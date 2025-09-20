@@ -19,6 +19,9 @@ import {
 	FiEdit,
 } from "react-icons/fi";
 
+// At the top of your ProfilDesa.jsx file
+import { z } from "zod";
+
 // Fix ikon default Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -30,6 +33,35 @@ L.Icon.Default.mergeOptions({
 
 const BACKEND_URL = import.meta.env.VITE_API_BASE_URL;
 const ImageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
+
+const profilSchema = z.object({
+	jumlah_penduduk: z.coerce
+		.number()
+		.positive("Jumlah penduduk harus angka positif.")
+		.optional()
+		.nullable(),
+	sejarah_desa: z.string().optional().nullable(),
+	demografi: z.string().optional().nullable(),
+	potensi_desa: z.string().optional().nullable(),
+	no_telp: z
+		.string()
+		.max(20, "No. Telepon terlalu panjang.")
+		.optional()
+		.nullable(),
+	email: z.string().email("Format email tidak valid.").optional().nullable(),
+	instagram_url: z
+		.string()
+		.url("URL Instagram tidak valid.")
+		.optional()
+		.nullable(),
+	youtube_url: z.string().url("URL YouTube tidak valid.").optional().nullable(),
+	luas_wilayah: z.string().max(255).optional().nullable(),
+	alamat_kantor: z.string().optional().nullable(),
+	radius_ke_kecamatan: z.string().max(255).optional().nullable(),
+	latitude: z.coerce.number().optional().nullable(),
+	longitude: z.coerce.number().optional().nullable(),
+	// We don't validate the IDs or file paths here
+});
 
 // Komponen kecil untuk mengambil koordinat saat peta diklik
 const LocationMarker = ({ onPositionChange }) => {
@@ -48,6 +80,7 @@ const ProfilDesa = () => {
 	const [editMode, setEditMode] = useState(false);
 	const [foto, setFoto] = useState(null);
 	const [fotoPreview, setFotoPreview] = useState(null);
+	const [errors, setErrors] = useState({});
 
 	const fetchProfil = useCallback(async () => {
 		try {
@@ -82,8 +115,29 @@ const ProfilDesa = () => {
 
 	const handleSubmit = async (e) => {
 		e.preventDefault();
-		const formData = new FormData();
+		setErrors({}); // <-- Bersihkan error lama
 
+		// --- BLOK VALIDASI ---
+		try {
+			profilSchema.parse(profil); // <-- Jalankan validasi
+		} catch (error) {
+			if (error instanceof ZodError) {
+				const formattedErrors = {};
+				error.errors.forEach((err) => {
+					formattedErrors[err.path[0]] = err.message;
+				});
+				setErrors(formattedErrors); // <-- Simpan error ke state
+				Swal.fire(
+					"Input Tidak Valid",
+					"Silakan periksa kembali data yang Anda masukkan.",
+					"error"
+				);
+				return; // <-- Hentikan submit jika validasi gagal
+			}
+		}
+		// ----------------------
+
+		const formData = new FormData();
 		Object.keys(profil).forEach((key) => {
 			if (profil[key] !== null && profil[key] !== undefined) {
 				formData.append(key, profil[key]);
@@ -100,7 +154,7 @@ const ProfilDesa = () => {
 			});
 			Swal.fire("Berhasil!", "Profil desa telah diperbarui.", "success");
 			setEditMode(false);
-			fetchProfil(); // Ambil data terbaru
+			fetchProfil();
 		} catch (error) {
 			Swal.fire("Gagal!", "Terjadi kesalahan saat menyimpan.", "error");
 		}
@@ -152,103 +206,166 @@ const ProfilDesa = () => {
 							Informasi Umum
 						</h3>
 						<div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
-							{/* Dropdown untuk Klasifikasi Desa */}
 							<div>
 								<label className="block text-sm font-medium text-gray-700">
 									Klasifikasi Desa
 								</label>
-								<select
-									name="klasifikasi_desa"
-									value={profil.klasifikasi_desa || ""}
-									onChange={handleChange}
-									className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+								<div
+									className={`bg-slate-100 mt-1 px-4 py-2  rounded-md shadow-sm ${
+										errors.klasifikasi_desa
+											? "border-red-500"
+											: "border-slate-300 border"
+									}`}
 								>
-									<option value="" disabled>
-										Pilih Opsi
-									</option>
-									<option value="Desa Tradisional">Desa Tradisional</option>
-									<option value="Desa Swadaya">Desa Swadaya</option>
-									<option value="Desa Swakarya">Desa Swakarya</option>
-									<option value="Desa Swasembada">Desa Swasembada</option>
-								</select>
+									<select
+										name="klasifikasi_desa"
+										value={profil.klasifikasi_desa || ""}
+										onChange={handleChange}
+										className={`block w-full `}
+									>
+										<option value="" disabled>
+											Pilih Opsi
+										</option>
+										<option value="Desa Tradisional">Desa Tradisional</option>
+										<option value="Desa Swadaya">Desa Swadaya</option>
+										<option value="Desa Swakarya">Desa Swakarya</option>
+										<option value="Desa Swasembada">Desa Swasembada</option>
+									</select>
+								</div>
+								{errors.klasifikasi_desa && (
+									<p className="mt-1 text-xs text-red-600">
+										{errors.klasifikasi_desa}
+									</p>
+								)}
 							</div>
-
-							{/* Dropdown untuk Status Desa / IDM */}
 							<div>
 								<label className="block text-sm font-medium text-gray-700">
 									Status Desa / IDM
 								</label>
-								<select
-									name="status_desa"
-									value={profil.status_desa || ""}
-									onChange={handleChange}
-									className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+								<div
+									className={`bg-slate-100 mt-1 px-4 py-2  rounded-md shadow-sm ${
+										errors.status_desa
+											? "border-red-500"
+											: "border-slate-300 border"
+									}`}
 								>
-									<option value="" disabled>
-										Pilih Opsi
-									</option>
-									<option value="Desa Tertinggal">Desa Tertinggal</option>
-									<option value="Desa Berkembang">Desa Berkembang</option>
-									<option value="Desa Maju">Desa Maju</option>
-									<option value="Desa Mandiri">Desa Mandiri</option>
-								</select>
-							</div>
+									<select
+										name="status_desa"
+										value={profil.status_desa || ""}
+										onChange={handleChange}
+										className={`block w-full`}
+									>
+										<option value="" disabled>
+											Pilih Opsi
+										</option>
+										<option value="Desa Tertinggal">Desa Tertinggal</option>
+										<option value="Desa Berkembang">Desa Berkembang</option>
+										<option value="Desa Maju">Desa Maju</option>
+										<option value="Desa Mandiri">Desa Mandiri</option>
+									</select>
+								</div>
 
-							{/* Dropdown untuk Tipologi Desa */}
+								{errors.status_desa && (
+									<p className="mt-1 text-xs text-red-600">
+										{errors.status_desa}
+									</p>
+								)}
+							</div>
 							<div className="md:col-span-2">
 								<label className="block text-sm font-medium text-gray-700">
 									Tipologi Desa
 								</label>
-								<select
-									name="tipologi_desa"
-									value={profil.tipologi_desa || ""}
-									onChange={handleChange}
-									className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+								<div
+									className={`bg-slate-100 mt-1 px-4 py-2  rounded-md shadow-sm ${
+										errors.tipologi_desa
+											? "border-red-500"
+											: "border-slate-300 border"
+									}`}
 								>
-									<option value="" disabled>
-										Pilih Opsi
-									</option>
-									<option value="Kehutanan">Kehutanan</option>
-									<option value="Perikanan">Perikanan</option>
-									<option value="Perindustrian/Jasa">Perindustrian/Jasa</option>
-									<option value="Perkebunan">Perkebunan</option>
-									<option value="Perladangan">Perladangan</option>
-									<option value="Persawahan">Persawahan</option>
-									<option value="Pertambangan">Pertambangan</option>
-									<option value="Pesisir/Nelayan">Pesisir/Nelayan</option>
-									<option value="Peternakan">Peternakan</option>
-									<option value="Tidak Terdefinisi">Tidak Terdefinisi</option>
-								</select>
-							</div>
+									<select
+										name="tipologi_desa"
+										value={profil.tipologi_desa || ""}
+										onChange={handleChange}
+										className={`block w-full`}
+									>
+										<option value="" disabled>
+											Pilih Opsi
+										</option>
+										<option value="Kehutanan">Kehutanan</option>
+										<option value="Perikanan">Perikanan</option>
+										<option value="Perindustrian/Jasa">
+											Perindustrian/Jasa
+										</option>
+										<option value="Perkebunan">Perkebunan</option>
+										<option value="Perladangan">Perladangan</option>
+										<option value="Persawahan">Persawahan</option>
+										<option value="Pertambangan">Pertambangan</option>
+										<option value="Pesisir/Nelayan">Pesisir/Nelayan</option>
+										<option value="Peternakan">Peternakan</option>
+										<option value="Tidak Terdefinisi">Tidak Terdefinisi</option>
+									</select>
+								</div>
 
-							{/* Input Jumlah Penduduk (tidak berubah) */}
+								{errors.tipologi_desa && (
+									<p className="mt-1 text-xs text-red-600">
+										{errors.tipologi_desa}
+									</p>
+								)}
+							</div>
 							<div>
 								<label className="block text-sm font-medium text-gray-700">
 									Jumlah Penduduk
 								</label>
-								<input
-									type="number"
-									name="jumlah_penduduk"
-									value={profil.jumlah_penduduk || ""}
-									onChange={handleChange}
-									className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-								/>
+								<div
+									className={`mt-1 bg-slate-100 px-4 py-2 rounded-md border-gray-300 shadow-sm ${
+										errors.jumlah_penduduk
+											? "border-red-500"
+											: "border-slate-300 border"
+									}`}
+								>
+									<input
+										type="number"
+										name="jumlah_penduduk"
+										value={profil.jumlah_penduduk || ""}
+										onChange={handleChange}
+										className={`block w-full `}
+									/>
+									{errors.jumlah_penduduk && (
+										<p className="mt-1 text-xs text-red-600">
+											{errors.jumlah_penduduk}
+										</p>
+									)}
+								</div>
 							</div>
 						</div>
 						<div className="mt-4">
 							<label className="block text-sm font-medium text-gray-700">
 								Sejarah Desa
 							</label>
-							<textarea
-								name="sejarah_desa"
-								value={profil.sejarah_desa || ""}
-								onChange={handleChange}
-								rows="5"
-								className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-							></textarea>
+							<div
+								className={`bg-slate-100 mt-1 px-4 py-2  rounded-md shadow-sm ${
+									errors.sejarah_desa
+										? "border-red-500"
+										: " border-slate-300 border"
+								}`}
+							>
+								<textarea
+									name="sejarah_desa"
+									value={profil.sejarah_desa || ""}
+									onChange={handleChange}
+									rows="5"
+									className={`block w-full `}
+								></textarea>
+							</div>
+							{errors.sejarah_desa && (
+								<p className="mt-1 text-xs text-red-600">
+									{errors.sejarah_desa}
+								</p>
+							)}
 						</div>
 					</div>
 
+					{/* --- Bagian Kontak & Media Sosial --- */}
 					<div className="border-b border-gray-200 pb-6">
 						<h3 className="text-lg font-semibold text-gray-800">
 							Kontak & Media Sosial
@@ -258,55 +375,106 @@ const ProfilDesa = () => {
 								<label className="block text-sm font-medium text-gray-700">
 									No. Telepon Kantor
 								</label>
-								<input
-									type="text"
-									name="no_telp"
-									value={profil.no_telp || ""}
-									onChange={handleChange}
-									className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-								/>
+								<div
+									className={`bg-slate-100 mt-1 px-4 py-2 rounded-md shadow-sm ${
+										errors.no_telp
+											? "border-red-500"
+											: "border-slate-300 border"
+									}`}
+								>
+									<input
+										type="text"
+										name="no_telp"
+										value={profil.no_telp || ""}
+										onChange={handleChange}
+										className={`block w-full `}
+									/>
+								</div>
+								{errors.no_telp && (
+									<p className="mt-1 text-xs text-red-600">{errors.no_telp}</p>
+								)}
 							</div>
 							<div>
 								<label className="block text-sm font-medium text-gray-700">
 									Email Desa
 								</label>
-								<input
-									type="email"
-									name="email"
-									value={profil.email || ""}
-									onChange={handleChange}
-									className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-								/>
+								<div
+									className={`bg-slate-100 mt-1 px-4 py-2 rounded-md shadow-sm ${
+										errors.email ? "border-red-500" : "border-slate-300 border"
+									}`}
+								>
+									{" "}
+									<input
+										type="email"
+										name="email"
+										value={profil.email || ""}
+										onChange={handleChange}
+										className={`block w-full `}
+									/>
+								</div>
+
+								{errors.email && (
+									<p className="mt-1 text-xs text-red-600">{errors.email}</p>
+								)}
 							</div>
 							<div>
 								<label className="block text-sm font-medium text-gray-700">
 									URL Instagram
 								</label>
-								<input
-									type="url"
-									name="instagram_url"
-									value={profil.instagram_url || ""}
-									onChange={handleChange}
-									className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-									placeholder="https://instagram.com/..."
-								/>
+								<div
+									className={` bg-slate-100 mt-1 px-4 py-2 rounded-md shadow-sm ${
+										errors.instagram_url
+											? "border-red-500"
+											: "border-slate-300 border"
+									}`}
+								>
+									<input
+										type="url"
+										name="instagram_url"
+										value={profil.instagram_url || ""}
+										onChange={handleChange}
+										className={` block w-full `}
+										placeholder="https://instagram.com/..."
+									/>
+								</div>
+
+								{errors.instagram_url && (
+									<p className="mt-1 text-xs text-red-600">
+										{errors.instagram_url}
+									</p>
+								)}
 							</div>
 							<div>
 								<label className="block text-sm font-medium text-gray-700">
 									URL YouTube
 								</label>
-								<input
-									type="url"
-									name="youtube_url"
-									value={profil.youtube_url || ""}
-									onChange={handleChange}
-									className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-									placeholder="https://youtube.com/..."
-								/>
+								<div
+									className={`bg-slate-100 mt-1 px-4 py-2 rounded-md shadow-sm ${
+										errors.youtube_url
+											? "border-red-500"
+											: "border-slate-300 border"
+									}`}
+								>
+									<input
+										type="url"
+										name="youtube_url"
+										value={profil.youtube_url || ""}
+										onChange={handleChange}
+										className={`block w-full`}
+										placeholder="https://youtube.com/..."
+									/>
+								</div>
+
+								{errors.youtube_url && (
+									<p className="mt-1 text-xs text-red-600">
+										{errors.youtube_url}
+									</p>
+								)}
 							</div>
 						</div>
 					</div>
 
+					{/* --- Bagian Data Wilayah & Potensi --- */}
 					<div className="border-b border-gray-200 pb-6">
 						<h3 className="text-lg font-semibold text-gray-800">
 							Data Wilayah & Potensi
@@ -316,52 +484,107 @@ const ProfilDesa = () => {
 								<label className="block text-sm font-medium text-gray-700">
 									Luas Wilayah (km²)
 								</label>
-								<input
-									type="text"
-									name="luas_wilayah"
-									value={profil.luas_wilayah || ""}
-									onChange={handleChange}
-									className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-								/>
+								<div
+									className={`bg-slate-100 mt-1 px-4 py-2 rounded-md shadow-sm ${
+										errors.luas_wilayah
+											? "border-red-500"
+											: "border-slate-300 border"
+									}`}
+								>
+									<input
+										type="text"
+										name="luas_wilayah"
+										value={profil.luas_wilayah || ""}
+										onChange={handleChange}
+										className={`block w-full `}
+									/>
+								</div>
+
+								{errors.luas_wilayah && (
+									<p className="mt-1 text-xs text-red-600">
+										{errors.luas_wilayah}
+									</p>
+								)}
 							</div>
 							<div>
 								<label className="block text-sm font-medium text-gray-700">
 									Jarak ke Kecamatan (km)
 								</label>
-								<input
-									type="text"
-									name="radius_ke_kecamatan"
-									value={profil.radius_ke_kecamatan || ""}
-									onChange={handleChange}
-									className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-								/>
+								<div
+									className={`bg-slate-100 mt-1 px-4 py-2 rounded-md shadow-sm ${
+										errors.radius_ke_kecamatan
+											? "border-red-500"
+											: "border-slate-300 border"
+									}`}
+								>
+									<input
+										type="text"
+										name="radius_ke_kecamatan"
+										value={profil.radius_ke_kecamatan || ""}
+										onChange={handleChange}
+										className={`block w-full }`}
+									/>
+								</div>
+								{errors.radius_ke_kecamatan && (
+									<p className="mt-1 text-xs text-red-600">
+										{errors.radius_ke_kecamatan}
+									</p>
+								)}
 							</div>
 						</div>
 						<div className="mt-4">
 							<label className="block text-sm font-medium text-gray-700">
 								Demografi
 							</label>
-							<textarea
-								name="demografi"
-								value={profil.demografi || ""}
-								onChange={handleChange}
-								rows="5"
-								className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-							></textarea>
+							<div
+								className={`bg-slate-100 mt-1 px-4 py-2 rounded-md shadow-sm ${
+									errors.demografi
+										? "border-red-500"
+										: "border-slate-300 border"
+								}`}
+							>
+								<textarea
+									name="demografi"
+									value={profil.demografi || ""}
+									onChange={handleChange}
+									rows="5"
+									className={`block w-full `}
+								></textarea>
+							</div>
+
+							{errors.demografi && (
+								<p className="mt-1 text-xs text-red-600">{errors.demografi}</p>
+							)}
 						</div>
 						<div className="mt-4">
 							<label className="block text-sm font-medium text-gray-700">
 								Potensi Desa
 							</label>
-							<textarea
-								name="potensi_desa"
-								value={profil.potensi_desa || ""}
-								onChange={handleChange}
-								rows="5"
-								className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-							></textarea>
+							<div
+								className={` bg-slate-100 mt-1 px-4 py-2 rounded-md shadow-sm ${
+									errors.potensi_desa
+										? "border-red-500"
+										: "border-slate-300 border"
+								}`}
+							>
+								{" "}
+								<textarea
+									name="potensi_desa"
+									value={profil.potensi_desa || ""}
+									onChange={handleChange}
+									rows="5"
+									className={` block w-full `}
+								></textarea>
+							</div>
+
+							{errors.potensi_desa && (
+								<p className="mt-1 text-xs text-red-600">
+									{errors.potensi_desa}
+								</p>
+							)}
 						</div>
 					</div>
+
 					{/* --- Bagian Lokasi & Foto --- */}
 					<div>
 						<h3 className="text-lg font-semibold text-gray-800">
@@ -372,13 +595,28 @@ const ProfilDesa = () => {
 								<label className="block text-sm font-medium text-gray-700">
 									Alamat Kantor Desa
 								</label>
-								<textarea
-									name="alamat_kantor"
-									value={profil.alamat_kantor || ""}
-									onChange={handleChange}
-									rows="3"
-									className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-								></textarea>
+								<div
+									className={`bg-slate-100 mt-1 px-4 py-2 rounded-md shadow-sm ${
+										errors.alamat_kantor
+											? "border-red-500"
+											: "border-slate-300 border"
+									}`}
+								>
+									{" "}
+									<textarea
+										name="alamat_kantor"
+										value={profil.alamat_kantor || ""}
+										onChange={handleChange}
+										rows="3"
+										className={`block w-full `}
+									></textarea>
+								</div>
+
+								{errors.alamat_kantor && (
+									<p className="mt-1 text-xs text-red-600">
+										{errors.alamat_kantor}
+									</p>
+								)}
 							</div>
 							<div>
 								<label className="block text-sm font-medium text-gray-700">
@@ -406,27 +644,54 @@ const ProfilDesa = () => {
 								<label className="block text-sm font-medium text-gray-700">
 									Latitude
 								</label>
-								<input
-									type="number"
-									step="any"
-									name="latitude"
-									value={profil.latitude || ""}
-									onChange={handleChange}
-									className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-								/>
+								<div
+									className={`bg-slate-100 mt-1 px-4 py-2 rounded-md shadow-sm ${
+										errors.latitude
+											? "border-red-500"
+											: "border-slate-300 border"
+									}`}
+								>
+									{" "}
+									<input
+										type="number"
+										step="any"
+										name="latitude"
+										value={profil.latitude || ""}
+										onChange={handleChange}
+										className={` block w-full `}
+									/>
+								</div>
+
+								{errors.latitude && (
+									<p className="mt-1 text-xs text-red-600">{errors.latitude}</p>
+								)}
 							</div>
 							<div>
 								<label className="block text-sm font-medium text-gray-700">
 									Longitude
 								</label>
-								<input
-									type="number"
-									step="any"
-									name="longitude"
-									value={profil.longitude || ""}
-									onChange={handleChange}
-									className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-								/>
+								<div
+									className={`bg-slate-100 mt-1 px-4 py-2 rounded-md shadow-sm ${
+										errors.longitude
+											? "border-red-500"
+											: "border-slate-300 border"
+									}`}
+								>
+									<input
+										type="number"
+										step="any"
+										name="longitude"
+										value={profil.longitude || ""}
+										onChange={handleChange}
+										className={`block w-full`}
+									/>
+								</div>
+
+								{errors.longitude && (
+									<p className="mt-1 text-xs text-red-600">
+										{errors.longitude}
+									</p>
+								)}
 							</div>
 						</div>
 						<div className="h-96 w-full mt-6 rounded-lg shadow overflow-hidden">

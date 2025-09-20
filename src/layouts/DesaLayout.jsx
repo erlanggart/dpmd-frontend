@@ -3,6 +3,7 @@ import React from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { FiLogOut } from "react-icons/fi";
+import Footer from "../components/landingpage/Footer";
 
 const DesaLayout = () => {
 	const { user, logout } = useAuth();
@@ -16,7 +17,7 @@ const DesaLayout = () => {
 	return (
 		<div className="min-h-screen bg-gray-100">
 			{/* Header untuk Dashboard Desa */}
-			<header className="bg-white shadow-md m-4 rounded-lg border border-slate-200">
+			<header className="bg-white shadow-md m-4 rounded-lg border border-slate-200 w-7xl mx-auto">
 				<div className="container mx-auto flex h-16 items-center justify-between px-6">
 					<div className="flex items-center space-x-4">
 						<img src="/logo-kab.png" alt="Logo" className="h-10" />
@@ -45,9 +46,11 @@ const DesaLayout = () => {
 			</header>
 
 			{/* Konten utama dari setiap halaman modul desa akan dirender di sini */}
-			<main className="container mx-auto p-6">
+			<main className="w-7xl mx-auto py-6">
 				<Outlet />
 			</main>
+
+			<Footer />
 		</div>
 	);
 };
