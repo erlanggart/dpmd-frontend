@@ -4,9 +4,13 @@ import "./index.css";
 import App from "./App.jsx";
 
 import "@splidejs/react-splide/css";
+import { AuthProvider } from "./context/AuthContext.jsx";
+import "leaflet/dist/leaflet.css";
 
 createRoot(document.getElementById("root")).render(
 	<StrictMode>
-		<App />
+		<AuthProvider>
+			<App />
+		</AuthProvider>
 	</StrictMode>
 );

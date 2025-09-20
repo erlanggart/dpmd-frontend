@@ -3,27 +3,38 @@ import { Link, useNavigate } from "react-router-dom";
 import api from "../api";
 import { FiEye, FiEyeOff, FiLoader } from "react-icons/fi";
 import LoginImageSlider from "../components/login/LoginImageSlider";
+import { useAuth } from "../context/AuthContext";
 
 const LoginPage = () => {
-	// ... (semua state dan fungsi handleLogin Anda tetap sama)
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 	const [error, setError] = useState(null);
 	const [loading, setLoading] = useState(false);
 	const navigate = useNavigate();
 	const [showPassword, setShowPassword] = useState(false);
+	const { login } = useAuth();
 
 	const handleLogin = async (e) => {
 		e.preventDefault();
-		setError(null);
 		setLoading(true);
+		setError(null);
 		try {
 			const response = await api.post("/login", { email, password });
-			localStorage.setItem("authToken", response.data.access_token);
-			localStorage.setItem("user", JSON.stringify(response.data.user));
-			navigate("/dashboard");
+
+			// 1. Simpan data user baru ke dalam sebuah variabel
+			const newUser = response.data.user;
+
+			// 2. Gunakan fungsi login dari context untuk menyimpan data secara global
+			login(newUser, response.data.access_token);
+
+			// 3. Gunakan variabel 'newUser' untuk membuat keputusan
+			if (newUser.roles.includes("admin desa")) {
+				navigate("/desa/dashboard"); // Arahkan ke dashboard desa
+			} else {
+				navigate("/dashboard"); // Arahkan ke dashboard admin utama
+			}
 		} catch (err) {
-			setError(err.response?.data?.message || "Email atau Password salah.");
+			setError(err.response?.data?.message || "Login gagal.");
 		} finally {
 			setLoading(false);
 		}
@@ -101,7 +112,7 @@ const LoginPage = () => {
 							</button>
 						</div>
 						{error && (
-							<p className="rounded-md bg-red-50 p-3 text-center text-sm text-red-600">
+							<p className="rounded-md bg-red-500/90 p-3 text-center text-sm text-white ">
 								{error}
 							</p>
 						)}

@@ -1,10 +1,12 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link as RouterLink } from "react-router-dom"; // Link untuk navigasi halaman
+import { Link as ScrollLink } from "react-scroll"; // Link BARU untuk scrolling
 import { FiLogIn } from "react-icons/fi";
-import HeroSection from "../components/HeroSection"; // Kita akan buat HeroSection terpisah
+import HeroSection from "../components/HeroSection";
 import { useScrollPosition } from "../hooks/useScrollPosition";
 import FeatureSection from "../components/landingpage/FeatureSection";
 import Footer from "../components/landingpage/Footer";
+import StatsSection from "../components/landingpage/StatsSection";
 
 const LandingPage = () => {
 	const scrollY = useScrollPosition();
@@ -18,10 +20,22 @@ const LandingPage = () => {
 		}
   `;
 
+	// Daftar link navigasi
+	const navLinks = [
+		{ to: "home", label: "Beranda" },
+		{ to: "stats", label: "Statistik" },
+		{ to: "features", label: "Fitur" },
+		{ to: "contact", label: "Kontak" },
+	];
+
+	// Styling untuk link navigasi
+	const navLinkClasses =
+		"cursor-pointer  text-white transition-colors hover:text-secondary";
+
 	return (
 		<div>
 			<header className={headerClasses}>
-				<div className="w-7xl mx-auto flex items-center justify-between">
+				<div className="container w-7xl mx-auto flex items-center justify-between">
 					<div className="flex items-center space-x-4">
 						<img
 							src="/logo-kab.png"
@@ -29,36 +43,54 @@ const LandingPage = () => {
 							className="h-10"
 						/>
 						<div>
-							<h1
-								className={`text-lg font-bold md:text-sm transition-colors ${
-									scrollY > 50 ? "text-white" : "text-white"
-								}`}
-							>
+							<h1 className="text-lg font-bold text-white md:text-sm">
 								Dinas Pemberdayaan Masyarakat dan Desa
 							</h1>
-							<h2
-								className={`font-semibold transition-colors ${
-									scrollY > 50 ? "text-gray-200" : "text-white"
-								}`}
-							>
-								Kabupaten Bogor
-							</h2>
+							<h2 className="font-semibold text-white/90">Kabupaten Bogor</h2>
 						</div>
 					</div>
-					<Link
-						to="/login"
-						className={`hidden items-center gap-2 rounded-lg px-5 py-2.5 font-semibold transition-colors md:flex text-white ${
-							scrollY > 50
-								? "bg-[rgb(var(--color-secondary))] hover:bg-[rgb(var(--color-secondary))]/80 "
-								: "bg-primary hover:bg-[rgb(var(--color-primary))]/90"
-						}`}
-					>
-						<FiLogIn />
-						<span>Login</span>
-					</Link>
+					<div className="flex items-center space-x-8">
+						{/* Navigasi untuk Scroll (hanya di desktop) */}
+						<nav className="hidden items-center space-x-8 lg:flex">
+							{navLinks.map((link) => (
+								<ScrollLink
+									key={link.to}
+									to={link.to}
+									spy={true} // Membuat link aktif saat section di-scroll
+									smooth={true} // Animasi smooth scroll
+									offset={-70} // Offset agar tidak tertutup header
+									duration={500} // Durasi animasi (ms)
+									className={navLinkClasses}
+									activeClass="text-secondary" // Kelas saat link aktif
+								>
+									{link.label}
+								</ScrollLink>
+							))}
+						</nav>
+
+						{/* Tombol Login */}
+						{/* <RouterLink
+							to="/login"
+							className={`hidden items-center gap-2 rounded-lg px-5 py-2.5 font-semibold transition-colors md:flex ${
+								scrollY > 50
+									? "bg-secondary text-white hover:bg-secondary/90"
+									: "bg-white text-primary hover:bg-gray-200"
+							}`}
+						>
+							<FiLogIn />
+							<span>Login</span>
+						</RouterLink> */}
+					</div>
 				</div>
 			</header>
-			<HeroSection />
+
+			{/* Pastikan setiap komponen ini memiliki ID yang sesuai */}
+			<section id="home">
+				<HeroSection />
+			</section>
+			<section id="stats">
+				<StatsSection />
+			</section>
 			<section id="features" className="bg-white py-20">
 				<FeatureSection />
 			</section>

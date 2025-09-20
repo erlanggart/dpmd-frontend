@@ -1,22 +1,39 @@
+// src/pages/DashboardPage.jsx
 import React from "react";
+import { useAuth } from "../context/AuthContext";
+import DesaDashboard from "../components/desa/DesaDashboard";
+
+// Anda bisa membuat komponen dashboard lain untuk peran lain
+const SuperAdminDashboard = () => (
+	<h1 className="text-white text-3xl">Dashboard Super Admin</h1>
+);
+const KecamatanDashboard = () => (
+	<h1 className="text-white text-3xl">Dashboard Kecamatan</h1>
+);
 
 const DashboardPage = () => {
-	const user = JSON.parse(localStorage.getItem("user") || "{}");
+	const { user } = useAuth();
 
-	return (
-		<div>
-			<h1 className="mb-4 text-3xl font-bold text-white">Dashboard Utama</h1>
-			<div className="rounded-lg bg-gray-800 p-6 text-white">
-				<p className="text-lg">
-					Selamat datang kembali, <span className="font-bold">{user.name}</span>
-					!
-				</p>
-				<p className="mt-2 text-gray-400">
-					Peran Anda: {user.roles?.join(", ")}
-				</p>
-			</div>
-		</div>
-	);
+	// Jika data user belum dimuat, tampilkan pesan loading
+	if (!user) {
+		return <p className="text-white">Memuat...</p>;
+	}
+
+	// Tampilkan komponen dashboard berdasarkan peran pertama user
+	if (user.roles.includes("admin desa")) {
+		return <DesaDashboard />;
+	}
+
+	if (user.roles.includes("admin kecamatan")) {
+		return <KecamatanDashboard />;
+	}
+
+	if (user.roles.includes("superadmin")) {
+		return <SuperAdminDashboard />;
+	}
+
+	// Tampilan default jika tidak ada peran yang cocok
+	return <h1 className="text-white">Selamat Datang, {user.name}</h1>;
 };
 
 export default DashboardPage;

@@ -24,13 +24,19 @@ api.interceptors.request.use(
 api.interceptors.response.use(
 	(response) => response,
 	(error) => {
+		// Cek jika error adalah 401
 		if (error.response && error.response.status === 401) {
-			localStorage.removeItem("authToken");
-			localStorage.removeItem("user");
-			window.location.href = "/login";
+			// TAMBAHKAN PENGECEKAN INI:
+			// Hanya redirect jika kita TIDAK sedang di halaman login.
+			if (window.location.pathname !== "/login") {
+				localStorage.removeItem("authToken");
+				localStorage.removeItem("user");
+				window.location.href = "/login";
+			}
 		}
+
+		// Kembalikan error agar bisa ditangani oleh komponen (seperti LoginPage)
 		return Promise.reject(error);
 	}
 );
-
 export default api;
