@@ -1,0 +1,324 @@
+import React, { useState, useEffect } from "react";
+import { z } from "zod";
+
+// Skema validasi menggunakan Zod
+const produkHukumSchema = z.object({
+	judul: z.string().min(1, "Judul tidak boleh kosong"),
+	nomor: z.string().min(1, "Nomor tidak boleh kosong"),
+	tahun: z
+		.string()
+		.min(4, "Tahun harus 4 digit")
+		.refine((val) => !isNaN(parseInt(val, 10)), {
+			message: "Tahun harus berupa angka",
+		})
+		.refine(
+			(val) =>
+				parseInt(val, 10) >= 1900 &&
+				parseInt(val, 10) <= new Date().getFullYear() + 1,
+			{
+				message: "Tahun tidak valid",
+			}
+		),
+	jenis: z.enum([
+		"Peraturan Desa",
+		"Peraturan Kepala Desa",
+		"Keputusan Kepala Desa",
+	]),
+	singkatan_jenis: z.enum(["PERDES", "PERKADES", "SK KADES"]),
+	tempat_penetapan: z.string().min(1, "Tempat penetapan tidak boleh kosong"),
+	tanggal_penetapan: z.string().min(1, "Tanggal penetapan tidak boleh kosong"),
+	sumber: z.string().optional(),
+	subjek: z.string().optional(),
+	status_peraturan: z.enum(["berlaku", "dicabut"]),
+	keterangan_status: z.string().optional(),
+	file: z.any().optional(),
+});
+
+const getTodayDateString = () => {
+	const today = new Date();
+	const year = today.getFullYear();
+	const month = String(today.getMonth() + 1).padStart(2, "0"); // Months are 0-indexed
+	const day = String(today.getDate()).padStart(2, "0");
+	return `${year}-${month}-${day}`;
+};
+
+const ProdukHukumForm = ({ onSubmit, initialData }) => {
+	const [formData, setFormData] = useState({
+		judul: "",
+		nomor: "",
+		tahun: "",
+		jenis: "Peraturan Desa",
+		singkatan_jenis: "PERDES",
+		tempat_penetapan: "",
+		tanggal_penetapan: getTodayDateString(), // Default ke tanggal hari ini
+		sumber: "",
+		subjek: "",
+		status_peraturan: "berlaku",
+		keterangan_status: "",
+		file: null,
+	});
+	const [errors, setErrors] = useState({});
+
+	useEffect(() => {
+		if (initialData) {
+			// Pastikan semua field ada dan dalam format string jika perlu
+			setFormData({
+				judul: initialData.judul || "",
+				nomor: initialData.nomor || "",
+				tahun: initialData.tahun ? String(initialData.tahun) : "",
+				jenis: initialData.jenis || "Peraturan Desa",
+				singkatan_jenis: initialData.singkatan_jenis || "PERDES",
+				tempat_penetapan: initialData.tempat_penetapan || "",
+				tanggal_penetapan:
+					initialData.tanggal_penetapan || getTodayDateString(), // Gunakan data yang ada, atau default ke hari ini
+				sumber: initialData.sumber || "",
+				subjek: initialData.subjek || "",
+				status_peraturan: initialData.status_peraturan || "berlaku",
+				keterangan_status: initialData.keterangan_status || "",
+				file: null, // File tidak diisi ulang untuk edit
+			});
+		} else {
+			// Reset form untuk data baru, tapi pertahankan tanggal hari ini
+			setFormData({
+				judul: "",
+				nomor: "",
+				tahun: "",
+				jenis: "Peraturan Desa",
+				singkatan_jenis: "PERDES",
+				tempat_penetapan: "",
+				tanggal_penetapan: getTodayDateString(),
+				sumber: "",
+				subjek: "",
+				status_peraturan: "berlaku",
+				keterangan_status: "",
+				file: null,
+			});
+		}
+		// Bersihkan error setiap kali data awal berubah
+		setErrors({});
+	}, [initialData]);
+
+	const handleChange = (e) => {
+		const { name, value } = e.target;
+		setFormData({ ...formData, [name]: value });
+		// Hapus pesan error untuk field yang sedang diubah
+		if (errors[name]) {
+			setErrors((prevErrors) => ({ ...prevErrors, [name]: null }));
+		}
+	};
+
+	const handleFileChange = (e) => {
+		setFormData({ ...formData, file: e.target.files[0] });
+		if (errors.file) {
+			setErrors((prevErrors) => ({ ...prevErrors, file: null }));
+		}
+	};
+
+	const handleSubmit = (e) => {
+		e.preventDefault();
+		const result = produkHukumSchema.safeParse(formData);
+
+		if (!result.success) {
+			const newErrors = {};
+			result.error.errors.forEach((err) => {
+				newErrors[err.path[0]] = err.message;
+			});
+			setErrors(newErrors);
+			return; // Hentikan submit jika validasi gagal
+		}
+
+		// Jika validasi berhasil, bersihkan error dan kirim data
+		setErrors({});
+		onSubmit(result.data); // Kirim data yang sudah divalidasi
+	};
+
+	return (
+		<form onSubmit={handleSubmit} className="space-y-4" noValidate>
+			<div>
+				<label className="block mb-1">Judul</label>
+				<div className="input-group">
+					<input
+						type="text"
+						name="judul"
+						value={formData.judul}
+						onChange={handleChange}
+						placeholder="Masukkan judul produk hukum"
+						className="w-full"
+					/>
+				</div>
+				{errors.judul && (
+					<p className="text-red-500 text-sm mt-1">{errors.judul}</p>
+				)}
+			</div>
+			<div>
+				<label className="block mb-1">Nomor</label>
+				<div className="input-group">
+					<input
+						type="text"
+						name="nomor"
+						value={formData.nomor}
+						onChange={handleChange}
+						placeholder="contoh: 123/XYZ/2023"
+						className="w-full"
+					/>
+				</div>
+				{errors.nomor && (
+					<p className="text-red-500 text-sm mt-1">{errors.nomor}</p>
+				)}
+			</div>
+			<div>
+				<label className="block mb-1">Tahun</label>
+				<div className="input-group">
+					<input
+						type="text" // Ubah ke text untuk validasi yang lebih baik
+						name="tahun"
+						value={formData.tahun}
+						onChange={handleChange}
+						className="w-full"
+						maxLength="4"
+						placeholder="contoh: 2023"
+					/>
+				</div>
+				{errors.tahun && (
+					<p className="text-red-500 text-sm mt-1">{errors.tahun}</p>
+				)}
+			</div>
+			<div>
+				<label className="block mb-1">Jenis</label>
+				<div className="input-group">
+					<select
+						name="jenis"
+						value={formData.jenis}
+						onChange={handleChange}
+						className="w-full"
+					>
+						<option value="Peraturan Desa">Peraturan Desa</option>
+						<option value="Peraturan Kepala Desa">Peraturan Kepala Desa</option>
+						<option value="Keputusan Kepala Desa">Keputusan Kepala Desa</option>
+					</select>
+				</div>
+			</div>
+			<div>
+				<label className="block mb-1">Singkatan Jenis</label>
+				<div className="input-group">
+					<select
+						name="singkatan_jenis"
+						value={formData.singkatan_jenis}
+						onChange={handleChange}
+						className="w-full"
+					>
+						<option value="PERDES">PERDES</option>
+						<option value="PERKADES">PERKADES</option>
+						<option value="SK KADES">SK KADES</option>
+					</select>
+				</div>
+			</div>
+			<div>
+				<label className="block mb-1">Tempat Penetapan</label>
+				<div className="input-group">
+					<input
+						type="text"
+						name="tempat_penetapan"
+						value={formData.tempat_penetapan}
+						onChange={handleChange}
+						placeholder="contoh : Desa Sukamaju"
+						className="w-full"
+					/>
+				</div>
+				{errors.tempat_penetapan && (
+					<p className="text-red-500 text-sm mt-1">{errors.tempat_penetapan}</p>
+				)}
+			</div>
+			<div>
+				<label className="block mb-1">Tanggal Penetapan</label>
+				<div className="input-group">
+					<input
+						type="date"
+						name="tanggal_penetapan"
+						value={formData.tanggal_penetapan}
+						onChange={handleChange}
+						className="w-full"
+					/>
+				</div>
+				{errors.tanggal_penetapan && (
+					<p className="text-red-500 text-sm mt-1">
+						{errors.tanggal_penetapan}
+					</p>
+				)}
+			</div>
+			<div>
+				<label className="block mb-1">Sumber</label>
+				<div className="input-group">
+					<input
+						type="text"
+						name="sumber"
+						value={formData.sumber}
+						onChange={handleChange}
+						placeholder="contoh: LDes Sukamaju Tahun 2025 Nomor 5"
+						className="w-full"
+					/>
+				</div>
+			</div>
+			<div>
+				<label className="block mb-1">Subjek</label>
+				<div className="input-group">
+					<input
+						type="text"
+						name="subjek"
+						value={formData.subjek}
+						onChange={handleChange}
+						placeholder="contoh: Kependudukan, Pembangunan, dll"
+						className="w-full"
+					/>
+				</div>
+			</div>
+			<div>
+				<label className="block mb-1">Status Peraturan</label>
+				<div className="input-group">
+					<select
+						name="status_peraturan"
+						value={formData.status_peraturan}
+						onChange={handleChange}
+						className="w-full"
+					>
+						<option value="berlaku">Berlaku</option>
+						<option value="dicabut">Dicabut</option>
+					</select>
+				</div>
+			</div>
+			<div>
+				<label className="block mb-1">Keterangan Status</label>
+				<div className="input-group">
+					<input
+						type="text"
+						name="keterangan_status"
+						value={formData.keterangan_status}
+						onChange={handleChange}
+						placeholder="Masukkan keterangan status jika ada"
+						className="w-full"
+					/>
+				</div>
+			</div>
+			<div>
+				<label className="block mb-1">File (PDF)</label>
+				<div className="input-group">
+					<input
+						type="file"
+						name="file"
+						onChange={handleFileChange}
+						className="w-full"
+						accept=".pdf"
+					/>
+				</div>
+			</div>
+			<button
+				type="submit"
+				className="bg-blue-500 text-white px-4 py-2 rounded"
+			>
+				Simpan
+			</button>
+		</form>
+	);
+};
+
+export default ProdukHukumForm;

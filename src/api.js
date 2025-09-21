@@ -39,4 +39,39 @@ api.interceptors.response.use(
 		return Promise.reject(error);
 	}
 );
+
+// --- Produk Hukum ---
+export const getProdukHukums = (page = 1, search = "") => {
+	return api.get(`/produk-hukum?page=${page}&search=${search}`);
+};
+
+export const createProdukHukum = (data) => {
+	const formData = new FormData();
+	for (const key in data) {
+		formData.append(key, data[key]);
+	}
+	return api.post("/produk-hukum", formData, {
+		headers: {
+			"Content-Type": "multipart/form-data",
+		},
+	});
+};
+
+export const updateProdukHukum = (id, data) => {
+	const formData = new FormData();
+	for (const key in data) {
+		formData.append(key, data[key]);
+	}
+	formData.append("_method", "PUT"); // Laravel needs this for file uploads in updates
+	return api.post(`/produk-hukum/${id}`, formData, {
+		headers: {
+			"Content-Type": "multipart/form-data",
+		},
+	});
+};
+
+export const deleteProdukHukum = (id) => {
+	return api.delete(`/produk-hukum/${id}`);
+};
+
 export default api;

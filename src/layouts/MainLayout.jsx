@@ -35,7 +35,9 @@ const SubMenu = ({ item, openMenu, toggleMenu, isMinimized }) => {
 		<div>
 			<button
 				onClick={() => !isMinimized && toggleMenu(item.key)}
-				className={`flex w-full items-center justify-between p-3 rounded-lg transition-colors ${
+				className={`flex w-full items-center p-3 rounded-lg transition-colors ${
+					isMinimized ? "justify-center" : "justify-between"
+				} ${
 					isChildActive && !isMinimized
 						? "bg-gray-100 text-primary font-semibold"
 						: "text-gray-600 hover:bg-gray-100"
@@ -44,26 +46,20 @@ const SubMenu = ({ item, openMenu, toggleMenu, isMinimized }) => {
 			>
 				<div className="flex items-center">
 					{React.cloneElement(item.icon, {
-						className: " h-5 w-5 flex-shrink-0",
+						className: `h-5 w-5 flex-shrink-0 ${isMinimized ? "" : "mr-3"}`,
 					})}
-					{/* --- Teks submenu sekarang dinamis --- */}
 					<span
 						className={`transition-all duration-200 whitespace-nowrap ${
-							isMinimized ? "opacity-0 scale-0" : "opacity-100 scale-100 ml-3"
+							isMinimized ? "w-0 opacity-0" : "w-auto opacity-100 ml-3"
 						}`}
 					>
 						{item.label}
 					</span>
 				</div>
-				{/* --- Chevron dinamis --- */}
 				<FiChevronDown
 					className={`transform transition-all duration-300 flex-shrink-0 ${
 						isOpen ? "rotate-180" : ""
-					} ${
-						isMinimized
-							? "w-0 opacity-0 scale-0"
-							: "w-auto opacity-100 scale-100"
-					}`}
+					} ${isMinimized ? "w-0 opacity-0" : "w-auto opacity-100"}`}
 				/>
 			</button>
 			<div
@@ -147,7 +143,7 @@ const MainLayout = () => {
 		{
 			key: "pemdes",
 			label: "Pemdes",
-			icon: <TbUserPentagon className="mr-3 h-5 w-5" />,
+			icon: <TbUserPentagon />,
 			children: [
 				{ to: "/dashboard/profil-desa", label: "Profil Desa" },
 				{ to: "/dashboard/aparatur-desa", label: "Aparatur Desa" },
@@ -156,7 +152,7 @@ const MainLayout = () => {
 		{
 			key: "keudes",
 			label: "KKD",
-			icon: <TbHomeDollar className="mr-3 h-5 w-5" />,
+			icon: <TbHomeDollar />,
 			children: [
 				{ to: "/dashboard/dana-desa", label: "Dana Desa" },
 				{ to: "/dashboard/alokasi-dana-desa", label: "Alokasi Dana Desa" },
@@ -166,7 +162,7 @@ const MainLayout = () => {
 		{
 			key: "sarpras",
 			label: "SPKED",
-			icon: <TbMap className="mr-3 h-5 w-5" />,
+			icon: <TbMap />,
 			children: [
 				{ to: "/dashboard/bumdes", label: "BUMDes" },
 				{ to: "/dashboard/samisade", label: "Samisade" },
@@ -175,7 +171,7 @@ const MainLayout = () => {
 		{
 			key: "pemmas",
 			label: "PMD",
-			icon: <TbBuildingBank className="mr-3 h-5 w-5" />,
+			icon: <TbBuildingBank />,
 			children: [
 				{ to: "/dashboard/kelembagaan", label: "Kelembagaan (RT/RW/Posyandu)" },
 			],
@@ -187,7 +183,7 @@ const MainLayout = () => {
 		{
 			key: "sekretariat",
 			label: "Sekretariat",
-			icon: <FiClipboard className="mr-3 h-5 w-5" />,
+			icon: <FiClipboard />,
 			children: [
 				{ to: "/dashboard/pegawai", label: "Pegawai" },
 				{ to: "/dashboard/perjalanan-dinas", label: "Perjalanan Dinas" },
@@ -196,7 +192,7 @@ const MainLayout = () => {
 		{
 			key: "landing",
 			label: "Landing Page",
-			icon: <FiLayout className="mr-3 h-5 w-5" />,
+			icon: <FiLayout />,
 			children: [
 				{ to: "/dashboard/hero-gallery", label: "Galeri Hero" },
 				{ to: "/dashboard/articles", label: "Manajemen Artikel" },
@@ -222,25 +218,19 @@ const MainLayout = () => {
 				} ${isSidebarMinimized ? "w-24" : "w-72"}`}
 			>
 				<div
-					className={`flex h-16 flex-shrink-0 items-center ${
-						isSidebarMinimized ? "justify-center" : "justify-between "
-					} px-4 border-b border-slate-200`}
+					className={`flex h-16 flex-shrink-0 items-center border-b border-slate-200 transition-all duration-300 ${
+						isSidebarMinimized ? "justify-center px-2" : "justify-start px-4"
+					}`}
 				>
-					<div
-						className={`flex items-center overflow-hidden 
-						}`}
-					>
+					<div className="flex items-center overflow-hidden">
 						<img
 							src="/logo-kab.png"
 							alt="Logo"
 							className="h-10 flex-shrink-0"
 						/>
-						{/* --- Teks header sidebar sekarang dinamis --- */}
 						<div
-							className={` transition-all duration-300 whitespace-nowrap ${
-								isSidebarMinimized
-									? "w-0 opacity-0 scale-0"
-									: "w-full opacity-100 scale-100 ml-3"
+							className={`transition-all duration-300 whitespace-nowrap ${
+								isSidebarMinimized ? "w-0 opacity-0" : "w-full opacity-100 ml-3"
 							}`}
 						>
 							<p className="text-sm font-bold text-primary">DPMD</p>
@@ -261,7 +251,7 @@ const MainLayout = () => {
 				</div>
 
 				<nav
-					className={`flex-1 space-y-1  ${
+					className={`flex-1 space-y-1 ${
 						isSidebarMinimized ? "overflow-y-hidden" : "overflow-y-auto"
 					} p-4`}
 				>
@@ -270,6 +260,8 @@ const MainLayout = () => {
 						to="/dashboard"
 						className={({ isActive }) =>
 							`flex items-center p-3 rounded-lg transition-colors ${
+								isSidebarMinimized ? "justify-center" : ""
+							} ${
 								isActive
 									? "bg-primary text-white font-semibold"
 									: "text-gray-600 hover:bg-gray-100"
@@ -277,12 +269,14 @@ const MainLayout = () => {
 						}
 						end
 					>
-						<FiGrid className="mr-3 h-5 w-5 flex-shrink-0" />
+						<FiGrid
+							className={`h-5 w-5 flex-shrink-0 ${
+								isSidebarMinimized ? "" : "mr-3"
+							}`}
+						/>
 						<span
 							className={`transition-all duration-200 ${
-								isSidebarMinimized
-									? "opacity-0 scale-0"
-									: "opacity-100 scale-100"
+								isSidebarMinimized ? "w-0 opacity-0" : "w-auto opacity-100"
 							}`}
 						>
 							Dashboard

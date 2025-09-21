@@ -30,3 +30,9 @@
 		color: rgb(var(--color-secondary));
 	}
 }
+
+@layer components {
+	.input-group {
+		@apply bg-slate-100 px-4 py-2 rounded-md shadow-sm;
+	}
+}
