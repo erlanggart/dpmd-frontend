@@ -1,16 +1,15 @@
-// src/components/desa/DesaDashboard.jsx
+// src/components/kecamatan/KecamatanDashboard.jsx
 import React, { useState, useEffect } from "react";
 import { 
     FiGrid, 
     FiUsers, 
     FiFileText, 
-    FiDollarSign, 
     FiMapPin,
-    FiHome,
-    FiActivity 
+    FiActivity,
+    FiUserCheck 
 } from 'react-icons/fi';
 
-const DesaDashboard = () => {
+const KecamatanDashboard = () => {
     const [userData, setUserData] = useState(null);
     const [dashboardData, setDashboardData] = useState({
         stats: [],
@@ -30,25 +29,25 @@ const DesaDashboard = () => {
 
     const loadDashboardData = () => {
         const config = {
-            title: 'Dashboard Admin Desa',
+            title: 'Dashboard Admin Kecamatan',
             stats: [
-                { title: 'Jumlah RW', value: '12', icon: <FiMapPin />, color: 'bg-blue-500' },
-                { title: 'Jumlah RT', value: '48', icon: <FiHome />, color: 'bg-green-500' },
-                { title: 'Penduduk', value: '3,245', icon: <FiUsers />, color: 'bg-purple-500' },
-                { title: 'Dana Desa', value: 'Rp 850M', icon: <FiDollarSign />, color: 'bg-yellow-500' }
+                { title: 'Jumlah Desa', value: '15', icon: <FiMapPin />, color: 'bg-blue-500' },
+                { title: 'Total Penduduk', value: '45,678', icon: <FiUsers />, color: 'bg-green-500' },
+                { title: 'Aparatur', value: '234', icon: <FiUserCheck />, color: 'bg-purple-500' },
+                { title: 'Program Aktif', value: '28', icon: <FiActivity />, color: 'bg-yellow-500' }
             ],
             recentActivities: [
-                'Data kependudukan telah diperbarui',
-                'Laporan bulanan telah dikirim ke kecamatan',
-                'Rapat BPD terlaksana dengan baik',
-                'Pelayanan administratif berjalan lancar',
-                'Update profil desa selesai'
+                'Koordinasi dengan 15 desa se-kecamatan',
+                'Laporan bulanan telah dikirim ke kabupaten',
+                'Program pemberdayaan masyarakat berjalan',
+                'Monitoring pembangunan infrastruktur',
+                'Evaluasi kinerja desa-desa'
             ],
             quickActions: [
-                { title: 'Profil Desa', path: '/desa/profil-desa', icon: <FiMapPin /> },
-                { title: 'Produk Hukum', path: '/desa/produk-hukum', icon: <FiFileText /> },
-                { title: 'Data Penduduk', path: '/desa/penduduk', icon: <FiUsers /> },
-                { title: 'Laporan', path: '/desa/laporan', icon: <FiFileText /> }
+                { title: 'Data Desa', path: '/kecamatan/data-desa', icon: <FiMapPin /> },
+                { title: 'Laporan Desa', path: '/kecamatan/laporan-desa', icon: <FiFileText /> },
+                { title: 'Program Kecamatan', path: '/kecamatan/program', icon: <FiActivity /> },
+                { title: 'Koordinasi', path: '/kecamatan/koordinasi', icon: <FiUsers /> }
             ]
         };
         setDashboardData(config);
@@ -60,9 +59,9 @@ const DesaDashboard = () => {
             <div className="bg-white rounded-lg shadow-sm border p-6">
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-900">Dashboard Admin Desa</h1>
+                        <h1 className="text-2xl font-bold text-gray-900">Dashboard Admin Kecamatan</h1>
                         <p className="text-gray-600 mt-1">
-                            Selamat datang, {userData?.name || 'Admin Desa'}
+                            Selamat datang, {userData?.name || 'Admin Kecamatan'}
                         </p>
                     </div>
                     <div className="text-right text-sm text-gray-500">
@@ -130,4 +129,4 @@ const DesaDashboard = () => {
     );
 };
 
-export default DesaDashboard;
+export default KecamatanDashboard;

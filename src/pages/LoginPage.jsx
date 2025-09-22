@@ -27,11 +27,13 @@ const LoginPage = () => {
 			// 2. Gunakan fungsi login dari context untuk menyimpan data secara global
 			login(newUser, response.data.access_token);
 
-			// 3. Gunakan variabel 'newUser' untuk membuat keputusan
+			// 3. Routing berdasarkan roles user
 			if (newUser.roles.includes("admin desa")) {
 				navigate("/desa/dashboard"); // Arahkan ke dashboard desa
+			} else if (newUser.roles.includes("bidang") || newUser.roles.includes("superadmin")) {
+				navigate("/dashboard"); // Arahkan ke dashboard admin utama untuk bidang dan superadmin
 			} else {
-				navigate("/dashboard"); // Arahkan ke dashboard admin utama
+				navigate("/dashboard"); // Default ke dashboard utama
 			}
 		} catch (err) {
 			setError(err.response?.data?.message || "Login gagal.");

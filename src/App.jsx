@@ -24,9 +24,11 @@ const UserManagementPage = lazy(() =>
 );
 const Kelembagaan = lazy(() => import("./pages/PMD/Kelembagaan"));
 const BumdesApp = lazy(() => import("./pages/sarpras/Bumdes-app"));
-const BidangLoginPage = lazy(() => import("./pages/bidang/BidangLoginPage"));
+const PerjalananDinas = lazy(() => import("./pages/sarpras/perjadin"));
 const DesaLayout = lazy(() => import("./layouts/DesaLayout"));
 const DesaDashboard = lazy(() => import("./components/desa/DesaDashboard"));
+const KecamatanDashboard = lazy(() => import("./components/kecamatan/KecamatanDashboard"));
+const DinasDashboard = lazy(() => import("./components/dinas/DinasDashboard"));
 const ProdukHukum = lazy(() => import("./pages/desa/ProdukHukum"));
 const ProfilDesaPage = lazy(() => import("./pages/desa/ProfilDesaPage"));
 const ProdukHukumDetail = lazy(() => import("./pages/desa/ProdukHukumDetail"));
@@ -34,10 +36,9 @@ const PublicLayout = lazy(() => import("./layouts/PublicLayout"));
 
 const ProtectedRoute = ({ children }) => {
 	const token = localStorage.getItem("authToken");
-	const bidangToken = localStorage.getItem("bidangAuthToken");
 	const location = useLocation();
 
-	if (!token && !bidangToken) {
+	if (!token) {
 		// Simpan lokasi yang dituju agar bisa redirect kembali setelah login
 		return <Navigate to="/login" state={{ from: location }} replace />;
 	}
@@ -59,7 +60,6 @@ function App() {
 					{/* Rute yang di-load secara statis */}
 					<Route path="/" element={<LandingPage />} />
 					<Route path="/login" element={<LoginPage />} />
-					<Route path="/login/bidang" element={<BidangLoginPage />} />
 
 					{/* Rute Publik dengan lazy loading */}
 					<Route element={<PublicLayout />}>
@@ -80,6 +80,7 @@ function App() {
 						<Route path="hero-gallery" element={<HeroGalleryManagement />} />
 						<Route path="kelembagaan" element={<Kelembagaan />} />
 						<Route path="bumdes" element={<BumdesApp />} />
+						<Route path="perjalanan-dinas" element={<PerjalananDinas />} />
 						{/* Route untuk bidang - akan diarahkan ke dashboard index */}
 						<Route path="sekretariat" element={<Navigate to="/dashboard" replace />} />
 						<Route path="sarana-prasarana" element={<Navigate to="/dashboard" replace />} />
@@ -105,6 +106,20 @@ function App() {
 						{/* Tambahkan rute modul desa lain di sini nanti, contoh: */}
 						{/* <Route path="aparatur" element={<AparaturPage />} /> */}
 					</Route>
+
+					{/* Rute Kecamatan */}
+					<Route path="/kecamatan/dashboard" element={
+						<ProtectedRoute>
+							<KecamatanDashboard />
+						</ProtectedRoute>
+					} />
+
+					{/* Rute Dinas */}
+					<Route path="/dinas/dashboard" element={
+						<ProtectedRoute>
+							<DinasDashboard />
+						</ProtectedRoute>
+					} />
 				</Routes>
 			</Suspense>
 		</Router>

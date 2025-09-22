@@ -20,7 +20,7 @@ import {
 } from "react-icons/fi";
 
 // At the top of your ProfilDesa.jsx file
-import { z } from "zod";
+import { z, ZodError } from "zod";
 
 // Fix ikon default Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
@@ -115,17 +115,24 @@ const ProfilDesa = () => {
 
 	const handleSubmit = async (e) => {
 		e.preventDefault();
+		console.log('=== SUBMIT DEBUG START ===');
+		console.log('Profil data:', profil);
+		
 		setErrors({}); // <-- Bersihkan error lama
 
 		// --- BLOK VALIDASI ---
 		try {
+			console.log('Running validation...');
 			profilSchema.parse(profil); // <-- Jalankan validasi
+			console.log('Validation passed');
 		} catch (error) {
+			console.error('Validation failed:', error);
 			if (error instanceof ZodError) {
 				const formattedErrors = {};
 				error.errors.forEach((err) => {
 					formattedErrors[err.path[0]] = err.message;
 				});
+				console.log('Formatted errors:', formattedErrors);
 				setErrors(formattedErrors); // <-- Simpan error ke state
 				Swal.fire(
 					"Input Tidak Valid",
@@ -137,6 +144,7 @@ const ProfilDesa = () => {
 		}
 		// ----------------------
 
+		console.log('Preparing FormData...');
 		const formData = new FormData();
 		Object.keys(profil).forEach((key) => {
 			if (profil[key] !== null && profil[key] !== undefined) {
@@ -148,16 +156,28 @@ const ProfilDesa = () => {
 			formData.append("foto_kantor_desa", foto);
 		}
 
+		// Log FormData contents
+		console.log('FormData contents:');
+		for (let [key, value] of formData.entries()) {
+			console.log(key, value);
+		}
+
 		try {
-			await api.post("/profil-desa", formData, {
+			console.log('Sending API request...');
+			const response = await api.post("/profil-desa", formData, {
 				headers: { "Content-Type": "multipart/form-data" },
 			});
+			console.log('API response:', response);
 			Swal.fire("Berhasil!", "Profil desa telah diperbarui.", "success");
 			setEditMode(false);
 			fetchProfil();
 		} catch (error) {
-			Swal.fire("Gagal!", "Terjadi kesalahan saat menyimpan.", "error");
+			console.error('API error:', error);
+			console.error('API error response:', error.response);
+			Swal.fire("Gagal!", `Terjadi kesalahan saat menyimpan: ${error.response?.data?.message || error.message}`, "error");
 		}
+		
+		console.log('=== SUBMIT DEBUG END ===');
 	};
 
 	const handleCancel = () => {

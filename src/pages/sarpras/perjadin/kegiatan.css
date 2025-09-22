@@ -1,0 +1,922 @@
+/* src/kegiatan.css */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+
+/* --- Variable Warna Global --- */
+:root {
+  --color-primary: #030f31;
+  --color-secondary: #f97316;
+  --color-success: #22c55e;
+  --color-danger: #ef4444;
+  --color-dark: #1f2937;
+  --color-text: #4b5563;
+  --color-background: #f9f7f7;
+  --color-card-bg: #ffffff;
+  --color-light-blue: #eff6ff;
+  --color-light-gray: #e5e7eb;
+}
+
+/* --- Base Styles dan Utilities --- */
+body {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--color-background);
+  color: var(--color-text);
+}
+
+.custom-container {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .custom-container {
+    padding: 2rem;
+  }
+}
+
+/* Animasi */
+.fade-in { animation: fadeIn 0.5s ease-in-out forwards; opacity: 0; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.fade-in-up { animation: fadeInUp 0.5s ease-out forwards; opacity: 0; transform: translateY(20px); }
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+.fade-out-down { animation: fadeOutDown 0.5s ease-in forwards; opacity: 1; transform: translateY(0); }
+@keyframes fadeOutDown { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(20px); } }
+
+.fade-out-down-hidden {
+  opacity: 0;
+  transform: translateY(20px);
+  pointer-events: none;
+  visibility: hidden;
+  transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out, visibility 0s 0.5s;
+}
+
+/* Judul dan Pembagi */
+.list-heading,
+.dashboard-heading,
+.weekly-schedule-heading {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  color: var(--color-dark);
+}
+
+.section-divider {
+  border: none;
+  border-top: 1px solid var(--color-light-gray);
+  margin: 2rem 0;
+}
+
+/* Card Style dasar yang dapat digunakan kembali */
+.base-card {
+  background-color: var(--color-card-bg);
+  padding: 2rem;
+  border-radius: 1rem;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.05);
+}
+
+/* Tombol Dasar */
+.btn-base {
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.75rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease-in-out;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-base:hover { transform: translateY(-2px); }
+.btn-base i { margin-right: 0.5rem; }
+
+/* --- Gaya Tombol Utama --- */
+.btn-primary,
+.btn-export-excel,
+.btn-edit,
+.btn-delete,
+.btn-submit,
+.btn-cancel,
+.btn-add-personil {
+    /* Gaya dasar yang sama untuk semua tombol */
+    border-radius: 0.75rem;
+    text-align: center;
+    text-decoration: none;
+    padding: 0.90rem 1rem;
+    font-size: 13.5px;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease; /* Animasi transisi yang halus */
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.btn-primary:hover,
+.btn-export-excel:hover,
+.btn-edit:hover,
+.btn-delete:hover,
+.btn-submit:hover,
+.btn-cancel:hover,
+.btn-add-personil:hover {
+    transform: translateY(-2px); /* Animasi naik saat dihover */
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* --- Tombol dengan Warna dan Margin Spesifik --- */
+.btn-primary { 
+    background-color: var(--color-primary); 
+    color: white; 
+    margin-top: 5vh; 
+}
+.btn-primary:hover { 
+    background-color: #020b27; 
+}
+
+.btn-export-excel { 
+    background-color: rgb(0, 81, 0); 
+    color: white; 
+    margin-top: 5vh; 
+}
+.btn-export-excel:hover { 
+    background-color: #005a00; 
+}
+
+.btn-edit { 
+    background-color: #005a00; 
+    color: white; 
+    margin-right: 2vh; 
+}
+.btn-edit:hover { 
+    background-color:#048004; 
+}
+
+.btn-delete { 
+    background-color: var(--color-danger); 
+    color: white;
+}
+.btn-delete:hover { 
+    background-color: #dc2626; 
+}
+
+.btn-submit { 
+    background-color: #005a00; 
+    color: white; 
+}
+.btn-submit:hover { 
+    background-color: #048004; 
+}
+
+.btn-cancel { 
+    background-color: var(--color-danger); 
+    color: white;
+}
+.btn-cancel:hover { 
+    background-color: #dc2626; 
+}
+
+.btn-add-personil { 
+    background-color: var(--color-primary); 
+    color: white; 
+    width: 20%; 
+    margin-top: 1rem;
+}
+.btn-add-personil:hover { 
+    background-color: #1c3988; 
+}
+
+/* --- Penyesuaian Ikon --- */
+.btn-primary i,
+.btn-export-excel i,
+.btn-edit i,
+.btn-delete i,
+.btn-add-personil i {
+    margin-right: 0.5rem;
+}
+
+/* --- Responsivitas untuk Tombol --- */
+@media (max-width: 768px) {
+    .btn-add-personil {
+        width: 100%; /* Tombol mengisi penuh layar di perangkat kecil */
+        margin-top: 1rem;
+        margin-bottom: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .btn-primary,
+    .btn-export-excel {
+        margin-top: 2vh; /* Mengurangi margin vertikal */
+    }
+
+    .btn-edit,
+    .btn-delete {
+        width: 100%; /* Tombol edit/hapus menjadi lebar penuh */
+        margin-right: 0;
+        margin-bottom: 1vh;
+    }
+}
+
+/* --- Dashboard Component --- */
+.dashboard-summary-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+@media (min-width: 768px) {
+  .dashboard-summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (min-width: 1024px) {
+  .dashboard-summary-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.dashboard-card {
+  background-color: var(--color-light-blue);
+  color: var(--color-primary);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.05);
+  transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 1.5rem;
+  border-radius: 1rem;
+}
+.dashboard-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 20px rgba(0, 0, 0, 0.1);
+}
+
+.dashboard-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.dashboard-card-icon {
+  font-size: 1.75rem;
+}
+
+.dashboard-card-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.dashboard-card-value {
+  font-size: 2.5rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--color-dark);
+}
+@media (min-width: 768px) {
+  .dashboard-card-value {
+    font-size: 3rem;
+  }
+}
+
+.dashboard-card-label {
+  font-size: 0.875rem;
+  color: var(--color-text);
+  font-weight: 600;
+  margin-top: 0.25rem;
+  text-align: center;
+}
+
+.dashboard-bidang-card {
+  background-color: var(--color-card-bg);
+  padding: 2rem;
+  border-radius: 1rem;
+  color: var(--color-dark);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.05);
+}
+@media (min-width: 768px) {
+  .dashboard-bidang-card {
+    grid-column: span 2 / span 2;
+  }
+}
+@media (min-width: 1024px) {
+  .dashboard-bidang-card {
+    grid-column: span 1 / span 1;
+  }
+}
+
+.dashboard-bidang-header {
+  font-size: 1.25rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+.dashboard-bidang-header i {
+  color: var(--color-secondary);
+}
+
+.dashboard-bidang-list {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.dashboard-bidang-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background-color: var(--color-background);
+  border-radius: 0.75rem;
+  transition: all 0.3s ease-in-out;
+  cursor: pointer;
+}
+.dashboard-bidang-item:hover {
+  background-color: var(--color-light-blue);
+  color: var(--color-primary);
+}
+@media (min-width: 500px) {
+  .dashboard-bidang-item {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+
+}
+
+.dashboard-bidang-item span {
+  font-weight: 700;
+  color: var(--color-dark);
+  background-color: var(--color-light-gray);
+  padding: 0.25rem 0.75rem;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+}
+
+/* --- Weekly Schedule Component --- */
+.weekly-schedule-container {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+}
+@media (min-width: 1024px) {
+  .weekly-schedule-container {
+    grid-template-columns: 1fr 2fr;
+  }
+}
+
+.calendar-card {
+  background-color: var(--color-card-bg);
+  border-radius: 1rem;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+  padding: 1.5rem;
+}
+
+.activity-card-container {
+  background-color: var(--color-card-bg);
+  border-radius: 1rem;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+  position: relative;
+  padding: 1.5rem;
+  overflow: hidden;
+}
+@media (min-width: 768px) {
+  .activity-card-container {
+    padding: 2rem;
+  }
+}
+@media (min-width: 1024px) {
+  .activity-card-container {
+    padding: 5rem;
+  }
+}
+
+.calendar-header,
+.activity-card-header {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-dark);
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.calendar-header i { color: var(--color-primary); }
+.activity-card-header i { color: var(--color-success); }
+
+.calendar-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.calendar-day-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  transition: all 0.3s ease-in-out;
+  border: 1px solid var(--color-light-gray);
+}
+.calendar-day-item:hover {
+  background-color: var(--color-background);
+  transform: translateY(-2px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+.calendar-day-item.active {
+  background-color: var(--color-light-blue);
+  border: 1px solid var(--color-primary);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+.nav-buttons-container{
+  margin-top: 5vh;
+}
+.calendar-day-info {
+  display: flex;
+  flex-direction: column;
+}
+.day-name { font-weight: 700; color: var(--color-dark); }
+.day-date-text { font-size: 0.85rem; color: var(--color-text); }
+
+.calendar-day-count {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  padding: 0.25rem 0.75rem;
+  background-color: #dbeafe;
+  border-radius: 0.75rem;
+}
+
+/* src/kegiatan.css */
+
+/* --- Bagian Carousel dan Detail Aktivitas --- */
+
+/* Gaya Default (Fokus Desktop & Tablet) */
+
+/* Wrapper */
+.activity-carousel-wrapper {
+  position: relative;
+  min-height: 250px;
+}
+
+/* Card Aktivitas */
+.activity-card-new {
+  width: 80%; /* Lebar yang lebih kecil untuk desktop agar terlihat lebih terpusat */
+  margin: auto; /* Memastikan card berada di tengah horizontal */
+  padding: 3rem; /* Padding lebih besar untuk desktop */
+  background-color: rgb(241, 244, 250);
+  border-radius: 1rem;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+  transition: all 0.5s ease-in-out;
+}
+
+.activity-card-new.fade-in-up {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Judul Card */
+.activity-card-new h5 {
+  font-weight: 700;
+  font-size: 1.7rem; /* Ukuran default untuk desktop */
+  color: var(--color-dark);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Lokasi */
+.activity-card-new p.location {
+  font-size: 1rem; /* Ukuran default untuk desktop */
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+/* Detail Aktivitas */
+.activity-card-details {
+  margin-top: 1rem;
+  border-top: 1px solid var(--color-light-gray);
+  padding-top: 1rem;
+}
+
+.activity-card-detail-item {
+  margin-bottom: 0.75rem;
+}
+.activity-card-detail-item:last-child {
+  margin-bottom: 0;
+}
+
+.activity-card-detail-item span {
+  font-weight: 700;
+  color: var(--color-dark);
+  display: block;
+  font-size: 0.95rem; /* Ukuran default untuk desktop */
+}
+
+.activity-card-detail-item ul {
+  list-style-type: none;
+  padding-left: 0;
+  margin-top: 0.5rem;
+}
+
+.activity-card-detail-item li {
+  color: var(--color-text);
+  font-size: 1rem; /* Ukuran default untuk desktop */
+  position: relative;
+  padding-left: 1.25rem;
+}
+.activity-card-detail-item li::before {
+  content: '•';
+  color: var(--color-primary);
+  font-weight: bold;
+  display: inline-block;
+  width: 1em;
+  margin-left: -1.25em;
+  position: absolute;
+}
+
+/* Dots Carousel */
+.carousel-dots {
+  display: flex;
+  justify-content: center;
+  margin-top: 2rem;
+}
+
+.dot {
+  height: 10px;
+  width: 10px;
+  margin: 0 6px;
+  border-radius: 50%;
+  background-color: var(--color-light-gray);
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+.dot.active {
+  background-color: var(--color-primary);
+}
+
+.no-activity-message {
+  color: var(--color-text);
+  text-align: center;
+  padding: 2rem 0;
+}
+
+
+/* Media Query untuk Perangkat Ponsel (max-width: 767px) */
+@media (max-width: 767px) {
+  .activity-card-new {
+    width: 100%; /* Mengisi lebar penuh layar */
+    padding: 1.5rem; /* Mengurangi padding agar tidak terlalu besar */
+    box-sizing: border-box; /* Penting agar padding tidak membuat elemen melebihi 100% */
+  }
+
+  .activity-card-new h5 {
+    font-size: 1.5rem; /* Mengurangi ukuran judul */
+  }
+
+  .activity-card-new p.location {
+    font-size: 0.95rem; /* Mengurangi ukuran font lokasi */
+  }
+
+  .activity-card-detail-item span {
+    font-size: 0.9rem; /* Mengurangi ukuran font detail */
+  }
+
+  .activity-card-detail-item li {
+    font-size: 0.9rem; /* Mengurangi ukuran font daftar */
+  }
+}
+/* --- KegiatanList & KegiatanForm Components --- */
+.action-buttons-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+@media (min-width: 768px) {
+  .action-buttons-container {
+    flex-direction: row;
+    justify-content: flex-end;
+    align-items: center;
+  }
+}
+
+.btn-primary, .btn-export-excel {
+  min-width: 100%;
+}
+@media (min-width: 768px) {
+  .btn-primary, .btn-export-excel {
+    min-width: 180px;
+  }
+}
+
+.form-container {
+  background-color: var(--color-card-bg);
+  padding: 1.5rem;
+  border-radius: 1rem;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+  margin-bottom: 2.5rem;
+}
+.form-container.hidden {
+  display: none;
+}
+@media (min-width: 768px) {
+  .form-container {
+    padding: 2rem;
+  }
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-label {
+  display: block;
+  font-weight: 600;
+  color: var(--color-dark);
+  margin-bottom: 0.75rem;
+  font-size: 0.95rem;
+}
+
+.form-input, .form-select, .form-textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--color-light-gray);
+  border-radius: 0.75rem;
+  font-size: 1rem;
+  color: var(--color-text);
+  transition: all 0.3s ease-in-out;
+  box-sizing: border-box;
+}
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+  outline: none;
+}
+.form-textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.form-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+@media (min-width: 500px) {
+  .form-actions {
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+}
+
+.form-bidang-group {
+  background-color: #f9fafb;
+  padding: 1.5rem;
+  border-radius: 1rem;
+  border: 1px solid var(--color-light-gray);
+  position: relative;
+  margin-bottom: 1rem;
+}
+.form-bidang-group .btn-remove-bidang {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background-color: transparent;
+  color: var(--color-danger);
+  border: none;
+  cursor: pointer;
+  font-size: 1.25rem;
+  transition: transform 0.2s;
+}
+.form-bidang-group .btn-remove-bidang:hover {
+  transform: scale(1.1);
+}
+
+.personil-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.personil-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.btn-remove-personil {
+  background-color: var(--color-danger);
+  color: white;
+  font-weight: 600;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  transition: all 0.3s ease-in-out;
+  border: none;
+  cursor: pointer;
+}
+.btn-remove-personil:hover {
+  background-color: #dc2626;
+  transform: translateY(-2px);
+}
+
+.list-card {
+  background-color: var(--color-card-bg);
+  padding: 1.5rem;
+  border-radius: 1rem;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+}
+
+/* Filter dan Search */
+.filter-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+@media (min-width: 768px) {
+  .filter-controls {
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 1.5rem;
+  }
+}
+
+.search-input-wrapper,
+.filter-select-wrapper {
+  position: relative;
+  flex-grow: 1;
+  width: 100%;
+}
+@media (min-width: 768px) {
+  .search-input-wrapper { max-width: 300px; }
+  .filter-select-wrapper { max-width: 250px; }
+}
+
+.input-icon {
+  position: absolute;
+  top: 50%;
+  left: 0.75rem;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  color: var(--color-text);
+  font-size: 1rem;
+  pointer-events: none;
+}
+
+.search-input,
+.filter-select {
+  width: 100%;
+  padding: 0.75rem 1rem 0.75rem 2.5rem;
+  border: 1px solid var(--color-light-gray);
+  border-radius: 0.75rem;
+  font-size: 1rem;
+  color: var(--color-dark);
+  transition: all 0.3s ease-in-out;
+}
+.search-input:focus, .filter-select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+}
+
+/* Tabel */
+.table-wrapper {
+  overflow-x: auto;
+  border-radius: 1rem;
+  border: 1px solid var(--color-light-gray);
+  box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.05);
+}
+
+.data-table {
+  width: 100%;
+  min-width: 600px;
+  border-collapse: separate;
+  border-spacing: 0;
+  text-align: left;
+  background-color: var(--color-card-bg);
+}
+
+.data-table th,
+.data-table td {
+  padding: 1.25rem 1rem;
+  font-size: 0.875rem;
+  color: var(--color-dark);
+}
+@media (min-width: 768px) {
+  .data-table th, .data-table td {
+    padding: 1.25rem 1.5rem;
+    font-size: 0.95rem;
+  }
+}
+
+.data-table th {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background-color: #7784ab;
+  color: white;
+  border-bottom: 1px solid #1c3988;
+}
+.data-table th:first-child { border-top-left-radius: 1rem; }
+.data-table th:last-child { border-top-right-radius: 1rem; }
+@media (min-width: 768px) {
+  .data-table th {
+    font-size: 0.8rem;
+  }
+}
+
+.data-table td {
+  border-bottom: 1px solid var(--color-light-gray);
+}
+.data-table tr:last-child td {
+  border-bottom: none;
+}
+.data-table tbody tr:hover {
+  background-color: #f9fafb;
+  transition: background-color 0.2s ease-in-out;
+}
+
+.personil-cell {
+  max-width: 300px;
+  white-space: normal;
+  word-wrap: break-word;
+}
+.personil-cell ul {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 0 0;
+}
+.personil-cell li {
+  font-size: 0.875rem;
+  color: var(--color-text);
+}
+.personil-cell strong {
+  display: block;
+}
+
+.actions-cell {
+  white-space: nowrap;
+}
+
+/* Penyesuaian Pagination */
+.pagination-controls {
+  margin-top: 1.5rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.pagination-button {
+  padding: 0.4rem 0.8rem;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  transition: all 0.3s ease-in-out;
+  border: none;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+.pagination-button.active {
+  background-color: var(--color-primary);
+  color: white;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+.pagination-button:not(.active) {
+  background-color: var(--color-light-gray);
+  color: var(--color-text);
+}
+.pagination-button:not(.active):hover {
+  background-color: #d1d5db;
+}
+
+.empty-table-message {
+  text-align: center;
+  padding: 2rem;
+  color: var(--color-text);
+  font-style: italic;
+}

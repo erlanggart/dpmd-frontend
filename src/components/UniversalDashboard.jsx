@@ -7,7 +7,9 @@ import {
     FiTrendingUp,
     FiCalendar,
     FiMapPin,
-    FiActivity
+    FiActivity,
+    FiHome,
+    FiUserCheck
 } from 'react-icons/fi';
 import { 
     TbBuildingBank, 
@@ -26,31 +28,101 @@ const UniversalDashboard = () => {
     });
 
     useEffect(() => {
-        // Deteksi user dan role
+        // Deteksi user dan role - HANYA untuk role bidang tertentu
         const storedUser = localStorage.getItem("user");
-        const bidangUserData = localStorage.getItem("bidangUserData");
         
-        if (bidangUserData) {
-            const bidangUser = JSON.parse(bidangUserData);
-            setUserRole(bidangUser.role);
-            setUserData(bidangUser);
-        } else if (storedUser) {
+        console.log('=== UNIVERSAL DASHBOARD DEBUG ===');
+        console.log('storedUser:', storedUser);
+        
+        if (storedUser) {
             const regularUser = JSON.parse(storedUser);
-            setUserRole(regularUser.roles[0]); // ambil role pertama
-            setUserData(regularUser);
+            console.log('regularUser:', regularUser);
+            console.log('regularUser.role:', regularUser.role);
+            console.log('regularUser.bidangRole:', regularUser.bidangRole);
+            
+            // Daftar role yang BOLEH menggunakan UniversalDashboard
+            const allowedRoles = [
+                'superadmin', 
+                'sekretariat', 
+                'sarana_prasarana', 
+                'kekayaan_keuangan', 
+                'pemberdayaan_masyarakat', 
+                'pemerintahan_desa'
+            ];
+            
+            let detectedRole = null;
+            
+            // Cek bidangRole dulu (untuk user bidang)
+            if (regularUser.bidangRole && allowedRoles.includes(regularUser.bidangRole)) {
+                detectedRole = regularUser.bidangRole;
+            } 
+            // Cek role biasa (untuk superadmin)
+            else if (regularUser.role && allowedRoles.includes(regularUser.role)) {
+                detectedRole = regularUser.role;
+            }
+            
+            if (detectedRole) {
+                setUserRole(detectedRole);
+                setUserData(regularUser);
+                console.log('Setting allowed role for UniversalDashboard:', detectedRole);
+            } else {
+                console.log('Role not allowed for UniversalDashboard, redirecting...');
+                // Redirect ke dashboard yang sesuai
+                if (regularUser.role === 'desa') {
+                    window.location.href = '/desa/dashboard';
+                } else if (regularUser.role === 'kecamatan') {
+                    window.location.href = '/kecamatan/dashboard';
+                } else if (regularUser.role === 'dinas') {
+                    window.location.href = '/dinas/dashboard';
+                } else {
+                    window.location.href = '/login';
+                }
+            }
+        } else {
+            console.log('No user data found, redirecting to login');
+            window.location.href = '/login';
         }
+        console.log('=== END UNIVERSAL DASHBOARD DEBUG ===');
     }, []);
 
     useEffect(() => {
         if (userRole) {
-            loadDashboardData(userRole);
+            loadDashboardData();
         }
     }, [userRole]);
 
-    const loadDashboardData = (role) => {
+    // Tambahan useEffect untuk debug role changes
+    useEffect(() => {
+        console.log('=== ROLE CHANGED ===');
+        console.log('userRole now:', userRole);
+        console.log('userData now:', userData);
+    }, [userRole, userData]);
+
+    const loadDashboardData = async () => {
         const dashboardConfigs = {
             'superadmin': {
                 title: 'Dashboard Super Admin',
+                stats: [
+                    { title: 'Total Desa', value: '416', icon: <FiMapPin />, color: 'bg-blue-500' },
+                    { title: 'Total User', value: '1,250', icon: <FiUsers />, color: 'bg-green-500' },
+                    { title: 'Dokumen', value: '3,420', icon: <FiFileText />, color: 'bg-purple-500' },
+                    { title: 'Anggaran', value: 'Rp 15.2M', icon: <FiDollarSign />, color: 'bg-yellow-500' }
+                ],
+                recentActivities: [
+                    'User baru didaftarkan: Admin Desa Ciawi',
+                    'Dokumen APBDes Desa Sukamaju telah diupload',
+                    'Data BUMDes Desa Bojong telah diperbarui',
+                    'Laporan bulanan telah digenerate'
+                ],
+                quickActions: [
+                    { title: 'Kelola User', path: '/dashboard/users', icon: <FiUsers /> },
+                    { title: 'Hero Gallery', path: '/dashboard/hero-gallery', icon: <FiGrid /> },
+                    { title: 'Kelembagaan', path: '/dashboard/kelembagaan', icon: <TbUserPentagon /> },
+                    { title: 'Data BUMDes', path: '/dashboard/bumdes', icon: <TbBuildingBank /> }
+                ]
+            },
+            'admin': {
+                title: 'Dashboard Admin',
                 stats: [
                     { title: 'Total Desa', value: '416', icon: <FiMapPin />, color: 'bg-blue-500' },
                     { title: 'Total User', value: '1,250', icon: <FiUsers />, color: 'bg-green-500' },
@@ -174,21 +246,91 @@ const UniversalDashboard = () => {
                     { title: 'Kelembagaan', path: '/dashboard/kelembagaan', icon: <TbUserPentagon /> },
                     { title: 'Hero Gallery', path: '/dashboard/hero-gallery', icon: <FiGrid /> }
                 ]
+            },
+            // Dashboard untuk Admin Desa
+            'admin_desa': {
+                title: 'Dashboard Admin Desa',
+                stats: [
+                    { title: 'Jumlah RW', value: '12', icon: <FiMapPin />, color: 'bg-blue-500' },
+                    { title: 'Jumlah RT', value: '48', icon: <FiHome />, color: 'bg-green-500' },
+                    { title: 'Penduduk', value: '3,245', icon: <FiUsers />, color: 'bg-purple-500' },
+                    { title: 'Dana Desa', value: 'Rp 850M', icon: <FiDollarSign />, color: 'bg-yellow-500' }
+                ],
+                recentActivities: [
+                    'Data kependudukan telah diperbarui',
+                    'Laporan bulanan telah dikirim ke kecamatan',
+                    'Rapat BPD terlaksana dengan baik',
+                    'Pelayanan administratif berjalan lancar'
+                ],
+                quickActions: [
+                    { title: 'Profil Desa', path: '/dashboard/profil-desa', icon: <FiMapPin /> },
+                    { title: 'Data Penduduk', path: '/dashboard/penduduk', icon: <FiUsers /> },
+                    { title: 'Aparatur Desa', path: '/dashboard/aparatur-desa', icon: <FiUsers /> },
+                    { title: 'Laporan', path: '/dashboard/laporan-desa', icon: <FiFileText /> }
+                ]
+            },
+            // Dashboard untuk Admin Kecamatan
+            'admin_kecamatan': {
+                title: 'Dashboard Admin Kecamatan',
+                stats: [
+                    { title: 'Jumlah Desa', value: '15', icon: <FiMapPin />, color: 'bg-blue-500' },
+                    { title: 'Total Penduduk', value: '45,678', icon: <FiUsers />, color: 'bg-green-500' },
+                    { title: 'Aparatur', value: '234', icon: <FiUserCheck />, color: 'bg-purple-500' },
+                    { title: 'Program Aktif', value: '28', icon: <FiActivity />, color: 'bg-yellow-500' }
+                ],
+                recentActivities: [
+                    'Koordinasi dengan 15 desa se-kecamatan',
+                    'Laporan bulanan telah dikirim ke kabupaten',
+                    'Program pemberdayaan masyarakat berjalan',
+                    'Monitoring pembangunan infrastruktur'
+                ],
+                quickActions: [
+                    { title: 'Data Desa', path: '/dashboard/data-desa', icon: <FiMapPin /> },
+                    { title: 'Laporan Desa', path: '/dashboard/laporan-desa', icon: <FiFileText /> },
+                    { title: 'Program Kecamatan', path: '/dashboard/program-kecamatan', icon: <FiActivity /> },
+                    { title: 'Koordinasi', path: '/dashboard/koordinasi', icon: <FiUsers /> }
+                ]
+            },
+            // Dashboard untuk Admin Dinas
+            'admin_dinas': {
+                title: 'Dashboard Admin Dinas',
+                stats: [
+                    { title: 'Kecamatan', value: '28', icon: <FiMapPin />, color: 'bg-blue-500' },
+                    { title: 'Total Desa', value: '416', icon: <FiHome />, color: 'bg-green-500' },
+                    { title: 'Pegawai Dinas', value: '156', icon: <FiUsers />, color: 'bg-purple-500' },
+                    { title: 'Anggaran', value: 'Rp 125M', icon: <FiDollarSign />, color: 'bg-yellow-500' }
+                ],
+                recentActivities: [
+                    'Koordinasi dengan seluruh kecamatan',
+                    'Laporan triwulan telah diselesaikan',
+                    'Program strategis tahun ini berjalan sesuai target',
+                    'Evaluasi kinerja kecamatan dan desa'
+                ],
+                quickActions: [
+                    { title: 'Monitoring Kecamatan', path: '/dashboard/monitoring-kecamatan', icon: <FiMapPin /> },
+                    { title: 'Data Desa', path: '/dashboard/data-desa', icon: <FiHome /> },
+                    { title: 'Laporan Strategis', path: '/dashboard/laporan-strategis', icon: <FiFileText /> },
+                    { title: 'Program Dinas', path: '/dashboard/program-dinas', icon: <FiActivity /> }
+                ]
             }
         };
 
-        const config = dashboardConfigs[role] || dashboardConfigs['superadmin'];
+        const config = dashboardConfigs[userRole] || dashboardConfigs['superadmin'];
         setDashboardData(config);
     };
 
     const getRoleBadgeColor = (role) => {
         const colors = {
             'superadmin': 'bg-red-100 text-red-800',
+            'admin': 'bg-red-100 text-red-800',
             'sekretariat': 'bg-blue-100 text-blue-800',
             'sarana_prasarana': 'bg-green-100 text-green-800',
             'kekayaan_keuangan': 'bg-yellow-100 text-yellow-800',
             'pemberdayaan_masyarakat': 'bg-purple-100 text-purple-800',
-            'pemerintahan_desa': 'bg-indigo-100 text-indigo-800'
+            'pemerintahan_desa': 'bg-indigo-100 text-indigo-800',
+            'admin_desa': 'bg-cyan-100 text-cyan-800',
+            'admin_kecamatan': 'bg-teal-100 text-teal-800',
+            'admin_dinas': 'bg-pink-100 text-pink-800'
         };
         return colors[role] || 'bg-gray-100 text-gray-800';
     };
@@ -216,9 +358,7 @@ const UniversalDashboard = () => {
                         </p>
                     </div>
                     <div className="flex items-center space-x-3">
-                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${getRoleBadgeColor(userRole)}`}>
-                            {userRole.replace('_', ' ').toUpperCase()}
-                        </span>
+                    
                         <div className="text-right text-sm text-gray-500">
                             {new Date().toLocaleDateString('id-ID', { 
                                 weekday: 'long', 
