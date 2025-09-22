@@ -113,8 +113,25 @@ const MainLayout = () => {
 
 	useEffect(() => {
 		const storedUser = localStorage.getItem("user");
+		const bidangUserData = localStorage.getItem("bidangUserData");
+		
+		console.log('MainLayout: storedUser =', storedUser);
+		console.log('MainLayout: bidangUserData =', bidangUserData);
+		
 		if (storedUser) {
-			setUser(JSON.parse(storedUser));
+			const userData = JSON.parse(storedUser);
+			console.log('MainLayout: Setting regular user =', userData);
+			setUser(userData);
+		} else if (bidangUserData) {
+			// Set user bidang sebagai user untuk sidebar
+			const bidangUser = JSON.parse(bidangUserData);
+			const userForSidebar = {
+				name: bidangUser.name,
+				roles: ['bidang'],
+				bidangRole: bidangUser.role
+			};
+			console.log('MainLayout: Setting bidang user =', userForSidebar);
+			setUser(userForSidebar);
 		}
 	}, []);
 
@@ -131,6 +148,7 @@ const MainLayout = () => {
 	const handleLogout = () => {
 		localStorage.removeItem("authToken");
 		localStorage.removeItem("user");
+		localStorage.removeItem("bidangUserData");
 		navigate("/login");
 	};
 
@@ -295,7 +313,13 @@ const MainLayout = () => {
 					))}
 
 					{/* Render Menu Admin */}
-					{user?.roles.includes("superadmin") && (
+					{(() => {
+						const shouldShowAdmin = user?.roles.includes("superadmin") || user?.roles.includes("bidang");
+						console.log('MainLayout: user =', user);
+						console.log('MainLayout: user.roles =', user?.roles);
+						console.log('MainLayout: shouldShowAdmin =', shouldShowAdmin);
+						return shouldShowAdmin;
+					})() && (
 						<>
 							<div className="pt-2 my-2 border-t border-slate-200"></div>
 							{adminMenuItems.map((item) => (
@@ -336,6 +360,11 @@ const MainLayout = () => {
 							</button>
 							<span className="mr-4 text-gray-700">
 								Halo, <span className="font-semibold">{user?.name}</span>
+								{user?.bidangRole && (
+									<span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+										{user.bidangRole.replace('_', ' ').toUpperCase()}
+									</span>
+								)}
 							</span>
 						</div>
 
@@ -368,7 +397,7 @@ const MainLayout = () => {
 				<SearchPalette
 					menuItems={menuItems}
 					adminMenuItems={
-						user?.roles.includes("superadmin") ? adminMenuItems : []
+						(user?.roles.includes("superadmin") || user?.roles.includes("bidang")) ? adminMenuItems : []
 					}
 					closePalette={() => setSearchOpen(false)}
 				/>

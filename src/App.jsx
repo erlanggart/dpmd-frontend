@@ -23,6 +23,8 @@ const UserManagementPage = lazy(() =>
 	import("./pages/dashboard/UserManagementPage")
 );
 const Kelembagaan = lazy(() => import("./pages/PMD/Kelembagaan"));
+const BumdesApp = lazy(() => import("./pages/sarpras/Bumdes-app"));
+const BidangLoginPage = lazy(() => import("./pages/bidang/BidangLoginPage"));
 const DesaLayout = lazy(() => import("./layouts/DesaLayout"));
 const DesaDashboard = lazy(() => import("./components/desa/DesaDashboard"));
 const ProdukHukum = lazy(() => import("./pages/desa/ProdukHukum"));
@@ -32,9 +34,10 @@ const PublicLayout = lazy(() => import("./layouts/PublicLayout"));
 
 const ProtectedRoute = ({ children }) => {
 	const token = localStorage.getItem("authToken");
+	const bidangToken = localStorage.getItem("bidangAuthToken");
 	const location = useLocation();
 
-	if (!token) {
+	if (!token && !bidangToken) {
 		// Simpan lokasi yang dituju agar bisa redirect kembali setelah login
 		return <Navigate to="/login" state={{ from: location }} replace />;
 	}
@@ -56,6 +59,7 @@ function App() {
 					{/* Rute yang di-load secara statis */}
 					<Route path="/" element={<LandingPage />} />
 					<Route path="/login" element={<LoginPage />} />
+					<Route path="/login/bidang" element={<BidangLoginPage />} />
 
 					{/* Rute Publik dengan lazy loading */}
 					<Route element={<PublicLayout />}>
@@ -75,6 +79,13 @@ function App() {
 						<Route path="users" element={<UserManagementPage />} />
 						<Route path="hero-gallery" element={<HeroGalleryManagement />} />
 						<Route path="kelembagaan" element={<Kelembagaan />} />
+						<Route path="bumdes" element={<BumdesApp />} />
+						{/* Route untuk bidang - akan diarahkan ke dashboard index */}
+						<Route path="sekretariat" element={<Navigate to="/dashboard" replace />} />
+						<Route path="sarana-prasarana" element={<Navigate to="/dashboard" replace />} />
+						<Route path="kekayaan-keuangan" element={<Navigate to="/dashboard" replace />} />
+						<Route path="pemberdayaan-masyarakat" element={<Navigate to="/dashboard" replace />} />
+						<Route path="pemerintahan-desa" element={<Navigate to="/dashboard" replace />} />
 						{/* Tambahkan rute admin lainnya di sini */}
 					</Route>
 
