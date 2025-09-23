@@ -26,10 +26,10 @@ const SubMenu = ({ item, openMenu, toggleMenu, isMinimized }) => {
 	const location = useLocation();
 	const isOpen = openMenu === item.key;
 
-	// Cek apakah salah satu submenu aktif
-	const isChildActive = item.children.some((child) =>
-		location.pathname.startsWith(child.to)
-	);
+	// Cek apakah salah satu submenu aktif - logika yang disederhanakan
+	const isChildActive = item.children.some((child) => {
+		return location.pathname.startsWith(child.to);
+	});
 
 	return (
 		<div>
@@ -37,11 +37,7 @@ const SubMenu = ({ item, openMenu, toggleMenu, isMinimized }) => {
 				onClick={() => !isMinimized && toggleMenu(item.key)}
 				className={`flex w-full items-center p-3 rounded-lg transition-colors ${
 					isMinimized ? "justify-center" : "justify-between"
-				} ${
-					isChildActive && !isMinimized
-						? "bg-gray-100 text-primary font-semibold"
-						: "text-gray-600 hover:bg-gray-100"
-				}`}
+				} text-gray-600 hover:bg-gray-100`}
 				disabled={isMinimized}
 			>
 				<div className="flex items-center">
@@ -75,7 +71,7 @@ const SubMenu = ({ item, openMenu, toggleMenu, isMinimized }) => {
 							className={({ isActive }) =>
 								`py-2 px-3 text-sm rounded-md transition-colors ${
 									isActive
-										? "bg-primary text-white font-semibold"
+										? "sidebar-active font-semibold"
 										: "text-gray-500 hover:bg-gray-100 hover:text-primary"
 								}`
 							}
@@ -315,7 +311,7 @@ const MainLayout = () => {
 								isSidebarMinimized ? "justify-center" : ""
 							} ${
 								isActive
-									? "bg-primary text-white font-semibold"
+									? "sidebar-active font-semibold"
 									: "text-gray-600 hover:bg-gray-100"
 							}`
 						}

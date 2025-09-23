@@ -17,30 +17,30 @@ import {
     TbMap, 
     TbUserPentagon 
 } from 'react-icons/tb';
+import AnimatedCounter from '../components/AnimatedCounter'; // Import komponen AnimatedCounter yang baru
 
 const UniversalDashboard = () => {
     const [userRole, setUserRole] = useState(null);
     const [userData, setUserData] = useState(null);
     const [dashboardData, setDashboardData] = useState({
+        title: '', // Tambahkan default title
         stats: [],
         recentActivities: [],
         quickActions: []
     });
 
     useEffect(() => {
-        // Deteksi user dan role - HANYA untuk role bidang tertentu
         const storedUser = localStorage.getItem("user");
         
-        console.log('=== UNIVERSAL DASHBOARD DEBUG ===');
-        console.log('storedUser:', storedUser);
+        // console.log('=== UNIVERSAL DASHBOARD DEBUG ===');
+        // console.log('storedUser:', storedUser);
         
         if (storedUser) {
             const regularUser = JSON.parse(storedUser);
-            console.log('regularUser:', regularUser);
-            console.log('regularUser.role:', regularUser.role);
-            console.log('regularUser.bidangRole:', regularUser.bidangRole);
+            // console.log('regularUser:', regularUser);
+            // console.log('regularUser.role:', regularUser.role);
+            // console.log('regularUser.bidangRole:', regularUser.bidangRole);
             
-            // Daftar role yang BOLEH menggunakan UniversalDashboard
             const allowedRoles = [
                 'superadmin', 
                 'sekretariat', 
@@ -52,11 +52,9 @@ const UniversalDashboard = () => {
             
             let detectedRole = null;
             
-            // Cek bidangRole dulu (untuk user bidang)
             if (regularUser.bidangRole && allowedRoles.includes(regularUser.bidangRole)) {
                 detectedRole = regularUser.bidangRole;
             } 
-            // Cek role biasa (untuk superadmin)
             else if (regularUser.role && allowedRoles.includes(regularUser.role)) {
                 detectedRole = regularUser.role;
             }
@@ -64,10 +62,9 @@ const UniversalDashboard = () => {
             if (detectedRole) {
                 setUserRole(detectedRole);
                 setUserData(regularUser);
-                console.log('Setting allowed role for UniversalDashboard:', detectedRole);
+                // console.log('Setting allowed role for UniversalDashboard:', detectedRole);
             } else {
-                console.log('Role not allowed for UniversalDashboard, redirecting...');
-                // Redirect ke dashboard yang sesuai
+                // console.log('Role not allowed for UniversalDashboard, redirecting...');
                 if (regularUser.role === 'desa') {
                     window.location.href = '/desa/dashboard';
                 } else if (regularUser.role === 'kecamatan') {
@@ -79,10 +76,10 @@ const UniversalDashboard = () => {
                 }
             }
         } else {
-            console.log('No user data found, redirecting to login');
+            // console.log('No user data found, redirecting to login');
             window.location.href = '/login';
         }
-        console.log('=== END UNIVERSAL DASHBOARD DEBUG ===');
+        // console.log('=== END UNIVERSAL DASHBOARD DEBUG ===');
     }, []);
 
     useEffect(() => {
@@ -91,22 +88,22 @@ const UniversalDashboard = () => {
         }
     }, [userRole]);
 
-    // Tambahan useEffect untuk debug role changes
-    useEffect(() => {
-        console.log('=== ROLE CHANGED ===');
-        console.log('userRole now:', userRole);
-        console.log('userData now:', userData);
-    }, [userRole, userData]);
+    // Tambahan useEffect untuk debug role changes (opsional, bisa dihapus)
+    // useEffect(() => {
+    //     console.log('=== ROLE CHANGED ===');
+    //     console.log('userRole now:', userRole);
+    //     console.log('userData now:', userData);
+    // }, [userRole, userData]);
 
     const loadDashboardData = async () => {
         const dashboardConfigs = {
             'superadmin': {
                 title: 'Dashboard Super Admin',
                 stats: [
-                    { title: 'Total Desa', value: '416', icon: <FiMapPin />, color: 'bg-blue-500' },
-                    { title: 'Total User', value: '1,250', icon: <FiUsers />, color: 'bg-green-500' },
-                    { title: 'Dokumen', value: '3,420', icon: <FiFileText />, color: 'bg-purple-500' },
-                    { title: 'Anggaran', value: 'Rp 15.2M', icon: <FiDollarSign />, color: 'bg-yellow-500' }
+                    { title: 'Total Desa', value: '416', icon: <FiMapPin />, color: 'bg-indigo-700' }, // Ubah warna di sini
+                    { title: 'Total User', value: '1250', icon: <FiUsers />, color: 'bg-indigo-700' }, // Ubah warna di sini
+                    { title: 'Dokumen', value: '3420', icon: <FiFileText />, color: 'bg-indigo-700' }, // Ubah warna di sini
+                    { title: 'Anggaran', value: 'Rp 15.2M', icon: <FiDollarSign />, color: 'bg-indigo-700' } // Ubah warna di sini
                 ],
                 recentActivities: [
                     'User baru didaftarkan: Admin Desa Ciawi',
@@ -124,10 +121,10 @@ const UniversalDashboard = () => {
             'admin': {
                 title: 'Dashboard Admin',
                 stats: [
-                    { title: 'Total Desa', value: '416', icon: <FiMapPin />, color: 'bg-blue-500' },
-                    { title: 'Total User', value: '1,250', icon: <FiUsers />, color: 'bg-green-500' },
-                    { title: 'Dokumen', value: '3,420', icon: <FiFileText />, color: 'bg-purple-500' },
-                    { title: 'Anggaran', value: 'Rp 15.2M', icon: <FiDollarSign />, color: 'bg-yellow-500' }
+                    { title: 'Total Desa', value: '416', icon: <FiMapPin />, color: 'bg-indigo-700' },
+                    { title: 'Total User', value: '1250', icon: <FiUsers />, color: 'bg-indigo-700' },
+                    { title: 'Dokumen', value: '3420', icon: <FiFileText />, color: 'bg-indigo-700' },
+                    { title: 'Anggaran', value: 'Rp 15.2M', icon: <FiDollarSign />, color: 'bg-indigo-700' }
                 ],
                 recentActivities: [
                     'User baru didaftarkan: Admin Desa Ciawi',
@@ -145,10 +142,10 @@ const UniversalDashboard = () => {
             'sekretariat': {
                 title: 'Dashboard Sekretariat',
                 stats: [
-                    { title: 'Pegawai Aktif', value: '124', icon: <FiUsers />, color: 'bg-blue-500' },
-                    { title: 'Perjalanan Dinas', value: '18', icon: <FiCalendar />, color: 'bg-green-500' },
-                    { title: 'Dokumen', value: '856', icon: <FiFileText />, color: 'bg-purple-500' },
-                    { title: 'Anggaran', value: 'Rp 2.8M', icon: <FiDollarSign />, color: 'bg-yellow-500' }
+                    { title: 'Pegawai Aktif', value: '124', icon: <FiUsers />, color: 'bg-indigo-700' },
+                    { title: 'Perjalanan Dinas', value: '18', icon: <FiCalendar />, color: 'bg-indigo-700' },
+                    { title: 'Dokumen', value: '856', icon: <FiFileText />, color: 'bg-indigo-700' },
+                    { title: 'Anggaran', value: 'Rp 2.8M', icon: <FiDollarSign />, color: 'bg-indigo-700' }
                 ],
                 recentActivities: [
                     'Perjalanan dinas ke Jakarta telah disetujui',
@@ -166,10 +163,10 @@ const UniversalDashboard = () => {
             'sarana_prasarana': {
                 title: 'Dashboard Sarana Prasarana',
                 stats: [
-                    { title: 'Total BUMDes', value: '89', icon: <TbBuildingBank />, color: 'bg-blue-500' },
-                    { title: 'Infrastruktur', value: '156', icon: <TbMap />, color: 'bg-green-500' },
-                    { title: 'Proyek Aktif', value: '23', icon: <FiActivity />, color: 'bg-purple-500' },
-                    { title: 'Anggaran', value: 'Rp 8.5M', icon: <FiDollarSign />, color: 'bg-yellow-500' }
+                    { title: 'Total BUMDes', value: '89', icon: <TbBuildingBank />, color: 'bg-indigo-700' },
+                    { title: 'Infrastruktur', value: '156', icon: <TbMap />, color: 'bg-indigo-700' },
+                    { title: 'Proyek Aktif', value: '23', icon: <FiActivity />, color: 'bg-indigo-700' },
+                    { title: 'Anggaran', value: 'Rp 8.5M', icon: <FiDollarSign />, color: 'bg-indigo-700' }
                 ],
                 recentActivities: [
                     'Data BUMDes Desa Sukamaju telah diperbarui',
@@ -187,10 +184,10 @@ const UniversalDashboard = () => {
             'kekayaan_keuangan': {
                 title: 'Dashboard Kekayaan & Keuangan',
                 stats: [
-                    { title: 'Dana Desa', value: 'Rp 12.4M', icon: <TbHomeDollar />, color: 'bg-blue-500' },
-                    { title: 'APBD', value: 'Rp 45.2M', icon: <FiDollarSign />, color: 'bg-green-500' },
-                    { title: 'BHPRD', value: 'Rp 8.7M', icon: <TbHomeDollar />, color: 'bg-purple-500' },
-                    { title: 'Realisasi', value: '78%', icon: <FiTrendingUp />, color: 'bg-yellow-500' }
+                    { title: 'Dana Desa', value: 'Rp 12.4M', icon: <TbHomeDollar />, color: 'bg-indigo-700' },
+                    { title: 'APBD', value: 'Rp 45.2M', icon: <FiDollarSign />, color: 'bg-indigo-700' },
+                    { title: 'BHPRD', value: 'Rp 8.7M', icon: <TbHomeDollar />, color: 'bg-indigo-700' },
+                    { title: 'Realisasi', value: '78%', icon: <FiTrendingUp />, color: 'bg-indigo-700' }
                 ],
                 recentActivities: [
                     'Penyaluran dana desa tahap III telah selesai',
@@ -208,10 +205,10 @@ const UniversalDashboard = () => {
             'pemberdayaan_masyarakat': {
                 title: 'Dashboard Pemberdayaan Masyarakat',
                 stats: [
-                    { title: 'Program PKK', value: '125', icon: <FiUsers />, color: 'bg-blue-500' },
-                    { title: 'UMKM Aktif', value: '234', icon: <TbBuildingBank />, color: 'bg-green-500' },
-                    { title: 'Kegiatan Sosial', value: '67', icon: <FiActivity />, color: 'bg-purple-500' },
-                    { title: 'Peserta', value: '2,450', icon: <FiUsers />, color: 'bg-yellow-500' }
+                    { title: 'Program PKK', value: '125', icon: <FiUsers />, color: 'bg-indigo-700' },
+                    { title: 'UMKM Aktif', value: '234', icon: <TbBuildingBank />, color: 'bg-indigo-700' },
+                    { title: 'Kegiatan Sosial', value: '67', icon: <FiActivity />, color: 'bg-indigo-700' },
+                    { title: 'Peserta', value: '2450', icon: <FiUsers />, color: 'bg-indigo-700' }
                 ],
                 recentActivities: [
                     'Pelatihan UMKM batch 3 telah selesai',
@@ -229,10 +226,10 @@ const UniversalDashboard = () => {
             'pemerintahan_desa': {
                 title: 'Dashboard Pemerintahan Desa',
                 stats: [
-                    { title: 'Total Desa', value: '416', icon: <FiMapPin />, color: 'bg-blue-500' },
-                    { title: 'Aparatur Desa', value: '1,248', icon: <FiUsers />, color: 'bg-green-500' },
-                    { title: 'BPD Aktif', value: '398', icon: <TbUserPentagon />, color: 'bg-purple-500' },
-                    { title: 'Layanan Publik', value: '156', icon: <FiFileText />, color: 'bg-yellow-500' }
+                    { title: 'Total Desa', value: '416', icon: <FiMapPin />, color: 'bg-indigo-700' },
+                    { title: 'Aparatur Desa', value: '1248', icon: <FiUsers />, color: 'bg-indigo-700' },
+                    { title: 'BPD Aktif', value: '398', icon: <TbUserPentagon />, color: 'bg-indigo-700' },
+                    { title: 'Layanan Publik', value: '156', icon: <FiFileText />, color: 'bg-indigo-700' }
                 ],
                 recentActivities: [
                     'Pelantikan aparatur desa baru',
@@ -247,14 +244,13 @@ const UniversalDashboard = () => {
                     { title: 'Hero Gallery', path: '/dashboard/hero-gallery', icon: <FiGrid /> }
                 ]
             },
-            // Dashboard untuk Admin Desa
             'admin_desa': {
                 title: 'Dashboard Admin Desa',
                 stats: [
-                    { title: 'Jumlah RW', value: '12', icon: <FiMapPin />, color: 'bg-blue-500' },
-                    { title: 'Jumlah RT', value: '48', icon: <FiHome />, color: 'bg-green-500' },
-                    { title: 'Penduduk', value: '3,245', icon: <FiUsers />, color: 'bg-purple-500' },
-                    { title: 'Dana Desa', value: 'Rp 850M', icon: <FiDollarSign />, color: 'bg-yellow-500' }
+                    { title: 'Jumlah RW', value: '12', icon: <FiMapPin />, color: 'bg-indigo-700' },
+                    { title: 'Jumlah RT', value: '48', icon: <FiHome />, color: 'bg-indigo-700' },
+                    { title: 'Penduduk', value: '3245', icon: <FiUsers />, color: 'bg-indigo-700' },
+                    { title: 'Dana Desa', value: 'Rp 850M', icon: <FiDollarSign />, color: 'bg-indigo-700' }
                 ],
                 recentActivities: [
                     'Data kependudukan telah diperbarui',
@@ -269,14 +265,13 @@ const UniversalDashboard = () => {
                     { title: 'Laporan', path: '/dashboard/laporan-desa', icon: <FiFileText /> }
                 ]
             },
-            // Dashboard untuk Admin Kecamatan
             'admin_kecamatan': {
                 title: 'Dashboard Admin Kecamatan',
                 stats: [
-                    { title: 'Jumlah Desa', value: '15', icon: <FiMapPin />, color: 'bg-blue-500' },
-                    { title: 'Total Penduduk', value: '45,678', icon: <FiUsers />, color: 'bg-green-500' },
-                    { title: 'Aparatur', value: '234', icon: <FiUserCheck />, color: 'bg-purple-500' },
-                    { title: 'Program Aktif', value: '28', icon: <FiActivity />, color: 'bg-yellow-500' }
+                    { title: 'Jumlah Desa', value: '15', icon: <FiMapPin />, color: 'bg-indigo-700' },
+                    { title: 'Total Penduduk', value: '45678', icon: <FiUsers />, color: 'bg-indigo-700' },
+                    { title: 'Aparatur', value: '234', icon: <FiUserCheck />, color: 'bg-indigo-700' },
+                    { title: 'Program Aktif', value: '28', icon: <FiActivity />, color: 'bg-indigo-700' }
                 ],
                 recentActivities: [
                     'Koordinasi dengan 15 desa se-kecamatan',
@@ -291,14 +286,13 @@ const UniversalDashboard = () => {
                     { title: 'Koordinasi', path: '/dashboard/koordinasi', icon: <FiUsers /> }
                 ]
             },
-            // Dashboard untuk Admin Dinas
             'admin_dinas': {
                 title: 'Dashboard Admin Dinas',
                 stats: [
-                    { title: 'Kecamatan', value: '28', icon: <FiMapPin />, color: 'bg-blue-500' },
-                    { title: 'Total Desa', value: '416', icon: <FiHome />, color: 'bg-green-500' },
-                    { title: 'Pegawai Dinas', value: '156', icon: <FiUsers />, color: 'bg-purple-500' },
-                    { title: 'Anggaran', value: 'Rp 125M', icon: <FiDollarSign />, color: 'bg-yellow-500' }
+                    { title: 'Kecamatan', value: '28', icon: <FiMapPin />, color: 'bg-indigo-700' },
+                    { title: 'Total Desa', value: '416', icon: <FiHome />, color: 'bg-indigo-700' },
+                    { title: 'Pegawai Dinas', value: '156', icon: <FiUsers />, color: 'bg-indigo-700' },
+                    { title: 'Anggaran', value: 'Rp 125M', icon: <FiDollarSign />, color: 'bg-indigo-700' }
                 ],
                 recentActivities: [
                     'Koordinasi dengan seluruh kecamatan',
@@ -349,17 +343,17 @@ const UniversalDashboard = () => {
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="bg-white rounded-lg shadow-sm border p-6">
+            <div className="bg-primary rounded-lg shadow-sm border p-6">
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-900">{dashboardData.title}</h1>
-                        <p className="text-gray-600 mt-1">
+                        <h1 className="text-2xl font-bold text-white">{dashboardData.title}</h1>
+                        <p className="text-gray-200 mt-1">
                             Selamat datang, {userData?.name}
                         </p>
                     </div>
                     <div className="flex items-center space-x-3">
                     
-                        <div className="text-right text-sm text-gray-500">
+                        <div className="text-right text-sm text-gray-200">
                             {new Date().toLocaleDateString('id-ID', { 
                                 weekday: 'long', 
                                 year: 'numeric', 
@@ -374,15 +368,18 @@ const UniversalDashboard = () => {
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {dashboardData.stats.map((stat, index) => (
-                    <div key={index} className="bg-white rounded-lg shadow-sm border p-6">
-                        <div className="flex items-center">
-                            <div className={`p-3 rounded-lg ${stat.color} text-white mr-4`}>
-                                {stat.icon}
-                            </div>
-                            <div>
-                                <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-                                <p className="text-gray-600 text-sm">{stat.title}</p>
-                            </div>
+                    <div 
+                        key={index} 
+                        className="bg-white rounded-lg shadow-md border border-gray-200 p-6 flex items-center transition-transform transform hover:scale-105" // Menambahkan hover effect
+                    >
+                        <div className={`p-3 rounded-lg bg-primary text-white mr-4 flex-shrink-0`}>
+                            {stat.icon}
+                        </div>
+                        <div>
+                            <p className="text-2xl font-bold text-gray-900">
+                                <AnimatedCounter endValue={stat.value} /> {/* Menggunakan AnimatedCounter */}
+                            </p>
+                            <p className="text-gray-600 text-sm">{stat.title}</p>
                         </div>
                     </div>
                 ))}
@@ -390,32 +387,32 @@ const UniversalDashboard = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Quick Actions */}
-                <div className="bg-white rounded-lg shadow-sm border p-6">
-                    <h2 className="text-lg font-semibold text-gray-900 mb-4">Aksi Cepat</h2>
+                <div className="bg-primary rounded-lg shadow-sm border p-6">
+                    <h2 className="text-lg font-semibold text-white mb-4">Aksi Cepat</h2>
                     <div className="grid grid-cols-2 gap-3">
                         {dashboardData.quickActions.map((action, index) => (
                             <a
                                 key={index}
                                 href={action.path}
-                                className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                                className="flex items-center p-3 border border-gray-300 border-opacity-30 rounded-lg hover:bg-white hover:bg-opacity-10 transition-colors group"
                             >
-                                <div className="text-primary mr-3">
+                                <div className="text-white mr-3 group-hover:scale-110 transition-transform">
                                     {action.icon}
                                 </div>
-                                <span className="text-sm font-medium text-gray-700">{action.title}</span>
+                                <span className="text-sm font-medium text-white">{action.title}</span>
                             </a>
                         ))}
                     </div>
                 </div>
 
                 {/* Recent Activities */}
-                <div className="bg-white rounded-lg shadow-sm border p-6">
-                    <h2 className="text-lg font-semibold text-gray-900 mb-4">Aktivitas Terbaru</h2>
+                <div className="bg-primary rounded-lg shadow-sm border p-6">
+                    <h2 className="text-lg font-semibold text-white mb-4">Aktivitas Terbaru</h2>
                     <div className="space-y-3">
                         {dashboardData.recentActivities.map((activity, index) => (
-                            <div key={index} className="flex items-start">
-                                <div className="w-2 h-2 bg-primary rounded-full mt-2 mr-3 flex-shrink-0"></div>
-                                <p className="text-sm text-gray-600">{activity}</p>
+                            <div key={index} className="flex items-start hover:bg-white hover:bg-opacity-10 p-2 rounded-lg transition-colors">
+                                <div className="w-2 h-2 bg-white rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                                <p className="text-sm text-gray-200">{activity}</p>
                             </div>
                         ))}
                     </div>

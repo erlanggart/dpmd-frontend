@@ -101,7 +101,7 @@ body {
 
 .nav-button {
     flex-grow: 1;
-    background-color: var(--background-card);
+    background-color: re;
     color: var(--text-primary);
     padding: 15px 20px;
     border: none;
