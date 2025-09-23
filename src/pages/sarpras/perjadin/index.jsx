@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Dashboard from './Dashboard';
 import KegiatanList from './KegiatanList';
+import Statistik from './Statistik';
 import './kegiatan.css';
 
 const PerjalananDinas = () => {
@@ -16,44 +17,41 @@ const PerjalananDinas = () => {
 
   return (
     <div className="custom-container fade-in">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Perjalanan Dinas</h1>
-        <p className="mt-2 text-sm text-gray-600">
-          Kelola dan pantau kegiatan perjalanan dinas
-        </p>
-      </div>
-
       {/* Navigation Tabs */}
-      <div className="mb-6">
-        <nav className="flex space-x-8" aria-label="Tabs">
-         <button class="nav-button"
-  onClick={() => setActiveTab('dashboard')}
-  className={`nav-button py-2 px-1 border-b-2 font-medium text-sm transition-all duration-300 ${
-    activeTab === 'dashboard'
-      ? 'border-blue-500 text-blue-600'
-      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-  }`}
->
-  Dashboard
-</button>
-<button class="nav-button"
-  onClick={() => setActiveTab('kegiatan')}
-  className={`nav-button py-2 px-1 border-b-2 font-medium text-sm transition-all duration-300 ${
-    activeTab === 'kegiatan'
-      ? 'border-blue-500 text-blue-600'
-      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-  }`}
->
-  Daftar Kegiatan
-</button>        </nav>
+      <div className="nav-buttons-container">
+        <button
+          onClick={() => setActiveTab('dashboard')}
+          className={`nav-button ${activeTab === 'dashboard' ? 'active' : ''}`}
+        >
+          <i className="fas fa-chart-pie nav-icon"></i>
+          Dashboard
+        </button>
+        <button
+          onClick={() => setActiveTab('statistik')}
+          className={`nav-button ${activeTab === 'statistik' ? 'active' : ''}`}
+        >
+          <i className="fas fa-chart-bar nav-icon"></i>
+          Statistik
+        </button>
+        <button
+          onClick={() => setActiveTab('kegiatan')}
+          className={`nav-button ${activeTab === 'kegiatan' ? 'active' : ''}`}
+        >
+          <i className="fas fa-list nav-icon"></i>
+          Daftar Kegiatan
+        </button>
       </div>
 
       {/* Content */}
-      <div className="bg-white rounded-lg shadow-lg">
+      <div className="base-card">
         {activeTab === 'dashboard' && (
           <div className="fade-in-up">
             <Dashboard onFilterClick={handleFilterClick} />
+          </div>
+        )}
+        {activeTab === 'statistik' && (
+          <div className="fade-in-up">
+            <Statistik />
           </div>
         )}
         {activeTab === 'kegiatan' && (

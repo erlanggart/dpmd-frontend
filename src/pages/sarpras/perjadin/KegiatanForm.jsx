@@ -1,7 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../../api';
 import Swal from 'sweetalert2';
-import './kegiatan.css';
+
+// Custom CSS for animations
+const styles = `
+  @keyframes fadeInUp {
+    0% {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-in-up {
+    animation: fadeInUp 0.6s ease-out;
+  }
+
+  .gradient-dark-blue {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+  }
+
+  .gradient-darker-blue {
+    background: linear-gradient(135deg, #0c1420 0%, #1e293b 50%, #475569 100%);
+  }
+`;
+
+// Inject styles
+const styleSheet = document.createElement("style");
+styleSheet.textContent = styles;
+document.head.appendChild(styleSheet);
 
 const KegiatanForm = ({ kegiatan: initialKegiatan, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
@@ -19,7 +49,7 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose, onSuccess }) => {
   useEffect(() => {
     const fetchMasterData = async () => {
       try {
-        const bidangRes = await api.get('/bidang');
+        const bidangRes = await api.get('/perjadin/bidang');
         setAllBidangList(bidangRes.data);
       } catch (error) {
         Swal.fire('Error', 'Gagal memuat data master (bidang).', 'error');
@@ -48,7 +78,7 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose, onSuccess }) => {
         const bidangIds = [...new Set(initialKegiatan.details.map(d => d.id_bidang))];
         const personilPromises = bidangIds.map(async (bidangId) => {
           try {
-            const personilRes = await api.get(`/personil/${bidangId}`);
+            const personilRes = await api.get(`/perjadin/personil/${bidangId}`);
             return { bidangId, data: personilRes.data };
           } catch (error) {
             console.error(`Error fetching personil for bidang ${bidangId}:`, error);
@@ -87,7 +117,7 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose, onSuccess }) => {
     // Fetch personil untuk bidang yang dipilih
     if (e.target.value && !allPersonilByBidang[e.target.value]) {
       try {
-        const personilRes = await api.get(`/personil/${e.target.value}`);
+        const personilRes = await api.get(`/perjadin/personil/${e.target.value}`);
         setAllPersonilByBidang(prev => ({
           ...prev,
           [e.target.value]: personilRes.data
@@ -159,6 +189,31 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose, onSuccess }) => {
     });
   }, [formData.personil_bidang_list]);
 
+  // Fungsi untuk mengecek konflik personil pada tanggal yang sama
+  const checkPersonnelConflict = async (personnelList, startDate, endDate) => {
+    try {
+      const conflictCheckPromises = personnelList.map(async (personName) => {
+        const response = await api.get(`/perjadin/check-personnel-conflict`, {
+          params: {
+            personnel_name: personName,
+            start_date: startDate,
+            end_date: endDate,
+            exclude_id: initialKegiatan?.id_kegiatan || null
+          }
+        });
+        return { name: personName, conflicts: response.data.conflicts || [] };
+      });
+
+      const conflictResults = await Promise.all(conflictCheckPromises);
+      const conflictedPersonnel = conflictResults.filter(result => result.conflicts.length > 0);
+      
+      return conflictedPersonnel;
+    } catch (error) {
+      console.error('Error checking personnel conflict:', error);
+      return [];
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -167,12 +222,86 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose, onSuccess }) => {
       return;
     }
 
+    // Validasi konflik personil
+    const allSelectedPersonnel = [];
+    formData.personil_bidang_list.forEach(group => {
+      group.personil.forEach(personName => {
+        if (personName && personName.trim()) {
+          allSelectedPersonnel.push(personName.trim());
+        }
+      });
+    });
+
+    if (allSelectedPersonnel.length > 0) {
+      const conflictedPersonnel = await checkPersonnelConflict(
+        allSelectedPersonnel, 
+        formData.tanggal_mulai, 
+        formData.tanggal_selesai
+      );
+
+      if (conflictedPersonnel.length > 0) {
+        let conflictMessage = '<div style="text-align: left; font-size: 14px; line-height: 1.6;">';
+        conflictMessage += '<strong style="color: #dc2626; margin-bottom: 10px; display: block;">⚠️ Konflik Jadwal Ditemukan:</strong>';
+        
+        conflictedPersonnel.forEach(person => {
+          conflictMessage += `<div style="margin-bottom: 12px; padding: 10px; background: #fef2f2; border-left: 4px solid #dc2626; border-radius: 4px;">`;
+          conflictMessage += `<strong style="color: #1f2937;">${person.name}</strong><br/>`;
+          conflictMessage += '<span style="color: #6b7280; font-size: 12px;">Sudah terjadwal pada:</span><br/>';
+          
+          person.conflicts.forEach(conflict => {
+            const startDate = new Date(conflict.tanggal_mulai).toLocaleDateString('id-ID', {
+              day: '2-digit', month: 'short', year: 'numeric'
+            });
+            const endDate = new Date(conflict.tanggal_selesai).toLocaleDateString('id-ID', {
+              day: '2-digit', month: 'short', year: 'numeric'
+            });
+            
+            conflictMessage += `<span style="color: #dc2626; font-weight: 500;">• ${conflict.nama_kegiatan}</span><br/>`;
+            conflictMessage += `<span style="color: #6b7280; font-size: 11px;">  ${startDate} - ${endDate}</span><br/>`;
+          });
+          
+          conflictMessage += '</div>';
+        });
+        
+        conflictMessage += '<div style="margin-top: 15px; padding: 10px; background: #fffbeb; border-left: 4px solid #f59e0b; border-radius: 4px;">';
+        conflictMessage += '<strong style="color: #92400e;">💡 Solusi:</strong><br/>';
+        conflictMessage += '<span style="color: #78716c; font-size: 12px;">• Pilih personil lain yang tersedia<br/>• Ubah tanggal kegiatan<br/>• Koordinasikan dengan kepala bidang</span>';
+        conflictMessage += '</div></div>';
+
+        await Swal.fire({
+          title: 'Konflik Jadwal Personil',
+          html: conflictMessage,
+          icon: 'warning',
+          confirmButtonText: 'Perbaiki Jadwal',
+          confirmButtonColor: '#dc2626',
+          customClass: {
+            popup: 'swal2-popup-large',
+            htmlContainer: 'swal2-html-container-left'
+          },
+          didOpen: () => {
+            const style = document.createElement('style');
+            style.textContent = `
+              .swal2-popup-large {
+                width: 600px !important;
+                max-width: 90vw !important;
+              }
+              .swal2-html-container-left {
+                text-align: left !important;
+              }
+            `;
+            document.head.appendChild(style);
+          }
+        });
+        return; // Stop form submission
+      }
+    }
+
     try {
       let response;
       if (initialKegiatan) {
-        response = await api.put(`/kegiatan/${initialKegiatan.id_kegiatan}`, formData);
+        response = await api.put(`/perjadin/kegiatan/${initialKegiatan.id_kegiatan}`, formData);
       } else {
-        response = await api.post('/kegiatan', formData);
+        response = await api.post('/perjadin/kegiatan', formData);
       }
       
       if (response.data.status === 'success') {
@@ -192,103 +321,252 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose, onSuccess }) => {
   };
 
   return (
-    <div id="form-container" className="form-container">
-      <h3 className="list-heading">Formulir Kegiatan</h3>
-      <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label htmlFor="nama_kegiatan" className="form-label"><i className="fas fa-pen-nib" style={{color: '#3b82f6', marginRight: '8px'}}></i> Nama Kegiatan</label>
-          <input type="text" id="nama_kegiatan" name="nama_kegiatan" value={formData.nama_kegiatan} onChange={(e) => setFormData({...formData, nama_kegiatan: e.target.value})} className="form-input" required />
-        </div>
-        <div className="form-group">
-          <label htmlFor="nomor_sp" className="form-label"><i className="fas fa-file-alt" style={{color: '#3b82f6', marginRight: '8px'}}></i> Nomor SP</label>
-          <input type="text" id="nomor_sp" name="nomor_sp" value={formData.nomor_sp} onChange={(e) => setFormData({...formData, nomor_sp: e.target.value})} className="form-input" required />
-        </div>
-        <div className="form-group" style={{display: 'grid', gridTemplateColumns: '1fr', gap: '1rem'}}>
-          <div style={{display: 'grid', gridTemplateColumns: '1fr', gap: '1rem'}}>
-            <div>
-              <label htmlFor="tanggal_mulai" className="form-label"><i className="fas fa-calendar-alt" style={{color: '#3b82f6', marginRight: '8px'}}></i> Tanggal Mulai</label>
-              <input type="date" id="tanggal_mulai" name="tanggal_mulai" value={formData.tanggal_mulai} onChange={(e) => setFormData({...formData, tanggal_mulai: e.target.value})} className="form-input" required />
+    <div className="animate-fade-in-up bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-auto">
+      {/* Header */}
+      <div className="gradient-darker-blue p-6 relative">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="bg-white/20 backdrop-blur-sm p-3 rounded-xl border border-white/10">
+              <i className="fas fa-edit text-2xl text-white"></i>
             </div>
             <div>
-              <label htmlFor="tanggal_selesai" className="form-label"><i className="fas fa-calendar-check" style={{color: '#3b82f6', marginRight: '8px'}}></i> Tanggal Selesai</label>
-              <input type="date" id="tanggal_selesai" name="tanggal_selesai" value={formData.tanggal_selesai} onChange={(e) => setFormData({...formData, tanggal_selesai: e.target.value})} className="form-input" required />
+              <h2 className="text-2xl font-bold text-white">
+                {initialKegiatan ? 'Edit Kegiatan' : 'Tambah Kegiatan Baru'}
+              </h2>
+              <p className="text-slate-300 text-sm">
+                {initialKegiatan ? 'Perbarui informasi kegiatan perjalanan dinas' : 'Isi formulir untuk menambah kegiatan perjalanan dinas'}
+              </p>
             </div>
           </div>
+          <button
+            onClick={onClose}
+            className="bg-white/20 hover:bg-white/30 text-white p-2 rounded-lg transition-all duration-200"
+          >
+            <i className="fas fa-times text-lg"></i>
+          </button>
         </div>
-        <div className="form-group">
-          <label htmlFor="lokasi" className="form-label"><i className="fas fa-map-marker-alt" style={{color: '#3b82f6', marginRight: '8px'}}></i> Tempat Kegiatan</label>
-          <input type="text" id="lokasi" name="lokasi" value={formData.lokasi} onChange={(e) => setFormData({...formData, lokasi: e.target.value})} className="form-input" required />
+      </div>
+
+      {/* Form Content */}
+      <form onSubmit={handleSubmit} className="p-8 space-y-8">
+        {/* Basic Information */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Nama Kegiatan */}
+          <div className="lg:col-span-2">
+            <label className="block text-sm font-bold text-gray-700 mb-2">
+              <i className="fas fa-pen-nib text-slate-600 mr-2"></i>
+              Nama Kegiatan
+            </label>
+            <input 
+              type="text" 
+              value={formData.nama_kegiatan} 
+              onChange={(e) => setFormData({...formData, nama_kegiatan: e.target.value})} 
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 bg-white shadow-sm transition-all duration-200" 
+              placeholder="Masukkan nama kegiatan"
+              required 
+            />
+          </div>
+
+          {/* Nomor SP */}
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-2">
+              <i className="fas fa-file-alt text-slate-600 mr-2"></i>
+              Nomor SP
+            </label>
+            <input 
+              type="text" 
+              value={formData.nomor_sp} 
+              onChange={(e) => setFormData({...formData, nomor_sp: e.target.value})} 
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 bg-white shadow-sm transition-all duration-200" 
+              placeholder="Nomor Surat Perintah"
+              required 
+            />
+          </div>
+
+          {/* Lokasi */}
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-2">
+              <i className="fas fa-map-marker-alt text-slate-600 mr-2"></i>
+              Tempat Kegiatan
+            </label>
+            <input 
+              type="text" 
+              value={formData.lokasi} 
+              onChange={(e) => setFormData({...formData, lokasi: e.target.value})} 
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 bg-white shadow-sm transition-all duration-200" 
+              placeholder="Lokasi kegiatan"
+              required 
+            />
+          </div>
+
+          {/* Tanggal */}
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-2">
+              <i className="fas fa-calendar-alt text-slate-600 mr-2"></i>
+              Tanggal Mulai
+            </label>
+            <input 
+              type="date" 
+              value={formData.tanggal_mulai} 
+              onChange={(e) => setFormData({...formData, tanggal_mulai: e.target.value})} 
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 bg-white shadow-sm transition-all duration-200" 
+              required 
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-2">
+              <i className="fas fa-calendar-check text-slate-600 mr-2"></i>
+              Tanggal Selesai
+            </label>
+            <input 
+              type="date" 
+              value={formData.tanggal_selesai} 
+              onChange={(e) => setFormData({...formData, tanggal_selesai: e.target.value})} 
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 bg-white shadow-sm transition-all duration-200" 
+              required 
+            />
+          </div>
         </div>
-        <div className="form-group">
-          <label className="form-label"><i className="fas fa-users-cog" style={{color: '#3b82f6', marginRight: '8px'}}></i> Bidang & Personil</label>
-          <div id="bidang-container" style={{display: 'flex', flexDirection: 'column', gap: '0.5rem'}}>
+
+        {/* Bidang & Personil Section */}
+        <div className="bg-gradient-to-r from-slate-50 to-blue-50 p-6 rounded-2xl border border-gray-200">
+          <label className="block text-lg font-bold text-gray-700 mb-4">
+            <i className="fas fa-users-cog text-slate-600 mr-2"></i>
+            Bidang & Personil
+          </label>
+          
+          <div className="space-y-6">
             {formData.personil_bidang_list.map((item, index) => (
-              <div key={index} style={{backgroundColor: '#f9fafb', padding: '1rem', borderRadius: '0.5rem', border: '1px solid #e5e7eb', marginBottom: '1rem', position: 'relative'}}>
+              <div key={index} className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm relative">
+                {/* Remove Button */}
                 {formData.personil_bidang_list.length > 1 && (
-                  <button type="button" onClick={() => removeBidangGroup(index)} style={{position: 'absolute', top: '0.5rem', right: '0.5rem', color: '#ef4444', fontWeight: 'bold', border: 'none', background: 'transparent', cursor: 'pointer'}} title="Hapus Bidang">
+                  <button 
+                    type="button" 
+                    onClick={() => removeBidangGroup(index)} 
+                    className="absolute top-4 right-4 bg-red-500 hover:bg-red-600 text-white p-2 rounded-lg transition-all duration-200"
+                    title="Hapus Bidang"
+                  >
                     <i className="fas fa-times"></i>
                   </button>
                 )}
-                <div className="form-group">
-                  <label className="form-label">Bidang</label>
-                  <select
-                    name="id_bidang"
-                    className="form-select"
-                    value={item.id_bidang}
-                    onChange={(e) => handleBidangChange(index, e)}
-                    required
-                  >
-                    <option value="">Pilih Bidang</option>
-                    {allBidangList.map(b => (
-                      <option key={b.id} value={b.id}>{b.nama}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Personil</label>
-                  <div style={{display: 'flex', flexDirection: 'column', gap: '0.5rem'}}>
-                    {item.personil.map((personilName, personilIndex) => (
-                      <div key={personilIndex} style={{display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
-                        <select
-                          name="personil"
-                          className="form-select"
-                          value={personilName}
-                          onChange={(e) => handlePersonilChange(index, personilIndex, e)}
-                          required
-                        >
-                          <option value="">Pilih Personil</option>
-                          {allPersonilByBidang[item.id_bidang] && allPersonilByBidang[item.id_bidang].map(p => (
-                            <option key={p.id_personil} value={p.nama_personil}>{p.nama_personil}</option>
-                          ))}
-                        </select>
-                        {item.personil.length > 1 && (
-                          <button type="button" onClick={() => removePersonilSelect(index, personilIndex)} className="btn-remove-personil">
-                            <i className="fas fa-times"></i>
-                          </button>
-                        )}
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Bidang Selection */}
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                      <i className="fas fa-building text-slate-600 mr-2"></i>
+                      Bidang
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={item.id_bidang}
+                        onChange={(e) => handleBidangChange(index, e)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 bg-white shadow-sm transition-all duration-200 appearance-none"
+                        required
+                      >
+                        <option value="">Pilih Bidang</option>
+                        {allBidangList.map(b => (
+                          <option key={b.id} value={b.id}>{b.nama}</option>
+                        ))}
+                      </select>
+                      <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                        <i className="fas fa-chevron-down text-gray-400"></i>
                       </div>
-                    ))}
-                    <button type="button" onClick={() => addPersonilSelect(index)} className="btn-add-personil">
-                      <i className="fas fa-plus"></i> Tambah Personil
-                    </button>
+                    </div>
+                  </div>
+
+                  {/* Personil Selection */}
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                      <i className="fas fa-users text-slate-600 mr-2"></i>
+                      Personil ({item.personil.length} orang)
+                    </label>
+                    <div className="space-y-3">
+                      {item.personil.map((personilName, personilIndex) => (
+                        <div key={personilIndex} className="flex items-center gap-3">
+                          <div className="flex-1 relative">
+                            <select
+                              value={personilName}
+                              onChange={(e) => handlePersonilChange(index, personilIndex, e)}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 bg-white shadow-sm transition-all duration-200 appearance-none"
+                              required
+                            >
+                              <option value="">Pilih Personil</option>
+                              {allPersonilByBidang[item.id_bidang] && allPersonilByBidang[item.id_bidang].map(p => (
+                                <option key={p.id_personil} value={p.nama_personil}>{p.nama_personil}</option>
+                              ))}
+                            </select>
+                            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                              <i className="fas fa-chevron-down text-gray-400"></i>
+                            </div>
+                          </div>
+                          {item.personil.length > 1 && (
+                            <button 
+                              type="button" 
+                              onClick={() => removePersonilSelect(index, personilIndex)} 
+                              className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-lg transition-all duration-200"
+                            >
+                              <i className="fas fa-times"></i>
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      <button 
+                        type="button" 
+                        onClick={() => addPersonilSelect(index)} 
+                        className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200"
+                      >
+                        <i className="fas fa-plus"></i>
+                        <span>Tambah Personil</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
             ))}
           </div>
-          <button type="button" onClick={addBidangGroup} className="btn-add-personil" style={{marginTop: '0.5rem'}}>
-            <i className="fas fa-plus-circle"></i> Tambah Bidang
+          
+          <button 
+            type="button" 
+            onClick={addBidangGroup} 
+            className="mt-6 flex items-center gap-2 bg-slate-700 hover:bg-slate-800 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
+          >
+            <i className="fas fa-plus-circle"></i>
+            <span>Tambah Bidang</span>
           </button>
         </div>
-        <div className="form-group">
-          <label htmlFor="keterangan" className="form-label"><i className="fas fa-info-circle" style={{color: '#3b82f6', marginRight: '8px'}}></i> Keterangan</label>
-          <textarea id="keterangan" placeholder="Dihadiri Kepala Dinas" name="keterangan" value={formData.keterangan} onChange={(e) => setFormData({...formData, keterangan: e.target.value})} className="form-textarea"></textarea>
+
+        {/* Keterangan */}
+        <div>
+          <label className="block text-sm font-bold text-gray-700 mb-2">
+            <i className="fas fa-info-circle text-slate-600 mr-2"></i>
+            Keterangan
+          </label>
+          <textarea 
+            value={formData.keterangan} 
+            onChange={(e) => setFormData({...formData, keterangan: e.target.value})} 
+            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 bg-white shadow-sm transition-all duration-200" 
+            rows="4"
+            placeholder="Tambahkan keterangan kegiatan (opsional)"
+          />
         </div>
-        <div className="form-actions">
-          <button type="button" onClick={onClose} className="btn-cancel">
+
+        {/* Action Buttons */}
+        <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t border-gray-200">
+          <button 
+            type="button" 
+            onClick={onClose} 
+            className="flex-1 sm:flex-none px-6 py-3 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
+          >
+            <i className="fas fa-times mr-2"></i>
             Batal
           </button>
-          <button type="submit" className="btn-submit">
+          <button 
+            type="submit" 
+            className="flex-1 px-8 py-3 bg-gradient-to-r from-slate-700 to-slate-900 hover:from-slate-800 hover:to-slate-950 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
+          >
+            <i className="fas fa-save mr-2"></i>
             {initialKegiatan ? 'Perbarui Kegiatan' : 'Simpan Kegiatan'}
           </button>
         </div>

@@ -387,16 +387,16 @@ const UniversalDashboard = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Quick Actions */}
-                <div className="bg-primary rounded-lg shadow-sm border p-6">
-                    <h2 className="text-lg font-semibold text-white mb-4">Aksi Cepat</h2>
+                <div className="bg-white rounded-lg shadow-sm  p-6">
+                    <h2 className="text-lg font-semibold text-primary mb-4">Aksi Cepat</h2>
                     <div className="grid grid-cols-2 gap-3">
                         {dashboardData.quickActions.map((action, index) => (
                             <a
                                 key={index}
                                 href={action.path}
-                                className="flex items-center p-3 border border-gray-300 border-opacity-30 rounded-lg hover:bg-white hover:bg-opacity-10 transition-colors group"
+                                className="flex items-center bg-primary p-3 border border-gray-300 border-opacity-30 rounded-lg hover:bg-primary hover:bg-opacity-10 transition-colors group"
                             >
-                                <div className="text-white mr-3 group-hover:scale-110 transition-transform">
+                                <div className="text-white  mr-3 group-hover:scale-110 transition-transform">
                                     {action.icon}
                                 </div>
                                 <span className="text-sm font-medium text-white">{action.title}</span>
@@ -406,13 +406,13 @@ const UniversalDashboard = () => {
                 </div>
 
                 {/* Recent Activities */}
-                <div className="bg-primary rounded-lg shadow-sm border p-6">
-                    <h2 className="text-lg font-semibold text-white mb-4">Aktivitas Terbaru</h2>
+                <div className="bg-white rounded-lg shadow-sm  p-6">
+                    <h2 className="text-lg font-semibold text-primary mb-4">Aktivitas Terbaru</h2>
                     <div className="space-y-3">
                         {dashboardData.recentActivities.map((activity, index) => (
                             <div key={index} className="flex items-start hover:bg-white hover:bg-opacity-10 p-2 rounded-lg transition-colors">
-                                <div className="w-2 h-2 bg-white rounded-full mt-2 mr-3 flex-shrink-0"></div>
-                                <p className="text-sm text-gray-200">{activity}</p>
+                                <div className="w-2 h-2 bg-primary rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                                <p className="text-sm bg-primary text-white p-2 rounded">{activity}</p>
                             </div>
                         ))}
                     </div>

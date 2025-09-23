@@ -4,6 +4,7 @@ import { FaPlus, FaChartBar, FaUserEdit, FaSignOutAlt } from 'react-icons/fa';
 import api from '../../../services/api.js';
 import BumdesForm from './BumdesForm';
 import BumdesDashboard from './BumdesDashboard';
+import BumdesDashboardModern from './BumdesDashboardModern';
 import Login from './Login';
 import BumdesEditDashboard from './BumdesEditDashboard';
 import './bumdes.css';
@@ -54,7 +55,7 @@ function BumdesApp() {
             case 'form':
                 return <BumdesForm />;
             case 'statistik':
-                return <BumdesDashboard />;
+                return <BumdesDashboardModern />;
             case 'login':
                 // Teruskan fungsi handleLoginSuccess ke komponen Login
                 return <Login onLoginSuccess={handleLoginSuccess} />;
@@ -66,7 +67,7 @@ function BumdesApp() {
                 // Teruskan data dan fungsi logout ke BumdesEditDashboard
                 return <BumdesEditDashboard initialData={bumdesData} onLogout={handleLogout} />;
             default:
-                return <BumdesDashboard />;
+                return <BumdesDashboardModern />;
         }
     };
 

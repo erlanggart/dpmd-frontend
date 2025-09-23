@@ -74,4 +74,33 @@ export const deleteProdukHukum = (id) => {
 	return api.delete(`/produk-hukum/${id}`);
 };
 
+// --- Perjadin ---
+export const getPerjadinBidang = () => {
+	return api.get("/bidang");
+};
+
+export const getPersonilByBidang = (bidangId) => {
+	return api.get(`/personil/${bidangId}`);
+};
+
+export const getKegiatan = () => {
+	return api.get("/kegiatan");
+};
+
+export const createKegiatan = (data) => {
+	return api.post("/kegiatan", data);
+};
+
+export const updateKegiatan = (id, data) => {
+	return api.put(`/kegiatan/${id}`, data);
+};
+
+export const deleteKegiatan = (id) => {
+	return api.delete(`/kegiatan/${id}`);
+};
+
+export const getStatistikPerjadin = (periode = 'minggu') => {
+	return api.get(`/perjadin/statistik-perjadin?periode=${periode}`);
+};
+
 export default api;
