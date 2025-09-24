@@ -3,7 +3,7 @@ import axios from "axios";
 
 const api = axios.create({
 	baseURL: import.meta.env.VITE_API_BASE_URL || "/api",
-	timeout: 10000,
+	timeout: 30000, // Increased timeout to 30 seconds for heavy queries
 	headers: {
 		"Content-Type": "application/json",
 		Accept: "application/json",

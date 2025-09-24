@@ -186,7 +186,7 @@ const BumdesDashboardModern = () => {
 
   if (loading) {
     return (
-      <div className="kegiatan-container">
+      <div className="kegiatan-container relative">
         {/* Header Skeleton */}
         <div className="dashboard-header">
           <div className="skeleton-text skeleton-title"></div>
@@ -239,15 +239,7 @@ const BumdesDashboardModern = () => {
           </div>
         </div>
 
-        {/* Loading Overlay */}
-        <div className="modern-loading-overlay">
-          <div className="modern-loading-spinner">
-            <div className="spinner-ring"></div>
-            <div className="spinner-ring"></div>
-            <div className="spinner-ring"></div>
-          </div>
-          <p className="loading-text">Memuat data BUMDes...</p>
-        </div>
+
       </div>
     );
   }
@@ -256,7 +248,7 @@ const BumdesDashboardModern = () => {
   const kecamatanDistribution = getKecamatanDistribution();
 
   return (
-    <div className="kegiatan-container">
+    <div className="kegiatan-container relative">
       {/* Header Section */}
       <div className="dashboard-header">
         <h3 className="dashboard-heading">
@@ -356,6 +348,12 @@ const BumdesDashboardModern = () => {
             <i className="fas fa-chart-bar" style={{ marginRight: '0.5rem' }}></i>
             Distribusi BUMDes per Jenis Usaha
           </h5>
+          {loading && (
+            <div className="header-loader">
+              <div className="header-spinner"></div>
+              <span>Memuat...</span>
+            </div>
+          )}
         </div>
         
         <div style={{ height: '350px' }}>

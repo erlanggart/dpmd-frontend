@@ -28,7 +28,7 @@ ChartJS.register(
 );
 
 const Statistik = () => {
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState('minggu');
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
@@ -54,11 +54,18 @@ const Statistik = () => {
       setDashboardData(response.data);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
+      // Set default data as fallback
+      setDashboardData({
+        mingguan: 0,
+        bulanan: 0,
+        per_bidang: []
+      });
     }
   };
 
   // Fetch data statistik
   const fetchStatistikData = async () => {
+    setIsLoading(true);
     try {
       const params = {
         period: selectedPeriod,
@@ -81,88 +88,24 @@ const Statistik = () => {
         personilPerBidang: []
       });
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
   useEffect(() => {
+    // Only fetch dashboard data once on mount
     fetchDashboardData();
-    fetchStatistikData();
   }, []);
 
   useEffect(() => {
+    // Fetch statistik data on mount and when filters change
     fetchStatistikData();
   }, [selectedPeriod, selectedYear, selectedMonth]);
 
-  if (loading) {
-    return (
-      <div className="kegiatan-container">
-        {/* Header Skeleton */}
-        <div className="dashboard-header">
-          <div className="skeleton-text skeleton-title"></div>
-          <div className="skeleton-text skeleton-subtitle"></div>
-        </div>
-
-        {/* Filter Skeleton */}
-        <div className="base-card" style={{ marginBottom: '2rem' }}>
-          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
-            <div className="skeleton-filter"></div>
-            <div className="skeleton-filter"></div>
-            <div className="skeleton-filter"></div>
-          </div>
-        </div>
-
-        {/* Summary Cards Skeleton */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-          {[1, 2, 3, 4].map(i => (
-            <div key={i} className="base-card">
-              <div className="skeleton-card-header">
-                <div className="skeleton-text skeleton-card-title"></div>
-                <div className="skeleton-icon"></div>
-              </div>
-              <div className="skeleton-text skeleton-card-value"></div>
-              <div className="skeleton-text skeleton-card-desc"></div>
-            </div>
-          ))}
-        </div>
-
-        {/* Main Chart Skeleton */}
-        <div className="base-card" style={{ marginBottom: '2rem' }}>
-          <div className="skeleton-text skeleton-chart-title" style={{ marginBottom: '1rem' }}></div>
-          <div className="skeleton-chart"></div>
-        </div>
-
-        {/* Bottom Grid Skeleton */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
-          <div className="base-card">
-            <div className="skeleton-text skeleton-chart-title" style={{ marginBottom: '1rem' }}></div>
-            <div className="skeleton-list">
-              {[1, 2, 3].map(i => (
-                <div key={i} className="skeleton-list-item"></div>
-              ))}
-            </div>
-          </div>
-          <div className="base-card">
-            <div className="skeleton-text skeleton-chart-title" style={{ marginBottom: '1rem' }}></div>
-            <div className="skeleton-doughnut"></div>
-          </div>
-        </div>
-
-        {/* Loading Overlay */}
-        <div className="modern-loading-overlay">
-          <div className="modern-loading-spinner">
-            <div className="spinner-ring"></div>
-            <div className="spinner-ring"></div>
-            <div className="spinner-ring"></div>
-          </div>
-          <p className="loading-text">Memuat data perjalanan dinas...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="kegiatan-container">
+    <div className="kegiatan-container relative">
+
+
       {/* Header Section */}
       <div className="dashboard-header">
         <h3 className="dashboard-heading">
@@ -273,7 +216,35 @@ const Statistik = () => {
           </h5>
         </div>
         
-        <div style={{ height: '350px' }}>
+        <div style={{ height: '350px', position: 'relative' }}>
+          {isLoading && (
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(255, 255, 255, 0.8)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '12px',
+              zIndex: 10
+            }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{
+                  width: '20px',
+                  height: '20px',
+                  border: '2px solid #e5e7eb',
+                  borderTop: '2px solid #6366f1',
+                  borderRadius: '50%',
+                  animation: 'spin 1s linear infinite',
+                  margin: '0 auto 8px'
+                }}></div>
+                <small style={{ color: '#6b7280' }}>Memuat data...</small>
+              </div>
+            </div>
+          )}
           <Bar
             data={{
               labels: statistikData.grafikData.map(item => item.label),

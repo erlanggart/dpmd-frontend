@@ -115,7 +115,17 @@ const Dashboard = ({ onFilterClick }) => {
         const response = await api.get('/perjadin/dashboard');
         setData(response.data);
       } catch (error) {
-        Swal.fire('Error', 'Gagal memuat data dashboard.', 'error');
+        console.error('Failed to fetch dashboard data:', error);
+        // Set default data as fallback
+        setData({
+          mingguan: 0,
+          bulanan: 0,
+          per_bidang: [],
+        });
+        // Only show error if it's not a timeout
+        if (error.code !== 'ECONNABORTED') {
+          Swal.fire('Error', 'Gagal memuat data dashboard.', 'error');
+        }
       }
     };
     fetchDashboardData();
@@ -128,6 +138,8 @@ const Dashboard = ({ onFilterClick }) => {
         setWeeklySchedule(response.data);
       } catch (error) {
         console.error('Failed to fetch weekly schedule', error);
+        // Set empty array as fallback
+        setWeeklySchedule([]);
       }
     };
     fetchWeeklySchedule();
@@ -428,6 +440,7 @@ const Dashboard = ({ onFilterClick }) => {
                     {selectedDay.kegiatan && selectedDay.kegiatan.length > 0 ? (
                       selectedDay.kegiatan.map((keg, index) => (
                           <div 
+                            key={keg.id_kegiatan || index}
                             className="w-full transition-all duration-500"
                             style={{
                               opacity: index === activeActivityIndex && !isActivityTransitioning ? 1 : 0,

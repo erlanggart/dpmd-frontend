@@ -18,6 +18,7 @@ import {
     TbUserPentagon 
 } from 'react-icons/tb';
 import AnimatedCounter from '../components/AnimatedCounter'; // Import komponen AnimatedCounter yang baru
+import { getUserRole, getDisposisiMenuPath, getDisposisiMenuLabel } from '../utils/roleUtils';
 
 const UniversalDashboard = () => {
     const [userRole, setUserRole] = useState(null);
@@ -156,6 +157,7 @@ const UniversalDashboard = () => {
                 quickActions: [
                     { title: 'Data Pegawai', path: '/dashboard/pegawai', icon: <FiUsers /> },
                     { title: 'Perjalanan Dinas', path: '/dashboard/perjalanan-dinas', icon: <FiCalendar /> },
+                    { title: getDisposisiMenuLabel(getUserRole()), path: getDisposisiMenuPath(getUserRole()), icon: <FiFileText /> },
                     { title: 'Kelola User', path: '/dashboard/users', icon: <FiUsers /> },
                     { title: 'Hero Gallery', path: '/dashboard/hero-gallery', icon: <FiGrid /> }
                 ]

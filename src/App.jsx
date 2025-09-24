@@ -24,7 +24,12 @@ const UserManagementPage = lazy(() =>
 );
 const Kelembagaan = lazy(() => import("./pages/PMD/Kelembagaan"));
 const BumdesApp = lazy(() => import("./pages/sarpras/Bumdes-app"));
-const PerjalananDinas = lazy(() => import("./pages/sarpras/perjadin"));
+const PerjalananDinas = lazy(() => import("./pages/sekretariat/perjadin"));
+const DisposisiPersuratan = lazy(() => import("./pages/sekretariat/disposisi"));
+const KepalaDinas = lazy(() => import("./pages/sekretariat/disposisi/KepalaDinas"));
+const SekretarisDinas = lazy(() => import("./pages/sekretariat/disposisi/SekretarisDinas"));
+const KepalaBidang = lazy(() => import("./pages/sekretariat/disposisi/KepalaBidang"));
+const RoleGuard = lazy(() => import("./components/guards/RoleGuard"));
 const DesaLayout = lazy(() => import("./layouts/DesaLayout"));
 const DesaDashboard = lazy(() => import("./components/desa/DesaDashboard"));
 const KecamatanDashboard = lazy(() => import("./components/kecamatan/KecamatanDashboard"));
@@ -81,6 +86,23 @@ function App() {
 						<Route path="kelembagaan" element={<Kelembagaan />} />
 						<Route path="bumdes" element={<BumdesApp />} />
 						<Route path="perjalanan-dinas" element={<PerjalananDinas />} />
+						<Route path="disposisi-persuratan" element={<DisposisiPersuratan />} />
+						{/* Routes untuk role-based disposisi dengan protection */}
+						<Route path="disposisi/kepala-dinas" element={
+							<RoleGuard requiredRole="kepala_dinas">
+								<KepalaDinas />
+							</RoleGuard>
+						} />
+						<Route path="disposisi/sekretaris-dinas" element={
+							<RoleGuard requiredRole="sekretaris_dinas">
+								<SekretarisDinas />
+							</RoleGuard>
+						} />
+						<Route path="disposisi/kepala-bidang" element={
+							<RoleGuard allowedRoles={['kepala_bidang_pemerintahan', 'kepala_bidang_kesra', 'kepala_bidang_ekonomi', 'kepala_bidang_fisik']}>
+								<KepalaBidang />
+							</RoleGuard>
+						} />
 						{/* Route untuk bidang - akan diarahkan ke dashboard index */}
 						<Route path="sekretariat" element={<Navigate to="/dashboard" replace />} />
 						<Route path="sarana-prasarana" element={<Navigate to="/dashboard" replace />} />

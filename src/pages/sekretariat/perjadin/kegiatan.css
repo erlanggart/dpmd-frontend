@@ -8,6 +8,169 @@
   --color-success: #22c55e;
   --color-danger: #ef4444;
   --color-dark: #1f2937;
+
+/* Modern Perjadin Loading Styles */
+.perjadin-loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(249, 250, 251, 0.98) 100%);
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeInBlur 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.perjadin-loading-content {
+  text-align: center;
+  background: white;
+  padding: 2.5rem;
+  border-radius: 24px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(99, 102, 241, 0.1);
+  max-width: 400px;
+  width: 90%;
+}
+
+.perjadin-spinner-container {
+  margin-bottom: 1.5rem;
+}
+
+.perjadin-spinner {
+  width: 80px;
+  height: 80px;
+  color: #6366f1;
+}
+
+.perjadin-loading-text h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: #1f2937;
+  font-family: 'Inter', sans-serif;
+}
+
+.perjadin-loading-text p {
+  margin: 0 0 1.5rem 0;
+  color: #6b7280;
+  font-size: 0.95rem;
+  font-family: 'Inter', sans-serif;
+}
+
+.perjadin-progress-bar {
+  width: 100%;
+  height: 6px;
+  background: #e5e7eb;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.perjadin-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #6366f1, #8b5cf6, #6366f1);
+  background-size: 200% 100%;
+  border-radius: 3px;
+  animation: progressSlide 2s ease-in-out infinite;
+}
+
+/* Filter Loading Overlay */
+.perjadin-filter-loading {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  border-radius: 12px;
+  animation: fadeIn 0.3s ease;
+}
+
+.perjadin-filter-loading-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: white;
+  padding: 12px 20px;
+  border-radius: 50px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(99, 102, 241, 0.1);
+}
+
+.perjadin-mini-spinner {
+  width: 20px;
+  height: 20px;
+}
+
+.perjadin-filter-loading-content span {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  font-family: 'Inter', sans-serif;
+}
+
+@keyframes fadeInBlur {
+  0% {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+  }
+  100% {
+    opacity: 1;
+    backdrop-filter: blur(12px);
+  }
+}
+
+@keyframes progressSlide {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+/* Perjadin Tab Loading */
+.perjadin-tab-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  padding: 2rem;
+}
+
+.perjadin-tab-loading-content {
+  text-align: center;
+}
+
+.perjadin-tab-spinner {
+  margin-bottom: 1rem;
+}
+
+.perjadin-tab-spinner-svg {
+  width: 40px;
+  height: 40px;
+  color: #6366f1;
+}
+
+.perjadin-tab-loading-content p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.875rem;
+  font-family: 'Inter', sans-serif;
+}
   --color-text: #4b5563;
   --color-background: #f9f7f7;
   --color-card-bg: #ffffff;
@@ -1416,29 +1579,7 @@ nav[aria-label="Tabs"] .nav-button.bg-primary {
   padding: 1.5rem;
 }
 
-.statistik-loading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 3rem;
-  text-align: center;
-}
 
-.loading-spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid var(--color-light-gray);
-  border-top: 4px solid var(--color-primary);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-bottom: 1rem;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
 
 .statistik-header {
   display: flex;
@@ -2179,3 +2320,10 @@ nav[aria-label="Tabs"] .nav-button.bg-primary {
   from { opacity: 0; }
   to { opacity: 1; }
 }
+
+/* Simple spinner animation for loading states */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+

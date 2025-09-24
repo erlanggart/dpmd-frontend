@@ -20,6 +20,8 @@ import {
 	TbUserPentagon,
 } from "react-icons/tb";
 import SearchPalette from "../components/SearchPalatte";
+import RoleSwitcher from "../components/RoleSwitcher";
+import { getUserRole, getDisposisiMenuPath, getDisposisiMenuLabel } from "../utils/roleUtils";
 
 // Komponen Submenu (Accordion Item)
 const SubMenu = ({ item, openMenu, toggleMenu, isMinimized }) => {
@@ -200,6 +202,7 @@ const MainLayout = () => {
 				children: [
 					{ to: "/dashboard/pegawai", label: "Pegawai" },
 					{ to: "/dashboard/perjalanan-dinas", label: "Perjalanan Dinas" },
+					{ to: getDisposisiMenuPath(getUserRole()), label: getDisposisiMenuLabel(getUserRole()) },
 				],
 			},
 			{
@@ -404,6 +407,9 @@ const MainLayout = () => {
 					closePalette={() => setSearchOpen(false)}
 				/>
 			)}
+			
+			{/* Role Switcher untuk development */}
+			<RoleSwitcher />
 		</div>
 	);
 };
