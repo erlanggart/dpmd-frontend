@@ -1,12 +1,35 @@
 // BumdesApp.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { FaPlus, FaChartBar, FaUserEdit, FaSignOutAlt } from 'react-icons/fa';
 import api from '../../../services/api.js';
-import BumdesForm from './BumdesForm';
-import BumdesDashboard from './BumdesDashboard';
-import Login from './Login';
-import BumdesEditDashboard from './BumdesEditDashboard';
 import './bumdes.css';
+
+// Lazy load komponen untuk performa yang lebih baik
+const BumdesForm = lazy(() => import('./BumdesForm'));
+const BumdesDashboard = lazy(() => import('./BumdesDashboard'));
+const BumdesDashboardModern = lazy(() => import('./BumdesDashboardModern'));
+const Login = lazy(() => import('./Login'));
+const BumdesEditDashboard = lazy(() => import('./BumdesEditDashboard'));
+
+// Modern Loading Fallback Component
+const ModernLoadingFallback = () => (
+    <div className="lazy-loading-container">
+        <div className="lazy-loading-content">
+            <div className="lazy-spinner-container">
+                <svg className="lazy-spinner" viewBox="0 0 50 50">
+                    <circle className="lazy-spinner-path" cx="25" cy="25" r="20" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeDasharray="31.416" strokeDashoffset="31.416">
+                        <animate attributeName="stroke-array" dur="2s" values="0 31.416;15.708 15.708;0 31.416" repeatCount="indefinite"/>
+                        <animate attributeName="stroke-dashoffset" dur="2s" values="0;-15.708;-31.416" repeatCount="indefinite"/>
+                    </circle>
+                </svg>
+            </div>
+            <div className="lazy-loading-text">
+                <h3>Memuat Komponen...</h3>
+                <p>Mohon tunggu sebentar</p>
+            </div>
+        </div>
+    </div>
+);
 
 function BumdesApp() {
     // State untuk mengelola tampilan dan data sesi
@@ -54,7 +77,7 @@ function BumdesApp() {
             case 'form':
                 return <BumdesForm />;
             case 'statistik':
-                return <BumdesDashboard />;
+                return <BumdesDashboardModern />;
             case 'login':
                 // Teruskan fungsi handleLoginSuccess ke komponen Login
                 return <Login onLoginSuccess={handleLoginSuccess} />;
@@ -66,7 +89,7 @@ function BumdesApp() {
                 // Teruskan data dan fungsi logout ke BumdesEditDashboard
                 return <BumdesEditDashboard initialData={bumdesData} onLogout={handleLogout} />;
             default:
-                return <BumdesDashboard />;
+                return <BumdesDashboardModern />;
         }
     };
 
@@ -109,7 +132,9 @@ function BumdesApp() {
                 </div>
 
                 <div className="content-card">
-                    {renderContent()}
+                    <Suspense fallback={<ModernLoadingFallback />}>
+                        {renderContent()}
+                    </Suspense>
                 </div>
             </div>
         </div>
