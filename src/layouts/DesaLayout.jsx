@@ -1,13 +1,20 @@
 import React, { useState } from "react";
 import { Outlet, useNavigate, NavLink } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { FiLogOut, FiGrid, FiBook, FiUser, FiMenu } from "react-icons/fi";
+import {
+	FiLogOut,
+	FiGrid,
+	FiBook,
+	FiUser,
+	FiMenu,
+	FiUserCheck,
+} from "react-icons/fi";
 import Footer from "../components/landingpage/Footer";
 
 const DesaLayout = () => {
 	const { user, logout } = useAuth();
 	const navigate = useNavigate();
-	const [sidebarOpen, setSidebarOpen] = useState(true);
+	const [sidebarOpen, setSidebarOpen] = useState(false); // Default to closed on mobile
 
 	const handleLogout = () => {
 		logout();
@@ -19,23 +26,37 @@ const DesaLayout = () => {
 	const inactiveLinkClass = "hover:bg-gray-100";
 
 	return (
-		<div className="min-h-screen bg-gray-100 space-y-6 px-6">
+		<div className="min-h-screen bg-slate-200 pt-1  ">
+			{/* Backdrop for mobile */}
+			{sidebarOpen && (
+				<div
+					className="fixed inset-0 z-20 bg-black/50 lg:hidden"
+					onClick={() => setSidebarOpen(false)}
+				></div>
+			)}
+
 			{/* Header untuk Dashboard Desa */}
-			<header className="bg-white shadow-md m-4 rounded-lg border border-slate-200 w-full lg:w-7xl mx-auto ">
-				<div className="container mx-auto flex h-16 items-center justify-between px-6">
+			<header className="bg-white mx-4 px-4 my-4 shadow-md rounded lg:mx-20">
+				<div className=" mx-auto flex h-16 items-center justify-between">
 					<div className="flex items-center space-x-4">
 						<button
 							onClick={() => setSidebarOpen(!sidebarOpen)}
-							className="text-gray-500 hover:text-primary"
+							className="text-gray-500 hover:text-primary hidden lg:block" // Only show on desktop
+						>
+							<FiMenu className="h-6 w-6" />
+						</button>
+						<button
+							onClick={() => setSidebarOpen(!sidebarOpen)}
+							className="text-gray-500 hover:text-primary lg:hidden" // Only show on mobile
 						>
 							<FiMenu className="h-6 w-6" />
 						</button>
 						<img src="/logo-kab.png" alt="Logo" className="h-10" />
 						<div>
-							<h1 className="font-bold text-gray-800">
+							<h1 className="font-bold text-xs lg:text-lg text-gray-800">
 								Dashboard Desa {user?.desa?.nama || ""}
 							</h1>
-							<p className="text-sm text-gray-500">
+							<p className="text-xs md:text-sm text-gray-500">
 								Kecamatan {user?.desa?.kecamatan?.nama || ""}
 							</p>
 						</div>
@@ -49,16 +70,18 @@ const DesaLayout = () => {
 							className="flex items-center space-x-2 bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded"
 							title="Logout"
 						>
-							<FiLogOut className="h-6 w-6" /> <span>Logout</span>
+							<FiLogOut className="h-5 w-5 md:h-6 md:w-6" />
+							<span className="hidden md:inline">Logout</span>
 						</button>
 					</div>
 				</div>
 			</header>
 
-			<div className="w-full lg:w-7xl mx-auto flex space-x-6">
+			<div className=" mx-4 flex space-x-0 lg:mx-20  lg:space-x-6 mb-6">
+				{/* Sidebar */}
 				<aside
-					className={`bg-white p-4 rounded-sm shadow-md border border-slate-200 transition-all duration-300 ${
-						sidebarOpen ? "w-64" : "w-20"
+					className={`fixed top-0 left-0 h-full bg-white p-4 shadow-lg border-r border-slate-200 transform transition-all duration-300 ease-in-out z-30 lg:relative lg:translate-x-0 lg:shadow-md lg:border lg:rounded-lg ${
+						sidebarOpen ? "translate-x- w-64" : "-translate-x-full w-64 lg:w-20"
 					}`}
 				>
 					<nav>
@@ -71,9 +94,16 @@ const DesaLayout = () => {
 											isActive ? activeLinkClass : inactiveLinkClass
 										}`
 									}
+									onClick={() =>
+										window.innerWidth < 1024 && setSidebarOpen(false)
+									} // Close on mobile click
 								>
 									<FiGrid className="h-6 w-6" />
-									<span className={`ml-3 ${!sidebarOpen && "hidden"}`}>
+									<span
+										className={`ml-3 whitespace-nowrap ${
+											!sidebarOpen && "lg:hidden"
+										}`}
+									>
 										Dashboard
 									</span>
 								</NavLink>
@@ -86,9 +116,16 @@ const DesaLayout = () => {
 											isActive ? activeLinkClass : inactiveLinkClass
 										}`
 									}
+									onClick={() =>
+										window.innerWidth < 1024 && setSidebarOpen(false)
+									} // Close on mobile click
 								>
 									<FiUser className="h-6 w-6" />
-									<span className={`ml-3 ${!sidebarOpen && "hidden"}`}>
+									<span
+										className={`ml-3 whitespace-nowrap ${
+											!sidebarOpen && "lg:hidden"
+										}`}
+									>
 										Profil Desa
 									</span>
 								</NavLink>
@@ -101,10 +138,39 @@ const DesaLayout = () => {
 											isActive ? activeLinkClass : inactiveLinkClass
 										}`
 									}
+									onClick={() =>
+										window.innerWidth < 1024 && setSidebarOpen(false)
+									} // Close on mobile click
 								>
 									<FiBook className="h-6 w-6" />
-									<span className={`ml-3 ${!sidebarOpen && "hidden"}`}>
+									<span
+										className={`ml-3 whitespace-nowrap ${
+											!sidebarOpen && "lg:hidden"
+										}`}
+									>
 										Produk Hukum
+									</span>
+								</NavLink>
+							</li>
+							<li className="mb-2">
+								<NavLink
+									to="/desa/aparatur-desa"
+									className={({ isActive }) =>
+										`${baseLinkClass} ${
+											isActive ? activeLinkClass : inactiveLinkClass
+										}`
+									}
+									onClick={() =>
+										window.innerWidth < 1024 && setSidebarOpen(false)
+									} // Close on mobile click
+								>
+									<FiUserCheck className="h-6 w-6" />
+									<span
+										className={`ml-3 whitespace-nowrap ${
+											!sidebarOpen && "lg:hidden"
+										}`}
+									>
+										Aparatur Desa
 									</span>
 								</NavLink>
 							</li>
@@ -113,7 +179,7 @@ const DesaLayout = () => {
 					</nav>
 				</aside>
 
-				{/* Konten utama dari setiap halaman modul desa akan dirender di sini */}
+				{/* Konten utama */}
 				<main className="flex-1 min-h-screen">
 					<Outlet />
 				</main>

@@ -29,6 +29,9 @@ const ProdukHukum = lazy(() => import("./pages/desa/ProdukHukum"));
 const ProfilDesaPage = lazy(() => import("./pages/desa/ProfilDesaPage"));
 const ProdukHukumDetail = lazy(() => import("./pages/desa/ProdukHukumDetail"));
 const PublicLayout = lazy(() => import("./layouts/PublicLayout"));
+const AparaturDesaPage = lazy(() =>
+	import("./pages/desa/aparatur-desa/AparaturDesaPage")
+);
 
 const ProtectedRoute = ({ children }) => {
 	const token = localStorage.getItem("authToken");
@@ -91,6 +94,7 @@ function App() {
 						<Route path="produk-hukum" element={<ProdukHukum />} />
 						<Route path="profil-desa" element={<ProfilDesaPage />} />
 						<Route path="produk-hukum/:id" element={<ProdukHukumDetail />} />
+						<Route path="aparatur-desa" element={<AparaturDesaPage />} />
 						{/* Tambahkan rute modul desa lain di sini nanti, contoh: */}
 						{/* <Route path="aparatur" element={<AparaturPage />} /> */}
 					</Route>

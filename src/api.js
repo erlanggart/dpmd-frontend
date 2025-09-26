@@ -74,4 +74,56 @@ export const deleteProdukHukum = (id) => {
 	return api.delete(`/produk-hukum/${id}`);
 };
 
+export const getAparaturDesa = (params) => {
+	return api.get("/aparatur-desa", { params });
+};
+
+export const getAparaturDesaById = (id) => {
+	return api.get(`/aparatur-desa/${id}`);
+};
+
+// Helper to build FormData
+const buildFormData = (data) => {
+	const formData = new FormData();
+	for (const key in data) {
+		if (data[key] !== null && data[key] !== undefined) {
+			// If the value is a File object and its name is empty, it's likely an empty dropzone field.
+			if (data[key] instanceof File && !data[key].name) {
+				continue;
+			}
+			formData.append(key, data[key]);
+		}
+	}
+	return formData;
+};
+
+export const createAparaturDesa = (data) => {
+	const formData = buildFormData(data);
+	return api.post("/aparatur-desa", formData, {
+		headers: {
+			"Content-Type": "multipart/form-data",
+		},
+	});
+};
+
+export const updateAparaturDesa = (id, data) => {
+	const formData = buildFormData(data);
+	// Laravel expects POST for multipart/form-data updates
+	formData.append("_method", "PUT");
+	return api.post(`/aparatur-desa/${id}`, formData, {
+		headers: {
+			"Content-Type": "multipart/form-data",
+		},
+	});
+};
+
+export const deleteAparaturDesa = (id) => {
+	return api.delete(`/aparatur-desa/${id}`);
+};
+
+// We also need to fetch produk hukum for the form's select input
+export const getProdukHukumList = (params) => {
+	return api.get("/produk-hukum", { params });
+};
+
 export default api;

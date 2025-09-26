@@ -10,27 +10,33 @@ const truncateText = (text, maxLength) => {
 };
 
 const ProdukHukumList = ({ produkHukums }) => {
+	console.log(produkHukums);
 	return (
 		<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
 			{produkHukums.map((item) => (
 				<Link
 					to={`/desa/produk-hukum/${item.id}`}
 					key={item.id}
-					className="block bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden border border-slate-200 "
+					className="flex flex-col bg-white rounded-lg shadow-md hover:shadow-xl transition-all duration-300  overflow-hidden border border-slate-200 hover:scale-105 h-full"
 				>
-					<div className="p-6">
-						<h3 className="text-lg font-bold text-gray-800 mb-2">
+					<div className="p-6 flex-grow ">
+						<div>
+							<p className="font-semibold text-xs">
+								{item.jenis} {item.desa.nama}
+							</p>
+							<p className="text-xs text-slate-500">
+								Kecamatan {item.desa.kecamatan.nama}
+							</p>
+						</div>
+						<h3 className=" text-center text-lg font-bold text-gray-800 py-2">
 							{truncateText(item.judul, 50)}
 						</h3>
-						<div className="text-sm text-gray-600 space-y-1">
+						<div className="text-sm text-center text-slate-500 space-y-1 flex-grow">
 							<p>
-								<span className="font-semibold">Jenis:</span> {item.jenis}
+								<span className="font-semibold">Nomor </span> {item.nomor}
 							</p>
 							<p>
-								<span className="font-semibold">Nomor:</span> {item.nomor}
-							</p>
-							<p>
-								<span className="font-semibold">Tahun:</span> {item.tahun}
+								<span className="font-semibold">Tahun </span> {item.tahun}
 							</p>
 						</div>
 					</div>
