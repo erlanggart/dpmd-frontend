@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
-import { z } from "zod";
+import React, { useState, useEffect, useCallback } from "react";
+import { useDropzone } from "react-dropzone";
+import { set, z } from "zod";
 
 // Skema validasi menggunakan Zod
 const produkHukumSchema = z.object({
@@ -31,7 +32,17 @@ const produkHukumSchema = z.object({
 	subjek: z.string().optional(),
 	status_peraturan: z.enum(["berlaku", "dicabut"]),
 	keterangan_status: z.string().optional(),
-	file: z.any().optional(),
+	file: z
+		.any()
+		.optional()
+		.refine(
+			(file) => !file || (file && file.size <= 5 * 1024 * 1024), // 5MB max size
+			`Ukuran file maksimal adalah 5MB.`
+		)
+		.refine(
+			(file) => !file || (file && file.type === "application/pdf"),
+			`File harus berformat PDF.`
+		),
 });
 
 const getTodayDateString = () => {
@@ -58,6 +69,27 @@ const ProdukHukumForm = ({ onSubmit, initialData }) => {
 		file: null,
 	});
 	const [errors, setErrors] = useState({});
+	const [isSubmitting, setIsSubmitting] = useState(false);
+
+	const onDrop = useCallback(
+		(acceptedFiles) => {
+			if (acceptedFiles.length > 0) {
+				setFormData((prev) => ({ ...prev, file: acceptedFiles[0] }));
+				if (errors.file) {
+					setErrors((prevErrors) => ({ ...prevErrors, file: null }));
+				}
+			}
+		},
+		[errors.file]
+	);
+
+	const { getRootProps, getInputProps, isDragActive } = useDropzone({
+		onDrop,
+		accept: {
+			"application/pdf": [".pdf"],
+		},
+		multiple: false,
+	});
 
 	useEffect(() => {
 		if (initialData) {
@@ -107,28 +139,25 @@ const ProdukHukumForm = ({ onSubmit, initialData }) => {
 		}
 	};
 
-	const handleFileChange = (e) => {
-		setFormData({ ...formData, file: e.target.files[0] });
-		if (errors.file) {
-			setErrors((prevErrors) => ({ ...prevErrors, file: null }));
-		}
-	};
-
 	const handleSubmit = (e) => {
 		e.preventDefault();
+		setIsSubmitting(true);
 		const result = produkHukumSchema.safeParse(formData);
 
 		if (!result.success) {
+			console.log("Validation errors:", result.error);
 			const newErrors = {};
-			result.error.errors.forEach((err) => {
+			result.error.issues.forEach((err) => {
 				newErrors[err.path[0]] = err.message;
 			});
 			setErrors(newErrors);
+			setIsSubmitting(false);
 			return; // Hentikan submit jika validasi gagal
 		}
 
 		// Jika validasi berhasil, bersihkan error dan kirim data
 		setErrors({});
+		setIsSubmitting(false);
 		onSubmit(result.data); // Kirim data yang sudah divalidasi
 	};
 
@@ -301,21 +330,36 @@ const ProdukHukumForm = ({ onSubmit, initialData }) => {
 			</div>
 			<div>
 				<label className="block mb-1">File (PDF)</label>
-				<div className="input-group">
-					<input
-						type="file"
-						name="file"
-						onChange={handleFileChange}
-						className="w-full"
-						accept=".pdf"
-					/>
+				<div
+					{...getRootProps()}
+					className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer ${
+						isDragActive
+							? "border-primary bg-blue-50"
+							: "border-gray-300 hover:border-primary"
+					}`}
+				>
+					<input {...getInputProps()} name="file" />
+					{isDragActive ? (
+						<p>Lepaskan file di sini ...</p>
+					) : formData.file ? (
+						<p>
+							File terpilih: {formData.file.name} (
+							{(formData.file.size / 1024).toFixed(2)} KB)
+						</p>
+					) : (
+						<p>Seret & lepas file PDF di sini, atau klik untuk memilih file</p>
+					)}
 				</div>
+				{errors.file && (
+					<p className="text-red-500 text-sm mt-1">{errors.file}</p>
+				)}
 			</div>
 			<button
 				type="submit"
 				className="bg-blue-500 text-white px-4 py-2 rounded"
+				disabled={isSubmitting}
 			>
-				Simpan
+				{isSubmitting ? "Menyimpan..." : "Simpan"}
 			</button>
 		</form>
 	);
