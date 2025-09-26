@@ -23,8 +23,17 @@ const UserManagementPage = lazy(() =>
 	import("./pages/dashboard/UserManagementPage")
 );
 const Kelembagaan = lazy(() => import("./pages/PMD/Kelembagaan"));
+const BumdesApp = lazy(() => import("./pages/sarpras/Bumdes-app"));
+const PerjalananDinas = lazy(() => import("./pages/sekretariat/perjadin"));
+const DisposisiPersuratan = lazy(() => import("./pages/sekretariat/disposisi"));
+const KepalaDinas = lazy(() => import("./pages/sekretariat/disposisi/KepalaDinas"));
+const SekretarisDinas = lazy(() => import("./pages/sekretariat/disposisi/SekretarisDinas"));
+const KepalaBidang = lazy(() => import("./pages/sekretariat/disposisi/KepalaBidang"));
+const RoleGuard = lazy(() => import("./components/guards/RoleGuard"));
 const DesaLayout = lazy(() => import("./layouts/DesaLayout"));
 const DesaDashboard = lazy(() => import("./components/desa/DesaDashboard"));
+const KecamatanDashboard = lazy(() => import("./components/kecamatan/KecamatanDashboard"));
+const DinasDashboard = lazy(() => import("./components/dinas/DinasDashboard"));
 const ProdukHukum = lazy(() => import("./pages/desa/ProdukHukum"));
 const ProfilDesaPage = lazy(() => import("./pages/desa/ProfilDesaPage"));
 const ProdukHukumDetail = lazy(() => import("./pages/desa/ProdukHukumDetail"));
@@ -78,6 +87,31 @@ function App() {
 						<Route path="users" element={<UserManagementPage />} />
 						<Route path="hero-gallery" element={<HeroGalleryManagement />} />
 						<Route path="kelembagaan" element={<Kelembagaan />} />
+						<Route path="bumdes" element={<BumdesApp />} />
+						<Route path="perjalanan-dinas" element={<PerjalananDinas />} />
+						<Route path="disposisi-persuratan" element={<DisposisiPersuratan />} />
+						{/* Routes untuk role-based disposisi dengan protection */}
+						<Route path="disposisi/kepala-dinas" element={
+							<RoleGuard requiredRole="kepala_dinas">
+								<KepalaDinas />
+							</RoleGuard>
+						} />
+						<Route path="disposisi/sekretaris-dinas" element={
+							<RoleGuard requiredRole="sekretaris_dinas">
+								<SekretarisDinas />
+							</RoleGuard>
+						} />
+						<Route path="disposisi/kepala-bidang" element={
+							<RoleGuard allowedRoles={['kepala_bidang_pemerintahan', 'kepala_bidang_kesra', 'kepala_bidang_ekonomi', 'kepala_bidang_fisik']}>
+								<KepalaBidang />
+							</RoleGuard>
+						} />
+						{/* Route untuk bidang - akan diarahkan ke dashboard index */}
+						<Route path="sekretariat" element={<Navigate to="/dashboard" replace />} />
+						<Route path="sarana-prasarana" element={<Navigate to="/dashboard" replace />} />
+						<Route path="kekayaan-keuangan" element={<Navigate to="/dashboard" replace />} />
+						<Route path="pemberdayaan-masyarakat" element={<Navigate to="/dashboard" replace />} />
+						<Route path="pemerintahan-desa" element={<Navigate to="/dashboard" replace />} />
 						{/* Tambahkan rute admin lainnya di sini */}
 					</Route>
 
@@ -98,6 +132,20 @@ function App() {
 						{/* Tambahkan rute modul desa lain di sini nanti, contoh: */}
 						{/* <Route path="aparatur" element={<AparaturPage />} /> */}
 					</Route>
+
+					{/* Rute Kecamatan */}
+					<Route path="/kecamatan/dashboard" element={
+						<ProtectedRoute>
+							<KecamatanDashboard />
+						</ProtectedRoute>
+					} />
+
+					{/* Rute Dinas */}
+					<Route path="/dinas/dashboard" element={
+						<ProtectedRoute>
+							<DinasDashboard />
+						</ProtectedRoute>
+					} />
 				</Routes>
 			</Suspense>
 		</Router>

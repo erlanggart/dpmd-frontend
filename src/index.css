@@ -20,11 +20,17 @@
 	}
 
 	.bg-primary {
-		background-color: rgb(var(--color-primary));
+		background-color: rgb(var(--color-primary)) !important;
 	}
 
 	.text-primary {
 		color: rgb(var(--color-primary));
+	}
+
+	/* Styling khusus untuk sidebar active state */
+	.sidebar-active {
+		background-color: rgb(17, 38, 66) !important;
+		color: white !important;
 	}
 	.text-secondary {
 		color: rgb(var(--color-secondary));

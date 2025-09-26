@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
 import {
 	FiGrid,
@@ -20,16 +20,18 @@ import {
 	TbUserPentagon,
 } from "react-icons/tb";
 import SearchPalette from "../components/SearchPalatte";
+import RoleSwitcher from "../components/RoleSwitcher";
+import { getUserRole, getDisposisiMenuPath, getDisposisiMenuLabel } from "../utils/roleUtils";
 
 // Komponen Submenu (Accordion Item)
 const SubMenu = ({ item, openMenu, toggleMenu, isMinimized }) => {
 	const location = useLocation();
 	const isOpen = openMenu === item.key;
 
-	// Cek apakah salah satu submenu aktif
-	const isChildActive = item.children.some((child) =>
-		location.pathname.startsWith(child.to)
-	);
+	// Cek apakah salah satu submenu aktif - logika yang disederhanakan
+	const isChildActive = item.children.some((child) => {
+		return location.pathname.startsWith(child.to);
+	});
 
 	return (
 		<div>
@@ -37,11 +39,7 @@ const SubMenu = ({ item, openMenu, toggleMenu, isMinimized }) => {
 				onClick={() => !isMinimized && toggleMenu(item.key)}
 				className={`flex w-full items-center p-3 rounded-lg transition-colors ${
 					isMinimized ? "justify-center" : "justify-between"
-				} ${
-					isChildActive && !isMinimized
-						? "bg-gray-100 text-primary font-semibold"
-						: "text-gray-600 hover:bg-gray-100"
-				}`}
+				} text-gray-600 hover:bg-gray-100`}
 				disabled={isMinimized}
 			>
 				<div className="flex items-center">
@@ -75,7 +73,7 @@ const SubMenu = ({ item, openMenu, toggleMenu, isMinimized }) => {
 							className={({ isActive }) =>
 								`py-2 px-3 text-sm rounded-md transition-colors ${
 									isActive
-										? "bg-primary text-white font-semibold"
+										? "sidebar-active font-semibold"
 										: "text-gray-500 hover:bg-gray-100 hover:text-primary"
 								}`
 							}
@@ -113,20 +111,33 @@ const MainLayout = () => {
 
 	useEffect(() => {
 		const storedUser = localStorage.getItem("user");
+		
+		console.log('=== USER LOADING DEBUG ===');
+		console.log('MainLayout: storedUser =', storedUser);
+		
 		if (storedUser) {
-			setUser(JSON.parse(storedUser));
+			const userData = JSON.parse(storedUser);
+			console.log('MainLayout: Setting user =', userData);
+			console.log('MainLayout: User roles =', userData.roles);
+			console.log('MainLayout: User bidangRole =', userData.bidangRole);
+			setUser(userData);
+		} else {
+			console.log('MainLayout: No user data found');
 		}
+		console.log('=== END USER LOADING ===');
 	}, []);
 
 	// Secara otomatis membuka menu yang relevan saat halaman dimuat
 	useEffect(() => {
+		if (!menuItems) return;
+		
 		const currentMenu = menuItems.find((item) =>
 			item.children.some((child) => location.pathname.startsWith(child.to))
 		);
 		if (currentMenu) {
 			setOpenMenu(currentMenu.key);
 		}
-	}, [location.pathname]);
+	}, [location.pathname, user]); // Ganti menuItems dengan user untuk menghindari circular dependency
 
 	const handleLogout = () => {
 		localStorage.removeItem("authToken");
@@ -138,68 +149,108 @@ const MainLayout = () => {
 		setOpenMenu(openMenu === key ? null : key);
 	};
 
-	// Definisikan struktur menu di sini
-	const menuItems = [
-		{
-			key: "pemdes",
-			label: "Pemdes",
-			icon: <TbUserPentagon />,
-			children: [
-				{ to: "/dashboard/profil-desa", label: "Profil Desa" },
-				{ to: "/dashboard/aparatur-desa", label: "Aparatur Desa" },
-			],
-		},
-		{
-			key: "keudes",
-			label: "KKD",
-			icon: <TbHomeDollar />,
-			children: [
-				{ to: "/dashboard/dana-desa", label: "Dana Desa" },
-				{ to: "/dashboard/alokasi-dana-desa", label: "Alokasi Dana Desa" },
-				{ to: "/dashboard/bhprd", label: "BHPRD" },
-			],
-		},
-		{
-			key: "sarpras",
-			label: "SPKED",
-			icon: <TbMap />,
-			children: [
-				{ to: "/dashboard/bumdes", label: "BUMDes" },
-				{ to: "/dashboard/samisade", label: "Samisade" },
-			],
-		},
-		{
-			key: "pemmas",
-			label: "PMD",
-			icon: <TbBuildingBank />,
-			children: [
-				{ to: "/dashboard/kelembagaan", label: "Kelembagaan (RT/RW/Posyandu)" },
-			],
-		},
-	];
+	// Definisikan menu berdasarkan role user menggunakan useMemo
+	const menuItems = useMemo(() => {
+		console.log('=== MENU GENERATION START ===');
+		console.log('Current user in useMemo:', user);
+		
+		const baseMenuItems = [
+			{
+				key: "pemdes",
+				label: "Pemdes",
+				icon: <TbUserPentagon />,
+				children: [
+					{ to: "/dashboard/profil-desa", label: "Profil Desa" },
+					{ to: "/dashboard/aparatur-desa", label: "Aparatur Desa" },
+				],
+			},
+			{
+				key: "keudes",
+				label: "KKD",
+				icon: <TbHomeDollar />,
+				children: [
+					{ to: "/dashboard/dana-desa", label: "Dana Desa" },
+					{ to: "/dashboard/alokasi-dana-desa", label: "Alokasi Dana Desa" },
+					{ to: "/dashboard/bhprd", label: "BHPRD" },
+				],
+			},
+			{
+				key: "sarpras",
+				label: "SPKED",
+				icon: <TbMap />,
+				children: [
+					{ to: "/dashboard/bumdes", label: "BUMDes" },
+					{ to: "/dashboard/samisade", label: "Samisade" },
+				],
+			},
+			{
+				key: "pemmas",
+				label: "PMD",
+				icon: <TbBuildingBank />,
+				children: [
+					{ to: "/dashboard/kelembagaan", label: "Kelembagaan (RT/RW/Posyandu)" },
+				],
+			},
+		];
 
-	// Menu khusus untuk Superadmin
-	const adminMenuItems = [
-		{
-			key: "sekretariat",
-			label: "Sekretariat",
-			icon: <FiClipboard />,
-			children: [
-				{ to: "/dashboard/pegawai", label: "Pegawai" },
-				{ to: "/dashboard/perjalanan-dinas", label: "Perjalanan Dinas" },
-			],
-		},
-		{
-			key: "landing",
-			label: "Landing Page",
-			icon: <FiLayout />,
-			children: [
-				{ to: "/dashboard/hero-gallery", label: "Galeri Hero" },
-				{ to: "/dashboard/articles", label: "Manajemen Artikel" },
-				{ to: "/dashboard/users", label: "Manajemen User" },
-			],
-		},
-	];
+		// Menu admin yang akan ditambahkan jika user adalah superadmin atau bidang
+		const adminMenuItems = [
+			{
+				key: "sekretariat",
+				label: "Sekretariat",
+				icon: <FiClipboard />,
+				children: [
+					{ to: "/dashboard/pegawai", label: "Pegawai" },
+					{ to: "/dashboard/perjalanan-dinas", label: "Perjalanan Dinas" },
+					{ to: getDisposisiMenuPath(getUserRole()), label: getDisposisiMenuLabel(getUserRole()) },
+				],
+			},
+			{
+				key: "landing",
+				label: "Landing Page",
+				icon: <FiLayout />,
+				children: [
+					{ to: "/dashboard/hero-gallery", label: "Galeri Hero" },
+					{ to: "/dashboard/articles", label: "Manajemen Artikel" },
+					{ to: "/dashboard/users", label: "Manajemen User" },
+				],
+			},
+		];
+
+		// Gabungkan menu berdasarkan role user
+		if (!user) {
+			console.log('No user found, returning base menu only');
+			console.log('=== MENU GENERATION END ===');
+			return baseMenuItems;
+		}
+
+		const userRoles = user.roles || [];
+		const userRole = user.role; // Role langsung dari database
+		const bidangRoles = ['sekretariat', 'sarana_prasarana', 'kekayaan_keuangan', 'pemberdayaan_masyarakat', 'pemerintahan_desa'];
+		
+		const isSuperAdmin = userRoles.includes("superadmin") || userRole === 'superadmin';
+		const isBidangUser = userRoles.includes("bidang") || Boolean(user.bidangRole) || bidangRoles.includes(userRole);
+		
+		console.log('User roles:', userRoles);
+		console.log('User role:', userRole);
+		console.log('User bidangRole:', user.bidangRole);
+		console.log('Is super admin:', isSuperAdmin);
+		console.log('Is bidang user:', isBidangUser);
+		console.log('Should show admin menus:', isSuperAdmin || isBidangUser);
+		
+		if (isSuperAdmin || isBidangUser) {
+			console.log('Adding admin menu items to base menu');
+			const finalMenu = [...baseMenuItems, ...adminMenuItems];
+			console.log('Final menu items:', finalMenu.map(item => item.label));
+			console.log('=== MENU GENERATION END ===');
+			return finalMenu;
+		}
+		
+		console.log('Using base menu items only');
+		console.log('Base menu items:', baseMenuItems.map(item => item.label));
+		console.log('=== MENU GENERATION END ===');
+		return baseMenuItems;
+	}, [user]); // Dependency hanya pada user
 
 	return (
 		<div className="flex h-screen bg-slate-100">
@@ -263,7 +314,7 @@ const MainLayout = () => {
 								isSidebarMinimized ? "justify-center" : ""
 							} ${
 								isActive
-									? "bg-primary text-white font-semibold"
+									? "sidebar-active font-semibold"
 									: "text-gray-600 hover:bg-gray-100"
 							}`
 						}
@@ -283,7 +334,7 @@ const MainLayout = () => {
 						</span>
 					</NavLink>
 
-					{/* Render Menu Dinamis */}
+					{/* Render Menu - Semua menu dalam satu sidebar tanpa pemisahan */}
 					{menuItems.map((item) => (
 						<SubMenu
 							key={item.key}
@@ -293,22 +344,6 @@ const MainLayout = () => {
 							isMinimized={isSidebarMinimized}
 						/>
 					))}
-
-					{/* Render Menu Admin */}
-					{user?.roles.includes("superadmin") && (
-						<>
-							<div className="pt-2 my-2 border-t border-slate-200"></div>
-							{adminMenuItems.map((item) => (
-								<SubMenu
-									key={item.key}
-									item={item}
-									openMenu={openMenu}
-									toggleMenu={toggleMenu}
-									isMinimized={isSidebarMinimized}
-								/>
-							))}
-						</>
-					)}
 				</nav>
 			</aside>
 			<div className="flex flex-1 flex-col overflow-hidden ">
@@ -336,6 +371,7 @@ const MainLayout = () => {
 							</button>
 							<span className="mr-4 text-gray-700">
 								Halo, <span className="font-semibold">{user?.name}</span>
+								
 							</span>
 						</div>
 
@@ -367,12 +403,13 @@ const MainLayout = () => {
 			{isSearchOpen && (
 				<SearchPalette
 					menuItems={menuItems}
-					adminMenuItems={
-						user?.roles.includes("superadmin") ? adminMenuItems : []
-					}
+					adminMenuItems={[]} // Admin menu sudah digabung dalam menuItems
 					closePalette={() => setSearchOpen(false)}
 				/>
 			)}
+			
+			{/* Role Switcher untuk development */}
+			<RoleSwitcher />
 		</div>
 	);
 };
