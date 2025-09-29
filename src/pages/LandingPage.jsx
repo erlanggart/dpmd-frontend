@@ -1,7 +1,7 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link as RouterLink } from "react-router-dom"; // Link untuk navigasi halaman
 import { Link as ScrollLink } from "react-scroll"; // Link BARU untuk scrolling
-import { FiLogIn } from "react-icons/fi";
+import { FiLogIn, FiMenu, FiX } from "react-icons/fi";
 import HeroSection from "../components/HeroSection";
 import MusdesusHeroSection from "../components/MusdesusHeroSection";
 import { useScrollPosition } from "../hooks/useScrollPosition";
@@ -11,9 +11,10 @@ import StatsSection from "../components/landingpage/StatsSection";
 
 const LandingPage = () => {
 	const scrollY = useScrollPosition();
+	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
 	const headerClasses = `
-    fixed top-0 z-50 w-full p-4 transition-all duration-300
+    fixed top-0 z-50 w-full px-4 py-3 transition-all duration-300
     ${
 			scrollY > 50
 				? "bg-[rgb(var(--color-primary))] shadow-lg"
@@ -31,58 +32,83 @@ const LandingPage = () => {
 
 	// Styling untuk link navigasi
 	const navLinkClasses =
-		"cursor-pointer  text-white transition-colors hover:text-secondary";
+		"cursor-pointer text-white transition-colors hover:text-secondary block py-2 px-4 lg:p-0";
+
+	const closeMobileMenu = () => {
+		setIsMobileMenuOpen(false);
+	};
 
 	return (
 		<div>
 			<header className={headerClasses}>
-				<div className="container w-7xl mx-auto flex items-center justify-between">
-					<div className="flex items-center space-x-4">
+				<div className="container max-w-7xl mx-auto flex items-center justify-between">
+					<div className="flex items-center space-x-3">
 						<img
 							src="/logo-kab.png"
 							alt="Logo Kabupaten Bogor"
-							className="h-10"
+							className="h-8 md:h-10"
 						/>
-						<div>
-							<h1 className="text-lg font-bold text-white md:text-sm">
+						<div className="hidden sm:block">
+							<h1 className="text-sm md:text-lg font-bold text-white">
 								Dinas Pemberdayaan Masyarakat dan Desa
 							</h1>
-							<h2 className="font-semibold text-white/90">Kabupaten Bogor</h2>
+							<h2 className="text-xs md:text-sm font-semibold text-white/90">Kabupaten Bogor</h2>
 						</div>
 					</div>
-					<div className="flex items-center space-x-8">
-						{/* Navigasi untuk Scroll (hanya di desktop) */}
-						<nav className="hidden items-center space-x-8 lg:flex">
+					
+					{/* Desktop Navigation */}
+					<div className="hidden lg:flex items-center space-x-8">
+						<nav className="flex items-center space-x-8">
 							{navLinks.map((link) => (
 								<ScrollLink
 									key={link.to}
 									to={link.to}
-									spy={true} // Membuat link aktif saat section di-scroll
-									smooth={true} // Animasi smooth scroll
-									offset={-70} // Offset agar tidak tertutup header
-									duration={500} // Durasi animasi (ms)
-									className={navLinkClasses}
-									activeClass="text-secondary" // Kelas saat link aktif
+									spy={true}
+									smooth={true}
+									offset={-70}
+									duration={500}
+									className="cursor-pointer text-white transition-colors hover:text-secondary"
+									activeClass="text-secondary"
+									onClick={closeMobileMenu}
 								>
 									{link.label}
 								</ScrollLink>
 							))}
 						</nav>
-
-						{/* Tombol Login */}
-						{/* <RouterLink
-							to="/login"
-							className={`hidden items-center gap-2 rounded-lg px-5 py-2.5 font-semibold transition-colors md:flex ${
-								scrollY > 50
-									? "bg-secondary text-white hover:bg-secondary/90"
-									: "bg-white text-primary hover:bg-gray-200"
-							}`}
-						>
-							<FiLogIn />
-							<span>Login</span>
-						</RouterLink> */}
 					</div>
+
+					{/* Mobile Menu Button */}
+					<button
+						className="lg:hidden text-white p-2 rounded-md hover:bg-white/10 transition-colors"
+						onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+						aria-label="Toggle menu"
+					>
+						{isMobileMenuOpen ? <FiX className="w-6 h-6" /> : <FiMenu className="w-6 h-6" />}
+					</button>
 				</div>
+
+				{/* Mobile Navigation Menu */}
+				{isMobileMenuOpen && (
+					<div className="lg:hidden bg-slate-800/95 backdrop-blur-sm border-t border-white/20">
+						<nav className="container max-w-7xl mx-auto px-4 py-4 space-y-2">
+							{navLinks.map((link) => (
+								<ScrollLink
+									key={link.to}
+									to={link.to}
+									spy={true}
+									smooth={true}
+									offset={-70}
+									duration={500}
+									className={navLinkClasses}
+									activeClass="text-secondary bg-white/10 rounded-md"
+									onClick={closeMobileMenu}
+								>
+									{link.label}
+								</ScrollLink>
+							))}
+						</nav>
+					</div>
+				)}
 			</header>
 
 			{/* Pastikan setiap komponen ini memiliki ID yang sesuai */}
