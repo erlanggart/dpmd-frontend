@@ -24,8 +24,9 @@ const HeroSection = () => {
 				const response = await api.get("/public/hero-gallery");
 				setGallery(response.data);
 			} catch (err) {
-				console.error("Gagal mengambil galeri:", err);
-				setError("Tidak dapat memuat gambar. Silakan coba lagi nanti.");
+				// Jika gagal memuat galeri, gunakan array kosong tanpa menampilkan error
+				setGallery([]);
+				setError(null); // Reset error state
 			} finally {
 				// Hentikan loading terlepas dari berhasil atau gagal
 				setLoading(false);
@@ -74,9 +75,17 @@ const HeroSection = () => {
 					))}
 					{gallery.length === 0 && (
 						<SwiperSlide>
-							<div className="h-full w-full bg-gray-800">
-								<div className="flex h-full items-center justify-center text-white">
-									<p>Tidak ada gambar tersedia.</p>
+							<div className="h-full w-full bg-gradient-to-br from-blue-900 via-blue-800 to-blue-900">
+								<div className="flex h-full items-center justify-center">
+									<div className="text-center text-white">
+										<div className="mb-4">
+											<svg className="mx-auto h-24 w-24 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+											</svg>
+										</div>
+										<h3 className="text-2xl font-semibold mb-2">Dinas Pemberdayaan Masyarakat dan Desa</h3>
+										<p className="text-blue-200">Kabupaten Bogor</p>
+									</div>
 								</div>
 							</div>
 						</SwiperSlide>
@@ -97,10 +106,10 @@ const HeroSection = () => {
 					Satu platform untuk mengelola, memonitor, dan menganalisis semua data
 					terkait Dinas Pemberdayaan Masyarakat dan Desa Kabupaten Bogor.
 				</p>
-				<div className="mt-8">
+				<div className="mt-8 flex justify-center">
 					<Link
 						to="/login"
-						className="rounded-lg bg-[rgb(var(--color-secondary))] px-8 py-3.5 text-lg font-bold text-white transition-colors hover:bg-[rgb(var(--color-primary))]"
+						className="rounded-lg bg-[rgb(var(--color-secondary))] px-8 py-3.5 text-lg font-bold text-white transition-colors hover:bg-[rgb(var(--color-primary))] shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 duration-200"
 					>
 						Masuk ke Sistem
 					</Link>
