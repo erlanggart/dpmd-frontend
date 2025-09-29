@@ -74,6 +74,7 @@ export const deleteProdukHukum = (id) => {
 	return api.delete(`/produk-hukum/${id}`);
 };
 
+
 // --- Perjadin ---
 export const getPerjadinBidang = () => {
 	return api.get("/bidang");

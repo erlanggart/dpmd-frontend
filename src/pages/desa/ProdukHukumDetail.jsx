@@ -114,7 +114,7 @@ const ProdukHukumDetail = () => {
 				<div className="flex justify-between items-center mb-4">
 					<button
 						onClick={() => navigate(-1)}
-						className="flex items-center space-x-2 bg-white text-slate-500 p-2 shadow-md border-2 border-slate-200 rounded hover:bg-gray-600"
+						className="flex items-center space-x-2 bg-white text-slate-500 p-2 shadow-md border-2 border-slate-200 rounded hover:bg-slate-200"
 					>
 						<FaArrowLeft /> <span>Kembali</span>
 					</button>
