@@ -23,12 +23,16 @@ const StatsSection = () => {
 	useEffect(() => {
 		const fetchStats = async () => {
 			try {
-				// Ganti endpoint ini dengan endpoint API Anda yang sebenarnya
+				// Coba ambil data dari API
 				const response = await api.get("/public/stats");
-				setStats(response.data);
+				if (response.data.success) {
+					setStats(response.data.data);
+				} else {
+					// Jika API response tidak success, gunakan data default
+					setStats({ kecamatan: 40, desa: 416, kelurahan: 19 });
+				}
 			} catch (error) {
-				console.error("Gagal mengambil data statistik:", error);
-				// Set data default jika API gagal
+				// Jika API gagal, gunakan data default tanpa log error di console
 				setStats({ kecamatan: 40, desa: 416, kelurahan: 19 });
 			} finally {
 				setLoading(false);

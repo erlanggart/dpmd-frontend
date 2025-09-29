@@ -7,10 +7,13 @@ import {
 	useLocation,
 } from "react-router-dom";
 import { Suspense, lazy } from "react";
+import { Toaster } from 'react-hot-toast';
 
 // Halaman utama di-import langsung untuk performa awal yang lebih cepat
 import LoginPage from "./pages/LoginPage";
 import LandingPage from "./pages/LandingPage";
+import MusdesusStatsPage from "./pages/MusdesusStatsPage";
+import MusdesusUploadPage from "./pages/MusdesusUploadPage";
 import Spinner from "./components/ui/Spinner";
 
 // Komponen lain di-lazy load untuk code-splitting
@@ -65,6 +68,8 @@ function App() {
 					{/* Rute yang di-load secara statis */}
 					<Route path="/" element={<LandingPage />} />
 					<Route path="/login" element={<LoginPage />} />
+					<Route path="/musdesus-stats" element={<MusdesusStatsPage />} />
+					<Route path="/musdesus-upload" element={<MusdesusUploadPage />} />
 
 					{/* Rute Publik dengan lazy loading */}
 					<Route element={<PublicLayout />}>
@@ -144,6 +149,33 @@ function App() {
 					} />
 				</Routes>
 			</Suspense>
+			<Toaster
+				position="top-right"
+				reverseOrder={false}
+				gutter={8}
+				containerClassName=""
+				containerStyle={{}}
+				toastOptions={{
+					// Define default options
+					className: '',
+					duration: 4000,
+					style: {
+						background: '#363636',
+						color: '#fff',
+					},
+					// Default options for specific types
+					success: {
+						duration: 3000,
+						theme: {
+							primary: 'green',
+							secondary: 'black',
+						},
+					},
+					error: {
+						duration: 4000,
+					},
+				}}
+			/>
 		</Router>
 	);
 }

@@ -3,6 +3,7 @@ import { Link as RouterLink } from "react-router-dom"; // Link untuk navigasi ha
 import { Link as ScrollLink } from "react-scroll"; // Link BARU untuk scrolling
 import { FiLogIn } from "react-icons/fi";
 import HeroSection from "../components/HeroSection";
+import MusdesusHeroSection from "../components/MusdesusHeroSection";
 import { useScrollPosition } from "../hooks/useScrollPosition";
 import FeatureSection from "../components/landingpage/FeatureSection";
 import Footer from "../components/landingpage/Footer";
@@ -87,6 +88,9 @@ const LandingPage = () => {
 			{/* Pastikan setiap komponen ini memiliki ID yang sesuai */}
 			<section id="home">
 				<HeroSection />
+			</section>
+			<section id="musdesus">
+				<MusdesusHeroSection />
 			</section>
 			<section id="stats">
 				<StatsSection />
