@@ -26,6 +26,8 @@ const MusdesusUpload = ({ onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [dragActive, setDragActive] = useState(false);
+  const [desaUploadStatus, setDesaUploadStatus] = useState(null);
+  const [isCheckingDesa, setIsCheckingDesa] = useState(false);
 
   // Fetch kecamatan list on component mount
   useEffect(() => {
@@ -39,8 +41,18 @@ const MusdesusUpload = ({ onClose }) => {
     } else {
       setDesaList([]);
       setFormData(prev => ({ ...prev, desa_id: '' }));
+      setDesaUploadStatus(null);
     }
   }, [formData.kecamatan_id]);
+
+  // Check desa upload status when desa changes
+  useEffect(() => {
+    if (formData.desa_id) {
+      checkDesaUploadStatus(formData.desa_id);
+    } else {
+      setDesaUploadStatus(null);
+    }
+  }, [formData.desa_id]);
 
   const fetchKecamatan = async () => {
     try {
@@ -67,6 +79,24 @@ const MusdesusUpload = ({ onClose }) => {
     } catch (error) {
       toast.error('Gagal memuat data desa');
       console.error('Error fetching desa:', error);
+    }
+  };
+
+  const checkDesaUploadStatus = async (desaId) => {
+    setIsCheckingDesa(true);
+    try {
+      const response = await api.get(`/musdesus/check-desa/${desaId}`);
+      if (response.data.success) {
+        setDesaUploadStatus(response.data);
+        if (response.data.already_uploaded) {
+          toast.warning(response.data.message);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking desa upload status:', error);
+      setDesaUploadStatus(null);
+    } finally {
+      setIsCheckingDesa(false);
     }
   };
 
@@ -141,6 +171,12 @@ const MusdesusUpload = ({ onClose }) => {
 
     if (!formData.kecamatan_id || !formData.desa_id || !formData.nama_pengupload) {
       toast.error('Kecamatan, Desa, dan Nama Pengupload wajib diisi');
+      return;
+    }
+
+    // Check if desa already uploaded
+    if (desaUploadStatus?.already_uploaded) {
+      toast.error('Desa ini sudah pernah melakukan upload sebelumnya. Satu desa hanya dapat upload satu kali.');
       return;
     }
 
@@ -300,6 +336,46 @@ const MusdesusUpload = ({ onClose }) => {
                   </option>
                 ))}
               </select>
+              
+              {/* Status Upload Desa */}
+              {isCheckingDesa && (
+                <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="flex items-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                    <span className="text-sm text-gray-600">Mengecek status upload desa...</span>
+                  </div>
+                </div>
+              )}
+              
+              {desaUploadStatus?.already_uploaded && (
+                <div className="mt-3 p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="flex items-start">
+                    <ExclamationTriangleIcon className="h-5 w-5 text-red-500 mr-3 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <h4 className="text-sm font-semibold text-red-800 mb-1">
+                        Desa Sudah Pernah Upload!
+                      </h4>
+                      <p className="text-sm text-red-700 mb-2">
+                        {desaUploadStatus.message}
+                      </p>
+                      <div className="text-xs text-red-600 space-y-1">
+                        <p><strong>Upload terakhir:</strong> {desaUploadStatus.upload_info?.upload_date}</p>
+                        <p><strong>Diupload oleh:</strong> {desaUploadStatus.upload_info?.uploader_name}</p>
+                        <p><strong>Jumlah file:</strong> {desaUploadStatus.upload_info?.files_count} file</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {desaUploadStatus?.already_uploaded === false && (
+                <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center">
+                    <div className="h-4 w-4 bg-green-500 rounded-full mr-2"></div>
+                    <span className="text-sm text-green-700">Desa belum pernah upload, dapat melakukan upload.</span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Nama Pengupload */}
@@ -508,13 +584,18 @@ const MusdesusUpload = ({ onClose }) => {
           )}
           <button
             type="submit"
-            disabled={isLoading || files.length === 0}
+            disabled={isLoading || files.length === 0 || desaUploadStatus?.already_uploaded}
             className="px-8 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-semibold flex items-center"
           >
             {isLoading ? (
               <>
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
                 Mengupload...
+              </>
+            ) : desaUploadStatus?.already_uploaded ? (
+              <>
+                <ExclamationTriangleIcon className="w-5 h-5 mr-2" />
+                Upload Diblokir
               </>
             ) : (
               <>

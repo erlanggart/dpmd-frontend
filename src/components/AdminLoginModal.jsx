@@ -5,6 +5,7 @@ import {
   EyeSlashIcon,
   XMarkIcon 
 } from '@heroicons/react/24/outline';
+import api from '../api';
 
 const AdminLoginModal = ({ 
   isOpen, 
@@ -33,32 +34,34 @@ const AdminLoginModal = ({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log('Admin login form submitted with data:', formData);
     setLoading(true);
     setError('');
 
     try {
-      const response = await fetch('/api/admin/verify-login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData)
-      });
+      console.log('Sending admin login request to:', '/admin/verify-login');
+      const response = await api.post('/admin/verify-login', formData);
+      console.log('Admin login response:', response);
 
-      const data = await response.json();
-
-      if (response.ok && data.success) {
+      if (response.data.success) {
+        console.log('Admin login successful, storing session data');
         // Store admin session temporarily
         sessionStorage.setItem('admin_verified', 'true');
         sessionStorage.setItem('admin_verification_time', Date.now().toString());
         
-        onSuccess(data);
+        onSuccess(response.data);
         handleClose();
       } else {
-        setError(data.message || 'Login gagal. Periksa kredensial Anda.');
+        console.log('Admin login failed:', response.data.message);
+        setError(response.data.message || 'Login gagal. Periksa kredensial Anda.');
       }
     } catch (error) {
-      setError('Terjadi kesalahan sistem. Silakan coba lagi.');
+      console.error('Admin login error:', error);
+      if (error.response?.data?.message) {
+        setError(error.response.data.message);
+      } else {
+        setError('Terjadi kesalahan sistem. Silakan coba lagi.');
+      }
     } finally {
       setLoading(false);
     }

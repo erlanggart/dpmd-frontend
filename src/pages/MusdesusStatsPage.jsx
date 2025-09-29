@@ -46,6 +46,7 @@ const MusdesusStatsPage = () => {
   const [selectedDesa, setSelectedDesa] = useState('');
   const [kecamatanList, setKecamatanList] = useState([]);
   const [desaList, setDesaList] = useState([]);
+  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
   
   // Modal states
   const [deleteModal, setDeleteModal] = useState({
@@ -62,11 +63,27 @@ const MusdesusStatsPage = () => {
 
   useEffect(() => {
     loadData();
+    checkAdminStatus();
   }, []);
 
   useEffect(() => {
     filterFiles();
   }, [filesList, selectedKecamatan, selectedDesa]);
+
+  useEffect(() => {
+    // Check admin status every minute
+    const interval = setInterval(() => {
+      checkAdminStatus();
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const checkAdminStatus = () => {
+    const isLoggedIn = checkAdminVerification();
+    console.log('Checking admin status, current login state:', isLoggedIn);
+    setIsAdminLoggedIn(isLoggedIn);
+  };
 
   const loadData = async () => {
     try {
@@ -165,7 +182,10 @@ const MusdesusStatsPage = () => {
     const adminVerified = sessionStorage.getItem('admin_verified');
     const verificationTime = sessionStorage.getItem('admin_verification_time');
     
+    console.log('Checking admin verification - verified:', adminVerified, 'time:', verificationTime);
+    
     if (!adminVerified || !verificationTime) {
+      console.log('No admin verification found');
       return false;
     }
 
@@ -174,25 +194,38 @@ const MusdesusStatsPage = () => {
     const timeDiff = now - parseInt(verificationTime);
     const fifteenMinutes = 15 * 60 * 1000;
 
+    console.log('Time difference:', timeDiff, 'ms, limit:', fifteenMinutes, 'ms');
+
     if (timeDiff > fifteenMinutes) {
+      console.log('Admin verification expired, clearing session');
       // Clear expired verification
       sessionStorage.removeItem('admin_verified');
       sessionStorage.removeItem('admin_verification_time');
       return false;
     }
 
+    console.log('Admin verification is valid');
     return true;
   };
 
   const handleAdminLoginSuccess = (data) => {
+    console.log('Admin login success callback triggered with data:', data);
     toast.success('Verifikasi admin berhasil!');
-    // Proceed with delete
-    setDeleteModal({
-      isOpen: true,
-      fileId: adminModal.pendingDeleteId,
-      fileName: adminModal.pendingDeleteName,
-      loading: false
-    });
+    setIsAdminLoggedIn(true);
+    console.log('Admin logged in state updated to true');
+    
+    // Only proceed with delete if there's a pending delete action
+    if (adminModal.pendingDeleteId) {
+      console.log('Proceeding with pending delete for file ID:', adminModal.pendingDeleteId);
+      setDeleteModal({
+        isOpen: true,
+        fileId: adminModal.pendingDeleteId,
+        fileName: adminModal.pendingDeleteName,
+        loading: false
+      });
+    } else {
+      console.log('No pending delete action, admin login completed');
+    }
   };
 
   const handleConfirmDelete = async () => {
@@ -414,13 +447,51 @@ const MusdesusStatsPage = () => {
               Kabupaten Bogor
             </p>
           </div>
-          <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex flex-col sm:flex-row gap-4 justify-between items-start">
             <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-center">
               <div className="text-gray-600 text-sm">Total File</div>
               <div className="text-2xl lg:text-3xl font-bold text-gray-900">{stats.summary.total_files}</div>
               <div className="text-gray-500 text-xs mt-1">
                 {stats.summary.total_size_mb} MB
               </div>
+            </div>
+            
+            {/* Admin Login Button */}
+            <div className="flex flex-col gap-2">
+              {!isAdminLoggedIn ? (
+                <button
+                  onClick={() => {
+                    console.log('Login Admin button clicked');
+                    setAdminModal({ isOpen: true, pendingDeleteId: null, pendingDeleteName: '' });
+                  }}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                  Login Admin
+                </button>
+              ) : (
+                <div className="flex flex-col items-center gap-2">
+                  <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-100 text-green-800 rounded-lg">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Admin Login
+                  </div>
+                  <button
+                    onClick={() => {
+                      sessionStorage.removeItem('admin_verified');
+                      sessionStorage.removeItem('admin_verification_time');
+                      setIsAdminLoggedIn(false);
+                      toast.success('Logout admin berhasil');
+                    }}
+                    className="text-xs text-red-600 hover:text-red-800 underline"
+                  >
+                    Logout
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -569,6 +640,23 @@ const MusdesusStatsPage = () => {
             )}
           </div>
 
+          {/* Admin Status Info */}
+          {!isAdminLoggedIn && (
+            <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <div className="flex items-start gap-3">
+                <svg className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 15.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+                <div>
+                  <p className="text-yellow-800 text-sm font-medium">Akses Terbatas</p>
+                  <p className="text-yellow-700 text-sm mt-1">
+                    Untuk menghapus file, silakan login sebagai super admin terlebih dahulu menggunakan tombol "Login Admin" di atas.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {filteredFiles.length === 0 ? (
             <div className="text-center py-12">
               <FolderIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -633,14 +721,16 @@ const MusdesusStatsPage = () => {
                               <EyeIcon className="w-4 h-4" />
                               Lihat
                             </button>
-                            <button
-                              onClick={() => handleDelete(file.id, file.nama_file)}
-                              className="inline-flex items-center gap-1 text-red-700 hover:text-red-900 bg-red-50 hover:bg-red-100 px-3 py-1 rounded-md transition-colors"
-                              title="Hapus File"
-                            >
-                              <TrashIcon className="w-4 h-4" />
-                              Hapus
-                            </button>
+                            {isAdminLoggedIn && (
+                              <button
+                                onClick={() => handleDelete(file.id, file.nama_file)}
+                                className="inline-flex items-center gap-1 text-red-700 hover:text-red-900 bg-red-50 hover:bg-red-100 px-3 py-1 rounded-md transition-colors"
+                                title="Hapus File"
+                              >
+                                <TrashIcon className="w-4 h-4" />
+                                Hapus
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -685,13 +775,15 @@ const MusdesusStatsPage = () => {
                         <EyeIcon className="w-4 h-4" />
                         Lihat
                       </button>
-                      <button
-                        onClick={() => handleDelete(file.id, file.nama_file)}
-                        className="flex-1 inline-flex items-center justify-center gap-2 text-red-700 hover:text-red-900 bg-red-50 hover:bg-red-100 px-3 py-2 rounded-md transition-colors text-sm"
-                      >
-                        <TrashIcon className="w-4 h-4" />
-                        Hapus
-                      </button>
+                      {isAdminLoggedIn && (
+                        <button
+                          onClick={() => handleDelete(file.id, file.nama_file)}
+                          className="flex-1 inline-flex items-center justify-center gap-2 text-red-700 hover:text-red-900 bg-red-50 hover:bg-red-100 px-3 py-2 rounded-md transition-colors text-sm"
+                        >
+                          <TrashIcon className="w-4 h-4" />
+                          Hapus
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -700,6 +792,27 @@ const MusdesusStatsPage = () => {
           )}
         </div>
       </div>
+
+      {/* Modal Components */}
+      <DeleteConfirmationModal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal({ isOpen: false, fileId: null, fileName: '', loading: false })}
+        onConfirm={handleConfirmDelete}
+        title="Hapus File Musdesus"
+        message={`Apakah Anda yakin ingin menghapus file "${deleteModal.fileName}"? Tindakan ini tidak dapat dibatalkan.`}
+        loading={deleteModal.loading}
+      />
+
+      <AdminLoginModal
+        isOpen={adminModal.isOpen}
+        onClose={() => {
+          console.log('Closing admin login modal');
+          setAdminModal({ isOpen: false, pendingDeleteId: null, pendingDeleteName: '' });
+        }}
+        onSuccess={handleAdminLoginSuccess}
+        title="Login Admin Diperlukan"
+        message="Silakan login sebagai super admin untuk melanjutkan operasi penghapusan file."
+      />
     </div>
   );
 };
