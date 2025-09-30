@@ -91,7 +91,7 @@ const MusdesusView = () => {
 
   const handleDownload = async (filename) => {
     try {
-      const response = await api.get(`/musdesus/download/${filename}`, {
+      const response = await api.get(`/musdesus/download-file/${filename}`, {
         responseType: 'blob'
       });
       
@@ -112,7 +112,8 @@ const MusdesusView = () => {
   };
 
   const handlePreview = (filename) => {
-    const fileUrl = `${api.defaults.baseURL.replace('/api', '')}/storage/musdesus/${filename}`;
+    // Use the new API endpoint for viewing files
+    const fileUrl = `${api.defaults.baseURL}/musdesus/view/${filename}`;
     window.open(fileUrl, '_blank');
   };
 
