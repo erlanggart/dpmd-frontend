@@ -35,9 +35,12 @@ const AparaturDesaPage = () => {
 		try {
 			// Fetch all produk hukum without pagination for the select list
 			const response = await getProdukHukumList({ all: true });
-			setProdukHukum(response.data.data);
+			// Handle both paginated and non-paginated responses
+			const data = response.data.data;
+			setProdukHukum(Array.isArray(data) ? data : data?.data || []);
 		} catch (error) {
 			console.error("Failed to fetch produk hukum:", error);
+			setProdukHukum([]); // Set empty array as fallback
 		}
 	};
 
