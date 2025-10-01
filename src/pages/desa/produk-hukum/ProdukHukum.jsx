@@ -5,9 +5,9 @@ import {
 	getProdukHukums,
 	createProdukHukum,
 	updateProdukHukum,
-} from "../../api";
-import ProdukHukumList from "../../components/produk-hukum/ProdukHukumList";
-import ProdukHukumForm from "../../components/produk-hukum/ProdukHukumForm";
+} from "../../../api";
+import ProdukHukumList from "../../../components/produk-hukum/ProdukHukumList";
+import ProdukHukumForm from "../../../components/produk-hukum/ProdukHukumForm";
 
 const ProdukHukum = () => {
 	const [produkHukums, setProdukHukums] = useState([]);
