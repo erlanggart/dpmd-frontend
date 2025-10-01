@@ -4,7 +4,7 @@ import {
     FiCheckCircle, 
     FiXCircle, 
     FiUsers, 
-    FiBarChart3,
+    FiBarChart2,
     FiDownload,
     FiEye,
     FiRefreshCw
@@ -164,7 +164,7 @@ const MusdesusMonitoringPage = () => {
                 <div className="bg-white p-6 rounded-lg shadow-sm border">
                     <div className="flex items-center">
                         <div className="p-2 bg-purple-100 rounded-lg">
-                            <FiBarChart3 className="w-6 h-6 text-purple-600" />
+                            <FiBarChart2 className="w-6 h-6 text-purple-600" />
                         </div>
                         <div className="ml-4">
                             <h3 className="text-sm font-medium text-gray-600">Persentase</h3>
