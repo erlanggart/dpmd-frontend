@@ -64,7 +64,7 @@ const AparaturDesaEditPage = lazy(() =>
 const MusdesusDebugTest = lazy(() =>
 	import("./components/test/MusdesusDebugTest")
 );
-const DesaProfile = lazy(() => import("./pages/desa/DesaProfile"));
+
 const MusdesusMonitoringPage = lazy(() =>
 	import("./pages/admin/MusdesusMonitoringPage")
 );
@@ -208,7 +208,7 @@ function App() {
 							path="aparatur-desa/:id/edit"
 							element={<AparaturDesaEditPage />}
 						/>
-						<Route path="profile" element={<DesaProfile />} />
+
 						{/* Tambahkan rute modul desa lain di sini nanti, contoh: */}
 						{/* <Route path="aparatur" element={<AparaturPage />} /> */}
 					</Route>
