@@ -47,6 +47,7 @@ const MusdesusStatsPage = () => {
   const [kecamatanList, setKecamatanList] = useState([]);
   const [desaList, setDesaList] = useState([]);
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
+  const [monitoringData, setMonitoringData] = useState(null);
   
   // Modal states
   const [deleteModal, setDeleteModal] = useState({
@@ -88,22 +89,25 @@ const MusdesusStatsPage = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      // Load statistics, file list, dan kecamatan bersamaan
-      const [statsResponse, filesResponse, kecamatanResponse] = await Promise.all([
+      // Load statistics, file list, kecamatan, dan monitoring data bersamaan
+      const [statsResponse, filesResponse, kecamatanResponse, monitoringResponse] = await Promise.all([
         api.get('/public/musdesus/stats'),
         api.get('/public/musdesus/files'),
-        api.get('/musdesus/kecamatan')
+        api.get('/musdesus/kecamatan'),
+        api.get('/public/musdesus/monitoring').catch(() => ({ data: { data: null } }))
       ]);
       
       setStats(statsResponse.data.data);
       setFilesList(filesResponse.data.data || []);
       setKecamatanList(kecamatanResponse.data.data || []);
+      setMonitoringData(monitoringResponse.data.data);
     } catch (error) {
       console.error('Error loading data:', error);
       toast.error('Gagal memuat data musdesus');
       setStats(null);
       setFilesList([]);
       setKecamatanList([]);
+      setMonitoringData(null);
     } finally {
       setLoading(false);
     }
@@ -600,18 +604,75 @@ const MusdesusStatsPage = () => {
               </div>
             </div>
 
-            {/* File Type Distribution Chart */}
+            {/* Desa Upload Status Lists */}
             <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
               <h3 className="text-gray-900 text-xl font-bold mb-4 flex items-center gap-2">
-                <ChartBarIcon className="w-6 h-6" />
-                Jenis File
+                <BuildingOfficeIcon className="w-6 h-6" />
+                Status Upload per Desa
               </h3>
               <p className="text-gray-600 text-sm mb-4">
-                Distribusi berdasarkan tipe file
+                Daftar desa yang sudah dan belum upload
               </p>
-              <div className="h-80 lg:h-96">
-                <Doughnut data={fileTypeData} options={doughnutOptions} />
-              </div>
+              
+              {monitoringData ? (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Desa Sudah Upload */}
+                  <div>
+                    <h4 className="text-lg font-semibold text-green-700 mb-3 flex items-center">
+                      <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      Sudah Upload ({monitoringData.detail_monitoring?.filter(item => item.total_uploads > 0).length || 0})
+                    </h4>
+                    <div className="max-h-64 overflow-y-auto space-y-2">
+                      {monitoringData.detail_monitoring?.filter(item => item.total_uploads > 0).map((item, index) => (
+                        <div key={index} className="flex justify-between items-center p-3 bg-green-50 rounded-lg border border-green-200">
+                          <div>
+                            <h5 className="font-medium text-gray-900">{item.nama_desa}</h5>
+                            <p className="text-sm text-gray-600">Kec. {item.nama_kecamatan}</p>
+                            <p className="text-sm text-blue-600">Petugas: {item.nama_petugas}</p>
+                          </div>
+                          <div className="text-right">
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              {item.total_uploads} file
+                            </span>
+                          </div>
+                        </div>
+                      )) || <div className="text-center text-gray-500 py-4">Tidak ada desa yang sudah upload</div>}
+                    </div>
+                  </div>
+
+                  {/* Desa Belum Upload */}
+                  <div>
+                    <h4 className="text-lg font-semibold text-red-700 mb-3 flex items-center">
+                      <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                      </svg>
+                      Belum Upload ({monitoringData.detail_monitoring?.filter(item => item.total_uploads === 0).length || 0})
+                    </h4>
+                    <div className="max-h-64 overflow-y-auto space-y-2">
+                      {monitoringData.detail_monitoring?.filter(item => item.total_uploads === 0).map((item, index) => (
+                        <div key={index} className="flex justify-between items-center p-3 bg-red-50 rounded-lg border border-red-200">
+                          <div>
+                            <h5 className="font-medium text-gray-900">{item.nama_desa}</h5>
+                            <p className="text-sm text-gray-600">Kec. {item.nama_kecamatan}</p>
+                            <p className="text-sm text-blue-600">Petugas: {item.nama_petugas}</p>
+                          </div>
+                          <div className="text-right">
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                              Belum Upload
+                            </span>
+                          </div>
+                        </div>
+                      )) || <div className="text-center text-gray-500 py-4">Semua desa sudah upload</div>}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center text-gray-500 py-8">
+                  Data monitoring tidak tersedia
+                </div>
+              )}
             </div>
           </div>
         </div>

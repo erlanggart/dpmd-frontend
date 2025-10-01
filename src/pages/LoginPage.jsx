@@ -3,7 +3,6 @@ import { Link, useNavigate } from "react-router-dom";
 import api from "../api";
 import { FiEye, FiEyeOff, FiLoader } from "react-icons/fi";
 import LoginImageSlider from "../components/login/LoginImageSlider";
-import FaceLogin from "../components/face/FaceLogin";
 import { useAuth } from "../context/AuthContext";
 
 const LoginPage = () => {
@@ -43,23 +42,7 @@ const LoginPage = () => {
 		}
 	};
 
-	const handleFaceLoginSuccess = (userData) => {
-		// Handle successful face login
-		login(userData.user, userData.token);
 
-		// Route based on user role
-		if (userData.user.role === "desa") {
-			navigate("/desa/dashboard");
-		} else if (["superadmin", "sekretariat", "sarana_prasarana", "kekayaan_keuangan", "pemberdayaan_masyarakat", "pemerintahan_desa"].includes(userData.user.role)) {
-			navigate("/dashboard");
-		} else {
-			navigate("/dashboard");
-		}
-	};
-
-	const handleFaceLoginError = (errorMessage) => {
-		setError(errorMessage);
-	};
 
 	return (
 		<div className="relative flex min-h-screen items-center justify-center bg-gray-300 p-4">
@@ -154,26 +137,7 @@ const LoginPage = () => {
 						</button>
 					</form>
 
-					{/* Divider */}
-					<div className="my-6 flex items-center">
-						<div className="flex-1 border-t border-gray-300"></div>
-						<span className="px-4 text-sm text-gray-500 bg-white">atau</span>
-						<div className="flex-1 border-t border-gray-300"></div>
-					</div>
 
-					{/* Face Login Component */}
-					<FaceLogin 
-						onSuccess={handleFaceLoginSuccess}
-						onError={handleFaceLoginError}
-						className="mb-4"
-					/>
-
-					{/* Additional Info */}
-					<div className="mt-6 text-center">
-						<p className="text-xs text-gray-500">
-							Face ID login menggunakan teknologi biometric terdepan untuk keamanan maksimal
-						</p>
-					</div>
 				</div>
 			</div>
 		</div>
