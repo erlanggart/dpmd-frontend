@@ -8,7 +8,7 @@ export default defineConfig({
 	server: {
 		proxy: {
 			"/api": {
-				target: "http://localhost:8000",
+				target: "http://dpmd.test",
 				changeOrigin: true,
 				// rewrite: (path) => `/dpmd-backend${path}`,
 			},

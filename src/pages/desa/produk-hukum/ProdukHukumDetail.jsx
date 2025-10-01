@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import api from "../../api";
+import api from "../../../api";
 import Swal from "sweetalert2";
 import { FaArrowLeft } from "react-icons/fa";
 
@@ -109,7 +109,7 @@ const ProdukHukumDetail = () => {
 	);
 
 	return (
-		<div className="container mx-auto">
+		<div className="mx-auto">
 			<div className="bg-white p-6 rounded-lg shadow-md">
 				<div className="flex justify-between items-center mb-4">
 					<button

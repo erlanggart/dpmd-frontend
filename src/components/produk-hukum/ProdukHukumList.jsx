@@ -28,10 +28,8 @@ const ProdukHukumList = ({ produkHukums }) => {
 								Kecamatan {item.desa.kecamatan.nama}
 							</p>
 						</div>
-						<h3 className=" text-center text-lg font-bold text-gray-800 py-2">
-							{truncateText(item.judul, 50)}
-						</h3>
-						<div className="text-sm text-center text-slate-500 space-y-1 flex-grow">
+
+						<div className="text-md text-center text-slate-500 space-y-1 flex-grow pt-2">
 							<p>
 								<span className="font-semibold">Nomor </span> {item.nomor}
 							</p>
@@ -39,6 +37,9 @@ const ProdukHukumList = ({ produkHukums }) => {
 								<span className="font-semibold">Tahun </span> {item.tahun}
 							</p>
 						</div>
+						<h3 className=" text-center text-lg font-bold text-gray-800 py-2">
+							{truncateText(item.judul, 50)}
+						</h3>
 					</div>
 					<div
 						className={`px-6 py-2 text-xs font-bold text-white ${
