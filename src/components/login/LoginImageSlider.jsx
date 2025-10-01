@@ -23,6 +23,15 @@ const LoginImageSlider = () => {
 				setGallery(response.data);
 			} catch (err) {
 				console.error("Gagal mengambil galeri:", err);
+				// Use fallback images if API fails
+				setGallery([
+					{
+						id: 1,
+						image_path: 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800',
+						title: 'Government Office',
+						description: 'Default image'
+					}
+				]);
 			} finally {
 				setLoading(false);
 			}
