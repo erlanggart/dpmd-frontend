@@ -17,7 +17,8 @@ const MusdesusUpload = ({ onClose }) => {
     email_pengupload: '',
     telepon_pengupload: '',
     keterangan: '',
-    tanggal_musdesus: ''
+    tanggal_musdesus: '',
+    petugas_id: ''
   });
 
   const [files, setFiles] = useState([]);
@@ -28,6 +29,7 @@ const MusdesusUpload = ({ onClose }) => {
   const [dragActive, setDragActive] = useState(false);
   const [desaUploadStatus, setDesaUploadStatus] = useState(null);
   const [isCheckingDesa, setIsCheckingDesa] = useState(false);
+  const [petugasList, setPetugasList] = useState([]);
 
   // Fetch kecamatan list on component mount
   useEffect(() => {
@@ -45,14 +47,17 @@ const MusdesusUpload = ({ onClose }) => {
     }
   }, [formData.kecamatan_id]);
 
-  // Check desa upload status when desa changes
+  // Check desa upload status and fetch petugas when desa changes
   useEffect(() => {
-    if (formData.desa_id) {
+    if (formData.desa_id && formData.kecamatan_id) {
       checkDesaUploadStatus(formData.desa_id);
+      fetchPetugasByDesa(formData.desa_id, formData.kecamatan_id);
     } else {
       setDesaUploadStatus(null);
+      setPetugasList([]);
+      setFormData(prev => ({ ...prev, petugas_id: '' }));
     }
-  }, [formData.desa_id]);
+  }, [formData.desa_id, formData.kecamatan_id]);
 
   const fetchKecamatan = async () => {
     try {
@@ -97,6 +102,31 @@ const MusdesusUpload = ({ onClose }) => {
       setDesaUploadStatus(null);
     } finally {
       setIsCheckingDesa(false);
+    }
+  };
+
+  const fetchPetugasByDesa = async (desaId, kecamatanId) => {
+    try {
+      // Ambil nama desa dan kecamatan untuk matching
+      const desa = desaList.find(d => d.id == desaId);
+      const kecamatan = kecamatanList.find(k => k.id == kecamatanId);
+      
+      if (!desa || !kecamatan) return;
+
+      const response = await api.post(`/musdesus/petugas-by-desa`, {
+        nama_desa: desa.nama,
+        nama_kecamatan: kecamatan.nama
+      });
+
+      if (response.data.success) {
+        setPetugasList(response.data.data || []);
+      } else {
+        setPetugasList([]);
+        console.log('No petugas found for this desa');
+      }
+    } catch (error) {
+      console.error('Error fetching petugas:', error);
+      setPetugasList([]);
     }
   };
 
@@ -169,8 +199,8 @@ const MusdesusUpload = ({ onClose }) => {
       return;
     }
 
-    if (!formData.kecamatan_id || !formData.desa_id || !formData.nama_pengupload) {
-      toast.error('Kecamatan, Desa, dan Nama Pengupload wajib diisi');
+    if (!formData.kecamatan_id || !formData.desa_id || !formData.nama_pengupload || !formData.petugas_id) {
+      toast.error('Kecamatan, Desa, Nama Pengupload, dan Verifikasi Petugas wajib diisi');
       return;
     }
 
@@ -291,6 +321,8 @@ const MusdesusUpload = ({ onClose }) => {
           </div>
         </div>
 
+
+
         {/* Form Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Left Column - Form Fields */}
@@ -373,6 +405,37 @@ const MusdesusUpload = ({ onClose }) => {
                   <div className="flex items-center">
                     <div className="h-4 w-4 bg-green-500 rounded-full mr-2"></div>
                     <span className="text-sm text-green-700">Desa belum pernah upload, dapat melakukan upload.</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Petugas Monitoring */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-3">
+                Petugas Monitoring <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="petugas_id"
+                value={formData.petugas_id}
+                onChange={handleInputChange}
+                className="w-full p-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white disabled:bg-gray-100"
+                required
+                disabled={!formData.desa_id || petugasList.length === 0}
+              >
+                <option value="">Pilih Petugas Monitoring</option>
+                {petugasList.map(petugas => (
+                  <option key={petugas.id} value={petugas.id}>
+                    {petugas.nama_petugas}
+                  </option>
+                ))}
+              </select>
+              
+              {formData.desa_id && petugasList.length === 0 && (
+                <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <div className="flex items-center">
+                    <ExclamationTriangleIcon className="h-4 w-4 text-yellow-500 mr-2" />
+                    <span className="text-sm text-yellow-700">Tidak ada petugas monitoring untuk desa ini.</span>
                   </div>
                 </div>
               )}

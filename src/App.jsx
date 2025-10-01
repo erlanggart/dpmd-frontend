@@ -44,13 +44,10 @@ const PublicLayout = lazy(() => import("./layouts/PublicLayout"));
 const AparaturDesaPage = lazy(() =>
 	import("./pages/desa/aparatur-desa/AparaturDesaPage")
 );
-const FaceIDTester = lazy(() => import("./components/test/FaceIDTester"));
-const FaceIDBasicTest = lazy(() => import("./components/test/FaceIDBasicTest"));
-const ConnectionTester = lazy(() => import("./components/test/ConnectionTester"));
-const SimpleAPITest = lazy(() => import("./components/test/SimpleAPITest"));
+
 const MusdesusDebugTest = lazy(() => import("./components/test/MusdesusDebugTest"));
-const AdminProfile = lazy(() => import("./pages/admin/AdminProfile"));
 const DesaProfile = lazy(() => import("./pages/desa/DesaProfile"));
+const MusdesusMonitoringPage = lazy(() => import("./pages/admin/MusdesusMonitoringPage"));
 
 const ProtectedRoute = ({ children }) => {
 	const token = localStorage.getItem("authToken");
@@ -82,10 +79,7 @@ function App() {
 					<Route path="/musdesus-upload" element={<MusdesusUploadPage />} />
 					
 					{/* Testing Routes */}
-					<Route path="/api-test" element={<SimpleAPITest />} />
-					<Route path="/connection-test" element={<ConnectionTester />} />
-					<Route path="/face-id-test" element={<FaceIDTester />} />
-					<Route path="/face-basic-test" element={<FaceIDBasicTest />} />
+
 					<Route path="/musdesus-debug" element={<MusdesusDebugTest />} />
 
 					{/* Rute Publik dengan lazy loading */}
@@ -109,7 +103,7 @@ function App() {
 						<Route path="bumdes" element={<BumdesApp />} />
 						<Route path="perjalanan-dinas" element={<PerjalananDinas />} />
 						<Route path="disposisi-persuratan" element={<DisposisiPersuratan />} />
-						<Route path="profile" element={<AdminProfile />} />
+						<Route path="musdesus-monitoring" element={<MusdesusMonitoringPage />} />
 						{/* Routes untuk role-based disposisi dengan protection */}
 						<Route path="disposisi/kepala-dinas" element={
 							<RoleGuard requiredRole="kepala_dinas">
