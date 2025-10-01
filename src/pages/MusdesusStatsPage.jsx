@@ -49,6 +49,10 @@ const MusdesusStatsPage = () => {
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
   const [monitoringData, setMonitoringData] = useState(null);
   
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const filesPerPage = 5;
+  
   // Modal states
   const [deleteModal, setDeleteModal] = useState({
     isOpen: false,
@@ -140,6 +144,7 @@ const MusdesusStatsPage = () => {
     }
     
     setFilteredFiles(filtered);
+    setCurrentPage(1); // Reset to first page when filter changes
   };
 
   const handleKecamatanChange = async (kecamatanId) => {
@@ -150,6 +155,22 @@ const MusdesusStatsPage = () => {
     } else {
       setDesaList([]);
     }
+  };
+
+  const handleResetFilter = () => {
+    setSelectedKecamatan('');
+    setSelectedDesa('');
+    setCurrentPage(1);
+  };
+
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredFiles.length / filesPerPage);
+  const startIndex = (currentPage - 1) * filesPerPage;
+  const endIndex = startIndex + filesPerPage;
+  const currentFiles = filteredFiles.slice(startIndex, endIndex);
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
   };
 
   const handleDownload = async (filename) => {
@@ -690,10 +711,7 @@ const MusdesusStatsPage = () => {
             </h3>
             {(selectedKecamatan || selectedDesa) && (
               <button
-                onClick={() => {
-                  setSelectedKecamatan('');
-                  setSelectedDesa('');
-                }}
+                onClick={handleResetFilter}
                 className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm rounded-lg transition-colors"
               >
                 Reset Filter
@@ -748,7 +766,7 @@ const MusdesusStatsPage = () => {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredFiles.map((file) => (
+                    {currentFiles.map((file) => (
                       <tr key={file.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4">
                           <div className="flex items-center">
@@ -802,7 +820,7 @@ const MusdesusStatsPage = () => {
 
               {/* Mobile Card View */}
               <div className="lg:hidden space-y-4">
-                {filteredFiles.map((file) => (
+                {currentFiles.map((file) => (
                   <div key={file.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
                     <div className="flex items-start gap-3 mb-3">
                       <div className="text-2xl">
@@ -850,6 +868,83 @@ const MusdesusStatsPage = () => {
                 ))}
               </div>
             </>
+          )}
+
+          {/* Pagination */}
+          {filteredFiles.length > filesPerPage && (
+            <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="text-sm text-gray-700">
+                Menampilkan {startIndex + 1} - {Math.min(endIndex, filteredFiles.length)} dari {filteredFiles.length} file
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className={`px-3 py-2 text-sm rounded-lg border transition-colors ${
+                    currentPage === 1
+                      ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  Sebelumnya
+                </button>
+                
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, index) => {
+                    const page = index + 1;
+                    const isCurrentPage = page === currentPage;
+                    
+                    // Show first page, last page, current page, and pages around current page
+                    if (
+                      page === 1 ||
+                      page === totalPages ||
+                      (page >= currentPage - 1 && page <= currentPage + 1)
+                    ) {
+                      return (
+                        <button
+                          key={page}
+                          onClick={() => handlePageChange(page)}
+                          className={`px-3 py-2 text-sm rounded-lg border transition-colors ${
+                            isCurrentPage
+                              ? 'bg-blue-600 text-white border-blue-600'
+                              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      );
+                    }
+                    
+                    // Show ellipsis
+                    if (
+                      (page === currentPage - 2 && currentPage > 3) ||
+                      (page === currentPage + 2 && currentPage < totalPages - 2)
+                    ) {
+                      return (
+                        <span key={page} className="px-2 text-gray-500">
+                          ...
+                        </span>
+                      );
+                    }
+                    
+                    return null;
+                  })}
+                </div>
+                
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className={`px-3 py-2 text-sm rounded-lg border transition-colors ${
+                    currentPage === totalPages
+                      ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  Selanjutnya
+                </button>
+              </div>
+            </div>
           )}
         </div>
       </div>
