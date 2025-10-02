@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import Swal from "sweetalert2";
 import AparaturDesaList from "../../../components/aparatur-desa/AparaturDesaList";
+import AparaturDesaOrgChart from "../../../components/aparatur-desa/AparaturDesaOrgChart";
 import AparaturDesaForm from "../../../components/aparatur-desa/AparaturDesaForm";
 import {
 	getAparaturDesa,
@@ -10,6 +11,7 @@ import {
 	getProdukHukumList,
 } from "../../../../src/api/aparaturDesaApi";
 import { FiPlus } from "react-icons/fi";
+import { FaBars, FaGripHorizontal } from "react-icons/fa";
 
 const AparaturDesaPage = () => {
 	const [aparatur, setAparatur] = useState([]);
@@ -17,6 +19,7 @@ const AparaturDesaPage = () => {
 	const [loading, setLoading] = useState(true);
 	const [isFormOpen, setIsFormOpen] = useState(false);
 	const [editingData, setEditingData] = useState(null);
+	const [viewMode, setViewMode] = useState("orgchart"); // orgchart | table
 
 	const fetchAparatur = async () => {
 		try {
@@ -67,34 +70,6 @@ const AparaturDesaPage = () => {
 		}
 	};
 
-	const handleEdit = (data) => {
-		setEditingData(data);
-		setIsFormOpen(true);
-	};
-
-	const handleDelete = (id) => {
-		Swal.fire({
-			title: "Anda yakin?",
-			text: "Data yang dihapus tidak dapat dikembalikan!",
-			icon: "warning",
-			showCancelButton: true,
-			confirmButtonColor: "#3085d6",
-			cancelButtonColor: "#d33",
-			confirmButtonText: "Ya, hapus!",
-		}).then(async (result) => {
-			if (result.isConfirmed) {
-				try {
-					await deleteAparaturDesa(id);
-					Swal.fire("Dihapus!", "Data telah berhasil dihapus.", "success");
-					fetchAparatur(); // Refresh list
-				} catch (error) {
-					console.error("Delete error:", error);
-					Swal.fire("Error", "Gagal menghapus data.", "error");
-				}
-			}
-		});
-	};
-
 	const handleAddNew = () => {
 		setEditingData(null);
 		setIsFormOpen(true);
@@ -105,13 +80,33 @@ const AparaturDesaPage = () => {
 			<div className="flex justify-between items-center">
 				<h1 className="text-2xl font-bold">Manajemen Aparatur Desa</h1>
 				{!isFormOpen && (
-					<button
-						onClick={handleAddNew}
-						className="bg-primary text-white px-4 py-2 rounded-lg flex items-center space-x-2"
-					>
-						<FiPlus />
-						<span>Tambah Baru</span>
-					</button>
+					<div className="flex items-center gap-2">
+						<div className="inline-flex p-1 bg-white rounded-md border border-slate-200 overflow-hidden space-x-1">
+							<button
+								className={`px-3 py-3 text-sm  rounded ${
+									viewMode === "orgchart" ? "bg-primary text-white" : "bg-white"
+								}`}
+								onClick={() => setViewMode("orgchart")}
+							>
+								<FaGripHorizontal />
+							</button>
+							<button
+								className={`px-3 py-1.5 text-sm rounded ${
+									viewMode === "table" ? "bg-primary text-white" : "bg-white"
+								}`}
+								onClick={() => setViewMode("table")}
+							>
+								<FaBars />
+							</button>
+						</div>
+						<button
+							onClick={handleAddNew}
+							className="bg-primary text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+						>
+							<FiPlus />
+							<span>Tambah Baru</span>
+						</button>
+					</div>
 				)}
 			</div>
 
@@ -127,12 +122,16 @@ const AparaturDesaPage = () => {
 				/>
 			) : loading ? (
 				<p>Memuat...</p>
+			) : viewMode === "orgchart" ? (
+				aparatur && aparatur.length > 0 ? (
+					<AparaturDesaOrgChart aparatur={aparatur} />
+				) : (
+					<div className="bg-white rounded-md border p-6 text-center text-gray-500">
+						Belum ada data aparatur desa.
+					</div>
+				)
 			) : (
-				<AparaturDesaList
-					aparatur={aparatur}
-					onEdit={handleEdit}
-					onDelete={handleDelete}
-				/>
+				<AparaturDesaList aparatur={aparatur} />
 			)}
 		</div>
 	);
