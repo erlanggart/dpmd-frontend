@@ -142,9 +142,6 @@ const MainLayout = () => {
 
 	// Definisikan menu berdasarkan role user menggunakan useMemo
 	const menuItems = useMemo(() => {
-		console.log('=== MENU GENERATION START ===');
-		console.log('Current user in useMemo:', user);
-		
 		const baseMenuItems = [
 			{
 				key: "pemdes",
@@ -210,8 +207,6 @@ const MainLayout = () => {
 
 		// Gabungkan menu berdasarkan role user
 		if (!user) {
-			console.log('No user found, returning base menu only');
-			console.log('=== MENU GENERATION END ===');
 			return baseMenuItems;
 		}
 
@@ -222,24 +217,11 @@ const MainLayout = () => {
 		const isSuperAdmin = userRoles.includes("superadmin") || userRole === 'superadmin';
 		const isBidangUser = userRoles.includes("bidang") || Boolean(user.bidangRole) || bidangRoles.includes(userRole);
 		
-		console.log('User roles:', userRoles);
-		console.log('User role:', userRole);
-		console.log('User bidangRole:', user.bidangRole);
-		console.log('Is super admin:', isSuperAdmin);
-		console.log('Is bidang user:', isBidangUser);
-		console.log('Should show admin menus:', isSuperAdmin || isBidangUser);
-		
 		if (isSuperAdmin || isBidangUser) {
-			console.log('Adding admin menu items to base menu');
 			const finalMenu = [...baseMenuItems, ...adminMenuItems];
-			console.log('Final menu items:', finalMenu.map(item => item.label));
-			console.log('=== MENU GENERATION END ===');
 			return finalMenu;
 		}
 		
-		console.log('Using base menu items only');
-		console.log('Base menu items:', baseMenuItems.map(item => item.label));
-		console.log('=== MENU GENERATION END ===');
 		return baseMenuItems;
 	}, [user]); // Dependency hanya pada user
 

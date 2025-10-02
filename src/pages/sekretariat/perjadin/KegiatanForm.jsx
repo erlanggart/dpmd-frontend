@@ -297,12 +297,20 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose, onSuccess }) => {
     }
 
     try {
+      console.log('📤 KegiatanForm: Sending data to API:', {
+        formData,
+        endpoint: initialKegiatan ? `/perjadin/kegiatan/${initialKegiatan.id_kegiatan}` : '/perjadin/kegiatan',
+        method: initialKegiatan ? 'PUT' : 'POST'
+      });
+
       let response;
       if (initialKegiatan) {
         response = await api.put(`/perjadin/kegiatan/${initialKegiatan.id_kegiatan}`, formData);
       } else {
         response = await api.post('/perjadin/kegiatan', formData);
       }
+      
+      console.log('📥 KegiatanForm: API response:', response.data);
       
       if (response.data.status === 'success') {
         Swal.fire('Berhasil!', response.data.message, 'success');
@@ -321,34 +329,39 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose, onSuccess }) => {
   };
 
   return (
-    <div className="animate-fade-in-up bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-auto">
-      {/* Header */}
-      <div className="gradient-darker-blue p-6 relative">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="bg-white/20 backdrop-blur-sm p-3 rounded-xl border border-white/10">
-              <i className="fas fa-edit text-2xl text-white"></i>
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold text-white">
-                {initialKegiatan ? 'Edit Kegiatan' : 'Tambah Kegiatan Baru'}
-              </h2>
-              <p className="text-slate-300 text-sm">
-                {initialKegiatan ? 'Perbarui informasi kegiatan perjalanan dinas' : 'Isi formulir untuk menambah kegiatan perjalanan dinas'}
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="bg-white/20 hover:bg-white/30 text-white p-2 rounded-lg transition-all duration-200"
-          >
-            <i className="fas fa-times text-lg"></i>
-          </button>
+    <div className="space-y-8">
+      {/* Enhanced Header */}
+      <div className="text-center space-y-6">
+        <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-slate-700 to-slate-900 rounded-2xl shadow-2xl">
+          <i className="fas fa-edit text-3xl text-white"></i>
+        </div>
+        <div>
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent mb-4">
+            {initialKegiatan ? 'Edit Kegiatan' : 'Form Kegiatan Baru'}
+          </h1>
+          <p className="text-slate-600 text-lg max-w-2xl mx-auto">
+            {initialKegiatan ? 'Perbarui informasi kegiatan perjalanan dinas' : 'Isi formulir untuk menambah kegiatan perjalanan dinas baru'}
+          </p>
+          <div className="w-32 h-1 bg-gradient-to-r from-slate-700 via-slate-800 to-slate-900 mx-auto rounded-full mt-4"></div>
         </div>
       </div>
 
-      {/* Form Content */}
-      <form onSubmit={handleSubmit} className="p-8 space-y-8">
+      {/* Enhanced Form Container */}
+      <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-slate-200/50 overflow-hidden">
+        <div className="bg-gradient-to-r from-slate-700 to-slate-900 px-6 py-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-white/20 rounded-lg">
+              <i className="fas fa-form text-white"></i>
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-white">Formulir Kegiatan</h3>
+              <p className="text-slate-300 text-sm">Lengkapi semua informasi yang diperlukan</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Form Content */}
+        <form onSubmit={handleSubmit} className="p-8 space-y-8">
         {/* Basic Information */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Nama Kegiatan */}
@@ -570,7 +583,8 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose, onSuccess }) => {
             {initialKegiatan ? 'Perbarui Kegiatan' : 'Simpan Kegiatan'}
           </button>
         </div>
-      </form>
+        </form>
+      </div>
     </div>
   );
 };
