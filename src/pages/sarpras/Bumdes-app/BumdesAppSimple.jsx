@@ -1,4 +1,3 @@
-// Simple BumdesApp for debugging
 import React, { useState } from 'react';
 import { FaPlus, FaChartBar, FaUserEdit } from 'react-icons/fa';
 import './bumdes.css';

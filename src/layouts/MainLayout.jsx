@@ -112,19 +112,10 @@ const MainLayout = () => {
 	useEffect(() => {
 		const storedUser = localStorage.getItem("user");
 		
-		console.log('=== USER LOADING DEBUG ===');
-		console.log('MainLayout: storedUser =', storedUser);
-		
 		if (storedUser) {
 			const userData = JSON.parse(storedUser);
-			console.log('MainLayout: Setting user =', userData);
-			console.log('MainLayout: User roles =', userData.roles);
-			console.log('MainLayout: User bidangRole =', userData.bidangRole);
 			setUser(userData);
-		} else {
-			console.log('MainLayout: No user data found');
 		}
-		console.log('=== END USER LOADING ===');
 	}, []);
 
 	// Secara otomatis membuka menu yang relevan saat halaman dimuat
