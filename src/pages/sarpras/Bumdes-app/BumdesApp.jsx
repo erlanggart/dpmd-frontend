@@ -9,32 +9,32 @@ const BumdesDashboardModern = lazy(() => import('./BumdesDashboardModern'));
 
 // Modern Loading Fallback Component with Tailwind
 const ModernLoadingFallback = () => (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
+    <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-12 shadow-2xl border border-white/20 max-w-md mx-4">
             <div className="flex flex-col items-center space-y-6">
                 {/* Animated Spinner */}
                 <div className="relative">
-                    <div className="w-16 h-16 border-4 border-slate-200 rounded-full"></div>
-                    <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
+                    <div className="w-16 h-16 border-4 border-white rounded-full"></div>
+                    <div className="w-16 h-16 border-4 border-slate-800 border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
                     <div className="absolute inset-0 flex items-center justify-center">
-                        <FaBuilding className="text-blue-600 text-xl animate-pulse" />
+                        <FaBuilding className="text-slate-800 text-xl animate-pulse" />
                     </div>
                 </div>
                 
                 {/* Loading Text */}
                 <div className="text-center">
                     <h3 className="text-xl font-bold text-slate-800 mb-2 flex items-center gap-2">
-                        <HiSparkles className="text-blue-600" />
+                        <HiSparkles className="text-slate-800" />
                         Memuat Komponen...
                     </h3>
-                    <p className="text-slate-600">Mohon tunggu sebentar</p>
+                    <p className="text-slate-800">Mohon tunggu sebentar</p>
                 </div>
                 
                 {/* Progress Dots */}
                 <div className="flex space-x-2">
-                    <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
-                    <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                    <div className="w-2 h-2 bg-slate-800 rounded-full animate-bounce"></div>
+                    <div className="w-2 h-2 bg-slate-800 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                    <div className="w-2 h-2 bg-slate-800 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
                 </div>
             </div>
         </div>
@@ -62,8 +62,8 @@ function BumdesApp() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50">
-            <div className="container mx-auto px-4 py-8 max-w-7xl">
+        <div className="min-h-screen bg-white">
+            <div className="container mx-auto px-3 py-8 max-w-8xl">
                 {/* Enhanced Header Section */}
                 <div className="relative mb-8">
                     <div className="bg-slate-800 rounded-3xl shadow-2xl p-8 overflow-hidden">
@@ -83,11 +83,11 @@ function BumdesApp() {
                             <div className="flex items-center gap-4">
                                 {/* Icon dengan navy background */}
                                 <div className="relative">
-                                    <div className="w-16 h-16 bg-slate-700 rounded-2xl flex items-center justify-center shadow-lg">
+                                    <div className="w-16 h-16 bg-slate-800 rounded-2xl flex items-center justify-center shadow-lg">
                                         <FaBuilding className="text-white text-2xl" />
                                     </div>
                                     <div className="absolute -top-1 -right-1">
-                                        <HiSparkles className="text-blue-400 text-lg animate-pulse" />
+                                        <HiSparkles className="text-white text-lg animate-pulse" />
                                     </div>
                                 </div>
                                 
@@ -95,7 +95,7 @@ function BumdesApp() {
                                     <h1 className="text-4xl font-bold text-white mb-2">
                                         Data BUMDes
                                     </h1>
-                                    <p className="text-slate-300 text-lg font-medium">
+                                    <p className="text-white text-lg font-medium">
                                         Aplikasi Pengelolaan Data BUMDes Kabupaten Bogor
                                     </p>
                                 </div>
@@ -106,14 +106,14 @@ function BumdesApp() {
 
                 {/* Enhanced Navigation Buttons */}
                 <div className="mb-8">
-                    <div className="bg-white rounded-2xl p-2 shadow-xl border border-gray-200">
+                    <div className="bg-white rounded-2xl p-2 shadow-xl border border-white">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                             <button
                                 onClick={() => handleNavClick('form')}
                                 className={`group relative overflow-hidden rounded-xl px-6 py-4 font-semibold transition-all duration-300 transform hover:scale-105 ${
                                     view === 'form' 
                                         ? 'bg-slate-800 text-white shadow-lg' 
-                                        : 'bg-gray-50 text-slate-700 hover:bg-gray-100 hover:shadow-md'
+                                        : 'bg-white text-slate-800 hover:bg-white hover:shadow-md'
                                 }`}
                             >
                                 <div className="flex items-center justify-center gap-3">
@@ -127,7 +127,7 @@ function BumdesApp() {
                                 className={`group relative overflow-hidden rounded-xl px-6 py-4 font-semibold transition-all duration-300 transform hover:scale-105 ${
                                     view === 'statistik' 
                                         ? 'bg-slate-800 text-white shadow-lg' 
-                                        : 'bg-gray-50 text-slate-700 hover:bg-gray-100 hover:shadow-md'
+                                        : 'bg-white text-slate-800 hover:bg-white hover:shadow-md'
                                 }`}
                             >
                                 <div className="flex items-center justify-center gap-3">
@@ -140,7 +140,7 @@ function BumdesApp() {
                 </div>
 
                 {/* Enhanced Content Container */}
-                <div className="bg-white rounded-3xl shadow-xl border border-gray-200 min-h-[600px] overflow-hidden">
+                <div className="bg-white rounded-3xl shadow-xl border border-white min-h-[600px] overflow-hidden">
                     <Suspense fallback={<ModernLoadingFallback />}>
                         {renderContent()}
                     </Suspense>
