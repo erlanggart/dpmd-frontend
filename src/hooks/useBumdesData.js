@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import api from '../api';
+import api from '../services/api.js';
 
 export const useBumdesData = (initialData = null) => {
   const [bumdesData, setBumdesData] = useState([]);
@@ -148,20 +148,52 @@ export const useBumdesFilter = (bumdesData) => {
     return filteredData.slice(startIndex, endIndex);
   }, [filteredData, currentPage, itemsPerPage]);
 
-  // Get statistics
+  // Get statistics - BASIS: 416 DESA (JUMLAH BAKU BUMDES KABUPATEN BOGOR)
   const getStatistics = useCallback(() => {
-    const totalBumdes = filteredData.length;
+    const TOTAL_DESA_BOGOR = 416; // Jumlah baku BUMDes di Kabupaten Bogor
+    const totalBumdesUploaded = filteredData.length; // BUMDes yang sudah mengupload
+    const totalBumdesBelumUpload = TOTAL_DESA_BOGOR - bumdesData.length; // BUMDes belum mengupload dari total data
     const activeBumdes = filteredData.filter(item => item.status === 'aktif').length;
     const inactiveBumdes = filteredData.filter(item => item.status === 'tidak aktif').length;
     const totalKecamatan = [...new Set(filteredData.map(item => item.kecamatan).filter(Boolean))].length;
+    
+    // Persentase berdasarkan 416 desa sebagai 100%
+    const persentaseUpload = ((bumdesData.length / TOTAL_DESA_BOGOR) * 100).toFixed(1);
+    const persentaseBelumUpload = ((totalBumdesBelumUpload / TOTAL_DESA_BOGOR) * 100).toFixed(1);
+    
+    // Statistik per kecamatan
+    const kecamatanStats = bumdesData.reduce((acc, item) => {
+      const key = item.kecamatan || 'Tidak diketahui';
+      if (!acc[key]) {
+        acc[key] = { uploaded: 0, aktif: 0, nonAktif: 0 };
+      }
+      acc[key].uploaded++;
+      if (item.status === 'aktif') acc[key].aktif++;
+      if (item.status === 'tidak aktif') acc[key].nonAktif++;
+      return acc;
+    }, {});
+
+    const kecamatanData = Object.entries(kecamatanStats).map(([name, stats]) => ({
+      name,
+      uploaded: stats.uploaded,
+      aktif: stats.aktif,
+      nonAktif: stats.nonAktif,
+      belumUpload: 0 // Akan dihitung berdasarkan data master desa per kecamatan
+    }));
 
     return {
-      totalBumdes,
+      totalBumdes: totalBumdesUploaded, // BUMDes yang sudah upload (filtered)
+      totalBumdesUploaded: bumdesData.length, // Total BUMDes yang sudah upload (dari semua data)
+      totalBumdesBelumUpload, // BUMDes yang belum upload
+      totalDesaBogor: TOTAL_DESA_BOGOR, // Total desa di Kabupaten Bogor
       activeBumdes,
       inactiveBumdes,
-      totalKecamatan
+      totalKecamatan,
+      persentaseUpload,
+      persentaseBelumUpload,
+      kecamatanData
     };
-  }, [filteredData]);
+  }, [filteredData, bumdesData]);
 
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
 

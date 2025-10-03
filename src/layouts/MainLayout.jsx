@@ -368,7 +368,7 @@ const MainLayout = () => {
 					</div>
 					<div className="flex items-center"></div>
 				</header>
-				<main className="flex-1 overflow-y-auto p-4 pt-0">
+				<main className="flex-1 overflow-y-auto p-2 pt-0">
 					<Outlet />
 				</main>
 			</div>

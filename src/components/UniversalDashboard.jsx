@@ -343,7 +343,7 @@ const UniversalDashboard = () => {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 -m-2">
             {/* Header */}
             <div className="bg-primary rounded-lg shadow-sm border p-6">
                 <div className="flex items-center justify-between">
@@ -368,7 +368,7 @@ const UniversalDashboard = () => {
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6">
                 {dashboardData.stats.map((stat, index) => (
                     <div 
                         key={index} 
@@ -387,7 +387,7 @@ const UniversalDashboard = () => {
                 ))}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                 {/* Quick Actions */}
                 <div className="bg-white rounded-lg shadow-sm  p-6">
                     <h2 className="text-lg font-semibold text-primary mb-4">Aksi Cepat</h2>
