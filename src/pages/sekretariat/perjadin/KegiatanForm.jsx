@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import api from '../../../api';
 import Swal from 'sweetalert2';
 
-// Custom CSS for animations
+// Enhanced CSS for modern animations and effects
 const styles = `
   @keyframes fadeInUp {
     0% {
       opacity: 0;
-      transform: translateY(20px);
+      transform: translateY(30px);
     }
     100% {
       opacity: 1;
@@ -15,16 +15,70 @@ const styles = `
     }
   }
 
-  .animate-fade-in-up {
-    animation: fadeInUp 0.6s ease-out;
+  @keyframes slideIn {
+    0% {
+      opacity: 0;
+      transform: translateX(-20px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateX(0);
+    }
   }
 
-  .gradient-dark-blue {
+  @keyframes pulse {
+    0%, 100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.05);
+    }
+  }
+
+  .animate-fade-in-up {
+    animation: fadeInUp 0.8s ease-out;
+  }
+
+  .animate-slide-in {
+    animation: slideIn 0.6s ease-out;
+  }
+
+  .animate-pulse-subtle {
+    animation: pulse 2s infinite;
+  }
+
+  .gradient-slate {
     background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
   }
 
-  .gradient-darker-blue {
-    background: linear-gradient(135deg, #0c1420 0%, #1e293b 50%, #475569 100%);
+  .gradient-slate-light {
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #cbd5e1 100%);
+  }
+
+  .glass-effect {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .input-focus {
+    transition: all 0.3s ease;
+  }
+
+  .input-focus:focus {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, #1e293b 0%, #475569 100%);
+    transition: all 0.3s ease;
+  }
+
+  .btn-primary:hover {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
   }
 `;
 
@@ -330,115 +384,177 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose, onSuccess }) => {
 
   return (
     <div className="space-y-8">
-      {/* Enhanced Header */}
-      <div className="text-center space-y-6">
-        <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-slate-700 to-slate-900 rounded-2xl shadow-2xl">
-          <i className="fas fa-edit text-3xl text-white"></i>
+      {/* Enhanced Header with Modern Design */}
+      <div className="text-center space-y-8 animate-fade-in-up">
+        <div className="relative inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-slate-700 via-slate-800 to-slate-900 rounded-3xl shadow-2xl animate-pulse-subtle">
+          <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-3xl"></div>
+          <i className={`fas ${initialKegiatan ? 'fa-edit' : 'fa-plus-circle'} text-4xl text-white relative z-10`}></i>
+          <div className="absolute -top-2 -right-2 w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center">
+            <i className="fas fa-check text-white text-xs"></i>
+          </div>
         </div>
-        <div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent mb-4">
-            {initialKegiatan ? 'Edit Kegiatan' : 'Form Kegiatan Baru'}
-          </h1>
-          <p className="text-slate-600 text-lg max-w-2xl mx-auto">
-            {initialKegiatan ? 'Perbarui informasi kegiatan perjalanan dinas' : 'Isi formulir untuk menambah kegiatan perjalanan dinas baru'}
-          </p>
-          <div className="w-32 h-1 bg-gradient-to-r from-slate-700 via-slate-800 to-slate-900 mx-auto rounded-full mt-4"></div>
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-5xl font-bold bg-gradient-to-r from-slate-800 via-slate-700 to-slate-900 bg-clip-text text-transparent mb-4 tracking-tight">
+              {initialKegiatan ? '✏️ Edit Kegiatan' : '📝 Form Kegiatan Baru'}
+            </h1>
+            <p className="text-slate-600 text-xl max-w-3xl mx-auto leading-relaxed font-medium">
+              {initialKegiatan ? 'Perbarui informasi kegiatan perjalanan dinas dengan detail terbaru' : 'Isi formulir lengkap untuk menambah kegiatan perjalanan dinas baru'}
+            </p>
+          </div>
+          <div className="flex items-center justify-center space-x-2">
+            <div className="w-3 h-3 bg-slate-700 rounded-full animate-pulse"></div>
+            <div className="w-16 h-1 bg-gradient-to-r from-slate-700 via-slate-800 to-slate-900 rounded-full"></div>
+            <div className="w-3 h-3 bg-slate-800 rounded-full animate-pulse" style={{animationDelay: '0.2s'}}></div>
+            <div className="w-16 h-1 bg-gradient-to-r from-slate-800 via-slate-900 to-slate-700 rounded-full"></div>
+            <div className="w-3 h-3 bg-slate-900 rounded-full animate-pulse" style={{animationDelay: '0.4s'}}></div>
+          </div>
         </div>
       </div>
 
-      {/* Enhanced Form Container */}
-      <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-slate-200/50 overflow-hidden">
-        <div className="bg-gradient-to-r from-slate-700 to-slate-900 px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-white/20 rounded-lg">
-              <i className="fas fa-form text-white"></i>
+      {/* Enhanced Form Container with Glass Effect */}
+      <div className="glass-effect rounded-3xl shadow-2xl border border-slate-200/30 overflow-hidden animate-slide-in">
+        <div className="bg-gradient-to-r from-slate-700 via-slate-800 to-slate-900 px-8 py-6 relative">
+          <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent"></div>
+          <div className="flex items-center gap-4 relative z-10">
+            <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm border border-white/10">
+              <i className="fas fa-clipboard-list text-white text-xl"></i>
             </div>
-            <div>
-              <h3 className="text-xl font-bold text-white">Formulir Kegiatan</h3>
-              <p className="text-slate-300 text-sm">Lengkapi semua informasi yang diperlukan</p>
+            <div className="flex-1">
+              <h3 className="text-2xl font-bold text-white mb-1">📋 Formulir Kegiatan</h3>
+              <p className="text-slate-300 text-base font-medium">Lengkapi semua informasi yang diperlukan dengan detail</p>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
+              <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" style={{animationDelay: '0.3s'}}></div>
+              <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse" style={{animationDelay: '0.6s'}}></div>
             </div>
           </div>
         </div>
 
-        {/* Form Content */}
-        <form onSubmit={handleSubmit} className="p-8 space-y-8">
-        {/* Basic Information */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Nama Kegiatan */}
-          <div className="lg:col-span-2">
-            <label className="block text-sm font-bold text-gray-700 mb-2">
-              <i className="fas fa-pen-nib text-slate-600 mr-2"></i>
-              Nama Kegiatan
-            </label>
-            <input 
-              type="text" 
-              value={formData.nama_kegiatan} 
-              onChange={(e) => setFormData({...formData, nama_kegiatan: e.target.value})} 
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 bg-white shadow-sm transition-all duration-200" 
-              placeholder="Masukkan nama kegiatan"
-              required 
-            />
+        {/* Enhanced Form Content */}
+        <form onSubmit={handleSubmit} className="p-10 space-y-10">
+        {/* Basic Information Section */}
+        <div className="space-y-8">
+          <div className="border-l-4 border-slate-700 pl-6">
+            <h2 className="text-2xl font-bold text-slate-800 mb-2 flex items-center gap-3">
+              <i className="fas fa-info-circle text-slate-700"></i>
+              Informasi Dasar
+            </h2>
+            <p className="text-slate-600 text-lg">Data utama kegiatan perjalanan dinas</p>
           </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Nama Kegiatan */}
+            <div className="lg:col-span-2">
+              <label className="block text-base font-bold text-slate-800 mb-3 flex items-center gap-2">
+                <div className="p-1 bg-slate-100 rounded-lg">
+                  <i className="fas fa-pen-nib text-slate-700 text-sm"></i>
+                </div>
+                Nama Kegiatan
+                <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <input 
+                  type="text" 
+                  value={formData.nama_kegiatan} 
+                  onChange={(e) => setFormData({...formData, nama_kegiatan: e.target.value})} 
+                  className="w-full px-5 py-4 border-2 border-slate-200 rounded-2xl focus:ring-4 focus:ring-slate-500/20 focus:border-slate-500 bg-white shadow-lg transition-all duration-300 input-focus text-lg font-medium" 
+                  placeholder="Masukkan nama kegiatan lengkap"
+                  required 
+                />
+                <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                  <i className="fas fa-edit text-slate-400"></i>
+                </div>
+              </div>
+            </div>
 
-          {/* Nomor SP */}
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">
-              <i className="fas fa-file-alt text-slate-600 mr-2"></i>
-              Nomor SP
-            </label>
-            <input 
-              type="text" 
-              value={formData.nomor_sp} 
-              onChange={(e) => setFormData({...formData, nomor_sp: e.target.value})} 
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 bg-white shadow-sm transition-all duration-200" 
-              placeholder="Nomor Surat Perintah"
-              required 
-            />
-          </div>
+            {/* Nomor SP */}
+            <div>
+              <label className="block text-base font-bold text-slate-800 mb-3 flex items-center gap-2">
+                <div className="p-1 bg-slate-100 rounded-lg">
+                  <i className="fas fa-file-alt text-slate-700 text-sm"></i>
+                </div>
+                Nomor SP
+                <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <input 
+                  type="text" 
+                  value={formData.nomor_sp} 
+                  onChange={(e) => setFormData({...formData, nomor_sp: e.target.value})} 
+                  className="w-full px-5 py-4 border-2 border-slate-200 rounded-2xl focus:ring-4 focus:ring-slate-500/20 focus:border-slate-500 bg-white shadow-lg transition-all duration-300 input-focus text-lg font-medium" 
+                  placeholder="Nomor Surat Perintah"
+                  required 
+                />
+                <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                  <i className="fas fa-hashtag text-slate-400"></i>
+                </div>
+              </div>
+            </div>
 
-          {/* Lokasi */}
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">
-              <i className="fas fa-map-marker-alt text-slate-600 mr-2"></i>
-              Tempat Kegiatan
-            </label>
-            <input 
-              type="text" 
-              value={formData.lokasi} 
-              onChange={(e) => setFormData({...formData, lokasi: e.target.value})} 
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 bg-white shadow-sm transition-all duration-200" 
-              placeholder="Lokasi kegiatan"
-              required 
-            />
-          </div>
+            {/* Lokasi */}
+            <div>
+              <label className="block text-base font-bold text-slate-800 mb-3 flex items-center gap-2">
+                <div className="p-1 bg-slate-100 rounded-lg">
+                  <i className="fas fa-map-marker-alt text-slate-700 text-sm"></i>
+                </div>
+                Tempat Kegiatan
+                <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <input 
+                  type="text" 
+                  value={formData.lokasi} 
+                  onChange={(e) => setFormData({...formData, lokasi: e.target.value})} 
+                  className="w-full px-5 py-4 border-2 border-slate-200 rounded-2xl focus:ring-4 focus:ring-slate-500/20 focus:border-slate-500 bg-white shadow-lg transition-all duration-300 input-focus text-lg font-medium" 
+                  placeholder="Lokasi kegiatan"
+                  required 
+                />
+                <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                  <i className="fas fa-location-dot text-slate-400"></i>
+                </div>
+              </div>
+            </div>
 
-          {/* Tanggal */}
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">
-              <i className="fas fa-calendar-alt text-slate-600 mr-2"></i>
-              Tanggal Mulai
-            </label>
-            <input 
-              type="date" 
-              value={formData.tanggal_mulai} 
-              onChange={(e) => setFormData({...formData, tanggal_mulai: e.target.value})} 
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 bg-white shadow-sm transition-all duration-200" 
-              required 
-            />
-          </div>
+            {/* Tanggal Mulai */}
+            <div>
+              <label className="block text-base font-bold text-slate-800 mb-3 flex items-center gap-2">
+                <div className="p-1 bg-slate-100 rounded-lg">
+                  <i className="fas fa-calendar-alt text-slate-700 text-sm"></i>
+                </div>
+                Tanggal Mulai
+                <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <input 
+                  type="date" 
+                  value={formData.tanggal_mulai} 
+                  onChange={(e) => setFormData({...formData, tanggal_mulai: e.target.value})} 
+                  className="w-full px-5 py-4 border-2 border-slate-200 rounded-2xl focus:ring-4 focus:ring-slate-500/20 focus:border-slate-500 bg-white shadow-lg transition-all duration-300 input-focus text-lg font-medium" 
+                  required 
+                />
+              </div>
+            </div>
 
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">
-              <i className="fas fa-calendar-check text-slate-600 mr-2"></i>
-              Tanggal Selesai
-            </label>
-            <input 
-              type="date" 
-              value={formData.tanggal_selesai} 
-              onChange={(e) => setFormData({...formData, tanggal_selesai: e.target.value})} 
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 bg-white shadow-sm transition-all duration-200" 
-              required 
-            />
+            <div>
+              <label className="block text-base font-bold text-slate-800 mb-3 flex items-center gap-2">
+                <div className="p-1 bg-slate-100 rounded-lg">
+                  <i className="fas fa-calendar-check text-slate-700 text-sm"></i>
+                </div>
+                Tanggal Selesai
+                <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <input 
+                  type="date" 
+                  value={formData.tanggal_selesai} 
+                  onChange={(e) => setFormData({...formData, tanggal_selesai: e.target.value})} 
+                  className="w-full px-5 py-4 border-2 border-slate-200 rounded-2xl focus:ring-4 focus:ring-slate-500/20 focus:border-slate-500 bg-white shadow-lg transition-all duration-300 input-focus text-lg font-medium" 
+                  required 
+                />
+              </div>
+            </div>
           </div>
         </div>
 

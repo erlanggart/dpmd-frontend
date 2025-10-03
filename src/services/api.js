@@ -74,4 +74,17 @@ export const deleteProdukHukum = (id) => {
 	return api.delete(`/produk-hukum/${id}`);
 };
 
+// --- Kecamatan dan Desa ---
+export const getKecamatans = () => {
+	return api.get('/kecamatans');
+};
+
+export const getDesasByKecamatan = (kecamatanId) => {
+	return api.get(`/desas/by-kecamatan/${kecamatanId}`);
+};
+
+export const getAllDesas = () => {
+	return api.get('/desas');
+};
+
 export default api;

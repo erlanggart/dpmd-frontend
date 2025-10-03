@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { FiList, FiPlus, FiFileText, FiEdit, FiTrash2, FiEye, FiSearch, FiFilter } from 'react-icons/fi';
+import { FiList, FiPlus, FiFileText, FiEdit, FiTrash2, FiEye, FiSearch, FiFilter, FiDownload } from 'react-icons/fi';
 import api from '../../../api';
 import Swal from 'sweetalert2';
 import KegiatanForm from './KegiatanForm';
+import { exportToPDF, exportToExcel, formatDataForExport, exportWithProgress } from '../../../utils/exportUtils_clean';
 
 const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, refreshTrigger }) => {
   const [kegiatanList, setKegiatanList] = useState([]);
@@ -16,6 +17,48 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, refres
   const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
   const limit = 10;
+
+  // Export functionality states
+  const [isExportingPDF, setIsExportingPDF] = useState(false);
+  const [isExportingExcel, setIsExportingExcel] = useState(false);
+
+  // Performance optimization - Cache system
+  const [dataCache, setDataCache] = useState({
+    kegiatan: { data: null, hash: null, timestamp: null },
+    bidang: { data: null, hash: null, timestamp: null }
+  });
+  const [lastRefreshTrigger, setLastRefreshTrigger] = useState(0);
+
+  // Cache utility functions
+  const generateDataHash = (data) => {
+    try {
+      return btoa(JSON.stringify(data)).slice(0, 16);
+    } catch {
+      return Date.now().toString();
+    }
+  };
+
+  const isCacheValid = (cacheKey, maxAge = 120000) => { // 2 minutes default
+    const cache = dataCache[cacheKey];
+    if (!cache.timestamp) return false;
+    return (Date.now() - cache.timestamp) < maxAge;
+  };
+
+  const updateCache = (cacheKey, data) => {
+    setDataCache(prev => ({
+      ...prev,
+      [cacheKey]: {
+        data,
+        hash: generateDataHash(data),
+        timestamp: Date.now()
+      }
+    }));
+  };
+
+  const shouldFetchData = (cacheKey, maxAge = 120000) => {
+    const cache = dataCache[cacheKey];
+    return !cache.data || !isCacheValid(cacheKey, maxAge) || refreshTrigger > lastRefreshTrigger;
+  };
 
   useEffect(() => {
     fetchKegiatan();
@@ -31,13 +74,30 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, refres
 
   // Refresh data when refreshTrigger changes
   useEffect(() => {
-    if (refreshTrigger > 0) {
-      fetchKegiatan();
+    if (refreshTrigger > lastRefreshTrigger) {
+      console.log('🔄 KegiatanList: Refresh triggered, forcing fresh data fetch...');
+      setLastRefreshTrigger(refreshTrigger);
+      fetchKegiatan(true); // Force refresh
+      fetchBidang(true); // Force refresh
     }
-  }, [refreshTrigger]);
+  }, [refreshTrigger, lastRefreshTrigger]);
 
-  const fetchKegiatan = async () => {
+  const fetchKegiatan = async (forceRefresh = false) => {
+    const cacheKey = `kegiatan_${currentPage}_${searchTerm}_${selectedBidang}`;
+    
     try {
+      // Check if we should fetch kegiatan data
+      if (!forceRefresh && !shouldFetchData('kegiatan', 90000)) { // 1.5 minutes cache
+        const cachedData = dataCache.kegiatan.data;
+        if (cachedData && cachedData.params === `${currentPage}_${searchTerm}_${selectedBidang}`) {
+          console.log('📋 KegiatanList: Using cached kegiatan data');
+          setKegiatanList(cachedData.data);
+          setTotalPages(cachedData.totalPages);
+          setTotalRecords(cachedData.totalRecords);
+          return;
+        }
+      }
+
       setLoading(true);
       const params = {
         page: currentPage,
@@ -46,34 +106,97 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, refres
         bidang: selectedBidang,
       };
 
-      console.log('🔄 KegiatanList: Fetching kegiatan data with params:', params);
+      console.log('🔄 KegiatanList: Fetching fresh kegiatan data with params:', params);
       const response = await api.get('/perjadin/kegiatan', { params });
       
       if (response.data.success) {
-        console.log('✅ KegiatanList: Data received:', response.data.data);
-        setKegiatanList(response.data.data || []);
-        setTotalPages(response.data.totalPages || 1);
-        setTotalRecords(response.data.totalRecords || 0);
+        const newData = response.data.data || [];
+        const newMeta = {
+          totalPages: response.data.last_page || 1,
+          totalRecords: response.data.total || 0
+        };
+
+        // Check if data actually changed
+        const cachedHash = dataCache.kegiatan.hash;
+        const newHash = generateDataHash({ data: newData, ...newMeta, params: `${currentPage}_${searchTerm}_${selectedBidang}` });
+        
+        if (cachedHash === newHash && !forceRefresh) {
+          console.log('📋 KegiatanList: Kegiatan data unchanged, skipping update');
+          setLoading(false);
+          return;
+        }
+
+        console.log('✅ KegiatanList: Setting new kegiatan data:', newData);
+        setKegiatanList(newData);
+        setTotalPages(newMeta.totalPages);
+        setTotalRecords(newMeta.totalRecords);
+        
+        // Update cache
+        updateCache('kegiatan', { 
+          data: newData, 
+          ...newMeta, 
+          params: `${currentPage}_${searchTerm}_${selectedBidang}` 
+        });
       }
     } catch (error) {
-      console.error('❌ KegiatanList: Error fetching data:', error);
-      // Set empty data instead of showing error for first time users
-      setKegiatanList([]);
-      setTotalPages(1);
-      setTotalRecords(0);
+      console.error('❌ KegiatanList: Error fetching kegiatan data:', error);
+      
+      // Try to use cached data on error
+      if (dataCache.kegiatan.data) {
+        console.log('🔄 KegiatanList: Using cached kegiatan data due to error');
+        const cachedData = dataCache.kegiatan.data;
+        setKegiatanList(cachedData.data);
+        setTotalPages(cachedData.totalPages);
+        setTotalRecords(cachedData.totalRecords);
+      } else {
+        // Set empty data for new users
+        setKegiatanList([]);
+        setTotalPages(1);
+        setTotalRecords(0);
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchBidang = async () => {
+  const fetchBidang = async (forceRefresh = false) => {
     try {
+      // Check if we should fetch bidang data
+      if (!forceRefresh && !shouldFetchData('bidang', 300000)) { // 5 minutes cache for bidang (rarely changes)
+        console.log('📋 KegiatanList: Using cached bidang data');
+        const cachedData = dataCache.bidang.data;
+        if (cachedData) {
+          setBidangList(cachedData);
+          return;
+        }
+      }
+
+      console.log('🔄 KegiatanList: Fetching fresh bidang data...');
       const response = await api.get('/master/bidang');
       if (response.data.success) {
-        setBidangList(response.data.data || []);
+        const newBidangData = response.data.data || [];
+
+        // Check if bidang data actually changed
+        const cachedHash = dataCache.bidang.hash;
+        const newHash = generateDataHash(newBidangData);
+        
+        if (cachedHash === newHash && !forceRefresh) {
+          console.log('📋 KegiatanList: Bidang data unchanged, skipping update');
+          return;
+        }
+
+        console.log('✅ KegiatanList: Setting new bidang data:', newBidangData);
+        setBidangList(newBidangData);
+        updateCache('bidang', newBidangData);
       }
     } catch (error) {
-      console.error('Error fetching bidang:', error);
+      console.error('❌ KegiatanList: Error fetching bidang data:', error);
+      
+      // Try to use cached data on error
+      if (dataCache.bidang.data) {
+        console.log('🔄 KegiatanList: Using cached bidang data due to error');
+        setBidangList(dataCache.bidang.data);
+      }
     }
   };
 
@@ -141,29 +264,85 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, refres
     });
   };
 
-  const formatPersonil = (personilBidangList) => {
-    if (!personilBidangList || personilBidangList.length === 0) return '-';
+  const formatPersonil = (kegiatanData) => {
+    // Handle kegiatan.details from backend response
+    const details = kegiatanData?.details || kegiatanData?.personil_bidang_list || [];
     
-    console.log('🔍 KegiatanList: Formatting personil data:', personilBidangList);
+    if (!details || details.length === 0) return '-';
     
-    return personilBidangList.map(pb => {
+    console.log('🔍 KegiatanList: Formatting personil data:', details);
+    
+    return details.map(detail => {
       let personilNames = '';
       
-      // Handle different data structures from backend
-      if (pb.personil_list && Array.isArray(pb.personil_list)) {
-        // Format: { nama_bidang: "...", personil_list: [{nama_personil: "..."}, ...] }
-        personilNames = pb.personil_list.map(p => p.nama_personil || p.nama || p).join(', ');
-      } else if (pb.personil && Array.isArray(pb.personil)) {
-        // Format: { nama_bidang: "...", personil: ["nama1", "nama2", ...] }
-        personilNames = pb.personil.filter(p => p && p.trim()).join(', ');
-      } else if (pb.personil && typeof pb.personil === 'string') {
-        // Format: { nama_bidang: "...", personil: "nama1,nama2" }
-        personilNames = pb.personil;
+      // Backend sends: { id_bidang: 1, personil: "nama1, nama2", bidang: { nama: "..." } }
+      if (detail.personil && typeof detail.personil === 'string') {
+        personilNames = detail.personil;
+      } else if (detail.personil && Array.isArray(detail.personil)) {
+        personilNames = detail.personil.filter(p => p && p.trim()).join(', ');
       }
       
-      return `${pb.nama_bidang || pb.bidang || 'Unknown'}: ${personilNames || 'Tidak ada personil'}`;
+      const bidangName = detail.bidang?.nama || detail.nama_bidang || 'Unknown';
+      
+      return `${bidangName}: ${personilNames || 'Tidak ada personil'}`;
     }).join(' | ');
   };
+
+  // 📄 Export to PDF Handler  
+  const handleExportPDF = async () => {
+    try {
+      setIsExportingPDF(true);
+      
+      // Show loading alert
+      Swal.fire({
+        title: '📄 Mengekspor ke PDF...',
+        text: 'Mohon tunggu sebentar',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
+      // Fetch all data for export (without pagination)
+      const response = await api.get('/perjadin/kegiatan', {
+        params: {
+          limit: 1000, // Get all data
+          search: searchTerm,
+          bidang: selectedBidang
+        }
+      });
+
+      if (response.data.success) {
+        const formattedData = formatDataForExport(response.data.data || []);
+        const result = await exportWithProgress(exportToPDF, formattedData, 'Data Kegiatan Perjalanan Dinas');
+        
+        Swal.close();
+        
+        if (result.success) {
+          Swal.fire({
+            icon: 'success',
+            title: '🎉 Export Berhasil!',
+            text: 'File PDF telah berhasil diunduh',
+            confirmButtonColor: '#1e293b'
+          });
+        } else {
+          throw new Error(result.message);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Export PDF Error:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Export Gagal',
+        text: error.message || 'Terjadi kesalahan saat mengekspor ke PDF',
+        confirmButtonColor: '#dc2626'
+      });
+    } finally {
+      setIsExportingPDF(false);
+    }
+  };
+
+
 
   if (loading) {
     return (
@@ -194,7 +373,7 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, refres
         </div>
       </div>
 
-      {/* Enhanced Action Buttons */}
+      {/* Enhanced Action Buttons with Export Features */}
       <div className="flex flex-wrap gap-4 justify-center">
         <button 
           onClick={() => onAddNew ? onAddNew() : setShowForm(true)} 
@@ -205,14 +384,37 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, refres
           </div>
           <span>Tambah Kegiatan Baru</span>
         </button>
+        
+        {/* Export PDF Button */}
         <button 
-          onClick={handleExportExcel} 
-          className="group flex items-center gap-3 bg-gradient-to-r from-emerald-600 to-emerald-800 hover:from-emerald-700 hover:to-emerald-900 text-white px-8 py-4 rounded-2xl font-semibold shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300"
+          onClick={handleExportPDF}
+          disabled={isExportingPDF || kegiatanList.length === 0}
+          className="group flex items-center gap-3 bg-gradient-to-r from-red-600 to-red-800 hover:from-red-700 hover:to-red-900 disabled:from-gray-400 disabled:to-gray-600 disabled:cursor-not-allowed text-white px-8 py-4 rounded-2xl font-semibold shadow-xl hover:shadow-2xl transform hover:-translate-y-1 disabled:hover:translate-y-0 transition-all duration-300"
         >
           <div className="p-2 bg-white/20 rounded-lg group-hover:bg-white/30 transition-all duration-300">
-            <FiFileText className="text-lg" />
+            {isExportingPDF ? (
+              <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+            ) : (
+              <FiFileText className="text-lg" />
+            )}
           </div>
-          <span>Export ke Excel</span>
+          <span>{isExportingPDF ? 'Mengekspor...' : '📄 Export PDF'}</span>
+        </button>
+        
+        {/* Export Excel Button */}
+        <button 
+          onClick={handleExportExcel}
+          disabled={isExportingExcel || kegiatanList.length === 0}
+          className="group flex items-center gap-3 bg-gradient-to-r from-emerald-600 to-emerald-800 hover:from-emerald-700 hover:to-emerald-900 disabled:from-gray-400 disabled:to-gray-600 disabled:cursor-not-allowed text-white px-8 py-4 rounded-2xl font-semibold shadow-xl hover:shadow-2xl transform hover:-translate-y-1 disabled:hover:translate-y-0 transition-all duration-300"
+        >
+          <div className="p-2 bg-white/20 rounded-lg group-hover:bg-white/30 transition-all duration-300">
+            {isExportingExcel ? (
+              <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+            ) : (
+              <FiDownload className="text-lg" />
+            )}
+          </div>
+          <span>{isExportingExcel ? 'Mengekspor...' : '📊 Export Excel'}</span>
         </button>
       </div>
 
@@ -353,8 +555,8 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, refres
                       </div>
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-700">
-                      <div className="max-w-xs truncate" title={formatPersonil(kegiatan.personil_bidang_list)}>
-                        {formatPersonil(kegiatan.personil_bidang_list)}
+                      <div className="max-w-xs truncate" title={formatPersonil(kegiatan)}>
+                        {formatPersonil(kegiatan)}
                       </div>
                     </td>
                     <td className="px-6 py-4 text-center">

@@ -43,13 +43,64 @@ const Statistik = ({ refreshTrigger }) => {
     totalPersonil: 0,
     grafikData: [],
     topBidang: [],
-    personilPerBidang: []
+    personilPerBidang: [],
+    trendData: [],
+    monthlyComparison: [],
+    performanceMetrics: {}
   });
 
-  // Fetch data dashboard
-  const fetchDashboardData = async () => {
+  // Performance optimization - Cache system
+  const [dataCache, setDataCache] = useState({
+    dashboard: { data: null, hash: null, timestamp: null },
+    statistik: { data: null, hash: null, timestamp: null }
+  });
+  const [lastRefreshTrigger, setLastRefreshTrigger] = useState(0);
+
+  // Cache utility functions
+  const generateDataHash = (data) => {
     try {
-      console.log('🔄 Statistik: Fetching dashboard data...');
+      return btoa(JSON.stringify(data)).slice(0, 16);
+    } catch {
+      return Date.now().toString();
+    }
+  };
+
+  const isCacheValid = (cacheKey, maxAge = 120000) => { // 2 minutes default
+    const cache = dataCache[cacheKey];
+    if (!cache.timestamp) return false;
+    return (Date.now() - cache.timestamp) < maxAge;
+  };
+
+  const updateCache = (cacheKey, data) => {
+    setDataCache(prev => ({
+      ...prev,
+      [cacheKey]: {
+        data,
+        hash: generateDataHash(data),
+        timestamp: Date.now()
+      }
+    }));
+  };
+
+  const shouldFetchData = (cacheKey, maxAge = 120000) => {
+    const cache = dataCache[cacheKey];
+    return !cache.data || !isCacheValid(cacheKey, maxAge) || refreshTrigger > lastRefreshTrigger;
+  };
+
+  // Fetch data dashboard
+  const fetchDashboardData = async (forceRefresh = false) => {
+    try {
+      // Check if we should fetch dashboard data
+      if (!forceRefresh && !shouldFetchData('dashboard', 90000)) { // 1.5 minutes cache
+        console.log('� Statistik: Using cached dashboard data');
+        const cachedData = dataCache.dashboard.data;
+        if (cachedData) {
+          setDashboardData(cachedData);
+          return;
+        }
+      }
+
+      console.log('�🔄 Statistik: Fetching fresh dashboard data...');
       const response = await api.get('/perjadin/dashboard');
       
       console.log('📥 Statistik Dashboard: Received data:', response.data);
@@ -60,23 +111,53 @@ const Statistik = ({ refreshTrigger }) => {
           bulanan: 0,
           per_bidang: []
         };
+
+        // Check if dashboard data actually changed
+        const cachedHash = dataCache.dashboard.hash;
+        const newHash = generateDataHash(dashData);
         
-        console.log('✅ Statistik Dashboard: Setting data:', dashData);
+        if (cachedHash === newHash && !forceRefresh) {
+          console.log('📋 Statistik: Dashboard data unchanged, skipping update');
+          return;
+        }
+        
+        console.log('✅ Statistik Dashboard: Setting new data:', dashData);
         setDashboardData(dashData);
+        updateCache('dashboard', dashData);
       }
     } catch (error) {
       console.error('❌ Statistik Dashboard: Error fetching data:', error);
-      setDashboardData({
-        mingguan: 0,
-        bulanan: 0,
-        per_bidang: []
-      });
+      
+      // Try to use cached data on error
+      if (dataCache.dashboard.data) {
+        console.log('🔄 Statistik: Using cached dashboard data due to error');
+        setDashboardData(dataCache.dashboard.data);
+      } else {
+        setDashboardData({
+          mingguan: 0,
+          bulanan: 0,
+          per_bidang: []
+        });
+      }
     }
   };
 
-  // Fetch statistik data
-  const fetchStatistikData = async () => {
+  // Enhanced fetch statistik data with multiple data sources
+  const fetchStatistikData = async (forceRefresh = false) => {
+    const cacheKey = `statistik_${selectedPeriod}_${selectedYear}_${selectedMonth}`;
+    
     try {
+      // Check if we should fetch statistik data
+      if (!forceRefresh && !shouldFetchData('statistik', 90000)) { // 1.5 minutes cache
+        const cachedData = dataCache.statistik.data;
+        if (cachedData && cachedData.params === `${selectedPeriod}_${selectedYear}_${selectedMonth}`) {
+          console.log('📋 Statistik: Using cached statistik data');
+          setStatistikData(cachedData.data);
+          setIsLoading(false);
+          return;
+        }
+      }
+
       setIsLoading(true);
       const params = {
         periode: selectedPeriod,
@@ -84,29 +165,104 @@ const Statistik = ({ refreshTrigger }) => {
         ...(selectedPeriod === 'minggu' && { bulan: selectedMonth })
       };
       
-      console.log('🔄 Statistik: Fetching statistik data with params:', params);
-      const response = await api.get('/perjadin/statistik', { params });
+      console.log('🔄 Statistik: Fetching fresh enhanced statistik data with params:', params);
       
-      console.log('📊 Statistik: Received statistik data:', response.data);
+      // Fetch multiple data sources for comprehensive statistics
+      const [statistikResponse, kegiatanResponse] = await Promise.all([
+        api.get('/perjadin/statistik', { params }),
+        api.get('/perjadin/kegiatan', { params: { limit: 1000 } }) // Get all data for analysis
+      ]);
       
-      if (response.data.success) {
-        const statData = response.data.data;
-        console.log('✅ Statistik: Setting statistik data:', statData);
+      console.log('📊 Statistik: Received statistik data:', statistikResponse.data);
+      console.log('📋 Statistik: Received kegiatan data:', kegiatanResponse.data);
+      
+      if (statistikResponse.data.success) {
+        const statData = statistikResponse.data.data;
+        
+        // Enhance data with kegiatan analysis if available
+        if (kegiatanResponse.data.success && kegiatanResponse.data.data) {
+          const kegiatanData = kegiatanResponse.data.data;
+          statData.enhancedAnalysis = analyzeKegiatanData(kegiatanData);
+        }
+        
+        // Check if statistik data actually changed
+        const cachedHash = dataCache.statistik.hash;
+        const newHash = generateDataHash({ data: statData, params: `${selectedPeriod}_${selectedYear}_${selectedMonth}` });
+        
+        if (cachedHash === newHash && !forceRefresh) {
+          console.log('📋 Statistik: Statistik data unchanged, skipping update');
+          setIsLoading(false);
+          return;
+        }
+
+        console.log('✅ Statistik: Setting new enhanced statistik data:', statData);
         setStatistikData(statData);
+        
+        // Update cache
+        updateCache('statistik', { 
+          data: statData, 
+          params: `${selectedPeriod}_${selectedYear}_${selectedMonth}` 
+        });
       }
     } catch (error) {
       console.error('❌ Statistik: Error fetching statistik data:', error);
-      setStatistikData({
-        totalPerjalanan: 0,
-        totalBidang: 0,
-        totalPersonil: 0,
-        grafikData: [],
-        topBidang: [],
-        personilPerBidang: []
-      });
+      
+      // Try to use cached data on error
+      if (dataCache.statistik.data) {
+        console.log('🔄 Statistik: Using cached statistik data due to error');
+        setStatistikData(dataCache.statistik.data.data);
+      } else {
+        setStatistikData({
+          totalPerjalanan: 0,
+          totalBidang: 0,
+          totalPersonil: 0,
+          grafikData: [],
+          topBidang: [],
+          personilPerBidang: [],
+          trendData: [],
+          monthlyComparison: [],
+          performanceMetrics: {}
+        });
+      }
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Analyze kegiatan data for enhanced insights
+  const analyzeKegiatanData = (kegiatanData) => {
+    if (!Array.isArray(kegiatanData) || kegiatanData.length === 0) {
+      return { locationAnalysis: [], timeAnalysis: [], statusAnalysis: [] };
+    }
+
+    // Location analysis
+    const locationMap = {};
+    const timeMap = {};
+    
+    kegiatanData.forEach(kegiatan => {
+      // Location analysis
+      if (kegiatan.lokasi) {
+        locationMap[kegiatan.lokasi] = (locationMap[kegiatan.lokasi] || 0) + 1;
+      }
+      
+      // Time analysis (by month)
+      if (kegiatan.tanggal_mulai) {
+        const month = new Date(kegiatan.tanggal_mulai).getMonth();
+        const monthName = new Date(kegiatan.tanggal_mulai).toLocaleDateString('id-ID', { month: 'long' });
+        timeMap[monthName] = (timeMap[monthName] || 0) + 1;
+      }
+    });
+
+    return {
+      locationAnalysis: Object.entries(locationMap)
+        .map(([lokasi, count]) => ({ lokasi, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5),
+      timeAnalysis: Object.entries(timeMap)
+        .map(([bulan, count]) => ({ bulan, count }))
+        .sort((a, b) => b.count - a.count),
+      totalAnalyzed: kegiatanData.length
+    };
   };
 
   useEffect(() => {
@@ -119,48 +275,74 @@ const Statistik = ({ refreshTrigger }) => {
 
   // Refresh data when refreshTrigger changes
   useEffect(() => {
-    if (refreshTrigger > 0) {
-      fetchDashboardData();
-      fetchStatistikData();
+    if (refreshTrigger > lastRefreshTrigger) {
+      console.log('🔄 Statistik: Refresh triggered, forcing fresh data fetch...');
+      setLastRefreshTrigger(refreshTrigger);
+      fetchDashboardData(true); // Force refresh
+      fetchStatistikData(true); // Force refresh
     }
-  }, [refreshTrigger]);
+  }, [refreshTrigger, lastRefreshTrigger]);
 
-  // Chart data for Bar Chart
+  // Enhanced Chart data for Bar Chart with dynamic data
   const barChartData = {
-    labels: statistikData.grafikData.map(item => item.label || item.bulan || item.tahun || 'Unknown'),
+    labels: statistikData.grafikData?.length > 0 
+      ? statistikData.grafikData.map(item => item.label || item.bulan || item.tahun || 'Unknown')
+      : (statistikData.enhancedAnalysis?.timeAnalysis?.map(item => item.bulan) || ['Tidak ada data']),
     datasets: [
       {
         label: 'Jumlah Kegiatan',
-        data: statistikData.grafikData.map(item => item.total || 0),
-        backgroundColor: 'rgba(71, 85, 105, 0.8)',
+        data: statistikData.grafikData?.length > 0 
+          ? statistikData.grafikData.map(item => item.total || 0)
+          : (statistikData.enhancedAnalysis?.timeAnalysis?.map(item => item.count) || [0]),
+        backgroundColor: (ctx) => {
+          const canvas = ctx.chart.ctx;
+          const gradient = canvas.createLinearGradient(0, 0, 0, 400);
+          gradient.addColorStop(0, 'rgba(71, 85, 105, 0.9)');
+          gradient.addColorStop(1, 'rgba(71, 85, 105, 0.3)');
+          return gradient;
+        },
         borderColor: 'rgba(71, 85, 105, 1)',
         borderWidth: 2,
         borderRadius: 8,
         borderSkipped: false,
+        hoverBackgroundColor: 'rgba(51, 65, 85, 0.9)',
+        hoverBorderColor: 'rgba(51, 65, 85, 1)',
+        hoverBorderWidth: 3,
       }
     ]
   };
 
-  // Chart data for Doughnut Chart
+  // Enhanced Chart data for Doughnut Chart with better colors and data
   const doughnutChartData = {
-    labels: statistikData.topBidang.map(item => item.nama_bidang || 'Unknown'),
+    labels: statistikData.topBidang?.length > 0 
+      ? statistikData.topBidang.map(item => item.nama_bidang || item.nama || 'Unknown')
+      : ['Tidak ada data'],
     datasets: [
       {
-        data: statistikData.topBidang.map(item => item.total || 0),
-        backgroundColor: [
+        data: statistikData.topBidang?.length > 0 
+          ? statistikData.topBidang.map(item => item.total || item.jumlah || 0)
+          : [1],
+        backgroundColor: statistikData.topBidang?.length > 0 ? [
           'rgba(71, 85, 105, 0.8)',
           'rgba(100, 116, 139, 0.8)',
           'rgba(148, 163, 184, 0.8)',
           'rgba(203, 213, 225, 0.8)',
           'rgba(16, 185, 129, 0.8)',
-        ],
-        borderColor: [
+        ] : ['rgba(203, 213, 225, 0.5)'],
+        borderColor: statistikData.topBidang?.length > 0 ? [
           'rgba(71, 85, 105, 1)',
           'rgba(100, 116, 139, 1)',
           'rgba(148, 163, 184, 1)',
           'rgba(203, 213, 225, 1)',
           'rgba(16, 185, 129, 1)',
-        ],
+        ] : ['rgba(203, 213, 225, 1)'],
+        hoverBackgroundColor: statistikData.topBidang?.length > 0 ? [
+          'rgba(51, 65, 85, 0.9)',
+          'rgba(71, 85, 105, 0.9)',
+          'rgba(100, 116, 139, 0.9)',
+          'rgba(148, 163, 184, 0.9)',
+          'rgba(16, 185, 129, 0.9)',
+        ] : ['rgba(148, 163, 184, 0.7)'],
         borderWidth: 2,
       }
     ]
@@ -169,24 +351,61 @@ const Statistik = ({ refreshTrigger }) => {
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
+    interaction: {
+      intersect: false,
+      mode: 'index',
+    },
+    animation: {
+      duration: 800,
+      easing: 'easeInOutQuart'
+    },
     plugins: {
       legend: {
         position: 'top',
         labels: {
           font: {
-            size: 12,
+            size: 13,
             weight: 'bold'
           },
-          color: '#334155'
+          color: '#334155',
+          usePointStyle: true,
+          padding: 20
         }
       },
       title: {
         display: true,
-        text: `Statistik Perjalanan Dinas`,
+        text: `Statistik Perjalanan Dinas - ${selectedPeriod.charAt(0).toUpperCase() + selectedPeriod.slice(1)} ${selectedYear}`,
         color: '#1e293b',
         font: {
           size: 16,
           weight: 'bold'
+        },
+        padding: 20
+      },
+      tooltip: {
+        backgroundColor: 'rgba(30, 41, 59, 0.95)',
+        titleColor: '#f8fafc',
+        bodyColor: '#e2e8f0',
+        borderColor: 'rgba(71, 85, 105, 0.8)',
+        borderWidth: 1,
+        cornerRadius: 8,
+        displayColors: true,
+        titleFont: {
+          size: 14,
+          weight: 'bold'
+        },
+        bodyFont: {
+          size: 12
+        },
+        callbacks: {
+          label: function(context) {
+            return `${context.dataset.label}: ${context.parsed.y} kegiatan`;
+          },
+          afterLabel: function(context) {
+            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+            const percentage = total > 0 ? ((context.parsed.y / total) * 100).toFixed(1) : 0;
+            return `Persentase: ${percentage}%`;
+          }
         }
       }
     },
@@ -194,23 +413,51 @@ const Statistik = ({ refreshTrigger }) => {
       y: {
         beginAtZero: true,
         grid: {
-          color: 'rgba(148, 163, 184, 0.3)'
+          color: 'rgba(148, 163, 184, 0.2)',
+          borderDash: [2, 2]
         },
         ticks: {
           color: '#64748b',
           font: {
-            size: 11
+            size: 11,
+            weight: '500'
+          },
+          padding: 8,
+          callback: function(value) {
+            return value + ' kegiatan';
+          }
+        },
+        title: {
+          display: true,
+          text: 'Jumlah Kegiatan',
+          color: '#475569',
+          font: {
+            size: 12,
+            weight: 'bold'
           }
         }
       },
       x: {
         grid: {
-          color: 'rgba(148, 163, 184, 0.3)'
+          color: 'rgba(148, 163, 184, 0.1)',
+          borderDash: [2, 2]
         },
         ticks: {
           color: '#64748b',
           font: {
-            size: 11
+            size: 11,
+            weight: '500'
+          },
+          padding: 8,
+          maxRotation: 45
+        },
+        title: {
+          display: true,
+          text: selectedPeriod === 'minggu' ? 'Minggu' : selectedPeriod === 'bulan' ? 'Bulan' : 'Tahun',
+          color: '#475569',
+          font: {
+            size: 12,
+            weight: 'bold'
           }
         }
       }
@@ -446,9 +693,13 @@ const Statistik = ({ refreshTrigger }) => {
               <Doughnut 
                 data={doughnutChartData} 
                 options={{
-                  ...chartOptions,
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  animation: {
+                    duration: 1000,
+                    easing: 'easeInOutQuart'
+                  },
                   plugins: {
-                    ...chartOptions.plugins,
                     legend: {
                       position: 'bottom',
                       labels: {
@@ -457,8 +708,44 @@ const Statistik = ({ refreshTrigger }) => {
                           weight: 'bold'
                         },
                         color: '#334155',
-                        padding: 15
+                        padding: 15,
+                        usePointStyle: true,
+                        pointStyle: 'circle'
                       }
+                    },
+                    tooltip: {
+                      backgroundColor: 'rgba(30, 41, 59, 0.95)',
+                      titleColor: '#f8fafc',
+                      bodyColor: '#e2e8f0',
+                      borderColor: 'rgba(71, 85, 105, 0.8)',
+                      borderWidth: 1,
+                      cornerRadius: 8,
+                      titleFont: {
+                        size: 14,
+                        weight: 'bold'
+                      },
+                      bodyFont: {
+                        size: 12
+                      },
+                      callbacks: {
+                        label: function(context) {
+                          const label = context.label || '';
+                          const value = context.parsed || 0;
+                          const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                          const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                          return `${label}: ${value} kegiatan (${percentage}%)`;
+                        }
+                      }
+                    },
+                    title: {
+                      display: true,
+                      text: 'Distribusi Kegiatan per Bidang',
+                      color: '#1e293b',
+                      font: {
+                        size: 14,
+                        weight: 'bold'
+                      },
+                      padding: 10
                     }
                   }
                 }} 
@@ -467,6 +754,109 @@ const Statistik = ({ refreshTrigger }) => {
           </div>
         </div>
       </div>
+
+      {/* Enhanced Analytics Section */}
+      {statistikData.enhancedAnalysis && (
+        <div className="mt-8 space-y-6">
+          {/* Location Analytics */}
+          {statistikData.enhancedAnalysis.locationAnalysis?.length > 0 && (
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-slate-200/50 overflow-hidden">
+              <div className="bg-gradient-to-r from-slate-700 to-slate-900 px-6 py-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/20 rounded-lg">
+                    <FiUsers className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-white">Analisis Lokasi Kegiatan</h3>
+                    <p className="text-slate-300 text-sm">Top 5 lokasi dengan kegiatan terbanyak</p>
+                  </div>
+                </div>
+              </div>
+              <div className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {statistikData.enhancedAnalysis.locationAnalysis.slice(0, 5).map((location, index) => (
+                    <div key={index} className="bg-slate-50 rounded-lg p-4 hover:bg-slate-100 transition-colors duration-200">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-slate-800 text-sm truncate" title={location.lokasi}>
+                            {location.lokasi}
+                          </h4>
+                          <p className="text-slate-600 text-xs mt-1">
+                            {location.count} kegiatan
+                          </p>
+                        </div>
+                        <div className="ml-3">
+                          <div className="w-8 h-8 bg-gradient-to-br from-slate-600 to-slate-800 rounded-full flex items-center justify-center">
+                            <span className="text-white text-xs font-bold">#{index + 1}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="mt-3">
+                        <div className="w-full bg-slate-200 rounded-full h-2">
+                          <div 
+                            className="bg-gradient-to-r from-slate-600 to-slate-800 h-2 rounded-full transition-all duration-500"
+                            style={{ 
+                              width: `${(location.count / Math.max(...statistikData.enhancedAnalysis.locationAnalysis.map(l => l.count))) * 100}%` 
+                            }}
+                          ></div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Performance Metrics */}
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-slate-200/50 overflow-hidden">
+            <div className="bg-gradient-to-r from-slate-700 to-slate-900 px-6 py-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-white/20 rounded-lg">
+                  <FiTrendingUp className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">Insight & Metrics</h3>
+                  <p className="text-slate-300 text-sm">Ringkasan performa kegiatan</p>
+                </div>
+              </div>
+            </div>
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="text-center p-4 bg-slate-50 rounded-lg">
+                  <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <FiTrendingUp className="w-6 h-6 text-white" />
+                  </div>
+                  <h4 className="font-bold text-slate-800 text-lg">
+                    {Math.round((statistikData.totalPerjalanan / (statistikData.totalBidang || 1)) * 10) / 10}
+                  </h4>
+                  <p className="text-slate-600 text-sm">Rata-rata kegiatan per bidang</p>
+                </div>
+                
+                <div className="text-center p-4 bg-slate-50 rounded-lg">
+                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-700 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <FiUsers className="w-6 h-6 text-white" />
+                  </div>
+                  <h4 className="font-bold text-slate-800 text-lg">
+                    {Math.round((statistikData.totalPersonil / (statistikData.totalPerjalanan || 1)) * 10) / 10}
+                  </h4>
+                  <p className="text-slate-600 text-sm">Rata-rata personil per kegiatan</p>
+                </div>
+                
+                <div className="text-center p-4 bg-slate-50 rounded-lg">
+                  <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-700 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <FiBarChart2 className="w-6 h-6 text-white" />
+                  </div>
+                  <h4 className="font-bold text-slate-800 text-lg">
+                    {statistikData.enhancedAnalysis?.totalAnalyzed || statistikData.totalPerjalanan}
+                  </h4>
+                  <p className="text-slate-600 text-sm">Total data dianalisis</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

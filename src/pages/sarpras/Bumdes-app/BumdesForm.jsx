@@ -1,33 +1,225 @@
 import React, { useState, useEffect } from 'react';
-import api from '../../../services/api.js';
-import { FaPaperPlane, FaSpinner } from 'react-icons/fa';
-import './bumdes.css';
+import api, { getKecamatans, getDesasByKecamatan } from '../../../services/api.js';
+import { FaPaperPlane, FaSpinner, FaTimes, FaCheck, FaExclamationTriangle, FaInfoCircle, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import { HiSparkles } from 'react-icons/hi';
 
 const Modal = ({ show, onClose, title, message, type }) => {
     if (!show) {
         return null;
     }
 
-    const modalClass = `modal ${type}`;
+    const getModalStyles = () => {
+        switch (type) {
+            case 'error':
+                return {
+                    overlay: 'bg-red-900/20',
+                    container: 'border-red-200 bg-gradient-to-br from-red-50 to-red-100',
+                    icon: <FaExclamationTriangle className="text-red-600 text-2xl" />,
+                    iconBg: 'bg-red-100',
+                    button: 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700'
+                };
+            case 'success':
+                return {
+                    overlay: 'bg-green-900/20',
+                    container: 'border-green-200 bg-gradient-to-br from-green-50 to-green-100',
+                    icon: <FaCheck className="text-green-600 text-2xl" />,
+                    iconBg: 'bg-green-100',
+                    button: 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700'
+                };
+            default:
+                return {
+                    overlay: 'bg-slate-900/20',
+                    container: 'border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100',
+                    icon: <FaInfoCircle className="text-slate-600 text-2xl" />,
+                    iconBg: 'bg-slate-100',
+                    button: 'bg-gradient-to-r from-slate-500 to-slate-600 hover:from-slate-600 hover:to-slate-700'
+                };
+        }
+    };
+
+    const styles = getModalStyles();
 
     return (
-        <div className="modal-overlay">
-            <div className={modalClass}>
-                <div className="modal-header">
-                    <h4 className="modal-title">{title}</h4>
-                    <button onClick={onClose} className="modal-close-button">&times;</button>
+        <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${styles.overlay} backdrop-blur-sm`}>
+            <div className={`relative max-w-md w-full rounded-3xl shadow-2xl border-2 ${styles.container} p-8`}>
+                <button 
+                    onClick={onClose} 
+                    className="absolute top-4 right-4 p-2 rounded-full bg-white/50 hover:bg-white/80 transition-all duration-200 group"
+                >
+                    <FaTimes className="text-slate-600 group-hover:rotate-90 transition-transform duration-200" />
+                </button>
+
+                <div className={`w-16 h-16 rounded-2xl ${styles.iconBg} flex items-center justify-center mx-auto mb-6 shadow-lg`}>
+                    {styles.icon}
                 </div>
-                <div className="modal-body">
-                    <p>{message}</p>
-                </div>
-                <div className="modal-footer">
-                    <button onClick={onClose} className="modal-button">Tutup</button>
+
+                <div className="text-center">
+                    <h4 className="text-2xl font-bold text-slate-800 mb-4">{title}</h4>
+                    <p className="text-slate-600 leading-relaxed mb-8">{message}</p>
+                    
+                    <button 
+                        onClick={onClose} 
+                        className={`w-full py-3 px-6 rounded-xl text-white font-semibold ${styles.button} shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300`}
+                    >
+                        Tutup
+                    </button>
                 </div>
             </div>
         </div>
     );
 };
 
+// Enhanced form input component
+const FormInput = ({ label, name, type = "text", value, onChange, disabled, required = false, placeholder, options = [] }) => (
+    <div className="space-y-2">
+        <label className="block text-sm font-semibold text-slate-700">
+            {label}
+            {required && <span className="text-red-500 ml-1">*</span>}
+        </label>
+        {type === 'select' ? (
+            <select
+                name={name}
+                value={value}
+                onChange={onChange}
+                disabled={disabled}
+                className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-300 bg-white/80 backdrop-blur-sm disabled:bg-slate-100 disabled:cursor-not-allowed hover:border-slate-300"
+            >
+                <option value="">Pilih {label}</option>
+                {options.map((option, index) => (
+                    <option key={index} value={option.value || option}>
+                        {option.label || option}
+                    </option>
+                ))}
+            </select>
+        ) : type === 'file' ? (
+            <div className="relative">
+                <input
+                    type="file"
+                    name={name}
+                    onChange={onChange}
+                    disabled={disabled}
+                    className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-300 bg-white/80 backdrop-blur-sm disabled:bg-slate-100 disabled:cursor-not-allowed file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                />
+                <div className="text-xs text-slate-500 mt-1">Maksimal ukuran file: 5MB</div>
+            </div>
+        ) : type === 'textarea' ? (
+            <textarea
+                name={name}
+                value={value}
+                onChange={onChange}
+                disabled={disabled}
+                placeholder={placeholder}
+                rows={4}
+                className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-300 bg-white/80 backdrop-blur-sm disabled:bg-slate-100 disabled:cursor-not-allowed hover:border-slate-300 resize-none"
+            />
+        ) : (
+            <input
+                type={type}
+                name={name}
+                value={value}
+                onChange={onChange}
+                disabled={disabled}
+                placeholder={placeholder}
+                required={required}
+                className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-300 bg-white/80 backdrop-blur-sm disabled:bg-slate-100 disabled:cursor-not-allowed hover:border-slate-300"
+            />
+        )}
+    </div>
+);
+
+const SectionHeader = ({ title, subtitle }) => (
+    <div className="mb-8 text-center">
+        <h2 className="text-3xl font-bold text-slate-800 mb-2">{title}</h2>
+        {subtitle && <p className="text-slate-600">{subtitle}</p>}
+        <div className="w-24 h-1 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full mx-auto mt-4"></div>
+    </div>
+);
+
+// Rupiah formatting functions
+const formatRupiah = (angka) => {
+    if (!angka) return "";
+    let numberString = String(angka).replace(/[^,\d]/g, "").toString();
+    return "Rp. " + numberString.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+};
+
+const parseRupiah = (rupiah) => {
+    return parseInt(String(rupiah).replace(/[^0-9]/g, ''), 10) || 0;
+};
+
+// Initial form data
+export const initialFormData = {
+    kode_desa: '',
+    kecamatan: '',
+    desa: '',
+    namabumdesa: '',
+    AlamatBumdesa: '',
+    TelfonBumdes: '',
+    Alamatemail: '',
+    TahunPendirian: '',
+    status: 'aktif',
+    keterangan_tidak_aktif: '',
+    NIB: '',
+    LKPP: '',
+    NPWP: '',
+    badanhukum: '',
+    NamaPenasihat: '',
+    JenisKelaminPenasihat: '',
+    HPPenasihat: '',
+    NamaPengawas: '',
+    JenisKelaminPengawas: '',
+    HPPengawas: '',
+    NamaDirektur: '',
+    JenisKelaminDirektur: '',
+    HPDirektur: '',
+    NamaSekretaris: '',
+    JenisKelaminSekretaris: '',
+    HPSekretaris: '',
+    NamaBendahara: '',
+    JenisKelaminBendahara: '',
+    HPBendahara: '',
+    TotalTenagaKerja: '',
+    JenisUsaha: '',
+    JenisUsahaUtama: '',
+    JenisUsahaLainnya: '',
+    Omset2023: '',
+    Laba2023: '',
+    Omset2024: '',
+    Laba2024: '',
+    PenyertaanModal2019: '',
+    PenyertaanModal2020: '',
+    PenyertaanModal2021: '',
+    PenyertaanModal2022: '',
+    PenyertaanModal2023: '',
+    PenyertaanModal2024: '',
+    SumberLain: '',
+    JenisAset: '',
+    NilaiAset: '',
+    KerjasamaPihakKetiga: '',
+    'TahunMulai-TahunBerakhir': '',
+    KontribusiTerhadapPADes2021: '',
+    KontribusiTerhadapPADes2022: '',
+    KontribusiTerhadapPADes2023: '',
+    KontribusiTerhadapPADes2024: '',
+    Ketapang2024: '',
+    Ketapang2025: '',
+    DesaWisata: '',
+    BantuanKementrian: '',
+    BantuanLaptopShopee: '',
+    LaporanKeuangan2021: null,
+    LaporanKeuangan2022: null,
+    LaporanKeuangan2023: null,
+    LaporanKeuangan2024: null,
+    NomorPerdes: '',
+    Perdes: null,
+    ProfilBUMDesa: null,
+    BeritaAcara: null,
+    AnggaranDasar: null,
+    AnggaranRumahTangga: null,
+    ProgramKerja: null,
+    SK_BUM_Desa: null
+};
+
+// Form sections configuration
 const formSections = [
     { id: 'identitas', title: 'Identitas BUMDes' },
     { id: 'status', title: 'Status BUMDes' },
@@ -44,156 +236,91 @@ const formSections = [
     { id: 'dokumen', title: 'Dokumen Pendirian' },
 ];
 
-const initialFormData = {
-    kode_desa: '',
-    kecamatan: '',
-    desa: '',
-    namabumdesa: '',
-    status: 'aktif',
-    keterangan_tidak_aktif: '',
-    NIB: '',
-    LKPP: '',
-    NPWP: '',
-    badanhukum: '',
-    NamaPenasihat: '', JenisKelaminPenasihat: '', HPPenasihat: '', NamaPengawas: '', JenisKelaminPengawas: '', HPPengawas: '',
-    NamaDirektur: '', JenisKelaminDirektur: '', HPDirektur: '', NamaSekretaris: '', JenisKelaminSekretaris: '', HPSekretaris: '',
-    NamaBendahara: '', JenisKelaminBendahara: '', HPBendahara: '', TahunPendirian: '', AlamatBumdesa: '', Alamatemail: '',
-    TotalTenagaKerja: '', TelfonBumdes: '', JenisUsaha: '', JenisUsahaUtama: '', JenisUsahaLainnya: '', Omset2023: '', Laba2023: '',
-    Omset2024: '', Laba2024: '', PenyertaanModal2019: '', PenyertaanModal2020: '', PenyertaanModal2021: '', PenyertaanModal2022: '',
-    PenyertaanModal2023: '', PenyertaanModal2024: '', SumberLain: '', JenisAset: '', NilaiAset: '', KerjasamaPihakKetiga: '',
-    'TahunMulai-TahunBerakhir': '', KontribusiTerhadapPADes2021: '', KontribusiTerhadapPADes2022: '', KontribusiTerhadapPADes2023: '',
-    KontribusiTerhadapPADes2024: '', Ketapang2024: '', Ketapang2025: '', BantuanKementrian: '', BantuanLaptopShopee: '',
-    NomorPerdes: '', DesaWisata: '', // Field tambahan dari backend
-    LaporanKeuangan2021: null, LaporanKeuangan2022: null, LaporanKeuangan2023: null, LaporanKeuangan2024: null,
-    Perdes: null, ProfilBUMDesa: null, BeritaAcara: null, AnggaranDasar: null, AnggaranRumahTangga: null,
-    ProgramKerja: null, SK_BUM_Desa: null,
-};
-
-const formatRupiah = (angka) => {
-    let numberString = String(angka).replace(/[^,\d]/g, "").toString();
-    if (!numberString) return "";
-    return "Rp. " + numberString.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-};
-
-const parseRupiah = (rupiah) => {
-    return parseInt(String(rupiah).replace(/[^0-9]/g, ''), 10) || 0;
-};
-
-function BumdesForm() {
+function BumdesForm({ onSwitchToDashboard }) {
     const [formData, setFormData] = useState(initialFormData);
-    const [activeSection, setActiveSection] = useState('identitas');
     const [loading, setLoading] = useState(false);
-    const [message, setMessage] = useState({ text: '', type: '' });
-    const [hasSubmitted, setHasSubmitted] = useState(false);
-    const [modalShow, setModalShow] = useState(false);
-
-    const [allIdentitasData, setAllIdentitasData] = useState([]);
+    const [showPopup, setShowPopup] = useState(false);
+    const [popupMessage, setPopupMessage] = useState({ text: '', type: '' });
+    const [activeSection, setActiveSection] = useState('identitas');
+    const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
+    
+    // State untuk kecamatan dan desa
     const [kecamatanList, setKecamatanList] = useState([]);
     const [desaList, setDesaList] = useState([]);
-    const [filteredDesaList, setFilteredDesaList] = useState([]);
+    const [selectedKecamatanId, setSelectedKecamatanId] = useState('');
+    const [loadingDesa, setLoadingDesa] = useState(false);
 
-    // Fetch data kecamatan
+    // Load kecamatan data saat komponen dimount
     useEffect(() => {
-        const fetchKecamatan = async () => {
+        const fetchKecamatans = async () => {
             try {
-                const response = await api.get('/kecamatans');
-                const kecamatanData = response.data && Array.isArray(response.data.data) ? response.data.data : [];
-                setKecamatanList(kecamatanData);
+                const response = await getKecamatans();
+                setKecamatanList(response.data.data || []);
             } catch (error) {
-                console.error('Gagal mengambil data kecamatan:', error);
-                setMessage({ text: 'Gagal memuat data kecamatan. Coba refresh halaman.', type: 'error' });
-                setModalShow(true);
+                console.error('Error fetching kecamatans:', error);
+                showMessagePopup('Gagal memuat data kecamatan', 'error');
             }
         };
-        fetchKecamatan();
+
+        fetchKecamatans();
     }, []);
 
-    // Fetch data desa
-    useEffect(() => {
-        const fetchDesa = async () => {
+    // Handle kecamatan change
+    const handleKecamatanChange = async (e) => {
+        const kecamatanId = e.target.value;
+        const selectedKecamatan = kecamatanList.find(kec => kec.id == kecamatanId);
+        
+        setSelectedKecamatanId(kecamatanId);
+        setFormData({
+            ...formData,
+            kecamatan: selectedKecamatan ? selectedKecamatan.nama : '',
+            desa: '',
+            kode_desa: ''
+        });
+        
+        if (kecamatanId) {
+            setLoadingDesa(true);
             try {
-                const response = await api.get('/desas');
-                const desaData = response.data && Array.isArray(response.data.data) ? response.data.data : [];
-                setDesaList(desaData);
+                const response = await getDesasByKecamatan(kecamatanId);
+                setDesaList(response.data.data || []);
             } catch (error) {
-                console.error('Gagal mengambil data desa:', error);
-                setMessage({ text: 'Gagal memuat data desa. Coba refresh halaman.', type: 'error' });
-                setModalShow(true);
-            }
-        };
-        fetchDesa();
-    }, []);
-
-    // Filter desa berdasarkan kecamatan yang dipilih
-    useEffect(() => {
-        if (formData.kecamatan && desaList.length > 0) {
-            // Cari kecamatan yang dipilih berdasarkan nama
-            const selectedKecamatan = kecamatanList.find(kec => kec.nama === formData.kecamatan);
-            if (selectedKecamatan) {
-                const filtered = desaList.filter(desa => desa.kecamatan_id === selectedKecamatan.id);
-                setFilteredDesaList(filtered);
+                console.error('Error fetching desas:', error);
+                showMessagePopup('Gagal memuat data desa', 'error');
+                setDesaList([]);
+            } finally {
+                setLoadingDesa(false);
             }
         } else {
-            setFilteredDesaList([]);
+            setDesaList([]);
         }
-    }, [formData.kecamatan, desaList, kecamatanList]);
+    };
 
-    useEffect(() => {
-        const savedData = localStorage.getItem('bumdesFormData');
-        if (savedData) {
-            const parsedData = JSON.parse(savedData);
-            setFormData(prev => ({
-                ...prev,
-                ...parsedData,
-            }));
-            const submittedDesas = JSON.parse(localStorage.getItem('submittedDesas')) || [];
-            if (submittedDesas.includes(parsedData.kode_desa)) {
-                setHasSubmitted(true);
-                setMessage({ text: `Desa ini (${parsedData.desa}) sudah mengisi form. Anda tidak bisa mengisinya lagi.`, type: 'info' });
-                setModalShow(true);
-            }
+    // Handle desa change
+    const handleDesaChange = (e) => {
+        const desaId = e.target.value;
+        const selectedDesa = desaList.find(desa => desa.id == desaId);
+        
+        if (selectedDesa) {
+            setFormData({
+                ...formData,
+                desa: selectedDesa.nama,
+                kode_desa: selectedDesa.kode
+            });
+        } else {
+            setFormData({
+                ...formData,
+                desa: '',
+                kode_desa: ''
+            });
         }
-    }, []);
+    };
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        if (name.includes('Omset') || name.includes('Laba') || name.includes('Modal') || name.includes('Kontribusi') || name.includes('NilaiAset') || name.includes('SumberLain')) {
+        if (name.includes('Omset') || name.includes('Laba') || name.includes('Modal') || name.includes('Kontribusi') || name.includes('NilaiAset') || name.includes('SumberLain') || name === 'TotalTenagaKerja') {
             setFormData({ ...formData, [name]: parseRupiah(value) });
         } else {
             setFormData({ ...formData, [name]: value });
-        }
-    };
-
-    const handleKecamatanChange = (e) => {
-        const selectedKecamatan = e.target.value;
-        setFormData(prev => ({
-            ...prev,
-            kecamatan: selectedKecamatan,
-            desa: '',
-            kode_desa: '',
-        }));
-    };
-
-    const handleDesaChange = (e) => {
-        const selectedDesaId = e.target.value;
-        const selectedDesa = desaList.find(d => d.id.toString() === selectedDesaId);
-
-        if (selectedDesa) {
-            setFormData(prev => ({
-                ...prev,
-                desa: selectedDesa.nama,
-                kode_desa: selectedDesa.kode,
-            }));
-            
-            // Check if this desa has already submitted
-            const submittedDesas = JSON.parse(localStorage.getItem('submittedDesas')) || [];
-            if (submittedDesas.includes(selectedDesa.kode)) {
-                setHasSubmitted(true);
-                setMessage({ text: `Desa ini (${selectedDesa.nama}) sudah mengisi form. Anda tidak bisa mengisinya lagi.`, type: 'info' });
-                setModalShow(true);
-            } else {
-                setHasSubmitted(false);
-            }
         }
     };
 
@@ -201,376 +328,1151 @@ function BumdesForm() {
         setFormData({ ...formData, [e.target.name]: e.target.files[0] });
     };
 
-    const handleNext = () => {
-        if (activeSection === 'identitas') {
-            if (!formData.namabumdesa || !formData.kecamatan || !formData.kode_desa) {
-                setMessage({ text: 'Harap lengkapi Nama BUMDesa, Kecamatan, dan Desa sebelum melanjutkan.', type: 'error' });
-                setModalShow(true);
-                return;
-            }
-        }
-        
-        const currentIndex = formSections.findIndex(section => section.id === activeSection);
-        if (currentIndex < formSections.length - 1) {
-            const nonFileFormData = Object.fromEntries(
-                Object.entries(formData).filter(([key, value]) => !(value instanceof File))
-            );
-            localStorage.setItem('bumdesFormData', JSON.stringify(nonFileFormData));
-            
-            setActiveSection(formSections[currentIndex + 1].id);
-            setMessage({ text: '', type: '' });
-            setModalShow(false);
+    const showMessagePopup = (text, type) => {
+        setPopupMessage({ text, type });
+        setShowPopup(true);
+    };
+
+    const goToNextSection = () => {
+        if (currentSectionIndex < formSections.length - 1) {
+            const newIndex = currentSectionIndex + 1;
+            setCurrentSectionIndex(newIndex);
+            setActiveSection(formSections[newIndex].id);
         }
     };
 
-    const handlePrev = () => {
-        const currentIndex = formSections.findIndex(section => section.id === activeSection);
-        if (currentIndex > 0) {
-            setActiveSection(formSections[currentIndex - 1].id);
+    const goToPreviousSection = () => {
+        if (currentSectionIndex > 0) {
+            const newIndex = currentSectionIndex - 1;
+            setCurrentSectionIndex(newIndex);
+            setActiveSection(formSections[newIndex].id);
+        }
+    };
+
+    const goToSection = (sectionId) => {
+        const index = formSections.findIndex(section => section.id === sectionId);
+        if (index !== -1) {
+            setCurrentSectionIndex(index);
+            setActiveSection(sectionId);
         }
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
-        setMessage({ text: '', type: '' });
-        setModalShow(false);
-
-        const savedDataFromLocalStorage = JSON.parse(localStorage.getItem('bumdesFormData')) || {};
-
-        const finalData = { ...savedDataFromLocalStorage };
-        for (const key in formData) {
-            if (formData[key] instanceof File) {
-                finalData[key] = formData[key];
-            }
-        }
+        setShowPopup(false);
 
         const dataToSend = new FormData();
-        for (const key in finalData) {
-            if (finalData[key] !== null && finalData[key] !== undefined) {
-                if (finalData[key] instanceof File) {
-                    dataToSend.append(key, finalData[key], finalData[key].name);
+        for (const key in formData) {
+            const value = formData[key];
+            if (value !== null && value !== '') {
+                if (value instanceof File) {
+                    dataToSend.append(key, value);
+                } else if (['Omset2023', 'Laba2023', 'Omset2024', 'Laba2024', 'PenyertaanModal2019', 'PenyertaanModal2020', 'PenyertaanModal2021', 'PenyertaanModal2022', 'PenyertaanModal2023', 'PenyertaanModal2024', 'SumberLain', 'NilaiAset', 'KontribusiTerhadapPADes2021', 'KontribusiTerhadapPADes2022', 'KontribusiTerhadapPADes2023', 'KontribusiTerhadapPADes2024', 'TotalTenagaKerja'].includes(key)) {
+                    dataToSend.append(key, parseRupiah(value));
                 } else {
-                    dataToSend.append(key, finalData[key]);
+                    dataToSend.append(key, value);
                 }
             }
         }
 
         try {
-            // PERBAIKAN: Menggunakan api.post tanpa prefix '/api' karena sudah ada di baseURL
             const response = await api.post('/bumdes', dataToSend, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
 
-            const submittedDesas = JSON.parse(localStorage.getItem('submittedDesas')) || [];
-            submittedDesas.push(finalData.kode_desa);
-            localStorage.setItem('submittedDesas', JSON.stringify(submittedDesas));
-
-            localStorage.removeItem('bumdesFormData');
+            showMessagePopup('Data BUMDesa berhasil disimpan!', 'success');
             setFormData(initialFormData);
-            setActiveSection('identitas');
-            setHasSubmitted(true);
-            setMessage({ text: response.data.message, type: 'success' });
-            setModalShow(true);
-
+            setLoading(false);
         } catch (error) {
-            console.error(error);
-            const errorMessage = error.response?.data?.message || error.message;
-            setMessage({ text: 'Gagal mengirim data: ' + errorMessage, type: 'error' });
-            setModalShow(true);
-        } finally {
+            console.error("Gagal menyimpan data:", error.response?.data?.errors || error.message);
+            showMessagePopup('Gagal menyimpan data: ' + (error.response?.data?.message || error.message), 'error');
             setLoading(false);
         }
     };
-    
-    const isLastSection = activeSection === formSections[formSections.length - 1].id;
 
+    // Function to render each form section
     const renderSection = () => {
         switch (activeSection) {
             case 'identitas':
                 return (
-                    <div className="form-section">
-                        <h2 className="form-section-title">Identitas BUMDes</h2>
-                        <div className="form-group">
-                            <label className="form-label">Nama BUMDesa:</label>
-                            <input type="text" name="namabumdesa" value={formData.namabumdesa} onChange={handleChange} className="form-input" disabled={hasSubmitted} />
-                        </div>
-                        <div className="form-group">
-                            <label className="form-label">Kecamatan:</label>
-                            <select name="kecamatan" value={formData.kecamatan} onChange={handleKecamatanChange} className="form-select" disabled={hasSubmitted}>
-                                <option value="">Pilih Kecamatan</option>
-                                {kecamatanList.map(kec => (
-                                    <option key={kec.id} value={kec.nama}>{kec.nama}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div className="form-group">
-                            <label className="form-label">Desa:</label>
-                            <select name="desa" value={formData.desa ? filteredDesaList.find(d => d.nama === formData.desa)?.id || '' : ''} onChange={handleDesaChange} className="form-select" disabled={!formData.kecamatan || hasSubmitted}>
-                                <option value="">Pilih Desa</option>
-                                {filteredDesaList.map(desa => (
-                                    <option key={desa.id} value={desa.id}>{desa.nama}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div className="form-group">
-                            <label className="form-label">Kode Desa:</label>
-                            <input type="text" name="kode_desa" value={formData.kode_desa} readOnly className="form-input" placeholder="Kode Desa akan terisi otomatis" disabled={hasSubmitted} />
+                    <div className="space-y-8">
+                        <SectionHeader 
+                            title="Identitas BUMDes" 
+                            subtitle="Informasi dasar dan lokasi BUMDes"
+                        />
+                        
+                        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-100">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <FormInput
+                                    label="Kecamatan"
+                                    name="kecamatan_id"
+                                    type="select"
+                                    value={selectedKecamatanId}
+                                    onChange={handleKecamatanChange}
+                                    options={kecamatanList.map(kec => ({
+                                        value: kec.id,
+                                        label: kec.nama
+                                    }))}
+                                    required
+                                />
+                                
+                                <div className="space-y-2">
+                                    <label className="block text-sm font-semibold text-slate-700">
+                                        Desa
+                                        <span className="text-red-500 ml-1">*</span>
+                                    </label>
+                                    <select
+                                        name="desa_id"
+                                        value={desaList.find(desa => desa.nama === formData.desa)?.id || ''}
+                                        onChange={handleDesaChange}
+                                        disabled={!selectedKecamatanId || loadingDesa}
+                                        className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-300 bg-white/80 backdrop-blur-sm disabled:bg-slate-100 disabled:cursor-not-allowed hover:border-slate-300"
+                                    >
+                                        <option value="">
+                                            {loadingDesa ? 'Memuat desa...' : 'Pilih Desa'}
+                                        </option>
+                                        {desaList.map(desa => (
+                                            <option key={desa.id} value={desa.id}>
+                                                {desa.nama}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                                
+                                <FormInput
+                                    label="Kode Desa"
+                                    name="kode_desa"
+                                    value={formData.kode_desa}
+                                    onChange={handleChange}
+                                    disabled
+                                    placeholder="Kode akan terisi otomatis"
+                                />
+                                
+                                {/* Display selected kecamatan and desa */}
+                                {formData.kecamatan && (
+                                    <div className="md:col-span-2 p-4 bg-green-50 border border-green-200 rounded-xl">
+                                        <div className="text-sm font-medium text-green-800">
+                                            Lokasi Terpilih:
+                                        </div>
+                                        <div className="text-green-700 mt-1">
+                                            <strong>Kecamatan:</strong> {formData.kecamatan}
+                                            {formData.desa && <span className="ml-4"><strong>Desa:</strong> {formData.desa}</span>}
+                                            {formData.kode_desa && <span className="ml-4"><strong>Kode:</strong> {formData.kode_desa}</span>}
+                                        </div>
+                                    </div>
+                                )}
+                                
+                                {/* Hidden input untuk kecamatan */}
+                                <input
+                                    type="hidden"
+                                    name="kecamatan"
+                                    value={formData.kecamatan}
+                                />
+                                
+                                {/* Hidden input untuk desa */}
+                                <input
+                                    type="hidden"
+                                    name="desa"
+                                    value={formData.desa}
+                                />
+                                
+                                <FormInput
+                                    label="Nama BUMDesa"
+                                    name="namabumdesa"
+                                    value={formData.namabumdesa}
+                                    onChange={handleChange}
+                                    required
+                                />
+                                
+                                <div className="md:col-span-2">
+                                    <FormInput
+                                        label="Alamat BUMDesa"
+                                        name="AlamatBumdesa"
+                                        value={formData.AlamatBumdesa}
+                                        onChange={handleChange}
+                                        placeholder="Masukkan alamat lengkap BUMDesa"
+                                    />
+                                </div>
+                                
+                                <FormInput
+                                    label="No Telepon BUMDesa"
+                                    name="TelfonBumdes"
+                                    value={formData.TelfonBumdes}
+                                    onChange={handleChange}
+                                    placeholder="Contoh: 0812-3456-7890"
+                                />
+                                
+                                <FormInput
+                                    label="Alamat Email"
+                                    name="Alamatemail"
+                                    type="email"
+                                    value={formData.Alamatemail}
+                                    onChange={handleChange}
+                                    placeholder="Contoh: bumdes@desa.id"
+                                />
+                                
+                                <FormInput
+                                    label="Tahun Pendirian"
+                                    name="TahunPendirian"
+                                    type="number"
+                                    value={formData.TahunPendirian}
+                                    onChange={handleChange}
+                                    placeholder="Contoh: 2020"
+                                />
+                            </div>
                         </div>
                     </div>
                 );
+
             case 'status':
                 return (
-                    <div className="form-section">
-                        <h2 className="form-section-title">Status BUMDesa</h2>
-                        <label className="form-group">Status 2025:
-                            <select name="status" value={formData.status} onChange={handleChange} className="form-select" disabled={hasSubmitted}>
-                                <option value="aktif">Aktif</option>
-                                <option value="tidak aktif">Tidak Aktif</option>
-                            </select>
-                        </label>
-                        <label className="form-group">Keterangan Tidak Aktif:
-                            <select name="keterangan_tidak_aktif" value={formData.keterangan_tidak_aktif} onChange={handleChange} className="form-select" disabled={hasSubmitted}>
-                                <option value="">-</option>
-                                <option value="Ada pengurus, tidak ada usaha">Ada pengurus, tidak ada usaha</option>
-                                <option value="Tidak ada pengurus, ada usaha">Tidak ada pengurus, ada usaha</option>
-                                <option value="Tidak ada keduanya">Tidak ada keduanya</option>
-                            </select>
-                        </label>
+                    <div className="space-y-8">
+                        <SectionHeader 
+                            title="Status BUMDes" 
+                            subtitle="Status operasional BUMDes saat ini"
+                        />
+                        
+                        <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-6 border border-green-100">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <FormInput
+                                    label="Status 2025"
+                                    name="status"
+                                    type="select"
+                                    value={formData.status}
+                                    onChange={handleChange}
+                                    options={[
+                                        { value: 'aktif', label: 'Aktif' },
+                                        { value: 'tidak aktif', label: 'Tidak Aktif' }
+                                    ]}
+                                />
+                                
+                                <FormInput
+                                    label="Keterangan Tidak Aktif"
+                                    name="keterangan_tidak_aktif"
+                                    type="select"
+                                    value={formData.keterangan_tidak_aktif}
+                                    onChange={handleChange}
+                                    options={[
+                                        { value: 'Ada pengurus, tidak ada usaha', label: 'Ada pengurus, tidak ada usaha' },
+                                        { value: 'Tidak ada pengurus, ada usaha', label: 'Tidak ada pengurus, ada usaha' },
+                                        { value: 'Tidak ada keduanya', label: 'Tidak ada keduanya' }
+                                    ]}
+                                />
+                            </div>
+                        </div>
                     </div>
                 );
+
             case 'legalitas':
                 return (
-                    <div className="form-section">
-                        <h2 className="form-section-title">Legalitas</h2>
-                        <label className="form-group">NIB: <input type="text" name="NIB" value={formData.NIB} onChange={handleChange} placeholder="masukan nomor NIB.." className="form-input" disabled={hasSubmitted} /></label>
-                        <label className="form-group">LKPP: <input type="text" name="LKPP" value={formData.LKPP} onChange={handleChange} placeholder="masukan nomor LKPP.." className="form-input" disabled={hasSubmitted} /></label>
-                        <label className="form-group">NPWP: <input type="text" name="NPWP" value={formData.NPWP} onChange={handleChange} className="form-input" disabled={hasSubmitted} /></label>
-                        <label className="form-group">Status Badan Hukum:
-                            <select name="badanhukum" value={formData.badanhukum} onChange={handleChange} className="form-select" disabled={hasSubmitted}>
-                                <option value="">-</option>
-                                <option value="Belum Melakukan Proses">Belum Melakukan Proses</option>
-                                <option value="Nama Terverifikasi">Nama Terverifikasi</option>
-                                <option value="Perbaikan Dokumen">Perbaikan Dokumen</option>
-                                <option value="Terbit Sertifikat Badan Hukum">Terbit Sertifikat Badan Hukum</option>
-                            </select>
-                        </label>
+                    <div className="space-y-8">
+                        <SectionHeader 
+                            title="Legalitas" 
+                            subtitle="Dokumen dan status hukum BUMDes"
+                        />
+                        
+                        <div className="bg-gradient-to-br from-purple-50 to-violet-50 rounded-2xl p-6 border border-purple-100">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <FormInput
+                                    label="NIB (Nomor Induk Berusaha)"
+                                    name="NIB"
+                                    value={formData.NIB}
+                                    onChange={handleChange}
+                                    placeholder="Masukkan nomor NIB"
+                                />
+                                
+                                <FormInput
+                                    label="LKPP (Lembaga Kebijakan Pengadaan)"
+                                    name="LKPP"
+                                    value={formData.LKPP}
+                                    onChange={handleChange}
+                                    placeholder="Masukkan nomor LKPP"
+                                />
+                                
+                                <FormInput
+                                    label="NPWP"
+                                    name="NPWP"
+                                    value={formData.NPWP}
+                                    onChange={handleChange}
+                                    placeholder="Masukkan nomor NPWP"
+                                />
+                                
+                                <FormInput
+                                    label="Status Badan Hukum"
+                                    name="badanhukum"
+                                    type="select"
+                                    value={formData.badanhukum}
+                                    onChange={handleChange}
+                                    options={[
+                                        { value: 'Belum Melakukan Proses', label: 'Belum Melakukan Proses' },
+                                        { value: 'Nama Terverifikasi', label: 'Nama Terverifikasi' },
+                                        { value: 'Perbaikan Dokumen', label: 'Perbaikan Dokumen' },
+                                        { value: 'Terbit Sertifikat Badan Hukum', label: 'Terbit Sertifikat Badan Hukum' }
+                                    ]}
+                                />
+                            </div>
+                        </div>
                     </div>
                 );
+
             case 'pengurus':
                 return (
-                    <div className="form-section">
-                        <h2 className="form-section-title">Profil Pengurus</h2>
-                        {Object.keys(initialFormData).filter(key => key.startsWith('Nama') || key.startsWith('JenisKelamin') || key.startsWith('HP')).map(key => (
-                            <label key={key} className="form-group">
-                                {key.replace(/([A-Z])/g, ' $1').trim().replace(/_/g, ' ')}:
-                                {key.startsWith('JenisKelamin') ? (
-                                    <select name={key} value={formData[key]} onChange={handleChange} className="form-select" disabled={hasSubmitted}>
-                                        <option value="">-</option>
-                                        <option value="laki-laki">Laki-Laki</option>
-                                        <option value="perempuan">Perempuan</option>
-                                    </select>
-                                ) : (
-                                    <input type="text" name={key} value={formData[key] || ''} onChange={handleChange} className="form-input" disabled={hasSubmitted} />
-                                )}
-                            </label>
-                        ))}
+                    <div className="space-y-8">
+                        <SectionHeader 
+                            title="Profil Pengurus" 
+                            subtitle="Data lengkap pengurus BUMDes"
+                        />
+                        
+                        <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl p-6 border border-orange-100">
+                            <div className="space-y-8">
+                                {/* Penasihat */}
+                                <div>
+                                    <h3 className="text-lg font-semibold text-slate-800 mb-4 border-b border-orange-200 pb-2">Penasihat</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        <FormInput
+                                            label="Nama Penasihat"
+                                            name="NamaPenasihat"
+                                            value={formData.NamaPenasihat}
+                                            onChange={handleChange}
+                                        />
+                                        <FormInput
+                                            label="Jenis Kelamin"
+                                            name="JenisKelaminPenasihat"
+                                            type="select"
+                                            value={formData.JenisKelaminPenasihat}
+                                            onChange={handleChange}
+                                            options={[
+                                                { value: 'laki-laki', label: 'Laki-Laki' },
+                                                { value: 'perempuan', label: 'Perempuan' }
+                                            ]}
+                                        />
+                                        <FormInput
+                                            label="No HP"
+                                            name="HPPenasihat"
+                                            value={formData.HPPenasihat}
+                                            onChange={handleChange}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Pengawas */}
+                                <div>
+                                    <h3 className="text-lg font-semibold text-slate-800 mb-4 border-b border-orange-200 pb-2">Pengawas</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        <FormInput
+                                            label="Nama Pengawas"
+                                            name="NamaPengawas"
+                                            value={formData.NamaPengawas}
+                                            onChange={handleChange}
+                                        />
+                                        <FormInput
+                                            label="Jenis Kelamin"
+                                            name="JenisKelaminPengawas"
+                                            type="select"
+                                            value={formData.JenisKelaminPengawas}
+                                            onChange={handleChange}
+                                            options={[
+                                                { value: 'laki-laki', label: 'Laki-Laki' },
+                                                { value: 'perempuan', label: 'Perempuan' }
+                                            ]}
+                                        />
+                                        <FormInput
+                                            label="No HP"
+                                            name="HPPengawas"
+                                            value={formData.HPPengawas}
+                                            onChange={handleChange}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Direktur */}
+                                <div>
+                                    <h3 className="text-lg font-semibold text-slate-800 mb-4 border-b border-orange-200 pb-2">Direktur</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        <FormInput
+                                            label="Nama Direktur"
+                                            name="NamaDirektur"
+                                            value={formData.NamaDirektur}
+                                            onChange={handleChange}
+                                        />
+                                        <FormInput
+                                            label="Jenis Kelamin"
+                                            name="JenisKelaminDirektur"
+                                            type="select"
+                                            value={formData.JenisKelaminDirektur}
+                                            onChange={handleChange}
+                                            options={[
+                                                { value: 'laki-laki', label: 'Laki-Laki' },
+                                                { value: 'perempuan', label: 'Perempuan' }
+                                            ]}
+                                        />
+                                        <FormInput
+                                            label="No HP"
+                                            name="HPDirektur"
+                                            value={formData.HPDirektur}
+                                            onChange={handleChange}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Sekretaris */}
+                                <div>
+                                    <h3 className="text-lg font-semibold text-slate-800 mb-4 border-b border-orange-200 pb-2">Sekretaris</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        <FormInput
+                                            label="Nama Sekretaris"
+                                            name="NamaSekretaris"
+                                            value={formData.NamaSekretaris}
+                                            onChange={handleChange}
+                                        />
+                                        <FormInput
+                                            label="Jenis Kelamin"
+                                            name="JenisKelaminSekretaris"
+                                            type="select"
+                                            value={formData.JenisKelaminSekretaris}
+                                            onChange={handleChange}
+                                            options={[
+                                                { value: 'laki-laki', label: 'Laki-Laki' },
+                                                { value: 'perempuan', label: 'Perempuan' }
+                                            ]}
+                                        />
+                                        <FormInput
+                                            label="No HP"
+                                            name="HPSekretaris"
+                                            value={formData.HPSekretaris}
+                                            onChange={handleChange}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Bendahara */}
+                                <div>
+                                    <h3 className="text-lg font-semibold text-slate-800 mb-4 border-b border-orange-200 pb-2">Bendahara</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        <FormInput
+                                            label="Nama Bendahara"
+                                            name="NamaBendahara"
+                                            value={formData.NamaBendahara}
+                                            onChange={handleChange}
+                                        />
+                                        <FormInput
+                                            label="Jenis Kelamin"
+                                            name="JenisKelaminBendahara"
+                                            type="select"
+                                            value={formData.JenisKelaminBendahara}
+                                            onChange={handleChange}
+                                            options={[
+                                                { value: 'laki-laki', label: 'Laki-Laki' },
+                                                { value: 'perempuan', label: 'Perempuan' }
+                                            ]}
+                                        />
+                                        <FormInput
+                                            label="No HP"
+                                            name="HPBendahara"
+                                            value={formData.HPBendahara}
+                                            onChange={handleChange}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 );
+
             case 'organisasi':
                 return (
-                    <div className="form-section">
-                        <h2 className="form-section-title">Profil Organisasi BUMDesa</h2>
-                        <label className="form-group">Tahun Pendirian: <input type="text" name="TahunPendirian" value={formData.TahunPendirian} onChange={handleChange} className="form-input" disabled={hasSubmitted} /></label>
-                        <label className="form-group">Alamat Bumdesa: <input type="text" name="AlamatBumdesa" value={formData.AlamatBumdesa} onChange={handleChange} className="form-input" disabled={hasSubmitted} /></label>
-                        <label className="form-group">Alamat email: <input type="text" name="Alamatemail" value={formData.Alamatemail} onChange={handleChange} className="form-input" disabled={hasSubmitted} /></label>
-                        <label className="form-group">Total Tenaga Kerja: <input type="text" name="TotalTenagaKerja" value={formData.TotalTenagaKerja} onChange={handleChange} className="form-input" disabled={hasSubmitted} /></label>
-                        <label className="form-group">No Telfon BUMDesa: <input type="text" name="TelfonBumdes" value={formData.TelfonBumdes} onChange={handleChange} className="form-input" disabled={hasSubmitted} /></label>
+                    <div className="space-y-8">
+                        <SectionHeader 
+                            title="Profil Organisasi" 
+                            subtitle="Informasi organisasi BUMDes"
+                        />
+                        
+                        <div className="bg-gradient-to-br from-cyan-50 to-blue-50 rounded-2xl p-6 border border-cyan-100">
+                            <div className="grid grid-cols-1 gap-6">
+                                <FormInput
+                                    label="Total Tenaga Kerja"
+                                    name="TotalTenagaKerja"
+                                    type="number"
+                                    value={formData.TotalTenagaKerja}
+                                    onChange={handleChange}
+                                    placeholder="Jumlah total tenaga kerja"
+                                />
+                            </div>
+                        </div>
                     </div>
                 );
+
             case 'usaha':
                 return (
-                    <div className="form-section">
-                        <h2 className="form-section-title">Usaha BUMDesa</h2>
-                        <label className="form-group">Jenis Usaha:
-                            <select name="JenisUsaha" value={formData.JenisUsaha} onChange={handleChange} className="form-select" disabled={hasSubmitted}>
-                                <option value="">-</option>
-                                <option value="BudidayadanPertambangan">Budidaya dan Pertambangan</option>
-                                <option value="BudidayaPertanian">Budidaya Pertanian</option>
-                                <option value="BudidayaPerikanan">Budidaya Perikanan</option>
-                                <option value="BudidayaPeternakan">Budidaya Peternakan</option>
-                                <option value="BudidayaPertanianPeternakanPerikanan">Budidaya Pertanian, Budidaya Peternakan, Budidaya Perikanan</option>
-                                <option value="BudidayaPertanianPerdagangandanJasaUmumPariwisata">Budidaya Pertanian, Perdagangan dan Jasa Umum, Pariwisata</option>
-                                <option value="BudidayaPertanianPerdagangandanJasaUmumPariwisataKeuangan/LKD">Budidaya Pertanian,Perdagangan dan Jasa Umum, Pariwisata, Keuangan/LKD</option>
-                                <option value="BudidayaPertanianPerdagangandanJasaUmumPelayananPublikKeuangan/LKD">Budidaya Pertanian, Perdagangan dan, Jasa Umum, Pelayanan Publik Keuangan/LKD</option>
-                                <option value="BudidayaPertanianPerdagangandanJasaUmumPengolahandanManufaktur">Budidaya Pertanian, Perdagangan dan Jasa Umum, Pengolahan dan Manufaktur</option>
-                                <option value="Keuangan/LKD">Keuangan/LKD</option>
-                                <option value="Pariwisata">Pariwisaata</option>
-                                <option value="PelayananPublik">Pelayanan Publik</option>
-                                <option value="PelayananPublikKeuangan/LKD">Pelayanan Publik, Keuangan/LKD</option>
-                                <option value="PengolahandanManufaktur">Pengolahan dan Manufaktur</option>
-                                <option value="PerdagangandanJasaUmum">Perdagangan dan Jasa Umum</option>
-                                <option value="PerdagangandanJasaUmumKeuangan/LKD">Perdagangan dan Jasa Umum, Keuangan/LKD</option>
-                                <option value="PerdagangandanJasaUmum,Pariwisata">Perdagangan dan Jasa Umum, Pariwisata</option>
-                                <option value="PerdagangandanJasaUmum,PelayananPublik">Perdagangan dan Jasa Umum, Pelayanan Publik</option>
-                                <option value="PerdagangandanJasaUmum,PengolahandanManufaktur">Perdagangan dan Jasa Umum, Pengolahan dan Manufaktur</option>
-                                <option value="BelumAdaKeterangan">Belum Ada Keterangan</option>
-                            </select>
-                        </label>
-                        <label className="form-group">Keterangan Jenis Usaha Utama: <input type="text" name="JenisUsahaUtama" value={formData.JenisUsahaUtama} onChange={handleChange} className="form-input" disabled={hasSubmitted} /></label>
-                        <label className="form-group">Jenis Usaha Lainnya: <input type="text" name="JenisUsahaLainnya" value={formData.JenisUsahaLainnya} onChange={handleChange} className="form-input" disabled={hasSubmitted} /></label>
-                        <label className="form-group">Omset 2023: <input type="text" name="Omset2023" value={formatRupiah(formData.Omset2023)} onChange={handleChange} className="form-input" disabled={hasSubmitted} /></label>
-                        <label className="form-group">Laba 2023: <input type="text" name="Laba2023" value={formatRupiah(formData.Laba2023)} onChange={handleChange} className="form-input" disabled={hasSubmitted} /></label>
-                        <label className="form-group">Omset 2024: <input type="text" name="Omset2024" value={formatRupiah(formData.Omset2024)} onChange={handleChange} className="form-input" disabled={hasSubmitted} /></label>
-                        <label className="form-group">Laba 2024: <input type="text" name="Laba2024" value={formatRupiah(formData.Laba2024)} onChange={handleChange} className="form-input" disabled={hasSubmitted} /></label>
+                    <div className="space-y-8">
+                        <SectionHeader 
+                            title="Usaha BUMDes" 
+                            subtitle="Detail usaha dan kinerja keuangan"
+                        />
+                        
+                        <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl p-6 border border-emerald-100">
+                            <div className="space-y-8">
+                                {/* Jenis Usaha */}
+                                <div>
+                                    <h3 className="text-lg font-semibold text-slate-800 mb-4 border-b border-emerald-200 pb-2">Jenis Usaha</h3>
+                                    <div className="grid grid-cols-1 gap-6">
+                                        <FormInput
+                                            label="Jenis Usaha"
+                                            name="JenisUsaha"
+                                            type="select"
+                                            value={formData.JenisUsaha}
+                                            onChange={handleChange}
+                                            options={[
+                                                { value: 'BudidayadanPertambangan', label: 'Budidaya dan Pertambangan' },
+                                                { value: 'BudidayaPertanian', label: 'Budidaya Pertanian' },
+                                                { value: 'BudidayaPerikanan', label: 'Budidaya Perikanan' },
+                                                { value: 'BudidayaPeternakan', label: 'Budidaya Peternakan' },
+                                                { value: 'BudidayaPertanianPeternakanPerikanan', label: 'Budidaya Pertanian, Peternakan, Perikanan' },
+                                                { value: 'Keuangan/LKD', label: 'Keuangan/LKD' },
+                                                { value: 'Pariwisata', label: 'Pariwisata' },
+                                                { value: 'PelayananPublik', label: 'Pelayanan Publik' },
+                                                { value: 'PengolahandanManufaktur', label: 'Pengolahan dan Manufaktur' },
+                                                { value: 'PerdagangandanJasaUmum', label: 'Perdagangan dan Jasa Umum' }
+                                            ]}
+                                        />
+                                        
+                                        <FormInput
+                                            label="Keterangan Jenis Usaha Utama"
+                                            name="JenisUsahaUtama"
+                                            type="textarea"
+                                            value={formData.JenisUsahaUtama}
+                                            onChange={handleChange}
+                                            placeholder="Jelaskan detail usaha utama"
+                                        />
+                                        
+                                        <FormInput
+                                            label="Jenis Usaha Lainnya"
+                                            name="JenisUsahaLainnya"
+                                            type="textarea"
+                                            value={formData.JenisUsahaLainnya}
+                                            onChange={handleChange}
+                                            placeholder="Jelaskan usaha lainnya (jika ada)"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Kinerja Keuangan */}
+                                <div>
+                                    <h3 className="text-lg font-semibold text-slate-800 mb-4 border-b border-emerald-200 pb-2">Kinerja Keuangan</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <FormInput
+                                            label="Omset 2023"
+                                            name="Omset2023"
+                                            value={formatRupiah(formData.Omset2023)}
+                                            onChange={handleChange}
+                                            placeholder="Rp. 0"
+                                        />
+                                        
+                                        <FormInput
+                                            label="Laba 2023"
+                                            name="Laba2023"
+                                            value={formatRupiah(formData.Laba2023)}
+                                            onChange={handleChange}
+                                            placeholder="Rp. 0"
+                                        />
+                                        
+                                        <FormInput
+                                            label="Omset 2024"
+                                            name="Omset2024"
+                                            value={formatRupiah(formData.Omset2024)}
+                                            onChange={handleChange}
+                                            placeholder="Rp. 0"
+                                        />
+                                        
+                                        <FormInput
+                                            label="Laba 2024"
+                                            name="Laba2024"
+                                            value={formatRupiah(formData.Laba2024)}
+                                            onChange={handleChange}
+                                            placeholder="Rp. 0"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 );
+
             case 'permodalan':
                 return (
-                    <div className="form-section">
-                        <h2 className="form-section-title">Permodalan dan Aset</h2>
-                        <label className="form-group">Penyertaan Modal 2019: <input type="text" name="PenyertaanModal2019" value={formatRupiah(formData.PenyertaanModal2019)} onChange={handleChange} className="form-input" disabled={hasSubmitted} /></label>
-                        <label className="form-group">Penyertaan Modal 2020: <input type="text" name="PenyertaanModal2020" value={formatRupiah(formData.PenyertaanModal2020)} onChange={handleChange} className="form-input" disabled={hasSubmitted} /></label>
-                        <label className="form-group">Penyertaan Modal 2021: <input type="text" name="PenyertaanModal2021" value={formatRupiah(formData.PenyertaanModal2021)} onChange={handleChange} className="form-input" disabled={hasSubmitted} /></label>
-                        <label className="form-group">Penyertaan Modal 2022: <input type="text" name="PenyertaanModal2022" value={formatRupiah(formData.PenyertaanModal2022)} onChange={handleChange} className="form-input" disabled={hasSubmitted} /></label>
-                        <label className="form-group">Penyertaan Modal 2023: <input type="text" name="PenyertaanModal2023" value={formatRupiah(formData.PenyertaanModal2023)} onChange={handleChange} className="form-input" disabled={hasSubmitted} /></label>
-                        <label className="form-group">Penyertaan Modal 2024: <input type="text" name="PenyertaanModal2024" value={formatRupiah(formData.PenyertaanModal2024)} onChange={handleChange} className="form-input" disabled={hasSubmitted} /></label>
-                        <label className="form-group">Modal dari Sumber Lain: <input type="text" name="SumberLain" value={formatRupiah(formData.SumberLain)} onChange={handleChange} className="form-input" disabled={hasSubmitted} /></label>
-                        <label className="form-group">Jenis Aset: <input type="text" name="JenisAset" value={formData.JenisAset} onChange={handleChange} className="form-input" disabled={hasSubmitted} /></label>
-                        <label className="form-group">Nilai Aset: <input type="text" name="NilaiAset" value={formatRupiah(formData.NilaiAset)} onChange={handleChange} className="form-input" disabled={hasSubmitted} /></label>
+                    <div className="space-y-8">
+                        <SectionHeader 
+                            title="Permodalan dan Aset" 
+                            subtitle="Modal dan aset BUMDes"
+                        />
+                        
+                        <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-2xl p-6 border border-yellow-100">
+                            <div className="space-y-8">
+                                {/* Penyertaan Modal */}
+                                <div>
+                                    <h3 className="text-lg font-semibold text-slate-800 mb-4 border-b border-yellow-200 pb-2">Penyertaan Modal</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        <FormInput
+                                            label="Penyertaan Modal 2019"
+                                            name="PenyertaanModal2019"
+                                            value={formatRupiah(formData.PenyertaanModal2019)}
+                                            onChange={handleChange}
+                                            placeholder="Rp. 0"
+                                        />
+                                        
+                                        <FormInput
+                                            label="Penyertaan Modal 2020"
+                                            name="PenyertaanModal2020"
+                                            value={formatRupiah(formData.PenyertaanModal2020)}
+                                            onChange={handleChange}
+                                            placeholder="Rp. 0"
+                                        />
+                                        
+                                        <FormInput
+                                            label="Penyertaan Modal 2021"
+                                            name="PenyertaanModal2021"
+                                            value={formatRupiah(formData.PenyertaanModal2021)}
+                                            onChange={handleChange}
+                                            placeholder="Rp. 0"
+                                        />
+                                        
+                                        <FormInput
+                                            label="Penyertaan Modal 2022"
+                                            name="PenyertaanModal2022"
+                                            value={formatRupiah(formData.PenyertaanModal2022)}
+                                            onChange={handleChange}
+                                            placeholder="Rp. 0"
+                                        />
+                                        
+                                        <FormInput
+                                            label="Penyertaan Modal 2023"
+                                            name="PenyertaanModal2023"
+                                            value={formatRupiah(formData.PenyertaanModal2023)}
+                                            onChange={handleChange}
+                                            placeholder="Rp. 0"
+                                        />
+                                        
+                                        <FormInput
+                                            label="Penyertaan Modal 2024"
+                                            name="PenyertaanModal2024"
+                                            value={formatRupiah(formData.PenyertaanModal2024)}
+                                            onChange={handleChange}
+                                            placeholder="Rp. 0"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Aset */}
+                                <div>
+                                    <h3 className="text-lg font-semibold text-slate-800 mb-4 border-b border-yellow-200 pb-2">Aset</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <FormInput
+                                            label="Modal dari Sumber Lain"
+                                            name="SumberLain"
+                                            value={formatRupiah(formData.SumberLain)}
+                                            onChange={handleChange}
+                                            placeholder="Rp. 0"
+                                        />
+                                        
+                                        <FormInput
+                                            label="Nilai Aset"
+                                            name="NilaiAset"
+                                            value={formatRupiah(formData.NilaiAset)}
+                                            onChange={handleChange}
+                                            placeholder="Rp. 0"
+                                        />
+                                        
+                                        <div className="md:col-span-2">
+                                            <FormInput
+                                                label="Jenis Aset"
+                                                name="JenisAset"
+                                                type="textarea"
+                                                value={formData.JenisAset}
+                                                onChange={handleChange}
+                                                placeholder="Jelaskan jenis-jenis aset yang dimiliki"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 );
+
             case 'kemitraan':
                 return (
-                    <div className="form-section">
-                        <h2 className="form-section-title">Kemitraan/Kerjasama</h2>
-                        <label className="form-group">Kemitraan/Kerjasama Pihak Ketiga: <input type="text" name="KerjasamaPihakKetiga" value={formData.KerjasamaPihakKetiga} onChange={handleChange} className="form-input" disabled={hasSubmitted} /></label>
-                        <label className="form-group">Tahun Mulai-Tahun Berakhir: <input type="text" name="TahunMulai-TahunBerakhir" value={formData['TahunMulai-TahunBerakhir']} onChange={handleChange} className="form-input" disabled={hasSubmitted} /></label>
+                    <div className="space-y-8">
+                        <SectionHeader 
+                            title="Kemitraan" 
+                            subtitle="Kerjasama dengan pihak ketiga"
+                        />
+                        
+                        <div className="bg-gradient-to-br from-pink-50 to-rose-50 rounded-2xl p-6 border border-pink-100">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <FormInput
+                                    label="Kemitraan/Kerjasama Pihak Ketiga"
+                                    name="KerjasamaPihakKetiga"
+                                    type="textarea"
+                                    value={formData.KerjasamaPihakKetiga}
+                                    onChange={handleChange}
+                                    placeholder="Jelaskan kerjasama dengan pihak ketiga"
+                                />
+                                
+                                <FormInput
+                                    label="Tahun Mulai - Tahun Berakhir"
+                                    name="TahunMulai-TahunBerakhir"
+                                    value={formData['TahunMulai-TahunBerakhir']}
+                                    onChange={handleChange}
+                                    placeholder="Contoh: 2020-2025"
+                                />
+                            </div>
+                        </div>
                     </div>
                 );
+
             case 'kontribusi':
                 return (
-                    <div className="form-section">
-                        <h2 className="form-section-title">Kontribusi PADES</h2>
-                        <label className="form-group">Kontribusi PADes 2021: <input type="text" name="KontribusiTerhadapPADes2021" value={formatRupiah(formData.KontribusiTerhadapPADes2021)} onChange={handleChange} className="form-input" disabled={hasSubmitted} /></label>
-                        <label className="form-group">Kontribusi PADes 2022: <input type="text" name="KontribusiTerhadapPADes2022" value={formatRupiah(formData.KontribusiTerhadapPADes2022)} onChange={handleChange} className="form-input" disabled={hasSubmitted} /></label>
-                        <label className="form-group">Kontribusi PADes 2023: <input type="text" name="KontribusiTerhadapPADes2023" value={formatRupiah(formData.KontribusiTerhadapPADes2023)} onChange={handleChange} className="form-input" disabled={hasSubmitted} /></label>
-                        <label className="form-group">Kontribusi PADes 2024: <input type="text" name="KontribusiTerhadapPADes2024" value={formatRupiah(formData.KontribusiTerhadapPADes2024)} onChange={handleChange} className="form-input" disabled={hasSubmitted} /></label>
+                    <div className="space-y-8">
+                        <SectionHeader 
+                            title="Kontribusi PADes" 
+                            subtitle="Kontribusi terhadap Pendapatan Asli Desa"
+                        />
+                        
+                        <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-6 border border-indigo-100">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <FormInput
+                                    label="Kontribusi PADes 2021"
+                                    name="KontribusiTerhadapPADes2021"
+                                    value={formatRupiah(formData.KontribusiTerhadapPADes2021)}
+                                    onChange={handleChange}
+                                    placeholder="Rp. 0"
+                                />
+                                
+                                <FormInput
+                                    label="Kontribusi PADes 2022"
+                                    name="KontribusiTerhadapPADes2022"
+                                    value={formatRupiah(formData.KontribusiTerhadapPADes2022)}
+                                    onChange={handleChange}
+                                    placeholder="Rp. 0"
+                                />
+                                
+                                <FormInput
+                                    label="Kontribusi PADes 2023"
+                                    name="KontribusiTerhadapPADes2023"
+                                    value={formatRupiah(formData.KontribusiTerhadapPADes2023)}
+                                    onChange={handleChange}
+                                    placeholder="Rp. 0"
+                                />
+                                
+                                <FormInput
+                                    label="Kontribusi PADes 2024"
+                                    name="KontribusiTerhadapPADes2024"
+                                    value={formatRupiah(formData.KontribusiTerhadapPADes2024)}
+                                    onChange={handleChange}
+                                    placeholder="Rp. 0"
+                                />
+                            </div>
+                        </div>
                     </div>
                 );
+
             case 'peran':
                 return (
-                    <div className="form-section">
-                        <h2 className="form-section-title">Peran BUMDesa pada Program Pemerintah</h2>
-                        <label className="form-group">Peran Program Ketahanan Pangan 2024:
-                            <select name="Ketapang2024" value={formData.Ketapang2024} onChange={handleChange} className="form-select" disabled={hasSubmitted}>
-                                <option value="">-</option>
-                                <option value="Pengelola">Pengelola</option>
-                                <option value="Distribusi">Distribusi</option>
-                                <option value="Pemasaran">Pemasaran</option>
-                                <option value="tidakadaperan">Tidak Ada Peran</option>
-                            </select>
-                        </label>
-                        <label className="form-group">Peran Program Ketahanan Pangan 2025:
-                            <select name="Ketapang2025" value={formData.Ketapang2025} onChange={handleChange} className="form-select" disabled={hasSubmitted}>
-                                <option value="">-</option>
-                                <option value="Pengelola">Pengelola</option>
-                                <option value="Distribusi">Distribusi</option>
-                                <option value="Pemasaran">Pemasaran</option>
-                                <option value="tidakadaperan">Tidak Ada Peran</option>
-                            </select>
-                        </label>
-                        <label className="form-group">Peran Pada Desa Wisata:
-                            <select name="DesaWisata" value={formData.DesaWisata} onChange={handleChange} className="form-select" disabled={hasSubmitted}>
-                                <option value="">-</option>
-                                <option value="PengelolaUtama">Pengelola Utama</option>
-                                <option value="Pengelola Pendukung">Pengelola Pendukung</option>
-                            </select>
-                        </label>
+                    <div className="space-y-8">
+                        <SectionHeader 
+                            title="Peran BUMDes" 
+                            subtitle="Peran dalam program pemerintah"
+                        />
+                        
+                        <div className="bg-gradient-to-br from-teal-50 to-cyan-50 rounded-2xl p-6 border border-teal-100">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <FormInput
+                                    label="Peran Program Ketahanan Pangan 2024"
+                                    name="Ketapang2024"
+                                    type="select"
+                                    value={formData.Ketapang2024}
+                                    onChange={handleChange}
+                                    options={[
+                                        { value: 'Pengelola', label: 'Pengelola' },
+                                        { value: 'Distribusi', label: 'Distribusi' },
+                                        { value: 'Pemasaran', label: 'Pemasaran' },
+                                        { value: 'tidakadaperan', label: 'Tidak Ada Peran' }
+                                    ]}
+                                />
+                                
+                                <FormInput
+                                    label="Peran Program Ketahanan Pangan 2025"
+                                    name="Ketapang2025"
+                                    type="select"
+                                    value={formData.Ketapang2025}
+                                    onChange={handleChange}
+                                    options={[
+                                        { value: 'Pengelola', label: 'Pengelola' },
+                                        { value: 'Distribusi', label: 'Distribusi' },
+                                        { value: 'Pemasaran', label: 'Pemasaran' },
+                                        { value: 'tidakadaperan', label: 'Tidak Ada Peran' }
+                                    ]}
+                                />
+                                
+                                <div className="md:col-span-2">
+                                    <FormInput
+                                        label="Peran Pada Desa Wisata"
+                                        name="DesaWisata"
+                                        type="select"
+                                        value={formData.DesaWisata}
+                                        onChange={handleChange}
+                                        options={[
+                                            { value: 'PengelolaUtama', label: 'Pengelola Utama' },
+                                            { value: 'Pengelola Pendukung', label: 'Pengelola Pendukung' }
+                                        ]}
+                                    />
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 );
+
             case 'bantuan':
                 return (
-                    <div className="form-section">
-                        <h2 className="form-section-title">Bantuan</h2>
-                        <label className="form-group">Bantuan Kementrian: <input type="text" name="BantuanKementrian" value={formData.BantuanKementrian} onChange={handleChange} className="form-input" disabled={hasSubmitted} /></label>
-                        <label className="form-group">Bantuan Lainnya: <input type="text" name="BantuanLaptopShopee" value={formData.BantuanLaptopShopee} onChange={handleChange} className="form-input" disabled={hasSubmitted} /></label>
+                    <div className="space-y-8">
+                        <SectionHeader 
+                            title="Bantuan" 
+                            subtitle="Bantuan yang diterima BUMDes"
+                        />
+                        
+                        <div className="bg-gradient-to-br from-lime-50 to-green-50 rounded-2xl p-6 border border-lime-100">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <FormInput
+                                    label="Bantuan Kementerian"
+                                    name="BantuanKementrian"
+                                    type="textarea"
+                                    value={formData.BantuanKementrian}
+                                    onChange={handleChange}
+                                    placeholder="Jelaskan bantuan dari kementerian"
+                                />
+                                
+                                <FormInput
+                                    label="Bantuan Lainnya"
+                                    name="BantuanLaptopShopee"
+                                    type="textarea"
+                                    value={formData.BantuanLaptopShopee}
+                                    onChange={handleChange}
+                                    placeholder="Jelaskan bantuan lainnya"
+                                />
+                            </div>
+                        </div>
                     </div>
                 );
+
             case 'laporan':
                 return (
-                    <div className="form-section">
-                        <h2 className="form-section-title">Laporan Pertanggung Jawaban</h2>
-                        <label className="form-group file-group">Laporan Keuangan 2021 (Maks: 5MB): <input type="file" name="LaporanKeuangan2021" onChange={handleFileChange} className="file-input" disabled={hasSubmitted} /></label>
-                        <label className="form-group file-group">Laporan Keuangan 2022 (Maks: 5MB): <input type="file" name="LaporanKeuangan2022" onChange={handleFileChange} className="file-input" disabled={hasSubmitted} /></label>
-                        <label className="form-group file-group">Laporan Keuangan 2023 (Maks: 5MB): <input type="file" name="LaporanKeuangan2023" onChange={handleFileChange} className="file-input" disabled={hasSubmitted} /></label>
-                        <label className="form-group file-group">Laporan Keuangan 2024 (Maks: 5MB): <input type="file" name="LaporanKeuangan2024" onChange={handleFileChange} className="file-input" disabled={hasSubmitted} /></label>
+                    <div className="space-y-8">
+                        <SectionHeader 
+                            title="Laporan Keuangan" 
+                            subtitle="Laporan pertanggungjawaban keuangan"
+                        />
+                        
+                        <div className="bg-gradient-to-br from-slate-50 to-gray-50 rounded-2xl p-6 border border-slate-100">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <FormInput
+                                    label="Laporan Keuangan 2021"
+                                    name="LaporanKeuangan2021"
+                                    type="file"
+                                    onChange={handleFileChange}
+                                />
+                                
+                                <FormInput
+                                    label="Laporan Keuangan 2022"
+                                    name="LaporanKeuangan2022"
+                                    type="file"
+                                    onChange={handleFileChange}
+                                />
+                                
+                                <FormInput
+                                    label="Laporan Keuangan 2023"
+                                    name="LaporanKeuangan2023"
+                                    type="file"
+                                    onChange={handleFileChange}
+                                />
+                                
+                                <FormInput
+                                    label="Laporan Keuangan 2024"
+                                    name="LaporanKeuangan2024"
+                                    type="file"
+                                    onChange={handleFileChange}
+                                />
+                            </div>
+                        </div>
                     </div>
                 );
+
             case 'dokumen':
                 return (
-                    <div className="form-section">
-                        <h2 className="form-section-title">Dokumen Pendirian</h2>
-                        <label className="form-group">Nomor Perdes: <input type="text" name="NomorPerdes" value={formData.NomorPerdes} onChange={handleChange} className="form-input" disabled={hasSubmitted} /></label>
-                        <label className="form-group file-group">Perdes (Maks: 5MB): <input type="file" name="Perdes" onChange={handleFileChange} className="file-input" disabled={hasSubmitted} /></label>
-                        <label className="form-group file-group">Profil BUM Desa (Maks: 5MB): <input type="file" name="ProfilBUMDesa" onChange={handleFileChange} className="file-input" disabled={hasSubmitted} /></label>
-                        <label className="form-group file-group">Berita Acara (Maks: 5MB): <input type="file" name="BeritaAcara" onChange={handleFileChange} className="form-input" disabled={hasSubmitted} /></label>
-                        <label className="form-group file-group">Anggaran Dasar (Maks: 5MB): <input type="file" name="AnggaranDasar" onChange={handleFileChange} className="form-input" disabled={hasSubmitted} /></label>
-                        <label className="form-group file-group">Anggaran Rumah Tangga (Maks: 5MB): <input type="file" name="AnggaranRumahTangga" onChange={handleFileChange} className="form-input" disabled={hasSubmitted} /></label>
-                        <label className="form-group file-group">Program Kerja (Maks: 5MB): <input type="file" name="ProgramKerja" onChange={handleFileChange} className="form-input" disabled={hasSubmitted} /></label>
-                        <label className="form-group file-group">SK BUM Desa (Maks: 5MB): <input type="file" name="SK_BUM_Desa" onChange={handleFileChange} className="form-input" disabled={hasSubmitted} /></label>
+                    <div className="space-y-8">
+                        <SectionHeader 
+                            title="Dokumen Pendirian" 
+                            subtitle="Dokumen resmi pendirian BUMDes"
+                        />
+                        
+                        <div className="bg-gradient-to-br from-red-50 to-pink-50 rounded-2xl p-6 border border-red-100">
+                            <div className="space-y-6">
+                                <FormInput
+                                    label="Nomor Perdes"
+                                    name="NomorPerdes"
+                                    value={formData.NomorPerdes}
+                                    onChange={handleChange}
+                                    placeholder="Nomor Peraturan Desa"
+                                />
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <FormInput
+                                        label="Perdes"
+                                        name="Perdes"
+                                        type="file"
+                                        onChange={handleFileChange}
+                                    />
+                                    
+                                    <FormInput
+                                        label="Profil BUMDesa"
+                                        name="ProfilBUMDesa"
+                                        type="file"
+                                        onChange={handleFileChange}
+                                    />
+                                    
+                                    <FormInput
+                                        label="Berita Acara"
+                                        name="BeritaAcara"
+                                        type="file"
+                                        onChange={handleFileChange}
+                                    />
+                                    
+                                    <FormInput
+                                        label="Anggaran Dasar"
+                                        name="AnggaranDasar"
+                                        type="file"
+                                        onChange={handleFileChange}
+                                    />
+                                    
+                                    <FormInput
+                                        label="Anggaran Rumah Tangga"
+                                        name="AnggaranRumahTangga"
+                                        type="file"
+                                        onChange={handleFileChange}
+                                    />
+                                    
+                                    <FormInput
+                                        label="Program Kerja"
+                                        name="ProgramKerja"
+                                        type="file"
+                                        onChange={handleFileChange}
+                                    />
+                                    
+                                    <div className="md:col-span-2">
+                                        <FormInput
+                                            label="SK BUM Desa (Wajib)"
+                                            name="SK_BUM_Desa"
+                                            type="file"
+                                            onChange={handleFileChange}
+                                            required
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Submit Button - Only in dokumen section */}
+                        <div className="bg-white/60 backdrop-blur-xl rounded-2xl shadow-xl border border-white/20 p-6">
+                            <div className="text-center">
+                                <div className="mb-6">
+                                    <h3 className="text-xl font-bold text-slate-800 mb-2">Kirim Data BUMDes</h3>
+                                    <p className="text-slate-600">Pastikan semua data telah diisi dengan benar sebelum mengirim</p>
+                                </div>
+                                
+                                <button 
+                                    type="submit" 
+                                    disabled={loading}
+                                    className="group bg-slate-800 hover:bg-slate-700 disabled:bg-gray-300 text-white px-12 py-4 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 disabled:transform-none disabled:cursor-not-allowed flex items-center gap-3 text-lg mx-auto"
+                                >
+                                    {loading ? (
+                                        <>
+                                            <FaSpinner className="animate-spin text-xl" />
+                                            <span>Menyimpan...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <FaPaperPlane className="group-hover:scale-110 transition-transform duration-300 text-xl" />
+                                            <span>Simpan Data BUMDes</span>
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 );
+
             default:
-                return null;
+                return (
+                    <div className="text-center py-12">
+                        <div className="text-slate-500 text-lg">
+                            Section ini sedang dalam pengembangan
+                        </div>
+                        <div className="text-slate-400 text-sm mt-2">
+                            Fitur lengkap akan segera tersedia
+                        </div>
+                    </div>
+                );
         }
     };
 
     return (
-        <div className="form-page-container">
-            <nav className="sidebar">
-                {formSections.map(section => (
-                    <button
-                        key={section.id}
-                        onClick={() => setActiveSection(section.id)}
-                        className={`sidebar-button ${activeSection === section.id ? 'active' : ''}`}
-                    >
-                        {section.title}
-                    </button>
-                ))}
-            </nav>
-            <form onSubmit={isLastSection ? handleSubmit : (e) => e.preventDefault()} className="form-content">
-                {renderSection()}
-                
-                <Modal 
-                    show={modalShow} 
-                    onClose={() => setModalShow(false)} 
-                    title={message.type === 'error' ? 'Validasi Gagal' : (message.type === 'info' ? 'Informasi' : 'Berhasil')}
-                    message={message.text} 
-                    type={message.type} 
-                />
-
-                <div className="form-navigation">
-                    {activeSection !== 'identitas' && (
-                        <button type="button" onClick={handlePrev} className="nav-button-prev-button" disabled={loading || hasSubmitted}>
-                            Kembali
+        <div className="min-h-screen bg-gray-50">
+            {/* Enhanced Header */}
+            <div className="bg-slate-800 border-b border-slate-700 shadow-xl p-6">
+                <div className="max-w-7xl mx-auto flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-slate-700 rounded-2xl flex items-center justify-center shadow-lg">
+                            <FaPaperPlane className="text-white text-xl" />
+                        </div>
+                        <div>
+                            <h1 className="text-2xl font-bold text-white">Form Input BUMDes</h1>
+                            <p className="text-slate-300">Isi data BUMDes dengan lengkap dan akurat</p>
+                        </div>
+                    </div>
+                    
+                    <div className="flex gap-3">
+                        <button 
+                            onClick={onSwitchToDashboard}
+                            className="bg-white text-slate-800 hover:bg-gray-100 px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
+                        >
+                            Dashboard
                         </button>
-                    )}
-                    {isLastSection ? (
-                        <button type="submit" disabled={loading || hasSubmitted} className="submit-button">
-                            {loading ? <FaSpinner className="spinner" /> : <FaPaperPlane />}
-                            {loading ? 'Mengirim...' : 'Submit'}
-                        </button>
-                    ) : (
-                        <button type="button" onClick={handleNext} disabled={loading || hasSubmitted} className="nav-button-next-button">
-                            Next
-                        </button>
-                    )}
+                    </div>
                 </div>
-            </form>
+            </div>
+
+            <div className="flex flex-col lg:flex-row">
+                {/* Enhanced Sidebar Navigation */}
+                <nav className="lg:w-80 bg-white border-r border-gray-200 shadow-xl overflow-y-auto">
+                    <div className="p-6">
+                        <div className="flex items-center gap-3 mb-8">
+                            <div className="w-10 h-10 bg-slate-800 rounded-xl flex items-center justify-center">
+                                <HiSparkles className="text-white text-xl" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold text-slate-800">Form Sections</h3>
+                                <p className="text-sm text-slate-600">Step by step</p>
+                            </div>
+                        </div>
+                        
+                        <div className="space-y-2">
+                            {formSections.map((section, index) => (
+                                <button
+                                    key={section.id}
+                                    onClick={() => goToSection(section.id)}
+                                    className={`w-full text-left p-4 rounded-xl font-medium transition-all duration-300 group ${
+                                        activeSection === section.id
+                                            ? 'bg-slate-800 text-white shadow-lg'
+                                            : 'text-slate-700 hover:bg-gray-50 hover:shadow-md'
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold ${
+                                            activeSection === section.id
+                                                ? 'bg-white/20 text-white'
+                                                : 'bg-slate-100 text-slate-600 group-hover:bg-slate-200'
+                                        }`}>
+                                            {index + 1}
+                                        </div>
+                                        <span className="flex-1">{section.title}</span>
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </nav>
+
+                {/* Enhanced Form Content */}
+                <div className="flex-1 flex flex-col">
+                    <form onSubmit={handleSubmit} className="flex-1 p-6">
+                        <div className="bg-white rounded-3xl shadow-xl border border-gray-200 min-h-full flex flex-col">
+                            <div className="p-8 flex-1">
+                                {renderSection()}
+                            </div>
+                            
+                            {/* Navigation Buttons */}
+                            <div className="px-8 py-6 border-t border-gray-200 bg-gray-50 rounded-b-3xl">
+                                <div className="flex justify-between items-center">
+                                    <button
+                                        type="button"
+                                        onClick={goToPreviousSection}
+                                        disabled={currentSectionIndex === 0}
+                                        className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${
+                                            currentSectionIndex === 0
+                                                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                                : 'bg-white text-slate-800 hover:bg-gray-100 shadow-lg hover:shadow-xl transform hover:-translate-y-1'
+                                        }`}
+                                    >
+                                        <FaChevronLeft />
+                                        Previous
+                                    </button>
+
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm text-slate-600">
+                                            Step {currentSectionIndex + 1} of {formSections.length}
+                                        </span>
+                                        <div className="flex gap-1">
+                                            {formSections.map((_, index) => (
+                                                <div
+                                                    key={index}
+                                                    className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                                                        index === currentSectionIndex
+                                                            ? 'bg-slate-800'
+                                                            : index < currentSectionIndex
+                                                            ? 'bg-green-500'
+                                                            : 'bg-gray-300'
+                                                    }`}
+                                                />
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {currentSectionIndex === formSections.length - 1 ? (
+                                        <button
+                                            type="submit"
+                                            disabled={loading}
+                                            className="flex items-center gap-2 bg-slate-800 text-white hover:bg-slate-700 px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            {loading ? <FaSpinner className="animate-spin" /> : <FaPaperPlane />}
+                                            {loading ? 'Menyimpan...' : 'Submit'}
+                                        </button>
+                                    ) : (
+                                        <button
+                                            type="button"
+                                            onClick={goToNextSection}
+                                            className="flex items-center gap-2 bg-slate-800 text-white hover:bg-slate-700 px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
+                                        >
+                                            Next
+                                            <FaChevronRight />
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            {/* Modal Component */}
+            <Modal 
+                show={showPopup} 
+                onClose={() => setShowPopup(false)} 
+                title={popupMessage.type === 'error' ? 'Penyimpanan Gagal' : 'Data Tersimpan'}
+                message={popupMessage.text} 
+                type={popupMessage.type} 
+            />
         </div>
     );
 }
 
-export { initialFormData };
 export default BumdesForm;
