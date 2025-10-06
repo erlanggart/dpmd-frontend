@@ -734,4 +734,5 @@ const Dashboard = ({ refreshTrigger, onFilterClick }) => {
   );
 };
 
-export default Dashboard;
+// Memoize component to prevent unnecessary re-renders
+export default React.memo(Dashboard);

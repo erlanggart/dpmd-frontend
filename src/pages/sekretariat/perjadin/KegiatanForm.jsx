@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { FiEdit3, FiPlus, FiClipboard, FiCheck } from 'react-icons/fi';
 import api from '../../../api';
 import Swal from 'sweetalert2';
 
@@ -99,14 +100,49 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose, onSuccess }) => {
   });
   const [allBidangList, setAllBidangList] = useState([]);
   const [allPersonilByBidang, setAllPersonilByBidang] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [masterDataCache, setMasterDataCache] = useState({
+    bidang: { data: null, timestamp: null },
+    personil: { data: {}, timestamp: {} }
+  });
+
+  // Cache utility functions
+  const isCacheValid = (timestamp, maxAge = 300000) => { // 5 minutes default
+    if (!timestamp) return false;
+    return (Date.now() - timestamp) < maxAge;
+  };
 
   useEffect(() => {
     const fetchMasterData = async () => {
       try {
+        // Check if bidang data is cached and valid
+        if (masterDataCache.bidang.data && isCacheValid(masterDataCache.bidang.timestamp)) {
+          console.log('📋 KegiatanForm: Using cached bidang data');
+          setAllBidangList(masterDataCache.bidang.data);
+          return;
+        }
+
+        console.log('KegiatanForm: Fetching fresh bidang data...');
         const bidangRes = await api.get('/perjadin/bidang');
+        
         setAllBidangList(bidangRes.data);
+        setMasterDataCache(prev => ({
+          ...prev,
+          bidang: {
+            data: bidangRes.data,
+            timestamp: Date.now()
+          }
+        }));
       } catch (error) {
-        Swal.fire('Error', 'Gagal memuat data master (bidang).', 'error');
+        console.error('KegiatanForm: Error fetching master data:', error);
+        
+        // Use cached data if available
+        if (masterDataCache.bidang.data) {
+          console.log('KegiatanForm: Using cached bidang data due to error');
+          setAllBidangList(masterDataCache.bidang.data);
+        } else {
+          Swal.fire('Error', 'Gagal memuat data master (bidang).', 'error');
+        }
       }
     };
     fetchMasterData();
@@ -168,17 +204,58 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose, onSuccess }) => {
     newPersonilBidangList[index].personil = [''];
     setFormData({ ...formData, personil_bidang_list: newPersonilBidangList });
 
-    // Fetch personil untuk bidang yang dipilih
+    // Fetch personil untuk bidang yang dipilih dengan caching
     if (e.target.value && !allPersonilByBidang[e.target.value]) {
       try {
+        // Check if personil data is cached and valid
+        const cachedTimestamp = masterDataCache.personil.timestamp[e.target.value];
+        const cachedData = masterDataCache.personil.data[e.target.value];
+        
+        if (cachedData && isCacheValid(cachedTimestamp)) {
+          console.log(`📋 KegiatanForm: Using cached personil data for bidang ${e.target.value}`);
+          setAllPersonilByBidang(prev => ({
+            ...prev,
+            [e.target.value]: cachedData
+          }));
+          return;
+        }
+
+        console.log(`KegiatanForm: Fetching fresh personil data for bidang ${e.target.value}...`);
         const personilRes = await api.get(`/perjadin/personil/${e.target.value}`);
+        
         setAllPersonilByBidang(prev => ({
           ...prev,
           [e.target.value]: personilRes.data
         }));
+
+        // Update cache
+        setMasterDataCache(prev => ({
+          ...prev,
+          personil: {
+            data: {
+              ...prev.personil.data,
+              [e.target.value]: personilRes.data
+            },
+            timestamp: {
+              ...prev.personil.timestamp,
+              [e.target.value]: Date.now()
+            }
+          }
+        }));
       } catch (error) {
-        console.error('Error fetching personil:', error);
-        Swal.fire('Error', 'Gagal memuat data personil.', 'error');
+        console.error('KegiatanForm: Error fetching personil:', error);
+        
+        // Use cached data if available
+        const cachedData = masterDataCache.personil.data[e.target.value];
+        if (cachedData) {
+          console.log(`KegiatanForm: Using cached personil data due to error for bidang ${e.target.value}`);
+          setAllPersonilByBidang(prev => ({
+            ...prev,
+            [e.target.value]: cachedData
+          }));
+        } else {
+          Swal.fire('Error', 'Gagal memuat data personil.', 'error');
+        }
       }
     }
   };
@@ -227,10 +304,12 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose, onSuccess }) => {
   const fetchPersonilByBidang = async (idBidang) => {
     if (!allPersonilByBidang[idBidang]) {
       try {
-        const response = await api.get(`/personil/${idBidang}`);
+        console.log(`KegiatanForm: Fetching fresh personil data for bidang ${idBidang}...`);
+        const response = await api.get(`/perjadin/personil/${idBidang}`);
         setAllPersonilByBidang(prev => ({ ...prev, [idBidang]: response.data }));
+        console.log(`KegiatanForm: Successfully fetched personil for bidang ${idBidang}`);
       } catch (error) {
-        console.error('Failed to fetch personil:', error);
+        console.error('KegiatanForm: Failed to fetch personil:', error);
       }
     }
   };
@@ -270,6 +349,8 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose, onSuccess }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (isSubmitting) return; // Prevent double submission
     
     if (formData.tanggal_mulai > formData.tanggal_selesai) {
       Swal.fire('Peringatan', 'Tanggal selesai tidak boleh lebih awal dari tanggal mulai.', 'warning');
@@ -351,6 +432,20 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose, onSuccess }) => {
     }
 
     try {
+      setIsSubmitting(true);
+      
+      // Show loading indicator
+      Swal.fire({
+        title: initialKegiatan ? 'Mengupdate Kegiatan...' : 'Menyimpan Kegiatan...',
+        text: 'Mohon tunggu sebentar',
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        showConfirmButton: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+      
       console.log('📤 KegiatanForm: Sending data to API:', {
         formData,
         endpoint: initialKegiatan ? `/perjadin/kegiatan/${initialKegiatan.id_kegiatan}` : '/perjadin/kegiatan',
@@ -366,19 +461,45 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose, onSuccess }) => {
       
       console.log('📥 KegiatanForm: API response:', response.data);
       
+      Swal.close(); // Close loading
+      
       if (response.data.status === 'success') {
-        Swal.fire('Berhasil!', response.data.message, 'success');
+        Swal.fire({
+          icon: 'success',
+          title: 'Berhasil!',
+          text: response.data.message,
+          confirmButtonColor: '#1e293b'
+        });
         onSuccess();
       } else {
-        Swal.fire('Gagal!', response.data.message, 'error');
+        Swal.fire({
+          icon: 'error',
+          title: 'Gagal!',
+          text: response.data.message,
+          confirmButtonColor: '#dc2626'
+        });
       }
     } catch (error) {
+      Swal.close(); // Close loading
+      
       if (error.response && error.response.status === 409) {
-        Swal.fire('Gagal!', error.response.data.message, 'warning');
+        Swal.fire({
+          icon: 'warning',
+          title: 'Konflik Data!',
+          text: error.response.data.message,
+          confirmButtonColor: '#f59e0b'
+        });
       } else {
-        console.error('Error:', error);
-        Swal.fire('Oops...', 'Terjadi kesalahan saat menyimpan data.', 'error');
+        console.error('KegiatanForm: Error submitting form:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Oops...',
+          text: error.response?.data?.message || 'Terjadi kesalahan saat menyimpan data.',
+          confirmButtonColor: '#dc2626'
+        });
       }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -388,15 +509,19 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose, onSuccess }) => {
       <div className="text-center space-y-8 animate-fade-in-up">
         <div className="relative inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-slate-700 via-slate-800 to-slate-900 rounded-3xl shadow-2xl animate-pulse-subtle">
           <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-3xl"></div>
-          <i className={`fas ${initialKegiatan ? 'fa-edit' : 'fa-plus-circle'} text-4xl text-white relative z-10`}></i>
+          {initialKegiatan ? (
+            <FiEdit3 className="text-4xl text-white relative z-10" />
+          ) : (
+            <FiPlus className="text-4xl text-white relative z-10" />
+          )}
           <div className="absolute -top-2 -right-2 w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center">
-            <i className="fas fa-check text-white text-xs"></i>
+            <FiCheck className="text-white text-xs" />
           </div>
         </div>
         <div className="space-y-6">
           <div>
             <h1 className="text-5xl font-bold bg-gradient-to-r from-slate-800 via-slate-700 to-slate-900 bg-clip-text text-transparent mb-4 tracking-tight">
-              {initialKegiatan ? '✏️ Edit Kegiatan' : '📝 Form Kegiatan Baru'}
+              {initialKegiatan ? 'Edit Kegiatan' : 'Form Kegiatan Baru'}
             </h1>
             <p className="text-slate-600 text-xl max-w-3xl mx-auto leading-relaxed font-medium">
               {initialKegiatan ? 'Perbarui informasi kegiatan perjalanan dinas dengan detail terbaru' : 'Isi formulir lengkap untuk menambah kegiatan perjalanan dinas baru'}
@@ -418,10 +543,10 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose, onSuccess }) => {
           <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent"></div>
           <div className="flex items-center gap-4 relative z-10">
             <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm border border-white/10">
-              <i className="fas fa-clipboard-list text-white text-xl"></i>
+              <FiClipboard className="text-white text-xl" />
             </div>
             <div className="flex-1">
-              <h3 className="text-2xl font-bold text-white mb-1">📋 Formulir Kegiatan</h3>
+              <h3 className="text-2xl font-bold text-white mb-1">Formulir Kegiatan</h3>
               <p className="text-slate-300 text-base font-medium">Lengkapi semua informasi yang diperlukan dengan detail</p>
             </div>
             <div className="flex items-center space-x-2">
@@ -693,10 +818,24 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose, onSuccess }) => {
           </button>
           <button 
             type="submit" 
-            className="flex-1 px-8 py-3 bg-gradient-to-r from-slate-700 to-slate-900 hover:from-slate-800 hover:to-slate-950 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
+            disabled={isSubmitting}
+            className={`flex-1 px-8 py-3 font-bold rounded-xl shadow-lg transition-all duration-300 ${
+              isSubmitting 
+                ? 'bg-gray-400 cursor-not-allowed' 
+                : 'bg-gradient-to-r from-slate-700 to-slate-900 hover:from-slate-800 hover:to-slate-950 hover:shadow-xl transform hover:-translate-y-1'
+            } text-white`}
           >
-            <i className="fas fa-save mr-2"></i>
-            {initialKegiatan ? 'Perbarui Kegiatan' : 'Simpan Kegiatan'}
+            {isSubmitting ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent inline-block mr-2"></div>
+                {initialKegiatan ? 'Memperbarui...' : 'Menyimpan...'}
+              </>
+            ) : (
+              <>
+                <i className="fas fa-save mr-2"></i>
+                {initialKegiatan ? 'Perbarui Kegiatan' : 'Simpan Kegiatan'}
+              </>
+            )}
           </button>
         </div>
         </form>
@@ -705,4 +844,5 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose, onSuccess }) => {
   );
 };
 
-export default KegiatanForm;
+// Memoize component to prevent unnecessary re-renders
+export default React.memo(KegiatanForm);

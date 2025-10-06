@@ -27,26 +27,66 @@ const ModernDashboard = ({ onFilterClick }) => {
   });
   const [weeklySchedule, setWeeklySchedule] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [lastFetch, setLastFetch] = useState(0);
+  const [dataHash, setDataHash] = useState('');
+
+  // Cache duration: 5 minutes for dashboard data
+  const CACHE_DURATION = 5 * 60 * 1000;
+
+  const generateDataHash = (data) => {
+    return btoa(JSON.stringify(data)).slice(0, 10);
+  };
+
+  const shouldFetchData = () => {
+    return (Date.now() - lastFetch) > CACHE_DURATION;
+  };
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
+    const fetchDashboardData = async (forceRefresh = false) => {
+      // Skip fetch if data is still fresh and not forcing refresh
+      if (!forceRefresh && !shouldFetchData()) {
+        console.log('📋 Dashboard: Using cached data, skipping fetch');
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
+        console.log('🔄 Dashboard: Fetching fresh dashboard data...');
+        
         const response = await api.get('/perjadin/dashboard');
-        setData({
+        const newData = {
           ...response.data,
           tahunan: response.data.mingguan * 52, // Estimasi tahunan
           rata_rata_harian: Math.round(response.data.mingguan / 7) // Rata-rata harian
-        });
+        };
+
+        // Check if data actually changed
+        const newHash = generateDataHash(newData);
+        if (dataHash === newHash && !forceRefresh) {
+          console.log('📋 Dashboard: Data unchanged, skipping update');
+          setLoading(false);
+          return;
+        }
+
+        console.log('✅ Dashboard: Setting new dashboard data');
+        setData(newData);
+        setDataHash(newHash);
+        setLastFetch(Date.now());
       } catch (error) {
-        console.error('Failed to fetch dashboard data:', error);
-        setData({
-          mingguan: 0,
-          bulanan: 0,
-          per_bidang: [],
-          tahunan: 0,
-          rata_rata_harian: 0
-        });
+        console.error('❌ Dashboard: Failed to fetch dashboard data:', error);
+        
+        // Only set empty data if we don't have any cached data
+        if (!data.mingguan && !data.bulanan) {
+          setData({
+            mingguan: 0,
+            bulanan: 0,
+            per_bidang: [],
+            tahunan: 0,
+            rata_rata_harian: 0
+          });
+        }
+        
         if (error.code !== 'ECONNABORTED') {
           Swal.fire('Error', 'Gagal memuat data dashboard.', 'error');
         }
@@ -55,18 +95,30 @@ const ModernDashboard = ({ onFilterClick }) => {
       }
     };
 
-    const fetchWeeklySchedule = async () => {
+    const fetchWeeklySchedule = async (forceRefresh = false) => {
       try {
+        console.log('🔄 Dashboard: Fetching weekly schedule...');
         const response = await api.get('/perjadin/dashboard/weekly-schedule');
         setWeeklySchedule(response.data || []);
       } catch (error) {
-        console.error('Failed to fetch weekly schedule:', error);
+        console.error('❌ Dashboard: Failed to fetch weekly schedule:', error);
         setWeeklySchedule([]);
       }
     };
 
+    // Initial load
     fetchDashboardData();
     fetchWeeklySchedule();
+
+    // Set up periodic refresh every 10 minutes if page is visible
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchDashboardData();
+        fetchWeeklySchedule();
+      }
+    }, 10 * 60 * 1000); // 10 minutes
+
+    return () => clearInterval(interval);
   }, []);
 
   const containerVariants = {

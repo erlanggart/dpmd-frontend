@@ -1,11 +1,17 @@
 import React, { useState, Suspense, lazy } from 'react';
 import { FiHome, FiBarChart2, FiTrendingUp, FiPlus, FiList } from 'react-icons/fi';
 
-// Lazy load komponen untuk performa yang lebih baik
+// Lazy load komponen untuk performa yang lebih baik dengan memoization
 const Dashboard = lazy(() => import('./Dashboard'));
 const Statistik = lazy(() => import('./Statistik'));
 const KegiatanForm = lazy(() => import('./KegiatanForm'));
 const KegiatanList = lazy(() => import('./KegiatanList'));
+
+// Memoized wrapper components to prevent unnecessary re-renders
+const MemoizedDashboard = React.memo(Dashboard);
+const MemoizedStatistik = React.memo(Statistik);
+const MemoizedKegiatanForm = React.memo(KegiatanForm);
+const MemoizedKegiatanList = React.memo(KegiatanList);
 
 // Enhanced Loading Fallback untuk komponen
 const LoadingFallback = () => (
@@ -42,11 +48,20 @@ const PerjalananDinas = () => {
   const [dateFilter, setDateFilter] = useState('');
   const [bidangFilter, setBidangFilter] = useState('');
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [mountedTabs, setMountedTabs] = useState(new Set(['dashboard'])); // Track mounted components
 
   const handleFilterClick = (date, bidang) => {
     setDateFilter(date);
     setBidangFilter(bidang);
     setActiveTab('kegiatan-list');
+    // Mark tab as mounted
+    setMountedTabs(prev => new Set([...prev, 'kegiatan-list']));
+  };
+
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+    // Mark tab as mounted when first accessed
+    setMountedTabs(prev => new Set([...prev, tabId]));
   };
 
   // Function to trigger refresh of all components
@@ -105,8 +120,8 @@ const PerjalananDinas = () => {
         </div>
       </div>
 
-      {/* Enhanced Navigation Tabs */}
-      <div className="bg-white/80 backdrop-blur-sm border-b border-slate-200/50 sticky top-0 z-40">
+      {/* Enhanced Navigation Tabs - Removed sticky positioning */}
+      <div className="bg-white/80 backdrop-blur-sm border-b border-slate-200/50 shadow-sm">
         <div className="max-w-7xl mx-auto px-6">
           <nav className="flex" aria-label="Tabs">
             {tabs.map((tab, index) => {
@@ -115,7 +130,7 @@ const PerjalananDinas = () => {
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => handleTabChange(tab.id)}
                   className={`group relative flex-1 flex items-center justify-center gap-3 py-4 px-6 text-sm font-semibold transition-all duration-300 ${
                     isActive
                       ? 'text-white'
@@ -181,32 +196,39 @@ const PerjalananDinas = () => {
           <div className="p-8">
             <Suspense fallback={<LoadingFallback />}>
               <div className="transition-all duration-500 ease-in-out">
-                {activeTab === 'dashboard' && (
-                  <div className="animate-fadeIn">
-                    <Dashboard 
-                      onFilterClick={handleFilterClick} 
-                      refreshTrigger={refreshTrigger}
-                    />
+                {/* Keep components alive but hide inactive ones to prevent re-mounting and re-fetching */}
+                
+                {/* Dashboard - Always mounted as default */}
+                <div className={`${activeTab === 'dashboard' ? 'animate-fadeIn' : 'hidden'}`}>
+                  <MemoizedDashboard 
+                    onFilterClick={handleFilterClick} 
+                    refreshTrigger={refreshTrigger}
+                  />
+                </div>
+
+                {/* Statistik - Mount once and keep alive */}
+                {mountedTabs.has('statistik') && (
+                  <div className={`${activeTab === 'statistik' ? 'animate-fadeIn' : 'hidden'}`}>
+                    <MemoizedStatistik refreshTrigger={refreshTrigger} />
                   </div>
                 )}
-                {activeTab === 'statistik' && (
-                  <div className="animate-fadeIn">
-                    <Statistik refreshTrigger={refreshTrigger} />
-                  </div>
-                )}
-                {activeTab === 'kegiatan-form' && (
-                  <div className="animate-fadeIn">
-                    <KegiatanForm 
+
+                {/* Kegiatan Form - Mount once and keep alive */}
+                {mountedTabs.has('kegiatan-form') && (
+                  <div className={`${activeTab === 'kegiatan-form' ? 'animate-fadeIn' : 'hidden'}`}>
+                    <MemoizedKegiatanForm 
                       onSuccess={handleFormSuccess}
                     />
                   </div>
                 )}
-                {activeTab === 'kegiatan-list' && (
-                  <div className="animate-fadeIn">
-                    <KegiatanList 
+
+                {/* Kegiatan List - Mount once and keep alive */}
+                {mountedTabs.has('kegiatan-list') && (
+                  <div className={`${activeTab === 'kegiatan-list' ? 'animate-fadeIn' : 'hidden'}`}>
+                    <MemoizedKegiatanList 
                       initialDateFilter={dateFilter}
                       initialBidangFilter={bidangFilter}
-                      onAddNew={() => setActiveTab('kegiatan-form')}
+                      onAddNew={() => handleTabChange('kegiatan-form')}
                       refreshTrigger={refreshTrigger}
                     />
                   </div>
@@ -227,7 +249,7 @@ const PerjalananDinas = () => {
       </div>
 
       {/* Custom Styles */}
-      <style jsx>{`
+      <style>{`
         @keyframes fadeIn {
           from {
             opacity: 0;

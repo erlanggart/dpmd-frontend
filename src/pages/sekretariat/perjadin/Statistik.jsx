@@ -861,4 +861,5 @@ const Statistik = ({ refreshTrigger }) => {
   );
 };
 
-export default Statistik;
+// Memoize component to prevent unnecessary re-renders
+export default React.memo(Statistik);
