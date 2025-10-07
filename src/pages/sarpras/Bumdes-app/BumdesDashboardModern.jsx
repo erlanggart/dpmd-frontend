@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useBumdesData, useBumdesFilter } from '../../../hooks/useBumdesData';
+import { useBumdesStatistics } from '../../../hooks/useBumdesStatistics';
 import { 
   FiHome, 
   FiBarChart2, 
@@ -21,7 +22,8 @@ import {
   FiAlertCircle,
   FiUpload,
   FiPause,
-  FiTarget
+  FiTarget,
+  FiDatabase
 } from 'react-icons/fi';
 import { HiSparkles } from 'react-icons/hi';
 import BumdesEditDashboard from './BumdesEditDashboard';
@@ -29,24 +31,37 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 
-// CSS-in-JS for animations
+// Simplified CSS for better performance
 const notificationStyles = `
   @keyframes fade-in {
-    from { opacity: 0; transform: translateX(100%); }
-    to { opacity: 1; transform: translateX(0); }
+    from { opacity: 0; }
+    to { opacity: 1; }
   }
   
-  @keyframes progress-bar {
-    from { transform: scaleX(1); }
-    to { transform: scaleX(0); }
+  @keyframes simple-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
   }
   
   .animate-fade-in {
-    animation: fade-in 0.3s ease-out forwards;
+    animation: fade-in 0.3s ease-out;
   }
   
-  .animate-progress-bar {
-    animation: progress-bar 4s linear forwards;
+  .animate-simple-spin {
+    animation: simple-spin 1s linear infinite;
+  }
+  
+  .simple-shadow {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+  
+  .simple-hover {
+    transition: all 0.2s ease;
+  }
+  
+  .simple-hover:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 12px -1px rgba(0, 0, 0, 0.15);
   }
 
   /* Custom scrollbar for dropdown */
@@ -207,7 +222,7 @@ const parseDesaInfo = (desaString) => {
   return { kodeDesa: '', namaDesa: desaString.trim() };
 };
 
-// Enhanced Statistics Card with better layout and responsiveness
+// Simplified Statistics Card - elegant and lightweight
 const StatCard = ({ 
   title, 
   value, 
@@ -233,135 +248,165 @@ const StatCard = ({
   };
 
   return (
-    <div className="relative overflow-hidden cursor-pointer group" onClick={onClick}>
-      <div className={`${color} rounded-2xl ${cardSizes[size]} shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 hover:scale-105 border border-white/10`}>
-        {/* Animated Background Pattern */}
-        <div className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-500">
-          <svg className="w-full h-full" viewBox="0 0 100 100" fill="none">
-            <defs>
-              <pattern id={`pattern-${title}`} width="20" height="20" patternUnits="userSpaceOnUse">
-                <circle cx="10" cy="10" r="1" fill="currentColor"/>
-                <path d="M 20 0 L 0 0 0 20" fill="none" stroke="currentColor" strokeWidth="0.5"/>
-              </pattern>
-            </defs>
-            <rect width="100" height="100" fill={`url(#pattern-${title})`} />
-          </svg>
+    <div className="cursor-pointer group" onClick={onClick}>
+      <div className={`${color} rounded-2xl ${cardSizes[size]} simple-shadow simple-hover border border-white/10`}>
+        <div className="flex items-center justify-between mb-4">
+          <div className={`${accentColor} p-3 rounded-xl`}>
+            <Icon className={`${size === 'large' ? 'text-3xl' : size === 'compact' ? 'text-xl' : 'text-2xl'} text-white`} />
+          </div>
+          {trend && (
+            <div className="flex items-center gap-1 text-white/90 text-sm font-medium bg-white/10 px-2 py-1 rounded-lg">
+              <FiTrendingUp className="text-xs" />
+              <span>{trend}</span>
+            </div>
+          )}
         </div>
         
-        {/* Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent group-hover:from-white/10 transition-all duration-500"></div>
-        
-        <div className="relative">
-          {/* Header with Icon and Trend */}
-          <div className="flex items-center justify-between mb-4">
-            <div className={`${accentColor} p-3 rounded-xl backdrop-blur-sm group-hover:scale-110 transition-transform duration-300`}>
-              <Icon className={`${size === 'large' ? 'text-3xl' : size === 'compact' ? 'text-xl' : 'text-2xl'} text-white drop-shadow-lg`} />
-            </div>
-            {trend && (
-              <div className="flex items-center gap-1 text-white/90 text-sm font-medium bg-white/10 px-2 py-1 rounded-lg backdrop-blur-sm">
-                <FiTrendingUp className="text-xs" />
-                <span>{trend}</span>
-              </div>
-            )}
+        <div className={textColor}>
+          <div className={`${valueSizes[size]} font-bold mb-2 text-white`}>
+            {value?.toLocaleString?.() || value}
           </div>
-          
-          {/* Content */}
-          <div className={textColor}>
-            <div className={`${valueSizes[size]} font-bold mb-2 text-white drop-shadow-lg group-hover:scale-105 transition-transform duration-300`}>
-              {value}
-            </div>
-            <div className="text-white/90 text-sm font-semibold mb-1 tracking-wide">
-              {title}
-            </div>
-            {subtitle && (
-              <div className="text-white/70 text-xs leading-relaxed">
-                {subtitle}
-              </div>
-            )}
+          <div className="text-white/90 text-sm font-semibold mb-1">
+            {title}
           </div>
-
-          {/* Hover indicator */}
-          <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-white/0 via-white/50 to-white/0 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500"></div>
+          {subtitle && (
+            <div className="text-white/70 text-xs">
+              {subtitle}
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 };
 
-// Enhanced BumdesCard with Detail Modal
+// Simplified BumdesCard - clean and elegant
 const BumdesCard = ({ bumdes, onClick }) => {
   const isNotUploaded = bumdes.upload_status === 'not_uploaded';
   
   return (
     <div 
-      className={`rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 cursor-pointer border group ${
+      className={`rounded-2xl p-6 simple-shadow simple-hover cursor-pointer border ${
         isNotUploaded 
-          ? 'bg-gray-50 border-gray-300 opacity-75' 
-          : 'bg-white border-gray-100'
+          ? 'bg-orange-50 border-orange-200' 
+          : 'bg-white border-gray-200'
       }`}
       onClick={() => onClick(bumdes)}
     >
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex-1">
-          <h3 className={`text-lg font-bold mb-2 group-hover:text-slate-800 transition-colors duration-300 ${
-            isNotUploaded ? 'text-slate-800' : 'text-slate-800'
-          }`}>
-            {bumdes.namabumdesa}
-          </h3>
-          <div className="flex items-center gap-2 text-slate-800 text-sm mb-2">
-            <FiMapPin className="text-xs" />
-            <span>{bumdes.desa}, {bumdes.kecamatan}</span>
-          </div>
-          {bumdes.kode_desa && (
-            <div className="text-xs text-gray-500 mb-2">
-              Kode Desa: {bumdes.kode_desa}
+      
+      <div className="relative z-10">
+        <div className="flex items-start justify-between mb-6">
+          <div className="flex-1">
+            {/* BUMDes Name with enhanced typography */}
+            <h3 className={`text-xl font-black mb-3 group-hover:text-slate-900 transition-all duration-300 ${
+              isNotUploaded ? 'text-slate-700' : 'text-slate-800'
+            } drop-shadow-sm`}>
+              {bumdes.namabumdesa}
+            </h3>
+            
+            {/* Location with icon */}
+            <div className="flex items-center gap-3 text-slate-600 text-sm mb-3 font-medium">
+              <div className={`p-2 rounded-xl ${
+                isNotUploaded ? 'bg-orange-200' : 'bg-blue-200'
+              }`}>
+                <FiMapPin className="text-sm" />
+              </div>
+              <span>{bumdes.desa}, {bumdes.kecamatan}</span>
             </div>
-          )}
-          <div className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${
-            isNotUploaded 
-              ? 'bg-orange-100 text-orange-800' 
-              : bumdes.status === 'aktif' 
-                ? 'bg-green-100 text-green-800' 
-                : 'bg-red-100 text-red-800'
-          }`}>
-            {isNotUploaded ? 'Belum Upload' : bumdes.status}
+            
+            {/* Kode Desa */}
+            {bumdes.kode_desa && (
+              <div className="text-xs text-slate-500 mb-3 font-mono bg-slate-100 px-2 py-1 rounded-lg inline-block">
+                Kode: {bumdes.kode_desa}
+              </div>
+            )}
+            
+            {/* Status Badge */}
+            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold shadow-sm ${
+              isNotUploaded 
+                ? 'bg-gradient-to-r from-orange-400 to-amber-500 text-white' 
+                : bumdes.status === 'aktif' 
+                  ? 'bg-gradient-to-r from-emerald-400 to-green-500 text-white' 
+                  : 'bg-gradient-to-r from-red-400 to-pink-500 text-white'
+            }`}>
+              <div className="w-2 h-2 rounded-full bg-white/80 animate-pulse"></div>
+              {isNotUploaded ? 'Belum Upload' : bumdes.status?.toUpperCase()}
+            </div>
           </div>
-        </div>
-        <div className="text-right">
-          <div className="text-sm text-gray-500 mb-1">
-            {isNotUploaded ? 'Status' : 'Tahun Pendirian'}
-          </div>
-          <div className={`text-lg font-bold ${isNotUploaded ? 'text-orange-600' : 'text-slate-800'}`}>
-            {isNotUploaded ? 'Belum Diisi' : (bumdes.TahunPendirian || 'Belum diisi')}
+          
+          {/* Right side info */}
+          <div className="text-right">
+            <div className="text-sm text-slate-500 mb-2 font-medium">
+              {isNotUploaded ? 'Status' : 'Tahun Pendirian'}
+            </div>
+            <div className={`text-2xl font-black ${
+              isNotUploaded ? 'text-orange-600' : 'text-slate-800'
+            } drop-shadow-sm`}>
+              {isNotUploaded ? '📋' : (bumdes.TahunPendirian || '❓')}
+            </div>
           </div>
         </div>
       </div>
       
-      <div className="grid grid-cols-2 gap-4 text-sm">
-        <div>
-          <div className="text-gray-500 mb-1">Jenis Usaha</div>
-          <div className={`font-medium truncate ${isNotUploaded ? 'text-gray-500' : 'text-gray-800'}`}>
+      {/* Enhanced Info Grid */}
+      <div className="grid grid-cols-2 gap-6 mt-6">
+        <div className={`p-4 rounded-2xl ${
+          isNotUploaded ? 'bg-orange-100' : 'bg-blue-100'
+        } group-hover:shadow-lg transition-all duration-300`}>
+          <div className="flex items-center gap-2 mb-2">
+            <FiDollarSign className={`text-lg ${
+              isNotUploaded ? 'text-orange-600' : 'text-blue-600'
+            }`} />
+            <div className="text-xs text-slate-600 font-bold uppercase tracking-wide">Jenis Usaha</div>
+          </div>
+          <div className={`font-bold text-sm ${
+            isNotUploaded ? 'text-orange-700' : 'text-slate-800'
+          } line-clamp-2`}>
             {isNotUploaded ? 'Belum diisi' : (bumdes.JenisUsaha || 'Belum diisi')}
           </div>
         </div>
-        <div>
-          <div className="text-gray-500 mb-1">Tenaga Kerja</div>
-          <div className={`font-medium ${isNotUploaded ? 'text-gray-500' : 'text-gray-800'}`}>
-            {isNotUploaded ? 'Belum diisi' : (bumdes.TotalTenagaKerja || 0)} orang
+        
+        <div className={`p-4 rounded-2xl ${
+          isNotUploaded ? 'bg-orange-100' : 'bg-emerald-100'
+        } group-hover:shadow-lg transition-all duration-300`}>
+          <div className="flex items-center gap-2 mb-2">
+            <FiUsers className={`text-lg ${
+              isNotUploaded ? 'text-orange-600' : 'text-emerald-600'
+            }`} />
+            <div className="text-xs text-slate-600 font-bold uppercase tracking-wide">Tenaga Kerja</div>
+          </div>
+          <div className={`font-bold text-sm ${
+            isNotUploaded ? 'text-orange-700' : 'text-slate-800'
+          }`}>
+            {isNotUploaded ? 'Belum diisi' : `${bumdes.TotalTenagaKerja || 0} orang`}
           </div>
         </div>
       </div>
       
-      <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
-        <div className="text-xs text-gray-500">
-          {isNotUploaded ? 'Data belum tersedia' : 'Klik untuk detail lengkap'}
+      {/* Enhanced Footer */}
+      <div className="mt-6 pt-6 border-t border-slate-200 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className={`w-3 h-3 rounded-full animate-pulse ${
+            isNotUploaded ? 'bg-orange-400' : 'bg-green-400'
+          }`}></div>
+          <div className="text-sm text-slate-600 font-medium">
+            {isNotUploaded ? 'Data belum tersedia' : 'Klik untuk detail lengkap'}
+          </div>
         </div>
-        <div className={`p-2 rounded-lg transition-colors duration-300 ${
+        
+        <div className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-300 ${
           isNotUploaded 
-            ? 'bg-gray-200 group-hover:bg-gray-300' 
-            : 'bg-purple-100 group-hover:bg-purple-200'
-        }`}>
-          <FiBarChart2 className={`text-sm ${isNotUploaded ? 'text-gray-500' : 'text-slate-600'}`} />
+            ? 'bg-orange-200 group-hover:bg-orange-300' 
+            : 'bg-indigo-200 group-hover:bg-indigo-300'
+        } shadow-sm`}>
+          <FiBarChart2 className={`text-lg ${
+            isNotUploaded ? 'text-orange-700' : 'text-indigo-700'
+          }`} />
+          <span className={`text-sm font-bold ${
+            isNotUploaded ? 'text-orange-700' : 'text-indigo-700'
+          }`}>
+            Detail
+          </span>
         </div>
       </div>
     </div>
@@ -1078,7 +1123,8 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
     loading, 
     error, 
     kecamatanList, 
-    refreshData 
+    refreshData,
+    deleteBumdesData 
   } = useBumdesData(initialData);
   
   const [selectedBumdes, setSelectedBumdes] = useState(null);
@@ -1705,22 +1751,16 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
     if (!deletingBumdes) return;
 
     try {
-      const response = await fetch(`http://localhost:8000/api/bumdes/${deletingBumdes.id}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (response.ok) {
-        // Refresh data setelah berhasil delete
-        refreshData();
+      const result = await deleteBumdesData(deletingBumdes.id);
+      
+      if (result.success) {
         setShowDeleteConfirm(false);
         setDeletingBumdes(null);
         alert('Data BUMDes berhasil dihapus!');
+        // Refresh statistics after successful delete
+        refreshStatistics();
       } else {
-        const errorData = await response.json();
-        alert('Gagal menghapus data: ' + (errorData.message || 'Unknown error'));
+        alert('Gagal menghapus data: ' + (result.message || 'Unknown error'));
       }
     } catch (error) {
       console.error('Error deleting bumdes:', error);
@@ -1734,9 +1774,18 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
   };
   
   const {
-    filteredData,
-    getStatistics
+    filteredData
   } = useBumdesFilter(bumdesData);
+
+  // Get statistics from API with caching info
+  const { 
+    compatibleStatistics, 
+    loading: statsLoading, 
+    error: statsError,
+    refreshStatistics,
+    lastFetch: statsLastFetch,
+    isStale: isStatsStale
+  } = useBumdesStatistics();
 
   // Get unique jenis usaha list
   const jenisUsahaList = [...new Set(bumdesData.map(item => item.JenisUsaha).filter(Boolean))].sort();
@@ -1766,38 +1815,97 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
     }
   }, [initialData, bumdesData.length, refreshData]);
 
-  if (loading) {
+  // Only show loading if we have no data at all
+  if (loading && bumdesData.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-        <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-12 shadow-2xl border border-white/20 text-center max-w-md">
+      <div className="min-h-screen bg-white flex items-center justify-center p-6">
+        <div className="text-center">
+          {/* Simple elegant loader */}
           <div className="relative mb-8">
-            <div className="w-20 h-20 border-4 border-slate-200 rounded-full mx-auto"></div>
-            <div className="w-20 h-20 border-4 border-blue-600 border-t-transparent rounded-full animate-spin absolute top-0 left-1/2 transform -translate-x-1/2"></div>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <FiActivity className="text-blue-600 text-2xl animate-pulse" />
-            </div>
+            <div className="w-16 h-16 border-4 border-slate-200 rounded-full mx-auto"></div>
+            <div className="w-16 h-16 border-4 border-slate-800 border-t-transparent rounded-full animate-spin absolute top-0 left-1/2 transform -translate-x-1/2"></div>
           </div>
-          <h3 className="text-2xl font-bold text-slate-800 mb-2">Memuat Dashboard</h3>
-          <p className="text-slate-600">Mengambil data BUMDes terbaru...</p>
+          
+          {/* Simple text */}
+          <h3 className="text-xl font-semibold text-slate-800 mb-2">
+            Loading Dashboard
+          </h3>
+          <p className="text-slate-500 text-sm">
+            Mengambil data BUMDes...
+          </p>
+          
+          {/* Simple dots */}
+          <div className="flex justify-center items-center gap-1 mt-4">
+            <div className="w-2 h-2 bg-slate-400 rounded-full animate-pulse"></div>
+            <div className="w-2 h-2 bg-slate-400 rounded-full"></div>
+            <div className="w-2 h-2 bg-slate-400 rounded-full"></div>
+          </div>
         </div>
       </div>
     );
   }
 
-  if (error) {
+  // Only show full error screen if we have no data at all
+  if (error && bumdesData.length === 0) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center p-6">
-        <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-12 shadow-2xl border border-white text-center max-w-md">
-          <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mx-auto mb-6">
-            <FiFileText className="text-slate-800 text-2xl" />
+        <div className="text-center max-w-md">
+          {/* Simple error icon */}
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <FiAlertCircle className="text-red-500 text-2xl" />
           </div>
-          <h3 className="text-2xl font-bold text-slate-800 mb-4">Gagal Memuat Data</h3>
-          <p className="text-slate-800 mb-6">{error}</p>
+          
+          <h3 className="text-xl font-semibold text-slate-800 mb-2">
+            Terjadi Kesalahan
+          </h3>
+          <p className="text-slate-600 text-sm mb-6 leading-relaxed">
+            {error || "Gagal memuat data dashboard. Silakan coba lagi."}
+          </p>
+          
           <button 
             onClick={refreshData}
-            className="bg-slate-800 hover:bg-slate-800 text-white px-8 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 flex items-center gap-2 mx-auto"
+            className="bg-slate-800 hover:bg-slate-700 text-white px-6 py-3 rounded-xl font-semibold transition-colors duration-200 flex items-center gap-2 mx-auto"
           >
-            <FiRefreshCw className="text-lg" />
+            <FiRefreshCw className="text-sm" />
+            <span>Coba Lagi</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const statistics = compatibleStatistics;
+
+  // Show loading state if statistics are still loading
+  if (statsLoading) {
+    return (
+      <div className="min-h-screen bg-white -m-2 flex items-center justify-center">
+        <div className="text-center">
+          <div className="relative mb-6">
+            <div className="w-12 h-12 border-3 border-slate-200 rounded-full mx-auto"></div>
+            <div className="w-12 h-12 border-3 border-slate-800 border-t-transparent rounded-full animate-spin absolute top-0 left-1/2 transform -translate-x-1/2"></div>
+          </div>
+          <p className="text-slate-600 font-medium">Memuat statistik...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if there's an error loading statistics
+  if (statsError) {
+    return (
+      <div className="min-h-screen bg-white -m-2 flex items-center justify-center">
+        <div className="text-center max-w-md">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <FiAlertCircle className="text-red-500 text-2xl" />
+          </div>
+          <h2 className="text-xl font-semibold text-slate-800 mb-2">Error Memuat Statistik</h2>
+          <p className="text-slate-600 text-sm mb-6">{statsError}</p>
+          <button
+            onClick={refreshStatistics}
+            className="bg-slate-800 hover:bg-slate-700 text-white px-6 py-3 rounded-xl font-semibold transition-colors duration-200 flex items-center gap-2 mx-auto"
+          >
+            <FiRefreshCw className="text-sm" />
             Coba Lagi
           </button>
         </div>
@@ -1805,71 +1913,136 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
     );
   }
 
-  const statistics = getStatistics();
-
   return (
-    <div className="min-h-screen bg-white -m-2">
-      {/* Enhanced Header */}
-      <div className="text-center mb-12 px-4 lg:px-6">
-        <div className="relative inline-block">
-          <div className="w-20 h-20 bg-slate-800 rounded-3xl flex items-center justify-center mb-6 shadow-2xl transform rotate-3">
-            <FiHome className="text-white text-3xl transform -rotate-3" />
+    <div className="min-h-screen bg-gray-50 -m-2">
+      {/* Simplified Header */}
+      <div className="bg-slate-800 text-white">
+        <div className="text-center py-12 px-4 lg:px-6">
+          {/* Simple Logo */}
+          <div className="inline-block mb-6">
+            <div className="w-16 h-16 bg-slate-700 rounded-2xl flex items-center justify-center simple-shadow">
+              <FiHome className="text-white text-2xl" />
+            </div>
           </div>
-          <div className="absolute -top-1 -right-1">
-            <HiSparkles className="text-white text-2xl animate-pulse" />
+          
+          {/* Simple Typography */}
+          <div className="mb-8">
+            <h1 className="text-4xl lg:text-5xl font-bold text-white mb-2">
+              Dashboard BUMDes
+            </h1>
+            <p className="text-lg text-slate-300 mb-4">
+              Sistem Monitoring BUMDes Kabupaten Bogor
+            </p>
+            <div className="flex items-center justify-center gap-2 text-slate-400">
+              <div className={`w-2 h-2 rounded-full ${
+                statsLoading ? 'bg-yellow-400' : 'bg-green-400'
+              }`}></div>
+              <span className="text-sm">
+                {statsLoading ? 'Loading...' : 'Data Ready'}
+              </span>
+              {statsLastFetch && (
+                <>
+                  <span className="mx-2">•</span>
+                  <span className="text-xs">
+                    Updated: {new Date(statsLastFetch).toLocaleTimeString()}
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
+          
+          {/* Simple Action Buttons */}
+          <div className="flex flex-col sm:flex-row justify-center gap-3">
+            <button
+              onClick={exportToPDF}
+              className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold simple-hover"
+            >
+              <FiDownload className="text-lg" />
+              <span>Export PDF</span>
+            </button>
+            <button
+              onClick={exportToExcel}
+              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold simple-hover"
+            >
+              <FiDownload className="text-lg" />
+              <span>Export Excel</span>
+            </button>
+            <button
+              onClick={() => window.open('/dashboard/bumdes/village-sync', '_blank')}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold simple-hover"
+            >
+              <FiMapPin className="text-lg" />
+              <span>Sync Kode Desa</span>
+            </button>
           </div>
         </div>
         
-        <h1 className="text-5xl font-bold text-slate-800 mb-4">
-          Dashboard BUMDes
-        </h1>
-        <p className="text-xl text-slate-800 font-medium">
-          Ringkasan dan Statistik BUMDes Kabupaten Bogor
-        </p>
-        <div className="w-32 h-1 bg-slate-800 rounded-full mx-auto mt-6"></div>
-        
-        {/* Export Buttons */}
-        <div className="flex justify-center gap-4 mt-8">
-          <button
-            onClick={exportToPDF}
-            className="flex items-center gap-2 bg-slate-800 text-white hover:bg-slate-800 px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
-          >
-            <FiDownload />
-            Export PDF
-          </button>
-          <button
-            onClick={exportToExcel}
-            className="flex items-center gap-2 bg-slate-800 text-white hover:bg-slate-800 px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
-          >
-            <FiDownload />
-            Export Excel
-          </button>
-        </div>
+
       </div>
 
-      <div className="px-4 lg:px-6 space-y-8">
-        {/* Quick Summary Banner */}
-        <div className="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 rounded-3xl p-6 lg:p-8 text-white shadow-2xl border border-white/10">
-          <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
-            <div className="text-center lg:text-left">
-              <h2 className="text-2xl lg:text-3xl font-bold mb-2">Dashboard Monitoring BUMDes</h2>
-              <p className="text-slate-300 text-sm lg:text-base">
-                Monitoring real-time data BUMDes untuk {statistics.totalDesaBogor} desa di Kabupaten Bogor
-              </p>
-            </div>
-            
-            <div className="flex flex-wrap justify-center lg:justify-end gap-4">
-              <div className="text-center bg-white/10 backdrop-blur-sm rounded-2xl p-4 min-w-[120px]">
-                <div className="text-2xl font-bold text-white-400">{statistics.persentaseUpload}%</div>
-                <div className="text-xs text-slate-300">Coverage</div>
+      <div className="px-4 lg:px-6 space-y-10 -mt-6 relative">
+        {/* Simple Summary Banner */}
+        <div className="bg-white rounded-2xl simple-shadow border border-gray-200">
+          <div className="p-6 lg:p-8">
+            <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
+              <div className="text-center lg:text-left flex-1">
+                <div className="flex items-center justify-center lg:justify-start gap-3 mb-3">
+                  <div className="p-2 bg-slate-800 rounded-lg">
+                    <FiActivity className="text-white text-xl" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-slate-800">
+                    Dashboard Status
+                  </h2>
+                </div>
+                <p className="text-slate-600 mb-3">
+                  Monitoring data BUMDes untuk {statistics.totalDesaBogor} desa di Kabupaten Bogor
+                </p>
+                <div className="flex items-center justify-center lg:justify-start gap-2 text-slate-500">
+                  <div className={`w-2 h-2 rounded-full ${
+                    statsLoading ? 'bg-yellow-500' : 'bg-green-500'
+                  }`}></div>
+                  <span className="text-sm">
+                    {statsLoading ? 'Loading...' : 'Data Ready'}
+                  </span>
+                  {statsLastFetch && (
+                    <>
+                      <span className="mx-2">•</span>
+                      <span className="text-xs">
+                        Updated: {new Date(statsLastFetch).toLocaleTimeString()}
+                      </span>
+                    </>
+                  )}
+                </div>
               </div>
-              <div className="text-center bg-white/10 backdrop-blur-sm rounded-2xl p-4 min-w-[120px]">
-                <div className="text-2xl font-bold text-white-400">{statistics.totalBumdesUploaded}</div>
-                <div className="text-xs text-slate-300">Data Terkumpul</div>
-              </div>
-              <div className="text-center bg-white/10 backdrop-blur-sm rounded-2xl p-4 min-w-[120px]">
-                <div className="text-2xl font-bold text-white-400">{statistics.totalKecamatan}</div>
-                <div className="text-xs text-slate-300">Kecamatan</div>
+              
+              {/* Simple Stats Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 min-w-fit">
+                <div className="bg-slate-800 rounded-xl p-4 text-white">
+                  <div className="flex items-center justify-between mb-2">
+                    <FiTarget className="text-lg" />
+                    <span className="text-xs bg-white/20 px-2 py-1 rounded">Live</span>
+                  </div>
+                  <div className="text-2xl font-bold">{statistics.persentaseUpload}%</div>
+                  <div className="text-sm text-slate-300">Coverage</div>
+                </div>
+                
+                <div className="bg-emerald-600 rounded-xl p-4 text-white">
+                  <div className="flex items-center justify-between mb-2">
+                    <FiUpload className="text-lg" />
+                    <span className="text-xs bg-white/20 px-2 py-1 rounded">Active</span>
+                  </div>
+                  <div className="text-2xl font-bold">{statistics.totalBumdesUploaded}</div>
+                  <div className="text-sm text-emerald-200">Uploaded</div>
+                </div>
+                
+                <div className="bg-indigo-600 rounded-xl p-4 text-white">
+                  <div className="flex items-center justify-between mb-2">
+                    <FiMapPin className="text-lg" />
+                    <span className="text-xs bg-white/20 px-2 py-1 rounded">Total</span>
+                  </div>
+                  <div className="text-2xl font-bold">{statistics.totalKecamatan}</div>
+                  <div className="text-sm text-indigo-200">Kecamatan</div>
+                </div>
               </div>
             </div>
           </div>
@@ -1915,8 +2088,92 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
             />
           </div>
 
+          {/* Status Badan Hukum Statistics */}
+          <div className="bg-white rounded-2xl simple-shadow border border-gray-200 p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-3 bg-slate-800 rounded-xl">
+                <FiFileText className="text-white text-lg" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-800">Status Badan Hukum BUMDes</h3>
+                <p className="text-slate-600">Target: 100% Terbit Sertifikat ({statistics.percentageSertifikat}% tercapai)</p>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+                <div className="text-2xl font-bold text-green-800 mb-1">{statistics.terbitSertifikat}</div>
+                <div className="text-sm text-green-600 font-medium">Terbit Sertifikat</div>
+                <div className="text-xs text-green-500 mt-1">{statistics.percentageSertifikat}% dari target</div>
+              </div>
+              
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                <div className="text-2xl font-bold text-blue-800 mb-1">{statistics.namaTermerifikasi}</div>
+                <div className="text-sm text-blue-600 font-medium">Nama Terverifikasi</div>
+                <div className="text-xs text-blue-500 mt-1">Tahap verifikasi</div>
+              </div>
+              
+              <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+                <div className="text-2xl font-bold text-yellow-800 mb-1">{statistics.perbaikanDokumen}</div>
+                <div className="text-sm text-yellow-600 font-medium">Perbaikan Dokumen</div>
+                <div className="text-xs text-yellow-500 mt-1">Perlu perbaikan</div>
+              </div>
+              
+              <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                <div className="text-2xl font-bold text-red-800 mb-1">{statistics.belumProses}</div>
+                <div className="text-sm text-red-600 font-medium">Belum Proses</div>
+                <div className="text-xs text-red-500 mt-1">Belum mulai</div>
+              </div>
+            </div>
+            
+            {/* Enhanced Progress Bar for Badan Hukum */}
+            <div className="mt-8 p-6 bg-gradient-to-r from-slate-50 to-blue-50 rounded-2xl border border-slate-200">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl">
+                    <FiCheck className="text-white text-lg" />
+                  </div>
+                  <span className="text-lg font-bold text-slate-800">Progress Sertifikat Badan Hukum</span>
+                </div>
+                <div className="text-right">
+                  <div className="text-2xl font-black text-green-600">{statistics.percentageSertifikat}%</div>
+                  <div className="text-xs text-slate-500">dari target 100%</div>
+                </div>
+              </div>
+              
+              {/* Multi-layer animated progress bar */}
+              <div className="relative">
+                <div className="w-full bg-slate-200 rounded-full h-6 overflow-hidden shadow-inner">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-pulse"></div>
+                  <div 
+                    className="relative h-6 bg-gradient-to-r from-green-400 via-emerald-500 to-green-600 rounded-full transition-all duration-2000 ease-out shadow-lg"
+                    style={{ width: `${Math.min(100, statistics.percentageSertifikat)}%` }}
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent rounded-full"></div>
+                    <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+                      {statistics.percentageSertifikat > 10 && (
+                        <div className="text-white text-xs font-bold drop-shadow-lg">
+                          {statistics.percentageSertifikat}%
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Progress markers */}
+                <div className="flex justify-between mt-2 text-xs text-slate-500">
+                  <span>0%</span>
+                  <span>25%</span>
+                  <span>50%</span>
+                  <span>75%</span>
+                  <span>100%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Secondary Statistics - Normal Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 lg:gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 lg:gap-1">
             <StatCard
               title="BUMDes Aktif"
               value={filteredAndSearchedData.filter(b => b.status === 'aktif').length}
@@ -1947,15 +2204,7 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
               accentColor="bg-slate-400/30"
             />
 
-            <StatCard
-              title="Rata-rata per Kecamatan"
-              value={Math.round(statistics.totalBumdesUploaded / statistics.totalKecamatan)}
-              subtitle="BUMDes per kecamatan"
-              icon={FiBarChart2}
-              color="bg-gradient-to-br from-slate-800 to-slate-900"
-              textColor="text-white"
-              accentColor="bg-slate-400/30"
-            />
+            
 
             <StatCard
               title="Tingkat Partisipasi"
@@ -2069,412 +2318,69 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
           </div>
         </div>
 
-        {/* Enhanced Status Upload Per Kecamatan */}
-        <div className="bg-white/70 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 p-6 lg:p-8">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-gradient-to-r from-slate-800 to-slate-900 rounded-xl">
-                <FiMapPin className="text-white text-xl" />
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-slate-800">Monitoring BUMDes per Kecamatan</h3>
-                <p className="text-gray-600 text-sm">Analisis sebaran dan status BUMDes di seluruh wilayah</p>
-              </div>
-            </div>
-            
-            {/* Summary Cards */}
-            <div className="flex flex-wrap gap-2">
-              <div className="bg-blue-100 text-blue-800 px-3 py-2 rounded-xl text-xs font-semibold">
-                {statistics.kecamatanData.reduce((sum, k) => sum + k.uploaded, 0)} Total Upload
-              </div>
-              <div className="bg-blue-100 text-blue-800 px-3 py-2 rounded-xl text-xs font-semibold">
-                {statistics.kecamatanData.reduce((sum, k) => sum + k.aktif, 0)} Aktif
-              </div>
-            </div>
+      
+
+        
+
+   
+
+       
+
+        {/* Premium BUMDes List */}
+        <div className="relative overflow-hidden bg-gradient-to-br from-white via-slate-50 to-blue-50 rounded-3xl shadow-2xl border border-white/50 backdrop-blur-xl">
+          {/* Decorative background elements */}
+          <div className="absolute top-0 right-0 w-64 h-64 opacity-5">
+            <div className="w-full h-full bg-gradient-to-br from-blue-400 to-indigo-600 rounded-full transform translate-x-32 -translate-y-32"></div>
           </div>
           
-          {/* Responsive Grid Layout */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-h-[500px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-slate-100">
-            {statistics.kecamatanData.map((kecamatan, index) => (
-              <div 
-                key={kecamatan.name} 
-                className={`group relative bg-gradient-to-br ${
-                  index % 5 === 0 ? 'from-blue-50 to-blue-100 border-blue-200 hover:from-blue-100 hover:to-blue-200' :
-                  index % 5 === 1 ? 'from-slate-50 to-slate-100 border-slate-200 hover:from-slate-100 hover:to-slate-200' :
-                  index % 5 === 2 ? 'from-blue-50 to-slate-100 border-blue-200 hover:from-blue-100 hover:to-slate-200' :
-                  index % 5 === 3 ? 'from-slate-50 to-blue-100 border-slate-200 hover:from-slate-100 hover:to-blue-200' :
-                  'from-blue-50 to-slate-50 border-blue-200 hover:from-blue-100 hover:to-slate-100'
-                } rounded-2xl p-4 border transition-all duration-300 hover:shadow-lg hover:scale-105 cursor-pointer`}
-              >
-                {/* Kecamatan Name */}
-                <div className={`text-sm font-bold mb-3 ${
-                  index % 5 === 0 ? 'text-blue-800' :
-                  index % 5 === 1 ? 'text-slate-800' :
-                  index % 5 === 2 ? 'text-blue-800' :
-                  index % 5 === 3 ? 'text-slate-800' :
-                  'text-blue-800'
-                } group-hover:scale-105 transition-transform duration-300`}>
-                  {kecamatan.name}
+          <div className="relative bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-900 text-white p-8">
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+              <div className="flex items-center gap-4">
+                <div className="p-4 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-xl border border-white/20">
+                  <FiBarChart2 className="text-2xl" />
                 </div>
-                
-                {/* Statistics */}
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-2xl lg:text-3xl font-black mb-1">Data BUMDes</h3>
+                  <div className="flex items-center gap-4 text-blue-200">
                     <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                      <span className="text-xs text-gray-600 font-medium">Upload</span>
+                      <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                      <span className="text-sm font-medium">{filteredBumdesData.length} ditampilkan</span>
                     </div>
-                    <span className="text-sm font-bold text-blue-700 bg-blue-50 px-2 py-1 rounded-lg">
-                      {kecamatan.uploaded}
-                    </span>
-                  </div>
-                  
-                  <div className="flex justify-between items-center">
+                    <div className="text-blue-300">•</div>
                     <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                      <span className="text-xs text-gray-600 font-medium">Aktif</span>
+                      <FiUsers className="text-sm" />
+                      <span className="text-sm font-medium">{bumdesData.length} total data</span>
                     </div>
-                    <span className="text-sm font-bold text-blue-700 bg-blue-50 px-2 py-1 rounded-lg">
-                      {kecamatan.aktif}
-                    </span>
-                  </div>
-                  
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
-                      <span className="text-xs text-gray-600 font-medium">Non-Aktif</span>
-                    </div>
-                    <span className="text-sm font-bold text-amber-700 bg-amber-50 px-2 py-1 rounded-lg">
-                      {kecamatan.nonAktif}
-                    </span>
-                  </div>
-
-                  {/* Progress Bar */}
-                  <div className="mt-3 pt-3 border-t border-gray-200">
-                    <div className="flex justify-between text-xs text-gray-500 mb-1">
-                      <span>Progress</span>
-                      <span>{Math.round((kecamatan.uploaded / (kecamatan.uploaded + kecamatan.aktif + kecamatan.nonAktif)) * 100)}%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-1.5">
-                      <div 
-                        className={`h-1.5 rounded-full transition-all duration-1000 ease-out ${
-                          index % 5 === 0 ? 'bg-gradient-to-r from-blue-400 to-blue-500' :
-                          index % 5 === 1 ? 'bg-gradient-to-r from-slate-400 to-slate-500' :
-                          index % 5 === 2 ? 'bg-gradient-to-r from-blue-400 to-slate-500' :
-                          index % 5 === 3 ? 'bg-gradient-to-r from-slate-400 to-blue-500' :
-                          'bg-gradient-to-r from-blue-400 to-slate-400'
-                        }`}
-                        style={{ 
-                          width: `${Math.min(100, Math.round((kecamatan.uploaded / (kecamatan.uploaded + kecamatan.aktif + kecamatan.nonAktif)) * 100))}%` 
-                        }}
-                      ></div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Hover Overlay */}
-                <div className="absolute inset-0 bg-white/20 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Badan Hukum Statistics */}
-        <div className="bg-white/70 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 p-6">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-3 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl">
-              <FiFileText className="text-white text-xl" />
-            </div>
-            <div>
-              <h3 className="text-xl font-bold text-slate-800">Statistik Badan Hukum</h3>
-              <p className="text-gray-600 text-sm">Breakdown status badan hukum BUMDes</p>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {Object.entries(
-              filteredAndSearchedData.reduce((acc, bumdes) => {
-                const badanHukum = bumdes.badanhukum || 'Belum Diisi';
-                acc[badanHukum] = (acc[badanHukum] || 0) + 1;
-                return acc;
-              }, {})
-            ).map(([status, count], index) => (
-              <div key={status} className={`bg-gradient-to-br ${
-                index % 4 === 0 ? 'from-blue-50 to-blue-100 border-blue-200' :
-                index % 4 === 1 ? 'from-slate-50 to-slate-100 border-slate-200' :
-                index % 4 === 2 ? 'from-blue-50 to-indigo-100 border-blue-200' :
-                'from-slate-50 to-slate-100 border-slate-200'
-              } rounded-2xl p-4 border`}>
-                <div className={`text-sm font-medium mb-1 ${
-                  index % 4 === 0 ? 'text-blue-600' :
-                  index % 4 === 1 ? 'text-slate-600' :
-                  index % 4 === 2 ? 'text-blue-600' :
-                  'text-slate-600'
-                }`}>
-                  {status}
-                </div>
-                <div className={`text-2xl font-bold ${
-                  index % 4 === 0 ? 'text-blue-800' :
-                  index % 4 === 1 ? 'text-slate-800' :
-                  index % 4 === 2 ? 'text-blue-800' :
-                  'text-slate-800'
-                }`}>
-                  {count}
-                </div>
-                <div className="text-xs text-gray-500 mt-1">
-                  {((count / filteredAndSearchedData.length) * 100).toFixed(1)}%
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Charts Section */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-          {/* Status Chart */}
-          <ChartCard title="Distribusi Status BUMDes" icon={FiBarChart2}>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-slate-50 rounded-xl border border-blue-100">
-                <div className="flex items-center gap-3">
-                  <div className="w-4 h-4 bg-blue-500 rounded-full"></div>
-                  <span className="font-medium text-slate-700">Aktif</span>
-                </div>
-                <div className="text-right">
-                  <div className="text-2xl font-bold text-blue-600">{statistics.activeBumdes}</div>
-                  <div className="text-sm text-blue-600">
-                    {statistics.totalBumdes > 0 ? Math.round((statistics.activeBumdes / statistics.totalBumdes) * 100) : 0}%
                   </div>
                 </div>
               </div>
               
-              <div className="flex items-center justify-between p-4 bg-gradient-to-r from-slate-50 to-gray-50 rounded-xl border border-slate-100">
-                <div className="flex items-center gap-3">
-                  <div className="w-4 h-4 bg-slate-500 rounded-full"></div>
-                  <span className="font-medium text-slate-700">Tidak Aktif</span>
-                </div>
-                <div className="text-right">
-                  <div className="text-2xl font-bold text-slate-600">{statistics.totalBumdes - statistics.activeBumdes}</div>
-                  <div className="text-sm text-slate-600">
-                    {statistics.totalBumdes > 0 ? Math.round(((statistics.totalBumdes - statistics.activeBumdes) / statistics.totalBumdes) * 100) : 0}%
-                  </div>
-                </div>
-              </div>
-            </div>
-          </ChartCard>
-
-          {/* Kecamatan Distribution */}
-          <ChartCard title="Distribusi per Kecamatan" icon={FiMapPin}>
-            <div className="space-y-3 max-h-64 overflow-y-auto">
-              {kecamatanList.length > 0 ? kecamatanList.slice(0, 8).map((kecamatan, index) => {
-                const bumdesCount = bumdesData.filter(b => b.kecamatan === kecamatan).length;
-                const maxCount = Math.max(...kecamatanList.map(k => 
-                  bumdesData.filter(b => b.kecamatan === k).length
-                ), 1);
-                const percentage = maxCount > 0 ? (bumdesCount / maxCount) * 100 : 0;
-                
-                return (
-                  <div key={index} className="flex items-center gap-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-medium text-slate-700 truncate">
-                          {kecamatan}
-                        </span>
-                        <span className="text-sm text-slate-500 font-semibold">{bumdesCount} BUMDes</span>
-                      </div>
-                      <div className="w-full bg-slate-200 rounded-full h-2">
-                        <div 
-                          className="bg-gradient-to-r from-slate-600 to-slate-800 h-2 rounded-full transition-all duration-500"
-                          style={{ width: `${percentage}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              }) : (
-                <div className="text-center py-8 text-slate-500">
-                  <FiMapPin className="mx-auto text-4xl mb-2 opacity-50" />
-                  <p>Belum ada data distribusi kecamatan</p>
-                </div>
-              )}
-            </div>
-          </ChartCard>
-        </div>
-
-        {/* Advanced Analytics */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Top Performing Kecamatan */}
-          <div className="bg-white/70 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-3 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl">
-                <FiTrendingUp className="text-white text-xl" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-slate-800">Kecamatan Terbaik</h3>
-                <p className="text-gray-600 text-sm">Berdasarkan jumlah upload</p>
-              </div>
-            </div>
-            
-            <div className="space-y-3">
-              {statistics.kecamatanData
-                .sort((a, b) => b.uploaded - a.uploaded)
-                .slice(0, 5)
-                .map((kecamatan, index) => (
-                  <div key={kecamatan.name} className="flex items-center justify-between p-3 bg-gradient-to-r from-blue-50 to-slate-50 rounded-xl border border-blue-100">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs ${
-                        index === 0 ? 'bg-blue-600' :
-                        index === 1 ? 'bg-slate-500' :
-                        index === 2 ? 'bg-blue-500' :
-                        'bg-slate-400'
-                      }`}>
-                        {index + 1}
-                      </div>
-                      <div>
-                        <div className="font-semibold text-slate-800 text-sm">{kecamatan.name}</div>
-                        <div className="text-xs text-blue-600">{kecamatan.aktif} aktif</div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-lg font-bold text-blue-700">{kecamatan.uploaded}</div>
-                      <div className="text-xs text-blue-600">BUMDes</div>
-                    </div>
-                  </div>
-                ))}
-            </div>
-          </div>
-
-          {/* Upload Rate Analysis */}
-          <div className="bg-white/70 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-3 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl">
-                <FiUpload className="text-white text-xl" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-slate-800">Analisis Upload</h3>
-                <p className="text-gray-600 text-sm">Status dan target pencapaian</p>
-              </div>
-            </div>
-            
-            <div className="space-y-4">
-              <div className="text-center p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
-                <div className="text-3xl font-bold text-blue-700 mb-1">{statistics.persentaseUpload}%</div>
-                <div className="text-sm text-slate-600 mb-2">Coverage Saat Ini</div>
-                <div className="w-full bg-blue-200 rounded-full h-2">
-                  <div 
-                    className="bg-gradient-to-r from-blue-500 to-indigo-600 h-2 rounded-full transition-all duration-1000"
-                    style={{ width: `${statistics.persentaseUpload}%` }}
-                  ></div>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-3">
-                <div className="text-center p-3 bg-blue-50 rounded-xl border border-blue-100">
-                  <div className="text-lg font-bold text-blue-700">{statistics.totalBumdesUploaded}</div>
-                  <div className="text-xs text-slate-600">Sudah Upload</div>
-                </div>
-                <div className="text-center p-3 bg-slate-50 rounded-xl border border-slate-100">
-                  <div className="text-lg font-bold text-slate-700">{statistics.totalBumdesBelumUpload}</div>
-                  <div className="text-xs text-slate-600">Belum Upload</div>
-                </div>
-              </div>
-
-              <div className="mt-4 p-3 bg-slate-50 rounded-xl border border-slate-200">
-                <div className="text-xs text-slate-600 mb-2">Target yang diperlukan untuk 100%:</div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium text-slate-700">Kekurangan Data:</span>
-                  <span className="text-lg font-bold text-slate-800">{statistics.totalBumdesBelumUpload} BUMDes</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Recent Activity Summary */}
-          <div className="bg-white/70 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-3 bg-gradient-to-r from-blue-500 to-slate-600 rounded-xl">
-                <FiActivity className="text-white text-xl" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-slate-800">Ringkasan Status</h3>
-                <p className="text-gray-600 text-sm">Kondisi operasional BUMDes</p>
-              </div>
-            </div>
-            
-            <div className="space-y-4">
-              <div className="p-4 bg-gradient-to-r from-blue-50 to-slate-50 rounded-xl border border-blue-100">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                    <span className="text-sm font-medium text-slate-700">BUMDes Aktif</span>
-                  </div>
-                  <span className="text-xl font-bold text-blue-700">
-                    {filteredAndSearchedData.filter(b => b.status === 'aktif').length}
-                  </span>
-                </div>
-                <div className="text-xs text-blue-600">
-                  {Math.round((filteredAndSearchedData.filter(b => b.status === 'aktif').length / statistics.totalBumdesUploaded) * 100)}% dari yang upload
-                </div>
-              </div>
-
-              <div className="p-4 bg-gradient-to-r from-slate-50 to-gray-50 rounded-xl border border-slate-100">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-slate-500 rounded-full"></div>
-                    <span className="text-sm font-medium text-slate-700">Tidak Aktif</span>
-                  </div>
-                  <span className="text-xl font-bold text-slate-700">
-                    {filteredAndSearchedData.filter(b => b.status === 'tidak aktif').length}
-                  </span>
-                </div>
-                <div className="text-xs text-slate-600">
-                  Membutuhkan perhatian khusus
-                </div>
-              </div>
-
-              <div className="p-4 bg-gradient-to-r from-slate-50 to-gray-100 rounded-xl border border-slate-200">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-slate-700 mb-1">
-                    {Math.round(statistics.totalBumdesUploaded / statistics.totalKecamatan)}
-                  </div>
-                  <div className="text-xs text-slate-600">Rata-rata BUMDes per Kecamatan</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* BUMDes List */}
-        <div className="bg-white/70 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 overflow-hidden">
-          <div className="bg-slate-800 text-white p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-white/20 rounded-xl">
-                  <FiBarChart2 className="text-xl" />
-                </div>
-                <h3 className="text-xl font-bold">Daftar BUMDes</h3>
-                <div className="text-white/80 text-sm">
-                  ({filteredBumdesData.length} dari {bumdesData.length} total)
-                </div>
-              </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-3">
                 <button
                   onClick={showAllData ? handleShowPaginated : handleShowAll}
-                  className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                  className="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-xl font-bold simple-shadow text-white transition-colors duration-200"
                 >
-                  {showAllData ? 'Tampilkan dengan Halaman' : 'Lihat Semua'}
+                  <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
+                  <div className="relative flex items-center gap-2">
+                    <FiRefreshCw className="text-sm" />
+                    <span>{showAllData ? 'Pagination Mode' : 'Show All Data'}</span>
+                  </div>
                 </button>
               </div>
             </div>
             
-            {/* Search and Filter */}
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-              <div className="relative md:col-span-2 lg:col-span-2">
+            {/* Enhanced Search and Filter */}
+            <div className="mt-8 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+              <div className="relative md:col-span-2 lg:col-span-2 group">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <FiBarChart2 className="h-5 w-5 text-white/60 group-focus-within:text-white transition-colors duration-200" />
+                </div>
                 <input
                   type="text"
                   placeholder="Cari nama BUMDes, desa, atau kecamatan..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/50"
+                  className="w-full pl-12 pr-4 py-3 bg-white/15 border border-white/30 rounded-xl text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent backdrop-blur-sm transition-all duration-300 hover:bg-white/20"
                 />
               </div>
 
@@ -2681,6 +2587,55 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
         </div>
       )}
 
+      {/* Admin Tools Section */}
+      <div className="px-4 lg:px-6 pb-8">
+        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 bg-blue-600 rounded-lg">
+              <FiDatabase className="text-white text-lg" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900">Tools Administrator</h3>
+          </div>
+          
+          <p className="text-gray-600 mb-6">
+            Alat administratif untuk mengelola data BUMDes dan sinkronisasi kode desa.
+          </p>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-white rounded-xl p-4 border border-blue-100">
+              <div className="flex items-center gap-3 mb-3">
+                <FiMapPin className="text-blue-600 text-lg" />
+                <h4 className="font-semibold text-gray-900">Sinkronisasi Kode Desa</h4>
+              </div>
+              <p className="text-gray-600 text-sm mb-4">
+                Sinkronkan kode desa BUMDes dengan data resmi dari database desa.
+              </p>
+              <button
+                onClick={() => window.open('/dashboard/bumdes/village-sync', '_blank')}
+                className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors duration-200"
+              >
+                <FiDatabase className="text-sm" />
+                <span>Buka Tool Sinkronisasi</span>
+              </button>
+            </div>
+            
+            <div className="bg-white rounded-xl p-4 border border-green-100">
+              <div className="flex items-center gap-3 mb-3">
+                <FiCheck className="text-green-600 text-lg" />
+                <h4 className="font-semibold text-gray-900">Status Data</h4>
+              </div>
+              <p className="text-gray-600 text-sm mb-4">
+                {statistics.totalBumdes} BUMDes terdaftar, semua kode desa sudah valid.
+              </p>
+              <div className="flex items-center gap-2 text-green-600 text-sm font-medium">
+                <FiCheck className="text-xs" />
+                <span>Data Tersinkronisasi</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Modern Notification Popup */}
       {notification.show && (
         <div className="fixed top-4 right-4 z-50 animate-fade-in">
@@ -2732,15 +2687,9 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
                 </button>
               </div>
               
-              {/* Progress bar */}
+              {/* Simple progress bar */}
               <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20">
-                <div 
-                  className="h-full bg-white/50 animate-progress-bar"
-                  style={{ 
-                    animation: 'progress-bar 4s linear forwards',
-                    transformOrigin: 'left'
-                  }}
-                ></div>
+                <div className="h-full bg-white/50 w-full"></div>
               </div>
             </div>
           </div>

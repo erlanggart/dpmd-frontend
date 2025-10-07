@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import api, { getKecamatans, getDesasByKecamatan } from '../../../services/api.js';
+import api from '../../../api.js';
 import { 
   FaPaperPlane, 
   FaSpinner, 
@@ -12,7 +12,6 @@ import {
   FaTrash
 } from 'react-icons/fa';
 import { HiSparkles } from 'react-icons/hi';
-import { initialFormData } from './BumdesForm';
 
 const normalizeFieldName = (name) => {
     return name.replace(/([A-Z])/g, ' $1').replace(/_/g, ' ');
@@ -250,7 +249,7 @@ function BumdesEditDashboard({ initialData, onLogout, onClose, onDelete }) {
     useEffect(() => {
         const fetchKecamatans = async () => {
             try {
-                const response = await getKecamatans();
+                const response = await api.get('/kecamatan');
                 const kecamatans = response.data.data || [];
                 setKecamatanList(kecamatans);
                 
@@ -260,7 +259,7 @@ function BumdesEditDashboard({ initialData, onLogout, onClose, onDelete }) {
                     if (foundKecamatan) {
                         setSelectedKecamatanId(foundKecamatan.id);
                         // Load desa untuk kecamatan ini
-                        const desaResponse = await getDesasByKecamatan(foundKecamatan.id);
+                        const desaResponse = await api.get(`/desa/${foundKecamatan.id}`);
                         setDesaList(desaResponse.data.data || []);
                     }
                 }
@@ -289,7 +288,7 @@ function BumdesEditDashboard({ initialData, onLogout, onClose, onDelete }) {
         if (kecamatanId) {
             setLoadingDesa(true);
             try {
-                const response = await getDesasByKecamatan(kecamatanId);
+                const response = await api.get(`/desa/${kecamatanId}`);
                 setDesaList(response.data.data || []);
             } catch (error) {
                 console.error('Error fetching desas:', error);

@@ -1,35 +1,77 @@
 import { useState, useEffect, useCallback } from 'react';
-import api from '../services/api.js';
+import api from '../api.js';
 
 export const useBumdesData = (initialData = null) => {
   const [bumdesData, setBumdesData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [kecamatanList, setKecamatanList] = useState([]);
+  const [lastFetch, setLastFetch] = useState(null);
+  const [dataVersion, setDataVersion] = useState(0);
+  const [dataHash, setDataHash] = useState('');
+  
+  // Cache duration: 5 minutes
+  const CACHE_DURATION = 5 * 60 * 1000;
 
-  // Fetch data dari API
-  const fetchBumdesData = useCallback(async () => {
+  const generateDataHash = useCallback((data) => {
+    return btoa(JSON.stringify(data)).slice(0, 10);
+  }, []);
+
+  const shouldFetchData = useCallback(() => {
+    return (Date.now() - lastFetch) > CACHE_DURATION;
+  }, [lastFetch, CACHE_DURATION]);
+
+  // Fetch data dari API with smart caching
+  const fetchBumdesData = useCallback(async (forceRefresh = false) => {
+    // Skip fetch if data is still fresh and not forcing refresh
+    if (!forceRefresh && !shouldFetchData() && bumdesData.length > 0) {
+      console.log('📋 BUMDes: Using cached data, skipping fetch');
+      setLoading(false);
+      return;
+    }
+    
     try {
       setLoading(true);
       setError(null);
+      console.log('🔄 BUMDes: Fetching fresh data...');
       
       const response = await api.get('/bumdes');
       const apiData = response.data && Array.isArray(response.data.data) ? response.data.data : [];
       
+      // Check if data actually changed
+      const newHash = generateDataHash(apiData);
+      if (dataHash === newHash && !forceRefresh) {
+        console.log('📋 BUMDes: Data unchanged, skipping update');
+        setLoading(false);
+        return;
+      }
+      
+      console.log('✅ BUMDes: Setting new data');
       setBumdesData(apiData);
+      setDataHash(newHash);
+      setLastFetch(Date.now());
+      setDataVersion(prev => prev + 1);
       
       // Extract unique kecamatan
       const uniqueKecamatan = [...new Set(apiData.map(item => item.kecamatan).filter(Boolean))];
       setKecamatanList(uniqueKecamatan.sort());
       
     } catch (err) {
-      console.error('Error fetching BUMDes data:', err);
-      setError('Gagal memuat data BUMDes');
-      setBumdesData([]);
+      console.error('❌ BUMDes: Failed to fetch data:', err);
+      
+      // Only set empty data if we don't have any cached data
+      if (bumdesData.length === 0) {
+        setError('Gagal memuat data BUMDes');
+        setBumdesData([]);
+      }
+      
+      if (err.code !== 'ECONNABORTED') {
+        setError('Gagal memuat data BUMDes');
+      }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [shouldFetchData, bumdesData.length, dataHash, generateDataHash]);
 
   // Add new BUMDes data
   const addBumdesData = useCallback(async (newData) => {
@@ -67,33 +109,53 @@ export const useBumdesData = (initialData = null) => {
   const deleteBumdesData = useCallback(async (id) => {
     try {
       const response = await api.delete(`/bumdes/${id}`);
-      if (response.data.success) {
+      // Check both status and success field from response
+      if (response.status === 200 && response.data.success) {
         setBumdesData(prev => prev.filter(item => item.id !== id));
-        return { success: true };
+        return { success: true, message: response.data.message };
       }
-      return { success: false, message: response.data.message };
+      return { success: false, message: response.data.message || 'Terjadi kesalahan' };
     } catch (err) {
       console.error('Error deleting BUMDes:', err);
-      return { success: false, message: 'Gagal menghapus data BUMDes' };
+      // Handle error response
+      const errorMessage = err.response?.data?.message || err.message || 'Gagal menghapus data BUMDes';
+      return { success: false, message: errorMessage };
     }
   }, []);
 
-  // Refresh data
+  // Refresh data (force refresh)
   const refreshData = useCallback(() => {
-    fetchBumdesData();
+    fetchBumdesData(true);
   }, [fetchBumdesData]);
+  
+  // Check if data needs refresh
+  const isDataStale = useCallback(() => {
+    const now = Date.now();
+    return !lastFetch || (now - lastFetch) > CACHE_DURATION;
+  }, [lastFetch, CACHE_DURATION]);
 
-  // Initialize data
+  // Initialize data and periodic refresh
   useEffect(() => {
     if (initialData && Array.isArray(initialData)) {
       setBumdesData(initialData);
       const uniqueKecamatan = [...new Set(initialData.map(item => item.kecamatan).filter(Boolean))];
       setKecamatanList(uniqueKecamatan.sort());
+      setLastFetch(Date.now());
       setLoading(false);
     } else {
+      // Initial load
       fetchBumdesData();
     }
-  }, [initialData, fetchBumdesData]);
+
+    // Set up periodic refresh every 10 minutes if page is visible
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchBumdesData();
+      }
+    }, 10 * 60 * 1000); // 10 minutes
+
+    return () => clearInterval(interval);
+  }, []); // Empty dependency array for initial setup only
 
   return {
     bumdesData,
@@ -103,7 +165,10 @@ export const useBumdesData = (initialData = null) => {
     addBumdesData,
     updateBumdesData,
     deleteBumdesData,
-    refreshData
+    refreshData,
+    isDataStale,
+    lastFetch,
+    dataVersion
   };
 };
 
