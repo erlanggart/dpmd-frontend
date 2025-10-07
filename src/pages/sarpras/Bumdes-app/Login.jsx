@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import api from '../../../services/api.js';
 import { FaSignInAlt, FaSpinner, FaCheckCircle, FaExclamationCircle } from 'react-icons/fa';
-import './bumdes.css';
+
 
 function Login({ onLoginSuccess }) {
     const [desa, setDesa] = useState('');

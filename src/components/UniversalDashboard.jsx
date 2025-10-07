@@ -33,14 +33,8 @@ const UniversalDashboard = () => {
     useEffect(() => {
         const storedUser = localStorage.getItem("user");
         
-        // console.log('=== UNIVERSAL DASHBOARD DEBUG ===');
-        // console.log('storedUser:', storedUser);
-        
         if (storedUser) {
             const regularUser = JSON.parse(storedUser);
-            // console.log('regularUser:', regularUser);
-            // console.log('regularUser.role:', regularUser.role);
-            // console.log('regularUser.bidangRole:', regularUser.bidangRole);
             
             const allowedRoles = [
                 'superadmin', 
@@ -63,9 +57,7 @@ const UniversalDashboard = () => {
             if (detectedRole) {
                 setUserRole(detectedRole);
                 setUserData(regularUser);
-                // console.log('Setting allowed role for UniversalDashboard:', detectedRole);
             } else {
-                // console.log('Role not allowed for UniversalDashboard, redirecting...');
                 if (regularUser.role === 'desa') {
                     window.location.href = '/desa/dashboard';
                 } else if (regularUser.role === 'kecamatan') {
@@ -77,10 +69,8 @@ const UniversalDashboard = () => {
                 }
             }
         } else {
-            // console.log('No user data found, redirecting to login');
             window.location.href = '/login';
         }
-        // console.log('=== END UNIVERSAL DASHBOARD DEBUG ===');
     }, []);
 
     useEffect(() => {
@@ -89,12 +79,7 @@ const UniversalDashboard = () => {
         }
     }, [userRole]);
 
-    // Tambahan useEffect untuk debug role changes (opsional, bisa dihapus)
-    // useEffect(() => {
-    //     console.log('=== ROLE CHANGED ===');
-    //     console.log('userRole now:', userRole);
-    //     console.log('userData now:', userData);
-    // }, [userRole, userData]);
+
 
     const loadDashboardData = async () => {
         const dashboardConfigs = {
@@ -343,7 +328,7 @@ const UniversalDashboard = () => {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 -m-2">
             {/* Header */}
             <div className="bg-primary rounded-lg shadow-sm border p-6">
                 <div className="flex items-center justify-between">

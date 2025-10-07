@@ -10,11 +10,10 @@ import {
   ArcElement,
 } from 'chart.js';
 import { Bar, Doughnut } from 'react-chartjs-2';
-import { 
+import {
   ChartBarIcon,
   ArrowLeftIcon,
   EyeIcon,
-  ArrowDownTrayIcon,
   HomeIcon,
   BuildingOfficeIcon,
   FolderIcon,
@@ -173,15 +172,34 @@ const MusdesusStatsPage = () => {
     setCurrentPage(page);
   };
 
+  // ====================================================================
+  // FUNGSI UTAMA YANG DIPERBAIKI: Mengatasi URL & memastikan PREVIEW
+  // ====================================================================
   const handleDownload = async (filename) => {
     try {
-      window.open(`${api.defaults.baseURL.replace('/api', '')}/storage/musdesus/${filename}`, '_blank');
-      toast.success('File dibuka di tab baru');
+      // 1. Ambil URL dasar (misal: https://api.dpmdbogorkab.id/api)
+      let baseUrl = api.defaults.baseURL;
+
+      // 2. HAPUS subdomain 'api.' jika ada. (Perbaikan URL Domain)
+      // Ini mengatasi masalah https://api.dpmdbogorkab.id menjadi https://dpmdbogorkab.id
+      if (baseUrl.includes('//api.')) {
+        baseUrl = baseUrl.replace('//api.', '//'); 
+      }
+
+      // 3. Gabungkan dengan endpoint kustom yang sudah benar untuk PREVIEW (viewFile).
+      const previewUrl = `${baseUrl}/uploads/musdesus/${filename}`;
+      
+      // 4. Buka di tab baru (Preview)
+      window.open(previewUrl, '_blank');
+      toast.success('File dibuka untuk dilihat di tab baru.');
     } catch (error) {
       console.error('Error opening file:', error);
       toast.error('Gagal membuka file');
     }
   };
+  // ====================================================================
+  // END FUNGSI UTAMA YANG DIPERBAIKI
+  // ====================================================================
 
   const handleDelete = (fileId, fileName) => {
     // Check admin verification first

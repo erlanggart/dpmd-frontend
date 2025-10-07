@@ -3,7 +3,6 @@ import api from '../../../services/api.js';
 import { Bar, Doughnut, Pie } from 'react-chartjs-2';
 import 'chart.js/auto';
 import { FaSearch, FaFilter, FaRedoAlt } from 'react-icons/fa';
-import './bumdes.css';
 
 // Komponen Card Ringkasan yang Dapat Digunakan Ulang
 const SummaryCard = ({ title, data, itemsPerPage }) => {

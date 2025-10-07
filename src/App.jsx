@@ -61,10 +61,6 @@ const AparaturDesaEditPage = lazy(() =>
 	import("./pages/desa/aparatur-desa/AparaturDesaEditPage")
 );
 
-const MusdesusDebugTest = lazy(() =>
-	import("./components/test/MusdesusDebugTest")
-);
-
 const MusdesusMonitoringPage = lazy(() =>
 	import("./pages/admin/MusdesusMonitoringPage")
 );
@@ -98,9 +94,7 @@ function App() {
 					<Route path="/musdesus-stats" element={<MusdesusStatsPage />} />
 					<Route path="/musdesus-upload" element={<MusdesusUploadPage />} />
 
-					{/* Testing Routes */}
 
-					<Route path="/musdesus-debug" element={<MusdesusDebugTest />} />
 
 					{/* Rute Publik dengan lazy loading */}
 					<Route element={<PublicLayout />}>
