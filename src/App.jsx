@@ -60,6 +60,22 @@ const AparaturDesaDetailPage = lazy(() =>
 const AparaturDesaEditPage = lazy(() =>
 	import("./pages/desa/aparatur-desa/AparaturDesaEditPage")
 );
+const KelembagaanDesaPage = lazy(() =>
+	import("./pages/desa/kelembagaan/KelembagaanDesaPage")
+);
+const KelembagaanList = lazy(() =>
+	import("./pages/desa/kelembagaan/KelembagaanList")
+);
+
+const KelembagaanDetailPage = lazy(() =>
+	import("./pages/desa/kelembagaan/KelembagaanDetailPage")
+);
+const PengurusDetailPage = lazy(() =>
+	import("./pages/desa/pengurus/PengurusDetailPage")
+);
+const PengurusEditPage = lazy(() =>
+	import("./pages/desa/pengurus/PengurusEditPage")
+);
 
 const MusdesusDebugTest = lazy(() =>
 	import("./components/test/MusdesusDebugTest")
@@ -209,8 +225,24 @@ function App() {
 							element={<AparaturDesaEditPage />}
 						/>
 
-						{/* Tambahkan rute modul desa lain di sini nanti, contoh: */}
-						{/* <Route path="aparatur" element={<AparaturPage />} /> */}
+						{/* Kelembagaan Desa */}
+						<Route path="kelembagaan" element={<KelembagaanDesaPage />} />
+						<Route path="kelembagaan/:type" element={<KelembagaanList />} />
+						{/* New detail with id param */}
+						<Route
+							path="kelembagaan/:type/:id"
+							element={<KelembagaanDetailPage />}
+						/>
+
+						{/* Pengurus Detail */}
+						<Route
+							path="pengurus/:pengurusId"
+							element={<PengurusDetailPage />}
+						/>
+						<Route
+							path="pengurus/:pengurusId/edit"
+							element={<PengurusEditPage />}
+						/>
 					</Route>
 
 					{/* Rute Kecamatan */}

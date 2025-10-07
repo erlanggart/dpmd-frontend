@@ -9,6 +9,14 @@ import {
 	FiMenu,
 	FiUserCheck,
 } from "react-icons/fi";
+
+import {
+	LuBookMarked,
+	LuIdCard,
+	LuLandmark,
+	LuTrello,
+	LuUserCheck,
+} from "react-icons/lu";
 import Footer from "../components/landingpage/Footer";
 
 const DesaLayout = () => {
@@ -120,7 +128,7 @@ const DesaLayout = () => {
 										window.innerWidth < 1024 && setSidebarOpen(false)
 									} // Close on mobile click
 								>
-									<FiUser className="h-6 w-6" />
+									<LuIdCard className="h-6 w-6" />
 									<span
 										className={`ml-3 whitespace-nowrap ${
 											!sidebarOpen && "lg:hidden"
@@ -142,7 +150,7 @@ const DesaLayout = () => {
 										window.innerWidth < 1024 && setSidebarOpen(false)
 									} // Close on mobile click
 								>
-									<FiBook className="h-6 w-6" />
+									<LuBookMarked className="h-6 w-6" />
 									<span
 										className={`ml-3 whitespace-nowrap ${
 											!sidebarOpen && "lg:hidden"
@@ -164,13 +172,35 @@ const DesaLayout = () => {
 										window.innerWidth < 1024 && setSidebarOpen(false)
 									} // Close on mobile click
 								>
-									<FiUserCheck className="h-6 w-6" />
+									<LuUserCheck className="h-6 w-6" />
 									<span
 										className={`ml-3 whitespace-nowrap ${
 											!sidebarOpen && "lg:hidden"
 										}`}
 									>
 										Aparatur Desa
+									</span>
+								</NavLink>
+							</li>
+							<li className="mb-2">
+								<NavLink
+									to="/desa/kelembagaan"
+									className={({ isActive }) =>
+										`${baseLinkClass} ${
+											isActive ? activeLinkClass : inactiveLinkClass
+										}`
+									}
+									onClick={() =>
+										window.innerWidth < 1024 && setSidebarOpen(false)
+									} // Close on mobile click
+								>
+									<LuLandmark className="h-6 w-6" />
+									<span
+										className={`ml-3 whitespace-nowrap ${
+											!sidebarOpen && "lg:hidden"
+										}`}
+									>
+										Kelembagaan Desa
 									</span>
 								</NavLink>
 							</li>
