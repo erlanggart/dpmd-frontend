@@ -53,17 +53,21 @@ Dokumentasi lengkap tersedia di folder [`docs/`](./docs/INDEX.md):
 ## 🛠️ Development
 
 ### Prerequisites
-- Node.js 16+ 
+
+- Node.js 16+
 - npm atau yarn
 
 ### Available Scripts
+
 - `npm run dev` - Start development server
 - `npm run build` - Build for production
 - `npm run preview` - Preview production build
 - `npm run lint` - Run ESLint
 
 ### Environment Variables
+
 Buat file `.env` berdasarkan `.env.example`:
+
 ```bash
 VITE_API_URL=http://localhost:8000/api
 VITE_APP_NAME="DPMD System"

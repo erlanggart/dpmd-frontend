@@ -13,6 +13,7 @@ npm install && npm run dev
 **👉 [Lihat Dokumentasi Lengkap di `docs/`](./docs/README.md)**
 
 Folder `docs/` berisi:
+
 - Setup & instalasi lengkap
 - Panduan pengembangan
 - Dokumentasi fitur-fitur
