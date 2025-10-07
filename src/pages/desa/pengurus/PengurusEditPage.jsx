@@ -1,0 +1,475 @@
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { getPengurusById, updatePengurus } from "../../../services/pengurus";
+import { useAuth } from "../../../context/AuthContext";
+import { FaArrowLeft, FaSave } from "react-icons/fa";
+import Swal from "sweetalert2";
+
+const PengurusEditPage = () => {
+	const { pengurusId } = useParams();
+	const navigate = useNavigate();
+	const { user } = useAuth();
+
+	const [pengurus, setPengurus] = useState(null);
+	const [loading, setLoading] = useState(true);
+	const [saving, setSaving] = useState(false);
+	const [formData, setFormData] = useState({
+		nama_lengkap: "",
+		nik: "",
+		tempat_lahir: "",
+		tanggal_lahir: "",
+		jenis_kelamin: "",
+		status_perkawinan: "",
+		alamat: "",
+		no_telepon: "",
+		pendidikan: "",
+		jabatan: "",
+		tanggal_mulai_jabatan: "",
+		tanggal_akhir_jabatan: "",
+	});
+	const [avatarFile, setAvatarFile] = useState(null);
+	const [avatarPreview, setAvatarPreview] = useState(null);
+
+	// Check permissions
+	const isAdmin = user?.role === "admin_kabupaten";
+	const isUserDesa = user?.role === "desa";
+	const isAdminBidang = user?.role === "pemberdayaan_masyarakat";
+	const isSuperAdmin = user?.role === "superadmin";
+	const canEdit = isAdmin || isUserDesa || isAdminBidang || isSuperAdmin;
+
+	useEffect(() => {
+		if (!canEdit) {
+			Swal.fire({
+				icon: "error",
+				title: "Akses Ditolak",
+				text: "Anda tidak memiliki izin untuk mengedit pengurus",
+			}).then(() => navigate(-1));
+			return;
+		}
+
+		loadPengurusDetail();
+	}, [pengurusId, canEdit, navigate]);
+
+	const loadPengurusDetail = async () => {
+		if (!pengurusId) return;
+
+		setLoading(true);
+		try {
+			const response = await getPengurusById(pengurusId);
+			const data = response?.data?.data;
+
+			if (data) {
+				setPengurus(data);
+				setFormData({
+					nama_lengkap: data.nama_lengkap || "",
+					nik: data.nik || "",
+					tempat_lahir: data.tempat_lahir || "",
+					tanggal_lahir: data.tanggal_lahir || "",
+					jenis_kelamin: data.jenis_kelamin || "",
+					status_perkawinan: data.status_perkawinan || "",
+					alamat: data.alamat || "",
+					no_telepon: data.no_telepon || "",
+					pendidikan: data.pendidikan || "",
+					jabatan: data.jabatan || "",
+					tanggal_mulai_jabatan: data.tanggal_mulai_jabatan || "",
+					tanggal_akhir_jabatan: data.tanggal_akhir_jabatan || "",
+				});
+			}
+		} catch (error) {
+			console.error("Error loading pengurus detail:", error);
+			Swal.fire({
+				icon: "error",
+				title: "Gagal",
+				text: "Gagal memuat detail pengurus",
+			}).then(() => navigate(-1));
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	const handleInputChange = (e) => {
+		const { name, value } = e.target;
+		setFormData((prev) => ({
+			...prev,
+			[name]: value,
+		}));
+	};
+
+	const handleAvatarChange = (e) => {
+		const file = e.target.files[0];
+		if (file) {
+			setAvatarFile(file);
+			const reader = new FileReader();
+			reader.onload = (e) => setAvatarPreview(e.target.result);
+			reader.readAsDataURL(file);
+		}
+	};
+
+	const handleSubmit = async (e) => {
+		e.preventDefault();
+
+		if (!formData.nama_lengkap.trim()) {
+			Swal.fire({
+				icon: "error",
+				title: "Error",
+				text: "Nama lengkap wajib diisi",
+			});
+			return;
+		}
+
+		setSaving(true);
+		try {
+			const submitData = new FormData();
+
+			// Add form data
+			Object.entries(formData).forEach(([key, value]) => {
+				if (value) {
+					submitData.append(key, value);
+				}
+			});
+
+			// Add avatar if selected
+			if (avatarFile) {
+				submitData.append("avatar", avatarFile);
+			}
+
+			await updatePengurus(pengurusId, submitData, { multipart: true });
+
+			await Swal.fire({
+				icon: "success",
+				title: "Berhasil",
+				text: "Data pengurus berhasil diperbarui",
+				timer: 2000,
+				showConfirmButton: false,
+			});
+
+			navigate(`/desa/pengurus/${pengurusId}`);
+		} catch (error) {
+			console.error("Error updating pengurus:", error);
+			Swal.fire({
+				icon: "error",
+				title: "Gagal",
+				text: "Gagal memperbarui data pengurus",
+			});
+		} finally {
+			setSaving(false);
+		}
+	};
+
+	if (loading) {
+		return (
+			<div className="min-h-screen bg-gray-50 flex items-center justify-center">
+				<div className="text-center">
+					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+					<p className="text-gray-600">Memuat data pengurus...</p>
+				</div>
+			</div>
+		);
+	}
+
+	if (!pengurus) {
+		return (
+			<div className="min-h-screen bg-gray-50 flex items-center justify-center">
+				<div className="text-center">
+					<p className="text-gray-600 mb-4">Data pengurus tidak ditemukan</p>
+					<button
+						onClick={() => navigate(-1)}
+						className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+					>
+						Kembali
+					</button>
+				</div>
+			</div>
+		);
+	}
+
+	return (
+		<div className="min-h-screen bg-gray-50">
+			<div className="bg-white shadow">
+				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+					<div className="flex items-center justify-between py-4">
+						<div className="flex items-center space-x-4">
+							<button
+								onClick={() => navigate(-1)}
+								className="flex items-center justify-center w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors"
+								title="Kembali"
+							>
+								<FaArrowLeft className="text-gray-600" />
+							</button>
+							<div>
+								<h1 className="text-2xl font-bold text-gray-900">
+									Edit Pengurus
+								</h1>
+								<p className="text-sm text-gray-500">
+									Ubah informasi pengurus kelembagaan
+								</p>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+				<form onSubmit={handleSubmit} className="space-y-6">
+					{/* Avatar Upload */}
+					<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+						<h3 className="text-lg font-semibold text-gray-900 mb-4">
+							Foto Profil
+						</h3>
+
+						<div className="flex items-center space-x-6">
+							<div className="relative">
+								{avatarPreview ? (
+									<img
+										src={avatarPreview}
+										alt="Preview"
+										className="w-24 h-24 rounded-full object-cover border-4 border-gray-200"
+									/>
+								) : pengurus.avatar ? (
+									<img
+										src={`${import.meta.env.VITE_IMAGE_BASE_URL}/uploads/${
+											pengurus.avatar
+										}`}
+										alt={pengurus.nama_lengkap}
+										className="w-24 h-24 rounded-full object-cover border-4 border-gray-200"
+									/>
+								) : (
+									<div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center border-4 border-gray-300">
+										<span className="text-gray-400 text-2xl font-semibold">
+											{formData.nama_lengkap.charAt(0).toUpperCase() || "?"}
+										</span>
+									</div>
+								)}
+							</div>
+
+							<div>
+								<input
+									type="file"
+									id="avatar"
+									accept="image/*"
+									onChange={handleAvatarChange}
+									className="hidden"
+								/>
+								<label
+									htmlFor="avatar"
+									className="cursor-pointer inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+								>
+									Pilih Foto
+								</label>
+								<p className="mt-1 text-xs text-gray-500">
+									JPG, PNG hingga 5MB
+								</p>
+							</div>
+						</div>
+					</div>
+
+					{/* Personal Information */}
+					<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+						<h3 className="text-lg font-semibold text-gray-900 mb-4">
+							Informasi Pribadi
+						</h3>
+
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+							<div>
+								<label className="block text-sm font-medium text-gray-700 mb-1">
+									Nama Lengkap *
+								</label>
+								<input
+									type="text"
+									name="nama_lengkap"
+									value={formData.nama_lengkap}
+									onChange={handleInputChange}
+									className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+									required
+								/>
+							</div>
+
+							<div>
+								<label className="block text-sm font-medium text-gray-700 mb-1">
+									NIK
+								</label>
+								<input
+									type="text"
+									name="nik"
+									value={formData.nik}
+									onChange={handleInputChange}
+									className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								/>
+							</div>
+
+							<div>
+								<label className="block text-sm font-medium text-gray-700 mb-1">
+									Tempat Lahir
+								</label>
+								<input
+									type="text"
+									name="tempat_lahir"
+									value={formData.tempat_lahir}
+									onChange={handleInputChange}
+									className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								/>
+							</div>
+
+							<div>
+								<label className="block text-sm font-medium text-gray-700 mb-1">
+									Tanggal Lahir
+								</label>
+								<input
+									type="date"
+									name="tanggal_lahir"
+									value={formData.tanggal_lahir}
+									onChange={handleInputChange}
+									className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								/>
+							</div>
+
+							<div>
+								<label className="block text-sm font-medium text-gray-700 mb-1">
+									Jenis Kelamin
+								</label>
+								<select
+									name="jenis_kelamin"
+									value={formData.jenis_kelamin}
+									onChange={handleInputChange}
+									className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								>
+									<option value="">Pilih Jenis Kelamin</option>
+									<option value="Laki-laki">Laki-laki</option>
+									<option value="Perempuan">Perempuan</option>
+								</select>
+							</div>
+
+							<div>
+								<label className="block text-sm font-medium text-gray-700 mb-1">
+									Status Perkawinan
+								</label>
+								<select
+									name="status_perkawinan"
+									value={formData.status_perkawinan}
+									onChange={handleInputChange}
+									className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								>
+									<option value="">Pilih Status</option>
+									<option value="Belum Kawin">Belum Kawin</option>
+									<option value="Kawin">Kawin</option>
+									<option value="Cerai Hidup">Cerai Hidup</option>
+									<option value="Cerai Mati">Cerai Mati</option>
+								</select>
+							</div>
+
+							<div>
+								<label className="block text-sm font-medium text-gray-700 mb-1">
+									Pendidikan
+								</label>
+								<input
+									type="text"
+									name="pendidikan"
+									value={formData.pendidikan}
+									onChange={handleInputChange}
+									placeholder="Contoh: S1 Komputer"
+									className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								/>
+							</div>
+
+							<div>
+								<label className="block text-sm font-medium text-gray-700 mb-1">
+									No. Telepon
+								</label>
+								<input
+									type="tel"
+									name="no_telepon"
+									value={formData.no_telepon}
+									onChange={handleInputChange}
+									placeholder="Contoh: 081234567890"
+									className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								/>
+							</div>
+
+							<div className="md:col-span-2">
+								<label className="block text-sm font-medium text-gray-700 mb-1">
+									Alamat
+								</label>
+								<textarea
+									name="alamat"
+									value={formData.alamat}
+									onChange={handleInputChange}
+									rows={3}
+									className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								/>
+							</div>
+						</div>
+					</div>
+
+					{/* Position Information */}
+					<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+						<h3 className="text-lg font-semibold text-gray-900 mb-4">
+							Informasi Jabatan
+						</h3>
+
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+							<div>
+								<label className="block text-sm font-medium text-gray-700 mb-1">
+									Jabatan
+								</label>
+								<input
+									type="text"
+									name="jabatan"
+									value={formData.jabatan}
+									onChange={handleInputChange}
+									className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								/>
+							</div>
+
+							<div>
+								<label className="block text-sm font-medium text-gray-700 mb-1">
+									Tanggal Mulai Jabatan
+								</label>
+								<input
+									type="date"
+									name="tanggal_mulai_jabatan"
+									value={formData.tanggal_mulai_jabatan}
+									onChange={handleInputChange}
+									className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								/>
+							</div>
+
+							<div>
+								<label className="block text-sm font-medium text-gray-700 mb-1">
+									Tanggal Akhir Jabatan
+								</label>
+								<input
+									type="date"
+									name="tanggal_akhir_jabatan"
+									value={formData.tanggal_akhir_jabatan}
+									onChange={handleInputChange}
+									className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								/>
+							</div>
+						</div>
+					</div>
+
+					{/* Submit Buttons */}
+					<div className="flex justify-end space-x-4">
+						<button
+							type="button"
+							onClick={() => navigate(-1)}
+							className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+						>
+							Batal
+						</button>
+						<button
+							type="submit"
+							disabled={saving}
+							className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center space-x-2"
+						>
+							<FaSave />
+							<span>{saving ? "Menyimpan..." : "Simpan Perubahan"}</span>
+						</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	);
+};
+
+export default PengurusEditPage;
