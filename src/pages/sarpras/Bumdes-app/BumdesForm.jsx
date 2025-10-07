@@ -3,6 +3,237 @@ import api, { getKecamatans, getDesasByKecamatan } from '../../../services/api.j
 import { FaPaperPlane, FaSpinner, FaTimes, FaCheck, FaExclamationTriangle, FaInfoCircle, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import { HiSparkles } from 'react-icons/hi';
 
+// Custom CSS untuk styling dropdown yang lebih baik
+const customStyles = `
+  .custom-dropdown {
+    position: relative;
+    width: 100%;
+  }
+  
+  .custom-dropdown-trigger {
+    width: 100%;
+    padding: 0.75rem 3rem 0.75rem 1rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(8px);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    transition: all 0.3s ease;
+    outline: none;
+    text-align: left;
+  }
+  
+  .custom-dropdown-trigger:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+  
+  .custom-dropdown-trigger:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+  }
+  
+  .custom-dropdown-trigger.disabled {
+    background-color: #f1f5f9;
+    cursor: not-allowed;
+    color: #94a3b8;
+  }
+  
+  .custom-dropdown-arrow {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 1.25rem;
+    height: 1.25rem;
+    color: #6b7280;
+    transition: transform 0.2s ease;
+  }
+  
+  .custom-dropdown-arrow.open {
+    transform: translateY(-50%) rotate(180deg);
+  }
+  
+  .custom-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    margin-top: 0.25rem;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    max-height: 12rem;
+    overflow-y: auto;
+    backdrop-filter: blur(8px);
+  }
+  
+  .custom-dropdown-menu::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .custom-dropdown-menu::-webkit-scrollbar-track {
+    background: #f8fafc;
+  }
+  
+  .custom-dropdown-menu::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+  }
+  
+  .custom-dropdown-menu::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+  
+  .custom-dropdown-option {
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    border-bottom: 1px solid #f8fafc;
+  }
+  
+  .custom-dropdown-option:hover {
+    background-color: #f1f5f9;
+    color: #1e293b;
+  }
+  
+  .custom-dropdown-option:last-child {
+    border-bottom: none;
+  }
+  
+  .custom-dropdown-option.selected {
+    background-color: #e2e8f0;
+    color: #1e293b;
+    font-weight: 500;
+  }
+  
+  .custom-dropdown-placeholder {
+    color: #94a3b8;
+  }
+`;
+
+// Inject CSS styles
+if (typeof document !== 'undefined') {
+  const styleSheet = document.createElement('style');
+  styleSheet.type = 'text/css';
+  styleSheet.innerHTML = customStyles;
+  if (!document.head.querySelector('style[data-bumdes-form-styles]')) {
+    styleSheet.setAttribute('data-bumdes-form-styles', 'true');
+    document.head.appendChild(styleSheet);
+  }
+}
+
+// Custom Dropdown Component
+const CustomDropdown = ({ label, name, value, onChange, options = [], disabled = false, placeholder }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    
+    const filteredOptions = options.filter(option => 
+        (option.label || option).toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    
+    const selectedOption = options.find(option => 
+        (option.value || option) === value
+    );
+    
+    const handleSelect = (optionValue) => {
+        const event = {
+            target: {
+                name: name,
+                value: optionValue
+            }
+        };
+        onChange(event);
+        setIsOpen(false);
+        setSearchTerm('');
+    };
+    
+    const toggleDropdown = () => {
+        if (!disabled) {
+            setIsOpen(!isOpen);
+        }
+    };
+    
+    const handleClickOutside = (e) => {
+        if (!e.target.closest('.custom-dropdown')) {
+            setIsOpen(false);
+            setSearchTerm('');
+        }
+    };
+    
+    useEffect(() => {
+        document.addEventListener('click', handleClickOutside);
+        return () => document.removeEventListener('click', handleClickOutside);
+    }, []);
+    
+    return (
+        <div className="custom-dropdown">
+            <button
+                type="button"
+                className={`custom-dropdown-trigger ${disabled ? 'disabled' : ''}`}
+                onClick={toggleDropdown}
+                disabled={disabled}
+            >
+                <span className={selectedOption ? '' : 'custom-dropdown-placeholder'}>
+                    {selectedOption ? (selectedOption.label || selectedOption) : (placeholder || `Pilih ${label}`)}
+                </span>
+                <svg 
+                    className={`custom-dropdown-arrow ${isOpen ? 'open' : ''}`}
+                    fill="none" 
+                    viewBox="0 0 20 20"
+                    stroke="currentColor"
+                >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="m6 8 4 4 4-4" />
+                </svg>
+            </button>
+            
+            {isOpen && (
+                <div className="custom-dropdown-menu">
+                    {options.length > 8 && (
+                        <div className="p-2 border-b border-gray-100">
+                            <input
+                                type="text"
+                                placeholder="Cari..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                                onClick={(e) => e.stopPropagation()}
+                            />
+                        </div>
+                    )}
+                    
+                    {filteredOptions.length === 0 ? (
+                        <div className="custom-dropdown-option text-gray-500">
+                            Tidak ada data yang ditemukan
+                        </div>
+                    ) : (
+                        filteredOptions.map((option, index) => (
+                            <div
+                                key={index}
+                                className={`custom-dropdown-option ${
+                                    (option.value || option) === value ? 'selected' : ''
+                                }`}
+                                onClick={() => handleSelect(option.value || option)}
+                            >
+                                {option.label || option}
+                            </div>
+                        ))
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
+
 const Modal = ({ show, onClose, title, message, type }) => {
     if (!show) {
         return null;
@@ -25,6 +256,14 @@ const Modal = ({ show, onClose, title, message, type }) => {
                     icon: <FaCheck className="text-green-600 text-2xl" />,
                     iconBg: 'bg-green-100',
                     button: 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700'
+                };
+            case 'warning':
+                return {
+                    overlay: 'bg-yellow-900/20',
+                    container: 'border-yellow-200 bg-gradient-to-br from-yellow-50 to-yellow-100',
+                    icon: <FaExclamationTriangle className="text-yellow-600 text-2xl" />,
+                    iconBg: 'bg-yellow-100',
+                    button: 'bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700'
                 };
             default:
                 return {
@@ -70,27 +309,23 @@ const Modal = ({ show, onClose, title, message, type }) => {
 };
 
 // Enhanced form input component
-const FormInput = ({ label, name, type = "text", value, onChange, disabled, required = false, placeholder, options = [] }) => (
+const FormInput = ({ label, name, type = "text", value, onChange, disabled, required = false, placeholder, options = [], dropdownStyle = "auto" }) => (
     <div className="space-y-2">
         <label className="block text-sm font-semibold text-slate-700">
             {label}
             {required && <span className="text-red-500 ml-1">*</span>}
         </label>
         {type === 'select' ? (
-            <select
+            <CustomDropdown
+                label={label}
                 name={name}
                 value={value}
                 onChange={onChange}
+                options={options}
                 disabled={disabled}
-                className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-300 bg-white/80 backdrop-blur-sm disabled:bg-slate-100 disabled:cursor-not-allowed hover:border-slate-300"
-            >
-                <option value="">Pilih {label}</option>
-                {options.map((option, index) => (
-                    <option key={index} value={option.value || option}>
-                        {option.label || option}
-                    </option>
-                ))}
-            </select>
+                placeholder={placeholder}
+            />
+        
         ) : type === 'file' ? (
             <div className="relative">
                 <input
@@ -296,7 +531,7 @@ function BumdesForm({ onSwitchToDashboard }) {
     };
 
     // Handle desa change
-    const handleDesaChange = (e) => {
+    const handleDesaChange = async (e) => {
         const desaId = e.target.value;
         const selectedDesa = desaList.find(desa => desa.id == desaId);
         
@@ -306,6 +541,12 @@ function BumdesForm({ onSwitchToDashboard }) {
                 desa: selectedDesa.nama,
                 kode_desa: selectedDesa.kode
             });
+
+            // Check if this desa already has BUMDes
+            const hasExisting = await checkExistingBumdes(selectedDesa.kode);
+            if (hasExisting) {
+                showMessagePopup(`Peringatan: Desa "${selectedDesa.nama}" sudah melakukan input data BUMDes. Setiap desa hanya dapat memiliki satu BUMDes.`, 'warning');
+            }
         } else {
             setFormData({
                 ...formData,
@@ -357,10 +598,36 @@ function BumdesForm({ onSwitchToDashboard }) {
         }
     };
 
+    // Function to check if desa already has BUMDes
+    const checkExistingBumdes = async (kodeDesa) => {
+        try {
+            const response = await api.get(`/bumdes/check-desa/${kodeDesa}`);
+            return response.data?.exists || false;
+        } catch (error) {
+            console.log('Error checking existing BUMDes:', error);
+            return false;
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
         setShowPopup(false);
+
+        // Validasi kode_desa
+        if (!formData.kode_desa) {
+            showMessagePopup('Silakan pilih desa terlebih dahulu.', 'error');
+            setLoading(false);
+            return;
+        }
+
+        // Check if desa already has BUMDes
+        const hasExisting = await checkExistingBumdes(formData.kode_desa);
+        if (hasExisting) {
+            showMessagePopup(`Desa "${formData.desa}" sudah memiliki data BUMDes. Setiap desa hanya dapat memiliki satu BUMDes.`, 'error');
+            setLoading(false);
+            return;
+        }
 
         const dataToSend = new FormData();
         for (const key in formData) {
@@ -386,7 +653,27 @@ function BumdesForm({ onSwitchToDashboard }) {
             setLoading(false);
         } catch (error) {
             console.error("Gagal menyimpan data:", error.response?.data?.errors || error.message);
-            showMessagePopup('Gagal menyimpan data: ' + (error.response?.data?.message || error.message), 'error');
+            
+            let errorMessage = 'Gagal menyimpan data BUMDes.';
+            
+            // Handle specific validation errors
+            if (error.response?.status === 422) {
+                const errors = error.response.data.errors;
+                
+                if (errors?.kode_desa) {
+                    errorMessage = `Desa "${formData.desa}" sudah memiliki data BUMDes. Setiap desa hanya dapat memiliki satu BUMDes.`;
+                } else if (errors) {
+                    // Handle other validation errors
+                    const firstError = Object.keys(errors)[0];
+                    errorMessage = `Error validasi: ${errors[firstError][0]}`;
+                } else {
+                    errorMessage = error.response.data.message || 'Data tidak valid.';
+                }
+            } else {
+                errorMessage = error.response?.data?.message || error.message || 'Terjadi kesalahan pada server.';
+            }
+            
+            showMessagePopup(errorMessage, 'error');
             setLoading(false);
         }
     };
@@ -422,22 +709,18 @@ function BumdesForm({ onSwitchToDashboard }) {
                                         Desa
                                         <span className="text-red-500 ml-1">*</span>
                                     </label>
-                                    <select
+                                    <CustomDropdown
+                                        label="Desa"
                                         name="desa_id"
                                         value={desaList.find(desa => desa.nama === formData.desa)?.id || ''}
                                         onChange={handleDesaChange}
+                                        options={desaList.map(desa => ({
+                                            value: desa.id,
+                                            label: desa.nama
+                                        }))}
                                         disabled={!selectedKecamatanId || loadingDesa}
-                                        className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-300 bg-white/80 backdrop-blur-sm disabled:bg-slate-100 disabled:cursor-not-allowed hover:border-slate-300"
-                                    >
-                                        <option value="">
-                                            {loadingDesa ? 'Memuat desa...' : 'Pilih Desa'}
-                                        </option>
-                                        {desaList.map(desa => (
-                                            <option key={desa.id} value={desa.id}>
-                                                {desa.nama}
-                                            </option>
-                                        ))}
-                                    </select>
+                                        placeholder={loadingDesa ? 'Memuat desa...' : 'Pilih Desa'}
+                                    />
                                 </div>
                                 
                                 <FormInput
@@ -1438,14 +1721,9 @@ function BumdesForm({ onSwitchToDashboard }) {
                                     </div>
 
                                     {currentSectionIndex === formSections.length - 1 ? (
-                                        <button
-                                            type="submit"
-                                            disabled={loading}
-                                            className="flex items-center gap-2 bg-slate-800 text-white hover:bg-slate-700 px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                            {loading ? <FaSpinner className="animate-spin" /> : <FaPaperPlane />}
-                                            {loading ? 'Menyimpan...' : 'Submit'}
-                                        </button>
+                                        <div className="text-sm text-slate-600">
+                                            Gunakan tombol "Simpan Data BUMDes" di atas untuk mengirim data
+                                        </div>
                                     ) : (
                                         <button
                                             type="button"

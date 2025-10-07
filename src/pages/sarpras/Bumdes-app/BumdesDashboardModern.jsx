@@ -23,7 +23,10 @@ import {
   FiUpload,
   FiPause,
   FiTarget,
-  FiDatabase
+  FiFolder,
+  FiFile,
+  FiLink,
+  FiEye
 } from 'react-icons/fi';
 import { HiSparkles } from 'react-icons/hi';
 import BumdesEditDashboard from './BumdesEditDashboard';
@@ -414,7 +417,7 @@ const BumdesCard = ({ bumdes, onClick }) => {
 };
 
 // Enhanced Detail Modal Component with Complete Data
-const BumdesDetailModal = ({ bumdes, isOpen, onClose, onEdit, onDelete }) => {
+const BumdesDetailModal = ({ bumdes, isOpen, onClose, onEdit, onDelete, onOpenDocuments }) => {
   if (!isOpen || !bumdes) return null;
 
   const isNotUploaded = bumdes.upload_status === 'not_uploaded';
@@ -482,6 +485,13 @@ const BumdesDetailModal = ({ bumdes, isOpen, onClose, onEdit, onDelete }) => {
                   </button>
                 </>
               )}
+              <button
+                onClick={() => onOpenDocuments(bumdes.id, bumdes.namabumdesa)}
+                className="bg-blue-500/80 hover:bg-blue-600/90 p-3 rounded-xl transition-colors duration-300 backdrop-blur-sm"
+                title="Lihat Dokumen Backup"
+              >
+                <FiFolder className="text-xl" />
+              </button>
               <button
                 onClick={onClose}
                 className="bg-white/20 hover:bg-white/30 p-3 rounded-xl transition-colors duration-300 backdrop-blur-sm"
@@ -1688,6 +1698,13 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
   const [showAllBumdes, setShowAllBumdes] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletingBumdes, setDeletingBumdes] = useState(null);
+  
+  // Document management states
+  const [showDocumentModal, setShowDocumentModal] = useState(false);
+  const [documents, setDocuments] = useState([]);
+  const [documentsLoading, setDocumentsLoading] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState(null);
+  const [selectedBumdesForDocs, setSelectedBumdesForDocs] = useState(null);
 
   const handleBumdesClick = (bumdes) => {
     const isNotUploaded = bumdes.upload_status === 'not_uploaded';
@@ -1771,6 +1788,62 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
   const handleCancelDelete = () => {
     setShowDeleteConfirm(false);
     setDeletingBumdes(null);
+  };
+
+  // Document management functions
+  const fetchDocuments = async () => {
+    setDocumentsLoading(true);
+    try {
+      const response = await fetch('http://localhost:8000/api/bumdes/dokumen-badan-hukum');
+      const result = await response.json();
+      
+      if (result.success) {
+        setDocuments(result.data);
+      } else {
+        showNotification('error', 'Gagal mengambil data dokumen');
+      }
+    } catch (error) {
+      console.error('Error fetching documents:', error);
+      showNotification('error', 'Terjadi kesalahan saat mengambil data dokumen');
+    } finally {
+      setDocumentsLoading(false);
+    }
+  };
+
+  const handleShowDocuments = () => {
+    setShowDocumentModal(true);
+    if (documents.length === 0) {
+      fetchDocuments();
+    }
+  };
+
+  const linkDocumentToBumdes = async (filename, bumdesId, documentType) => {
+    try {
+      const response = await fetch('http://localhost:8000/api/bumdes/link-document', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          filename,
+          bumdes_id: bumdesId,
+          document_type: documentType
+        })
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        showNotification('success', result.message);
+        // Refresh documents to update matched data
+        fetchDocuments();
+      } else {
+        showNotification('error', result.message || 'Gagal mengaitkan dokumen');
+      }
+    } catch (error) {
+      console.error('Error linking document:', error);
+      showNotification('error', 'Terjadi kesalahan saat mengaitkan dokumen');
+    }
   };
   
   const {
@@ -1954,6 +2027,16 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
           {/* Simple Action Buttons */}
           <div className="flex flex-col sm:flex-row justify-center gap-3">
             <button
+              onClick={() => {
+                setShowDocumentModal(true);
+                fetchDocuments();
+              }}
+              className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-white px-6 py-3 rounded-lg font-semibold simple-hover"
+            >
+              <FiFolder className="text-lg" />
+              <span>Dokumen Badan Hukum</span>
+            </button>
+            <button
               onClick={exportToPDF}
               className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold simple-hover"
             >
@@ -1966,13 +2049,6 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
             >
               <FiDownload className="text-lg" />
               <span>Export Excel</span>
-            </button>
-            <button
-              onClick={() => window.open('/dashboard/bumdes/village-sync', '_blank')}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold simple-hover"
-            >
-              <FiMapPin className="text-lg" />
-              <span>Sync Kode Desa</span>
             </button>
           </div>
         </div>
@@ -2530,6 +2606,12 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
         onClose={handleCloseDetailModal}
         onEdit={handleEditClick}
         onDelete={handleDeleteClick}
+        onOpenDocuments={(bumdesId, bumdesName) => {
+          setShowDetailModal(false);
+          setShowDocumentModal(true);
+          setSelectedBumdesForDocs({ id: bumdesId, name: bumdesName });
+          fetchDocuments();
+        }}
       />
 
       {/* Edit Modal */}
@@ -2587,54 +2669,266 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
         </div>
       )}
 
-      {/* Admin Tools Section */}
-      <div className="px-4 lg:px-6 pb-8">
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 bg-blue-600 rounded-lg">
-              <FiDatabase className="text-white text-lg" />
-            </div>
-            <h3 className="text-xl font-bold text-gray-900">Tools Administrator</h3>
-          </div>
-          
-          <p className="text-gray-600 mb-6">
-            Alat administratif untuk mengelola data BUMDes dan sinkronisasi kode desa.
-          </p>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-white rounded-xl p-4 border border-blue-100">
-              <div className="flex items-center gap-3 mb-3">
-                <FiMapPin className="text-blue-600 text-lg" />
-                <h4 className="font-semibold text-gray-900">Sinkronisasi Kode Desa</h4>
+      {/* Document Management Modal */}
+      {showDocumentModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-6xl h-[90vh] flex flex-col shadow-2xl">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <FiFolder className="text-blue-600 text-xl" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">Dokumen Badan Hukum</h2>
+                  <p className="text-gray-600">
+                    {selectedBumdesForDocs 
+                      ? `Dokumen untuk ${selectedBumdesForDocs.name}` 
+                      : 'Kelola dan sinkronkan dokumen BUMDes'
+                    }
+                  </p>
+                </div>
               </div>
-              <p className="text-gray-600 text-sm mb-4">
-                Sinkronkan kode desa BUMDes dengan data resmi dari database desa.
-              </p>
               <button
-                onClick={() => window.open('/dashboard/bumdes/village-sync', '_blank')}
-                className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors duration-200"
+                onClick={() => setShowDocumentModal(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
               >
-                <FiDatabase className="text-sm" />
-                <span>Buka Tool Sinkronisasi</span>
+                <FiX className="text-xl text-gray-500" />
               </button>
             </div>
-            
-            <div className="bg-white rounded-xl p-4 border border-green-100">
-              <div className="flex items-center gap-3 mb-3">
-                <FiCheck className="text-green-600 text-lg" />
-                <h4 className="font-semibold text-gray-900">Status Data</h4>
-              </div>
-              <p className="text-gray-600 text-sm mb-4">
-                {statistics.totalBumdes} BUMDes terdaftar, semua kode desa sudah valid.
-              </p>
-              <div className="flex items-center gap-2 text-green-600 text-sm font-medium">
-                <FiCheck className="text-xs" />
-                <span>Data Tersinkronisasi</span>
-              </div>
+
+            <div className="flex-1 overflow-hidden flex flex-col p-6">
+              {documentsLoading ? (
+                <div className="flex-1 flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="animate-simple-spin w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full mx-auto mb-4"></div>
+                    <p className="text-gray-600">Memuat dokumen...</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex-1 overflow-hidden">
+                  <div className="mb-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-gray-600">
+                          Ditemukan <span className="font-semibold text-gray-900">
+                            {selectedBumdesForDocs 
+                              ? documents.filter(doc => doc.matched_bumdes && doc.matched_bumdes.some(match => match.id === selectedBumdesForDocs.id)).length
+                              : documents.length
+                            }
+                          </span> dokumen
+                          {selectedBumdesForDocs && (
+                            <span className="text-sm text-blue-600 ml-2">untuk {selectedBumdesForDocs.name}</span>
+                          )}
+                        </p>
+                        {selectedBumdesForDocs && (
+                          <button
+                            onClick={() => setSelectedBumdesForDocs(null)}
+                            className="text-sm text-blue-600 hover:text-blue-800 mt-1"
+                          >
+                            Tampilkan semua dokumen
+                          </button>
+                        )}
+                      </div>
+                      <button
+                        onClick={fetchDocuments}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        <FiRefreshCw className="text-sm" />
+                        <span>Refresh</span>
+                      </button>
+                    </div>
+                    
+                    {/* Document Statistics */}
+                    {!selectedBumdesForDocs && documents.length > 0 && (
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
+                          <div className="text-lg font-bold text-blue-600">
+                            {documents.filter(doc => doc.document_type !== 'backup_file').length}
+                          </div>
+                          <div className="text-xs text-blue-600">Database</div>
+                        </div>
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-center">
+                          <div className="text-lg font-bold text-yellow-600">
+                            {documents.filter(doc => doc.document_type === 'backup_file').length}
+                          </div>
+                          <div className="text-xs text-yellow-600">Backup</div>
+                        </div>
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-center">
+                          <div className="text-lg font-bold text-green-600">
+                            {documents.filter(doc => doc.file_exists).length}
+                          </div>
+                          <div className="text-xs text-green-600">Tersedia</div>
+                        </div>
+                        <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-center">
+                          <div className="text-lg font-bold text-red-600">
+                            {documents.filter(doc => !doc.file_exists).length}
+                          </div>
+                          <div className="text-xs text-red-600">Hilang</div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 overflow-y-auto max-h-full">
+                    {documents
+                      .filter(doc => {
+                        if (!selectedBumdesForDocs) return true;
+                        return doc.matched_bumdes && doc.matched_bumdes.some(match => match.id === selectedBumdesForDocs.id);
+                      })
+                      .map((doc, index) => (
+                      <div key={index} className={`rounded-xl p-4 border ${
+                        doc.file_exists 
+                          ? 'bg-white border-gray-200' 
+                          : 'bg-red-50 border-red-200'
+                      }`}>
+                        <div className="flex items-start gap-3 mb-3">
+                          <div className={`p-2 rounded-lg flex-shrink-0 ${
+                            doc.file_exists 
+                              ? doc.document_type === 'backup_file' 
+                                ? 'bg-yellow-100' 
+                                : 'bg-blue-100'
+                              : 'bg-red-100'
+                          }`}>
+                            <FiFile className={`text-lg ${
+                              doc.file_exists 
+                                ? doc.document_type === 'backup_file' 
+                                  ? 'text-yellow-600' 
+                                  : 'text-blue-600'
+                                : 'text-red-600'
+                            }`} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold text-gray-900 text-sm truncate" title={doc.filename}>
+                              {doc.filename}
+                            </h3>
+                            {doc.document_label && doc.document_type !== 'backup_file' && (
+                              <p className="text-xs text-blue-600 font-medium mt-0.5">
+                                {doc.document_label}
+                              </p>
+                            )}
+                            <p className="text-xs text-gray-500 mt-1">
+                              {doc.size > 0 ? (doc.size / 1024 / 1024).toFixed(2) + ' MB' : 'N/A'} • {doc.extension?.toUpperCase()}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {new Date(doc.last_modified * 1000).toLocaleDateString('id-ID')}
+                            </p>
+                            <div className={`inline-block px-2 py-1 rounded-full text-xs font-medium mt-1 ${
+                              doc.file_exists 
+                                ? doc.status === 'backup' 
+                                  ? 'bg-yellow-100 text-yellow-800' 
+                                  : 'bg-green-100 text-green-800'
+                                : 'bg-red-100 text-red-800'
+                            }`}>
+                              {doc.file_exists 
+                                ? doc.status === 'backup' 
+                                  ? 'File Backup' 
+                                  : 'Tersedia'
+                                : 'File Hilang'
+                              }
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          {doc.bumdes_info ? (
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                              <p className="text-xs font-medium text-blue-800 mb-1">
+                                Milik BUMDes:
+                              </p>
+                              <div className="text-xs text-blue-700">
+                                <div className="font-medium">{doc.bumdes_info.namabumdesa}</div>
+                                <div className="text-blue-600">{doc.bumdes_info.desa}, {doc.bumdes_info.kecamatan}</div>
+                              </div>
+                            </div>
+                          ) : doc.matched_bumdes && doc.matched_bumdes.length > 0 ? (
+                            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                              <p className="text-xs font-medium text-green-800 mb-2">
+                                Kemungkinan cocok dengan:
+                              </p>
+                              {doc.matched_bumdes.slice(0, 2).map((match, idx) => (
+                                <div key={idx} className="text-xs text-green-700 mb-1 last:mb-0">
+                                  <div className="font-medium">{match.namabumdesa}</div>
+                                  <div className="text-green-600">{match.desa}, {match.kecamatan}</div>
+                                </div>
+                              ))}
+                              {doc.matched_bumdes.length > 2 && (
+                                <p className="text-xs text-green-600 mt-1">
+                                  +{doc.matched_bumdes.length - 2} lainnya
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                              <p className="text-xs text-gray-600">
+                                Belum ada BUMDes yang cocok
+                              </p>
+                            </div>
+                          )}
+
+                          <div className="flex gap-2">
+                            {doc.file_exists ? (
+                              <a
+                                href={`http://localhost:8000${doc.url}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 transition-colors"
+                              >
+                                <FiEye className="text-sm" />
+                                <span>Lihat</span>
+                              </a>
+                            ) : (
+                              <div className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-400 text-white text-xs rounded-lg cursor-not-allowed">
+                                <FiEye className="text-sm" />
+                                <span>File Hilang</span>
+                              </div>
+                            )}
+                            {doc.matched_bumdes && doc.matched_bumdes.length > 0 && doc.file_exists && (
+                              <button
+                                onClick={() => {
+                                  if (doc.matched_bumdes[0]) {
+                                    linkDocumentToBumdes(doc.filename, doc.matched_bumdes[0].id, 'other');
+                                  }
+                                }}
+                                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-green-600 text-white text-xs rounded-lg hover:bg-green-700 transition-colors"
+                              >
+                                <FiLink className="text-sm" />
+                                <span>Kaitkan</span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {(() => {
+                    const filteredDocs = selectedBumdesForDocs 
+                      ? documents.filter(doc => doc.matched_bumdes && doc.matched_bumdes.some(match => match.id === selectedBumdesForDocs.id))
+                      : documents;
+                    
+                    return filteredDocs.length === 0 && !documentsLoading && (
+                      <div className="flex-1 flex items-center justify-center">
+                        <div className="text-center">
+                          <FiFolder className="text-6xl text-gray-300 mx-auto mb-4" />
+                          <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                            {selectedBumdesForDocs ? 'Tidak ada dokumen untuk BUMDes ini' : 'Tidak ada dokumen'}
+                          </h3>
+                          <p className="text-gray-600">
+                            {selectedBumdesForDocs 
+                              ? `Belum ada dokumen yang cocok dengan ${selectedBumdesForDocs.name}`
+                              : 'Belum ada dokumen badan hukum yang tersedia'
+                            }
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Modern Notification Popup */}
       {notification.show && (

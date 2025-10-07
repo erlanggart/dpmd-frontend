@@ -27,7 +27,6 @@ const UserManagementPage = lazy(() =>
 );
 const Kelembagaan = lazy(() => import("./pages/PMD/Kelembagaan"));
 const BumdesApp = lazy(() => import("./pages/sarpras/Bumdes-app"));
-const VillageSyncDashboard = lazy(() => import("./pages/sarpras/Bumdes-app/VillageSyncDashboard"));
 const PerjalananDinas = lazy(() => import("./pages/sekretariat/perjadin"));
 const DisposisiPersuratan = lazy(() => import("./pages/sekretariat/disposisi"));
 const KepalaDinas = lazy(() =>
@@ -116,7 +115,6 @@ function App() {
 						<Route path="hero-gallery" element={<HeroGalleryManagement />} />
 						<Route path="kelembagaan" element={<Kelembagaan />} />
 						<Route path="bumdes" element={<BumdesApp />} />
-						<Route path="bumdes/village-sync" element={<VillageSyncDashboard />} />
 						<Route path="perjalanan-dinas" element={<PerjalananDinas />} />
 						<Route
 							path="disposisi-persuratan"
