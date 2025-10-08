@@ -1,11 +1,13 @@
 // BumdesApp.jsx - Modern Tailwind Design
 import React, { useState, Suspense, lazy } from 'react';
 import { FaPlus, FaChartBar, FaBuilding } from 'react-icons/fa';
+import { FiFileText } from 'react-icons/fi';
 import { HiSparkles } from 'react-icons/hi';
 
 // Lazy load komponen untuk performa yang lebih baik
 const BumdesForm = lazy(() => import('./BumdesForm'));
 const BumdesDashboardModern = lazy(() => import('./BumdesDashboardModern'));
+const BumdesDokumenManager = lazy(() => import('./BumdesDokumenManager'));
 
 // Modern Loading Fallback Component with Tailwind
 const ModernLoadingFallback = () => (
@@ -56,6 +58,8 @@ function BumdesApp() {
                 return <BumdesForm onSwitchToDashboard={() => setView('statistik')} />;
             case 'statistik':
                 return <BumdesDashboardModern />;
+            case 'dokumen':
+                return <BumdesDokumenManager />;
             default:
                 return <BumdesDashboardModern />;
         }
@@ -107,7 +111,7 @@ function BumdesApp() {
                 {/* Enhanced Navigation Buttons */}
                 <div className="mb-8">
                     <div className="bg-white rounded-2xl p-2 shadow-xl border border-white">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                             <button
                                 onClick={() => handleNavClick('form')}
                                 className={`group relative overflow-hidden rounded-xl px-6 py-4 font-semibold transition-all duration-300 transform hover:scale-105 ${
@@ -133,6 +137,20 @@ function BumdesApp() {
                                 <div className="flex items-center justify-center gap-3">
                                     <FaChartBar className={`text-xl transition-transform duration-300 ${view === 'statistik' ? 'scale-110' : 'group-hover:scale-110'}`} />
                                     <span className="text-lg">Dashboard Statistik</span>
+                                </div>
+                            </button>
+
+                            <button
+                                onClick={() => handleNavClick('dokumen')}
+                                className={`group relative overflow-hidden rounded-xl px-6 py-4 font-semibold transition-all duration-300 transform hover:scale-105 ${
+                                    view === 'dokumen' 
+                                        ? 'bg-slate-800 text-white shadow-lg' 
+                                        : 'bg-white text-slate-800 hover:bg-white hover:shadow-md'
+                                }`}
+                            >
+                                <div className="flex items-center justify-center gap-3">
+                                    <FiFileText className={`text-xl transition-transform duration-300 ${view === 'dokumen' ? 'scale-110' : 'group-hover:scale-110'}`} />
+                                    <span className="text-lg">Kelola Dokumen</span>
                                 </div>
                             </button>
                         </div>

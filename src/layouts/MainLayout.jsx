@@ -168,6 +168,7 @@ const MainLayout = () => {
 				icon: <TbMap />,
 				children: [
 					{ to: "/dashboard/bumdes", label: "BUMDes" },
+					{ to: "/dashboard/laporan-keuangan", label: "Laporan Keuangan" },
 					{ to: "/dashboard/samisade", label: "Samisade" },
 				],
 			},
