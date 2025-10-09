@@ -1,4 +1,11 @@
 import api from "../api";
+import {
+	makeApiCall,
+	getEndpoint,
+	getAdminParams,
+	isAdminUser,
+	getCurrentUser,
+} from "../utils/apiHelpers";
 
 // Map slug type to fully-qualified Laravel model class for polymorphic field
 export const mapTypeToModel = (type) => {
@@ -14,39 +21,71 @@ export const mapTypeToModel = (type) => {
 	return map[type] || null;
 };
 
-export const listPengurus = () => api.get("/desa/pengurus");
+export const listPengurus = () => makeApiCall(api, "pengurus", "list");
 
 // Lightweight pengurus list by kelembagaan (only essential data)
-export const getPengurusByKelembagaan = (type, id) => {
+export const getPengurusByKelembagaan = (type, id, desaId = null) => {
 	const model = mapTypeToModel(type);
-	return api.get("/desa/pengurus/by-kelembagaan", {
-		params: {
-			kelembagaan_type: model,
-			kelembagaan_id: id,
-		},
-	});
+	const baseParams = {
+		kelembagaan_type: model,
+		kelembagaan_id: id,
+	};
+
+	// Add desa_id if provided (for superadmin access)
+	if (desaId) {
+		baseParams.desa_id = desaId;
+	}
+
+	const endpoint = getEndpoint("pengurus/by-kelembagaan", "list");
+	const params = getAdminParams(baseParams);
+
+	return api.get(endpoint, { params });
 };
 
 // Get pengurus history (inactive)
-export const getPengurusHistory = (type, id) => {
+export const getPengurusHistory = (type, id, desaId = null) => {
 	const model = mapTypeToModel(type);
-	return api.get("/desa/pengurus/history", {
-		params: {
-			kelembagaan_type: model,
-			kelembagaan_id: id,
-		},
-	});
+	const baseParams = {
+		kelembagaan_type: model,
+		kelembagaan_id: id,
+	};
+
+	// Add desa_id if provided (for superadmin access)
+	if (desaId) {
+		baseParams.desa_id = desaId;
+	}
+
+	const endpoint = getEndpoint("pengurus/history", "list");
+	const params = getAdminParams(baseParams);
+
+	return api.get(endpoint, { params });
 };
 
 // Get detailed pengurus data
-export const getPengurusDetail = (id) => api.get(`/desa/pengurus/${id}`);
+export const getPengurusDetail = (id, desaId = null) => {
+	const baseParams = desaId ? { desa_id: desaId } : {};
+	return makeApiCall(api, "pengurus", "show", id, null, { params: baseParams });
+};
 
 // Update pengurus status
-export const updatePengurusStatus = (id, status, endDate = null) => {
-	return api.put(`/desa/pengurus/${id}/status`, {
-		status_jabatan: status,
-		tanggal_akhir_jabatan: endDate,
-	});
+export const updatePengurusStatus = (
+	id,
+	status,
+	endDate = null,
+	desaId = null
+) => {
+	const baseParams = desaId ? { desa_id: desaId } : {};
+	const params = getAdminParams(baseParams);
+
+	// Status update always uses desa endpoint
+	return api.put(
+		`/desa/pengurus/${id}/status`,
+		{
+			status_jabatan: status,
+			tanggal_akhir_jabatan: endDate,
+		},
+		{ params }
+	);
 };
 
 // Legacy function - kept for compatibility but now uses new endpoint
@@ -69,36 +108,51 @@ export const getPengurusByKelembagaanLegacy = async (type, id) => {
 
 export const addPengurus = (data, opts = {}) => {
 	const isMultipart = data instanceof FormData || opts.multipart;
-	if (isMultipart) {
-		return api.post("/desa/pengurus", data, {
-			headers: { "Content-Type": "multipart/form-data" },
-		});
-	}
-	return api.post("/desa/pengurus", data);
+	const { desaId, ...restOpts } = opts;
+
+	// Add desa_id for superadmin access
+	const baseParams = desaId ? { desa_id: desaId } : {};
+	const params = getAdminParams(baseParams);
+
+	const config = {
+		params,
+		...(isMultipart && { headers: { "Content-Type": "multipart/form-data" } }),
+	};
+
+	return makeApiCall(api, "pengurus", "create", null, data, config);
 };
 
 export const updatePengurus = (id, data, opts = {}) => {
 	const isMultipart = data instanceof FormData || opts.multipart;
+	const { desaId, ...restOpts } = opts;
+
+	// Add desa_id for superadmin access
+	const baseParams = desaId ? { desa_id: desaId } : {};
+	const params = getAdminParams(baseParams);
+
 	if (isMultipart) {
-		return api.post(
-			`/desa/pengurus/${id}`,
-			(() => {
-				const fd = data instanceof FormData ? data : new FormData();
-				if (!(data instanceof FormData)) {
-					Object.entries(data || {}).forEach(([k, v]) => fd.append(k, v));
-				}
-				fd.append("_method", "PUT");
-				return fd;
-			})(),
-			{
-				headers: { "Content-Type": "multipart/form-data" },
-			}
-		);
+		// For multipart, we need to use POST with _method override (Laravel convention)
+		const endpoint = getEndpoint("pengurus", "update");
+		const fd = data instanceof FormData ? data : new FormData();
+		if (!(data instanceof FormData)) {
+			Object.entries(data || {}).forEach(([k, v]) => fd.append(k, v));
+		}
+		fd.append("_method", "PUT");
+
+		return api.post(`${endpoint}/${id}`, fd, {
+			headers: { "Content-Type": "multipart/form-data" },
+			params,
+		});
 	}
-	return api.put(`/desa/pengurus/${id}`, data);
+
+	return makeApiCall(api, "pengurus", "update", id, data, { params });
 };
 
-export const deletePengurus = (id) => api.delete(`/desa/pengurus/${id}`);
+export const deletePengurus = (id) =>
+	makeApiCall(api, "pengurus", "delete", id);
 
 // Get pengurus by ID
-export const getPengurusById = (id) => api.get(`/desa/pengurus/${id}`);
+export const getPengurusById = (id, desaId = null) => {
+	const baseParams = desaId ? { desa_id: desaId } : {};
+	return makeApiCall(api, "pengurus", "show", id, null, { params: baseParams });
+};

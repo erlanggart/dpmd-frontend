@@ -28,10 +28,24 @@ const LoginPage = () => {
 			login(newUser, response.data.access_token);
 
 			// 3. Routing berdasarkan roles user
-			if (newUser.roles.includes("admin desa")) {
+			if (newUser.roles.includes("desa")) {
 				navigate("/desa/dashboard"); // Arahkan ke dashboard desa
-			} else if (newUser.roles.includes("bidang") || newUser.roles.includes("superadmin")) {
-				navigate("/dashboard"); // Arahkan ke dashboard admin utama untuk bidang dan superadmin
+			} else if (newUser.roles.includes("kecamatan")) {
+				navigate("/kecamatan/dashboard"); // Arahkan ke dashboard kecamatan
+			} else if (
+				newUser.roles.includes("superadmin") ||
+				newUser.roles.includes("pemerintahan_desa") ||
+				newUser.roles.includes("sarana_prasarana") ||
+				newUser.roles.includes("kekayaan_keuangan") ||
+				newUser.roles.includes("pemberdayaan_masyarakat") ||
+				newUser.roles.includes("sekretariat") ||
+				newUser.roles.includes("prolap") ||
+				newUser.roles.includes("keuangan") ||
+				newUser.roles.includes("dinas") ||
+				newUser.roles.includes("kepala_dinas") ||
+				newUser.roles.includes("sekretaris_dinas")
+			) {
+				navigate("/dashboard"); // Arahkan ke dashboard utama untuk superadmin, bidang, departemen, dan dinas
 			} else {
 				navigate("/dashboard"); // Default ke dashboard utama
 			}
@@ -41,8 +55,6 @@ const LoginPage = () => {
 			setLoading(false);
 		}
 	};
-
-
 
 	return (
 		<div className="relative flex min-h-screen items-center justify-center bg-gray-300 p-4">
@@ -136,8 +148,6 @@ const LoginPage = () => {
 							{loading ? <FiLoader className="animate-spin" /> : "Sign In"}
 						</button>
 					</form>
-
-
 				</div>
 			</div>
 		</div>

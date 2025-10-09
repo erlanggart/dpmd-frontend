@@ -11,7 +11,12 @@ import PengurusDetailPage from "./pengurus/PengurusDetailPage";
 
 const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
 
-const PengurusKelembagaan = ({ kelembagaanType, kelembagaanId }) => {
+const PengurusKelembagaan = ({
+	kelembagaanType,
+	kelembagaanId,
+	desaId,
+	onPengurusCountChange,
+}) => {
 	const { user } = useAuth();
 	const isAdmin = user?.role === "admin_kabupaten";
 	const isUserDesa = user?.role === "desa";
@@ -34,18 +39,27 @@ const PengurusKelembagaan = ({ kelembagaanType, kelembagaanId }) => {
 
 		setLoading(true);
 		try {
+			// Pass desaId for superadmin access
+			const superadminDesaId = isSuperAdmin ? desaId : null;
 			const response = await getPengurusByKelembagaan(
 				kelembagaanType,
-				kelembagaanId
+				kelembagaanId,
+				superadminDesaId
 			);
-			setPengurusList(response?.data?.data || []);
+			const pengurusData = response?.data?.data || [];
+			setPengurusList(pengurusData);
+
+			// Notify parent component about pengurus count change
+			if (onPengurusCountChange) {
+				onPengurusCountChange(pengurusData.length);
+			}
 		} catch (error) {
 			console.error("Error loading pengurus:", error);
 			setPengurusList([]);
 		} finally {
 			setLoading(false);
 		}
-	}, [kelembagaanType, kelembagaanId]);
+	}, [kelembagaanType, kelembagaanId, isSuperAdmin, desaId]);
 
 	useEffect(() => {
 		loadPengurus();
@@ -64,10 +78,16 @@ const PengurusKelembagaan = ({ kelembagaanType, kelembagaanId }) => {
 			formData.append("kelembagaan_type", kelembagaanType);
 			formData.append("kelembagaan_id", kelembagaanId);
 
+			// Prepare options with desaId for superadmin access
+			const options =
+				isSuperAdmin && desaId
+					? { desaId, multipart: true }
+					: { multipart: true };
+
 			if (editingPengurus) {
-				await updatePengurus(editingPengurus.id, formData);
+				await updatePengurus(editingPengurus.id, formData, options);
 			} else {
-				await addPengurus(formData);
+				await addPengurus(formData, options);
 			}
 
 			setShowForm(false);
@@ -125,6 +145,7 @@ const PengurusKelembagaan = ({ kelembagaanType, kelembagaanId }) => {
 				kelembagaanId={kelembagaanId}
 				onAddPengurus={handleAddPengurus}
 				onViewHistory={handleViewHistory}
+				desaId={desaId}
 			/>
 
 			{showForm && (
@@ -147,6 +168,7 @@ const PengurusKelembagaan = ({ kelembagaanType, kelembagaanId }) => {
 					}}
 					onEdit={handleEditFromDetail}
 					onStatusUpdate={handleStatusUpdate}
+					desaId={desaId}
 				/>
 			)}
 		</div>
