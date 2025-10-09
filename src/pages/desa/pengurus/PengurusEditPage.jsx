@@ -1,9 +1,24 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getPengurusById, updatePengurus } from "../../../services/pengurus";
+import { getProdukHukums } from "../../../services/api";
 import { useAuth } from "../../../context/AuthContext";
-import { FaArrowLeft, FaSave } from "react-icons/fa";
+import { FaArrowLeft, FaSave, FaFileAlt } from "react-icons/fa";
+import SearchableProdukHukumSelect from "../../../components/shared/SearchableProdukHukumSelect";
 import Swal from "sweetalert2";
+
+// Helper function to determine correct routing based on user role
+const getPengurusRoutePath = (user, pengurusId, action = "") => {
+	const isSuperAdmin = user?.role === "superadmin";
+	const isAdminBidang = ["pemberdayaan_masyarakat", "pmd"].includes(user?.role);
+
+	if (isSuperAdmin || isAdminBidang) {
+		return `/dashboard/pengurus/${pengurusId}${action ? `/${action}` : ""}`;
+	}
+
+	// Default for desa users
+	return `/desa/pengurus/${pengurusId}${action ? `/${action}` : ""}`;
+};
 
 const PengurusEditPage = () => {
 	const { pengurusId } = useParams();
@@ -13,6 +28,7 @@ const PengurusEditPage = () => {
 	const [pengurus, setPengurus] = useState(null);
 	const [loading, setLoading] = useState(true);
 	const [saving, setSaving] = useState(false);
+	const [produkHukumList, setProdukHukumList] = useState([]);
 	const [formData, setFormData] = useState({
 		nama_lengkap: "",
 		nik: "",
@@ -26,6 +42,7 @@ const PengurusEditPage = () => {
 		jabatan: "",
 		tanggal_mulai_jabatan: "",
 		tanggal_akhir_jabatan: "",
+		produk_hukum_id: "",
 	});
 	const [avatarFile, setAvatarFile] = useState(null);
 	const [avatarPreview, setAvatarPreview] = useState(null);
@@ -37,20 +54,18 @@ const PengurusEditPage = () => {
 	const isSuperAdmin = user?.role === "superadmin";
 	const canEdit = isAdmin || isUserDesa || isAdminBidang || isSuperAdmin;
 
-	useEffect(() => {
-		if (!canEdit) {
-			Swal.fire({
-				icon: "error",
-				title: "Akses Ditolak",
-				text: "Anda tidak memiliki izin untuk mengedit pengurus",
-			}).then(() => navigate(-1));
-			return;
+	const loadProdukHukumList = useCallback(async () => {
+		try {
+			const response = await getProdukHukums(1, "");
+			const allData = response?.data?.data || [];
+			setProdukHukumList(allData.data || []);
+		} catch (error) {
+			console.error("Error loading produk hukum:", error);
+			setProdukHukumList([]);
 		}
+	}, []);
 
-		loadPengurusDetail();
-	}, [pengurusId, canEdit, navigate]);
-
-	const loadPengurusDetail = async () => {
+	const loadPengurusDetail = useCallback(async () => {
 		if (!pengurusId) return;
 
 		setLoading(true);
@@ -73,6 +88,7 @@ const PengurusEditPage = () => {
 					jabatan: data.jabatan || "",
 					tanggal_mulai_jabatan: data.tanggal_mulai_jabatan || "",
 					tanggal_akhir_jabatan: data.tanggal_akhir_jabatan || "",
+					produk_hukum_id: data.produk_hukum_id || "",
 				});
 			}
 		} catch (error) {
@@ -85,7 +101,21 @@ const PengurusEditPage = () => {
 		} finally {
 			setLoading(false);
 		}
-	};
+	}, [pengurusId, navigate]);
+
+	useEffect(() => {
+		if (!canEdit) {
+			Swal.fire({
+				icon: "error",
+				title: "Akses Ditolak",
+				text: "Anda tidak memiliki izin untuk mengedit pengurus",
+			}).then(() => navigate(-1));
+			return;
+		}
+
+		loadPengurusDetail();
+		loadProdukHukumList();
+	}, [loadPengurusDetail, loadProdukHukumList, canEdit, navigate]);
 
 	const handleInputChange = (e) => {
 		const { name, value } = e.target;
@@ -143,7 +173,7 @@ const PengurusEditPage = () => {
 				showConfirmButton: false,
 			});
 
-			navigate(`/desa/pengurus/${pengurusId}`);
+			navigate(getPengurusRoutePath(user, pengurusId));
 		} catch (error) {
 			console.error("Error updating pengurus:", error);
 			Swal.fire({
@@ -445,6 +475,88 @@ const PengurusEditPage = () => {
 									className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 								/>
 							</div>
+						</div>
+					</div>
+
+					{/* SK Pengangkatan */}
+					<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+						<h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+							<FaFileAlt className="mr-2 text-indigo-600" />
+							SK Pengangkatan Pengurus
+						</h3>
+
+						<div className="space-y-4">
+							<div>
+								<label className="block text-sm font-medium text-gray-700 mb-2">
+									Pilih SK Produk Hukum
+									<span className="text-xs text-gray-500 ml-2">
+										(Surat Keputusan Pengangkatan)
+									</span>
+								</label>
+								<SearchableProdukHukumSelect
+									value={formData.produk_hukum_id}
+									onChange={(value) =>
+										setFormData((prev) => ({ ...prev, produk_hukum_id: value }))
+									}
+									produkHukumList={
+										Array.isArray(produkHukumList) ? produkHukumList : []
+									}
+								/>
+								<p className="text-xs text-gray-500 mt-1">
+									Pilih Surat Keputusan (SK) sebagai dasar hukum pengangkatan
+									pengurus ini. SK ini akan menjadi rujukan legal untuk posisi
+									jabatan yang dipegang.
+								</p>
+							</div>
+
+							{/* Preview SK yang dipilih */}
+							{formData.produk_hukum_id &&
+								produkHukumList.find(
+									(ph) => ph.id === formData.produk_hukum_id
+								) && (
+									<div className="p-4 rounded-lg bg-emerald-50 border border-emerald-200">
+										<div className="flex items-start space-x-3">
+											<div className="mt-1">
+												<svg
+													className="w-5 h-5 text-emerald-600"
+													fill="none"
+													stroke="currentColor"
+													viewBox="0 0 24 24"
+												>
+													<path
+														strokeLinecap="round"
+														strokeLinejoin="round"
+														strokeWidth={2}
+														d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+													/>
+												</svg>
+											</div>
+											<div className="flex-1">
+												<h4 className="font-semibold text-emerald-800 text-sm mb-1">
+													SK Terpilih:
+												</h4>
+												{(() => {
+													const ph = produkHukumList.find(
+														(ph) => ph.id === formData.produk_hukum_id
+													);
+													return (
+														<div className="space-y-1">
+															<p className="text-emerald-700 font-medium text-sm">
+																Nomor {ph.nomor} Tahun {ph.tahun}
+															</p>
+															<p className="text-gray-600 text-sm leading-relaxed">
+																{ph.judul}
+															</p>
+															<p className="text-xs text-emerald-600 font-medium">
+																Jenis: {ph.jenis}
+															</p>
+														</div>
+													);
+												})()}
+											</div>
+										</div>
+									</div>
+								)}
 						</div>
 					</div>
 

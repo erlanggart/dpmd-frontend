@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
 	getPengurusDetail,
 	updatePengurusStatus,
 } from "../../../services/pengurus";
 import { useAuth } from "../../../context/AuthContext";
+import { getProdukHukums } from "../../../services/api";
+import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 
 const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
@@ -13,11 +15,14 @@ const PengurusDetailPage = ({
 	onClose,
 	onEdit,
 	onStatusUpdate,
+	desaId,
 }) => {
 	const { user } = useAuth();
+	const navigate = useNavigate();
 	const [pengurus, setPengurus] = useState(null);
 	const [loading, setLoading] = useState(true);
 	const [updating, setUpdating] = useState(false);
+	const [produkHukumList, setProdukHukumList] = useState([]);
 
 	const isAdmin = user?.role === "admin_kabupaten";
 	const isUserDesa = user?.role === "desa";
@@ -29,14 +34,28 @@ const PengurusDetailPage = ({
 
 	useEffect(() => {
 		loadPengurusDetail();
-	}, [pengurusId]);
+		loadProdukHukumList();
+	}, [loadPengurusDetail, loadProdukHukumList]);
 
-	const loadPengurusDetail = async () => {
+	const loadProdukHukumList = useCallback(async () => {
+		try {
+			const response = await getProdukHukums(1, "");
+			const allData = response?.data?.data || [];
+			setProdukHukumList(allData.data || []);
+		} catch (error) {
+			console.error("Error loading produk hukum:", error);
+			setProdukHukumList([]);
+		}
+	}, []);
+
+	const loadPengurusDetail = useCallback(async () => {
 		if (!pengurusId) return;
 
 		setLoading(true);
 		try {
-			const response = await getPengurusDetail(pengurusId);
+			// Pass desaId for superadmin access
+			const superadminDesaId = isSuperAdmin ? desaId : null;
+			const response = await getPengurusDetail(pengurusId, superadminDesaId);
 			setPengurus(response?.data?.data || null);
 		} catch (error) {
 			console.error("Error loading pengurus detail:", error);
@@ -48,7 +67,7 @@ const PengurusDetailPage = ({
 		} finally {
 			setLoading(false);
 		}
-	};
+	}, [pengurusId, isSuperAdmin, desaId]);
 
 	const handleStatusChange = async (newStatus) => {
 		if (!pengurus) return;
@@ -88,7 +107,14 @@ const PengurusDetailPage = ({
 
 		setUpdating(true);
 		try {
-			await updatePengurusStatus(pengurus.id, newStatus, endDate);
+			// Pass desaId for superadmin access
+			const superadminDesaId = isSuperAdmin ? desaId : null;
+			await updatePengurusStatus(
+				pengurus.id,
+				newStatus,
+				endDate,
+				superadminDesaId
+			);
 
 			Swal.fire({
 				title: "Berhasil!",
@@ -367,6 +393,85 @@ const PengurusDetailPage = ({
 										<p className="text-gray-900">
 											{formatDate(pengurus.tanggal_akhir_jabatan)}
 										</p>
+									</div>
+								</div>
+
+								{/* SK Pengangkatan */}
+								<div className="p-4 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-100 border border-emerald-200">
+									<div className="flex items-start space-x-3">
+										<div className="mt-1">
+											<svg
+												className="w-5 h-5 text-emerald-600"
+												fill="none"
+												stroke="currentColor"
+												viewBox="0 0 24 24"
+											>
+												<path
+													strokeLinecap="round"
+													strokeLinejoin="round"
+													strokeWidth={2}
+													d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+												/>
+											</svg>
+										</div>
+										<div className="flex-1">
+											<h4 className="font-semibold text-gray-800 text-sm mb-1">
+												SK Pengangkatan Pengurus
+											</h4>
+											{pengurus.produk_hukum_id &&
+											produkHukumList.find(
+												(ph) => ph.id === pengurus.produk_hukum_id
+											) ? (
+												<button
+													onClick={() =>
+														navigate(
+															`/desa/produk-hukum/${pengurus.produk_hukum_id}`
+														)
+													}
+													className="w-full text-left hover:bg-emerald-100 rounded-lg p-2 -m-2 transition-colors duration-200 group"
+												>
+													<div className="text-sm">
+														{(() => {
+															const ph = produkHukumList.find(
+																(ph) => ph.id === pengurus.produk_hukum_id
+															);
+															return (
+																<div className="space-y-1">
+																	<div className="flex items-center justify-between">
+																		<p className="text-emerald-700 font-medium group-hover:text-emerald-800">
+																			Nomor {ph.nomor} Tahun {ph.tahun}
+																		</p>
+																		<svg
+																			className="w-4 h-4 text-emerald-600 group-hover:text-emerald-800 transform group-hover:translate-x-1 transition-all duration-200"
+																			fill="none"
+																			stroke="currentColor"
+																			viewBox="0 0 24 24"
+																		>
+																			<path
+																				strokeLinecap="round"
+																				strokeLinejoin="round"
+																				strokeWidth={2}
+																				d="M9 5l7 7-7 7"
+																			/>
+																		</svg>
+																	</div>
+																	<p className="text-gray-600 leading-relaxed group-hover:text-gray-700">
+																		{ph.judul}
+																	</p>
+																	<p className="text-xs text-emerald-600 group-hover:text-emerald-700 font-medium mt-1">
+																		Klik untuk melihat detail SK →
+																	</p>
+																</div>
+															);
+														})()}
+													</div>
+												</button>
+											) : (
+												<p className="text-gray-500 text-sm italic">
+													Belum terhubung dengan SK pengangkatan
+												</p>
+											)}
+										</div>
 									</div>
 								</div>
 

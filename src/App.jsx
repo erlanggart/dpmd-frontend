@@ -26,6 +26,12 @@ const UserManagementPage = lazy(() =>
 	import("./pages/dashboard/UserManagementPage")
 );
 const Kelembagaan = lazy(() => import("./pages/PMD/Kelembagaan"));
+const AdminKelembagaanDetailPage = lazy(() =>
+	import("./pages/PMD/AdminKelembagaanDetailPage")
+);
+const AdminKelembagaanDetailWrapper = lazy(() =>
+	import("./pages/PMD/AdminKelembagaanDetailWrapper")
+);
 const BumdesApp = lazy(() => import("./pages/sarpras/Bumdes-app"));
 const PerjalananDinas = lazy(() => import("./pages/sekretariat/perjadin"));
 const DisposisiPersuratan = lazy(() => import("./pages/sekretariat/disposisi"));
@@ -110,8 +116,6 @@ function App() {
 					<Route path="/musdesus-stats" element={<MusdesusStatsPage />} />
 					<Route path="/musdesus-upload" element={<MusdesusUploadPage />} />
 
-
-
 					{/* Rute Publik dengan lazy loading */}
 					<Route element={<PublicLayout />}>
 						<Route path="/produk-hukum/:id" element={<ProdukHukumDetail />} />
@@ -130,6 +134,25 @@ function App() {
 						<Route path="users" element={<UserManagementPage />} />
 						<Route path="hero-gallery" element={<HeroGalleryManagement />} />
 						<Route path="kelembagaan" element={<Kelembagaan />} />
+						{/* Admin Kelembagaan Detail with navigation to specific kelembagaan */}
+						<Route
+							path="kelembagaan/admin/:desaId"
+							element={<AdminKelembagaanDetailPage />}
+						/>
+						{/* Admin access to specific kelembagaan detail (RW, RT, etc.) */}
+						<Route
+							path="kelembagaan/admin/:desaId/:type/:id"
+							element={<AdminKelembagaanDetailWrapper />}
+						/>
+						{/* Admin Pengurus Detail & Edit - untuk superadmin dan admin bidang */}
+						<Route
+							path="pengurus/:pengurusId"
+							element={<PengurusDetailPage />}
+						/>
+						<Route
+							path="pengurus/:pengurusId/edit"
+							element={<PengurusEditPage />}
+						/>
 						<Route path="bumdes" element={<BumdesApp />} />
 						<Route path="perjalanan-dinas" element={<PerjalananDinas />} />
 						<Route

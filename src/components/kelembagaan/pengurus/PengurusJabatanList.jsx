@@ -25,8 +25,21 @@ import {
 
 const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
 
+// Helper function to determine correct routing based on user role
+const getPengurusRoutePath = (user, pengurusId) => {
+	const isSuperAdmin = user?.role === "superadmin";
+	const isAdminBidang = ["pemberdayaan_masyarakat", "pmd"].includes(user?.role);
+
+	if (isSuperAdmin || isAdminBidang) {
+		return `/dashboard/pengurus/${pengurusId}`;
+	}
+
+	// Default for desa users
+	return `/desa/pengurus/${pengurusId}`;
+};
+
 // Komponen untuk kartu jabatan individual
-const JabatanCard = ({ jabatan, pengurusList, getDisplayJabatan }) => {
+const JabatanCard = ({ jabatan, pengurusList, getDisplayJabatan, user }) => {
 	const [isExpanded, setIsExpanded] = useState(false);
 
 	const getJabatanIcon = (jabatanName) => {
@@ -102,7 +115,11 @@ const JabatanCard = ({ jabatan, pengurusList, getDisplayJabatan }) => {
 					{pengurusList.length > 0 ? (
 						<div className="divide-y divide-gray-50">
 							{pengurusList.map((pengurus, index) => (
-								<PengurusItem key={pengurus.id || index} pengurus={pengurus} />
+								<PengurusItem
+									key={pengurus.id || index}
+									pengurus={pengurus}
+									user={user}
+								/>
 							))}
 						</div>
 					) : (
@@ -122,7 +139,7 @@ const JabatanCard = ({ jabatan, pengurusList, getDisplayJabatan }) => {
 };
 
 // Komponen untuk item pengurus individual
-const PengurusItem = ({ pengurus }) => {
+const PengurusItem = ({ pengurus, user }) => {
 	return (
 		<div className="group p-4 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-200">
 			<div className="flex items-center justify-between">
@@ -182,7 +199,7 @@ const PengurusItem = ({ pengurus }) => {
 
 				{/* Action Button */}
 				<Link
-					to={`/desa/pengurus/${pengurus.id}`}
+					to={getPengurusRoutePath(user, pengurus.id)}
 					className="flex items-center space-x-2 px-4 py-2 text-sm text-blue-600 hover:text-white bg-blue-50 hover:bg-gradient-to-r hover:from-blue-500 hover:to-indigo-600 rounded-lg border border-blue-200 hover:border-blue-500 transform hover:scale-105 transition-all duration-200 shadow-sm hover:shadow-md"
 				>
 					<LuEye className="w-4 h-4" />
@@ -260,6 +277,7 @@ const PengurusJabatanList = ({
 	kelembagaanId,
 	onAddPengurus,
 	onViewHistory,
+	desaId,
 }) => {
 	const { user } = useAuth();
 	const isAdmin = user?.role === "admin_kabupaten";
@@ -282,9 +300,15 @@ const PengurusJabatanList = ({
 
 		setLoading(true);
 		try {
+			// Pass desaId for superadmin access
+			const superadminDesaId = isSuperAdmin ? desaId : null;
 			const [activeResponse, historyResponse] = await Promise.all([
-				getPengurusByKelembagaan(kelembagaanType, kelembagaanId),
-				getPengurusHistory(kelembagaanType, kelembagaanId),
+				getPengurusByKelembagaan(
+					kelembagaanType,
+					kelembagaanId,
+					superadminDesaId
+				),
+				getPengurusHistory(kelembagaanType, kelembagaanId, superadminDesaId),
 			]);
 
 			setActivePengurus(activeResponse?.data?.data || []);
@@ -393,6 +417,7 @@ const PengurusJabatanList = ({
 							jabatan={jabatan}
 							pengurusList={pengurusList}
 							getDisplayJabatan={getDisplayJabatan}
+							user={user}
 						/>
 					))}
 				</div>
@@ -523,7 +548,7 @@ const PengurusJabatanList = ({
 
 											{/* Action Button */}
 											<Link
-												to={`/desa/pengurus/${pengurus.id}`}
+												to={getPengurusRoutePath(user, pengurus.id)}
 												className="flex items-center space-x-2 px-3 py-1.5 text-sm text-gray-600 hover:text-blue-600 bg-gray-100 hover:bg-blue-50 rounded-lg border border-gray-200 hover:border-blue-200 transition-all duration-200"
 											>
 												<LuEye className="w-4 h-4" />

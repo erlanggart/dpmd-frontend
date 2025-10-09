@@ -261,7 +261,7 @@ export default function PengurusForm({
 			setAvatarPreview(null);
 		}
 		setAvatar(null);
-	}, [editData, reset]);
+	}, [editData, reset, imageBaseUrl]);
 
 	// Validate avatar file
 	const validateAvatar = (file) => {
@@ -338,17 +338,17 @@ export default function PengurusForm({
 		}
 	};
 
-	// Real-time validation helpers
-	const validateNIK = (nik) => {
-		if (!nik) return true; // Optional field
-		if (nik.length !== 16) return false;
-		return /^\d+$/.test(nik);
-	};
+	// Real-time validation helpers (removed as validation is handled by Zod schema)
+	// const validateNIK = (nik) => {
+	// 	if (!nik) return true; // Optional field
+	// 	if (nik.length !== 16) return false;
+	// 	return /^\d+$/.test(nik);
+	// };
 
-	const validatePhoneNumber = (phone) => {
-		if (!phone) return true; // Optional field
-		return /^(\+62|62|0)[0-9]{8,13}$/.test(phone);
-	};
+	// const validatePhoneNumber = (phone) => {
+	// 	if (!phone) return true; // Optional field
+	// 	return /^(\+62|62|0)[0-9]{8,13}$/.test(phone);
+	// };
 
 	// Validate all data before submit
 	const validateBeforeSubmit = () => {
@@ -1003,7 +1003,7 @@ export default function PengurusForm({
 
 						{/* SK Produk Hukum */}
 						<div>
-							<label className="label-style">
+							<label className="block text-sm font-medium text-gray-700 mb-2">
 								SK Produk Hukum
 								<span className="text-xs text-gray-500 ml-2">
 									(Surat Keputusan Pengangkatan)
@@ -1029,6 +1029,11 @@ export default function PengurusForm({
 									{errors.produk_hukum_id.message}
 								</p>
 							)}
+							<p className="text-xs text-gray-500 mt-1">
+								Pilih Surat Keputusan (SK) sebagai dasar hukum pengangkatan
+								pengurus ini. SK ini akan menjadi rujukan legal untuk posisi
+								jabatan yang dipegang.
+							</p>
 						</div>
 					</div>
 
