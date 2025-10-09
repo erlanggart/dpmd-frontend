@@ -17,8 +17,7 @@ const MusdesusUpload = ({ onClose }) => {
     email_pengupload: '',
     telepon_pengupload: '',
     keterangan: '',
-    tanggal_musdesus: '',
-    petugas_id: ''
+    tanggal_musdesus: ''
   });
 
   const [files, setFiles] = useState([]);
@@ -27,9 +26,6 @@ const MusdesusUpload = ({ onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [dragActive, setDragActive] = useState(false);
-  const [desaUploadStatus, setDesaUploadStatus] = useState(null);
-  const [isCheckingDesa, setIsCheckingDesa] = useState(false);
-  const [petugasList, setPetugasList] = useState([]);
 
   // Fetch kecamatan list on component mount
   useEffect(() => {
@@ -43,21 +39,8 @@ const MusdesusUpload = ({ onClose }) => {
     } else {
       setDesaList([]);
       setFormData(prev => ({ ...prev, desa_id: '' }));
-      setDesaUploadStatus(null);
     }
   }, [formData.kecamatan_id]);
-
-  // Check desa upload status and fetch petugas when desa changes
-  useEffect(() => {
-    if (formData.desa_id && formData.kecamatan_id) {
-      checkDesaUploadStatus(formData.desa_id);
-      fetchPetugasByDesa(formData.desa_id, formData.kecamatan_id);
-    } else {
-      setDesaUploadStatus(null);
-      setPetugasList([]);
-      setFormData(prev => ({ ...prev, petugas_id: '' }));
-    }
-  }, [formData.desa_id, formData.kecamatan_id]);
 
   const fetchKecamatan = async () => {
     try {
@@ -84,49 +67,6 @@ const MusdesusUpload = ({ onClose }) => {
     } catch (error) {
       toast.error('Gagal memuat data desa');
       console.error('Error fetching desa:', error);
-    }
-  };
-
-  const checkDesaUploadStatus = async (desaId) => {
-    setIsCheckingDesa(true);
-    try {
-      const response = await api.get(`/musdesus/check-desa/${desaId}`);
-      if (response.data.success) {
-        setDesaUploadStatus(response.data);
-        if (response.data.already_uploaded) {
-          toast.warning(response.data.message);
-        }
-      }
-    } catch (error) {
-      console.error('Error checking desa upload status:', error);
-      setDesaUploadStatus(null);
-    } finally {
-      setIsCheckingDesa(false);
-    }
-  };
-
-  const fetchPetugasByDesa = async (desaId, kecamatanId) => {
-    try {
-      // Ambil nama desa dan kecamatan untuk matching
-      const desa = desaList.find(d => d.id == desaId);
-      const kecamatan = kecamatanList.find(k => k.id == kecamatanId);
-      
-      if (!desa || !kecamatan) return;
-
-      const response = await api.post(`/musdesus/petugas-by-desa`, {
-        nama_desa: desa.nama,
-        nama_kecamatan: kecamatan.nama
-      });
-
-      if (response.data.success) {
-        setPetugasList(response.data.data || []);
-      } else {
-        setPetugasList([]);
-        console.log('No petugas found for this desa');
-      }
-    } catch (error) {
-      console.error('Error fetching petugas:', error);
-      setPetugasList([]);
     }
   };
 
@@ -199,14 +139,8 @@ const MusdesusUpload = ({ onClose }) => {
       return;
     }
 
-    if (!formData.kecamatan_id || !formData.desa_id || !formData.nama_pengupload || !formData.petugas_id) {
-      toast.error('Kecamatan, Desa, Nama Pengupload, dan Verifikasi Petugas wajib diisi');
-      return;
-    }
-
-    // Check if desa already uploaded
-    if (desaUploadStatus?.already_uploaded) {
-      toast.error('Desa ini sudah pernah melakukan upload sebelumnya. Satu desa hanya dapat upload satu kali.');
+    if (!formData.kecamatan_id || !formData.desa_id || !formData.nama_pengupload) {
+      toast.error('Kecamatan, Desa, dan Nama Pengupload wajib diisi');
       return;
     }
 
@@ -321,8 +255,6 @@ const MusdesusUpload = ({ onClose }) => {
           </div>
         </div>
 
-
-
         {/* Form Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Left Column - Form Fields */}
@@ -368,77 +300,6 @@ const MusdesusUpload = ({ onClose }) => {
                   </option>
                 ))}
               </select>
-              
-              {/* Status Upload Desa */}
-              {isCheckingDesa && (
-                <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                  <div className="flex items-center">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-                    <span className="text-sm text-gray-600">Mengecek status upload desa...</span>
-                  </div>
-                </div>
-              )}
-              
-              {desaUploadStatus?.already_uploaded && (
-                <div className="mt-3 p-4 bg-red-50 border border-red-200 rounded-lg">
-                  <div className="flex items-start">
-                    <ExclamationTriangleIcon className="h-5 w-5 text-red-500 mr-3 mt-0.5 flex-shrink-0" />
-                    <div>
-                      <h4 className="text-sm font-semibold text-red-800 mb-1">
-                        Desa Sudah Pernah Upload!
-                      </h4>
-                      <p className="text-sm text-red-700 mb-2">
-                        {desaUploadStatus.message}
-                      </p>
-                      <div className="text-xs text-red-600 space-y-1">
-                        <p><strong>Upload terakhir:</strong> {desaUploadStatus.upload_info?.upload_date}</p>
-                        <p><strong>Diupload oleh:</strong> {desaUploadStatus.upload_info?.uploader_name}</p>
-                        <p><strong>Jumlah file:</strong> {desaUploadStatus.upload_info?.files_count} file</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              {desaUploadStatus?.already_uploaded === false && (
-                <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-                  <div className="flex items-center">
-                    <div className="h-4 w-4 bg-green-500 rounded-full mr-2"></div>
-                    <span className="text-sm text-green-700">Desa belum pernah upload, dapat melakukan upload.</span>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Petugas Monitoring */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-3">
-                Petugas Monitoring <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="petugas_id"
-                value={formData.petugas_id}
-                onChange={handleInputChange}
-                className="w-full p-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white disabled:bg-gray-100"
-                required
-                disabled={!formData.desa_id || petugasList.length === 0}
-              >
-                <option value="">Pilih Petugas Monitoring</option>
-                {petugasList.map(petugas => (
-                  <option key={petugas.id} value={petugas.id}>
-                    {petugas.nama_petugas}
-                  </option>
-                ))}
-              </select>
-              
-              {formData.desa_id && petugasList.length === 0 && (
-                <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <div className="flex items-center">
-                    <ExclamationTriangleIcon className="h-4 w-4 text-yellow-500 mr-2" />
-                    <span className="text-sm text-yellow-700">Tidak ada petugas monitoring untuk desa ini.</span>
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Nama Pengupload */}
@@ -647,18 +508,13 @@ const MusdesusUpload = ({ onClose }) => {
           )}
           <button
             type="submit"
-            disabled={isLoading || files.length === 0 || desaUploadStatus?.already_uploaded}
+            disabled={isLoading || files.length === 0}
             className="px-8 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-semibold flex items-center"
           >
             {isLoading ? (
               <>
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
                 Mengupload...
-              </>
-            ) : desaUploadStatus?.already_uploaded ? (
-              <>
-                <ExclamationTriangleIcon className="w-5 h-5 mr-2" />
-                Upload Diblokir
               </>
             ) : (
               <>

@@ -38,11 +38,9 @@ const HeroSection = () => {
 	// --- RENDER KONTEN BERDASARKAN STATE ---
 	if (loading) {
 		return (
-			<main className="flex min-h-screen items-center justify-center bg-gray-900 text-white px-4">
-				<div className="text-center">
-					<FiLoader className="animate-spin text-2xl sm:text-3xl lg:text-4xl mx-auto mb-4" />
-					<span className="text-lg sm:text-xl lg:text-2xl">Memuat...</span>
-				</div>
+			<main className="flex min-h-screen items-center justify-center bg-gray-900 text-white">
+				<FiLoader className="animate-spin text-4xl" />
+				<span className="ml-4 text-2xl">Memuat...</span>
 			</main>
 		);
 	}
@@ -50,10 +48,8 @@ const HeroSection = () => {
 	// Tampilkan pesan error jika ada
 	if (error) {
 		return (
-			<main className="flex min-h-screen items-center justify-center bg-gray-900 text-white px-4">
-				<div className="text-center">
-					<span className="text-lg sm:text-xl lg:text-2xl text-red-400">{error}</span>
-				</div>
+			<main className="flex min-h-screen items-center justify-center bg-gray-900 text-white">
+				<span className="text-2xl text-red-400">{error}</span>
 			</main>
 		);
 	}
@@ -81,14 +77,14 @@ const HeroSection = () => {
 						<SwiperSlide>
 							<div className="h-full w-full bg-gradient-to-br from-blue-900 via-blue-800 to-blue-900">
 								<div className="flex h-full items-center justify-center">
-									<div className="text-center text-white px-4">
+									<div className="text-center text-white">
 										<div className="mb-4">
-											<svg className="mx-auto h-16 w-16 sm:h-20 sm:w-20 lg:h-24 lg:w-24 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<svg className="mx-auto h-24 w-24 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
 											</svg>
 										</div>
-										<h3 className="text-lg sm:text-xl lg:text-2xl font-semibold mb-2">Dinas Pemberdayaan Masyarakat dan Desa</h3>
-										<p className="text-sm sm:text-base text-blue-200">Kabupaten Bogor</p>
+										<h3 className="text-2xl font-semibold mb-2">Dinas Pemberdayaan Masyarakat dan Desa</h3>
+										<p className="text-blue-200">Kabupaten Bogor</p>
 									</div>
 								</div>
 							</div>
@@ -99,21 +95,21 @@ const HeroSection = () => {
 
 			<div className="absolute inset-0 z-10 bg-black/60"></div>
 
-			<div className="container relative z-20 mx-auto px-4 sm:px-6 lg:px-8 text-center">
-				<h2 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-extrabold tracking-tight text-white mb-2 sm:mb-4">
+			<div className="container relative z-20 mx-auto px-6 text-center">
+				<h2 className="text-2xl font-extrabold tracking-tight text-white md:text-4xl">
 					Dinas Pemberdayaan Masyarakat dan Desa
 				</h2>
-				<h2 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-extrabold tracking-tight text-white mb-4 sm:mb-6">
+				<h2 className="text-4xl font-extrabold tracking-tight text-white md:text-6xl">
 					Kabupaten Bogor
 				</h2>
-				<p className="mx-auto max-w-2xl text-sm sm:text-base lg:text-lg text-gray-200 px-4">
+				<p className="mx-auto mt-4 max-w-2xl text-lg text-gray-200">
 					Satu platform untuk mengelola, memonitor, dan menganalisis semua data
 					terkait Dinas Pemberdayaan Masyarakat dan Desa Kabupaten Bogor.
 				</p>
-				<div className="mt-6 sm:mt-8 flex justify-center">
+				<div className="mt-8 flex justify-center">
 					<Link
 						to="/login"
-						className="rounded-lg bg-[rgb(var(--color-secondary))] px-6 sm:px-8 py-3 sm:py-3.5 text-base sm:text-lg font-bold text-white transition-colors hover:bg-[rgb(var(--color-primary))] shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 duration-200"
+						className="rounded-lg bg-[rgb(var(--color-secondary))] px-8 py-3.5 text-lg font-bold text-white transition-colors hover:bg-[rgb(var(--color-primary))] shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 duration-200"
 					>
 						Masuk ke Sistem
 					</Link>
