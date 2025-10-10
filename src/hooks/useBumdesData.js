@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import api from '../services/api.js';
+import api from '../api.js';
 
 export const useBumdesData = (initialData = null) => {
   const [bumdesData, setBumdesData] = useState([]);
@@ -36,7 +36,9 @@ export const useBumdesData = (initialData = null) => {
       console.log('🔄 BUMDes Hook: Fetching fresh data...');
       console.log('🔄 BUMDes Hook: API Base URL:', api.defaults.baseURL);
       
-      const response = await api.get('/bumdes');
+      const response = await api.get('/bumdes', {
+        timeout: 60000 // 60 seconds timeout for BUMDes data (187 records)
+      });
       console.log('📊 BUMDes Hook: Raw response:', response);
       
       const apiData = response.data && Array.isArray(response.data.data) ? response.data.data : [];
@@ -65,8 +67,13 @@ export const useBumdesData = (initialData = null) => {
       console.error('❌ BUMDes Hook: Error details:', {
         message: err.message,
         status: err.response?.status,
+        statusText: err.response?.statusText,
+        data: err.response?.data,
         url: err.config?.url,
-        baseURL: err.config?.baseURL
+        baseURL: err.config?.baseURL,
+        timeout: err.config?.timeout,
+        code: err.code,
+        name: err.name
       });
       
       // Only set empty data if we don't have any cached data

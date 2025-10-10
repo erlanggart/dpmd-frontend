@@ -26,6 +26,7 @@ import {
   FiFolder,
   FiFile,
   FiLink,
+  FiEye,
   FiChevronLeft,
   FiChevronRight,
   FiChevronsLeft,
@@ -35,6 +36,7 @@ import { HiSparkles } from 'react-icons/hi';
 import BumdesEditDashboard from './BumdesEditDashboard';
 import jsPDF from 'jspdf';
 import API_CONFIG from '../../../config/api';
+import api from '../../../api';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 
@@ -1484,12 +1486,12 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
     setDocumentsLoading(true);
     try {
       const [dokumenResponse, laporanResponse] = await Promise.all([
-        fetch(`${API_CONFIG.BASE_URL}/bumdes/dokumen-badan-hukum`),
-        fetch(`${API_CONFIG.BASE_URL}/bumdes/laporan-keuangan`)
+        api.get('/bumdes/dokumen-badan-hukum', { timeout: 60000 }),
+        api.get('/bumdes/laporan-keuangan', { timeout: 60000 })
       ]);
 
-      const dokumenResult = await dokumenResponse.json();
-      const laporanResult = await laporanResponse.json();
+      const dokumenResult = dokumenResponse.data;
+      const laporanResult = laporanResponse.data;
 
       if (dokumenResult.status === 'success' && laporanResult.status === 'success') {
         const allDocs = [
