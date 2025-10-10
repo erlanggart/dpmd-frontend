@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import api from '../api.js';
+import api from '../services/api.js';
 
 export const useBumdesStatistics = () => {
   const [statistics, setStatistics] = useState({
@@ -49,8 +49,10 @@ export const useBumdesStatistics = () => {
       setLoading(true);
       setError(null);
       console.log('🔄 BUMDes Stats: Fetching fresh statistics...');
+      console.log('🔄 BUMDes Stats: API Base URL:', api.defaults.baseURL);
       
       const response = await api.get('/bumdes/statistics');
+      console.log('📊 BUMDes Stats: Raw response:', response);
       
       if (response.data.success) {
         // Check if data actually changed
@@ -61,7 +63,7 @@ export const useBumdesStatistics = () => {
           return;
         }
         
-        console.log('✅ BUMDes Stats: Setting new statistics data');
+        console.log('✅ BUMDes Stats: Setting new statistics data:', response.data.data);
         setStatistics(response.data.data);
         setDataHash(newHash);
         setLastFetch(Date.now());
@@ -71,6 +73,12 @@ export const useBumdesStatistics = () => {
       }
     } catch (err) {
       console.error('❌ BUMDes Stats: Failed to fetch statistics:', err);
+      console.error('❌ BUMDes Stats: Error details:', {
+        message: err.message,
+        status: err.response?.status,
+        url: err.config?.url,
+        baseURL: err.config?.baseURL
+      });
       
       // Only set error if we don't have any cached data
       if (statistics.total === 0) {

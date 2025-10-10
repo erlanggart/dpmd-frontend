@@ -25,7 +25,11 @@ import {
   FiTarget,
   FiFolder,
   FiFile,
-  FiLink
+  FiLink,
+  FiChevronLeft,
+  FiChevronRight,
+  FiChevronsLeft,
+  FiChevronsRight
 } from 'react-icons/fi';
 import { HiSparkles } from 'react-icons/hi';
 import BumdesEditDashboard from './BumdesEditDashboard';
@@ -1001,7 +1005,7 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
   const [jenisUsahaFilter, setJenisUsahaFilter] = useState('all');
   const [uploadStatusFilter, setUploadStatusFilter] = useState('all'); // all, uploaded, not_uploaded
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(12);
+  const [itemsPerPage, setItemsPerPage] = useState(4); // Changed to 4 cards per page
   const [showAllData, setShowAllData] = useState(false);
   
   // Notification state
@@ -1475,6 +1479,59 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
   const [availableDesa, setAvailableDesa] = useState([]);
   const [filteredDocuments, setFilteredDocuments] = useState([]);
   
+  // Document management functions
+  const fetchAllDocuments = async () => {
+    setDocumentsLoading(true);
+    try {
+      const [dokumenResponse, laporanResponse] = await Promise.all([
+        fetch(`${API_CONFIG.BASE_URL}/bumdes/dokumen-badan-hukum`),
+        fetch(`${API_CONFIG.BASE_URL}/bumdes/laporan-keuangan`)
+      ]);
+
+      const dokumenResult = await dokumenResponse.json();
+      const laporanResult = await laporanResponse.json();
+
+      if (dokumenResult.status === 'success' && laporanResult.status === 'success') {
+        const allDocs = [
+          ...dokumenResult.data.map(doc => ({ ...doc, type: 'dokumen_badan_hukum' })),
+          ...laporanResult.data.map(doc => ({ ...doc, type: 'laporan_keuangan' }))
+        ];
+        console.log('📄 Documents loaded:', allDocs.length);
+        setDocuments(allDocs);
+        
+        // Extract unique kecamatan and desa for filters
+        const kecamatanSet = new Set();
+        const desaSet = new Set();
+        
+        bumdesData.forEach(bumdes => {
+          if (bumdes.kecamatan) kecamatanSet.add(bumdes.kecamatan);
+          if (bumdes.desa) {
+            const desaInfo = parseDesaInfo(bumdes.desa);
+            desaSet.add(desaInfo.namaDesa);
+          }
+        });
+        
+        setAvailableKecamatan([...kecamatanSet].sort());
+        setAvailableDesa([...desaSet].sort());
+      } else {
+        showNotification('error', 'Gagal mengambil data dokumen');
+      }
+    } catch (error) {
+      console.error('Error fetching documents:', error);
+      showNotification('error', 'Terjadi kesalahan saat mengambil data dokumen');
+    } finally {
+      setDocumentsLoading(false);
+    }
+  };
+
+  // Fetch documents when BUMDes data is loaded
+  useEffect(() => {
+    if (bumdesData.length > 0) {
+      console.log('🔄 Fetching documents because BUMDes data is loaded:', bumdesData.length, 'records');
+      fetchAllDocuments();
+    }
+  }, [bumdesData.length]);
+  
 
 
   const handleBumdesClick = (bumdes) => {
@@ -1597,50 +1654,6 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
     return matchesSearch && matchesStatus && matchesKecamatan && matchesJenisUsaha;
   });
 
-  // Document management functions
-  const fetchAllDocuments = async () => {
-    setDocumentsLoading(true);
-    try {
-      const [dokumenResponse, laporanResponse] = await Promise.all([
-        fetch(`${API_CONFIG.BASE_URL}/bumdes/dokumen-badan-hukum`),
-        fetch(`${API_CONFIG.BASE_URL}/bumdes/laporan-keuangan`)
-      ]);
-
-      const dokumenResult = await dokumenResponse.json();
-      const laporanResult = await laporanResponse.json();
-
-      if (dokumenResult.status === 'success' && laporanResult.status === 'success') {
-        const allDocs = [
-          ...dokumenResult.data.map(doc => ({ ...doc, type: 'dokumen_badan_hukum' })),
-          ...laporanResult.data.map(doc => ({ ...doc, type: 'laporan_keuangan' }))
-        ];
-        setDocuments(allDocs);
-        
-        // Extract unique kecamatan and desa for filters
-        const kecamatanSet = new Set();
-        const desaSet = new Set();
-        
-        bumdesData.forEach(bumdes => {
-          if (bumdes.kecamatan) kecamatanSet.add(bumdes.kecamatan);
-          if (bumdes.desa) {
-            const desaInfo = parseDesaInfo(bumdes.desa);
-            desaSet.add(desaInfo.namaDesa);
-          }
-        });
-        
-        setAvailableKecamatan([...kecamatanSet].sort());
-        setAvailableDesa([...desaSet].sort());
-      } else {
-        showNotification('error', 'Gagal mengambil data dokumen');
-      }
-    } catch (error) {
-      console.error('Error fetching documents:', error);
-      showNotification('error', 'Terjadi kesalahan saat mengambil data dokumen');
-    } finally {
-      setDocumentsLoading(false);
-    }
-  };
-
   const handleOpenDocuments = (bumdesId, bumdesName) => {
     // Find the selected BUMDes data to get its location info
     const selectedBumdes = bumdesData.find(b => b.id === bumdesId);
@@ -1688,6 +1701,44 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
     } catch (error) {
       console.error('Error linking document:', error);
       showNotification('error', 'Terjadi kesalahan saat mengaitkan dokumen');
+    }
+  };
+
+  // Delete file function for dashboard
+  const deleteDocumentFile = async (filename, documentType, bumdesId = null) => {
+    if (!window.confirm(`Apakah Anda yakin ingin menghapus file "${filename}"? Tindakan ini tidak dapat dibatalkan.`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/bumdes/delete-file`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          filename,
+          folder: documentType,
+          bumdes_id: bumdesId
+        })
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        showNotification('success', result.message);
+        // Refresh documents and BUMDes data
+        fetchAllDocuments();
+        if (selectedBumdesForDocs?.id) {
+          // Refresh the specific BUMDes data if viewing from detail modal
+          refreshData();
+        }
+      } else {
+        showNotification('error', result.message || 'Gagal menghapus file');
+      }
+    } catch (error) {
+      console.error('Error deleting file:', error);
+      showNotification('error', 'Terjadi kesalahan saat menghapus file');
     }
   };
 
@@ -1758,27 +1809,17 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
   // Only show loading if we have no data at all
   if (loading && bumdesData.length === 0) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center p-6">
+      <div className="min-h-screen bg-gradient-to-br from-slate-100 via-slate-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">
-          {/* Simple elegant loader */}
-          <div className="relative mb-8">
-            <div className="w-16 h-16 border-4 border-slate-200 rounded-full mx-auto"></div>
-            <div className="w-16 h-16 border-4 border-slate-800 border-t-transparent rounded-full animate-spin absolute top-0 left-1/2 transform -translate-x-1/2"></div>
-          </div>
-          
-          {/* Simple text */}
-          <h3 className="text-xl font-semibold text-slate-800 mb-2">
-            Loading Dashboard
-          </h3>
-          <p className="text-slate-500 text-sm">
-            Mengambil data BUMDes...
-          </p>
-          
-          {/* Simple dots */}
-          <div className="flex justify-center items-center gap-1 mt-4">
-            <div className="w-2 h-2 bg-slate-400 rounded-full animate-pulse"></div>
-            <div className="w-2 h-2 bg-slate-400 rounded-full"></div>
-            <div className="w-2 h-2 bg-slate-400 rounded-full"></div>
+          <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-2xl p-12 border border-white/30">
+            <div className="relative">
+              <div className="w-16 h-16 mx-auto mb-6 bg-gradient-to-r from-slate-700 to-slate-800 rounded-2xl flex items-center justify-center">
+                <FiRefreshCw className="w-8 h-8 text-white animate-spin" />
+              </div>
+              <div className="absolute -inset-4 bg-gradient-to-r from-slate-600/20 to-slate-800/20 rounded-full blur-xl animate-pulse"></div>
+            </div>
+            <h3 className="text-xl font-bold text-slate-800 mb-2">Memuat Dashboard</h3>
+            <p className="text-slate-600">Mengambil data BUMDes...</p>
           </div>
         </div>
       </div>
@@ -1788,27 +1829,24 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
   // Only show full error screen if we have no data at all
   if (error && bumdesData.length === 0) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center p-6">
-        <div className="text-center max-w-md">
-          {/* Simple error icon */}
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <FiAlertCircle className="text-red-500 text-2xl" />
+      <div className="min-h-screen bg-gradient-to-br from-slate-100 via-slate-50 to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-2xl p-12 border border-white/30">
+            <div className="w-16 h-16 mx-auto mb-6 bg-gradient-to-r from-red-500 to-red-600 rounded-2xl flex items-center justify-center">
+              <FiAlertCircle className="w-8 h-8 text-white" />
+            </div>
+            <h3 className="text-xl font-bold text-slate-800 mb-2">Terjadi Kesalahan</h3>
+            <p className="text-slate-600 mb-6 leading-relaxed">
+              {error || "Gagal memuat data dashboard. Silakan coba lagi."}
+            </p>
+            <button 
+              onClick={refreshData}
+              className="bg-gradient-to-r from-slate-700 to-slate-800 hover:from-slate-800 hover:to-slate-900 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 mx-auto shadow-lg hover:shadow-xl"
+            >
+              <FiRefreshCw className="text-sm" />
+              <span>Coba Lagi</span>
+            </button>
           </div>
-          
-          <h3 className="text-xl font-semibold text-slate-800 mb-2">
-            Terjadi Kesalahan
-          </h3>
-          <p className="text-slate-600 text-sm mb-6 leading-relaxed">
-            {error || "Gagal memuat data dashboard. Silakan coba lagi."}
-          </p>
-          
-          <button 
-            onClick={refreshData}
-            className="bg-slate-800 hover:bg-slate-700 text-white px-6 py-3 rounded-xl font-semibold transition-colors duration-200 flex items-center gap-2 mx-auto"
-          >
-            <FiRefreshCw className="text-sm" />
-            <span>Coba Lagi</span>
-          </button>
         </div>
       </div>
     );
@@ -2380,68 +2418,186 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
                   ))}
                 </div>
                 
-                {/* Pagination */}
+                {/* Enhanced Modern Pagination */}
                 {!showAllData && totalPages > 1 && (
-                  <div className="flex justify-center mt-8">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handlePageChange(currentPage - 1)}
-                        disabled={currentPage === 1}
-                        className="px-3 py-2 rounded-lg bg-slate-800 text-white disabled:bg-gray-300 disabled:text-gray-500 hover:bg-slate-700 transition-colors"
-                      >
-                        ←
-                      </button>
-                      
-                      {[...Array(totalPages)].map((_, index) => {
-                        const page = index + 1;
-                        if (page === 1 || page === totalPages || (page >= currentPage - 2 && page <= currentPage + 2)) {
-                          return (
-                            <button
-                              key={page}
-                              onClick={() => handlePageChange(page)}
-                              className={`px-3 py-2 rounded-lg transition-colors ${
-                                currentPage === page
-                                  ? 'bg-slate-800 text-white'
-                                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                              }`}
-                            >
-                              {page}
-                            </button>
-                          );
-                        } else if (page === currentPage - 3 || page === currentPage + 3) {
-                          return <span key={page} className="px-2 text-gray-500">...</span>;
-                        }
-                        return null;
-                      })}
-                      
-                      <button
-                        onClick={() => handlePageChange(currentPage + 1)}
-                        disabled={currentPage === totalPages}
-                        className="px-3 py-2 rounded-lg bg-slate-800 text-white disabled:bg-gray-300 disabled:text-gray-500 hover:bg-slate-700 transition-colors"
-                      >
-                        →
-                      </button>
+                  <div className="mt-8 space-y-4">
+                    {/* Pagination Info */}
+                    <div className="text-center text-sm text-slate-600">
+                      Menampilkan <span className="font-semibold">{startIndex + 1}</span> - <span className="font-semibold">{Math.min(endIndex, filteredBumdesData.length)}</span> dari <span className="font-semibold">{filteredBumdesData.length}</span> BUMDes
+                    </div>
+                    
+                    {/* Desktop Pagination */}
+                    <div className="hidden md:flex justify-center">
+                      <div className="flex items-center gap-2 bg-white rounded-2xl shadow-lg border border-slate-200 p-2">
+                        {/* First Page */}
+                        <button
+                          onClick={() => handlePageChange(1)}
+                          disabled={currentPage === 1}
+                          className="p-3 rounded-xl text-slate-600 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                          title="Halaman Pertama"
+                        >
+                          <FiChevronsLeft className="w-4 h-4" />
+                        </button>
+                        
+                        {/* Previous Page */}
+                        <button
+                          onClick={() => handlePageChange(currentPage - 1)}
+                          disabled={currentPage === 1}
+                          className="p-3 rounded-xl text-slate-600 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                          title="Halaman Sebelumnya"
+                        >
+                          <FiChevronLeft className="w-4 h-4" />
+                        </button>
+                        
+                        {/* Page Numbers */}
+                        <div className="flex items-center gap-1 mx-2">
+                          {totalPages <= 7 ? (
+                            // Show all pages if 7 or fewer
+                            Array.from({ length: totalPages }, (_, i) => (
+                              <button
+                                key={i + 1}
+                                onClick={() => handlePageChange(i + 1)}
+                                className={`px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
+                                  currentPage === i + 1
+                                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg transform scale-105'
+                                    : 'text-slate-600 hover:bg-slate-100'
+                                }`}
+                              >
+                                {i + 1}
+                              </button>
+                            ))
+                          ) : (
+                            // Show ellipsis logic for many pages
+                            <>
+                              {currentPage > 3 && (
+                                <>
+                                  <button
+                                    onClick={() => handlePageChange(1)}
+                                    className="px-4 py-3 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-all"
+                                  >
+                                    1
+                                  </button>
+                                  {currentPage > 4 && (
+                                    <span className="px-2 text-slate-400">...</span>
+                                  )}
+                                </>
+                              )}
+                              
+                              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                let pageNumber;
+                                if (currentPage <= 3) {
+                                  pageNumber = i + 1;
+                                } else if (currentPage >= totalPages - 2) {
+                                  pageNumber = totalPages - 4 + i;
+                                } else {
+                                  pageNumber = currentPage - 2 + i;
+                                }
+                                
+                                if (pageNumber < 1 || pageNumber > totalPages) return null;
+                                
+                                return (
+                                  <button
+                                    key={pageNumber}
+                                    onClick={() => handlePageChange(pageNumber)}
+                                    className={`px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
+                                      currentPage === pageNumber
+                                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg transform scale-105'
+                                        : 'text-slate-600 hover:bg-slate-100'
+                                    }`}
+                                  >
+                                    {pageNumber}
+                                  </button>
+                                );
+                              })}
+                              
+                              {currentPage < totalPages - 2 && (
+                                <>
+                                  {currentPage < totalPages - 3 && (
+                                    <span className="px-2 text-slate-400">...</span>
+                                  )}
+                                  <button
+                                    onClick={() => handlePageChange(totalPages)}
+                                    className="px-4 py-3 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-all"
+                                  >
+                                    {totalPages}
+                                  </button>
+                                </>
+                              )}
+                            </>
+                          )}
+                        </div>
+                        
+                        {/* Next Page */}
+                        <button
+                          onClick={() => handlePageChange(currentPage + 1)}
+                          disabled={currentPage === totalPages}
+                          className="p-3 rounded-xl text-slate-600 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                          title="Halaman Selanjutnya"
+                        >
+                          <FiChevronRight className="w-4 h-4" />
+                        </button>
+                        
+                        {/* Last Page */}
+                        <button
+                          onClick={() => handlePageChange(totalPages)}
+                          disabled={currentPage === totalPages}
+                          className="p-3 rounded-xl text-slate-600 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                          title="Halaman Terakhir"
+                        >
+                          <FiChevronsRight className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Mobile Pagination */}
+                    <div className="md:hidden flex justify-center">
+                      <div className="flex items-center gap-3 bg-white rounded-2xl shadow-lg border border-slate-200 p-3">
+                        <button
+                          onClick={() => handlePageChange(currentPage - 1)}
+                          disabled={currentPage === 1}
+                          className="flex items-center gap-2 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                        >
+                          <FiChevronLeft className="w-4 h-4" />
+                          <span className="text-sm font-medium">Sebelumnya</span>
+                        </button>
+                        
+                        <div className="px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl text-sm font-bold shadow-lg">
+                          {currentPage} / {totalPages}
+                        </div>
+                        
+                        <button
+                          onClick={() => handlePageChange(currentPage + 1)}
+                          disabled={currentPage === totalPages}
+                          className="flex items-center gap-2 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                        >
+                          <span className="text-sm font-medium">Selanjutnya</span>
+                          <FiChevronRight className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
                 
                 {/* Items per page selector */}
                 {!showAllData && (
-                  <div className="flex justify-center items-center gap-2 mt-4 text-sm text-gray-600">
-                    <span>Tampilkan per halaman:</span>
-                    <select
-                      value={itemsPerPage}
-                      onChange={(e) => {
-                        setItemsPerPage(Number(e.target.value));
-                        setCurrentPage(1);
-                      }}
-                      className="px-2 py-1 border border-gray-300 rounded bg-white"
-                    >
-                      <option value={6}>6</option>
-                      <option value={12}>12</option>
-                      <option value={24}>24</option>
-                      <option value={48}>48</option>
-                    </select>
+                  <div className="flex justify-center items-center gap-3 mt-6">
+                    <div className="flex items-center gap-3 bg-white rounded-2xl shadow-lg border border-slate-200 px-6 py-3">
+                      <span className="text-sm font-medium text-slate-700">Tampilkan per halaman:</span>
+                      <select
+                        value={itemsPerPage}
+                        onChange={(e) => {
+                          setItemsPerPage(Number(e.target.value));
+                          setCurrentPage(1);
+                        }}
+                        className="px-4 py-2 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm hover:shadow-md transition-all"
+                      >
+                        <option value={4}>4 Cards</option>
+                        <option value={8}>8 Cards</option>
+                        <option value={12}>12 Cards</option>
+                        <option value={16}>16 Cards</option>
+                        <option value={24}>24 Cards</option>
+                      </select>
+                    </div>
                   </div>
                 )}
               </>
@@ -2592,8 +2748,15 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
               <div className="p-6">
                 {documentsLoading ? (
                   <div className="text-center py-12">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                    <p className="text-gray-500">Memuat dokumen...</p>
+                    <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg p-8 border border-white/30 inline-block">
+                      <div className="relative">
+                        <div className="w-12 h-12 mx-auto mb-4 bg-gradient-to-r from-slate-700 to-slate-800 rounded-xl flex items-center justify-center">
+                          <FiRefreshCw className="w-6 h-6 text-white animate-spin" />
+                        </div>
+                        <div className="absolute -inset-2 bg-gradient-to-r from-slate-600/20 to-slate-800/20 rounded-full blur-lg animate-pulse"></div>
+                      </div>
+                      <p className="text-slate-600 font-medium">Memuat dokumen...</p>
+                    </div>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -2626,6 +2789,7 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
                               onClick={() => window.open(doc.download_url, '_blank')}
                               className="flex-1 px-3 py-1 text-xs bg-blue-100 text-blue-600 rounded hover:bg-blue-200 transition-colors"
                             >
+                              <FiEye className="inline mr-1" />
                               Lihat
                             </button>
                             <button
@@ -2634,6 +2798,13 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
                             >
                               <FiLink className="inline mr-1" />
                               Kaitkan
+                            </button>
+                            <button
+                              onClick={() => deleteDocumentFile(doc.filename, doc.type, selectedBumdesForDocs.id)}
+                              className="px-3 py-1 text-xs bg-red-100 text-red-600 rounded hover:bg-red-200 transition-colors"
+                              title="Hapus file"
+                            >
+                              <FiTrash2 className="inline" />
                             </button>
                           </div>
                         </div>
