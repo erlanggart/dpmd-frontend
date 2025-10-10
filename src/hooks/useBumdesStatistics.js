@@ -51,7 +51,9 @@ export const useBumdesStatistics = () => {
       console.log('🔄 BUMDes Stats: Fetching fresh statistics...');
       console.log('🔄 BUMDes Stats: API Base URL:', api.defaults.baseURL);
       
-      const response = await api.get('/bumdes/statistics');
+      const response = await api.get('/bumdes/statistics', {
+        timeout: 45000 // 45 seconds timeout for statistics
+      });
       console.log('📊 BUMDes Stats: Raw response:', response);
       
       if (response.data.success) {
