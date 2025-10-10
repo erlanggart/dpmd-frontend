@@ -16,12 +16,14 @@ const ProdukHukum = () => {
 	const [currentPage, setCurrentPage] = useState(1);
 	const [totalPages, setTotalPages] = useState(1);
 	const [searchTerm, setSearchTerm] = useState("");
+	const [isLoading, setIsLoading] = useState(false);
 
 	const location = useLocation();
 	const navigate = useNavigate();
 
 	const fetchProdukHukums = async (page, search = "") => {
 		try {
+			setIsLoading(true);
 			const response = await getProdukHukums(page, search);
 			setProdukHukums(response.data.data.data);
 			setCurrentPage(response.data.data.current_page);
@@ -33,6 +35,8 @@ const ProdukHukum = () => {
 				title: "Oops...",
 				text: "Gagal memuat data produk hukum!",
 			});
+		} finally {
+			setIsLoading(false);
 		}
 	};
 
@@ -67,20 +71,36 @@ const ProdukHukum = () => {
 	const handleFormSubmit = async (formData) => {
 		try {
 			const action = editingProduk ? "diperbarui" : "ditambahkan";
+
+			// Show loading toast
+			const loadingToast = Swal.fire({
+				title: `${editingProduk ? "Memperbarui" : "Menyimpan"} produk hukum...`,
+				text: "Mohon tunggu, sedang memproses data.",
+				allowOutsideClick: false,
+				didOpen: () => {
+					Swal.showLoading();
+				},
+			});
+
 			if (editingProduk) {
 				await updateProdukHukum(editingProduk.id, formData);
 			} else {
 				await createProdukHukum(formData);
 			}
+
+			// Close loading toast
+			loadingToast.close();
+
 			setSearchTerm(""); // Reset pencarian setelah submit
-			fetchProdukHukums(1); // Kembali ke halaman 1
+			await fetchProdukHukums(1); // Kembali ke halaman 1
 			setIsFormVisible(false);
 			setEditingProduk(null);
+
 			Swal.fire({
 				icon: "success",
 				title: "Berhasil!",
 				text: `Produk hukum berhasil ${action}.`,
-				timer: 1500,
+				timer: 2000,
 				showConfirmButton: false,
 			});
 		} catch (error) {
@@ -90,8 +110,10 @@ const ProdukHukum = () => {
 				title: "Gagal!",
 				text:
 					"Terjadi kesalahan saat menyimpan data. " +
-					(error.response?.data?.message || ""),
+					(error.response?.data?.message || "Silakan coba lagi."),
 			});
+			// Re-throw error so form component can handle it
+			throw error;
 		}
 	};
 
@@ -145,11 +167,38 @@ const ProdukHukum = () => {
 							placeholder="Cari peraturan berdasarkan judul..."
 							value={searchTerm}
 							onChange={(e) => setSearchTerm(e.target.value)}
-							className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+							disabled={isLoading}
+							className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
 						/>
 					</div>
 
-					{produkHukums.length > 0 ? (
+					{isLoading ? (
+						<div className="text-center py-10">
+							<div className="flex justify-center items-center gap-3">
+								<svg
+									className="animate-spin h-6 w-6 text-blue-500"
+									xmlns="http://www.w3.org/2000/svg"
+									fill="none"
+									viewBox="0 0 24 24"
+								>
+									<circle
+										className="opacity-25"
+										cx="12"
+										cy="12"
+										r="10"
+										stroke="currentColor"
+										strokeWidth="4"
+									></circle>
+									<path
+										className="opacity-75"
+										fill="currentColor"
+										d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+									></path>
+								</svg>
+								<p className="text-gray-500">Memuat data produk hukum...</p>
+							</div>
+						</div>
+					) : produkHukums.length > 0 ? (
 						<ProdukHukumList produkHukums={produkHukums} />
 					) : (
 						<div className="text-center py-10">
@@ -163,8 +212,8 @@ const ProdukHukum = () => {
 						<div className="mt-4 flex justify-between">
 							<button
 								onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-								disabled={currentPage === 1}
-								className="bg-gray-300 px-4 py-2 rounded disabled:opacity-50"
+								disabled={currentPage === 1 || isLoading}
+								className="bg-gray-300 px-4 py-2 rounded disabled:opacity-50 disabled:cursor-not-allowed"
 							>
 								Previous
 							</button>
@@ -175,8 +224,8 @@ const ProdukHukum = () => {
 								onClick={() =>
 									setCurrentPage((p) => Math.min(p + 1, totalPages))
 								}
-								disabled={currentPage === totalPages}
-								className="bg-gray-300 px-4 py-2 rounded disabled:opacity-50"
+								disabled={currentPage === totalPages || isLoading}
+								className="bg-gray-300 px-4 py-2 rounded disabled:opacity-50 disabled:cursor-not-allowed"
 							>
 								Next
 							</button>
