@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { FiList, FiPlus, FiFileText, FiEdit, FiTrash2, FiEye, FiSearch, FiFilter, FiDownload } from 'react-icons/fi';
+import { FiList, FiPlus, FiFileText, FiEdit, FiTrash2, FiEye, FiSearch, FiFilter, FiDownload, FiX, FiRefreshCw } from 'react-icons/fi';
 import api from '../../../api';
 import Swal from 'sweetalert2';
 import KegiatanForm from './KegiatanForm';
 import { exportToPDF, exportToExcel, formatDataForExport, exportWithProgress } from '../../../utils/exportUtils';
+import { generateSafeDataHashLong } from '../../../utils/hashUtils';
 
 const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, refreshTrigger }) => {
   const [kegiatanList, setKegiatanList] = useState([]);
@@ -16,7 +17,7 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, refres
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
-  const limit = 10;
+  const limit = 4;
 
   // Export functionality states
   const [isExportingPDF, setIsExportingPDF] = useState(false);
@@ -31,11 +32,7 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, refres
 
   // Cache utility functions
   const generateDataHash = (data) => {
-    try {
-      return btoa(JSON.stringify(data)).slice(0, 16);
-    } catch {
-      return Date.now().toString();
-    }
+    return generateSafeDataHashLong(data);
   };
 
   const isCacheValid = (cacheKey, maxAge = 120000) => { // 2 minutes default
@@ -70,6 +67,13 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, refres
     const cache = dataCache[cacheKey];
     return !cache.data || !isCacheValid(cacheKey, maxAge) || refreshTrigger > lastRefreshTrigger;
   };
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+    }
+  }, [searchTerm, selectedBidang]);
 
   // Debounced effect for search to reduce API calls
   useEffect(() => {
@@ -128,6 +132,7 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, refres
       };
 
       console.log('KegiatanList: Fetching fresh kegiatan data with params:', params);
+      console.log('📋 KegiatanList: Filter values - searchTerm:', searchTerm, 'selectedBidang:', selectedBidang);
       const response = await api.get('/perjadin/kegiatan', { params });
       
       if (response.data.success) {
@@ -220,6 +225,14 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, refres
       }
     }
   };
+
+  const handleClearFilters = useCallback(() => {
+    setSearchTerm('');
+    setSelectedBidang('');
+    setCurrentPage(1);
+    // Clear cache to force fresh data
+    clearCache('kegiatan');
+  }, []);
 
   const handleEdit = useCallback((kegiatan) => {
     setEditingKegiatan(kegiatan);
@@ -584,7 +597,7 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, refres
 
         {/* Enhanced Filters */}
         <div className="p-6 bg-slate-50 border-b border-slate-200">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Search Input */}
             <div className="space-y-2">
               <label className="block text-sm font-semibold text-slate-700">
@@ -608,7 +621,11 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, refres
               </label>
               <select
                 value={selectedBidang}
-                onChange={(e) => setSelectedBidang(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  console.log('📋 KegiatanList: Bidang filter changed to:', value);
+                  setSelectedBidang(value);
+                }}
                 className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent"
               >
                 <option value="">Semua Bidang</option>
@@ -619,23 +636,119 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, refres
                 ))}
               </select>
             </div>
+
+            {/* Filter Actions */}
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-slate-700 opacity-0">
+                Actions
+              </label>
+              <div className="flex gap-3">
+                <button
+                  onClick={handleClearFilters}
+                  disabled={!searchTerm && !selectedBidang}
+                  className="flex-1 px-4 py-3 bg-white border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 flex items-center justify-center gap-2"
+                >
+                  <FiX className="w-4 h-4" />
+                  Reset Filter
+                </button>
+                <button
+                  onClick={() => fetchKegiatan(true)}
+                  className="px-4 py-3 bg-slate-600 text-white rounded-xl hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-500 transition-colors duration-200 flex items-center justify-center"
+                  title="Refresh Data"
+                >
+                  <FiRefreshCw className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
           </div>
+
+          {/* Filter Status */}
+          {(searchTerm || selectedBidang) && (
+            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm text-blue-700">
+                  <FiFilter className="w-4 h-4" />
+                  <span>Filter aktif:</span>
+                  {searchTerm && <span className="bg-blue-100 px-2 py-1 rounded">"{searchTerm}"</span>}
+                  {selectedBidang && (
+                    <span className="bg-blue-100 px-2 py-1 rounded">
+                      {bidangList.find(b => b.id_bidang.toString() === selectedBidang)?.nama_bidang || 'Bidang dipilih'}
+                    </span>
+                  )}
+                </div>
+                <button
+                  onClick={handleClearFilters}
+                  className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1"
+                >
+                  <FiX className="w-3 h-3" />
+                  Hapus semua filter
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Enhanced Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead className="bg-gradient-to-r from-slate-100 to-slate-200">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-bold text-slate-700 uppercase tracking-wider border-b border-slate-300">No</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-slate-700 uppercase tracking-wider border-b border-slate-300">Nomor SP</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-slate-700 uppercase tracking-wider border-b border-slate-300">Nama Kegiatan</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-slate-700 uppercase tracking-wider border-b border-slate-300">Tanggal</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-slate-700 uppercase tracking-wider border-b border-slate-300">Lokasi</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-slate-700 uppercase tracking-wider border-b border-slate-300">Personil</th>
-                <th className="px-4 py-3 text-center text-xs font-bold text-slate-700 uppercase tracking-wider border-b border-slate-300">Aksi</th>
-              </tr>
-            </thead>
+        {/* Modern Enhanced Table */}
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[1400px]">
+              <thead className="bg-gradient-to-r from-slate-50 via-gray-50 to-slate-50 border-b-2 border-gray-200">
+                <tr>
+                  <th className="px-6 py-4 text-left w-20">
+                    <div className="flex items-center justify-center">
+                      <span className="bg-gray-600 text-white px-3 py-1 rounded-full text-xs font-bold">No</span>
+                    </div>
+                  </th>
+                  <th className="px-6 py-4 text-left w-44">
+                    <div className="flex items-center space-x-2 text-gray-700 font-semibold">
+                      <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <span className="text-sm">📄</span>
+                      </div>
+                      <span className="text-sm">Nomor SP</span>
+                    </div>
+                  </th>
+                  <th className="px-6 py-4 text-left w-64">
+                    <div className="flex items-center space-x-2 text-gray-700 font-semibold">
+                      <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                        <span className="text-sm">📋</span>
+                      </div>
+                      <span className="text-sm">Kegiatan</span>
+                    </div>
+                  </th>
+                  <th className="px-6 py-4 text-left w-40">
+                    <div className="flex items-center space-x-2 text-gray-700 font-semibold">
+                      <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
+                        <span className="text-sm">📅</span>
+                      </div>
+                      <span className="text-sm">Tanggal</span>
+                    </div>
+                  </th>
+                  <th className="px-6 py-4 text-left w-44">
+                    <div className="flex items-center space-x-2 text-gray-700 font-semibold">
+                      <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                        <span className="text-sm">📍</span>
+                      </div>
+                      <span className="text-sm">Lokasi</span>
+                    </div>
+                  </th>
+                  <th className="px-6 py-4 text-left">
+                    <div className="flex items-center space-x-2 text-gray-700 font-semibold">
+                      <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center">
+                        <span className="text-sm">👥</span>
+                      </div>
+                      <span className="text-sm">Personil & Bidang</span>
+                    </div>
+                  </th>
+                  <th className="px-6 py-4 text-center w-32">
+                    <div className="flex items-center justify-center space-x-2 text-gray-700 font-semibold">
+                      <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+                        <span className="text-sm">⚙️</span>
+                      </div>
+                      <span className="text-sm">Aksi</span>
+                    </div>
+                  </th>
+                </tr>
+              </thead>
             <tbody className="divide-y divide-slate-200">
               {kegiatanList.length === 0 ? (
                 <tr>
@@ -653,45 +766,107 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, refres
                 </tr>
               ) : (
                 kegiatanList.map((kegiatan, index) => (
-                  <tr key={kegiatan.id_kegiatan || kegiatan.id_perjadin} className="hover:bg-slate-50/70 transition-colors duration-200 border-b border-slate-100">
-                    <td className="px-4 py-3 text-sm text-slate-700 font-medium">
-                      {(currentPage - 1) * limit + index + 1}
-                    </td>
-                    <td className="px-4 py-3 text-sm font-semibold text-slate-800">
-                      <span className="inline-flex px-2 py-1 bg-slate-100 text-slate-700 rounded-md text-xs">
-                        {kegiatan.nomor_sp || 'N/A'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="max-w-xs">
-                        <p className="text-sm font-semibold text-slate-800 truncate" title={kegiatan.nama_kegiatan}>
-                          {kegiatan.nama_kegiatan}
-                        </p>
-                        {kegiatan.keterangan && (
-                          <p className="text-xs text-slate-600 mt-1 truncate" title={kegiatan.keterangan}>
-                            {kegiatan.keterangan}
-                          </p>
-                        )}
+                  <tr key={kegiatan.id_kegiatan || kegiatan.id_perjadin} className="hover:bg-blue-50/30 transition-all duration-200 group">
+                    {/* Nomor */}
+                    <td className="px-6 py-5 text-center">
+                      <div className="flex items-center justify-center">
+                        <span className="inline-flex items-center justify-center w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-full text-sm font-bold shadow-sm">
+                          {(currentPage - 1) * limit + index + 1}
+                        </span>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-sm text-slate-700">
+
+                    {/* Nomor SP */}
+                    <td className="px-6 py-5">
+                      <div className="flex items-center space-x-3">
+                        <div className="flex-shrink-0">
+                          <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center group-hover:bg-gray-200 transition-colors">
+                            <span className="text-lg">📄</span>
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-sm font-semibold text-gray-900">
+                            {kegiatan.nomor_sp || 'Belum ada nomor'}
+                          </div>
+                          <div className="text-xs text-gray-500">Nomor Surat Perintah</div>
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* Nama Kegiatan */}
+                    <td className="px-6 py-5">
                       <div className="space-y-1">
-                        <div className="font-medium text-slate-800">{formatDate(kegiatan.tanggal_mulai)}</div>
-                        {kegiatan.tanggal_selesai && kegiatan.tanggal_selesai !== kegiatan.tanggal_mulai && (
-                          <div className="text-xs text-slate-500">s/d {formatDate(kegiatan.tanggal_selesai)}</div>
+                        <div className="text-sm font-semibold text-gray-900 leading-5">
+                          {kegiatan.nama_kegiatan}
+                        </div>
+                        {kegiatan.keterangan && (
+                          <div className="text-xs text-gray-600 leading-4">
+                            <span className="inline-flex items-center space-x-1">
+                              <span>💭</span>
+                              <span className="truncate max-w-xs" title={kegiatan.keterangan}>
+                                {kegiatan.keterangan}
+                              </span>
+                            </span>
+                          </div>
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-sm text-slate-700">
-                      <div className="max-w-xs truncate" title={kegiatan.lokasi}>
-                        <span className="inline-flex px-2 py-1 bg-blue-50 text-blue-700 rounded-md text-xs">
+
+                    {/* Tanggal */}
+                    <td className="px-6 py-5">
+                      <div className="space-y-1">
+                        <div className="inline-flex items-center space-x-2 px-3 py-1.5 bg-green-50 text-green-800 rounded-lg text-sm font-medium">
+                          <span>🗓️</span>
+                          <span>{formatDate(kegiatan.tanggal_mulai)}</span>
+                        </div>
+                        {kegiatan.tanggal_selesai && kegiatan.tanggal_selesai !== kegiatan.tanggal_mulai && (
+                          <div className="inline-flex items-center space-x-2 px-3 py-1 bg-green-100 text-green-700 rounded text-xs">
+                            <span>s/d {formatDate(kegiatan.tanggal_selesai)}</span>
+                          </div>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* Lokasi */}
+                    <td className="px-6 py-5">
+                      <div className="inline-flex items-center space-x-2 px-3 py-2 bg-purple-50 text-purple-800 rounded-lg text-sm max-w-xs">
+                        <span>📍</span>
+                        <span className="truncate" title={kegiatan.lokasi}>
                           {kegiatan.lokasi || 'Belum ditentukan'}
                         </span>
                       </div>
                     </td>
                     <td className="px-4 py-3 text-sm text-slate-700">
-                      <div className="max-w-xs truncate" title={formatPersonil(kegiatan)}>
-                        {formatPersonil(kegiatan)}
+                      <div className="w-full">
+                        {kegiatan?.details?.length > 0 ? (
+                          <div className="space-y-2">
+                            {kegiatan.details.map((detail, idx) => (
+                              <div key={idx} className="border-l-4 border-blue-400 pl-3 py-1 bg-blue-50/50 rounded-r">
+                                <div className="font-semibold text-xs text-blue-800 mb-1">
+                                  📋 {detail.bidang?.nama || detail.nama_bidang || 'Unknown Bidang'}
+                                </div>
+                                <div className="text-xs text-slate-600 leading-relaxed break-words">
+                                  {detail.personil && typeof detail.personil === 'string' 
+                                    ? (
+                                        <div className="bg-white border border-gray-200 rounded px-2 py-1">
+                                          � {detail.personil}
+                                        </div>
+                                      )
+                                    : detail.personil && Array.isArray(detail.personil)
+                                      ? (
+                                          <div className="bg-white border border-gray-200 rounded px-2 py-1">
+                                            � {detail.personil.filter(p => p && p.trim()).join(', ')}
+                                          </div>
+                                        )
+                                      : <span className="text-gray-400 italic">Tidak ada personil</span>
+                                  }
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 italic text-xs">Belum ada personil</span>
+                        )}
                       </div>
                     </td>
                     <td className="px-4 py-3 text-center">
@@ -718,31 +893,57 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, refres
                   </tr>
                 ))
               )}
-            </tbody>
-          </table>
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        {/* Enhanced Pagination */}
-        {totalPages > 1 && (
-          <div className="bg-gradient-to-r from-slate-50 to-slate-100 px-6 py-4 border-t border-slate-200">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-2 text-sm text-slate-600">
-                <span>Menampilkan</span>
-                <span className="px-2 py-1 bg-slate-200 text-slate-800 rounded-md font-bold text-xs">
-                  {(currentPage - 1) * limit + 1} - {Math.min(currentPage * limit, totalRecords)}
-                </span>
-                <span>dari</span>
-                <span className="px-2 py-1 bg-slate-200 text-slate-800 rounded-md font-bold text-xs">{totalRecords}</span>
-                <span>data</span>
-              </div>
+        {/* Enhanced Pagination with Info */}
+        <div className="bg-gradient-to-r from-slate-50 to-slate-100 px-6 py-4 border-t border-slate-200">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            {/* Data Info - Always show */}
+            <div className="flex items-center gap-2 text-sm text-slate-600">
+              <span>Menampilkan</span>
+              <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-md font-bold text-xs">
+                {totalRecords > 0 ? (currentPage - 1) * limit + 1 : 0} - {Math.min(currentPage * limit, totalRecords)}
+              </span>
+              <span>dari</span>
+              <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-md font-bold text-xs">{totalRecords}</span>
+              <span>data</span>
+              {totalPages > 1 && (
+                <>
+                  <span>•</span>
+                  <span className="text-xs">
+                    Halaman <strong>{currentPage}</strong> dari <strong>{totalPages}</strong>
+                  </span>
+                </>
+              )}
+            </div>
+
+            {/* Pagination Controls - Show only if more than 1 page */}
+            {totalPages > 1 && (
               <div className="flex items-center gap-1">
+                {/* First Page */}
+                {currentPage > 3 && totalPages > 5 && (
+                  <>
+                    <button
+                      onClick={() => setCurrentPage(1)}
+                      className="px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 bg-white text-slate-600 hover:bg-slate-100 border border-slate-300 hover:scale-105"
+                    >
+                      1
+                    </button>
+                    {currentPage > 4 && <span className="px-2 text-slate-400">...</span>}
+                  </>
+                )}
+
                 {/* Previous Button */}
                 <button
                   onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                   disabled={currentPage === 1}
-                  className="px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 bg-white text-slate-600 hover:bg-slate-100 border border-slate-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 bg-white text-slate-600 hover:bg-slate-100 border border-slate-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
                 >
-                  ←
+                  <span>←</span>
+                  <span className="hidden sm:inline">Prev</span>
                 </button>
                 
                 {/* Page Numbers */}
@@ -762,9 +963,9 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, refres
                     <button
                       key={page}
                       onClick={() => setCurrentPage(page)}
-                      className={`px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+                      className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
                         currentPage === page
-                          ? 'bg-slate-700 text-white shadow-lg scale-110'
+                          ? 'bg-blue-600 text-white shadow-lg ring-2 ring-blue-300'
                           : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-300 hover:scale-105'
                       }`}
                     >
@@ -777,14 +978,28 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, refres
                 <button
                   onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                   disabled={currentPage === totalPages}
-                  className="px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 bg-white text-slate-600 hover:bg-slate-100 border border-slate-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 bg-white text-slate-600 hover:bg-slate-100 border border-slate-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
                 >
-                  →
+                  <span className="hidden sm:inline">Next</span>
+                  <span>→</span>
                 </button>
+
+                {/* Last Page */}
+                {currentPage < totalPages - 2 && totalPages > 5 && (
+                  <>
+                    {currentPage < totalPages - 3 && <span className="px-2 text-slate-400">...</span>}
+                    <button
+                      onClick={() => setCurrentPage(totalPages)}
+                      className="px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 bg-white text-slate-600 hover:bg-slate-100 border border-slate-300 hover:scale-105"
+                    >
+                      {totalPages}
+                    </button>
+                  </>
+                )}
               </div>
-            </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

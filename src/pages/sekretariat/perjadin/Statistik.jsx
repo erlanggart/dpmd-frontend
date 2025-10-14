@@ -14,6 +14,7 @@ import {
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { FiBarChart2, FiCalendar, FiTrendingUp, FiUsers, FiFilter } from 'react-icons/fi';
 import api from '../../../api';
+import { generateSafeDataHashLong } from '../../../utils/hashUtils';
 
 ChartJS.register(
   CategoryScale,
@@ -58,11 +59,7 @@ const Statistik = ({ refreshTrigger }) => {
 
   // Cache utility functions
   const generateDataHash = (data) => {
-    try {
-      return btoa(JSON.stringify(data)).slice(0, 16);
-    } catch {
-      return Date.now().toString();
-    }
+    return generateSafeDataHashLong(data);
   };
 
   const isCacheValid = (cacheKey, maxAge = 120000) => { // 2 minutes default

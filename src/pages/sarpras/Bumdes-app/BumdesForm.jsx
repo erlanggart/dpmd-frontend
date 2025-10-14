@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import api, { getKecamatans, getDesasByKecamatan } from '../../../services/api.js';
-import { FaPaperPlane, FaSpinner, FaTimes, FaCheck, FaExclamationTriangle, FaInfoCircle, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import { FaPaperPlane, FaSpinner, FaTimes, FaCheck, FaExclamationTriangle, FaInfoCircle, FaChevronLeft, FaChevronRight, FaSave, FaTrash } from 'react-icons/fa';
 import { HiSparkles } from 'react-icons/hi';
+import { useLocalStorage, useFileLocalStorage } from '../../../hooks/useLocalStorage.js';
+import EnhancedFileInput from '../../../components/EnhancedFileInput.jsx';
 
 // Custom CSS untuk styling dropdown yang lebih baik
 const customStyles = `
@@ -308,59 +310,65 @@ const Modal = ({ show, onClose, title, message, type }) => {
     );
 };
 
-// Enhanced form input component
-const FormInput = ({ label, name, type = "text", value, onChange, disabled, required = false, placeholder, options = [], dropdownStyle = "auto" }) => (
-    <div className="space-y-2">
-        <label className="block text-sm font-semibold text-slate-700">
-            {label}
-            {required && <span className="text-red-500 ml-1">*</span>}
-        </label>
-        {type === 'select' ? (
-            <CustomDropdown
+// Enhanced form input component with localStorage support
+const FormInput = ({ label, name, type = "text", value, onChange, disabled, required = false, placeholder, options = [], dropdownStyle = "auto", fileInfo, onFileInfoChange, isValidFileInfo }) => {
+    if (type === 'file') {
+        return (
+            <EnhancedFileInput
                 label={label}
                 name={name}
-                value={value}
                 onChange={onChange}
-                options={options}
                 disabled={disabled}
-                placeholder={placeholder}
+                required={required}
+                fileInfo={fileInfo}
+                onFileInfoChange={onFileInfoChange}
+                isValidFileInfo={isValidFileInfo}
             />
-        
-        ) : type === 'file' ? (
-            <div className="relative">
-                <input
-                    type="file"
+        );
+    }
+    
+    return (
+        <div className="space-y-2">
+            <label className="block text-sm font-semibold text-slate-700">
+                {label}
+                {required && <span className="text-red-500 ml-1">*</span>}
+            </label>
+            {type === 'select' ? (
+                <CustomDropdown
+                    label={label}
                     name={name}
+                    value={value}
+                    onChange={onChange}
+                    options={options}
+                    disabled={disabled}
+                    placeholder={placeholder}
+                />
+            
+            ) : type === 'textarea' ? (
+                <textarea
+                    name={name}
+                    value={value}
                     onChange={onChange}
                     disabled={disabled}
-                    className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-300 bg-white/80 backdrop-blur-sm disabled:bg-slate-100 disabled:cursor-not-allowed file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                    placeholder={placeholder}
+                    rows={4}
+                    className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-300 bg-white/80 backdrop-blur-sm disabled:bg-slate-100 disabled:cursor-not-allowed hover:border-slate-300 resize-none"
                 />
-                <div className="text-xs text-slate-500 mt-1">Maksimal ukuran file: 5MB</div>
-            </div>
-        ) : type === 'textarea' ? (
-            <textarea
-                name={name}
-                value={value}
-                onChange={onChange}
-                disabled={disabled}
-                placeholder={placeholder}
-                rows={4}
-                className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-300 bg-white/80 backdrop-blur-sm disabled:bg-slate-100 disabled:cursor-not-allowed hover:border-slate-300 resize-none"
-            />
-        ) : (
-            <input
-                type={type}
-                name={name}
-                value={value}
-                onChange={onChange}
-                disabled={disabled}
-                placeholder={placeholder}
-                required={required}
-                className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-300 bg-white/80 backdrop-blur-sm disabled:bg-slate-100 disabled:cursor-not-allowed hover:border-slate-300"
-            />
-        )}
-    </div>
-);
+            ) : (
+                <input
+                    type={type}
+                    name={name}
+                    value={value}
+                    onChange={onChange}
+                    disabled={disabled}
+                    placeholder={placeholder}
+                    required={required}
+                    className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-300 bg-white/80 backdrop-blur-sm disabled:bg-slate-100 disabled:cursor-not-allowed hover:border-slate-300"
+                />
+            )}
+        </div>
+    );
+};
 
 const SectionHeader = ({ title, subtitle }) => (
     <div className="mb-8 text-center">
@@ -472,12 +480,25 @@ const formSections = [
 ];
 
 function BumdesForm({ onSwitchToDashboard }) {
-    const [formData, setFormData] = useState(initialFormData);
+    // State untuk form data dengan localStorage
+    const [formData, setFormData] = useLocalStorage('bumdes-form-data', initialFormData);
+    
+    // State untuk file information dengan localStorage
+    const [fileInfo, setFileInfo, removeFileInfo, clearAllFiles, isValidFileInfo] = useFileLocalStorage('bumdes-file-info');
+    
+    // State untuk file objects (tidak disimpan di localStorage)
+    const [selectedFiles, setSelectedFiles] = useState({});
+    
     const [loading, setLoading] = useState(false);
     const [showPopup, setShowPopup] = useState(false);
     const [popupMessage, setPopupMessage] = useState({ text: '', type: '' });
-    const [activeSection, setActiveSection] = useState('identitas');
-    const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
+    
+    // State untuk section navigation dengan localStorage
+    const [activeSection, setActiveSection] = useLocalStorage('bumdes-active-section', 'identitas');
+    const [currentSectionIndex, setCurrentSectionIndex] = useState(() => {
+        const index = formSections.findIndex(section => section.id === activeSection);
+        return index !== -1 ? index : 0;
+    });
     
     // State untuk kecamatan dan desa
     const [kecamatanList, setKecamatanList] = useState([]);
@@ -485,12 +506,30 @@ function BumdesForm({ onSwitchToDashboard }) {
     const [selectedKecamatanId, setSelectedKecamatanId] = useState('');
     const [loadingDesa, setLoadingDesa] = useState(false);
 
+    // Auto-save timer
+    const [autoSaveStatus, setAutoSaveStatus] = useState('');
+
     // Load kecamatan data saat komponen dimount
     useEffect(() => {
         const fetchKecamatans = async () => {
             try {
                 const response = await getKecamatans();
                 setKecamatanList(response.data.data || []);
+                
+                // Restore kecamatan selection from form data
+                if (formData.kecamatan) {
+                    const savedKecamatan = response.data.data.find(kec => kec.nama === formData.kecamatan);
+                    if (savedKecamatan) {
+                        setSelectedKecamatanId(savedKecamatan.id);
+                        // Load desa list for saved kecamatan
+                        try {
+                            const desaResponse = await getDesasByKecamatan(savedKecamatan.id);
+                            setDesaList(desaResponse.data.data || []);
+                        } catch (error) {
+                            console.error('Error loading saved desa list:', error);
+                        }
+                    }
+                }
             } catch (error) {
                 console.error('Error fetching kecamatans:', error);
                 showMessagePopup('Gagal memuat data kecamatan', 'error');
@@ -498,7 +537,26 @@ function BumdesForm({ onSwitchToDashboard }) {
         };
 
         fetchKecamatans();
-    }, []);
+    }, [formData.kecamatan]);
+
+    // Update currentSectionIndex when activeSection changes
+    useEffect(() => {
+        const index = formSections.findIndex(section => section.id === activeSection);
+        if (index !== -1) {
+            setCurrentSectionIndex(index);
+        }
+    }, [activeSection]);
+
+    // Auto-save functionality
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setAutoSaveStatus('Data tersimpan otomatis');
+            const hideTimer = setTimeout(() => setAutoSaveStatus(''), 2000);
+            return () => clearTimeout(hideTimer);
+        }, 1000);
+
+        return () => clearTimeout(timer);
+    }, [formData]);
 
     // Handle kecamatan change
     const handleKecamatanChange = async (e) => {
@@ -566,7 +624,43 @@ function BumdesForm({ onSwitchToDashboard }) {
     };
 
     const handleFileChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.files[0] });
+        const { name } = e.target;
+        const file = e.target.files[0];
+        
+        if (file) {
+            // Store actual file object for form submission
+            setSelectedFiles(prev => ({
+                ...prev,
+                [name]: file
+            }));
+            
+            // File info is handled by EnhancedFileInput component
+        } else {
+            // Remove file when cleared
+            setSelectedFiles(prev => {
+                const updated = { ...prev };
+                delete updated[name];
+                return updated;
+            });
+        }
+    };
+
+    const handleFileInfoChange = (fieldName, file) => {
+        if (file) {
+            setFileInfo(fieldName, file);
+            // Also store the actual file for submission
+            setSelectedFiles(prev => ({
+                ...prev,
+                [fieldName]: file
+            }));
+        } else {
+            removeFileInfo(fieldName);
+            setSelectedFiles(prev => {
+                const updated = { ...prev };
+                delete updated[fieldName];
+                return updated;
+            });
+        }
     };
 
     const showMessagePopup = (text, type) => {
@@ -596,6 +690,18 @@ function BumdesForm({ onSwitchToDashboard }) {
             setCurrentSectionIndex(index);
             setActiveSection(sectionId);
         }
+    };
+
+    // Clear form data function
+    const clearFormData = () => {
+        setFormData(initialFormData);
+        setSelectedFiles({});
+        clearAllFiles();
+        setActiveSection('identitas');
+        setCurrentSectionIndex(0);
+        setSelectedKecamatanId('');
+        setDesaList([]);
+        showMessagePopup('Data formulir telah dibersihkan', 'success');
     };
 
     // Function to check if desa already has BUMDes
@@ -633,13 +739,18 @@ function BumdesForm({ onSwitchToDashboard }) {
         for (const key in formData) {
             const value = formData[key];
             if (value !== null && value !== '') {
-                if (value instanceof File) {
-                    dataToSend.append(key, value);
-                } else if (['Omset2023', 'Laba2023', 'Omset2024', 'Laba2024', 'PenyertaanModal2019', 'PenyertaanModal2020', 'PenyertaanModal2021', 'PenyertaanModal2022', 'PenyertaanModal2023', 'PenyertaanModal2024', 'SumberLain', 'NilaiAset', 'KontribusiTerhadapPADes2021', 'KontribusiTerhadapPADes2022', 'KontribusiTerhadapPADes2023', 'KontribusiTerhadapPADes2024', 'TotalTenagaKerja'].includes(key)) {
+                if (['Omset2023', 'Laba2023', 'Omset2024', 'Laba2024', 'PenyertaanModal2019', 'PenyertaanModal2020', 'PenyertaanModal2021', 'PenyertaanModal2022', 'PenyertaanModal2023', 'PenyertaanModal2024', 'SumberLain', 'NilaiAset', 'KontribusiTerhadapPADes2021', 'KontribusiTerhadapPADes2022', 'KontribusiTerhadapPADes2023', 'KontribusiTerhadapPADes2024', 'TotalTenagaKerja'].includes(key)) {
                     dataToSend.append(key, parseRupiah(value));
                 } else {
                     dataToSend.append(key, value);
                 }
+            }
+        }
+
+        // Add selected files to FormData
+        for (const key in selectedFiles) {
+            if (selectedFiles[key]) {
+                dataToSend.append(key, selectedFiles[key]);
             }
         }
 
@@ -649,7 +760,16 @@ function BumdesForm({ onSwitchToDashboard }) {
             });
 
             showMessagePopup('Data BUMDesa berhasil disimpan!', 'success');
+            
+            // Clear localStorage after successful submission
             setFormData(initialFormData);
+            setSelectedFiles({});
+            clearAllFiles();
+            setActiveSection('identitas');
+            setCurrentSectionIndex(0);
+            setSelectedKecamatanId('');
+            setDesaList([]);
+            
             setLoading(false);
         } catch (error) {
             console.error("Gagal menyimpan data:", error.response?.data?.errors || error.message);
@@ -1463,6 +1583,9 @@ function BumdesForm({ onSwitchToDashboard }) {
                                     name="LaporanKeuangan2021"
                                     type="file"
                                     onChange={handleFileChange}
+                                    fileInfo={fileInfo}
+                                    onFileInfoChange={handleFileInfoChange}
+                                    isValidFileInfo={isValidFileInfo}
                                 />
                                 
                                 <FormInput
@@ -1470,6 +1593,9 @@ function BumdesForm({ onSwitchToDashboard }) {
                                     name="LaporanKeuangan2022"
                                     type="file"
                                     onChange={handleFileChange}
+                                    fileInfo={fileInfo}
+                                    onFileInfoChange={handleFileInfoChange}
+                                    isValidFileInfo={isValidFileInfo}
                                 />
                                 
                                 <FormInput
@@ -1477,6 +1603,9 @@ function BumdesForm({ onSwitchToDashboard }) {
                                     name="LaporanKeuangan2023"
                                     type="file"
                                     onChange={handleFileChange}
+                                    fileInfo={fileInfo}
+                                    onFileInfoChange={handleFileInfoChange}
+                                    isValidFileInfo={isValidFileInfo}
                                 />
                                 
                                 <FormInput
@@ -1484,6 +1613,9 @@ function BumdesForm({ onSwitchToDashboard }) {
                                     name="LaporanKeuangan2024"
                                     type="file"
                                     onChange={handleFileChange}
+                                    fileInfo={fileInfo}
+                                    onFileInfoChange={handleFileInfoChange}
+                                    isValidFileInfo={isValidFileInfo}
                                 />
                             </div>
                         </div>
@@ -1514,6 +1646,9 @@ function BumdesForm({ onSwitchToDashboard }) {
                                         name="Perdes"
                                         type="file"
                                         onChange={handleFileChange}
+                                        fileInfo={fileInfo}
+                                        onFileInfoChange={handleFileInfoChange}
+                                        isValidFileInfo={isValidFileInfo}
                                     />
                                     
                                     <FormInput
@@ -1521,6 +1656,9 @@ function BumdesForm({ onSwitchToDashboard }) {
                                         name="ProfilBUMDesa"
                                         type="file"
                                         onChange={handleFileChange}
+                                        fileInfo={fileInfo}
+                                        onFileInfoChange={handleFileInfoChange}
+                                        isValidFileInfo={isValidFileInfo}
                                     />
                                     
                                     <FormInput
@@ -1528,6 +1666,9 @@ function BumdesForm({ onSwitchToDashboard }) {
                                         name="BeritaAcara"
                                         type="file"
                                         onChange={handleFileChange}
+                                        fileInfo={fileInfo}
+                                        onFileInfoChange={handleFileInfoChange}
+                                        isValidFileInfo={isValidFileInfo}
                                     />
                                     
                                     <FormInput
@@ -1535,6 +1676,9 @@ function BumdesForm({ onSwitchToDashboard }) {
                                         name="AnggaranDasar"
                                         type="file"
                                         onChange={handleFileChange}
+                                        fileInfo={fileInfo}
+                                        onFileInfoChange={handleFileInfoChange}
+                                        isValidFileInfo={isValidFileInfo}
                                     />
                                     
                                     <FormInput
@@ -1542,6 +1686,9 @@ function BumdesForm({ onSwitchToDashboard }) {
                                         name="AnggaranRumahTangga"
                                         type="file"
                                         onChange={handleFileChange}
+                                        fileInfo={fileInfo}
+                                        onFileInfoChange={handleFileInfoChange}
+                                        isValidFileInfo={isValidFileInfo}
                                     />
                                     
                                     <FormInput
@@ -1549,7 +1696,23 @@ function BumdesForm({ onSwitchToDashboard }) {
                                         name="ProgramKerja"
                                         type="file"
                                         onChange={handleFileChange}
+                                        fileInfo={fileInfo}
+                                        onFileInfoChange={handleFileInfoChange}
+                                        isValidFileInfo={isValidFileInfo}
                                     />
+                                    
+                                    <div className="md:col-span-2">
+                                        <FormInput
+                                            label="SK BUM Desa (Wajib)"
+                                            name="SK_BUM_Desa"
+                                            type="file"
+                                            onChange={handleFileChange}
+                                            required
+                                            fileInfo={fileInfo}
+                                            onFileInfoChange={handleFileInfoChange}
+                                            isValidFileInfo={isValidFileInfo}
+                                        />
+                                    </div>
                                     
                                     <div className="md:col-span-2">
                                         <FormInput
@@ -1624,6 +1787,22 @@ function BumdesForm({ onSwitchToDashboard }) {
                     </div>
                     
                     <div className="flex gap-3">
+                        {/* Auto-save status */}
+                        {autoSaveStatus && (
+                            <div className="flex items-center gap-2 px-4 py-3 bg-green-100 text-green-800 rounded-xl border border-green-200">
+                                <FaSave className="text-sm" />
+                                <span className="text-sm font-medium">{autoSaveStatus}</span>
+                            </div>
+                        )}
+                        
+                        <button 
+                            onClick={clearFormData}
+                            className="bg-red-500 text-white hover:bg-red-600 px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 flex items-center gap-2"
+                        >
+                            <FaTrash className="text-sm" />
+                            Bersihkan Form
+                        </button>
+                        
                         <button 
                             onClick={onSwitchToDashboard}
                             className="bg-white text-slate-800 hover:bg-gray-100 px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
