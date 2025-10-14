@@ -1167,7 +1167,6 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
       
       showNotification('success', 'File PDF berhasil diunduh!');
     } catch (error) {
-      console.error('Error generating PDF:', error);
       showNotification('error', 'Gagal mengunduh PDF. Silakan coba lagi.');
     }
   };
@@ -1362,7 +1361,6 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
       
       showNotification('success', 'File Excel berhasil diunduh!');
     } catch (error) {
-      console.error('Error generating Excel:', error);
       alert('Gagal mengunduh Excel. Silakan coba lagi.');
     }
   };
@@ -1498,7 +1496,6 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
           ...dokumenResult.data.map(doc => ({ ...doc, type: 'dokumen_badan_hukum' })),
           ...laporanResult.data.map(doc => ({ ...doc, type: 'laporan_keuangan' }))
         ];
-        console.log('📄 Documents loaded:', allDocs.length);
         setDocuments(allDocs);
         
         // Extract unique kecamatan and desa for filters
@@ -1519,7 +1516,6 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
         showNotification('error', 'Gagal mengambil data dokumen');
       }
     } catch (error) {
-      console.error('Error fetching documents:', error);
       showNotification('error', 'Terjadi kesalahan saat mengambil data dokumen');
     } finally {
       setDocumentsLoading(false);
@@ -1529,7 +1525,6 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
   // Fetch documents when BUMDes data is loaded
   useEffect(() => {
     if (bumdesData.length > 0) {
-      console.log('🔄 Fetching documents because BUMDes data is loaded:', bumdesData.length, 'records');
       fetchAllDocuments();
     }
   }, [bumdesData.length]);
@@ -1610,7 +1605,6 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
         alert('Gagal menghapus data: ' + (result.message || 'Unknown error'));
       }
     } catch (error) {
-      console.error('Error deleting bumdes:', error);
       alert('Terjadi kesalahan saat menghapus data');
     }
   };
@@ -1701,7 +1695,6 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
         showNotification('error', result.message || 'Gagal mengaitkan dokumen');
       }
     } catch (error) {
-      console.error('Error linking document:', error);
       showNotification('error', 'Terjadi kesalahan saat mengaitkan dokumen');
     }
   };
@@ -1739,7 +1732,6 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
         showNotification('error', result.message || 'Gagal menghapus file');
       }
     } catch (error) {
-      console.error('Error deleting file:', error);
       showNotification('error', 'Terjadi kesalahan saat menghapus file');
     }
   };
@@ -1748,21 +1740,15 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
   useEffect(() => {
     let filtered = documents;
 
-    console.log('Filtering documents - total documents:', documents.length);
-    
     // Show ONLY documents that belong to the selected BUMDes
     if (selectedBumdesForDocs && selectedBumdesForDocs.bumdesData) {
       const selectedBumdes = selectedBumdesForDocs.bumdesData;
-      
-      console.log('Selected BUMDes ID:', selectedBumdes.id);
-      console.log('Selected BUMDes Name:', selectedBumdes.namabumdesa);
       
       filtered = documents.filter(doc => {
         // STRICT: Only show documents that EXACTLY belong to this BUMDes
         
         // Method 1: Document has bumdes_info with exact BUMDes ID match
         if (doc.bumdes_info && doc.bumdes_info.id === selectedBumdes.id) {
-          console.log('✓ Exact BUMDes ID match:', doc.filename, '| BUMDes:', doc.bumdes_info.namabumdesa);
           return true;
         }
         
@@ -1770,19 +1756,13 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
         if (doc.matched_bumdes && Array.isArray(doc.matched_bumdes)) {
           const hasExactMatch = doc.matched_bumdes.some(match => match.id === selectedBumdes.id);
           if (hasExactMatch) {
-            console.log('✓ Exact BUMDes ID match via matched_bumdes:', doc.filename);
             return true;
           }
         }
         
-        // DO NOT show unlinked files - only show documents that belong to this BUMDes
-        console.log('✗ Document does not belong to selected BUMDes:', doc.filename);
         return false;
       });
-      
-      console.log('Filtered documents for BUMDes ID', selectedBumdes.id, ':', filtered.length);
     } else {
-      console.log('No BUMDes selected, showing no documents');
       filtered = []; // Show no documents if no BUMDes is selected
     }
 
@@ -1793,10 +1773,7 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
         doc.filename.toLowerCase().includes(searchLower) ||
         doc.type.toLowerCase().includes(searchLower)
       );
-      console.log('Filtered documents after search:', filtered.length);
     }
-
-    console.log('Final filtered documents:', filtered.length);
     setFilteredDocuments(filtered);
   }, [documents, documentFilters.search, selectedBumdesForDocs, bumdesData]);
 
@@ -2817,14 +2794,22 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
                       <div className="text-center py-12">
                         <FiFile className="mx-auto h-12 w-12 text-gray-400 mb-4" />
                         <h3 className="text-lg font-medium text-gray-900 mb-2">
-                          Tidak ada dokumen
+                          Tidak ada dokumen yang terkait
                         </h3>
-                        <p className="text-gray-500">
-                          {documentFilters.kecamatan || documentFilters.desa || documentFilters.search
-                            ? 'Tidak ada dokumen yang sesuai dengan filter'
-                            : 'Belum ada dokumen yang tersedia'
+                        <p className="text-gray-500 mb-4">
+                          {documentFilters.search
+                            ? 'Tidak ada dokumen yang sesuai dengan pencarian'
+                            : 'Belum ada dokumen yang terkait dengan BUMDes ini'
                           }
                         </p>
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-left max-w-md mx-auto">
+                          <h4 className="text-sm font-medium text-blue-800 mb-2">Cara mengaitkan dokumen:</h4>
+                          <ol className="text-xs text-blue-700 space-y-1">
+                            <li>1. Pastikan nama file mengandung nama BUMDes yang sesuai</li>
+                            <li>2. Atau gunakan tombol "Kaitkan" pada dokumen yang tersedia</li>
+                            <li>3. File akan otomatis muncul setelah dikaitkan dengan benar</li>
+                          </ol>
+                        </div>
                       </div>
                     )}
                   </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { FiEdit3, FiPlus, FiClipboard, FiCheck } from 'react-icons/fi';
+import { FiEdit3, FiPlus, FiClipboard, FiCheck, FiX, FiTrash2 } from 'react-icons/fi';
 import api from '../../../api';
 import Swal from 'sweetalert2';
 
@@ -764,7 +764,7 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose = () => {}, onSuccess
                     className="absolute top-4 right-4 bg-red-500 hover:bg-red-600 text-white p-2 rounded-lg transition-all duration-200"
                     title="Hapus Bidang"
                   >
-                    <i className="fas fa-times"></i>
+                    <FiX className="w-4 h-4" />
                   </button>
                 )}
 
@@ -823,8 +823,9 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose = () => {}, onSuccess
                               type="button" 
                               onClick={() => removePersonilSelect(index, personilIndex)} 
                               className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-lg transition-all duration-200"
+                              title="Hapus Personil"
                             >
-                              <i className="fas fa-times"></i>
+                              <FiTrash2 className="w-4 h-4" />
                             </button>
                           )}
                         </div>
@@ -834,7 +835,7 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose = () => {}, onSuccess
                         onClick={() => addPersonilSelect(index)} 
                         className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200"
                       >
-                        <i className="fas fa-plus"></i>
+                        <FiPlus className="w-4 h-4" />
                         <span>Tambah Personil</span>
                       </button>
                     </div>
