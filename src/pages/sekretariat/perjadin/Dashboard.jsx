@@ -12,6 +12,7 @@ import {
 } from 'react-icons/fi';
 import api from '../../../api';
 import Swal from 'sweetalert2';
+import { generateSafeDataHashLong } from '../../../utils/hashUtils';
 
 // Enhanced animations and transitions
 const enhancedStyles = `
@@ -179,7 +180,7 @@ const ActivityCard = ({ activity }) => {
 const Dashboard = ({ refreshTrigger, onFilterClick }) => {
   // Cache utility functions
   const generateDataHash = (data) => {
-    return btoa(JSON.stringify(data)).substring(0, 16);
+    return generateSafeDataHashLong(data);
   };
 
   const isCacheValid = (cacheKey, maxAge = 30000) => { // 30 seconds default

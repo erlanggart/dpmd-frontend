@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../api.js';
+import { generateSafeDataHash } from '../utils/hashUtils.js';
 
 export const useBumdesData = (initialData = null) => {
   const [bumdesData, setBumdesData] = useState([]);
@@ -14,7 +15,7 @@ export const useBumdesData = (initialData = null) => {
   const CACHE_DURATION = 5 * 60 * 1000;
 
   const generateDataHash = useCallback((data) => {
-    return btoa(JSON.stringify(data)).slice(0, 10);
+    return generateSafeDataHash(data);
   }, []);
 
   const shouldFetchData = useCallback(() => {

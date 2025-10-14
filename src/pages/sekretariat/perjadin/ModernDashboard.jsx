@@ -16,6 +16,7 @@ import Swal from 'sweetalert2';
 import StatCard from '../../../components/perjadin/StatCard';
 import ActivityCard from '../../../components/perjadin/ActivityCard';
 import ChartCard from '../../../components/perjadin/ChartCard';
+import { generateSafeDataHash } from '../../../utils/hashUtils';
 
 const ModernDashboard = ({ onFilterClick }) => {
   const [data, setData] = useState({
@@ -34,7 +35,7 @@ const ModernDashboard = ({ onFilterClick }) => {
   const CACHE_DURATION = 5 * 60 * 1000;
 
   const generateDataHash = (data) => {
-    return btoa(JSON.stringify(data)).slice(0, 10);
+    return generateSafeDataHash(data);
   };
 
   const shouldFetchData = () => {
