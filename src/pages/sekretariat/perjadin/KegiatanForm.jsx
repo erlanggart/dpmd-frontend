@@ -125,11 +125,14 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose = () => {}, onSuccess
         console.log('KegiatanForm: Fetching fresh bidang data...');
         const bidangRes = await api.get('/perjadin/bidang');
         
-        setAllBidangList(bidangRes.data);
+        // Handle API response structure
+        const bidangData = bidangRes.data?.success ? bidangRes.data.data : bidangRes.data;
+        
+        setAllBidangList(bidangData);
         setMasterDataCache(prev => ({
           ...prev,
           bidang: {
-            data: bidangRes.data,
+            data: bidangData,
             timestamp: Date.now()
           }
         }));
@@ -229,9 +232,12 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose = () => {}, onSuccess
           )
         ]);
         
+        // Handle API response structure
+        const personilData = personilRes.data?.success ? personilRes.data.data : personilRes.data;
+        
         setAllPersonilByBidang(prev => ({
           ...prev,
-          [e.target.value]: personilRes.data
+          [e.target.value]: personilData
         }));
 
         // Update cache
@@ -240,7 +246,7 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose = () => {}, onSuccess
           personil: {
             data: {
               ...prev.personil.data,
-              [e.target.value]: personilRes.data
+              [e.target.value]: personilData
             },
             timestamp: {
               ...prev.personil.timestamp,
@@ -312,7 +318,9 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose = () => {}, onSuccess
       try {
         console.log(`KegiatanForm: Fetching fresh personil data for bidang ${idBidang}...`);
         const response = await api.get(`/perjadin/personil/${idBidang}`);
-        setAllPersonilByBidang(prev => ({ ...prev, [idBidang]: response.data }));
+        // Handle API response structure
+        const personilData = response.data?.success ? response.data.data : response.data;
+        setAllPersonilByBidang(prev => ({ ...prev, [idBidang]: personilData }));
         console.log(`KegiatanForm: Successfully fetched personil for bidang ${idBidang}`);
       } catch (error) {
         console.error('KegiatanForm: Failed to fetch personil:', error);
@@ -783,8 +791,10 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose = () => {}, onSuccess
                         required
                       >
                         <option value="">Pilih Bidang</option>
-                        {allBidangList.map(b => (
-                          <option key={b.id} value={b.id}>{b.nama}</option>
+                        {Array.isArray(allBidangList) && allBidangList.map(b => (
+                          <option key={b.id_bidang || b.id} value={b.id_bidang || b.id}>
+                            {b.nama_bidang || b.nama}
+                          </option>
                         ))}
                       </select>
                       <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
@@ -810,7 +820,7 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose = () => {}, onSuccess
                               required
                             >
                               <option value="">Pilih Personil</option>
-                              {allPersonilByBidang[item.id_bidang] && allPersonilByBidang[item.id_bidang].map(p => (
+                              {Array.isArray(allPersonilByBidang[item.id_bidang]) && allPersonilByBidang[item.id_bidang].map(p => (
                                 <option key={p.id_personil} value={p.nama_personil}>{p.nama_personil}</option>
                               ))}
                             </select>

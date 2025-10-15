@@ -133,7 +133,8 @@ const MusdesusStatsPage = () => {
 
   const handleDownload = async (filename) => {
     try {
-      window.open(`${api.defaults.baseURL.replace('/api', '')}/storage/musdesus/${filename}`, '_blank');
+      // Perbaikan path: gunakan /api/uploads/musdesus/ yang benar
+      window.open(`${api.defaults.baseURL}/uploads/musdesus/${filename}`, '_blank');
       toast.success('File dibuka di tab baru');
     } catch (error) {
       console.error('Error opening file:', error);
