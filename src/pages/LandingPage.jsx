@@ -8,6 +8,7 @@ import { useScrollPosition } from "../hooks/useScrollPosition";
 import FeatureSection from "../components/landingpage/FeatureSection";
 import Footer from "../components/landingpage/Footer";
 import StatsSection from "../components/landingpage/StatsSection";
+import VideoTutorialSection from "../components/landingpage/VideoTutorialSection";
 
 const LandingPage = () => {
 	const scrollY = useScrollPosition();
@@ -25,6 +26,7 @@ const LandingPage = () => {
 	// Daftar link navigasi
 	const navLinks = [
 		{ to: "home", label: "Beranda" },
+		{ to: "tutorial", label: "Tutorial" },
 		{ to: "stats", label: "Statistik" },
 		{ to: "features", label: "Fitur" },
 		{ to: "contact", label: "Kontak" },
@@ -114,6 +116,9 @@ const LandingPage = () => {
 			{/* Pastikan setiap komponen ini memiliki ID yang sesuai */}
 			<section id="home">
 				<HeroSection />
+			</section>
+			<section id="tutorial">
+				<VideoTutorialSection />
 			</section>
 			<section id="musdesus">
 				<MusdesusHeroSection />

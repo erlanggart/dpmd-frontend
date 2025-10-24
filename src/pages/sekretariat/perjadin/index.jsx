@@ -6,12 +6,14 @@ const Dashboard = lazy(() => import('./Dashboard'));
 const Statistik = lazy(() => import('./Statistik'));
 const KegiatanForm = lazy(() => import('./KegiatanForm'));
 const KegiatanList = lazy(() => import('./KegiatanList'));
+const DetailLengkap = lazy(() => import('./DetailLengkap'));
 
 // Memoized wrapper components to prevent unnecessary re-renders
 const MemoizedDashboard = React.memo(Dashboard);
 const MemoizedStatistik = React.memo(Statistik);
 const MemoizedKegiatanForm = React.memo(KegiatanForm);
 const MemoizedKegiatanList = React.memo(KegiatanList);
+const MemoizedDetailLengkap = React.memo(DetailLengkap);
 
 // Enhanced Loading Fallback untuk komponen
 const LoadingFallback = () => (
@@ -48,6 +50,7 @@ const PerjalananDinas = () => {
   const [dateFilter, setDateFilter] = useState('');
   const [bidangFilter, setBidangFilter] = useState('');
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [selectedPerjadinId, setSelectedPerjadinId] = useState(null);
   const [mountedTabs, setMountedTabs] = useState(new Set(['dashboard'])); // Track mounted components
 
   const handleFilterClick = (date, bidang) => {
@@ -75,6 +78,19 @@ const PerjalananDinas = () => {
     console.log('✅ Main: Form submitted successfully, switching to list and refreshing data');
     setActiveTab('kegiatan-list');
     triggerDataRefresh(); // Refresh all data
+  };
+
+  // Handle detail view navigation
+  const handleDetailView = (perjadinId) => {
+    setSelectedPerjadinId(perjadinId);
+    setActiveTab('detail-lengkap');
+    setMountedTabs(prev => new Set([...prev, 'detail-lengkap']));
+  };
+
+  // Handle back from detail view
+  const handleBackFromDetail = () => {
+    setActiveTab('kegiatan-list');
+    setSelectedPerjadinId(null);
   };
 
   const tabs = [
@@ -229,7 +245,18 @@ const PerjalananDinas = () => {
                       initialDateFilter={dateFilter}
                       initialBidangFilter={bidangFilter}
                       onAddNew={() => handleTabChange('kegiatan-form')}
+                      onDetailView={handleDetailView}
                       refreshTrigger={refreshTrigger}
+                    />
+                  </div>
+                )}
+
+                {/* Detail Lengkap - Mount once and keep alive */}
+                {mountedTabs.has('detail-lengkap') && (
+                  <div className={`${activeTab === 'detail-lengkap' ? 'animate-fadeIn' : 'hidden'}`}>
+                    <MemoizedDetailLengkap 
+                      perjadinId={selectedPerjadinId}
+                      onBack={handleBackFromDetail}
                     />
                   </div>
                 )}

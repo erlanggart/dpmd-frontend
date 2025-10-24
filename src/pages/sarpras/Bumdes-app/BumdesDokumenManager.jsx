@@ -54,7 +54,6 @@ const BumdesDokumenManager = () => {
 
   const fetchDokumenBadanHukum = async () => {
     try {
-      console.log('Fetching dokumen badan hukum...');
       const response = await fetch(`${API_CONFIG.BASE_URL}/bumdes/dokumen-badan-hukum`, {
         method: 'GET',
         headers: {
@@ -71,7 +70,6 @@ const BumdesDokumenManager = () => {
       const result = await response.json();
       
       if (result.status === 'success') {
-        console.log('Setting dokumen badan hukum data:', result.data?.length, 'items');
         setDokumenBadanHukum(result.data || []);
       } else {
         throw new Error(result.message || 'Failed to fetch dokumen badan hukum');
@@ -84,7 +82,6 @@ const BumdesDokumenManager = () => {
 
   const fetchLaporanKeuangan = async () => {
     try {
-      console.log('Fetching laporan keuangan...');
       const response = await fetch(`${API_CONFIG.BASE_URL}/bumdes/laporan-keuangan`, {
         method: 'GET',
         headers: {
@@ -101,7 +98,6 @@ const BumdesDokumenManager = () => {
       const result = await response.json();
       
       if (result.status === 'success') {
-        console.log('Setting laporan keuangan data:', result.data?.length, 'items');
         setLaporanKeuangan(result.data || []);
       } else {
         throw new Error(result.message || 'Failed to fetch laporan keuangan');
@@ -123,17 +119,11 @@ const BumdesDokumenManager = () => {
     setError(null);
     
     try {
-      console.log('Starting data fetch...');
-      
       // Fetch dokumen badan hukum
       await fetchDokumenBadanHukum();
-      console.log('Dokumen badan hukum fetched');
       
       // Fetch laporan keuangan
       await fetchLaporanKeuangan();
-      console.log('Laporan keuangan fetched');
-      
-      console.log('All data fetched successfully');
       
     } catch (error) {
       console.error('Error in fetchAllData:', error);
@@ -872,7 +862,7 @@ const BumdesDokumenManager = () => {
                               <button
                                 onClick={() => handleDeleteFile(
                                   item.filename, 
-                                  activeTab === 'badan-hukum' ? 'dokumen_badanhukum' : 'laporan_keuangan',
+                                  activeTab === 'badan-hukum' ? 'bumdes_dokumen_badanhukum' : 'bumdes_laporan_keuangan',
                                   item.id
                                 )}
                                 disabled={deleteLoading}
@@ -981,7 +971,7 @@ const BumdesDokumenManager = () => {
                           <button
                             onClick={() => handleDeleteFile(
                               item.filename, 
-                              activeTab === 'badan-hukum' ? 'dokumen_badanhukum' : 'laporan_keuangan',
+                              activeTab === 'badan-hukum' ? 'bumdes_dokumen_badanhukum' : 'bumdes_laporan_keuangan',
                               item.id
                             )}
                             disabled={deleteLoading}

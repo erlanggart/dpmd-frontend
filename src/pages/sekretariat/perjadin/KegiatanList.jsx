@@ -1,12 +1,12 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { FiList, FiPlus, FiFileText, FiEdit, FiTrash2, FiEye, FiSearch, FiFilter, FiDownload, FiX, FiRefreshCw } from 'react-icons/fi';
+import React, { useState, useEffect, useCallback } from 'react';
+import { FiPlus, FiEdit, FiTrash2, FiSearch, FiX } from 'react-icons/fi';
 import api from '../../../api';
 import Swal from 'sweetalert2';
 import KegiatanForm from './KegiatanForm';
 import { exportToPDF, exportToExcel, formatDataForExport, exportWithProgress } from '../../../utils/exportUtils';
 import { generateSafeDataHashLong } from '../../../utils/hashUtils';
 
-const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, refreshTrigger }) => {
+const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, onDetailView, refreshTrigger }) => {
   const [kegiatanList, setKegiatanList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -86,7 +86,8 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, refres
 
   // Fetch bidang data only once on component mount
   useEffect(() => {
-    fetchBidang();
+    console.log('KegiatanList: Component mounted, fetching bidang data...');
+    fetchBidang(true); // Force refresh on first load
   }, []);
 
   useEffect(() => {
@@ -100,7 +101,6 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, refres
   // Refresh data when refreshTrigger changes
   useEffect(() => {
     if (refreshTrigger > lastRefreshTrigger) {
-      console.log('KegiatanList: Refresh triggered, forcing fresh data fetch...');
       setLastRefreshTrigger(refreshTrigger);
       fetchKegiatan(true); // Force refresh
       fetchBidang(true); // Force refresh
@@ -115,7 +115,7 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, refres
       if (!forceRefresh && !shouldFetchData('kegiatan', 90000)) { // 1.5 minutes cache
         const cachedData = dataCache.kegiatan.data;
         if (cachedData && cachedData.params === `${currentPage}_${searchTerm}_${selectedBidang}`) {
-          console.log('📋 KegiatanList: Using cached kegiatan data');
+          console.log('KegiatanList: Using cached kegiatan data');
           setKegiatanList(cachedData.data);
           setTotalPages(cachedData.totalPages);
           setTotalRecords(cachedData.totalRecords);
@@ -128,11 +128,9 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, refres
         page: currentPage,
         limit: limit,
         search: searchTerm,
-        bidang: selectedBidang,
+        id_bidang: selectedBidang, // Perbaikan: gunakan id_bidang sesuai dengan backend
       };
 
-      console.log('KegiatanList: Fetching fresh kegiatan data with params:', params);
-      console.log('📋 KegiatanList: Filter values - searchTerm:', searchTerm, 'selectedBidang:', selectedBidang);
       const response = await api.get('/perjadin/kegiatan', { params });
       
       if (response.data.success) {
@@ -147,12 +145,16 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, refres
         const newHash = generateDataHash({ data: newData, ...newMeta, params: `${currentPage}_${searchTerm}_${selectedBidang}` });
         
         if (cachedHash === newHash && !forceRefresh) {
-          console.log('📋 KegiatanList: Kegiatan data unchanged, skipping update');
           setLoading(false);
           return;
         }
 
-        console.log('✅ KegiatanList: Setting new kegiatan data:', newData);
+        // Debug: Log data untuk melihat struktur
+        console.log('KegiatanList: Received data:', newData);
+        if (newData.length > 0) {
+          console.log('KegiatanList: First item details:', newData[0].details);
+        }
+
         setKegiatanList(newData);
         setTotalPages(newMeta.totalPages);
         setTotalRecords(newMeta.totalRecords);
@@ -169,7 +171,6 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, refres
       
       // Try to use cached data on error
       if (dataCache.kegiatan.data) {
-        console.log('KegiatanList: Using cached kegiatan data due to error');
         const cachedData = dataCache.kegiatan.data;
         setKegiatanList(cachedData.data);
         setTotalPages(cachedData.totalPages);
@@ -189,39 +190,61 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, refres
     try {
       // Check if we should fetch bidang data
       if (!forceRefresh && !shouldFetchData('bidang', 300000)) { // 5 minutes cache for bidang (rarely changes)
-        console.log('📋 KegiatanList: Using cached bidang data');
         const cachedData = dataCache.bidang.data;
         if (cachedData) {
-          setBidangList(cachedData);
+          // Ensure cached data is filtered for active bidang only
+          const activeCachedData = cachedData.filter(bidang => 
+            bidang.status === 'aktif' || bidang.status === 'active' || bidang.status === 1
+          );
+          setBidangList(activeCachedData);
           return;
         }
       }
-
-      console.log('KegiatanList: Fetching fresh bidang data...');
-      const response = await api.get('/perjadin/bidang');
-      if (response.data.success) {
-        const newBidangData = response.data.data || [];
+      
+      const response = await api.get('/bidangs');
+      
+      // Handle both API response formats
+      const isWrappedResponse = response.data.success !== undefined;
+      let allBidangData = [];
+      
+      if (isWrappedResponse && response.data.success) {
+        allBidangData = response.data.data || [];
+      } else if (!isWrappedResponse && Array.isArray(response.data)) {
+        // Direct array response from /bidangs endpoint
+        allBidangData = response.data.map(bidang => ({
+          id_bidang: bidang.id,
+          nama_bidang: bidang.nama,
+          status: 'aktif' // Assume all bidang from this endpoint are active
+        }));
+      }
+      
+      if (allBidangData.length > 0) {
+        // Filter only active bidang
+        const activeBidangData = allBidangData.filter(bidang => 
+          bidang.status === 'aktif' || bidang.status === 'active' || bidang.status === 1
+        );
 
         // Check if bidang data actually changed
         const cachedHash = dataCache.bidang.hash;
-        const newHash = generateDataHash(newBidangData);
+        const newHash = generateDataHash(activeBidangData);
         
         if (cachedHash === newHash && !forceRefresh) {
-          console.log('📋 KegiatanList: Bidang data unchanged, skipping update');
           return;
         }
 
-        console.log('✅ KegiatanList: Setting new bidang data:', newBidangData);
-        setBidangList(newBidangData);
-        updateCache('bidang', newBidangData);
+        setBidangList(activeBidangData);
+        updateCache('bidang', activeBidangData);
       }
     } catch (error) {
-      console.error('KegiatanList: Error fetching bidang data:', error);
+      console.error('Error fetching bidang:', error);
       
       // Try to use cached data on error
       if (dataCache.bidang.data) {
-        console.log('KegiatanList: Using cached bidang data due to error');
-        setBidangList(dataCache.bidang.data);
+        // Ensure cached data is also filtered for active bidang only
+        const activeCachedData = dataCache.bidang.data.filter(bidang => 
+          bidang.status === 'aktif' || bidang.status === 'active' || bidang.status === 1
+        );
+        setBidangList(activeCachedData);
       }
     }
   };
@@ -240,8 +263,6 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, refres
   }, []);
 
   const handleDelete = async (id) => {
-    console.log('🔍 KegiatanList: handleDelete called with ID:', id, 'Type:', typeof id);
-    
     if (!id) {
       console.error('KegiatanList: ID is undefined or null!');
       Swal.fire({
@@ -281,11 +302,7 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, refres
         const response = await api.delete(`/perjadin/kegiatan/${id}`);
         
         // Check if deletion was successful
-        console.log('🔍 KegiatanList: Delete response received:', response.data);
-        
         if (response.data && response.data.status === 'success') {
-          console.log('✅ KegiatanList: Delete successful, clearing caches...');
-          
           // Clear relevant caches to force refresh
           clearCache('kegiatan');
           clearCache('dashboard');
@@ -302,7 +319,6 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, refres
             showConfirmButton: false
           });
         } else {
-          console.error('KegiatanList: Unexpected response format:', response.data);
           throw new Error(response.data?.message || 'Response tidak valid dari server');
         }
       } catch (error) {
@@ -329,8 +345,6 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, refres
           Swal.showLoading();
         }
       });
-
-      console.log('Starting Excel export...', { searchTerm, selectedBidang });
 
       // Fetch all data for export (without pagination)
       const response = await api.get('/perjadin/kegiatan', {
@@ -393,27 +407,7 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, refres
     });
   };
 
-  const formatPersonil = useCallback((kegiatanData) => {
-    // Handle kegiatan.details from backend response
-    const details = kegiatanData?.details || kegiatanData?.personil_bidang_list || [];
-    
-    if (!details || details.length === 0) return '-';
-    
-    return details.map(detail => {
-      let personilNames = '';
-      
-      // Backend sends: { id_bidang: 1, personil: "nama1, nama2", bidang: { nama: "..." } }
-      if (detail.personil && typeof detail.personil === 'string') {
-        personilNames = detail.personil;
-      } else if (detail.personil && Array.isArray(detail.personil)) {
-        personilNames = detail.personil.filter(p => p && p.trim()).join(', ');
-      }
-      
-      const bidangName = detail.bidang?.nama || detail.nama_bidang || 'Unknown';
-      
-      return `${bidangName}: ${personilNames || 'Tidak ada personil'}`;
-    }).join(' | ');
-  }, []);
+
 
   // Export to PDF Handler  
   const handleExportPDF = useCallback(async () => {
@@ -500,7 +494,7 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, refres
       {/* Enhanced Header Section */}
       <div className="text-center space-y-6">
         <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-slate-700 to-slate-900 rounded-2xl shadow-2xl">
-          <FiList className="text-3xl text-white" />
+          <span className="text-3xl font-bold text-white">📋</span>
         </div>
         <div>
           <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent mb-4">
@@ -527,6 +521,8 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, refres
           <span className="sm:hidden">Tambah</span>
         </button>
         
+
+        
         {/* Export PDF Button */}
         <button 
           onClick={handleExportPDF}
@@ -537,7 +533,7 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, refres
             {isExportingPDF ? (
               <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
             ) : (
-              <FiFileText className="text-lg" />
+              <span className="text-lg">📄</span>
             )}
           </div>
           <span className="hidden sm:inline">{isExportingPDF ? 'Mengekspor...' : 'Export PDF'}</span>
@@ -554,7 +550,7 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, refres
             {isExportingExcel ? (
               <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
             ) : (
-              <FiDownload className="text-lg" />
+              <span className="text-lg">📊</span>
             )}
           </div>
           <span className="hidden sm:inline">{isExportingExcel ? 'Mengekspor...' : 'Export Excel'}</span>
@@ -581,7 +577,7 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, refres
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-white/20 rounded-lg">
-                <FiList className="w-5 h-5 text-white" />
+                <span className="text-white text-lg">📝</span>
               </div>
               <div>
                 <h3 className="text-xl font-bold text-white">Daftar Kegiatan</h3>
@@ -601,7 +597,7 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, refres
             {/* Search Input */}
             <div className="space-y-2">
               <label className="block text-sm font-semibold text-slate-700">
-                <FiSearch className="inline w-4 h-4 mr-2" />
+                <span className="mr-2">🔍</span>
                 Pencarian
               </label>
               <input
@@ -616,25 +612,28 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, refres
             {/* Bidang Filter */}
             <div className="space-y-2">
               <label className="block text-sm font-semibold text-slate-700">
-                <FiFilter className="inline w-4 h-4 mr-2" />
-                Filter Bidang
+                <span className="mr-2">⚡</span>
+                Filter Bidang ({bidangList.length} bidang tersedia)
               </label>
               <select
                 value={selectedBidang}
                 onChange={(e) => {
-                  const value = e.target.value;
-                  console.log('📋 KegiatanList: Bidang filter changed to:', value);
-                  setSelectedBidang(value);
+                  setSelectedBidang(e.target.value);
                 }}
                 className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent"
               >
                 <option value="">Semua Bidang</option>
-                {bidangList.map(bidang => (
-                  <option key={bidang.id_bidang} value={bidang.id_bidang}>
-                    {bidang.nama_bidang}
+                {bidangList.map((bidang, index) => (
+                  <option key={bidang.id_bidang || index} value={bidang.id_bidang}>
+                    {bidang.nama_bidang || 'Nama tidak tersedia'}
                   </option>
                 ))}
               </select>
+              {bidangList.length === 0 && (
+                <p className="text-xs text-red-500 mt-1">
+                  Tidak ada data bidang tersedia. Periksa koneksi atau data bidang.
+                </p>
+              )}
             </div>
 
             {/* Filter Actions */}
@@ -646,17 +645,17 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, refres
                 <button
                   onClick={handleClearFilters}
                   disabled={!searchTerm && !selectedBidang}
-                  className="flex-1 px-4 py-3 bg-white border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-3 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 disabled:from-gray-400 disabled:to-gray-500 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-red-400 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2 font-medium shadow-md hover:shadow-lg transform hover:scale-105 disabled:hover:scale-100"
                 >
                   <FiX className="w-4 h-4" />
                   Reset Filter
                 </button>
                 <button
                   onClick={() => fetchKegiatan(true)}
-                  className="px-4 py-3 bg-slate-600 text-white rounded-xl hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-500 transition-colors duration-200 flex items-center justify-center"
+                  className="px-4 py-3 bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-400 transition-all duration-200 flex items-center justify-center shadow-md hover:shadow-lg transform hover:scale-105"
                   title="Refresh Data"
                 >
-                  <FiRefreshCw className="w-4 h-4" />
+                  <span className="text-lg">🔄</span>
                 </button>
               </div>
             </div>
@@ -664,21 +663,21 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, refres
 
           {/* Filter Status */}
           {(searchTerm || selectedBidang) && (
-            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="mt-4 p-3 bg-slate-50 border border-slate-200 rounded-lg">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-sm text-blue-700">
-                  <FiFilter className="w-4 h-4" />
+                <div className="flex items-center gap-2 text-sm text-slate-700">
+                  <span>⚡</span>
                   <span>Filter aktif:</span>
-                  {searchTerm && <span className="bg-blue-100 px-2 py-1 rounded">"{searchTerm}"</span>}
+                  {searchTerm && <span className="bg-slate-200 px-2 py-1 rounded">"{searchTerm}"</span>}
                   {selectedBidang && (
-                    <span className="bg-blue-100 px-2 py-1 rounded">
+                    <span className="bg-slate-200 px-2 py-1 rounded">
                       {bidangList.find(b => b.id_bidang.toString() === selectedBidang)?.nama_bidang || 'Bidang dipilih'}
                     </span>
                   )}
                 </div>
                 <button
                   onClick={handleClearFilters}
-                  className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1"
+                  className="text-slate-700 hover:text-slate-900 text-sm flex items-center gap-1"
                 >
                   <FiX className="w-3 h-3" />
                   Hapus semua filter
@@ -689,62 +688,39 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, refres
         </div>
 
         {/* Modern Enhanced Table */}
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+        <div className="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1400px]">
+            <table className="w-full min-w-[1000px]">
               <thead className="bg-gradient-to-r from-slate-50 via-gray-50 to-slate-50 border-b-2 border-gray-200">
                 <tr>
-                  <th className="px-6 py-4 text-left w-20">
+                  <th className="px-6 py-4 text-center w-20">
                     <div className="flex items-center justify-center">
-                      <span className="bg-gray-600 text-white px-3 py-1 rounded-full text-xs font-bold">No</span>
+                      <span className="text-sm font-semibold text-gray-700">No</span>
                     </div>
                   </th>
                   <th className="px-6 py-4 text-left w-44">
-                    <div className="flex items-center space-x-2 text-gray-700 font-semibold">
-                      <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <span className="text-sm">📄</span>
-                      </div>
-                      <span className="text-sm">Nomor SP</span>
+                    <div className="flex items-center text-gray-700 font-semibold">
+                      <span className="text-sm font-medium">Nomor SP</span>
                     </div>
                   </th>
                   <th className="px-6 py-4 text-left w-64">
-                    <div className="flex items-center space-x-2 text-gray-700 font-semibold">
-                      <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                        <span className="text-sm">📋</span>
-                      </div>
-                      <span className="text-sm">Kegiatan</span>
+                    <div className="flex items-center text-gray-700 font-semibold">
+                      <span className="text-sm font-medium">Nama Kegiatan</span>
                     </div>
                   </th>
                   <th className="px-6 py-4 text-left w-40">
-                    <div className="flex items-center space-x-2 text-gray-700 font-semibold">
-                      <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
-                        <span className="text-sm">📅</span>
-                      </div>
-                      <span className="text-sm">Tanggal</span>
+                    <div className="flex items-center text-gray-700 font-semibold">
+                      <span className="text-sm font-medium">Tanggal</span>
                     </div>
                   </th>
                   <th className="px-6 py-4 text-left w-44">
                     <div className="flex items-center space-x-2 text-gray-700 font-semibold">
-                      <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                        <span className="text-sm">📍</span>
-                      </div>
-                      <span className="text-sm">Lokasi</span>
-                    </div>
-                  </th>
-                  <th className="px-6 py-4 text-left">
-                    <div className="flex items-center space-x-2 text-gray-700 font-semibold">
-                      <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center">
-                        <span className="text-sm">👥</span>
-                      </div>
-                      <span className="text-sm">Personil & Bidang</span>
+                      <span className="text-sm font-medium">Lokasi</span>
                     </div>
                   </th>
                   <th className="px-6 py-4 text-center w-32">
                     <div className="flex items-center justify-center space-x-2 text-gray-700 font-semibold">
-                      <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
-                        <span className="text-sm">⚙️</span>
-                      </div>
-                      <span className="text-sm">Aksi</span>
+                      <span className="text-sm font-medium">Aksi</span>
                     </div>
                   </th>
                 </tr>
@@ -752,60 +728,50 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, refres
             <tbody className="divide-y divide-slate-200">
               {kegiatanList.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="px-6 py-12 text-center">
+                  <td colSpan="5" className="px-6 py-12 text-center">
                     <div className="space-y-4">
-                      <div className="w-16 h-16 bg-slate-200 rounded-2xl flex items-center justify-center mx-auto">
-                        <FiList className="w-8 h-8 text-slate-500" />
+                      <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center mx-auto">
+                        <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
                       </div>
                       <div>
-                        <h6 className="text-lg font-bold text-slate-800">Belum Ada Kegiatan</h6>
-                        <p className="text-slate-600 text-sm mt-1">Mulai dengan menambahkan kegiatan perjalanan dinas baru</p>
+                        <h6 className="text-lg font-semibold text-gray-800">Belum Ada Data Kegiatan</h6>
+                        <p className="text-gray-600 text-sm mt-1">Tambahkan kegiatan perjalanan dinas untuk melihat daftar</p>
                       </div>
                     </div>
                   </td>
                 </tr>
               ) : (
                 kegiatanList.map((kegiatan, index) => (
-                  <tr key={kegiatan.id_kegiatan || kegiatan.id_perjadin} className="hover:bg-blue-50/30 transition-all duration-200 group">
+                  <tr key={kegiatan.id_kegiatan || kegiatan.id_perjadin} className="hover:bg-slate-50/50 transition-all duration-200 group">
                     {/* Nomor */}
-                    <td className="px-6 py-5 text-center">
-                      <div className="flex items-center justify-center">
-                        <span className="inline-flex items-center justify-center w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-full text-sm font-bold shadow-sm">
-                          {(currentPage - 1) * limit + index + 1}
-                        </span>
-                      </div>
+                    <td className="px-6 py-4 text-center">
+                      <span className="inline-flex items-center justify-center w-8 h-8 bg-gray-100 text-gray-700 rounded-lg text-sm font-semibold">
+                        {(currentPage - 1) * limit + index + 1}
+                      </span>
                     </td>
 
                     {/* Nomor SP */}
-                    <td className="px-6 py-5">
-                      <div className="flex items-center space-x-3">
-                        <div className="flex-shrink-0">
-                          <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center group-hover:bg-gray-200 transition-colors">
-                            <span className="text-lg">📄</span>
-                          </div>
+                    <td className="px-6 py-4">
+                      <div>
+                        <div className="text-sm font-semibold text-gray-900">
+                          {kegiatan.nomor_sp || 'Belum ada nomor'}
                         </div>
-                        <div>
-                          <div className="text-sm font-semibold text-gray-900">
-                            {kegiatan.nomor_sp || 'Belum ada nomor'}
-                          </div>
-                          <div className="text-xs text-gray-500">Nomor Surat Perintah</div>
-                        </div>
+                        <div className="text-xs text-gray-500">Surat Perintah</div>
                       </div>
                     </td>
 
                     {/* Nama Kegiatan */}
-                    <td className="px-6 py-5">
+                    <td className="px-6 py-4">
                       <div className="space-y-1">
                         <div className="text-sm font-semibold text-gray-900 leading-5">
                           {kegiatan.nama_kegiatan}
                         </div>
                         {kegiatan.keterangan && (
                           <div className="text-xs text-gray-600 leading-4">
-                            <span className="inline-flex items-center space-x-1">
-                              <span>💭</span>
-                              <span className="truncate max-w-xs" title={kegiatan.keterangan}>
-                                {kegiatan.keterangan}
-                              </span>
+                            <span className="truncate max-w-sm block" title={kegiatan.keterangan}>
+                              {kegiatan.keterangan}
                             </span>
                           </div>
                         )}
@@ -813,77 +779,54 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, refres
                     </td>
 
                     {/* Tanggal */}
-                    <td className="px-6 py-5">
+                    <td className="px-6 py-4">
                       <div className="space-y-1">
-                        <div className="inline-flex items-center space-x-2 px-3 py-1.5 bg-green-50 text-green-800 rounded-lg text-sm font-medium">
-                          <span>🗓️</span>
-                          <span>{formatDate(kegiatan.tanggal_mulai)}</span>
+                        <div className="text-sm font-medium text-gray-900">
+                          {formatDate(kegiatan.tanggal_mulai)}
                         </div>
                         {kegiatan.tanggal_selesai && kegiatan.tanggal_selesai !== kegiatan.tanggal_mulai && (
-                          <div className="inline-flex items-center space-x-2 px-3 py-1 bg-green-100 text-green-700 rounded text-xs">
-                            <span>s/d {formatDate(kegiatan.tanggal_selesai)}</span>
+                          <div className="text-xs text-gray-600">
+                            s/d {formatDate(kegiatan.tanggal_selesai)}
                           </div>
                         )}
                       </div>
                     </td>
 
                     {/* Lokasi */}
-                    <td className="px-6 py-5">
-                      <div className="inline-flex items-center space-x-2 px-3 py-2 bg-purple-50 text-purple-800 rounded-lg text-sm max-w-xs">
-                        <span>📍</span>
-                        <span className="truncate" title={kegiatan.lokasi}>
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-gray-900 max-w-xs">
+                        <span className="block truncate" title={kegiatan.lokasi}>
                           {kegiatan.lokasi || 'Belum ditentukan'}
                         </span>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-sm text-slate-700">
-                      <div className="w-full">
-                        {kegiatan?.details?.length > 0 ? (
-                          <div className="space-y-2">
-                            {kegiatan.details.map((detail, idx) => (
-                              <div key={idx} className="border-l-4 border-blue-400 pl-3 py-1 bg-blue-50/50 rounded-r">
-                                <div className="font-semibold text-xs text-blue-800 mb-1">
-                                  📋 {detail.bidang?.nama || detail.nama_bidang || 'Unknown Bidang'}
-                                </div>
-                                <div className="text-xs text-slate-600 leading-relaxed break-words">
-                                  {detail.personil && typeof detail.personil === 'string' 
-                                    ? (
-                                        <div className="bg-white border border-gray-200 rounded px-2 py-1">
-                                          � {detail.personil}
-                                        </div>
-                                      )
-                                    : detail.personil && Array.isArray(detail.personil)
-                                      ? (
-                                          <div className="bg-white border border-gray-200 rounded px-2 py-1">
-                                            � {detail.personil.filter(p => p && p.trim()).join(', ')}
-                                          </div>
-                                        )
-                                      : <span className="text-gray-400 italic">Tidak ada personil</span>
-                                  }
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <span className="text-gray-400 italic text-xs">Belum ada personil</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <div className="flex items-center justify-center gap-1">
+
+                    <td className="px-6 py-4 text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={() => {
+                            const id = kegiatan.id_kegiatan || kegiatan.id_perjadin || kegiatan.id;
+                            onDetailView && onDetailView(id);
+                          }}
+                          className="inline-flex items-center justify-center px-3 py-1.5 bg-slate-700 hover:bg-slate-800 text-white text-xs font-medium rounded-md transition-colors duration-200"
+                          title="Lihat Detail"
+                        >
+                          Detail
+                        </button>
                         <button
                           onClick={() => handleEdit(kegiatan)}
-                          className="inline-flex items-center justify-center w-8 h-8 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg transition-all duration-200 hover:scale-110"
+                          className="inline-flex items-center justify-center px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-medium rounded-md transition-colors duration-200"
                           title="Edit Kegiatan"
                         >
-                          <FiEdit className="w-4 h-4" />
+                          <FiEdit className="w-3 h-3 mr-1" />
+                          Edit
                         </button>
                         <button
                           onClick={() => {
                             const id = kegiatan.id_kegiatan || kegiatan.id_perjadin || kegiatan.id;
                             handleDelete(id);
                           }}
-                          className="inline-flex items-center justify-center w-8 h-8 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-all duration-200 hover:scale-110"
+                          className="inline-flex items-center justify-center px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 text-xs font-medium rounded-md transition-colors duration-200"
                           title="Hapus Kegiatan"
                         >
                           <FiTrash2 className="w-4 h-4" />
@@ -904,11 +847,11 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, refres
             {/* Data Info - Always show */}
             <div className="flex items-center gap-2 text-sm text-slate-600">
               <span>Menampilkan</span>
-              <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-md font-bold text-xs">
+              <span className="px-2 py-1 bg-slate-200 text-slate-800 rounded-md font-bold text-xs">
                 {totalRecords > 0 ? (currentPage - 1) * limit + 1 : 0} - {Math.min(currentPage * limit, totalRecords)}
               </span>
               <span>dari</span>
-              <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-md font-bold text-xs">{totalRecords}</span>
+              <span className="px-2 py-1 bg-slate-200 text-slate-800 rounded-md font-bold text-xs">{totalRecords}</span>
               <span>data</span>
               {totalPages > 1 && (
                 <>
@@ -965,7 +908,7 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, refres
                       onClick={() => setCurrentPage(page)}
                       className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
                         currentPage === page
-                          ? 'bg-blue-600 text-white shadow-lg ring-2 ring-blue-300'
+                          ? 'bg-slate-700 text-white shadow-lg ring-2 ring-slate-400'
                           : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-300 hover:scale-105'
                       }`}
                     >

@@ -735,29 +735,48 @@ function BumdesForm({ onSwitchToDashboard }) {
             return;
         }
 
-        const dataToSend = new FormData();
-        for (const key in formData) {
-            const value = formData[key];
-            if (value !== null && value !== '') {
-                if (['Omset2023', 'Laba2023', 'Omset2024', 'Laba2024', 'PenyertaanModal2019', 'PenyertaanModal2020', 'PenyertaanModal2021', 'PenyertaanModal2022', 'PenyertaanModal2023', 'PenyertaanModal2024', 'SumberLain', 'NilaiAset', 'KontribusiTerhadapPADes2021', 'KontribusiTerhadapPADes2022', 'KontribusiTerhadapPADes2023', 'KontribusiTerhadapPADes2024', 'TotalTenagaKerja'].includes(key)) {
-                    dataToSend.append(key, parseRupiah(value));
-                } else {
-                    dataToSend.append(key, value);
+        try {
+            // STEP 1: Submit data TANPA file dulu
+            const dataOnly = {};
+            for (const key in formData) {
+                const value = formData[key];
+                if (value !== null && value !== '') {
+                    if (['Omset2023', 'Laba2023', 'Omset2024', 'Laba2024', 'PenyertaanModal2019', 'PenyertaanModal2020', 'PenyertaanModal2021', 'PenyertaanModal2022', 'PenyertaanModal2023', 'PenyertaanModal2024', 'SumberLain', 'NilaiAset', 'KontribusiTerhadapPADes2021', 'KontribusiTerhadapPADes2022', 'KontribusiTerhadapPADes2023', 'KontribusiTerhadapPADes2024', 'TotalTenagaKerja'].includes(key)) {
+                        dataOnly[key] = parseRupiah(value);
+                    } else {
+                        dataOnly[key] = value;
+                    }
                 }
             }
-        }
 
-        // Add selected files to FormData
-        for (const key in selectedFiles) {
-            if (selectedFiles[key]) {
-                dataToSend.append(key, selectedFiles[key]);
-            }
-        }
-
-        try {
-            const response = await api.post('/bumdes', dataToSend, {
-                headers: { 'Content-Type': 'multipart/form-data' }
+            const response = await api.post('/bumdes', dataOnly, {
+                headers: { 'Content-Type': 'application/json' }
             });
+
+            const bumdesId = response.data.data?.id;
+
+            // STEP 2: Upload files satu per satu jika ada
+            const fileFields = Object.keys(selectedFiles).filter(key => selectedFiles[key]);
+            
+            if (fileFields.length > 0 && bumdesId) {
+                let uploadedCount = 0;
+                for (const fieldName of fileFields) {
+                    try {
+                        const fileData = new FormData();
+                        fileData.append('file', selectedFiles[fieldName]);
+                        fileData.append('bumdes_id', bumdesId);
+                        fileData.append('field_name', fieldName);
+
+                        await api.post('/bumdes-upload-file', fileData, {
+                            headers: { 'Content-Type': 'multipart/form-data' }
+                        });
+                        uploadedCount++;
+                    } catch (fileError) {
+                        console.error(`Failed to upload ${fieldName}:`, fileError);
+                        // Continue dengan file lain meskipun ada yang gagal
+                    }
+                }
+            }
 
             showMessagePopup('Data BUMDesa berhasil disimpan!', 'success');
             
