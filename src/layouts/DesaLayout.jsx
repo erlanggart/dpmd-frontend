@@ -16,6 +16,7 @@ import {
 	LuLandmark,
 	LuTrello,
 	LuUserCheck,
+	LuStore,
 } from "react-icons/lu";
 import Footer from "../components/landingpage/Footer";
 
@@ -201,6 +202,28 @@ const DesaLayout = () => {
 										}`}
 									>
 										Kelembagaan Desa
+									</span>
+								</NavLink>
+							</li>
+							<li className="mb-2">
+								<NavLink
+									to="/desa/bumdes"
+									className={({ isActive }) =>
+										`${baseLinkClass} ${
+											isActive ? activeLinkClass : inactiveLinkClass
+										}`
+									}
+									onClick={() =>
+										window.innerWidth < 1024 && setSidebarOpen(false)
+									} // Close on mobile click
+								>
+									<LuStore className="h-6 w-6" />
+									<span
+										className={`ml-3 whitespace-nowrap ${
+											!sidebarOpen && "lg:hidden"
+										}`}
+									>
+										BUMDES
 									</span>
 								</NavLink>
 							</li>

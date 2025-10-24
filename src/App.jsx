@@ -82,6 +82,9 @@ const PengurusDetailPage = lazy(() =>
 const PengurusEditPage = lazy(() =>
 	import("./pages/desa/pengurus/PengurusEditPage")
 );
+const BumdesDesaPage = lazy(() =>
+	import("./pages/desa/bumdes/BumdesDesaPage")
+);
 
 const MusdesusMonitoringPage = lazy(() =>
 	import("./pages/admin/MusdesusMonitoringPage")
@@ -260,6 +263,9 @@ function App() {
 							path="pengurus/:pengurusId/edit"
 							element={<PengurusEditPage />}
 						/>
+
+						{/* BUMDES Desa */}
+						<Route path="bumdes" element={<BumdesDesaPage />} />
 					</Route>
 
 					{/* Rute Kecamatan */}
