@@ -631,6 +631,99 @@ const BumdesDetailModal = ({ bumdes, isOpen, onClose, onEdit, onDelete, onOpenDo
             </div>
           </div>
 
+          {/* 3.1. Dokumen Produk Hukum */}
+          <div className="bg-white rounded-2xl p-6 border border-white">
+            <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+              <FiFileText className="text-slate-800" />
+              Dokumen Produk Hukum
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Perdes */}
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-200">
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <h4 className="font-semibold text-gray-800 flex items-center gap-2">
+                      <FiFileText className="text-blue-600" />
+                      Peraturan Desa (Perdes)
+                    </h4>
+                    <p className="text-xs text-gray-500 mt-1">Dokumen legalitas pendirian BUMDes</p>
+                  </div>
+                </div>
+                {bumdes.Perdes ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm">
+                      <FiCheck className="text-green-600" />
+                      <span className="text-green-700 font-medium">Dokumen tersedia</span>
+                    </div>
+                    <div className="bg-white rounded-lg p-3 border border-blue-200">
+                      <div className="text-xs text-gray-500 mb-1">Nama File:</div>
+                      <div className="text-sm font-medium text-gray-800 break-all">
+                        {bumdes.Perdes.split('/').pop()}
+                      </div>
+                    </div>
+                    <a
+                      href={`http://localhost:8000/storage/app/uploads/${bumdes.Perdes}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm w-full justify-center"
+                    >
+                      <FiEye />
+                      Lihat Dokumen
+                    </a>
+                  </div>
+                ) : (
+                  <div className="text-center py-4">
+                    <FiFile className="mx-auto h-8 w-8 text-gray-400 mb-2" />
+                    <p className="text-sm text-gray-500">Belum ada dokumen</p>
+                    <p className="text-xs text-gray-400 mt-1">Upload melalui form input BUMDes</p>
+                  </div>
+                )}
+              </div>
+
+              {/* SK BUM Desa */}
+              <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-4 border border-green-200">
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <h4 className="font-semibold text-gray-800 flex items-center gap-2">
+                      <FiFileText className="text-green-600" />
+                      SK BUM Desa
+                    </h4>
+                    <p className="text-xs text-gray-500 mt-1">Surat Keputusan BUMDes</p>
+                  </div>
+                </div>
+                {bumdes.SK_BUM_Desa ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm">
+                      <FiCheck className="text-green-600" />
+                      <span className="text-green-700 font-medium">Dokumen tersedia</span>
+                    </div>
+                    <div className="bg-white rounded-lg p-3 border border-green-200">
+                      <div className="text-xs text-gray-500 mb-1">Nama File:</div>
+                      <div className="text-sm font-medium text-gray-800 break-all">
+                        {bumdes.SK_BUM_Desa.split('/').pop()}
+                      </div>
+                    </div>
+                    <a
+                      href={`http://localhost:8000/storage/app/uploads/${bumdes.SK_BUM_Desa}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm w-full justify-center"
+                    >
+                      <FiEye />
+                      Lihat Dokumen
+                    </a>
+                  </div>
+                ) : (
+                  <div className="text-center py-4">
+                    <FiFile className="mx-auto h-8 w-8 text-gray-400 mb-2" />
+                    <p className="text-sm text-gray-500">Belum ada dokumen</p>
+                    <p className="text-xs text-gray-400 mt-1">Upload melalui form input BUMDes</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* 4. Profil Pengurus */}
           <div className="bg-white rounded-2xl p-6 border border-white">
             <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
@@ -1499,18 +1592,21 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
   const fetchAllDocuments = async () => {
     setDocumentsLoading(true);
     try {
-      const [dokumenResponse, laporanResponse] = await Promise.all([
+      const [dokumenResponse, laporanResponse, produkHukumResponse] = await Promise.all([
         api.get('/bumdes/dokumen-badan-hukum', { timeout: 60000 }),
-        api.get('/bumdes/laporan-keuangan', { timeout: 60000 })
+        api.get('/bumdes/laporan-keuangan', { timeout: 60000 }),
+        api.get('/bumdes/produk-hukum', { timeout: 60000 })
       ]);
 
       const dokumenResult = dokumenResponse.data;
       const laporanResult = laporanResponse.data;
+      const produkHukumResult = produkHukumResponse.data;
 
-      if (dokumenResult.status === 'success' && laporanResult.status === 'success') {
+      if (dokumenResult.status === 'success' && laporanResult.status === 'success' && produkHukumResult.status === 'success') {
         const allDocs = [
           ...dokumenResult.data.map(doc => ({ ...doc, type: 'dokumen_badan_hukum' })),
-          ...laporanResult.data.map(doc => ({ ...doc, type: 'laporan_keuangan' }))
+          ...laporanResult.data.map(doc => ({ ...doc, type: 'laporan_keuangan' })),
+          ...produkHukumResult.data.map(doc => ({ ...doc, type: 'produk_hukum' }))
         ];
         setDocuments(allDocs);
         
@@ -2974,13 +3070,19 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
                       {filteredDocuments.map((doc, index) => (
                         <div key={index} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                           <div className="flex items-start gap-3">
-                            <FiFile className="text-blue-500 mt-1 flex-shrink-0" />
+                            <FiFile className={`mt-1 flex-shrink-0 ${
+                              doc.type === 'produk_hukum' ? 'text-purple-500' : 
+                              doc.type === 'dokumen_badan_hukum' ? 'text-blue-500' : 
+                              'text-green-500'
+                            }`} />
                             <div className="flex-1 min-w-0">
                               <h4 className="text-sm font-medium text-gray-900 truncate">
                                 {doc.filename}
                               </h4>
                               <p className="text-xs text-gray-500 mt-1">
-                                {doc.type === 'dokumen_badan_hukum' ? 'Dokumen Badan Hukum' : 'Laporan Keuangan'}
+                                {doc.type === 'produk_hukum' ? 'Produk Hukum' :
+                                 doc.type === 'dokumen_badan_hukum' ? 'Dokumen Badan Hukum' : 
+                                 'Laporan Keuangan'}
                               </p>
                               <p className="text-xs text-gray-400 mt-1">
                                 {doc.file_size_formatted}

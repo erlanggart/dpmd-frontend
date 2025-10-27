@@ -38,23 +38,45 @@ const BumdesDesaPage = () => {
 		kode_desa: "",
 		TahunPendirian: "",
 		AlamatBumdes: "",
+		AlamatBumdesa: "", // Alias untuk AlamatBumdes
 		NoHpBumdes: "",
+		TelfonBumdes: "", // Alias untuk NoHpBumdes
 		EmailBumdes: "",
+		Alamatemail: "", // Alias untuk EmailBumdes
+		status: "aktif",
+		keterangan_tidak_aktif: "",
 
 		// 2. Dasar Hukum Pendirian
 		NoPerdes: "",
+		NomorPerdes: "", // Alias untuk NoPerdes
 		TanggalPerdes: "",
 		NoSKKemenkumham: "",
 		TanggalSKKemenkumham: "",
 		produk_hukum_perdes_id: "",
 		produk_hukum_sk_bumdes_id: "",
 
+		// 2b. Legalitas
+		NIB: "",
+		LKPP: "",
+		NPWP: "",
+		badanhukum: "",
+
 		// 3. Kepengurusan/Organisasi
 		NamaPenasihat: "",
+		JenisKelaminPenasihat: "",
+		HPPenasihat: "",
 		NamaPengawas: "",
+		JenisKelaminPengawas: "",
+		HPPengawas: "",
 		NamaDirektur: "",
+		JenisKelaminDirektur: "",
+		HPDirektur: "",
 		NamaSekretaris: "",
+		JenisKelaminSekretaris: "",
+		HPSekretaris: "",
 		NamaBendahara: "",
+		JenisKelaminBendahara: "",
+		HPBendahara: "",
 
 		// 4. Sumber Daya Manusia
 		TotalTenagaKerja: "",
@@ -63,6 +85,8 @@ const BumdesDesaPage = () => {
 
 		// 5. Bidang Usaha
 		JenisUsaha: "",
+		JenisUsahaUtama: "",
+		JenisUsahaLainnya: "",
 		KelasUsaha: "",
 		StatusUsaha: "",
 
@@ -71,6 +95,15 @@ const BumdesDesaPage = () => {
 		ModalSekarang: "",
 		Aset: "",
 		KekayaanBersih: "",
+		PenyertaanModal2019: "",
+		PenyertaanModal2020: "",
+		PenyertaanModal2021: "",
+		PenyertaanModal2022: "",
+		PenyertaanModal2023: "",
+		PenyertaanModal2024: "",
+		SumberLain: "",
+		JenisAset: "",
+		NilaiAset: "",
 
 		// 7. Omzet dan Keuntungan (3 tahun terakhir)
 		Omzet2022: "",
@@ -86,12 +119,19 @@ const BumdesDesaPage = () => {
 		// 8. Potensi dan Program
 		PotensiWisata: "",
 		OVOP: "",
+		Ketapang2024: "",
 		Ketapang2025: "",
 		DesaWisata: "",
+		KerjasamaPihakKetiga: "",
+		"TahunMulai-TahunBerakhir": "",
 
 		// 9. Kontribusi PADes
 		KontribusiPADesRP: "",
 		KontribusiPADesPersen: "",
+		KontribusiTerhadapPADes2021: "",
+		KontribusiTerhadapPADes2022: "",
+		KontribusiTerhadapPADes2023: "",
+		KontribusiTerhadapPADes2024: "",
 
 		// 10. Peran dalam Program
 		PeranOVOP: "",
@@ -107,6 +147,19 @@ const BumdesDesaPage = () => {
 
 		// 13. Status Upload
 		upload_status: "not_uploaded",
+	});
+
+	// State untuk file uploads - Perdes dan SK sudah terintegrasi dengan Produk Hukum Desa
+	const [fileUploads, setFileUploads] = useState({
+		LaporanKeuangan2021: null,
+		LaporanKeuangan2022: null,
+		LaporanKeuangan2023: null,
+		LaporanKeuangan2024: null,
+		ProfilBUMDesa: null,
+		BeritaAcara: null,
+		AnggaranDasar: null,
+		AnggaranRumahTangga: null,
+		ProgramKerja: null,
 	});
 
 	// Fetch BUMDES data dan produk hukum options untuk desa ini
@@ -149,13 +202,38 @@ const BumdesDesaPage = () => {
 
 	const fetchProdukHukumOptions = async () => {
 		try {
+			console.log('Fetching produk hukum options for BUMDES...');
 			const result = await BumdesDesaService.getProdukHukumForBumdes();
 			
+			console.log('Produk Hukum API Response:', result);
+			
 			if (result.success && result.data) {
-				setProdukHukumOptions(result.data);
+				console.log('Setting produk hukum options:', {
+					perdes: result.data.perdes?.length || 0,
+					sk: result.data.sk?.length || 0,
+					sk_bumdes: result.data.sk_bumdes?.length || 0
+				});
+				
+				setProdukHukumOptions({
+					perdes: result.data.perdes || [],
+					sk: result.data.sk || result.data.sk_bumdes || []
+				});
+			} else {
+				console.warn('No produk hukum data received');
+				setProdukHukumOptions({ perdes: [], sk: [] });
 			}
 		} catch (error) {
 			console.error("Error fetching produk hukum options:", error);
+			
+			// Show user-friendly notification
+			Swal.fire({
+				icon: 'warning',
+				title: 'Perhatian',
+				text: 'Gagal memuat data Produk Hukum. Pastikan Anda sudah mengupload Perdes dan SK di menu Produk Hukum.',
+				confirmButtonColor: '#3b82f6',
+			});
+			
+			setProdukHukumOptions({ perdes: [], sk: [] });
 		}
 	};
 
@@ -163,6 +241,13 @@ const BumdesDesaPage = () => {
 		setFormData(prev => ({
 			...prev,
 			[field]: value
+		}));
+	};
+
+	const handleFileChange = (field, file) => {
+		setFileUploads(prev => ({
+			...prev,
+			[field]: file
 		}));
 	};
 
@@ -174,19 +259,81 @@ const BumdesDesaPage = () => {
 			const validation = BumdesDesaService.validateBumdesData(formData);
 			if (!validation.isValid) {
 				Swal.fire("Error", validation.errors.join('\n'), "error");
+				setSaving(false);
 				return;
 			}
 
 			let result;
+			
 			if (bumdesData) {
+				// === UPDATE EXISTING DATA ===
+				// STEP 1: Update data tanpa file
 				result = await BumdesDesaService.updateBumdes(bumdesData.id, formData);
+				
+				// STEP 2: Upload files satu per satu jika ada
+				const fileFields = Object.keys(fileUploads).filter(key => fileUploads[key] !== null);
+				
+				if (fileFields.length > 0) {
+					for (const fieldName of fileFields) {
+						try {
+							const fileData = new FormData();
+							fileData.append('file', fileUploads[fieldName]);
+							fileData.append('bumdes_id', bumdesData.id);
+							fileData.append('field_name', fieldName);
+
+							await api.post('/desa/bumdes/upload-file', fileData, {
+								headers: { 'Content-Type': 'multipart/form-data' }
+							});
+						} catch (fileError) {
+							console.error(`Failed to upload ${fieldName}:`, fileError);
+							// Continue dengan file lain meskipun ada yang gagal
+						}
+					}
+				}
 			} else {
+				// === CREATE NEW DATA ===
+				// STEP 1: Submit data TANPA file dulu
 				result = await BumdesDesaService.createBumdes(formData);
+				const bumdesId = result.data?.id;
+
+				// STEP 2: Upload files satu per satu jika ada
+				const fileFields = Object.keys(fileUploads).filter(key => fileUploads[key] !== null);
+				
+				if (fileFields.length > 0 && bumdesId) {
+					for (const fieldName of fileFields) {
+						try {
+							const fileData = new FormData();
+							fileData.append('file', fileUploads[fieldName]);
+							fileData.append('bumdes_id', bumdesId);
+							fileData.append('field_name', fieldName);
+
+							await api.post('/desa/bumdes/upload-file', fileData, {
+								headers: { 'Content-Type': 'multipart/form-data' }
+							});
+						} catch (fileError) {
+							console.error(`Failed to upload ${fieldName}:`, fileError);
+							// Continue dengan file lain meskipun ada yang gagal
+						}
+					}
+				}
 			}
 
 			if (result.success) {
 				setBumdesData(result.data);
 				setIsEditing(false);
+				
+				// Reset file uploads state
+				setFileUploads({
+					LaporanKeuangan2021: null,
+					LaporanKeuangan2022: null,
+					LaporanKeuangan2023: null,
+					LaporanKeuangan2024: null,
+					ProfilBUMDesa: null,
+					BeritaAcara: null,
+					AnggaranDasar: null,
+					AnggaranRumahTangga: null,
+					ProgramKerja: null,
+				});
 				
 				Swal.fire({
 					title: "Berhasil!",
@@ -200,7 +347,22 @@ const BumdesDesaPage = () => {
 			}
 		} catch (error) {
 			console.error("Error saving BUMDES data:", error);
-			Swal.fire("Error", "Gagal menyimpan data BUMDES", "error");
+			
+			// Tampilkan error validasi jika ada
+			let errorMessage = "Gagal menyimpan data BUMDES";
+			if (error.response?.data?.errors) {
+				const errors = error.response.data.errors;
+				const errorList = Object.entries(errors)
+					.map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
+					.join('\n');
+				errorMessage = `Validasi gagal:\n\n${errorList}`;
+			} else if (error.response?.data?.message) {
+				errorMessage = error.response.data.message;
+			} else if (error.message) {
+				errorMessage = error.message;
+			}
+			
+			Swal.fire("Error", errorMessage, "error");
 		} finally {
 			setSaving(false);
 		}
@@ -308,11 +470,15 @@ const BumdesDesaPage = () => {
 				}`}
 			>
 				<option value="">{placeholder}</option>
-				{options.map((option) => (
-					<option key={option.id} value={option.id}>
-						{option.judul} ({option.nomor} - {new Date(option.tanggal).toLocaleDateString('id-ID')})
-					</option>
-				))}
+				{Array.isArray(options) && options.length > 0 ? (
+					options.map((option) => (
+						<option key={option.id || option.value} value={option.id || option.value}>
+							{option.nomor ? `${option.nomor} - ${option.judul} (${option.tahun})` : (option.label || option)}
+						</option>
+					))
+				) : (
+					<option key="no-data" disabled>Tidak ada data tersedia</option>
+				)}
 			</select>
 			{formData[field] && options.length > 0 && (
 				<div className="mt-2 p-3 bg-blue-50 rounded-lg">
@@ -321,10 +487,14 @@ const BumdesDesaPage = () => {
 						return selected ? (
 							<div className="text-sm text-blue-800">
 								<div className="font-medium">{selected.judul}</div>
-								<div className="text-blue-600">
-									{selected.nomor} • {new Date(selected.tanggal).toLocaleDateString('id-ID')} • {selected.jenis}
+								<div className="text-blue-600 mt-1">
+									{selected.singkatan_jenis || selected.jenis} {selected.nomor} Tahun {selected.tahun}
 								</div>
-								{selected.subjek && <div className="mt-1 text-blue-700">{selected.subjek}</div>}
+								{selected.tanggal_penetapan && (
+									<div className="text-blue-600">
+										Ditetapkan: {new Date(selected.tanggal_penetapan).toLocaleDateString('id-ID')}
+									</div>
+								)}
 							</div>
 						) : null;
 					})()}
@@ -437,6 +607,15 @@ const BumdesDesaPage = () => {
 						{renderInput("Kecamatan", "kecamatan", "text", "", false)}
 						{renderInput("Kode Desa", "kode_desa", "text", "", false)}
 						{renderInput("Tahun Pendirian", "TahunPendirian", "number", "Contoh: 2020")}
+						{renderSelect("Status BUMDes", "status", [
+							{ value: "aktif", label: "Aktif" },
+							{ value: "tidak aktif", label: "Tidak Aktif" }
+						], "Pilih status BUMDes")}
+						{formData.status === "tidak aktif" && (
+							<div className="md:col-span-2">
+								{renderTextarea("Keterangan Tidak Aktif", "keterangan_tidak_aktif", "Jelaskan alasan tidak aktif")}
+							</div>
+						)}
 						{renderInput("No. HP BUMDes", "NoHpBumdes", "tel", "Contoh: 08123456789")}
 						<div className="md:col-span-2">
 							{renderTextarea("Alamat BUMDes", "AlamatBumdes", "Masukkan alamat lengkap BUMDes")}
@@ -462,11 +641,32 @@ const BumdesDesaPage = () => {
 						</div>
 
 						<div className="grid grid-cols-1 gap-6">
+							{/* Info jika tidak ada data */}
+							{(!produkHukumOptions.perdes || produkHukumOptions.perdes.length === 0) && 
+							 (!produkHukumOptions.sk || produkHukumOptions.sk.length === 0) && (
+								<div className="col-span-1 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+									<div className="flex items-start gap-3">
+										<FiAlertCircle className="text-yellow-600 mt-1" />
+										<div className="flex-1">
+											<h4 className="text-sm font-medium text-yellow-800 mb-1">
+												Belum Ada Produk Hukum
+											</h4>
+											<p className="text-xs text-yellow-700">
+												Anda belum mengupload Peraturan Desa (PERDES) atau SK BUMDES. 
+												Silakan upload terlebih dahulu melalui menu <strong>Produk Hukum</strong>.
+											</p>
+										</div>
+									</div>
+								</div>
+							)}
+							
 							{renderSelect(
 								"Peraturan Desa (PERDES) BUMDES",
 								"produk_hukum_perdes_id",
 								produkHukumOptions.perdes || [],
-								"Pilih PERDES BUMDES yang sudah diupload",
+								produkHukumOptions.perdes?.length > 0 
+									? "Pilih PERDES BUMDES yang sudah diupload" 
+									: "Belum ada PERDES - Upload di menu Produk Hukum",
 								true
 							)}
 							
@@ -474,7 +674,9 @@ const BumdesDesaPage = () => {
 								"Surat Keputusan (SK) BUMDES",
 								"produk_hukum_sk_bumdes_id",
 								produkHukumOptions.sk || [],
-								"Pilih SK BUMDES yang sudah diupload",
+								produkHukumOptions.sk?.length > 0 
+									? "Pilih SK BUMDES yang sudah diupload" 
+									: "Belum ada SK - Upload di menu Produk Hukum",
 								true
 							)}
 						</div>
@@ -497,14 +699,88 @@ const BumdesDesaPage = () => {
 					</div>
 				))}
 
+				{/* 2b. Legalitas */}
+				{renderFormSection("2b. Legalitas", <FiFileText className="text-blue-600" />, (
+					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+						{renderInput("NIB (Nomor Induk Berusaha)", "NIB", "text", "Masukkan NIB")}
+						{renderInput("LKPP (Lembaga Kebijakan Pengadaan)", "LKPP", "text", "Masukkan LKPP")}
+						{renderInput("NPWP", "NPWP", "text", "Masukkan NPWP")}
+						{renderSelect("Status Badan Hukum", "badanhukum", [
+							{ value: "Terbit Sertifikat Badan Hukum", label: "Terbit Sertifikat Badan Hukum" },
+							{ value: "Nama Terverifikasi", label: "Nama Terverifikasi" },
+							{ value: "Perbaikan Dokumen", label: "Perbaikan Dokumen" },
+							{ value: "Belum Melakukan Proses", label: "Belum Melakukan Proses" }
+						], "Pilih status badan hukum")}
+					</div>
+				))}
+
 				{/* 3. Kepengurusan/Organisasi */}
 				{renderFormSection("3. Kepengurusan/Organisasi", <FiUsers className="text-blue-600" />, (
-					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-						{renderInput("Nama Penasihat", "NamaPenasihat", "text", "Masukkan nama penasihat")}
-						{renderInput("Nama Pengawas", "NamaPengawas", "text", "Masukkan nama pengawas")}
-						{renderInput("Nama Direktur", "NamaDirektur", "text", "Masukkan nama direktur")}
-						{renderInput("Nama Sekretaris", "NamaSekretaris", "text", "Masukkan nama sekretaris")}
-						{renderInput("Nama Bendahara", "NamaBendahara", "text", "Masukkan nama bendahara")}
+					<div className="space-y-6">
+						{/* Penasihat */}
+						<div className="border-b pb-4">
+							<h4 className="font-semibold text-gray-700 mb-3">Penasihat</h4>
+							<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+								{renderInput("Nama Penasihat", "NamaPenasihat", "text", "Masukkan nama penasihat")}
+								{renderSelect("Jenis Kelamin", "JenisKelaminPenasihat", [
+									{ value: "Laki-laki", label: "Laki-laki" },
+									{ value: "Perempuan", label: "Perempuan" }
+								], "Pilih jenis kelamin")}
+								{renderInput("No HP Penasihat", "HPPenasihat", "text", "Contoh: 08123456789")}
+							</div>
+						</div>
+
+						{/* Pengawas */}
+						<div className="border-b pb-4">
+							<h4 className="font-semibold text-gray-700 mb-3">Pengawas</h4>
+							<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+								{renderInput("Nama Pengawas", "NamaPengawas", "text", "Masukkan nama pengawas")}
+								{renderSelect("Jenis Kelamin", "JenisKelaminPengawas", [
+									{ value: "Laki-laki", label: "Laki-laki" },
+									{ value: "Perempuan", label: "Perempuan" }
+								], "Pilih jenis kelamin")}
+								{renderInput("No HP Pengawas", "HPPengawas", "text", "Contoh: 08123456789")}
+							</div>
+						</div>
+
+						{/* Direktur */}
+						<div className="border-b pb-4">
+							<h4 className="font-semibold text-gray-700 mb-3">Direktur</h4>
+							<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+								{renderInput("Nama Direktur", "NamaDirektur", "text", "Masukkan nama direktur")}
+								{renderSelect("Jenis Kelamin", "JenisKelaminDirektur", [
+									{ value: "Laki-laki", label: "Laki-laki" },
+									{ value: "Perempuan", label: "Perempuan" }
+								], "Pilih jenis kelamin")}
+								{renderInput("No HP Direktur", "HPDirektur", "text", "Contoh: 08123456789")}
+							</div>
+						</div>
+
+						{/* Sekretaris */}
+						<div className="border-b pb-4">
+							<h4 className="font-semibold text-gray-700 mb-3">Sekretaris</h4>
+							<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+								{renderInput("Nama Sekretaris", "NamaSekretaris", "text", "Masukkan nama sekretaris")}
+								{renderSelect("Jenis Kelamin", "JenisKelaminSekretaris", [
+									{ value: "Laki-laki", label: "Laki-laki" },
+									{ value: "Perempuan", label: "Perempuan" }
+								], "Pilih jenis kelamin")}
+								{renderInput("No HP Sekretaris", "HPSekretaris", "text", "Contoh: 08123456789")}
+							</div>
+						</div>
+
+						{/* Bendahara */}
+						<div>
+							<h4 className="font-semibold text-gray-700 mb-3">Bendahara</h4>
+							<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+								{renderInput("Nama Bendahara", "NamaBendahara", "text", "Masukkan nama bendahara")}
+								{renderSelect("Jenis Kelamin", "JenisKelaminBendahara", [
+									{ value: "Laki-laki", label: "Laki-laki" },
+									{ value: "Perempuan", label: "Perempuan" }
+								], "Pilih jenis kelamin")}
+								{renderInput("No HP Bendahara", "HPBendahara", "text", "Contoh: 08123456789")}
+							</div>
+						</div>
 					</div>
 				))}
 
@@ -602,6 +878,121 @@ const BumdesDesaPage = () => {
 					</div>
 				))}
 			</div>
+
+			{/* 13. Upload Dokumen */}
+			{renderFormSection("13. Upload Dokumen", <FiFileText className="text-blue-600" />, (
+				<div className="space-y-6">
+					{/* Laporan Keuangan Files */}
+					<div className="border-b pb-4">
+						<h4 className="font-semibold text-gray-700 mb-4 flex items-center gap-2">
+							<FiFileText className="text-blue-600" />
+							Laporan Keuangan
+						</h4>
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+							{['2021', '2022', '2023', '2024'].map(year => (
+								<div key={year} className="space-y-2">
+									<label className="block text-sm font-medium text-gray-700">
+										Laporan Keuangan {year}
+									</label>
+									<input
+										type="file"
+										accept=".pdf,.doc,.docx"
+										onChange={(e) => {
+											const file = e.target.files[0];
+											if (file) {
+												if (file.size > 5 * 1024 * 1024) {
+													Swal.fire('Error', 'Ukuran file maksimal 5MB', 'error');
+													e.target.value = '';
+													return;
+												}
+												setFileUploads(prev => ({
+													...prev,
+													[`LaporanKeuangan${year}`]: file
+												}));
+											}
+										}}
+										className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+									/>
+									{fileUploads[`LaporanKeuangan${year}`] && (
+										<p className="text-xs text-green-600 flex items-center gap-1">
+											<FiFileText /> {fileUploads[`LaporanKeuangan${year}`].name}
+										</p>
+									)}
+									{formData[`LaporanKeuangan${year}`] && !fileUploads[`LaporanKeuangan${year}`] && (
+										<p className="text-xs text-gray-600 flex items-center gap-1">
+											<FiFileText /> File tersimpan: {formData[`LaporanKeuangan${year}`].split('/').pop()}
+										</p>
+									)}
+								</div>
+							))}
+						</div>
+					</div>
+
+				{/* Dokumen Badan Hukum */}
+				<div>
+					<h4 className="font-semibold text-gray-700 mb-4 flex items-center gap-2">
+						<FiFileText className="text-blue-600" />
+						Dokumen Badan Hukum BUMDes
+					</h4>
+					<p className="text-sm text-gray-600 mb-3">
+						<strong>Catatan:</strong> Perdes dan SK BUMDes sudah terintegrasi dengan fitur Produk Hukum Desa. 
+						Silakan upload file-file dokumen BUMDes lainnya di bawah ini.
+					</p>
+					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+						{[
+							{ key: 'ProfilBUMDesa', label: 'Profil BUMDes' },
+							{ key: 'BeritaAcara', label: 'Berita Acara' },
+							{ key: 'AnggaranDasar', label: 'Anggaran Dasar' },
+							{ key: 'AnggaranRumahTangga', label: 'Anggaran Rumah Tangga' },
+							{ key: 'ProgramKerja', label: 'Program Kerja' }
+						].map(doc => (
+								<div key={doc.key} className="space-y-2">
+									<label className="block text-sm font-medium text-gray-700">
+										{doc.label}
+									</label>
+									<input
+										type="file"
+										accept=".pdf,.doc,.docx"
+										onChange={(e) => {
+											const file = e.target.files[0];
+											if (file) {
+												if (file.size > 5 * 1024 * 1024) {
+													Swal.fire('Error', 'Ukuran file maksimal 5MB', 'error');
+													e.target.value = '';
+													return;
+												}
+												setFileUploads(prev => ({
+													...prev,
+													[doc.key]: file
+												}));
+											}
+										}}
+										className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+									/>
+									{fileUploads[doc.key] && (
+										<p className="text-xs text-green-600 flex items-center gap-1">
+											<FiFileText /> {fileUploads[doc.key].name}
+										</p>
+									)}
+									{formData[doc.key] && !fileUploads[doc.key] && (
+										<p className="text-xs text-gray-600 flex items-center gap-1">
+											<FiFileText /> File tersimpan: {formData[doc.key].split('/').pop()}
+										</p>
+									)}
+								</div>
+							))}
+						</div>
+					</div>
+
+					{/* File Upload Info */}
+					<div className="p-3 bg-yellow-50 rounded-md">
+						<p className="text-sm text-yellow-800 flex items-center gap-2">
+							<FiAlertCircle />
+							Format file yang didukung: PDF, DOC, DOCX. Ukuran maksimal: 5MB per file
+						</p>
+					</div>
+				</div>
+			))}
 
 			{/* Footer Info */}
 			<div className="mt-8 p-4 bg-blue-50 rounded-lg">
