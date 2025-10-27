@@ -67,7 +67,7 @@ const HeroSection = () => {
 					{gallery.map((image) => (
 						<SwiperSlide key={image.id}>
 							<img
-								src={`${imageBaseUrl}/uploads/${image.image_path}`}
+								src={`${imageBaseUrl}/storage/app/uploads/${image.image_path}`}
 								alt={image.title || "Hero Image"}
 								className="absolute inset-0 h-full w-full object-cover"
 							/>

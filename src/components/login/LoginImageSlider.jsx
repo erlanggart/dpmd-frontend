@@ -58,7 +58,7 @@ const LoginImageSlider = () => {
 			{gallery.map((image) => (
 				<SwiperSlide key={image.id}>
 					<img
-						src={`${imageBaseUrl}/uploads/${image.image_path}`}
+						src={`${imageBaseUrl}/storage/app/uploads/${image.image_path}`}
 						alt={image.title || "Login Image"}
 						className="h-full w-full object-cover rounded-2xl"
 					/>

@@ -231,7 +231,7 @@ const HeroGalleryManagement = () => {
 						className="bg-primary rounded-lg overflow-hidden group"
 					>
 						<img
-							src={`${imageBaseUrl}/uploads/${image.image_path}`}
+							src={`${imageBaseUrl}/storage/app/uploads/${image.image_path}`}
 							alt={image.title || "Hero Image"}
 							className="w-full h-48 object-cover"
 						/>
