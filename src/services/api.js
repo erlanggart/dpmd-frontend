@@ -2,7 +2,7 @@
 import axios from "axios";
 
 const api = axios.create({
-	baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api",
+	baseURL: "http://127.0.0.1:3001/api",
 	timeout: 10000,
 	headers: {
 		"Content-Type": "application/json",
@@ -12,7 +12,7 @@ const api = axios.create({
 
 api.interceptors.request.use(
 	(config) => {
-		const token = localStorage.getItem("authToken");
+		const token = localStorage.getItem("expressToken");
 		if (token) {
 			config.headers["Authorization"] = `Bearer ${token}`;
 		}
@@ -29,7 +29,7 @@ api.interceptors.response.use(
 			// TAMBAHKAN PENGECEKAN INI:
 			// Hanya redirect jika kita TIDAK sedang di halaman login.
 			if (window.location.pathname !== "/login") {
-				localStorage.removeItem("authToken");
+				localStorage.removeItem("expressToken");
 				localStorage.removeItem("user");
 				window.location.href = "/login";
 			}
@@ -40,51 +40,25 @@ api.interceptors.response.use(
 	}
 );
 
-// --- Produk Hukum ---
-export const getProdukHukums = (page = 1, search = "") => {
-	return api.get(`/produk-hukum?page=${page}&search=${search}`);
-};
-
-export const createProdukHukum = (data) => {
-	const formData = new FormData();
-	for (const key in data) {
-		formData.append(key, data[key]);
+// Helper functions for location data
+export const getKecamatans = async () => {
+	try {
+		const response = await api.get('/kecamatans');
+		return response.data;
+	} catch (error) {
+		console.error('Error fetching kecamatans:', error);
+		throw error;
 	}
-	return api.post("/produk-hukum", formData, {
-		headers: {
-			"Content-Type": "multipart/form-data",
-		},
-	});
 };
 
-export const updateProdukHukum = (id, data) => {
-	const formData = new FormData();
-	for (const key in data) {
-		formData.append(key, data[key]);
+export const getDesasByKecamatan = async (kecamatanId) => {
+	try {
+		const response = await api.get(`/desas/kecamatan/${kecamatanId}`);
+		return response.data;
+	} catch (error) {
+		console.error('Error fetching desas:', error);
+		throw error;
 	}
-	formData.append("_method", "PUT"); // Laravel needs this for file uploads in updates
-	return api.post(`/produk-hukum/${id}`, formData, {
-		headers: {
-			"Content-Type": "multipart/form-data",
-		},
-	});
-};
-
-export const deleteProdukHukum = (id) => {
-	return api.delete(`/produk-hukum/${id}`);
-};
-
-// --- Kecamatan dan Desa ---
-export const getKecamatans = () => {
-	return api.get('/kecamatans');
-};
-
-export const getDesasByKecamatan = (kecamatanId) => {
-	return api.get(`/desas/by-kecamatan/${kecamatanId}`);
-};
-
-export const getAllDesas = () => {
-	return api.get('/desas');
 };
 
 export default api;

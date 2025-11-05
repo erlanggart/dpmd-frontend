@@ -19,19 +19,27 @@ const LoginPage = () => {
 		setLoading(true);
 		setError(null);
 		try {
-			const response = await api.post("/login", { email, password });
+			// Login to Express backend (single source of truth)
+			const response = await api.post("/auth/login", { email, password });
 
-			// 1. Simpan data user baru ke dalam sebuah variabel
-			const newUser = response.data.user;
+			const newUser = response.data.data.user;
+			const expressToken = response.data.data.token;
 
-			// 2. Gunakan fungsi login dari context untuk menyimpan data secara global
-			login(newUser, response.data.access_token);
+			console.log('✅ Express login successful');
 
-			// 3. Routing berdasarkan roles user
+			// Normalize role to roles array for compatibility
+			if (newUser.role && !newUser.roles) {
+				newUser.roles = [newUser.role];
+			}
+
+			// Save token and user using context
+			login(newUser, null, expressToken); // No Laravel token
+
+			// Routing based on user roles
 			if (newUser.roles.includes("desa")) {
-				navigate("/desa/dashboard"); // Arahkan ke dashboard desa
+				navigate("/desa/dashboard");
 			} else if (newUser.roles.includes("kecamatan")) {
-				navigate("/kecamatan/dashboard"); // Arahkan ke dashboard kecamatan
+				navigate("/kecamatan/dashboard");
 			} else if (
 				newUser.roles.includes("superadmin") ||
 				newUser.roles.includes("pemerintahan_desa") ||
@@ -45,9 +53,9 @@ const LoginPage = () => {
 				newUser.roles.includes("kepala_dinas") ||
 				newUser.roles.includes("sekretaris_dinas")
 			) {
-				navigate("/dashboard"); // Arahkan ke dashboard utama untuk superadmin, bidang, departemen, dan dinas
+				navigate("/dashboard");
 			} else {
-				navigate("/dashboard"); // Default ke dashboard utama
+				navigate("/dashboard");
 			}
 		} catch (err) {
 			setError(err.response?.data?.message || "Login gagal.");

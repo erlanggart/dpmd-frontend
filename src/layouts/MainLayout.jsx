@@ -14,14 +14,10 @@ import {
 } from "react-icons/fi";
 
 import {
-	TbBuildingBank,
-	TbHomeDollar,
 	TbMap,
-	TbUserPentagon,
 } from "react-icons/tb";
 import SearchPalette from "../components/SearchPalatte";
 import RoleSwitcher from "../components/RoleSwitcher";
-import { getUserRole, getDisposisiMenuPath, getDisposisiMenuLabel } from "../utils/roleUtils";
 
 // Komponen Submenu (Accordion Item)
 const SubMenu = ({ item, openMenu, toggleMenu, isMinimized }) => {
@@ -131,7 +127,7 @@ const MainLayout = () => {
 	}, [location.pathname, user]); // Ganti menuItems dengan user untuk menghindari circular dependency
 
 	const handleLogout = () => {
-		localStorage.removeItem("authToken");
+		localStorage.removeItem("expressToken");
 		localStorage.removeItem("user");
 		navigate("/login");
 	};
@@ -144,39 +140,11 @@ const MainLayout = () => {
 	const menuItems = useMemo(() => {
 		const baseMenuItems = [
 			{
-				key: "pemdes",
-				label: "Pemdes",
-				icon: <TbUserPentagon />,
-				children: [
-					{ to: "/dashboard/profil-desa", label: "Profil Desa" },
-					{ to: "/dashboard/aparatur-desa", label: "Aparatur Desa" },
-				],
-			},
-			{
-				key: "keudes",
-				label: "KKD",
-				icon: <TbHomeDollar />,
-				children: [
-					{ to: "/dashboard/dana-desa", label: "Dana Desa" },
-					{ to: "/dashboard/alokasi-dana-desa", label: "Alokasi Dana Desa" },
-					{ to: "/dashboard/bhprd", label: "BHPRD" },
-				],
-			},
-			{
 				key: "sarpras",
 				label: "SPKED",
 				icon: <TbMap />,
 				children: [
 					{ to: "/dashboard/bumdes", label: "BUMDes" },
-					{ to: "/dashboard/samisade", label: "Samisade" },
-				],
-			},
-			{
-				key: "pemmas",
-				label: "PMD",
-				icon: <TbBuildingBank />,
-				children: [
-					{ to: "/dashboard/kelembagaan", label: "Kelembagaan (RT/RW/Posyandu)" },
 				],
 			},
 		];
@@ -188,9 +156,7 @@ const MainLayout = () => {
 				label: "Sekretariat",
 				icon: <FiClipboard />,
 				children: [
-					{ to: "/dashboard/pegawai", label: "Pegawai" },
 					{ to: "/dashboard/perjalanan-dinas", label: "Perjalanan Dinas" },
-					{ to: getDisposisiMenuPath(getUserRole()), label: getDisposisiMenuLabel(getUserRole()) },
 				],
 			},
 			{
@@ -199,8 +165,6 @@ const MainLayout = () => {
 				icon: <FiLayout />,
 				children: [
 					{ to: "/dashboard/hero-gallery", label: "Galeri Hero" },
-					{ to: "/dashboard/articles", label: "Manajemen Artikel" },
-					{ to: "/dashboard/users", label: "Manajemen User" },
 				],
 			},
 		];

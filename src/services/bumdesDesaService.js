@@ -144,7 +144,7 @@ const BumdesDesaService = {
   // Get produk hukum options for BUMDES
   getProdukHukumForBumdes: async () => {
     try {
-      const response = await api.get('/desa/bumdes/produk-hukum');
+      const response = await api.get('/desa/bumdes/produk-hukum-options');
       return response.data;
     } catch (error) {
       console.error('Error fetching produk hukum options:', error);

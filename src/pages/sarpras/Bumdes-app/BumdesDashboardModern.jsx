@@ -662,7 +662,7 @@ const BumdesDetailModal = ({ bumdes, isOpen, onClose, onEdit, onDelete, onOpenDo
                       </div>
                     </div>
                     <a
-                      href={`http://localhost:8000/storage/app/uploads/${bumdes.Perdes}`}
+                      href={`http://127.0.0.1:3001/uploads/${bumdes.Perdes}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm w-full justify-center"
@@ -704,7 +704,7 @@ const BumdesDetailModal = ({ bumdes, isOpen, onClose, onEdit, onDelete, onOpenDo
                       </div>
                     </div>
                     <a
-                      href={`http://localhost:8000/storage/app/uploads/${bumdes.SK_BUM_Desa}`}
+                      href={`http://127.0.0.1:3001/uploads/${bumdes.SK_BUM_Desa}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm w-full justify-center"
@@ -2100,14 +2100,18 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
       const selectedBumdes = selectedBumdesForDocs.bumdesData;
       
       filtered = documents.filter(doc => {
-        // STRICT: Only show documents that EXACTLY belong to this BUMDes
+        // Filter berdasarkan ID BUMDes yang sesuai
+        // Backend mengirim field 'id' yang merupakan bumdes.id
+        if (doc.id === selectedBumdes.id) {
+          return true;
+        }
         
-        // Method 1: Document has bumdes_info with exact BUMDes ID match
+        // Backward compatibility: Check bumdes_info structure (if exists)
         if (doc.bumdes_info && doc.bumdes_info.id === selectedBumdes.id) {
           return true;
         }
         
-        // Method 2: Check matched_bumdes array for exact BUMDes ID match
+        // Backward compatibility: Check matched_bumdes array (if exists)
         if (doc.matched_bumdes && Array.isArray(doc.matched_bumdes)) {
           const hasExactMatch = doc.matched_bumdes.some(match => match.id === selectedBumdes.id);
           if (hasExactMatch) {
