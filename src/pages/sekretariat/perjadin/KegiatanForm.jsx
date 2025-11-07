@@ -274,7 +274,14 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose = () => {}, onSuccess
 
   const handlePersonilChange = (groupIndex, personilIndex, e) => {
     const newPersonilBidangList = [...formData.personil_bidang_list];
-    newPersonilBidangList[groupIndex].personil[personilIndex] = e.target.value;
+    try {
+      // Parse JSON string dari option value
+      const personilData = JSON.parse(e.target.value);
+      newPersonilBidangList[groupIndex].personil[personilIndex] = personilData;
+    } catch (error) {
+      // Fallback ke string biasa jika bukan JSON (untuk backward compatibility)
+      newPersonilBidangList[groupIndex].personil[personilIndex] = e.target.value;
+    }
     setFormData({ ...formData, personil_bidang_list: newPersonilBidangList });
   };
 
@@ -814,14 +821,14 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose = () => {}, onSuccess
                         <div key={personilIndex} className="flex items-center gap-3">
                           <div className="flex-1 relative">
                             <select
-                              value={personilName}
+                              value={typeof personilName === 'object' ? JSON.stringify(personilName) : personilName}
                               onChange={(e) => handlePersonilChange(index, personilIndex, e)}
                               className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 bg-white shadow-sm transition-all duration-200 appearance-none"
                               required
                             >
                               <option value="">Pilih Personil</option>
                               {Array.isArray(allPersonilByBidang[item.id_bidang]) && allPersonilByBidang[item.id_bidang].map(p => (
-                                <option key={p.id_personil} value={p.nama_personil}>{p.nama_personil}</option>
+                                <option key={p.id_personil} value={JSON.stringify({id_personil: p.id_personil, nama_personil: p.nama_personil})}>{p.nama_personil}</option>
                               ))}
                             </select>
                             <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">

@@ -201,27 +201,25 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, onDeta
         }
       }
       
-      const response = await api.get('/bidangs');
+      const response = await api.get('/perjadin/bidang');
       
-      // Handle both API response formats
-      const isWrappedResponse = response.data.success !== undefined;
+      // Handle API response format
       let allBidangData = [];
       
-      if (isWrappedResponse && response.data.success) {
-        allBidangData = response.data.data || [];
-      } else if (!isWrappedResponse && Array.isArray(response.data)) {
-        // Direct array response from /bidangs endpoint
-        allBidangData = response.data.map(bidang => ({
-          id_bidang: bidang.id,
-          nama_bidang: bidang.nama,
-          status: 'aktif' // Assume all bidang from this endpoint are active
-        }));
+      if (response.data.success && response.data.data) {
+        // Backend returns wrapped response with success flag
+        allBidangData = response.data.data;
+      } else if (Array.isArray(response.data)) {
+        // Fallback for direct array response
+        allBidangData = response.data;
       }
       
+      console.log('📊 Fetched bidang data:', allBidangData);
+      
       if (allBidangData.length > 0) {
-        // Filter only active bidang
+        // Filter only active bidang (backend already sends only active ones)
         const activeBidangData = allBidangData.filter(bidang => 
-          bidang.status === 'aktif' || bidang.status === 'active' || bidang.status === 1
+          !bidang.status || bidang.status === 'aktif' || bidang.status === 'active' || bidang.status === 1
         );
 
         // Check if bidang data actually changed
@@ -302,7 +300,7 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, onDeta
         const response = await api.delete(`/perjadin/kegiatan/${id}`);
         
         // Check if deletion was successful
-        if (response.data && response.data.status === 'success') {
+        if (response.data && response.data.success === true) {
           // Clear relevant caches to force refresh
           clearCache('kegiatan');
           clearCache('dashboard');

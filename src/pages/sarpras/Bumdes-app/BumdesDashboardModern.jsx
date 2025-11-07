@@ -39,7 +39,6 @@ import API_CONFIG from '../../../config/api';
 import api from '../../../api';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
-import Swal from 'sweetalert2';
 
 // Simplified CSS for better performance
 const notificationStyles = `
@@ -424,7 +423,7 @@ const BumdesCard = ({ bumdes, onClick }) => {
 };
 
 // Enhanced Detail Modal Component with Complete Data
-const BumdesDetailModal = ({ bumdes, isOpen, onClose, onEdit, onDelete, onOpenDocuments, isDeleting }) => {
+const BumdesDetailModal = ({ bumdes, isOpen, onClose, onEdit, onDelete, onOpenDocuments }) => {
   if (!isOpen || !bumdes) return null;
 
   const isNotUploaded = bumdes.upload_status === 'not_uploaded';
@@ -485,24 +484,10 @@ const BumdesDetailModal = ({ bumdes, isOpen, onClose, onEdit, onDelete, onOpenDo
                   </button>
                   <button
                     onClick={() => onDelete(bumdes)}
-                    disabled={isDeleting}
-                    className={`p-3 rounded-xl transition-all duration-300 backdrop-blur-sm ${
-                      isDeleting 
-                        ? 'bg-gray-400/80 cursor-not-allowed' 
-                        : 'bg-red-500/80 hover:bg-red-600/90 hover:scale-105'
-                    }`}
-                    title={isDeleting ? "Sedang menghapus..." : "Hapus Data"}
+                    className="bg-red-500/80 hover:bg-red-600/90 p-3 rounded-xl transition-colors duration-300 backdrop-blur-sm"
+                    title="Hapus Data"
                   >
-                    {isDeleting ? (
-                      <div className="animate-spin text-xl">
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                      </div>
-                    ) : (
-                      <FiTrash2 className="text-xl" />
-                    )}
+                    <FiTrash2 className="text-xl" />
                   </button>
                 </>
               )}
@@ -627,99 +612,6 @@ const BumdesDetailModal = ({ bumdes, isOpen, onClose, onEdit, onDelete, onOpenDo
               <div>
                 <div className="text-sm text-gray-500 mb-1">Badan Hukum</div>
                 <div className="font-medium">{bumdes.badanhukum || 'Belum diisi'}</div>
-              </div>
-            </div>
-          </div>
-
-          {/* 3.1. Dokumen Produk Hukum */}
-          <div className="bg-white rounded-2xl p-6 border border-white">
-            <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-              <FiFileText className="text-slate-800" />
-              Dokumen Produk Hukum
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Perdes */}
-              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-200">
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <h4 className="font-semibold text-gray-800 flex items-center gap-2">
-                      <FiFileText className="text-blue-600" />
-                      Peraturan Desa (Perdes)
-                    </h4>
-                    <p className="text-xs text-gray-500 mt-1">Dokumen legalitas pendirian BUMDes</p>
-                  </div>
-                </div>
-                {bumdes.Perdes ? (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm">
-                      <FiCheck className="text-green-600" />
-                      <span className="text-green-700 font-medium">Dokumen tersedia</span>
-                    </div>
-                    <div className="bg-white rounded-lg p-3 border border-blue-200">
-                      <div className="text-xs text-gray-500 mb-1">Nama File:</div>
-                      <div className="text-sm font-medium text-gray-800 break-all">
-                        {bumdes.Perdes.split('/').pop()}
-                      </div>
-                    </div>
-                    <a
-                      href={`http://127.0.0.1:3001/uploads/${bumdes.Perdes}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm w-full justify-center"
-                    >
-                      <FiEye />
-                      Lihat Dokumen
-                    </a>
-                  </div>
-                ) : (
-                  <div className="text-center py-4">
-                    <FiFile className="mx-auto h-8 w-8 text-gray-400 mb-2" />
-                    <p className="text-sm text-gray-500">Belum ada dokumen</p>
-                    <p className="text-xs text-gray-400 mt-1">Upload melalui form input BUMDes</p>
-                  </div>
-                )}
-              </div>
-
-              {/* SK BUM Desa */}
-              <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-4 border border-green-200">
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <h4 className="font-semibold text-gray-800 flex items-center gap-2">
-                      <FiFileText className="text-green-600" />
-                      SK BUM Desa
-                    </h4>
-                    <p className="text-xs text-gray-500 mt-1">Surat Keputusan BUMDes</p>
-                  </div>
-                </div>
-                {bumdes.SK_BUM_Desa ? (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm">
-                      <FiCheck className="text-green-600" />
-                      <span className="text-green-700 font-medium">Dokumen tersedia</span>
-                    </div>
-                    <div className="bg-white rounded-lg p-3 border border-green-200">
-                      <div className="text-xs text-gray-500 mb-1">Nama File:</div>
-                      <div className="text-sm font-medium text-gray-800 break-all">
-                        {bumdes.SK_BUM_Desa.split('/').pop()}
-                      </div>
-                    </div>
-                    <a
-                      href={`http://127.0.0.1:3001/uploads/${bumdes.SK_BUM_Desa}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm w-full justify-center"
-                    >
-                      <FiEye />
-                      Lihat Dokumen
-                    </a>
-                  </div>
-                ) : (
-                  <div className="text-center py-4">
-                    <FiFile className="mx-auto h-8 w-8 text-gray-400 mb-2" />
-                    <p className="text-sm text-gray-500">Belum ada dokumen</p>
-                    <p className="text-xs text-gray-400 mt-1">Upload melalui form input BUMDes</p>
-                  </div>
-                )}
               </div>
             </div>
           </div>
@@ -1574,7 +1466,6 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
   const [showAllBumdes, setShowAllBumdes] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletingBumdes, setDeletingBumdes] = useState(null);
-  const [isDeleting, setIsDeleting] = useState(false);
   
   // Document management states
   const [showDocumentModal, setShowDocumentModal] = useState(false);
@@ -1589,25 +1480,31 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
   const [filteredDocuments, setFilteredDocuments] = useState([]);
   
   // Document management functions
-  const fetchAllDocuments = async () => {
+  const fetchAllDocuments = async (bumdesId = null) => {
     setDocumentsLoading(true);
     try {
-      const [dokumenResponse, laporanResponse, produkHukumResponse] = await Promise.all([
-        api.get('/bumdes/dokumen-badan-hukum', { timeout: 60000 }),
-        api.get('/bumdes/laporan-keuangan', { timeout: 60000 }),
-        api.get('/bumdes/produk-hukum', { timeout: 60000 })
+      // Build query params
+      const params = {};
+      if (bumdesId) {
+        params.bumdes_id = bumdesId;
+      }
+
+      const [dokumenResponse, laporanResponse] = await Promise.all([
+        api.get('/bumdes/dokumen-badan-hukum', { params, timeout: 60000 }),
+        api.get('/bumdes/laporan-keuangan', { params, timeout: 60000 })
       ]);
 
       const dokumenResult = dokumenResponse.data;
       const laporanResult = laporanResponse.data;
-      const produkHukumResult = produkHukumResponse.data;
 
-      if (dokumenResult.status === 'success' && laporanResult.status === 'success' && produkHukumResult.status === 'success') {
+      if (dokumenResult.status === 'success' && laporanResult.status === 'success') {
         const allDocs = [
           ...dokumenResult.data.map(doc => ({ ...doc, type: 'dokumen_badan_hukum' })),
-          ...laporanResult.data.map(doc => ({ ...doc, type: 'laporan_keuangan' })),
-          ...produkHukumResult.data.map(doc => ({ ...doc, type: 'produk_hukum' }))
+          ...laporanResult.data.map(doc => ({ ...doc, type: 'laporan_keuangan' }))
         ];
+        
+        console.log(`📦 Fetched ${allDocs.length} documents${bumdesId ? ` for BUMDes ID ${bumdesId}` : ' (all)'}`);
+        
         setDocuments(allDocs);
         
         // Extract unique kecamatan and desa for filters
@@ -1628,6 +1525,7 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
         showNotification('error', 'Gagal mengambil data dokumen');
       }
     } catch (error) {
+      console.error('❌ Error fetching documents:', error);
       showNotification('error', 'Terjadi kesalahan saat mengambil data dokumen');
     } finally {
       setDocumentsLoading(false);
@@ -1695,157 +1593,29 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
     setEditingBumdes(null);
   };
 
-  const handleDeleteClick = async (bumdes) => {
-    // Tutup modal detail terlebih dahulu
+  const handleDeleteClick = (bumdes) => {
+    setDeletingBumdes(bumdes);
     setShowDetailModal(false);
-    
-    // Tampilkan SweetAlert untuk konfirmasi
-    const result = await Swal.fire({
-      title: 'Konfirmasi Hapus Data',
-      html: `
-        <div class="text-center">
-          <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-4">
-            <svg class="h-8 w-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
-          </div>
-          <p class="text-gray-600 mb-2">Apakah Anda yakin ingin menghapus data BUMDes:</p>
-          <p class="font-semibold text-gray-900 text-lg">"${bumdes.namabumdesa}"</p>
-          <p class="text-red-600 text-sm mt-2">⚠️ Tindakan ini tidak dapat dibatalkan!</p>
-        </div>
-      `,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#dc2626',
-      cancelButtonColor: '#6b7280',
-      confirmButtonText: 'Ya, Hapus Data',
-      cancelButtonText: 'Batal',
-      reverseButtons: true,
-      focusCancel: true,
-      customClass: {
-        popup: 'rounded-3xl',
-        confirmButton: 'font-semibold px-6 py-3 rounded-xl',
-        cancelButton: 'font-semibold px-6 py-3 rounded-xl'
-      },
-      backdrop: `
-        rgba(0,0,0,0.7)
-        url("data:image/svg+xml,%3csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3e%3cdefs%3e%3cpattern id='grid' width='20' height='20' patternUnits='userSpaceOnUse'%3e%3cpath d='M 20 0 L 0 0 0 20' fill='none' stroke='rgba(255,255,255,0.03)' stroke-width='1'/%3e%3c/pattern%3e%3c/defs%3e%3crect width='100' height='100' fill='url(%23grid)'/%3e%3c/svg%3e")
-        center
-        no-repeat
-      `
-    });
-
-    if (result.isConfirmed) {
-      await handleConfirmDelete(bumdes);
-    }
+    setShowDeleteConfirm(true);
   };
 
-  const handleConfirmDelete = async (bumdes) => {
-    // Set loading state
-    setIsDeleting(true);
-    
-    // Tampilkan loading alert
-    Swal.fire({
-      title: 'Menghapus Data...',
-      html: `
-        <div class="text-center">
-          <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-blue-100 mb-4">
-            <svg class="animate-spin h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-          </div>
-          <p class="text-gray-600">Sedang menghapus data BUMDes <strong>"${bumdes.namabumdesa}"</strong>...</p>
-          <p class="text-sm text-gray-500 mt-2">Mohon tunggu sebentar</p>
-        </div>
-      `,
-      allowOutsideClick: false,
-      allowEscapeKey: false,
-      showConfirmButton: false,
-      customClass: {
-        popup: 'rounded-3xl'
-      }
-    });
+  const handleConfirmDelete = async () => {
+    if (!deletingBumdes) return;
 
     try {
-      const result = await deleteBumdesData(bumdes.id);
+      const result = await deleteBumdesData(deletingBumdes.id);
       
       if (result.success) {
+        setShowDeleteConfirm(false);
+        setDeletingBumdes(null);
+        alert('Data BUMDes berhasil dihapus!');
         // Refresh statistics after successful delete
         refreshStatistics();
-        
-        // Success alert
-        await Swal.fire({
-          title: 'Berhasil!',
-          html: `
-            <div class="text-center">
-              <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
-                <svg class="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <p class="text-gray-600">Data BUMDes <strong>"${bumdes.namabumdesa}"</strong> berhasil dihapus!</p>
-            </div>
-          `,
-          icon: 'success',
-          confirmButtonColor: '#10b981',
-          confirmButtonText: 'OK',
-          customClass: {
-            popup: 'rounded-3xl',
-            confirmButton: 'font-semibold px-6 py-3 rounded-xl'
-          },
-          timer: 3000,
-          timerProgressBar: true
-        });
       } else {
-        // Error alert
-        await Swal.fire({
-          title: 'Gagal Menghapus!',
-          html: `
-            <div class="text-center">
-              <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-4">
-                <svg class="h-8 w-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </div>
-              <p class="text-gray-600">${result.message || 'Terjadi kesalahan yang tidak diketahui'}</p>
-            </div>
-          `,
-          icon: 'error',
-          confirmButtonColor: '#dc2626',
-          confirmButtonText: 'Tutup',
-          customClass: {
-            popup: 'rounded-3xl',
-            confirmButton: 'font-semibold px-6 py-3 rounded-xl'
-          }
-        });
+        alert('Gagal menghapus data: ' + (result.message || 'Unknown error'));
       }
     } catch (error) {
-      // Error alert
-      await Swal.fire({
-        title: 'Terjadi Kesalahan!',
-        html: `
-          <div class="text-center">
-            <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-4">
-              <svg class="h-8 w-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.732 15.5c-.77.833.192 2.5 1.732 2.5z" />
-              </svg>
-            </div>
-            <p class="text-gray-600">Terjadi kesalahan saat menghapus data</p>
-            <p class="text-sm text-gray-500 mt-2">${error.message || 'Error tidak diketahui'}</p>
-          </div>
-        `,
-        icon: 'error',
-        confirmButtonColor: '#dc2626',
-        confirmButtonText: 'Tutup',
-        customClass: {
-          popup: 'rounded-3xl',
-          confirmButton: 'font-semibold px-6 py-3 rounded-xl'
-        }
-      });
-    } finally {
-      // Reset loading state
-      setIsDeleting(false);
+      alert('Terjadi kesalahan saat menghapus data');
     }
   };
 
@@ -1906,9 +1676,8 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
       search: '' 
     });
     
-    if (documents.length === 0) {
-      fetchAllDocuments();
-    }
+    // Fetch documents specifically for this BUMDes
+    fetchAllDocuments(bumdesId);
   };
 
   const linkDocumentToBumdes = async (filename, bumdesId, documentType) => {
@@ -1939,63 +1708,11 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
     }
   };
 
-  // Delete file function for dashboard with SweetAlert
+  // Delete file function for dashboard
   const deleteDocumentFile = async (filename, documentType, bumdesId = null) => {
-    // Tampilkan SweetAlert untuk konfirmasi
-    const result = await Swal.fire({
-      title: 'Konfirmasi Hapus File',
-      html: `
-        <div class="text-center">
-          <div class="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-red-100 mb-4">
-            <svg class="h-7 w-7 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-          </div>
-          <p class="text-gray-600 mb-2">Apakah Anda yakin ingin menghapus file:</p>
-          <p class="font-semibold text-gray-900 text-sm break-all">"${filename}"</p>
-          <p class="text-red-600 text-xs mt-2">⚠️ Tindakan ini tidak dapat dibatalkan!</p>
-        </div>
-      `,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#dc2626',
-      cancelButtonColor: '#6b7280',
-      confirmButtonText: 'Ya, Hapus File',
-      cancelButtonText: 'Batal',
-      reverseButtons: true,
-      focusCancel: true,
-      customClass: {
-        popup: 'rounded-2xl',
-        confirmButton: 'font-semibold px-4 py-2 rounded-lg text-sm',
-        cancelButton: 'font-semibold px-4 py-2 rounded-lg text-sm'
-      }
-    });
-
-    if (!result.isConfirmed) {
+    if (!window.confirm(`Apakah Anda yakin ingin menghapus file "${filename}"? Tindakan ini tidak dapat dibatalkan.`)) {
       return;
     }
-
-    // Tampilkan loading alert
-    Swal.fire({
-      title: 'Menghapus File...',
-      html: `
-        <div class="text-center">
-          <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 mb-4">
-            <svg class="animate-spin h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-          </div>
-          <p class="text-gray-600">Sedang menghapus file...</p>
-        </div>
-      `,
-      allowOutsideClick: false,
-      allowEscapeKey: false,
-      showConfirmButton: false,
-      customClass: {
-        popup: 'rounded-2xl'
-      }
-    });
 
     try {
       const response = await fetch(`${API_CONFIG.BASE_URL}/bumdes/delete-file`, {
@@ -2010,84 +1727,21 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
         })
       });
 
-      const deleteResult = await response.json();
+      const result = await response.json();
       
-      if (deleteResult.success) {
+      if (result.success) {
+        showNotification('success', result.message);
         // Refresh documents and BUMDes data
         fetchAllDocuments();
         if (selectedBumdesForDocs?.id) {
           // Refresh the specific BUMDes data if viewing from detail modal
           refreshData();
         }
-
-        // Success alert
-        await Swal.fire({
-          title: 'Berhasil!',
-          html: `
-            <div class="text-center">
-              <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
-                <svg class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <p class="text-gray-600">${deleteResult.message}</p>
-            </div>
-          `,
-          icon: 'success',
-          confirmButtonColor: '#10b981',
-          confirmButtonText: 'OK',
-          customClass: {
-            popup: 'rounded-2xl',
-            confirmButton: 'font-semibold px-4 py-2 rounded-lg text-sm'
-          },
-          timer: 2000,
-          timerProgressBar: true
-        });
       } else {
-        // Error alert
-        await Swal.fire({
-          title: 'Gagal Menghapus!',
-          html: `
-            <div class="text-center">
-              <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
-                <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </div>
-              <p class="text-gray-600">${deleteResult.message || 'Gagal menghapus file'}</p>
-            </div>
-          `,
-          icon: 'error',
-          confirmButtonColor: '#dc2626',
-          confirmButtonText: 'Tutup',
-          customClass: {
-            popup: 'rounded-2xl',
-            confirmButton: 'font-semibold px-4 py-2 rounded-lg text-sm'
-          }
-        });
+        showNotification('error', result.message || 'Gagal menghapus file');
       }
     } catch (error) {
-      // Error alert
-      await Swal.fire({
-        title: 'Terjadi Kesalahan!',
-        html: `
-          <div class="text-center">
-            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
-              <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.732 15.5c-.77.833.192 2.5 1.732 2.5z" />
-              </svg>
-            </div>
-            <p class="text-gray-600">Terjadi kesalahan saat menghapus file</p>
-          </div>
-        `,
-        icon: 'error',
-        confirmButtonColor: '#dc2626',
-        confirmButtonText: 'Tutup',
-        customClass: {
-          popup: 'rounded-2xl',
-          confirmButton: 'font-semibold px-4 py-2 rounded-lg text-sm'
-        }
-      });
+      showNotification('error', 'Terjadi kesalahan saat menghapus file');
     }
   };
 
@@ -2099,28 +1753,57 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
     if (selectedBumdesForDocs && selectedBumdesForDocs.bumdesData) {
       const selectedBumdes = selectedBumdesForDocs.bumdesData;
       
+      console.log('🔍 Filtering documents for BUMDes ID:', selectedBumdes.id);
+      console.log('📄 Total documents available:', documents.length);
+      
       filtered = documents.filter(doc => {
-        // Filter berdasarkan ID BUMDes yang sesuai
-        // Backend mengirim field 'id' yang merupakan bumdes.id
+        // STRICT: Only show documents that EXACTLY belong to this BUMDes
+        
+        // Method 1: Document has bumdes_id field from backend (PRIMARY METHOD)
+        if (doc.bumdes_id === selectedBumdes.id) {
+          console.log('✅ Match found (bumdes_id):', doc.filename, 'ID:', doc.bumdes_id);
+          return true;
+        }
+        
+        // Method 2: Document has direct id field from backend (FALLBACK for backward compatibility)
         if (doc.id === selectedBumdes.id) {
+          console.log('✅ Match found (id - fallback):', doc.filename, 'ID:', doc.id);
           return true;
         }
         
-        // Backward compatibility: Check bumdes_info structure (if exists)
+        // Method 3: Document has bumdes_info with exact BUMDes ID match
         if (doc.bumdes_info && doc.bumdes_info.id === selectedBumdes.id) {
+          console.log('✅ Match found (bumdes_info):', doc.filename);
           return true;
         }
         
-        // Backward compatibility: Check matched_bumdes array (if exists)
+        // Method 4: Check matched_bumdes array for exact BUMDes ID match
         if (doc.matched_bumdes && Array.isArray(doc.matched_bumdes)) {
           const hasExactMatch = doc.matched_bumdes.some(match => match.id === selectedBumdes.id);
           if (hasExactMatch) {
+            console.log('✅ Match found (matched_bumdes):', doc.filename);
             return true;
           }
         }
         
         return false;
       });
+      
+      console.log('📊 Filtered documents count:', filtered.length);
+      
+      // Remove duplicates based on filename + field combination
+      const seenDocs = new Map();
+      filtered = filtered.filter(doc => {
+        const key = `${doc.filename}_${doc.field}`;
+        if (seenDocs.has(key)) {
+          console.log('⚠️ Duplicate removed:', doc.filename, doc.field);
+          return false;
+        }
+        seenDocs.set(key, true);
+        return true;
+      });
+      
+      console.log('📊 After deduplication:', filtered.length);
     } else {
       filtered = []; // Show no documents if no BUMDes is selected
     }
@@ -2958,7 +2641,6 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
         onEdit={handleEditClick}
         onDelete={handleDeleteClick}
         onOpenDocuments={handleOpenDocuments}
-        isDeleting={isDeleting}
       />
 
       {/* Edit Modal */}
@@ -2979,7 +2661,42 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
         </div>
       )}
 
-
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && deletingBumdes && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl">
+            <div className="p-6">
+              <div className="text-center">
+                <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+                  <FiTrash2 className="h-6 w-6 text-red-600" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">
+                  Konfirmasi Hapus Data
+                </h3>
+                <p className="text-sm text-gray-500 mb-6">
+                  Apakah Anda yakin ingin menghapus data BUMDes <span className="font-medium text-gray-900">"{deletingBumdes.namabumdesa}"</span>? 
+                  Tindakan ini tidak dapat dibatalkan.
+                </p>
+                
+                <div className="flex gap-3 justify-center">
+                  <button
+                    onClick={handleCancelDelete}
+                    className="px-6 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors duration-300"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    onClick={handleConfirmDelete}
+                    className="px-6 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors duration-300"
+                  >
+                    Hapus Data
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Document Management Modal */}
       {showDocumentModal && (
@@ -3074,19 +2791,13 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
                       {filteredDocuments.map((doc, index) => (
                         <div key={index} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                           <div className="flex items-start gap-3">
-                            <FiFile className={`mt-1 flex-shrink-0 ${
-                              doc.type === 'produk_hukum' ? 'text-purple-500' : 
-                              doc.type === 'dokumen_badan_hukum' ? 'text-blue-500' : 
-                              'text-green-500'
-                            }`} />
+                            <FiFile className="text-blue-500 mt-1 flex-shrink-0" />
                             <div className="flex-1 min-w-0">
                               <h4 className="text-sm font-medium text-gray-900 truncate">
                                 {doc.filename}
                               </h4>
                               <p className="text-xs text-gray-500 mt-1">
-                                {doc.type === 'produk_hukum' ? 'Produk Hukum' :
-                                 doc.type === 'dokumen_badan_hukum' ? 'Dokumen Badan Hukum' : 
-                                 'Laporan Keuangan'}
+                                {doc.type === 'dokumen_badan_hukum' ? 'Dokumen Badan Hukum' : 'Laporan Keuangan'}
                               </p>
                               <p className="text-xs text-gray-400 mt-1">
                                 {doc.file_size_formatted}
@@ -3111,24 +2822,10 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
                             </button>
                             <button
                               onClick={() => deleteDocumentFile(doc.filename, doc.type, selectedBumdesForDocs.id)}
-                              disabled={isDeleting}
-                              className={`px-3 py-1 text-xs rounded transition-all duration-200 ${
-                                isDeleting 
-                                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                                  : 'bg-red-100 text-red-600 hover:bg-red-200 hover:scale-105'
-                              }`}
-                              title={isDeleting ? "Sedang menghapus..." : "Hapus file"}
+                              className="px-3 py-1 text-xs bg-red-100 text-red-600 rounded hover:bg-red-200 transition-colors"
+                              title="Hapus file"
                             >
-                              {isDeleting ? (
-                                <div className="animate-spin inline-block">
-                                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                  </svg>
-                                </div>
-                              ) : (
-                                <FiTrash2 className="inline" />
-                              )}
+                              <FiTrash2 className="inline" />
                             </button>
                           </div>
                         </div>

@@ -44,7 +44,8 @@ api.interceptors.response.use(
 export const getKecamatans = async () => {
 	try {
 		const response = await api.get('/kecamatans');
-		return response.data;
+		console.log('🔍 Raw kecamatan response:', response);
+		return response; // Return full axios response
 	} catch (error) {
 		console.error('Error fetching kecamatans:', error);
 		throw error;
@@ -54,7 +55,8 @@ export const getKecamatans = async () => {
 export const getDesasByKecamatan = async (kecamatanId) => {
 	try {
 		const response = await api.get(`/desas/kecamatan/${kecamatanId}`);
-		return response.data;
+		console.log('🔍 Raw desa response:', response);
+		return response; // Return full axios response
 	} catch (error) {
 		console.error('Error fetching desas:', error);
 		throw error;

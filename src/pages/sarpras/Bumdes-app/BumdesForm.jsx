@@ -391,6 +391,7 @@ const parseRupiah = (rupiah) => {
 
 // Initial form data
 export const initialFormData = {
+    desa_id: null,
     kode_desa: '',
     kecamatan: '',
     desa: '',
@@ -513,26 +514,34 @@ function BumdesForm({ onSwitchToDashboard }) {
     useEffect(() => {
         const fetchKecamatans = async () => {
             try {
+                console.log('🔄 Fetching kecamatan data...');
                 const response = await getKecamatans();
-                setKecamatanList(response.data.data || []);
+                console.log('📊 Kecamatan response:', response);
+                
+                // Handle both response.data.data and response.data
+                const kecamatanData = response.data?.data || response.data || [];
+                console.log('📋 Kecamatan list:', kecamatanData);
+                setKecamatanList(kecamatanData);
                 
                 // Restore kecamatan selection from form data
                 if (formData.kecamatan) {
-                    const savedKecamatan = response.data.data.find(kec => kec.nama === formData.kecamatan);
+                    const savedKecamatan = kecamatanData.find(kec => kec.nama === formData.kecamatan);
                     if (savedKecamatan) {
                         setSelectedKecamatanId(savedKecamatan.id);
                         // Load desa list for saved kecamatan
                         try {
                             const desaResponse = await getDesasByKecamatan(savedKecamatan.id);
-                            setDesaList(desaResponse.data.data || []);
+                            const desaData = desaResponse.data?.data || desaResponse.data || [];
+                            setDesaList(desaData);
                         } catch (error) {
                             console.error('Error loading saved desa list:', error);
                         }
                     }
                 }
             } catch (error) {
-                console.error('Error fetching kecamatans:', error);
-                showMessagePopup('Gagal memuat data kecamatan', 'error');
+                console.error('❌ Error fetching kecamatans:', error);
+                console.error('Error details:', error.response?.data || error.message);
+                showMessagePopup('Gagal memuat data kecamatan: ' + (error.response?.data?.message || error.message), 'error');
             }
         };
 
@@ -563,6 +572,8 @@ function BumdesForm({ onSwitchToDashboard }) {
         const kecamatanId = e.target.value;
         const selectedKecamatan = kecamatanList.find(kec => kec.id == kecamatanId);
         
+        console.log('🏘️ Kecamatan changed:', kecamatanId, selectedKecamatan);
+        
         setSelectedKecamatanId(kecamatanId);
         setFormData({
             ...formData,
@@ -574,17 +585,24 @@ function BumdesForm({ onSwitchToDashboard }) {
         if (kecamatanId) {
             setLoadingDesa(true);
             try {
+                console.log('🔄 Fetching desa for kecamatan:', kecamatanId);
                 const response = await getDesasByKecamatan(kecamatanId);
-                setDesaList(response.data.data || []);
+                console.log('📊 Desa response:', response);
+                
+                const desaData = response.data?.data || response.data || [];
+                console.log('📋 Desa list:', desaData);
+                setDesaList(desaData);
             } catch (error) {
-                console.error('Error fetching desas:', error);
-                showMessagePopup('Gagal memuat data desa', 'error');
+                console.error('❌ Error fetching desas:', error);
+                console.error('Error details:', error.response?.data || error.message);
+                showMessagePopup('Gagal memuat data desa: ' + (error.response?.data?.message || error.message), 'error');
                 setDesaList([]);
             } finally {
                 setLoadingDesa(false);
             }
         } else {
             setDesaList([]);
+            setLoadingDesa(false);
         }
     };
 
@@ -593,9 +611,12 @@ function BumdesForm({ onSwitchToDashboard }) {
         const desaId = e.target.value;
         const selectedDesa = desaList.find(desa => desa.id == desaId);
         
+        console.log('🏘️ Desa selected:', selectedDesa);
+        
         if (selectedDesa) {
             setFormData({
                 ...formData,
+                desa_id: selectedDesa.id,  // Add desa_id for backend
                 desa: selectedDesa.nama,
                 kode_desa: selectedDesa.kode
             });
@@ -608,6 +629,7 @@ function BumdesForm({ onSwitchToDashboard }) {
         } else {
             setFormData({
                 ...formData,
+                desa_id: null,
                 desa: '',
                 kode_desa: ''
             });
@@ -740,7 +762,8 @@ function BumdesForm({ onSwitchToDashboard }) {
             const dataOnly = {};
             for (const key in formData) {
                 const value = formData[key];
-                if (value !== null && value !== '') {
+                // Skip empty values except for desa_id which is required
+                if (key === 'desa_id' || (value !== null && value !== '')) {
                     if (['Omset2023', 'Laba2023', 'Omset2024', 'Laba2024', 'PenyertaanModal2019', 'PenyertaanModal2020', 'PenyertaanModal2021', 'PenyertaanModal2022', 'PenyertaanModal2023', 'PenyertaanModal2024', 'SumberLain', 'NilaiAset', 'KontribusiTerhadapPADes2021', 'KontribusiTerhadapPADes2022', 'KontribusiTerhadapPADes2023', 'KontribusiTerhadapPADes2024', 'TotalTenagaKerja'].includes(key)) {
                         dataOnly[key] = parseRupiah(value);
                     } else {
@@ -748,6 +771,9 @@ function BumdesForm({ onSwitchToDashboard }) {
                     }
                 }
             }
+
+            console.log('📤 Sending BUMDes data:', dataOnly);
+            console.log('🔑 desa_id value:', dataOnly.desa_id);
 
             const response = await api.post('/bumdes', dataOnly, {
                 headers: { 'Content-Type': 'application/json' }
