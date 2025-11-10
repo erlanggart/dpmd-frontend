@@ -18,7 +18,6 @@ import {
 	TbMap,
 } from "react-icons/tb";
 import SearchPalette from "../components/SearchPalatte";
-import RoleSwitcher from "../components/RoleSwitcher";
 
 // Komponen Submenu (Accordion Item)
 const SubMenu = ({ item, openMenu, toggleMenu, isMinimized }) => {
@@ -353,9 +352,6 @@ const MainLayout = () => {
 					closePalette={() => setSearchOpen(false)}
 				/>
 			)}
-			
-			{/* Role Switcher untuk development */}
-			<RoleSwitcher />
 		</div>
 	);
 };
