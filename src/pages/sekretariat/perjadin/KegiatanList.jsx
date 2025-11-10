@@ -688,7 +688,7 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, onDeta
         {/* Modern Enhanced Table */}
         <div className="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1000px]">
+            <table className="w-full min-w-[1200px]">
               <thead className="bg-gradient-to-r from-slate-50 via-gray-50 to-slate-50 border-b-2 border-gray-200">
                 <tr>
                   <th className="px-6 py-4 text-center w-20">
@@ -716,6 +716,11 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, onDeta
                       <span className="text-sm font-medium">Lokasi</span>
                     </div>
                   </th>
+                  <th className="px-6 py-4 text-left w-48">
+                    <div className="flex items-center space-x-2 text-gray-700 font-semibold">
+                      <span className="text-sm font-medium">Bidang & Personil</span>
+                    </div>
+                  </th>
                   <th className="px-6 py-4 text-center w-32">
                     <div className="flex items-center justify-center space-x-2 text-gray-700 font-semibold">
                       <span className="text-sm font-medium">Aksi</span>
@@ -726,7 +731,7 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, onDeta
             <tbody className="divide-y divide-slate-200">
               {kegiatanList.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="px-6 py-12 text-center">
+                  <td colSpan="7" className="px-6 py-12 text-center">
                     <div className="space-y-4">
                       <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center mx-auto">
                         <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -796,6 +801,47 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, onDeta
                         <span className="block truncate" title={kegiatan.lokasi}>
                           {kegiatan.lokasi || 'Belum ditentukan'}
                         </span>
+                      </div>
+                    </td>
+
+                    {/* Bidang & Personil */}
+                    <td className="px-6 py-4">
+                      <div className="space-y-2">
+                        {/* Bidang */}
+                        {kegiatan.details && kegiatan.details.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {kegiatan.details.slice(0, 2).map((detail, idx) => (
+                              detail.bidang && (
+                                <span 
+                                  key={idx}
+                                  className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700"
+                                  title={detail.bidang.nama}
+                                >
+                                  {detail.bidang.nama}
+                                </span>
+                              )
+                            ))}
+                            {kegiatan.details.length > 2 && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-200 text-slate-700">
+                                +{kegiatan.details.length - 2}
+                              </span>
+                            )}
+                          </div>
+                        ) : kegiatan.bidang_list ? (
+                          <div className="text-xs text-slate-600">{kegiatan.bidang_list}</div>
+                        ) : (
+                          <span className="text-xs text-gray-400">Belum ada bidang</span>
+                        )}
+                        
+                        {/* Personil Count */}
+                        {kegiatan.details && kegiatan.details.length > 0 && (
+                          <div className="text-xs text-gray-500">
+                            {kegiatan.details.reduce((total, detail) => {
+                              const personilCount = detail.personil_list ? detail.personil_list.length : 0;
+                              return total + personilCount;
+                            }, 0)} personil
+                          </div>
+                        )}
                       </div>
                     </td>
 
