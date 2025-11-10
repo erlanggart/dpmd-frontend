@@ -100,7 +100,7 @@ const BumdesDesaService = {
     try {
       const formData = new FormData();
       
-      // Add _method for Laravel PUT spoofing
+      // Add method override for Express PUT handling
       formData.append('_method', 'PUT');
       
       // Append all text data

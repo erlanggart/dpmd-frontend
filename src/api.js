@@ -73,7 +73,7 @@ export const updateProdukHukum = (id, data) => {
 	for (const key in data) {
 		formData.append(key, data[key]);
 	}
-	formData.append("_method", "PUT"); // Laravel needs this for file uploads in updates
+	formData.append("_method", "PUT"); // Method override for Express
 	return api.post(`/produk-hukum/${id}`, formData, {
 		headers: {
 			"Content-Type": "multipart/form-data",

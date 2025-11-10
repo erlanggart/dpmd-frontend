@@ -7,7 +7,7 @@ import {
 	getCurrentUser,
 } from "../utils/apiHelpers";
 
-// Map slug type to fully-qualified Laravel model class for polymorphic field
+// Map slug type to model class for polymorphic field
 export const mapTypeToModel = (type) => {
 	const map = {
 		rw: "App\\Models\\Rw",
@@ -131,7 +131,7 @@ export const updatePengurus = (id, data, opts = {}) => {
 	const params = getAdminParams(baseParams);
 
 	if (isMultipart) {
-		// For multipart, we need to use POST with _method override (Laravel convention)
+		// For multipart, use POST with _method override for Express
 		const endpoint = getEndpoint("pengurus", "update");
 		const fd = data instanceof FormData ? data : new FormData();
 		if (!(data instanceof FormData)) {
