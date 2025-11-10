@@ -11,6 +11,7 @@ import {
 	FiMenu,
 	FiChevronsRight,
 	FiChevronsLeft,
+	FiFileText,
 } from "react-icons/fi";
 
 import {
@@ -157,6 +158,14 @@ const MainLayout = () => {
 				icon: <FiClipboard />,
 				children: [
 					{ to: "/dashboard/perjalanan-dinas", label: "Perjalanan Dinas" },
+				],
+			},
+			{
+				key: "pemdes",
+				label: "Bid. Pemdes",
+				icon: <FiFileText />,
+				children: [
+					{ to: "/dashboard/laporan-desa", label: "Laporan Desa" },
 				],
 			},
 			{

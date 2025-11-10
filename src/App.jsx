@@ -27,6 +27,7 @@ const DesaDashboard = lazy(() => import("./components/desa/DesaDashboard"));
 const BumdesDesaPage = lazy(() =>
 	import("./pages/desa/bumdes/BumdesDesaPage")
 );
+const LaporanDesa = lazy(() => import("./pages/PMD/LaporanDesa"));
 
 const ProtectedRoute = ({ children }) => {
 	const token = localStorage.getItem("expressToken");
@@ -68,6 +69,7 @@ function App() {
 						<Route path="hero-gallery" element={<HeroGalleryManagement />} />
 						<Route path="bumdes" element={<BumdesApp />} />
 						<Route path="perjalanan-dinas" element={<PerjalananDinas />} />
+						<Route path="laporan-desa" element={<LaporanDesa />} />
 					</Route>
 
 					{/* Rute Desa dengan lazy loading */}
