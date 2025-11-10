@@ -54,11 +54,17 @@ const BumdesDokumenManager = () => {
 
   const fetchDokumenBadanHukum = async () => {
     try {
+      const token = localStorage.getItem('expressToken');
+      if (!token) {
+        throw new Error('Token tidak ditemukan. Silakan login kembali.');
+      }
+
       const response = await fetch(`${API_CONFIG.BASE_URL}/bumdes/dokumen-badan-hukum`, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         mode: 'cors'
       });
@@ -82,11 +88,17 @@ const BumdesDokumenManager = () => {
 
   const fetchLaporanKeuangan = async () => {
     try {
+      const token = localStorage.getItem('expressToken');
+      if (!token) {
+        throw new Error('Token tidak ditemukan. Silakan login kembali.');
+      }
+
       const response = await fetch(`${API_CONFIG.BASE_URL}/bumdes/laporan-keuangan`, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         mode: 'cors'
       });

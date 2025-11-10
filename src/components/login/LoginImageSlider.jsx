@@ -20,14 +20,14 @@ const LoginImageSlider = () => {
 		const fetchData = async () => {
 			try {
 				const response = await api.get("/public/hero-gallery");
-				setGallery(response.data);
+				setGallery(response.data.data || response.data);
 			} catch (err) {
 				console.error("Gagal mengambil galeri:", err);
 				// Use fallback images if API fails
 				setGallery([
 					{
 						id: 1,
-						image_path: 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800',
+						image_path: 'placeholder.jpg',
 						title: 'Government Office',
 						description: 'Default image'
 					}
@@ -58,7 +58,7 @@ const LoginImageSlider = () => {
 			{gallery.map((image) => (
 				<SwiperSlide key={image.id}>
 					<img
-						src={`${imageBaseUrl}/uploads/${image.image_path}`}
+						src={`http://127.0.0.1:3001/uploads/${image.image_path}`}
 						alt={image.title || "Login Image"}
 						className="h-full w-full object-cover rounded-2xl"
 					/>

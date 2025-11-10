@@ -64,6 +64,72 @@ const BumdesDesaService = {
     }
   },
 
+  // Create BUMDES with files
+  createBumdesWithFiles: async (data, files) => {
+    try {
+      const formData = new FormData();
+      
+      // Append all text data
+      Object.keys(data).forEach(key => {
+        if (data[key] !== null && data[key] !== undefined && data[key] !== '') {
+          formData.append(key, data[key]);
+        }
+      });
+      
+      // Append all files
+      Object.keys(files).forEach(key => {
+        if (files[key]) {
+          formData.append(key, files[key]);
+        }
+      });
+
+      const response = await api.post('/desa/bumdes', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error creating BUMDES with files:', error);
+      throw error;
+    }
+  },
+
+  // Update BUMDES with files
+  updateBumdesWithFiles: async (id, data, files) => {
+    try {
+      const formData = new FormData();
+      
+      // Add method override for Express PUT handling
+      formData.append('_method', 'PUT');
+      
+      // Append all text data
+      Object.keys(data).forEach(key => {
+        if (data[key] !== null && data[key] !== undefined && data[key] !== '') {
+          formData.append(key, data[key]);
+        }
+      });
+      
+      // Append all files
+      Object.keys(files).forEach(key => {
+        if (files[key]) {
+          formData.append(key, files[key]);
+        }
+      });
+
+      // Use POST instead of PUT for file uploads
+      const response = await api.post(`/desa/bumdes/${id}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error updating BUMDES with files:', error);
+      throw error;
+    }
+  },
+
   // Get BUMDES statistics for current desa
   getBumdesStatistics: async () => {
     try {
@@ -78,7 +144,7 @@ const BumdesDesaService = {
   // Get produk hukum options for BUMDES
   getProdukHukumForBumdes: async () => {
     try {
-      const response = await api.get('/desa/bumdes/produk-hukum');
+      const response = await api.get('/desa/bumdes/produk-hukum-options');
       return response.data;
     } catch (error) {
       console.error('Error fetching produk hukum options:', error);

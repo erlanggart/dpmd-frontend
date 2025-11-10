@@ -22,7 +22,7 @@ const HeroSection = () => {
 		const fetchData = async () => {
 			try {
 				const response = await api.get("/public/hero-gallery");
-				setGallery(response.data);
+				setGallery(response.data.data || response.data);
 			} catch (err) {
 				// Jika gagal memuat galeri, gunakan array kosong tanpa menampilkan error
 				setGallery([]);
@@ -67,7 +67,7 @@ const HeroSection = () => {
 					{gallery.map((image) => (
 						<SwiperSlide key={image.id}>
 							<img
-								src={`${imageBaseUrl}/uploads/${image.image_path}`}
+								src={`http://127.0.0.1:3001/uploads/${image.image_path}`}
 								alt={image.title || "Hero Image"}
 								className="absolute inset-0 h-full w-full object-cover"
 							/>

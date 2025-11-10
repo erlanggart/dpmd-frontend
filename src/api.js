@@ -1,9 +1,10 @@
 // src/api.js
 import axios from "axios";
+import { getBaseURL, API_ENDPOINTS } from "./config/apiConfig";
 
 const api = axios.create({
-	baseURL: import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api",
-	timeout: 30000, // Increased timeout to 30 seconds for heavy queries
+	baseURL: API_ENDPOINTS.EXPRESS_BASE, // Express only
+	timeout: 30000,
 	headers: {
 		"Content-Type": "application/json",
 		Accept: "application/json",
@@ -12,10 +13,22 @@ const api = axios.create({
 
 api.interceptors.request.use(
 	(config) => {
-		const token = localStorage.getItem("authToken");
-		if (token) {
-			config.headers["Authorization"] = `Bearer ${token}`;
+		// All endpoints use Express now
+		config.baseURL = API_ENDPOINTS.EXPRESS_BASE;
+		
+		// Skip token for public auth endpoints
+		const publicEndpoints = ['/login', '/auth/login', '/register'];
+		const isPublicEndpoint = publicEndpoints.some(pub => config.url?.includes(pub));
+		
+		if (!isPublicEndpoint) {
+			// Use single token (expressToken)
+			const token = localStorage.getItem("expressToken");
+				
+			if (token) {
+				config.headers["Authorization"] = `Bearer ${token}`;
+			}
 		}
+		
 		return config;
 	},
 	(error) => Promise.reject(error)
@@ -24,18 +37,16 @@ api.interceptors.request.use(
 api.interceptors.response.use(
 	(response) => response,
 	(error) => {
-		// Cek jika error adalah 401
+		// Check if error is 401
 		if (error.response && error.response.status === 401) {
-			// TAMBAHKAN PENGECEKAN INI:
-			// Hanya redirect jika kita TIDAK sedang di halaman login.
+			// Only redirect if NOT on login page
 			if (window.location.pathname !== "/login") {
-				localStorage.removeItem("authToken");
+				localStorage.removeItem("expressToken");
 				localStorage.removeItem("user");
 				window.location.href = "/login";
 			}
 		}
 
-		// Kembalikan error agar bisa ditangani oleh komponen (seperti LoginPage)
 		return Promise.reject(error);
 	}
 );
@@ -62,7 +73,7 @@ export const updateProdukHukum = (id, data) => {
 	for (const key in data) {
 		formData.append(key, data[key]);
 	}
-	formData.append("_method", "PUT"); // Laravel needs this for file uploads in updates
+	formData.append("_method", "PUT"); // Method override for Express
 	return api.post(`/produk-hukum/${id}`, formData, {
 		headers: {
 			"Content-Type": "multipart/form-data",

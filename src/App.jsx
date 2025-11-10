@@ -12,8 +12,6 @@ import { Toaster } from "react-hot-toast";
 // Halaman utama di-import langsung untuk performa awal yang lebih cepat
 import LoginPage from "./pages/LoginPage";
 import LandingPage from "./pages/LandingPage";
-import MusdesusStatsPage from "./pages/MusdesusStatsPage";
-import MusdesusUploadPage from "./pages/MusdesusUploadPage";
 import Spinner from "./components/ui/Spinner";
 
 // Komponen lain di-lazy load untuk code-splitting
@@ -22,76 +20,17 @@ const MainLayout = lazy(() => import("./layouts/MainLayout"));
 const HeroGalleryManagement = lazy(() =>
 	import("./pages/dashboard/HeroGalleryManagement")
 );
-const UserManagementPage = lazy(() =>
-	import("./pages/dashboard/UserManagementPage")
-);
-const Kelembagaan = lazy(() => import("./pages/PMD/Kelembagaan"));
-const AdminKelembagaanDetailPage = lazy(() =>
-	import("./pages/PMD/AdminKelembagaanDetailPage")
-);
-const AdminKelembagaanDetailWrapper = lazy(() =>
-	import("./pages/PMD/AdminKelembagaanDetailWrapper")
-);
 const BumdesApp = lazy(() => import("./pages/sarpras/Bumdes-app"));
 const PerjalananDinas = lazy(() => import("./pages/sekretariat/perjadin"));
-const DisposisiPersuratan = lazy(() => import("./pages/sekretariat/disposisi"));
-const KepalaDinas = lazy(() =>
-	import("./pages/sekretariat/disposisi/KepalaDinas")
-);
-const SekretarisDinas = lazy(() =>
-	import("./pages/sekretariat/disposisi/SekretarisDinas")
-);
-const KepalaBidang = lazy(() =>
-	import("./pages/sekretariat/disposisi/KepalaBidang")
-);
-const RoleGuard = lazy(() => import("./components/guards/RoleGuard"));
 const DesaLayout = lazy(() => import("./layouts/DesaLayout"));
 const DesaDashboard = lazy(() => import("./components/desa/DesaDashboard"));
-const KecamatanDashboard = lazy(() =>
-	import("./components/kecamatan/KecamatanDashboard")
-);
-const DinasDashboard = lazy(() => import("./components/dinas/DinasDashboard"));
-const ProdukHukum = lazy(() => import("./pages/desa/produk-hukum/ProdukHukum"));
-const ProfilDesaPage = lazy(() => import("./pages/desa/ProfilDesaPage"));
-const ProdukHukumDetail = lazy(() =>
-	import("./pages/desa/produk-hukum/ProdukHukumDetail")
-);
-const PublicLayout = lazy(() => import("./layouts/PublicLayout"));
-const AparaturDesaPage = lazy(() =>
-	import("./pages/desa/aparatur-desa/AparaturDesaPage")
-);
-const AparaturDesaDetailPage = lazy(() =>
-	import("./pages/desa/aparatur-desa/AparaturDesaDetailPage")
-);
-const AparaturDesaEditPage = lazy(() =>
-	import("./pages/desa/aparatur-desa/AparaturDesaEditPage")
-);
-const KelembagaanDesaPage = lazy(() =>
-	import("./pages/desa/kelembagaan/KelembagaanDesaPage")
-);
-const KelembagaanList = lazy(() =>
-	import("./pages/desa/kelembagaan/KelembagaanList")
-);
-
-const KelembagaanDetailPage = lazy(() =>
-	import("./pages/desa/kelembagaan/KelembagaanDetailPage")
-);
-const PengurusDetailPage = lazy(() =>
-	import("./pages/desa/pengurus/PengurusDetailPage")
-);
-const PengurusEditPage = lazy(() =>
-	import("./pages/desa/pengurus/PengurusEditPage")
-);
 const BumdesDesaPage = lazy(() =>
 	import("./pages/desa/bumdes/BumdesDesaPage")
 );
-
-const MusdesusMonitoringPage = lazy(() =>
-	import("./pages/admin/MusdesusMonitoringPage")
-);
+const LaporanDesa = lazy(() => import("./pages/PMD/LaporanDesa"));
 
 const ProtectedRoute = ({ children }) => {
-	const token = localStorage.getItem("authToken");
+	const token = localStorage.getItem("expressToken");
 	const location = useLocation();
 
 	if (!token) {
@@ -116,13 +55,6 @@ function App() {
 					{/* Rute yang di-load secara statis */}
 					<Route path="/" element={<LandingPage />} />
 					<Route path="/login" element={<LoginPage />} />
-					<Route path="/musdesus-stats" element={<MusdesusStatsPage />} />
-					<Route path="/musdesus-upload" element={<MusdesusUploadPage />} />
-
-					{/* Rute Publik dengan lazy loading */}
-					<Route element={<PublicLayout />}>
-						<Route path="/produk-hukum/:id" element={<ProdukHukumDetail />} />
-					</Route>
 
 					{/* Rute Admin/Dashboard dengan lazy loading */}
 					<Route
@@ -134,92 +66,10 @@ function App() {
 						}
 					>
 						<Route index element={<DashboardPage />} />
-						<Route path="users" element={<UserManagementPage />} />
 						<Route path="hero-gallery" element={<HeroGalleryManagement />} />
-						<Route path="kelembagaan" element={<Kelembagaan />} />
-						{/* Admin Kelembagaan Detail with navigation to specific kelembagaan */}
-						<Route
-							path="kelembagaan/admin/:desaId"
-							element={<AdminKelembagaanDetailPage />}
-						/>
-						{/* Admin access to specific kelembagaan detail (RW, RT, etc.) */}
-						<Route
-							path="kelembagaan/admin/:desaId/:type/:id"
-							element={<AdminKelembagaanDetailWrapper />}
-						/>
-						{/* Admin Pengurus Detail & Edit - untuk superadmin dan admin bidang */}
-						<Route
-							path="pengurus/:pengurusId"
-							element={<PengurusDetailPage />}
-						/>
-						<Route
-							path="pengurus/:pengurusId/edit"
-							element={<PengurusEditPage />}
-						/>
 						<Route path="bumdes" element={<BumdesApp />} />
 						<Route path="perjalanan-dinas" element={<PerjalananDinas />} />
-						<Route
-							path="disposisi-persuratan"
-							element={<DisposisiPersuratan />}
-						/>
-						<Route
-							path="musdesus-monitoring"
-							element={<MusdesusMonitoringPage />}
-						/>
-						{/* Routes untuk role-based disposisi dengan protection */}
-						<Route
-							path="disposisi/kepala-dinas"
-							element={
-								<RoleGuard requiredRole="kepala_dinas">
-									<KepalaDinas />
-								</RoleGuard>
-							}
-						/>
-						<Route
-							path="disposisi/sekretaris-dinas"
-							element={
-								<RoleGuard requiredRole="sekretaris_dinas">
-									<SekretarisDinas />
-								</RoleGuard>
-							}
-						/>
-						<Route
-							path="disposisi/kepala-bidang"
-							element={
-								<RoleGuard
-									allowedRoles={[
-										"kepala_bidang_pemerintahan",
-										"kepala_bidang_kesra",
-										"kepala_bidang_ekonomi",
-										"kepala_bidang_fisik",
-									]}
-								>
-									<KepalaBidang />
-								</RoleGuard>
-							}
-						/>
-						{/* Route untuk bidang - akan diarahkan ke dashboard index */}
-						<Route
-							path="sekretariat"
-							element={<Navigate to="/dashboard" replace />}
-						/>
-						<Route
-							path="sarana-prasarana"
-							element={<Navigate to="/dashboard" replace />}
-						/>
-						<Route
-							path="kekayaan-keuangan"
-							element={<Navigate to="/dashboard" replace />}
-						/>
-						<Route
-							path="pemberdayaan-masyarakat"
-							element={<Navigate to="/dashboard" replace />}
-						/>
-						<Route
-							path="pemerintahan-desa"
-							element={<Navigate to="/dashboard" replace />}
-						/>
-						{/* Tambahkan rute admin lainnya di sini */}
+						<Route path="laporan-desa" element={<LaporanDesa />} />
 					</Route>
 
 					{/* Rute Desa dengan lazy loading */}
@@ -232,61 +82,8 @@ function App() {
 						}
 					>
 						<Route path="dashboard" element={<DesaDashboard />} />
-						<Route path="produk-hukum" element={<ProdukHukum />} />
-						<Route path="profil-desa" element={<ProfilDesaPage />} />
-						<Route path="produk-hukum/:id" element={<ProdukHukumDetail />} />
-						<Route path="aparatur-desa" element={<AparaturDesaPage />} />
-						<Route
-							path="aparatur-desa/:id"
-							element={<AparaturDesaDetailPage />}
-						/>
-						<Route
-							path="aparatur-desa/:id/edit"
-							element={<AparaturDesaEditPage />}
-						/>
-
-						{/* Kelembagaan Desa */}
-						<Route path="kelembagaan" element={<KelembagaanDesaPage />} />
-						<Route path="kelembagaan/:type" element={<KelembagaanList />} />
-						{/* New detail with id param */}
-						<Route
-							path="kelembagaan/:type/:id"
-							element={<KelembagaanDetailPage />}
-						/>
-
-						{/* Pengurus Detail */}
-						<Route
-							path="pengurus/:pengurusId"
-							element={<PengurusDetailPage />}
-						/>
-						<Route
-							path="pengurus/:pengurusId/edit"
-							element={<PengurusEditPage />}
-						/>
-
-						{/* BUMDES Desa */}
 						<Route path="bumdes" element={<BumdesDesaPage />} />
 					</Route>
-
-					{/* Rute Kecamatan */}
-					<Route
-						path="/kecamatan/dashboard"
-						element={
-							<ProtectedRoute>
-								<KecamatanDashboard />
-							</ProtectedRoute>
-						}
-					/>
-
-					{/* Rute Dinas */}
-					<Route
-						path="/dinas/dashboard"
-						element={
-							<ProtectedRoute>
-								<DinasDashboard />
-							</ProtectedRoute>
-						}
-					/>
 				</Routes>
 			</Suspense>
 			<Toaster

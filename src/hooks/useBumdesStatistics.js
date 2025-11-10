@@ -67,7 +67,45 @@ export const useBumdesStatistics = () => {
         }
         
         console.log('✅ BUMDes Stats: Setting new statistics data:', response.data.data);
-        setStatistics(response.data.data);
+        
+        // Transform new backend structure to match frontend expectations
+        const apiData = response.data.data;
+        const transformedStats = {
+          // Overview data
+          total: apiData.overview?.total || 0,
+          target_total: apiData.overview?.progress_to_target?.target || 416,
+          aktif: apiData.overview?.aktif || 0,
+          tidak_aktif: apiData.overview?.tidak_aktif || 0,
+          
+          // Progress to target
+          progress_to_target: {
+            current: apiData.overview?.total || 0,
+            target: apiData.overview?.progress_to_target?.target || 416,
+            remaining: apiData.overview?.progress_to_target?.remaining || 416,
+            percentage: apiData.overview?.progress_to_target?.percentage || 0
+          },
+          
+          // Additional statistics
+          percentage_aktif: apiData.overview?.total > 0 
+            ? Math.round((apiData.overview?.aktif / apiData.overview?.total) * 100) 
+            : 0,
+          
+          // Data for charts
+          by_kecamatan: apiData.by_kecamatan || [],
+          by_jenis_usaha: apiData.by_jenis_usaha || [],
+          by_tahun: apiData.by_tahun || [],
+          financial: apiData.financial || {},
+          workforce: apiData.workforce || {},
+          
+          // Badan Hukum statistics (now from backend)
+          terbit_sertifikat: apiData.badan_hukum?.terbit_sertifikat || 0,
+          nama_terverifikasi: apiData.badan_hukum?.nama_terverifikasi || 0,
+          perbaikan_dokumen: apiData.badan_hukum?.perbaikan_dokumen || 0,
+          belum_proses: apiData.badan_hukum?.belum_proses || 0,
+          percentage_sertifikat: apiData.badan_hukum?.percentage_sertifikat || 0
+        };
+        
+        setStatistics(transformedStats);
         setDataHash(newHash);
         setLastFetch(Date.now());
         setStatsVersion(prev => prev + 1);
@@ -132,7 +170,7 @@ export const useBumdesStatistics = () => {
       persentaseBelumUpload: Math.round(100 - statistics.progress_to_target.percentage),
       activeBumdes: statistics.aktif,
       inactiveBumdes: statistics.tidak_aktif,
-      totalKecamatan: 40, // Approximate number of kecamatan in Bogor
+      totalKecamatan: statistics.by_kecamatan?.length || 40,
       
       // New statistics from API
       terbitSertifikat: statistics.terbit_sertifikat,
@@ -143,33 +181,27 @@ export const useBumdesStatistics = () => {
       percentageSertifikat: statistics.percentage_sertifikat,
       targetBumdes: statistics.target_total,
       
-      // Additional new statistics for UI components
-      usahaUtamaStats: statistics.usaha_utama_stats || [],
-      ketahananPanganStats: statistics.ketahanan_pangan_stats || { total: 0, categories: [] },
+      // Chart data
+      chartData: {
+        byKecamatan: statistics.by_kecamatan || [],
+        byJenisUsaha: statistics.by_jenis_usaha || [],
+        byTahun: statistics.by_tahun || [],
+        financial: statistics.financial || {},
+        workforce: statistics.workforce || {},
+        status: {
+          aktif: statistics.aktif || 0,
+          tidak_aktif: statistics.tidak_aktif || 0
+        }
+      },
       
-      // Mock kecamatanData for compatibility - this should come from a separate API endpoint
-      kecamatanData: [
-        { name: 'BOGOR BARAT', uploaded: Math.floor(statistics.total * 0.05), aktif: Math.floor(statistics.aktif * 0.05), nonAktif: Math.floor(statistics.tidak_aktif * 0.1), belumUpload: Math.floor(statistics.progress_to_target.remaining * 0.05) },
-        { name: 'BOGOR TIMUR', uploaded: Math.floor(statistics.total * 0.06), aktif: Math.floor(statistics.aktif * 0.06), nonAktif: Math.floor(statistics.tidak_aktif * 0.1), belumUpload: Math.floor(statistics.progress_to_target.remaining * 0.06) },
-        { name: 'BOGOR UTARA', uploaded: Math.floor(statistics.total * 0.04), aktif: Math.floor(statistics.aktif * 0.04), nonAktif: Math.floor(statistics.tidak_aktif * 0.1), belumUpload: Math.floor(statistics.progress_to_target.remaining * 0.04) },
-        { name: 'BOGOR SELATAN', uploaded: Math.floor(statistics.total * 0.05), aktif: Math.floor(statistics.aktif * 0.05), nonAktif: Math.floor(statistics.tidak_aktif * 0.1), belumUpload: Math.floor(statistics.progress_to_target.remaining * 0.05) },
-        { name: 'CITEUREUP', uploaded: Math.floor(statistics.total * 0.03), aktif: Math.floor(statistics.aktif * 0.03), nonAktif: Math.floor(statistics.tidak_aktif * 0.1), belumUpload: Math.floor(statistics.progress_to_target.remaining * 0.03) },
-        { name: 'CIBINONG', uploaded: Math.floor(statistics.total * 0.04), aktif: Math.floor(statistics.aktif * 0.04), nonAktif: Math.floor(statistics.tidak_aktif * 0.1), belumUpload: Math.floor(statistics.progress_to_target.remaining * 0.04) },
-        { name: 'GUNUNG PUTRI', uploaded: Math.floor(statistics.total * 0.05), aktif: Math.floor(statistics.aktif * 0.05), nonAktif: Math.floor(statistics.tidak_aktif * 0.1), belumUpload: Math.floor(statistics.progress_to_target.remaining * 0.05) },
-        { name: 'CILEUNGSI', uploaded: Math.floor(statistics.total * 0.04), aktif: Math.floor(statistics.aktif * 0.04), nonAktif: Math.floor(statistics.tidak_aktif * 0.1), belumUpload: Math.floor(statistics.progress_to_target.remaining * 0.04) },
-        { name: 'JONGGOL', uploaded: Math.floor(statistics.total * 0.03), aktif: Math.floor(statistics.aktif * 0.03), nonAktif: Math.floor(statistics.tidak_aktif * 0.1), belumUpload: Math.floor(statistics.progress_to_target.remaining * 0.03) },
-        { name: 'CARIU', uploaded: Math.floor(statistics.total * 0.02), aktif: Math.floor(statistics.aktif * 0.02), nonAktif: Math.floor(statistics.tidak_aktif * 0.1), belumUpload: Math.floor(statistics.progress_to_target.remaining * 0.02) },
-        { name: 'TANJUNGSARI', uploaded: Math.floor(statistics.total * 0.02), aktif: Math.floor(statistics.aktif * 0.02), nonAktif: Math.floor(statistics.tidak_aktif * 0.1), belumUpload: Math.floor(statistics.progress_to_target.remaining * 0.02) },
-        { name: 'SUKAMAKMUR', uploaded: Math.floor(statistics.total * 0.02), aktif: Math.floor(statistics.aktif * 0.02), nonAktif: Math.floor(statistics.tidak_aktif * 0.1), belumUpload: Math.floor(statistics.progress_to_target.remaining * 0.02) },
-        { name: 'BABAKAN MADANG', uploaded: Math.floor(statistics.total * 0.03), aktif: Math.floor(statistics.aktif * 0.03), nonAktif: Math.floor(statistics.tidak_aktif * 0.1), belumUpload: Math.floor(statistics.progress_to_target.remaining * 0.03) },
-        { name: 'SUKARAJA', uploaded: Math.floor(statistics.total * 0.04), aktif: Math.floor(statistics.aktif * 0.04), nonAktif: Math.floor(statistics.tidak_aktif * 0.1), belumUpload: Math.floor(statistics.progress_to_target.remaining * 0.04) },
-        { name: 'CIAWI', uploaded: Math.floor(statistics.total * 0.03), aktif: Math.floor(statistics.aktif * 0.03), nonAktif: Math.floor(statistics.tidak_aktif * 0.1), belumUpload: Math.floor(statistics.progress_to_target.remaining * 0.03) },
-        { name: 'CISARUA', uploaded: Math.floor(statistics.total * 0.02), aktif: Math.floor(statistics.aktif * 0.02), nonAktif: Math.floor(statistics.tidak_aktif * 0.1), belumUpload: Math.floor(statistics.progress_to_target.remaining * 0.02) },
-        { name: 'MEGAMENDUNG', uploaded: Math.floor(statistics.total * 0.03), aktif: Math.floor(statistics.aktif * 0.03), nonAktif: Math.floor(statistics.tidak_aktif * 0.1), belumUpload: Math.floor(statistics.progress_to_target.remaining * 0.03) },
-        { name: 'BOJONGGEDE', uploaded: Math.floor(statistics.total * 0.04), aktif: Math.floor(statistics.aktif * 0.04), nonAktif: Math.floor(statistics.tidak_aktif * 0.1), belumUpload: Math.floor(statistics.progress_to_target.remaining * 0.04) },
-        { name: 'TAJURHALANG', uploaded: Math.floor(statistics.total * 0.03), aktif: Math.floor(statistics.aktif * 0.03), nonAktif: Math.floor(statistics.tidak_aktif * 0.1), belumUpload: Math.floor(statistics.progress_to_target.remaining * 0.03) },
-        { name: 'KEMANG', uploaded: Math.floor(statistics.total * 0.03), aktif: Math.floor(statistics.aktif * 0.03), nonAktif: Math.floor(statistics.tidak_aktif * 0.1), belumUpload: Math.floor(statistics.progress_to_target.remaining * 0.03) }
-      ].slice(0, 20) // Limit to 20 for display
+      // Kecamatan data for UI
+      kecamatanData: (statistics.by_kecamatan || []).map(kec => ({
+        name: kec.kecamatan,
+        uploaded: kec.total,
+        aktif: kec.aktif,
+        nonAktif: kec.tidak_aktif,
+        belumUpload: 0 // This needs separate calculation
+      }))
     };
   }, [statistics]);
 

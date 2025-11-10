@@ -11,6 +11,7 @@ const ProdukHukumDetail = () => {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
 	const [isUpdating, setIsUpdating] = useState(false);
+	const [pdfBlobUrl, setPdfBlobUrl] = useState(null); // State untuk PDF blob URL
 
 	const fetchProdukHukum = async () => {
 		setLoading(true);
@@ -18,6 +19,11 @@ const ProdukHukumDetail = () => {
 			const response = await api.get(`/produk-hukum/${id}`);
 			if (response.data && response.data.success) {
 				setProdukHukum(response.data.data);
+				
+				// Fetch PDF file sebagai blob dengan Authorization header
+				if (response.data.data.file) {
+					fetchPdfFile(response.data.data.id);
+				}
 			} else {
 				setError("Gagal mengambil data produk hukum.");
 			}
@@ -29,8 +35,39 @@ const ProdukHukumDetail = () => {
 		}
 	};
 
+	const fetchPdfFile = async (produkHukumId) => {
+		try {
+			const token = localStorage.getItem("authToken");
+			const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+			
+			const response = await fetch(`${apiUrl}/api/desa/produk-hukum/${produkHukumId}/download`, {
+				method: 'GET',
+				headers: {
+					'Authorization': `Bearer ${token}`
+				}
+			});
+
+			if (response.ok) {
+				const blob = await response.blob();
+				const blobUrl = URL.createObjectURL(blob);
+				setPdfBlobUrl(blobUrl);
+			} else {
+				console.error('Failed to fetch PDF:', response.statusText);
+			}
+		} catch (error) {
+			console.error('Error fetching PDF file:', error);
+		}
+	};
+
 	useEffect(() => {
 		fetchProdukHukum();
+		
+		// Cleanup blob URL saat component unmount
+		return () => {
+			if (pdfBlobUrl) {
+				URL.revokeObjectURL(pdfBlobUrl);
+			}
+		};
 	}, [id]);
 
 	const handleStatusChange = async () => {
@@ -92,9 +129,6 @@ const ProdukHukumDetail = () => {
 	if (!produkHukum) {
 		return <p>Produk hukum tidak ditemukan.</p>;
 	}
-
-	const baseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
-	const fileUrl = `${baseUrl}/uploads/produk_hukum/${produkHukum.file}`;
 
 	const handleEdit = () => {
 		navigate("/desa/produk-hukum", { state: { editingProduk: produkHukum } });
@@ -201,15 +235,21 @@ const ProdukHukumDetail = () => {
 
 				<div className="mt-6">
 					<h2 className="text-xl font-bold mb-2">Dokumen</h2>
-					{produkHukum.file ? (
+					{pdfBlobUrl ? (
 						<iframe
-							src={fileUrl}
+							src={pdfBlobUrl}
 							title={produkHukum.judul}
-							className="w-full h-screen"
+							className="w-full h-screen border-2 border-gray-300 rounded-lg"
 							style={{ minHeight: "75vh" }}
 						></iframe>
+					) : produkHukum.file ? (
+						<div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg">
+							<p className="text-gray-600">Memuat dokumen PDF...</p>
+						</div>
 					) : (
-						<p>Tidak ada file yang tersedia untuk ditampilkan.</p>
+						<div className="flex items-center justify-center h-64 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+							<p className="text-gray-500">Tidak ada file yang tersedia untuk ditampilkan.</p>
+						</div>
 					)}
 				</div>
 			</div>

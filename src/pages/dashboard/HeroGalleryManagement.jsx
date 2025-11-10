@@ -37,8 +37,8 @@ const HeroGalleryManagement = () => {
 
 	const fetchGallery = async () => {
 		try {
-			const response = await api.get("/admin/hero-gallery");
-			setGallery(response.data);
+			const response = await api.get("/hero-gallery");
+			setGallery(response.data.data || []);
 		} catch (err) {
 			setError("Gagal memuat galeri.");
 		} finally {
@@ -71,7 +71,7 @@ const HeroGalleryManagement = () => {
 		formData.append("title", title);
 
 		try {
-			await api.post("/admin/hero-gallery", formData, {
+			await api.post("/hero-gallery", formData, {
 				headers: { "Content-Type": "multipart/form-data" },
 			});
 			setSelectedFile(null);
@@ -115,7 +115,7 @@ const HeroGalleryManagement = () => {
 		}).then(async (result) => {
 			if (result.isConfirmed) {
 				try {
-					await api.delete(`/admin/hero-gallery/${id}`);
+					await api.delete(`/hero-gallery/${id}`);
 					setGallery(gallery.filter((item) => item.id !== id));
 					Swal.fire("Dihapus!", "Gambar Anda telah dihapus.", "success");
 				} catch (err) {
@@ -131,11 +131,9 @@ const HeroGalleryManagement = () => {
 
 	const handleToggleActive = async (image) => {
 		try {
-			const response = await api.put(`/admin/hero-gallery/${image.id}`, {
-				is_active: !image.is_active,
-			});
+			const response = await api.patch(`/hero-gallery/${image.id}/toggle-status`);
 			setGallery(
-				gallery.map((item) => (item.id === image.id ? response.data : item))
+				gallery.map((item) => (item.id === image.id ? response.data.data : item))
 			);
 		} catch (err) {
 			// 5. Tampilkan notifikasi error
