@@ -785,28 +785,26 @@ function BumdesForm({ onSwitchToDashboard }) {
             const fileFields = Object.keys(selectedFiles).filter(key => selectedFiles[key]);
             
             if (fileFields.length > 0 && bumdesId) {
-                let uploadedCount = 0;
-                for (const fieldName of fileFields) {
-                    try {
-                        const fileData = new FormData();
-                        fileData.append('file', selectedFiles[fieldName]);
-                        fileData.append('bumdes_id', bumdesId);
-                        fileData.append('field_name', fieldName);
+            let uploadedCount = 0;
+            for (const fieldName of fileFields) {
+                try {
+                    const fileData = new FormData();
+                    fileData.append('file', selectedFiles[fieldName]);
+                    fileData.append('bumdes_id', bumdesId);
+                    fileData.append('field_name', fieldName);
 
-                        await api.post('/bumdes-upload-file', fileData, {
-                            headers: { 'Content-Type': 'multipart/form-data' }
-                        });
-                        uploadedCount++;
-                    } catch (fileError) {
-                        console.error(`Failed to upload ${fieldName}:`, fileError);
-                        // Continue dengan file lain meskipun ada yang gagal
-                    }
+                    await api.post('/bumdes/upload-file', fileData, {
+                        headers: { 'Content-Type': 'multipart/form-data' }
+                    });
+                    uploadedCount++;
+                } catch (fileError) {
+                    console.error(`Failed to upload ${fieldName}:`, fileError);
+                    // Continue dengan file lain meskipun ada yang gagal
                 }
             }
+        }
 
-            showMessagePopup('Data BUMDesa berhasil disimpan!', 'success');
-            
-            // Clear localStorage after successful submission
+        showMessagePopup('Data BUMDesa berhasil disimpan!', 'success');            // Clear localStorage after successful submission
             setFormData(initialFormData);
             setSelectedFiles({});
             clearAllFiles();

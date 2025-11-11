@@ -149,35 +149,33 @@ const MainLayout = () => {
 			},
 		];
 
-		// Menu admin yang akan ditambahkan jika user adalah superadmin atau bidang
-		const adminMenuItems = [
-			{
-				key: "sekretariat",
-				label: "Sekretariat",
-				icon: <FiClipboard />,
-				children: [
-					{ to: "/dashboard/perjalanan-dinas", label: "Perjalanan Dinas" },
-				],
-			},
-			{
-				key: "pemdes",
-				label: "Bid. Pemdes",
-				icon: <FiFileText />,
-				children: [
-					{ to: "/dashboard/laporan-desa", label: "Laporan Desa" },
-				],
-			},
-			{
-				key: "landing",
-				label: "Landing Page",
-				icon: <FiLayout />,
-				children: [
-					{ to: "/dashboard/hero-gallery", label: "Galeri Hero" },
-				],
-			},
-		];
-
-		// Gabungkan menu berdasarkan role user
+	// Menu admin yang akan ditambahkan jika user adalah superadmin atau bidang
+	const adminMenuItems = [
+		{
+			key: "sekretariat",
+			label: "Sekretariat",
+			icon: <FiClipboard />,
+			children: [
+				{ to: "/dashboard/perjalanan-dinas", label: "Perjalanan Dinas" },
+			],
+		},
+		{
+			key: "pemdes",
+			label: "Pemdes",
+			icon: <FiFileText />,
+			children: [
+				{ to: "/dashboard/laporan-desa", label: "Laporan Desa" },
+			],
+		},
+		{
+			key: "landing",
+			label: "Landing Page",
+			icon: <FiLayout />,
+			children: [
+				{ to: "/dashboard/hero-gallery", label: "Galeri Hero" },
+			],
+		},
+	];		// Gabungkan menu berdasarkan role user
 		if (!user) {
 			return baseMenuItems;
 		}
