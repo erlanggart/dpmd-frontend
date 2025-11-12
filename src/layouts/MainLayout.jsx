@@ -138,6 +138,27 @@ const MainLayout = () => {
 
 	// Definisikan menu berdasarkan role user menggunakan useMemo
 	const menuItems = useMemo(() => {
+		// Menu khusus untuk Core Dashboard (Multi-role access)
+		if (
+			user?.role === 'kepala_dinas' ||
+			user?.role === 'sekretaris_dinas' ||
+			user?.role === 'kabid_pemerintahan_desa' ||
+			user?.role === 'kabid_spked' ||
+			user?.role === 'kabid_kekayaan_keuangan_desa' ||
+			user?.role === 'kabid_pemberdayaan_masyarakat_desa'
+		) {
+			return [
+				{
+					key: "core-dashboard",
+					label: "Dashboard",
+					icon: <FiGrid />,
+					children: [
+						{ to: "/core-dashboard/dashboard", label: "Analytics" },
+					],
+				},
+			];
+		}
+
 		const baseMenuItems = [
 			{
 				key: "sarpras",
@@ -157,14 +178,6 @@ const MainLayout = () => {
 			icon: <FiClipboard />,
 			children: [
 				{ to: "/dashboard/perjalanan-dinas", label: "Perjalanan Dinas" },
-			],
-		},
-		{
-			key: "pemdes",
-			label: "Pemdes",
-			icon: <FiFileText />,
-			children: [
-				{ to: "/dashboard/laporan-desa", label: "Laporan Desa" },
 			],
 		},
 		{
@@ -249,33 +262,35 @@ const MainLayout = () => {
 						isSidebarMinimized ? "overflow-y-hidden" : "overflow-y-auto"
 					} p-4`}
 				>
-					{/* Link Dashboard Utama */}
-					<NavLink
-						to="/dashboard"
-						className={({ isActive }) =>
-							`flex items-center p-3 rounded-lg transition-colors ${
-								isSidebarMinimized ? "justify-center" : ""
-							} ${
-								isActive
-									? "sidebar-active font-semibold"
-									: "text-gray-600 hover:bg-gray-100"
-							}`
-						}
-						end
-					>
-						<FiGrid
-							className={`h-5 w-5 flex-shrink-0 ${
-								isSidebarMinimized ? "" : "mr-3"
-							}`}
-						/>
-						<span
-							className={`transition-all duration-200 ${
-								isSidebarMinimized ? "w-0 opacity-0" : "w-auto opacity-100"
-							}`}
+					{/* Link Dashboard Utama - Hidden for kepala_dinas */}
+					{user?.role !== 'kepala_dinas' && (
+						<NavLink
+							to="/dashboard"
+							className={({ isActive }) =>
+								`flex items-center p-3 rounded-lg transition-colors ${
+									isSidebarMinimized ? "justify-center" : ""
+								} ${
+									isActive
+										? "sidebar-active font-semibold"
+										: "text-gray-600 hover:bg-gray-100"
+								}`
+							}
+							end
 						>
-							Dashboard
-						</span>
-					</NavLink>
+							<FiGrid
+								className={`h-5 w-5 flex-shrink-0 ${
+									isSidebarMinimized ? "" : "mr-3"
+								}`}
+							/>
+							<span
+								className={`transition-all duration-200 ${
+									isSidebarMinimized ? "w-0 opacity-0" : "w-auto opacity-100"
+								}`}
+							>
+								Dashboard
+							</span>
+						</NavLink>
+					)}
 
 					{/* Render Menu - Semua menu dalam satu sidebar tanpa pemisahan */}
 					{menuItems.map((item) => (

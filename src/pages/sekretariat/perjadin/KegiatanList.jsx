@@ -133,11 +133,12 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, onDeta
 
       const response = await api.get('/perjadin/kegiatan', { params });
       
-      if (response.data.success) {
+      if (response.data.status === 'success') {
         const newData = response.data.data || [];
+        const pagination = response.data.pagination || {};
         const newMeta = {
-          totalPages: response.data.last_page || 1,
-          totalRecords: response.data.total || 0
+          totalPages: pagination.last_page || 1,
+          totalRecords: pagination.total || 0
         };
 
         // Check if data actually changed
@@ -206,7 +207,7 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, onDeta
       // Handle API response format
       let allBidangData = [];
       
-      if (response.data.success && response.data.data) {
+      if (response.data.status === 'success' && response.data.data) {
         // Backend returns wrapped response with success flag
         allBidangData = response.data.data;
       } else if (Array.isArray(response.data)) {
@@ -300,7 +301,7 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, onDeta
         const response = await api.delete(`/perjadin/kegiatan/${id}`);
         
         // Check if deletion was successful
-        if (response.data && response.data.success === true) {
+        if (response.data && response.data.status === 'success') {
           // Clear relevant caches to force refresh
           clearCache('kegiatan');
           clearCache('dashboard');
@@ -353,7 +354,7 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, onDeta
         }
       });
 
-      if (response.data.success) {
+      if (response.data.status === 'success') {
         const exportData = response.data.data || [];
         
         if (exportData.length === 0) {
@@ -431,7 +432,7 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, onDeta
         }
       });
 
-      if (response.data.success) {
+      if (response.data.status === 'success') {
         const exportData = response.data.data || [];
         
         if (exportData.length === 0) {

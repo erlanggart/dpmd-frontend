@@ -27,7 +27,21 @@ const DesaDashboard = lazy(() => import("./components/desa/DesaDashboard"));
 const BumdesDesaPage = lazy(() =>
 	import("./pages/desa/bumdes/BumdesDesaPage")
 );
-const LaporanDesa = lazy(() => import("./pages/PMD/LaporanDesa"));
+const KepalaDinasLayout = lazy(() =>
+	import("./pages/kepala-dinas/KepalaDinasLayout")
+);
+const DashboardOverview = lazy(() =>
+	import("./pages/kepala-dinas/DashboardOverview")
+);
+const StatistikBumdes = lazy(() =>
+	import("./pages/kepala-dinas/StatistikBumdes")
+);
+const StatistikPerjadin = lazy(() =>
+	import("./pages/kepala-dinas/StatistikPerjadin")
+);
+const TrendsPage = lazy(() =>
+	import("./pages/kepala-dinas/TrendsPage")
+);
 
 const ProtectedRoute = ({ children }) => {
 	const token = localStorage.getItem("expressToken");
@@ -69,7 +83,6 @@ function App() {
 						<Route path="hero-gallery" element={<HeroGalleryManagement />} />
 						<Route path="bumdes" element={<BumdesApp />} />
 						<Route path="perjalanan-dinas" element={<PerjalananDinas />} />
-						<Route path="laporan-desa" element={<LaporanDesa />} />
 					</Route>
 
 					{/* Rute Desa dengan lazy loading */}
@@ -83,6 +96,22 @@ function App() {
 					>
 						<Route path="dashboard" element={<DesaDashboard />} />
 						<Route path="bumdes" element={<BumdesDesaPage />} />
+					</Route>
+
+					{/* Rute Core Dashboard - Multi Role Access */}
+					<Route
+						path="/core-dashboard"
+						element={
+							<ProtectedRoute>
+								<KepalaDinasLayout />
+							</ProtectedRoute>
+						}
+					>
+						<Route index element={<Navigate to="dashboard" replace />} />
+						<Route path="dashboard" element={<DashboardOverview />} />
+						<Route path="statistik-bumdes" element={<StatistikBumdes />} />
+						<Route path="statistik-perjadin" element={<StatistikPerjadin />} />
+						<Route path="trends" element={<TrendsPage />} />
 					</Route>
 				</Routes>
 			</Suspense>

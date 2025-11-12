@@ -248,8 +248,7 @@ const UniversalDashboard = () => {
                 quickActions: [
                     { title: 'Profil Desa', path: '/dashboard/profil-desa', icon: <FiMapPin /> },
                     { title: 'Data Penduduk', path: '/dashboard/penduduk', icon: <FiUsers /> },
-                    { title: 'Aparatur Desa', path: '/dashboard/aparatur-desa', icon: <FiUsers /> },
-                    { title: 'Laporan', path: '/dashboard/laporan-desa', icon: <FiFileText /> }
+                    { title: 'Aparatur Desa', path: '/dashboard/aparatur-desa', icon: <FiUsers /> }
                 ]
             },
             'admin_kecamatan': {
@@ -268,7 +267,6 @@ const UniversalDashboard = () => {
                 ],
                 quickActions: [
                     { title: 'Data Desa', path: '/dashboard/data-desa', icon: <FiMapPin /> },
-                    { title: 'Laporan Desa', path: '/dashboard/laporan-desa', icon: <FiFileText /> },
                     { title: 'Program Kecamatan', path: '/dashboard/program-kecamatan', icon: <FiActivity /> },
                     { title: 'Koordinasi', path: '/dashboard/koordinasi', icon: <FiUsers /> }
                 ]

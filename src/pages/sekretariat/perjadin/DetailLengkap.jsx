@@ -38,7 +38,7 @@ const DetailLengkap = ({ perjadinId, onBack }) => {
       const response = await api.get(`/perjadin/kegiatan/${perjadinId}`);
       console.log('API Response:', response.data);
       
-      if (response.data?.success) {
+      if (response.data?.status === 'success') {
         const data = response.data.data;
         console.log('Detail data:', data);
         console.log('Bidang data:', data.bidang);

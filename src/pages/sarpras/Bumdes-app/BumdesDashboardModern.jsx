@@ -1715,14 +1715,16 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
     }
 
     try {
+      const token = localStorage.getItem('expressToken');
       const response = await fetch(`${API_CONFIG.BASE_URL}/bumdes/delete-file`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           filename,
-          folder: documentType,
+          document_type: documentType,
           bumdes_id: bumdesId
         })
       });
