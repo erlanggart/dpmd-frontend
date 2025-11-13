@@ -45,7 +45,6 @@ const KecamatanDashboard = () => {
             ],
             quickActions: [
                 { title: 'Data Desa', path: '/kecamatan/data-desa', icon: <FiMapPin /> },
-                { title: 'Laporan Desa', path: '/kecamatan/laporan-desa', icon: <FiFileText /> },
                 { title: 'Program Kecamatan', path: '/kecamatan/program', icon: <FiActivity /> },
                 { title: 'Koordinasi', path: '/kecamatan/koordinasi', icon: <FiUsers /> }
             ]

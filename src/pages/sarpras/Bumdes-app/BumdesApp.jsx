@@ -1,5 +1,5 @@
-// BumdesApp.jsx - Modern Tailwind Design
-import React, { useState, Suspense, lazy } from 'react';
+// BumdesApp.jsx - Modern Tailwind Design with Optimized Navigation
+import React, { useState, Suspense, lazy, useCallback } from 'react';
 import { FaPlus, FaChartBar, FaBuilding } from 'react-icons/fa';
 import { FiFileText } from 'react-icons/fi';
 import { HiSparkles } from 'react-icons/hi';
@@ -46,24 +46,25 @@ const ModernLoadingFallback = () => (
 function BumdesApp() {
     // State untuk mengelola tampilan
     const [view, setView] = useState('statistik'); // Tampilan default
+    const [loadedViews, setLoadedViews] = useState({ statistik: true }); // Track which views have been loaded
 
-    // Fungsi untuk berpindah navigasi
-    const handleNavClick = (newView) => {
+    // Fungsi untuk berpindah navigasi - load komponen jika belum pernah di-load
+    const handleNavClick = useCallback((newView) => {
         setView(newView);
-    };
-
-    const renderContent = () => {
-        switch (view) {
-            case 'form':
-                return <BumdesForm onSwitchToDashboard={() => setView('statistik')} />;
-            case 'statistik':
-                return <BumdesDashboardModern />;
-            case 'dokumen':
-                return <BumdesDokumenManager />;
-            default:
-                return <BumdesDashboardModern />;
+        if (!loadedViews[newView]) {
+            setLoadedViews(prev => ({ ...prev, [newView]: true }));
         }
-    };
+    }, [loadedViews]);
+
+    // Callback untuk refresh dashboard setelah data baru ditambahkan
+    const handleDataAdded = useCallback(() => {
+        // Force remount dashboard untuk refresh data
+        setLoadedViews(prev => ({ ...prev, statistik: false }));
+        setTimeout(() => {
+            setLoadedViews(prev => ({ ...prev, statistik: true }));
+            setView('statistik');
+        }, 100);
+    }, []);
 
     return (
         <div className="min-h-screen bg-white">
@@ -157,11 +158,34 @@ function BumdesApp() {
                     </div>
                 </div>
 
-                {/* Enhanced Content Container */}
+                {/* Enhanced Content Container - Render all components but hide inactive ones */}
                 <div className="bg-white rounded-3xl shadow-xl border border-white min-h-[600px] overflow-hidden">
-                    <Suspense fallback={<ModernLoadingFallback />}>
-                        {renderContent()}
-                    </Suspense>
+                    {/* Form Input - Only load when accessed */}
+                    <div className={view === 'form' ? 'block' : 'hidden'}>
+                        {loadedViews.form && (
+                            <Suspense fallback={<ModernLoadingFallback />}>
+                                <BumdesForm onSwitchToDashboard={handleDataAdded} />
+                            </Suspense>
+                        )}
+                    </div>
+
+                    {/* Dashboard Statistik - Always loaded */}
+                    <div className={view === 'statistik' ? 'block' : 'hidden'}>
+                        {loadedViews.statistik && (
+                            <Suspense fallback={<ModernLoadingFallback />}>
+                                <BumdesDashboardModern />
+                            </Suspense>
+                        )}
+                    </div>
+
+                    {/* Kelola Dokumen - Only load when accessed */}
+                    <div className={view === 'dokumen' ? 'block' : 'hidden'}>
+                        {loadedViews.dokumen && (
+                            <Suspense fallback={<ModernLoadingFallback />}>
+                                <BumdesDokumenManager />
+                            </Suspense>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>

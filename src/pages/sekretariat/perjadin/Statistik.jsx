@@ -102,7 +102,7 @@ const Statistik = ({ refreshTrigger }) => {
       
       console.log('📥 Statistik Dashboard: Received data:', response.data);
       
-      if (response.data.success) {
+      if (response.data.status === 'success') {
         const dashData = response.data.data || {
           mingguan: 0,
           bulanan: 0,
@@ -173,11 +173,11 @@ const Statistik = ({ refreshTrigger }) => {
       console.log('📊 Statistik: Received statistik data:', statistikResponse.data);
       console.log('📋 Statistik: Received kegiatan data:', kegiatanResponse.data);
       
-      if (statistikResponse.data.success) {
+      if (statistikResponse.data.status === 'success') {
         const statData = statistikResponse.data.data;
         
         // Enhance data with kegiatan analysis if available
-        if (kegiatanResponse.data.success && kegiatanResponse.data.data) {
+        if (kegiatanResponse.data.status === 'success' && kegiatanResponse.data.data) {
           const kegiatanData = kegiatanResponse.data.data;
           statData.enhancedAnalysis = analyzeKegiatanData(kegiatanData);
         }
