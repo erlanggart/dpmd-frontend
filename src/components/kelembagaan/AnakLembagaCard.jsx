@@ -81,45 +81,81 @@ const AnakLembagaCard = ({
 					)}
 				</div>
 
-				{/* Add RT Form */}
+				{/* Add RT Modal */}
 				{isAddingRT && (
-					<div className="mb-6 p-5 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 shadow-sm">
-						<div className="flex items-center space-x-3 mb-3">
-							<div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center text-white">
-								<LuPlus className="w-4 h-4" />
+					<div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+						<div 
+							className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-auto transform transition-all"
+							onClick={(e) => e.stopPropagation()}
+						>
+							{/* Modal Header */}
+							<div className="bg-gradient-to-r from-blue-500 via-blue-600 to-indigo-600 p-6 rounded-t-2xl">
+								<div className="flex items-center justify-between">
+									<div className="flex items-center space-x-3">
+										<div className="w-10 h-10 bg-white bg-opacity-20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+											<LuPlus className="w-6 h-6 text-white" />
+										</div>
+										<h3 className="text-xl font-bold text-white">Tambah RT Baru</h3>
+									</div>
+									<button
+										onClick={() => {
+											setIsAddingRT(false);
+											setNomorRT("");
+										}}
+										className="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded-lg transition-colors"
+									>
+										<LuX className="w-6 h-6" />
+									</button>
+								</div>
 							</div>
-							<h4 className="font-semibold text-gray-800">Tambah RT Baru</h4>
-						</div>
 
-						<div className="flex items-center gap-3">
-							<div className="flex-1">
-								<input
-									type="text"
-									placeholder="Nomor RT (contoh: 001)"
-									value={nomorRT}
-									onChange={(e) => setNomorRT(e.target.value)}
-									className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-									disabled={isLoading}
-								/>
+							{/* Modal Body */}
+							<div className="p-6 space-y-5">
+								<div>
+									<label className="block text-sm font-semibold text-gray-700 mb-2">
+										Nomor RT <span className="text-red-500">*</span>
+									</label>
+									<input
+										type="text"
+										placeholder="Contoh: 001, 002, 003"
+										value={nomorRT}
+										onChange={(e) => setNomorRT(e.target.value)}
+										onKeyPress={(e) => {
+											if (e.key === 'Enter' && nomorRT.trim() && !isLoading) {
+												handleAddRT();
+											}
+										}}
+										className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-800 placeholder-gray-400"
+										disabled={isLoading}
+										autoFocus
+									/>
+									<p className="mt-2 text-xs text-gray-500">
+										Masukkan nomor RT dengan format yang konsisten
+									</p>
+								</div>
 							</div>
-							<button
-								onClick={handleAddRT}
-								disabled={isLoading || !nomorRT.trim()}
-								className="flex items-center space-x-2 px-4 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-md"
-							>
-								<LuSave className="w-4 h-4" />
-								<span>{isLoading ? "..." : "Simpan"}</span>
-							</button>
-							<button
-								onClick={() => {
-									setIsAddingRT(false);
-									setNomorRT("");
-								}}
-								className="flex items-center space-x-2 px-4 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors duration-200"
-							>
-								<LuX className="w-4 h-4" />
-								<span>Batal</span>
-							</button>
+
+							{/* Modal Footer */}
+							<div className="px-6 pb-6 flex items-center gap-3">
+								<button
+									onClick={() => {
+										setIsAddingRT(false);
+										setNomorRT("");
+									}}
+									className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 font-semibold transition-colors duration-200"
+									disabled={isLoading}
+								>
+									Batal
+								</button>
+								<button
+									onClick={handleAddRT}
+									disabled={isLoading || !nomorRT.trim()}
+									className="flex-1 flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:from-green-600 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold transition-all duration-200 shadow-lg hover:shadow-xl"
+								>
+									<LuSave className="w-5 h-5" />
+									<span>{isLoading ? "Menyimpan..." : "Simpan"}</span>
+								</button>
+							</div>
 						</div>
 					</div>
 				)}

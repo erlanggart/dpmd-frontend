@@ -5,9 +5,11 @@ import {
 	Route,
 	Navigate,
 	useLocation,
+	Outlet,
 } from "react-router-dom";
 import { Suspense, lazy } from "react";
 import { Toaster } from "react-hot-toast";
+import { useAuth } from "./context/AuthContext";
 
 // Halaman utama di-import langsung untuk performa awal yang lebih cepat
 import LoginPage from "./pages/LoginPage";
@@ -15,6 +17,18 @@ import LandingPage from "./pages/LandingPage";
 import MusdesusStatsPage from "./pages/MusdesusStatsPage";
 import MusdesusUploadPage from "./pages/MusdesusUploadPage";
 import Spinner from "./components/ui/Spinner";
+
+// Role constants for better maintainability
+const ROLES = {
+	SUPERADMIN: "superadmin",
+	PMD: "pemberdayaan_masyarakat",
+	PMD_ALT: "pmd",
+	DESA: "desa",
+	KECAMATAN: "kecamatan",
+};
+
+// Role groups
+const ADMIN_ROLES = [ROLES.SUPERADMIN, ROLES.PMD, ROLES.PMD_ALT];
 
 // Komponen lain di-lazy load untuk code-splitting
 const DashboardPage = lazy(() => import("./pages/DashboardPage"));
@@ -99,6 +113,23 @@ const ProtectedRoute = ({ children }) => {
 	return children;
 };
 
+const RoleProtectedRoute = ({ children, allowedRoles }) => {
+	const token = localStorage.getItem("expressToken");
+	const { user } = useAuth();
+	const location = useLocation();
+
+	if (!token) {
+		return <Navigate to="/login" state={{ from: location }} replace />;
+	}
+
+	// Check if user role is allowed
+	if (allowedRoles && !allowedRoles.includes(user?.role)) {
+		return <Navigate to="/dashboard" replace />;
+	}
+
+	return children || <Outlet />;
+};
+
 function App() {
 	return (
 		<Router>
@@ -130,6 +161,7 @@ function App() {
 							</ProtectedRoute>
 						}
 					>
+						{/* Public dashboard routes - accessible by all authenticated users */}
 						<Route index element={<DashboardPage />} />
 						<Route path="users" element={<UserManagementPage />} />
 						<Route path="hero-gallery" element={<HeroGalleryManagement />} />

@@ -13,38 +13,12 @@ export const getDesaDetail = (desaId) => {
 
 /**
  * Get all kelembagaan data for a specific desa (admin access)
+ * Now uses single optimized backend endpoint
  */
 export const getDesaKelembagaanAll = async (desaId) => {
 	try {
-		const [
-			desaResponse,
-			rwResponse,
-			posyanduResponse,
-			karangTarunaResponse,
-			lpmResponse,
-			satlinmasResponse,
-			pkkResponse,
-		] = await Promise.all([
-			getDesaDetail(desaId),
-			getDesaRW(desaId),
-			getDesaPosyandu(desaId),
-			getDesaKarangTaruna(desaId),
-			getDesaLPM(desaId),
-			getDesaSatlinmas(desaId),
-			getDesaPKK(desaId),
-		]);
-
-		return {
-			desa: desaResponse.data,
-			kelembagaan: {
-				rw: rwResponse.data?.data || [],
-				posyandu: posyanduResponse.data?.data || [],
-				karangTaruna: karangTarunaResponse.data?.data || null,
-				lpm: lpmResponse.data?.data || null,
-				satlinmas: satlinmasResponse.data?.data || null,
-				pkk: pkkResponse.data?.data || null,
-			},
-		};
+		const response = await api.get(`/admin/desa-detail/${desaId}`);
+		return response.data;
 	} catch (error) {
 		console.error("Error fetching kelembagaan data:", error);
 		throw error;

@@ -671,36 +671,36 @@ const Kelembagaan = () => {
 														<td className="border border-gray-300 px-4 py-3 text-center">
 															<span
 																className={`px-2 py-1 text-xs rounded-full ${
-																	desa.status_pemerintahan === "kelurahan"
+																	desa.status === "kelurahan"
 																		? "bg-purple-100 text-purple-800"
 																		: "bg-green-100 text-green-800"
 																}`}
 															>
-																{desa.status_pemerintahan === "kelurahan"
+																{desa.status === "kelurahan"
 																	? "Kelurahan"
 																	: "Desa"}
 															</span>
 														</td>
 														<td className="border border-gray-300 px-4 py-3 text-center font-semibold text-purple-600">
-															{desa.kelembagaan.rw}
+															{desa.kelembagaan?.rw || 0}
 														</td>
 														<td className="border border-gray-300 px-4 py-3 text-center font-semibold text-green-600">
-															{desa.kelembagaan.rt}
+															{desa.kelembagaan?.rt || 0}
 														</td>
 														<td className="border border-gray-300 px-4 py-3 text-center font-semibold text-red-600">
-															{desa.kelembagaan.posyandu}
+															{desa.kelembagaan?.posyandu || 0}
 														</td>
 														<td className="border border-gray-300 px-4 py-3 text-center">
 															<StatusBadge
-																status={desa.kelembagaan.karangTaruna}
+																status={desa.kelembagaan?.karangTaruna || "Belum Terbentuk"}
 															/>
 														</td>
 														<td className="border border-gray-300 px-4 py-3 text-center">
-															<StatusBadge status={desa.kelembagaan.lpm} />
+															<StatusBadge status={desa.kelembagaan?.lpm || "Belum Terbentuk"} />
 														</td>
 														<td className="border border-gray-300 px-4 py-3 text-center">
 															<StatusBadge
-																status={desa.kelembagaan.satlinmas}
+																status={desa.kelembagaan?.satlinmas || "Belum Terbentuk"}
 															/>
 														</td>
 													</tr>

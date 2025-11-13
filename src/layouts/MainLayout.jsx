@@ -39,7 +39,11 @@ const SubMenu = ({ item, openMenu, toggleMenu, isMinimized }) => {
 				onClick={() => !isMinimized && toggleMenu(item.key)}
 				className={`flex w-full items-center p-3 rounded-lg transition-colors ${
 					isMinimized ? "justify-center" : "justify-between"
-				} text-gray-600 hover:bg-gray-100`}
+				} ${
+					isChildActive 
+						? "bg-primary/10 text-primary font-semibold" 
+						: "text-gray-600 hover:bg-gray-100"
+				}`}
 				disabled={isMinimized}
 			>
 				<div className="flex items-center">
@@ -190,7 +194,26 @@ const MainLayout = () => {
 				children: [
 					{ to: "/dashboard/pegawai", label: "Pegawai" },
 					{ to: "/dashboard/perjalanan-dinas", label: "Perjalanan Dinas" },
+<<<<<<< Updated upstream
 					{ to: getDisposisiMenuPath(getUserRole()), label: getDisposisiMenuLabel(getUserRole()) },
+=======
+				],
+			},
+			{
+				key: "pmd",
+				label: "PMD",
+				icon: <FiFileText />,
+				children: [
+					{ to: "/dashboard/kelembagaan", label: "Kelembagaan" },
+				],
+			},
+			{
+				key: "pemdes",
+				label: "Bid. Pemdes",
+				icon: <FiFileText />,
+				children: [
+					{ to: "/dashboard/laporan-desa", label: "Laporan Desa" },
+>>>>>>> Stashed changes
 				],
 			},
 			{
