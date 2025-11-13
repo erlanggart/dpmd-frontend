@@ -12,6 +12,7 @@ import { Toaster } from "react-hot-toast";
 // Halaman utama di-import langsung untuk performa awal yang lebih cepat
 import LoginPage from "./pages/LoginPage";
 import LandingPage from "./pages/LandingPage";
+import BeritaDetailPage from "./pages/BeritaDetailPage";
 import Spinner from "./components/ui/Spinner";
 
 // Komponen lain di-lazy load untuk code-splitting
@@ -19,6 +20,9 @@ const DashboardPage = lazy(() => import("./pages/DashboardPage"));
 const MainLayout = lazy(() => import("./layouts/MainLayout"));
 const HeroGalleryManagement = lazy(() =>
 	import("./pages/dashboard/HeroGalleryManagement")
+);
+const BeritaManagement = lazy(() =>
+	import("./pages/dashboard/BeritaManagement")
 );
 const BumdesApp = lazy(() => import("./pages/sarpras/Bumdes-app"));
 const PerjalananDinas = lazy(() => import("./pages/sekretariat/perjadin"));
@@ -68,6 +72,7 @@ function App() {
 				<Routes>
 					{/* Rute yang di-load secara statis */}
 					<Route path="/" element={<LandingPage />} />
+					<Route path="/berita/:slug" element={<BeritaDetailPage />} />
 					<Route path="/login" element={<LoginPage />} />
 
 					{/* Rute Admin/Dashboard dengan lazy loading */}
@@ -81,6 +86,7 @@ function App() {
 					>
 						<Route index element={<DashboardPage />} />
 						<Route path="hero-gallery" element={<HeroGalleryManagement />} />
+						<Route path="berita" element={<BeritaManagement />} />
 						<Route path="bumdes" element={<BumdesApp />} />
 						<Route path="perjalanan-dinas" element={<PerjalananDinas />} />
 					</Route>

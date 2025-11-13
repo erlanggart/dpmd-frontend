@@ -186,6 +186,7 @@ const MainLayout = () => {
 			icon: <FiLayout />,
 			children: [
 				{ to: "/dashboard/hero-gallery", label: "Galeri Hero" },
+				{ to: "/dashboard/berita", label: "Berita" },
 			],
 		},
 	];		// Gabungkan menu berdasarkan role user
