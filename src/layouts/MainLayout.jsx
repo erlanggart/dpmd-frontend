@@ -201,9 +201,15 @@ const MainLayout = () => {
 		const isSuperAdmin = userRoles.includes("superadmin") || userRole === 'superadmin';
 		const isBidangUser = userRoles.includes("bidang") || Boolean(user.bidangRole) || bidangRoles.includes(userRole);
 		
-		if (isSuperAdmin || isBidangUser) {
+		// Only superadmin can access Landing Page section
+		if (isSuperAdmin) {
 			const finalMenu = [...baseMenuItems, ...adminMenuItems];
 			return finalMenu;
+		}
+		
+		// Bidang users only get base menu
+		if (isBidangUser) {
+			return baseMenuItems;
 		}
 		
 		return baseMenuItems;

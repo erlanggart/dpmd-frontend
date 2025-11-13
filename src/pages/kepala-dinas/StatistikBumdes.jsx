@@ -97,18 +97,13 @@ const StatistikBumdes = () => {
           <div className="absolute top-1/2 right-1/4 w-40 h-40 bg-white opacity-5 rounded-full animate-pulse"></div>
           
           <div className="relative z-10">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="bg-white bg-opacity-20 backdrop-blur-md p-4 rounded-2xl border border-white border-opacity-30 shadow-lg animate-bounce">
-                <Users className="w-12 h-12 text-white" />
-              </div>
-              <div>
-                <h1 className="text-3xl md:text-4xl font-bold text-white drop-shadow-lg">
-                  📊 Statistik BUMDes
-                </h1>
-                <p className="text-white text-opacity-90 text-lg">
-                  Data BUMDes Kabupaten Bogor
-                </p>
-              </div>
+            <div className="mb-4">
+              <h1 className="text-3xl md:text-4xl font-bold text-white drop-shadow-lg">
+                📊 Statistik BUMDes
+              </h1>
+              <p className="text-white text-opacity-90 text-lg">
+                Data BUMDes Kabupaten Bogor
+              </p>
             </div>
 
             {/* Quick Stats Pills */}

@@ -37,12 +37,23 @@ const StatistikPerjadin = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [currentWeekOffset, setCurrentWeekOffset] = useState(0); // 0 = current week, -1 = previous, +1 = next
+  const [calendarView, setCalendarView] = useState('weekly'); // 'weekly' or 'monthly'
+  const [selectedMonth, setSelectedMonth] = useState(new Date());
+  const [isUpdatingCalendar, setIsUpdatingCalendar] = useState(false); // For calendar-only updates
   const itemsPerPage = 5;
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, []); // Only fetch once on mount
+
+  // Update calendar when week offset changes (without full page reload)
+  useEffect(() => {
+    if (currentWeekOffset !== 0 || weeklySchedule.length > 0) {
+      updateWeeklyCalendar();
+    }
+  }, [currentWeekOffset]);
 
   // Auto transition between days in calendar
   useEffect(() => {
@@ -59,6 +70,20 @@ const StatistikPerjadin = () => {
     return () => clearInterval(dayInterval);
   }, [weeklySchedule]);
 
+  // Update only the weekly calendar (lazy update)
+  const updateWeeklyCalendar = async () => {
+    setIsUpdatingCalendar(true);
+    try {
+      const processedSchedule = generateWeekSchedule(currentWeekOffset, kegiatanList);
+      setWeeklySchedule(processedSchedule);
+      console.log('📅 Weekly calendar updated:', processedSchedule);
+    } catch (err) {
+      console.error('Error updating calendar:', err);
+    } finally {
+      setIsUpdatingCalendar(false);
+    }
+  };
+
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -74,7 +99,7 @@ const StatistikPerjadin = () => {
         }
       );
 
-      // Fetch kegiatan list
+      // Fetch kegiatan list with date filter
       const kegiatanResponse = await axios.get(
         `${API_CONFIG.BASE_URL}/perjadin/kegiatan?limit=100`,
         {
@@ -84,44 +109,14 @@ const StatistikPerjadin = () => {
         }
       );
 
-      // Fetch weekly schedule from API
-      const weeklyResponse = await axios.get(
-        `${API_CONFIG.BASE_URL}/perjadin/dashboard/weekly-schedule`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
-
       setDashboardData(dashResponse.data.data);
-      setKegiatanList(kegiatanResponse.data.data || []);
+      const allKegiatan = kegiatanResponse.data.data || [];
+      setKegiatanList(allKegiatan);
       
-      // Process weekly schedule data from API
-      if (weeklyResponse.data.status === 'success' && weeklyResponse.data.data && Array.isArray(weeklyResponse.data.data)) {
-        const today = new Date();
-        const processedSchedule = weeklyResponse.data.data.map(day => ({
-          date: day.tanggal,
-          day: day.hari,
-          kegiatan: day.kegiatan || []
-        }));
-        
-        console.log('📅 Weekly schedule loaded:', processedSchedule);
-        setWeeklySchedule(processedSchedule);
-      } else {
-        // Fallback: Generate empty 7 days if API fails
-        const today = new Date();
-        const weekSchedule = Array.from({ length: 7 }, (_, i) => {
-          const date = new Date(today);
-          date.setDate(today.getDate() + i);
-          return {
-            date: date.toISOString().split('T')[0],
-            day: date.toLocaleDateString('id-ID', { weekday: 'short' }),
-            kegiatan: []
-          };
-        });
-        setWeeklySchedule(weekSchedule);
-      }
+      // Generate initial weekly schedule (current week)
+      const processedSchedule = generateWeekSchedule(0, allKegiatan);
+      console.log('📅 Initial weekly schedule loaded:', processedSchedule);
+      setWeeklySchedule(processedSchedule);
       
       setError(null);
     } catch (err) {
@@ -130,6 +125,91 @@ const StatistikPerjadin = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Generate week schedule with kegiatan mapping
+  const generateWeekSchedule = (weekOffset, kegiatanData) => {
+    const today = new Date();
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - today.getDay() + (weekOffset * 7));
+    
+    return Array.from({ length: 7 }, (_, i) => {
+      const date = new Date(startOfWeek);
+      date.setDate(startOfWeek.getDate() + i);
+      const dateStr = date.toISOString().split('T')[0];
+      
+      // Filter kegiatan for this specific date
+      const dayKegiatan = kegiatanData.filter(k => {
+        const mulai = new Date(k.tanggal_mulai);
+        const selesai = new Date(k.tanggal_selesai);
+        const currentDate = new Date(dateStr);
+        return currentDate >= mulai && currentDate <= selesai;
+      });
+      
+      return {
+        date: dateStr,
+        day: date.toLocaleDateString('id-ID', { weekday: 'short' }),
+        kegiatan: dayKegiatan
+      };
+    });
+  };
+
+  // Navigate weeks
+  const goToPreviousWeek = () => {
+    setCurrentWeekOffset(prev => prev - 1);
+    setSelectedDayIndex(0);
+  };
+
+  const goToNextWeek = () => {
+    setCurrentWeekOffset(prev => prev + 1);
+    setSelectedDayIndex(0);
+  };
+
+  const goToCurrentWeek = () => {
+    setCurrentWeekOffset(0);
+    setSelectedDayIndex(0);
+  };
+
+  // Generate monthly calendar
+  const generateMonthCalendar = () => {
+    const year = selectedMonth.getFullYear();
+    const month = selectedMonth.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const startDate = new Date(firstDay);
+    startDate.setDate(startDate.getDate() - startDate.getDay()); // Start from Sunday
+    
+    const calendar = [];
+    let currentDate = new Date(startDate);
+    
+    for (let week = 0; week < 6; week++) {
+      const weekDays = [];
+      for (let day = 0; day < 7; day++) {
+        const dateStr = currentDate.toISOString().split('T')[0];
+        const dayKegiatan = kegiatanList.filter(k => {
+          const mulai = new Date(k.tanggal_mulai);
+          const selesai = new Date(k.tanggal_selesai);
+          const checkDate = new Date(dateStr);
+          return checkDate >= mulai && checkDate <= selesai;
+        });
+        
+        weekDays.push({
+          date: new Date(currentDate),
+          dateStr: dateStr,
+          isCurrentMonth: currentDate.getMonth() === month,
+          isToday: currentDate.toDateString() === new Date().toDateString(),
+          kegiatan: dayKegiatan
+        });
+        
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+      calendar.push(weekDays);
+      
+      // Stop if we've passed the last day of the month
+      if (currentDate > lastDay && weekDays[weekDays.length - 1].date > lastDay) break;
+    }
+    
+    return calendar;
   };
 
   // Filter kegiatan
@@ -257,18 +337,13 @@ const StatistikPerjadin = () => {
           <div className="absolute top-1/2 right-1/4 w-40 h-40 bg-white opacity-5 rounded-full animate-pulse"></div>
           
           <div className="relative z-10">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="bg-white bg-opacity-20 backdrop-blur-md p-4 rounded-2xl border border-white border-opacity-30 shadow-lg">
-                <Briefcase className="w-12 h-12 text-white animate-bounce" />
-              </div>
-              <div>
-                <h1 className="text-3xl md:text-4xl font-bold text-white drop-shadow-lg">
-                  ✈️ Statistik Perjalanan Dinas
-                </h1>
-                <p className="text-white text-opacity-90 text-lg">
-                  Data Perjalanan Dinas DPMD Kabupaten Bogor
-                </p>
-              </div>
+            <div className="mb-4">
+              <h1 className="text-3xl md:text-4xl font-bold text-white drop-shadow-lg">
+                ✈️ Statistik Perjalanan Dinas
+              </h1>
+              <p className="text-white text-opacity-90 text-lg">
+                Data Perjalanan Dinas DPMD Kabupaten Bogor
+              </p>
             </div>
 
             {/* Quick Stats Pills */}
@@ -384,82 +459,267 @@ const StatistikPerjadin = () => {
           </div>
         </div>
 
-        {/* Weekly Calendar */}
+        {/* Calendar Section - Weekly or Monthly */}
         {weeklySchedule.length > 0 && (
-          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Calendar className="w-5 h-5 text-gray-700" />
-              <h2 className="text-xl font-bold text-gray-800">Kalender Mingguan</h2>
-              <span className="text-sm text-gray-500 ml-auto flex items-center gap-2">
-                <span>Jadwal 7 Hari</span>
-                <span className="inline-flex items-center gap-1 text-xs">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  Auto-transition
-                </span>
-              </span>
-            </div>
-            
-            <div className="grid grid-cols-7 gap-2">
-              {weeklySchedule.map((day, index) => {
-                const isToday = new Date(day.date).toDateString() === new Date().toDateString();
-                const isSelected = index === selectedDayIndex;
-                const kegiatanCount = getKegiatanCountForDate(day.date);
-                
-                return (
-                  <div 
-                    key={index}
-                    onClick={() => setSelectedDayIndex(index)}
-                    className={`relative p-3 rounded-xl border-2 transition-all duration-300 cursor-pointer transform ${
-                      isSelected
-                        ? 'border-transparent bg-gradient-to-br from-emerald-500 to-teal-600 shadow-xl scale-110 -translate-y-1'
-                        : isToday 
-                        ? 'border-transparent bg-gradient-to-br from-orange-400 to-amber-500 shadow-lg hover:shadow-xl' 
-                        : 'border-gray-200 bg-gradient-to-br from-white to-gray-50 hover:border-gray-300 hover:shadow-lg hover:scale-105'
-                    } ${isTransitioning && isSelected ? 'animate-pulse' : ''}`}
+          <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+            {/* Calendar Header */}
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <Calendar className="w-6 h-6 text-orange-600" />
+                <h2 className="text-2xl font-bold text-gray-800">
+                  {calendarView === 'weekly' ? 'Kalender Mingguan' : 'Kalender Bulanan'}
+                </h2>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                {/* View Toggle */}
+                <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                  <button
+                    onClick={() => setCalendarView('weekly')}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                      calendarView === 'weekly'
+                        ? 'bg-white text-orange-600 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-800'
+                    }`}
                   >
-                    <div className="text-center relative z-10">
-                      <div className={`text-xs font-bold mb-1 uppercase tracking-wide ${
-                        isSelected ? 'text-white' : isToday ? 'text-white' : 'text-gray-600'
-                      }`}>
-                        {getDayName(day.date)}
+                    Mingguan
+                  </button>
+                  <button
+                    onClick={() => setCalendarView('monthly')}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                      calendarView === 'monthly'
+                        ? 'bg-white text-orange-600 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-800'
+                    }`}
+                  >
+                    Bulanan
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Weekly Calendar View */}
+            {calendarView === 'weekly' && (
+              <>
+                {/* Week Navigation */}
+                <div className="flex items-center justify-between mb-4 bg-gradient-to-r from-orange-50 to-amber-50 rounded-lg p-3">
+                  <button
+                    onClick={goToPreviousWeek}
+                    disabled={isUpdatingCalendar}
+                    className="flex items-center gap-2 px-4 py-2 bg-white hover:bg-gray-50 rounded-lg shadow-sm transition-all hover:shadow-md group disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ChevronLeft className="w-5 h-5 text-gray-600 group-hover:text-orange-600 group-hover:-translate-x-1 transition-all" />
+                    <span className="text-sm font-medium text-gray-700">Minggu Sebelumnya</span>
+                  </button>
+                  
+                  <div className="flex flex-col items-center">
+                    {isUpdatingCalendar ? (
+                      <div className="flex items-center gap-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-600"></div>
+                        <span className="text-sm font-medium text-gray-600">Memuat...</span>
                       </div>
-                      <div className={`text-2xl font-extrabold mb-2 ${
-                        isSelected ? 'text-white' : isToday ? 'text-white' : 'text-gray-800'
-                      }`}>
-                        {(() => {
-                          const date = new Date(day.date);
-                          return isNaN(date.getTime()) ? '-' : date.getDate();
-                        })()}
-                      </div>
-                      <div className={`text-xs font-semibold ${
-                        kegiatanCount > 0 
-                          ? isSelected || isToday ? 'text-white' : 'text-emerald-600' 
-                          : isSelected || isToday ? 'text-white/80' : 'text-gray-400'
-                      }`}>
-                        {kegiatanCount > 0 ? `${kegiatanCount} kegiatan` : 'Tidak ada'}
-                      </div>
-                    </div>
-                    {isSelected && (
-                      <div className="absolute inset-0 bg-white/10 rounded-xl animate-pulse"></div>
-                    )}
-                    {isSelected && (
-                      <div className="mt-2 text-center relative z-10">
-                        <span className="inline-block px-2 py-0.5 bg-white/30 backdrop-blur-sm text-white text-xs rounded-full font-bold animate-pulse">
-                          Active
+                    ) : (
+                      <>
+                        <span className="text-sm font-semibold text-gray-600">
+                          {weeklySchedule[0] && (() => {
+                            const startDate = new Date(weeklySchedule[0].date);
+                            const endDate = new Date(weeklySchedule[6].date);
+                            return `${startDate.getDate()} ${startDate.toLocaleDateString('id-ID', { month: 'short' })} - ${endDate.getDate()} ${endDate.toLocaleDateString('id-ID', { month: 'short', year: 'numeric' })}`;
+                          })()}
                         </span>
-                      </div>
-                    )}
-                    {isToday && !isSelected && (
-                      <div className="mt-2 text-center relative z-10">
-                        <span className="inline-block px-2 py-0.5 bg-white/30 backdrop-blur-sm text-white text-xs rounded-full font-bold">
-                          Hari ini
-                        </span>
-                      </div>
+                        {currentWeekOffset !== 0 && (
+                          <button
+                            onClick={goToCurrentWeek}
+                            className="mt-1 text-xs text-orange-600 hover:text-orange-700 font-medium hover:underline"
+                          >
+                            Kembali ke Minggu Ini
+                          </button>
+                        )}
+                      </>
                     )}
                   </div>
-                );
-              })}
-            </div>
+                  
+                  <button
+                    onClick={goToNextWeek}
+                    disabled={isUpdatingCalendar}
+                    className="flex items-center gap-2 px-4 py-2 bg-white hover:bg-gray-50 rounded-lg shadow-sm transition-all hover:shadow-md group disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <span className="text-sm font-medium text-gray-700">Minggu Berikutnya</span>
+                    <ChevronRight className="w-5 h-5 text-gray-600 group-hover:text-orange-600 group-hover:translate-x-1 transition-all" />
+                  </button>
+                </div>
+
+                {/* Weekly Calendar Grid */}
+                <div className={`grid grid-cols-7 gap-3 transition-opacity duration-300 ${isUpdatingCalendar ? 'opacity-50' : 'opacity-100'}`}>
+                  {weeklySchedule.map((day, index) => {
+                    const isToday = new Date(day.date).toDateString() === new Date().toDateString();
+                    const isSelected = index === selectedDayIndex;
+                    const kegiatanCount = day.kegiatan?.length || 0;
+                    
+                    return (
+                      <div 
+                        key={index}
+                        onClick={() => setSelectedDayIndex(index)}
+                        className={`relative p-4 rounded-xl border-2 transition-all duration-300 cursor-pointer transform ${
+                          isSelected
+                            ? 'border-transparent bg-gradient-to-br from-emerald-500 to-teal-600 shadow-xl scale-110 -translate-y-1'
+                            : isToday 
+                            ? 'border-transparent bg-gradient-to-br from-orange-400 to-amber-500 shadow-lg hover:shadow-xl hover:scale-105' 
+                            : 'border-gray-200 bg-gradient-to-br from-white to-gray-50 hover:border-orange-300 hover:shadow-lg hover:scale-105'
+                        } ${isTransitioning && isSelected ? 'animate-pulse' : ''}`}
+                      >
+                        <div className="text-center relative z-10">
+                          <div className={`text-xs font-bold mb-1 uppercase tracking-wide ${
+                            isSelected ? 'text-white' : isToday ? 'text-white' : 'text-gray-600'
+                          }`}>
+                            {day.day}
+                          </div>
+                          <div className={`text-3xl font-extrabold mb-2 ${
+                            isSelected ? 'text-white' : isToday ? 'text-white' : 'text-gray-800'
+                          }`}>
+                            {(() => {
+                              const date = new Date(day.date);
+                              return isNaN(date.getTime()) ? '-' : date.getDate();
+                            })()}
+                          </div>
+                          <div className={`text-xs font-semibold mb-1 ${
+                            kegiatanCount > 0 
+                              ? isSelected || isToday ? 'text-white' : 'text-emerald-600' 
+                              : isSelected || isToday ? 'text-white/80' : 'text-gray-400'
+                          }`}>
+                            {kegiatanCount > 0 ? `${kegiatanCount} kegiatan` : 'Tidak ada'}
+                          </div>
+                        </div>
+                        {isSelected && (
+                          <>
+                            <div className="absolute inset-0 bg-white/10 rounded-xl animate-pulse"></div>
+                            <div className="mt-1 text-center relative z-10">
+                              <span className="inline-block px-2 py-0.5 bg-white/30 backdrop-blur-sm text-white text-xs rounded-full font-bold animate-pulse">
+                                Dipilih
+                              </span>
+                            </div>
+                          </>
+                        )}
+                        {isToday && !isSelected && (
+                          <div className="mt-1 text-center relative z-10">
+                            <span className="inline-block px-2 py-0.5 bg-white/30 backdrop-blur-sm text-white text-xs rounded-full font-bold">
+                              Hari ini
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
+            {/* Monthly Calendar View */}
+            {calendarView === 'monthly' && (
+              <>
+                {/* Month Navigation */}
+                <div className="flex items-center justify-between mb-4 bg-gradient-to-r from-orange-50 to-amber-50 rounded-lg p-3">
+                  <button
+                    onClick={() => {
+                      const newMonth = new Date(selectedMonth);
+                      newMonth.setMonth(newMonth.getMonth() - 1);
+                      setSelectedMonth(newMonth);
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-white hover:bg-gray-50 rounded-lg shadow-sm transition-all hover:shadow-md group"
+                  >
+                    <ChevronLeft className="w-5 h-5 text-gray-600 group-hover:text-orange-600 group-hover:-translate-x-1 transition-all" />
+                    <span className="text-sm font-medium text-gray-700">Bulan Sebelumnya</span>
+                  </button>
+                  
+                  <div className="flex flex-col items-center">
+                    <span className="text-lg font-bold text-gray-800">
+                      {selectedMonth.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
+                    </span>
+                    {selectedMonth.getMonth() !== new Date().getMonth() && (
+                      <button
+                        onClick={() => setSelectedMonth(new Date())}
+                        className="mt-1 text-xs text-orange-600 hover:text-orange-700 font-medium hover:underline"
+                      >
+                        Kembali ke Bulan Ini
+                      </button>
+                    )}
+                  </div>
+                  
+                  <button
+                    onClick={() => {
+                      const newMonth = new Date(selectedMonth);
+                      newMonth.setMonth(newMonth.getMonth() + 1);
+                      setSelectedMonth(newMonth);
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-white hover:bg-gray-50 rounded-lg shadow-sm transition-all hover:shadow-md group"
+                  >
+                    <span className="text-sm font-medium text-gray-700">Bulan Berikutnya</span>
+                    <ChevronRight className="w-5 h-5 text-gray-600 group-hover:text-orange-600 group-hover:translate-x-1 transition-all" />
+                  </button>
+                </div>
+
+                {/* Monthly Calendar Grid */}
+                <div className="space-y-2">
+                  {/* Day Headers */}
+                  <div className="grid grid-cols-7 gap-2">
+                    {['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'].map(day => (
+                      <div key={day} className="text-center text-sm font-bold text-gray-600 py-2">
+                        {day}
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* Calendar Days */}
+                  {generateMonthCalendar().map((week, weekIdx) => (
+                    <div key={weekIdx} className="grid grid-cols-7 gap-2">
+                      {week.map((day, dayIdx) => {
+                        const kegiatanCount = day.kegiatan?.length || 0;
+                        return (
+                          <div
+                            key={dayIdx}
+                            className={`relative p-3 rounded-lg border transition-all cursor-pointer min-h-[80px] ${
+                              !day.isCurrentMonth
+                                ? 'bg-gray-50 border-gray-100 opacity-50'
+                                : day.isToday
+                                ? 'bg-gradient-to-br from-orange-100 to-amber-100 border-orange-300 shadow-md hover:shadow-lg'
+                                : kegiatanCount > 0
+                                ? 'bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-200 hover:shadow-md'
+                                : 'bg-white border-gray-200 hover:border-gray-300 hover:shadow-sm'
+                            }`}
+                          >
+                            <div className={`text-sm font-semibold mb-1 ${
+                              day.isToday ? 'text-orange-700' : !day.isCurrentMonth ? 'text-gray-400' : 'text-gray-700'
+                            }`}>
+                              {day.date.getDate()}
+                            </div>
+                            {kegiatanCount > 0 && (
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-1">
+                                  <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                                  <span className="text-xs font-medium text-emerald-700">
+                                    {kegiatanCount} kegiatan
+                                  </span>
+                                </div>
+                                <div className="text-xs text-gray-600 line-clamp-2">
+                                  {day.kegiatan[0]?.nama_kegiatan}
+                                </div>
+                              </div>
+                            )}
+                            {day.isToday && (
+                              <div className="absolute top-1 right-1">
+                                <span className="inline-block px-1.5 py-0.5 bg-orange-600 text-white text-xs rounded-full font-bold">
+                                  Hari ini
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         )}
 

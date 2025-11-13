@@ -11,16 +11,6 @@ const NewsSection = () => {
   const [beritaList, setBeritaList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedKategori, setSelectedKategori] = useState('');
-
-  const kategoris = [
-    { value: '', label: 'Semua' },
-    { value: 'pengumuman', label: 'Pengumuman' },
-    { value: 'bumdes', label: 'BUMDes' },
-    { value: 'perjadin', label: 'Perjalanan Dinas' },
-    { value: 'musdesus', label: 'Musdesus' },
-    { value: 'umum', label: 'Umum' }
-  ];
 
   // Dummy data untuk testing (10 berita)
   const dummyBerita = [
@@ -29,7 +19,6 @@ const NewsSection = () => {
       slug: 'pembinaan-bumdes-kabupaten-bogor',
       judul: 'Pembinaan BUMDes Kabupaten Bogor',
       ringkasan: 'Kegiatan pembinaan dan pelatihan manajemen BUMDes se-Kabupaten Bogor untuk meningkatkan kualitas pengelolaan.',
-      kategori: 'bumdes',
       gambar: null,
       views: 245,
       tanggal_publish: '2025-11-12',
@@ -40,7 +29,6 @@ const NewsSection = () => {
       slug: 'penyaluran-hibah-pkk-2025',
       judul: 'Penyaluran Hibah PKK Kabupaten Bogor Tahun 2025',
       ringkasan: 'Dinas DPMD menyalurkan hibah kepada PKK se-Kabupaten Bogor untuk mendukung program pemberdayaan masyarakat.',
-      kategori: 'pengumuman',
       gambar: null,
       views: 189,
       tanggal_publish: '2025-11-11',
@@ -51,7 +39,6 @@ const NewsSection = () => {
       slug: 'pelatihan-manajemen-bumdes',
       judul: 'Pelatihan Manajemen BUMDes se-Kabupaten Bogor',
       ringkasan: 'Workshop manajemen keuangan dan pemasaran produk BUMDes untuk meningkatkan daya saing usaha desa.',
-      kategori: 'bumdes',
       gambar: null,
       views: 312,
       tanggal_publish: '2025-11-10',
@@ -62,7 +49,6 @@ const NewsSection = () => {
       slug: 'musdesus-perencanaan-pembangunan-desa',
       judul: 'Musdesus Perencanaan Pembangunan Desa 2026',
       ringkasan: 'Musyawarah desa khusus membahas rencana pembangunan dan alokasi dana desa untuk tahun anggaran 2026.',
-      kategori: 'musdesus',
       gambar: null,
       views: 421,
       tanggal_publish: '2025-11-09',
@@ -73,7 +59,6 @@ const NewsSection = () => {
       slug: 'monitoring-perjadin-kecamatan',
       judul: 'Monitoring Perjalanan Dinas Tingkat Kecamatan',
       ringkasan: 'Tim DPMD melakukan monitoring dan evaluasi pelaksanaan perjalanan dinas di seluruh kecamatan.',
-      kategori: 'perjadin',
       gambar: null,
       views: 167,
       tanggal_publish: '2025-11-08',
@@ -84,7 +69,6 @@ const NewsSection = () => {
       slug: 'sosialisasi-program-desa-digital',
       judul: 'Sosialisasi Program Desa Digital',
       ringkasan: 'Pengenalan dan sosialisasi transformasi digital untuk desa-desa di Kabupaten Bogor menuju smart village.',
-      kategori: 'umum',
       gambar: null,
       views: 534,
       tanggal_publish: '2025-11-07',
@@ -95,7 +79,6 @@ const NewsSection = () => {
       slug: 'launching-produk-unggulan-bumdes',
       judul: 'Launching Produk Unggulan BUMDes Bogor',
       ringkasan: 'Peluncuran produk-produk unggulan dari berbagai BUMDes di Kabupaten Bogor dalam pameran regional.',
-      kategori: 'bumdes',
       gambar: null,
       views: 678,
       tanggal_publish: '2025-11-06',
@@ -106,7 +89,6 @@ const NewsSection = () => {
       slug: 'rapat-koordinasi-kepala-desa',
       judul: 'Rapat Koordinasi Kepala Desa Se-Kabupaten',
       ringkasan: 'Pertemuan koordinasi membahas implementasi program prioritas dan tantangan pembangunan desa.',
-      kategori: 'pengumuman',
       gambar: null,
       views: 289,
       tanggal_publish: '2025-11-05',
@@ -117,7 +99,6 @@ const NewsSection = () => {
       slug: 'festival-desa-wisata-2025',
       judul: 'Festival Desa Wisata Kabupaten Bogor 2025',
       ringkasan: 'Gelaran festival desa wisata menampilkan potensi wisata dan budaya dari desa-desa di Kabupaten Bogor.',
-      kategori: 'umum',
       gambar: null,
       views: 892,
       tanggal_publish: '2025-11-04',
@@ -128,7 +109,6 @@ const NewsSection = () => {
       slug: 'evaluasi-bumdes-triwulan-3',
       judul: 'Evaluasi Kinerja BUMDes Triwulan III 2025',
       ringkasan: 'Hasil evaluasi kinerja dan laporan keuangan BUMDes se-Kabupaten Bogor untuk periode triwulan ketiga.',
-      kategori: 'bumdes',
       gambar: null,
       views: 445,
       tanggal_publish: '2025-11-03',
@@ -138,7 +118,7 @@ const NewsSection = () => {
 
   useEffect(() => {
     fetchBerita();
-  }, [selectedKategori]);
+  }, []);
 
   const fetchBerita = async () => {
     try {
@@ -147,10 +127,6 @@ const NewsSection = () => {
         limit: 10,
         status: 'published'
       };
-
-      if (selectedKategori) {
-        params.kategori = selectedKategori;
-      }
 
       const response = await axios.get(`${API_CONFIG.BASE_URL}/berita/public`, { params });
 
@@ -183,25 +159,6 @@ const NewsSection = () => {
           <p className="text-gray-600 text-lg max-w-2xl mx-auto">
             Dapatkan informasi terbaru seputar kegiatan dan program Dinas Pemberdayaan Masyarakat dan Desa
           </p>
-        </div>
-
-        {/* Filter Kategori */}
-        <div className="flex justify-center mb-12 overflow-x-auto">
-          <div className="inline-flex gap-2 bg-white rounded-xl shadow-lg p-2">
-            {kategoris.map((kat) => (
-              <button
-                key={kat.value}
-                onClick={() => setSelectedKategori(kat.value)}
-                className={`px-6 py-2 rounded-lg font-semibold transition-all duration-300 whitespace-nowrap ${
-                  selectedKategori === kat.value
-                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                {kat.label}
-              </button>
-            ))}
-          </div>
         </div>
 
         {/* Loading State */}
