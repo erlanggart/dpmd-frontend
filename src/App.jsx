@@ -12,6 +12,7 @@ import { Toaster } from "react-hot-toast";
 // Halaman utama di-import langsung untuk performa awal yang lebih cepat
 import LoginPage from "./pages/LoginPage";
 import LandingPage from "./pages/LandingPage";
+import BeritaDetailPage from "./pages/BeritaDetailPage";
 import Spinner from "./components/ui/Spinner";
 
 // Komponen lain di-lazy load untuk code-splitting
@@ -20,6 +21,9 @@ const MainLayout = lazy(() => import("./layouts/MainLayout"));
 const HeroGalleryManagement = lazy(() =>
 	import("./pages/dashboard/HeroGalleryManagement")
 );
+const BeritaManagement = lazy(() =>
+	import("./pages/dashboard/BeritaManagement")
+);
 const BumdesApp = lazy(() => import("./pages/sarpras/Bumdes-app"));
 const PerjalananDinas = lazy(() => import("./pages/sekretariat/perjadin"));
 const DesaLayout = lazy(() => import("./layouts/DesaLayout"));
@@ -27,7 +31,21 @@ const DesaDashboard = lazy(() => import("./components/desa/DesaDashboard"));
 const BumdesDesaPage = lazy(() =>
 	import("./pages/desa/bumdes/BumdesDesaPage")
 );
-const LaporanDesa = lazy(() => import("./pages/PMD/LaporanDesa"));
+const KepalaDinasLayout = lazy(() =>
+	import("./pages/kepala-dinas/KepalaDinasLayout")
+);
+const DashboardOverview = lazy(() =>
+	import("./pages/kepala-dinas/DashboardOverview")
+);
+const StatistikBumdes = lazy(() =>
+	import("./pages/kepala-dinas/StatistikBumdes")
+);
+const StatistikPerjadin = lazy(() =>
+	import("./pages/kepala-dinas/StatistikPerjadin")
+);
+const TrendsPage = lazy(() =>
+	import("./pages/kepala-dinas/TrendsPage")
+);
 
 const ProtectedRoute = ({ children }) => {
 	const token = localStorage.getItem("expressToken");
@@ -54,6 +72,7 @@ function App() {
 				<Routes>
 					{/* Rute yang di-load secara statis */}
 					<Route path="/" element={<LandingPage />} />
+					<Route path="/berita/:slug" element={<BeritaDetailPage />} />
 					<Route path="/login" element={<LoginPage />} />
 
 					{/* Rute Admin/Dashboard dengan lazy loading */}
@@ -67,9 +86,9 @@ function App() {
 					>
 						<Route index element={<DashboardPage />} />
 						<Route path="hero-gallery" element={<HeroGalleryManagement />} />
+						<Route path="berita" element={<BeritaManagement />} />
 						<Route path="bumdes" element={<BumdesApp />} />
 						<Route path="perjalanan-dinas" element={<PerjalananDinas />} />
-						<Route path="laporan-desa" element={<LaporanDesa />} />
 					</Route>
 
 					{/* Rute Desa dengan lazy loading */}
@@ -83,6 +102,22 @@ function App() {
 					>
 						<Route path="dashboard" element={<DesaDashboard />} />
 						<Route path="bumdes" element={<BumdesDesaPage />} />
+					</Route>
+
+					{/* Rute Core Dashboard - Multi Role Access */}
+					<Route
+						path="/core-dashboard"
+						element={
+							<ProtectedRoute>
+								<KepalaDinasLayout />
+							</ProtectedRoute>
+						}
+					>
+						<Route index element={<Navigate to="dashboard" replace />} />
+						<Route path="dashboard" element={<DashboardOverview />} />
+						<Route path="statistik-bumdes" element={<StatistikBumdes />} />
+						<Route path="statistik-perjadin" element={<StatistikPerjadin />} />
+						<Route path="trends" element={<TrendsPage />} />
 					</Route>
 				</Routes>
 			</Suspense>

@@ -179,15 +179,17 @@ const BumdesDokumenManager = () => {
 
     setDeleteLoading(true);
     try {
+      const token = localStorage.getItem('expressToken');
       const response = await fetch(`${API_CONFIG.BASE_URL}/bumdes/delete-file`, {
         method: 'DELETE',
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           filename,
-          folder,
+          document_type: folder,
           bumdes_id: bumdesId
         })
       });

@@ -126,7 +126,7 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose = () => {}, onSuccess
         const bidangRes = await api.get('/perjadin/bidang');
         
         // Handle API response structure
-        const bidangData = bidangRes.data?.success ? bidangRes.data.data : bidangRes.data;
+        const bidangData = bidangRes.data?.status === 'success' ? bidangRes.data.data : bidangRes.data;
         
         setAllBidangList(bidangData);
         setMasterDataCache(prev => ({
@@ -233,7 +233,7 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose = () => {}, onSuccess
         ]);
         
         // Handle API response structure
-        const personilData = personilRes.data?.success ? personilRes.data.data : personilRes.data;
+        const personilData = personilRes.data?.status === 'success' ? personilRes.data.data : personilRes.data;
         
         setAllPersonilByBidang(prev => ({
           ...prev,
@@ -326,7 +326,7 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose = () => {}, onSuccess
         console.log(`KegiatanForm: Fetching fresh personil data for bidang ${idBidang}...`);
         const response = await api.get(`/perjadin/personil/${idBidang}`);
         // Handle API response structure
-        const personilData = response.data?.success ? response.data.data : response.data;
+        const personilData = response.data?.status === 'success' ? response.data.data : response.data;
         setAllPersonilByBidang(prev => ({ ...prev, [idBidang]: personilData }));
         console.log(`KegiatanForm: Successfully fetched personil for bidang ${idBidang}`);
       } catch (error) {
@@ -405,8 +405,13 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose = () => {}, onSuccess
     const allSelectedPersonnel = [];
     formData.personil_bidang_list.forEach(group => {
       group.personil.forEach(personName => {
-        if (personName && personName.trim()) {
-          allSelectedPersonnel.push(personName.trim());
+        // Handle both object and string format
+        if (personName) {
+          if (typeof personName === 'object' && personName.nama_personil) {
+            allSelectedPersonnel.push(personName.nama_personil.trim());
+          } else if (typeof personName === 'string' && personName.trim()) {
+            allSelectedPersonnel.push(personName.trim());
+          }
         }
       });
     });

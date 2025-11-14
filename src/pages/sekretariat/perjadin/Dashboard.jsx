@@ -311,7 +311,7 @@ const Dashboard = ({ refreshTrigger, onFilterClick }) => {
       
       const response = await api.get('/perjadin/dashboard');
       
-      if (response.data.success) {
+      if (response.data.status === 'success') {
         const dashData = response.data.data || {
           total: 0,
           mingguan: 0,
@@ -371,7 +371,7 @@ const Dashboard = ({ refreshTrigger, onFilterClick }) => {
       
       console.log('📅 Dashboard: Weekly schedule data:', response.data);
       
-      if (response.data.success && response.data.data && Array.isArray(response.data.data)) {
+      if (response.data.status === 'success' && response.data.data && Array.isArray(response.data.data)) {
         const today = new Date();
         const processedSchedule = response.data.data.map(day => ({
           date: new Date(day.tanggal),

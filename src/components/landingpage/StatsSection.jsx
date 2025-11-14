@@ -60,7 +60,7 @@ const StatsSection = () => {
 
 	return (
 		<section ref={ref} className="bg-gray-50 py-20">
-			<div className="w-7xl mx-auto">
+			<div className="container max-w-7xl mx-auto px-4">
 				<div className="text-center">
 					<h2 className="text-3xl font-bold text-gray-900">
 						Wilayah Administratif Kabupaten Bogor
