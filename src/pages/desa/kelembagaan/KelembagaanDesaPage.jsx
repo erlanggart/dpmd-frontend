@@ -14,7 +14,6 @@ import {
 	LuShield,
 	LuSprout,
 	LuBuilding2,
-	LuCrown,
 	LuPlus,
 	LuCheck,
 	LuArrowRight,
@@ -22,7 +21,6 @@ import {
 
 const MainCard = ({
 	title,
-	subtitle,
 	onClick,
 	icon: Icon,
 	gradient,
@@ -35,7 +33,7 @@ const MainCard = ({
 	>
 		<div className="flex items-center justify-between mb-4">
 			<div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
-				<Icon className="w-8 h-8 text-white" />
+				{Icon && <Icon className="w-8 h-8 text-white" />}
 			</div>
 			<LuArrowRight className="w-5 h-5 text-white/70" />
 		</div>
@@ -53,23 +51,25 @@ const SmallCard = ({
 	onClick,
 	cta,
 	onCta,
-	icon: Icon,
+	icon,
 	formed,
 	gradient,
-}) => (
-	<div
-		className={`rounded-xl p-4 shadow-md bg-gradient-to-r ${gradient} border border-white/10 hover:shadow-lg transition-all duration-300 ${
-			onClick ? "cursor-pointer hover:scale-105" : ""
-		}`}
-		onClick={onClick}
-	>
-		<div className="flex items-center justify-between mb-3">
-			<div className="flex items-center space-x-3">
-				<div className="p-2 bg-white/20 rounded-lg">
-					<Icon className="w-5 h-5 text-white" />
+}) => {
+	const IconComponent = icon;
+	return (
+		<div
+			className={`rounded-xl p-4 shadow-md bg-gradient-to-r ${gradient} border border-white/10 hover:shadow-lg transition-all duration-300 ${
+				onClick ? "cursor-pointer hover:scale-105" : ""
+			}`}
+			onClick={onClick}
+		>
+			<div className="flex items-center justify-between mb-3">
+				<div className="flex items-center space-x-3">
+					<div className="p-2 bg-white/20 rounded-lg">
+						{IconComponent && <IconComponent className="w-5 h-5 text-white" />}
+					</div>
+					<h4 className="font-semibold text-white">{title}</h4>
 				</div>
-				<h4 className="font-semibold text-white">{title}</h4>
-			</div>
 			{formed && <LuCheck className="w-5 h-5 text-green-300" />}
 		</div>
 
@@ -88,9 +88,8 @@ const SmallCard = ({
 			</button>
 		)}
 	</div>
-);
-
-export default function KelembagaanDesaPage() {
+	);
+};export default function KelembagaanDesaPage() {
 	const [summary, setSummary] = useState({
 		rt: 0,
 		rw: 0,

@@ -9,6 +9,9 @@ import {
 
 import {
 	LuStore,
+	LuFileText,
+	LuUsers,
+	LuStore,
 } from "react-icons/lu";
 import Footer from "../components/landingpage/Footer";
 
@@ -97,7 +100,7 @@ const DesaLayout = () => {
 									}
 									onClick={() =>
 										window.innerWidth < 1024 && setSidebarOpen(false)
-									} // Close on mobile click
+									}
 								>
 									<FiGrid className="h-6 w-6" />
 									<span
@@ -119,7 +122,7 @@ const DesaLayout = () => {
 									}
 									onClick={() =>
 										window.innerWidth < 1024 && setSidebarOpen(false)
-									} // Close on mobile click
+									}
 								>
 									<LuStore className="h-6 w-6" />
 									<span
@@ -128,6 +131,50 @@ const DesaLayout = () => {
 										}`}
 									>
 										BUMDES
+									</span>
+								</NavLink>
+							</li>
+							<li className="mb-2">
+								<NavLink
+									to="/desa/kelembagaan"
+									className={({ isActive }) =>
+										`${baseLinkClass} ${
+											isActive ? activeLinkClass : inactiveLinkClass
+										}`
+									}
+									onClick={() =>
+										window.innerWidth < 1024 && setSidebarOpen(false)
+									}
+								>
+									<LuUsers className="h-6 w-6" />
+									<span
+										className={`ml-3 whitespace-nowrap ${
+											!sidebarOpen && "lg:hidden"
+										}`}
+									>
+										Kelembagaan
+									</span>
+								</NavLink>
+							</li>
+							<li className="mb-2">
+								<NavLink
+									to="/desa/produk-hukum"
+									className={({ isActive }) =>
+										`${baseLinkClass} ${
+											isActive ? activeLinkClass : inactiveLinkClass
+										}`
+									}
+									onClick={() =>
+										window.innerWidth < 1024 && setSidebarOpen(false)
+									}
+								>
+									<LuFileText className="h-6 w-6" />
+									<span
+										className={`ml-3 whitespace-nowrap ${
+											!sidebarOpen && "lg:hidden"
+										}`}
+									>
+										Produk Hukum
 									</span>
 								</NavLink>
 							</li>

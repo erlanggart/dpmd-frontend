@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
 import {
 	LuArrowLeft,
 	LuBuilding2,
@@ -10,131 +9,118 @@ import {
 	LuSprout,
 	LuMapPin,
 	LuLoader,
-	LuHouse,
 	LuChevronRight,
 	LuEye,
 	LuUserCheck,
 } from "react-icons/lu";
 import { getDesaKelembagaanAll } from "../../api/kelembagaanApi";
 
-// Import komponen yang sudah ada dari desa kelembagaan
-import KelembagaanDetailPage from "../desa/kelembagaan/KelembagaanDetailPage";
-
 /**
- * AdminKelembagaanDetailPage - Wrapper untuk admin PMD mengakses detail kelembagaan desa
- *
- * Komponen ini memungkinkan admin PMD untuk melihat detail kelembagaan dari desa tertentu
- * dengan menggunakan komponen KelembagaanDetailPage yang sudah ada tetapi dengan konteks admin
+ * AdminKelembagaanDetailPage - Admin PMD mengakses detail kelembagaan desa
+ * Role protection sudah dilakukan di App.jsx routing
  */
 const AdminKelembagaanDetailPage = () => {
 	const { desaId } = useParams();
 	const navigate = useNavigate();
-	const { user } = useAuth();
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
 	const [desaInfo, setDesaInfo] = useState(null);
-	const [selectedKelembagaan, setSelectedKelembagaan] = useState(null);
 	const [kelembagaanList, setKelembagaanList] = useState([]);
 
-	// Check admin access
-	const isAdmin = ["superadmin", "pemberdayaan_masyarakat", "pmd"].includes(
-		user?.role
-	);
-
-	useEffect(() => {
-		if (!isAdmin) {
-			navigate("/dashboard");
-			return;
-		}
-		fetchDesaKelembagaan();
-	}, [desaId, isAdmin]);
-
-	const fetchDesaKelembagaan = async () => {
+	const fetchDesaKelembagaan = React.useCallback(async () => {
 		try {
 			setLoading(true);
+			setError(null);
+			
 			const response = await getDesaKelembagaanAll(desaId);
+			
+			console.log("API Response:", response); // Debug
 
-			setDesaInfo(response.desa.data);
+			setDesaInfo(response.data.desa);
 
 			// Buat list kelembagaan yang tersedia untuk navigasi
 			const kelembagaanItems = [];
+			const rwData = response.data.kelembagaan.rw || [];
+			const posyanduData = response.data.kelembagaan.posyandu || [];
 
-			// RW List
-			if (response.kelembagaan.rw && response.kelembagaan.rw.length > 0) {
-				response.kelembagaan.rw.forEach((rw) => {
-					kelembagaanItems.push({
-						type: "rw",
-						id: rw.id,
-						name: `RW ${rw.nomor}`,
-						data: rw,
-						count: rw.rt_count || 0,
-						icon: LuBuilding2,
-						color: "from-blue-500 to-indigo-600",
-					});
-				});
-			}
+			// RW - Tampilkan card summary
+			kelembagaanItems.push({
+				type: "rw",
+				id: null,
+				name: "RW (Rukun Warga)",
+				count: rwData.length,
+				totalRT: rwData.reduce((sum, rw) => sum + (rw.rt_count || 0), 0),
+				isCollection: true,
+				isEmpty: rwData.length === 0,
+				icon: LuBuilding2,
+				color: "from-blue-500 to-indigo-600",
+				data: rwData,
+			});
 
-			// Posyandu List
-			if (
-				response.kelembagaan.posyandu &&
-				response.kelembagaan.posyandu.length > 0
-			) {
-				response.kelembagaan.posyandu.forEach((posyandu) => {
-					kelembagaanItems.push({
-						type: "posyandu",
-						id: posyandu.id,
-						name: posyandu.nama,
-						data: posyandu,
-						icon: LuHeart,
-						color: "from-pink-500 to-red-600",
-					});
-				});
-			}
+			// Posyandu - Tampilkan card summary
+			kelembagaanItems.push({
+				type: "posyandu",
+				id: null,
+				name: "Posyandu",
+				count: posyanduData.length,
+				isCollection: true,
+				isEmpty: posyanduData.length === 0,
+				icon: LuHeart,
+				color: "from-pink-500 to-red-600",
+				data: posyanduData,
+			});
 
-			// Single entities
-			if (response.kelembagaan.karangTaruna) {
-				kelembagaanItems.push({
-					type: "karang-taruna",
-					id: response.kelembagaan.karangTaruna.id,
-					name: response.kelembagaan.karangTaruna.nama,
-					data: response.kelembagaan.karangTaruna,
-					icon: LuUsers,
-					color: "from-purple-500 to-indigo-600",
-				});
-			}
+			// Karang Taruna - Single entity
+			const karangTaruna = response.data.kelembagaan.karang_taruna;
+			kelembagaanItems.push({
+				type: "karang-taruna",
+				id: karangTaruna?.id || null,
+				name: karangTaruna?.nama || "Karang Taruna",
+				isCollection: false,
+				isEmpty: !karangTaruna,
+				icon: LuUsers,
+				color: "from-purple-500 to-indigo-600",
+				data: karangTaruna,
+			});
 
-			if (response.kelembagaan.lpm) {
-				kelembagaanItems.push({
-					type: "lpm",
-					id: response.kelembagaan.lpm.id,
-					name: response.kelembagaan.lpm.nama,
-					data: response.kelembagaan.lpm,
-					icon: LuUserCheck,
-					color: "from-gray-500 to-gray-700",
-				});
-			}
+			// LPM - Single entity
+			const lpm = response.data.kelembagaan.lpm;
+			kelembagaanItems.push({
+				type: "lpm",
+				id: lpm?.id || null,
+				name: lpm?.nama || "LPM (Lembaga Pemberdayaan Masyarakat)",
+				isCollection: false,
+				isEmpty: !lpm,
+				icon: LuUserCheck,
+				color: "from-gray-500 to-gray-700",
+				data: lpm,
+			});
 
-			if (response.kelembagaan.satlinmas) {
-				kelembagaanItems.push({
-					type: "satlinmas",
-					id: response.kelembagaan.satlinmas.id,
-					name: response.kelembagaan.satlinmas.nama,
-					data: response.kelembagaan.satlinmas,
-					icon: LuShield,
-					color: "from-green-500 to-emerald-600",
-				});
-			}
+			// Satlinmas - Single entity
+			const satlinmas = response.data.kelembagaan.satlinmas;
+			kelembagaanItems.push({
+				type: "satlinmas",
+				id: satlinmas?.id || null,
+				name: satlinmas?.nama || "Satlinmas",
+				isCollection: false,
+				isEmpty: !satlinmas,
+				icon: LuShield,
+				color: "from-green-500 to-emerald-600",
+				data: satlinmas,
+			});
 
-			if (response.kelembagaan.pkk) {
-				kelembagaanItems.push({
-					type: "pkk",
-					id: response.kelembagaan.pkk.id,
-					name: response.kelembagaan.pkk.nama,
-					data: response.kelembagaan.pkk,
-					icon: LuSprout,
-					color: "from-emerald-500 to-green-600",
-				});
-			}
+			// PKK - Single entity
+			const pkk = response.data.kelembagaan.pkk;
+			kelembagaanItems.push({
+				type: "pkk",
+				id: pkk?.id || null,
+				name: pkk?.nama || "PKK (Pemberdayaan Kesejahteraan Keluarga)",
+				isCollection: false,
+				isEmpty: !pkk,
+				icon: LuSprout,
+				color: "from-emerald-500 to-green-600",
+				data: pkk,
+			});
 
 			setKelembagaanList(kelembagaanItems);
 		} catch (err) {
@@ -143,29 +129,34 @@ const AdminKelembagaanDetailPage = () => {
 		} finally {
 			setLoading(false);
 		}
-	};
+	}, [desaId]);
+
+	useEffect(() => {
+		fetchDesaKelembagaan();
+	}, [fetchDesaKelembagaan]);
 
 	const handleKelembagaanClick = (item) => {
-		// Navigate to detail kelembagaan dengan role admin
-		navigate(`/dashboard/kelembagaan/admin/${desaId}/${item.type}/${item.id}`);
+		// Jika belum terbentuk, tidak bisa di-click
+		if (item.isEmpty) {
+			return;
+		}
+
+		// Untuk collection (RW, Posyandu), bisa navigate ke list
+		if (item.isCollection && item.count > 0) {
+			// TODO: Navigate to list page jika ada
+			console.log("Navigate to", item.type, "list");
+			return;
+		}
+
+		// Untuk single entity, navigate ke detail
+		if (!item.isCollection && item.id) {
+			navigate(`/dashboard/kelembagaan/admin/${desaId}/${item.type}/${item.id}`);
+		}
 	};
 
 	const handleBackToList = () => {
 		navigate("/dashboard/kelembagaan");
 	};
-
-	if (!isAdmin) {
-		return (
-			<div className="min-h-screen bg-gray-50 flex items-center justify-center">
-				<div className="text-center">
-					<h2 className="text-xl font-bold text-red-600">Akses Ditolak</h2>
-					<p className="text-gray-600 mt-2">
-						Anda tidak memiliki akses ke halaman ini.
-					</p>
-				</div>
-			</div>
-		);
-	}
 
 	if (loading) {
 		return (
@@ -205,11 +196,6 @@ const AdminKelembagaanDetailPage = () => {
 				</div>
 			</div>
 		);
-	}
-
-	// If selectedKelembagaan is set, show the detail page
-	if (selectedKelembagaan) {
-		return <KelembagaanDetailPage />;
 	}
 
 	return (
@@ -253,16 +239,17 @@ const AdminKelembagaanDetailPage = () => {
 
 				{/* Grid Kelembagaan */}
 				<div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-					{kelembagaanList.map((item, index) => (
+					{kelembagaanList.map((item) => (
 						<KelembagaanCard
-							key={`${item.type}-${item.id}`}
+							key={`${item.type}-${item.id || 'empty'}`}
 							item={item}
 							onClick={() => handleKelembagaanClick(item)}
 						/>
 					))}
 				</div>
 
-				{kelembagaanList.length === 0 && (
+				{/* Empty state jika tidak ada data sama sekali */}
+				{kelembagaanList.every(item => item.isEmpty) && (
 					<div className="text-center py-16">
 						<div className="text-gray-400 mb-4">
 							<LuBuilding2 className="w-16 h-16 mx-auto" />
@@ -284,16 +271,19 @@ const AdminKelembagaanDetailPage = () => {
 					<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
 						<div className="text-center">
 							<div className="text-2xl font-bold text-blue-600">
-								{kelembagaanList.filter((item) => item.type === "rw").length}
+								{kelembagaanList.find((item) => item.type === "rw")?.count || 0}
 							</div>
 							<div className="text-sm text-gray-600">Total RW</div>
 						</div>
 						<div className="text-center">
+							<div className="text-2xl font-bold text-blue-400">
+								{kelembagaanList.find((item) => item.type === "rw")?.totalRT || 0}
+							</div>
+							<div className="text-sm text-gray-600">Total RT</div>
+						</div>
+						<div className="text-center">
 							<div className="text-2xl font-bold text-pink-600">
-								{
-									kelembagaanList.filter((item) => item.type === "posyandu")
-										.length
-								}
+								{kelembagaanList.find((item) => item.type === "posyandu")?.count || 0}
 							</div>
 							<div className="text-sm text-gray-600">Total Posyandu</div>
 						</div>
@@ -301,19 +291,11 @@ const AdminKelembagaanDetailPage = () => {
 							<div className="text-2xl font-bold text-green-600">
 								{
 									kelembagaanList.filter((item) =>
-										["karang-taruna", "lpm", "satlinmas", "pkk"].includes(
-											item.type
-										)
+										["karang-taruna", "lpm", "satlinmas", "pkk"].includes(item.type) && !item.isEmpty
 									).length
 								}
 							</div>
-							<div className="text-sm text-gray-600">Kelembagaan Lain</div>
-						</div>
-						<div className="text-center">
-							<div className="text-2xl font-bold text-gray-600">
-								{kelembagaanList.length}
-							</div>
-							<div className="text-sm text-gray-600">Total Kelembagaan</div>
+							<div className="text-sm text-gray-600">Kelembagaan Lain Terbentuk</div>
 						</div>
 					</div>
 				</div>
@@ -331,34 +313,52 @@ const KelembagaanCard = ({ item, onClick }) => {
 		if (e.target.closest(".eye-button")) {
 			return;
 		}
-		onClick();
+		
+		// Jika belum terbentuk, tidak bisa di-click
+		if (!item.isEmpty) {
+			onClick();
+		}
 	};
 
 	const handleEyeClick = (e) => {
 		e.preventDefault();
 		e.stopPropagation();
-		onClick();
+		if (!item.isEmpty) {
+			onClick();
+		}
 	};
 
 	return (
 		<div
 			onClick={handleCardClick}
-			className="group cursor-pointer bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 border border-gray-200 hover:border-blue-300"
+			className={`group bg-white rounded-xl shadow-sm transition-all duration-300 border ${
+				item.isEmpty 
+					? 'border-gray-300 opacity-75' 
+					: 'cursor-pointer hover:shadow-lg transform hover:-translate-y-1 border-gray-200 hover:border-blue-300'
+			}`}
 		>
 			<div
-				className={`h-1.5 bg-gradient-to-r ${item.color} rounded-t-xl`}
+				className={`h-1.5 bg-gradient-to-r ${item.color} rounded-t-xl ${
+					item.isEmpty ? 'opacity-50' : ''
+				}`}
 			></div>
 
 			<div className="p-6">
 				<div className="flex items-center justify-between mb-4">
 					<div className="flex items-center space-x-3">
 						<div
-							className={`w-12 h-12 bg-gradient-to-r ${item.color} rounded-xl flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform duration-300`}
+							className={`w-12 h-12 bg-gradient-to-r ${item.color} rounded-xl flex items-center justify-center text-white shadow-lg transition-transform duration-300 ${
+								item.isEmpty ? 'opacity-50' : 'group-hover:scale-110'
+							}`}
 						>
 							<Icon className="w-6 h-6" />
 						</div>
-						<div>
-							<h3 className="text-lg font-semibold text-gray-800 group-hover:text-blue-800 transition-colors">
+						<div className="flex-1">
+							<h3 className={`text-lg font-semibold transition-colors ${
+								item.isEmpty 
+									? 'text-gray-600' 
+									: 'text-gray-800 group-hover:text-blue-800'
+							}`}>
 								{item.name}
 							</h3>
 							<p className="text-sm text-gray-500 capitalize">
@@ -367,27 +367,71 @@ const KelembagaanCard = ({ item, onClick }) => {
 						</div>
 					</div>
 
-					<button
-						onClick={handleEyeClick}
-						className="eye-button p-2 rounded-full hover:bg-blue-50 transition-colors group/btn"
-						title="Lihat Detail"
-					>
-						<LuEye className="w-5 h-5 text-gray-400 group-hover/btn:text-blue-500 transition-colors" />
-					</button>
+					{!item.isEmpty && (
+						<button
+							onClick={handleEyeClick}
+							className="eye-button p-2 rounded-full hover:bg-blue-50 transition-colors group/btn"
+							title="Lihat Detail"
+						>
+							<LuEye className="w-5 h-5 text-gray-400 group-hover/btn:text-blue-500 transition-colors" />
+						</button>
+					)}
 				</div>
 
-				{item.data?.alamat && (
-					<div className="flex items-center space-x-2 text-sm text-gray-500 mb-3">
-						<LuMapPin className="w-4 h-4" />
+				{/* Status Badge */}
+				<div className="mb-3">
+					{item.isEmpty ? (
+						<span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-600">
+							<span className="w-2 h-2 bg-gray-400 rounded-full mr-2"></span>
+							Belum Terbentuk
+						</span>
+					) : (
+						<span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-700">
+							<span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+							Sudah Terbentuk
+						</span>
+					)}
+				</div>
+
+				{/* Collection Info (for RW, Posyandu) */}
+				{item.isCollection && (
+					<div className="space-y-2">
+						<div className="flex items-center justify-between text-sm">
+							<span className="text-gray-600">Total {item.type.toUpperCase()}:</span>
+							<span className={`font-bold text-lg ${
+								item.count > 0 ? 'text-blue-600' : 'text-gray-400'
+							}`}>
+								{item.count}
+							</span>
+						</div>
+						{item.type === "rw" && (
+							<div className="flex items-center justify-between text-sm">
+								<span className="text-gray-600">Total RT:</span>
+								<span className={`font-semibold ${
+									item.totalRT > 0 ? 'text-blue-500' : 'text-gray-400'
+								}`}>
+									{item.totalRT}
+								</span>
+							</div>
+						)}
+					</div>
+				)}
+
+				{/* Single Entity Info */}
+				{!item.isCollection && item.data?.alamat && (
+					<div className="flex items-center space-x-2 text-sm text-gray-500 mt-3">
+						<LuMapPin className="w-4 h-4 flex-shrink-0" />
 						<span className="truncate">{item.data.alamat}</span>
 					</div>
 				)}
 
-				{item.count !== undefined && (
-					<div className="text-sm">
-						<span className="text-gray-600">Memiliki: </span>
-						<span className="font-semibold text-blue-600">{item.count} RT</span>
-					</div>
+				{/* Empty State Message */}
+				{item.isEmpty && (
+					<p className="text-sm text-gray-500 mt-2 italic">
+						{item.isCollection 
+							? `Belum ada data ${item.type} yang terdaftar`
+							: 'Kelembagaan ini belum dibentuk'}
+					</p>
 				)}
 			</div>
 		</div>
