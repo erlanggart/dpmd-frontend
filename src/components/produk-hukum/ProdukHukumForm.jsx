@@ -36,8 +36,8 @@ const produkHukumSchema = z.object({
 		.any()
 		.optional()
 		.refine(
-			(file) => !file || (file && file.size <= 5 * 1024 * 1024), // 5MB max size
-			`Ukuran file maksimal adalah 5MB.`
+			(file) => !file || (file && file.size <= 10 * 1024 * 1024), // 10MB max size
+			`Ukuran file maksimal adalah 10MB.`
 		)
 		.refine(
 			(file) => !file || (file && file.type === "application/pdf"),
@@ -139,8 +139,11 @@ const ProdukHukumForm = ({ onSubmit, initialData }) => {
 		}
 	};
 
-	const handleSubmit = (e) => {
+	const handleSubmit = async (e) => {
 		e.preventDefault();
+
+		if (isSubmitting) return; // Prevent double submission
+
 		setIsSubmitting(true);
 		const result = produkHukumSchema.safeParse(formData);
 
@@ -155,10 +158,16 @@ const ProdukHukumForm = ({ onSubmit, initialData }) => {
 			return; // Hentikan submit jika validasi gagal
 		}
 
-		// Jika validasi berhasil, bersihkan error dan kirim data
-		setErrors({});
-		setIsSubmitting(false);
-		onSubmit(result.data); // Kirim data yang sudah divalidasi
+		try {
+			// Jika validasi berhasil, bersihkan error dan kirim data
+			setErrors({});
+			await onSubmit(result.data); // Kirim data yang sudah divalidasi dan tunggu selesai
+		} catch (error) {
+			console.error("Error in form submission:", error);
+			// Error akan ditangani di parent component, jadi kita hanya perlu reset loading
+		} finally {
+			setIsSubmitting(false);
+		}
 	};
 
 	return (
@@ -347,7 +356,14 @@ const ProdukHukumForm = ({ onSubmit, initialData }) => {
 							{(formData.file.size / 1024).toFixed(2)} KB)
 						</p>
 					) : (
-						<p>Seret & lepas file PDF di sini, atau klik untuk memilih file</p>
+						<div>
+							<p className="mb-2">
+								Seret & lepas file PDF di sini, atau klik untuk memilih file
+							</p>
+							<p className="text-sm text-gray-500">
+								Maksimal ukuran file: 10MB
+							</p>
+						</div>
 					)}
 				</div>
 				{errors.file && (
@@ -356,9 +372,35 @@ const ProdukHukumForm = ({ onSubmit, initialData }) => {
 			</div>
 			<button
 				type="submit"
-				className="bg-blue-500 text-white px-4 py-2 rounded"
+				className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 ${
+					isSubmitting
+						? "bg-gray-400 cursor-not-allowed"
+						: "bg-blue-500 hover:bg-blue-600 active:scale-95"
+				} text-white`}
 				disabled={isSubmitting}
 			>
+				{isSubmitting && (
+					<svg
+						className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+						xmlns="http://www.w3.org/2000/svg"
+						fill="none"
+						viewBox="0 0 24 24"
+					>
+						<circle
+							className="opacity-25"
+							cx="12"
+							cy="12"
+							r="10"
+							stroke="currentColor"
+							strokeWidth="4"
+						></circle>
+						<path
+							className="opacity-75"
+							fill="currentColor"
+							d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+						></path>
+					</svg>
+				)}
 				{isSubmitting ? "Menyimpan..." : "Simpan"}
 			</button>
 		</form>

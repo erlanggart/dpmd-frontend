@@ -4,24 +4,14 @@ import { useAuth } from "../context/AuthContext";
 import {
 	FiLogOut,
 	FiGrid,
-	FiBook,
-	FiUser,
 	FiMenu,
-	FiUserCheck,
 } from "react-icons/fi";
 
 import {
-<<<<<<< Updated upstream
-	LuBookMarked,
-	LuIdCard,
-	LuLandmark,
-	LuTrello,
-	LuUserCheck,
-=======
 	LuStore,
 	LuFileText,
 	LuUsers,
->>>>>>> Stashed changes
+	LuStore,
 } from "react-icons/lu";
 import Footer from "../components/landingpage/Footer";
 
@@ -124,7 +114,7 @@ const DesaLayout = () => {
 							</li>
 							<li className="mb-2">
 								<NavLink
-									to="/desa/profil-desa"
+									to="/desa/bumdes"
 									className={({ isActive }) =>
 										`${baseLinkClass} ${
 											isActive ? activeLinkClass : inactiveLinkClass
@@ -134,79 +124,13 @@ const DesaLayout = () => {
 										window.innerWidth < 1024 && setSidebarOpen(false)
 									}
 								>
-									<LuIdCard className="h-6 w-6" />
+									<LuStore className="h-6 w-6" />
 									<span
 										className={`ml-3 whitespace-nowrap ${
 											!sidebarOpen && "lg:hidden"
 										}`}
 									>
-										Profil Desa
-									</span>
-								</NavLink>
-							</li>
-							<li className="mb-2">
-								<NavLink
-									to="/desa/produk-hukum"
-									className={({ isActive }) =>
-										`${baseLinkClass} ${
-											isActive ? activeLinkClass : inactiveLinkClass
-										}`
-									}
-									onClick={() =>
-										window.innerWidth < 1024 && setSidebarOpen(false)
-									} // Close on mobile click
-								>
-									<LuBookMarked className="h-6 w-6" />
-									<span
-										className={`ml-3 whitespace-nowrap ${
-											!sidebarOpen && "lg:hidden"
-										}`}
-									>
-										Produk Hukum
-									</span>
-								</NavLink>
-							</li>
-							<li className="mb-2">
-								<NavLink
-									to="/desa/aparatur-desa"
-									className={({ isActive }) =>
-										`${baseLinkClass} ${
-											isActive ? activeLinkClass : inactiveLinkClass
-										}`
-									}
-									onClick={() =>
-										window.innerWidth < 1024 && setSidebarOpen(false)
-									} // Close on mobile click
-								>
-									<LuUserCheck className="h-6 w-6" />
-									<span
-										className={`ml-3 whitespace-nowrap ${
-											!sidebarOpen && "lg:hidden"
-										}`}
-									>
-										Aparatur Desa
-									</span>
-								</NavLink>
-							</li>
-							<li className="mb-2">
-								<NavLink
-									to="/desa/kelembagaan"
-									className={({ isActive }) =>
-										`${baseLinkClass} ${
-											isActive ? activeLinkClass : inactiveLinkClass
-										}`
-									}
-									onClick={() =>
-										window.innerWidth < 1024 && setSidebarOpen(false)
-									} // Close on mobile click
-								>
-									<LuLandmark className="h-6 w-6" />
-									<span
-										className={`ml-3 whitespace-nowrap ${
-											!sidebarOpen && "lg:hidden"
-										}`}
-									>
-										Kelembagaan Desa
+										BUMDES
 									</span>
 								</NavLink>
 							</li>

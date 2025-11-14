@@ -42,3 +42,44 @@
 		@apply bg-slate-100 border border-slate-200 p-2 rounded-md mt-2 shadow-sm;
 	}
 }
+
+/* Animation for error messages */
+@keyframes shake {
+	0%, 100% {
+		transform: translateX(0);
+	}
+	10%, 30%, 50%, 70%, 90% {
+		transform: translateX(-5px);
+	}
+	20%, 40%, 60%, 80% {
+		transform: translateX(5px);
+	}
+}
+
+.animate-shake {
+	animation: shake 0.5s ease-in-out;
+}
+
+/* 3D Card Flip Effects - Revolving Door */
+.perspective-1000 {
+	perspective: 1000px;
+}
+
+.rotate-y-180 {
+	transform: rotateY(180deg);
+}
+
+.transform-gpu {
+	transform: translateZ(0);
+	will-change: transform;
+}
+
+/* Preserve 3D for nested elements */
+.preserve-3d {
+	transform-style: preserve-3d;
+}
+
+.backface-hidden {
+	backface-visibility: hidden;
+	-webkit-backface-visibility: hidden;
+}

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../api";
-import { FiEye, FiEyeOff, FiLoader } from "react-icons/fi";
+import { FiEye, FiEyeOff, FiLoader, FiAlertCircle } from "react-icons/fi";
 import LoginImageSlider from "../components/login/LoginImageSlider";
 import { useAuth } from "../context/AuthContext";
 
@@ -19,19 +19,36 @@ const LoginPage = () => {
 		setLoading(true);
 		setError(null);
 		try {
-			const response = await api.post("/login", { email, password });
+			// Login to Express backend (single source of truth)
+			const response = await api.post("/auth/login", { email, password });
 
-			// 1. Simpan data user baru ke dalam sebuah variabel
-			const newUser = response.data.user;
+			const newUser = response.data.data.user;
+			const expressToken = response.data.data.token;
 
-			// 2. Gunakan fungsi login dari context untuk menyimpan data secara global
-			login(newUser, response.data.access_token);
+			console.log('✅ Express login successful');
 
-			// 3. Routing berdasarkan roles user
+			// Normalize role to roles array for compatibility
+			if (newUser.role && !newUser.roles) {
+				newUser.roles = [newUser.role];
+			}
+
+			// Save token and user using context
+			login(newUser, null, expressToken); // No Laravel token
+
+			// Routing based on user roles
 			if (newUser.roles.includes("desa")) {
-				navigate("/desa/dashboard"); // Arahkan ke dashboard desa
+				navigate("/desa/dashboard");
 			} else if (newUser.roles.includes("kecamatan")) {
-				navigate("/kecamatan/dashboard"); // Arahkan ke dashboard kecamatan
+				navigate("/kecamatan/dashboard");
+			} else if (
+				newUser.roles.includes("kepala_dinas") ||
+				newUser.roles.includes("sekretaris_dinas") ||
+				newUser.roles.includes("kabid_pemerintahan_desa") ||
+				newUser.roles.includes("kabid_spked") ||
+				newUser.roles.includes("kabid_kekayaan_keuangan_desa") ||
+				newUser.roles.includes("kabid_pemberdayaan_masyarakat_desa")
+			) {
+				navigate("/core-dashboard/dashboard");
 			} else if (
 				newUser.roles.includes("superadmin") ||
 				newUser.roles.includes("pemerintahan_desa") ||
@@ -41,16 +58,37 @@ const LoginPage = () => {
 				newUser.roles.includes("sekretariat") ||
 				newUser.roles.includes("prolap") ||
 				newUser.roles.includes("keuangan") ||
-				newUser.roles.includes("dinas") ||
-				newUser.roles.includes("kepala_dinas") ||
-				newUser.roles.includes("sekretaris_dinas")
+				newUser.roles.includes("dinas")
 			) {
-				navigate("/dashboard"); // Arahkan ke dashboard utama untuk superadmin, bidang, departemen, dan dinas
+				navigate("/dashboard");
 			} else {
-				navigate("/dashboard"); // Default ke dashboard utama
+				navigate("/dashboard");
 			}
 		} catch (err) {
-			setError(err.response?.data?.message || "Login gagal.");
+			console.error('Login error:', err);
+			
+			// Handle different error types
+			if (err.response) {
+				// Server responded with error
+				const status = err.response.status;
+				const message = err.response?.data?.message;
+				
+				if (status === 401) {
+					setError("Email atau password salah. Silakan coba lagi.");
+				} else if (status === 404) {
+					setError("Email tidak terdaftar dalam sistem.");
+				} else if (status === 403) {
+					setError("Akun Anda tidak memiliki akses. Hubungi admin.");
+				} else {
+					setError(message || "Login gagal. Silakan coba lagi.");
+				}
+			} else if (err.request) {
+				// Request made but no response
+				setError("Tidak dapat terhubung ke server. Periksa koneksi internet Anda.");
+			} else {
+				// Something else happened
+				setError("Terjadi kesalahan. Silakan coba lagi.");
+			}
 		} finally {
 			setLoading(false);
 		}
@@ -128,9 +166,19 @@ const LoginPage = () => {
 							</button>
 						</div>
 						{error && (
-							<p className="rounded-md bg-red-500/90 p-3 text-center text-sm text-white ">
-								{error}
-							</p>
+							<div className="rounded-lg bg-red-50 border border-red-200 p-4 animate-shake">
+								<div className="flex items-start gap-3">
+									<FiAlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+									<div className="flex-1">
+										<h3 className="text-sm font-semibold text-red-800 mb-1">
+											Login Gagal
+										</h3>
+										<p className="text-sm text-red-700">
+											{error}
+										</p>
+									</div>
+								</div>
+							</div>
 						)}
 						<div className="text-right">
 							<Link

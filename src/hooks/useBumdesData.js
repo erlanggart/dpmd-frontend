@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../api.js';
+import { generateSafeDataHash } from '../utils/hashUtils.js';
 
 export const useBumdesData = (initialData = null) => {
   const [bumdesData, setBumdesData] = useState([]);
@@ -14,7 +15,7 @@ export const useBumdesData = (initialData = null) => {
   const CACHE_DURATION = 5 * 60 * 1000;
 
   const generateDataHash = useCallback((data) => {
-    return btoa(JSON.stringify(data)).slice(0, 10);
+    return generateSafeDataHash(data);
   }, []);
 
   const shouldFetchData = useCallback(() => {
@@ -25,7 +26,7 @@ export const useBumdesData = (initialData = null) => {
   const fetchBumdesData = useCallback(async (forceRefresh = false) => {
     // Skip fetch if data is still fresh and not forcing refresh
     if (!forceRefresh && !shouldFetchData() && bumdesData.length > 0) {
-      console.log('📋 BUMDes: Using cached data, skipping fetch');
+      console.log('📋 BUMDes Hook: Using cached data, skipping fetch');
       setLoading(false);
       return;
     }
@@ -33,20 +34,26 @@ export const useBumdesData = (initialData = null) => {
     try {
       setLoading(true);
       setError(null);
-      console.log('🔄 BUMDes: Fetching fresh data...');
+      console.log('🔄 BUMDes Hook: Fetching fresh data...');
+      console.log('🔄 BUMDes Hook: API Base URL:', api.defaults.baseURL);
       
-      const response = await api.get('/bumdes');
+      const response = await api.get('/bumdes', {
+        timeout: 60000 // 60 seconds timeout for BUMDes data (187 records)
+      });
+      console.log('📊 BUMDes Hook: Raw response:', response);
+      
       const apiData = response.data && Array.isArray(response.data.data) ? response.data.data : [];
+      console.log('📊 BUMDes Hook: Processed data length:', apiData.length);
       
       // Check if data actually changed
       const newHash = generateDataHash(apiData);
       if (dataHash === newHash && !forceRefresh) {
-        console.log('📋 BUMDes: Data unchanged, skipping update');
+        console.log('📋 BUMDes Hook: Data unchanged, skipping update');
         setLoading(false);
         return;
       }
       
-      console.log('✅ BUMDes: Setting new data');
+      console.log('✅ BUMDes Hook: Setting new data');
       setBumdesData(apiData);
       setDataHash(newHash);
       setLastFetch(Date.now());
@@ -57,7 +64,18 @@ export const useBumdesData = (initialData = null) => {
       setKecamatanList(uniqueKecamatan.sort());
       
     } catch (err) {
-      console.error('❌ BUMDes: Failed to fetch data:', err);
+      console.error('❌ BUMDes Hook: Failed to fetch data:', err);
+      console.error('❌ BUMDes Hook: Error details:', {
+        message: err.message,
+        status: err.response?.status,
+        statusText: err.response?.statusText,
+        data: err.response?.data,
+        url: err.config?.url,
+        baseURL: err.config?.baseURL,
+        timeout: err.config?.timeout,
+        code: err.code,
+        name: err.name
+      });
       
       // Only set empty data if we don't have any cached data
       if (bumdesData.length === 0) {

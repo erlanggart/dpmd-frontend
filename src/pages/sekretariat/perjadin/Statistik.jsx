@@ -14,6 +14,7 @@ import {
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { FiBarChart2, FiCalendar, FiTrendingUp, FiUsers, FiFilter } from 'react-icons/fi';
 import api from '../../../api';
+import { generateSafeDataHashLong } from '../../../utils/hashUtils';
 
 ChartJS.register(
   CategoryScale,
@@ -58,11 +59,7 @@ const Statistik = ({ refreshTrigger }) => {
 
   // Cache utility functions
   const generateDataHash = (data) => {
-    try {
-      return btoa(JSON.stringify(data)).slice(0, 16);
-    } catch {
-      return Date.now().toString();
-    }
+    return generateSafeDataHashLong(data);
   };
 
   const isCacheValid = (cacheKey, maxAge = 120000) => { // 2 minutes default
@@ -105,7 +102,7 @@ const Statistik = ({ refreshTrigger }) => {
       
       console.log('📥 Statistik Dashboard: Received data:', response.data);
       
-      if (response.data.success) {
+      if (response.data.status === 'success') {
         const dashData = response.data.data || {
           mingguan: 0,
           bulanan: 0,
@@ -176,11 +173,11 @@ const Statistik = ({ refreshTrigger }) => {
       console.log('📊 Statistik: Received statistik data:', statistikResponse.data);
       console.log('📋 Statistik: Received kegiatan data:', kegiatanResponse.data);
       
-      if (statistikResponse.data.success) {
+      if (statistikResponse.data.status === 'success') {
         const statData = statistikResponse.data.data;
         
         // Enhance data with kegiatan analysis if available
-        if (kegiatanResponse.data.success && kegiatanResponse.data.data) {
+        if (kegiatanResponse.data.status === 'success' && kegiatanResponse.data.data) {
           const kegiatanData = kegiatanResponse.data.data;
           statData.enhancedAnalysis = analyzeKegiatanData(kegiatanData);
         }

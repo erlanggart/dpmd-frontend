@@ -12,30 +12,36 @@ export const AuthProvider = ({ children }) => {
 		return storedUser ? JSON.parse(storedUser) : null;
 	});
 
-	const [token, setToken] = useState(() => {
-		return localStorage.getItem("authToken");
+	// Express token - single source of authentication
+	const [expressToken, setExpressToken] = useState(() => {
+		return localStorage.getItem("expressToken");
 	});
 
-	// Fungsi untuk menyimpan data saat login
-	const login = (userData, authToken) => {
+	// Fungsi untuk menyimpan data saat login (Express-only)
+	const login = (userData, _deprecated = null, expressAuthToken = null) => {
 		localStorage.setItem("user", JSON.stringify(userData));
-		localStorage.setItem("authToken", authToken);
 		setUser(userData);
-		setToken(authToken);
+
+		// Save Express token (primary authentication)
+		if (expressAuthToken) {
+			localStorage.setItem("expressToken", expressAuthToken);
+			setExpressToken(expressAuthToken);
+		}
 	};
 
 	// Fungsi untuk menghapus data saat logout
 	const logout = () => {
 		localStorage.removeItem("user");
-		localStorage.removeItem("authToken");
+		localStorage.removeItem("expressToken");
 		setUser(null);
-		setToken(null);
+		setExpressToken(null);
 	};
 
 	// Nilai yang akan dibagikan ke semua komponen
 	const value = {
 		user,
-		token,
+		token: expressToken, // Alias for compatibility
+		expressToken,
 		login,
 		logout,
 	};

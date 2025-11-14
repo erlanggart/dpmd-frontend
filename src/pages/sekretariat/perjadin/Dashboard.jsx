@@ -12,6 +12,7 @@ import {
 } from 'react-icons/fi';
 import api from '../../../api';
 import Swal from 'sweetalert2';
+import { generateSafeDataHashLong } from '../../../utils/hashUtils';
 
 // Enhanced animations and transitions
 const enhancedStyles = `
@@ -179,7 +180,7 @@ const ActivityCard = ({ activity }) => {
 const Dashboard = ({ refreshTrigger, onFilterClick }) => {
   // Cache utility functions
   const generateDataHash = (data) => {
-    return btoa(JSON.stringify(data)).substring(0, 16);
+    return generateSafeDataHashLong(data);
   };
 
   const isCacheValid = (cacheKey, maxAge = 30000) => { // 30 seconds default
@@ -310,7 +311,7 @@ const Dashboard = ({ refreshTrigger, onFilterClick }) => {
       
       const response = await api.get('/perjadin/dashboard');
       
-      if (response.data.success) {
+      if (response.data.status === 'success') {
         const dashData = response.data.data || {
           total: 0,
           mingguan: 0,
@@ -370,7 +371,7 @@ const Dashboard = ({ refreshTrigger, onFilterClick }) => {
       
       console.log('📅 Dashboard: Weekly schedule data:', response.data);
       
-      if (response.data.success && response.data.data && Array.isArray(response.data.data)) {
+      if (response.data.status === 'success' && response.data.data && Array.isArray(response.data.data)) {
         const today = new Date();
         const processedSchedule = response.data.data.map(day => ({
           date: new Date(day.tanggal),
@@ -516,7 +517,7 @@ const Dashboard = ({ refreshTrigger, onFilterClick }) => {
           </div>
         </div>
 
-        {/* Status Aktif */}
+        {/* Total Personil Terlibat */}
         <div className="group relative overflow-hidden bg-gradient-to-br from-emerald-600 to-emerald-800 rounded-2xl p-6 text-white shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-16 translate-x-16"></div>
           <div className="relative z-10">
@@ -525,15 +526,15 @@ const Dashboard = ({ refreshTrigger, onFilterClick }) => {
                 <FiUsers className="w-6 h-6 text-white" />
               </div>
               <div className="text-right">
-                <div className="text-3xl font-bold">{data.per_bidang.length}</div>
-                <div className="text-emerald-200 text-sm">Bidang</div>
+                <div className="text-3xl font-bold">{data.total_personil_terlibat || 0}</div>
+                <div className="text-emerald-200 text-sm">Personil</div>
               </div>
             </div>
             <div className="space-y-2">
-              <h3 className="font-semibold text-lg">Bidang Aktif</h3>
+              <h3 className="font-semibold text-lg">Total Personil</h3>
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                <span className="text-emerald-200 text-sm">Total bidang</span>
+                <span className="text-emerald-200 text-sm">Yang terlibat</span>
               </div>
             </div>
           </div>
@@ -554,7 +555,7 @@ const Dashboard = ({ refreshTrigger, onFilterClick }) => {
               </div>
               <div className="text-right">
                 <div className="text-2xl font-bold text-white">{data.per_bidang.length}</div>
-                <div className="text-slate-300 text-sm">Bidang Aktif</div>
+                <div className="text-slate-300 text-sm">Bidang Terlibat</div>
               </div>
             </div>
           </div>
@@ -576,7 +577,7 @@ const Dashboard = ({ refreshTrigger, onFilterClick }) => {
                         {b.nama_bidang}
                       </span>
                       <span className="text-sm text-slate-600 mt-1">
-                        Bidang Kerja • {b.total_kegiatan || 0} Kegiatan
+                        Bidang Kerja • {b.total || 0} Kegiatan
                       </span>
                     </div>
                   </div>

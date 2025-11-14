@@ -112,8 +112,8 @@ const MusdesusView = () => {
   };
 
   const handlePreview = (filename) => {
-    // Use the new API endpoint for viewing files
-    const fileUrl = `${api.defaults.baseURL}/musdesus/view/${filename}`;
+    // Gunakan path yang benar untuk preview file musdesus
+    const fileUrl = `${api.defaults.baseURL}/uploads/musdesus/${filename}`;
     window.open(fileUrl, '_blank');
   };
 

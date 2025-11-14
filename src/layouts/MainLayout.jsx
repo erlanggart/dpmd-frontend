@@ -11,17 +11,13 @@ import {
 	FiMenu,
 	FiChevronsRight,
 	FiChevronsLeft,
+	FiFileText,
 } from "react-icons/fi";
 
 import {
-	TbBuildingBank,
-	TbHomeDollar,
 	TbMap,
-	TbUserPentagon,
 } from "react-icons/tb";
 import SearchPalette from "../components/SearchPalatte";
-import RoleSwitcher from "../components/RoleSwitcher";
-import { getUserRole, getDisposisiMenuPath, getDisposisiMenuLabel } from "../utils/roleUtils";
 
 // Komponen Submenu (Accordion Item)
 const SubMenu = ({ item, openMenu, toggleMenu, isMinimized }) => {
@@ -135,7 +131,7 @@ const MainLayout = () => {
 	}, [location.pathname, user]); // Ganti menuItems dengan user untuk menghindari circular dependency
 
 	const handleLogout = () => {
-		localStorage.removeItem("authToken");
+		localStorage.removeItem("expressToken");
 		localStorage.removeItem("user");
 		navigate("/login");
 	};
@@ -146,26 +142,28 @@ const MainLayout = () => {
 
 	// Definisikan menu berdasarkan role user menggunakan useMemo
 	const menuItems = useMemo(() => {
+		// Menu khusus untuk Core Dashboard (Multi-role access)
+		if (
+			user?.role === 'kepala_dinas' ||
+			user?.role === 'sekretaris_dinas' ||
+			user?.role === 'kabid_pemerintahan_desa' ||
+			user?.role === 'kabid_spked' ||
+			user?.role === 'kabid_kekayaan_keuangan_desa' ||
+			user?.role === 'kabid_pemberdayaan_masyarakat_desa'
+		) {
+			return [
+				{
+					key: "core-dashboard",
+					label: "Dashboard",
+					icon: <FiGrid />,
+					children: [
+						{ to: "/core-dashboard/dashboard", label: "Analytics" },
+					],
+				},
+			];
+		}
+
 		const baseMenuItems = [
-			{
-				key: "pemdes",
-				label: "Pemdes",
-				icon: <TbUserPentagon />,
-				children: [
-					{ to: "/dashboard/profil-desa", label: "Profil Desa" },
-					{ to: "/dashboard/aparatur-desa", label: "Aparatur Desa" },
-				],
-			},
-			{
-				key: "keudes",
-				label: "KKD",
-				icon: <TbHomeDollar />,
-				children: [
-					{ to: "/dashboard/dana-desa", label: "Dana Desa" },
-					{ to: "/dashboard/alokasi-dana-desa", label: "Alokasi Dana Desa" },
-					{ to: "/dashboard/bhprd", label: "BHPRD" },
-				],
-			},
 			{
 				key: "sarpras",
 				label: "SPKED",
@@ -194,26 +192,7 @@ const MainLayout = () => {
 				children: [
 					{ to: "/dashboard/pegawai", label: "Pegawai" },
 					{ to: "/dashboard/perjalanan-dinas", label: "Perjalanan Dinas" },
-<<<<<<< Updated upstream
 					{ to: getDisposisiMenuPath(getUserRole()), label: getDisposisiMenuLabel(getUserRole()) },
-=======
-				],
-			},
-			{
-				key: "pmd",
-				label: "PMD",
-				icon: <FiFileText />,
-				children: [
-					{ to: "/dashboard/kelembagaan", label: "Kelembagaan" },
-				],
-			},
-			{
-				key: "pemdes",
-				label: "Bid. Pemdes",
-				icon: <FiFileText />,
-				children: [
-					{ to: "/dashboard/laporan-desa", label: "Laporan Desa" },
->>>>>>> Stashed changes
 				],
 			},
 			{
@@ -228,7 +207,26 @@ const MainLayout = () => {
 			},
 		];
 
-		// Gabungkan menu berdasarkan role user
+	// Menu admin yang akan ditambahkan jika user adalah superadmin atau bidang
+	const adminMenuItems = [
+		{
+			key: "sekretariat",
+			label: "Sekretariat",
+			icon: <FiClipboard />,
+			children: [
+				{ to: "/dashboard/perjalanan-dinas", label: "Perjalanan Dinas" },
+			],
+		},
+		{
+			key: "landing",
+			label: "Landing Page",
+			icon: <FiLayout />,
+			children: [
+				{ to: "/dashboard/hero-gallery", label: "Galeri Hero" },
+				{ to: "/dashboard/berita", label: "Berita" },
+			],
+		},
+	];		// Gabungkan menu berdasarkan role user
 		if (!user) {
 			return baseMenuItems;
 		}
@@ -240,9 +238,15 @@ const MainLayout = () => {
 		const isSuperAdmin = userRoles.includes("superadmin") || userRole === 'superadmin';
 		const isBidangUser = userRoles.includes("bidang") || Boolean(user.bidangRole) || bidangRoles.includes(userRole);
 		
-		if (isSuperAdmin || isBidangUser) {
+		// Only superadmin can access Landing Page section
+		if (isSuperAdmin) {
 			const finalMenu = [...baseMenuItems, ...adminMenuItems];
 			return finalMenu;
+		}
+		
+		// Bidang users only get base menu
+		if (isBidangUser) {
+			return baseMenuItems;
 		}
 		
 		return baseMenuItems;
@@ -302,33 +306,35 @@ const MainLayout = () => {
 						isSidebarMinimized ? "overflow-y-hidden" : "overflow-y-auto"
 					} p-4`}
 				>
-					{/* Link Dashboard Utama */}
-					<NavLink
-						to="/dashboard"
-						className={({ isActive }) =>
-							`flex items-center p-3 rounded-lg transition-colors ${
-								isSidebarMinimized ? "justify-center" : ""
-							} ${
-								isActive
-									? "sidebar-active font-semibold"
-									: "text-gray-600 hover:bg-gray-100"
-							}`
-						}
-						end
-					>
-						<FiGrid
-							className={`h-5 w-5 flex-shrink-0 ${
-								isSidebarMinimized ? "" : "mr-3"
-							}`}
-						/>
-						<span
-							className={`transition-all duration-200 ${
-								isSidebarMinimized ? "w-0 opacity-0" : "w-auto opacity-100"
-							}`}
+					{/* Link Dashboard Utama - Hidden for kepala_dinas */}
+					{user?.role !== 'kepala_dinas' && (
+						<NavLink
+							to="/dashboard"
+							className={({ isActive }) =>
+								`flex items-center p-3 rounded-lg transition-colors ${
+									isSidebarMinimized ? "justify-center" : ""
+								} ${
+									isActive
+										? "sidebar-active font-semibold"
+										: "text-gray-600 hover:bg-gray-100"
+								}`
+							}
+							end
 						>
-							Dashboard
-						</span>
-					</NavLink>
+							<FiGrid
+								className={`h-5 w-5 flex-shrink-0 ${
+									isSidebarMinimized ? "" : "mr-3"
+								}`}
+							/>
+							<span
+								className={`transition-all duration-200 ${
+									isSidebarMinimized ? "w-0 opacity-0" : "w-auto opacity-100"
+								}`}
+							>
+								Dashboard
+							</span>
+						</NavLink>
+					)}
 
 					{/* Render Menu - Semua menu dalam satu sidebar tanpa pemisahan */}
 					{menuItems.map((item) => (
@@ -403,9 +409,6 @@ const MainLayout = () => {
 					closePalette={() => setSearchOpen(false)}
 				/>
 			)}
-			
-			{/* Role Switcher untuk development */}
-			<RoleSwitcher />
 		</div>
 	);
 };

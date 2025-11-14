@@ -10,10 +10,11 @@ import {
   ArcElement,
 } from 'chart.js';
 import { Bar, Doughnut } from 'react-chartjs-2';
-import {
+import { 
   ChartBarIcon,
   ArrowLeftIcon,
   EyeIcon,
+  ArrowDownTrayIcon,
   HomeIcon,
   BuildingOfficeIcon,
   FolderIcon,
@@ -45,12 +46,6 @@ const MusdesusStatsPage = () => {
   const [selectedDesa, setSelectedDesa] = useState('');
   const [kecamatanList, setKecamatanList] = useState([]);
   const [desaList, setDesaList] = useState([]);
-  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
-  const [monitoringData, setMonitoringData] = useState(null);
-  
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const filesPerPage = 5;
   
   // Modal states
   const [deleteModal, setDeleteModal] = useState({
@@ -67,50 +62,31 @@ const MusdesusStatsPage = () => {
 
   useEffect(() => {
     loadData();
-    checkAdminStatus();
   }, []);
 
   useEffect(() => {
     filterFiles();
   }, [filesList, selectedKecamatan, selectedDesa]);
 
-  useEffect(() => {
-    // Check admin status every minute
-    const interval = setInterval(() => {
-      checkAdminStatus();
-    }, 60000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  const checkAdminStatus = () => {
-    const isLoggedIn = checkAdminVerification();
-    console.log('Checking admin status, current login state:', isLoggedIn);
-    setIsAdminLoggedIn(isLoggedIn);
-  };
-
   const loadData = async () => {
     try {
       setLoading(true);
-      // Load statistics, file list, kecamatan, dan monitoring data bersamaan
-      const [statsResponse, filesResponse, kecamatanResponse, monitoringResponse] = await Promise.all([
+      // Load statistics, file list, dan kecamatan bersamaan
+      const [statsResponse, filesResponse, kecamatanResponse] = await Promise.all([
         api.get('/public/musdesus/stats'),
         api.get('/public/musdesus/files'),
-        api.get('/musdesus/kecamatan'),
-        api.get('/public/musdesus/monitoring').catch(() => ({ data: { data: null } }))
+        api.get('/musdesus/kecamatan')
       ]);
       
       setStats(statsResponse.data.data);
       setFilesList(filesResponse.data.data || []);
       setKecamatanList(kecamatanResponse.data.data || []);
-      setMonitoringData(monitoringResponse.data.data);
     } catch (error) {
       console.error('Error loading data:', error);
       toast.error('Gagal memuat data musdesus');
       setStats(null);
       setFilesList([]);
       setKecamatanList([]);
-      setMonitoringData(null);
     } finally {
       setLoading(false);
     }
@@ -143,7 +119,6 @@ const MusdesusStatsPage = () => {
     }
     
     setFilteredFiles(filtered);
-    setCurrentPage(1); // Reset to first page when filter changes
   };
 
   const handleKecamatanChange = async (kecamatanId) => {
@@ -156,50 +131,16 @@ const MusdesusStatsPage = () => {
     }
   };
 
-  const handleResetFilter = () => {
-    setSelectedKecamatan('');
-    setSelectedDesa('');
-    setCurrentPage(1);
-  };
-
-  // Calculate pagination
-  const totalPages = Math.ceil(filteredFiles.length / filesPerPage);
-  const startIndex = (currentPage - 1) * filesPerPage;
-  const endIndex = startIndex + filesPerPage;
-  const currentFiles = filteredFiles.slice(startIndex, endIndex);
-
-  const handlePageChange = (page) => {
-    setCurrentPage(page);
-  };
-
-  // ====================================================================
-  // FUNGSI UTAMA YANG DIPERBAIKI: Mengatasi URL & memastikan PREVIEW
-  // ====================================================================
   const handleDownload = async (filename) => {
     try {
-      // 1. Ambil URL dasar (misal: https://api.dpmdbogorkab.id/api)
-      let baseUrl = api.defaults.baseURL;
-
-      // 2. HAPUS subdomain 'api.' jika ada. (Perbaikan URL Domain)
-      // Ini mengatasi masalah https://api.dpmdbogorkab.id menjadi https://dpmdbogorkab.id
-      if (baseUrl.includes('//api.')) {
-        baseUrl = baseUrl.replace('//api.', '//'); 
-      }
-
-      // 3. Gabungkan dengan endpoint kustom yang sudah benar untuk PREVIEW (viewFile).
-      const previewUrl = `${baseUrl}/uploads/musdesus/${filename}`;
-      
-      // 4. Buka di tab baru (Preview)
-      window.open(previewUrl, '_blank');
-      toast.success('File dibuka untuk dilihat di tab baru.');
+      // Perbaikan path: gunakan /api/uploads/musdesus/ yang benar
+      window.open(`${api.defaults.baseURL}/uploads/musdesus/${filename}`, '_blank');
+      toast.success('File dibuka di tab baru');
     } catch (error) {
       console.error('Error opening file:', error);
       toast.error('Gagal membuka file');
     }
   };
-  // ====================================================================
-  // END FUNGSI UTAMA YANG DIPERBAIKI
-  // ====================================================================
 
   const handleDelete = (fileId, fileName) => {
     // Check admin verification first
@@ -225,10 +166,7 @@ const MusdesusStatsPage = () => {
     const adminVerified = sessionStorage.getItem('admin_verified');
     const verificationTime = sessionStorage.getItem('admin_verification_time');
     
-    console.log('Checking admin verification - verified:', adminVerified, 'time:', verificationTime);
-    
     if (!adminVerified || !verificationTime) {
-      console.log('No admin verification found');
       return false;
     }
 
@@ -237,38 +175,25 @@ const MusdesusStatsPage = () => {
     const timeDiff = now - parseInt(verificationTime);
     const fifteenMinutes = 15 * 60 * 1000;
 
-    console.log('Time difference:', timeDiff, 'ms, limit:', fifteenMinutes, 'ms');
-
     if (timeDiff > fifteenMinutes) {
-      console.log('Admin verification expired, clearing session');
       // Clear expired verification
       sessionStorage.removeItem('admin_verified');
       sessionStorage.removeItem('admin_verification_time');
       return false;
     }
 
-    console.log('Admin verification is valid');
     return true;
   };
 
   const handleAdminLoginSuccess = (data) => {
-    console.log('Admin login success callback triggered with data:', data);
     toast.success('Verifikasi admin berhasil!');
-    setIsAdminLoggedIn(true);
-    console.log('Admin logged in state updated to true');
-    
-    // Only proceed with delete if there's a pending delete action
-    if (adminModal.pendingDeleteId) {
-      console.log('Proceeding with pending delete for file ID:', adminModal.pendingDeleteId);
-      setDeleteModal({
-        isOpen: true,
-        fileId: adminModal.pendingDeleteId,
-        fileName: adminModal.pendingDeleteName,
-        loading: false
-      });
-    } else {
-      console.log('No pending delete action, admin login completed');
-    }
+    // Proceed with delete
+    setDeleteModal({
+      isOpen: true,
+      fileId: adminModal.pendingDeleteId,
+      fileName: adminModal.pendingDeleteName,
+      loading: false
+    });
   };
 
   const handleConfirmDelete = async () => {
@@ -490,51 +415,13 @@ const MusdesusStatsPage = () => {
               Kabupaten Bogor
             </p>
           </div>
-          <div className="flex flex-col sm:flex-row gap-4 justify-between items-start">
+          <div className="flex flex-col sm:flex-row gap-4">
             <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-center">
               <div className="text-gray-600 text-sm">Total File</div>
               <div className="text-2xl lg:text-3xl font-bold text-gray-900">{stats.summary.total_files}</div>
               <div className="text-gray-500 text-xs mt-1">
                 {stats.summary.total_size_mb} MB
               </div>
-            </div>
-            
-            {/* Admin Login Button */}
-            <div className="flex flex-col gap-2">
-              {!isAdminLoggedIn ? (
-                <button
-                  onClick={() => {
-                    console.log('Login Admin button clicked');
-                    setAdminModal({ isOpen: true, pendingDeleteId: null, pendingDeleteName: '' });
-                  }}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
-                  Login Admin
-                </button>
-              ) : (
-                <div className="flex flex-col items-center gap-2">
-                  <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-100 text-green-800 rounded-lg">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    Admin Login
-                  </div>
-                  <button
-                    onClick={() => {
-                      sessionStorage.removeItem('admin_verified');
-                      sessionStorage.removeItem('admin_verification_time');
-                      setIsAdminLoggedIn(false);
-                      toast.success('Logout admin berhasil');
-                    }}
-                    className="text-xs text-red-600 hover:text-red-800 underline"
-                  >
-                    Logout
-                  </button>
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -643,75 +530,18 @@ const MusdesusStatsPage = () => {
               </div>
             </div>
 
-            {/* Desa Upload Status Lists */}
+            {/* File Type Distribution Chart */}
             <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
               <h3 className="text-gray-900 text-xl font-bold mb-4 flex items-center gap-2">
-                <BuildingOfficeIcon className="w-6 h-6" />
-                Status Upload per Desa
+                <ChartBarIcon className="w-6 h-6" />
+                Jenis File
               </h3>
               <p className="text-gray-600 text-sm mb-4">
-                Daftar desa yang sudah dan belum upload
+                Distribusi berdasarkan tipe file
               </p>
-              
-              {monitoringData ? (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Desa Sudah Upload */}
-                  <div>
-                    <h4 className="text-lg font-semibold text-green-700 mb-3 flex items-center">
-                      <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                      </svg>
-                      Sudah Upload ({monitoringData.detail_monitoring?.filter(item => item.total_uploads > 0).length || 0})
-                    </h4>
-                    <div className="max-h-64 overflow-y-auto space-y-2">
-                      {monitoringData.detail_monitoring?.filter(item => item.total_uploads > 0).map((item, index) => (
-                        <div key={index} className="flex justify-between items-center p-3 bg-green-50 rounded-lg border border-green-200">
-                          <div>
-                            <h5 className="font-medium text-gray-900">{item.nama_desa}</h5>
-                            <p className="text-sm text-gray-600">Kec. {item.nama_kecamatan}</p>
-                            <p className="text-sm text-blue-600">Petugas: {item.nama_petugas}</p>
-                          </div>
-                          <div className="text-right">
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                              {item.total_uploads} file
-                            </span>
-                          </div>
-                        </div>
-                      )) || <div className="text-center text-gray-500 py-4">Tidak ada desa yang sudah upload</div>}
-                    </div>
-                  </div>
-
-                  {/* Desa Belum Upload */}
-                  <div>
-                    <h4 className="text-lg font-semibold text-red-700 mb-3 flex items-center">
-                      <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                      </svg>
-                      Belum Upload ({monitoringData.detail_monitoring?.filter(item => item.total_uploads === 0).length || 0})
-                    </h4>
-                    <div className="max-h-64 overflow-y-auto space-y-2">
-                      {monitoringData.detail_monitoring?.filter(item => item.total_uploads === 0).map((item, index) => (
-                        <div key={index} className="flex justify-between items-center p-3 bg-red-50 rounded-lg border border-red-200">
-                          <div>
-                            <h5 className="font-medium text-gray-900">{item.nama_desa}</h5>
-                            <p className="text-sm text-gray-600">Kec. {item.nama_kecamatan}</p>
-                            <p className="text-sm text-blue-600">Petugas: {item.nama_petugas}</p>
-                          </div>
-                          <div className="text-right">
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                              Belum Upload
-                            </span>
-                          </div>
-                        </div>
-                      )) || <div className="text-center text-gray-500 py-4">Semua desa sudah upload</div>}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center text-gray-500 py-8">
-                  Data monitoring tidak tersedia
-                </div>
-              )}
+              <div className="h-80 lg:h-96">
+                <Doughnut data={fileTypeData} options={doughnutOptions} />
+              </div>
             </div>
           </div>
         </div>
@@ -729,30 +559,16 @@ const MusdesusStatsPage = () => {
             </h3>
             {(selectedKecamatan || selectedDesa) && (
               <button
-                onClick={handleResetFilter}
+                onClick={() => {
+                  setSelectedKecamatan('');
+                  setSelectedDesa('');
+                }}
                 className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm rounded-lg transition-colors"
               >
                 Reset Filter
               </button>
             )}
           </div>
-
-          {/* Admin Status Info */}
-          {!isAdminLoggedIn && (
-            <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <div className="flex items-start gap-3">
-                <svg className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 15.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
-                <div>
-                  <p className="text-yellow-800 text-sm font-medium">Akses Terbatas</p>
-                  <p className="text-yellow-700 text-sm mt-1">
-                    Untuk menghapus file, silakan login sebagai super admin terlebih dahulu menggunakan tombol "Login Admin" di atas.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
 
           {filteredFiles.length === 0 ? (
             <div className="text-center py-12">
@@ -784,7 +600,7 @@ const MusdesusStatsPage = () => {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {currentFiles.map((file) => (
+                    {filteredFiles.map((file) => (
                       <tr key={file.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4">
                           <div className="flex items-center">
@@ -818,16 +634,14 @@ const MusdesusStatsPage = () => {
                               <EyeIcon className="w-4 h-4" />
                               Lihat
                             </button>
-                            {isAdminLoggedIn && (
-                              <button
-                                onClick={() => handleDelete(file.id, file.nama_file)}
-                                className="inline-flex items-center gap-1 text-red-700 hover:text-red-900 bg-red-50 hover:bg-red-100 px-3 py-1 rounded-md transition-colors"
-                                title="Hapus File"
-                              >
-                                <TrashIcon className="w-4 h-4" />
-                                Hapus
-                              </button>
-                            )}
+                            <button
+                              onClick={() => handleDelete(file.id, file.nama_file)}
+                              className="inline-flex items-center gap-1 text-red-700 hover:text-red-900 bg-red-50 hover:bg-red-100 px-3 py-1 rounded-md transition-colors"
+                              title="Hapus File"
+                            >
+                              <TrashIcon className="w-4 h-4" />
+                              Hapus
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -838,7 +652,7 @@ const MusdesusStatsPage = () => {
 
               {/* Mobile Card View */}
               <div className="lg:hidden space-y-4">
-                {currentFiles.map((file) => (
+                {filteredFiles.map((file) => (
                   <div key={file.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
                     <div className="flex items-start gap-3 mb-3">
                       <div className="text-2xl">
@@ -872,121 +686,21 @@ const MusdesusStatsPage = () => {
                         <EyeIcon className="w-4 h-4" />
                         Lihat
                       </button>
-                      {isAdminLoggedIn && (
-                        <button
-                          onClick={() => handleDelete(file.id, file.nama_file)}
-                          className="flex-1 inline-flex items-center justify-center gap-2 text-red-700 hover:text-red-900 bg-red-50 hover:bg-red-100 px-3 py-2 rounded-md transition-colors text-sm"
-                        >
-                          <TrashIcon className="w-4 h-4" />
-                          Hapus
-                        </button>
-                      )}
+                      <button
+                        onClick={() => handleDelete(file.id, file.nama_file)}
+                        className="flex-1 inline-flex items-center justify-center gap-2 text-red-700 hover:text-red-900 bg-red-50 hover:bg-red-100 px-3 py-2 rounded-md transition-colors text-sm"
+                      >
+                        <TrashIcon className="w-4 h-4" />
+                        Hapus
+                      </button>
                     </div>
                   </div>
                 ))}
               </div>
             </>
           )}
-
-          {/* Pagination */}
-          {filteredFiles.length > filesPerPage && (
-            <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="text-sm text-gray-700">
-                Menampilkan {startIndex + 1} - {Math.min(endIndex, filteredFiles.length)} dari {filteredFiles.length} file
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className={`px-3 py-2 text-sm rounded-lg border transition-colors ${
-                    currentPage === 1
-                      ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
-                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  Sebelumnya
-                </button>
-                
-                <div className="flex items-center gap-1">
-                  {Array.from({ length: totalPages }, (_, index) => {
-                    const page = index + 1;
-                    const isCurrentPage = page === currentPage;
-                    
-                    // Show first page, last page, current page, and pages around current page
-                    if (
-                      page === 1 ||
-                      page === totalPages ||
-                      (page >= currentPage - 1 && page <= currentPage + 1)
-                    ) {
-                      return (
-                        <button
-                          key={page}
-                          onClick={() => handlePageChange(page)}
-                          className={`px-3 py-2 text-sm rounded-lg border transition-colors ${
-                            isCurrentPage
-                              ? 'bg-blue-600 text-white border-blue-600'
-                              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                          }`}
-                        >
-                          {page}
-                        </button>
-                      );
-                    }
-                    
-                    // Show ellipsis
-                    if (
-                      (page === currentPage - 2 && currentPage > 3) ||
-                      (page === currentPage + 2 && currentPage < totalPages - 2)
-                    ) {
-                      return (
-                        <span key={page} className="px-2 text-gray-500">
-                          ...
-                        </span>
-                      );
-                    }
-                    
-                    return null;
-                  })}
-                </div>
-                
-                <button
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  className={`px-3 py-2 text-sm rounded-lg border transition-colors ${
-                    currentPage === totalPages
-                      ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
-                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  Selanjutnya
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       </div>
-
-      {/* Modal Components */}
-      <DeleteConfirmationModal
-        isOpen={deleteModal.isOpen}
-        onClose={() => setDeleteModal({ isOpen: false, fileId: null, fileName: '', loading: false })}
-        onConfirm={handleConfirmDelete}
-        title="Hapus File Musdesus"
-        message={`Apakah Anda yakin ingin menghapus file "${deleteModal.fileName}"? Tindakan ini tidak dapat dibatalkan.`}
-        loading={deleteModal.loading}
-      />
-
-      <AdminLoginModal
-        isOpen={adminModal.isOpen}
-        onClose={() => {
-          console.log('Closing admin login modal');
-          setAdminModal({ isOpen: false, pendingDeleteId: null, pendingDeleteName: '' });
-        }}
-        onSuccess={handleAdminLoginSuccess}
-        title="Login Admin Diperlukan"
-        message="Silakan login sebagai super admin untuk melanjutkan operasi penghapusan file."
-      />
     </div>
   );
 };

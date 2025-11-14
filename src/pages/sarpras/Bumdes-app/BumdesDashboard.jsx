@@ -61,16 +61,27 @@ function BumdesDashboard() {
     useEffect(() => {
         const fetchData = async () => {
             try {
+                console.log('🔄 Dashboard: Fetching BUMDes data...');
                 const response = await api.get('/bumdes');
+                console.log('📊 Dashboard: API Response:', response);
+                console.log('📊 Dashboard: Response data:', response.data);
+                
                 // Perbaikan utama: Periksa apakah response.data dan response.data.data ada sebelum memprosesnya
                 const apiData = response.data && Array.isArray(response.data.data) ? response.data.data : [];
+                console.log('📊 Dashboard: Processed data count:', apiData.length);
 
                 setData(apiData);
                 setFilteredData(apiData);
                 const uniqueKecamatan = [...new Set(apiData.map(item => item.kecamatan).filter(Boolean))];
                 setKecamatanList(uniqueKecamatan.sort());
+                console.log('✅ Dashboard: Data loaded successfully');
             } catch (error) {
-                console.error('Error fetching data:', error);
+                console.error('❌ Dashboard: Error fetching data:', error);
+                console.error('❌ Dashboard: Error details:', {
+                    message: error.message,
+                    status: error.response?.status,
+                    url: error.config?.url
+                });
                 setError('Gagal memuat data dari server. 😔');
             } finally {
                 setLoading(false);

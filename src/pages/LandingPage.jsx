@@ -8,6 +8,8 @@ import { useScrollPosition } from "../hooks/useScrollPosition";
 import FeatureSection from "../components/landingpage/FeatureSection";
 import Footer from "../components/landingpage/Footer";
 import StatsSection from "../components/landingpage/StatsSection";
+import VideoTutorialSection from "../components/landingpage/VideoTutorialSection";
+import NewsSection from "../components/landingpage/NewsSection";
 
 const LandingPage = () => {
 	const scrollY = useScrollPosition();
@@ -25,7 +27,9 @@ const LandingPage = () => {
 	// Daftar link navigasi
 	const navLinks = [
 		{ to: "home", label: "Beranda" },
+		{ to: "tutorial", label: "Tutorial" },
 		{ to: "stats", label: "Statistik" },
+		{ to: "berita", label: "Berita" },
 		{ to: "features", label: "Fitur" },
 		{ to: "contact", label: "Kontak" },
 	];
@@ -39,7 +43,7 @@ const LandingPage = () => {
 	};
 
 	return (
-		<div>
+		<div className="overflow-x-hidden">
 			<header className={headerClasses}>
 				<div className="container max-w-7xl mx-auto flex items-center justify-between">
 					<div className="flex items-center space-x-3">
@@ -115,11 +119,17 @@ const LandingPage = () => {
 			<section id="home">
 				<HeroSection />
 			</section>
+			<section id="tutorial">
+				<VideoTutorialSection />
+			</section>
 			<section id="musdesus">
 				<MusdesusHeroSection />
 			</section>
 			<section id="stats">
 				<StatsSection />
+			</section>
+			<section id="berita">
+				<NewsSection />
 			</section>
 			<section id="features" className="bg-white py-20">
 				<FeatureSection />

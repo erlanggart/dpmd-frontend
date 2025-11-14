@@ -59,17 +59,17 @@ const StatsSection = () => {
 	];
 
 	return (
-		<section ref={ref} className="bg-gray-50 py-12 sm:py-16 lg:py-20">
-			<div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+		<section ref={ref} className="bg-gray-50 py-20">
+			<div className="container max-w-7xl mx-auto px-4">
 				<div className="text-center">
-					<h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-3 sm:mb-4">
+					<h2 className="text-3xl font-bold text-gray-900">
 						Wilayah Administratif Kabupaten Bogor
 					</h2>
-					<p className="text-base sm:text-lg lg:text-xl text-gray-600 max-w-3xl mx-auto px-4">
+					<p className="mt-2 text-lg text-gray-600">
 						Data terpadu dari seluruh wilayah di bawah naungan DPMD.
 					</p>
 				</div>
-				<div className="mt-8 sm:mt-10 lg:mt-12 grid grid-cols-1 gap-6 sm:gap-8 md:grid-cols-3">
+				<div className="mt-12 grid grid-cols-1 gap-8 md:grid-cols-3">
 					{statItems.map((item, index) => (
 						<StatCard
 							key={index}

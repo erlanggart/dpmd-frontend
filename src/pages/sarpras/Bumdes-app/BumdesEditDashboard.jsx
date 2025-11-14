@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../../api.js';
+import API_CONFIG from '../../../config/api';
 import { 
   FaPaperPlane, 
   FaSpinner, 
@@ -749,7 +750,7 @@ function BumdesEditDashboard({ initialData, onLogout, onClose, onDelete }) {
                                 <label className="form-label">{normalizeFieldName(key)}:</label>
                                 {formData[key] && typeof formData[key] === 'string' && (
                                     <div className="file-info">
-                                        <a href={`http://localhost:8000/storage/${formData[key]}`} target="_blank" rel="noopener noreferrer" className="download-link">
+                                        <a href={`${API_CONFIG.STORAGE_URL}/${formData[key]}`} target="_blank" rel="noopener noreferrer" className="download-link">
                                             <FaFileDownload /> Unduh Dokumen Saat Ini
                                         </a>
                                     </div>
@@ -769,7 +770,7 @@ function BumdesEditDashboard({ initialData, onLogout, onClose, onDelete }) {
                                 <label className="form-label">{normalizeFieldName(key)}:</label>
                                 {formData[key] && typeof formData[key] === 'string' && (
                                     <div className="file-info">
-                                        <a href={`http://localhost:8000/storage/${formData[key]}`} target="_blank" rel="noopener noreferrer" className="download-link">
+                                        <a href={`${API_CONFIG.STORAGE_URL}/${formData[key]}`} target="_blank" rel="noopener noreferrer" className="download-link">
                                             <FaFileDownload /> Unduh Dokumen Saat Ini
                                         </a>
                                     </div>

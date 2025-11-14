@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { FiEdit3, FiPlus, FiClipboard, FiCheck } from 'react-icons/fi';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { FiEdit3, FiPlus, FiClipboard, FiCheck, FiX, FiTrash2 } from 'react-icons/fi';
 import api from '../../../api';
 import Swal from 'sweetalert2';
 
@@ -88,7 +88,7 @@ const styleSheet = document.createElement("style");
 styleSheet.textContent = styles;
 document.head.appendChild(styleSheet);
 
-const KegiatanForm = ({ kegiatan: initialKegiatan, onClose, onSuccess }) => {
+const KegiatanForm = ({ kegiatan: initialKegiatan, onClose = () => {}, onSuccess = () => {} }) => {
   const [formData, setFormData] = useState({
     nomor_sp: '',
     nama_kegiatan: '',
@@ -125,11 +125,14 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose, onSuccess }) => {
         console.log('KegiatanForm: Fetching fresh bidang data...');
         const bidangRes = await api.get('/perjadin/bidang');
         
-        setAllBidangList(bidangRes.data);
+        // Handle API response structure
+        const bidangData = bidangRes.data?.status === 'success' ? bidangRes.data.data : bidangRes.data;
+        
+        setAllBidangList(bidangData);
         setMasterDataCache(prev => ({
           ...prev,
           bidang: {
-            data: bidangRes.data,
+            data: bidangData,
             timestamp: Date.now()
           }
         }));
@@ -198,7 +201,7 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose, onSuccess }) => {
     }
   }, [initialKegiatan]);
 
-  const handleBidangChange = async (index, e) => {
+  const handleBidangChange = useCallback(async (index, e) => {
     const newPersonilBidangList = [...formData.personil_bidang_list];
     newPersonilBidangList[index].id_bidang = e.target.value;
     newPersonilBidangList[index].personil = [''];
@@ -221,11 +224,20 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose, onSuccess }) => {
         }
 
         console.log(`KegiatanForm: Fetching fresh personil data for bidang ${e.target.value}...`);
-        const personilRes = await api.get(`/perjadin/personil/${e.target.value}`);
+        // Add timeout to prevent long waiting
+        const personilRes = await Promise.race([
+          api.get(`/perjadin/personil/${e.target.value}`),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Timeout')), 10000) // 10 second timeout
+          )
+        ]);
+        
+        // Handle API response structure
+        const personilData = personilRes.data?.status === 'success' ? personilRes.data.data : personilRes.data;
         
         setAllPersonilByBidang(prev => ({
           ...prev,
-          [e.target.value]: personilRes.data
+          [e.target.value]: personilData
         }));
 
         // Update cache
@@ -234,7 +246,7 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose, onSuccess }) => {
           personil: {
             data: {
               ...prev.personil.data,
-              [e.target.value]: personilRes.data
+              [e.target.value]: personilData
             },
             timestamp: {
               ...prev.personil.timestamp,
@@ -258,11 +270,18 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose, onSuccess }) => {
         }
       }
     }
-  };
+  }, [formData.personil_bidang_list, allPersonilByBidang, masterDataCache, isCacheValid]);
 
   const handlePersonilChange = (groupIndex, personilIndex, e) => {
     const newPersonilBidangList = [...formData.personil_bidang_list];
-    newPersonilBidangList[groupIndex].personil[personilIndex] = e.target.value;
+    try {
+      // Parse JSON string dari option value
+      const personilData = JSON.parse(e.target.value);
+      newPersonilBidangList[groupIndex].personil[personilIndex] = personilData;
+    } catch (error) {
+      // Fallback ke string biasa jika bukan JSON (untuk backward compatibility)
+      newPersonilBidangList[groupIndex].personil[personilIndex] = e.target.value;
+    }
     setFormData({ ...formData, personil_bidang_list: newPersonilBidangList });
   };
 
@@ -306,7 +325,9 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose, onSuccess }) => {
       try {
         console.log(`KegiatanForm: Fetching fresh personil data for bidang ${idBidang}...`);
         const response = await api.get(`/perjadin/personil/${idBidang}`);
-        setAllPersonilByBidang(prev => ({ ...prev, [idBidang]: response.data }));
+        // Handle API response structure
+        const personilData = response.data?.status === 'success' ? response.data.data : response.data;
+        setAllPersonilByBidang(prev => ({ ...prev, [idBidang]: personilData }));
         console.log(`KegiatanForm: Successfully fetched personil for bidang ${idBidang}`);
       } catch (error) {
         console.error('KegiatanForm: Failed to fetch personil:', error);
@@ -322,27 +343,46 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose, onSuccess }) => {
     });
   }, [formData.personil_bidang_list]);
 
-  // Fungsi untuk mengecek konflik personil pada tanggal yang sama
+  // Fungsi untuk mengecek konflik personil pada tanggal yang sama - OPTIMIZED
   const checkPersonnelConflict = async (personnelList, startDate, endDate) => {
     try {
-      const conflictCheckPromises = personnelList.map(async (personName) => {
-        const response = await api.get(`/perjadin/check-personnel-conflict`, {
-          params: {
-            personnel_name: personName,
-            start_date: startDate,
-            end_date: endDate,
-            exclude_id: initialKegiatan?.id_kegiatan || null
-          }
-        });
-        return { name: personName, conflicts: response.data.conflicts || [] };
+      // Use individual checks with limited batch size for better performance
+      const batchSize = 3; // Process only 3 at a time to prevent timeout
+      const limitedPersonnelList = personnelList.slice(0, batchSize);
+      
+      const conflictCheckPromises = limitedPersonnelList.map(async (personName) => {
+        try {
+          const response = await Promise.race([
+            api.get(`/perjadin/check-personnel-conflict`, {
+              params: {
+                personnel_name: personName,
+                start_date: startDate,
+                end_date: endDate,
+                exclude_id: initialKegiatan?.id_kegiatan || null
+              }
+            }),
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Individual conflict check timeout')), 5000)
+            )
+          ]);
+          return { name: personName, conflicts: response.data.conflicts || [] };
+        } catch (error) {
+          console.warn(`Conflict check failed for ${personName}:`, error);
+          return { name: personName, conflicts: [] };
+        }
       });
 
       const conflictResults = await Promise.all(conflictCheckPromises);
       const conflictedPersonnel = conflictResults.filter(result => result.conflicts.length > 0);
       
+      // Show warning if we had to limit the check
+      if (personnelList.length > batchSize) {
+        console.warn(`Conflict check limited to ${batchSize} personnel out of ${personnelList.length} for performance`);
+      }
+      
       return conflictedPersonnel;
     } catch (error) {
-      console.error('Error checking personnel conflict:', error);
+      console.error('Error checking personnel conflicts:', error);
       return [];
     }
   };
@@ -352,7 +392,11 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose, onSuccess }) => {
     
     if (isSubmitting) return; // Prevent double submission
     
+    // Immediately set submitting to prevent double clicks
+    setIsSubmitting(true);
+    
     if (formData.tanggal_mulai > formData.tanggal_selesai) {
+      setIsSubmitting(false);
       Swal.fire('Peringatan', 'Tanggal selesai tidak boleh lebih awal dari tanggal mulai.', 'warning');
       return;
     }
@@ -361,18 +405,37 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose, onSuccess }) => {
     const allSelectedPersonnel = [];
     formData.personil_bidang_list.forEach(group => {
       group.personil.forEach(personName => {
-        if (personName && personName.trim()) {
-          allSelectedPersonnel.push(personName.trim());
+        // Handle both object and string format
+        if (personName) {
+          if (typeof personName === 'object' && personName.nama_personil) {
+            allSelectedPersonnel.push(personName.nama_personil.trim());
+          } else if (typeof personName === 'string' && personName.trim()) {
+            allSelectedPersonnel.push(personName.trim());
+          }
         }
       });
     });
 
     if (allSelectedPersonnel.length > 0) {
+      // Show loading indicator for conflict check
+      Swal.fire({
+        title: 'Mengecek Konflik Jadwal...',
+        text: 'Mohon tunggu sebentar',
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        showConfirmButton: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+      
       const conflictedPersonnel = await checkPersonnelConflict(
         allSelectedPersonnel, 
         formData.tanggal_mulai, 
         formData.tanggal_selesai
       );
+
+      Swal.close(); // Close conflict check loading
 
       if (conflictedPersonnel.length > 0) {
         let conflictMessage = '<div style="text-align: left; font-size: 14px; line-height: 1.6;">';
@@ -427,12 +490,12 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose, onSuccess }) => {
             document.head.appendChild(style);
           }
         });
+        setIsSubmitting(false); // Reset submitting state on conflict
         return; // Stop form submission
       }
     }
 
     try {
-      setIsSubmitting(true);
       
       // Show loading indicator
       Swal.fire({
@@ -464,13 +527,33 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose, onSuccess }) => {
       Swal.close(); // Close loading
       
       if (response.data.status === 'success') {
-        Swal.fire({
+        await Swal.fire({
           icon: 'success',
           title: 'Berhasil!',
           text: response.data.message,
           confirmButtonColor: '#1e293b'
         });
-        onSuccess();
+        
+        // Reset form state after successful submission
+        if (!initialKegiatan) {
+          setFormData({
+            nomor_sp: '',
+            nama_kegiatan: '',
+            tanggal_mulai: '',
+            tanggal_selesai: '',
+            lokasi: '',
+            keterangan: '',
+            personil_bidang_list: [{ id_bidang: '', personil: [''] }],
+          });
+        }
+        
+        // Call success callback and close form
+        if (typeof onSuccess === 'function') {
+          onSuccess();
+        }
+        if (typeof onClose === 'function') {
+          onClose();
+        }
       } else {
         Swal.fire({
           icon: 'error',
@@ -701,7 +784,7 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose, onSuccess }) => {
                     className="absolute top-4 right-4 bg-red-500 hover:bg-red-600 text-white p-2 rounded-lg transition-all duration-200"
                     title="Hapus Bidang"
                   >
-                    <i className="fas fa-times"></i>
+                    <FiX className="w-4 h-4" />
                   </button>
                 )}
 
@@ -720,8 +803,10 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose, onSuccess }) => {
                         required
                       >
                         <option value="">Pilih Bidang</option>
-                        {allBidangList.map(b => (
-                          <option key={b.id} value={b.id}>{b.nama}</option>
+                        {Array.isArray(allBidangList) && allBidangList.map(b => (
+                          <option key={b.id_bidang || b.id} value={b.id_bidang || b.id}>
+                            {b.nama_bidang || b.nama}
+                          </option>
                         ))}
                       </select>
                       <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
@@ -741,14 +826,14 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose, onSuccess }) => {
                         <div key={personilIndex} className="flex items-center gap-3">
                           <div className="flex-1 relative">
                             <select
-                              value={personilName}
+                              value={typeof personilName === 'object' ? JSON.stringify(personilName) : personilName}
                               onChange={(e) => handlePersonilChange(index, personilIndex, e)}
                               className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 bg-white shadow-sm transition-all duration-200 appearance-none"
                               required
                             >
                               <option value="">Pilih Personil</option>
-                              {allPersonilByBidang[item.id_bidang] && allPersonilByBidang[item.id_bidang].map(p => (
-                                <option key={p.id_personil} value={p.nama_personil}>{p.nama_personil}</option>
+                              {Array.isArray(allPersonilByBidang[item.id_bidang]) && allPersonilByBidang[item.id_bidang].map(p => (
+                                <option key={p.id_personil} value={JSON.stringify({id_personil: p.id_personil, nama_personil: p.nama_personil})}>{p.nama_personil}</option>
                               ))}
                             </select>
                             <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
@@ -760,8 +845,9 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose, onSuccess }) => {
                               type="button" 
                               onClick={() => removePersonilSelect(index, personilIndex)} 
                               className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-lg transition-all duration-200"
+                              title="Hapus Personil"
                             >
-                              <i className="fas fa-times"></i>
+                              <FiTrash2 className="w-4 h-4" />
                             </button>
                           )}
                         </div>
@@ -771,7 +857,7 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose, onSuccess }) => {
                         onClick={() => addPersonilSelect(index)} 
                         className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200"
                       >
-                        <i className="fas fa-plus"></i>
+                        <FiPlus className="w-4 h-4" />
                         <span>Tambah Personil</span>
                       </button>
                     </div>
@@ -810,7 +896,11 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose, onSuccess }) => {
         <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t border-gray-200">
           <button 
             type="button" 
-            onClick={onClose} 
+            onClick={() => {
+              if (typeof onClose === 'function') {
+                onClose();
+              }
+            }}
             className="flex-1 sm:flex-none px-6 py-3 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
           >
             <i className="fas fa-times mr-2"></i>
@@ -819,9 +909,11 @@ const KegiatanForm = ({ kegiatan: initialKegiatan, onClose, onSuccess }) => {
           <button 
             type="submit" 
             disabled={isSubmitting}
+            onDoubleClick={(e) => e.preventDefault()}
+            style={{ pointerEvents: isSubmitting ? 'none' : 'auto' }}
             className={`flex-1 px-8 py-3 font-bold rounded-xl shadow-lg transition-all duration-300 ${
               isSubmitting 
-                ? 'bg-gray-400 cursor-not-allowed' 
+                ? 'bg-gray-400 cursor-not-allowed opacity-70' 
                 : 'bg-gradient-to-r from-slate-700 to-slate-900 hover:from-slate-800 hover:to-slate-950 hover:shadow-xl transform hover:-translate-y-1'
             } text-white`}
           >

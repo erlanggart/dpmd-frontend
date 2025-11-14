@@ -20,14 +20,14 @@ const LoginImageSlider = () => {
 		const fetchData = async () => {
 			try {
 				const response = await api.get("/public/hero-gallery");
-				setGallery(response.data);
+				setGallery(response.data.data || response.data);
 			} catch (err) {
 				console.error("Gagal mengambil galeri:", err);
 				// Use fallback images if API fails
 				setGallery([
 					{
 						id: 1,
-						image_path: 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800',
+						image_path: 'placeholder.jpg',
 						title: 'Government Office',
 						description: 'Default image'
 					}
@@ -58,9 +58,13 @@ const LoginImageSlider = () => {
 			{gallery.map((image) => (
 				<SwiperSlide key={image.id}>
 					<img
-						src={`${imageBaseUrl}/uploads/${image.image_path}`}
+						src={`http://127.0.0.1:3001/uploads/${encodeURIComponent(image.image_path).replace(/%2F/g, '/')}`}
 						alt={image.title || "Login Image"}
 						className="h-full w-full object-cover rounded-2xl"
+						onError={(e) => {
+							console.error('Failed to load image:', image.image_path);
+							e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23374151" width="100" height="100"/%3E%3Ctext fill="%239CA3AF" x="50%" y="50%" text-anchor="middle" dy=".3em"%3ENo Image%3C/text%3E%3C/svg%3E';
+						}}
 					/>
 				</SwiperSlide>
 			))}

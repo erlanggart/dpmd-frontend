@@ -2,7 +2,7 @@
 import axios from "axios";
 
 const api = axios.create({
-	baseURL: import.meta.env.VITE_API_BASE_URL || "/api",
+	baseURL: "http://127.0.0.1:3001/api",
 	timeout: 10000,
 	headers: {
 		"Content-Type": "application/json",
@@ -12,7 +12,7 @@ const api = axios.create({
 
 api.interceptors.request.use(
 	(config) => {
-		const token = localStorage.getItem("authToken");
+		const token = localStorage.getItem("expressToken");
 		if (token) {
 			config.headers["Authorization"] = `Bearer ${token}`;
 		}
@@ -29,7 +29,7 @@ api.interceptors.response.use(
 			// TAMBAHKAN PENGECEKAN INI:
 			// Hanya redirect jika kita TIDAK sedang di halaman login.
 			if (window.location.pathname !== "/login") {
-				localStorage.removeItem("authToken");
+				localStorage.removeItem("expressToken");
 				localStorage.removeItem("user");
 				window.location.href = "/login";
 			}
@@ -67,6 +67,14 @@ export const getProdukHukums = async (pageOrParams = {}, search = "") => {
 		return response;
 	} catch (error) {
 		console.error('Error fetching produk hukum:', error);
+// Helper functions for location data
+export const getKecamatans = async () => {
+	try {
+		const response = await api.get('/kecamatans');
+		console.log('🔍 Raw kecamatan response:', response);
+		return response; // Return full axios response
+	} catch (error) {
+		console.error('Error fetching kecamatans:', error);
 		throw error;
 	}
 };
@@ -134,6 +142,15 @@ export const updateProdukHukumStatus = async (id, status_peraturan) => {
 		return response;
 	} catch (error) {
 		console.error('Error updating produk hukum status:', error);
+		throw error;
+	}
+export const getDesasByKecamatan = async (kecamatanId) => {
+	try {
+		const response = await api.get(`/desas/kecamatan/${kecamatanId}`);
+		console.log('🔍 Raw desa response:', response);
+		return response; // Return full axios response
+	} catch (error) {
+		console.error('Error fetching desas:', error);
 		throw error;
 	}
 };

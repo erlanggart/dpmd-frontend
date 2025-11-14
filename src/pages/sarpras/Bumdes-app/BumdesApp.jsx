@@ -1,11 +1,13 @@
-// BumdesApp.jsx - Modern Tailwind Design
-import React, { useState, Suspense, lazy } from 'react';
+// BumdesApp.jsx - Modern Tailwind Design with Optimized Navigation
+import React, { useState, Suspense, lazy, useCallback } from 'react';
 import { FaPlus, FaChartBar, FaBuilding } from 'react-icons/fa';
+import { FiFileText } from 'react-icons/fi';
 import { HiSparkles } from 'react-icons/hi';
 
 // Lazy load komponen untuk performa yang lebih baik
 const BumdesForm = lazy(() => import('./BumdesForm'));
 const BumdesDashboardModern = lazy(() => import('./BumdesDashboardModern'));
+const BumdesDokumenManager = lazy(() => import('./BumdesDokumenManager'));
 
 // Modern Loading Fallback Component with Tailwind
 const ModernLoadingFallback = () => (
@@ -44,22 +46,25 @@ const ModernLoadingFallback = () => (
 function BumdesApp() {
     // State untuk mengelola tampilan
     const [view, setView] = useState('statistik'); // Tampilan default
+    const [loadedViews, setLoadedViews] = useState({ statistik: true }); // Track which views have been loaded
 
-    // Fungsi untuk berpindah navigasi
-    const handleNavClick = (newView) => {
+    // Fungsi untuk berpindah navigasi - load komponen jika belum pernah di-load
+    const handleNavClick = useCallback((newView) => {
         setView(newView);
-    };
-
-    const renderContent = () => {
-        switch (view) {
-            case 'form':
-                return <BumdesForm onSwitchToDashboard={() => setView('statistik')} />;
-            case 'statistik':
-                return <BumdesDashboardModern />;
-            default:
-                return <BumdesDashboardModern />;
+        if (!loadedViews[newView]) {
+            setLoadedViews(prev => ({ ...prev, [newView]: true }));
         }
-    };
+    }, [loadedViews]);
+
+    // Callback untuk refresh dashboard setelah data baru ditambahkan
+    const handleDataAdded = useCallback(() => {
+        // Force remount dashboard untuk refresh data
+        setLoadedViews(prev => ({ ...prev, statistik: false }));
+        setTimeout(() => {
+            setLoadedViews(prev => ({ ...prev, statistik: true }));
+            setView('statistik');
+        }, 100);
+    }, []);
 
     return (
         <div className="min-h-screen bg-white">
@@ -107,7 +112,7 @@ function BumdesApp() {
                 {/* Enhanced Navigation Buttons */}
                 <div className="mb-8">
                     <div className="bg-white rounded-2xl p-2 shadow-xl border border-white">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                             <button
                                 onClick={() => handleNavClick('form')}
                                 className={`group relative overflow-hidden rounded-xl px-6 py-4 font-semibold transition-all duration-300 transform hover:scale-105 ${
@@ -135,15 +140,52 @@ function BumdesApp() {
                                     <span className="text-lg">Dashboard Statistik</span>
                                 </div>
                             </button>
+
+                            <button
+                                onClick={() => handleNavClick('dokumen')}
+                                className={`group relative overflow-hidden rounded-xl px-6 py-4 font-semibold transition-all duration-300 transform hover:scale-105 ${
+                                    view === 'dokumen' 
+                                        ? 'bg-slate-800 text-white shadow-lg' 
+                                        : 'bg-white text-slate-800 hover:bg-white hover:shadow-md'
+                                }`}
+                            >
+                                <div className="flex items-center justify-center gap-3">
+                                    <FiFileText className={`text-xl transition-transform duration-300 ${view === 'dokumen' ? 'scale-110' : 'group-hover:scale-110'}`} />
+                                    <span className="text-lg">Kelola Dokumen</span>
+                                </div>
+                            </button>
                         </div>
                     </div>
                 </div>
 
-                {/* Enhanced Content Container */}
+                {/* Enhanced Content Container - Render all components but hide inactive ones */}
                 <div className="bg-white rounded-3xl shadow-xl border border-white min-h-[600px] overflow-hidden">
-                    <Suspense fallback={<ModernLoadingFallback />}>
-                        {renderContent()}
-                    </Suspense>
+                    {/* Form Input - Only load when accessed */}
+                    <div className={view === 'form' ? 'block' : 'hidden'}>
+                        {loadedViews.form && (
+                            <Suspense fallback={<ModernLoadingFallback />}>
+                                <BumdesForm onSwitchToDashboard={handleDataAdded} />
+                            </Suspense>
+                        )}
+                    </div>
+
+                    {/* Dashboard Statistik - Always loaded */}
+                    <div className={view === 'statistik' ? 'block' : 'hidden'}>
+                        {loadedViews.statistik && (
+                            <Suspense fallback={<ModernLoadingFallback />}>
+                                <BumdesDashboardModern />
+                            </Suspense>
+                        )}
+                    </div>
+
+                    {/* Kelola Dokumen - Only load when accessed */}
+                    <div className={view === 'dokumen' ? 'block' : 'hidden'}>
+                        {loadedViews.dokumen && (
+                            <Suspense fallback={<ModernLoadingFallback />}>
+                                <BumdesDokumenManager />
+                            </Suspense>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>
