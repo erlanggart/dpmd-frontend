@@ -39,11 +39,33 @@ const BeritaManagement = lazy(() =>
 	import("./pages/dashboard/BeritaManagement")
 );
 const BumdesApp = lazy(() => import("./pages/sarpras/Bumdes-app"));
+const Kelembagaan = lazy(() => import("./pages/PMD/Kelembagaan"));
 const PerjalananDinas = lazy(() => import("./pages/sekretariat/perjadin"));
 const DesaLayout = lazy(() => import("./layouts/DesaLayout"));
 const DesaDashboard = lazy(() => import("./components/desa/DesaDashboard"));
 const BumdesDesaPage = lazy(() =>
 	import("./pages/desa/bumdes/BumdesDesaPage")
+);
+const KelembagaanDesaPage = lazy(() =>
+	import("./pages/desa/kelembagaan/KelembagaanDesaPage")
+);
+const KelembagaanList = lazy(() =>
+	import("./pages/desa/kelembagaan/KelembagaanList")
+);
+const KelembagaanDetailPage = lazy(() =>
+	import("./pages/desa/kelembagaan/KelembagaanDetailPage")
+);
+const PengurusDetailPage = lazy(() =>
+	import("./pages/desa/pengurus/PengurusDetailPage")
+);
+const ProdukHukum = lazy(() =>
+	import("./pages/desa/produk-hukum/ProdukHukum")
+);
+const ProdukHukumDetail = lazy(() =>
+	import("./pages/desa/produk-hukum/ProdukHukumDetail")
+);
+const PengurusEditPage = lazy(() =>
+	import("./pages/desa/pengurus/PengurusEditPage")
 );
 const KepalaDinasLayout = lazy(() =>
 	import("./pages/kepala-dinas/KepalaDinasLayout")
@@ -120,6 +142,7 @@ function App() {
 						<Route path="hero-gallery" element={<HeroGalleryManagement />} />
 						<Route path="berita" element={<BeritaManagement />} />
 						<Route path="bumdes" element={<BumdesApp />} />
+						<Route path="kelembagaan" element={<Kelembagaan />} />
 						<Route path="perjalanan-dinas" element={<PerjalananDinas />} />
 					</Route>
 
@@ -134,6 +157,13 @@ function App() {
 					>
 						<Route path="dashboard" element={<DesaDashboard />} />
 						<Route path="bumdes" element={<BumdesDesaPage />} />
+						<Route path="kelembagaan" element={<KelembagaanDesaPage />} />
+						<Route path="kelembagaan/:type" element={<KelembagaanList />} />
+						<Route path="kelembagaan/:type/:id" element={<KelembagaanDetailPage />} />
+						<Route path="pengurus/:id" element={<PengurusDetailPage />} />
+						<Route path="pengurus/:id/edit" element={<PengurusEditPage />} />
+						<Route path="produk-hukum" element={<ProdukHukum />} />
+						<Route path="produk-hukum/:id" element={<ProdukHukumDetail />} />
 					</Route>
 
 					{/* Rute Core Dashboard - Multi Role Access */}

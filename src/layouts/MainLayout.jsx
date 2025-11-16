@@ -16,6 +16,7 @@ import {
 
 import {
 	TbMap,
+	TbBuildingBank,
 } from "react-icons/tb";
 import SearchPalette from "../components/SearchPalatte";
 
@@ -192,7 +193,7 @@ const MainLayout = () => {
 				children: [
 					{ to: "/dashboard/pegawai", label: "Pegawai" },
 					{ to: "/dashboard/perjalanan-dinas", label: "Perjalanan Dinas" },
-					{ to: getDisposisiMenuPath(getUserRole()), label: getDisposisiMenuLabel(getUserRole()) },
+					{ to: "/dashboard/disposisi", label: "Disposisi Surat" },
 				],
 			},
 			{
@@ -207,26 +208,7 @@ const MainLayout = () => {
 			},
 		];
 
-	// Menu admin yang akan ditambahkan jika user adalah superadmin atau bidang
-	const adminMenuItems = [
-		{
-			key: "sekretariat",
-			label: "Sekretariat",
-			icon: <FiClipboard />,
-			children: [
-				{ to: "/dashboard/perjalanan-dinas", label: "Perjalanan Dinas" },
-			],
-		},
-		{
-			key: "landing",
-			label: "Landing Page",
-			icon: <FiLayout />,
-			children: [
-				{ to: "/dashboard/hero-gallery", label: "Galeri Hero" },
-				{ to: "/dashboard/berita", label: "Berita" },
-			],
-		},
-	];		// Gabungkan menu berdasarkan role user
+		// Gabungkan menu berdasarkan role user
 		if (!user) {
 			return baseMenuItems;
 		}

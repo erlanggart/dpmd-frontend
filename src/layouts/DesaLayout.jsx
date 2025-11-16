@@ -11,7 +11,6 @@ import {
 	LuStore,
 	LuFileText,
 	LuUsers,
-	LuStore,
 } from "react-icons/lu";
 import Footer from "../components/landingpage/Footer";
 

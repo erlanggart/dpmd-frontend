@@ -46,7 +46,7 @@ export const getKecamatans = () => {
 };
 
 export const getDesasByKecamatan = (kecamatanId) => {
-	return api.get(`/desas/by-kecamatan/${kecamatanId}`);
+	return api.get(`/desas/kecamatan/${kecamatanId}`);
 };
 
 export const getAllDesas = () => {
@@ -67,14 +67,6 @@ export const getProdukHukums = async (pageOrParams = {}, search = "") => {
 		return response;
 	} catch (error) {
 		console.error('Error fetching produk hukum:', error);
-// Helper functions for location data
-export const getKecamatans = async () => {
-	try {
-		const response = await api.get('/kecamatans');
-		console.log('🔍 Raw kecamatan response:', response);
-		return response; // Return full axios response
-	} catch (error) {
-		console.error('Error fetching kecamatans:', error);
 		throw error;
 	}
 };
@@ -142,15 +134,6 @@ export const updateProdukHukumStatus = async (id, status_peraturan) => {
 		return response;
 	} catch (error) {
 		console.error('Error updating produk hukum status:', error);
-		throw error;
-	}
-export const getDesasByKecamatan = async (kecamatanId) => {
-	try {
-		const response = await api.get(`/desas/kecamatan/${kecamatanId}`);
-		console.log('🔍 Raw desa response:', response);
-		return response; // Return full axios response
-	} catch (error) {
-		console.error('Error fetching desas:', error);
 		throw error;
 	}
 };
