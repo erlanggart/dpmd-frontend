@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { FiFile, FiLink, FiX, FiFilter, FiSearch, FiRefreshCw } from 'react-icons/fi';
 import { useNotification } from '../../../context/NotificationContext';
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:3001/api';
+
 const DocumentManagement = () => {
   const [documents, setDocuments] = useState([]);
   const [bumdesData, setBumdesData] = useState([]);
@@ -83,8 +85,8 @@ const DocumentManagement = () => {
     setDocumentsLoading(true);
     try {
       const [docsResponse, laporanResponse] = await Promise.all([
-        fetch('http://127.0.0.1:3001/api/bumdes/dokumen-badan-hukum'),
-        fetch('http://127.0.0.1:3001/api/bumdes/laporan-keuangan')
+        fetch(`${API_BASE}/bumdes/dokumen-badan-hukum`),
+        fetch(`${API_BASE}/bumdes/laporan-keuangan`)
       ]);
 
       if (!docsResponse.ok || !laporanResponse.ok) {
@@ -113,7 +115,7 @@ const DocumentManagement = () => {
   // Fetch BUMDes data
   const fetchBumdesData = async () => {
     try {
-      const response = await fetch('http://127.0.0.1:3001/api/bumdes');
+      const response = await fetch(`${API_BASE}/bumdes`);
       if (!response.ok) throw new Error('Failed to fetch BUMDes data');
       
       const data = await response.json();
@@ -128,7 +130,7 @@ const DocumentManagement = () => {
   const linkDocumentToBumdes = async (filename, bumdesId, documentType) => {
     setLinkingDocument(filename);
     try {
-      const response = await fetch('http://127.0.0.1:3001/api/bumdes/link-document', {
+      const response = await fetch(`${API_BASE}/bumdes/link-document`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

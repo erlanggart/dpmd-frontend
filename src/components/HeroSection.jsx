@@ -67,7 +67,7 @@ const HeroSection = () => {
 				{gallery.map((image) => (
 					<SwiperSlide key={image.id}>
 						<img
-							src={`http://127.0.0.1:3001/uploads/${encodeURIComponent(image.image_path).replace(/%2F/g, '/')}`}
+							src={`${import.meta.env.VITE_IMAGE_BASE_URL || 'http://127.0.0.1:3001'}/uploads/${encodeURIComponent(image.image_path).replace(/%2F/g, '/')}`}
 							alt={image.title || "Hero Image"}
 							className="absolute inset-0 h-full w-full object-cover"
 							onError={(e) => {

@@ -164,7 +164,7 @@ const UniversalDashboard = () => {
                 quickActions: [
                     { title: 'Data BUMDes', path: '/dashboard/bumdes', icon: <TbBuildingBank /> },
                     { title: 'Samisade', path: '/dashboard/samisade', icon: <TbMap /> },
-                    { title: 'Kelembagaan', path: '/dashboard/kelembagaan', icon: <TbUserPentagon /> },
+                    { title: getDisposisiMenuLabel(getUserRole()), path: getDisposisiMenuPath(getUserRole()), icon: <FiFileText /> },
                     { title: 'Hero Gallery', path: '/dashboard/hero-gallery', icon: <FiGrid /> }
                 ]
             },
@@ -186,7 +186,7 @@ const UniversalDashboard = () => {
                     { title: 'Dana Desa', path: '/dashboard/dana-desa', icon: <TbHomeDollar /> },
                     { title: 'APBD', path: '/dashboard/alokasi-dana-desa', icon: <FiDollarSign /> },
                     { title: 'BHPRD', path: '/dashboard/bhprd', icon: <TbHomeDollar /> },
-                    { title: 'Data BUMDes', path: '/dashboard/bumdes', icon: <TbBuildingBank /> }
+                    { title: getDisposisiMenuLabel(getUserRole()), path: getDisposisiMenuPath(getUserRole()), icon: <FiFileText /> }
                 ]
             },
             'pemberdayaan_masyarakat': {
@@ -205,7 +205,7 @@ const UniversalDashboard = () => {
                 ],
                 quickActions: [
                     { title: 'Kelembagaan', path: '/dashboard/kelembagaan', icon: <TbUserPentagon /> },
-                    { title: 'Data BUMDes', path: '/dashboard/bumdes', icon: <TbBuildingBank /> },
+                    { title: getDisposisiMenuLabel(getUserRole()), path: getDisposisiMenuPath(getUserRole()), icon: <FiFileText /> },
                     { title: 'Hero Gallery', path: '/dashboard/hero-gallery', icon: <FiGrid /> },
                     { title: 'Kelola User', path: '/dashboard/users', icon: <FiUsers /> }
                 ]
@@ -227,7 +227,7 @@ const UniversalDashboard = () => {
                 quickActions: [
                     { title: 'Profil Desa', path: '/dashboard/profil-desa', icon: <FiMapPin /> },
                     { title: 'Aparatur Desa', path: '/dashboard/aparatur-desa', icon: <FiUsers /> },
-                    { title: 'Kelembagaan', path: '/dashboard/kelembagaan', icon: <TbUserPentagon /> },
+                    { title: getDisposisiMenuLabel(getUserRole()), path: getDisposisiMenuPath(getUserRole()), icon: <FiFileText /> },
                     { title: 'Hero Gallery', path: '/dashboard/hero-gallery', icon: <FiGrid /> }
                 ]
             },

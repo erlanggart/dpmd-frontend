@@ -15,6 +15,7 @@ import { useAuth } from "./context/AuthContext";
 import LoginPage from "./pages/LoginPage";
 import LandingPage from "./pages/LandingPage";
 import BeritaDetailPage from "./pages/BeritaDetailPage";
+import KegiatanDetailPage from "./pages/KegiatanDetailPage";
 import Spinner from "./components/ui/Spinner";
 
 // Role constants for better maintainability
@@ -126,6 +127,7 @@ function App() {
 					{/* Rute yang di-load secara statis */}
 					<Route path="/" element={<LandingPage />} />
 					<Route path="/berita/:slug" element={<BeritaDetailPage />} />
+					<Route path="/kegiatan/:slug" element={<KegiatanDetailPage />} />
 					<Route path="/login" element={<LoginPage />} />
 
 					{/* Rute Admin/Dashboard dengan lazy loading */}

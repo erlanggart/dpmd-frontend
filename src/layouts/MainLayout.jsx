@@ -195,40 +195,58 @@ const MainLayout = () => {
 					{ to: "/dashboard/perjalanan-dinas", label: "Perjalanan Dinas" },
 					{ to: "/dashboard/disposisi", label: "Disposisi Surat" },
 				],
-			},
-			{
-				key: "landing",
-				label: "Landing Page",
-				icon: <FiLayout />,
-				children: [
-					{ to: "/dashboard/hero-gallery", label: "Galeri Hero" },
-					{ to: "/dashboard/articles", label: "Manajemen Artikel" },
-					{ to: "/dashboard/users", label: "Manajemen User" },
-				],
-			},
-		];
-
-		// Gabungkan menu berdasarkan role user
+		},
+		{
+			key: "landing",
+			label: "Landing Page",
+			icon: <FiLayout />,
+			children: [
+				{ to: "/dashboard/hero-gallery", label: "Galeri Hero" },
+				{ to: "/dashboard/berita", label: "Manajemen Berita" },
+				{ to: "/dashboard/users", label: "Manajemen User" },
+			],
+		},
+	];		// Gabungkan menu berdasarkan role user
 		if (!user) {
 			return baseMenuItems;
 		}
 
 		const userRoles = user.roles || [];
 		const userRole = user.role; // Role langsung dari database
+		const bidangRole = user.bidangRole; // Role bidang spesifik
 		const bidangRoles = ['sekretariat', 'sarana_prasarana', 'kekayaan_keuangan', 'pemberdayaan_masyarakat', 'pemerintahan_desa'];
 		
 		const isSuperAdmin = userRoles.includes("superadmin") || userRole === 'superadmin';
 		const isBidangUser = userRoles.includes("bidang") || Boolean(user.bidangRole) || bidangRoles.includes(userRole);
 		
-		// Only superadmin can access Landing Page section
+		// Only superadmin can access all menus
 		if (isSuperAdmin) {
 			const finalMenu = [...baseMenuItems, ...adminMenuItems];
 			return finalMenu;
 		}
 		
-		// Bidang users only get base menu
+		// Bidang users get filtered menu based on their bidangRole
 		if (isBidangUser) {
-			return baseMenuItems;
+			const filteredMenu = [];
+			
+			// Sarana Prasarana: only SPKED menu
+			if (bidangRole === 'sarana_prasarana' || userRole === 'sarana_prasarana') {
+				filteredMenu.push(baseMenuItems.find(item => item.key === 'sarpras'));
+			}
+			// Pemberdayaan Masyarakat: only PMD menu
+			else if (bidangRole === 'pemberdayaan_masyarakat' || userRole === 'pemberdayaan_masyarakat') {
+				filteredMenu.push(baseMenuItems.find(item => item.key === 'pemmas'));
+			}
+			// Sekretariat: only Sekretariat menu
+			else if (bidangRole === 'sekretariat' || userRole === 'sekretariat') {
+				filteredMenu.push(adminMenuItems.find(item => item.key === 'sekretariat'));
+			}
+			// Other bidang: show all base menus (fallback)
+			else {
+				return baseMenuItems;
+			}
+			
+			return filteredMenu.filter(Boolean); // Remove undefined items
 		}
 		
 		return baseMenuItems;

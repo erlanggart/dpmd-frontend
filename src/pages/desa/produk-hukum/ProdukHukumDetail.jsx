@@ -38,7 +38,7 @@ const ProdukHukumDetail = () => {
 	const fetchPdfFile = async (produkHukumId) => {
 		try {
 			const token = localStorage.getItem("expressToken");
-			const apiUrl = 'http://127.0.0.1:3001/api';
+			const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:3001/api';
 			
 			const response = await fetch(`${apiUrl}/produk-hukum/${produkHukumId}/download`, {
 				method: 'GET',
