@@ -37,10 +37,10 @@ const ProdukHukumDetail = () => {
 
 	const fetchPdfFile = async (produkHukumId) => {
 		try {
-			const token = localStorage.getItem("authToken");
-			const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+			const token = localStorage.getItem("expressToken");
+			const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:3001/api';
 			
-			const response = await fetch(`${apiUrl}/api/desa/produk-hukum/${produkHukumId}/download`, {
+			const response = await fetch(`${apiUrl}/produk-hukum/${produkHukumId}/download`, {
 				method: 'GET',
 				headers: {
 					'Authorization': `Bearer ${token}`

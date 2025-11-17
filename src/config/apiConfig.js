@@ -5,7 +5,7 @@ export const API_ENDPOINTS = {
   // Express Backend (Port 3001) - ONLY BACKEND
   EXPRESS_BASE: isDevelopment 
     ? 'http://127.0.0.1:3001/api'
-    : 'https://protobackend.vertinova.id/api',
+    : 'https://api.dpmdbogorkab.id/api',
 };
 
 /**

@@ -164,13 +164,28 @@ const BumdesDesaPage = () => {
 
 	// Fetch BUMDES data dan produk hukum options untuk desa ini
 	useEffect(() => {
-		fetchBumdesData();
-		fetchProdukHukumOptions();
-	}, []);
+		const initializeData = async () => {
+			try {
+				setLoading(true);
+				console.log('Initializing BUMDes page, user:', user?.desa?.nama);
+				
+				// Fetch both data in parallel
+				await Promise.all([
+					fetchBumdesData(),
+					fetchProdukHukumOptions()
+				]);
+			} catch (error) {
+				console.error('Error initializing BUMDes page:', error);
+			} finally {
+				setLoading(false);
+			}
+		};
+
+		initializeData();
+	}, []); // eslint-disable-line react-hooks/exhaustive-deps
 
 	const fetchBumdesData = async () => {
 		try {
-			setLoading(true);
 			const result = await BumdesDesaService.getBumdesData();
 			
 			if (result.success && result.data) {
@@ -195,8 +210,6 @@ const BumdesDesaPage = () => {
 				kecamatan: user?.desa?.kecamatan?.nama || "",
 				kode_desa: user?.desa?.kode || "",
 			}));
-		} finally {
-			setLoading(false);
 		}
 	};
 
@@ -417,19 +430,21 @@ const BumdesDesaPage = () => {
 		</div>
 	);
 
-	const renderInput = (label, field, type = "text", placeholder = "", required = false) => (
+	const renderInput = (label, field, type = "text", placeholder = "", required = false, readOnly = false) => (
 		<div>
 			<label className="block text-sm font-medium text-gray-700 mb-2">
 				{label} {required && <span className="text-red-500">*</span>}
+				{readOnly && <span className="text-xs text-gray-500 ml-2">(Otomatis dari akun desa)</span>}
 			</label>
 			<input
 				type={type}
 				value={formData[field] || ""}
 				onChange={(e) => handleInputChange(field, e.target.value)}
 				placeholder={placeholder}
-				disabled={!isEditing}
+				disabled={!isEditing || readOnly}
+				readOnly={readOnly}
 				className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-					!isEditing ? "bg-gray-50 cursor-not-allowed" : ""
+					!isEditing || readOnly ? "bg-gray-50 cursor-not-allowed" : ""
 				}`}
 			/>
 		</div>
@@ -603,9 +618,9 @@ const BumdesDesaPage = () => {
 				{renderFormSection("1. Identitas BUMDes", <FiShoppingBag className="text-blue-600" />, (
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 						{renderInput("Nama BUMDes", "namabumdesa", "text", "Masukkan nama BUMDes", true)}
-						{renderInput("Nama Desa", "desa", "text", "", false)}
-						{renderInput("Kecamatan", "kecamatan", "text", "", false)}
-						{renderInput("Kode Desa", "kode_desa", "text", "", false)}
+						{renderInput("Nama Desa", "desa", "text", "", false, true)}
+						{renderInput("Kecamatan", "kecamatan", "text", "", false, true)}
+						{renderInput("Kode Desa", "kode_desa", "text", "", false, true)}
 						{renderInput("Tahun Pendirian", "TahunPendirian", "number", "Contoh: 2020")}
 						{renderSelect("Status BUMDes", "status", [
 							{ value: "aktif", label: "Aktif" },

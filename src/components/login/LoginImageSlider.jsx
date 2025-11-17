@@ -55,13 +55,13 @@ const LoginImageSlider = () => {
 			loop={gallery.length > 1}
 			className="h-full w-full rounded-2xl"
 		>
-			{gallery.map((image) => (
-				<SwiperSlide key={image.id}>
-					<img
-						src={`http://127.0.0.1:3001/uploads/${encodeURIComponent(image.image_path).replace(/%2F/g, '/')}`}
-						alt={image.title || "Login Image"}
-						className="h-full w-full object-cover rounded-2xl"
-						onError={(e) => {
+		{gallery.map((image) => (
+			<SwiperSlide key={image.id}>
+				<img
+					src={`${import.meta.env.VITE_IMAGE_BASE_URL || 'http://127.0.0.1:3001'}/uploads/${encodeURIComponent(image.image_path).replace(/%2F/g, '/')}`}
+					alt={image.title || "Login Image"}
+					className="h-full w-full object-cover rounded-2xl"
+					onError={(e) => {
 							console.error('Failed to load image:', image.image_path);
 							e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23374151" width="100" height="100"/%3E%3Ctext fill="%239CA3AF" x="50%" y="50%" text-anchor="middle" dy=".3em"%3ENo Image%3C/text%3E%3C/svg%3E';
 						}}

@@ -139,12 +139,17 @@ const CustomDropdown = ({ label, name, value, onChange, options = [], disabled =
     const [isOpen, setIsOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     
-    const filteredOptions = options.filter(option => 
-        (option.label || option).toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    // Ensure value is never undefined/null
+    const safeValue = value || '';
+    
+    const filteredOptions = options.filter(option => {
+        const label = option.label || option;
+        // Convert to string to safely call toLowerCase
+        return String(label).toLowerCase().includes(searchTerm.toLowerCase());
+    });
     
     const selectedOption = options.find(option => 
-        (option.value || option) === value
+        (option.value || option) === safeValue
     );
     
     const handleSelect = (optionValue) => {
@@ -222,7 +227,7 @@ const CustomDropdown = ({ label, name, value, onChange, options = [], disabled =
                             <div
                                 key={index}
                                 className={`custom-dropdown-option ${
-                                    (option.value || option) === value ? 'selected' : ''
+                                    (option.value || option) === safeValue ? 'selected' : ''
                                 }`}
                                 onClick={() => handleSelect(option.value || option)}
                             >
@@ -347,7 +352,7 @@ const FormInput = ({ label, name, type = "text", value, onChange, disabled, requ
             ) : type === 'textarea' ? (
                 <textarea
                     name={name}
-                    value={value}
+                    value={value || ''}
                     onChange={onChange}
                     disabled={disabled}
                     placeholder={placeholder}
@@ -358,7 +363,7 @@ const FormInput = ({ label, name, type = "text", value, onChange, disabled, requ
                 <input
                     type={type}
                     name={name}
-                    value={value}
+                    value={value || ''}
                     onChange={onChange}
                     disabled={disabled}
                     placeholder={placeholder}
@@ -391,7 +396,7 @@ const parseRupiah = (rupiah) => {
 
 // Initial form data
 export const initialFormData = {
-    desa_id: null,
+    desa_id: '',
     kode_desa: '',
     kecamatan: '',
     desa: '',
@@ -449,18 +454,18 @@ export const initialFormData = {
     DesaWisata: '',
     BantuanKementrian: '',
     BantuanLaptopShopee: '',
-    LaporanKeuangan2021: null,
-    LaporanKeuangan2022: null,
-    LaporanKeuangan2023: null,
-    LaporanKeuangan2024: null,
+    LaporanKeuangan2021: '',
+    LaporanKeuangan2022: '',
+    LaporanKeuangan2023: '',
+    LaporanKeuangan2024: '',
     NomorPerdes: '',
-    Perdes: null,
-    ProfilBUMDesa: null,
-    BeritaAcara: null,
-    AnggaranDasar: null,
-    AnggaranRumahTangga: null,
-    ProgramKerja: null,
-    SK_BUM_Desa: null
+    Perdes: '',
+    ProfilBUMDesa: '',
+    BeritaAcara: '',
+    AnggaranDasar: '',
+    AnggaranRumahTangga: '',
+    ProgramKerja: '',
+    SK_BUM_Desa: ''
 };
 
 // Form sections configuration
@@ -570,14 +575,16 @@ function BumdesForm({ onSwitchToDashboard }) {
     // Handle kecamatan change
     const handleKecamatanChange = async (e) => {
         const kecamatanId = e.target.value;
-        const selectedKecamatan = kecamatanList.find(kec => kec.id == kecamatanId);
+        const selectedKecamatan = kecamatanList.find(kec => 
+            (kec.id_kecamatan || kec.id) == kecamatanId
+        );
         
         console.log('🏘️ Kecamatan changed:', kecamatanId, selectedKecamatan);
         
         setSelectedKecamatanId(kecamatanId);
         setFormData({
             ...formData,
-            kecamatan: selectedKecamatan ? selectedKecamatan.nama : '',
+            kecamatan: selectedKecamatan ? (selectedKecamatan.nama_kecamatan || selectedKecamatan.nama) : '',
             desa: '',
             kode_desa: ''
         });
@@ -609,22 +616,22 @@ function BumdesForm({ onSwitchToDashboard }) {
     // Handle desa change
     const handleDesaChange = async (e) => {
         const desaId = e.target.value;
-        const selectedDesa = desaList.find(desa => desa.id == desaId);
+        const selectedDesa = desaList.find(desa => (desa.id_desa || desa.id) == desaId);
         
         console.log('🏘️ Desa selected:', selectedDesa);
         
         if (selectedDesa) {
             setFormData({
                 ...formData,
-                desa_id: selectedDesa.id,  // Add desa_id for backend
-                desa: selectedDesa.nama,
-                kode_desa: selectedDesa.kode
+                desa_id: selectedDesa.id_desa || selectedDesa.id,  // Support both field names
+                desa: selectedDesa.nama_desa || selectedDesa.nama,
+                kode_desa: selectedDesa.kode_desa || selectedDesa.kode
             });
 
             // Check if this desa already has BUMDes
-            const hasExisting = await checkExistingBumdes(selectedDesa.kode);
+            const hasExisting = await checkExistingBumdes(selectedDesa.kode_desa || selectedDesa.kode);
             if (hasExisting) {
-                showMessagePopup(`Peringatan: Desa "${selectedDesa.nama}" sudah melakukan input data BUMDes. Setiap desa hanya dapat memiliki satu BUMDes.`, 'warning');
+                showMessagePopup(`Peringatan: Desa "${selectedDesa.nama_desa || selectedDesa.nama}" sudah melakukan input data BUMDes. Setiap desa hanya dapat memiliki satu BUMDes.`, 'warning');
             }
         } else {
             setFormData({
@@ -749,6 +756,13 @@ function BumdesForm({ onSwitchToDashboard }) {
             return;
         }
 
+        // Validasi namabumdesa (required field)
+        if (!formData.namabumdesa || formData.namabumdesa.trim() === '') {
+            showMessagePopup('Nama BUMDesa wajib diisi.', 'error');
+            setLoading(false);
+            return;
+        }
+
         // Check if desa already has BUMDes
         const hasExisting = await checkExistingBumdes(formData.kode_desa);
         if (hasExisting) {
@@ -861,8 +875,8 @@ function BumdesForm({ onSwitchToDashboard }) {
                                     value={selectedKecamatanId}
                                     onChange={handleKecamatanChange}
                                     options={kecamatanList.map(kec => ({
-                                        value: kec.id,
-                                        label: kec.nama
+                                        value: kec.id_kecamatan || kec.id,
+                                        label: kec.nama_kecamatan || kec.nama
                                     }))}
                                     required
                                 />
@@ -875,11 +889,11 @@ function BumdesForm({ onSwitchToDashboard }) {
                                     <CustomDropdown
                                         label="Desa"
                                         name="desa_id"
-                                        value={desaList.find(desa => desa.nama === formData.desa)?.id || ''}
+                                        value={desaList.find(desa => (desa.nama_desa || desa.nama) === formData.desa)?.id_desa || desaList.find(desa => (desa.nama_desa || desa.nama) === formData.desa)?.id || ''}
                                         onChange={handleDesaChange}
                                         options={desaList.map(desa => ({
-                                            value: desa.id,
-                                            label: desa.nama
+                                            value: desa.id_desa || desa.id,
+                                            label: desa.nama_desa || desa.nama
                                         }))}
                                         disabled={!selectedKecamatanId || loadingDesa}
                                         placeholder={loadingDesa ? 'Memuat desa...' : 'Pilih Desa'}
@@ -928,7 +942,8 @@ function BumdesForm({ onSwitchToDashboard }) {
                                     name="namabumdesa"
                                     value={formData.namabumdesa}
                                     onChange={handleChange}
-                                    required
+                                    required={true}
+                                    placeholder="Masukkan nama BUMDesa"
                                 />
                                 
                                 <div className="md:col-span-2">
