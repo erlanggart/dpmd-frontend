@@ -203,7 +203,7 @@ const MainLayout = () => {
 			children: [
 				{ to: "/dashboard/hero-gallery", label: "Galeri Hero" },
 				{ to: "/dashboard/berita", label: "Manajemen Berita" },
-				{ to: "/dashboard/users", label: "Manajemen User" },
+				{ to: "/dashboard/user", label: "Manajemen User" },
 			],
 		},
 	];		// Gabungkan menu berdasarkan role user

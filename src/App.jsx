@@ -83,16 +83,21 @@ const StatistikPerjadin = lazy(() =>
 const TrendsPage = lazy(() =>
 	import("./pages/kepala-dinas/TrendsPage")
 );
+const UserManagementPage = lazy(() =>
+	import("./pages/dashboard/UserManagementPage")
+);
 
 const ProtectedRoute = ({ children }) => {
 	const token = localStorage.getItem("expressToken");
 	const location = useLocation();
 
 	if (!token) {
+		console.log("🔒 ProtectedRoute: No token found, redirecting to login");
 		// Simpan lokasi yang dituju agar bisa redirect kembali setelah login
 		return <Navigate to="/login" state={{ from: location }} replace />;
 	}
 
+	console.log("✅ ProtectedRoute: Token found, allowing access");
 	return children;
 };
 
@@ -146,6 +151,7 @@ function App() {
 						<Route path="bumdes" element={<BumdesApp />} />
 						<Route path="kelembagaan" element={<Kelembagaan />} />
 						<Route path="perjalanan-dinas" element={<PerjalananDinas />} />
+						<Route path="user" element={<UserManagementPage />} />
 					</Route>
 
 					{/* Rute Desa dengan lazy loading */}
