@@ -1,5 +1,5 @@
 // src/components/tabs/WilayahManagement.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import {
 	LuMapPin,
 	LuUser,
@@ -29,10 +29,10 @@ const WilayahManagement = () => {
 	const { user: currentUser } = useAuth();
 
 	// Role-role tingkat wilayah
-	const wilayahRoles = ["kecamatan", "desa"];
+	const wilayahRoles = useMemo(() => ["kecamatan", "desa"], []);
 
 	// Function to fetch users
-	const fetchUsers = async () => {
+	const fetchUsers = useCallback(async () => {
 		setLoading(true);
 		try {
 			const response = await api.get("/users");
@@ -48,11 +48,11 @@ const WilayahManagement = () => {
 		} finally {
 			setLoading(false);
 		}
-	};
+	}, [wilayahRoles]);
 
 	useEffect(() => {
 		fetchUsers();
-	}, []);
+	}, [fetchUsers]);
 
 	// Function to handle user added
 	const handleUserAdded = () => {

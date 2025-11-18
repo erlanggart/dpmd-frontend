@@ -1,5 +1,5 @@
 // src/components/tabs/BidangManagement.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import {
 	LuUsers,
 	LuUser,
@@ -29,7 +29,7 @@ const BidangManagement = () => {
 	const { user: currentUser } = useAuth();
 
 	// Role-role untuk 4 bidang dan 3 departemen di DPMD
-	const bidangRoles = [
+	const bidangRoles = useMemo(() => [
 		// 4 Bidang
 		"sarana_prasarana",
 		"pemerintahan_desa",
@@ -39,10 +39,10 @@ const BidangManagement = () => {
 		"sekretariat",
 		"prolap",
 		"keuangan",
-	];
+	], []);
 
 	// Urutan kategori berdasarkan 4 bidang dan 3 departemen DPMD
-	const categoryOrder = [
+	const categoryOrder = useMemo(() => [
 		// 4 Bidang
 		"Bidang Pemerintahan Desa",
 		"Bidang Sarana Prasarana",
@@ -52,10 +52,10 @@ const BidangManagement = () => {
 		"Departemen Sekretariat",
 		"Departemen Program dan Pelaporan",
 		"Departemen Keuangan",
-	];
+	], []);
 
 	// Function to fetch users
-	const fetchUsers = async () => {
+	const fetchUsers = useCallback(async () => {
 		setLoading(true);
 		try {
 			const response = await api.get("/users");
@@ -71,7 +71,7 @@ const BidangManagement = () => {
 		} finally {
 			setLoading(false);
 		}
-	};
+	}, [bidangRoles]);
 
 	useEffect(() => {
 		fetchUsers();
@@ -81,7 +81,7 @@ const BidangManagement = () => {
 			initialExpanded[category] = true;
 		});
 		setExpandedSections(initialExpanded);
-	}, []);
+	}, [fetchUsers, categoryOrder]);
 
 	// Function to handle user added
 	const handleUserAdded = () => {

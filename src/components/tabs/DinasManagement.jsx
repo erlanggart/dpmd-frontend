@@ -1,5 +1,5 @@
 // src/components/tabs/DinasManagement.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import {
 	LuBuilding,
 	LuUser,
@@ -18,10 +18,10 @@ const DinasManagement = () => {
 	const [showAddModal, setShowAddModal] = useState(false);
 
 	// Role-role tingkat dinas
-	const dinasRoles = ["dinas", "kepala_dinas", "sekretaris_dinas"];
+	const dinasRoles = useMemo(() => ["dinas", "kepala_dinas", "sekretaris_dinas"], []);
 
 	// Function to fetch users
-	const fetchUsers = async () => {
+	const fetchUsers = useCallback(async () => {
 		setLoading(true);
 		try {
 			const response = await api.get("/users");
@@ -37,11 +37,11 @@ const DinasManagement = () => {
 		} finally {
 			setLoading(false);
 		}
-	};
+	}, [dinasRoles]);
 
 	useEffect(() => {
 		fetchUsers();
-	}, []);
+	}, [fetchUsers]);
 
 	// Function to handle user added
 	const handleUserAdded = () => {
