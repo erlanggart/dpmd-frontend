@@ -57,6 +57,9 @@ const KelembagaanList = lazy(() =>
 const KelembagaanDetailPage = lazy(() =>
 	import("./pages/desa/kelembagaan/KelembagaanDetailPage")
 );
+const AdminKelembagaanDetailPage = lazy(() =>
+	import("./pages/PMD/AdminKelembagaanDetailPage")
+);
 const PengurusDetailPage = lazy(() =>
 	import("./pages/desa/pengurus/PengurusDetailPage")
 );
@@ -133,6 +136,8 @@ const DdNonEarmarkedT2 = lazy(() =>
 );
 const InsentifDd = lazy(() =>
 	import("./pages/kkd/dd/InsentifDd")
+const UserManagementPage = lazy(() =>
+	import("./pages/dashboard/UserManagementPage")
 );
 
 const ProtectedRoute = ({ children }) => {
@@ -140,10 +145,12 @@ const ProtectedRoute = ({ children }) => {
 	const location = useLocation();
 
 	if (!token) {
+		console.log("🔒 ProtectedRoute: No token found, redirecting to login");
 		// Simpan lokasi yang dituju agar bisa redirect kembali setelah login
 		return <Navigate to="/login" state={{ from: location }} replace />;
 	}
 
+	console.log("✅ ProtectedRoute: Token found, allowing access");
 	return children;
 };
 
@@ -219,6 +226,16 @@ function App() {
 					<Route path="dd/insentif" element={<InsentifDd />} />
 					<Route path="kelembagaan" element={<Kelembagaan />} />
 					<Route path="perjalanan-dinas" element={<PerjalananDinas />} />
+						{/* Public dashboard routes - accessible by all authenticated users */}
+						<Route index element={<DashboardPage />} />
+						<Route path="hero-gallery" element={<HeroGalleryManagement />} />
+						<Route path="berita" element={<BeritaManagement />} />
+						<Route path="bumdes" element={<BumdesApp />} />
+						<Route path="kelembagaan" element={<Kelembagaan />} />
+						<Route path="kelembagaan/admin/:desaId" element={<AdminKelembagaanDetailPage />} />
+						<Route path="kelembagaan/admin/:desaId/:type/:id" element={<KelembagaanDetailPage />} />
+						<Route path="perjalanan-dinas" element={<PerjalananDinas />} />
+						<Route path="user" element={<UserManagementPage />} />
 					</Route>
 
 					{/* Rute Desa dengan lazy loading */}

@@ -1,6 +1,5 @@
 // src/components/tabs/SuperAdminUsers.jsx
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { LuCalendar, LuCrown, LuUser, LuMail, LuPlus } from "react-icons/lu";
 import api from "../../api";
 import AddUserModal from "../AddUserModal";
@@ -10,29 +9,16 @@ const SuperAdminUsers = () => {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
 	const [showAddModal, setShowAddModal] = useState(false);
-	const navigate = useNavigate();
 
 	// Function to fetch users
 	const fetchUsers = async () => {
-		const token = localStorage.getItem("authToken");
-		if (!token) {
-			navigate("/login");
-			return;
-		}
-
 		setLoading(true);
 		try {
-			const response = await api.get("/users", {
-				headers: { Authorization: `Bearer ${token}` },
-			});
+			const response = await api.get("/users?role=superadmin");
 
 			console.log(response.data);
 
-			// Filter hanya superadmin
-			const superAdmins = response.data.data.filter(
-				(user) => user.role === "superadmin"
-			);
-			setUsers(superAdmins);
+			setUsers(response.data.data);
 		} catch (err) {
 			setError("Gagal mengambil data user.");
 			console.error(err);
@@ -43,10 +29,10 @@ const SuperAdminUsers = () => {
 
 	useEffect(() => {
 		fetchUsers();
-	}, [navigate]);
+	}, []);
 
 	// Function to handle user added
-	const handleUserAdded = (newUser) => {
+	const handleUserAdded = () => {
 		// Refresh the user list
 		fetchUsers();
 	};

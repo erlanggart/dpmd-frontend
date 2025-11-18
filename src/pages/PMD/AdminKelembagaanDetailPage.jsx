@@ -224,7 +224,7 @@ const AdminKelembagaanDetailPage = () => {
 							</div>
 							<div>
 								<h1 className="text-3xl font-bold text-gray-800">
-									{desaInfo?.nama_desa}
+									{desaInfo?.nama}
 								</h1>
 								<p className="text-lg text-gray-600">
 									Kecamatan {desaInfo?.nama_kecamatan}
