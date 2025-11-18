@@ -119,18 +119,6 @@ const MainLayout = () => {
 		}
 	}, []);
 
-	// Secara otomatis membuka menu yang relevan saat halaman dimuat
-	useEffect(() => {
-		if (!menuItems) return;
-		
-		const currentMenu = menuItems.find((item) =>
-			item.children.some((child) => location.pathname.startsWith(child.to))
-		);
-		if (currentMenu) {
-			setOpenMenu(currentMenu.key);
-		}
-	}, [location.pathname, user]); // Ganti menuItems dengan user untuk menghindari circular dependency
-
 	const handleLogout = () => {
 		localStorage.removeItem("expressToken");
 		localStorage.removeItem("user");
@@ -203,7 +191,7 @@ const MainLayout = () => {
 			children: [
 				{ to: "/dashboard/hero-gallery", label: "Galeri Hero" },
 				{ to: "/dashboard/berita", label: "Manajemen Berita" },
-				{ to: "/dashboard/users", label: "Manajemen User" },
+				{ to: "/dashboard/user", label: "Manajemen User" },
 			],
 		},
 	];		// Gabungkan menu berdasarkan role user
@@ -251,6 +239,18 @@ const MainLayout = () => {
 		
 		return baseMenuItems;
 	}, [user]); // Dependency hanya pada user
+
+	// Secara otomatis membuka menu yang relevan saat halaman dimuat
+	useEffect(() => {
+		if (!menuItems) return;
+		
+		const currentMenu = menuItems.find((item) =>
+			item.children.some((child) => location.pathname.startsWith(child.to))
+		);
+		if (currentMenu) {
+			setOpenMenu(currentMenu.key);
+		}
+	}, [location.pathname, menuItems]);
 
 	return (
 		<div className="flex h-screen bg-slate-100">

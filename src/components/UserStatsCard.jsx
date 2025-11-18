@@ -22,41 +22,28 @@ const UserStatsCard = () => {
 	useEffect(() => {
 		const fetchUserStats = async () => {
 			try {
-				const token = localStorage.getItem("authToken");
-				const response = await api.get("/users", {
-					headers: { Authorization: `Bearer ${token}` },
-				});
+				// Check if token exists
+				const token = localStorage.getItem("expressToken");
+				if (!token) {
+					console.log("No token found, skipping user stats fetch");
+					setStats((prev) => ({ ...prev, loading: false }));
+					return;
+				}
 
-				const users = response.data.data;
+				const response = await api.get("/users/stats");
+				const statsData = response.data.data;
 
-				// Kategori roles
-				const dinasRoles = ["dinas", "kepala_dinas", "sekretaris_dinas"];
-				const bidangRoles = [
-					"kepala_bidang_pemerintahan",
-					"kepala_bidang_kesra",
-					"kepala_bidang_ekonomi",
-					"kepala_bidang_fisik",
-					"sarana_prasarana",
-					"kekayaan_keuangan",
-					"pemberdayaan_masyarakat",
-					"pemerintahan_desa",
-					"sekretariat",
-					"staff",
-				];
-				const wilayahRoles = ["kecamatan", "desa"];
-
-				const calculations = {
-					total: users.length,
-					superadmin: users.filter((u) => u.role === "superadmin").length,
-					dinas: users.filter((u) => dinasRoles.includes(u.role)).length,
-					bidang: users.filter((u) => bidangRoles.includes(u.role)).length,
-					wilayah: users.filter((u) => wilayahRoles.includes(u.role)).length,
+				setStats({
+					total: statsData.total,
+					superadmin: statsData.superadmin,
+					dinas: statsData.dinas,
+					bidang: statsData.bidang,
+					wilayah: statsData.kecamatan + statsData.desa,
 					loading: false,
-				};
-
-				setStats(calculations);
+				});
 			} catch (error) {
 				console.error("Error fetching user stats:", error);
+				// Don't redirect on error, just show loading: false
 				setStats((prev) => ({ ...prev, loading: false }));
 			}
 		};

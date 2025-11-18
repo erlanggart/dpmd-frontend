@@ -1,6 +1,5 @@
 // src/components/tabs/DinasManagement.jsx
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import {
 	LuBuilding,
 	LuUser,
@@ -17,24 +16,15 @@ const DinasManagement = () => {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
 	const [showAddModal, setShowAddModal] = useState(false);
-	const navigate = useNavigate();
 
 	// Role-role tingkat dinas
-	const dinasRoles = ["dinas", "kepala_dinas", "sekretaris_dinas"];
+	const dinasRoles = useMemo(() => ["dinas", "kepala_dinas", "sekretaris_dinas"], []);
 
 	// Function to fetch users
-	const fetchUsers = async () => {
-		const token = localStorage.getItem("authToken");
-		if (!token) {
-			navigate("/login");
-			return;
-		}
-
+	const fetchUsers = useCallback(async () => {
 		setLoading(true);
 		try {
-			const response = await api.get("/users", {
-				headers: { Authorization: `Bearer ${token}` },
-			});
+			const response = await api.get("/users");
 
 			// Filter user dengan role tingkat dinas
 			const dinasUsers = response.data.data.filter((user) =>
@@ -47,14 +37,14 @@ const DinasManagement = () => {
 		} finally {
 			setLoading(false);
 		}
-	};
+	}, [dinasRoles]);
 
 	useEffect(() => {
 		fetchUsers();
-	}, [navigate]);
+	}, [fetchUsers]);
 
 	// Function to handle user added
-	const handleUserAdded = (newUser) => {
+	const handleUserAdded = () => {
 		fetchUsers();
 	};
 

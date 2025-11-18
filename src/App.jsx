@@ -56,6 +56,9 @@ const KelembagaanList = lazy(() =>
 const KelembagaanDetailPage = lazy(() =>
 	import("./pages/desa/kelembagaan/KelembagaanDetailPage")
 );
+const AdminKelembagaanDetailPage = lazy(() =>
+	import("./pages/PMD/AdminKelembagaanDetailPage")
+);
 const PengurusDetailPage = lazy(() =>
 	import("./pages/desa/pengurus/PengurusDetailPage")
 );
@@ -83,16 +86,21 @@ const StatistikPerjadin = lazy(() =>
 const TrendsPage = lazy(() =>
 	import("./pages/kepala-dinas/TrendsPage")
 );
+const UserManagementPage = lazy(() =>
+	import("./pages/dashboard/UserManagementPage")
+);
 
 const ProtectedRoute = ({ children }) => {
 	const token = localStorage.getItem("expressToken");
 	const location = useLocation();
 
 	if (!token) {
+		console.log("🔒 ProtectedRoute: No token found, redirecting to login");
 		// Simpan lokasi yang dituju agar bisa redirect kembali setelah login
 		return <Navigate to="/login" state={{ from: location }} replace />;
 	}
 
+	console.log("✅ ProtectedRoute: Token found, allowing access");
 	return children;
 };
 
@@ -145,7 +153,10 @@ function App() {
 						<Route path="berita" element={<BeritaManagement />} />
 						<Route path="bumdes" element={<BumdesApp />} />
 						<Route path="kelembagaan" element={<Kelembagaan />} />
+						<Route path="kelembagaan/admin/:desaId" element={<AdminKelembagaanDetailPage />} />
+						<Route path="kelembagaan/admin/:desaId/:type/:id" element={<KelembagaanDetailPage />} />
 						<Route path="perjalanan-dinas" element={<PerjalananDinas />} />
+						<Route path="user" element={<UserManagementPage />} />
 					</Route>
 
 					{/* Rute Desa dengan lazy loading */}

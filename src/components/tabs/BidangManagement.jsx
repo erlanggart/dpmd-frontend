@@ -1,6 +1,5 @@
 // src/components/tabs/BidangManagement.jsx
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import {
 	LuUsers,
 	LuUser,
@@ -10,7 +9,6 @@ import {
 	LuPlus,
 	LuChevronDown,
 	LuChevronUp,
-	LuRefreshCw,
 	LuShield,
 } from "react-icons/lu";
 import api from "../../api";
@@ -28,11 +26,10 @@ const BidangManagement = () => {
 	const [resetLoading, setResetLoading] = useState(false);
 	const [showResetModal, setShowResetModal] = useState(false);
 	const [selectedUser, setSelectedUser] = useState(null);
-	const navigate = useNavigate();
 	const { user: currentUser } = useAuth();
 
 	// Role-role untuk 4 bidang dan 3 departemen di DPMD
-	const bidangRoles = [
+	const bidangRoles = useMemo(() => [
 		// 4 Bidang
 		"sarana_prasarana",
 		"pemerintahan_desa",
@@ -42,10 +39,10 @@ const BidangManagement = () => {
 		"sekretariat",
 		"prolap",
 		"keuangan",
-	];
+	], []);
 
 	// Urutan kategori berdasarkan 4 bidang dan 3 departemen DPMD
-	const categoryOrder = [
+	const categoryOrder = useMemo(() => [
 		// 4 Bidang
 		"Bidang Pemerintahan Desa",
 		"Bidang Sarana Prasarana",
@@ -55,21 +52,13 @@ const BidangManagement = () => {
 		"Departemen Sekretariat",
 		"Departemen Program dan Pelaporan",
 		"Departemen Keuangan",
-	];
+	], []);
 
 	// Function to fetch users
-	const fetchUsers = async () => {
-		const token = localStorage.getItem("authToken");
-		if (!token) {
-			navigate("/login");
-			return;
-		}
-
+	const fetchUsers = useCallback(async () => {
 		setLoading(true);
 		try {
-			const response = await api.get("/users", {
-				headers: { Authorization: `Bearer ${token}` },
-			});
+			const response = await api.get("/users");
 
 			// Filter user dengan role tingkat bidang
 			const bidangUsers = response.data.data.filter((user) =>
@@ -82,7 +71,7 @@ const BidangManagement = () => {
 		} finally {
 			setLoading(false);
 		}
-	};
+	}, [bidangRoles]);
 
 	useEffect(() => {
 		fetchUsers();
@@ -92,10 +81,10 @@ const BidangManagement = () => {
 			initialExpanded[category] = true;
 		});
 		setExpandedSections(initialExpanded);
-	}, [navigate]);
+	}, [fetchUsers, categoryOrder]);
 
 	// Function to handle user added
-	const handleUserAdded = (newUser) => {
+	const handleUserAdded = () => {
 		fetchUsers();
 	};
 

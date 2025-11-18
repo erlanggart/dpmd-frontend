@@ -1,6 +1,5 @@
 // src/components/tabs/WilayahManagement.jsx
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import {
 	LuMapPin,
 	LuUser,
@@ -10,7 +9,6 @@ import {
 	LuHouse,
 	LuPlus,
 	LuShield,
-	LuRefreshCw,
 } from "react-icons/lu";
 import api from "../../api";
 import AddUserModal from "../AddUserModal";
@@ -28,25 +26,16 @@ const WilayahManagement = () => {
 	const [resetLoading, setResetLoading] = useState(false);
 	const [showResetModal, setShowResetModal] = useState(false);
 	const [selectedUser, setSelectedUser] = useState(null);
-	const navigate = useNavigate();
 	const { user: currentUser } = useAuth();
 
 	// Role-role tingkat wilayah
-	const wilayahRoles = ["kecamatan", "desa"];
+	const wilayahRoles = useMemo(() => ["kecamatan", "desa"], []);
 
 	// Function to fetch users
-	const fetchUsers = async () => {
-		const token = localStorage.getItem("authToken");
-		if (!token) {
-			navigate("/login");
-			return;
-		}
-
+	const fetchUsers = useCallback(async () => {
 		setLoading(true);
 		try {
-			const response = await api.get("/users", {
-				headers: { Authorization: `Bearer ${token}` },
-			});
+			const response = await api.get("/users");
 
 			// Filter user dengan role tingkat wilayah
 			const wilayahUsers = response.data.data.filter((user) =>
@@ -59,14 +48,14 @@ const WilayahManagement = () => {
 		} finally {
 			setLoading(false);
 		}
-	};
+	}, [wilayahRoles]);
 
 	useEffect(() => {
 		fetchUsers();
-	}, [navigate]);
+	}, [fetchUsers]);
 
 	// Function to handle user added
-	const handleUserAdded = (newUser) => {
+	const handleUserAdded = () => {
 		fetchUsers();
 	};
 
