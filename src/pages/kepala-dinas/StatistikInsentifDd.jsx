@@ -356,6 +356,80 @@ const StatistikInsentifDd = () => {
             </div>
           </div>
         </div>
+
+        {/* Detail Data per Kecamatan */}
+        <div className="mt-8 bg-white rounded-2xl shadow-xl border border-gray-100">
+          <div className="p-6 md:p-8 border-b border-gray-200">
+            <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+              <div className="w-2 h-8 bg-gradient-to-b from-emerald-500 to-green-500 rounded-full"></div>
+              Detail Data per Kecamatan
+            </h3>
+          </div>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gradient-to-r from-emerald-600 to-green-600 text-white">
+                <tr>
+                  <th className="px-6 py-4 text-left">Kecamatan</th>
+                  <th className="px-6 py-4 text-left">Desa</th>
+                  <th className="px-6 py-4 text-left">Status</th>
+                  <th className="px-6 py-4 text-right">Alokasi</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {Object.entries(groupedByKecamatan).map(([kecamatan, items]) => {
+                  const isExpanded = expandedKecamatan[kecamatan];
+                  const totalKecamatan = items.reduce((sum, item) => sum + item.realisasi, 0);
+                  return (
+                    <React.Fragment key={kecamatan}>
+                      <tr className="bg-emerald-50 hover:bg-emerald-100 transition-colors">
+                        <td className="px-6 py-4" colSpan="4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <MapPin className="w-5 h-5 text-emerald-600" />
+                              <span className="font-semibold text-gray-800">{kecamatan}</span>
+                              <span className="text-sm text-gray-600">({items.length} desa)</span>
+                              <span className="text-sm font-semibold text-emerald-700">{formatRupiah(totalKecamatan)}</span>
+                            </div>
+                            <button
+                              onClick={() => setExpandedKecamatan(prev => ({
+                                ...prev,
+                                [kecamatan]: !prev[kecamatan]
+                              }))}
+                              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium"
+                            >
+                              {isExpanded ? (
+                                <>
+                                  <ChevronUp className="w-4 h-4" />
+                                  Tutup Detail
+                                </>
+                              ) : (
+                                <>
+                                  <ChevronDown className="w-4 h-4" />
+                                  Lihat Detail
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                      {isExpanded && items.map((item, index) => (
+                        <tr key={`${item.desa}-${index}`} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-6 py-4 text-gray-400">↳ {kecamatan}</td>
+                          <td className="px-6 py-4 font-medium text-gray-800">{item.desa}</td>
+                          <td className="px-6 py-4">{getStatusBadge(item.status)}</td>
+                          <td className="px-6 py-4 text-right font-semibold text-emerald-700">
+                            {formatRupiah(item.realisasi)}
+                          </td>
+                        </tr>
+                      ))}
+                    </React.Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   );

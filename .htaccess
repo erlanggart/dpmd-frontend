@@ -15,6 +15,17 @@
 # Disable directory listing
 Options -Indexes
 
+# MIME Types untuk JavaScript modules (PENTING untuk mengatasi error MIME type)
+<IfModule mod_mime.c>
+    AddType application/javascript .js .mjs
+    AddType text/css .css
+    AddType image/svg+xml .svg
+    AddType application/json .json
+    AddType font/woff2 .woff2
+    AddType font/woff .woff
+    AddType font/ttf .ttf
+</IfModule>
+
 # Cache static assets
 <IfModule mod_expires.c>
     ExpiresActive On

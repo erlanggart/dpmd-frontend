@@ -379,21 +379,37 @@ const StatistikDdEarmarkedT1 = () => {
               <tbody className="divide-y divide-gray-200">
                 {Object.entries(groupedByKecamatan).map(([kecamatan, items]) => {
                   const isExpanded = expandedKecamatan[kecamatan];
+                  const totalKecamatan = items.reduce((sum, item) => sum + item.realisasi, 0);
                   return (
                     <React.Fragment key={kecamatan}>
-                      <tr 
-                        className="bg-cyan-50 hover:bg-cyan-100 cursor-pointer transition-colors"
-                        onClick={() => setExpandedKecamatan(prev => ({
-                          ...prev,
-                          [kecamatan]: !prev[kecamatan]
-                        }))}
-                      >
+                      <tr className="bg-cyan-50 hover:bg-cyan-100 transition-colors">
                         <td className="px-6 py-4" colSpan="4">
-                          <div className="flex items-center gap-3 font-semibold text-gray-800">
-                            {isExpanded ? <ChevronUp className="w-5 h-5 text-cyan-600" /> : <ChevronDown className="w-5 h-5 text-cyan-600" />}
-                            <MapPin className="w-5 h-5 text-cyan-600" />
-                            <span>{kecamatan}</span>
-                            <span className="text-sm text-gray-600 font-normal">({items.length} desa)</span>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <MapPin className="w-5 h-5 text-cyan-600" />
+                              <span className="font-semibold text-gray-800">{kecamatan}</span>
+                              <span className="text-sm text-gray-600">({items.length} desa)</span>
+                              <span className="text-sm font-semibold text-cyan-700">{formatRupiah(totalKecamatan)}</span>
+                            </div>
+                            <button
+                              onClick={() => setExpandedKecamatan(prev => ({
+                                ...prev,
+                                [kecamatan]: !prev[kecamatan]
+                              }))}
+                              className="flex items-center gap-2 px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors text-sm font-medium"
+                            >
+                              {isExpanded ? (
+                                <>
+                                  <ChevronUp className="w-4 h-4" />
+                                  Tutup Detail
+                                </>
+                              ) : (
+                                <>
+                                  <ChevronDown className="w-4 h-4" />
+                                  Lihat Detail
+                                </>
+                              )}
+                            </button>
                           </div>
                         </td>
                       </tr>
