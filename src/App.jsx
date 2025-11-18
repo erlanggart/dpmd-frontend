@@ -7,9 +7,10 @@ import {
 	useLocation,
 	Outlet,
 } from "react-router-dom";
-import { Suspense, lazy } from "react";
-import { Toaster } from "react-hot-toast";
+import { Suspense, lazy, useEffect } from "react";
+import { Toaster, toast } from "react-hot-toast";
 import { useAuth } from "./context/AuthContext";
+import { useThemeColor } from "./hooks/useThemeColor";
 
 // Halaman utama di-import langsung untuk performa awal yang lebih cepat
 import LoginPage from "./pages/LoginPage";
@@ -83,9 +84,58 @@ const StatistikBumdes = lazy(() =>
 const StatistikPerjadin = lazy(() =>
 	import("./pages/kepala-dinas/StatistikPerjadin")
 );
+const StatistikBankeu = lazy(() =>
+	import("./pages/kepala-dinas/StatistikBankeu")
+);
+const StatistikAdd = lazy(() =>
+	import("./pages/kepala-dinas/StatistikAdd")
+);
+const StatistikBhprd = lazy(() =>
+	import("./pages/kepala-dinas/StatistikBhprd")
+);
+// DD Statistik Sub-categories
+const StatistikDdEarmarkedT1 = lazy(() =>
+	import("./pages/kepala-dinas/StatistikDdEarmarkedT1")
+);
+const StatistikDdEarmarkedT2 = lazy(() =>
+	import("./pages/kepala-dinas/StatistikDdEarmarkedT2")
+);
+const StatistikDdNonEarmarkedT1 = lazy(() =>
+	import("./pages/kepala-dinas/StatistikDdNonEarmarkedT1")
+);
+const StatistikDdNonEarmarkedT2 = lazy(() =>
+	import("./pages/kepala-dinas/StatistikDdNonEarmarkedT2")
+);
+const StatistikInsentifDd = lazy(() =>
+	import("./pages/kepala-dinas/StatistikInsentifDd")
+);
 const TrendsPage = lazy(() =>
 	import("./pages/kepala-dinas/TrendsPage")
 );
+const Bankeu = lazy(() =>
+	import("./pages/sarpras/Bankeu")
+);
+const Add = lazy(() =>
+	import("./pages/kkd/Add")
+);
+const Bhprd = lazy(() =>
+	import("./pages/kkd/Bhprd")
+);
+// DD Sub-categories
+const DdEarmarkedT1 = lazy(() =>
+	import("./pages/kkd/dd/DdEarmarkedT1")
+);
+const DdEarmarkedT2 = lazy(() =>
+	import("./pages/kkd/dd/DdEarmarkedT2")
+);
+const DdNonEarmarkedT1 = lazy(() =>
+	import("./pages/kkd/dd/DdNonEarmarkedT1")
+);
+const DdNonEarmarkedT2 = lazy(() =>
+	import("./pages/kkd/dd/DdNonEarmarkedT2")
+);
+const InsentifDd = lazy(() =>
+	import("./pages/kkd/dd/InsentifDd")
 const UserManagementPage = lazy(() =>
 	import("./pages/dashboard/UserManagementPage")
 );
@@ -121,17 +171,31 @@ const RoleProtectedRoute = ({ children, allowedRoles }) => {
 	return children || <Outlet />;
 };
 
+// Component wrapper untuk theme color hook
+const ThemeColorWrapper = ({ children }) => {
+	const location = useLocation();
+	useThemeColor();
+	
+	// Dismiss all toasts on route change to prevent stuck toasts
+	useEffect(() => {
+		toast.dismiss();
+	}, [location.pathname]);
+	
+	return children;
+};
+
 function App() {
 	return (
 		<Router>
-			<Suspense
-				fallback={
-					<div className="flex h-screen items-center justify-center">
-						<Spinner />
-					</div>
-				}
-			>
-				<Routes>
+			<ThemeColorWrapper>
+				<Suspense
+					fallback={
+						<div className="flex h-screen items-center justify-center">
+							<Spinner />
+						</div>
+					}
+				>
+					<Routes>
 					{/* Rute yang di-load secara statis */}
 					<Route path="/" element={<LandingPage />} />
 					<Route path="/berita/:slug" element={<BeritaDetailPage />} />
@@ -147,6 +211,21 @@ function App() {
 							</ProtectedRoute>
 						}
 					>
+					{/* Public dashboard routes - accessible by all authenticated users */}
+					<Route index element={<DashboardPage />} />
+					<Route path="hero-gallery" element={<HeroGalleryManagement />} />
+					<Route path="berita" element={<BeritaManagement />} />
+					<Route path="bumdes" element={<BumdesApp />} />
+					<Route path="bankeu" element={<Bankeu />} />
+					<Route path="add" element={<Add />} />
+					<Route path="bhprd" element={<Bhprd />} />
+					<Route path="dd/earmarked-t1" element={<DdEarmarkedT1 />} />
+					<Route path="dd/earmarked-t2" element={<DdEarmarkedT2 />} />
+					<Route path="dd/nonearmarked-t1" element={<DdNonEarmarkedT1 />} />
+					<Route path="dd/nonearmarked-t2" element={<DdNonEarmarkedT2 />} />
+					<Route path="dd/insentif" element={<InsentifDd />} />
+					<Route path="kelembagaan" element={<Kelembagaan />} />
+					<Route path="perjalanan-dinas" element={<PerjalananDinas />} />
 						{/* Public dashboard routes - accessible by all authenticated users */}
 						<Route index element={<DashboardPage />} />
 						<Route path="hero-gallery" element={<HeroGalleryManagement />} />
@@ -188,11 +267,19 @@ function App() {
 							</ProtectedRoute>
 						}
 					>
-						<Route index element={<Navigate to="dashboard" replace />} />
-						<Route path="dashboard" element={<DashboardOverview />} />
-						<Route path="statistik-bumdes" element={<StatistikBumdes />} />
-						<Route path="statistik-perjadin" element={<StatistikPerjadin />} />
-						<Route path="trends" element={<TrendsPage />} />
+					<Route index element={<Navigate to="dashboard" replace />} />
+					<Route path="dashboard" element={<DashboardOverview />} />
+					<Route path="statistik-bumdes" element={<StatistikBumdes />} />
+					<Route path="statistik-perjadin" element={<StatistikPerjadin />} />
+					<Route path="statistik-bankeu" element={<StatistikBankeu />} />
+					<Route path="statistik-add" element={<StatistikAdd />} />
+					<Route path="statistik-bhprd" element={<StatistikBhprd />} />
+					<Route path="statistik-dd-earmarked-t1" element={<StatistikDdEarmarkedT1 />} />
+					<Route path="statistik-dd-earmarked-t2" element={<StatistikDdEarmarkedT2 />} />
+					<Route path="statistik-dd-nonearmarked-t1" element={<StatistikDdNonEarmarkedT1 />} />
+					<Route path="statistik-dd-nonearmarked-t2" element={<StatistikDdNonEarmarkedT2 />} />
+					<Route path="statistik-insentif-dd" element={<StatistikInsentifDd />} />
+					<Route path="trends" element={<TrendsPage />} />
 					</Route>
 				</Routes>
 			</Suspense>
@@ -223,6 +310,7 @@ function App() {
 					},
 				}}
 			/>
+			</ThemeColorWrapper>
 		</Router>
 	);
 }

@@ -1,6 +1,6 @@
 // src/pages/kepala-dinas/KepalaDinasLayout.jsx
 import React, { useState } from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Users, 
@@ -9,12 +9,16 @@ import {
   Menu, 
   X,
   LogOut,
-  ChevronLeft
+  ChevronLeft,
+  ChevronDown,
+  DollarSign
 } from 'lucide-react';
 
 const KepalaDinasLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [expandedDd, setExpandedDd] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogout = () => {
     localStorage.removeItem('expressToken');
@@ -38,6 +42,32 @@ const KepalaDinasLayout = () => {
       path: '/core-dashboard/statistik-perjadin',
       icon: <Briefcase className="w-5 h-5" />,
       label: 'Statistik Perjalanan Dinas'
+    },
+    {
+      path: '/core-dashboard/statistik-bankeu',
+      icon: <DollarSign className="w-5 h-5" />,
+      label: 'Statistik Bantuan Keuangan'
+    },
+    {
+      path: '/core-dashboard/statistik-add',
+      icon: <DollarSign className="w-5 h-5" />,
+      label: 'Statistik ADD'
+    },
+    {
+      path: '/core-dashboard/statistik-bhprd',
+      icon: <DollarSign className="w-5 h-5" />,
+      label: 'Statistik BHPRD'
+    },
+    {
+      label: 'Statistik DD',
+      icon: <DollarSign className="w-5 h-5" />,
+      submenu: [
+        { path: '/core-dashboard/statistik-dd-earmarked-t1', label: 'DD Earmarked Tahap 1' },
+        { path: '/core-dashboard/statistik-dd-earmarked-t2', label: 'DD Earmarked Tahap 2' },
+        { path: '/core-dashboard/statistik-dd-nonearmarked-t1', label: 'DD Non-Earmarked Tahap 1' },
+        { path: '/core-dashboard/statistik-dd-nonearmarked-t2', label: 'DD Non-Earmarked Tahap 2' },
+        { path: '/core-dashboard/statistik-insentif-dd', label: 'Insentif DD' },
+      ]
     },
     {
       path: '/core-dashboard/trends',
@@ -81,28 +111,84 @@ const KepalaDinasLayout = () => {
 
         {/* Navigation Menu */}
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-          {menuItems.map((item, index) => (
-            <NavLink
-              key={index}
-              to={item.path}
-              end={item.end}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
-                  isActive
-                    ? 'bg-blue-600 text-white shadow-lg'
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`
-              }
-              title={!sidebarOpen ? item.label : ''}
-            >
-              <div className={sidebarOpen ? '' : 'mx-auto'}>
-                {item.icon}
-              </div>
-              {sidebarOpen && (
-                <span className="font-medium">{item.label}</span>
-              )}
-            </NavLink>
-          ))}
+          {menuItems.map((item, index) => {
+            // Handle menu with submenu (DD)
+            if (item.submenu) {
+              const isSubmenuActive = item.submenu.some(sub => 
+                location.pathname === sub.path
+              );
+
+              return (
+                <div key={index}>
+                  <button
+                    onClick={() => sidebarOpen && setExpandedDd(!expandedDd)}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 w-full ${
+                      isSubmenuActive
+                        ? 'bg-blue-600 text-white shadow-lg'
+                        : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    <div className={sidebarOpen ? '' : 'mx-auto'}>
+                      {item.icon}
+                    </div>
+                    {sidebarOpen && (
+                      <>
+                        <span className="font-medium flex-1 text-left">{item.label}</span>
+                        <ChevronDown 
+                          className={`w-4 h-4 transition-transform ${
+                            expandedDd ? 'rotate-180' : ''
+                          }`}
+                        />
+                      </>
+                    )}
+                  </button>
+                  {sidebarOpen && expandedDd && (
+                    <div className="ml-8 mt-2 space-y-1">
+                      {item.submenu.map((subitem, subindex) => (
+                        <NavLink
+                          key={subindex}
+                          to={subitem.path}
+                          className={({ isActive }) =>
+                            `flex items-center px-4 py-2 rounded-lg text-sm transition-colors ${
+                              isActive
+                                ? 'bg-blue-100 text-blue-700 font-medium'
+                                : 'text-gray-600 hover:bg-gray-100'
+                            }`
+                          }
+                        >
+                          {subitem.label}
+                        </NavLink>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            // Regular menu item
+            return (
+              <NavLink
+                key={index}
+                to={item.path}
+                end={item.end}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
+                    isActive
+                      ? 'bg-blue-600 text-white shadow-lg'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`
+                }
+                title={!sidebarOpen ? item.label : ''}
+              >
+                <div className={sidebarOpen ? '' : 'mx-auto'}>
+                  {item.icon}
+                </div>
+                {sidebarOpen && (
+                  <span className="font-medium">{item.label}</span>
+                )}
+              </NavLink>
+            );
+          })}
         </nav>
 
         {/* Logout Button */}

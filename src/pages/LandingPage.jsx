@@ -9,6 +9,7 @@ import Footer from "../components/landingpage/Footer";
 import StatsSection from "../components/landingpage/StatsSection";
 import NewsSection from "../components/landingpage/NewsSection";
 import KegiatanSection from "../components/landingpage/KegiatanSection";
+import PWAInstallPrompt from "../components/PWAInstallPrompt";
 
 const LandingPage = () => {
 	const scrollY = useScrollPosition();
@@ -131,6 +132,8 @@ const LandingPage = () => {
 				<FeatureSection />
 			</section>
 			<Footer />
+			{/* PWA disabled temporarily - causing click blocking */}
+			{/* <PWAInstallPrompt showOnLanding={true} /> */}
 		</div>
 	);
 };
