@@ -56,6 +56,9 @@ const KelembagaanList = lazy(() =>
 const KelembagaanDetailPage = lazy(() =>
 	import("./pages/desa/kelembagaan/KelembagaanDetailPage")
 );
+const AdminKelembagaanDetailPage = lazy(() =>
+	import("./pages/PMD/AdminKelembagaanDetailPage")
+);
 const PengurusDetailPage = lazy(() =>
 	import("./pages/desa/pengurus/PengurusDetailPage")
 );
@@ -150,6 +153,8 @@ function App() {
 						<Route path="berita" element={<BeritaManagement />} />
 						<Route path="bumdes" element={<BumdesApp />} />
 						<Route path="kelembagaan" element={<Kelembagaan />} />
+						<Route path="kelembagaan/admin/:desaId" element={<AdminKelembagaanDetailPage />} />
+						<Route path="kelembagaan/admin/:desaId/:type/:id" element={<KelembagaanDetailPage />} />
 						<Route path="perjalanan-dinas" element={<PerjalananDinas />} />
 						<Route path="user" element={<UserManagementPage />} />
 					</Route>
