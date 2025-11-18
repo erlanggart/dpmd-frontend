@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { Users, Briefcase, TrendingUp, ArrowRight, BarChart3, Activity, Calendar, MapPin } from 'lucide-react';
+import { Users, Briefcase, TrendingUp, ArrowRight, BarChart3, Activity, Calendar, MapPin, DollarSign, Building2 } from 'lucide-react';
 import DashboardHeader from './components/DashboardHeader';
 
 const API_CONFIG = {
@@ -12,12 +12,177 @@ const API_CONFIG = {
 const DashboardOverview = () => {
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState(null);
+  const [bankeuData, setBankeuData] = useState(null);
+  const [addData, setAddData] = useState(null);
+  const [ddData, setDdData] = useState(null);
+  const [bhprdData, setBhprdData] = useState(null);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchDashboardData();
+    fetchBankeuData();
+    fetchAddData();
+    fetchDdData();
+    fetchBhprdData();
   }, []);
+
+  const fetchBankeuData = async () => {
+    try {
+      const response = await fetch('/bankeu2025.json');
+      const data = await response.json();
+      
+      // Filter hanya data yang ada nominalnya (Realisasi > 0)
+      const validData = data.filter(item => parseInt(item.Realisasi.replace(/,/g, '')) > 0);
+      
+      // Group data by kecamatan + desa untuk mendapatkan desa unik
+      const desaMap = {};
+      validData.forEach(item => {
+        const key = `${item.kecamatan}|${item.desa}`;
+        if (!desaMap[key]) {
+          desaMap[key] = {
+            kecamatan: item.kecamatan,
+            desa: item.desa,
+            tahap1: null,
+            tahap2: null
+          };
+        }
+        
+        // Tahap 1 = Dana Telah Dicairkan
+        if (item.sts === 'Dana Telah Dicairkan') {
+          desaMap[key].tahap1 = {
+            sts: item.sts,
+            realisasi: parseInt(item.Realisasi.replace(/,/g, ''))
+          };
+        } else {
+          // Tahap 2 = status lainnya (Review, Proses, dll)
+          desaMap[key].tahap2 = {
+            sts: item.sts,
+            realisasi: parseInt(item.Realisasi.replace(/,/g, ''))
+          };
+        }
+      });
+
+      const desaList = Object.values(desaMap);
+      
+      // Hitung statistik berdasarkan desa unik
+      const stats = {
+        total_desa: desaList.length,
+        dana_cair: desaList.filter(d => d.tahap1 !== null).length,
+        tahap2_proses: desaList.filter(d => d.tahap2 !== null).length,
+        total_realisasi_tahap1: desaList.reduce((sum, d) => sum + (d.tahap1?.realisasi || 0), 0),
+        total_realisasi_tahap2: desaList.reduce((sum, d) => sum + (d.tahap2?.realisasi || 0), 0)
+      };
+      
+      setBankeuData(stats);
+    } catch (err) {
+      console.error('Error loading bankeu data:', err);
+    }
+  };
+
+  const fetchAddData = async () => {
+    try {
+      const token = localStorage.getItem('expressToken');
+      const response = await axios.get(
+        `${API_CONFIG.BASE_URL}/add/data`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+      const data = response.data.data;
+      
+      // ADD workflow: Simple 1 record per desa, status "Belum Mengajukan"
+      const totalDesa = data.length;
+      const totalAlokasi = data.reduce((sum, item) => sum + parseInt(item.Realisasi.replace(/,/g, '')), 0);
+      
+      // Status breakdown
+      const statusCount = {};
+      data.forEach(item => {
+        statusCount[item.sts] = (statusCount[item.sts] || 0) + 1;
+      });
+      
+      setAddData({
+        total_desa: totalDesa,
+        total_alokasi: totalAlokasi,
+        belum_mengajukan: statusCount['Belum Mengajukan'] || 0,
+        sudah_mengajukan: statusCount['Sudah Mengajukan'] || 0,
+        dana_cair: statusCount['Dana Telah Dicairkan'] || 0
+      });
+    } catch (err) {
+      console.error('Error loading ADD data:', err);
+    }
+  };
+
+  const fetchDdData = async () => {
+    try {
+      const token = localStorage.getItem('expressToken');
+      const response = await axios.get(
+        `${API_CONFIG.BASE_URL}/dd/data`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+      const data = response.data.data;
+      
+      // DD workflow: Simple 1 record per desa, mostly realisasi = 0
+      const totalDesa = data.length;
+      const totalRealisasi = data.reduce((sum, item) => sum + parseInt(item.Realisasi.replace(/,/g, '')), 0);
+      
+      // Status breakdown
+      const statusCount = {};
+      data.forEach(item => {
+        statusCount[item.sts] = (statusCount[item.sts] || 0) + 1;
+      });
+      
+      setDdData({
+        total_desa: totalDesa,
+        total_realisasi: totalRealisasi,
+        belum_mengajukan: statusCount['Belum Mengajukan'] || 0,
+        sudah_mengajukan: statusCount['Sudah Mengajukan'] || 0,
+        dana_cair: statusCount['Dana Telah Dicairkan'] || 0
+      });
+    } catch (err) {
+      console.error('Error loading DD data:', err);
+    }
+  };
+
+  const fetchBhprdData = async () => {
+    try {
+      const token = localStorage.getItem('expressToken');
+      const response = await axios.get(
+        `${API_CONFIG.BASE_URL}/bhprd/data`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+      const data = response.data.data;
+      
+      // BHPRD workflow: Simple 1 record per desa, mixed status
+      const totalDesa = data.length;
+      const totalRealisasi = data.reduce((sum, item) => sum + parseInt(item.Realisasi.replace(/,/g, '')), 0);
+      
+      // Status breakdown
+      const statusCount = {};
+      data.forEach(item => {
+        statusCount[item.sts] = (statusCount[item.sts] || 0) + 1;
+      });
+      
+      setBhprdData({
+        total_desa: totalDesa,
+        total_realisasi: totalRealisasi,
+        dana_cair: statusCount['Dana Telah Dicairkan'] || 0,
+        belum_cair: statusCount['Belum Mengajukan'] || 0
+      });
+    } catch (err) {
+      console.error('Error loading BHPRD data:', err);
+    }
+  };
 
   const fetchDashboardData = async () => {
     try {
@@ -119,12 +284,72 @@ const DashboardOverview = () => {
       ]
     },
     {
-      title: 'Analisis Trend',
-      description: 'Lihat trend perkembangan BUMDes dan Perjalanan Dinas dalam 6 bulan terakhir',
-      icon: <TrendingUp className="w-12 h-12" />,
+      title: 'Bantuan Keuangan Infrastruktur 2025',
+      description: 'Lihat progress pencairan dana bantuan keuangan infrastruktur desa tahun 2025',
+      icon: <DollarSign className="w-12 h-12" />,
+      gradient: 'from-green-500 via-emerald-600 to-teal-600',
+      shadowColor: 'shadow-green-500/50',
+      bgPattern: 'bg-green-50',
+      value: bankeuData?.total_desa || 0,
+      label: 'Total Desa Penerima',
+      path: '/core-dashboard/statistik-bankeu',
+      stats: [
+        { icon: <Building2 className="w-4 h-4" />, label: `${bankeuData?.dana_cair || 0} Cair` },
+        { icon: <Activity className="w-4 h-4" />, label: 'Live Update' }
+      ]
+    },
+    {
+      title: 'Alokasi Dana Desa (ADD)',
+      description: 'Lihat alokasi dana desa untuk pembangunan dan pemberdayaan masyarakat',
+      icon: <DollarSign className="w-12 h-12" />,
       gradient: 'from-purple-500 via-purple-600 to-pink-600',
       shadowColor: 'shadow-purple-500/50',
       bgPattern: 'bg-purple-50',
+      value: addData?.total_desa || 0,
+      label: 'Total Desa',
+      path: '/core-dashboard/statistik-add',
+      stats: [
+        { icon: <Building2 className="w-4 h-4" />, label: `${addData?.belum_mengajukan || 0} Belum` },
+        { icon: <Activity className="w-4 h-4" />, label: 'Live Update' }
+      ]
+    },
+    {
+      title: 'Dana Desa (DD)',
+      description: 'Lihat realisasi dana desa untuk infrastruktur dan pemberdayaan masyarakat',
+      icon: <DollarSign className="w-12 h-12" />,
+      gradient: 'from-cyan-500 via-blue-600 to-indigo-600',
+      shadowColor: 'shadow-cyan-500/50',
+      bgPattern: 'bg-cyan-50',
+      value: ddData?.total_desa || 0,
+      label: 'Total Desa',
+      path: '/core-dashboard/statistik-dd',
+      stats: [
+        { icon: <Building2 className="w-4 h-4" />, label: `${ddData?.belum_mengajukan || 0} Belum` },
+        { icon: <Activity className="w-4 h-4" />, label: 'Live Update' }
+      ]
+    },
+    {
+      title: 'Bagi Hasil Pajak Retribusi (BHPRD)',
+      description: 'Lihat realisasi bagi hasil pajak dan retribusi daerah untuk desa',
+      icon: <DollarSign className="w-12 h-12" />,
+      gradient: 'from-emerald-500 via-green-600 to-teal-600',
+      shadowColor: 'shadow-emerald-500/50',
+      bgPattern: 'bg-emerald-50',
+      value: bhprdData?.total_desa || 0,
+      label: 'Total Desa',
+      path: '/core-dashboard/statistik-bhprd',
+      stats: [
+        { icon: <Building2 className="w-4 h-4" />, label: `${bhprdData?.dana_cair || 0} Cair` },
+        { icon: <Activity className="w-4 h-4" />, label: 'Live Update' }
+      ]
+    },
+    {
+      title: 'Analisis Trend',
+      description: 'Lihat trend perkembangan BUMDes dan Perjalanan Dinas dalam 6 bulan terakhir',
+      icon: <TrendingUp className="w-12 h-12" />,
+      gradient: 'from-pink-500 via-rose-600 to-red-600',
+      shadowColor: 'shadow-pink-500/50',
+      bgPattern: 'bg-pink-50',
       value: '6 Bulan',
       label: 'Data Historis',
       path: '/core-dashboard/trends',
@@ -173,7 +398,7 @@ const DashboardOverview = () => {
         </div>
 
         {/* Module Cards dengan Design Modern */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
           {moduleCards.map((card, index) => (
             <div
               key={index}
@@ -249,12 +474,136 @@ const DashboardOverview = () => {
           ))}
         </div>
 
-        {/* Enhanced Quick Stats Summary */}
+        {/* Enhanced Quick Stats Summary - KKD Programs */}
+        <div className="bg-white rounded-2xl shadow-xl p-8 mb-6 border border-gray-100">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-1">
+                KKD (Kekayaan & Keuangan Desa)
+              </h3>
+              <p className="text-gray-500 text-sm">Statistik ADD, DD, dan BHPRD</p>
+            </div>
+            <div className="bg-gradient-to-r from-purple-400 to-pink-500 text-white px-4 py-2 rounded-xl shadow-lg flex items-center gap-2 animate-pulse">
+              <div className="w-2 h-2 bg-white rounded-full"></div>
+              <span className="text-sm font-semibold">Live Data</span>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* ADD Card */}
+            <div className="group relative bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-6 border-2 border-purple-100 hover:border-purple-300 transition-all duration-300 hover:shadow-lg overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-purple-200 opacity-20 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500"></div>
+              <div className="relative">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="bg-gradient-to-br from-purple-500 to-pink-600 p-3 rounded-xl shadow-lg">
+                    <DollarSign className="w-8 h-8 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-gray-600 text-xs font-medium">Alokasi Dana Desa</p>
+                    <p className="text-lg font-bold text-purple-600">ADD 2025</p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Total Desa</span>
+                    <span className="text-xl font-bold text-purple-600">{(addData?.total_desa || 0).toLocaleString('id-ID')}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Total Alokasi</span>
+                    <span className="text-xs font-semibold text-purple-600">
+                      {((addData?.total_alokasi || 0) / 1000000000).toFixed(2)}M
+                    </span>
+                  </div>
+                  <div className="pt-2 border-t border-purple-200">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-gray-500">Belum Mengajukan</span>
+                      <span className="font-semibold text-gray-700">{addData?.belum_mengajukan || 0}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* DD Card */}
+            <div className="group relative bg-gradient-to-br from-cyan-50 to-blue-50 rounded-2xl p-6 border-2 border-cyan-100 hover:border-cyan-300 transition-all duration-300 hover:shadow-lg overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-200 opacity-20 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500"></div>
+              <div className="relative">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="bg-gradient-to-br from-cyan-500 to-blue-600 p-3 rounded-xl shadow-lg">
+                    <DollarSign className="w-8 h-8 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-gray-600 text-xs font-medium">Dana Desa</p>
+                    <p className="text-lg font-bold text-cyan-600">DD 2025</p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Total Desa</span>
+                    <span className="text-xl font-bold text-cyan-600">{(ddData?.total_desa || 0).toLocaleString('id-ID')}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Total Realisasi</span>
+                    <span className="text-xs font-semibold text-cyan-600">
+                      {((ddData?.total_realisasi || 0) / 1000000000).toFixed(2)}M
+                    </span>
+                  </div>
+                  <div className="pt-2 border-t border-cyan-200">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-gray-500">Belum Mengajukan</span>
+                      <span className="font-semibold text-gray-700">{ddData?.belum_mengajukan || 0}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* BHPRD Card */}
+            <div className="group relative bg-gradient-to-br from-emerald-50 to-green-50 rounded-2xl p-6 border-2 border-emerald-100 hover:border-emerald-300 transition-all duration-300 hover:shadow-lg overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-200 opacity-20 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500"></div>
+              <div className="relative">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="bg-gradient-to-br from-emerald-500 to-green-600 p-3 rounded-xl shadow-lg">
+                    <DollarSign className="w-8 h-8 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-gray-600 text-xs font-medium">Bagi Hasil Pajak</p>
+                    <p className="text-lg font-bold text-emerald-600">BHPRD 2025</p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Total Desa</span>
+                    <span className="text-xl font-bold text-emerald-600">{(bhprdData?.total_desa || 0).toLocaleString('id-ID')}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Total Realisasi</span>
+                    <span className="text-xs font-semibold text-emerald-600">
+                      {((bhprdData?.total_realisasi || 0) / 1000000000).toFixed(2)}M
+                    </span>
+                  </div>
+                  <div className="pt-2 border-t border-emerald-200">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-green-600">Dana Cair</span>
+                      <span className="font-semibold text-green-700">{bhprdData?.dana_cair || 0}</span>
+                    </div>
+                    <div className="flex justify-between text-xs mt-1">
+                      <span className="text-gray-500">Belum Cair</span>
+                      <span className="font-semibold text-gray-700">{bhprdData?.belum_cair || 0}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Enhanced Quick Stats Summary - General */}
         <div className="bg-white rounded-2xl shadow-xl p-8 mb-6 border border-gray-100">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-1">
-                Ringkasan Statistik
+                Ringkasan Statistik Umum
               </h3>
               <p className="text-gray-500 text-sm">Data terupdate secara real-time</p>
             </div>
@@ -264,7 +613,7 @@ const DashboardOverview = () => {
             </div>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* BUMDes Card */}
             <div className="group relative bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border-2 border-blue-100 hover:border-blue-300 transition-all duration-300 hover:shadow-lg overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-blue-200 opacity-20 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500"></div>
@@ -295,6 +644,23 @@ const DashboardOverview = () => {
                     {(summary?.total_perjalanan_dinas || 0).toLocaleString('id-ID')}
                   </p>
                   <p className="text-xs text-gray-500 mt-1">Kegiatan perjalanan dinas</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Bantuan Keuangan Card */}
+            <div className="group relative bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-6 border-2 border-green-100 hover:border-green-300 transition-all duration-300 hover:shadow-lg overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-green-200 opacity-20 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500"></div>
+              <div className="relative flex items-center gap-4">
+                <div className="bg-gradient-to-br from-green-500 to-emerald-600 p-4 rounded-2xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                  <DollarSign className="w-10 h-10 text-white" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-gray-600 text-sm font-medium mb-1">Bantuan Keuangan Infrastruktur</p>
+                  <p className="text-4xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                    {(bankeuData?.dana_cair || 0).toLocaleString('id-ID')}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">Dana telah dicairkan dari {bankeuData?.total_desa || 0} desa</p>
                 </div>
               </div>
             </div>

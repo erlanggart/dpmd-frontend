@@ -12,6 +12,7 @@ import {
 	FiChevronsRight,
 	FiChevronsLeft,
 	FiFileText,
+	FiDollarSign,
 } from "react-icons/fi";
 
 import {
@@ -24,10 +25,17 @@ import SearchPalette from "../components/SearchPalatte";
 const SubMenu = ({ item, openMenu, toggleMenu, isMinimized }) => {
 	const location = useLocation();
 	const isOpen = openMenu === item.key;
+	const [expandedSubmenu, setExpandedSubmenu] = useState(null);
 
 	// Cek apakah salah satu submenu aktif - logika yang disederhanakan
 	const isChildActive = item.children.some((child) => {
-		return location.pathname.startsWith(child.to);
+		if (child.to) {
+			return location.pathname.startsWith(child.to);
+		}
+		if (child.submenu) {
+			return child.submenu.some((sub) => location.pathname.startsWith(sub.to));
+		}
+		return false;
 	});
 
 	return (
@@ -63,25 +71,81 @@ const SubMenu = ({ item, openMenu, toggleMenu, isMinimized }) => {
 			</button>
 			<div
 				className={`overflow-hidden transition-all duration-300 ${
-					isOpen && !isMinimized ? "max-h-96" : "max-h-0"
+					isOpen && !isMinimized ? "max-h-[600px]" : "max-h-0"
 				}`}
 			>
 				<div className="flex flex-col space-y-1 py-2 pl-9">
-					{item.children.map((child) => (
-						<NavLink
-							key={child.to}
-							to={child.to}
-							className={({ isActive }) =>
-								`py-2 px-3 text-sm rounded-md transition-colors ${
-									isActive
-										? "sidebar-active font-semibold"
-										: "text-gray-500 hover:bg-gray-100 hover:text-primary"
-								}`
-							}
-						>
-							{child.label}
-						</NavLink>
-					))}
+					{item.children.map((child, index) => {
+						// Handle nested submenu (DD dengan 5 submenu)
+						if (child.submenu) {
+							const isSubmenuOpen = expandedSubmenu === child.label;
+							const isSubmenuActive = child.submenu.some((sub) =>
+								location.pathname.startsWith(sub.to)
+							);
+
+							return (
+								<div key={`submenu-${index}`}>
+									<button
+										onClick={() =>
+											setExpandedSubmenu(isSubmenuOpen ? null : child.label)
+										}
+										className={`w-full py-2 px-3 text-sm rounded-md transition-colors flex items-center justify-between ${
+											isSubmenuActive
+												? "bg-primary/10 text-primary font-semibold"
+												: "text-gray-500 hover:bg-gray-100 hover:text-primary"
+										}`}
+									>
+										<span>{child.label}</span>
+										<FiChevronDown
+											className={`transform transition-all duration-200 ${
+												isSubmenuOpen ? "rotate-180" : ""
+											}`}
+										/>
+									</button>
+									<div
+										className={`overflow-hidden transition-all duration-300 ${
+											isSubmenuOpen ? "max-h-96" : "max-h-0"
+										}`}
+									>
+										<div className="flex flex-col space-y-1 py-1 pl-4">
+											{child.submenu.map((sub) => (
+												<NavLink
+													key={sub.to}
+													to={sub.to}
+													className={({ isActive }) =>
+														`py-2 px-3 text-sm rounded-md transition-colors ${
+															isActive
+																? "sidebar-active font-semibold"
+																: "text-gray-500 hover:bg-gray-100 hover:text-primary"
+														}`
+													}
+												>
+													{sub.label}
+												</NavLink>
+											))}
+										</div>
+									</div>
+								</div>
+							);
+						}
+
+						// Handle regular menu item
+						return (
+							<NavLink
+								key={child.to}
+								to={child.to}
+								className={({ isActive }) =>
+									`py-2 px-3 text-sm rounded-md transition-colors ${
+										isActive
+											? "sidebar-active font-semibold"
+											: "text-gray-500 hover:bg-gray-100 hover:text-primary"
+									}`
+								}
+							>
+								{child.label}
+							</NavLink>
+						);
+					})}
 				</div>
 			</div>
 		</div>
@@ -166,12 +230,31 @@ const MainLayout = () => {
 
 		const baseMenuItems = [
 			{
-				key: "sarpras",
+				key: "spked",
 				label: "SPKED",
 				icon: <TbMap />,
 				children: [
 					{ to: "/dashboard/bumdes", label: "BUMDes" },
-					{ to: "/dashboard/samisade", label: "Samisade" },
+					{ to: "/dashboard/bankeu", label: "Bantuan Keuangan" },
+				],
+			},
+			{
+				key: "kkd",
+				label: "KKD",
+				icon: <FiDollarSign />,
+				children: [
+					{ to: "/dashboard/add", label: "ADD" },
+					{ to: "/dashboard/bhprd", label: "BHPRD" },
+					{
+						label: "DD",
+						submenu: [
+							{ to: "/dashboard/dd/earmarked-t1", label: "DD Earmarked Tahap 1" },
+							{ to: "/dashboard/dd/earmarked-t2", label: "DD Earmarked Tahap 2" },
+							{ to: "/dashboard/dd/nonearmarked-t1", label: "DD Non-Earmarked Tahap 1" },
+							{ to: "/dashboard/dd/nonearmarked-t2", label: "DD Non-Earmarked Tahap 2" },
+							{ to: "/dashboard/dd/insentif", label: "Insentif DD" },
+						],
+					},
 				],
 			},
 			{
@@ -229,9 +312,10 @@ const MainLayout = () => {
 		if (isBidangUser) {
 			const filteredMenu = [];
 			
-			// Sarana Prasarana: only SPKED menu
+			// Sarana Prasarana: only SPKED and KKD menu
 			if (bidangRole === 'sarana_prasarana' || userRole === 'sarana_prasarana') {
-				filteredMenu.push(baseMenuItems.find(item => item.key === 'sarpras'));
+				filteredMenu.push(baseMenuItems.find(item => item.key === 'spked'));
+				filteredMenu.push(baseMenuItems.find(item => item.key === 'kkd'));
 			}
 			// Pemberdayaan Masyarakat: only PMD menu
 			else if (bidangRole === 'pemberdayaan_masyarakat' || userRole === 'pemberdayaan_masyarakat') {

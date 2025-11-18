@@ -15,7 +15,8 @@ import {
     TbBuildingBank, 
     TbHomeDollar, 
     TbMap, 
-    TbUserPentagon 
+    TbUserPentagon,
+    TbCoin
 } from 'react-icons/tb';
 import AnimatedCounter from '../components/AnimatedCounter'; // Import komponen AnimatedCounter yang baru
 import { getUserRole, getDisposisiMenuPath, getDisposisiMenuLabel } from '../utils/roleUtils';
@@ -163,7 +164,7 @@ const UniversalDashboard = () => {
                 ],
                 quickActions: [
                     { title: 'Data BUMDes', path: '/dashboard/bumdes', icon: <TbBuildingBank /> },
-                    { title: 'Samisade', path: '/dashboard/samisade', icon: <TbMap /> },
+                    { title: 'Bantuan Keuangan', path: '/dashboard/bankeu', icon: <TbCoin /> },
                     { title: getDisposisiMenuLabel(getUserRole()), path: getDisposisiMenuPath(getUserRole()), icon: <FiFileText /> },
                     { title: 'Hero Gallery', path: '/dashboard/hero-gallery', icon: <FiGrid /> }
                 ]

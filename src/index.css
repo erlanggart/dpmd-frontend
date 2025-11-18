@@ -83,3 +83,69 @@
 	backface-visibility: hidden;
 	-webkit-backface-visibility: hidden;
 }
+
+/* PWA Install Prompt Animation */
+@keyframes slide-up {
+	from {
+		transform: translateY(100%);
+		opacity: 0;
+	}
+	to {
+		transform: translateY(0);
+		opacity: 1;
+	}
+}
+
+.animate-slide-up {
+	animation: slide-up 0.3s ease-out;
+}
+
+/* Responsive utilities */
+@media (max-width: 768px) {
+	/* Improve mobile touch targets */
+	button, a {
+		min-height: 44px;
+	}
+	
+	/* Better mobile form inputs */
+	input, select, textarea {
+		font-size: 16px; /* Prevents zoom on iOS */
+	}
+}
+
+/* Landscape mode optimizations */
+@media (max-width: 768px) and (orientation: landscape) {
+	/* Reduce vertical spacing in landscape */
+	.py-20 {
+		padding-top: 2rem;
+		padding-bottom: 2rem;
+	}
+	
+	.py-16 {
+		padding-top: 1.5rem;
+		padding-bottom: 1.5rem;
+	}
+	
+	/* Compact header in landscape */
+	header {
+		padding-top: 0.5rem;
+		padding-bottom: 0.5rem;
+	}
+	
+	/* Better use of horizontal space */
+	.container {
+		max-width: 100%;
+	}
+}
+
+/* Tablet landscape optimizations */
+@media (min-width: 769px) and (max-width: 1024px) and (orientation: landscape) {
+	/* Optimal grid layout for tablets in landscape */
+	.grid-cols-1 {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+	
+	.md\:grid-cols-2 {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+}
