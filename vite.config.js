@@ -77,9 +77,13 @@ export default defineConfig({
 	server: {
 		proxy: {
 			"/api": {
-				target: "http://dpmd.test",
+				target: "http://localhost:3001",
 				changeOrigin: true,
-				// rewrite: (path) => `/dpmd-backend${path}`,
+				secure: false,
+			},
+			"/storage": {
+				target: "http://localhost:3001",
+				changeOrigin: true,
 			},
 		},
 	},

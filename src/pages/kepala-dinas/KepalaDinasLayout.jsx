@@ -39,7 +39,7 @@ const KepalaDinasLayout = () => {
       label: 'Statistik BUMDes'
     },
     {
-      path: '/core-dashboard/statistik-perjadin',
+      path: '/core-dashboard/statistik-perjalanan-dinas',
       icon: <Briefcase className="w-5 h-5" />,
       label: 'Statistik Perjalanan Dinas'
     },
@@ -59,15 +59,9 @@ const KepalaDinasLayout = () => {
       label: 'Statistik BHPRD'
     },
     {
-      label: 'Statistik DD',
+      path: '/core-dashboard/statistik-dd',
       icon: <DollarSign className="w-5 h-5" />,
-      submenu: [
-        { path: '/core-dashboard/statistik-dd-earmarked-t1', label: 'DD Earmarked Tahap 1' },
-        { path: '/core-dashboard/statistik-dd-earmarked-t2', label: 'DD Earmarked Tahap 2' },
-        { path: '/core-dashboard/statistik-dd-nonearmarked-t1', label: 'DD Non-Earmarked Tahap 1' },
-        { path: '/core-dashboard/statistik-dd-nonearmarked-t2', label: 'DD Non-Earmarked Tahap 2' },
-        { path: '/core-dashboard/statistik-insentif-dd', label: 'Insentif DD' },
-      ]
+      label: 'Statistik DD'
     },
     {
       path: '/core-dashboard/trends',

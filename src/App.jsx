@@ -16,7 +16,7 @@ import { useThemeColor } from "./hooks/useThemeColor";
 import LoginPage from "./pages/LoginPage";
 import LandingPage from "./pages/LandingPage";
 import BeritaDetailPage from "./pages/BeritaDetailPage";
-import KegiatanDetailPage from "./pages/KegiatanDetailPage";
+import BankeuPublicPage from "./pages/BankeuPublicPage";
 import Spinner from "./components/ui/Spinner";
 
 // Role constants for better maintainability
@@ -84,9 +84,6 @@ const StatistikBumdes = lazy(() =>
 const StatistikPerjadin = lazy(() =>
 	import("./pages/kepala-dinas/StatistikPerjadin")
 );
-const StatistikBankeu = lazy(() =>
-	import("./pages/kepala-dinas/StatistikBankeu")
-);
 const StatistikAdd = lazy(() =>
 	import("./pages/kepala-dinas/StatistikAdd")
 );
@@ -94,26 +91,17 @@ const StatistikBhprd = lazy(() =>
 	import("./pages/kepala-dinas/StatistikBhprd")
 );
 // DD Statistik Sub-categories
-const StatistikDdEarmarkedT1 = lazy(() =>
-	import("./pages/kepala-dinas/StatistikDdEarmarkedT1")
-);
-const StatistikDdEarmarkedT2 = lazy(() =>
-	import("./pages/kepala-dinas/StatistikDdEarmarkedT2")
-);
-const StatistikDdNonEarmarkedT1 = lazy(() =>
-	import("./pages/kepala-dinas/StatistikDdNonEarmarkedT1")
-);
-const StatistikDdNonEarmarkedT2 = lazy(() =>
-	import("./pages/kepala-dinas/StatistikDdNonEarmarkedT2")
-);
-const StatistikInsentifDd = lazy(() =>
-	import("./pages/kepala-dinas/StatistikInsentifDd")
+const StatistikDdDashboard = lazy(() =>
+	import("./pages/kepala-dinas/StatistikDdDashboard")
 );
 const TrendsPage = lazy(() =>
 	import("./pages/kepala-dinas/TrendsPage")
 );
-const Bankeu = lazy(() =>
-	import("./pages/sarpras/Bankeu")
+const BankeuDashboard = lazy(() =>
+	import("./pages/sarana-prasarana/bankeu/BankeuDashboard")
+);
+const StatistikBankeuDashboard = lazy(() =>
+	import("./pages/kepala-dinas/StatistikBankeuDashboard")
 );
 const Add = lazy(() =>
 	import("./pages/kkd/Add")
@@ -122,20 +110,8 @@ const Bhprd = lazy(() =>
 	import("./pages/kkd/Bhprd")
 );
 // DD Sub-categories
-const DdEarmarkedT1 = lazy(() =>
-	import("./pages/kkd/dd/DdEarmarkedT1")
-);
-const DdEarmarkedT2 = lazy(() =>
-	import("./pages/kkd/dd/DdEarmarkedT2")
-);
-const DdNonEarmarkedT1 = lazy(() =>
-	import("./pages/kkd/dd/DdNonEarmarkedT1")
-);
-const DdNonEarmarkedT2 = lazy(() =>
-	import("./pages/kkd/dd/DdNonEarmarkedT2")
-);
-const InsentifDd = lazy(() =>
-	import("./pages/kkd/dd/InsentifDd")
+const DdDashboard = lazy(() =>
+	import("./pages/kkd/dd/DdDashboard")
 );
 const UserManagementPage = lazy(() =>
 	import("./pages/dashboard/UserManagementPage")
@@ -200,7 +176,7 @@ function App() {
 					{/* Rute yang di-load secara statis */}
 					<Route path="/" element={<LandingPage />} />
 					<Route path="/berita/:slug" element={<BeritaDetailPage />} />
-					<Route path="/kegiatan/:slug" element={<KegiatanDetailPage />} />
+					<Route path="/bantuan-keuangan" element={<BankeuPublicPage />} />
 					<Route path="/login" element={<LoginPage />} />
 
 					{/* Rute Admin/Dashboard dengan lazy loading */}
@@ -217,14 +193,10 @@ function App() {
 					<Route path="hero-gallery" element={<HeroGalleryManagement />} />
 					<Route path="berita" element={<BeritaManagement />} />
 					<Route path="bumdes" element={<BumdesApp />} />
-					<Route path="bankeu" element={<Bankeu />} />
+					<Route path="bankeu" element={<BankeuDashboard />} />
 					<Route path="add" element={<Add />} />
 					<Route path="bhprd" element={<Bhprd />} />
-					<Route path="dd/earmarked-t1" element={<DdEarmarkedT1 />} />
-					<Route path="dd/earmarked-t2" element={<DdEarmarkedT2 />} />
-					<Route path="dd/nonearmarked-t1" element={<DdNonEarmarkedT1 />} />
-					<Route path="dd/nonearmarked-t2" element={<DdNonEarmarkedT2 />} />
-					<Route path="dd/insentif" element={<InsentifDd />} />
+					<Route path="dd" element={<DdDashboard />} />
 					<Route path="kelembagaan" element={<Kelembagaan />} />
 					<Route path="perjalanan-dinas" element={<PerjalananDinas />} />
 						{/* Public dashboard routes - accessible by all authenticated users */}
@@ -272,14 +244,10 @@ function App() {
 					<Route path="dashboard" element={<DashboardOverview />} />
 					<Route path="statistik-bumdes" element={<StatistikBumdes />} />
 					<Route path="statistik-perjadin" element={<StatistikPerjadin />} />
-					<Route path="statistik-bankeu" element={<StatistikBankeu />} />
+					<Route path="statistik-bankeu" element={<StatistikBankeuDashboard />} />
 					<Route path="statistik-add" element={<StatistikAdd />} />
 					<Route path="statistik-bhprd" element={<StatistikBhprd />} />
-					<Route path="statistik-dd-earmarked-t1" element={<StatistikDdEarmarkedT1 />} />
-					<Route path="statistik-dd-earmarked-t2" element={<StatistikDdEarmarkedT2 />} />
-					<Route path="statistik-dd-nonearmarked-t1" element={<StatistikDdNonEarmarkedT1 />} />
-					<Route path="statistik-dd-nonearmarked-t2" element={<StatistikDdNonEarmarkedT2 />} />
-					<Route path="statistik-insentif-dd" element={<StatistikInsentifDd />} />
+					<Route path="statistik-dd" element={<StatistikDdDashboard />} />
 					<Route path="trends" element={<TrendsPage />} />
 					</Route>
 				</Routes>

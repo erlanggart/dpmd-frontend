@@ -233,16 +233,7 @@ const MainLayout = () => {
 				children: [
 					{ to: "/dashboard/add", label: "ADD" },
 					{ to: "/dashboard/bhprd", label: "BHPRD" },
-					{
-						label: "DD",
-						submenu: [
-							{ to: "/dashboard/dd/earmarked-t1", label: "DD Earmarked Tahap 1" },
-							{ to: "/dashboard/dd/earmarked-t2", label: "DD Earmarked Tahap 2" },
-							{ to: "/dashboard/dd/nonearmarked-t1", label: "DD Non-Earmarked Tahap 1" },
-							{ to: "/dashboard/dd/nonearmarked-t2", label: "DD Non-Earmarked Tahap 2" },
-							{ to: "/dashboard/dd/insentif", label: "Insentif DD" },
-						],
-					},
+					{ to: "/dashboard/dd", label: "DD" },
 				],
 			},
 			{
