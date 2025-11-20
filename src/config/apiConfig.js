@@ -1,5 +1,5 @@
 // API Configuration - All routes now use Express backend
-const isDevelopment = import.meta.env.DEV || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const isDevelopment = import.meta.env.DEV;
 
 export const API_ENDPOINTS = {
   // Express Backend (Port 3001) - ONLY BACKEND
