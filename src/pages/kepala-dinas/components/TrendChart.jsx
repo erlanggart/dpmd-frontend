@@ -13,8 +13,12 @@ import {
 import { Calendar } from 'lucide-react';
 
 const COLORS = {
-  primary: '#3B82F6',
-  accent: '#F59E0B'
+  bumdes: '#3B82F6',    // Blue
+  perjadin: '#F59E0B',  // Orange
+  add: '#10B981',       // Green
+  bhprd: '#8B5CF6',     // Purple
+  dd: '#EF4444',        // Red
+  bankeu: '#06B6D4'     // Cyan
 };
 
 const TrendChart = ({ trends }) => {
@@ -22,7 +26,11 @@ const TrendChart = ({ trends }) => {
   const trendsData = (trends || []).map(item => ({
     month: item.month,
     BUMDes: item.bumdes_count,
-    Perjadin: item.perjadin_count
+    Perjadin: item.perjadin_count,
+    ADD: item.add_count,
+    BHPRD: item.bhprd_count,
+    DD: item.dd_count,
+    Bankeu: item.bankeu_count
   }));
 
   return (
@@ -30,10 +38,10 @@ const TrendChart = ({ trends }) => {
       <div className="flex items-center gap-2 mb-4">
         <Calendar className="w-5 h-5 text-purple-600" />
         <h2 className="text-xl font-bold text-gray-800">
-          Trend Bulanan (6 Bulan Terakhir)
+          Trend Bulanan Semua Program (6 Bulan Terakhir)
         </h2>
       </div>
-      <ResponsiveContainer width="100%" height={350}>
+      <ResponsiveContainer width="100%" height={400}>
         <LineChart data={trendsData}>
           <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
           <XAxis dataKey="month" />
@@ -49,16 +57,48 @@ const TrendChart = ({ trends }) => {
           <Line
             type="monotone"
             dataKey="BUMDes"
-            stroke={COLORS.primary}
-            strokeWidth={3}
+            stroke={COLORS.bumdes}
+            strokeWidth={2}
             dot={{ r: 4 }}
             activeDot={{ r: 6 }}
           />
           <Line
             type="monotone"
             dataKey="Perjadin"
-            stroke={COLORS.accent}
-            strokeWidth={3}
+            stroke={COLORS.perjadin}
+            strokeWidth={2}
+            dot={{ r: 4 }}
+            activeDot={{ r: 6 }}
+          />
+          <Line
+            type="monotone"
+            dataKey="ADD"
+            stroke={COLORS.add}
+            strokeWidth={2}
+            dot={{ r: 4 }}
+            activeDot={{ r: 6 }}
+          />
+          <Line
+            type="monotone"
+            dataKey="BHPRD"
+            stroke={COLORS.bhprd}
+            strokeWidth={2}
+            dot={{ r: 4 }}
+            activeDot={{ r: 6 }}
+          />
+          <Line
+            type="monotone"
+            dataKey="DD"
+            stroke={COLORS.dd}
+            strokeWidth={2}
+            dot={{ r: 4 }}
+            activeDot={{ r: 6 }}
+          />
+          <Line
+            type="monotone"
+            dataKey="Bankeu"
+            stroke={COLORS.bankeu}
+            strokeWidth={2}
             dot={{ r: 4 }}
             activeDot={{ r: 6 }}
           />

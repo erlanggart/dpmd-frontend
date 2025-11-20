@@ -77,17 +77,42 @@ const TrendsPage = () => {
   // Calculate statistics from trends data
   const calculateStats = () => {
     if (!trendsData || trendsData.length === 0) {
-      return { totalBumdes: 0, totalPerjadin: 0, avgBumdes: 0, avgPerjadin: 0 };
+      return { 
+        totalBumdes: 0, 
+        totalPerjadin: 0, 
+        totalAdd: 0,
+        totalBhprd: 0,
+        totalDd: 0,
+        totalBankeu: 0,
+        avgBumdes: 0, 
+        avgPerjadin: 0,
+        avgAdd: 0,
+        avgBhprd: 0,
+        avgDd: 0,
+        avgBankeu: 0
+      };
     }
 
     const totalBumdes = trendsData.reduce((sum, item) => sum + (item.bumdes_count || 0), 0);
     const totalPerjadin = trendsData.reduce((sum, item) => sum + (item.perjadin_count || 0), 0);
+    const totalAdd = trendsData.reduce((sum, item) => sum + (item.add_count || 0), 0);
+    const totalBhprd = trendsData.reduce((sum, item) => sum + (item.bhprd_count || 0), 0);
+    const totalDd = trendsData.reduce((sum, item) => sum + (item.dd_count || 0), 0);
+    const totalBankeu = trendsData.reduce((sum, item) => sum + (item.bankeu_count || 0), 0);
 
     return {
       totalBumdes,
       totalPerjadin,
+      totalAdd,
+      totalBhprd,
+      totalDd,
+      totalBankeu,
       avgBumdes: Math.round(totalBumdes / trendsData.length),
       avgPerjadin: Math.round(totalPerjadin / trendsData.length),
+      avgAdd: Math.round(totalAdd / trendsData.length),
+      avgBhprd: Math.round(totalBhprd / trendsData.length),
+      avgDd: Math.round(totalDd / trendsData.length),
+      avgBankeu: Math.round(totalBankeu / trendsData.length),
       months: trendsData.length
     };
   };
@@ -137,22 +162,36 @@ const TrendsPage = () => {
             <TrendingUp className="w-24 h-24 text-white opacity-20" />
           </div>
           
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 border-t border-white border-opacity-20 pt-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 border-t border-white border-opacity-20 pt-6">
             <div>
-              <p className="text-white text-opacity-75 text-sm">Total BUMDes (6 bulan)</p>
+              <p className="text-white text-opacity-75 text-sm">Total BUMDes</p>
               <p className="text-2xl font-bold">{stats.totalBumdes}</p>
+              <p className="text-white text-opacity-60 text-xs mt-1">Avg: {stats.avgBumdes}/bulan</p>
             </div>
             <div>
-              <p className="text-white text-opacity-75 text-sm">Rata-rata BUMDes/bulan</p>
-              <p className="text-2xl font-bold">{stats.avgBumdes}</p>
-            </div>
-            <div>
-              <p className="text-white text-opacity-75 text-sm">Total Perjadin (6 bulan)</p>
+              <p className="text-white text-opacity-75 text-sm">Total Perjadin</p>
               <p className="text-2xl font-bold">{stats.totalPerjadin}</p>
+              <p className="text-white text-opacity-60 text-xs mt-1">Avg: {stats.avgPerjadin}/bulan</p>
             </div>
             <div>
-              <p className="text-white text-opacity-75 text-sm">Rata-rata Perjadin/bulan</p>
-              <p className="text-2xl font-bold">{stats.avgPerjadin}</p>
+              <p className="text-white text-opacity-75 text-sm">Total ADD</p>
+              <p className="text-2xl font-bold">{stats.totalAdd}</p>
+              <p className="text-white text-opacity-60 text-xs mt-1">Avg: {stats.avgAdd}/bulan</p>
+            </div>
+            <div>
+              <p className="text-white text-opacity-75 text-sm">Total BHPRD</p>
+              <p className="text-2xl font-bold">{stats.totalBhprd}</p>
+              <p className="text-white text-opacity-60 text-xs mt-1">Avg: {stats.avgBhprd}/bulan</p>
+            </div>
+            <div>
+              <p className="text-white text-opacity-75 text-sm">Total DD</p>
+              <p className="text-2xl font-bold">{stats.totalDd}</p>
+              <p className="text-white text-opacity-60 text-xs mt-1">Avg: {stats.avgDd}/bulan</p>
+            </div>
+            <div>
+              <p className="text-white text-opacity-75 text-sm">Total Bankeu</p>
+              <p className="text-2xl font-bold">{stats.totalBankeu}</p>
+              <p className="text-white text-opacity-60 text-xs mt-1">Avg: {stats.avgBankeu}/bulan</p>
             </div>
           </div>
         </div>
@@ -161,7 +200,7 @@ const TrendsPage = () => {
         <TrendChart trends={trendsData} />
 
         {/* Insights */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
           <div className="bg-white rounded-xl shadow-lg p-6">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-3 bg-blue-50 rounded-lg">
@@ -185,6 +224,46 @@ const TrendsPage = () => {
             <p className="text-gray-600 leading-relaxed">
               Perjalanan dinas menunjukkan tren dengan rata-rata {stats.avgPerjadin} kegiatan per bulan. 
               Data ini membantu dalam perencanaan anggaran dan koordinasi kegiatan.
+            </p>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-3 bg-green-50 rounded-lg">
+                <TrendingUp className="w-6 h-6 text-green-600" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-800">Insight Bantuan Keuangan</h3>
+            </div>
+            <p className="text-gray-600 leading-relaxed">
+              Total {stats.totalAdd} ADD, {stats.totalDd} DD, dan {stats.totalBankeu} Bankeu menunjukkan 
+              distribusi bantuan keuangan yang konsisten ke desa-desa.
+            </p>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-3 bg-purple-50 rounded-lg">
+                <TrendingUp className="w-6 h-6 text-purple-600" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-800">Insight BHPRD</h3>
+            </div>
+            <p className="text-gray-600 leading-relaxed">
+              Total {stats.totalBhprd} data BHPRD dengan rata-rata {stats.avgBhprd} per bulan 
+              menunjukkan stabilitas dalam bagi hasil pajak dan retribusi daerah.
+            </p>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-lg p-6 md:col-span-2">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-3 bg-indigo-50 rounded-lg">
+                <TrendingUp className="w-6 h-6 text-indigo-600" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-800">Ringkasan Keseluruhan</h3>
+            </div>
+            <p className="text-gray-600 leading-relaxed">
+              Dalam periode {stats.months} bulan terakhir, sistem telah mencatat perkembangan 
+              signifikan di semua aspek. Total kombinasi dari semua program menunjukkan 
+              komitmen DPMD dalam mendukung pembangunan desa dan kelembagaan.
             </p>
           </div>
         </div>
