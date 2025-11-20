@@ -136,6 +136,7 @@ const DdNonEarmarkedT2 = lazy(() =>
 );
 const InsentifDd = lazy(() =>
 	import("./pages/kkd/dd/InsentifDd")
+);
 const UserManagementPage = lazy(() =>
 	import("./pages/dashboard/UserManagementPage")
 );
