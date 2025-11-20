@@ -4,9 +4,14 @@ import { Link } from 'react-router-dom';
 import { FiActivity, FiCalendar, FiArrowRight } from 'react-icons/fi';
 
 const KegiatanCard = ({ title, description, icon, slug, year, image }) => {
+  // Handle special case for bantuan keuangan
+  const linkPath = slug === 'bantuan-keuangan-infrastruktur-2025' 
+    ? '/bantuan-keuangan' 
+    : `/kegiatan/${slug}`;
+
   return (
     <Link 
-      to={`/kegiatan/${slug}`}
+      to={linkPath}
       className="group bg-white rounded-xl shadow-md hover:shadow-2xl border border-gray-200 overflow-hidden transition-all duration-300 hover:-translate-y-1"
     >
       {/* Image */}

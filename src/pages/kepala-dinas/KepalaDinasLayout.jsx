@@ -1,5 +1,5 @@
 // src/pages/kepala-dinas/KepalaDinasLayout.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -15,10 +15,24 @@ import {
 } from 'lucide-react';
 
 const KepalaDinasLayout = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
   const [expandedDd, setExpandedDd] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Handle resize
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setSidebarOpen(true);
+      } else {
+        setSidebarOpen(false);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem('expressToken');
@@ -59,15 +73,9 @@ const KepalaDinasLayout = () => {
       label: 'Statistik BHPRD'
     },
     {
-      label: 'Statistik DD',
+      path: '/core-dashboard/statistik-dd',
       icon: <DollarSign className="w-5 h-5" />,
-      submenu: [
-        { path: '/core-dashboard/statistik-dd-earmarked-t1', label: 'DD Earmarked Tahap 1' },
-        { path: '/core-dashboard/statistik-dd-earmarked-t2', label: 'DD Earmarked Tahap 2' },
-        { path: '/core-dashboard/statistik-dd-nonearmarked-t1', label: 'DD Non-Earmarked Tahap 1' },
-        { path: '/core-dashboard/statistik-dd-nonearmarked-t2', label: 'DD Non-Earmarked Tahap 2' },
-        { path: '/core-dashboard/statistik-insentif-dd', label: 'Insentif DD' },
-      ]
+      label: 'Statistik DD'
     },
     {
       path: '/core-dashboard/trends',
@@ -78,11 +86,21 @@ const KepalaDinasLayout = () => {
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+      {/* Overlay for mobile */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
       <aside
         className={`${
-          sidebarOpen ? 'w-64' : 'w-20'
-        } bg-white shadow-xl transition-all duration-300 flex flex-col`}
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        } lg:translate-x-0 ${
+          sidebarOpen ? 'w-64' : 'lg:w-20'
+        } fixed lg:relative z-50 bg-white shadow-xl transition-all duration-300 flex flex-col h-full`}
       >
         {/* Sidebar Header */}
         <div className="p-4 border-b border-gray-200 flex items-center justify-between">
@@ -112,16 +130,22 @@ const KepalaDinasLayout = () => {
         {/* Navigation Menu */}
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
           {menuItems.map((item, index) => {
-            // Handle menu with submenu (DD)
+            // Handle menu with submenu (DD, BHPRD)
             if (item.submenu) {
               const isSubmenuActive = item.submenu.some(sub => 
                 location.pathname === sub.path
               );
 
+              // Determine which state to use based on label
+              const isExpanded = item.label === 'Statistik DD' ? expandedDd : 
+                                 item.label === 'Statistik BHPRD' ? expandedBhprd : false;
+              const setExpanded = item.label === 'Statistik DD' ? setExpandedDd : 
+                                   item.label === 'Statistik BHPRD' ? setExpandedBhprd : () => {};
+
               return (
                 <div key={index}>
                   <button
-                    onClick={() => sidebarOpen && setExpandedDd(!expandedDd)}
+                    onClick={() => sidebarOpen && setExpanded(!isExpanded)}
                     className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 w-full ${
                       isSubmenuActive
                         ? 'bg-blue-600 text-white shadow-lg'
@@ -136,13 +160,13 @@ const KepalaDinasLayout = () => {
                         <span className="font-medium flex-1 text-left">{item.label}</span>
                         <ChevronDown 
                           className={`w-4 h-4 transition-transform ${
-                            expandedDd ? 'rotate-180' : ''
+                            isExpanded ? 'rotate-180' : ''
                           }`}
                         />
                       </>
                     )}
                   </button>
-                  {sidebarOpen && expandedDd && (
+                  {sidebarOpen && isExpanded && (
                     <div className="ml-8 mt-2 space-y-1">
                       {item.submenu.map((subitem, subindex) => (
                         <NavLink
@@ -208,6 +232,16 @@ const KepalaDinasLayout = () => {
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto">
+        {/* Mobile Menu Button */}
+        <div className="lg:hidden fixed top-4 left-4 z-30">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="p-3 bg-white rounded-lg shadow-lg hover:bg-gray-100 transition-colors"
+          >
+            <Menu className="w-6 h-6 text-gray-700" />
+          </button>
+        </div>
+        
         <Outlet />
       </main>
     </div>
