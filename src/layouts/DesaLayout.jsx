@@ -11,6 +11,7 @@ import {
 	LuStore,
 	LuFileText,
 	LuUsers,
+	LuUserCheck,
 } from "react-icons/lu";
 import Footer from "../components/landingpage/Footer";
 
@@ -174,6 +175,28 @@ const DesaLayout = () => {
 										}`}
 									>
 										Kelembagaan
+									</span>
+								</NavLink>
+							</li>
+							<li className="mb-2">
+								<NavLink
+									to="/desa/aparatur-desa"
+									className={({ isActive }) =>
+										`${baseLinkClass} ${
+											isActive ? activeLinkClass : inactiveLinkClass
+										}`
+									}
+									onClick={() =>
+										window.innerWidth < 1024 && setSidebarOpen(false)
+									}
+								>
+									<LuUserCheck className="h-6 w-6" />
+									<span
+										className={`ml-3 whitespace-nowrap ${
+											!sidebarOpen && "lg:hidden"
+										}`}
+									>
+										Aparatur Desa
 									</span>
 								</NavLink>
 							</li>

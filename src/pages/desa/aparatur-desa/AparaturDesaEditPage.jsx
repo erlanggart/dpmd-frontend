@@ -27,6 +27,7 @@ const AparaturDesaEditPage = () => {
 				const data = phRes.data.data;
 				setProdukHukum(Array.isArray(data) ? data : data?.data || []);
 			} catch (e) {
+				console.error("Error loading edit data:", e);
 				setError("Gagal memuat data edit aparatur.");
 			} finally {
 				setLoading(false);
@@ -70,6 +71,7 @@ const AparaturDesaEditPage = () => {
 			await updateAparaturDesa(id, dataToSend);
 			nav(`/desa/aparatur-desa/${id}`);
 		} catch (e) {
+			console.error("Error updating aparatur:", e);
 			setError("Gagal menyimpan perubahan.");
 		}
 	};
