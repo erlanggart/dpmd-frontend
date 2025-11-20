@@ -39,7 +39,7 @@ const KepalaDinasLayout = () => {
       label: 'Statistik BUMDes'
     },
     {
-      path: '/core-dashboard/statistik-perjalanan-dinas',
+      path: '/core-dashboard/statistik-perjadin',
       icon: <Briefcase className="w-5 h-5" />,
       label: 'Statistik Perjalanan Dinas'
     },
