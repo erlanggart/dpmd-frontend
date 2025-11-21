@@ -1,4 +1,4 @@
-// Statistik DD Dashboard untuk Core Dashboard (Kepala Dinas) - View Only
+// Statistik ADD Dashboard untuk Core Dashboard (Kepala Dinas) - View Only
 import React, { useState, useEffect } from 'react';
 import { FiDollarSign, FiMapPin, FiUsers, FiTrendingUp, FiDownload, FiChevronDown, FiChevronUp, FiSearch, FiFilter, FiX } from 'react-icons/fi';
 import { Activity } from 'lucide-react';
@@ -11,83 +11,29 @@ import api from '../../api';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
 
-const StatistikDdDashboard = () => {
+const StatistikAddDashboard = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('earmarked-t1');
   const [loading, setLoading] = useState(true);
-  const [dataEarmarkedT1, setDataEarmarkedT1] = useState([]);
-  const [dataEarmarkedT2, setDataEarmarkedT2] = useState([]);
-  const [dataNonEarmarkedT1, setDataNonEarmarkedT1] = useState([]);
-  const [dataNonEarmarkedT2, setDataNonEarmarkedT2] = useState([]);
-  const [dataInsentif, setDataInsentif] = useState([]);
+  const [data, setData] = useState([]);
   const [expandedKecamatan, setExpandedKecamatan] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
   const [filterKecamatan, setFilterKecamatan] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
 
   useEffect(() => {
-    fetchAllData();
+    fetchData();
   }, []);
 
-  const fetchAllData = async () => {
-    setLoading(true);
-    
-    // Fetch Earmarked T1
+  const fetchData = async () => {
     try {
-      const response1 = await api.get('/dd-earmarked-t1/data');
-      setDataEarmarkedT1(response1.data.data || []);
+      setLoading(true);
+      const response = await api.get('/add/data');
+      setData(response.data.data || []);
     } catch (err) {
-      console.warn('Error loading DD Earmarked T1:', err);
-      setDataEarmarkedT1([]);
-    }
-
-    // Fetch Earmarked T2
-    try {
-      const response2 = await api.get('/dd-earmarked-t2/data');
-      setDataEarmarkedT2(response2.data.data || []);
-    } catch (err) {
-      console.warn('Error loading DD Earmarked T2:', err);
-      setDataEarmarkedT2([]);
-    }
-
-    // Fetch Non-Earmarked T1
-    try {
-      const response3 = await api.get('/dd-nonearmarked-t1/data');
-      setDataNonEarmarkedT1(response3.data.data || []);
-    } catch (err) {
-      console.warn('Error loading DD Non-Earmarked T1:', err);
-      setDataNonEarmarkedT1([]);
-    }
-
-    // Fetch Non-Earmarked T2
-    try {
-      const response4 = await api.get('/dd-nonearmarked-t2/data');
-      setDataNonEarmarkedT2(response4.data.data || []);
-    } catch (err) {
-      console.warn('Error loading DD Non-Earmarked T2:', err);
-      setDataNonEarmarkedT2([]);
-    }
-
-    // Fetch Insentif DD
-    try {
-      const response5 = await api.get('/insentif-dd/data');
-      setDataInsentif(response5.data.data || []);
-    } catch (err) {
-      console.warn('Error loading Insentif DD:', err);
-      setDataInsentif([]);
-    }
-
-    setLoading(false);
-  };
-
-  const getActiveData = () => {
-    switch (activeTab) {
-      case 'earmarked-t1': return dataEarmarkedT1;
-      case 'earmarked-t2': return dataEarmarkedT2;
-      case 'nonearmarked-t1': return dataNonEarmarkedT1;
-      case 'nonearmarked-t2': return dataNonEarmarkedT2;
-      case 'insentif': return dataInsentif;
-      default: return [];
+      console.warn('Error loading ADD:', err);
+      setData([]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -99,6 +45,20 @@ const StatistikDdDashboard = () => {
       realisasi: parseInt(String(item.Realisasi || item.realisasi || '0').replace(/,/g, ''))
     }));
   };
+
+  const rawActiveData = processData(data);
+  
+  // Apply filters and search
+  const activeData = rawActiveData.filter(item => {
+    const matchesSearch = searchTerm === '' || 
+      item.desa?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.kecamatan?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesKecamatan = filterKecamatan === '' || item.kecamatan === filterKecamatan;
+    const matchesStatus = filterStatus === '' || item.status === filterStatus;
+    
+    return matchesSearch && matchesKecamatan && matchesStatus;
+  });
 
   const calculateStats = (processedData) => {
     const uniqueDesa = [...new Set(processedData.map(item => `${item.kecamatan}_${item.desa}`))];
@@ -113,20 +73,6 @@ const StatistikDdDashboard = () => {
     };
   };
 
-  const rawActiveData = processData(getActiveData());
-  
-  // Apply filters and search
-  const activeData = rawActiveData.filter(item => {
-    const matchesSearch = searchTerm === '' || 
-      item.desa?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.kecamatan?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesKecamatan = filterKecamatan === '' || item.kecamatan === filterKecamatan;
-    const matchesStatus = filterStatus === '' || item.status === filterStatus;
-    
-    return matchesSearch && matchesKecamatan && matchesStatus;
-  });
-  
   const stats = calculateStats(activeData);
   
   // Get unique values for filters
@@ -152,14 +98,6 @@ const StatistikDdDashboard = () => {
   };
 
   const exportToExcel = () => {
-    const tabNames = {
-      'earmarked-t1': 'DD Earmarked Tahap 1',
-      'earmarked-t2': 'DD Earmarked Tahap 2',
-      'nonearmarked-t1': 'DD Non-Earmarked Tahap 1',
-      'nonearmarked-t2': 'DD Non-Earmarked Tahap 2',
-      'insentif': 'Insentif DD'
-    };
-
     const exportData = activeData.map((item, index) => ({
       No: index + 1,
       Kecamatan: item.kecamatan,
@@ -172,7 +110,7 @@ const StatistikDdDashboard = () => {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Data');
     
-    const fileName = `${tabNames[activeTab]}_${new Date().toISOString().split('T')[0]}.xlsx`;
+    const fileName = `ADD_${new Date().toISOString().split('T')[0]}.xlsx`;
     XLSX.writeFile(wb, fileName);
     toast.success('Data berhasil diexport!');
   };
@@ -202,7 +140,7 @@ const StatistikDdDashboard = () => {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-cyan-50 p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
         {/* Hero Welcome Banner dengan Gradient Modern */}
-        <div className="relative bg-gradient-to-r from-cyan-600 via-blue-600 to-indigo-600 rounded-3xl shadow-2xl p-8 mb-8 overflow-hidden">
+        <div className="relative bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 rounded-3xl shadow-2xl p-8 mb-8 overflow-hidden">
           {/* Animated Background Patterns */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-10 rounded-full -mr-32 -mt-32 animate-pulse"></div>
           <div className="absolute bottom-0 left-0 w-96 h-96 bg-white opacity-5 rounded-full -ml-48 -mb-48"></div>
@@ -210,20 +148,20 @@ const StatistikDdDashboard = () => {
           <div className="relative z-10">
             <div className="mb-4">
               <h1 className="text-3xl md:text-4xl font-bold text-white mb-2 drop-shadow-lg">
-                📊 Statistik Dana Desa
+                📊 Statistik Alokasi Dana Desa (ADD)
               </h1>
               <p className="text-white text-opacity-90 text-base md:text-lg">
-                Monitoring Dana Desa (DD) Earmarked, Non-Earmarked, dan Insentif
+                Monitoring Alokasi Dana Desa
               </p>
             </div>
             
             {/* Quick Stats in Hero */}
             <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="bg-cyan-700 bg-opacity-70 backdrop-blur-md rounded-xl p-4 border border-cyan-400 border-opacity-40 shadow-lg">
+              <div className="bg-purple-700 bg-opacity-70 backdrop-blur-md rounded-xl p-4 border border-purple-400 border-opacity-40 shadow-lg">
                 <p className="text-white text-opacity-90 text-xs md:text-sm mb-1 font-medium">Total Kecamatan</p>
                 <p className="text-white text-xl md:text-2xl font-bold">{stats.totalKecamatan}</p>
               </div>
-              <div className="bg-blue-700 bg-opacity-70 backdrop-blur-md rounded-xl p-4 border border-blue-400 border-opacity-40 shadow-lg">
+              <div className="bg-pink-700 bg-opacity-70 backdrop-blur-md rounded-xl p-4 border border-pink-400 border-opacity-40 shadow-lg">
                 <p className="text-white text-opacity-90 text-xs md:text-sm mb-1 font-medium">Total Desa</p>
                 <p className="text-white text-xl md:text-2xl font-bold">{stats.totalDesa}</p>
               </div>
@@ -231,67 +169,11 @@ const StatistikDdDashboard = () => {
                 <p className="text-white text-opacity-90 text-xs md:text-sm mb-1 font-medium">Total Alokasi</p>
                 <p className="text-white text-base md:text-lg font-bold truncate">{formatCurrency(stats.totalRealisasi)}</p>
               </div>
-              <div className="bg-purple-700 bg-opacity-70 backdrop-blur-md rounded-xl p-4 border border-purple-400 border-opacity-40 shadow-lg">
+              <div className="bg-fuchsia-700 bg-opacity-70 backdrop-blur-md rounded-xl p-4 border border-fuchsia-400 border-opacity-40 shadow-lg">
                 <p className="text-white text-opacity-90 text-xs md:text-sm mb-1 font-medium">Rata-rata/Desa</p>
                 <p className="text-white text-base md:text-lg font-bold truncate">{formatCurrency(stats.avgPerDesa)}</p>
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* Tab Navigation */}
-        <div className="mb-8 overflow-x-auto">
-          <div className="flex gap-2 p-1 bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg w-fit min-w-full">
-            <button
-              onClick={() => setActiveTab('earmarked-t1')}
-              className={`px-6 py-3 rounded-xl font-medium transition-all duration-300 whitespace-nowrap ${
-                activeTab === 'earmarked-t1'
-                  ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg scale-105'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              DD Earmarked T1
-            </button>
-            <button
-              onClick={() => setActiveTab('earmarked-t2')}
-              className={`px-6 py-3 rounded-xl font-medium transition-all duration-300 whitespace-nowrap ${
-                activeTab === 'earmarked-t2'
-                  ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg scale-105'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              DD Earmarked T2
-            </button>
-            <button
-              onClick={() => setActiveTab('nonearmarked-t1')}
-              className={`px-6 py-3 rounded-xl font-medium transition-all duration-300 whitespace-nowrap ${
-                activeTab === 'nonearmarked-t1'
-                  ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg scale-105'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              DD Non-Earmarked T1
-            </button>
-            <button
-              onClick={() => setActiveTab('nonearmarked-t2')}
-              className={`px-6 py-3 rounded-xl font-medium transition-all duration-300 whitespace-nowrap ${
-                activeTab === 'nonearmarked-t2'
-                  ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg scale-105'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              DD Non-Earmarked T2
-            </button>
-            <button
-              onClick={() => setActiveTab('insentif')}
-              className={`px-6 py-3 rounded-xl font-medium transition-all duration-300 whitespace-nowrap ${
-                activeTab === 'insentif'
-                  ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg scale-105'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              Insentif DD
-            </button>
           </div>
         </div>
 
@@ -540,8 +422,9 @@ const StatistikDdDashboard = () => {
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Pie Chart - Status Distribution */}
+          {/* Pie Chart */}
           <div className="bg-gradient-to-br from-white via-purple-50 to-pink-50 rounded-3xl shadow-2xl overflow-hidden border border-purple-100 hover:shadow-3xl transition-all duration-300">
             <div className="bg-white bg-opacity-80 backdrop-blur-sm px-8 py-6 border-b border-gray-200">
               <div className="flex items-center gap-4">
@@ -556,84 +439,61 @@ const StatistikDdDashboard = () => {
                 <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-pink-500/5 rounded-2xl"></div>
                 <div className="relative h-full">
                   <Pie
-                data={{
-                  labels: (() => {
-                    const statusCounts = {};
-                    activeData.forEach(d => {
-                      const status = d.status || 'Tidak Ada Status';
-                      statusCounts[status] = (statusCounts[status] || 0) + 1;
-                    });
-                    return Object.keys(statusCounts);
-                  })(),
-                  datasets: [{
-                    data: (() => {
-                      const statusCounts = {};
-                      activeData.forEach(d => {
-                        const status = d.status || 'Tidak Ada Status';
-                        statusCounts[status] = (statusCounts[status] || 0) + 1;
-                      });
-                      return Object.values(statusCounts);
-                    })(),
-                    backgroundColor: [
-                      'rgba(34, 197, 94, 0.8)',
-                      'rgba(251, 191, 36, 0.8)',
-                      'rgba(168, 85, 247, 0.8)',
-                      'rgba(59, 130, 246, 0.8)',
-                      'rgba(239, 68, 68, 0.8)',
-                    ],
-                    borderColor: [
-                      'rgba(34, 197, 94, 1)',
-                      'rgba(251, 191, 36, 1)',
-                      'rgba(168, 85, 247, 1)',
-                      'rgba(59, 130, 246, 1)',
-                      'rgba(239, 68, 68, 1)',
-                    ],
-                    borderWidth: 2,
-                  }]
-                }}
-                options={{
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  plugins: {
-                    legend: {
-                      position: 'bottom',
-                      labels: {
-                        padding: 20,
-                        font: { size: 13, weight: '600' },
-                        color: '#475569',
-                        usePointStyle: true,
-                        pointStyle: 'circle',
-                        boxWidth: 12,
-                        boxHeight: 12
-                      }
-                    },
-                    tooltip: {
-                      backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                      padding: 12,
-                      cornerRadius: 8,
-                      titleColor: '#fff',
-                      titleFont: { size: 14, weight: 'bold' },
-                      bodyColor: '#fff',
-                      bodyFont: { size: 13 },
-                      callbacks: {
-                        label: (context) => {
-                          const label = context.label || '';
-                          const value = context.parsed || 0;
-                          const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                          const percentage = ((value / total) * 100).toFixed(1);
-                          return `${label}: ${value} desa (${percentage}%)`;
+                    data={{
+                      labels: (() => {
+                        const statusCounts = {};
+                        activeData.forEach(d => {
+                          statusCounts[d.status] = (statusCounts[d.status] || 0) + 1;
+                        });
+                        return Object.keys(statusCounts);
+                      })(),
+                      datasets: [{
+                        data: (() => {
+                          const statusCounts = {};
+                          activeData.forEach(d => {
+                            statusCounts[d.status] = (statusCounts[d.status] || 0) + 1;
+                          });
+                          return Object.values(statusCounts);
+                        })(),
+                        backgroundColor: [
+                          'rgba(147, 51, 234, 0.8)',
+                          'rgba(236, 72, 153, 0.8)',
+                          'rgba(168, 85, 247, 0.8)',
+                          'rgba(219, 39, 119, 0.8)',
+                          'rgba(192, 132, 252, 0.8)',
+                        ],
+                        borderColor: [
+                          'rgba(147, 51, 234, 1)',
+                          'rgba(236, 72, 153, 1)',
+                          'rgba(168, 85, 247, 1)',
+                          'rgba(219, 39, 119, 1)',
+                          'rgba(192, 132, 252, 1)',
+                        ],
+                        borderWidth: 2,
+                      }]
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: {
+                          position: 'right',
+                          labels: {
+                            usePointStyle: true,
+                            pointStyle: 'circle',
+                            padding: 15,
+                            font: { size: 12 }
+                          }
+                        },
+                        tooltip: {
+                          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                          padding: 12,
+                          cornerRadius: 8
                         }
                       }
-                    }
-                  },
-                  animation: {
-                    animateRotate: true,
-                    animateScale: true,
-                    duration: 1500,
-                    easing: 'easeInOutQuart'
-                  }
-                }}
-              />
+                    }}
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -698,16 +558,16 @@ const StatistikDdDashboard = () => {
                                   </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-200">
-                                  {desas.map((desa, idx) => (
-                                    <tr key={idx} className="hover:bg-gray-100 transition-colors duration-150">
-                                      <td className="px-4 py-2 text-sm text-gray-700">{idx + 1}</td>
-                                      <td className="px-4 py-2 text-sm text-gray-900">{desa.desa}</td>
-                                      <td className="px-4 py-2">
-                                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                  {desas.map((desa, index) => (
+                                    <tr key={index} className="hover:bg-gray-100 transition-colors">
+                                      <td className="px-4 py-2 text-sm text-gray-700">{index + 1}</td>
+                                      <td className="px-4 py-2 text-sm text-gray-900 font-medium">{desa.desa}</td>
+                                      <td className="px-4 py-2 text-sm">
+                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                                           {desa.status}
                                         </span>
                                       </td>
-                                      <td className="px-4 py-2 text-sm text-gray-900 font-medium">{formatCurrency(desa.realisasi)}</td>
+                                      <td className="px-4 py-2 text-sm text-gray-700 font-semibold">{formatCurrency(desa.realisasi)}</td>
                                     </tr>
                                   ))}
                                 </tbody>
@@ -723,11 +583,9 @@ const StatistikDdDashboard = () => {
             </table>
           </div>
         </div>
-        </div>
-        </div>
       </div>
     </div>
   );
 };
 
-export default StatistikDdDashboard;
+export default StatistikAddDashboard;

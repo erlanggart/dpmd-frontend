@@ -63,11 +63,10 @@ const StatistikAdd = () => {
 
   const totalKecamatan = Object.keys(kecamatanStats).length;
 
-  // Top 10 kecamatan by total alokasi
+  // Semua kecamatan by total alokasi
   const topKecamatan = Object.entries(kecamatanStats)
     .map(([name, stats]) => ({ name, total: stats.total }))
-    .sort((a, b) => b.total - a.total)
-    .slice(0, 10);
+    .sort((a, b) => b.total - a.total);
 
   // Chart data - Status Distribution
   const statusChartData = {
@@ -124,8 +123,23 @@ const StatistikAdd = () => {
       y: {
         beginAtZero: true,
         ticks: {
-          callback: (value) => `Rp ${(value / 1000000).toFixed(0)}jt`
+          callback: (value) => `Rp ${(value / 1000000).toFixed(0)}jt`,
+          font: { size: 11 }
         }
+      },
+      x: {
+        ticks: {
+          autoSkip: false,
+          maxRotation: 45,
+          minRotation: 45,
+          font: { size: 10 }
+        }
+      }
+    },
+    plugins: {
+      legend: {
+        display: true,
+        position: 'top'
       }
     }
   };

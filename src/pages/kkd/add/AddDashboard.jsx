@@ -1,93 +1,41 @@
-// Statistik DD Dashboard untuk Core Dashboard (Kepala Dinas) - View Only
+// ADD Dashboard dengan Modern Design
 import React, { useState, useEffect } from 'react';
-import { FiDollarSign, FiMapPin, FiUsers, FiTrendingUp, FiDownload, FiChevronDown, FiChevronUp, FiSearch, FiFilter, FiX } from 'react-icons/fi';
+import { FiDollarSign, FiMapPin, FiUsers, FiTrendingUp, FiDownload, FiUpload, FiChevronDown, FiChevronUp, FiX, FiSearch, FiFilter } from 'react-icons/fi';
 import { Activity } from 'lucide-react';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement } from 'chart.js';
 import { Pie, Bar } from 'react-chartjs-2';
-import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
-import api from '../../api';
+import api from '../../../api';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
 
-const StatistikDdDashboard = () => {
-  const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('earmarked-t1');
+const AddDashboard = () => {
   const [loading, setLoading] = useState(true);
-  const [dataEarmarkedT1, setDataEarmarkedT1] = useState([]);
-  const [dataEarmarkedT2, setDataEarmarkedT2] = useState([]);
-  const [dataNonEarmarkedT1, setDataNonEarmarkedT1] = useState([]);
-  const [dataNonEarmarkedT2, setDataNonEarmarkedT2] = useState([]);
-  const [dataInsentif, setDataInsentif] = useState([]);
+  const [data, setData] = useState([]);
   const [expandedKecamatan, setExpandedKecamatan] = useState({});
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadFile, setUploadFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterKecamatan, setFilterKecamatan] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
 
   useEffect(() => {
-    fetchAllData();
+    fetchData();
   }, []);
 
-  const fetchAllData = async () => {
-    setLoading(true);
-    
-    // Fetch Earmarked T1
+  const fetchData = async () => {
     try {
-      const response1 = await api.get('/dd-earmarked-t1/data');
-      setDataEarmarkedT1(response1.data.data || []);
+      setLoading(true);
+      const response = await api.get('/add/data');
+      setData(response.data.data || []);
     } catch (err) {
-      console.warn('Error loading DD Earmarked T1:', err);
-      setDataEarmarkedT1([]);
-    }
-
-    // Fetch Earmarked T2
-    try {
-      const response2 = await api.get('/dd-earmarked-t2/data');
-      setDataEarmarkedT2(response2.data.data || []);
-    } catch (err) {
-      console.warn('Error loading DD Earmarked T2:', err);
-      setDataEarmarkedT2([]);
-    }
-
-    // Fetch Non-Earmarked T1
-    try {
-      const response3 = await api.get('/dd-nonearmarked-t1/data');
-      setDataNonEarmarkedT1(response3.data.data || []);
-    } catch (err) {
-      console.warn('Error loading DD Non-Earmarked T1:', err);
-      setDataNonEarmarkedT1([]);
-    }
-
-    // Fetch Non-Earmarked T2
-    try {
-      const response4 = await api.get('/dd-nonearmarked-t2/data');
-      setDataNonEarmarkedT2(response4.data.data || []);
-    } catch (err) {
-      console.warn('Error loading DD Non-Earmarked T2:', err);
-      setDataNonEarmarkedT2([]);
-    }
-
-    // Fetch Insentif DD
-    try {
-      const response5 = await api.get('/insentif-dd/data');
-      setDataInsentif(response5.data.data || []);
-    } catch (err) {
-      console.warn('Error loading Insentif DD:', err);
-      setDataInsentif([]);
-    }
-
-    setLoading(false);
-  };
-
-  const getActiveData = () => {
-    switch (activeTab) {
-      case 'earmarked-t1': return dataEarmarkedT1;
-      case 'earmarked-t2': return dataEarmarkedT2;
-      case 'nonearmarked-t1': return dataNonEarmarkedT1;
-      case 'nonearmarked-t2': return dataNonEarmarkedT2;
-      case 'insentif': return dataInsentif;
-      default: return [];
+      console.warn('Error loading ADD:', err);
+      setData([]);
+      toast.error('Gagal memuat data ADD');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -99,6 +47,20 @@ const StatistikDdDashboard = () => {
       realisasi: parseInt(String(item.Realisasi || item.realisasi || '0').replace(/,/g, ''))
     }));
   };
+
+  const rawActiveData = processData(data);
+  
+  // Apply filters and search
+  const activeData = rawActiveData.filter(item => {
+    const matchesSearch = searchTerm === '' || 
+      item.desa?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.kecamatan?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesKecamatan = filterKecamatan === '' || item.kecamatan === filterKecamatan;
+    const matchesStatus = filterStatus === '' || item.status === filterStatus;
+    
+    return matchesSearch && matchesKecamatan && matchesStatus;
+  });
 
   const calculateStats = (processedData) => {
     const uniqueDesa = [...new Set(processedData.map(item => `${item.kecamatan}_${item.desa}`))];
@@ -113,20 +75,6 @@ const StatistikDdDashboard = () => {
     };
   };
 
-  const rawActiveData = processData(getActiveData());
-  
-  // Apply filters and search
-  const activeData = rawActiveData.filter(item => {
-    const matchesSearch = searchTerm === '' || 
-      item.desa?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.kecamatan?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesKecamatan = filterKecamatan === '' || item.kecamatan === filterKecamatan;
-    const matchesStatus = filterStatus === '' || item.status === filterStatus;
-    
-    return matchesSearch && matchesKecamatan && matchesStatus;
-  });
-  
   const stats = calculateStats(activeData);
   
   // Get unique values for filters
@@ -151,15 +99,34 @@ const StatistikDdDashboard = () => {
     }));
   };
 
-  const exportToExcel = () => {
-    const tabNames = {
-      'earmarked-t1': 'DD Earmarked Tahap 1',
-      'earmarked-t2': 'DD Earmarked Tahap 2',
-      'nonearmarked-t1': 'DD Non-Earmarked Tahap 1',
-      'nonearmarked-t2': 'DD Non-Earmarked Tahap 2',
-      'insentif': 'Insentif DD'
-    };
+  const handleUpload = async () => {
+    if (!uploadFile) {
+      toast.error('Pilih file terlebih dahulu');
+      return;
+    }
 
+    const formData = new FormData();
+    formData.append('file', uploadFile);
+
+    setUploading(true);
+    try {
+      await api.post('/add/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      toast.success('Data berhasil diupload!');
+      setShowUploadModal(false);
+      setUploadFile(null);
+      fetchData();
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error(error.response?.data?.message || 'Gagal upload data');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const exportToExcel = () => {
     const exportData = activeData.map((item, index) => ({
       No: index + 1,
       Kecamatan: item.kecamatan,
@@ -172,7 +139,7 @@ const StatistikDdDashboard = () => {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Data');
     
-    const fileName = `${tabNames[activeTab]}_${new Date().toISOString().split('T')[0]}.xlsx`;
+    const fileName = `ADD_${new Date().toISOString().split('T')[0]}.xlsx`;
     XLSX.writeFile(wb, fileName);
     toast.success('Data berhasil diexport!');
   };
@@ -201,98 +168,14 @@ const StatistikDdDashboard = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-cyan-50 p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
-        {/* Hero Welcome Banner dengan Gradient Modern */}
-        <div className="relative bg-gradient-to-r from-cyan-600 via-blue-600 to-indigo-600 rounded-3xl shadow-2xl p-8 mb-8 overflow-hidden">
-          {/* Animated Background Patterns */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-10 rounded-full -mr-32 -mt-32 animate-pulse"></div>
-          <div className="absolute bottom-0 left-0 w-96 h-96 bg-white opacity-5 rounded-full -ml-48 -mb-48"></div>
-          
-          <div className="relative z-10">
-            <div className="mb-4">
-              <h1 className="text-3xl md:text-4xl font-bold text-white mb-2 drop-shadow-lg">
-                📊 Statistik Dana Desa
-              </h1>
-              <p className="text-white text-opacity-90 text-base md:text-lg">
-                Monitoring Dana Desa (DD) Earmarked, Non-Earmarked, dan Insentif
-              </p>
-            </div>
-            
-            {/* Quick Stats in Hero */}
-            <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="bg-cyan-700 bg-opacity-70 backdrop-blur-md rounded-xl p-4 border border-cyan-400 border-opacity-40 shadow-lg">
-                <p className="text-white text-opacity-90 text-xs md:text-sm mb-1 font-medium">Total Kecamatan</p>
-                <p className="text-white text-xl md:text-2xl font-bold">{stats.totalKecamatan}</p>
-              </div>
-              <div className="bg-blue-700 bg-opacity-70 backdrop-blur-md rounded-xl p-4 border border-blue-400 border-opacity-40 shadow-lg">
-                <p className="text-white text-opacity-90 text-xs md:text-sm mb-1 font-medium">Total Desa</p>
-                <p className="text-white text-xl md:text-2xl font-bold">{stats.totalDesa}</p>
-              </div>
-              <div className="bg-indigo-700 bg-opacity-70 backdrop-blur-md rounded-xl p-4 border border-indigo-400 border-opacity-40 shadow-lg">
-                <p className="text-white text-opacity-90 text-xs md:text-sm mb-1 font-medium">Total Alokasi</p>
-                <p className="text-white text-base md:text-lg font-bold truncate">{formatCurrency(stats.totalRealisasi)}</p>
-              </div>
-              <div className="bg-purple-700 bg-opacity-70 backdrop-blur-md rounded-xl p-4 border border-purple-400 border-opacity-40 shadow-lg">
-                <p className="text-white text-opacity-90 text-xs md:text-sm mb-1 font-medium">Rata-rata/Desa</p>
-                <p className="text-white text-base md:text-lg font-bold truncate">{formatCurrency(stats.avgPerDesa)}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Tab Navigation */}
-        <div className="mb-8 overflow-x-auto">
-          <div className="flex gap-2 p-1 bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg w-fit min-w-full">
-            <button
-              onClick={() => setActiveTab('earmarked-t1')}
-              className={`px-6 py-3 rounded-xl font-medium transition-all duration-300 whitespace-nowrap ${
-                activeTab === 'earmarked-t1'
-                  ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg scale-105'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              DD Earmarked T1
-            </button>
-            <button
-              onClick={() => setActiveTab('earmarked-t2')}
-              className={`px-6 py-3 rounded-xl font-medium transition-all duration-300 whitespace-nowrap ${
-                activeTab === 'earmarked-t2'
-                  ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg scale-105'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              DD Earmarked T2
-            </button>
-            <button
-              onClick={() => setActiveTab('nonearmarked-t1')}
-              className={`px-6 py-3 rounded-xl font-medium transition-all duration-300 whitespace-nowrap ${
-                activeTab === 'nonearmarked-t1'
-                  ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg scale-105'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              DD Non-Earmarked T1
-            </button>
-            <button
-              onClick={() => setActiveTab('nonearmarked-t2')}
-              className={`px-6 py-3 rounded-xl font-medium transition-all duration-300 whitespace-nowrap ${
-                activeTab === 'nonearmarked-t2'
-                  ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg scale-105'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              DD Non-Earmarked T2
-            </button>
-            <button
-              onClick={() => setActiveTab('insentif')}
-              className={`px-6 py-3 rounded-xl font-medium transition-all duration-300 whitespace-nowrap ${
-                activeTab === 'insentif'
-                  ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg scale-105'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              Insentif DD
-            </button>
-          </div>
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent mb-2">
+            Alokasi Dana Desa (ADD)
+          </h1>
+          <p className="text-gray-600">
+            Monitoring dan manajemen Alokasi Dana Desa
+          </p>
         </div>
 
         {/* Search and Filter Section */}
@@ -388,8 +271,15 @@ const StatistikDdDashboard = () => {
           )}
         </div>
 
-        {/* Export Button */}
-        <div className="flex gap-3 mb-8">
+        {/* Action Buttons */}
+        <div className="flex gap-3 mb-8 flex-wrap">
+          <button
+            onClick={() => setShowUploadModal(true)}
+            className="group px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center gap-2"
+          >
+            <FiUpload className="w-5 h-5 group-hover:rotate-12 transition-transform duration-300" />
+            <span className="font-medium">Update Data</span>
+          </button>
           <button
             onClick={exportToExcel}
             className="group px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center gap-2"
@@ -408,7 +298,7 @@ const StatistikDdDashboard = () => {
               </div>
             </div>
             <h3 className="text-white text-sm font-medium mb-1 opacity-90">Total Kecamatan</h3>
-            <p className="text-2xl sm:text-3xl font-bold text-white animate-fade-in">{stats.totalKecamatan}</p>
+            <p className="text-3xl font-bold text-white animate-fade-in">{stats.totalKecamatan}</p>
           </div>
 
           <div className="group bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] cursor-default">
@@ -418,7 +308,7 @@ const StatistikDdDashboard = () => {
               </div>
             </div>
             <h3 className="text-white text-sm font-medium mb-1 opacity-90">Total Desa</h3>
-            <p className="text-2xl sm:text-3xl font-bold text-white animate-fade-in">{stats.totalDesa}</p>
+            <p className="text-3xl font-bold text-white animate-fade-in">{stats.totalDesa}</p>
           </div>
 
           <div className="group bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] cursor-default">
@@ -428,7 +318,7 @@ const StatistikDdDashboard = () => {
               </div>
             </div>
             <h3 className="text-white text-sm font-medium mb-1 opacity-90">Total Alokasi</h3>
-            <p className="text-lg sm:text-xl md:text-2xl font-bold text-white animate-fade-in break-words">{formatCurrency(stats.totalRealisasi)}</p>
+            <p className="text-2xl font-bold text-white animate-fade-in">{formatCurrency(stats.totalRealisasi)}</p>
           </div>
 
           <div className="group bg-gradient-to-br from-orange-500 to-red-600 rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] cursor-default">
@@ -438,37 +328,34 @@ const StatistikDdDashboard = () => {
               </div>
             </div>
             <h3 className="text-white text-sm font-medium mb-1 opacity-90">Rata-rata per Desa</h3>
-            <p className="text-lg sm:text-xl md:text-2xl font-bold text-white animate-fade-in break-words">{formatCurrency(stats.avgPerDesa)}</p>
+            <p className="text-2xl font-bold text-white animate-fade-in">{formatCurrency(stats.avgPerDesa)}</p>
           </div>
         </div>
 
         {/* Charts Section */}
-        <div className="space-y-6 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {/* Bar Chart - Kecamatan */}
-          <div className="bg-gradient-to-br from-white via-cyan-50 to-blue-50 rounded-3xl shadow-2xl overflow-hidden border border-cyan-100 hover:shadow-3xl transition-all duration-300">
-            <div className="bg-white bg-opacity-80 backdrop-blur-sm px-8 py-6 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-3 h-10 bg-gradient-to-b from-cyan-500 via-blue-500 to-indigo-500 rounded-full shadow-lg"></div>
-                  <h3 className="text-2xl font-bold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">
-                    Alokasi per Kecamatan
-                  </h3>
-                </div>
-                <span className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-full text-sm font-semibold shadow-lg">
-                  {Object.keys(groupedData).length} Kecamatan
-                </span>
+          <div className="group bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl hover:shadow-3xl transition-all duration-500 p-8 border border-gray-100/50">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-3 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                <Activity className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">
+                  Top 10 Kecamatan
+                </h3>
+                <p className="text-sm text-gray-500">Berdasarkan Total Alokasi</p>
               </div>
             </div>
-            <div className="p-8 bg-white">
-              <div className="h-96 relative">
-                <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-blue-500/5 rounded-2xl"></div>
-                <div className="relative h-full">
+            <div className="h-[350px] relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-cyan-50/50 to-blue-50/50 rounded-2xl"></div>
+              <div className="relative h-full p-4">
                 <Bar
                   data={{
-                    labels: Object.keys(groupedData),
+                    labels: Object.keys(groupedData).slice(0, 10),
                     datasets: [{
                       label: 'Total Alokasi',
-                      data: Object.entries(groupedData).map(([_, desas]) => 
+                      data: Object.entries(groupedData).slice(0, 10).map(([_, desas]) => 
                         desas.reduce((sum, d) => sum + d.realisasi, 0)
                       ),
                       backgroundColor: (context) => {
@@ -494,46 +381,51 @@ const StatistikDdDashboard = () => {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                      legend: {
-                        display: true,
-                        position: 'top'
-                      },
+                      legend: { display: false },
                       tooltip: {
                         backgroundColor: 'rgba(0, 0, 0, 0.8)',
                         padding: 12,
+                        cornerRadius: 8,
+                        titleColor: '#fff',
                         titleFont: { size: 14, weight: 'bold' },
+                        bodyColor: '#fff',
                         bodyFont: { size: 13 },
+                        displayColors: false,
                         callbacks: {
-                          label: (context) => `Total: ${formatCurrency(context.parsed.y)}`
+                          label: (context) => formatCurrency(context.raw)
                         }
                       }
                     },
                     scales: {
-                      y: {
-                        beginAtZero: true,
-                        ticks: {
-                          callback: (value) => {
-                            if (value >= 1000000000) return `Rp ${(value / 1000000000).toFixed(1)} M`;
-                            if (value >= 1000000) return `Rp ${(value / 1000000).toFixed(0)} Jt`;
-                            return `Rp ${value.toLocaleString('id-ID')}`;
-                          },
-                          font: { size: 11 }
-                        },
-                        grid: {
-                          color: 'rgba(0, 0, 0, 0.05)'
-                        }
-                      },
                       x: {
-                        ticks: {
-                          font: { size: 10 },
-                          maxRotation: 45,
-                          minRotation: 45,
-                          autoSkip: false
-                        },
                         grid: {
                           display: false
+                        },
+                        ticks: {
+                          font: { size: 11, weight: '500' },
+                          color: '#64748b'
+                        }
+                      },
+                      y: {
+                        beginAtZero: true,
+                        grid: {
+                          color: 'rgba(0, 0, 0, 0.05)',
+                          drawBorder: false
+                        },
+                        ticks: {
+                          font: { size: 11, weight: '500' },
+                          color: '#64748b',
+                          callback: (value) => {
+                            if (value >= 1000000000) return (value / 1000000000).toFixed(1) + 'M';
+                            if (value >= 1000000) return (value / 1000000).toFixed(1) + 'Jt';
+                            return value;
+                          }
                         }
                       }
+                    },
+                    animation: {
+                      duration: 1500,
+                      easing: 'easeInOutQuart'
                     }
                   }}
                 />
@@ -542,20 +434,22 @@ const StatistikDdDashboard = () => {
           </div>
 
           {/* Pie Chart - Status Distribution */}
-          <div className="bg-gradient-to-br from-white via-purple-50 to-pink-50 rounded-3xl shadow-2xl overflow-hidden border border-purple-100 hover:shadow-3xl transition-all duration-300">
-            <div className="bg-white bg-opacity-80 backdrop-blur-sm px-8 py-6 border-b border-gray-200">
-              <div className="flex items-center gap-4">
-                <div className="w-3 h-10 bg-gradient-to-b from-purple-500 via-pink-500 to-rose-500 rounded-full shadow-lg"></div>
-                <h3 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+          <div className="group bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl hover:shadow-3xl transition-all duration-500 p-8 border border-gray-100/50">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-3 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                <Activity className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
                   Distribusi Status
                 </h3>
+                <p className="text-sm text-gray-500">Status Pencairan Dana</p>
               </div>
             </div>
-            <div className="p-8 bg-white flex justify-center">
-              <div className="w-full max-w-2xl h-96 relative">
-                <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-pink-500/5 rounded-2xl"></div>
-                <div className="relative h-full">
-                  <Pie
+            <div className="h-[350px] flex items-center justify-center relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-50/50 to-pink-50/50 rounded-2xl"></div>
+              <div className="relative w-full h-full flex items-center justify-center">
+              <Pie
                 data={{
                   labels: (() => {
                     const statusCounts = {};
@@ -698,16 +592,16 @@ const StatistikDdDashboard = () => {
                                   </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-200">
-                                  {desas.map((desa, idx) => (
-                                    <tr key={idx} className="hover:bg-gray-100 transition-colors duration-150">
-                                      <td className="px-4 py-2 text-sm text-gray-700">{idx + 1}</td>
-                                      <td className="px-4 py-2 text-sm text-gray-900">{desa.desa}</td>
-                                      <td className="px-4 py-2">
-                                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                  {desas.map((desa, index) => (
+                                    <tr key={index} className="hover:bg-gray-100 transition-colors">
+                                      <td className="px-4 py-2 text-sm text-gray-700">{index + 1}</td>
+                                      <td className="px-4 py-2 text-sm text-gray-900 font-medium">{desa.desa}</td>
+                                      <td className="px-4 py-2 text-sm">
+                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                                           {desa.status}
                                         </span>
                                       </td>
-                                      <td className="px-4 py-2 text-sm text-gray-900 font-medium">{formatCurrency(desa.realisasi)}</td>
+                                      <td className="px-4 py-2 text-sm text-gray-700 font-semibold">{formatCurrency(desa.realisasi)}</td>
                                     </tr>
                                   ))}
                                 </tbody>
@@ -723,11 +617,65 @@ const StatistikDdDashboard = () => {
             </table>
           </div>
         </div>
-        </div>
-        </div>
       </div>
+
+      {/* Upload Modal */}
+      {showUploadModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 animate-fade-in">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-2xl font-bold text-gray-900">Update Data ADD</h3>
+              <button
+                onClick={() => {
+                  setShowUploadModal(false);
+                  setUploadFile(null);
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <FiX className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Pilih File JSON
+              </label>
+              <input
+                type="file"
+                accept=".json"
+                onChange={(e) => setUploadFile(e.target.files[0])}
+                className="w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-xl focus:outline-none focus:border-cyan-500 transition-colors cursor-pointer hover:border-cyan-400"
+              />
+              {uploadFile && (
+                <p className="mt-2 text-sm text-gray-600">
+                  File terpilih: <span className="font-medium">{uploadFile.name}</span>
+                </p>
+              )}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowUploadModal(false);
+                  setUploadFile(null);
+                }}
+                className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleUpload}
+                disabled={!uploadFile || uploading}
+                className="flex-1 px-4 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-xl hover:shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              >
+                {uploading ? 'Uploading...' : 'Upload'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
-export default StatistikDdDashboard;
+export default AddDashboard;

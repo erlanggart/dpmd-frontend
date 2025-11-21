@@ -140,7 +140,7 @@ const BhprdDashboard = () => {
   const kecamatanRealisasi = Object.entries(groupedData).map(([kecamatan, desas]) => ({
     kecamatan,
     total: desas.reduce((sum, d) => sum + d.realisasi, 0)
-  })).sort((a, b) => b.total - a.total).slice(0, 10);
+  })).sort((a, b) => b.total - a.total);
 
   const kecamatanChartData = {
     labels: kecamatanRealisasi.map(k => k.kecamatan),
@@ -217,37 +217,61 @@ const BhprdDashboard = () => {
   }
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
-          <FiDollarSign className="text-green-600" />
-          BHPRD (Bagi Hasil Pajak Retribusi Daerah) 2025
-        </h1>
-        <p className="text-gray-600 mt-2">
-          Data realisasi bagi hasil pajak dan retribusi daerah untuk desa
-        </p>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-green-50 to-emerald-50 p-4 md:p-8">
+      <div className="max-w-7xl mx-auto">
+        {/* Hero Welcome Banner dengan Gradient Modern */}
+        <div className="relative bg-gradient-to-r from-emerald-600 via-green-600 to-teal-600 rounded-3xl shadow-2xl p-8 mb-8 overflow-hidden">
+          {/* Animated Background Patterns */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-10 rounded-full -mr-32 -mt-32 animate-pulse"></div>
+          <div className="absolute bottom-0 left-0 w-96 h-96 bg-white opacity-5 rounded-full -ml-48 -mb-48"></div>
+          
+          <div className="relative z-10">
+            <div className="mb-4">
+              <h1 className="text-3xl md:text-4xl font-bold text-white mb-2 drop-shadow-lg">
+                📊 BHPRD (Bagi Hasil Pajak Retribusi Daerah) 2025
+              </h1>
+              <p className="text-white text-opacity-90 text-base md:text-lg">
+                Data realisasi bagi hasil pajak dan retribusi daerah untuk desa
+              </p>
+            </div>
+            
+            {/* Quick Stats in Hero */}
+            <div className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-3">
+              <div className="bg-emerald-700 bg-opacity-70 backdrop-blur-md rounded-xl p-4 border border-emerald-400 border-opacity-40 shadow-lg">
+                <p className="text-white text-opacity-90 text-xs md:text-sm mb-1 font-medium">Total Desa</p>
+                <p className="text-white text-xl md:text-2xl font-bold">{totalDesa}</p>
+              </div>
+              <div className="bg-green-700 bg-opacity-70 backdrop-blur-md rounded-xl p-4 border border-green-400 border-opacity-40 shadow-lg">
+                <p className="text-white text-opacity-90 text-xs md:text-sm mb-1 font-medium">Total Realisasi</p>
+                <p className="text-white text-base md:text-lg font-bold truncate">{formatRupiah(totalRealisasi)}</p>
+              </div>
+              <div className="bg-teal-700 bg-opacity-70 backdrop-blur-md rounded-xl p-4 border border-teal-400 border-opacity-40 shadow-lg col-span-2 md:col-span-1">
+                <p className="text-white text-opacity-90 text-xs md:text-sm mb-1 font-medium">Rata-rata/Desa</p>
+                <p className="text-white text-base md:text-lg font-bold truncate">{formatRupiah(avgPerDesa)}</p>
+              </div>
+            </div>
+          </div>
+        </div>
 
-      {/* Tabs */}
-      <div className="bg-white rounded-xl shadow-sm p-1 mb-6 flex gap-2">
-        {tabs.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 px-6 py-3 rounded-lg font-medium transition-all ${
-              activeTab === tab.id
-                ? `bg-${tab.color}-600 text-white shadow-md`
-                : 'text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+        {/* Tabs */}
+        <div className="bg-white rounded-xl shadow-sm p-1 mb-6 flex gap-2">
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex-1 px-6 py-3 rounded-lg font-medium transition-all ${
+                activeTab === tab.id
+                  ? `bg-${tab.color}-600 text-white shadow-md`
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         {/* Total Desa */}
         <div className="group bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
           <div className="flex items-center justify-between mb-4">
@@ -257,7 +281,7 @@ const BhprdDashboard = () => {
             <FiTrendingUp className="w-8 h-8 text-white opacity-50" />
           </div>
           <h3 className="text-white text-sm font-medium mb-1 opacity-90">Total Desa</h3>
-          <p className="text-3xl font-bold text-white">{totalDesa}</p>
+          <p className="text-2xl sm:text-3xl font-bold text-white">{totalDesa}</p>
           <p className="text-white text-xs mt-2 opacity-75">Desa terdaftar</p>
         </div>
 
@@ -270,7 +294,7 @@ const BhprdDashboard = () => {
             <FiBarChart2 className="w-8 h-8 text-white opacity-50" />
           </div>
           <h3 className="text-white text-sm font-medium mb-1 opacity-90">Total Realisasi</h3>
-          <p className="text-xl md:text-2xl font-bold text-white break-words">{formatRupiah(totalRealisasi)}</p>
+          <p className="text-lg sm:text-xl md:text-2xl font-bold text-white break-words">{formatRupiah(totalRealisasi)}</p>
           <p className="text-white text-xs mt-2 opacity-75">Total dana BHPRD</p>
         </div>
 
@@ -283,49 +307,122 @@ const BhprdDashboard = () => {
             <FiActivity className="w-8 h-8 text-white opacity-50" />
           </div>
           <h3 className="text-white text-sm font-medium mb-1 opacity-90">Rata-rata per Desa</h3>
-          <p className="text-xl md:text-2xl font-bold text-white break-words">{formatRupiah(avgPerDesa)}</p>
+          <p className="text-lg sm:text-xl md:text-2xl font-bold text-white break-words">{formatRupiah(avgPerDesa)}</p>
           <p className="text-white text-xs mt-2 opacity-75">Realisasi rata-rata</p>
         </div>
       </div>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <div className="bg-white rounded-2xl p-6 shadow-xl">
-          <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-blue-500/10 to-indigo-500/10 p-6 mb-4">
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-500/5"></div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4 relative z-10">Distribusi Status</h3>
-            <div className="relative z-10 h-64 flex items-center justify-center">
-              <Pie data={statusChartData} options={{ maintainAspectRatio: false }} />
+      {/* Charts Section */}
+      <div className="space-y-6 mb-8">
+        {/* Bar Chart - Kecamatan */}
+        <div className="bg-gradient-to-br from-white via-emerald-50 to-green-50 rounded-3xl shadow-2xl overflow-hidden border border-emerald-100 hover:shadow-3xl transition-all duration-300">
+          <div className="bg-white bg-opacity-80 backdrop-blur-sm px-8 py-6 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-3 h-10 bg-gradient-to-b from-emerald-500 via-green-500 to-teal-500 rounded-full shadow-lg"></div>
+                <h3 className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
+                  Realisasi per Kecamatan - Tahap {activeTab === 'tahap1' ? '1' : activeTab === 'tahap2' ? '2' : '3'}
+                </h3>
+              </div>
+              <span className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-full text-sm font-semibold shadow-lg">
+                {kecamatanRealisasi.length} Kecamatan
+              </span>
             </div>
           </div>
-        </div>
-
-        <div className="bg-white rounded-2xl p-6 shadow-xl">
-          <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-green-500/10 to-emerald-500/10 p-6 mb-4">
-            <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-emerald-500/5"></div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4 relative z-10">Top 10 Kecamatan</h3>
-            <div className="relative z-10 h-64">
+          <div className="p-8 bg-white">
+            <div className="h-96 relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-green-500/5 rounded-2xl"></div>
+              <div className="relative h-full">
               <Bar 
                 data={kecamatanChartData} 
-                options={{ 
+                options={{
                   maintainAspectRatio: false,
-                  indexAxis: 'y',
-                  scales: { 
-                    x: { 
-                      ticks: { 
-                        callback: (value) => formatRupiah(value)
-                      } 
-                    } 
-                  },
+                  responsive: true,
                   plugins: {
+                    legend: {
+                      display: true,
+                      position: 'top'
+                    },
                     tooltip: {
+                      backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                      padding: 12,
                       callbacks: {
-                        label: (context) => formatRupiah(context.parsed.x)
+                        label: (context) => `Total: ${formatRupiah(context.parsed.y)}`
+                      }
+                    }
+                  },
+                  scales: {
+                    y: { 
+                      beginAtZero: true,
+                      ticks: { 
+                        callback: (value) => {
+                          if (value >= 1000000000) return `Rp ${(value / 1000000000).toFixed(1)} M`;
+                          if (value >= 1000000) return `Rp ${(value / 1000000).toFixed(0)} Jt`;
+                          return `Rp ${value.toLocaleString('id-ID')}`;
+                        },
+                        font: { size: 11 }
+                      },
+                      grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                      }
+                    },
+                    x: {
+                      ticks: {
+                        font: { size: 10 },
+                        maxRotation: 45,
+                        minRotation: 45,
+                        autoSkip: false
+                      },
+                      grid: {
+                        display: false
                       }
                     }
                   }
                 }} 
               />
+            </div>
+          </div>
+        </div>
+      </div>
+
+        {/* Status Distribution - Pie Chart */}
+        <div className="bg-gradient-to-br from-white via-purple-50 to-pink-50 rounded-3xl shadow-2xl overflow-hidden border border-purple-100 hover:shadow-3xl transition-all duration-300">
+          <div className="bg-white bg-opacity-80 backdrop-blur-sm px-8 py-6 border-b border-gray-200">
+            <div className="flex items-center gap-4">
+              <div className="w-3 h-10 bg-gradient-to-b from-purple-500 via-pink-500 to-rose-500 rounded-full shadow-lg"></div>
+              <h3 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                Distribusi Status
+              </h3>
+            </div>
+          </div>
+          <div className="p-8 bg-white flex justify-center">
+            <div className="w-full max-w-2xl h-96 relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-pink-500/5 rounded-2xl"></div>
+              <div className="relative h-full">
+                <Pie 
+                  data={statusChartData} 
+                  options={{ 
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { 
+                      legend: { 
+                        position: 'right',
+                        labels: {
+                          usePointStyle: true,
+                          pointStyle: 'circle',
+                          padding: 15,
+                          font: { size: 12 }
+                        }
+                      },
+                      tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        padding: 12,
+                        cornerRadius: 8
+                      }
+                    } 
+                  }} 
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -481,6 +578,7 @@ const BhprdDashboard = () => {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };

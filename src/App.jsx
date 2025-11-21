@@ -100,8 +100,8 @@ const BankeuDashboard = lazy(() =>
 const StatistikBankeuDashboard = lazy(() =>
 	import("./pages/kepala-dinas/StatistikBankeuDashboard")
 );
-const Add = lazy(() =>
-	import("./pages/kkd/Add")
+const AddDashboard = lazy(() =>
+	import("./pages/kkd/add/AddDashboard")
 );
 const BhprdDashboard = lazy(() =>
 	import("./pages/kkd/BhprdDashboard")
@@ -109,6 +109,10 @@ const BhprdDashboard = lazy(() =>
 // DD Sub-categories
 const DdDashboard = lazy(() =>
 	import("./pages/kkd/dd/DdDashboard")
+);
+// Statistik untuk Core Dashboard
+const StatistikAddDashboard = lazy(() =>
+	import("./pages/kepala-dinas/StatistikAddDashboard")
 );
 const UserManagementPage = lazy(() =>
 	import("./pages/dashboard/UserManagementPage")
@@ -191,7 +195,7 @@ function App() {
 					<Route path="berita" element={<BeritaManagement />} />
 					<Route path="bumdes" element={<BumdesApp />} />
 					<Route path="bankeu" element={<BankeuDashboard />} />
-					<Route path="add" element={<Add />} />
+					<Route path="add" element={<AddDashboard />} />
 					<Route path="bhprd" element={<BhprdDashboard />} />
 					<Route path="dd" element={<DdDashboard />} />
 					<Route path="kelembagaan" element={<Kelembagaan />} />
@@ -235,7 +239,7 @@ function App() {
 					<Route path="statistik-bumdes" element={<StatistikBumdes />} />
 					<Route path="statistik-perjadin" element={<StatistikPerjadin />} />
 					<Route path="statistik-bankeu" element={<StatistikBankeuDashboard />} />
-					<Route path="statistik-add" element={<StatistikAdd />} />
+					<Route path="statistik-add" element={<StatistikAddDashboard />} />
 					<Route path="statistik-bhprd" element={<BhprdDashboard />} />
 					<Route path="statistik-dd" element={<StatistikDdDashboard />} />
 					<Route path="trends" element={<TrendsPage />} />

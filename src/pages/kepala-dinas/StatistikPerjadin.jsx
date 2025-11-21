@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { 
   Briefcase, 
-  ArrowLeft, 
   Calendar, 
   MapPin, 
   Users, 
@@ -318,17 +317,6 @@ const StatistikPerjadin = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-orange-50 to-red-50 p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Header with Back Button */}
-        <div className="mb-6">
-          <button
-            onClick={() => navigate('/core-dashboard/dashboard')}
-            className="group flex items-center gap-2 text-gray-600 hover:text-orange-600 mb-4 transition-all duration-300 bg-white px-4 py-2 rounded-xl shadow-md hover:shadow-lg"
-          >
-            <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform duration-300" />
-            <span className="font-medium">Kembali ke Dashboard</span>
-          </button>
-        </div>
-
         {/* Hero Header Card */}
         <div className="relative bg-gradient-to-r from-orange-600 via-red-600 to-pink-600 rounded-3xl shadow-2xl p-8 mb-8 overflow-hidden">
           {/* Animated Background Patterns */}
@@ -381,7 +369,7 @@ const StatistikPerjadin = () => {
                 </div>
               </div>
               <h3 className="text-blue-100 text-sm font-semibold mb-2">Total Kegiatan</h3>
-              <p className="text-4xl font-bold text-white mb-1">{dashboardData?.total_kegiatan || 0}</p>
+              <p className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-1">{dashboardData?.total_kegiatan || 0}</p>
               <p className="text-xs text-blue-100 flex items-center gap-1">
                 <span className="w-2 h-2 bg-blue-300 rounded-full animate-pulse"></span>
                 Semua periode
@@ -404,7 +392,7 @@ const StatistikPerjadin = () => {
                 </div>
               </div>
               <h3 className="text-emerald-100 text-sm font-semibold mb-2">Kegiatan Minggu Ini</h3>
-              <p className="text-4xl font-bold text-white mb-1">{dashboardData?.kegiatan_minggu_ini || 0}</p>
+              <p className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-1">{dashboardData?.kegiatan_minggu_ini || 0}</p>
               <p className="text-xs text-emerald-100 flex items-center gap-1">
                 <span className="w-2 h-2 bg-emerald-300 rounded-full animate-pulse"></span>
                 7 hari terakhir
@@ -427,7 +415,7 @@ const StatistikPerjadin = () => {
                 </div>
               </div>
               <h3 className="text-purple-100 text-sm font-semibold mb-2">Kegiatan Bulan Ini</h3>
-              <p className="text-4xl font-bold text-white mb-1">{dashboardData?.kegiatan_bulan_ini || 0}</p>
+              <p className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-1">{dashboardData?.kegiatan_bulan_ini || 0}</p>
               <p className="text-xs text-purple-100 flex items-center gap-1">
                 <span className="w-2 h-2 bg-purple-300 rounded-full animate-pulse"></span>
                 30 hari terakhir
@@ -450,7 +438,7 @@ const StatistikPerjadin = () => {
                 </div>
               </div>
               <h3 className="text-orange-100 text-sm font-semibold mb-2">Total Personil</h3>
-              <p className="text-4xl font-bold text-white mb-1">{dashboardData?.total_personil || 0}</p>
+              <p className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-1">{dashboardData?.total_personil || 0}</p>
               <p className="text-xs text-orange-100 flex items-center gap-1">
                 <span className="w-2 h-2 bg-orange-300 rounded-full animate-pulse"></span>
                 Yang terlibat

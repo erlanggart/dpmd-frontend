@@ -18,7 +18,6 @@ const COLORS = {
 const PerjadinCharts = ({ perjalanan_dinas }) => {
   // Prepare Perjalanan Dinas by Lokasi
   const perjadinByLokasi = (perjalanan_dinas?.by_lokasi || [])
-    .slice(0, 10)
     .map(item => ({
       name: item.lokasi || 'Tidak Ada',
       total: item.total
@@ -29,10 +28,10 @@ const PerjadinCharts = ({ perjalanan_dinas }) => {
       <div className="flex items-center gap-2 mb-4">
         <Briefcase className="w-5 h-5 text-orange-600" />
         <h2 className="text-xl font-bold text-gray-800">
-          Perjalanan Dinas per Lokasi (Top 10)
+          Perjalanan Dinas per Lokasi
         </h2>
       </div>
-      <ResponsiveContainer width="100%" height={300}>
+      <ResponsiveContainer width="100%" height={400}>
         <BarChart data={perjadinByLokasi}>
           <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
           <XAxis
@@ -40,9 +39,9 @@ const PerjadinCharts = ({ perjalanan_dinas }) => {
             angle={-45}
             textAnchor="end"
             height={100}
-            tick={{ fontSize: 12 }}
+            tick={{ fontSize: 11 }}
           />
-          <YAxis />
+          <YAxis tick={{ fontSize: 11 }} />
           <Tooltip
             contentStyle={{
               backgroundColor: 'rgba(255, 255, 255, 0.95)',
