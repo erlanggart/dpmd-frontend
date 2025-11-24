@@ -306,7 +306,7 @@ const BhprdDashboard = () => {
             <span className="font-medium">Update Data</span>
           </button>
           <button
-            onClick={exportToExcel}
+            onClick={handleExportExcel}
             className="group px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center gap-2"
           >
             <FiDownload className="w-5 h-5 group-hover:translate-y-1 transition-transform duration-300" />
