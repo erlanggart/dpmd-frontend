@@ -7,8 +7,11 @@ import { Pie, Bar } from 'react-chartjs-2';
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 import api from '../../api';
+import { useDataCache } from '../../context/DataCacheContext';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
+
+const CACHE_KEY = 'bhprd-dashboard';
 
 const BhprdDashboard = () => {
   const [activeTab, setActiveTab] = useState('tahap1');
@@ -23,18 +26,30 @@ const BhprdDashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterKecamatan, setFilterKecamatan] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  const { getCachedData, setCachedData, isCached } = useDataCache();
 
   useEffect(() => {
-    fetchAllData();
+    if (isCached(CACHE_KEY)) {
+      const cachedData = getCachedData(CACHE_KEY);
+      setDataTahap1(cachedData.data.tahap1);
+      setDataTahap2(cachedData.data.tahap2);
+      setDataTahap3(cachedData.data.tahap3);
+      setLoading(false);
+    } else {
+      fetchAllData();
+    }
   }, []);
 
   const fetchAllData = async () => {
     setLoading(true);
     
+    let t1Data = [], t2Data = [], t3Data = [];
+    
     // Fetch Tahap 1
     try {
       const response1 = await api.get('/bhprd-t1/data');
-      setDataTahap1(response1.data.data || []);
+      t1Data = response1.data.data || [];
+      setDataTahap1(t1Data);
     } catch (err) {
       console.warn('Error loading BHPRD Tahap 1:', err);
       setDataTahap1([]);
@@ -43,7 +58,8 @@ const BhprdDashboard = () => {
     // Fetch Tahap 2
     try {
       const response2 = await api.get('/bhprd-t2/data');
-      setDataTahap2(response2.data.data || []);
+      t2Data = response2.data.data || [];
+      setDataTahap2(t2Data);
     } catch (err) {
       console.warn('Error loading BHPRD Tahap 2:', err);
       setDataTahap2([]);
@@ -52,11 +68,19 @@ const BhprdDashboard = () => {
     // Fetch Tahap 3
     try {
       const response3 = await api.get('/bhprd-t3/data');
-      setDataTahap3(response3.data.data || []);
+      t3Data = response3.data.data || [];
+      setDataTahap3(t3Data);
     } catch (err) {
       console.warn('Error loading BHPRD Tahap 3:', err);
       setDataTahap3([]);
     }
+
+    // Save to cache
+    setCachedData(CACHE_KEY, {
+      tahap1: t1Data,
+      tahap2: t2Data,
+      tahap3: t3Data
+    });
 
     setLoading(false);
   };
@@ -254,63 +278,41 @@ const BhprdDashboard = () => {
         </div>
 
         {/* Tabs */}
-        <div className="bg-white rounded-xl shadow-sm p-1 mb-6 flex gap-2">
-          {tabs.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 px-6 py-3 rounded-lg font-medium transition-all ${
-                activeTab === tab.id
-                  ? `bg-${tab.color}-600 text-white shadow-md`
-                  : 'text-gray-600 hover:bg-gray-100'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+        <div className="mb-8 overflow-x-auto">
+          <div className="flex gap-2 p-1 bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg w-fit min-w-full">
+            {tabs.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-6 py-3 rounded-xl font-medium transition-all duration-300 whitespace-nowrap ${
+                  activeTab === tab.id
+                    ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-lg scale-105'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        {/* Total Desa */}
-        <div className="group bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 bg-white bg-opacity-90 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-              <FiMapPin className="w-6 h-6 text-blue-600" />
-            </div>
-            <FiTrendingUp className="w-8 h-8 text-white opacity-50" />
-          </div>
-          <h3 className="text-white text-sm font-medium mb-1 opacity-90">Total Desa</h3>
-          <p className="text-2xl sm:text-3xl font-bold text-white">{totalDesa}</p>
-          <p className="text-white text-xs mt-2 opacity-75">Desa terdaftar</p>
+        {/* Action Buttons */}
+        <div className="flex gap-3 mb-8 flex-wrap">
+          <button
+            onClick={() => setShowUploadModal(true)}
+            className="group px-6 py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center gap-2"
+          >
+            <FiUpload className="w-5 h-5 group-hover:rotate-12 transition-transform duration-300" />
+            <span className="font-medium">Update Data</span>
+          </button>
+          <button
+            onClick={exportToExcel}
+            className="group px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center gap-2"
+          >
+            <FiDownload className="w-5 h-5 group-hover:translate-y-1 transition-transform duration-300" />
+            <span className="font-medium">Export Excel</span>
+          </button>
         </div>
-
-        {/* Total Realisasi */}
-        <div className="group bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 bg-white bg-opacity-90 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-              <FiDollarSign className="w-6 h-6 text-green-600" />
-            </div>
-            <FiBarChart2 className="w-8 h-8 text-white opacity-50" />
-          </div>
-          <h3 className="text-white text-sm font-medium mb-1 opacity-90">Total Realisasi</h3>
-          <p className="text-lg sm:text-xl md:text-2xl font-bold text-white break-words">{formatRupiah(totalRealisasi)}</p>
-          <p className="text-white text-xs mt-2 opacity-75">Total dana BHPRD</p>
-        </div>
-
-        {/* Rata-rata per Desa */}
-        <div className="group bg-gradient-to-br from-purple-500 to-violet-600 rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 bg-white bg-opacity-90 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-              <FiTrendingUp className="w-6 h-6 text-purple-600" />
-            </div>
-            <FiActivity className="w-8 h-8 text-white opacity-50" />
-          </div>
-          <h3 className="text-white text-sm font-medium mb-1 opacity-90">Rata-rata per Desa</h3>
-          <p className="text-lg sm:text-xl md:text-2xl font-bold text-white break-words">{formatRupiah(avgPerDesa)}</p>
-          <p className="text-white text-xs mt-2 opacity-75">Realisasi rata-rata</p>
-        </div>
-      </div>
 
       {/* Charts Section */}
       <div className="space-y-6 mb-8">

@@ -168,14 +168,42 @@ const AddDashboard = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-cyan-50 p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent mb-2">
-            Alokasi Dana Desa (ADD)
-          </h1>
-          <p className="text-gray-600">
-            Monitoring dan manajemen Alokasi Dana Desa
-          </p>
+        {/* Hero Welcome Banner dengan Gradient Modern */}
+        <div className="relative bg-gradient-to-r from-cyan-600 via-blue-600 to-indigo-600 rounded-3xl shadow-2xl p-8 mb-8 overflow-hidden">
+          {/* Animated Background Patterns */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-10 rounded-full -mr-32 -mt-32 animate-pulse"></div>
+          <div className="absolute bottom-0 left-0 w-96 h-96 bg-white opacity-5 rounded-full -ml-48 -mb-48"></div>
+          
+          <div className="relative z-10">
+            <div className="mb-4">
+              <h1 className="text-3xl md:text-4xl font-bold text-white mb-2 drop-shadow-lg">
+                📊 ADD (Alokasi Dana Desa)
+              </h1>
+              <p className="text-white text-opacity-90 text-base md:text-lg">
+                Monitoring dan manajemen Alokasi Dana Desa (ADD)
+              </p>
+            </div>
+            
+            {/* Quick Stats in Hero */}
+            <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="bg-cyan-700 bg-opacity-70 backdrop-blur-md rounded-xl p-4 border border-cyan-400 border-opacity-40 shadow-lg">
+                <p className="text-white text-opacity-90 text-xs md:text-sm mb-1 font-medium">Total Kecamatan</p>
+                <p className="text-white text-xl md:text-2xl font-bold">{stats.totalKecamatan}</p>
+              </div>
+              <div className="bg-blue-700 bg-opacity-70 backdrop-blur-md rounded-xl p-4 border border-blue-400 border-opacity-40 shadow-lg">
+                <p className="text-white text-opacity-90 text-xs md:text-sm mb-1 font-medium">Total Desa</p>
+                <p className="text-white text-xl md:text-2xl font-bold">{stats.totalDesa}</p>
+              </div>
+              <div className="bg-indigo-700 bg-opacity-70 backdrop-blur-md rounded-xl p-4 border border-indigo-400 border-opacity-40 shadow-lg overflow-hidden">
+                <p className="text-white text-opacity-90 text-xs md:text-sm mb-1 font-medium">Total Alokasi</p>
+                <p className="text-white text-[10px] md:text-xs font-bold break-words leading-tight">{formatCurrency(stats.totalRealisasi)}</p>
+              </div>
+              <div className="bg-purple-700 bg-opacity-70 backdrop-blur-md rounded-xl p-4 border border-purple-400 border-opacity-40 shadow-lg overflow-hidden">
+                <p className="text-white text-opacity-90 text-xs md:text-sm mb-1 font-medium">Rata-rata/Desa</p>
+                <p className="text-white text-[10px] md:text-xs font-bold break-words leading-tight">{formatCurrency(stats.avgPerDesa)}</p>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Search and Filter Section */}
@@ -287,49 +315,6 @@ const AddDashboard = () => {
             <FiDownload className="w-5 h-5 group-hover:translate-y-1 transition-transform duration-300" />
             <span className="font-medium">Export Excel</span>
           </button>
-        </div>
-
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="group bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] cursor-default">
-            <div className="flex items-start justify-between mb-4">
-              <div className="w-14 h-14 bg-white/90 backdrop-blur-sm rounded-xl flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg">
-                <FiMapPin className="w-7 h-7 text-cyan-600" />
-              </div>
-            </div>
-            <h3 className="text-white text-sm font-medium mb-1 opacity-90">Total Kecamatan</h3>
-            <p className="text-3xl font-bold text-white animate-fade-in">{stats.totalKecamatan}</p>
-          </div>
-
-          <div className="group bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] cursor-default">
-            <div className="flex items-start justify-between mb-4">
-              <div className="w-14 h-14 bg-white/90 backdrop-blur-sm rounded-xl flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg">
-                <FiUsers className="w-7 h-7 text-purple-600" />
-              </div>
-            </div>
-            <h3 className="text-white text-sm font-medium mb-1 opacity-90">Total Desa</h3>
-            <p className="text-3xl font-bold text-white animate-fade-in">{stats.totalDesa}</p>
-          </div>
-
-          <div className="group bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] cursor-default">
-            <div className="flex items-start justify-between mb-4">
-              <div className="w-14 h-14 bg-white/90 backdrop-blur-sm rounded-xl flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg">
-                <FiDollarSign className="w-7 h-7 text-green-600" />
-              </div>
-            </div>
-            <h3 className="text-white text-sm font-medium mb-1 opacity-90">Total Alokasi</h3>
-            <p className="text-2xl font-bold text-white animate-fade-in">{formatCurrency(stats.totalRealisasi)}</p>
-          </div>
-
-          <div className="group bg-gradient-to-br from-orange-500 to-red-600 rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] cursor-default">
-            <div className="flex items-start justify-between mb-4">
-              <div className="w-14 h-14 bg-white/90 backdrop-blur-sm rounded-xl flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg">
-                <FiTrendingUp className="w-7 h-7 text-orange-600" />
-              </div>
-            </div>
-            <h3 className="text-white text-sm font-medium mb-1 opacity-90">Rata-rata per Desa</h3>
-            <p className="text-2xl font-bold text-white animate-fade-in">{formatCurrency(stats.avgPerDesa)}</p>
-          </div>
         </div>
 
         {/* Charts Section */}

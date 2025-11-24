@@ -19,10 +19,13 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useDataCache } from '../../context/DataCacheContext';
 
 const API_CONFIG = {
   BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:3001/api'
 };
+
+const CACHE_KEY = 'statistik-perjadin';
 
 const StatistikPerjadin = () => {
   const [loading, setLoading] = useState(true);
@@ -42,9 +45,19 @@ const StatistikPerjadin = () => {
   const [isUpdatingCalendar, setIsUpdatingCalendar] = useState(false); // For calendar-only updates
   const itemsPerPage = 5;
   const navigate = useNavigate();
+  const { getCachedData, setCachedData, isCached } = useDataCache();
 
   useEffect(() => {
-    fetchData();
+    // Check if data is already cached
+    if (isCached(CACHE_KEY)) {
+      const cachedData = getCachedData(CACHE_KEY);
+      setDashboardData(cachedData.data.dashboardData);
+      setKegiatanList(cachedData.data.kegiatanList);
+      setWeeklySchedule(cachedData.data.weeklySchedule);
+      setLoading(false);
+    } else {
+      fetchData();
+    }
   }, []); // Only fetch once on mount
 
   // Update calendar when week offset changes (without full page reload)
@@ -116,6 +129,13 @@ const StatistikPerjadin = () => {
       const processedSchedule = generateWeekSchedule(0, allKegiatan);
       console.log('📅 Initial weekly schedule loaded:', processedSchedule);
       setWeeklySchedule(processedSchedule);
+      
+      // Save to cache
+      setCachedData(CACHE_KEY, {
+        dashboardData: dashResponse.data.data,
+        kegiatanList: allKegiatan,
+        weeklySchedule: processedSchedule
+      });
       
       setError(null);
     } catch (err) {

@@ -5,19 +5,30 @@ import BumdesCharts from './components/BumdesCharts';
 import BumdesStatsCards from './components/BumdesStatsCards';
 import { Users, TrendingUp, Building2, BarChart3, Activity } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useDataCache } from '../../context/DataCacheContext';
 
 const API_CONFIG = {
   BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:3001/api'
 };
+
+const CACHE_KEY = 'statistik-bumdes';
 
 const StatistikBumdes = () => {
   const [loading, setLoading] = useState(true);
   const [bumdesData, setBumdesData] = useState(null);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+  const { getCachedData, setCachedData, isCached } = useDataCache();
 
   useEffect(() => {
-    fetchBumdesData();
+    // Check if data is already cached
+    if (isCached(CACHE_KEY)) {
+      const cachedData = getCachedData(CACHE_KEY);
+      setBumdesData(cachedData.data);
+      setLoading(false);
+    } else {
+      fetchBumdesData();
+    }
   }, []);
 
   const fetchBumdesData = async () => {
@@ -34,7 +45,9 @@ const StatistikBumdes = () => {
         }
       );
 
-      setBumdesData(response.data.data.bumdes);
+      const data = response.data.data.bumdes;
+      setBumdesData(data);
+      setCachedData(CACHE_KEY, data); // Save to cache
       setError(null);
     } catch (err) {
       console.error('Error fetching bumdes data:', err);

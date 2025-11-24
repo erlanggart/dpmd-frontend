@@ -8,11 +8,15 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 import api from '../../api';
+import { useDataCache } from '../../context/DataCacheContext';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
 
+const CACHE_KEY = 'statistik-dd';
+
 const StatistikDdDashboard = () => {
   const navigate = useNavigate();
+  const { getCachedData, setCachedData, isCached } = useDataCache();
   const [activeTab, setActiveTab] = useState('earmarked-t1');
   const [loading, setLoading] = useState(true);
   const [dataEarmarkedT1, setDataEarmarkedT1] = useState([]);
@@ -26,16 +30,29 @@ const StatistikDdDashboard = () => {
   const [filterStatus, setFilterStatus] = useState('');
 
   useEffect(() => {
-    fetchAllData();
+    if (isCached(CACHE_KEY)) {
+      const cachedData = getCachedData(CACHE_KEY);
+      setDataEarmarkedT1(cachedData.data.earmarkedT1 || []);
+      setDataEarmarkedT2(cachedData.data.earmarkedT2 || []);
+      setDataNonEarmarkedT1(cachedData.data.nonEarmarkedT1 || []);
+      setDataNonEarmarkedT2(cachedData.data.nonEarmarkedT2 || []);
+      setDataInsentif(cachedData.data.insentif || []);
+      setLoading(false);
+    } else {
+      fetchAllData();
+    }
   }, []);
 
   const fetchAllData = async () => {
     setLoading(true);
-    
+
+    let et1Data = [], et2Data = [], net1Data = [], net2Data = [], insData = [];
+
     // Fetch Earmarked T1
     try {
       const response1 = await api.get('/dd-earmarked-t1/data');
-      setDataEarmarkedT1(response1.data.data || []);
+      et1Data = response1.data.data || [];
+      setDataEarmarkedT1(et1Data);
     } catch (err) {
       console.warn('Error loading DD Earmarked T1:', err);
       setDataEarmarkedT1([]);
@@ -44,7 +61,8 @@ const StatistikDdDashboard = () => {
     // Fetch Earmarked T2
     try {
       const response2 = await api.get('/dd-earmarked-t2/data');
-      setDataEarmarkedT2(response2.data.data || []);
+      et2Data = response2.data.data || [];
+      setDataEarmarkedT2(et2Data);
     } catch (err) {
       console.warn('Error loading DD Earmarked T2:', err);
       setDataEarmarkedT2([]);
@@ -53,7 +71,8 @@ const StatistikDdDashboard = () => {
     // Fetch Non-Earmarked T1
     try {
       const response3 = await api.get('/dd-nonearmarked-t1/data');
-      setDataNonEarmarkedT1(response3.data.data || []);
+      net1Data = response3.data.data || [];
+      setDataNonEarmarkedT1(net1Data);
     } catch (err) {
       console.warn('Error loading DD Non-Earmarked T1:', err);
       setDataNonEarmarkedT1([]);
@@ -62,7 +81,8 @@ const StatistikDdDashboard = () => {
     // Fetch Non-Earmarked T2
     try {
       const response4 = await api.get('/dd-nonearmarked-t2/data');
-      setDataNonEarmarkedT2(response4.data.data || []);
+      net2Data = response4.data.data || [];
+      setDataNonEarmarkedT2(net2Data);
     } catch (err) {
       console.warn('Error loading DD Non-Earmarked T2:', err);
       setDataNonEarmarkedT2([]);
@@ -71,11 +91,21 @@ const StatistikDdDashboard = () => {
     // Fetch Insentif DD
     try {
       const response5 = await api.get('/insentif-dd/data');
-      setDataInsentif(response5.data.data || []);
+      insData = response5.data.data || [];
+      setDataInsentif(insData);
     } catch (err) {
       console.warn('Error loading Insentif DD:', err);
       setDataInsentif([]);
     }
+
+    // Save to cache
+    setCachedData(CACHE_KEY, {
+      earmarkedT1: et1Data,
+      earmarkedT2: et2Data,
+      nonEarmarkedT1: net1Data,
+      nonEarmarkedT2: net2Data,
+      insentif: insData
+    });
 
     setLoading(false);
   };
@@ -114,21 +144,21 @@ const StatistikDdDashboard = () => {
   };
 
   const rawActiveData = processData(getActiveData());
-  
+
   // Apply filters and search
   const activeData = rawActiveData.filter(item => {
-    const matchesSearch = searchTerm === '' || 
+    const matchesSearch = searchTerm === '' ||
       item.desa?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.kecamatan?.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     const matchesKecamatan = filterKecamatan === '' || item.kecamatan === filterKecamatan;
     const matchesStatus = filterStatus === '' || item.status === filterStatus;
-    
+
     return matchesSearch && matchesKecamatan && matchesStatus;
   });
-  
+
   const stats = calculateStats(activeData);
-  
+
   // Get unique values for filters
   const uniqueKecamatan = [...new Set(rawActiveData.map(d => d.kecamatan))].sort();
   const uniqueStatus = [...new Set(rawActiveData.map(d => d.status))].filter(s => s).sort();
@@ -171,7 +201,7 @@ const StatistikDdDashboard = () => {
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Data');
-    
+
     const fileName = `${tabNames[activeTab]}_${new Date().toISOString().split('T')[0]}.xlsx`;
     XLSX.writeFile(wb, fileName);
     toast.success('Data berhasil diexport!');
@@ -227,13 +257,13 @@ const StatistikDdDashboard = () => {
                 <p className="text-white text-opacity-90 text-xs md:text-sm mb-1 font-medium">Total Desa</p>
                 <p className="text-white text-xl md:text-2xl font-bold">{stats.totalDesa}</p>
               </div>
-              <div className="bg-indigo-700 bg-opacity-70 backdrop-blur-md rounded-xl p-4 border border-indigo-400 border-opacity-40 shadow-lg">
+              <div className="bg-indigo-700 bg-opacity-70 backdrop-blur-md rounded-xl p-4 border border-indigo-400 border-opacity-40 shadow-lg overflow-hidden">
                 <p className="text-white text-opacity-90 text-xs md:text-sm mb-1 font-medium">Total Alokasi</p>
-                <p className="text-white text-base md:text-lg font-bold truncate">{formatCurrency(stats.totalRealisasi)}</p>
+                <p className="text-white text-[10px] md:text-xs font-bold break-words leading-tight">{formatCurrency(stats.totalRealisasi)}</p>
               </div>
-              <div className="bg-purple-700 bg-opacity-70 backdrop-blur-md rounded-xl p-4 border border-purple-400 border-opacity-40 shadow-lg">
+              <div className="bg-purple-700 bg-opacity-70 backdrop-blur-md rounded-xl p-4 border border-purple-400 border-opacity-40 shadow-lg overflow-hidden">
                 <p className="text-white text-opacity-90 text-xs md:text-sm mb-1 font-medium">Rata-rata/Desa</p>
-                <p className="text-white text-base md:text-lg font-bold truncate">{formatCurrency(stats.avgPerDesa)}</p>
+                <p className="text-white text-[10px] md:text-xs font-bold break-words leading-tight">{formatCurrency(stats.avgPerDesa)}</p>
               </div>
             </div>
           </div>
@@ -408,7 +438,7 @@ const StatistikDdDashboard = () => {
               </div>
             </div>
             <h3 className="text-white text-sm font-medium mb-1 opacity-90">Total Kecamatan</h3>
-            <p className="text-2xl sm:text-3xl font-bold text-white animate-fade-in">{stats.totalKecamatan}</p>
+            <p className="text-3xl font-bold text-white animate-fade-in">{stats.totalKecamatan}</p>
           </div>
 
           <div className="group bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] cursor-default">
@@ -418,7 +448,7 @@ const StatistikDdDashboard = () => {
               </div>
             </div>
             <h3 className="text-white text-sm font-medium mb-1 opacity-90">Total Desa</h3>
-            <p className="text-2xl sm:text-3xl font-bold text-white animate-fade-in">{stats.totalDesa}</p>
+            <p className="text-3xl font-bold text-white animate-fade-in">{stats.totalDesa}</p>
           </div>
 
           <div className="group bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] cursor-default">
@@ -428,7 +458,7 @@ const StatistikDdDashboard = () => {
               </div>
             </div>
             <h3 className="text-white text-sm font-medium mb-1 opacity-90">Total Alokasi</h3>
-            <p className="text-lg sm:text-xl md:text-2xl font-bold text-white animate-fade-in break-words">{formatCurrency(stats.totalRealisasi)}</p>
+            <p className="text-2xl font-bold text-white animate-fade-in">{formatCurrency(stats.totalRealisasi)}</p>
           </div>
 
           <div className="group bg-gradient-to-br from-orange-500 to-red-600 rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] cursor-default">
@@ -438,37 +468,34 @@ const StatistikDdDashboard = () => {
               </div>
             </div>
             <h3 className="text-white text-sm font-medium mb-1 opacity-90">Rata-rata per Desa</h3>
-            <p className="text-lg sm:text-xl md:text-2xl font-bold text-white animate-fade-in break-words">{formatCurrency(stats.avgPerDesa)}</p>
+            <p className="text-2xl font-bold text-white animate-fade-in">{formatCurrency(stats.avgPerDesa)}</p>
           </div>
         </div>
 
         {/* Charts Section */}
-        <div className="space-y-6 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {/* Bar Chart - Kecamatan */}
-          <div className="bg-gradient-to-br from-white via-cyan-50 to-blue-50 rounded-3xl shadow-2xl overflow-hidden border border-cyan-100 hover:shadow-3xl transition-all duration-300">
-            <div className="bg-white bg-opacity-80 backdrop-blur-sm px-8 py-6 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-3 h-10 bg-gradient-to-b from-cyan-500 via-blue-500 to-indigo-500 rounded-full shadow-lg"></div>
-                  <h3 className="text-2xl font-bold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">
-                    Alokasi per Kecamatan
-                  </h3>
-                </div>
-                <span className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-full text-sm font-semibold shadow-lg">
-                  {Object.keys(groupedData).length} Kecamatan
-                </span>
+          <div className="group bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl hover:shadow-3xl transition-all duration-500 p-8 border border-gray-100/50">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-3 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                <Activity className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">
+                  Top 10 Kecamatan
+                </h3>
+                <p className="text-sm text-gray-500">Berdasarkan Total Alokasi</p>
               </div>
             </div>
-            <div className="p-8 bg-white">
-              <div className="h-96 relative">
-                <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-blue-500/5 rounded-2xl"></div>
-                <div className="relative h-full">
+            <div className="h-[350px] relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-cyan-50/50 to-blue-50/50 rounded-2xl"></div>
+              <div className="relative h-full p-4">
                 <Bar
                   data={{
-                    labels: Object.keys(groupedData),
+                    labels: Object.keys(groupedData).slice(0, 10),
                     datasets: [{
                       label: 'Total Alokasi',
-                      data: Object.entries(groupedData).map(([_, desas]) => 
+                      data: Object.entries(groupedData).slice(0, 10).map(([_, desas]) => 
                         desas.reduce((sum, d) => sum + d.realisasi, 0)
                       ),
                       backgroundColor: (context) => {
@@ -494,46 +521,51 @@ const StatistikDdDashboard = () => {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                      legend: {
-                        display: true,
-                        position: 'top'
-                      },
+                      legend: { display: false },
                       tooltip: {
                         backgroundColor: 'rgba(0, 0, 0, 0.8)',
                         padding: 12,
+                        cornerRadius: 8,
+                        titleColor: '#fff',
                         titleFont: { size: 14, weight: 'bold' },
+                        bodyColor: '#fff',
                         bodyFont: { size: 13 },
+                        displayColors: false,
                         callbacks: {
-                          label: (context) => `Total: ${formatCurrency(context.parsed.y)}`
+                          label: (context) => formatCurrency(context.raw)
                         }
                       }
                     },
                     scales: {
-                      y: {
-                        beginAtZero: true,
-                        ticks: {
-                          callback: (value) => {
-                            if (value >= 1000000000) return `Rp ${(value / 1000000000).toFixed(1)} M`;
-                            if (value >= 1000000) return `Rp ${(value / 1000000).toFixed(0)} Jt`;
-                            return `Rp ${value.toLocaleString('id-ID')}`;
-                          },
-                          font: { size: 11 }
-                        },
-                        grid: {
-                          color: 'rgba(0, 0, 0, 0.05)'
-                        }
-                      },
                       x: {
-                        ticks: {
-                          font: { size: 10 },
-                          maxRotation: 45,
-                          minRotation: 45,
-                          autoSkip: false
-                        },
                         grid: {
                           display: false
+                        },
+                        ticks: {
+                          font: { size: 11, weight: '500' },
+                          color: '#64748b'
+                        }
+                      },
+                      y: {
+                        beginAtZero: true,
+                        grid: {
+                          color: 'rgba(0, 0, 0, 0.05)',
+                          drawBorder: false
+                        },
+                        ticks: {
+                          font: { size: 11, weight: '500' },
+                          color: '#64748b',
+                          callback: (value) => {
+                            if (value >= 1000000000) return (value / 1000000000).toFixed(1) + 'M';
+                            if (value >= 1000000) return (value / 1000000).toFixed(1) + 'Jt';
+                            return value;
+                          }
                         }
                       }
+                    },
+                    animation: {
+                      duration: 1500,
+                      easing: 'easeInOutQuart'
                     }
                   }}
                 />
@@ -542,20 +574,22 @@ const StatistikDdDashboard = () => {
           </div>
 
           {/* Pie Chart - Status Distribution */}
-          <div className="bg-gradient-to-br from-white via-purple-50 to-pink-50 rounded-3xl shadow-2xl overflow-hidden border border-purple-100 hover:shadow-3xl transition-all duration-300">
-            <div className="bg-white bg-opacity-80 backdrop-blur-sm px-8 py-6 border-b border-gray-200">
-              <div className="flex items-center gap-4">
-                <div className="w-3 h-10 bg-gradient-to-b from-purple-500 via-pink-500 to-rose-500 rounded-full shadow-lg"></div>
-                <h3 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+          <div className="group bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl hover:shadow-3xl transition-all duration-500 p-8 border border-gray-100/50">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-3 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                <Activity className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
                   Distribusi Status
                 </h3>
+                <p className="text-sm text-gray-500">Status Pencairan Dana</p>
               </div>
             </div>
-            <div className="p-8 bg-white flex justify-center">
-              <div className="w-full max-w-2xl h-96 relative">
-                <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-pink-500/5 rounded-2xl"></div>
-                <div className="relative h-full">
-                  <Pie
+            <div className="h-[350px] flex items-center justify-center relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-50/50 to-pink-50/50 rounded-2xl"></div>
+              <div className="relative w-full h-full flex items-center justify-center">
+              <Pie
                 data={{
                   labels: (() => {
                     const statusCounts = {};
@@ -722,8 +756,6 @@ const StatistikDdDashboard = () => {
               </tbody>
             </table>
           </div>
-        </div>
-        </div>
         </div>
       </div>
     </div>

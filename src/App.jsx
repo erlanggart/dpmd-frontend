@@ -11,6 +11,7 @@ import { Suspense, lazy, useEffect } from "react";
 import { Toaster, toast } from "react-hot-toast";
 import { useAuth } from "./context/AuthContext";
 import { useThemeColor } from "./hooks/useThemeColor";
+import { DataCacheProvider } from "./context/DataCacheContext";
 
 // Halaman utama di-import langsung untuk performa awal yang lebih cepat
 import LoginPage from "./pages/LoginPage";
@@ -165,6 +166,7 @@ const ThemeColorWrapper = ({ children }) => {
 function App() {
 	return (
 		<Router>
+			<DataCacheProvider>
 			<ThemeColorWrapper>
 				<Suspense
 					fallback={
@@ -274,6 +276,7 @@ function App() {
 				}}
 			/>
 			</ThemeColorWrapper>
+			</DataCacheProvider>
 		</Router>
 	);
 }

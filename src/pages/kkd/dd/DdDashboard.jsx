@@ -7,8 +7,11 @@ import { Pie, Bar } from 'react-chartjs-2';
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 import api from '../../../api';
+import { useDataCache } from '../../../context/DataCacheContext';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
+
+const CACHE_KEY = 'dd-dashboard';
 
 const DdDashboard = () => {
   const [activeTab, setActiveTab] = useState('earmarked-t1');
@@ -25,18 +28,32 @@ const DdDashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterKecamatan, setFilterKecamatan] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  const { getCachedData, setCachedData, isCached } = useDataCache();
 
   useEffect(() => {
-    fetchAllData();
+    if (isCached(CACHE_KEY)) {
+      const cachedData = getCachedData(CACHE_KEY);
+      setDataEarmarkedT1(cachedData.data.earmarkedT1);
+      setDataEarmarkedT2(cachedData.data.earmarkedT2);
+      setDataNonEarmarkedT1(cachedData.data.nonEarmarkedT1);
+      setDataNonEarmarkedT2(cachedData.data.nonEarmarkedT2);
+      setDataInsentif(cachedData.data.insentif);
+      setLoading(false);
+    } else {
+      fetchAllData();
+    }
   }, []);
 
   const fetchAllData = async () => {
     setLoading(true);
     
+    let et1Data = [], et2Data = [], net1Data = [], net2Data = [], insData = [];
+    
     // Fetch Earmarked T1
     try {
       const response1 = await api.get('/dd-earmarked-t1/data');
-      setDataEarmarkedT1(response1.data.data || []);
+      et1Data = response1.data.data || [];
+      setDataEarmarkedT1(et1Data);
     } catch (err) {
       console.warn('Error loading DD Earmarked T1:', err);
       setDataEarmarkedT1([]);
@@ -45,7 +62,8 @@ const DdDashboard = () => {
     // Fetch Earmarked T2
     try {
       const response2 = await api.get('/dd-earmarked-t2/data');
-      setDataEarmarkedT2(response2.data.data || []);
+      et2Data = response2.data.data || [];
+      setDataEarmarkedT2(et2Data);
     } catch (err) {
       console.warn('Error loading DD Earmarked T2:', err);
       setDataEarmarkedT2([]);
@@ -54,7 +72,8 @@ const DdDashboard = () => {
     // Fetch Non-Earmarked T1
     try {
       const response3 = await api.get('/dd-nonearmarked-t1/data');
-      setDataNonEarmarkedT1(response3.data.data || []);
+      net1Data = response3.data.data || [];
+      setDataNonEarmarkedT1(net1Data);
     } catch (err) {
       console.warn('Error loading DD Non-Earmarked T1:', err);
       setDataNonEarmarkedT1([]);
@@ -63,7 +82,8 @@ const DdDashboard = () => {
     // Fetch Non-Earmarked T2
     try {
       const response4 = await api.get('/dd-nonearmarked-t2/data');
-      setDataNonEarmarkedT2(response4.data.data || []);
+      net2Data = response4.data.data || [];
+      setDataNonEarmarkedT2(net2Data);
     } catch (err) {
       console.warn('Error loading DD Non-Earmarked T2:', err);
       setDataNonEarmarkedT2([]);
@@ -72,11 +92,21 @@ const DdDashboard = () => {
     // Fetch Insentif DD
     try {
       const response5 = await api.get('/insentif-dd/data');
-      setDataInsentif(response5.data.data || []);
+      insData = response5.data.data || [];
+      setDataInsentif(insData);
     } catch (err) {
       console.warn('Error loading Insentif DD:', err);
       setDataInsentif([]);
     }
+
+    // Save to cache
+    setCachedData(CACHE_KEY, {
+      earmarkedT1: et1Data,
+      earmarkedT2: et2Data,
+      nonEarmarkedT1: net1Data,
+      nonEarmarkedT2: net2Data,
+      insentif: insData
+    });
 
     setLoading(false);
   };
@@ -237,14 +267,42 @@ const DdDashboard = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-cyan-50 p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent mb-2">
-            Dana Desa Dashboard
-          </h1>
-          <p className="text-gray-600">
-            Monitoring dan manajemen Dana Desa (DD) Earmarked, Non-Earmarked, dan Insentif
-          </p>
+        {/* Hero Welcome Banner dengan Gradient Modern */}
+        <div className="relative bg-gradient-to-r from-cyan-600 via-blue-600 to-indigo-600 rounded-3xl shadow-2xl p-8 mb-8 overflow-hidden">
+          {/* Animated Background Patterns */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-10 rounded-full -mr-32 -mt-32 animate-pulse"></div>
+          <div className="absolute bottom-0 left-0 w-96 h-96 bg-white opacity-5 rounded-full -ml-48 -mb-48"></div>
+          
+          <div className="relative z-10">
+            <div className="mb-4">
+              <h1 className="text-3xl md:text-4xl font-bold text-white mb-2 drop-shadow-lg">
+                📊 Statistik Dana Desa
+              </h1>
+              <p className="text-white text-opacity-90 text-base md:text-lg">
+                Monitoring dan Manajemen Dana Desa (DD) Earmarked, Non-Earmarked, dan Insentif
+              </p>
+            </div>
+            
+            {/* Quick Stats in Hero */}
+            <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="bg-cyan-700 bg-opacity-70 backdrop-blur-md rounded-xl p-4 border border-cyan-400 border-opacity-40 shadow-lg">
+                <p className="text-white text-opacity-90 text-xs md:text-sm mb-1 font-medium">Total Kecamatan</p>
+                <p className="text-white text-xl md:text-2xl font-bold">{stats.totalKecamatan}</p>
+              </div>
+              <div className="bg-blue-700 bg-opacity-70 backdrop-blur-md rounded-xl p-4 border border-blue-400 border-opacity-40 shadow-lg">
+                <p className="text-white text-opacity-90 text-xs md:text-sm mb-1 font-medium">Total Desa</p>
+                <p className="text-white text-xl md:text-2xl font-bold">{stats.totalDesa}</p>
+              </div>
+              <div className="bg-indigo-700 bg-opacity-70 backdrop-blur-md rounded-xl p-4 border border-indigo-400 border-opacity-40 shadow-lg overflow-hidden">
+                <p className="text-white text-opacity-90 text-xs md:text-sm mb-1 font-medium">Total Alokasi</p>
+                <p className="text-white text-[10px] md:text-xs font-bold break-words leading-tight">{formatCurrency(stats.totalRealisasi)}</p>
+              </div>
+              <div className="bg-purple-700 bg-opacity-70 backdrop-blur-md rounded-xl p-4 border border-purple-400 border-opacity-40 shadow-lg overflow-hidden">
+                <p className="text-white text-opacity-90 text-xs md:text-sm mb-1 font-medium">Rata-rata/Desa</p>
+                <p className="text-white text-[10px] md:text-xs font-bold break-words leading-tight">{formatCurrency(stats.avgPerDesa)}</p>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Tab Navigation */}
@@ -301,6 +359,24 @@ const DdDashboard = () => {
               Insentif DD
             </button>
           </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex gap-3 mb-8 flex-wrap">
+          <button
+            onClick={() => setShowUploadModal(true)}
+            className="group px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center gap-2"
+          >
+            <FiUpload className="w-5 h-5 group-hover:rotate-12 transition-transform duration-300" />
+            <span className="font-medium">Update Data</span>
+          </button>
+          <button
+            onClick={exportToExcel}
+            className="group px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center gap-2"
+          >
+            <FiDownload className="w-5 h-5 group-hover:translate-y-1 transition-transform duration-300" />
+            <span className="font-medium">Export Excel</span>
+          </button>
         </div>
 
         {/* Search and Filter Section */}

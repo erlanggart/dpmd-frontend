@@ -10,11 +10,15 @@ import { Pie, Bar } from 'react-chartjs-2';
 import api from '../../api';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
+import { useDataCache } from '../../context/DataCacheContext';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
 
+const CACHE_KEY = 'statistik-bankeu';
+
 const StatistikBankeuDashboard = () => {
   const navigate = useNavigate();
+  const { getCachedData, setCachedData, isCached } = useDataCache();
   const [activeTab, setActiveTab] = useState('tahap1');
   const [dataTahap1, setDataTahap1] = useState([]);
   const [dataTahap2, setDataTahap2] = useState([]);
@@ -23,17 +27,28 @@ const StatistikBankeuDashboard = () => {
   const [expandedKecamatan, setExpandedKecamatan] = useState({});
 
   useEffect(() => {
-    fetchData();
+    if (isCached(CACHE_KEY)) {
+      const cachedData = getCachedData(CACHE_KEY);
+      setDataTahap1(cachedData.data.tahap1 || []);
+      setDataTahap2(cachedData.data.tahap2 || []);
+      setLoading(false);
+    } else {
+      fetchData();
+    }
   }, []);
 
   const fetchData = async () => {
     try {
       setLoading(true);
       
+      let t1Data = [];
+      let t2Data = [];
+      
       // Fetch Tahap 1
       try {
         const response1 = await api.get('/bankeu-t1/data');
-        setDataTahap1(response1.data.data || []);
+        t1Data = response1.data.data || [];
+        setDataTahap1(t1Data);
       } catch (err) {
         console.warn('Error loading tahap1:', err);
         setDataTahap1([]);
@@ -42,11 +57,15 @@ const StatistikBankeuDashboard = () => {
       // Fetch Tahap 2
       try {
         const response2 = await api.get('/bankeu-t2/data');
-        setDataTahap2(response2.data.data || []);
+        t2Data = response2.data.data || [];
+        setDataTahap2(t2Data);
       } catch (err) {
         console.warn('Error loading tahap2:', err);
         setDataTahap2([]);
       }
+      
+      // Save to cache
+      setCachedData(CACHE_KEY, { tahap1: t1Data, tahap2: t2Data });
       
       setError(null);
     } catch (err) {
@@ -321,7 +340,7 @@ const StatistikBankeuDashboard = () => {
                   </h3>
                 </div>
                 <span className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-full text-sm font-semibold shadow-lg">
-                  {Object.keys(kecamatanData).length} Kecamatan
+                  {allKecamatan.length} Kecamatan
                 </span>
               </div>
             </div>

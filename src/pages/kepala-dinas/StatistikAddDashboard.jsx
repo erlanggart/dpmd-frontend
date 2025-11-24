@@ -8,11 +8,15 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 import api from '../../api';
+import { useDataCache } from '../../context/DataCacheContext';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
 
+const CACHE_KEY = 'statistik-add';
+
 const StatistikAddDashboard = () => {
   const navigate = useNavigate();
+  const { getCachedData, setCachedData, isCached } = useDataCache();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState([]);
   const [expandedKecamatan, setExpandedKecamatan] = useState({});
@@ -21,14 +25,22 @@ const StatistikAddDashboard = () => {
   const [filterStatus, setFilterStatus] = useState('');
 
   useEffect(() => {
-    fetchData();
+    if (isCached(CACHE_KEY)) {
+      const cachedData = getCachedData(CACHE_KEY);
+      setData(cachedData.data);
+      setLoading(false);
+    } else {
+      fetchData();
+    }
   }, []);
 
   const fetchData = async () => {
     try {
       setLoading(true);
       const response = await api.get('/add/data');
-      setData(response.data.data || []);
+      const fetchedData = response.data.data || [];
+      setData(fetchedData);
+      setCachedData(CACHE_KEY, fetchedData);
     } catch (err) {
       console.warn('Error loading ADD:', err);
       setData([]);
