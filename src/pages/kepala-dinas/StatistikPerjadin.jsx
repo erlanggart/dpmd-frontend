@@ -20,9 +20,17 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useDataCache } from '../../context/DataCacheContext';
+import { isVpnUser } from '../../utils/vpnHelper';
 
 const API_CONFIG = {
-  BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:3001/api'
+  BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:3001/api',
+  getEndpoint: (path) => {
+    // VPN users use /vpn-core/perjadin, normal users use /perjadin
+    if (isVpnUser()) {
+      return `${API_CONFIG.BASE_URL}/vpn-core/perjadin${path}`;
+    }
+    return `${API_CONFIG.BASE_URL}/perjadin${path}`;
+  }
 };
 
 const CACHE_KEY = 'statistik-perjadin';
@@ -101,24 +109,23 @@ const StatistikPerjadin = () => {
       setLoading(true);
       const token = localStorage.getItem('expressToken');
       
+      const config = {};
+      if (token !== 'VPN_ACCESS_TOKEN') {
+        config.headers = {
+          Authorization: `Bearer ${token}`
+        };
+      }
+      
       // Fetch dashboard statistics
       const dashResponse = await axios.get(
-        `${API_CONFIG.BASE_URL}/perjadin/dashboard`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
+        API_CONFIG.getEndpoint('/dashboard'),
+        config
       );
 
       // Fetch kegiatan list with date filter
       const kegiatanResponse = await axios.get(
-        `${API_CONFIG.BASE_URL}/perjadin/kegiatan?limit=100`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
+        API_CONFIG.getEndpoint('/kegiatan?limit=100'),
+        config
       );
 
       setDashboardData(dashResponse.data.data);

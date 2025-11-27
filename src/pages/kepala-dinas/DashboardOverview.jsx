@@ -4,9 +4,23 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { Users, Briefcase, TrendingUp, ArrowRight, BarChart3, Activity, Calendar, MapPin, DollarSign, Building2 } from 'lucide-react';
 import DashboardHeader from './components/DashboardHeader';
+import { isVpnUser } from '../../utils/vpnHelper';
 
 const API_CONFIG = {
-  BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:3001/api'
+  BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:3001/api',
+  getEndpoint: (path) => {
+    const vpnMode = isVpnUser();
+    if (vpnMode) {
+      // VPN mode: use /vpn-core prefix
+      return `${API_CONFIG.BASE_URL}/vpn-core${path}`;
+    } else {
+      // Normal mode: use /kepala-dinas prefix for dashboard
+      if (path === '/dashboard') {
+        return `${API_CONFIG.BASE_URL}/kepala-dinas/dashboard`;
+      }
+      return `${API_CONFIG.BASE_URL}${path}`;
+    }
+  }
 };
 
 const DashboardOverview = () => {
@@ -83,13 +97,16 @@ const DashboardOverview = () => {
   const fetchAddData = async () => {
     try {
       const token = localStorage.getItem('expressToken');
+      const headers = {};
+      
+      // Only add Authorization header for non-VPN users
+      if (token && token !== 'VPN_ACCESS_TOKEN') {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
       const response = await axios.get(
-        `${API_CONFIG.BASE_URL}/add/data`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
+        API_CONFIG.getEndpoint('/add/data'),
+        { headers }
       );
       const data = response.data.data;
       
@@ -118,13 +135,16 @@ const DashboardOverview = () => {
   const fetchDdData = async () => {
     try {
       const token = localStorage.getItem('expressToken');
+      const headers = {};
+      
+      // Only add Authorization header for non-VPN users
+      if (token && token !== 'VPN_ACCESS_TOKEN') {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
       const response = await axios.get(
-        `${API_CONFIG.BASE_URL}/dd/data`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
+        API_CONFIG.getEndpoint('/dd/data'),
+        { headers }
       );
       const data = response.data.data;
       
@@ -153,13 +173,16 @@ const DashboardOverview = () => {
   const fetchBhprdData = async () => {
     try {
       const token = localStorage.getItem('expressToken');
+      const headers = {};
+      
+      // Only add Authorization header for non-VPN users
+      if (token && token !== 'VPN_ACCESS_TOKEN') {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
       const response = await axios.get(
-        `${API_CONFIG.BASE_URL}/bhprd/data`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
+        API_CONFIG.getEndpoint('/bhprd/data'),
+        { headers }
       );
       const data = response.data.data;
       
@@ -188,14 +211,16 @@ const DashboardOverview = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('expressToken');
+      const headers = {};
+      
+      // Only add Authorization header for non-VPN users
+      if (token && token !== 'VPN_ACCESS_TOKEN') {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
       
       const response = await axios.get(
-        `${API_CONFIG.BASE_URL}/kepala-dinas/dashboard`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
+        API_CONFIG.getEndpoint('/dashboard'),
+        { headers }
       );
 
       console.log('Dashboard API Response:', response.data);

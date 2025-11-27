@@ -129,6 +129,12 @@ const ProtectedRoute = ({ children }) => {
 		return <Navigate to="/login" state={{ from: location }} replace />;
 	}
 
+	// Allow VPN access token to bypass normal auth
+	if (token === 'VPN_ACCESS_TOKEN') {
+		console.log("✅ ProtectedRoute: VPN access token detected, allowing access");
+		return children;
+	}
+
 	console.log("✅ ProtectedRoute: Token found, allowing access");
 	return children;
 };

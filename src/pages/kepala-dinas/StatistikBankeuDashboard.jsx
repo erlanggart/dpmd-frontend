@@ -11,6 +11,7 @@ import api from '../../api';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import { useDataCache } from '../../context/DataCacheContext';
+import { isVpnUser } from '../../utils/vpnHelper';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
 
@@ -46,7 +47,8 @@ const StatistikBankeuDashboard = () => {
       
       // Fetch Tahap 1
       try {
-        const response1 = await api.get('/bankeu-t1/data');
+        const endpoint1 = isVpnUser() ? '/vpn-core/bankeu-t1/data' : '/bankeu-t1/data';
+        const response1 = await api.get(endpoint1);
         t1Data = response1.data.data || [];
         setDataTahap1(t1Data);
       } catch (err) {
@@ -56,7 +58,8 @@ const StatistikBankeuDashboard = () => {
       
       // Fetch Tahap 2
       try {
-        const response2 = await api.get('/bankeu-t2/data');
+        const endpoint2 = isVpnUser() ? '/vpn-core/bankeu-t2/data' : '/bankeu-t2/data';
+        const response2 = await api.get(endpoint2);
         t2Data = response2.data.data || [];
         setDataTahap2(t2Data);
       } catch (err) {

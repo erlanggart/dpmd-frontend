@@ -21,7 +21,8 @@ const StatistikAdd = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/add/data');
+      const endpoint = isVpnUser() ? '/vpn-core/add/data' : '/add/data';
+      const response = await api.get(endpoint);
       setData(response.data.data || []);
       setError(null);
     } catch (err) {

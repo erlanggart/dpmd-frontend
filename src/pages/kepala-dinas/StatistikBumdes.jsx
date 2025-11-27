@@ -6,9 +6,14 @@ import BumdesStatsCards from './components/BumdesStatsCards';
 import { Users, TrendingUp, Building2, BarChart3, Activity } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useDataCache } from '../../context/DataCacheContext';
+import { isVpnUser } from '../../utils/vpnHelper';
 
 const API_CONFIG = {
-  BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:3001/api'
+  BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:3001/api',
+  getEndpoint: (path) => {
+    const basePath = isVpnUser() ? '/vpn-core' : '/kepala-dinas';
+    return `${API_CONFIG.BASE_URL}${basePath}${path}`;
+  }
 };
 
 const CACHE_KEY = 'statistik-bumdes';
@@ -36,13 +41,16 @@ const StatistikBumdes = () => {
       setLoading(true);
       const token = localStorage.getItem('expressToken');
       
+      const config = {};
+      if (token !== 'VPN_ACCESS_TOKEN') {
+        config.headers = {
+          Authorization: `Bearer ${token}`
+        };
+      }
+      
       const response = await axios.get(
-        `${API_CONFIG.BASE_URL}/kepala-dinas/dashboard`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
+        API_CONFIG.getEndpoint('/dashboard'),
+        config
       );
 
       const data = response.data.data.bumdes;

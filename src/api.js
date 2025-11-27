@@ -16,15 +16,16 @@ api.interceptors.request.use(
 		// All endpoints use Express now
 		config.baseURL = API_ENDPOINTS.EXPRESS_BASE;
 		
-		// Skip token for public auth endpoints
-		const publicEndpoints = ['/login', '/auth/login', '/register'];
+		// Skip token for public auth endpoints and VPN check
+		const publicEndpoints = ['/login', '/auth/login', '/register', '/auth/check-vpn'];
 		const isPublicEndpoint = publicEndpoints.some(pub => config.url?.includes(pub));
 		
 		if (!isPublicEndpoint) {
 			// Use single token (expressToken)
 			const token = localStorage.getItem("expressToken");
 				
-			if (token) {
+			// Skip VPN_ACCESS_TOKEN - don't send to backend
+			if (token && token !== 'VPN_ACCESS_TOKEN') {
 				config.headers["Authorization"] = `Bearer ${token}`;
 			}
 		}

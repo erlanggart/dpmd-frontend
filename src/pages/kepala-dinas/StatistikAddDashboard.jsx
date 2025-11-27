@@ -9,6 +9,7 @@ import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 import api from '../../api';
 import { useDataCache } from '../../context/DataCacheContext';
+import { isVpnUser } from '../../utils/vpnHelper';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
 
@@ -37,7 +38,8 @@ const StatistikAddDashboard = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/add/data');
+      const endpoint = isVpnUser() ? '/vpn-core/add/data' : '/add/data';
+      const response = await api.get(endpoint);
       const fetchedData = response.data.data || [];
       setData(fetchedData);
       setCachedData(CACHE_KEY, fetchedData);

@@ -8,7 +8,8 @@ import {
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
-import api from '../../api';
+import api from '../../../api';
+import { isVpnUser } from '../../../utils/vpnHelper';
 
 const BhprdT1 = () => {
   const [loading, setLoading] = useState(true);
@@ -39,7 +40,8 @@ const BhprdT1 = () => {
 
   const fetchFileInfo = async () => {
     try {
-      const response = await api.get('/bhprd-t1/info');
+      const endpoint = isVpnUser() ? '/vpn-core/bhprd-t1/info' : '/bhprd-t1/info';
+      const response = await api.get(endpoint);
       if (response.data.success) {
         setFileInfo(response.data.data);
       }
@@ -51,7 +53,8 @@ const BhprdT1 = () => {
   const fetchBhprdData = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/bhprd-t1/data');
+      const endpoint = isVpnUser() ? '/vpn-core/bhprd-t1/data' : '/bhprd-t1/data';
+      const response = await api.get(endpoint);
       const data = response.data.data;
       
       // BHPRD workflow: 1 record per desa, mixed status (Dana Telah Dicairkan / Belum Mengajukan)

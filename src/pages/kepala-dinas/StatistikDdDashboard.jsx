@@ -9,6 +9,7 @@ import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 import api from '../../api';
 import { useDataCache } from '../../context/DataCacheContext';
+import { isVpnUser } from '../../utils/vpnHelper';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
 
@@ -50,7 +51,8 @@ const StatistikDdDashboard = () => {
 
     // Fetch Earmarked T1
     try {
-      const response1 = await api.get('/dd-earmarked-t1/data');
+      const endpoint1 = isVpnUser() ? '/vpn-core/dd-earmarked-t1/data' : '/dd-earmarked-t1/data';
+      const response1 = await api.get(endpoint1);
       et1Data = response1.data.data || [];
       setDataEarmarkedT1(et1Data);
     } catch (err) {
@@ -60,7 +62,8 @@ const StatistikDdDashboard = () => {
 
     // Fetch Earmarked T2
     try {
-      const response2 = await api.get('/dd-earmarked-t2/data');
+      const endpoint2 = isVpnUser() ? '/vpn-core/dd-earmarked-t2/data' : '/dd-earmarked-t2/data';
+      const response2 = await api.get(endpoint2);
       et2Data = response2.data.data || [];
       setDataEarmarkedT2(et2Data);
     } catch (err) {
@@ -70,7 +73,8 @@ const StatistikDdDashboard = () => {
 
     // Fetch Non-Earmarked T1
     try {
-      const response3 = await api.get('/dd-nonearmarked-t1/data');
+      const endpoint3 = isVpnUser() ? '/vpn-core/dd-nonearmarked-t1/data' : '/dd-nonearmarked-t1/data';
+      const response3 = await api.get(endpoint3);
       net1Data = response3.data.data || [];
       setDataNonEarmarkedT1(net1Data);
     } catch (err) {
@@ -80,7 +84,8 @@ const StatistikDdDashboard = () => {
 
     // Fetch Non-Earmarked T2
     try {
-      const response4 = await api.get('/dd-nonearmarked-t2/data');
+      const endpoint4 = isVpnUser() ? '/vpn-core/dd-nonearmarked-t2/data' : '/dd-nonearmarked-t2/data';
+      const response4 = await api.get(endpoint4);
       net2Data = response4.data.data || [];
       setDataNonEarmarkedT2(net2Data);
     } catch (err) {
@@ -90,7 +95,8 @@ const StatistikDdDashboard = () => {
 
     // Fetch Insentif DD
     try {
-      const response5 = await api.get('/insentif-dd/data');
+      const endpoint5 = isVpnUser() ? '/vpn-core/insentif-dd/data' : '/insentif-dd/data';
+      const response5 = await api.get(endpoint5);
       insData = response5.data.data || [];
       setDataInsentif(insData);
     } catch (err) {
@@ -473,7 +479,7 @@ const StatistikDdDashboard = () => {
         </div>
 
         {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div className="space-y-6 mb-8">
           {/* Bar Chart - Kecamatan */}
           <div className="group bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl hover:shadow-3xl transition-all duration-500 p-8 border border-gray-100/50">
             <div className="flex items-center gap-3 mb-6">
@@ -482,7 +488,7 @@ const StatistikDdDashboard = () => {
               </div>
               <div>
                 <h3 className="text-xl font-bold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">
-                  Top 10 Kecamatan
+                  Semua Kecamatan
                 </h3>
                 <p className="text-sm text-gray-500">Berdasarkan Total Alokasi</p>
               </div>
@@ -491,84 +497,84 @@ const StatistikDdDashboard = () => {
               <div className="absolute inset-0 bg-gradient-to-br from-cyan-50/50 to-blue-50/50 rounded-2xl"></div>
               <div className="relative h-full p-4">
                 <Bar
-                  data={{
-                    labels: Object.keys(groupedData).slice(0, 10),
-                    datasets: [{
-                      label: 'Total Alokasi',
-                      data: Object.entries(groupedData).slice(0, 10).map(([_, desas]) => 
-                        desas.reduce((sum, d) => sum + d.realisasi, 0)
-                      ),
-                      backgroundColor: (context) => {
-                        const ctx = context.chart.ctx;
-                        const gradient = ctx.createLinearGradient(0, 0, 0, 350);
-                        gradient.addColorStop(0, 'rgba(6, 182, 212, 0.9)');
-                        gradient.addColorStop(1, 'rgba(37, 99, 235, 0.7)');
-                        return gradient;
-                      },
-                      borderColor: 'rgba(6, 182, 212, 1)',
-                      borderWidth: 2,
-                      borderRadius: 10,
-                      hoverBackgroundColor: (context) => {
-                        const ctx = context.chart.ctx;
-                        const gradient = ctx.createLinearGradient(0, 0, 0, 350);
-                        gradient.addColorStop(0, 'rgba(6, 182, 212, 1)');
-                        gradient.addColorStop(1, 'rgba(37, 99, 235, 0.9)');
-                        return gradient;
-                      },
-                    }]
-                  }}
-                  options={{
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                      legend: { display: false },
-                      tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        padding: 12,
-                        cornerRadius: 8,
-                        titleColor: '#fff',
-                        titleFont: { size: 14, weight: 'bold' },
-                        bodyColor: '#fff',
-                        bodyFont: { size: 13 },
-                        displayColors: false,
-                        callbacks: {
-                          label: (context) => formatCurrency(context.raw)
-                        }
-                      }
-                    },
-                    scales: {
-                      x: {
-                        grid: {
-                          display: false
+                    data={{
+                      labels: Object.keys(groupedData),
+                      datasets: [{
+                        label: 'Total Alokasi',
+                        data: Object.entries(groupedData).map(([_, desas]) => 
+                          desas.reduce((sum, d) => sum + d.realisasi, 0)
+                        ),
+                        backgroundColor: (context) => {
+                          const ctx = context.chart.ctx;
+                          const gradient = ctx.createLinearGradient(0, 0, 0, 350);
+                          gradient.addColorStop(0, 'rgba(6, 182, 212, 0.9)');
+                          gradient.addColorStop(1, 'rgba(37, 99, 235, 0.7)');
+                          return gradient;
                         },
-                        ticks: {
-                          font: { size: 11, weight: '500' },
-                          color: '#64748b'
-                        }
-                      },
-                      y: {
-                        beginAtZero: true,
-                        grid: {
-                          color: 'rgba(0, 0, 0, 0.05)',
-                          drawBorder: false
+                        borderColor: 'rgba(6, 182, 212, 1)',
+                        borderWidth: 2,
+                        borderRadius: 10,
+                        hoverBackgroundColor: (context) => {
+                          const ctx = context.chart.ctx;
+                          const gradient = ctx.createLinearGradient(0, 0, 0, 350);
+                          gradient.addColorStop(0, 'rgba(6, 182, 212, 1)');
+                          gradient.addColorStop(1, 'rgba(37, 99, 235, 0.9)');
+                          return gradient;
                         },
-                        ticks: {
-                          font: { size: 11, weight: '500' },
-                          color: '#64748b',
-                          callback: (value) => {
-                            if (value >= 1000000000) return (value / 1000000000).toFixed(1) + 'M';
-                            if (value >= 1000000) return (value / 1000000).toFixed(1) + 'Jt';
-                            return value;
+                      }]
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                          padding: 12,
+                          cornerRadius: 8,
+                          titleColor: '#fff',
+                          titleFont: { size: 14, weight: 'bold' },
+                          bodyColor: '#fff',
+                          bodyFont: { size: 13 },
+                          displayColors: false,
+                          callbacks: {
+                            label: (context) => formatCurrency(context.raw)
                           }
                         }
+                      },
+                      scales: {
+                        x: {
+                          grid: {
+                            display: false
+                          },
+                          ticks: {
+                            font: { size: 11, weight: '500' },
+                            color: '#64748b'
+                          }
+                        },
+                        y: {
+                          beginAtZero: true,
+                          grid: {
+                            color: 'rgba(0, 0, 0, 0.05)',
+                            drawBorder: false
+                          },
+                          ticks: {
+                            font: { size: 11, weight: '500' },
+                            color: '#64748b',
+                            callback: (value) => {
+                              if (value >= 1000000000) return (value / 1000000000).toFixed(1) + 'M';
+                              if (value >= 1000000) return (value / 1000000).toFixed(1) + 'Jt';
+                              return value;
+                            }
+                          }
+                        }
+                      },
+                      animation: {
+                        duration: 1500,
+                        easing: 'easeInOutQuart'
                       }
-                    },
-                    animation: {
-                      duration: 1500,
-                      easing: 'easeInOutQuart'
-                    }
-                  }}
-                />
+                    }}
+                  />
               </div>
             </div>
           </div>
@@ -589,106 +595,106 @@ const StatistikDdDashboard = () => {
             <div className="h-[350px] flex items-center justify-center relative">
               <div className="absolute inset-0 bg-gradient-to-br from-purple-50/50 to-pink-50/50 rounded-2xl"></div>
               <div className="relative w-full h-full flex items-center justify-center">
-              <Pie
-                data={{
-                  labels: (() => {
-                    const statusCounts = {};
-                    activeData.forEach(d => {
-                      const status = d.status || 'Tidak Ada Status';
-                      statusCounts[status] = (statusCounts[status] || 0) + 1;
-                    });
-                    return Object.keys(statusCounts);
-                  })(),
-                  datasets: [{
-                    data: (() => {
-                      const statusCounts = {};
-                      activeData.forEach(d => {
-                        const status = d.status || 'Tidak Ada Status';
-                        statusCounts[status] = (statusCounts[status] || 0) + 1;
-                      });
-                      return Object.values(statusCounts);
-                    })(),
-                    backgroundColor: [
-                      'rgba(34, 197, 94, 0.8)',
-                      'rgba(251, 191, 36, 0.8)',
-                      'rgba(168, 85, 247, 0.8)',
-                      'rgba(59, 130, 246, 0.8)',
-                      'rgba(239, 68, 68, 0.8)',
-                    ],
-                    borderColor: [
-                      'rgba(34, 197, 94, 1)',
-                      'rgba(251, 191, 36, 1)',
-                      'rgba(168, 85, 247, 1)',
-                      'rgba(59, 130, 246, 1)',
-                      'rgba(239, 68, 68, 1)',
-                    ],
-                    borderWidth: 2,
-                  }]
-                }}
-                options={{
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  plugins: {
-                    legend: {
-                      position: 'bottom',
-                      labels: {
-                        padding: 20,
-                        font: { size: 13, weight: '600' },
-                        color: '#475569',
-                        usePointStyle: true,
-                        pointStyle: 'circle',
-                        boxWidth: 12,
-                        boxHeight: 12
-                      }
-                    },
-                    tooltip: {
-                      backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                      padding: 12,
-                      cornerRadius: 8,
-                      titleColor: '#fff',
-                      titleFont: { size: 14, weight: 'bold' },
-                      bodyColor: '#fff',
-                      bodyFont: { size: 13 },
-                      callbacks: {
-                        label: (context) => {
-                          const label = context.label || '';
-                          const value = context.parsed || 0;
-                          const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                          const percentage = ((value / total) * 100).toFixed(1);
-                          return `${label}: ${value} desa (${percentage}%)`;
+                <Pie
+                  data={{
+                      labels: (() => {
+                        const statusCounts = {};
+                        activeData.forEach(d => {
+                          const status = d.status || 'Tidak Ada Status';
+                          statusCounts[status] = (statusCounts[status] || 0) + 1;
+                        });
+                        return Object.keys(statusCounts);
+                      })(),
+                      datasets: [{
+                        data: (() => {
+                          const statusCounts = {};
+                          activeData.forEach(d => {
+                            const status = d.status || 'Tidak Ada Status';
+                            statusCounts[status] = (statusCounts[status] || 0) + 1;
+                          });
+                          return Object.values(statusCounts);
+                        })(),
+                        backgroundColor: [
+                          'rgba(34, 197, 94, 0.8)',
+                          'rgba(251, 191, 36, 0.8)',
+                          'rgba(168, 85, 247, 0.8)',
+                          'rgba(59, 130, 246, 0.8)',
+                          'rgba(239, 68, 68, 0.8)',
+                        ],
+                        borderColor: [
+                          'rgba(34, 197, 94, 1)',
+                          'rgba(251, 191, 36, 1)',
+                          'rgba(168, 85, 247, 1)',
+                          'rgba(59, 130, 246, 1)',
+                          'rgba(239, 68, 68, 1)',
+                        ],
+                        borderWidth: 2,
+                      }]
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: {
+                          position: 'bottom',
+                          labels: {
+                            padding: 20,
+                            font: { size: 13, weight: '600' },
+                            color: '#475569',
+                            usePointStyle: true,
+                            pointStyle: 'circle',
+                            boxWidth: 12,
+                            boxHeight: 12
+                          }
+                        },
+                        tooltip: {
+                          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                          padding: 12,
+                          cornerRadius: 8,
+                          titleColor: '#fff',
+                          titleFont: { size: 14, weight: 'bold' },
+                          bodyColor: '#fff',
+                          bodyFont: { size: 13 },
+                          callbacks: {
+                            label: (context) => {
+                              const label = context.label || '';
+                              const value = context.parsed || 0;
+                              const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                              const percentage = ((value / total) * 100).toFixed(1);
+                              return `${label}: ${value} desa (${percentage}%)`;
+                            }
+                          }
                         }
-                      }
+                      },
+                      animation: {
+                        animateRotate: true,
+                        animateScale: true,
+                        duration: 1500,
+                      easing: 'easeInOutQuart'
                     }
-                  },
-                  animation: {
-                    animateRotate: true,
-                    animateScale: true,
-                    duration: 1500,
-                    easing: 'easeInOutQuart'
-                  }
-                }}
-              />
+                  }}
+                />
               </div>
             </div>
           </div>
         </div>
 
-        {/* Data Table */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl overflow-hidden">
-          <div className="p-6 border-b border-gray-200">
-            <h2 className="text-xl font-bold text-gray-800">Data per Kecamatan</h2>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white">
-                <tr>
-                  <th className="px-6 py-4 text-left text-sm font-semibold">Kecamatan</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold">Jumlah Desa</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold">Total Realisasi</th>
-                  <th className="px-6 py-4 text-center text-sm font-semibold">Aksi</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
+      {/* Data Table */}
+      <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl overflow-hidden">
+        <div className="p-6 border-b border-gray-200">
+          <h2 className="text-xl font-bold text-gray-800">Data per Kecamatan</h2>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white">
+              <tr>
+                <th className="px-6 py-4 text-left text-sm font-semibold">Kecamatan</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold">Jumlah Desa</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold">Total Realisasi</th>
+                <th className="px-6 py-4 text-center text-sm font-semibold">Aksi</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
                 {Object.entries(groupedData).map(([kecamatan, desas]) => {
                   const totalRealisasi = desas.reduce((sum, d) => sum + d.realisasi, 0);
                   const isExpanded = expandedKecamatan[kecamatan];

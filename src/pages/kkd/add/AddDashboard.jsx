@@ -7,6 +7,7 @@ import { Pie, Bar } from 'react-chartjs-2';
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 import api from '../../../api';
+import { isVpnUser } from '../../../utils/vpnHelper';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
 
@@ -28,7 +29,9 @@ const AddDashboard = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/add/data');
+      // VPN users use /vpn-core/add/data, normal users use /add/data
+      const endpoint = isVpnUser() ? '/vpn-core/add/data' : '/add/data';
+      const response = await api.get(endpoint);
       setData(response.data.data || []);
     } catch (err) {
       console.warn('Error loading ADD:', err);
@@ -186,21 +189,21 @@ const AddDashboard = () => {
             
             {/* Quick Stats in Hero */}
             <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="bg-cyan-700 bg-opacity-70 backdrop-blur-md rounded-xl p-4 border border-cyan-400 border-opacity-40 shadow-lg">
-                <p className="text-white text-opacity-90 text-xs md:text-sm mb-1 font-medium">Total Kecamatan</p>
-                <p className="text-white text-xl md:text-2xl font-bold">{stats.totalKecamatan}</p>
+              <div className="bg-cyan-700 bg-opacity-70 backdrop-blur-md rounded-xl p-3 md:p-4 border border-cyan-400 border-opacity-40 shadow-lg">
+                <p className="text-white text-opacity-90 text-xs mb-1 font-medium">Total Kecamatan</p>
+                <p className="text-white text-lg md:text-xl font-bold">{stats.totalKecamatan}</p>
               </div>
-              <div className="bg-blue-700 bg-opacity-70 backdrop-blur-md rounded-xl p-4 border border-blue-400 border-opacity-40 shadow-lg">
-                <p className="text-white text-opacity-90 text-xs md:text-sm mb-1 font-medium">Total Desa</p>
-                <p className="text-white text-xl md:text-2xl font-bold">{stats.totalDesa}</p>
+              <div className="bg-blue-700 bg-opacity-70 backdrop-blur-md rounded-xl p-3 md:p-4 border border-blue-400 border-opacity-40 shadow-lg">
+                <p className="text-white text-opacity-90 text-xs mb-1 font-medium">Total Desa</p>
+                <p className="text-white text-lg md:text-xl font-bold">{stats.totalDesa}</p>
               </div>
-              <div className="bg-indigo-700 bg-opacity-70 backdrop-blur-md rounded-xl p-4 border border-indigo-400 border-opacity-40 shadow-lg overflow-hidden">
-                <p className="text-white text-opacity-90 text-xs md:text-sm mb-1 font-medium">Total Alokasi</p>
-                <p className="text-white text-[10px] md:text-xs font-bold break-words leading-tight">{formatCurrency(stats.totalRealisasi)}</p>
+              <div className="bg-indigo-700 bg-opacity-70 backdrop-blur-md rounded-xl p-3 md:p-4 border border-indigo-400 border-opacity-40 shadow-lg">
+                <p className="text-white text-opacity-90 text-xs mb-1 font-medium truncate">Total Alokasi</p>
+                <p className="text-white text-[10px] md:text-xs font-bold break-all leading-tight">{formatCurrency(stats.totalRealisasi)}</p>
               </div>
-              <div className="bg-purple-700 bg-opacity-70 backdrop-blur-md rounded-xl p-4 border border-purple-400 border-opacity-40 shadow-lg overflow-hidden">
-                <p className="text-white text-opacity-90 text-xs md:text-sm mb-1 font-medium">Rata-rata/Desa</p>
-                <p className="text-white text-[10px] md:text-xs font-bold break-words leading-tight">{formatCurrency(stats.avgPerDesa)}</p>
+              <div className="bg-purple-700 bg-opacity-70 backdrop-blur-md rounded-xl p-3 md:p-4 border border-purple-400 border-opacity-40 shadow-lg">
+                <p className="text-white text-opacity-90 text-xs mb-1 font-medium truncate">Rata-rata/Desa</p>
+                <p className="text-white text-[10px] md:text-xs font-bold break-all leading-tight">{formatCurrency(stats.avgPerDesa)}</p>
               </div>
             </div>
           </div>
@@ -318,7 +321,7 @@ const AddDashboard = () => {
         </div>
 
         {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div className="space-y-6 mb-8">
           {/* Bar Chart - Kecamatan */}
           <div className="group bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl hover:shadow-3xl transition-all duration-500 p-8 border border-gray-100/50">
             <div className="flex items-center gap-3 mb-6">
@@ -327,20 +330,20 @@ const AddDashboard = () => {
               </div>
               <div>
                 <h3 className="text-xl font-bold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">
-                  Top 10 Kecamatan
+                  Semua Kecamatan
                 </h3>
                 <p className="text-sm text-gray-500">Berdasarkan Total Alokasi</p>
               </div>
             </div>
-            <div className="h-[350px] relative">
+            <div className="h-96 relative">
               <div className="absolute inset-0 bg-gradient-to-br from-cyan-50/50 to-blue-50/50 rounded-2xl"></div>
               <div className="relative h-full p-4">
                 <Bar
                   data={{
-                    labels: Object.keys(groupedData).slice(0, 10),
+                    labels: Object.keys(groupedData),
                     datasets: [{
                       label: 'Total Alokasi',
-                      data: Object.entries(groupedData).slice(0, 10).map(([_, desas]) => 
+                      data: Object.entries(groupedData).map(([_, desas]) => 
                         desas.reduce((sum, d) => sum + d.realisasi, 0)
                       ),
                       backgroundColor: (context) => {
@@ -431,7 +434,7 @@ const AddDashboard = () => {
                 <p className="text-sm text-gray-500">Status Pencairan Dana</p>
               </div>
             </div>
-            <div className="h-[350px] flex items-center justify-center relative">
+            <div className="h-96 flex items-center justify-center relative">
               <div className="absolute inset-0 bg-gradient-to-br from-purple-50/50 to-pink-50/50 rounded-2xl"></div>
               <div className="relative w-full h-full flex items-center justify-center">
               <Pie

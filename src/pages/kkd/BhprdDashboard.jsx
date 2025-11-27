@@ -7,6 +7,7 @@ import { Pie, Bar } from 'react-chartjs-2';
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 import api from '../../api';
+import { isVpnUser } from '../../utils/vpnHelper';
 import { useDataCache } from '../../context/DataCacheContext';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
@@ -45,9 +46,11 @@ const BhprdDashboard = () => {
     
     let t1Data = [], t2Data = [], t3Data = [];
     
-    // Fetch Tahap 1
+    const getEndpoint = (path) => isVpnUser() ? `/vpn-core${path}` : path;
+    
+    // Fetch BHPRD Tahap 1
     try {
-      const response1 = await api.get('/bhprd-t1/data');
+      const response1 = await api.get(getEndpoint('/bhprd-t1/data'));
       t1Data = response1.data.data || [];
       setDataTahap1(t1Data);
     } catch (err) {
@@ -317,222 +320,275 @@ const BhprdDashboard = () => {
       {/* Charts Section */}
       <div className="space-y-6 mb-8">
         {/* Bar Chart - Kecamatan */}
-        <div className="bg-gradient-to-br from-white via-emerald-50 to-green-50 rounded-3xl shadow-2xl overflow-hidden border border-emerald-100 hover:shadow-3xl transition-all duration-300">
-          <div className="bg-white bg-opacity-80 backdrop-blur-sm px-8 py-6 border-b border-gray-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-3 h-10 bg-gradient-to-b from-emerald-500 via-green-500 to-teal-500 rounded-full shadow-lg"></div>
-                <h3 className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
-                  Realisasi per Kecamatan - Tahap {activeTab === 'tahap1' ? '1' : activeTab === 'tahap2' ? '2' : '3'}
-                </h3>
-              </div>
-              <span className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-full text-sm font-semibold shadow-lg">
-                {kecamatanRealisasi.length} Kecamatan
-              </span>
+        <div className="group bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl hover:shadow-3xl transition-all duration-500 p-8 border border-gray-100/50">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-3 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+              <Activity className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
+                Semua Kecamatan
+              </h3>
+              <p className="text-sm text-gray-500">Realisasi Tahap {activeTab === 'tahap1' ? '1' : activeTab === 'tahap2' ? '2' : '3'}</p>
             </div>
           </div>
-          <div className="p-8 bg-white">
-            <div className="h-96 relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-green-500/5 rounded-2xl"></div>
-              <div className="relative h-full">
+          <div className="h-96 relative">
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-50/50 to-green-50/50 rounded-2xl"></div>
+            <div className="relative h-full p-4">
               <Bar 
-                data={kecamatanChartData} 
-                options={{
-                  maintainAspectRatio: false,
-                  responsive: true,
-                  plugins: {
-                    legend: {
-                      display: true,
-                      position: 'top'
+                data={{
+                  labels: kecamatanRealisasi.map(k => k.kecamatan),
+                  datasets: [{
+                    label: 'Total Realisasi',
+                    data: kecamatanRealisasi.map(k => k.total),
+                    backgroundColor: (context) => {
+                      const ctx = context.chart.ctx;
+                      const gradient = ctx.createLinearGradient(0, 0, 0, 350);
+                      gradient.addColorStop(0, 'rgba(16, 185, 129, 0.9)');
+                      gradient.addColorStop(1, 'rgba(5, 150, 105, 0.7)');
+                      return gradient;
                     },
+                    borderColor: 'rgba(16, 185, 129, 1)',
+                    borderWidth: 2,
+                    borderRadius: 10,
+                    hoverBackgroundColor: (context) => {
+                      const ctx = context.chart.ctx;
+                      const gradient = ctx.createLinearGradient(0, 0, 0, 350);
+                      gradient.addColorStop(0, 'rgba(16, 185, 129, 1)');
+                      gradient.addColorStop(1, 'rgba(5, 150, 105, 0.9)');
+                      return gradient;
+                    },
+                  }]
+                }}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: { display: false },
                     tooltip: {
                       backgroundColor: 'rgba(0, 0, 0, 0.8)',
                       padding: 12,
+                      cornerRadius: 8,
+                      titleColor: '#fff',
+                      titleFont: { size: 14, weight: 'bold' },
+                      bodyColor: '#fff',
+                      bodyFont: { size: 13 },
+                      displayColors: false,
                       callbacks: {
-                        label: (context) => `Total: ${formatRupiah(context.parsed.y)}`
+                        label: (context) => formatRupiah(context.raw)
                       }
                     }
                   },
                   scales: {
-                    y: { 
-                      beginAtZero: true,
-                      ticks: { 
-                        callback: (value) => {
-                          if (value >= 1000000000) return `Rp ${(value / 1000000000).toFixed(1)} M`;
-                          if (value >= 1000000) return `Rp ${(value / 1000000).toFixed(0)} Jt`;
-                          return `Rp ${value.toLocaleString('id-ID')}`;
-                        },
-                        font: { size: 11 }
-                      },
-                      grid: {
-                        color: 'rgba(0, 0, 0, 0.05)'
-                      }
-                    },
                     x: {
-                      ticks: {
-                        font: { size: 10 },
-                        maxRotation: 45,
-                        minRotation: 45,
-                        autoSkip: false
-                      },
                       grid: {
                         display: false
+                      },
+                      ticks: {
+                        font: { size: 11, weight: '500' },
+                        color: '#64748b',
+                        maxRotation: 45,
+                        minRotation: 45
+                      }
+                    },
+                    y: {
+                      beginAtZero: true,
+                      grid: {
+                        color: 'rgba(0, 0, 0, 0.05)',
+                        drawBorder: false
+                      },
+                      ticks: {
+                        font: { size: 11, weight: '500' },
+                        color: '#64748b',
+                        callback: (value) => {
+                          if (value >= 1000000000) return (value / 1000000000).toFixed(1) + 'M';
+                          if (value >= 1000000) return (value / 1000000).toFixed(1) + 'Jt';
+                          return value;
+                        }
                       }
                     }
+                  },
+                  animation: {
+                    duration: 1500,
+                    easing: 'easeInOutQuart'
                   }
-                }} 
+                }}
               />
             </div>
           </div>
         </div>
-      </div>
 
-        {/* Status Distribution - Pie Chart */}
-        <div className="bg-gradient-to-br from-white via-purple-50 to-pink-50 rounded-3xl shadow-2xl overflow-hidden border border-purple-100 hover:shadow-3xl transition-all duration-300">
-          <div className="bg-white bg-opacity-80 backdrop-blur-sm px-8 py-6 border-b border-gray-200">
-            <div className="flex items-center gap-4">
-              <div className="w-3 h-10 bg-gradient-to-b from-purple-500 via-pink-500 to-rose-500 rounded-full shadow-lg"></div>
-              <h3 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+        {/* Pie Chart - Status Distribution */}
+        <div className="group bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl hover:shadow-3xl transition-all duration-500 p-8 border border-gray-100/50">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-3 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+              <Activity className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
                 Distribusi Status
               </h3>
+              <p className="text-sm text-gray-500">Status Pencairan Dana</p>
             </div>
           </div>
-          <div className="p-8 bg-white flex justify-center">
-            <div className="w-full max-w-2xl h-96 relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-pink-500/5 rounded-2xl"></div>
-              <div className="relative h-full">
-                <Pie 
-                  data={statusChartData} 
-                  options={{ 
+          <div className="h-96 flex items-center justify-center relative">
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-50/50 to-pink-50/50 rounded-2xl"></div>
+            <div className="relative w-full h-full flex items-center justify-center">
+              <Pie 
+                  data={statusChartData}
+                  options={{
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: { 
-                      legend: { 
-                        position: 'right',
+                    plugins: {
+                      legend: {
+                        position: 'bottom',
                         labels: {
+                          padding: 20,
+                          font: { size: 13, weight: '600' },
+                          color: '#475569',
                           usePointStyle: true,
-                          pointStyle: 'circle',
-                          padding: 15,
-                          font: { size: 12 }
-                        }
-                      },
-                      tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        padding: 12,
-                        cornerRadius: 8
+                        pointStyle: 'circle',
+                        boxWidth: 12,
+                        boxHeight: 12
                       }
-                    } 
-                  }} 
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Filters & Actions */}
-      <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
-        <div className="flex flex-wrap gap-4">
-          <div className="flex-1 min-w-[200px]">
-            <div className="relative">
-              <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Cari desa atau kecamatan..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    },
+                    tooltip: {
+                      backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                      padding: 12,
+                      cornerRadius: 8,
+                      titleColor: '#fff',
+                      titleFont: { size: 14, weight: 'bold' },
+                      bodyColor: '#fff',
+                      bodyFont: { size: 13 },
+                      callbacks: {
+                        label: (context) => {
+                          const label = context.label || '';
+                          const value = context.parsed || 0;
+                          const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                          const percentage = ((value / total) * 100).toFixed(1);
+                          return `${label}: ${value} desa (${percentage}%)`;
+                        }
+                      }
+                    }
+                  },
+                  animation: {
+                    animateRotate: true,
+                    animateScale: true,
+                    duration: 1500,
+                    easing: 'easeInOutQuart'
+                  }
+                  }}
               />
             </div>
           </div>
+        </div>
+      </div>      {/* Filters & Search */}
+      <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-lg p-6 mb-6 border border-gray-100/50">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="relative">
+            <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <input
+              type="text"
+              placeholder="Cari desa atau kecamatan..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200"
+            />
+          </div>
 
-          <select
-            value={filterKecamatan}
-            onChange={(e) => setFilterKecamatan(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">Semua Kecamatan</option>
-            {uniqueKecamatans.map(kec => (
-              <option key={kec} value={kec}>{kec}</option>
-            ))}
-          </select>
+          <div className="relative">
+            <FiFilter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <select
+              value={filterKecamatan}
+              onChange={(e) => setFilterKecamatan(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 appearance-none bg-white transition-all duration-200"
+            >
+              <option value="">Semua Kecamatan</option>
+              {uniqueKecamatans.map(kec => (
+                <option key={kec} value={kec}>{kec}</option>
+              ))}
+            </select>
+          </div>
 
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">Semua Status</option>
-            {uniqueStatuses.map(status => (
-              <option key={status} value={status}>{status}</option>
-            ))}
-          </select>
-
-          <button
-            onClick={handleExportExcel}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
-          >
-            <FiDownload /> Export Excel
-          </button>
-
-          <button
-            onClick={() => setShowUploadModal(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-          >
-            <FiUpload /> Upload Data
-          </button>
+          <div className="relative">
+            <FiActivity className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 appearance-none bg-white transition-all duration-200"
+            >
+              <option value="">Semua Status</option>
+              {uniqueStatuses.map(status => (
+                <option key={status} value={status}>{status}</option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
       {/* Data Table */}
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl overflow-hidden">
+        <div className="p-6 border-b border-gray-200">
+          <h2 className="text-xl font-bold text-gray-800">Data per Kecamatan</h2>
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-gradient-to-r from-emerald-500 to-green-600 text-white">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">No</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Kecamatan</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Desa</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Realisasi</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold">No</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold">Kecamatan</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold">Desa</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold">Status</th>
+                <th className="px-6 py-4 text-right text-sm font-semibold">Realisasi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {Object.entries(groupedData).map(([kecamatan, desas]) => (
-                <React.Fragment key={kecamatan}>
-                  <tr
-                    className="bg-blue-50 cursor-pointer hover:bg-blue-100"
-                    onClick={() => setExpandedKecamatan(prev => ({ ...prev, [kecamatan]: !prev[kecamatan] }))}
-                  >
-                    <td colSpan="3" className="px-6 py-3 font-semibold text-gray-800 flex items-center gap-2">
-                      {expandedKecamatan[kecamatan] ? <FiChevronUp /> : <FiChevronDown />}
-                      {kecamatan} ({desas.length} desa)
-                    </td>
-                    <td className="px-6 py-3 text-right font-semibold text-gray-800" colSpan="2">
-                      {formatRupiah(desas.reduce((sum, d) => sum + d.realisasi, 0))}
-                    </td>
-                  </tr>
-                  {expandedKecamatan[kecamatan] && desas.map((item, idx) => (
-                    <tr key={`${kecamatan}-${idx}`} className="hover:bg-gray-50">
-                      <td className="px-6 py-3 text-sm text-gray-900">{idx + 1}</td>
-                      <td className="px-6 py-3 text-sm text-gray-500"></td>
-                      <td className="px-6 py-3 text-sm text-gray-900">{item.desa}</td>
-                      <td className="px-6 py-3">
-                        <span className={`px-2 py-1 text-xs rounded-full ${
-                          item.status?.toLowerCase().includes('cair') || item.status?.toLowerCase().includes('selesai')
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {item.status}
-                        </span>
+              {Object.entries(groupedData).map(([kecamatan, desas]) => {
+                const isExpanded = expandedKecamatan[kecamatan];
+
+                return (
+                  <React.Fragment key={kecamatan}>
+                    <tr
+                      className="bg-emerald-50 cursor-pointer hover:bg-emerald-100 transition-colors duration-200"
+                      onClick={() => setExpandedKecamatan(prev => ({ ...prev, [kecamatan]: !prev[kecamatan] }))}
+                    >
+                      <td colSpan="3" className="px-6 py-4 font-semibold text-gray-800">
+                        <div className="flex items-center gap-2">
+                          {isExpanded ? <FiChevronUp className="w-5 h-5" /> : <FiChevronDown className="w-5 h-5" />}
+                          <span>{kecamatan}</span>
+                          <span className="ml-2 px-2 py-1 bg-emerald-200 text-emerald-800 text-xs rounded-full">
+                            {desas.length} desa
+                          </span>
+                        </div>
                       </td>
-                      <td className="px-6 py-3 text-sm text-right text-gray-900 break-words">
-                        {formatRupiah(item.realisasi)}
+                      <td colSpan="2" className="px-6 py-4 text-right font-semibold text-gray-800">
+                        {formatRupiah(desas.reduce((sum, d) => sum + d.realisasi, 0))}
                       </td>
                     </tr>
-                  ))}
-                </React.Fragment>
-              ))}
+                    {isExpanded && desas.map((item, idx) => (
+                      <tr key={`${kecamatan}-${idx}`} className="hover:bg-gray-50 transition-colors duration-200">
+                        <td className="px-6 py-3 text-sm text-gray-900">{idx + 1}</td>
+                        <td className="px-6 py-3 text-sm text-gray-500"></td>
+                        <td className="px-6 py-3 text-sm text-gray-900 font-medium">{item.desa}</td>
+                        <td className="px-6 py-3">
+                          <span className={`px-3 py-1 text-xs font-medium rounded-full ${
+                            item.status?.toLowerCase().includes('cair') || item.status?.toLowerCase().includes('selesai')
+                              ? 'bg-green-100 text-green-800'
+                              : item.status?.toLowerCase().includes('proses')
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : 'bg-blue-100 text-blue-800'
+                          }`}>
+                            {item.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-3 text-sm text-right text-gray-900 font-medium">
+                          {formatRupiah(item.realisasi)}
+                        </td>
+                      </tr>
+                    ))}
+                  </React.Fragment>
+                );
+              })}
             </tbody>
           </table>
         </div>

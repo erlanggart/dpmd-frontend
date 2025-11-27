@@ -9,6 +9,7 @@ import {
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 import api from '../../api';
+import { isVpnUser } from '../../utils/vpnHelper';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -58,9 +59,10 @@ const Add = () => {
     setCurrentPage(1);
   }, [kegiatanData, filterStatus, searchTerm, sortBy]);
 
-  const fetchFileInfo = async () => {
+  const fetchInfo = async () => {
     try {
-      const response = await api.get('/add/info');
+      const endpoint = isVpnUser() ? '/vpn-core/add/info' : '/add/info';
+      const response = await api.get(endpoint);
       if (response.data.success) {
         setFileInfo(response.data.data);
       }
@@ -69,10 +71,11 @@ const Add = () => {
     }
   };
 
-  const fetchAddData = async () => {
+  const fetchData = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/add/data');
+      const endpoint = isVpnUser() ? '/vpn-core/add/data' : '/add/data';
+      const response = await api.get(endpoint);
       const data = response.data.data;
       
       // ADD workflow: Simple 1 record per desa
