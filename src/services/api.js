@@ -32,6 +32,15 @@ api.interceptors.request.use(
 		const token = localStorage.getItem("expressToken");
 		if (token) {
 			config.headers["Authorization"] = `Bearer ${token}`;
+			
+			// CRITICAL: If VPN token, attach secret key to all requests
+			if (token === 'VPN_ACCESS_TOKEN') {
+				const vpnSecret = sessionStorage.getItem('vpn_secret');
+				if (vpnSecret) {
+					// Send secret via header (more secure than query string)
+					config.headers['X-VPN-Secret'] = vpnSecret;
+				}
+			}
 		}
 		return config;
 	},

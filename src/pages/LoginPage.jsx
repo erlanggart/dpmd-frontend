@@ -14,6 +14,7 @@ const LoginPage = () => {
 	const [loading, setLoading] = useState(false);
 	const [checkingVpn, setCheckingVpn] = useState(false);
 	const [vpnMode, setVpnMode] = useState(false); // Toggle for VPN mode
+	const [vpnSecret, setVpnSecret] = useState(''); // VPN secret key input
 	const navigate = useNavigate();
 	const [showPassword, setShowPassword] = useState(false);
 	const { login } = useAuth();
@@ -30,18 +31,20 @@ const LoginPage = () => {
 			setCheckingVpn(true);
 			setError(null);
 			
-			// CRITICAL: Access backend via Tailscale IP directly for VPN detection
-			const vpnBackendUrl = 'http://100.107.112.30:3001/api/auth/check-vpn';
-			
-			const response = await axios.get(vpnBackendUrl, {
-				timeout: 5000,
-				headers: {
-					'Content-Type': 'application/json'
-				}
+			// HYBRID VERIFICATION: IP check + secret key fallback
+			// Send secret key to backend for verification
+			const response = await api.get('/auth/check-vpn-tailscale', {
+				params: { secret: vpnSecret },
+				timeout: 5000
 			});
 			
 			if (response.data.success && response.data.data.isVpn) {
-				// VPN DETECTED - Grant access
+				// ✅ VPN VERIFIED
+				const accessMethod = response.data.data.accessMethod;
+				const methodText = accessMethod === 'tailscale-ip' 
+					? 'Tailscale IP' 
+					: 'Secret Key';
+				
 				localStorage.setItem('expressToken', 'VPN_ACCESS_TOKEN');
 				localStorage.setItem('user', JSON.stringify({
 					id: 'vpn-user',
@@ -49,15 +52,20 @@ const LoginPage = () => {
 					email: 'vpn@internal',
 					role: 'vpn_access',
 					roles: ['vpn_access'],
-					vpnIp: response.data.data.ip // Store VPN IP for audit
+					vpnIp: response.data.data.ip,
+					accessMethod
 				}));
 				
-				// Show success notification
+				// Store secret in session for subsequent requests
+				if (accessMethod === 'secret-key') {
+					sessionStorage.setItem('vpn_secret', vpnSecret);
+				}
+				
 				toast.success(
-					`🔒 VPN Terdeteksi! (${response.data.data.ip})`,
+					`🔒 Akses Diverifikasi via ${methodText}!`,
 					{
 						duration: 3000,
-						icon: '🔐',
+						icon: '✅',
 						style: {
 							background: '#10b981',
 							color: '#fff',
@@ -66,17 +74,16 @@ const LoginPage = () => {
 					}
 				);
 				
-				// Redirect to Core Dashboard
 				setTimeout(() => {
 					window.location.href = '/core-dashboard/dashboard';
 				}, 1500);
 			} else {
-				// VPN NOT DETECTED - Deny access
-				const userIP = response.data.data.ip;
-				setError(`VPN tidak terdeteksi. IP Anda: ${userIP}. Pastikan Tailscale aktif dan terhubung ke jaringan DPMD.`);
-				toast.error('VPN Tidak Terdeteksi', {
-					duration: 4000,
-					icon: '⚠️',
+				// ❌ VERIFICATION FAILED
+				const userIP = response.data.data?.ip || 'unknown';
+				setError(`Akses ditolak. IP: ${userIP}. Hubungkan Tailscale atau masukkan kode akses yang benar.`);
+				toast.error('Verifikasi Gagal', {
+					duration: 5000,
+					icon: '❌',
 					style: {
 						background: '#ef4444',
 						color: '#fff'
@@ -84,21 +91,24 @@ const LoginPage = () => {
 				});
 			}
 		} catch (error) {
-			console.error('VPN check failed:', error);
+			console.error('VPN verification failed:', error);
 			
-			// Specific error messages
-			if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
-				setError('Timeout: Tidak dapat terhubung ke backend via Tailscale. Pastikan Tailscale aktif dan terhubung ke jaringan DPMD.');
-			} else if (error.code === 'ERR_NETWORK' || error.message.includes('Network Error')) {
-				setError('Network Error: Tidak dapat mengakses backend. Pastikan Tailscale sudah connected dan VPS (100.107.112.30) dapat dijangkau.');
+			if (error.response?.status === 403) {
+				const userIP = error.response.data?.data?.ip || 'unknown';
+				setError(`Akses ditolak. IP Anda: ${userIP}. Hubungkan Tailscale ATAU masukkan Kode Akses Internal yang valid.`);
+				toast.error('Akses Ditolak', {
+					duration: 5000,
+					icon: '🚫',
+					style: {
+						background: '#dc2626',
+						color: '#fff',
+						fontWeight: 'bold'
+					}
+				});
 			} else {
-				setError('Gagal memeriksa koneksi VPN. Pastikan Tailscale aktif dan terhubung ke jaringan internal DPMD.');
+				setError('Gagal memverifikasi akses. Periksa koneksi Tailscale atau Kode Akses Anda.');
+				toast.error('Verifikasi Gagal', { duration: 4000, icon: '❌' });
 			}
-			
-			toast.error('Gagal Memeriksa VPN', {
-				duration: 4000,
-				icon: '❌'
-			});
 		} finally {
 			setCheckingVpn(false);
 		}
@@ -262,16 +272,35 @@ const LoginPage = () => {
 
 					<form onSubmit={handleLogin} className="mt-8 space-y-6">
 						{vpnMode ? (
-							// VPN Mode - Show VPN check button
+							// VPN Mode - Show VPN check button + Secret key input
 							<div className="space-y-4">
-								<div className="rounded-xl bg-gradient-to-br from-emerald-50 to-green-50 border-2 border-emerald-200 p-6 text-center">
+								<div className="rounded-xl bg-gradient-to-br from-emerald-50 to-green-50 border-2 border-emerald-200 p-6">
 									<FiShield className="w-12 h-12 text-emerald-600 mx-auto mb-3" />
-									<h3 className="text-lg font-bold text-gray-800 mb-2">
-										Mode Login VPN
+									<h3 className="text-lg font-bold text-gray-800 mb-2 text-center">
+										Mode Akses Internal
 									</h3>
-									<p className="text-sm text-gray-600 mb-4">
-										Pastikan Anda sudah terhubung ke Tailscale VPN sebelum melanjutkan.
+									<p className="text-sm text-gray-600 mb-4 text-center">
+										Hubungkan Tailscale VPN atau masukkan Kode Akses Internal
 									</p>
+									
+									{/* Secret Key Input */}
+									<div className="mb-4">
+										<label htmlFor="vpn-secret" className="block text-sm font-medium text-gray-700 mb-2">
+											Kode Akses Internal (Opsional)
+										</label>
+										<input
+											id="vpn-secret"
+											type="password"
+											value={vpnSecret}
+											onChange={(e) => setVpnSecret(e.target.value)}
+											placeholder="Masukkan kode jika tidak pakai Tailscale"
+											className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200 text-sm"
+										/>
+										<p className="text-xs text-gray-500 mt-1">
+											💡 Kode akses didapat dari Admin DPMD via WhatsApp grup
+										</p>
+									</div>
+									
 									<button
 										type="button"
 										onClick={checkVpnConnection}
