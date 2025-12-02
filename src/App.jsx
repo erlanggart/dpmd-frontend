@@ -49,6 +49,10 @@ const DesaDashboard = lazy(() => import("./components/desa/DesaDashboard"));
 const BumdesDesaPage = lazy(() =>
 	import("./pages/desa/bumdes/BumdesDesaPage")
 );
+
+// Pegawai routes
+const PegawaiLayout = lazy(() => import("./pages/pegawai/PegawaiLayout"));
+const PegawaiDashboard = lazy(() => import("./pages/pegawai/PegawaiDashboard"));
 const KelembagaanDesaPage = lazy(() =>
 	import("./pages/desa/kelembagaan/KelembagaanDesaPage")
 );
@@ -231,6 +235,18 @@ function App() {
 						<Route path="pengurus/:id/edit" element={<PengurusEditPage />} />
 						<Route path="produk-hukum" element={<ProdukHukum />} />
 						<Route path="produk-hukum/:id" element={<ProdukHukumDetail />} />
+					</Route>
+
+					{/* Rute Pegawai */}
+					<Route
+						path="/pegawai"
+						element={
+							<ProtectedRoute>
+								<PegawaiLayout />
+							</ProtectedRoute>
+						}
+					>
+						<Route path="dashboard" element={<PegawaiDashboard />} />
 					</Route>
 
 					{/* Rute Core Dashboard - Multi Role Access */}

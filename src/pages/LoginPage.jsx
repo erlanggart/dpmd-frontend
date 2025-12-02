@@ -140,6 +140,8 @@ const LoginPage = () => {
 				navigate("/desa/dashboard");
 			} else if (newUser.roles.includes("kecamatan")) {
 				navigate("/kecamatan/dashboard");
+			} else if (newUser.roles.includes("pegawai")) {
+				navigate("/pegawai/dashboard");
 			} else if (
 				newUser.roles.includes("kepala_dinas") ||
 				newUser.roles.includes("sekretaris_dinas") ||
