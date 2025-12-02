@@ -450,7 +450,7 @@ const StatistikPerjadin = () => {
             </div>
           </div>
 
-          {/* Total Personil - Orange Gradient */}
+          {/* Total Pegawai - Orange Gradient */}
           <div className="relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
             <div className="absolute inset-0 bg-gradient-to-br from-orange-500 via-amber-600 to-orange-700"></div>
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
@@ -464,8 +464,8 @@ const StatistikPerjadin = () => {
                   <Activity className="w-4 h-4 text-white animate-bounce" />
                 </div>
               </div>
-              <h3 className="text-orange-100 text-sm font-semibold mb-2">Total Personil</h3>
-              <p className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-1">{dashboardData?.total_personil || 0}</p>
+              <h3 className="text-orange-100 text-sm font-semibold mb-2">Total Pegawai</h3>
+              <p className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-1">{dashboardData?.total_pegawai || 0}</p>
               <p className="text-xs text-orange-100 flex items-center gap-1">
                 <span className="w-2 h-2 bg-orange-300 rounded-full animate-pulse"></span>
                 Yang terlibat
@@ -1007,7 +1007,7 @@ const StatistikPerjadin = () => {
                         {kegiatan.details && kegiatan.details.length > 0 && (
                           <div>
                             <p className="text-sm font-medium text-gray-700 mb-3">
-                              Bidang & Personil:
+                              Bidang & Pegawai:
                             </p>
                             <div className="space-y-3">
                               {kegiatan.details.map((detail, idx) => (
@@ -1018,17 +1018,17 @@ const StatistikPerjadin = () => {
                                       {detail.nama_bidang || 'Bidang'}
                                     </span>
                                   </div>
-                                  {detail.personil_list && detail.personil_list.length > 0 && (
+                                  {detail.pegawai_list && detail.pegawai_list.length > 0 && (
                                     <div className="ml-6">
-                                      <p className="text-xs text-gray-500 mb-1">Personil:</p>
+                                      <p className="text-xs text-gray-500 mb-1">Pegawai:</p>
                                       <div className="flex flex-wrap gap-2">
-                                        {detail.personil_list.map((personil, pIdx) => (
+                                        {detail.pegawai_list.map((pegawai, pIdx) => (
                                           <span 
                                             key={pIdx}
                                             className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full"
                                           >
                                             <Users className="w-3 h-3" />
-                                            {personil.nama_personil}
+                                            {pegawai.nama_pegawai}
                                           </span>
                                         ))}
                                       </div>

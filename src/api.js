@@ -92,8 +92,8 @@ export const getPerjadinBidang = () => {
 	return api.get("/bidang");
 };
 
-export const getPersonilByBidang = (bidangId) => {
-	return api.get(`/personil/${bidangId}`);
+export const getPegawaiByBidang = (bidangId) => {
+	return api.get(`/pegawai/${bidangId}`);
 };
 
 export const getKegiatan = () => {

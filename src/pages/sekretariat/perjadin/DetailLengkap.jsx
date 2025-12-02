@@ -42,11 +42,11 @@ const DetailLengkap = ({ perjadinId, onBack }) => {
         const data = response.data.data;
         console.log('Detail data:', data);
         console.log('Bidang data:', data.bidang);
-        console.log('Personil data:', data.personil);
+        console.log('Pegawai data:', data.pegawai);
         
-        // Pastikan bidang dan personil selalu array
+        // Pastikan bidang dan pegawai selalu array
         data.bidang = data.bidang || [];
-        data.personil = data.personil || [];
+        data.pegawai = data.pegawai || [];
         
         setDetailData(data);
       } else {
@@ -84,7 +84,7 @@ const DetailLengkap = ({ perjadinId, onBack }) => {
               status: 'aktif'
             }
           ],
-          personil: [
+          pegawai: [
             {
               nama: 'John Doe',
               bidang: 'Bidang Test 1'
@@ -247,15 +247,15 @@ const DetailLengkap = ({ perjadinId, onBack }) => {
               )}
             </div>
 
-            {/* Personil Yang Terlibat */}
+            {/* Pegawai Yang Terlibat */}
             <div>
               <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2 mb-4">
                 <FiUsers className="w-5 h-5 text-slate-700" />
-                Personil Yang Terlibat ({detailData.personil ? detailData.personil.length : 0} orang)
+                Pegawai Yang Terlibat ({detailData.pegawai ? detailData.pegawai.length : 0} orang)
               </h3>
-              {detailData.personil && detailData.personil.length > 0 ? (
+              {detailData.pegawai && detailData.pegawai.length > 0 ? (
                 <div className="space-y-3">
-                  {detailData.personil.map((person, index) => (
+                  {detailData.pegawai.map((person, index) => (
                     <div key={index} className="bg-slate-50 p-4 rounded-lg border border-slate-200">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
@@ -274,7 +274,7 @@ const DetailLengkap = ({ perjadinId, onBack }) => {
               ) : (
                 <div className="text-center py-8 bg-slate-50 rounded-lg">
                   <div className="text-slate-400 text-4xl mb-2">👥</div>
-                  <p className="text-slate-500">Belum ada personil yang ditugaskan untuk kegiatan ini</p>
+                  <p className="text-slate-500">Belum ada pegawai yang ditugaskan untuk kegiatan ini</p>
                 </div>
               )}
             </div>
@@ -287,3 +287,5 @@ const DetailLengkap = ({ perjadinId, onBack }) => {
 };
 
 export default DetailLengkap;
+
+

@@ -41,10 +41,10 @@ const Statistik = ({ refreshTrigger }) => {
   const [statistikData, setStatistikData] = useState({
     totalPerjalanan: 0,
     totalBidang: 0,
-    totalPersonil: 0,
+    totalPegawai: 0,
     grafikData: [],
     topBidang: [],
-    personilPerBidang: [],
+    pegawaiPerBidang: [],
     trendData: [],
     monthlyComparison: [],
     performanceMetrics: {}
@@ -212,10 +212,10 @@ const Statistik = ({ refreshTrigger }) => {
         setStatistikData({
           totalPerjalanan: 0,
           totalBidang: 0,
-          totalPersonil: 0,
+          totalPegawai: 0,
           grafikData: [],
           topBidang: [],
-          personilPerBidang: [],
+          pegawaiPerBidang: [],
           trendData: [],
           monthlyComparison: [],
           performanceMetrics: {}
@@ -623,7 +623,7 @@ const Statistik = ({ refreshTrigger }) => {
           </div>
         </div>
 
-        {/* Total Personil */}
+        {/* Total Pegawai */}
         <div className="group relative overflow-hidden bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-2xl p-6 text-white shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-16 translate-x-16"></div>
           <div className="relative z-10">
@@ -632,15 +632,15 @@ const Statistik = ({ refreshTrigger }) => {
                 <FiUsers className="w-6 h-6 text-white" />
               </div>
               <div className="text-right">
-                <div className="text-3xl font-bold">{statistikData.totalPersonil}</div>
-                <div className="text-indigo-200 text-sm">Personil</div>
+                <div className="text-3xl font-bold">{statistikData.totalPegawai}</div>
+                <div className="text-indigo-200 text-sm">Pegawai</div>
               </div>
             </div>
             <div className="space-y-2">
-              <h3 className="font-semibold text-lg">Total Personil</h3>
+              <h3 className="font-semibold text-lg">Total Pegawai</h3>
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
-                <span className="text-indigo-200 text-sm">Personil terlibat</span>
+                <span className="text-indigo-200 text-sm">Pegawai terlibat</span>
               </div>
             </div>
           </div>
@@ -835,9 +835,9 @@ const Statistik = ({ refreshTrigger }) => {
                     <FiUsers className="w-6 h-6 text-white" />
                   </div>
                   <h4 className="font-bold text-slate-800 text-lg">
-                    {Math.round((statistikData.totalPersonil / (statistikData.totalPerjalanan || 1)) * 10) / 10}
+                    {Math.round((statistikData.totalPegawai / (statistikData.totalPerjalanan || 1)) * 10) / 10}
                   </h4>
-                  <p className="text-slate-600 text-sm">Rata-rata personil per kegiatan</p>
+                  <p className="text-slate-600 text-sm">rata-rata pegawai per kegiatan</p>
                 </div>
                 
                 <div className="text-center p-4 bg-slate-50 rounded-lg">
@@ -860,3 +860,4 @@ const Statistik = ({ refreshTrigger }) => {
 
 // Memoize component to prevent unnecessary re-renders
 export default React.memo(Statistik);
+
