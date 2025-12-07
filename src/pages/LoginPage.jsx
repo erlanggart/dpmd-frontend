@@ -135,22 +135,30 @@ const LoginPage = () => {
 			// Save token and user using context
 			login(newUser, null, expressToken); // No Laravel token
 
+			// Debug: Log user roles
+			console.log('Login - User roles:', newUser.roles);
+			console.log('Login - Role type:', typeof newUser.roles);
+			console.log('Login - Is array?', Array.isArray(newUser.roles));
+			console.log('Login - Includes kepala_dinas?', newUser.roles.includes('kepala_dinas'));
+
 			// Routing based on user roles
 			if (newUser.roles.includes("desa")) {
 				navigate("/desa/dashboard");
 			} else if (newUser.roles.includes("kecamatan")) {
 				navigate("/kecamatan/dashboard");
 			} else if (newUser.roles.includes("pegawai")) {
-				navigate("/pegawai/dashboard");
-			} else if (
-				newUser.roles.includes("kepala_dinas") ||
-				newUser.roles.includes("sekretaris_dinas") ||
-				newUser.roles.includes("kabid_pemerintahan_desa") ||
-				newUser.roles.includes("kabid_spked") ||
-				newUser.roles.includes("kabid_kekayaan_keuangan_desa") ||
-				newUser.roles.includes("kabid_pemberdayaan_masyarakat_desa")
-			) {
-				navigate("/core-dashboard/dashboard");
+			navigate("/pegawai/dashboard");
+		} else if (newUser.roles.includes("kepala_dinas")) {
+			console.log('Navigating to kepala-dinas dashboard');
+			navigate("/kepala-dinas/dashboard");
+		} else if (
+			newUser.roles.includes("sekretaris_dinas") ||
+			newUser.roles.includes("kabid_pemerintahan_desa") ||
+			newUser.roles.includes("kabid_spked") ||
+			newUser.roles.includes("kabid_kekayaan_keuangan_desa") ||
+			newUser.roles.includes("kabid_pemberdayaan_masyarakat_desa")
+		) {
+			navigate("/admin-dashboard/dashboard");
 			} else if (
 				newUser.roles.includes("superadmin") ||
 				newUser.roles.includes("pemerintahan_desa") ||

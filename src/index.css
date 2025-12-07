@@ -49,11 +49,30 @@
 		transform: translateX(0);
 	}
 	10%, 30%, 50%, 70%, 90% {
-		transform: translateX(-5px);
+		transform: translateX(-10px);
 	}
 	20%, 40%, 60%, 80% {
-		transform: translateX(5px);
+		transform: translateX(10px);
 	}
+}
+
+/* Animations for pegawai dashboard */
+@keyframes fadeIn {
+	from { opacity: 0; }
+	to { opacity: 1; }
+}
+
+@keyframes slideUp {
+	from { transform: translateY(100%); }
+	to { transform: translateY(0); }
+}
+
+.animate-fadeIn {
+	animation: fadeIn 0.2s ease-out;
+}
+
+.animate-slideUp {
+	animation: slideUp 0.3s ease-out;
 }
 
 .animate-shake {
