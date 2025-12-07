@@ -22,7 +22,8 @@ const StatistikDdNonEarmarkedT2 = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/dd-nonearmarked-t2/data');
+      const endpoint = isVpnUser() ? '/vpn-core/dd-nonearmarked-t2/data' : '/dd-nonearmarked-t2/data';
+      const response = await api.get(endpoint);
       setData(response.data.data || []);
       setError(null);
     } catch (err) {

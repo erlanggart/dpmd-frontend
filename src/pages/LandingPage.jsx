@@ -78,10 +78,10 @@ const LandingPage = () => {
 									{link.label}
 								</ScrollLink>
 							))}
-						</nav>
-					</div>
+					</nav>
+				</div>
 
-					{/* Mobile Menu Button */}
+				{/* Mobile Menu Button */}
 					<button
 						className="lg:hidden text-white p-2 rounded-md hover:bg-white/10 transition-colors"
 						onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -107,15 +107,13 @@ const LandingPage = () => {
 									activeClass="text-secondary bg-white/10 rounded-md"
 									onClick={closeMobileMenu}
 								>
-									{link.label}
-								</ScrollLink>
-							))}
-						</nav>
-					</div>
-				)}
-			</header>
-
-			{/* Pastikan setiap komponen ini memiliki ID yang sesuai */}
+								{link.label}
+							</ScrollLink>
+						))}
+					</nav>
+				</div>
+			)}
+		</header>			{/* Pastikan setiap komponen ini memiliki ID yang sesuai */}
 			<section id="home">
 				<HeroSection />
 			</section>

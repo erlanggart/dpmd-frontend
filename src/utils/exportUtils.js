@@ -100,14 +100,14 @@ export const exportToPDF = (data, title = "Data Kegiatan Perjalanan Dinas") => {
             return '-';
           }
         })(),
-        safeItem.personil_list || '-',
+        safeItem.pegawai_list || '-',
         safeItem.bidang_list || '-'
       ];
     });
     
     // Modern table with enhanced visual styling
     autoTable(doc, {
-      head: [['No', 'Nomor SP', 'Nama Kegiatan', 'Lokasi', 'Tgl Mulai', 'Tgl Selesai', 'Personil Terlibat', 'Bidang']],
+      head: [['No', 'Nomor SP', 'Nama Kegiatan', 'Lokasi', 'Tgl Mulai', 'Tgl Selesai', 'Pegawai Terlibat', 'Bidang']],
       body: tableData,
       startY: 50,
       margin: { left: margin, right: margin },
@@ -118,7 +118,7 @@ export const exportToPDF = (data, title = "Data Kegiatan Perjalanan Dinas") => {
         3: { cellWidth: 25, halign: 'left' },    // Lokasi
         4: { cellWidth: 15, halign: 'center' },  // Tgl Mulai
         5: { cellWidth: 15, halign: 'center' },  // Tgl Selesai
-        6: { cellWidth: 45, halign: 'left' },    // Personil - Wider for names
+        6: { cellWidth: 45, halign: 'left' },    // Pegawai - Wider for names
         7: { cellWidth: 63, halign: 'left' }     // Bidang
       },
       styles: {
@@ -234,7 +234,7 @@ export const exportToExcel = (data, title = "Data Kegiatan Perjalanan Dinas") =>
       [''],
       [''],
       // Table headers with enhanced naming
-      ['No', 'Nomor SP', 'Nama Kegiatan', 'Lokasi Tujuan', 'Tanggal Mulai', 'Tanggal Selesai', 'Personil Terlibat', 'Bidang Terlibat', 'Status'],
+      ['No', 'Nomor SP', 'Nama Kegiatan', 'Lokasi Tujuan', 'Tanggal Mulai', 'Tanggal Selesai', 'Pegawai Terlibat', 'Bidang Terlibat', 'Status'],
       // Data rows with improved formatting and safe property access
       ...data.map((item, index) => {
         // Ensure item is an object
@@ -263,7 +263,7 @@ export const exportToExcel = (data, title = "Data Kegiatan Perjalanan Dinas") =>
               return '-';
             }
           })(),
-          safeItem.personil_list || '-',
+          safeItem.pegawai_list || '-',
           safeItem.bidang_list || '-',
           'Aktif'
         ];
@@ -282,7 +282,7 @@ export const exportToExcel = (data, title = "Data Kegiatan Perjalanan Dinas") =>
       { width: 25 },  // Lokasi
       { width: 15 },  // Tanggal Mulai
       { width: 15 },  // Tanggal Selesai
-      { width: 40 },  // Personil - Wider for names
+      { width: 40 },  // Pegawai - Wider for names
       { width: 35 },  // Bidang
       { width: 12 }   // Status
     ];
@@ -316,37 +316,37 @@ export const formatDataForExport = (rawData) => {
     
     return {
       ...safeItem,
-      personil_count: (() => {
+      pegawai_count: (() => {
         try {
           if (!safeItem.details || !Array.isArray(safeItem.details)) {
             return 0;
           }
           return safeItem.details.reduce((sum, detail) => {
             if (!detail || typeof detail !== 'object') return sum;
-            const personilArray = detail.personil ? 
-              String(detail.personil).split(', ').filter(p => p && p.trim()) : [];
-            return sum + personilArray.length;
+            const pegawaiArray = detail.pegawai ? 
+              String(detail.pegawai).split(', ').filter(p => p && p.trim()) : [];
+            return sum + pegawaiArray.length;
           }, 0);
         } catch (error) {
-          console.warn('Error calculating personil_count:', error);
+          console.warn('Error calculating pegawai_count:', error);
           return 0;
         }
       })(),
-      personil_list: (() => {
+      pegawai_list: (() => {
         try {
           if (!safeItem.details || !Array.isArray(safeItem.details)) {
             return '-';
           }
-          const allPersonil = [];
-          safeItem.details.forEach(detail => {
-            if (detail && typeof detail === 'object' && detail.personil) {
-              const personilArray = String(detail.personil).split(', ').filter(p => p && p.trim());
-              allPersonil.push(...personilArray);
+          const allPegawai = [];
+          details.forEach(detail => {
+            if (detail && typeof detail === 'object' && detail.pegawai) {
+              const pegawaiArray = String(detail.pegawai).split(', ').filter(p => p && p.trim());
+              allPegawai.push(...pegawaiArray);
             }
           });
-          return allPersonil.length > 0 ? allPersonil.join(', ') : '-';
+          return allPegawai.length > 0 ? allPegawai.join(', ') : '-';
         } catch (error) {
-          console.warn('Error formatting personil_list:', error);
+          console.warn('Error formatting pegawai_list:', error);
           return '-';
         }
       })(),

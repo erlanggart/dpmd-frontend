@@ -22,7 +22,8 @@ const StatistikDdEarmarkedT1 = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/dd-earmarked-t1/data');
+      const endpoint = isVpnUser() ? '/vpn-core/dd-earmarked-t1/data' : '/dd-earmarked-t1/data';
+      const response = await api.get(endpoint);
       setData(response.data.data || []);
       setError(null);
     } catch (err) {

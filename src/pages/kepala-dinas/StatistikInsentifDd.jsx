@@ -22,7 +22,8 @@ const StatistikInsentifDd = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/insentif-dd/data');
+      const endpoint = isVpnUser() ? '/vpn-core/insentif-dd/data' : '/insentif-dd/data';
+      const response = await api.get(endpoint);
       setData(response.data.data || []);
       setError(null);
     } catch (err) {

@@ -3,21 +3,37 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import BumdesCharts from './components/BumdesCharts';
 import BumdesStatsCards from './components/BumdesStatsCards';
-import { Users, ArrowLeft, TrendingUp, Building2, BarChart3, Activity } from 'lucide-react';
+import { Users, TrendingUp, Building2, BarChart3, Activity } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useDataCache } from '../../context/DataCacheContext';
+import { isVpnUser } from '../../utils/vpnHelper';
 
 const API_CONFIG = {
-  BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:3001/api'
+  BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:3001/api',
+  getEndpoint: (path) => {
+    const basePath = isVpnUser() ? '/vpn-core' : '/kepala-dinas';
+    return `${API_CONFIG.BASE_URL}${basePath}${path}`;
+  }
 };
+
+const CACHE_KEY = 'statistik-bumdes';
 
 const StatistikBumdes = () => {
   const [loading, setLoading] = useState(true);
   const [bumdesData, setBumdesData] = useState(null);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+  const { getCachedData, setCachedData, isCached } = useDataCache();
 
   useEffect(() => {
-    fetchBumdesData();
+    // Check if data is already cached
+    if (isCached(CACHE_KEY)) {
+      const cachedData = getCachedData(CACHE_KEY);
+      setBumdesData(cachedData.data);
+      setLoading(false);
+    } else {
+      fetchBumdesData();
+    }
   }, []);
 
   const fetchBumdesData = async () => {
@@ -25,16 +41,21 @@ const StatistikBumdes = () => {
       setLoading(true);
       const token = localStorage.getItem('expressToken');
       
+      const config = {};
+      if (token !== 'VPN_ACCESS_TOKEN') {
+        config.headers = {
+          Authorization: `Bearer ${token}`
+        };
+      }
+      
       const response = await axios.get(
-        `${API_CONFIG.BASE_URL}/kepala-dinas/dashboard`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
+        API_CONFIG.getEndpoint('/dashboard'),
+        config
       );
 
-      setBumdesData(response.data.data.bumdes);
+      const data = response.data.data.bumdes;
+      setBumdesData(data);
+      setCachedData(CACHE_KEY, data); // Save to cache
       setError(null);
     } catch (err) {
       console.error('Error fetching bumdes data:', err);
@@ -78,17 +99,6 @@ const StatistikBumdes = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Header with Back Button */}
-        <div className="mb-6">
-          <button
-            onClick={() => navigate('/core-dashboard/dashboard')}
-            className="group flex items-center gap-2 text-gray-600 hover:text-blue-600 mb-4 transition-all duration-300 bg-white px-4 py-2 rounded-xl shadow-md hover:shadow-lg"
-          >
-            <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform duration-300" />
-            <span className="font-medium">Kembali ke Dashboard</span>
-          </button>
-        </div>
-
         {/* Hero Header Card */}
         <div className="relative bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 rounded-3xl shadow-2xl p-8 mb-8 overflow-hidden">
           {/* Animated Background Patterns */}
@@ -152,7 +162,7 @@ const StatistikBumdes = () => {
                   </div>
                 </div>
                 <p className="text-white text-opacity-90 text-sm mb-2 font-medium">Total BUMDes</p>
-                <p className="text-5xl font-bold mb-2">
+                <p className="text-3xl sm:text-4xl md:text-5xl font-bold mb-2">
                   {(bumdesData?.total || 0).toLocaleString('id-ID')}
                 </p>
                 <p className="text-white text-opacity-80 text-sm">Unit Usaha</p>
@@ -167,7 +177,7 @@ const StatistikBumdes = () => {
                   </div>
                 </div>
                 <p className="text-white text-opacity-90 text-sm mb-2 font-medium">BUMDes Aktif</p>
-                <p className="text-5xl font-bold mb-2">
+                <p className="text-3xl sm:text-4xl md:text-5xl font-bold mb-2">
                   {(bumdesData?.aktif || 0).toLocaleString('id-ID')}
                 </p>
                 <p className="text-white text-opacity-80 text-sm">
@@ -186,7 +196,7 @@ const StatistikBumdes = () => {
                   </div>
                 </div>
                 <p className="text-white text-opacity-90 text-sm mb-2 font-medium">BUMDes Non-Aktif</p>
-                <p className="text-5xl font-bold mb-2">
+                <p className="text-3xl sm:text-4xl md:text-5xl font-bold mb-2">
                   {(bumdesData?.non_aktif || 0).toLocaleString('id-ID')}
                 </p>
                 <p className="text-white text-opacity-80 text-sm">

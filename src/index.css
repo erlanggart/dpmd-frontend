@@ -60,6 +60,22 @@
 	animation: shake 0.5s ease-in-out;
 }
 
+/* Smooth fade in animation for sidebar content */
+@keyframes fade-in {
+	from {
+		opacity: 0;
+		transform: translateX(-10px);
+	}
+	to {
+		opacity: 1;
+		transform: translateX(0);
+	}
+}
+
+.animate-fade-in {
+	animation: fade-in 0.4s ease-out;
+}
+
 /* 3D Card Flip Effects - Revolving Door */
 .perspective-1000 {
 	perspective: 1000px;

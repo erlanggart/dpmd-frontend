@@ -21,10 +21,9 @@ const COLORS = {
 };
 
 const BumdesCharts = ({ bumdes }) => {
-  // Prepare BUMDes by Kecamatan data (top 10)
+  // Prepare BUMDes by Kecamatan data (semua)
   const bumdesByKecamatan = (bumdes?.by_kecamatan || [])
     .sort((a, b) => b.total - a.total)
-    .slice(0, 10)
     .map(item => ({
       name: item.kecamatan || 'Tidak Ada',
       total: item.total
@@ -43,10 +42,10 @@ const BumdesCharts = ({ bumdes }) => {
         <div className="flex items-center gap-2 mb-4">
           <MapPin className="w-5 h-5 text-blue-600" />
           <h2 className="text-xl font-bold text-gray-800">
-            BUMDes per Kecamatan (Top 10)
+            BUMDes per Kecamatan
           </h2>
         </div>
-        <ResponsiveContainer width="100%" height={300}>
+        <ResponsiveContainer width="100%" height={400}>
           <BarChart data={bumdesByKecamatan}>
             <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
             <XAxis
@@ -54,9 +53,9 @@ const BumdesCharts = ({ bumdes }) => {
               angle={-45}
               textAnchor="end"
               height={100}
-              tick={{ fontSize: 12 }}
+              tick={{ fontSize: 11 }}
             />
-            <YAxis />
+            <YAxis tick={{ fontSize: 11 }} />
             <Tooltip
               contentStyle={{
                 backgroundColor: 'rgba(255, 255, 255, 0.95)',

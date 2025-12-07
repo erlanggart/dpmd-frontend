@@ -2,6 +2,7 @@ import SuperAdminUsers from "../../components/tabs/SuperAdminUsers";
 import DinasManagement from "../../components/tabs/DinasManagement";
 import BidangManagement from "../../components/tabs/BidangManagement";
 import WilayahManagement from "../../components/tabs/WilayahManagement";
+import PegawaiManagement from "../../components/tabs/PegawaiManagement";
 import UserStatsCard from "../../components/UserStatsCard";
 import React, { useState } from "react";
 
@@ -16,6 +17,7 @@ const UserManagementPage = () => {
 			Component: BidangManagement,
 		},
 		{ key: "wilayah", label: "Kecamatan & Desa", Component: WilayahManagement },
+		{ key: "pegawai", label: "Pegawai", Component: PegawaiManagement },
 	];
 
 	// 2. State untuk melacak tab aktif, dimulai dari tab pertama

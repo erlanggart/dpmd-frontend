@@ -22,7 +22,8 @@ const StatistikBankeuT1 = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/bankeu-t1/data');
+      const endpoint = isVpnUser() ? '/vpn-core/bankeu-t1/data' : '/bankeu-t1/data';
+      const response = await api.get(endpoint);
       setData(response.data.data || []);
       setError(null);
     } catch (err) {

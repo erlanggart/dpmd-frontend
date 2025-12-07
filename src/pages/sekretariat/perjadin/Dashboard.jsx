@@ -84,7 +84,7 @@ const ActivityCard = ({ activity }) => {
     
     return details.map(detail => ({
       bidang: detail.bidang?.nama || 'Unknown',
-      personil: detail.personil || 'Tidak ada personil'
+      pegawai: detail.pegawai || 'Tidak ada pegawai'
     }));
   };
 
@@ -125,13 +125,13 @@ const ActivityCard = ({ activity }) => {
           <span className="text-slate-100 font-medium">{activity.lokasi}</span>
         </div>
         
-        {/* Bidang dan Personil */}
+        {/* Bidang dan Pegawai */}
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <div className="p-1.5 bg-slate-700/50 rounded-md">
               <FiUsers className="w-4 h-4 text-slate-200" />
             </div>
-            <span className="text-slate-200 text-sm font-semibold tracking-wide">Bidang & Personil</span>
+            <span className="text-slate-200 text-sm font-semibold tracking-wide">Bidang & Pegawai</span>
           </div>
           
           <div className="space-y-2.5 ml-1">
@@ -143,7 +143,7 @@ const ActivityCard = ({ activity }) => {
                     <span className="text-slate-100 font-semibold text-sm tracking-wide">{item.bidang}</span>
                   </div>
                   <div className="ml-4.5 pl-1">
-                    <span className="text-slate-200 text-xs leading-relaxed font-medium">{item.personil}</span>
+                    <span className="text-slate-200 text-xs leading-relaxed font-medium">{item.pegawai}</span>
                   </div>
                 </div>
               </div>
@@ -517,7 +517,7 @@ const Dashboard = ({ refreshTrigger, onFilterClick }) => {
           </div>
         </div>
 
-        {/* Total Personil Terlibat */}
+        {/* Total Pegawai Terlibat */}
         <div className="group relative overflow-hidden bg-gradient-to-br from-emerald-600 to-emerald-800 rounded-2xl p-6 text-white shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-16 translate-x-16"></div>
           <div className="relative z-10">
@@ -526,12 +526,12 @@ const Dashboard = ({ refreshTrigger, onFilterClick }) => {
                 <FiUsers className="w-6 h-6 text-white" />
               </div>
               <div className="text-right">
-                <div className="text-3xl font-bold">{data.total_personil_terlibat || 0}</div>
-                <div className="text-emerald-200 text-sm">Personil</div>
+                <div className="text-3xl font-bold">{data.total_pegawai_terlibat || 0}</div>
+                <div className="text-emerald-200 text-sm">Pegawai</div>
               </div>
             </div>
             <div className="space-y-2">
-              <h3 className="font-semibold text-lg">Total Personil</h3>
+              <h3 className="font-semibold text-lg">Total Pegawai</h3>
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
                 <span className="text-emerald-200 text-sm">Yang terlibat</span>
@@ -737,3 +737,4 @@ const Dashboard = ({ refreshTrigger, onFilterClick }) => {
 
 // Memoize component to prevent unnecessary re-renders
 export default React.memo(Dashboard);
+

@@ -11,6 +11,7 @@ import { Suspense, lazy, useEffect } from "react";
 import { Toaster, toast } from "react-hot-toast";
 import { useAuth } from "./context/AuthContext";
 import { useThemeColor } from "./hooks/useThemeColor";
+import { DataCacheProvider } from "./context/DataCacheContext";
 
 // Halaman utama di-import langsung untuk performa awal yang lebih cepat
 import LoginPage from "./pages/LoginPage";
@@ -48,6 +49,10 @@ const DesaDashboard = lazy(() => import("./components/desa/DesaDashboard"));
 const BumdesDesaPage = lazy(() =>
 	import("./pages/desa/bumdes/BumdesDesaPage")
 );
+
+// Pegawai routes
+const PegawaiLayout = lazy(() => import("./pages/pegawai/PegawaiLayout"));
+const PegawaiDashboard = lazy(() => import("./pages/pegawai/PegawaiDashboard"));
 const KelembagaanDesaPage = lazy(() =>
 	import("./pages/desa/kelembagaan/KelembagaanDesaPage")
 );
@@ -100,8 +105,8 @@ const BankeuDashboard = lazy(() =>
 const StatistikBankeuDashboard = lazy(() =>
 	import("./pages/kepala-dinas/StatistikBankeuDashboard")
 );
-const Add = lazy(() =>
-	import("./pages/kkd/Add")
+const AddDashboard = lazy(() =>
+	import("./pages/kkd/add/AddDashboard")
 );
 const BhprdDashboard = lazy(() =>
 	import("./pages/kkd/BhprdDashboard")
@@ -109,6 +114,10 @@ const BhprdDashboard = lazy(() =>
 // DD Sub-categories
 const DdDashboard = lazy(() =>
 	import("./pages/kkd/dd/DdDashboard")
+);
+// Statistik untuk Core Dashboard
+const StatistikAddDashboard = lazy(() =>
+	import("./pages/kepala-dinas/StatistikAddDashboard")
 );
 const UserManagementPage = lazy(() =>
 	import("./pages/dashboard/UserManagementPage")
@@ -122,6 +131,12 @@ const ProtectedRoute = ({ children }) => {
 		console.log("🔒 ProtectedRoute: No token found, redirecting to login");
 		// Simpan lokasi yang dituju agar bisa redirect kembali setelah login
 		return <Navigate to="/login" state={{ from: location }} replace />;
+	}
+
+	// Allow VPN access token to bypass normal auth
+	if (token === 'VPN_ACCESS_TOKEN') {
+		console.log("✅ ProtectedRoute: VPN access token detected, allowing access");
+		return children;
 	}
 
 	console.log("✅ ProtectedRoute: Token found, allowing access");
@@ -161,6 +176,7 @@ const ThemeColorWrapper = ({ children }) => {
 function App() {
 	return (
 		<Router>
+			<DataCacheProvider>
 			<ThemeColorWrapper>
 				<Suspense
 					fallback={
@@ -191,7 +207,7 @@ function App() {
 					<Route path="berita" element={<BeritaManagement />} />
 					<Route path="bumdes" element={<BumdesApp />} />
 					<Route path="bankeu" element={<BankeuDashboard />} />
-					<Route path="add" element={<Add />} />
+					<Route path="add" element={<AddDashboard />} />
 					<Route path="bhprd" element={<BhprdDashboard />} />
 					<Route path="dd" element={<DdDashboard />} />
 					<Route path="kelembagaan" element={<Kelembagaan />} />
@@ -221,6 +237,18 @@ function App() {
 						<Route path="produk-hukum/:id" element={<ProdukHukumDetail />} />
 					</Route>
 
+					{/* Rute Pegawai */}
+					<Route
+						path="/pegawai"
+						element={
+							<ProtectedRoute>
+								<PegawaiLayout />
+							</ProtectedRoute>
+						}
+					>
+						<Route path="dashboard" element={<PegawaiDashboard />} />
+					</Route>
+
 					{/* Rute Core Dashboard - Multi Role Access */}
 					<Route
 						path="/core-dashboard"
@@ -235,7 +263,7 @@ function App() {
 					<Route path="statistik-bumdes" element={<StatistikBumdes />} />
 					<Route path="statistik-perjadin" element={<StatistikPerjadin />} />
 					<Route path="statistik-bankeu" element={<StatistikBankeuDashboard />} />
-					<Route path="statistik-add" element={<StatistikAdd />} />
+					<Route path="statistik-add" element={<StatistikAddDashboard />} />
 					<Route path="statistik-bhprd" element={<BhprdDashboard />} />
 					<Route path="statistik-dd" element={<StatistikDdDashboard />} />
 					<Route path="trends" element={<TrendsPage />} />
@@ -270,6 +298,7 @@ function App() {
 				}}
 			/>
 			</ThemeColorWrapper>
+			</DataCacheProvider>
 		</Router>
 	);
 }
