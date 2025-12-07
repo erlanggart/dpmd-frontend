@@ -77,8 +77,17 @@ const ProdukHukumDetail = lazy(() =>
 const PengurusEditPage = lazy(() =>
 	import("./pages/desa/pengurus/PengurusEditPage")
 );
+const DisposisiSurat = lazy(() =>
+	import("./pages/dashboard/DisposisiSurat")
+);
+const CoreDashboardPublic = lazy(() =>
+	import("./pages/public/CoreDashboardPublic")
+);
 const KepalaDinasLayout = lazy(() =>
 	import("./pages/kepala-dinas/KepalaDinasLayout")
+);
+const KepalaDinasDashboard = lazy(() =>
+	import("./pages/kepala-dinas/KepalaDinasDashboard")
 );
 const DashboardOverview = lazy(() =>
 	import("./pages/kepala-dinas/DashboardOverview")
@@ -190,6 +199,7 @@ function App() {
 					<Route path="/" element={<LandingPage />} />
 					<Route path="/berita/:slug" element={<BeritaDetailPage />} />
 					<Route path="/bantuan-keuangan" element={<BankeuPublicPage />} />
+					<Route path="/core-dashboard" element={<CoreDashboardPublic />} />
 					<Route path="/login" element={<LoginPage />} />
 
 					{/* Rute Admin/Dashboard dengan lazy loading */}
@@ -215,6 +225,7 @@ function App() {
 					<Route path="kelembagaan/admin/:desaId/:type/:id" element={<KelembagaanDetailPage />} />
 					<Route path="perjalanan-dinas" element={<PerjalananDinas />} />
 					<Route path="user" element={<UserManagementPage />} />
+					<Route path="disposisi" element={<DisposisiSurat />} />
 					</Route>
 
 					{/* Rute Desa dengan lazy loading */}
@@ -249,9 +260,29 @@ function App() {
 						<Route path="dashboard" element={<PegawaiDashboard />} />
 					</Route>
 
-					{/* Rute Core Dashboard - Multi Role Access */}
+					{/* Rute Kepala Dinas - Exclusive untuk Kepala Dinas */}
 					<Route
-						path="/core-dashboard"
+						path="/kepala-dinas"
+						element={
+							<ProtectedRoute>
+								<KepalaDinasLayout />
+							</ProtectedRoute>
+						}
+					>
+						<Route index element={<Navigate to="dashboard" replace />} />
+						<Route path="dashboard" element={<KepalaDinasDashboard />} />
+						<Route path="statistik-bumdes" element={<StatistikBumdes />} />
+						<Route path="statistik-perjadin" element={<StatistikPerjadin />} />
+						<Route path="statistik-bankeu" element={<StatistikBankeuDashboard />} />
+						<Route path="statistik-add" element={<StatistikAddDashboard />} />
+						<Route path="statistik-bhprd" element={<BhprdDashboard />} />
+						<Route path="statistik-dd" element={<StatistikDdDashboard />} />
+						<Route path="trends" element={<TrendsPage />} />
+					</Route>
+
+					{/* Rute Core Dashboard - Multi Role Access (Sekretaris Dinas, Kabid, dll) */}
+					<Route
+						path="/admin-dashboard"
 						element={
 							<ProtectedRoute>
 								<KepalaDinasLayout />
