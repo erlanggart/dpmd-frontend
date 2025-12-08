@@ -1,8 +1,22 @@
 // src/services/api.js
 import axios from "axios";
 
+// Helper: Detect if in VPN mode
+const isVpnMode = () => {
+	const vpnToken = localStorage.getItem('expressToken');
+	return vpnToken === 'VPN_ACCESS_TOKEN';
+};
+
+// Helper: Get correct base URL based on VPN mode
+const getBaseURL = () => {
+	if (isVpnMode()) {
+		return 'http://100.107.112.30:3001/api'; // Direct Tailscale access
+	}
+	return import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:3001/api";
+};
+
 const api = axios.create({
-	baseURL: import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:3001/api",
+	baseURL: getBaseURL(),
 	timeout: 10000,
 	headers: {
 		"Content-Type": "application/json",
@@ -12,9 +26,21 @@ const api = axios.create({
 
 api.interceptors.request.use(
 	(config) => {
+		// Update baseURL dynamically in case VPN mode changed
+		config.baseURL = getBaseURL();
+		
 		const token = localStorage.getItem("expressToken");
 		if (token) {
 			config.headers["Authorization"] = `Bearer ${token}`;
+			
+			// CRITICAL: If VPN token, attach secret key to all requests
+			if (token === 'VPN_ACCESS_TOKEN') {
+				const vpnSecret = sessionStorage.getItem('vpn_secret');
+				if (vpnSecret) {
+					// Send secret via header (more secure than query string)
+					config.headers['X-VPN-Secret'] = vpnSecret;
+				}
+			}
 		}
 		return config;
 	},

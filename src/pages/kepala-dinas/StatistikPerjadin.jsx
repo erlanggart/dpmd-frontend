@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { 
   Briefcase, 
-  ArrowLeft, 
   Calendar, 
   MapPin, 
   Users, 
@@ -20,10 +19,21 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useDataCache } from '../../context/DataCacheContext';
+import { isVpnUser } from '../../utils/vpnHelper';
 
 const API_CONFIG = {
-  BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:3001/api'
+  BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:3001/api',
+  getEndpoint: (path) => {
+    // VPN users use /vpn-core/perjadin, normal users use /perjadin
+    if (isVpnUser()) {
+      return `${API_CONFIG.BASE_URL}/vpn-core/perjadin${path}`;
+    }
+    return `${API_CONFIG.BASE_URL}/perjadin${path}`;
+  }
 };
+
+const CACHE_KEY = 'statistik-perjadin';
 
 const StatistikPerjadin = () => {
   const [loading, setLoading] = useState(true);
@@ -43,9 +53,19 @@ const StatistikPerjadin = () => {
   const [isUpdatingCalendar, setIsUpdatingCalendar] = useState(false); // For calendar-only updates
   const itemsPerPage = 5;
   const navigate = useNavigate();
+  const { getCachedData, setCachedData, isCached } = useDataCache();
 
   useEffect(() => {
-    fetchData();
+    // Check if data is already cached
+    if (isCached(CACHE_KEY)) {
+      const cachedData = getCachedData(CACHE_KEY);
+      setDashboardData(cachedData.data.dashboardData);
+      setKegiatanList(cachedData.data.kegiatanList);
+      setWeeklySchedule(cachedData.data.weeklySchedule);
+      setLoading(false);
+    } else {
+      fetchData();
+    }
   }, []); // Only fetch once on mount
 
   // Update calendar when week offset changes (without full page reload)
@@ -89,24 +109,23 @@ const StatistikPerjadin = () => {
       setLoading(true);
       const token = localStorage.getItem('expressToken');
       
+      const config = {};
+      if (token !== 'VPN_ACCESS_TOKEN') {
+        config.headers = {
+          Authorization: `Bearer ${token}`
+        };
+      }
+      
       // Fetch dashboard statistics
       const dashResponse = await axios.get(
-        `${API_CONFIG.BASE_URL}/perjadin/dashboard`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
+        API_CONFIG.getEndpoint('/dashboard'),
+        config
       );
 
       // Fetch kegiatan list with date filter
       const kegiatanResponse = await axios.get(
-        `${API_CONFIG.BASE_URL}/perjadin/kegiatan?limit=100`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
+        API_CONFIG.getEndpoint('/kegiatan?limit=100'),
+        config
       );
 
       setDashboardData(dashResponse.data.data);
@@ -117,6 +136,13 @@ const StatistikPerjadin = () => {
       const processedSchedule = generateWeekSchedule(0, allKegiatan);
       console.log('📅 Initial weekly schedule loaded:', processedSchedule);
       setWeeklySchedule(processedSchedule);
+      
+      // Save to cache
+      setCachedData(CACHE_KEY, {
+        dashboardData: dashResponse.data.data,
+        kegiatanList: allKegiatan,
+        weeklySchedule: processedSchedule
+      });
       
       setError(null);
     } catch (err) {
@@ -318,17 +344,6 @@ const StatistikPerjadin = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-orange-50 to-red-50 p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Header with Back Button */}
-        <div className="mb-6">
-          <button
-            onClick={() => navigate('/core-dashboard/dashboard')}
-            className="group flex items-center gap-2 text-gray-600 hover:text-orange-600 mb-4 transition-all duration-300 bg-white px-4 py-2 rounded-xl shadow-md hover:shadow-lg"
-          >
-            <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform duration-300" />
-            <span className="font-medium">Kembali ke Dashboard</span>
-          </button>
-        </div>
-
         {/* Hero Header Card */}
         <div className="relative bg-gradient-to-r from-orange-600 via-red-600 to-pink-600 rounded-3xl shadow-2xl p-8 mb-8 overflow-hidden">
           {/* Animated Background Patterns */}
@@ -381,7 +396,7 @@ const StatistikPerjadin = () => {
                 </div>
               </div>
               <h3 className="text-blue-100 text-sm font-semibold mb-2">Total Kegiatan</h3>
-              <p className="text-4xl font-bold text-white mb-1">{dashboardData?.total_kegiatan || 0}</p>
+              <p className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-1">{dashboardData?.total_kegiatan || 0}</p>
               <p className="text-xs text-blue-100 flex items-center gap-1">
                 <span className="w-2 h-2 bg-blue-300 rounded-full animate-pulse"></span>
                 Semua periode
@@ -404,7 +419,7 @@ const StatistikPerjadin = () => {
                 </div>
               </div>
               <h3 className="text-emerald-100 text-sm font-semibold mb-2">Kegiatan Minggu Ini</h3>
-              <p className="text-4xl font-bold text-white mb-1">{dashboardData?.kegiatan_minggu_ini || 0}</p>
+              <p className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-1">{dashboardData?.kegiatan_minggu_ini || 0}</p>
               <p className="text-xs text-emerald-100 flex items-center gap-1">
                 <span className="w-2 h-2 bg-emerald-300 rounded-full animate-pulse"></span>
                 7 hari terakhir
@@ -427,7 +442,7 @@ const StatistikPerjadin = () => {
                 </div>
               </div>
               <h3 className="text-purple-100 text-sm font-semibold mb-2">Kegiatan Bulan Ini</h3>
-              <p className="text-4xl font-bold text-white mb-1">{dashboardData?.kegiatan_bulan_ini || 0}</p>
+              <p className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-1">{dashboardData?.kegiatan_bulan_ini || 0}</p>
               <p className="text-xs text-purple-100 flex items-center gap-1">
                 <span className="w-2 h-2 bg-purple-300 rounded-full animate-pulse"></span>
                 30 hari terakhir
@@ -435,7 +450,7 @@ const StatistikPerjadin = () => {
             </div>
           </div>
 
-          {/* Total Personil - Orange Gradient */}
+          {/* Total Pegawai - Orange Gradient */}
           <div className="relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
             <div className="absolute inset-0 bg-gradient-to-br from-orange-500 via-amber-600 to-orange-700"></div>
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
@@ -449,8 +464,8 @@ const StatistikPerjadin = () => {
                   <Activity className="w-4 h-4 text-white animate-bounce" />
                 </div>
               </div>
-              <h3 className="text-orange-100 text-sm font-semibold mb-2">Total Personil</h3>
-              <p className="text-4xl font-bold text-white mb-1">{dashboardData?.total_personil || 0}</p>
+              <h3 className="text-orange-100 text-sm font-semibold mb-2">Total Pegawai</h3>
+              <p className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-1">{dashboardData?.total_pegawai || 0}</p>
               <p className="text-xs text-orange-100 flex items-center gap-1">
                 <span className="w-2 h-2 bg-orange-300 rounded-full animate-pulse"></span>
                 Yang terlibat
@@ -992,7 +1007,7 @@ const StatistikPerjadin = () => {
                         {kegiatan.details && kegiatan.details.length > 0 && (
                           <div>
                             <p className="text-sm font-medium text-gray-700 mb-3">
-                              Bidang & Personil:
+                              Bidang & Pegawai:
                             </p>
                             <div className="space-y-3">
                               {kegiatan.details.map((detail, idx) => (
@@ -1003,17 +1018,17 @@ const StatistikPerjadin = () => {
                                       {detail.nama_bidang || 'Bidang'}
                                     </span>
                                   </div>
-                                  {detail.personil_list && detail.personil_list.length > 0 && (
+                                  {detail.pegawai_list && detail.pegawai_list.length > 0 && (
                                     <div className="ml-6">
-                                      <p className="text-xs text-gray-500 mb-1">Personil:</p>
+                                      <p className="text-xs text-gray-500 mb-1">Pegawai:</p>
                                       <div className="flex flex-wrap gap-2">
-                                        {detail.personil_list.map((personil, pIdx) => (
+                                        {detail.pegawai_list.map((pegawai, pIdx) => (
                                           <span 
                                             key={pIdx}
                                             className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full"
                                           >
                                             <Users className="w-3 h-3" />
-                                            {personil.nama_personil}
+                                            {pegawai.nama_pegawai}
                                           </span>
                                         ))}
                                       </div>

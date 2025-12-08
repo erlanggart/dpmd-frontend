@@ -9,6 +9,7 @@ import {
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 import api from '../../api';
+import { isVpnUser } from '../../utils/vpnHelper';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -58,9 +59,10 @@ const DdEarmarkedT1 = () => {
     setCurrentPage(1);
   }, [kegiatanData, filterStatus, searchTerm, sortBy]);
 
-  const fetchFileInfo = async () => {
+  const fetchInfo = async () => {
     try {
-      const response = await api.get('/dd-earmarked-t1/info');
+      const endpoint = isVpnUser() ? '/vpn-core/dd-earmarked-t1/info' : '/dd-earmarked-t1/info';
+      const response = await api.get(endpoint);
       if (response.data.success) {
         setFileInfo(response.data.data);
       }

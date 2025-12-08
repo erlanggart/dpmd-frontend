@@ -1,13 +1,10 @@
 // src/pages/core-dashboard/TrendsPage.jsx
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import TrendChart from './components/TrendChart';
 import { TrendingUp, ArrowLeft, Calendar } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-
-const API_CONFIG = {
-  BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:3001/api'
-};
+import api from '../../api';
+import { isVpnUser } from '../../utils/vpnHelper';
 
 const TrendsPage = () => {
   const [loading, setLoading] = useState(true);
@@ -22,16 +19,9 @@ const TrendsPage = () => {
   const fetchTrendsData = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('expressToken');
+      const endpoint = isVpnUser() ? '/vpn-core/dashboard' : '/kepala-dinas/dashboard';
       
-      const response = await axios.get(
-        `${API_CONFIG.BASE_URL}/kepala-dinas/dashboard`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
+      const response = await api.get(endpoint);
 
       setTrendsData(response.data.data.trends);
       setError(null);
@@ -93,6 +83,10 @@ const TrendsPage = () => {
       };
     }
 
+    // Get totals from the first item (they all have the same totals)
+    const totals = trendsData[0]?.totals || {};
+    
+    // For chart visualization, we sum the monthly variations
     const totalBumdes = trendsData.reduce((sum, item) => sum + (item.bumdes_count || 0), 0);
     const totalPerjadin = trendsData.reduce((sum, item) => sum + (item.perjadin_count || 0), 0);
     const totalAdd = trendsData.reduce((sum, item) => sum + (item.add_count || 0), 0);
@@ -101,12 +95,13 @@ const TrendsPage = () => {
     const totalBankeu = trendsData.reduce((sum, item) => sum + (item.bankeu_count || 0), 0);
 
     return {
-      totalBumdes,
-      totalPerjadin,
-      totalAdd,
-      totalBhprd,
-      totalDd,
-      totalBankeu,
+      // Use actual totals from backend
+      totalBumdes: totals.bumdes || totalBumdes,
+      totalPerjadin: totals.perjadin || totalPerjadin,
+      totalAdd: totals.add || totalAdd,
+      totalBhprd: totals.bhprd || totalBhprd,
+      totalDd: totals.dd || totalDd,
+      totalBankeu: totals.bankeu || totalBankeu,
       avgBumdes: Math.round(totalBumdes / trendsData.length),
       avgPerjadin: Math.round(totalPerjadin / trendsData.length),
       avgAdd: Math.round(totalAdd / trendsData.length),
@@ -115,6 +110,27 @@ const TrendsPage = () => {
       avgBankeu: Math.round(totalBankeu / trendsData.length),
       months: trendsData.length
     };
+  };
+
+  // Format currency for display (compact format for large numbers)
+  const formatCurrency = (value) => {
+    if (!value || isNaN(value)) return 'Rp 0';
+    
+    const billion = 1000000000;
+    const million = 1000000;
+    
+    if (value >= billion) {
+      return `Rp ${(value / billion).toFixed(2)} M`;
+    } else if (value >= million) {
+      return `Rp ${(value / million).toFixed(2)} Jt`;
+    }
+    
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(value);
   };
 
   const stats = calculateStats();
@@ -175,23 +191,23 @@ const TrendsPage = () => {
             </div>
             <div>
               <p className="text-white text-opacity-75 text-sm">Total ADD</p>
-              <p className="text-2xl font-bold">{stats.totalAdd}</p>
-              <p className="text-white text-opacity-60 text-xs mt-1">Avg: {stats.avgAdd}/bulan</p>
+              <p className="text-xl font-bold">{formatCurrency(stats.totalAdd)}</p>
+              <p className="text-white text-opacity-60 text-xs mt-1">Avg: {formatCurrency(stats.avgAdd)}/bulan</p>
             </div>
             <div>
               <p className="text-white text-opacity-75 text-sm">Total BHPRD</p>
-              <p className="text-2xl font-bold">{stats.totalBhprd}</p>
-              <p className="text-white text-opacity-60 text-xs mt-1">Avg: {stats.avgBhprd}/bulan</p>
+              <p className="text-xl font-bold">{formatCurrency(stats.totalBhprd)}</p>
+              <p className="text-white text-opacity-60 text-xs mt-1">Avg: {formatCurrency(stats.avgBhprd)}/bulan</p>
             </div>
             <div>
               <p className="text-white text-opacity-75 text-sm">Total DD</p>
-              <p className="text-2xl font-bold">{stats.totalDd}</p>
-              <p className="text-white text-opacity-60 text-xs mt-1">Avg: {stats.avgDd}/bulan</p>
+              <p className="text-xl font-bold">{formatCurrency(stats.totalDd)}</p>
+              <p className="text-white text-opacity-60 text-xs mt-1">Avg: {formatCurrency(stats.avgDd)}/bulan</p>
             </div>
             <div>
               <p className="text-white text-opacity-75 text-sm">Total Bankeu</p>
-              <p className="text-2xl font-bold">{stats.totalBankeu}</p>
-              <p className="text-white text-opacity-60 text-xs mt-1">Avg: {stats.avgBankeu}/bulan</p>
+              <p className="text-xl font-bold">{formatCurrency(stats.totalBankeu)}</p>
+              <p className="text-white text-opacity-60 text-xs mt-1">Avg: {formatCurrency(stats.avgBankeu)}/bulan</p>
             </div>
           </div>
         </div>
@@ -235,7 +251,7 @@ const TrendsPage = () => {
               <h3 className="text-lg font-bold text-gray-800">Insight Bantuan Keuangan</h3>
             </div>
             <p className="text-gray-600 leading-relaxed">
-              Total {stats.totalAdd} ADD, {stats.totalDd} DD, dan {stats.totalBankeu} Bankeu menunjukkan 
+              Total ADD {formatCurrency(stats.totalAdd)}, DD {formatCurrency(stats.totalDd)}, dan Bankeu {formatCurrency(stats.totalBankeu)} menunjukkan 
               distribusi bantuan keuangan yang konsisten ke desa-desa.
             </p>
           </div>
@@ -248,7 +264,7 @@ const TrendsPage = () => {
               <h3 className="text-lg font-bold text-gray-800">Insight BHPRD</h3>
             </div>
             <p className="text-gray-600 leading-relaxed">
-              Total {stats.totalBhprd} data BHPRD dengan rata-rata {stats.avgBhprd} per bulan 
+              Total BHPRD {formatCurrency(stats.totalBhprd)} dengan rata-rata {formatCurrency(stats.avgBhprd)} per bulan 
               menunjukkan stabilitas dalam bagi hasil pajak dan retribusi daerah.
             </p>
           </div>

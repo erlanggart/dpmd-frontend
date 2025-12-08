@@ -270,7 +270,7 @@ const ModernDashboard = ({ onFilterClick }) => {
                   status={activity.status}
                   bidang={activity.bidang}
                   location={activity.lokasi}
-                  participants={activity.total_personil}
+                  participants={activity.total_pegawai}
                   delay={0.6 + index * 0.05}
                   onClick={() => onFilterClick && onFilterClick('activity', activity.id)}
                 />

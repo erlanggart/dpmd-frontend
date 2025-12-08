@@ -5,6 +5,7 @@ import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearSca
 import { Pie, Bar } from 'react-chartjs-2';
 import api from '../../api';
 import * as XLSX from 'xlsx';
+import { isVpnUser } from '../../utils/vpnHelper';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
 
@@ -21,7 +22,8 @@ const StatistikBhprd = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/bhprd/data');
+      const endpoint = isVpnUser() ? '/vpn-core/bhprd-t3/data' : '/bhprd/data';
+      const response = await api.get(endpoint);
       setData(response.data.data || []);
       setError(null);
     } catch (err) {

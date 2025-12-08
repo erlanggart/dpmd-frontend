@@ -1,6 +1,6 @@
 // Statistik DD Dashboard untuk Core Dashboard (Kepala Dinas) - View Only
 import React, { useState, useEffect } from 'react';
-import { FiArrowLeft, FiDollarSign, FiMapPin, FiUsers, FiTrendingUp, FiDownload, FiChevronDown, FiChevronUp, FiSearch, FiFilter, FiX } from 'react-icons/fi';
+import { FiDollarSign, FiMapPin, FiUsers, FiTrendingUp, FiDownload, FiChevronDown, FiChevronUp, FiSearch, FiFilter, FiX } from 'react-icons/fi';
 import { Activity } from 'lucide-react';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement } from 'chart.js';
 import { Pie, Bar } from 'react-chartjs-2';
@@ -8,11 +8,16 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 import api from '../../api';
+import { useDataCache } from '../../context/DataCacheContext';
+import { isVpnUser } from '../../utils/vpnHelper';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
 
+const CACHE_KEY = 'statistik-dd';
+
 const StatistikDdDashboard = () => {
   const navigate = useNavigate();
+  const { getCachedData, setCachedData, isCached } = useDataCache();
   const [activeTab, setActiveTab] = useState('earmarked-t1');
   const [loading, setLoading] = useState(true);
   const [dataEarmarkedT1, setDataEarmarkedT1] = useState([]);
@@ -26,16 +31,30 @@ const StatistikDdDashboard = () => {
   const [filterStatus, setFilterStatus] = useState('');
 
   useEffect(() => {
-    fetchAllData();
+    if (isCached(CACHE_KEY)) {
+      const cachedData = getCachedData(CACHE_KEY);
+      setDataEarmarkedT1(cachedData.data.earmarkedT1 || []);
+      setDataEarmarkedT2(cachedData.data.earmarkedT2 || []);
+      setDataNonEarmarkedT1(cachedData.data.nonEarmarkedT1 || []);
+      setDataNonEarmarkedT2(cachedData.data.nonEarmarkedT2 || []);
+      setDataInsentif(cachedData.data.insentif || []);
+      setLoading(false);
+    } else {
+      fetchAllData();
+    }
   }, []);
 
   const fetchAllData = async () => {
     setLoading(true);
-    
+
+    let et1Data = [], et2Data = [], net1Data = [], net2Data = [], insData = [];
+
     // Fetch Earmarked T1
     try {
-      const response1 = await api.get('/dd-earmarked-t1/data');
-      setDataEarmarkedT1(response1.data.data || []);
+      const endpoint1 = isVpnUser() ? '/vpn-core/dd-earmarked-t1/data' : '/dd-earmarked-t1/data';
+      const response1 = await api.get(endpoint1);
+      et1Data = response1.data.data || [];
+      setDataEarmarkedT1(et1Data);
     } catch (err) {
       console.warn('Error loading DD Earmarked T1:', err);
       setDataEarmarkedT1([]);
@@ -43,8 +62,10 @@ const StatistikDdDashboard = () => {
 
     // Fetch Earmarked T2
     try {
-      const response2 = await api.get('/dd-earmarked-t2/data');
-      setDataEarmarkedT2(response2.data.data || []);
+      const endpoint2 = isVpnUser() ? '/vpn-core/dd-earmarked-t2/data' : '/dd-earmarked-t2/data';
+      const response2 = await api.get(endpoint2);
+      et2Data = response2.data.data || [];
+      setDataEarmarkedT2(et2Data);
     } catch (err) {
       console.warn('Error loading DD Earmarked T2:', err);
       setDataEarmarkedT2([]);
@@ -52,8 +73,10 @@ const StatistikDdDashboard = () => {
 
     // Fetch Non-Earmarked T1
     try {
-      const response3 = await api.get('/dd-nonearmarked-t1/data');
-      setDataNonEarmarkedT1(response3.data.data || []);
+      const endpoint3 = isVpnUser() ? '/vpn-core/dd-nonearmarked-t1/data' : '/dd-nonearmarked-t1/data';
+      const response3 = await api.get(endpoint3);
+      net1Data = response3.data.data || [];
+      setDataNonEarmarkedT1(net1Data);
     } catch (err) {
       console.warn('Error loading DD Non-Earmarked T1:', err);
       setDataNonEarmarkedT1([]);
@@ -61,8 +84,10 @@ const StatistikDdDashboard = () => {
 
     // Fetch Non-Earmarked T2
     try {
-      const response4 = await api.get('/dd-nonearmarked-t2/data');
-      setDataNonEarmarkedT2(response4.data.data || []);
+      const endpoint4 = isVpnUser() ? '/vpn-core/dd-nonearmarked-t2/data' : '/dd-nonearmarked-t2/data';
+      const response4 = await api.get(endpoint4);
+      net2Data = response4.data.data || [];
+      setDataNonEarmarkedT2(net2Data);
     } catch (err) {
       console.warn('Error loading DD Non-Earmarked T2:', err);
       setDataNonEarmarkedT2([]);
@@ -70,12 +95,23 @@ const StatistikDdDashboard = () => {
 
     // Fetch Insentif DD
     try {
-      const response5 = await api.get('/insentif-dd/data');
-      setDataInsentif(response5.data.data || []);
+      const endpoint5 = isVpnUser() ? '/vpn-core/insentif-dd/data' : '/insentif-dd/data';
+      const response5 = await api.get(endpoint5);
+      insData = response5.data.data || [];
+      setDataInsentif(insData);
     } catch (err) {
       console.warn('Error loading Insentif DD:', err);
       setDataInsentif([]);
     }
+
+    // Save to cache
+    setCachedData(CACHE_KEY, {
+      earmarkedT1: et1Data,
+      earmarkedT2: et2Data,
+      nonEarmarkedT1: net1Data,
+      nonEarmarkedT2: net2Data,
+      insentif: insData
+    });
 
     setLoading(false);
   };
@@ -114,21 +150,21 @@ const StatistikDdDashboard = () => {
   };
 
   const rawActiveData = processData(getActiveData());
-  
+
   // Apply filters and search
   const activeData = rawActiveData.filter(item => {
-    const matchesSearch = searchTerm === '' || 
+    const matchesSearch = searchTerm === '' ||
       item.desa?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.kecamatan?.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     const matchesKecamatan = filterKecamatan === '' || item.kecamatan === filterKecamatan;
     const matchesStatus = filterStatus === '' || item.status === filterStatus;
-    
+
     return matchesSearch && matchesKecamatan && matchesStatus;
   });
-  
+
   const stats = calculateStats(activeData);
-  
+
   // Get unique values for filters
   const uniqueKecamatan = [...new Set(rawActiveData.map(d => d.kecamatan))].sort();
   const uniqueStatus = [...new Set(rawActiveData.map(d => d.status))].filter(s => s).sort();
@@ -171,7 +207,7 @@ const StatistikDdDashboard = () => {
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Data');
-    
+
     const fileName = `${tabNames[activeTab]}_${new Date().toISOString().split('T')[0]}.xlsx`;
     XLSX.writeFile(wb, fileName);
     toast.success('Data berhasil diexport!');
@@ -201,21 +237,42 @@ const StatistikDdDashboard = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-cyan-50 p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
-        {/* Header with Back Button */}
-        <div className="mb-8">
-          <button
-            onClick={() => navigate('/core-dashboard')}
-            className="group flex items-center gap-2 text-gray-600 hover:text-cyan-600 transition-colors duration-200 mb-4"
-          >
-            <FiArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform duration-200" />
-            <span className="font-medium">Kembali ke Dashboard</span>
-          </button>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent mb-2">
-            Statistik Dana Desa
-          </h1>
-          <p className="text-gray-600">
-            Monitoring Dana Desa (DD) Earmarked, Non-Earmarked, dan Insentif
-          </p>
+        {/* Hero Welcome Banner dengan Gradient Modern */}
+        <div className="relative bg-gradient-to-r from-cyan-600 via-blue-600 to-indigo-600 rounded-3xl shadow-2xl p-8 mb-8 overflow-hidden">
+          {/* Animated Background Patterns */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-10 rounded-full -mr-32 -mt-32 animate-pulse"></div>
+          <div className="absolute bottom-0 left-0 w-96 h-96 bg-white opacity-5 rounded-full -ml-48 -mb-48"></div>
+          
+          <div className="relative z-10">
+            <div className="mb-4">
+              <h1 className="text-3xl md:text-4xl font-bold text-white mb-2 drop-shadow-lg">
+                📊 Statistik Dana Desa
+              </h1>
+              <p className="text-white text-opacity-90 text-base md:text-lg">
+                Monitoring Dana Desa (DD) Earmarked, Non-Earmarked, dan Insentif
+              </p>
+            </div>
+            
+            {/* Quick Stats in Hero */}
+            <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="bg-cyan-700 bg-opacity-70 backdrop-blur-md rounded-xl p-4 border border-cyan-400 border-opacity-40 shadow-lg">
+                <p className="text-white text-opacity-90 text-xs md:text-sm mb-1 font-medium">Total Kecamatan</p>
+                <p className="text-white text-xl md:text-2xl font-bold">{stats.totalKecamatan}</p>
+              </div>
+              <div className="bg-blue-700 bg-opacity-70 backdrop-blur-md rounded-xl p-4 border border-blue-400 border-opacity-40 shadow-lg">
+                <p className="text-white text-opacity-90 text-xs md:text-sm mb-1 font-medium">Total Desa</p>
+                <p className="text-white text-xl md:text-2xl font-bold">{stats.totalDesa}</p>
+              </div>
+              <div className="bg-indigo-700 bg-opacity-70 backdrop-blur-md rounded-xl p-4 border border-indigo-400 border-opacity-40 shadow-lg overflow-hidden">
+                <p className="text-white text-opacity-90 text-xs md:text-sm mb-1 font-medium">Total Alokasi</p>
+                <p className="text-white text-[10px] md:text-xs font-bold break-words leading-tight">{formatCurrency(stats.totalRealisasi)}</p>
+              </div>
+              <div className="bg-purple-700 bg-opacity-70 backdrop-blur-md rounded-xl p-4 border border-purple-400 border-opacity-40 shadow-lg overflow-hidden">
+                <p className="text-white text-opacity-90 text-xs md:text-sm mb-1 font-medium">Rata-rata/Desa</p>
+                <p className="text-white text-[10px] md:text-xs font-bold break-words leading-tight">{formatCurrency(stats.avgPerDesa)}</p>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Tab Navigation */}
@@ -422,7 +479,7 @@ const StatistikDdDashboard = () => {
         </div>
 
         {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div className="space-y-6 mb-8">
           {/* Bar Chart - Kecamatan */}
           <div className="group bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl hover:shadow-3xl transition-all duration-500 p-8 border border-gray-100/50">
             <div className="flex items-center gap-3 mb-6">
@@ -431,7 +488,7 @@ const StatistikDdDashboard = () => {
               </div>
               <div>
                 <h3 className="text-xl font-bold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">
-                  Top 10 Kecamatan
+                  Semua Kecamatan
                 </h3>
                 <p className="text-sm text-gray-500">Berdasarkan Total Alokasi</p>
               </div>
@@ -440,84 +497,84 @@ const StatistikDdDashboard = () => {
               <div className="absolute inset-0 bg-gradient-to-br from-cyan-50/50 to-blue-50/50 rounded-2xl"></div>
               <div className="relative h-full p-4">
                 <Bar
-                  data={{
-                    labels: Object.keys(groupedData).slice(0, 10),
-                    datasets: [{
-                      label: 'Total Alokasi',
-                      data: Object.entries(groupedData).slice(0, 10).map(([_, desas]) => 
-                        desas.reduce((sum, d) => sum + d.realisasi, 0)
-                      ),
-                      backgroundColor: (context) => {
-                        const ctx = context.chart.ctx;
-                        const gradient = ctx.createLinearGradient(0, 0, 0, 350);
-                        gradient.addColorStop(0, 'rgba(6, 182, 212, 0.9)');
-                        gradient.addColorStop(1, 'rgba(37, 99, 235, 0.7)');
-                        return gradient;
-                      },
-                      borderColor: 'rgba(6, 182, 212, 1)',
-                      borderWidth: 2,
-                      borderRadius: 10,
-                      hoverBackgroundColor: (context) => {
-                        const ctx = context.chart.ctx;
-                        const gradient = ctx.createLinearGradient(0, 0, 0, 350);
-                        gradient.addColorStop(0, 'rgba(6, 182, 212, 1)');
-                        gradient.addColorStop(1, 'rgba(37, 99, 235, 0.9)');
-                        return gradient;
-                      },
-                    }]
-                  }}
-                  options={{
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                      legend: { display: false },
-                      tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        padding: 12,
-                        cornerRadius: 8,
-                        titleColor: '#fff',
-                        titleFont: { size: 14, weight: 'bold' },
-                        bodyColor: '#fff',
-                        bodyFont: { size: 13 },
-                        displayColors: false,
-                        callbacks: {
-                          label: (context) => formatCurrency(context.raw)
-                        }
-                      }
-                    },
-                    scales: {
-                      x: {
-                        grid: {
-                          display: false
+                    data={{
+                      labels: Object.keys(groupedData),
+                      datasets: [{
+                        label: 'Total Alokasi',
+                        data: Object.entries(groupedData).map(([_, desas]) => 
+                          desas.reduce((sum, d) => sum + d.realisasi, 0)
+                        ),
+                        backgroundColor: (context) => {
+                          const ctx = context.chart.ctx;
+                          const gradient = ctx.createLinearGradient(0, 0, 0, 350);
+                          gradient.addColorStop(0, 'rgba(6, 182, 212, 0.9)');
+                          gradient.addColorStop(1, 'rgba(37, 99, 235, 0.7)');
+                          return gradient;
                         },
-                        ticks: {
-                          font: { size: 11, weight: '500' },
-                          color: '#64748b'
-                        }
-                      },
-                      y: {
-                        beginAtZero: true,
-                        grid: {
-                          color: 'rgba(0, 0, 0, 0.05)',
-                          drawBorder: false
+                        borderColor: 'rgba(6, 182, 212, 1)',
+                        borderWidth: 2,
+                        borderRadius: 10,
+                        hoverBackgroundColor: (context) => {
+                          const ctx = context.chart.ctx;
+                          const gradient = ctx.createLinearGradient(0, 0, 0, 350);
+                          gradient.addColorStop(0, 'rgba(6, 182, 212, 1)');
+                          gradient.addColorStop(1, 'rgba(37, 99, 235, 0.9)');
+                          return gradient;
                         },
-                        ticks: {
-                          font: { size: 11, weight: '500' },
-                          color: '#64748b',
-                          callback: (value) => {
-                            if (value >= 1000000000) return (value / 1000000000).toFixed(1) + 'M';
-                            if (value >= 1000000) return (value / 1000000).toFixed(1) + 'Jt';
-                            return value;
+                      }]
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                          padding: 12,
+                          cornerRadius: 8,
+                          titleColor: '#fff',
+                          titleFont: { size: 14, weight: 'bold' },
+                          bodyColor: '#fff',
+                          bodyFont: { size: 13 },
+                          displayColors: false,
+                          callbacks: {
+                            label: (context) => formatCurrency(context.raw)
                           }
                         }
+                      },
+                      scales: {
+                        x: {
+                          grid: {
+                            display: false
+                          },
+                          ticks: {
+                            font: { size: 11, weight: '500' },
+                            color: '#64748b'
+                          }
+                        },
+                        y: {
+                          beginAtZero: true,
+                          grid: {
+                            color: 'rgba(0, 0, 0, 0.05)',
+                            drawBorder: false
+                          },
+                          ticks: {
+                            font: { size: 11, weight: '500' },
+                            color: '#64748b',
+                            callback: (value) => {
+                              if (value >= 1000000000) return (value / 1000000000).toFixed(1) + 'M';
+                              if (value >= 1000000) return (value / 1000000).toFixed(1) + 'Jt';
+                              return value;
+                            }
+                          }
+                        }
+                      },
+                      animation: {
+                        duration: 1500,
+                        easing: 'easeInOutQuart'
                       }
-                    },
-                    animation: {
-                      duration: 1500,
-                      easing: 'easeInOutQuart'
-                    }
-                  }}
-                />
+                    }}
+                  />
               </div>
             </div>
           </div>
@@ -538,106 +595,106 @@ const StatistikDdDashboard = () => {
             <div className="h-[350px] flex items-center justify-center relative">
               <div className="absolute inset-0 bg-gradient-to-br from-purple-50/50 to-pink-50/50 rounded-2xl"></div>
               <div className="relative w-full h-full flex items-center justify-center">
-              <Pie
-                data={{
-                  labels: (() => {
-                    const statusCounts = {};
-                    activeData.forEach(d => {
-                      const status = d.status || 'Tidak Ada Status';
-                      statusCounts[status] = (statusCounts[status] || 0) + 1;
-                    });
-                    return Object.keys(statusCounts);
-                  })(),
-                  datasets: [{
-                    data: (() => {
-                      const statusCounts = {};
-                      activeData.forEach(d => {
-                        const status = d.status || 'Tidak Ada Status';
-                        statusCounts[status] = (statusCounts[status] || 0) + 1;
-                      });
-                      return Object.values(statusCounts);
-                    })(),
-                    backgroundColor: [
-                      'rgba(34, 197, 94, 0.8)',
-                      'rgba(251, 191, 36, 0.8)',
-                      'rgba(168, 85, 247, 0.8)',
-                      'rgba(59, 130, 246, 0.8)',
-                      'rgba(239, 68, 68, 0.8)',
-                    ],
-                    borderColor: [
-                      'rgba(34, 197, 94, 1)',
-                      'rgba(251, 191, 36, 1)',
-                      'rgba(168, 85, 247, 1)',
-                      'rgba(59, 130, 246, 1)',
-                      'rgba(239, 68, 68, 1)',
-                    ],
-                    borderWidth: 2,
-                  }]
-                }}
-                options={{
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  plugins: {
-                    legend: {
-                      position: 'bottom',
-                      labels: {
-                        padding: 20,
-                        font: { size: 13, weight: '600' },
-                        color: '#475569',
-                        usePointStyle: true,
-                        pointStyle: 'circle',
-                        boxWidth: 12,
-                        boxHeight: 12
-                      }
-                    },
-                    tooltip: {
-                      backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                      padding: 12,
-                      cornerRadius: 8,
-                      titleColor: '#fff',
-                      titleFont: { size: 14, weight: 'bold' },
-                      bodyColor: '#fff',
-                      bodyFont: { size: 13 },
-                      callbacks: {
-                        label: (context) => {
-                          const label = context.label || '';
-                          const value = context.parsed || 0;
-                          const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                          const percentage = ((value / total) * 100).toFixed(1);
-                          return `${label}: ${value} desa (${percentage}%)`;
+                <Pie
+                  data={{
+                      labels: (() => {
+                        const statusCounts = {};
+                        activeData.forEach(d => {
+                          const status = d.status || 'Tidak Ada Status';
+                          statusCounts[status] = (statusCounts[status] || 0) + 1;
+                        });
+                        return Object.keys(statusCounts);
+                      })(),
+                      datasets: [{
+                        data: (() => {
+                          const statusCounts = {};
+                          activeData.forEach(d => {
+                            const status = d.status || 'Tidak Ada Status';
+                            statusCounts[status] = (statusCounts[status] || 0) + 1;
+                          });
+                          return Object.values(statusCounts);
+                        })(),
+                        backgroundColor: [
+                          'rgba(34, 197, 94, 0.8)',
+                          'rgba(251, 191, 36, 0.8)',
+                          'rgba(168, 85, 247, 0.8)',
+                          'rgba(59, 130, 246, 0.8)',
+                          'rgba(239, 68, 68, 0.8)',
+                        ],
+                        borderColor: [
+                          'rgba(34, 197, 94, 1)',
+                          'rgba(251, 191, 36, 1)',
+                          'rgba(168, 85, 247, 1)',
+                          'rgba(59, 130, 246, 1)',
+                          'rgba(239, 68, 68, 1)',
+                        ],
+                        borderWidth: 2,
+                      }]
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: {
+                          position: 'bottom',
+                          labels: {
+                            padding: 20,
+                            font: { size: 13, weight: '600' },
+                            color: '#475569',
+                            usePointStyle: true,
+                            pointStyle: 'circle',
+                            boxWidth: 12,
+                            boxHeight: 12
+                          }
+                        },
+                        tooltip: {
+                          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                          padding: 12,
+                          cornerRadius: 8,
+                          titleColor: '#fff',
+                          titleFont: { size: 14, weight: 'bold' },
+                          bodyColor: '#fff',
+                          bodyFont: { size: 13 },
+                          callbacks: {
+                            label: (context) => {
+                              const label = context.label || '';
+                              const value = context.parsed || 0;
+                              const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                              const percentage = ((value / total) * 100).toFixed(1);
+                              return `${label}: ${value} desa (${percentage}%)`;
+                            }
+                          }
                         }
-                      }
+                      },
+                      animation: {
+                        animateRotate: true,
+                        animateScale: true,
+                        duration: 1500,
+                      easing: 'easeInOutQuart'
                     }
-                  },
-                  animation: {
-                    animateRotate: true,
-                    animateScale: true,
-                    duration: 1500,
-                    easing: 'easeInOutQuart'
-                  }
-                }}
-              />
+                  }}
+                />
               </div>
             </div>
           </div>
         </div>
 
-        {/* Data Table */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl overflow-hidden">
-          <div className="p-6 border-b border-gray-200">
-            <h2 className="text-xl font-bold text-gray-800">Data per Kecamatan</h2>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white">
-                <tr>
-                  <th className="px-6 py-4 text-left text-sm font-semibold">Kecamatan</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold">Jumlah Desa</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold">Total Realisasi</th>
-                  <th className="px-6 py-4 text-center text-sm font-semibold">Aksi</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
+      {/* Data Table */}
+      <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl overflow-hidden">
+        <div className="p-6 border-b border-gray-200">
+          <h2 className="text-xl font-bold text-gray-800">Data per Kecamatan</h2>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white">
+              <tr>
+                <th className="px-6 py-4 text-left text-sm font-semibold">Kecamatan</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold">Jumlah Desa</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold">Total Realisasi</th>
+                <th className="px-6 py-4 text-center text-sm font-semibold">Aksi</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
                 {Object.entries(groupedData).map(([kecamatan, desas]) => {
                   const totalRealisasi = desas.reduce((sum, d) => sum + d.realisasi, 0);
                   const isExpanded = expandedKecamatan[kecamatan];

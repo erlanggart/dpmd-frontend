@@ -4,6 +4,7 @@ import { FiDollarSign, FiMapPin, FiUsers, FiTrendingUp, FiDownload, FiSearch, Fi
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 import api from '../../../api';
+import { isVpnUser } from '../../../utils/vpnHelper';
 
 const DdEarmarkedT1 = () => {
   const [loading, setLoading] = useState(true);

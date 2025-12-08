@@ -719,7 +719,7 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, onDeta
                   </th>
                   <th className="px-6 py-4 text-left w-48">
                     <div className="flex items-center space-x-2 text-gray-700 font-semibold">
-                      <span className="text-sm font-medium">Bidang & Personil</span>
+                      <span className="text-sm font-medium">Bidang & Pegawai</span>
                     </div>
                   </th>
                   <th className="px-6 py-4 text-center w-32">
@@ -805,7 +805,7 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, onDeta
                       </div>
                     </td>
 
-                    {/* Bidang & Personil */}
+                    {/* Bidang & Pegawai */}
                     <td className="px-6 py-4">
                       <div className="space-y-2">
                         {/* Bidang */}
@@ -834,13 +834,13 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, onDeta
                           <span className="text-xs text-gray-400">Belum ada bidang</span>
                         )}
                         
-                        {/* Personil Count */}
+                        {/* pegawai Count */}
                         {kegiatan.details && kegiatan.details.length > 0 && (
                           <div className="text-xs text-gray-500">
                             {kegiatan.details.reduce((total, detail) => {
-                              const personilCount = detail.personil_list ? detail.personil_list.length : 0;
-                              return total + personilCount;
-                            }, 0)} personil
+                              const pegawaiCount = detail.pegawai_list ? detail.pegawai_list.length : 0;
+                              return total + pegawaiCount;
+                            }, 0)} pegawai
                           </div>
                         )}
                       </div>
@@ -995,3 +995,4 @@ const KegiatanList = ({ initialDateFilter, initialBidangFilter, onAddNew, onDeta
 
 // Memoize component to prevent unnecessary re-renders
 export default React.memo(KegiatanList);
+
