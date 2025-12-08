@@ -1,15 +1,32 @@
 import { useState, useEffect } from 'react';
-import { FiMail, FiSend, FiClock, FiCheck, FiEye, FiPlus, FiUpload, FiX } from 'react-icons/fi';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { FiMail, FiSend, FiClock, FiCheck, FiEye, FiPlus, FiUpload, FiX, FiFileText, FiCalendar } from 'react-icons/fi';
 import api from '../../api';
 import { toast } from 'react-hot-toast';
 
 export default function DisposisiSurat() {
-  const [activeTab, setActiveTab] = useState('masuk');
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Get user first before using in state
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const isSecretariat = user.role === 'sekretariat' || user.role === 'superadmin';
+  
+  const [activeTab, setActiveTab] = useState(isSecretariat ? 'surat-masuk' : 'masuk');
+  const [suratMasuk, setSuratMasuk] = useState([]);
   const [disposisiMasuk, setDisposisiMasuk] = useState([]);
   const [disposisiKeluar, setDisposisiKeluar] = useState([]);
   const [statistik, setStatistik] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showInputModal, setShowInputModal] = useState(false);
+  const [showKirimModal, setShowKirimModal] = useState(false);
+  const [selectedSurat, setSelectedSurat] = useState(null);
+  const [kepalaDinasList, setKepalaDinasList] = useState([]);
+  const [formKirim, setFormKirim] = useState({
+    kepala_dinas_user_id: '',
+    catatan: '',
+    instruksi: 'biasa'
+  });
   const [formData, setFormData] = useState({
     nomor_surat: '',
     tanggal_surat: '',
@@ -21,9 +38,8 @@ export default function DisposisiSurat() {
   });
   const [selectedFile, setSelectedFile] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
-  const isSecretariat = user.role === 'sekretariat' || user.role === 'superadmin';
+  const [showPdfModal, setShowPdfModal] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState('');
 
   useEffect(() => {
     fetchData();
@@ -32,21 +48,28 @@ export default function DisposisiSurat() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [statsRes, disposisiRes] = await Promise.all([
-        api.get('/disposisi/statistik'),
-        api.get(`/disposisi/${activeTab}`)
-      ]);
-
-      setStatistik(statsRes.data.data);
-      
-      if (activeTab === 'masuk') {
-        setDisposisiMasuk(disposisiRes.data.data);
+      if (activeTab === 'surat-masuk') {
+        // Fetch surat masuk draft untuk sekretariat
+        const suratRes = await api.get('/surat-masuk?status=draft');
+        setSuratMasuk(suratRes.data.data || []);
       } else {
-        setDisposisiKeluar(disposisiRes.data.data);
+        // Fetch disposisi seperti biasa
+        const [statsRes, disposisiRes] = await Promise.all([
+          api.get('/disposisi/statistik'),
+          api.get(`/disposisi/${activeTab}`)
+        ]);
+
+        setStatistik(statsRes.data.data);
+        
+        if (activeTab === 'masuk') {
+          setDisposisiMasuk(disposisiRes.data.data);
+        } else {
+          setDisposisiKeluar(disposisiRes.data.data);
+        }
       }
     } catch (error) {
-      console.error('Error fetching disposisi:', error);
-      toast.error('Gagal memuat data disposisi');
+      console.error('Error fetching data:', error);
+      toast.error('Gagal memuat data');
     } finally {
       setLoading(false);
     }
@@ -129,6 +152,49 @@ export default function DisposisiSurat() {
       keterangan: ''
     });
     setSelectedFile(null);
+  };
+
+  const fetchKepalaDinas = async () => {
+    try {
+      const response = await api.get('/users?role=kepala_dinas');
+      setKepalaDinasList(response.data.data || []);
+    } catch (error) {
+      console.error('Error fetching kepala dinas:', error);
+      toast.error('Gagal memuat daftar kepala dinas');
+    }
+  };
+
+  const handleOpenKirimModal = (surat) => {
+    setSelectedSurat(surat);
+    setShowKirimModal(true);
+    fetchKepalaDinas();
+  };
+
+  const handleKirimKeKepalaDinas = async (e) => {
+    e.preventDefault();
+    if (!formKirim.kepala_dinas_user_id) {
+      toast.error('Pilih kepala dinas terlebih dahulu');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await api.post(`/surat-masuk/${selectedSurat.id}/kirim-kepala-dinas`, formKirim);
+      toast.success('Surat berhasil dikirim ke Kepala Dinas');
+      setShowKirimModal(false);
+      setFormKirim({
+        kepala_dinas_user_id: '',
+        catatan: '',
+        instruksi: 'biasa'
+      });
+      setSelectedSurat(null);
+      fetchData(); // Refresh list
+    } catch (error) {
+      console.error('Error sending surat:', error);
+      toast.error(error.response?.data?.message || 'Gagal mengirim surat');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const getStatusBadge = (status) => {
@@ -236,6 +302,26 @@ export default function DisposisiSurat() {
         <div className="bg-white rounded-lg shadow-sm mb-6">
           <div className="border-b border-gray-200">
             <nav className="flex -mb-px">
+              {/* Tab Surat Masuk - hanya untuk sekretariat */}
+              {isSecretariat && (
+                <button
+                  onClick={() => setActiveTab('surat-masuk')}
+                  className={`py-4 px-6 font-medium text-sm border-b-2 transition-colors ${
+                    activeTab === 'surat-masuk'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <FiFileText />
+                    Surat Masuk
+                    <span className="bg-green-100 text-green-800 text-xs font-semibold px-2 py-0.5 rounded-full">
+                      {suratMasuk.length}
+                    </span>
+                  </div>
+                </button>
+              )}
+              
               <button
                 onClick={() => setActiveTab('masuk')}
                 className={`py-4 px-6 font-medium text-sm border-b-2 transition-colors ${
@@ -285,6 +371,94 @@ export default function DisposisiSurat() {
               </div>
             ) : (
               <div className="space-y-4">
+                {/* Surat Masuk Tab */}
+                {activeTab === 'surat-masuk' && suratMasuk.length === 0 && (
+                  <div className="text-center py-12">
+                    <FiFileText className="mx-auto text-gray-400 text-5xl mb-4" />
+                    <p className="text-gray-500">Tidak ada surat masuk</p>
+                  </div>
+                )}
+
+                {activeTab === 'surat-masuk' && suratMasuk.map((surat) => (
+                  <div
+                    key={surat.id}
+                    className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                            surat.jenis_surat === 'segera' 
+                              ? 'bg-red-100 text-red-800' 
+                              : surat.jenis_surat === 'rahasia'
+                              ? 'bg-purple-100 text-purple-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {surat.jenis_surat}
+                          </span>
+                          <span className="px-2 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">
+                            Draft
+                          </span>
+                        </div>
+                        <h3 className="font-semibold text-gray-900 mb-1">{surat.perihal}</h3>
+                        <p className="text-sm text-gray-600 mb-2">
+                          <span className="font-medium">No. Surat:</span> {surat.nomor_surat}
+                        </p>
+                        <p className="text-sm text-gray-600 mb-2">
+                          <span className="font-medium">Dari:</span> {surat.pengirim}
+                        </p>
+                        <div className="flex gap-4 text-xs text-gray-500">
+                          <span className="flex items-center gap-1">
+                            <FiCalendar />
+                            Tgl Surat: {new Date(surat.tanggal_surat).toLocaleDateString('id-ID')}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <FiClock />
+                            Diterima: {new Date(surat.tanggal_terima).toLocaleDateString('id-ID')}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 ml-4">
+                        <button
+                          onClick={() => handleOpenKirimModal(surat)}
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          title="Kirim ke Kepala Dinas"
+                        >
+                          <FiSend size={20} />
+                        </button>
+                        {surat.file_path && (
+                          <>
+                            <button
+                              onClick={() => {
+                                const baseUrl = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://127.0.0.1:3001';
+                                const filePath = surat.file_path.startsWith('/') ? surat.file_path : `/${surat.file_path}`;
+                                const url = `${baseUrl}${filePath}`;
+                                console.log('Preview URL (Surat Masuk):', url);
+                                setPdfUrl(url);
+                                setShowPdfModal(true);
+                              }}
+                              className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                              title="Preview PDF"
+                            >
+                              <FiEye size={20} />
+                            </button>
+                            <a
+                              href={`${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://127.0.0.1:3001'}${surat.file_path.startsWith('/') ? surat.file_path : '/' + surat.file_path}`}
+                              target="_blank"
+                              download
+                              rel="noopener noreferrer"
+                              className="p-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+                              title="Download File"
+                            >
+                              <FiFileText size={20} />
+                            </a>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
                 {activeTab === 'masuk' && disposisiMasuk.length === 0 && (
                   <div className="text-center py-12">
                     <FiMail className="mx-auto text-gray-400 text-5xl mb-4" />
@@ -344,6 +518,35 @@ export default function DisposisiSurat() {
                       </div>
 
                       <div className="flex flex-col gap-2 ml-4">
+                        {disposisi.surat?.file_path && (
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => {
+                                const baseUrl = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://127.0.0.1:3001';
+                                const filePath = disposisi.surat.file_path.startsWith('/') ? disposisi.surat.file_path : `/${disposisi.surat.file_path}`;
+                                const url = `${baseUrl}${filePath}`;
+                                console.log('Preview URL (Disposisi Masuk):', url);
+                                setPdfUrl(url);
+                                setShowPdfModal(true);
+                              }}
+                              className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                              title="Preview PDF"
+                            >
+                              <FiEye size={20} />
+                            </button>
+                            <a
+                              href={`${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://127.0.0.1:3001'}${disposisi.surat.file_path.startsWith('/') ? disposisi.surat.file_path : '/' + disposisi.surat.file_path}`}
+                              target="_blank"
+                              download
+                              rel="noopener noreferrer"
+                              className="p-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+                              title="Download File"
+                            >
+                              <FiFileText size={20} />
+                            </a>
+                          </div>
+                        )}
+                        
                         {disposisi.status === 'pending' && (
                           <button
                             onClick={() => handleBacaDisposisi(disposisi.id)}
@@ -354,7 +557,16 @@ export default function DisposisiSurat() {
                         )}
                         
                         <button
-                          onClick={() => window.location.href = `/disposisi/${disposisi.id}`}
+                          onClick={() => {
+                            const basePath = location.pathname.includes('/kepala-dinas') 
+                              ? '/kepala-dinas' 
+                              : location.pathname.includes('/kepala-bidang')
+                              ? '/kepala-bidang'
+                              : location.pathname.includes('/sekretaris-dinas')
+                              ? '/sekretaris-dinas'
+                              : '/dashboard';
+                            navigate(`${basePath}/disposisi/${disposisi.id}`);
+                          }}
                           className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium"
                         >
                           Detail
@@ -401,12 +613,52 @@ export default function DisposisiSurat() {
                         </p>
                       </div>
 
-                      <button
-                        onClick={() => window.location.href = `/disposisi/${disposisi.id}`}
-                        className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium ml-4"
-                      >
-                        Detail
-                      </button>
+                      <div className="flex flex-col gap-2 ml-4">
+                        {disposisi.surat?.file_path && (
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => {
+                                const baseUrl = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://127.0.0.1:3001';
+                                const filePath = disposisi.surat.file_path.startsWith('/') ? disposisi.surat.file_path : `/${disposisi.surat.file_path}`;
+                                const url = `${baseUrl}${filePath}`;
+                                console.log('Preview URL (Disposisi Keluar):', url);
+                                setPdfUrl(url);
+                                setShowPdfModal(true);
+                              }}
+                              className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                              title="Preview PDF"
+                            >
+                              <FiEye size={20} />
+                            </button>
+                            <a
+                              href={`${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://127.0.0.1:3001'}${disposisi.surat.file_path.startsWith('/') ? disposisi.surat.file_path : '/' + disposisi.surat.file_path}`}
+                              target="_blank"
+                              download
+                              rel="noopener noreferrer"
+                              className="p-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+                              title="Download File"
+                            >
+                              <FiFileText size={20} />
+                            </a>
+                          </div>
+                        )}
+                        
+                        <button
+                          onClick={() => {
+                            const basePath = location.pathname.includes('/kepala-dinas') 
+                              ? '/kepala-dinas' 
+                              : location.pathname.includes('/kepala-bidang')
+                              ? '/kepala-bidang'
+                              : location.pathname.includes('/sekretaris-dinas')
+                              ? '/sekretaris-dinas'
+                              : '/dashboard';
+                            navigate(`${basePath}/disposisi/${disposisi.id}`);
+                          }}
+                          className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium"
+                        >
+                          Detail
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -583,6 +835,164 @@ export default function DisposisiSurat() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Kirim ke Kepala Dinas */}
+      {showKirimModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-gray-900">Kirim ke Kepala Dinas</h3>
+              <button
+                onClick={() => {
+                  setShowKirimModal(false);
+                  setSelectedSurat(null);
+                  setFormKirim({
+                    kepala_dinas_user_id: '',
+                    catatan: '',
+                    instruksi: 'biasa'
+                  });
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <FiX size={24} />
+              </button>
+            </div>
+
+            {selectedSurat && (
+              <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                <p className="text-sm font-medium text-gray-700">{selectedSurat.perihal}</p>
+                <p className="text-xs text-gray-500 mt-1">No: {selectedSurat.nomor_surat}</p>
+              </div>
+            )}
+
+            <form onSubmit={handleKirimKeKepalaDinas} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Kepala Dinas <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={formKirim.kepala_dinas_user_id}
+                  onChange={(e) => setFormKirim({...formKirim, kepala_dinas_user_id: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  required
+                >
+                  <option value="">Pilih Kepala Dinas</option>
+                  {kepalaDinasList.map(user => (
+                    <option key={user.id} value={user.id}>
+                      {user.nama || user.email}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Instruksi
+                </label>
+                <select
+                  value={formKirim.instruksi}
+                  onChange={(e) => setFormKirim({...formKirim, instruksi: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="biasa">Biasa</option>
+                  <option value="segera">Segera</option>
+                  <option value="sangat_segera">Sangat Segera</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Catatan
+                </label>
+                <textarea
+                  value={formKirim.catatan}
+                  onChange={(e) => setFormKirim({...formKirim, catatan: e.target.value})}
+                  rows="3"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Tambahkan catatan untuk kepala dinas..."
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowKirimModal(false);
+                    setSelectedSurat(null);
+                    setFormKirim({
+                      kepala_dinas_user_id: '',
+                      catatan: '',
+                      instruksi: 'biasa'
+                    });
+                  }}
+                  className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
+                  disabled={submitting}
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  <FiSend />
+                  {submitting ? 'Mengirim...' : 'Kirim'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal PDF Viewer */}
+      {showPdfModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg w-full h-full max-w-6xl max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h3 className="text-lg font-bold text-gray-900">Preview Surat</h3>
+              <button
+                onClick={() => {
+                  setShowPdfModal(false);
+                  setPdfUrl('');
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <FiX size={24} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-hidden bg-gray-100">
+              {pdfUrl ? (
+                <object
+                  data={`${pdfUrl}#toolbar=0&navpanes=0&scrollbar=1`}
+                  type="application/pdf"
+                  className="w-full h-full"
+                >
+                  <embed
+                    src={`${pdfUrl}#toolbar=0&navpanes=0&scrollbar=1`}
+                    type="application/pdf"
+                    className="w-full h-full"
+                  />
+                  <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+                    <p className="text-gray-600 mb-4">Browser tidak support preview PDF inline.</p>
+                    <a
+                      href={pdfUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    >
+                      Buka PDF di Tab Baru
+                    </a>
+                  </div>
+                </object>
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <p className="text-gray-500">Loading PDF...</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

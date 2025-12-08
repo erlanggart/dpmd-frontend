@@ -127,6 +127,22 @@ const PegawaiLayout = () => {
 								<button 
 									onClick={() => {
 										setShowMenu(false);
+										navigate("/core-dashboard/dashboard");
+									}}
+									className="w-full flex items-center gap-3 p-4 rounded-xl hover:bg-slate-50 transition-colors text-left"
+								>
+									<div className="h-10 w-10 bg-blue-100 rounded-lg flex items-center justify-center">
+										<FiHome className="h-5 w-5 text-blue-600" />
+									</div>
+									<div>
+										<p className="font-semibold text-slate-800">Core Dashboard</p>
+										<p className="text-xs text-slate-500">Analytics DPMD</p>
+									</div>
+								</button>
+
+								<button 
+									onClick={() => {
+										setShowMenu(false);
 										navigate("/pegawai/profil");
 									}}
 									disabled

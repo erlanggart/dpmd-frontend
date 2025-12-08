@@ -80,14 +80,32 @@ const PengurusEditPage = lazy(() =>
 const DisposisiSurat = lazy(() =>
 	import("./pages/dashboard/DisposisiSurat")
 );
+const DisposisiDetail = lazy(() =>
+	import("./pages/dashboard/DisposisiDetail")
+);
 const CoreDashboardPublic = lazy(() =>
 	import("./pages/public/CoreDashboardPublic")
 );
 const KepalaDinasLayout = lazy(() =>
 	import("./pages/kepala-dinas/KepalaDinasLayout")
 );
+const KepalaBidangLayout = lazy(() =>
+	import("./pages/kepala-bidang/KepalaBidangLayout")
+);
+const SekretarisDinasLayout = lazy(() =>
+	import("./pages/sekretaris-dinas/SekretarisDinasLayout")
+);
+const CoreDashboardLayout = lazy(() =>
+	import("./layouts/CoreDashboardLayout")
+);
 const KepalaDinasDashboard = lazy(() =>
 	import("./pages/kepala-dinas/KepalaDinasDashboard")
+);
+const KepalaBidangDashboard = lazy(() =>
+	import("./pages/kepala-bidang/KepalaBidangDashboard")
+);
+const SekretarisDinasDashboard = lazy(() =>
+	import("./pages/sekretaris-dinas/SekretarisDinasDashboard")
 );
 const DashboardOverview = lazy(() =>
 	import("./pages/kepala-dinas/DashboardOverview")
@@ -127,6 +145,32 @@ const DdDashboard = lazy(() =>
 // Statistik untuk Core Dashboard
 const StatistikAddDashboard = lazy(() =>
 	import("./pages/kepala-dinas/StatistikAddDashboard")
+);
+// BHPRD Submenu Components
+const StatistikBhprdT1 = lazy(() =>
+	import("./pages/kepala-dinas/StatistikBhprdT1")
+);
+const StatistikBhprdT2 = lazy(() =>
+	import("./pages/kepala-dinas/StatistikBhprdT2")
+);
+const StatistikBhprdT3 = lazy(() =>
+	import("./pages/kepala-dinas/StatistikBhprdT3")
+);
+// DD Submenu Components
+const StatistikDdEarmarkedT1 = lazy(() =>
+	import("./pages/kepala-dinas/StatistikDdEarmarkedT1")
+);
+const StatistikDdEarmarkedT2 = lazy(() =>
+	import("./pages/kepala-dinas/StatistikDdEarmarkedT2")
+);
+const StatistikDdNonEarmarkedT1 = lazy(() =>
+	import("./pages/kepala-dinas/StatistikDdNonEarmarkedT1")
+);
+const StatistikDdNonEarmarkedT2 = lazy(() =>
+	import("./pages/kepala-dinas/StatistikDdNonEarmarkedT2")
+);
+const StatistikInsentifDd = lazy(() =>
+	import("./pages/kepala-dinas/StatistikInsentifDd")
 );
 const UserManagementPage = lazy(() =>
 	import("./pages/dashboard/UserManagementPage")
@@ -226,6 +270,7 @@ function App() {
 					<Route path="perjalanan-dinas" element={<PerjalananDinas />} />
 					<Route path="user" element={<UserManagementPage />} />
 					<Route path="disposisi" element={<DisposisiSurat />} />
+					<Route path="disposisi/:id" element={<DisposisiDetail />} />
 					</Route>
 
 					{/* Rute Desa dengan lazy loading */}
@@ -271,21 +316,46 @@ function App() {
 					>
 						<Route index element={<Navigate to="dashboard" replace />} />
 						<Route path="dashboard" element={<KepalaDinasDashboard />} />
-						<Route path="statistik-bumdes" element={<StatistikBumdes />} />
-						<Route path="statistik-perjadin" element={<StatistikPerjadin />} />
-						<Route path="statistik-bankeu" element={<StatistikBankeuDashboard />} />
-						<Route path="statistik-add" element={<StatistikAddDashboard />} />
-						<Route path="statistik-bhprd" element={<BhprdDashboard />} />
-						<Route path="statistik-dd" element={<StatistikDdDashboard />} />
-						<Route path="trends" element={<TrendsPage />} />
+						<Route path="disposisi" element={<DisposisiSurat />} />
+						<Route path="disposisi/:id" element={<DisposisiDetail />} />
+					</Route>
+
+					{/* Rute Kepala Bidang - Exclusive untuk Kepala Bidang */}
+					<Route
+						path="/kepala-bidang"
+						element={
+							<ProtectedRoute>
+								<KepalaBidangLayout />
+							</ProtectedRoute>
+						}
+					>
+						<Route index element={<Navigate to="dashboard" replace />} />
+						<Route path="dashboard" element={<KepalaBidangDashboard />} />
+						<Route path="disposisi" element={<DisposisiSurat />} />
+						<Route path="disposisi/:id" element={<DisposisiDetail />} />
+					</Route>
+
+					{/* Rute Sekretaris Dinas - Exclusive untuk Sekretaris Dinas */}
+					<Route
+						path="/sekretaris-dinas"
+						element={
+							<ProtectedRoute>
+								<SekretarisDinasLayout />
+							</ProtectedRoute>
+						}
+					>
+						<Route index element={<Navigate to="dashboard" replace />} />
+						<Route path="dashboard" element={<SekretarisDinasDashboard />} />
+						<Route path="disposisi" element={<DisposisiSurat />} />
+						<Route path="disposisi/:id" element={<DisposisiDetail />} />
 					</Route>
 
 					{/* Rute Core Dashboard - Multi Role Access (Sekretaris Dinas, Kabid, dll) */}
 					<Route
-						path="/admin-dashboard"
+						path="/core-dashboard"
 						element={
 							<ProtectedRoute>
-								<KepalaDinasLayout />
+								<CoreDashboardLayout />
 							</ProtectedRoute>
 						}
 					>
@@ -296,7 +366,17 @@ function App() {
 					<Route path="statistik-bankeu" element={<StatistikBankeuDashboard />} />
 					<Route path="statistik-add" element={<StatistikAddDashboard />} />
 					<Route path="statistik-bhprd" element={<BhprdDashboard />} />
+					{/* BHPRD Submenu Routes */}
+					<Route path="statistik-bhprd-tahap1" element={<StatistikBhprdT1 />} />
+					<Route path="statistik-bhprd-tahap2" element={<StatistikBhprdT2 />} />
+					<Route path="statistik-bhprd-tahap3" element={<StatistikBhprdT3 />} />
 					<Route path="statistik-dd" element={<StatistikDdDashboard />} />
+					{/* DD Submenu Routes */}
+					<Route path="statistik-dd-earmarked-tahap1" element={<StatistikDdEarmarkedT1 />} />
+					<Route path="statistik-dd-earmarked-tahap2" element={<StatistikDdEarmarkedT2 />} />
+					<Route path="statistik-dd-nonearmarked-tahap1" element={<StatistikDdNonEarmarkedT1 />} />
+					<Route path="statistik-dd-nonearmarked-tahap2" element={<StatistikDdNonEarmarkedT2 />} />
+					<Route path="statistik-insentif-dd" element={<StatistikInsentifDd />} />
 					<Route path="trends" element={<TrendsPage />} />
 					</Route>
 				</Routes>

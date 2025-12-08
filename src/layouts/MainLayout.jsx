@@ -195,27 +195,6 @@ const MainLayout = () => {
 
 	// Definisikan menu berdasarkan role user menggunakan useMemo
 	const menuItems = useMemo(() => {
-		// Menu khusus untuk Core Dashboard (Multi-role access)
-		if (
-			user?.role === 'kepala_dinas' ||
-			user?.role === 'sekretaris_dinas' ||
-			user?.role === 'kabid_pemerintahan_desa' ||
-			user?.role === 'kabid_spked' ||
-			user?.role === 'kabid_kekayaan_keuangan_desa' ||
-			user?.role === 'kabid_pemberdayaan_masyarakat_desa'
-		) {
-			return [
-				{
-					key: "core-dashboard",
-					label: "Dashboard",
-					icon: <FiGrid />,
-					children: [
-						{ to: "/core-dashboard/dashboard", label: "Analytics" },
-					],
-				},
-			];
-		}
-
 		const baseMenuItems = [
 			{
 				key: "spked",
@@ -410,6 +389,33 @@ const MainLayout = () => {
 							</span>
 						</NavLink>
 					)}
+
+					{/* Link Core Dashboard Analytics - Available for all roles */}
+					<NavLink
+						to="/core-dashboard/dashboard"
+						className={({ isActive }) =>
+							`flex items-center p-3 rounded-lg transition-colors ${
+								isSidebarMinimized ? "justify-center" : ""
+							} ${
+								isActive
+									? "sidebar-active font-semibold"
+									: "text-gray-600 hover:bg-gray-100"
+							}`
+						}
+					>
+						<FiLayout
+							className={`h-5 w-5 flex-shrink-0 ${
+								isSidebarMinimized ? "" : "mr-3"
+							}`}
+						/>
+						<span
+							className={`transition-all duration-200 ${
+								isSidebarMinimized ? "w-0 opacity-0" : "w-auto opacity-100"
+							}`}
+						>
+							Core Dashboard
+						</span>
+					</NavLink>
 
 					{/* Render Menu - Semua menu dalam satu sidebar tanpa pemisahan */}
 					{menuItems.map((item) => (

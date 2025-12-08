@@ -16,7 +16,6 @@ import {
 
 const KepalaDinasLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
-  const [expandedDd, setExpandedDd] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -53,45 +52,20 @@ const KepalaDinasLayout = () => {
 
   const menuItems = useMemo(() => [
     {
-      path: '/core-dashboard/dashboard',
+      path: '/kepala-dinas/dashboard',
       icon: <LayoutDashboard className="w-5 h-5" />,
       label: 'Dashboard',
       end: true
     },
     {
-      path: '/core-dashboard/statistik-bumdes',
-      icon: <Users className="w-5 h-5" />,
-      label: 'Statistik BUMDes'
-    },
-    {
-      path: '/core-dashboard/statistik-perjadin',
+      path: '/kepala-dinas/disposisi',
       icon: <Briefcase className="w-5 h-5" />,
-      label: 'Perjalanan Dinas'
+      label: 'Disposisi Surat'
     },
     {
-      path: '/core-dashboard/statistik-bankeu',
-      icon: <DollarSign className="w-5 h-5" />,
-      label: 'Statistik Bankeu'
-    },
-    {
-      path: '/core-dashboard/statistik-add',
-      icon: <DollarSign className="w-5 h-5" />,
-      label: 'Statistik ADD'
-    },
-    {
-      path: '/core-dashboard/statistik-bhprd',
-      icon: <DollarSign className="w-5 h-5" />,
-      label: 'Statistik BHPRD'
-    },
-    {
-      path: '/core-dashboard/statistik-dd',
-      icon: <DollarSign className="w-5 h-5" />,
-      label: 'Statistik DD'
-    },
-    {
-      path: '/core-dashboard/trends',
-      icon: <TrendingUp className="w-5 h-5" />,
-      label: 'Analisis Trend'
+      path: '/core-dashboard/dashboard',
+      icon: <LayoutDashboard className="w-5 h-5" />,
+      label: 'Core Dashboard'
     }
   ], []);
 
@@ -122,8 +96,8 @@ const KepalaDinasLayout = () => {
                 <LayoutDashboard className="w-6 h-6 text-white" />
               </div>
               <div className="min-w-0">
-                <h2 className="font-bold text-gray-800 truncate">Core Dashboard</h2>
-                <p className="text-xs text-gray-500 truncate">DPMD Analytics</p>
+                <h2 className="font-bold text-gray-800 truncate">Kepala Dinas</h2>
+                <p className="text-xs text-gray-500 truncate">DPMD Bogor</p>
               </div>
             </div>
           )}
@@ -142,91 +116,28 @@ const KepalaDinasLayout = () => {
 
         {/* Navigation Menu */}
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300">
-          {menuItems.map((item, index) => {
-            // Handle menu with submenu (DD, BHPRD)
-            if (item.submenu) {
-              const isSubmenuActive = item.submenu.some(sub => 
-                location.pathname === sub.path
-              );
-
-              // Determine which state to use based on label
-              const isExpanded = item.label === 'Statistik DD' ? expandedDd : 
-                                 item.label === 'Statistik BHPRD' ? expandedBhprd : false;
-              const setExpanded = item.label === 'Statistik DD' ? setExpandedDd : 
-                                   item.label === 'Statistik BHPRD' ? setExpandedBhprd : () => {};
-
-              return (
-                <div key={index}>
-                  <button
-                    onClick={() => sidebarOpen && setExpanded(!isExpanded)}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-lg w-full
-                      transition-colors duration-150
-                      ${isSubmenuActive
-                        ? 'bg-blue-600 text-white shadow-lg'
-                        : 'text-gray-700 hover:bg-gray-100'
-                      }`}
-                  >
-                    <div className={sidebarOpen ? '' : 'mx-auto'}>
-                      {item.icon}
-                    </div>
-                    {sidebarOpen && (
-                      <>
-                        <span className="font-medium flex-1 text-left truncate animate-fade-in">{item.label}</span>
-                        <ChevronDown 
-                          className={`w-4 h-4 transition-transform duration-200 flex-shrink-0
-                            ${isExpanded ? 'rotate-180' : ''}
-                          `}
-                        />
-                      </>
-                    )}
-                  </button>
-                  {sidebarOpen && isExpanded && (
-                    <div className="ml-8 mt-2 space-y-1">
-                      {item.submenu.map((subitem, subindex) => (
-                        <NavLink
-                          key={subindex}
-                          to={subitem.path}
-                          className={({ isActive }) =>
-                            `flex items-center px-4 py-2 rounded-lg text-sm transition-colors duration-150 ${
-                              isActive
-                                ? 'bg-blue-100 text-blue-700 font-medium'
-                                : 'text-gray-600 hover:bg-gray-100'
-                            }`
-                          }
-                        >
-                          <span className="truncate">{subitem.label}</span>
-                        </NavLink>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            }
-
-            // Regular menu item
-            return (
-              <NavLink
-                key={index}
-                to={item.path}
-                end={item.end}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors duration-150 ${
-                    isActive
-                      ? 'bg-blue-600 text-white shadow-lg'
-                      : 'text-gray-700 hover:bg-gray-100'
-                  }`
-                }
-                title={!sidebarOpen ? item.label : ''}
-              >
-                <div className={sidebarOpen ? 'flex-shrink-0' : 'mx-auto'}>
-                  {item.icon}
-                </div>
-                {sidebarOpen && (
-                  <span className="font-medium truncate animate-fade-in">{item.label}</span>
-                )}
-              </NavLink>
-            );
-          })}
+          {menuItems.map((item, index) => (
+            <NavLink
+              key={index}
+              to={item.path}
+              end={item.end}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors duration-150 ${
+                  isActive
+                    ? 'bg-blue-600 text-white shadow-lg'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`
+              }
+              title={!sidebarOpen ? item.label : ''}
+            >
+              <div className={sidebarOpen ? 'flex-shrink-0' : 'mx-auto'}>
+                {item.icon}
+              </div>
+              {sidebarOpen && (
+                <span className="font-medium truncate animate-fade-in">{item.label}</span>
+              )}
+            </NavLink>
+          ))}
         </nav>
 
         {/* Logout Button */}
