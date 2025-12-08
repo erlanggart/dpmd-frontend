@@ -302,7 +302,10 @@ function App() {
 							</ProtectedRoute>
 						}
 					>
+						<Route index element={<Navigate to="dashboard" replace />} />
 						<Route path="dashboard" element={<PegawaiDashboard />} />
+						<Route path="disposisi" element={<DisposisiSurat />} />
+						<Route path="disposisi/:id" element={<DisposisiDetail />} />
 					</Route>
 
 					{/* Rute Kepala Dinas - Exclusive untuk Kepala Dinas */}

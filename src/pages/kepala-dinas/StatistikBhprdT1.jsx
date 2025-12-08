@@ -371,4 +371,4 @@ const StatistikBhprdT1 = () => {
   );
 };
 
-export default StatistikBhprd;
+export default StatistikBhprdT1;

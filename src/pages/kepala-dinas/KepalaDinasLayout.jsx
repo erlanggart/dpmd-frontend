@@ -1,179 +1,208 @@
 // src/pages/kepala-dinas/KepalaDinasLayout.jsx
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  Users, 
-  Briefcase, 
-  TrendingUp, 
-  Menu, 
-  X,
-  LogOut,
-  ChevronLeft,
-  ChevronDown,
-  DollarSign
-} from 'lucide-react';
+import React from "react";
+import { Outlet, Navigate, useNavigate, useLocation } from "react-router-dom";
+import { FiHome, FiMail, FiBarChart2, FiMenu, FiLogOut, FiTrendingUp } from "react-icons/fi";
 
 const KepalaDinasLayout = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
-  const navigate = useNavigate();
-  const location = useLocation();
+	const [showMenu, setShowMenu] = React.useState(false);
+	const navigate = useNavigate();
+	const location = useLocation();
 
-  // Handle resize with debounce
-  useEffect(() => {
-    let timeoutId;
-    const handleResize = () => {
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => {
-        if (window.innerWidth >= 1024) {
-          setSidebarOpen(true);
-        } else {
-          setSidebarOpen(false);
-        }
-      }, 100);
-    };
+	// Check if user is logged in and has kepala_dinas role
+	const user = JSON.parse(localStorage.getItem("user") || "{}");
+	const token = localStorage.getItem("expressToken");
 
-    window.addEventListener('resize', handleResize);
-    return () => {
-      clearTimeout(timeoutId);
-      window.removeEventListener('resize', handleResize);
-    };
-  }, []);
+	if (!token || !user.role || user.role !== "kepala_dinas") {
+		return <Navigate to="/login" replace />;
+	}
 
-  const handleLogout = useCallback(() => {
-    localStorage.removeItem('expressToken');
-    localStorage.removeItem('user');
-    navigate('/login');
-  }, [navigate]);
+	const handleLogout = () => {
+		if (window.confirm("Yakin ingin keluar?")) {
+			localStorage.removeItem("user");
+			localStorage.removeItem("expressToken");
+			window.location.href = "/login";
+		}
+	};
 
-  const toggleSidebar = useCallback(() => {
-    setSidebarOpen(prev => !prev);
-  }, []);
+	const bottomNavItems = [
+		{ path: "/kepala-dinas/dashboard", label: "Dashboard", icon: FiHome },
+		{ path: "/kepala-dinas/disposisi", label: "Disposisi", icon: FiMail },
+		{ path: "/core-dashboard/dashboard", label: "Statistik", icon: FiBarChart2 },
+		{ path: "/kepala-dinas/menu", label: "Menu", icon: FiMenu, action: () => setShowMenu(true) },
+	];
 
-  const menuItems = useMemo(() => [
-    {
-      path: '/kepala-dinas/dashboard',
-      icon: <LayoutDashboard className="w-5 h-5" />,
-      label: 'Dashboard',
-      end: true
-    },
-    {
-      path: '/kepala-dinas/disposisi',
-      icon: <Briefcase className="w-5 h-5" />,
-      label: 'Disposisi Surat'
-    },
-    {
-      path: '/core-dashboard/dashboard',
-      icon: <LayoutDashboard className="w-5 h-5" />,
-      label: 'Core Dashboard'
-    }
-  ], []);
+	return (
+		<div className="min-h-screen bg-gray-50 pb-20">
+			{/* Main Content */}
+			<main className="min-h-screen">
+				<Outlet />
+			</main>
 
-  return (
-    <div className="flex h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 overflow-hidden">
-      {/* Overlay for mobile */}
-      {sidebarOpen && window.innerWidth < 1024 && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden transition-opacity duration-200"
-          onClick={toggleSidebar}
-        />
-      )}
+			{/* Bottom Navigation - Blue Theme for Kepala Dinas */}
+			<nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-blue-200 shadow-lg z-50">
+				<div className="max-w-lg mx-auto px-2">
+					<div className="flex items-center justify-around py-2">
+						{bottomNavItems.map((item, index) => {
+							const isActive = location.pathname === item.path;
+							const Icon = item.icon;
+							
+							return (
+								<button
+									key={index}
+									onClick={() => {
+										if (item.action) {
+											item.action();
+										} else {
+											navigate(item.path);
+										}
+									}}
+									className={`flex flex-col items-center justify-center px-4 py-2 rounded-xl transition-all ${
+										isActive 
+											? "text-blue-700" 
+											: "text-blue-400 hover:text-blue-600"
+									}`}
+								>
+									<Icon className={`h-6 w-6 mb-1 ${isActive ? "animate-bounce" : ""}`} />
+									<span className={`text-xs font-medium ${isActive ? "font-bold" : ""}`}>
+										{item.label}
+									</span>
+								</button>
+							);
+						})}
+					</div>
+				</div>
+			</nav>
 
-      {/* Sidebar */}
-      <aside
-        className={`fixed lg:relative z-50 h-full bg-white shadow-xl flex flex-col
-          transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]
-          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-          ${sidebarOpen ? 'w-64' : 'lg:w-20'}
-        `}
-        style={{ willChange: 'transform, width' }}
-      >
-        {/* Sidebar Header */}
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
-          {sidebarOpen && (
-            <div className="flex items-center gap-3 overflow-hidden animate-fade-in">
-              <div className="p-2 bg-blue-600 rounded-lg flex-shrink-0">
-                <LayoutDashboard className="w-6 h-6 text-white" />
-              </div>
-              <div className="min-w-0">
-                <h2 className="font-bold text-gray-800 truncate">Kepala Dinas</h2>
-                <p className="text-xs text-gray-500 truncate">DPMD Bogor</p>
-              </div>
-            </div>
-          )}
-          <button
-            onClick={toggleSidebar}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-all duration-300 flex-shrink-0"
-            aria-label={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
-          >
-            {sidebarOpen ? (
-              <ChevronLeft className="w-5 h-5 text-gray-600" />
-            ) : (
-              <Menu className="w-5 h-5 text-gray-600" />
-            )}
-          </button>
-        </div>
+			{/* Menu Modal - Slide from bottom */}
+			{showMenu && (
+				<>
+					<div 
+						className="fixed inset-0 bg-black bg-opacity-50 z-50 animate-fadeIn"
+						onClick={() => setShowMenu(false)}
+					></div>
+					<div className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl z-50 animate-slideUp">
+						<div className="max-w-lg mx-auto">
+							{/* Handle Bar */}
+							<div className="flex justify-center pt-3 pb-2">
+								<div className="w-12 h-1.5 bg-gray-300 rounded-full"></div>
+							</div>
 
-        {/* Navigation Menu */}
-        <nav className="flex-1 p-4 space-y-2 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300">
-          {menuItems.map((item, index) => (
-            <NavLink
-              key={index}
-              to={item.path}
-              end={item.end}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors duration-150 ${
-                  isActive
-                    ? 'bg-blue-600 text-white shadow-lg'
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`
-              }
-              title={!sidebarOpen ? item.label : ''}
-            >
-              <div className={sidebarOpen ? 'flex-shrink-0' : 'mx-auto'}>
-                {item.icon}
-              </div>
-              {sidebarOpen && (
-                <span className="font-medium truncate animate-fade-in">{item.label}</span>
-              )}
-            </NavLink>
-          ))}
-        </nav>
+							{/* Menu Header */}
+							<div className="px-6 py-4 border-b border-blue-100">
+								<div className="flex items-center gap-3">
+									<div className="h-14 w-14 bg-gradient-to-br from-blue-600 to-blue-800 rounded-full flex items-center justify-center shadow-md">
+										<span className="text-white font-bold text-xl">
+											{user.name?.charAt(0) || "K"}
+										</span>
+									</div>
+									<div className="flex-1">
+										<h3 className="font-bold text-gray-800 text-lg">{user.name || "Kepala Dinas"}</h3>
+										<p className="text-sm text-gray-500">{user.email}</p>
+										<span className="inline-block mt-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+											Kepala Dinas
+										</span>
+									</div>
+								</div>
+							</div>
 
-        {/* Logout Button */}
-        <div className="p-4 border-t border-gray-200 flex-shrink-0">
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-3 px-4 py-3 w-full rounded-lg text-red-600 hover:bg-red-50 transition-all duration-300"
-            title={!sidebarOpen ? 'Logout' : ''}
-          >
-            <div className={sidebarOpen ? 'flex-shrink-0' : 'mx-auto'}>
-              <LogOut className="w-5 h-5" />
-            </div>
-            {sidebarOpen && <span className="font-medium truncate animate-fade-in">Logout</span>}
-          </button>
-        </div>
-      </aside>
+							{/* Menu Items */}
+							<div className="px-6 py-4 space-y-2 max-h-96 overflow-y-auto">
+								<button
+									onClick={() => {
+										setShowMenu(false);
+										navigate("/kepala-dinas/dashboard");
+									}}
+									className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-blue-50 transition-colors text-left"
+								>
+									<div className="h-12 w-12 bg-blue-100 rounded-xl flex items-center justify-center">
+										<FiHome className="h-6 w-6 text-blue-600" />
+									</div>
+									<div>
+										<h4 className="font-semibold text-gray-800">Dashboard</h4>
+										<p className="text-sm text-gray-500">Lihat ringkasan data</p>
+									</div>
+								</button>
 
-      {/* Main Content */}
-      <main className="flex-1 overflow-y-auto">
-        {/* Mobile Menu Button */}
-        {!sidebarOpen && (
-          <div className="lg:hidden fixed top-4 left-4 z-30">
-            <button
-              onClick={toggleSidebar}
-              className="p-3 bg-white rounded-lg shadow-lg hover:bg-gray-100 transition-colors"
-              aria-label="Open menu"
-            >
-              <Menu className="w-6 h-6 text-gray-700" />
-            </button>
-          </div>
-        )}
-        
-        <Outlet />
-      </main>
-    </div>
-  );
+								<button
+									onClick={() => {
+										setShowMenu(false);
+										navigate("/kepala-dinas/disposisi");
+									}}
+									className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-blue-50 transition-colors text-left"
+								>
+									<div className="h-12 w-12 bg-blue-100 rounded-xl flex items-center justify-center">
+										<FiMail className="h-6 w-6 text-blue-600" />
+									</div>
+									<div>
+										<h4 className="font-semibold text-gray-800">Disposisi Surat</h4>
+										<p className="text-sm text-gray-500">Kelola disposisi</p>
+									</div>
+								</button>
+
+								<button
+									onClick={() => {
+										setShowMenu(false);
+										navigate("/core-dashboard/dashboard");
+									}}
+									className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-indigo-50 transition-colors text-left"
+								>
+									<div className="h-12 w-12 bg-indigo-100 rounded-xl flex items-center justify-center">
+										<FiTrendingUp className="h-6 w-6 text-indigo-600" />
+									</div>
+									<div>
+										<h4 className="font-semibold text-gray-800">Core Dashboard</h4>
+										<p className="text-sm text-gray-500">Analisis mendalam</p>
+									</div>
+								</button>
+
+								<div className="border-t border-gray-200 my-2"></div>
+
+								<button
+									onClick={handleLogout}
+									className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-red-50 transition-colors text-left"
+								>
+									<div className="h-12 w-12 bg-red-100 rounded-xl flex items-center justify-center">
+										<FiLogOut className="h-6 w-6 text-red-600" />
+									</div>
+									<div>
+										<h4 className="font-semibold text-red-600">Keluar</h4>
+										<p className="text-sm text-gray-500">Logout dari sistem</p>
+									</div>
+								</button>
+							</div>
+
+							{/* Close Button */}
+							<div className="px-6 py-4 border-t border-gray-200">
+								<button
+									onClick={() => setShowMenu(false)}
+									className="w-full py-3 text-gray-600 font-medium hover:text-gray-800 transition-colors"
+								>
+									Tutup
+								</button>
+							</div>
+						</div>
+					</div>
+				</>
+			)}
+
+			<style jsx>{`
+				@keyframes fadeIn {
+					from { opacity: 0; }
+					to { opacity: 1; }
+				}
+				@keyframes slideUp {
+					from { transform: translateY(100%); }
+					to { transform: translateY(0); }
+				}
+				.animate-fadeIn {
+					animation: fadeIn 0.3s ease-out;
+				}
+				.animate-slideUp {
+					animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+				}
+			`}</style>
+		</div>
+	);
 };
 
 export default KepalaDinasLayout;

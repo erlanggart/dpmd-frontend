@@ -1,7 +1,7 @@
 // src/pages/pegawai/PegawaiLayout.jsx
 import React from "react";
 import { Outlet, Navigate, useNavigate, useLocation } from "react-router-dom";
-import { FiHome, FiUser, FiLogOut, FiBell, FiMenu } from "react-icons/fi";
+import { FiHome, FiUser, FiLogOut, FiBell, FiMenu, FiMail } from "react-icons/fi";
 
 const PegawaiLayout = () => {
 	const [showMenu, setShowMenu] = React.useState(false);
@@ -26,7 +26,7 @@ const PegawaiLayout = () => {
 
 	const bottomNavItems = [
 		{ path: "/pegawai/dashboard", label: "Beranda", icon: FiHome },
-		{ path: "#", label: "Notifikasi", icon: FiBell, disabled: true },
+		{ path: "/pegawai/disposisi", label: "Disposisi", icon: FiMail },
 		{ path: "#", label: "Profil", icon: FiUser, disabled: true },
 		{ path: "/pegawai/menu", label: "Menu", icon: FiMenu, action: () => setShowMenu(true) },
 	];
@@ -121,6 +121,22 @@ const PegawaiLayout = () => {
 									<div>
 										<p className="font-semibold text-slate-800">Beranda</p>
 										<p className="text-xs text-slate-500">Dashboard utama</p>
+									</div>
+								</button>
+
+								<button 
+									onClick={() => {
+										setShowMenu(false);
+										navigate("/pegawai/disposisi");
+									}}
+									className="w-full flex items-center gap-3 p-4 rounded-xl hover:bg-slate-50 transition-colors text-left"
+								>
+									<div className="h-10 w-10 bg-purple-100 rounded-lg flex items-center justify-center">
+										<FiMail className="h-5 w-5 text-purple-600" />
+									</div>
+									<div>
+										<p className="font-semibold text-slate-800">Disposisi Surat</p>
+										<p className="text-xs text-slate-500">Kelola surat disposisi</p>
 									</div>
 								</button>
 

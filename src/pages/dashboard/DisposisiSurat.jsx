@@ -564,6 +564,8 @@ export default function DisposisiSurat() {
                               ? '/kepala-bidang'
                               : location.pathname.includes('/sekretaris-dinas')
                               ? '/sekretaris-dinas'
+                              : location.pathname.includes('/pegawai')
+                              ? '/pegawai'
                               : '/dashboard';
                             navigate(`${basePath}/disposisi/${disposisi.id}`);
                           }}
@@ -651,6 +653,8 @@ export default function DisposisiSurat() {
                               ? '/kepala-bidang'
                               : location.pathname.includes('/sekretaris-dinas')
                               ? '/sekretaris-dinas'
+                              : location.pathname.includes('/pegawai')
+                              ? '/pegawai'
                               : '/dashboard';
                             navigate(`${basePath}/disposisi/${disposisi.id}`);
                           }}
