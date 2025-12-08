@@ -119,6 +119,9 @@ const SekretarisDinasDashboard = lazy(() =>
 const DashboardOverview = lazy(() =>
 	import("./pages/kepala-dinas/DashboardOverview")
 );
+const LaporanDesa = lazy(() =>
+	import("./pages/kepala-dinas/LaporanDesa")
+);
 const StatistikBumdes = lazy(() =>
 	import("./pages/kepala-dinas/StatistikBumdes")
 );
@@ -373,6 +376,7 @@ function App() {
 					>
 					<Route index element={<Navigate to="dashboard" replace />} />
 					<Route path="dashboard" element={<DashboardOverview />} />
+					<Route path="laporan-desa" element={<LaporanDesa />} />
 					<Route path="statistik-bumdes" element={<StatistikBumdes />} />
 					<Route path="statistik-perjadin" element={<StatistikPerjadin />} />
 					<Route path="statistik-bankeu" element={<StatistikBankeuDashboard />} />
