@@ -247,7 +247,7 @@ const BeritaManagement = () => {
     });
     
     if (berita.gambar) {
-      setPreview(`${API_CONFIG.BASE_URL.replace('/api', '')}/storage/uploads/berita/${berita.gambar}`);
+      setPreview(`${API_CONFIG.BASE_URL.replace(/\/api$/, '')}/storage/uploads/berita/${berita.gambar}`);
     }
     
     setShowForm(true);
@@ -588,7 +588,7 @@ const BeritaManagement = () => {
                   <div className="flex-shrink-0">
                     {berita.gambar ? (
                       <img
-                        src={`${API_CONFIG.BASE_URL.replace('/api', '')}/storage/uploads/berita/${berita.gambar}`}
+                        src={`${API_CONFIG.BASE_URL.replace(/\/api$/, '')}/storage/uploads/berita/${berita.gambar}`}
                         alt={berita.judul}
                         className="w-32 h-32 object-cover rounded-lg"
                         onError={(e) => {

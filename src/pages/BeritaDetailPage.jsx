@@ -16,7 +16,7 @@ const BeritaDetailPage = () => {
   const [error, setError] = useState(null);
 
   const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:3001/api';
-  const STORAGE_BASE = API_BASE.replace('/api', '');
+  const STORAGE_BASE = API_BASE.replace(/\/api$/, '');
 
   useEffect(() => {
     fetchBeritaDetail();

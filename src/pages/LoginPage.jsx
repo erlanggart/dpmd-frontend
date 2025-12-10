@@ -2,10 +2,11 @@ import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios"; // CRITICAL: Direct axios import for VPN check
 import api from "../api";
-import { FiEye, FiEyeOff, FiLoader, FiAlertCircle, FiShield } from "react-icons/fi";
+import { FiEye, FiEyeOff, FiLoader, FiAlertCircle, FiShield, FiBell } from "react-icons/fi";
 import LoginImageSlider from "../components/login/LoginImageSlider";
 import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
+import { requestNotificationPermission, registerServiceWorker, subscribeToPushNotifications } from "../utils/pushNotifications";
 
 const LoginPage = () => {
 	const [email, setEmail] = useState("");
@@ -18,13 +19,53 @@ const LoginPage = () => {
 	const navigate = useNavigate();
 	const [showPassword, setShowPassword] = useState(false);
 	const { login } = useAuth();
+	const [notificationPermission, setNotificationPermission] = useState('default');
+	const [checkingNotification, setCheckingNotification] = useState(false);
 
-	// Auto check VPN when VPN mode is enabled
+	// Check notification permission on mount
 	useEffect(() => {
-		if (vpnMode) {
-			checkVpnConnection();
+		if ('Notification' in window) {
+			setNotificationPermission(Notification.permission);
 		}
-	}, [vpnMode]);
+	}, []);
+
+	const handleRequestNotification = async () => {
+		setCheckingNotification(true);
+		setError(null);
+		
+		try {
+			// Register service worker first
+			await registerServiceWorker();
+			
+			// Request notification permission
+			const granted = await requestNotificationPermission();
+			
+			if (granted) {
+				setNotificationPermission('granted');
+				toast.success('Notifikasi diizinkan! Anda bisa login sekarang.', {
+					duration: 3000,
+					icon: '✅',
+					style: {
+						background: '#10b981',
+						color: '#fff',
+						fontWeight: 'bold'
+					}
+				});
+			} else {
+				setNotificationPermission(Notification.permission);
+				setError('Izin notifikasi ditolak. Anda harus mengizinkan notifikasi untuk dapat login.');
+				toast.error('Izin notifikasi ditolak!', {
+					duration: 4000,
+					icon: '❌'
+				});
+			}
+		} catch (error) {
+			console.error('Error requesting notification:', error);
+			setError('Gagal meminta izin notifikasi. Coba lagi.');
+		} finally {
+			setCheckingNotification(false);
+		}
+	};
 
 	const checkVpnConnection = async () => {
 		try {
@@ -75,7 +116,8 @@ const LoginPage = () => {
 				);
 				
 				setTimeout(() => {
-					window.location.href = '/core-dashboard/dashboard';
+					// VPN users go to core-dashboard
+					navigate('/core-dashboard/dashboard');
 				}, 1500);
 			} else {
 				// ❌ VERIFICATION FAILED
@@ -116,6 +158,30 @@ const LoginPage = () => {
 
 	const handleLogin = async (e) => {
 		e.preventDefault();
+		
+		// Check notification permission first
+		if (!('Notification' in window)) {
+			setError("Browser Anda tidak mendukung notifikasi. Gunakan browser modern seperti Chrome atau Firefox.");
+			return;
+		}
+
+		const currentPermission = Notification.permission;
+		setNotificationPermission(currentPermission);
+
+		if (currentPermission !== 'granted') {
+			setError("Anda harus mengizinkan notifikasi untuk dapat login. Klik tombol 'Izinkan Notifikasi' di bawah.");
+			toast.error('Izinkan notifikasi terlebih dahulu!', {
+				duration: 4000,
+				icon: '🔔',
+				style: {
+					background: '#ef4444',
+					color: '#fff',
+					fontWeight: 'bold'
+				}
+			});
+			return;
+		}
+
 		setLoading(true);
 		setError(null);
 		try {
@@ -135,30 +201,65 @@ const LoginPage = () => {
 			// Save token and user using context
 			login(newUser, null, expressToken); // No Laravel token
 
+			// Auto-subscribe to push notifications after successful login
+			try {
+				console.log('🔔 Auto-subscribing to push notifications...');
+				const subscription = await subscribeToPushNotifications();
+				if (subscription) {
+					console.log('✅ Push notification subscription successful');
+					toast.success('Notifikasi aktif! Anda akan menerima update disposisi.', {
+						duration: 3000,
+						icon: '🔔'
+					});
+				}
+			} catch (notifError) {
+				console.error('Push notification subscription failed:', notifError);
+				// Don't block login if notification fails
+				toast('⚠️ Notifikasi gagal diaktifkan. Aktifkan manual di Settings.', {
+					duration: 4000,
+					icon: '⚠️'
+				});
+			}
+
 			// Debug: Log user roles
 			console.log('Login - User roles:', newUser.roles);
 			console.log('Login - Role type:', typeof newUser.roles);
 			console.log('Login - Is array?', Array.isArray(newUser.roles));
-			console.log('Login - Includes kepala_dinas?', newUser.roles.includes('kepala_dinas'));
+			console.log('Login - User role (single):', newUser.role);
 
-			// Routing based on user roles
+			// Routing based on user roles - CHECK SINGLE role FIRST before roles array
 			if (newUser.roles.includes("desa")) {
 				navigate("/desa/dashboard");
 			} else if (newUser.roles.includes("kecamatan")) {
 				navigate("/kecamatan/dashboard");
 			} else if (newUser.roles.includes("pegawai")) {
-			navigate("/pegawai/dashboard");
-		} else if (newUser.roles.includes("kepala_dinas")) {
-			console.log('Navigating to kepala-dinas dashboard');
-			navigate("/kepala-dinas/dashboard");
-		} else if (
-			newUser.roles.includes("sekretaris_dinas") ||
-			newUser.roles.includes("kabid_pemerintahan_desa") ||
-			newUser.roles.includes("kabid_spked") ||
-			newUser.roles.includes("kabid_kekayaan_keuangan_desa") ||
-			newUser.roles.includes("kabid_pemberdayaan_masyarakat_desa")
-		) {
-			navigate("/admin-dashboard/dashboard");
+				navigate("/pegawai/dashboard");
+			} else if (newUser.role === "kepala_dinas" || newUser.roles.includes("kepala_dinas")) {
+				// Kepala Dinas gets dedicated dashboard with sidebar
+				console.log('✅ Navigating kepala_dinas to /kepala-dinas/dashboard');
+				navigate("/kepala-dinas/dashboard");
+			} else if (
+				newUser.role === "kabid_sekretariat" ||
+				newUser.role === "kabid_pemerintahan_desa" ||
+				newUser.role === "kabid_spked" ||
+				newUser.role === "kabid_kekayaan_keuangan_desa" ||
+				newUser.role === "kabid_pemberdayaan_masyarakat_desa" ||
+				newUser.roles.includes("kabid_sekretariat") ||
+				newUser.roles.includes("kabid_pemerintahan_desa") ||
+				newUser.roles.includes("kabid_spked") ||
+				newUser.roles.includes("kabid_kekayaan_keuangan_desa") ||
+				newUser.roles.includes("kabid_pemberdayaan_masyarakat_desa")
+			) {
+				// Kepala Bidang gets dedicated dashboard
+				console.log('✅ Navigating kepala_bidang to /kepala-bidang/dashboard');
+				navigate("/kepala-bidang/dashboard");
+			} else if (
+				newUser.role === "sekretaris_dinas" ||
+				newUser.roles.includes("sekretaris_dinas")
+			) {
+				// Sekretaris Dinas gets dedicated dashboard
+				console.log('✅ Navigating sekretaris_dinas to /sekretaris-dinas/dashboard');
+				navigate("/sekretaris-dinas/dashboard");
 			} else if (
 				newUser.roles.includes("superadmin") ||
 				newUser.roles.includes("pemerintahan_desa") ||
@@ -279,6 +380,60 @@ const LoginPage = () => {
 							Login VPN
 						</span>
 					</div>
+
+					{/* Notification Permission Warning/Button */}
+					{!vpnMode && notificationPermission !== 'granted' && (
+						<div className="mt-6 rounded-xl bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-amber-300 p-5 animate-pulse">
+							<div className="flex items-start gap-4">
+								<FiBell className="w-8 h-8 text-amber-600 flex-shrink-0 mt-1" />
+								<div className="flex-1">
+									<h3 className="text-lg font-bold text-gray-800 mb-2">
+										Izinkan Notifikasi Diperlukan
+									</h3>
+									<p className="text-sm text-gray-700 mb-4">
+										Anda harus mengizinkan notifikasi push untuk dapat login dan menerima update disposisi secara real-time.
+									</p>
+									<button
+										type="button"
+										onClick={handleRequestNotification}
+										disabled={checkingNotification}
+										className="flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg font-semibold shadow-lg hover:from-amber-600 hover:to-orange-600 transition-all disabled:opacity-70 disabled:cursor-not-allowed w-full sm:w-auto"
+									>
+										{checkingNotification ? (
+											<>
+												<FiLoader className="animate-spin w-5 h-5" />
+												<span>Memproses...</span>
+											</>
+										) : (
+											<>
+												<FiBell className="w-5 h-5" />
+												<span>Izinkan Notifikasi</span>
+											</>
+										)}
+									</button>
+								</div>
+							</div>
+						</div>
+					)}
+
+					{/* Success Notification Badge */}
+					{!vpnMode && notificationPermission === 'granted' && (
+						<div className="mt-6 rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-300 p-4">
+							<div className="flex items-center gap-3">
+								<div className="p-2 bg-green-100 rounded-lg">
+									<FiBell className="w-6 h-6 text-green-600" />
+								</div>
+								<div>
+									<p className="text-sm font-semibold text-gray-800">
+										✅ Notifikasi Diizinkan
+									</p>
+									<p className="text-xs text-gray-600">
+										Silakan login untuk melanjutkan
+									</p>
+								</div>
+							</div>
+						</div>
+					)}
 
 					<form onSubmit={handleLogin} className="mt-8 space-y-6">
 						{vpnMode ? (

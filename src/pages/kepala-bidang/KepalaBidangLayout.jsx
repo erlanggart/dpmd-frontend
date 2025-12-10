@@ -1,18 +1,26 @@
-// src/pages/kepala-dinas/KepalaDinasLayout.jsx
+// src/pages/kepala-bidang/KepalaBidangLayout.jsx
 import React from "react";
 import { Outlet, Navigate, useNavigate, useLocation } from "react-router-dom";
-import { FiHome, FiMail, FiBarChart2, FiMenu, FiLogOut, FiTrendingUp } from "react-icons/fi";
+import { FiHome, FiMail, FiTrendingUp, FiMenu, FiLogOut } from "react-icons/fi";
 
-const KepalaDinasLayout = () => {
+const KepalaBidangLayout = () => {
 	const [showMenu, setShowMenu] = React.useState(false);
 	const navigate = useNavigate();
 	const location = useLocation();
 
-	// Check if user is logged in and has kepala_dinas role
+	// Check if user is logged in and has kepala bidang role
 	const user = JSON.parse(localStorage.getItem("user") || "{}");
 	const token = localStorage.getItem("expressToken");
 
-	if (!token || !user.role || user.role !== "kepala_dinas") {
+	const isKepalaBidang = user.role && [
+		'kabid_sekretariat',
+		'kabid_pemerintahan_desa', 
+		'kabid_spked',
+		'kabid_kekayaan_keuangan_desa',
+		'kabid_pemberdayaan_masyarakat_desa'
+	].includes(user.role);
+
+	if (!token || !isKepalaBidang) {
 		return <Navigate to="/login" replace />;
 	}
 
@@ -25,10 +33,10 @@ const KepalaDinasLayout = () => {
 	};
 
 	const bottomNavItems = [
-		{ path: "/kepala-dinas/dashboard", label: "Dashboard", icon: FiHome },
-		{ path: "/kepala-dinas/disposisi", label: "Disposisi", icon: FiMail },
-		{ path: "/core-dashboard/dashboard", label: "Statistik", icon: FiBarChart2 },
-		{ path: "/kepala-dinas/menu", label: "Menu", icon: FiMenu, action: () => setShowMenu(true) },
+		{ path: "/kepala-bidang/dashboard", label: "Dashboard", icon: FiHome },
+		{ path: "/kepala-bidang/disposisi", label: "Disposisi", icon: FiMail },
+		{ path: "/core-dashboard/dashboard", label: "Core", icon: FiTrendingUp },
+		{ path: "/kepala-bidang/menu", label: "Menu", icon: FiMenu, action: () => setShowMenu(true) },
 	];
 
 	return (
@@ -38,7 +46,7 @@ const KepalaDinasLayout = () => {
 				<Outlet />
 			</main>
 
-			{/* Bottom Navigation - Blue Theme for Kepala Dinas */}
+			{/* Bottom Navigation - Blue Theme for Kepala Bidang */}
 			<nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-blue-200 shadow-lg z-50">
 				<div className="max-w-lg mx-auto px-2">
 					<div className="flex items-center justify-around py-2">
@@ -56,7 +64,7 @@ const KepalaDinasLayout = () => {
 											navigate(item.path);
 										}
 									}}
-									className={`flex flex-col items-center justify-center px-4 py-2 rounded-xl transition-all ${
+									className={`flex flex-col items-center justify-center px-3 py-2 rounded-xl transition-all ${
 										isActive 
 											? "text-blue-700" 
 											: "text-blue-400 hover:text-blue-600"
@@ -96,10 +104,10 @@ const KepalaDinasLayout = () => {
 										</span>
 									</div>
 									<div className="flex-1">
-										<h3 className="font-bold text-gray-800 text-lg">{user.name || "Kepala Dinas"}</h3>
+										<h3 className="font-bold text-gray-800 text-lg">{user.name || "Kepala Bidang"}</h3>
 										<p className="text-sm text-gray-500">{user.email}</p>
-										<span className="inline-block mt-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
-											Kepala Dinas
+										<span className="inline-block mt-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium capitalize">
+											{user.role?.replace(/_/g, ' ')}
 										</span>
 									</div>
 								</div>
@@ -110,7 +118,7 @@ const KepalaDinasLayout = () => {
 								<button
 									onClick={() => {
 										setShowMenu(false);
-										navigate("/kepala-dinas/dashboard");
+										navigate("/kepala-bidang/dashboard");
 									}}
 									className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-blue-50 transition-colors text-left"
 								>
@@ -126,7 +134,7 @@ const KepalaDinasLayout = () => {
 								<button
 									onClick={() => {
 										setShowMenu(false);
-										navigate("/kepala-dinas/disposisi");
+										navigate("/kepala-bidang/disposisi");
 									}}
 									className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-blue-50 transition-colors text-left"
 								>
@@ -205,4 +213,4 @@ const KepalaDinasLayout = () => {
 	);
 };
 
-export default KepalaDinasLayout;
+export default KepalaBidangLayout;

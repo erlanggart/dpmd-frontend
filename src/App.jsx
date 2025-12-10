@@ -12,6 +12,7 @@ import { Toaster, toast } from "react-hot-toast";
 import { useAuth } from "./context/AuthContext";
 import { useThemeColor } from "./hooks/useThemeColor";
 import { DataCacheProvider } from "./context/DataCacheContext";
+import { registerServiceWorker, initializePWANotifications, subscribeToPushNotifications } from "./utils/pushNotifications";
 
 // Halaman utama di-import langsung untuk performa awal yang lebih cepat
 import LoginPage from "./pages/LoginPage";
@@ -77,8 +78,12 @@ const ProdukHukumDetail = lazy(() =>
 const PengurusEditPage = lazy(() =>
 	import("./pages/desa/pengurus/PengurusEditPage")
 );
+const SettingsPage = lazy(() => import("./pages/dashboard/SettingsPage"));
 const DisposisiSurat = lazy(() =>
 	import("./pages/dashboard/DisposisiSurat")
+);
+const DisposisiDetail = lazy(() =>
+	import("./pages/dashboard/DisposisiDetail")
 );
 const CoreDashboardPublic = lazy(() =>
 	import("./pages/public/CoreDashboardPublic")
@@ -86,8 +91,23 @@ const CoreDashboardPublic = lazy(() =>
 const KepalaDinasLayout = lazy(() =>
 	import("./pages/kepala-dinas/KepalaDinasLayout")
 );
+const KepalaBidangLayout = lazy(() =>
+	import("./pages/kepala-bidang/KepalaBidangLayout")
+);
+const SekretarisDinasLayout = lazy(() =>
+	import("./pages/sekretaris-dinas/SekretarisDinasLayout")
+);
+const CoreDashboardLayout = lazy(() =>
+	import("./layouts/CoreDashboardLayout")
+);
 const KepalaDinasDashboard = lazy(() =>
 	import("./pages/kepala-dinas/KepalaDinasDashboard")
+);
+const KepalaBidangDashboard = lazy(() =>
+	import("./pages/kepala-bidang/KepalaBidangDashboard")
+);
+const SekretarisDinasDashboard = lazy(() =>
+	import("./pages/sekretaris-dinas/SekretarisDinasDashboard")
 );
 const DashboardOverview = lazy(() =>
 	import("./pages/kepala-dinas/DashboardOverview")
@@ -127,6 +147,32 @@ const DdDashboard = lazy(() =>
 // Statistik untuk Core Dashboard
 const StatistikAddDashboard = lazy(() =>
 	import("./pages/kepala-dinas/StatistikAddDashboard")
+);
+// BHPRD Submenu Components
+const StatistikBhprdT1 = lazy(() =>
+	import("./pages/kepala-dinas/StatistikBhprdT1")
+);
+const StatistikBhprdT2 = lazy(() =>
+	import("./pages/kepala-dinas/StatistikBhprdT2")
+);
+const StatistikBhprdT3 = lazy(() =>
+	import("./pages/kepala-dinas/StatistikBhprdT3")
+);
+// DD Submenu Components
+const StatistikDdEarmarkedT1 = lazy(() =>
+	import("./pages/kepala-dinas/StatistikDdEarmarkedT1")
+);
+const StatistikDdEarmarkedT2 = lazy(() =>
+	import("./pages/kepala-dinas/StatistikDdEarmarkedT2")
+);
+const StatistikDdNonEarmarkedT1 = lazy(() =>
+	import("./pages/kepala-dinas/StatistikDdNonEarmarkedT1")
+);
+const StatistikDdNonEarmarkedT2 = lazy(() =>
+	import("./pages/kepala-dinas/StatistikDdNonEarmarkedT2")
+);
+const StatistikInsentifDd = lazy(() =>
+	import("./pages/kepala-dinas/StatistikInsentifDd")
 );
 const UserManagementPage = lazy(() =>
 	import("./pages/dashboard/UserManagementPage")
@@ -172,12 +218,64 @@ const RoleProtectedRoute = ({ children, allowedRoles }) => {
 // Component wrapper untuk theme color hook
 const ThemeColorWrapper = ({ children }) => {
 	const location = useLocation();
+	const { user } = useAuth();
 	useThemeColor();
 	
 	// Dismiss all toasts on route change to prevent stuck toasts
 	useEffect(() => {
 		toast.dismiss();
 	}, [location.pathname]);
+
+	// Initialize PWA and Push Notifications on mount (only for logged in users)
+	useEffect(() => {
+		const initPWA = async () => {
+			try {
+				// Register service worker
+				await registerServiceWorker();
+				console.log('PWA Service Worker registered');
+
+				// Listen for messages from service worker (untuk auto-refresh data)
+				if ('serviceWorker' in navigator) {
+					navigator.serviceWorker.addEventListener('message', (event) => {
+						console.log('[App] Message from SW:', event.data);
+						
+						if (event.data && event.data.type === 'NEW_NOTIFICATION') {
+							// Trigger custom event untuk refresh data tanpa reload
+							window.dispatchEvent(new CustomEvent('newNotification', {
+								detail: event.data.payload
+							}));
+							console.log('🔔 New notification event dispatched - UI will auto-refresh');
+						}
+					});
+				}
+
+				// Auto-initialize push notifications for logged in users
+				if (user && localStorage.getItem('expressToken')) {
+					// Wait a bit for SW to be ready
+					setTimeout(async () => {
+						const permission = Notification.permission;
+						
+						// Only auto-init if already granted (from login page)
+						if (permission === 'granted') {
+							console.log('Auto-initializing push notifications for logged in user');
+							try {
+								const subscription = await subscribeToPushNotifications();
+								if (subscription) {
+									console.log('✅ Background push subscription successful');
+								}
+							} catch (err) {
+								console.warn('Background push subscription failed:', err);
+							}
+						}
+					}, 1000);
+				}
+			} catch (error) {
+				console.error('Error initializing PWA:', error);
+			}
+		};
+
+		initPWA();
+	}, [user]);
 	
 	return children;
 };
@@ -226,6 +324,8 @@ function App() {
 					<Route path="perjalanan-dinas" element={<PerjalananDinas />} />
 					<Route path="user" element={<UserManagementPage />} />
 					<Route path="disposisi" element={<DisposisiSurat />} />
+					<Route path="disposisi/:id" element={<DisposisiDetail />} />
+					<Route path="settings" element={<SettingsPage />} />
 					</Route>
 
 					{/* Rute Desa dengan lazy loading */}
@@ -257,7 +357,10 @@ function App() {
 							</ProtectedRoute>
 						}
 					>
+						<Route index element={<Navigate to="dashboard" replace />} />
 						<Route path="dashboard" element={<PegawaiDashboard />} />
+						<Route path="disposisi" element={<DisposisiSurat />} />
+						<Route path="disposisi/:id" element={<DisposisiDetail />} />
 					</Route>
 
 					{/* Rute Kepala Dinas - Exclusive untuk Kepala Dinas */}
@@ -271,21 +374,46 @@ function App() {
 					>
 						<Route index element={<Navigate to="dashboard" replace />} />
 						<Route path="dashboard" element={<KepalaDinasDashboard />} />
-						<Route path="statistik-bumdes" element={<StatistikBumdes />} />
-						<Route path="statistik-perjadin" element={<StatistikPerjadin />} />
-						<Route path="statistik-bankeu" element={<StatistikBankeuDashboard />} />
-						<Route path="statistik-add" element={<StatistikAddDashboard />} />
-						<Route path="statistik-bhprd" element={<BhprdDashboard />} />
-						<Route path="statistik-dd" element={<StatistikDdDashboard />} />
-						<Route path="trends" element={<TrendsPage />} />
+						<Route path="disposisi" element={<DisposisiSurat />} />
+						<Route path="disposisi/:id" element={<DisposisiDetail />} />
+					</Route>
+
+					{/* Rute Kepala Bidang - Exclusive untuk Kepala Bidang */}
+					<Route
+						path="/kepala-bidang"
+						element={
+							<ProtectedRoute>
+								<KepalaBidangLayout />
+							</ProtectedRoute>
+						}
+					>
+						<Route index element={<Navigate to="dashboard" replace />} />
+						<Route path="dashboard" element={<KepalaBidangDashboard />} />
+						<Route path="disposisi" element={<DisposisiSurat />} />
+						<Route path="disposisi/:id" element={<DisposisiDetail />} />
+					</Route>
+
+					{/* Rute Sekretaris Dinas - Exclusive untuk Sekretaris Dinas */}
+					<Route
+						path="/sekretaris-dinas"
+						element={
+							<ProtectedRoute>
+								<SekretarisDinasLayout />
+							</ProtectedRoute>
+						}
+					>
+						<Route index element={<Navigate to="dashboard" replace />} />
+						<Route path="dashboard" element={<SekretarisDinasDashboard />} />
+						<Route path="disposisi" element={<DisposisiSurat />} />
+						<Route path="disposisi/:id" element={<DisposisiDetail />} />
 					</Route>
 
 					{/* Rute Core Dashboard - Multi Role Access (Sekretaris Dinas, Kabid, dll) */}
 					<Route
-						path="/admin-dashboard"
+						path="/core-dashboard"
 						element={
 							<ProtectedRoute>
-								<KepalaDinasLayout />
+								<CoreDashboardLayout />
 							</ProtectedRoute>
 						}
 					>
@@ -296,7 +424,17 @@ function App() {
 					<Route path="statistik-bankeu" element={<StatistikBankeuDashboard />} />
 					<Route path="statistik-add" element={<StatistikAddDashboard />} />
 					<Route path="statistik-bhprd" element={<BhprdDashboard />} />
+					{/* BHPRD Submenu Routes */}
+					<Route path="statistik-bhprd-tahap1" element={<StatistikBhprdT1 />} />
+					<Route path="statistik-bhprd-tahap2" element={<StatistikBhprdT2 />} />
+					<Route path="statistik-bhprd-tahap3" element={<StatistikBhprdT3 />} />
 					<Route path="statistik-dd" element={<StatistikDdDashboard />} />
+					{/* DD Submenu Routes */}
+					<Route path="statistik-dd-earmarked-tahap1" element={<StatistikDdEarmarkedT1 />} />
+					<Route path="statistik-dd-earmarked-tahap2" element={<StatistikDdEarmarkedT2 />} />
+					<Route path="statistik-dd-nonearmarked-tahap1" element={<StatistikDdNonEarmarkedT1 />} />
+					<Route path="statistik-dd-nonearmarked-tahap2" element={<StatistikDdNonEarmarkedT2 />} />
+					<Route path="statistik-insentif-dd" element={<StatistikInsentifDd />} />
 					<Route path="trends" element={<TrendsPage />} />
 					</Route>
 				</Routes>

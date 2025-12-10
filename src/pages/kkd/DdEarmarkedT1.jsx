@@ -1,4 +1,4 @@
-﻿// src/pages/kkd/DdEarmarkedT1.jsx - Dana Desa Earmarked Tahap 1 (DdEarmarkedT1) 2025
+// src/pages/kkd/DdEarmarkedT1.jsx - Dana Desa Earmarked Tahap 1 (DdEarmarkedT1) 2025
 import React, { useState, useEffect } from 'react';
 import { 
   FiDollarSign as FiMoney, FiMapPin, FiUsers, FiCheckCircle, 
@@ -457,7 +457,7 @@ const DdEarmarkedT1 = () => {
                       {isExpanded && items.map((item, index) => (
                         <tr key={`${item.desa}-${index}`} className="hover:bg-gray-50">
                           <td className="px-6 py-4">{index + 1}</td>
-                          <td className="px-6 py-4 text-gray-500">â†³ {kecamatan}</td>
+                          <td className="px-6 py-4 text-gray-500">↳ {kecamatan}</td>
                           <td className="px-6 py-4 font-medium">{item.desa}</td>
                           <td className="px-6 py-4">{getStatusBadge(item.status)}</td>
                           <td className="px-6 py-4 text-right font-semibold text-cyan-600">

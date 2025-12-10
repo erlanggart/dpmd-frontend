@@ -1,18 +1,18 @@
-// src/pages/kepala-dinas/KepalaDinasLayout.jsx
+// src/pages/sekretaris-dinas/SekretarisDinasLayout.jsx
 import React from "react";
 import { Outlet, Navigate, useNavigate, useLocation } from "react-router-dom";
-import { FiHome, FiMail, FiBarChart2, FiMenu, FiLogOut, FiTrendingUp } from "react-icons/fi";
+import { FiHome, FiMail, FiTrendingUp, FiMenu, FiLogOut } from "react-icons/fi";
 
-const KepalaDinasLayout = () => {
+const SekretarisDinasLayout = () => {
 	const [showMenu, setShowMenu] = React.useState(false);
 	const navigate = useNavigate();
 	const location = useLocation();
 
-	// Check if user is logged in and has kepala_dinas role
+	// Check if user is logged in and has sekretaris_dinas role
 	const user = JSON.parse(localStorage.getItem("user") || "{}");
 	const token = localStorage.getItem("expressToken");
 
-	if (!token || !user.role || user.role !== "kepala_dinas") {
+	if (!token || !user.role || user.role !== "sekretaris_dinas") {
 		return <Navigate to="/login" replace />;
 	}
 
@@ -25,10 +25,10 @@ const KepalaDinasLayout = () => {
 	};
 
 	const bottomNavItems = [
-		{ path: "/kepala-dinas/dashboard", label: "Dashboard", icon: FiHome },
-		{ path: "/kepala-dinas/disposisi", label: "Disposisi", icon: FiMail },
-		{ path: "/core-dashboard/dashboard", label: "Statistik", icon: FiBarChart2 },
-		{ path: "/kepala-dinas/menu", label: "Menu", icon: FiMenu, action: () => setShowMenu(true) },
+		{ path: "/sekretaris-dinas/dashboard", label: "Dashboard", icon: FiHome },
+		{ path: "/sekretaris-dinas/disposisi", label: "Disposisi", icon: FiMail },
+		{ path: "/core-dashboard/dashboard", label: "Core", icon: FiTrendingUp },
+		{ path: "/sekretaris-dinas/menu", label: "Menu", icon: FiMenu, action: () => setShowMenu(true) },
 	];
 
 	return (
@@ -38,8 +38,8 @@ const KepalaDinasLayout = () => {
 				<Outlet />
 			</main>
 
-			{/* Bottom Navigation - Blue Theme for Kepala Dinas */}
-			<nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-blue-200 shadow-lg z-50">
+			{/* Bottom Navigation - Purple Theme for Sekretaris Dinas */}
+			<nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-purple-200 shadow-lg z-50">
 				<div className="max-w-lg mx-auto px-2">
 					<div className="flex items-center justify-around py-2">
 						{bottomNavItems.map((item, index) => {
@@ -56,10 +56,10 @@ const KepalaDinasLayout = () => {
 											navigate(item.path);
 										}
 									}}
-									className={`flex flex-col items-center justify-center px-4 py-2 rounded-xl transition-all ${
+									className={`flex flex-col items-center justify-center px-3 py-2 rounded-xl transition-all ${
 										isActive 
-											? "text-blue-700" 
-											: "text-blue-400 hover:text-blue-600"
+											? "text-purple-700" 
+											: "text-purple-400 hover:text-purple-600"
 									}`}
 								>
 									<Icon className={`h-6 w-6 mb-1 ${isActive ? "animate-bounce" : ""}`} />
@@ -88,18 +88,18 @@ const KepalaDinasLayout = () => {
 							</div>
 
 							{/* Menu Header */}
-							<div className="px-6 py-4 border-b border-blue-100">
+							<div className="px-6 py-4 border-b border-purple-100">
 								<div className="flex items-center gap-3">
-									<div className="h-14 w-14 bg-gradient-to-br from-blue-600 to-blue-800 rounded-full flex items-center justify-center shadow-md">
+									<div className="h-14 w-14 bg-gradient-to-br from-purple-600 to-purple-800 rounded-full flex items-center justify-center shadow-md">
 										<span className="text-white font-bold text-xl">
-											{user.name?.charAt(0) || "K"}
+											{user.name?.charAt(0) || "S"}
 										</span>
 									</div>
 									<div className="flex-1">
-										<h3 className="font-bold text-gray-800 text-lg">{user.name || "Kepala Dinas"}</h3>
+										<h3 className="font-bold text-gray-800 text-lg">{user.name || "Sekretaris Dinas"}</h3>
 										<p className="text-sm text-gray-500">{user.email}</p>
-										<span className="inline-block mt-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
-											Kepala Dinas
+										<span className="inline-block mt-1 px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+											Sekretaris Dinas
 										</span>
 									</div>
 								</div>
@@ -110,12 +110,12 @@ const KepalaDinasLayout = () => {
 								<button
 									onClick={() => {
 										setShowMenu(false);
-										navigate("/kepala-dinas/dashboard");
+										navigate("/sekretaris-dinas/dashboard");
 									}}
-									className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-blue-50 transition-colors text-left"
+									className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-purple-50 transition-colors text-left"
 								>
-									<div className="h-12 w-12 bg-blue-100 rounded-xl flex items-center justify-center">
-										<FiHome className="h-6 w-6 text-blue-600" />
+									<div className="h-12 w-12 bg-purple-100 rounded-xl flex items-center justify-center">
+										<FiHome className="h-6 w-6 text-purple-600" />
 									</div>
 									<div>
 										<h4 className="font-semibold text-gray-800">Dashboard</h4>
@@ -126,12 +126,12 @@ const KepalaDinasLayout = () => {
 								<button
 									onClick={() => {
 										setShowMenu(false);
-										navigate("/kepala-dinas/disposisi");
+										navigate("/sekretaris-dinas/disposisi");
 									}}
-									className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-blue-50 transition-colors text-left"
+									className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-purple-50 transition-colors text-left"
 								>
-									<div className="h-12 w-12 bg-blue-100 rounded-xl flex items-center justify-center">
-										<FiMail className="h-6 w-6 text-blue-600" />
+									<div className="h-12 w-12 bg-purple-100 rounded-xl flex items-center justify-center">
+										<FiMail className="h-6 w-6 text-purple-600" />
 									</div>
 									<div>
 										<h4 className="font-semibold text-gray-800">Disposisi Surat</h4>
@@ -185,7 +185,7 @@ const KepalaDinasLayout = () => {
 				</>
 			)}
 
-			<style jsx>{`
+			<style>{`
 				@keyframes fadeIn {
 					from { opacity: 0; }
 					to { opacity: 1; }
@@ -205,4 +205,4 @@ const KepalaDinasLayout = () => {
 	);
 };
 
-export default KepalaDinasLayout;
+export default SekretarisDinasLayout;

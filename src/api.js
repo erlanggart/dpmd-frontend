@@ -28,6 +28,14 @@ api.interceptors.request.use(
 			if (token && token !== 'VPN_ACCESS_TOKEN') {
 				config.headers["Authorization"] = `Bearer ${token}`;
 			}
+			
+			// Add VPN secret for VPN users accessing VPN-protected routes
+			const user = JSON.parse(localStorage.getItem("user") || "{}");
+			const vpnSecret = sessionStorage.getItem('vpn_secret');
+			
+			if (user.role === 'vpn_access' && vpnSecret && config.url?.includes('/vpn-core')) {
+				config.headers['x-vpn-secret'] = vpnSecret;
+			}
 		}
 		
 		return config;

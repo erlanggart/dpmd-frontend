@@ -43,29 +43,29 @@ const KepalaDinasDashboardMain = () => {
       title: 'Disposisi Surat',
       description: 'Lihat dan kelola disposisi surat masuk',
       icon: FiMail,
-      link: '/dashboard/disposisi',
+      link: '/kepala-dinas/disposisi',
       color: 'blue',
       badge: stats.disposisi_pending
     },
     {
-      title: 'Statistik BUMDes',
-      description: 'Lihat statistik dan perkembangan BUMDes',
+      title: 'Core Dashboard',
+      description: 'Lihat analitik dan statistik lengkap',
       icon: FiBarChart2,
-      link: '/kepala-dinas/statistik-bumdes',
+      link: '/core-dashboard/dashboard',
       color: 'green'
     },
     {
-      title: 'Perjalanan Dinas',
-      description: 'Monitoring perjalanan dinas pegawai',
+      title: 'Manajemen User',
+      description: 'Kelola pengguna sistem',
       icon: FiUsers,
-      link: '/kepala-dinas/statistik-perjadin',
+      link: '/dashboard/user',
       color: 'purple'
     },
     {
-      title: 'Statistik Bantuan Keuangan',
-      description: 'Dana Desa, ADD, dan bantuan lainnya',
+      title: 'Berita & Informasi',
+      description: 'Kelola konten landing page',
       icon: FiTrendingUp,
-      link: '/kepala-dinas/statistik-bankeu',
+      link: '/dashboard/berita',
       color: 'amber'
     }
   ];
