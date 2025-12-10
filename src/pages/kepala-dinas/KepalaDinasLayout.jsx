@@ -51,52 +51,53 @@ const KepalaDinasLayout = () => {
     setSidebarOpen(prev => !prev);
   }, []);
 
+  // Menu items untuk Kepala Dinas (berbeda dari Core Dashboard)
   const menuItems = useMemo(() => [
     {
-      path: '/core-dashboard/dashboard',
+      path: '/kepala-dinas/dashboard',
       icon: <LayoutDashboard className="w-5 h-5" />,
-      label: 'Dashboard',
+      label: 'Dashboard Executive',
       end: true
     },
     {
-      path: '/core-dashboard/statistik-bumdes',
+      path: '/kepala-dinas/statistik-bumdes',
       icon: <Users className="w-5 h-5" />,
-      label: 'Statistik BUMDes'
+      label: 'BUMDes'
     },
     {
-      path: '/core-dashboard/statistik-perjadin',
+      path: '/kepala-dinas/statistik-perjadin',
       icon: <Briefcase className="w-5 h-5" />,
       label: 'Perjalanan Dinas'
     },
     {
-      path: '/core-dashboard/statistik-bankeu',
+      path: '/kepala-dinas/statistik-bankeu',
       icon: <DollarSign className="w-5 h-5" />,
-      label: 'Statistik Bankeu'
+      label: 'Bantuan Keuangan'
     },
     {
-      path: '/core-dashboard/statistik-add',
+      path: '/kepala-dinas/statistik-add',
       icon: <DollarSign className="w-5 h-5" />,
-      label: 'Statistik ADD'
+      label: 'ADD'
     },
     {
-      path: '/core-dashboard/statistik-bhprd',
+      path: '/kepala-dinas/statistik-bhprd',
       icon: <DollarSign className="w-5 h-5" />,
-      label: 'Statistik BHPRD'
+      label: 'BHPRD'
     },
     {
-      path: '/core-dashboard/statistik-dd',
+      path: '/kepala-dinas/statistik-dd',
       icon: <DollarSign className="w-5 h-5" />,
-      label: 'Statistik DD'
+      label: 'Dana Desa'
     },
     {
-      path: '/core-dashboard/trends',
+      path: '/kepala-dinas/trends',
       icon: <TrendingUp className="w-5 h-5" />,
-      label: 'Analisis Trend'
+      label: 'Trends & Analytics'
     }
   ], []);
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 overflow-hidden">
+    <div className="flex h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-zinc-50 overflow-hidden">
       {/* Overlay for mobile */}
       {sidebarOpen && window.innerWidth < 1024 && (
         <div 
@@ -105,9 +106,9 @@ const KepalaDinasLayout = () => {
         />
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar - Kepala Dinas Theme (Slate/Gray) */}
       <aside
-        className={`fixed lg:relative z-50 h-full bg-white shadow-xl flex flex-col
+        className={`fixed lg:relative z-50 h-full bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 shadow-2xl flex flex-col
           transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
           ${sidebarOpen ? 'w-64' : 'lg:w-20'}
@@ -115,33 +116,33 @@ const KepalaDinasLayout = () => {
         style={{ willChange: 'transform, width' }}
       >
         {/* Sidebar Header */}
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
+        <div className="p-4 border-b border-slate-700 flex items-center justify-between flex-shrink-0">
           {sidebarOpen && (
             <div className="flex items-center gap-3 overflow-hidden animate-fade-in">
-              <div className="p-2 bg-blue-600 rounded-lg flex-shrink-0">
+              <div className="p-2 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex-shrink-0 shadow-lg">
                 <LayoutDashboard className="w-6 h-6 text-white" />
               </div>
               <div className="min-w-0">
-                <h2 className="font-bold text-gray-800 truncate">Core Dashboard</h2>
-                <p className="text-xs text-gray-500 truncate">DPMD Analytics</p>
+                <h2 className="font-bold text-white truncate">Kepala Dinas</h2>
+                <p className="text-xs text-slate-300 truncate">Executive Dashboard</p>
               </div>
             </div>
           )}
           <button
             onClick={toggleSidebar}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-all duration-300 flex-shrink-0"
+            className="p-2 hover:bg-slate-700 rounded-lg transition-all duration-300 flex-shrink-0"
             aria-label={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
           >
             {sidebarOpen ? (
-              <ChevronLeft className="w-5 h-5 text-gray-600" />
+              <ChevronLeft className="w-5 h-5 text-slate-300" />
             ) : (
-              <Menu className="w-5 h-5 text-gray-600" />
+              <Menu className="w-5 h-5 text-slate-300" />
             )}
           </button>
         </div>
 
         {/* Navigation Menu */}
-        <nav className="flex-1 p-4 space-y-2 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300">
+        <nav className="flex-1 p-4 space-y-2 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-600">
           {menuItems.map((item, index) => {
             // Handle menu with submenu (DD, BHPRD)
             if (item.submenu) {
@@ -210,10 +211,10 @@ const KepalaDinasLayout = () => {
                 to={item.path}
                 end={item.end}
                 className={({ isActive }) =>
-                  `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors duration-150 ${
+                  `flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-150 ${
                     isActive
-                      ? 'bg-blue-600 text-white shadow-lg'
-                      : 'text-gray-700 hover:bg-gray-100'
+                      ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-500/50'
+                      : 'text-slate-300 hover:bg-slate-700 hover:text-white'
                   }`
                 }
                 title={!sidebarOpen ? item.label : ''}
@@ -230,10 +231,10 @@ const KepalaDinasLayout = () => {
         </nav>
 
         {/* Logout Button */}
-        <div className="p-4 border-t border-gray-200 flex-shrink-0">
+        <div className="p-4 border-t border-slate-700 flex-shrink-0">
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 px-4 py-3 w-full rounded-lg text-red-600 hover:bg-red-50 transition-all duration-300"
+            className="flex items-center gap-3 px-4 py-3 w-full rounded-lg text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-all duration-300"
             title={!sidebarOpen ? 'Logout' : ''}
           >
             <div className={sidebarOpen ? 'flex-shrink-0' : 'mx-auto'}>
