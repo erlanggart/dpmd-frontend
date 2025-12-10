@@ -1,11 +1,11 @@
 // API Configuration - All routes now use Express backend
-const isDevelopment = import.meta.env.DEV || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+// Auto-detect development vs production
+const isDevelopment = import.meta.env.DEV || window.location.hostname === 'localhost';
 
 export const API_ENDPOINTS = {
-  // Express Backend (Port 3001) - ONLY BACKEND
-  EXPRESS_BASE: isDevelopment 
-    ? 'http://127.0.0.1:3001/api'
-    : 'https://api.dpmdbogorkab.id/api',
+  // Express Backend - use env variable or default based on environment
+  EXPRESS_BASE: import.meta.env.VITE_API_BASE_URL || 
+    (isDevelopment ? 'http://localhost:3001/api' : 'https://api.dpmdbogorkab.id/api'),
 };
 
 /**

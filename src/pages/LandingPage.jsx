@@ -10,6 +10,7 @@ import StatsSection from "../components/landingpage/StatsSection";
 import NewsSection from "../components/landingpage/NewsSection";
 import KegiatanSection from "../components/landingpage/KegiatanSection";
 import PWAInstallPrompt from "../components/PWAInstallPrompt";
+import PWAInstallButton from "../components/PWAInstallButton";
 
 const LandingPage = () => {
 	const scrollY = useScrollPosition();
@@ -63,25 +64,24 @@ const LandingPage = () => {
 					{/* Desktop Navigation */}
 					<div className="hidden lg:flex items-center space-x-8">
 						<nav className="flex items-center space-x-8">
-							{navLinks.map((link) => (
-								<ScrollLink
-									key={link.to}
-									to={link.to}
-									spy={true}
-									smooth={true}
-									offset={-70}
-									duration={500}
-									className="cursor-pointer text-white transition-colors hover:text-secondary"
-									activeClass="text-secondary"
-									onClick={closeMobileMenu}
-								>
-									{link.label}
-								</ScrollLink>
-							))}
-					</nav>
-				</div>
-
-				{/* Mobile Menu Button */}
+					{navLinks.map((link) => (
+						<ScrollLink
+							key={link.to}
+							to={link.to}
+							spy={true}
+							smooth={true}
+							offset={-70}
+							duration={500}
+							className="cursor-pointer text-white transition-colors hover:text-secondary"
+							activeClass="text-secondary"
+							onClick={closeMobileMenu}
+						>
+							{link.label}
+						</ScrollLink>
+					))}
+				</nav>
+				<PWAInstallButton />
+			</div>				{/* Mobile Menu Button */}
 					<button
 						className="lg:hidden text-white p-2 rounded-md hover:bg-white/10 transition-colors"
 						onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -93,7 +93,7 @@ const LandingPage = () => {
 
 				{/* Mobile Navigation Menu */}
 				{isMobileMenuOpen && (
-					<div className="lg:hidden bg-slate-800/95 backdrop-blur-sm border-t border-white/20">
+					<div className="lg:hidden bg-slate-800/95 backdrop-blur-sm border-t border-white/20 relative z-50">
 						<nav className="container max-w-7xl mx-auto px-4 py-4 space-y-2">
 							{navLinks.map((link) => (
 								<ScrollLink
@@ -107,12 +107,15 @@ const LandingPage = () => {
 									activeClass="text-secondary bg-white/10 rounded-md"
 									onClick={closeMobileMenu}
 								>
-								{link.label}
-							</ScrollLink>
-						))}
-					</nav>
-				</div>
-			)}
+									{link.label}
+								</ScrollLink>
+							))}
+							<div className="pt-4 pb-2 relative z-10">
+								<PWAInstallButton />
+							</div>
+						</nav>
+					</div>
+				)}
 		</header>			{/* Pastikan setiap komponen ini memiliki ID yang sesuai */}
 			<section id="home">
 				<HeroSection />

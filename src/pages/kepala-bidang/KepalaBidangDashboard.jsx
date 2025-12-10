@@ -69,10 +69,10 @@ const KepalaBidangDashboard = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg shadow-lg p-6 text-white">
-        <h2 className="text-2xl font-bold mb-2">Selamat Datang, Kepala Bidang</h2>
+      <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg shadow-lg p-4 sm:p-6 text-white">
+        <h2 className="text-xl sm:text-2xl font-bold mb-2">Selamat Datang, Kepala Bidang</h2>
         <p className="text-blue-100">DPMD Kabupaten Bogor</p>
         <p className="text-sm text-blue-200 mt-1">
           {new Date().toLocaleDateString('id-ID', { 
@@ -85,7 +85,7 @@ const KepalaBidangDashboard = () => {
       </div>
 
       {/* Statistik Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-yellow-500">
           <div className="flex items-center justify-between">
             <div>
@@ -144,11 +144,10 @@ const KepalaBidangDashboard = () => {
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
         <button
           onClick={() => navigate('/kepala-bidang/disposisi')}
-          className="bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow text-left"
-        >
+          className="bg-white rounded-lg shadow-sm p-4 sm:p-6 hover:shadow-md transition-shadow text-left">
           <div className="flex items-center gap-4">
             <div className="bg-blue-100 p-3 rounded-full">
               <FileText className="text-blue-600" size={24} />
@@ -162,8 +161,7 @@ const KepalaBidangDashboard = () => {
 
         <button
           onClick={() => navigate('/core-dashboard/dashboard')}
-          className="bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow text-left"
-        >
+          className="bg-white rounded-lg shadow-sm p-4 sm:p-6 hover:shadow-md transition-shadow text-left">
           <div className="flex items-center gap-4">
             <div className="bg-green-100 p-3 rounded-full">
               <TrendingUp className="text-green-600" size={24} />
@@ -177,7 +175,7 @@ const KepalaBidangDashboard = () => {
 
         <button
           onClick={() => navigate('/kepala-bidang/disposisi?filter=pending')}
-          className="bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow text-left"
+          className="bg-white rounded-lg shadow-sm p-4 sm:p-6 hover:shadow-md transition-shadow text-left"
         >
           <div className="flex items-center gap-4">
             <div className="bg-yellow-100 p-3 rounded-full">

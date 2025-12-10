@@ -165,86 +165,103 @@ export default function DisposisiDetail() {
   const isRecipient = disposisi.ke_user_id.toString() === user.id.toString();
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-5xl mx-auto">
-        {/* Header */}
-        <div className="mb-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+      {/* Modern Header with Gradient */}
+      <div className="bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-600 text-white shadow-xl">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
           <button
             onClick={() => navigate(-1)}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4"
+            className="flex items-center gap-2 text-white/80 hover:text-white mb-3 sm:mb-4 transition-colors"
           >
-            <FiArrowLeft />
-            <span>Kembali</span>
+            <FiArrowLeft size={18} className="sm:w-5 sm:h-5" />
+            <span className="font-medium text-sm sm:text-base">Kembali</span>
           </button>
-          <h1 className="text-3xl font-bold text-gray-900">Detail Disposisi</h1>
+          <div className="flex items-center gap-2 sm:gap-4">
+            <div className="p-2 sm:p-3 bg-white/20 backdrop-blur-sm rounded-lg sm:rounded-xl">
+              <FiFileText size={24} className="sm:w-8 sm:h-8" />
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-3xl font-bold mb-1">Detail Disposisi</h1>
+              <p className="text-white/80 text-xs sm:text-base">Informasi lengkap surat dan disposisi</p>
+            </div>
+          </div>
         </div>
+      </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-6">
           {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-3 sm:space-y-6">
             {/* Info Surat */}
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Informasi Surat</h2>
+            <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+              <div className="bg-gradient-to-r from-blue-500 to-cyan-500 px-4 sm:px-6 py-3 sm:py-4">
+                <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+                  <FiFileText className="text-lg sm:text-xl" />
+                  Informasi Surat
+                </h2>
+              </div>
+              <div className="p-3 sm:p-6">
               
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Nomor Surat</label>
-                  <p className="text-gray-900 font-medium">{disposisi.surat?.nomor_surat}</p>
+                  <label className="text-xs sm:text-sm font-medium text-gray-500">Nomor Surat</label>
+                  <p className="text-sm sm:text-base text-gray-900 font-medium">{disposisi.surat?.nomor_surat}</p>
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Perihal</label>
-                  <p className="text-gray-900">{disposisi.surat?.perihal}</p>
+                  <label className="text-xs sm:text-sm font-medium text-gray-500">Perihal</label>
+                  <p className="text-sm sm:text-base text-gray-900">{disposisi.surat?.perihal}</p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Pengirim</label>
-                    <p className="text-gray-900">{disposisi.surat?.pengirim}</p>
+                    <label className="text-xs sm:text-sm font-medium text-gray-500">Pengirim</label>
+                    <p className="text-sm sm:text-base text-gray-900">{disposisi.surat?.pengirim}</p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Jenis Surat</label>
-                    <p className="text-gray-900 capitalize">{disposisi.surat?.jenis_surat}</p>
+                    <label className="text-xs sm:text-sm font-medium text-gray-500">Jenis Surat</label>
+                    <p className="text-sm sm:text-base text-gray-900 capitalize">{disposisi.surat?.jenis_surat}</p>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Tanggal Surat</label>
-                    <p className="text-gray-900">{formatTanggal(disposisi.surat?.tanggal_surat)}</p>
+                    <label className="text-xs sm:text-sm font-medium text-gray-500">Tanggal Surat</label>
+                    <p className="text-sm sm:text-base text-gray-900">{formatTanggal(disposisi.surat?.tanggal_surat)}</p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Tanggal Terima</label>
-                    <p className="text-gray-900">{formatTanggal(disposisi.surat?.tanggal_terima)}</p>
+                    <label className="text-xs sm:text-sm font-medium text-gray-500">Tanggal Terima</label>
+                    <p className="text-sm sm:text-base text-gray-900">{formatTanggal(disposisi.surat?.tanggal_terima)}</p>
                   </div>
                 </div>
 
                 {disposisi.surat?.file_path && (
                   <div>
-                    <label className="text-sm font-medium text-gray-500 block mb-2">File Lampiran</label>
-                    <div className="flex gap-2">
+                    <label className="text-xs sm:text-sm font-medium text-gray-500 block mb-2">File Lampiran</label>
+                    <div className="flex flex-col sm:flex-row gap-2">
                       <button
                         onClick={() => {
-                          const baseUrl = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://127.0.0.1:3001';
+                          const baseUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/api$/, '') || 'http://127.0.0.1:3001';
                           const filePath = disposisi.surat.file_path.startsWith('/') ? disposisi.surat.file_path : `/${disposisi.surat.file_path}`;
                           const url = `${baseUrl}${filePath}`;
                           console.log('PDF URL:', url);
                           setPdfUrl(url);
                           setShowPdfModal(true);
                         }}
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100"
+                        className="inline-flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:from-green-600 hover:to-emerald-600 text-sm font-medium shadow-lg hover:shadow-xl transition-all"
                       >
-                        <FiEye />
+                        <FiEye className="text-base sm:text-lg" />
                         Lihat PDF
                       </button>
                       <a
-                        href={`${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://127.0.0.1:3001'}${disposisi.surat.file_path.startsWith('/') ? disposisi.surat.file_path : '/' + disposisi.surat.file_path}`}
+                        href={`${import.meta.env.VITE_API_BASE_URL?.replace(/\/api$/, '') || 'http://127.0.0.1:3001'}${disposisi.surat.file_path.startsWith('/') ? disposisi.surat.file_path : '/' + disposisi.surat.file_path}`}
                         target="_blank"
                         download
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100"
+                        className="inline-flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg hover:from-blue-600 hover:to-cyan-600 text-sm font-medium shadow-lg hover:shadow-xl transition-all"
                       >
-                        <FiDownload />
+                        <FiDownload className="text-base sm:text-lg" />
                         Download File
                       </a>
                     </div>
@@ -254,8 +271,14 @@ export default function DisposisiDetail() {
             </div>
 
             {/* Info Disposisi */}
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Informasi Disposisi</h2>
+            <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+              <div className="bg-gradient-to-r from-purple-500 to-pink-500 px-4 sm:px-6 py-3 sm:py-4">
+                <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+                  <FiMail className="text-lg sm:text-xl" />
+                  Informasi Disposisi
+                </h2>
+              </div>
+              <div className="p-6">
               
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
@@ -330,8 +353,14 @@ export default function DisposisiDetail() {
 
             {/* History Disposisi */}
             {disposisi.surat?.disposisi && disposisi.surat.disposisi.length > 0 && (
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <h2 className="text-xl font-bold text-gray-900 mb-4">Riwayat Disposisi</h2>
+              <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+                <div className="bg-gradient-to-r from-orange-500 to-red-500 px-6 py-4">
+                  <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                    <FiClock />
+                    Riwayat Disposisi
+                  </h2>
+                </div>
+                <div className="p-6">
                 
                 <div className="space-y-4">
                   {disposisi.surat.disposisi.map((item, index) => (
@@ -372,23 +401,30 @@ export default function DisposisiDetail() {
                     </div>
                   ))}
                 </div>
+                </div>
               </div>
             )}
           </div>
 
           {/* Actions Sidebar */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-sm p-6 sticky top-6">
-              <h3 className="font-bold text-gray-900 mb-4">Aksi</h3>
+            <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-gray-100 overflow-hidden lg:sticky lg:top-6">
+              <div className="bg-gradient-to-r from-green-500 to-emerald-500 px-4 sm:px-6 py-3 sm:py-4">
+                <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                  <FiCheck className="text-base sm:text-lg" />
+                  Panel Aksi
+                </h3>
+              </div>
+              <div className="p-3 sm:p-6">
               
               {isRecipient && (
-                <div className="space-y-3">
+                <div className="space-y-2 sm:space-y-3">
                   {disposisi.status === 'pending' && (
                     <button
                       onClick={handleMarkAsRead}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+                      className="w-full flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg sm:rounded-xl hover:from-blue-600 hover:to-cyan-600 text-sm font-medium shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
                     >
-                      <FiMail />
+                      <FiMail className="text-base sm:text-lg" />
                       Tandai Dibaca
                     </button>
                   )}
@@ -398,26 +434,31 @@ export default function DisposisiDetail() {
                       {disposisi.status === 'dibaca' && (
                         <button
                           onClick={() => handleUpdateStatus('proses')}
-                          className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium"
+                          className="w-full flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-lg sm:rounded-xl hover:from-indigo-600 hover:to-purple-600 text-sm font-medium shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
                         >
-                          <FiClock />
+                          <FiClock className="text-base sm:text-lg" />
                           Tandai Diproses
                         </button>
                       )}
 
-                      <button
-                        onClick={() => setShowTeruskanModal(true)}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium"
-                      >
-                        <FiSend />
-                        Teruskan
-                      </button>
+                      {/* Tombol Teruskan hanya untuk Kepala Dinas, Sekretaris Dinas, dan Kepala Bidang */}
+                      {(user.role === 'kepala_dinas' || 
+                        user.role === 'sekretaris_dinas' || 
+                        user.role?.startsWith('kabid_')) && (
+                        <button
+                          onClick={() => setShowTeruskanModal(true)}
+                          className="w-full flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 text-sm font-medium shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+                        >
+                          <FiSend className="text-base sm:text-lg" />
+                          Teruskan
+                        </button>
+                      )}
 
                       <button
                         onClick={() => handleUpdateStatus('selesai')}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
+                        className="w-full flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg sm:rounded-xl hover:from-green-600 hover:to-emerald-600 text-sm font-medium shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
                       >
-                        <FiCheck />
+                        <FiCheck className="text-base sm:text-lg" />
                         Tandai Selesai
                       </button>
                     </>
@@ -430,20 +471,33 @@ export default function DisposisiDetail() {
                   Anda tidak memiliki akses untuk mengubah disposisi ini
                 </p>
               )}
+              </div>
             </div>
           </div>
         </div>
       </div>
+      </div>
 
       {/* Modal Teruskan */}
       {showTeruskanModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-            <div className="border-b px-6 py-4">
-              <h2 className="text-xl font-bold text-gray-900">Teruskan Disposisi</h2>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden">
+            <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-5">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-white flex items-center gap-3">
+                  <FiSend className="text-2xl" />
+                  Teruskan Disposisi
+                </h2>
+                <button
+                  onClick={() => setShowTeruskanModal(false)}
+                  className="text-white hover:bg-white/20 rounded-lg p-1.5 transition-colors"
+                >
+                  <FiX size={24} />
+                </button>
+              </div>
             </div>
 
-            <form onSubmit={handleTeruskan} className="p-6 space-y-4">
+            <form onSubmit={handleTeruskan} className="p-6 space-y-5">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Teruskan Kepada <span className="text-red-500">*</span>
@@ -452,12 +506,12 @@ export default function DisposisiDetail() {
                   value={formTeruskan.ke_user_id}
                   onChange={(e) => setFormTeruskan({ ...formTeruskan, ke_user_id: e.target.value })}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors"
                 >
-                  <option value="">Pilih User</option>
+                  <option value="">-- Pilih Penerima --</option>
                   {users.filter(u => u.id.toString() !== user.id.toString()).map((u) => (
                     <option key={u.id} value={u.id}>
-                      {u.name} - {u.role}
+                      {u.name}
                     </option>
                   ))}
                 </select>
@@ -470,7 +524,7 @@ export default function DisposisiDetail() {
                 <select
                   value={formTeruskan.instruksi}
                   onChange={(e) => setFormTeruskan({ ...formTeruskan, instruksi: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors"
                 >
                   <option value="biasa">Biasa</option>
                   <option value="penting">Penting</option>
@@ -489,17 +543,17 @@ export default function DisposisiDetail() {
                 <textarea
                   value={formTeruskan.catatan}
                   onChange={(e) => setFormTeruskan({ ...formTeruskan, catatan: e.target.value })}
-                  rows="3"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  placeholder="Catatan disposisi..."
+                  rows="4"
+                  className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors resize-none"
+                  placeholder="Tambahkan catatan untuk disposisi ini..."
                 />
               </div>
 
-              <div className="flex gap-3 pt-4">
+              <div className="flex gap-3 pt-6 border-t">
                 <button
                   type="button"
                   onClick={() => setShowTeruskanModal(false)}
-                  className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                  className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
                   disabled={submitting}
                 >
                   Batal
@@ -507,9 +561,10 @@ export default function DisposisiDetail() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 disabled:bg-gray-400 font-medium shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center justify-center gap-2"
                 >
-                  {submitting ? 'Mengirim...' : 'Teruskan'}
+                  <FiSend />
+                  {submitting ? 'Mengirim...' : 'Kirim Sekarang'}
                 </button>
               </div>
             </form>
@@ -566,6 +621,7 @@ export default function DisposisiDetail() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

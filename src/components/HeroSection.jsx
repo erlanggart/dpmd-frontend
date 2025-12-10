@@ -22,8 +22,11 @@ const HeroSection = () => {
 		const fetchData = async () => {
 			try {
 				const response = await api.get("/public/hero-gallery");
-				setGallery(response.data.data || response.data);
+				const galleryData = response.data.data || response.data;
+				// Pastikan gallery selalu array
+				setGallery(Array.isArray(galleryData) ? galleryData : []);
 			} catch (err) {
+				console.error('Error fetching hero gallery:', err);
 				// Jika gagal memuat galeri, gunakan array kosong tanpa menampilkan error
 				setGallery([]);
 				setError(null); // Reset error state
