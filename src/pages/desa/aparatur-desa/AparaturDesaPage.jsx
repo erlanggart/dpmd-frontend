@@ -7,7 +7,7 @@ import {
 	getAparaturDesa,
 	createAparaturDesa,
 	updateAparaturDesa,
-	deleteAparaturDesa,
+	
 	getProdukHukumList,
 } from "../../../../src/api/aparaturDesaApi";
 import { FiPlus } from "react-icons/fi";
@@ -25,7 +25,8 @@ const AparaturDesaPage = () => {
 		try {
 			setLoading(true);
 			const response = await getAparaturDesa();
-			setAparatur(response.data.data.data); // Adjust based on your API pagination structure
+			// API returns { success: true, data: [...] }
+			setAparatur(response.data.data || []);
 		} catch (error) {
 			console.error("Failed to fetch aparatur desa:", error);
 			Swal.fire("Error", "Gagal memuat data aparatur desa.", "error");

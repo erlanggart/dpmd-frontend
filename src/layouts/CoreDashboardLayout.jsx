@@ -59,6 +59,7 @@ const CoreDashboardLayout = () => {
       label: 'Dashboard',
       end: true
     },
+    
     {
       path: '/core-dashboard/statistik-bumdes',
       icon: <Users className="w-5 h-5" />,
@@ -105,6 +106,10 @@ const CoreDashboardLayout = () => {
       path: '/core-dashboard/trends',
       icon: <TrendingUp className="w-5 h-5" />,
       label: 'Analisis Trend'
+    },{
+      path: '/core-dashboard/laporan-desa',
+      icon: <Briefcase className="w-5 h-5" />,
+      label: 'Laporan Desa'
     }
   ], []);
 

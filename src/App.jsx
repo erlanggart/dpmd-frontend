@@ -88,6 +88,15 @@ const DisposisiDetail = lazy(() =>
 const CoreDashboardPublic = lazy(() =>
 	import("./pages/public/CoreDashboardPublic")
 );
+const AparaturDesaPage = lazy(() =>
+	import("./pages/desa/aparatur-desa/AparaturDesaPage")
+);
+const AparaturDesaDetailPage = lazy(() =>
+	import("./pages/desa/aparatur-desa/AparaturDesaDetailPage")
+);
+const AparaturDesaEditPage = lazy(() =>
+	import("./pages/desa/aparatur-desa/AparaturDesaEditPage")
+);
 const KepalaDinasLayout = lazy(() =>
 	import("./pages/kepala-dinas/KepalaDinasLayout")
 );
@@ -111,6 +120,9 @@ const SekretarisDinasDashboard = lazy(() =>
 );
 const DashboardOverview = lazy(() =>
 	import("./pages/kepala-dinas/DashboardOverview")
+);
+const LaporanDesa = lazy(() =>
+	import("./pages/kepala-dinas/LaporanDesa")
 );
 const StatistikBumdes = lazy(() =>
 	import("./pages/kepala-dinas/StatistikBumdes")
@@ -344,6 +356,9 @@ function App() {
 						<Route path="kelembagaan/:type/:id" element={<KelembagaanDetailPage />} />
 						<Route path="pengurus/:id" element={<PengurusDetailPage />} />
 						<Route path="pengurus/:id/edit" element={<PengurusEditPage />} />
+						<Route path="aparatur-desa" element={<AparaturDesaPage />} />
+						<Route path="aparatur-desa/:id" element={<AparaturDesaDetailPage />} />
+						<Route path="aparatur-desa/:id/edit" element={<AparaturDesaEditPage />} />
 						<Route path="produk-hukum" element={<ProdukHukum />} />
 						<Route path="produk-hukum/:id" element={<ProdukHukumDetail />} />
 					</Route>
@@ -419,6 +434,7 @@ function App() {
 					>
 					<Route index element={<Navigate to="dashboard" replace />} />
 					<Route path="dashboard" element={<DashboardOverview />} />
+					<Route path="laporan-desa" element={<LaporanDesa />} />
 					<Route path="statistik-bumdes" element={<StatistikBumdes />} />
 					<Route path="statistik-perjadin" element={<StatistikPerjadin />} />
 					<Route path="statistik-bankeu" element={<StatistikBankeuDashboard />} />
