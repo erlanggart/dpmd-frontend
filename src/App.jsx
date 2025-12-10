@@ -12,6 +12,7 @@ import { Toaster, toast } from "react-hot-toast";
 import { useAuth } from "./context/AuthContext";
 import { useThemeColor } from "./hooks/useThemeColor";
 import { DataCacheProvider } from "./context/DataCacheContext";
+import { registerServiceWorker, initializePWANotifications, subscribeToPushNotifications } from "./utils/pushNotifications";
 
 // Halaman utama di-import langsung untuk performa awal yang lebih cepat
 import LoginPage from "./pages/LoginPage";
@@ -77,6 +78,7 @@ const ProdukHukumDetail = lazy(() =>
 const PengurusEditPage = lazy(() =>
 	import("./pages/desa/pengurus/PengurusEditPage")
 );
+const SettingsPage = lazy(() => import("./pages/dashboard/SettingsPage"));
 const DisposisiSurat = lazy(() =>
 	import("./pages/dashboard/DisposisiSurat")
 );
@@ -216,12 +218,64 @@ const RoleProtectedRoute = ({ children, allowedRoles }) => {
 // Component wrapper untuk theme color hook
 const ThemeColorWrapper = ({ children }) => {
 	const location = useLocation();
+	const { user } = useAuth();
 	useThemeColor();
 	
 	// Dismiss all toasts on route change to prevent stuck toasts
 	useEffect(() => {
 		toast.dismiss();
 	}, [location.pathname]);
+
+	// Initialize PWA and Push Notifications on mount (only for logged in users)
+	useEffect(() => {
+		const initPWA = async () => {
+			try {
+				// Register service worker
+				await registerServiceWorker();
+				console.log('PWA Service Worker registered');
+
+				// Listen for messages from service worker (untuk auto-refresh data)
+				if ('serviceWorker' in navigator) {
+					navigator.serviceWorker.addEventListener('message', (event) => {
+						console.log('[App] Message from SW:', event.data);
+						
+						if (event.data && event.data.type === 'NEW_NOTIFICATION') {
+							// Trigger custom event untuk refresh data tanpa reload
+							window.dispatchEvent(new CustomEvent('newNotification', {
+								detail: event.data.payload
+							}));
+							console.log('🔔 New notification event dispatched - UI will auto-refresh');
+						}
+					});
+				}
+
+				// Auto-initialize push notifications for logged in users
+				if (user && localStorage.getItem('expressToken')) {
+					// Wait a bit for SW to be ready
+					setTimeout(async () => {
+						const permission = Notification.permission;
+						
+						// Only auto-init if already granted (from login page)
+						if (permission === 'granted') {
+							console.log('Auto-initializing push notifications for logged in user');
+							try {
+								const subscription = await subscribeToPushNotifications();
+								if (subscription) {
+									console.log('✅ Background push subscription successful');
+								}
+							} catch (err) {
+								console.warn('Background push subscription failed:', err);
+							}
+						}
+					}, 1000);
+				}
+			} catch (error) {
+				console.error('Error initializing PWA:', error);
+			}
+		};
+
+		initPWA();
+	}, [user]);
 	
 	return children;
 };
@@ -271,6 +325,7 @@ function App() {
 					<Route path="user" element={<UserManagementPage />} />
 					<Route path="disposisi" element={<DisposisiSurat />} />
 					<Route path="disposisi/:id" element={<DisposisiDetail />} />
+					<Route path="settings" element={<SettingsPage />} />
 					</Route>
 
 					{/* Rute Desa dengan lazy loading */}

@@ -1,4 +1,4 @@
-﻿// Bantuan Keuangan Tahap 2
+// Bantuan Keuangan Tahap 2
 import React, { useState, useEffect } from 'react';
 import { FiDollarSign, FiMapPin, FiUsers, FiTrendingUp, FiDownload, FiSearch, FiUpload, FiRefreshCw, FiX, FiChevronDown, FiChevronUp, FiFilter } from 'react-icons/fi';
 import toast from 'react-hot-toast';
@@ -348,7 +348,7 @@ const BankeuT2 = () => {
                     {isExpanded && items.map((item, idx) => (
                       <tr key={idx} className="hover:bg-gray-50">
                         <td className="px-6 py-4">{idx + 1}</td>
-                        <td className="px-6 py-4 text-gray-500">↳ {kecamatan}</td>
+                        <td className="px-6 py-4 text-gray-500">? {kecamatan}</td>
                         <td className="px-6 py-4 font-medium">{item.desa}</td>
                         <td className="px-6 py-4">
                           <span className={`px-2 py-1 text-xs rounded-full font-medium ${

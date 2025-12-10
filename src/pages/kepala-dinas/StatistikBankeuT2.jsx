@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Users, TrendingUp, BarChart3, Activity, DollarSign, ChevronDown, ChevronUp, MapPin } from 'lucide-react';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement } from 'chart.js';
@@ -535,7 +535,7 @@ const StatistikBankeuT2 = () => {
                       </tr>
                       {isExpanded && items.map((item, index) => (
                         <tr key={`${item.desa}-${index}`} className="hover:bg-gray-50 transition-colors">
-                          <td className="px-6 py-4 text-gray-400">↳ {kecamatan}</td>
+                          <td className="px-6 py-4 text-gray-400">? {kecamatan}</td>
                           <td className="px-6 py-4 font-medium text-gray-800">{item.desa}</td>
                           <td className="px-6 py-4">
                             <span className={`px-2 py-1 text-xs rounded-full font-medium ${
