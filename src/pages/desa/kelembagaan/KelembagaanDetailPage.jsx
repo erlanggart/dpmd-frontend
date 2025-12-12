@@ -31,10 +31,10 @@ import { FaArrowLeft } from "react-icons/fa";
 import {
 	showSuccessAlert,
 	showErrorAlert,
-	showWarningAlert,
 	showLoadingAlert,
 } from "../../../utils/sweetAlert";
-import { LuSettings2 } from "react-icons/lu";
+import { LuSettings2, LuClock, LuUser, LuCalendar } from "react-icons/lu";
+import { getDetailActivityLogs } from "../../../services/activityLogs";
 
 // Simple Modal for editing alamat and name/nomor
 const EditModal = ({
@@ -75,41 +75,153 @@ const EditModal = ({
 	);
 };
 
-const AktivitasLog = ({ lembagaType, lembagaId }) => (
-	<div className="bg-gradient-to-br from-white to-slate-50 rounded-2xl border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300">
-		{/* Header dengan gradient accent */}
-		<div className="h-1.5 bg-gradient-to-r from-purple-400 to-pink-500 rounded-t-2xl"></div>
+const AktivitasLog = ({ lembagaType, lembagaId }) => {
+	const [logs, setLogs] = useState([]);
+	const [loading, setLoading] = useState(true);
 
-		<div className="p-6">
-			{/* Header Section */}
-			<div className="flex items-center space-x-3 mb-6">
-				<div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-pink-600 rounded-xl flex items-center justify-center text-white shadow-lg">
-					<LuSettings2 className="w-6 h-6" />
-				</div>
-				<div>
-					<h3 className="text-xl font-bold text-gray-800">Log Aktivitas</h3>
-					<p className="text-sm text-gray-500">
-						Riwayat perubahan dan aktivitas
-					</p>
-				</div>
-			</div>
+	useEffect(() => {
+		const fetchLogs = async () => {
+			if (!lembagaType || !lembagaId) return;
+			
+			setLoading(true);
+			try {
+				const response = await getDetailActivityLogs(lembagaType, lembagaId, 50);
+				setLogs(response?.data?.logs || []);
+			} catch (error) {
+				console.error('Error fetching activity logs:', error);
+				setLogs([]);
+			} finally {
+				setLoading(false);
+			}
+		};
 
-			{/* Content */}
-			<div className="text-center py-12">
-				<div className="w-20 h-20 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-					<LuSettings2 className="w-8 h-8 text-gray-400" />
+		fetchLogs();
+	}, [lembagaType, lembagaId]);
+
+	const formatDate = (dateString) => {
+		const date = new Date(dateString);
+		return new Intl.DateTimeFormat('id-ID', {
+			day: 'numeric',
+			month: 'short',
+			year: 'numeric',
+			hour: '2-digit',
+			minute: '2-digit'
+		}).format(date);
+	};
+
+	const getActivityIcon = (activityType) => {
+		switch (activityType) {
+			case 'create':
+				return '🎉';
+			case 'update':
+				return '✏️';
+			case 'toggle_status':
+				return '🔄';
+			case 'verify':
+				return '✅';
+			case 'add_pengurus':
+				return '👤';
+			case 'update_pengurus':
+				return '✏️';
+			case 'toggle_pengurus_status':
+				return '🔄';
+			case 'verify_pengurus':
+				return '✅';
+			default:
+				return '📝';
+		}
+	};
+
+	const getEntityBadge = (entityType) => {
+		return entityType === 'lembaga' 
+			? <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">Lembaga</span>
+			: <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">Pengurus</span>;
+	};
+
+	return (
+		<div className="bg-gradient-to-br from-white to-slate-50 rounded-2xl border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300">
+			{/* Header dengan gradient accent */}
+			<div className="h-1.5 bg-gradient-to-r from-purple-400 to-pink-500 rounded-t-2xl"></div>
+
+			<div className="p-6">
+				{/* Header Section */}
+				<div className="flex items-center space-x-3 mb-6">
+					<div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-pink-600 rounded-xl flex items-center justify-center text-white shadow-lg">
+						<LuSettings2 className="w-6 h-6" />
+					</div>
+					<div>
+						<h3 className="text-xl font-bold text-gray-800">Log Aktivitas</h3>
+						<p className="text-sm text-gray-500">
+							Riwayat perubahan dan aktivitas
+						</p>
+					</div>
 				</div>
-				<h4 className="text-lg font-medium text-gray-600 mb-2">
-					Belum ada aktivitas
-				</h4>
-				<p className="text-sm text-gray-500">
-					Riwayat aktivitas untuk {lembagaType?.toUpperCase()} ID {lembagaId}{" "}
-					akan tampil di sini.
-				</p>
+
+				{/* Content */}
+				{loading ? (
+					<div className="text-center py-12">
+						<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
+						<p className="text-sm text-gray-500 mt-4">Memuat riwayat...</p>
+					</div>
+				) : logs.length === 0 ? (
+					<div className="text-center py-12">
+						<div className="w-20 h-20 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+							<LuSettings2 className="w-8 h-8 text-gray-400" />
+						</div>
+						<h4 className="text-lg font-medium text-gray-600 mb-2">
+							Belum ada aktivitas
+						</h4>
+						<p className="text-sm text-gray-500">
+							Riwayat aktivitas akan tampil di sini setelah ada perubahan data
+						</p>
+					</div>
+				) : (
+					<div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
+						{logs.map((log) => (
+							<div
+								key={log.id}
+								className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-200 border border-gray-100"
+							>
+								<div className="flex items-start space-x-3">
+									<div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-purple-100 to-pink-100 rounded-lg flex items-center justify-center text-xl">
+										{getActivityIcon(log.activity_type)}
+									</div>
+									<div className="flex-1 min-w-0">
+										<div className="flex items-start justify-between mb-2">
+											<div className="flex-1">
+												<p className="text-sm font-medium text-gray-800 leading-relaxed">
+													{log.action_description}
+												</p>
+												<div className="flex items-center space-x-2 mt-1">
+													{getEntityBadge(log.entity_type)}
+													{log.entity_name && (
+														<span className="text-xs text-gray-500">
+															· {log.entity_name}
+														</span>
+													)}
+												</div>
+											</div>
+										</div>
+										<div className="flex items-center space-x-4 text-xs text-gray-500">
+											<div className="flex items-center space-x-1">
+												<LuUser className="w-3 h-3" />
+												<span>{log.user_name}</span>
+											</div>
+											<div className="flex items-center space-x-1">
+												<LuCalendar className="w-3 h-3" />
+												<span>{formatDate(log.created_at)}</span>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						))}
+					</div>
+				)}
 			</div>
 		</div>
-	</div>
-);
+	);
+};
 
 export default function KelembagaanDetailPage() {
 	const { user } = useAuth();
@@ -438,9 +550,10 @@ export default function KelembagaanDetailPage() {
 
 						// Jika RT dan user adalah admin/bidang
 						if (type === "rt" && detail.rw_id && isSuperadminOrBidang) {
-							if (effectiveDesaId) {
+							const targetDesaId = desaId || detail?.desa_id || user?.desa_id;
+							if (targetDesaId) {
 								navigate(
-									`/dashboard/kelembagaan/admin/${effectiveDesaId}/rw/${detail.rw_id}`
+									`/dashboard/kelembagaan/admin/${targetDesaId}/rw/${detail.rw_id}`
 								);
 							} else {
 								// Fallback ke dashboard kelembagaan utama
@@ -457,9 +570,9 @@ export default function KelembagaanDetailPage() {
 
 						if (isSuperadminOrBidang) {
 							// Admin/bidang ke halaman admin dengan desa_id
-							const desaId = detail?.desa_id || user?.desa_id;
-							if (desaId) {
-								navigate(`/dashboard/kelembagaan/admin/${desaId}`);
+							const targetDesaId = detail?.desa_id || user?.desa_id;
+							if (targetDesaId) {
+								navigate(`/dashboard/kelembagaan/admin/${targetDesaId}`);
 							} else {
 								// Fallback ke dashboard kelembagaan utama
 								navigate(`/dashboard/kelembagaan`);

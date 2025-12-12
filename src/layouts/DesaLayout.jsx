@@ -15,6 +15,41 @@ import {
 } from "react-icons/lu";
 import Footer from "../components/landingpage/Footer";
 
+// Menu items configuration
+const menuItems = [
+	{
+		id: 'dashboard',
+		label: 'Dashboard',
+		path: '/desa/dashboard',
+		icon: FiGrid,
+	},
+	{
+		id: 'aparatur-desa',
+		label: 'Aparatur Desa',
+		path: '/desa/aparatur-desa',
+		icon: LuUserCheck,
+	},
+	{
+		id: 'produk-hukum',
+		label: 'Produk Hukum',
+		path: '/desa/produk-hukum',
+		icon: LuFileText,
+	},
+	{
+		id: 'bumdes',
+		label: 'BUMDES',
+		path: '/desa/bumdes',
+		icon: LuStore,
+	},
+	{
+		id: 'kelembagaan',
+		label: 'Kelembagaan',
+		path: '/desa/kelembagaan',
+		icon: LuUsers,
+	},
+	
+];
+
 const DesaLayout = () => {
 	const { user, logout } = useAuth();
 	const navigate = useNavigate();
@@ -88,146 +123,41 @@ const DesaLayout = () => {
 						sidebarOpen ? "translate-x- w-64" : "-translate-x-full w-64 lg:w-20"
 					}`}
 				>
+					
+
 					<nav>
 						<ul>
-							<li className="mb-2">
-								<NavLink
-									to="/desa/dashboard"
-									className={({ isActive }) =>
-										`${baseLinkClass} ${
-											isActive ? activeLinkClass : inactiveLinkClass
-										}`
-									}
-									onClick={() =>
-										window.innerWidth < 1024 && setSidebarOpen(false)
-									}
-								>
-									<FiGrid className="h-6 w-6" />
-									<span
-										className={`ml-3 whitespace-nowrap ${
-											!sidebarOpen && "lg:hidden"
-										}`}
-									>
-										Dashboard
-									</span>
-								</NavLink>
-							</li>
-							<li className="mb-2">
-								<NavLink
-									to="/core-dashboard/dashboard"
-									className={({ isActive }) =>
-										`${baseLinkClass} ${
-											isActive ? activeLinkClass : inactiveLinkClass
-										}`
-									}
-									onClick={() =>
-										window.innerWidth < 1024 && setSidebarOpen(false)
-									}
-								>
-									<FiGrid className="h-6 w-6" />
-									<span
-										className={`ml-3 whitespace-nowrap ${
-											!sidebarOpen && "lg:hidden"
-										}`}
-									>
-										Core Dashboard
-									</span>
-								</NavLink>
-							</li>
-							<li className="mb-2">
-								<NavLink
-									to="/desa/bumdes"
-									className={({ isActive }) =>
-										`${baseLinkClass} ${
-											isActive ? activeLinkClass : inactiveLinkClass
-										}`
-									}
-									onClick={() =>
-										window.innerWidth < 1024 && setSidebarOpen(false)
-									}
-								>
-									<LuStore className="h-6 w-6" />
-									<span
-										className={`ml-3 whitespace-nowrap ${
-											!sidebarOpen && "lg:hidden"
-										}`}
-									>
-										BUMDES
-									</span>
-								</NavLink>
-							</li>
-							<li className="mb-2">
-								<NavLink
-									to="/desa/kelembagaan"
-									className={({ isActive }) =>
-										`${baseLinkClass} ${
-											isActive ? activeLinkClass : inactiveLinkClass
-										}`
-									}
-									onClick={() =>
-										window.innerWidth < 1024 && setSidebarOpen(false)
-									}
-								>
-									<LuUsers className="h-6 w-6" />
-									<span
-										className={`ml-3 whitespace-nowrap ${
-											!sidebarOpen && "lg:hidden"
-										}`}
-									>
-										Kelembagaan
-									</span>
-								</NavLink>
-							</li>
-							<li className="mb-2">
-								<NavLink
-									to="/desa/aparatur-desa"
-									className={({ isActive }) =>
-										`${baseLinkClass} ${
-											isActive ? activeLinkClass : inactiveLinkClass
-										}`
-									}
-									onClick={() =>
-										window.innerWidth < 1024 && setSidebarOpen(false)
-									}
-								>
-									<LuUserCheck className="h-6 w-6" />
-									<span
-										className={`ml-3 whitespace-nowrap ${
-											!sidebarOpen && "lg:hidden"
-										}`}
-									>
-										Aparatur Desa
-									</span>
-								</NavLink>
-							</li>
-							<li className="mb-2">
-								<NavLink
-									to="/desa/produk-hukum"
-									className={({ isActive }) =>
-										`${baseLinkClass} ${
-											isActive ? activeLinkClass : inactiveLinkClass
-										}`
-									}
-									onClick={() =>
-										window.innerWidth < 1024 && setSidebarOpen(false)
-									}
-								>
-									<LuFileText className="h-6 w-6" />
-									<span
-										className={`ml-3 whitespace-nowrap ${
-											!sidebarOpen && "lg:hidden"
-										}`}
-									>
-										Produk Hukum
-									</span>
-								</NavLink>
-							</li>
-							{/* Tambahkan link menu lain di sini */}
+							{menuItems.map((item) => {
+								const IconComponent = item.icon;
+								return (
+									<li key={item.id} className="mb-2">
+										<NavLink
+											to={item.path}
+											className={({ isActive }) =>
+												`${baseLinkClass} ${
+													isActive ? activeLinkClass : inactiveLinkClass
+												}`
+											}
+											onClick={() =>
+												window.innerWidth < 1024 && setSidebarOpen(false)
+											}
+											title={item.label}
+										>
+											<IconComponent className="h-6 w-6" />
+											<span
+												className={`ml-3 whitespace-nowrap ${
+													!sidebarOpen && "lg:hidden"
+												}`}
+											>
+												{item.label}
+											</span>
+										</NavLink>
+									</li>
+								);
+							})}
 						</ul>
 					</nav>
-				</aside>
-
-				{/* Konten utama */}
+				</aside>				{/* Konten utama */}
 				<main className="flex-1 min-h-screen">
 					<Outlet />
 				</main>
