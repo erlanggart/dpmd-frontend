@@ -78,7 +78,7 @@ export const subscribeToPushNotifications = async () => {
     }
 
     // VAPID public key (generate di backend)
-    const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY || 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr9qBHEaQmZF-nZiV3K46EY';
+    const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY || 'BL6liNDgLWAzQLvO0rG9EAlJcg3Tf3S7TfeSGG7SN4KTXh7Yhq68IccPWAFfRrMjAcC9xMqVkpes2arRsQwi-m8';
     console.log('[Push] VAPID Public Key:', vapidPublicKey.substring(0, 30) + '...');
 
     // Convert VAPID key to Uint8Array
