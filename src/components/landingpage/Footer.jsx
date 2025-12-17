@@ -27,7 +27,7 @@ const Footer = () => {
 					<div>
 						<div className="flex items-center">
 							<img
-								src="/logo-kab.png"
+								src="/logo-bogor.png"
 								alt="Logo Kabupaten Bogor"
 								className="h-12"
 							/>

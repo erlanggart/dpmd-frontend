@@ -1,24 +1,31 @@
 // src/components/PWAInstallButton.jsx
 import React, { useEffect, useState } from 'react';
-import { FiDownload } from 'react-icons/fi';
+import { FiDownload, FiCheck } from 'react-icons/fi';
 
 const PWAInstallButton = () => {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isInstallable, setIsInstallable] = useState(false);
   const [isMobileOrTablet, setIsMobileOrTablet] = useState(false);
+  const [isAlreadyInstalled, setIsAlreadyInstalled] = useState(false);
 
   useEffect(() => {
     console.log('[PWA] Component mounted');
     
-    // Check if app is already installed
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches 
-      || window.navigator.standalone 
-      || document.referrer.includes('android-app://');
+    // Function to check if app is already installed
+    const checkIfInstalled = () => {
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches 
+        || window.navigator.standalone 
+        || document.referrer.includes('android-app://');
+      return isStandalone;
+    };
 
-    console.log('[PWA] Is standalone:', isStandalone);
+    const installed = checkIfInstalled();
+    console.log('[PWA] Is app installed:', installed);
+    setIsAlreadyInstalled(installed);
 
-    if (isStandalone) {
-      console.log('[PWA] App already installed');
+    // If already installed, show the button in "installed" state
+    if (installed) {
+      console.log('[PWA] App already installed - showing installed state button');
       return;
     }
 
@@ -44,12 +51,23 @@ const PWAInstallButton = () => {
     };
 
     window.addEventListener('beforeinstallprompt', handler);
-    console.log('[PWA] Event listener added');
+    
+    // Also listen for app installed event
+    const installedHandler = () => {
+      console.log('[PWA] App was installed');
+      setIsAlreadyInstalled(true);
+      setDeferredPrompt(null);
+      setIsInstallable(false);
+    };
+    
+    window.addEventListener('appinstalled', installedHandler);
+    console.log('[PWA] Event listeners added');
 
     // Cleanup
     return () => {
       window.removeEventListener('beforeinstallprompt', handler);
-      console.log('[PWA] Event listener removed');
+      window.removeEventListener('appinstalled', installedHandler);
+      console.log('[PWA] Event listeners removed');
     };
   }, []);
 
@@ -58,11 +76,29 @@ const PWAInstallButton = () => {
     e.stopPropagation();
     
     console.log('[PWA] Install button clicked');
+    
+    // Double-check if app is already installed (real-time check)
+    const isCurrentlyInstalled = window.matchMedia('(display-mode: standalone)').matches 
+      || window.navigator.standalone 
+      || document.referrer.includes('android-app://');
+    
+    console.log('[PWA] Real-time install check:', isCurrentlyInstalled);
+    console.log('[PWA] State isAlreadyInstalled:', isAlreadyInstalled);
     console.log('[PWA] deferredPrompt available:', !!deferredPrompt);
 
+    // Check if already installed (use real-time check)
+    if (isCurrentlyInstalled || isAlreadyInstalled) {
+      alert('✅ Aplikasi Sudah Terinstall!\n\nAnda sudah menginstall aplikasi ini sebelumnya.\nAnda dapat mengaksesnya dari home screen atau daftar aplikasi.');
+      
+      // Update state if not yet updated
+      if (!isAlreadyInstalled) {
+        setIsAlreadyInstalled(true);
+      }
+      return;
+    }
+
     if (!deferredPrompt) {
-      console.warn('[PWA] No install prompt available');
-      alert('Install prompt belum tersedia. Pastikan:\n1. Menggunakan HTTPS\n2. Ada manifest.json\n3. Ada service worker\n4. Browser mendukung PWA install');
+      console.warn('[PWA] No install prompt available - this should not happen as button should be hidden');
       return;
     }
 
@@ -78,6 +114,8 @@ const PWAInstallButton = () => {
 
       if (outcome === 'accepted') {
         console.log('[PWA] User accepted the install prompt');
+        alert('✅ Aplikasi berhasil diinstall!\n\nAnda dapat mengaksesnya dari home screen atau daftar aplikasi.');
+        setIsAlreadyInstalled(true);
       } else {
         console.log('[PWA] User dismissed the install prompt');
       }
@@ -87,30 +125,43 @@ const PWAInstallButton = () => {
       setIsInstallable(false);
     } catch (error) {
       console.error('[PWA] Error during install:', error);
-      alert('Gagal menginstall aplikasi. Silakan coba lagi.');
+      alert('❌ Gagal menginstall aplikasi. Silakan coba lagi atau gunakan menu browser untuk install.');
     }
   };
 
-  // Show button if:
-  // 1. PWA is installable (beforeinstallprompt fired) OR
-  // 2. User is on mobile/tablet device (always show for awareness)
-  if (!isInstallable && !isMobileOrTablet) return null;
+  // Show button ONLY if:
+  // 1. PWA is installable (beforeinstallprompt fired and deferredPrompt exists) OR
+  // 2. App is already installed (show with installed state)
+  // Do NOT show button if just on mobile without install prompt available
+  if (!isInstallable && !isAlreadyInstalled) return null;
 
   return (
     <button
       onClick={handleInstall}
-      disabled={!deferredPrompt}
       className={`flex items-center justify-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 w-full lg:w-auto touch-manipulation active:scale-95 ${
-        deferredPrompt 
-          ? 'bg-secondary hover:bg-secondary/90 text-white shadow-md hover:shadow-lg cursor-pointer pointer-events-auto' 
-          : 'bg-gray-400 text-gray-200 cursor-not-allowed'
+        isAlreadyInstalled
+          ? 'bg-green-600 hover:bg-green-700 text-white shadow-md hover:shadow-lg'
+          : 'bg-secondary hover:bg-secondary/90 text-white shadow-md hover:shadow-lg'
       }`}
-      style={{ WebkitTapHighlightColor: 'transparent' }}
-      title={deferredPrompt ? 'Install Aplikasi' : 'Gunakan browser yang mendukung PWA'}
+      title={
+        isAlreadyInstalled 
+          ? 'Klik untuk melihat status instalasi' 
+          : 'Klik untuk install aplikasi ke perangkat Anda'
+      }
     >
-      <FiDownload className="w-4 h-4" />
-      <span className="lg:hidden">Install Aplikasi</span>
-      <span className="hidden lg:inline">Install App</span>
+      {isAlreadyInstalled ? (
+        <>
+          <FiCheck className="w-4 h-4" />
+          <span className="lg:hidden">Sudah Terinstall</span>
+          <span className="hidden lg:inline">Already Installed</span>
+        </>
+      ) : (
+        <>
+          <FiDownload className="w-4 h-4" />
+          <span className="lg:hidden">Install Aplikasi</span>
+          <span className="hidden lg:inline">Install App</span>
+        </>
+      )}
     </button>
   );
 };

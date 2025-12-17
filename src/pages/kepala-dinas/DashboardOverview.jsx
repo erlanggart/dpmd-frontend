@@ -62,35 +62,40 @@ const DashboardOverview = () => {
           desaMap[key] = {
             kecamatan: item.kecamatan,
             desa: item.desa,
-            tahap1: null,
-            tahap2: null
+            records: []
           };
         }
-        
-        // Tahap 1 = Dana Telah Dicairkan
-        if (item.sts === 'Dana Telah Dicairkan') {
-          desaMap[key].tahap1 = {
-            sts: item.sts,
-            realisasi: parseInt(item.Realisasi.replace(/,/g, ''))
-          };
-        } else {
-          // Tahap 2 = status lainnya (Review, Proses, dll)
-          desaMap[key].tahap2 = {
-            sts: item.sts,
-            realisasi: parseInt(item.Realisasi.replace(/,/g, ''))
-          };
-        }
+        desaMap[key].records.push({
+          sts: item.sts,
+          realisasi: parseInt(item.Realisasi.replace(/,/g, ''))
+        });
       });
 
       const desaList = Object.values(desaMap);
       
-      // Hitung statistik berdasarkan desa unik
+      // Hitung statistik per status (DINAMIS)
+      const statusStats = {};
+      validData.forEach(item => {
+        if (!statusStats[item.sts]) {
+          statusStats[item.sts] = {
+            count: 0,
+            total: 0
+          };
+        }
+        statusStats[item.sts].count += 1;
+        statusStats[item.sts].total += parseInt(item.Realisasi.replace(/,/g, ''));
+      });
+      
+      // Hitung total realisasi
+      const total_realisasi = validData.reduce((sum, item) => 
+        sum + parseInt(item.Realisasi.replace(/,/g, '')), 0
+      );
+      
       const stats = {
         total_desa: desaList.length,
-        dana_cair: desaList.filter(d => d.tahap1 !== null).length,
-        tahap2_proses: desaList.filter(d => d.tahap2 !== null).length,
-        total_realisasi_tahap1: desaList.reduce((sum, d) => sum + (d.tahap1?.realisasi || 0), 0),
-        total_realisasi_tahap2: desaList.reduce((sum, d) => sum + (d.tahap2?.realisasi || 0), 0)
+        total_records: validData.length,
+        total_realisasi: total_realisasi,
+        statusStats: statusStats // Objek dinamis berisi semua status
       };
       
       setBankeuData(stats);
@@ -314,7 +319,7 @@ const DashboardOverview = () => {
       gradient: 'from-amber-500 to-amber-700',
       bgColor: 'bg-amber-50',
       textColor: 'text-amber-700',
-      change: `${bankeuData?.dana_cair || 0} Cair`,
+      change: `${bankeuData?.total_records || 0} Records`,
       trend: 'neutral'
     },
     {
@@ -491,7 +496,7 @@ const DashboardOverview = () => {
                   <CheckCircle2 className="w-5 h-5 text-green-600" />
                   <div>
                     <p className="font-semibold text-gray-900">Bankeu 2025</p>
-                    <p className="text-sm text-gray-600">{bankeuData?.dana_cair || 0} Desa Cair</p>
+                    <p className="text-sm text-gray-600">{bankeuData?.total_records || 0} Total Records</p>
                   </div>
                 </div>
                 <span className="text-green-700 font-bold">{bankeuData?.total_desa || 0}</span>
@@ -570,12 +575,12 @@ const DashboardOverview = () => {
               {/* Bankeu Performance */}
               <div>
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-medium text-gray-700">Bankeu Cair</span>
-                  <span className="text-sm font-bold text-green-600">{bankeuData?.dana_cair || 0}/{bankeuData?.total_desa || 0}</span>
+                  <span className="text-sm font-medium text-gray-700">Bankeu Records</span>
+                  <span className="text-sm font-bold text-green-600">{bankeuData?.total_records || 0} / {bankeuData?.total_desa || 0} Desa</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-3">
                   <div className="bg-gradient-to-r from-green-500 to-green-600 h-3 rounded-full" 
-                    style={{ width: `${bankeuData?.total_desa ? (bankeuData.dana_cair / bankeuData.total_desa * 100) : 0}%` }}>
+                    style={{ width: `${bankeuData?.total_desa ? (bankeuData.total_records / bankeuData.total_desa * 100) : 0}%` }}>
                   </div>
                 </div>
               </div>

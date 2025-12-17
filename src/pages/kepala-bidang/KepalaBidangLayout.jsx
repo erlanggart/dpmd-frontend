@@ -2,6 +2,7 @@
 import React from "react";
 import { Outlet, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { FiHome, FiMail, FiTrendingUp, FiMenu, FiLogOut } from "react-icons/fi";
+import './KepalaBidangLayout.css';
 
 const KepalaBidangLayout = () => {
 	const [showMenu, setShowMenu] = React.useState(false);
@@ -192,23 +193,6 @@ const KepalaBidangLayout = () => {
 					</div>
 				</>
 			)}
-
-			<style jsx>{`
-				@keyframes fadeIn {
-					from { opacity: 0; }
-					to { opacity: 1; }
-				}
-				@keyframes slideUp {
-					from { transform: translateY(100%); }
-					to { transform: translateY(0); }
-				}
-				.animate-fadeIn {
-					animation: fadeIn 0.3s ease-out;
-				}
-				.animate-slideUp {
-					animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-				}
-			`}</style>
 		</div>
 	);
 };

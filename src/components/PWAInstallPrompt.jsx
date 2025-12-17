@@ -114,7 +114,7 @@ const PWAInstallPrompt = ({ showOnLanding = false }) => {
               Install Aplikasi DPMD
             </h3>
             <p className="text-sm text-gray-600 mb-3">
-              Akses lebih cepat dengan install aplikasi di perangkat Anda
+              Akses lebih cepat dengan install aplikasi di perangkat Anda. Dapatkan notifikasi disposisi walaupun aplikasi tidak dibuka.
             </p>
             
             <button

@@ -5,6 +5,7 @@ import {
   Building2, Shield, LogOut, ChevronDown, ChevronRight 
 } from 'lucide-react';
 import axios from 'axios';
+import InstallPWA from '../components/InstallPWA';
 
 const API_CONFIG = {
   BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:3001/api'
@@ -223,6 +224,13 @@ const VPNDashboardLayout = () => {
             ))}
           </ul>
         </nav>
+
+        {/* Install PWA Button */}
+        {sidebarOpen && (
+          <div className="p-4 border-t border-indigo-500 flex-shrink-0">
+            <InstallPWA />
+          </div>
+        )}
 
         {/* Footer */}
         <div className="p-4 border-t border-indigo-500 flex-shrink-0">

@@ -111,6 +111,9 @@ const SekretarisDinasLayout = lazy(() =>
 const CoreDashboardLayout = lazy(() =>
 	import("./layouts/CoreDashboardLayout")
 );
+const WelcomeDashboard = lazy(() =>
+	import("./pages/core-dashboard/WelcomeDashboard")
+);
 const KepalaDinasDashboard = lazy(() =>
 	import("./pages/kepala-dinas/KepalaDinasDashboard")
 );
@@ -327,7 +330,7 @@ function App() {
 					<Route
 						path="/dashboard"
 						element={
-							<ProtectedRoute allowedRoles={['super_admin', 'admin', 'pegawai', 'kepala_dinas', 'kepala_bidang', 'sekretaris_dinas']}>
+							<ProtectedRoute allowedRoles={['super_admin', 'admin', 'pegawai', 'kepala_dinas', 'kepala_bidang', 'sekretaris_dinas', 'sarana_prasarana', 'kekayaan_keuangan']}>
 								<MainLayout />
 							</ProtectedRoute>
 						}
@@ -450,13 +453,13 @@ function App() {
 					<Route
 						path="/core-dashboard"
 						element={
-							<RoleProtectedRoute allowedRoles={['super_admin', 'kepala_dinas', 'sekretaris_dinas', 'kepala_bidang', 'pegawai']}>
+							<RoleProtectedRoute allowedRoles={['super_admin', 'kepala_dinas', 'sekretaris_dinas', 'kepala_bidang', 'pegawai', 'sarana_prasarana', 'kekayaan_keuangan', ]}>
 								<CoreDashboardLayout />
 							</RoleProtectedRoute>
 						}
 					>
 					<Route index element={<Navigate to="dashboard" replace />} />
-					<Route path="dashboard" element={<DashboardOverview />} />
+					<Route path="dashboard" element={<WelcomeDashboard />} />
 					<Route path="laporan-desa" element={<LaporanDesa />} />
 					<Route path="statistik-bumdes" element={<StatistikBumdes />} />
 					<Route path="statistik-perjadin" element={<StatistikPerjadin />} />

@@ -1,11 +1,10 @@
 // Service Worker untuk PWA dengan Push Notifications
-const CACHE_NAME = 'dpmd-cache-v1';
+const CACHE_NAME = 'dpmd-cache-v2';
 const urlsToCache = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/icon-192x192.png',
-  '/icon-512x512.png'
+  '/logo-bogor.png'
 ];
 
 // Install event - cache assets
@@ -58,17 +57,19 @@ self.addEventListener('push', (event) => {
   console.log('[SW] Push data:', event.data ? event.data.text() : 'No data');
   
   let notificationData = {
-    title: 'DPMD - Disposisi Baru',
-    body: 'Anda menerima disposisi surat baru',
-    icon: '/icon-192x192.png',
-    badge: '/icon-192x192.png',
-    vibrate: [200, 100, 200],
-    tag: 'disposisi-notification',
-    requireInteraction: true,
-    renotify: true,
-    silent: false,
+    title: 'DPMD Bogor',
+    body: 'Anda memiliki notifikasi baru',
+    icon: '/logo-bogor.png',
+    badge: '/logo-bogor.png',
+    image: '/logo-bogor.png',
+    vibrate: [500, 200, 500, 200, 500, 200, 500], // Vibration pattern kuat seperti WhatsApp
+    tag: 'dpmd-notification',
+    requireInteraction: true, // Notifikasi tetap sampai user klik
+    renotify: true, // Vibrate lagi jika ada notifikasi baru dengan tag sama
+    silent: false, // WAJIB false untuk heads-up notification
+    timestamp: Date.now(),
     data: {
-      url: '/dashboard/disposisi',
+      url: '/dashboard',
       timestamp: Date.now()
     }
   };
@@ -82,15 +83,17 @@ self.addEventListener('push', (event) => {
         body: payload.body || notificationData.body,
         icon: payload.icon || notificationData.icon,
         badge: payload.badge || notificationData.badge,
+        image: payload.image || payload.icon || notificationData.image,
         vibrate: payload.vibrate || notificationData.vibrate,
         tag: payload.tag || notificationData.tag,
         requireInteraction: payload.requireInteraction !== undefined ? payload.requireInteraction : true,
         renotify: true,
         silent: false,
+        timestamp: payload.timestamp || Date.now(),
         data: payload.data || notificationData.data,
         actions: payload.actions || [
-          { action: 'open', title: 'Buka' },
-          { action: 'close', title: 'Tutup' }
+          { action: 'open', title: 'BUKA DISPOSISI' },
+          { action: 'mark_read', title: 'TANDAI DIBACA' }
         ]
       };
     } catch (e) {
@@ -110,11 +113,13 @@ self.addEventListener('push', (event) => {
       body: notificationData.body,
       icon: notificationData.icon,
       badge: notificationData.badge,
+      image: notificationData.image,
       vibrate: notificationData.vibrate,
       tag: notificationData.tag,
       requireInteraction: notificationData.requireInteraction,
       renotify: notificationData.renotify,
       silent: notificationData.silent,
+      timestamp: notificationData.timestamp,
       data: notificationData.data,
       actions: notificationData.actions
     }
@@ -140,30 +145,65 @@ self.addEventListener('push', (event) => {
 
 // Notification click event
 self.addEventListener('notificationclick', (event) => {
-  console.log('Notification clicked:', event);
+  console.log('[SW] Notification clicked:', event);
+  console.log('[SW] Notification data:', event.notification.data);
+  console.log('[SW] Action:', event.action);
   
   event.notification.close();
 
-  if (event.action === 'close') {
+  // Handle mark_read action
+  if (event.action === 'mark_read') {
+    console.log('[SW] Mark read action clicked');
+    // Broadcast to app to mark as read without opening
+    event.waitUntil(
+      self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+        .then(clients => {
+          clients.forEach(client => {
+            client.postMessage({
+              type: 'MARK_DISPOSISI_READ',
+              disposisi_id: event.notification.data?.disposisi_id
+            });
+          });
+        })
+    );
     return;
   }
 
-  const urlToOpen = event.notification.data?.url || '/dashboard/disposisi';
+  // Get URL from notification data
+  const urlToOpen = event.notification.data?.url || '/dashboard';
+  const fullUrl = new URL(urlToOpen, self.location.origin).href;
+  
+  console.log('[SW] Opening URL:', fullUrl);
+  console.log('[SW] Notification type:', event.notification.data?.type);
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then((clientList) => {
-        // Check if there's already a window open
+        console.log('[SW] Found', clientList.length, 'client(s)');
+        
+        // Check if there's already a window open with our app
         for (let i = 0; i < clientList.length; i++) {
           const client = clientList[i];
-          if (client.url.includes(urlToOpen) && 'focus' in client) {
-            return client.focus();
+          console.log('[SW] Client URL:', client.url);
+          
+          // If same origin, navigate to the URL
+          if (client.url.startsWith(self.location.origin) && 'focus' in client) {
+            console.log('[SW] Focusing existing client and navigating');
+            return client.focus().then(() => {
+              // Navigate the client to the disposisi detail
+              return client.navigate(fullUrl);
+            });
           }
         }
+        
         // If no window is open, open a new one
+        console.log('[SW] No existing client, opening new window');
         if (clients.openWindow) {
-          return clients.openWindow(urlToOpen);
+          return clients.openWindow(fullUrl);
         }
+      })
+      .catch(err => {
+        console.error('[SW] Error handling notification click:', err);
       })
   );
 });
