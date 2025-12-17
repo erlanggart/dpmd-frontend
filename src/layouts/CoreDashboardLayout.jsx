@@ -247,6 +247,7 @@ const CoreDashboardLayout = () => {
           })}
         </nav>
 
+
         {/* Logout Button */}
         <div className="p-4 border-t border-gray-200 flex-shrink-0">
           <button

@@ -20,6 +20,7 @@ import {
 	TbBuildingBank,
 } from "react-icons/tb";
 import SearchPalette from "../components/SearchPalatte";
+import InstallPWA from "../components/InstallPWA";
 
 // Komponen Submenu (Accordion Item)
 const SubMenu = ({ item, openMenu, toggleMenu, isMinimized }) => {
@@ -329,7 +330,7 @@ const MainLayout = () => {
 				>
 					<div className="flex items-center overflow-hidden">
 						<img
-							src="/logo-kab.png"
+							src="/logo-bogor.png"
 							alt="Logo"
 							className="h-10 flex-shrink-0"
 						/>
@@ -428,7 +429,12 @@ const MainLayout = () => {
 						/>
 					))}
 				</nav>
-			</aside>
+				{/* Install PWA Button */}
+				{!isSidebarMinimized && (
+					<div className="p-4 border-t border-gray-200">
+						<InstallPWA />
+					</div>
+				)}			</aside>
 			<div className="flex flex-1 flex-col overflow-hidden ">
 				<header className="flex h-16 flex-shrink-0 items-center justify-between bg-white m-4 px-6 rounded-lg shadow-md border border-slate-200">
 					<div className="flex space-x-2 w-full justify-between items-center">
