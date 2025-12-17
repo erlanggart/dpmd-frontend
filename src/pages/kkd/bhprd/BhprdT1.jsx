@@ -6,10 +6,15 @@ import {
   FiSearch, FiChevronDown, FiChevronUp,
   FiUpload, FiRefreshCw, FiInfo, FiX
 } from 'react-icons/fi';
+import { Activity } from 'lucide-react';
+import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement } from 'chart.js';
+import { Pie, Bar } from 'react-chartjs-2';
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 import api from '../../../api';
 import { isVpnUser } from '../../../utils/vpnHelper';
+
+ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
 
 const BhprdT1 = () => {
   const [loading, setLoading] = useState(true);
@@ -22,11 +27,12 @@ const BhprdT1 = () => {
   const [groupByKecamatan, setGroupByKecamatan] = useState(true);
   const [expandedKecamatan, setExpandedKecamatan] = useState({});
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(20);
+  const [itemsPerPage] = useState(20);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadFile, setUploadFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [fileInfo, setFileInfo] = useState(null);
+  const [activeTabView, setActiveTabView] = useState('statistic'); // 'statistic' or 'table'
 
   useEffect(() => {
     fetchBhprdData();
@@ -36,6 +42,7 @@ const BhprdT1 = () => {
   useEffect(() => {
     filterAndSortData();
     setCurrentPage(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [kegiatanData, filterStatus, searchTerm, sortBy]);
 
   const fetchFileInfo = async () => {
@@ -124,6 +131,91 @@ const BhprdT1 = () => {
     setFilteredData(filtered);
   };
 
+  // Get status configuration for dynamic colors
+  const getStatusConfig = (status) => {
+    const statusLower = status.toLowerCase();
+    
+    if (statusLower.includes('dicairkan') || statusLower.includes('selesai') || statusLower.includes('cair')) {
+      return {
+        color: 'green',
+        bgClass: 'bg-green-100',
+        textClass: 'text-green-600',
+        borderClass: 'border-green-200',
+        hoverBorderClass: 'hover:border-green-400',
+        badgeBg: 'bg-green-500',
+        badgeBorder: 'border-green-300',
+        gradient: 'from-green-500 to-emerald-600'
+      };
+    } else if (statusLower.includes('proses') || statusLower.includes('spp') || statusLower.includes('pending') || statusLower.includes('mengajukan')) {
+      return {
+        color: 'yellow',
+        bgClass: 'bg-yellow-100',
+        textClass: 'text-yellow-600',
+        borderClass: 'border-yellow-200',
+        hoverBorderClass: 'hover:border-yellow-400',
+        badgeBg: 'bg-yellow-500',
+        badgeBorder: 'border-yellow-300',
+        gradient: 'from-yellow-500 to-amber-600'
+      };
+    } else if (statusLower.includes('kembali') || statusLower.includes('tolak') || statusLower.includes('batal')) {
+      return {
+        color: 'red',
+        bgClass: 'bg-red-100',
+        textClass: 'text-red-600',
+        borderClass: 'border-red-200',
+        hoverBorderClass: 'hover:border-red-400',
+        badgeBg: 'bg-red-500',
+        badgeBorder: 'border-red-300',
+        gradient: 'from-red-500 to-rose-600'
+      };
+    } else if (statusLower.includes('belum') || statusLower.includes('tidak')) {
+      return {
+        color: 'gray',
+        bgClass: 'bg-gray-100',
+        textClass: 'text-gray-600',
+        borderClass: 'border-gray-200',
+        hoverBorderClass: 'hover:border-gray-400',
+        badgeBg: 'bg-gray-500',
+        badgeBorder: 'border-gray-300',
+        gradient: 'from-gray-500 to-slate-600'
+      };
+    } else {
+      return {
+        color: 'blue',
+        bgClass: 'bg-blue-100',
+        textClass: 'text-blue-600',
+        borderClass: 'border-blue-200',
+        hoverBorderClass: 'hover:border-blue-400',
+        badgeBg: 'bg-blue-500',
+        badgeBorder: 'border-blue-300',
+        gradient: 'from-blue-500 to-indigo-600'
+      };
+    }
+  };
+
+  // Dynamic status summary
+  const statusSummary = filteredData.reduce((acc, item) => {
+    const status = item.status || 'Tidak Ada Status';
+    if (!acc[status]) {
+      acc[status] = {
+        count: 0,
+        total: 0
+      };
+    }
+    acc[status].count += 1;
+    acc[status].total += item.realisasi;
+    return acc;
+  }, {});
+
+  // Handle tab switch and clear filters
+  const handleSetActiveTab = (view) => {
+    if (view === 'table') {
+      setSearchTerm('');
+      setFilterStatus('all');
+    }
+    setActiveTabView(view);
+  };
+
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
@@ -134,14 +226,11 @@ const BhprdT1 = () => {
   };
 
   const getStatusBadge = (status) => {
-    const styles = {
-      'Belum Mengajukan': 'bg-gray-100 text-gray-800 border-gray-200',
-      'Sudah Mengajukan': 'bg-blue-100 text-blue-800 border-blue-200',
-      'Dana Telah Dicairkan': 'bg-green-100 text-green-800 border-green-200',
-    };
+    const config = getStatusConfig(status);
+    const badgeClasses = `${config.bgClass} ${config.textClass.replace('600', '800')} ${config.borderClass}`;
     
     return (
-      <span className={`px-2 py-1 text-xs rounded-full border ${styles[status] || styles['Belum Mengajukan']}`}>
+      <span className={`px-2 py-1 text-xs rounded-full border ${badgeClasses}`}>
         {status}
       </span>
     );
@@ -364,6 +453,220 @@ const BhprdT1 = () => {
         )}
       </div>
 
+      {/* Tab Navigation */}
+      <div className="mb-8">
+        <div className="flex gap-2 bg-white/90 backdrop-blur-sm rounded-2xl p-2 shadow-lg">
+          <button
+            onClick={() => handleSetActiveTab('statistic')}
+            className={`flex-1 px-6 py-3 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2 ${
+              activeTabView === 'statistic'
+                ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg scale-105'
+                : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            <Activity className="w-5 h-5" />
+            <span>Statistik</span>
+          </button>
+          <button
+            onClick={() => handleSetActiveTab('table')}
+            className={`flex-1 px-6 py-3 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2 ${
+              activeTabView === 'table'
+                ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg scale-105'
+                : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            <FiUsers className="w-5 h-5" />
+            <span>Tabel Data</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Tab Content - Statistic */}
+      {activeTabView === 'statistic' && (
+        <div className="space-y-6 mb-8">
+          {/* Bar Chart - Per Kecamatan */}
+          <div className="group bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl hover:shadow-3xl transition-all duration-500 p-8 border border-gray-100/50">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-3 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                <Activity className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                  Realisasi per Kecamatan
+                </h3>
+                <p className="text-sm text-gray-500">Total Alokasi BHPRD</p>
+              </div>
+            </div>
+            <div className="h-96 relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-green-50/50 to-emerald-50/50 rounded-2xl"></div>
+              <div className="relative h-full p-4">
+                <Bar
+                  data={{
+                    labels: Object.keys(groupedData || {}),
+                    datasets: [{
+                      label: 'Total Realisasi',
+                      data: Object.entries(groupedData || {}).map(([, desas]) => 
+                        desas.reduce((sum, d) => sum + d.realisasi, 0)
+                      ),
+                      backgroundColor: (context) => {
+                        const ctx = context.chart.ctx;
+                        const gradient = ctx.createLinearGradient(0, 0, 0, 350);
+                        gradient.addColorStop(0, 'rgba(34, 197, 94, 0.9)');
+                        gradient.addColorStop(1, 'rgba(16, 185, 129, 0.7)');
+                        return gradient;
+                      },
+                      borderColor: 'rgba(34, 197, 94, 1)',
+                      borderWidth: 2,
+                      borderRadius: 10,
+                    }]
+                  }}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: { display: false },
+                      tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        padding: 12,
+                        cornerRadius: 8,
+                        callbacks: {
+                          label: (context) => formatCurrency(context.raw)
+                        }
+                      }
+                    },
+                    scales: {
+                      x: {
+                        grid: { display: false },
+                        ticks: { font: { size: 11, weight: '500' }, color: '#64748b' }
+                      },
+                      y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(0, 0, 0, 0.05)', drawBorder: false },
+                        ticks: {
+                          font: { size: 11, weight: '500' },
+                          color: '#64748b',
+                          callback: (value) => {
+                            if (value >= 1000000000) return (value / 1000000000).toFixed(1) + 'M';
+                            if (value >= 1000000) return (value / 1000000).toFixed(1) + 'Jt';
+                            return value;
+                          }
+                        }
+                      }
+                    }
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Pie Chart - Status Distribution */}
+          <div className="group bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl hover:shadow-3xl transition-all duration-500 p-8 border border-gray-100/50">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-3 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                <Activity className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                  Distribusi Status
+                </h3>
+                <p className="text-sm text-gray-500">Berdasarkan Status Pencairan</p>
+              </div>
+            </div>
+            <div className="h-96 flex items-center justify-center relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-green-50/50 to-emerald-50/50 rounded-2xl"></div>
+              <div className="relative w-full h-full flex items-center justify-center">
+                <Pie
+                  data={{
+                    labels: Object.keys(statusSummary),
+                    datasets: [{
+                      data: Object.values(statusSummary).map(s => s.count),
+                      backgroundColor: [
+                        'rgba(34, 197, 94, 0.8)',
+                        'rgba(251, 191, 36, 0.8)',
+                        'rgba(168, 85, 247, 0.8)',
+                        'rgba(59, 130, 246, 0.8)',
+                        'rgba(239, 68, 68, 0.8)',
+                      ],
+                      borderColor: [
+                        'rgba(34, 197, 94, 1)',
+                        'rgba(251, 191, 36, 1)',
+                        'rgba(168, 85, 247, 1)',
+                        'rgba(59, 130, 246, 1)',
+                        'rgba(239, 68, 68, 1)',
+                      ],
+                      borderWidth: 2,
+                    }]
+                  }}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: {
+                        position: 'bottom',
+                        labels: {
+                          padding: 20,
+                          font: { size: 13, weight: '600' },
+                          usePointStyle: true,
+                        }
+                      },
+                      tooltip: {
+                        callbacks: {
+                          label: (context) => {
+                            const label = context.label || '';
+                            const value = context.parsed || 0;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((value / total) * 100).toFixed(1);
+                            return `${label}: ${value} desa (${percentage}%)`;
+                          }
+                        }
+                      }
+                    }
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab Content - Table */}
+      {activeTabView === 'table' && (
+        <div className="space-y-6">
+          {/* Status Summary Cards - Dynamic */}
+          {Object.keys(statusSummary).length > 0 && (
+            <div className={`grid grid-cols-1 ${Object.keys(statusSummary).length === 2 ? 'md:grid-cols-2' : 'md:grid-cols-3'} gap-6 mb-6`}>
+              {Object.entries(statusSummary).map(([status, data]) => {
+                const config = getStatusConfig(status);
+                const percentage = stats.totalDesa > 0 ? ((data.count / stats.totalDesa) * 100).toFixed(1) : 0;
+                
+                return (
+                  <div 
+                    key={status}
+                    className={`group bg-white rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 border-2 ${config.borderClass} ${config.hoverBorderClass}`}
+                  >
+                    <div className="flex items-center justify-between mb-4">
+                      <div className={`w-12 h-12 ${config.bgClass} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
+                        <Activity className={`w-6 h-6 ${config.textClass}`} />
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm text-gray-600 font-medium">{status}</p>
+                        <p className="text-xs text-gray-500 mt-1">{percentage}%</p>
+                      </div>
+                    </div>
+                    <p className={`text-4xl font-bold ${config.textClass} mb-2`}>{data.count}</p>
+                    <p className="text-sm text-gray-600 mb-2">Desa dengan status ini</p>
+                    <div className="mt-3 pt-3 border-t border-gray-100">
+                      <p className="text-xs text-gray-500 mb-1">Total Nominal</p>
+                      <p className={`text-lg font-bold ${config.textClass.replace('600', '700')}`}>
+                        {formatCurrency(data.total)}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
       {/* Filters and Search */}
       <div className="bg-white p-4 rounded-lg shadow-md mb-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -412,8 +715,8 @@ const BhprdT1 = () => {
         </div>
       </div>
 
-      {/* Data Table */}
-      <div className="bg-white rounded-lg shadow-md overflow-hidden">
+          {/* Data Table */}
+          <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gradient-to-r from-green-600 to-green-700 text-white">
@@ -427,7 +730,7 @@ const BhprdT1 = () => {
             </thead>
             <tbody className="divide-y divide-gray-200">
               {groupByKecamatan ? (
-                paginatedData.map(([kecamatan, items], kecIndex) => {
+                paginatedData.map(([kecamatan, items]) => {
                   const isExpanded = expandedKecamatan[kecamatan];
                   return (
                     <React.Fragment key={kecamatan}>
@@ -505,7 +808,9 @@ const BhprdT1 = () => {
             </div>
           </div>
         )}
-      </div>
+          </div>
+        </div>
+      )}
 
       {/* Upload Modal */}
       {showUploadModal && (

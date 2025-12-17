@@ -6,10 +6,15 @@ import {
   FiSearch, FiChevronDown, FiChevronUp,
   FiUpload, FiRefreshCw, FiInfo, FiX
 } from 'react-icons/fi';
+import { Activity } from 'lucide-react';
+import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement } from 'chart.js';
+import { Pie, Bar } from 'react-chartjs-2';
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 import api from '../../../api';
 import { isVpnUser } from '../../../utils/vpnHelper';
+
+ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
 
 const BhprdT2 = () => {
   const [loading, setLoading] = useState(true);

@@ -342,7 +342,7 @@ function App() {
 				<Route path="kelembagaan/:type" element={<KelembagaanList />} />
 				<Route path="kelembagaan/:type/:id" element={<KelembagaanDetailPage />} />
 				<Route path="perjalanan-dinas" element={<PerjalananDinas />} />					{/* Admin Only Routes (Super Admin & Admin) */}
-						<Route element={<RoleProtectedRoute allowedRoles={['super_admin', 'admin']} />}>
+						<Route element={<RoleProtectedRoute allowedRoles={['super_admin', 'admin', 'sarana_prasarana', 'kekayaan_keuangan']} />}>
 							<Route path="hero-gallery" element={<HeroGalleryManagement />} />
 							<Route path="berita" element={<BeritaManagement />} />
 							<Route path="user" element={<UserManagementPage />} />

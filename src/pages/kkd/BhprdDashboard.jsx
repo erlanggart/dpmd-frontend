@@ -27,6 +27,8 @@ const BhprdDashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterKecamatan, setFilterKecamatan] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  const [selectedStatusFromCard, setSelectedStatusFromCard] = useState('');
+  const [activeTabView, setActiveTabView] = useState('statistic'); // 'statistic' or 'table'
   const { getCachedData, setCachedData, isCached } = useDataCache();
 
   useEffect(() => {
@@ -124,7 +126,8 @@ const BhprdDashboard = () => {
       item.kecamatan.toLowerCase().includes(searchTerm.toLowerCase());
     const matchKecamatan = !filterKecamatan || item.kecamatan === filterKecamatan;
     const matchStatus = !filterStatus || item.status === filterStatus;
-    return matchSearch && matchKecamatan && matchStatus;
+    const matchCardStatus = !selectedStatusFromCard || item.status === selectedStatusFromCard;
+    return matchSearch && matchKecamatan && matchStatus && matchCardStatus;
   });
 
   // Group by kecamatan
@@ -143,6 +146,86 @@ const BhprdDashboard = () => {
 
   const uniqueKecamatans = [...new Set(processedData.map(item => item.kecamatan))];
   const uniqueStatuses = [...new Set(processedData.map(item => item.status))];
+
+  // Dynamic Status Detection - Group by unique status (untuk Table tab - terpengaruh filter)
+  const statusSummary = filteredData.reduce((acc, item) => {
+    const status = item.status || 'Tidak Ada Status';
+    if (!acc[status]) {
+      acc[status] = {
+        count: 0,
+        total: 0,
+        items: []
+      };
+    }
+    acc[status].count += 1;
+    acc[status].total += item.realisasi;
+    acc[status].items.push(item);
+    return acc;
+  }, {});
+
+  // Get status configuration for colors and icons
+  const getStatusConfig = (status) => {
+    const statusLower = status.toLowerCase();
+    
+    // Check for keywords to determine color scheme
+    if (statusLower.includes('dicairkan') || statusLower.includes('selesai') || statusLower.includes('cair')) {
+      return {
+        color: 'green',
+        bgClass: 'bg-green-100',
+        textClass: 'text-green-600',
+        borderClass: 'border-green-200',
+        hoverBorderClass: 'hover:border-green-400',
+        badgeBg: 'bg-green-500',
+        badgeBorder: 'border-green-300',
+        gradient: 'from-green-500 to-emerald-600'
+      };
+    } else if (statusLower.includes('proses') || statusLower.includes('spp') || statusLower.includes('pending')) {
+      return {
+        color: 'yellow',
+        bgClass: 'bg-yellow-100',
+        textClass: 'text-yellow-600',
+        borderClass: 'border-yellow-200',
+        hoverBorderClass: 'hover:border-yellow-400',
+        badgeBg: 'bg-yellow-500',
+        badgeBorder: 'border-yellow-300',
+        gradient: 'from-yellow-500 to-amber-600'
+      };
+    } else if (statusLower.includes('kembali') || statusLower.includes('tolak') || statusLower.includes('batal')) {
+      return {
+        color: 'red',
+        bgClass: 'bg-red-100',
+        textClass: 'text-red-600',
+        borderClass: 'border-red-200',
+        hoverBorderClass: 'hover:border-red-400',
+        badgeBg: 'bg-red-500',
+        badgeBorder: 'border-red-300',
+        gradient: 'from-red-500 to-rose-600'
+      };
+    } else if (statusLower.includes('belum') || statusLower.includes('tidak')) {
+      return {
+        color: 'gray',
+        bgClass: 'bg-gray-100',
+        textClass: 'text-gray-600',
+        borderClass: 'border-gray-200',
+        hoverBorderClass: 'hover:border-gray-400',
+        badgeBg: 'bg-gray-500',
+        badgeBorder: 'border-gray-300',
+        gradient: 'from-gray-500 to-slate-600'
+      };
+    } else {
+      // Default blue for unknown status
+      return {
+        color: 'blue',
+        bgClass: 'bg-blue-100',
+        textClass: 'text-blue-600',
+        borderClass: 'border-blue-200',
+        hoverBorderClass: 'hover:border-blue-400',
+        badgeBg: 'bg-blue-500',
+        badgeBorder: 'border-blue-300',
+        gradient: 'from-blue-500 to-indigo-600'
+      };
+    }
+  };
 
   // Charts data
   const statusCounts = processedData.reduce((acc, item) => {
@@ -168,15 +251,6 @@ const BhprdDashboard = () => {
     kecamatan,
     total: desas.reduce((sum, d) => sum + d.realisasi, 0)
   })).sort((a, b) => b.total - a.total);
-
-  const kecamatanChartData = {
-    labels: kecamatanRealisasi.map(k => k.kecamatan),
-    datasets: [{
-      label: 'Realisasi (Rp)',
-      data: kecamatanRealisasi.map(k => k.total),
-      backgroundColor: 'rgba(59, 130, 246, 0.8)',
-    }],
-  };
 
   const handleExportExcel = () => {
     const exportData = filteredData.map((item, index) => ({
@@ -229,6 +303,18 @@ const BhprdDashboard = () => {
     }
   };
 
+  // Handle tab view switch and clear table filters when switching to Table view
+  const handleSetActiveTabView = (view) => {
+    if (view === 'table') {
+      // clear any active filters so Table starts unfiltered when coming from Statistic
+      setSearchTerm('');
+      setFilterKecamatan('');
+      setFilterStatus('');
+      setSelectedStatusFromCard('');
+    }
+    setActiveTabView(view);
+  };
+
   const tabs = [
     { id: 'tahap1', label: 'Tahap 1', color: 'blue' },
     { id: 'tahap2', label: 'Tahap 2', color: 'green' },
@@ -244,8 +330,8 @@ const BhprdDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-green-50 to-emerald-50 p-4 md:p-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen ">
+      <div className="mx-auto">
         {/* Hero Welcome Banner dengan Gradient Modern */}
         <div className="relative bg-gradient-to-r from-emerald-600 via-green-600 to-teal-600 rounded-3xl shadow-2xl p-8 mb-8 overflow-hidden">
           {/* Animated Background Patterns */}
@@ -255,7 +341,7 @@ const BhprdDashboard = () => {
           <div className="relative z-10">
             <div className="mb-4">
               <h1 className="text-3xl md:text-4xl font-bold text-white mb-2 drop-shadow-lg">
-                📊 BHPRD (Bagi Hasil Pajak Retribusi Daerah) 2025
+                BHPRD (Bagi Hasil Pajak Retribusi Daerah) 2025
               </h1>
               <p className="text-white text-opacity-90 text-base md:text-lg">
                 Data realisasi bagi hasil pajak dan retribusi daerah untuk desa
@@ -317,6 +403,37 @@ const BhprdDashboard = () => {
           </button>
         </div>
 
+        {/* Tab View Navigation (Statistik vs Tabel) */}
+        <div className="mb-8 mx-4">
+          <div className="flex gap-2 bg-white/90 backdrop-blur-sm rounded-2xl p-2 shadow-lg">
+            <button
+              onClick={() => handleSetActiveTabView('statistic')}
+              className={`flex-1 px-6 py-3 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2 ${
+                activeTabView === 'statistic'
+                  ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-lg scale-105'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <FiBarChart2 className="w-5 h-5" />
+              <span>Statistik</span>
+            </button>
+            <button
+              onClick={() => handleSetActiveTabView('table')}
+              className={`flex-1 px-6 py-3 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2 ${
+                activeTabView === 'table'
+                  ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-lg scale-105'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <FiUsers className="w-5 h-5" />
+              <span>Tabel Data</span>
+            </button>
+          </div>
+        </div>
+
+      {/* Tab Content - Statistic */}
+      {activeTabView === 'statistic' && (
+        <div className="space-y-6 mb-8">
       {/* Charts Section */}
       <div className="space-y-6 mb-8">
         {/* Bar Chart - Kecamatan */}
@@ -482,7 +599,77 @@ const BhprdDashboard = () => {
             </div>
           </div>
         </div>
-      </div>      {/* Filters & Search */}
+      </div>
+        </div>
+      )}
+
+      {/* Tab Content - Table */}
+      {activeTabView === 'table' && (
+        <div className="space-y-6">
+          {/* Status Summary Cards - Dynamic */}
+          {Object.keys(statusSummary).length > 0 && (
+            <div className={`grid grid-cols-1 ${Object.keys(statusSummary).length === 2 ? 'md:grid-cols-2' : Object.keys(statusSummary).length === 1 ? 'md:grid-cols-1 max-w-md mx-auto' : 'md:grid-cols-3'} gap-6 mb-8`}>
+              {Object.entries(statusSummary).map(([status, data]) => {
+                const config = getStatusConfig(status);
+                const percentage = totalDesa > 0 ? ((data.count / totalDesa) * 100).toFixed(1) : 0;
+                const isSelected = selectedStatusFromCard === status;
+                
+                return (
+                  <div 
+                    key={status}
+                    onClick={() => {
+                      if (selectedStatusFromCard === status) {
+                        setSelectedStatusFromCard('');
+                        setFilterStatus('');
+                      } else {
+                        setSelectedStatusFromCard(status);
+                        setFilterStatus('');
+                      }
+                    }}
+                    className={`group bg-white rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 border-2 cursor-pointer ${
+                      isSelected 
+                        ? `${config.borderClass.replace('200', '500')} ring-4 ring-opacity-50 ${config.borderClass.replace('border-', 'ring-').replace('200', '300')}` 
+                        : `${config.borderClass} ${config.hoverBorderClass}`
+                    }`}
+                    title={`Klik untuk filter data dengan status: ${status}`}
+                  >
+                    <div className="flex items-center justify-between mb-4">
+                      <div className={`w-12 h-12 ${config.bgClass} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300 ${isSelected ? 'scale-110' : ''}`}>
+                        <Activity className={`w-6 h-6 ${config.textClass}`} />
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm text-gray-600 font-medium truncate max-w-[150px]" title={status}>
+                          {status.length > 20 ? status.substring(0, 20) + '...' : status}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {percentage}%
+                        </p>
+                      </div>
+                    </div>
+                    <p className={`text-4xl font-bold ${config.textClass} mb-2`}>{data.count}</p>
+                    <p className="text-sm text-gray-600 mb-2">
+                      {isSelected ? '✓ Filter Aktif' : 'Desa dengan status ini'}
+                    </p>
+                    <div className="mt-3 pt-3 border-t border-gray-100">
+                      <p className="text-xs text-gray-500 mb-1">Total Nominal</p>
+                      <p className={`text-lg font-bold ${config.textClass.replace('600', '700')}`}>
+                        {formatRupiah(data.total)}
+                      </p>
+                    </div>
+                    {isSelected && (
+                      <div className="mt-3 pt-2">
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-600">
+                          <span>🔍</span> Klik lagi untuk hapus filter
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+      {/* Filters & Search */}
       <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-lg p-6 mb-6 border border-gray-100/50">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="relative">
@@ -524,6 +711,63 @@ const BhprdDashboard = () => {
             </select>
           </div>
         </div>
+
+        {/* Active Filters Display */}
+        {(searchTerm || filterKecamatan || filterStatus || selectedStatusFromCard) && (
+          <div className="flex flex-wrap items-center gap-2 mt-4">
+            <span className="text-sm text-gray-600 font-medium">Filter Aktif:</span>
+            {searchTerm && (
+              <span className="inline-flex items-center gap-1 px-3 py-1 bg-emerald-100 text-emerald-700 rounded-lg text-sm">
+                <FiSearch className="w-3 h-3" />
+                {searchTerm}
+                <button onClick={() => setSearchTerm('')} className="ml-1 hover:text-emerald-900">
+                  <FiX className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+            {filterKecamatan && (
+              <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-700 rounded-lg text-sm">
+                <FiMapPin className="w-3 h-3" />
+                {filterKecamatan}
+                <button onClick={() => setFilterKecamatan('')} className="ml-1 hover:text-purple-900">
+                  <FiX className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+            {filterStatus && (
+              <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-lg text-sm">
+                <Activity className="w-3 h-3" />
+                {filterStatus}
+                <button onClick={() => setFilterStatus('')} className="ml-1 hover:text-green-900">
+                  <FiX className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+            {selectedStatusFromCard && (
+              <span className="inline-flex items-center gap-1 px-3 py-1 bg-indigo-100 text-indigo-700 rounded-lg text-sm font-semibold border-2 border-indigo-300">
+                <span>🔍</span>
+                Card: {selectedStatusFromCard.length > 30 ? selectedStatusFromCard.substring(0, 30) + '...' : selectedStatusFromCard}
+                <button 
+                  onClick={() => setSelectedStatusFromCard('')} 
+                  className="ml-1 hover:text-indigo-900"
+                >
+                  <FiX className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+            <button
+              onClick={() => {
+                setSearchTerm('');
+                setFilterKecamatan('');
+                setFilterStatus('');
+                setSelectedStatusFromCard('');
+              }}
+              className="text-sm text-red-600 hover:text-red-700 font-medium underline"
+            >
+              Reset Semua
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Data Table */}
@@ -565,27 +809,26 @@ const BhprdDashboard = () => {
                         {formatRupiah(desas.reduce((sum, d) => sum + d.realisasi, 0))}
                       </td>
                     </tr>
-                    {isExpanded && desas.map((item, idx) => (
-                      <tr key={`${kecamatan}-${idx}`} className="hover:bg-gray-50 transition-colors duration-200">
-                        <td className="px-6 py-3 text-sm text-gray-900">{idx + 1}</td>
-                        <td className="px-6 py-3 text-sm text-gray-500"></td>
-                        <td className="px-6 py-3 text-sm text-gray-900 font-medium">{item.desa}</td>
-                        <td className="px-6 py-3">
-                          <span className={`px-3 py-1 text-xs font-medium rounded-full ${
-                            item.status?.toLowerCase().includes('cair') || item.status?.toLowerCase().includes('selesai')
-                              ? 'bg-green-100 text-green-800'
-                              : item.status?.toLowerCase().includes('proses')
-                              ? 'bg-yellow-100 text-yellow-800'
-                              : 'bg-blue-100 text-blue-800'
-                          }`}>
-                            {item.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-3 text-sm text-right text-gray-900 font-medium">
-                          {formatRupiah(item.realisasi)}
-                        </td>
-                      </tr>
-                    ))}
+                    {isExpanded && desas.map((item, idx) => {
+                      const config = getStatusConfig(item.status);
+                      const badgeClasses = `${config.bgClass} ${config.textClass.replace('600', '800')} ${config.borderClass}`;
+
+                      return (
+                        <tr key={`${kecamatan}-${idx}`} className="hover:bg-gray-50 transition-colors duration-200">
+                          <td className="px-6 py-3 text-sm text-gray-900">{idx + 1}</td>
+                          <td className="px-6 py-3 text-sm text-gray-500"></td>
+                          <td className="px-6 py-3 text-sm text-gray-900 font-medium">{item.desa}</td>
+                          <td className="px-6 py-3">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${badgeClasses}`}>
+                              {item.status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-3 text-sm text-right text-gray-900 font-medium">
+                            {formatRupiah(item.realisasi)}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </React.Fragment>
                 );
               })}
@@ -593,6 +836,8 @@ const BhprdDashboard = () => {
           </table>
         </div>
       </div>
+        </div>
+      )}
 
       {/* Upload Modal */}
       {showUploadModal && (
