@@ -140,30 +140,51 @@ self.addEventListener('push', (event) => {
 
 // Notification click event
 self.addEventListener('notificationclick', (event) => {
-  console.log('Notification clicked:', event);
+  console.log('[SW] Notification clicked:', event);
+  console.log('[SW] Notification data:', event.notification.data);
+  console.log('[SW] Action:', event.action);
   
   event.notification.close();
 
   if (event.action === 'close') {
+    console.log('[SW] Close action clicked, closing notification');
     return;
   }
 
+  // Get URL from notification data
   const urlToOpen = event.notification.data?.url || '/dashboard/disposisi';
+  const fullUrl = new URL(urlToOpen, self.location.origin).href;
+  
+  console.log('[SW] Opening URL:', fullUrl);
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then((clientList) => {
-        // Check if there's already a window open
+        console.log('[SW] Found', clientList.length, 'client(s)');
+        
+        // Check if there's already a window open with our app
         for (let i = 0; i < clientList.length; i++) {
           const client = clientList[i];
-          if (client.url.includes(urlToOpen) && 'focus' in client) {
-            return client.focus();
+          console.log('[SW] Client URL:', client.url);
+          
+          // If same origin, navigate to the URL
+          if (client.url.startsWith(self.location.origin) && 'focus' in client) {
+            console.log('[SW] Focusing existing client and navigating');
+            return client.focus().then(() => {
+              // Navigate the client to the disposisi detail
+              return client.navigate(fullUrl);
+            });
           }
         }
+        
         // If no window is open, open a new one
+        console.log('[SW] No existing client, opening new window');
         if (clients.openWindow) {
-          return clients.openWindow(urlToOpen);
+          return clients.openWindow(fullUrl);
         }
+      })
+      .catch(err => {
+        console.error('[SW] Error handling notification click:', err);
       })
   );
 });
