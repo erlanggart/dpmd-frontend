@@ -29,6 +29,7 @@ const DdDashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterKecamatan, setFilterKecamatan] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState(null); // Filter status dari card
   const { getCachedData, setCachedData, isCached } = useDataCache();
 
   useEffect(() => {
@@ -164,6 +165,23 @@ const DdDashboard = () => {
   
   const stats = calculateStats(activeData);
   
+  // Status statistics - dari semua data (untuk card)
+  const statusStats = rawActiveData.reduce((acc, item) => {
+    if (!acc[item.status]) {
+      acc[item.status] = { count: 0, total: 0 };
+    }
+    acc[item.status].count += 1;
+    acc[item.status].total += item.realisasi;
+    return acc;
+  }, {});
+
+  // Convert to array and sort by total (descending)
+  const statusArray = Object.entries(statusStats).map(([status, data]) => ({
+    name: status,
+    count: data.count,
+    total: data.total
+  })).sort((a, b) => b.total - a.total);
+  
   // Get unique values for filters
   const uniqueKecamatan = [...new Set(rawActiveData.map(d => d.kecamatan))].sort();
   const uniqueStatus = [...new Set(rawActiveData.map(d => d.status))].filter(s => s).sort();
@@ -184,6 +202,35 @@ const DdDashboard = () => {
       ...prev,
       [kecamatan]: !prev[kecamatan]
     }));
+  };
+
+  // Handler untuk klik card status
+  const handleStatusClick = (statusName) => {
+    if (selectedStatus === statusName) {
+      setSelectedStatus(null);
+      setFilterStatus('');
+    } else {
+      setSelectedStatus(statusName);
+      setFilterStatus(statusName);
+    }
+  };
+
+  // Fungsi untuk mendapatkan warna card berdasarkan status (DINAMIS)
+  const getStatusColor = (status, index) => {
+    const colors = [
+      { bg: 'from-green-50 to-green-100', border: 'border-green-300', text: 'text-green-800', textBold: 'text-green-700', textMuted: 'text-green-600', dot: 'bg-green-500', borderTop: 'border-green-300' },
+      { bg: 'from-blue-50 to-blue-100', border: 'border-blue-300', text: 'text-blue-800', textBold: 'text-blue-700', textMuted: 'text-blue-600', dot: 'bg-blue-500', borderTop: 'border-blue-300' },
+      { bg: 'from-yellow-50 to-yellow-100', border: 'border-yellow-300', text: 'text-yellow-800', textBold: 'text-yellow-700', textMuted: 'text-yellow-600', dot: 'bg-yellow-500', borderTop: 'border-yellow-300' },
+      { bg: 'from-purple-50 to-purple-100', border: 'border-purple-300', text: 'text-purple-800', textBold: 'text-purple-700', textMuted: 'text-purple-600', dot: 'bg-purple-500', borderTop: 'border-purple-300' },
+      { bg: 'from-red-50 to-red-100', border: 'border-red-300', text: 'text-red-800', textBold: 'text-red-700', textMuted: 'text-red-600', dot: 'bg-red-500', borderTop: 'border-red-300' },
+      { bg: 'from-indigo-50 to-indigo-100', border: 'border-indigo-300', text: 'text-indigo-800', textBold: 'text-indigo-700', textMuted: 'text-indigo-600', dot: 'bg-indigo-500', borderTop: 'border-indigo-300' },
+      { bg: 'from-pink-50 to-pink-100', border: 'border-pink-300', text: 'text-pink-800', textBold: 'text-pink-700', textMuted: 'text-pink-600', dot: 'bg-pink-500', borderTop: 'border-pink-300' },
+      { bg: 'from-cyan-50 to-cyan-100', border: 'border-cyan-300', text: 'text-cyan-800', textBold: 'text-cyan-700', textMuted: 'text-cyan-600', dot: 'bg-cyan-500', borderTop: 'border-cyan-300' },
+      { bg: 'from-orange-50 to-orange-100', border: 'border-orange-300', text: 'text-orange-800', textBold: 'text-orange-700', textMuted: 'text-orange-600', dot: 'bg-orange-500', borderTop: 'border-orange-300' },
+      { bg: 'from-gray-50 to-gray-100', border: 'border-gray-300', text: 'text-gray-800', textBold: 'text-gray-700', textMuted: 'text-gray-600', dot: 'bg-gray-500', borderTop: 'border-gray-300' },
+    ];
+    
+    return colors[index % colors.length];
   };
 
   const handleUpload = async () => {
@@ -472,6 +519,63 @@ const DdDashboard = () => {
               >
                 Reset Semua
               </button>
+            </div>
+          )}
+        </div>
+
+        {/* Nominal per Status Cards - DINAMIS */}
+        <div className="bg-white rounded-2xl p-6 shadow-xl mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+              <FiDollarSign className="w-5 h-5 text-cyan-600" />
+              Nominal Dana per Status ({statusArray.length} Status)
+            </h3>
+            {selectedStatus && (
+              <button
+                onClick={() => handleStatusClick(null)}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors"
+              >
+                ✕ Reset Filter
+              </button>
+            )}
+          </div>
+          
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {statusArray.map((status, index) => {
+              const color = getStatusColor(status.name, index);
+              const isSelected = selectedStatus === status.name;
+              return (
+                <div 
+                  key={status.name}
+                  onClick={() => handleStatusClick(status.name)}
+                  className={`bg-gradient-to-br ${color.bg} border-2 ${
+                    isSelected ? color.border + ' ring-4 ring-offset-2 ring-cyan-400' : color.border
+                  } rounded-xl p-4 hover:shadow-lg transition-all cursor-pointer transform hover:scale-105 ${
+                    isSelected ? 'scale-105 shadow-xl' : ''
+                  }`}
+                  title={`Klik untuk filter data ${status.name}`}
+                >
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className={`w-3 h-3 ${color.dot} rounded-full animate-pulse`}></div>
+                    <p className={`text-xs font-semibold ${color.text} line-clamp-2`} title={status.name}>
+                      {status.name}
+                    </p>
+                  </div>
+                  <p className={`text-xl font-bold ${color.textBold} mb-2`}>
+                    {formatCurrency(status.total)}
+                  </p>
+                  <div className={`flex items-center justify-between pt-2 border-t ${color.borderTop}`}>
+                    <p className={`text-xs ${color.textMuted}`}>Total Desa:</p>
+                    <p className={`text-sm font-bold ${color.textBold}`}>{status.count}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          
+          {statusArray.length === 0 && (
+            <div className="text-center py-8 text-gray-500">
+              <p>Tidak ada data status</p>
             </div>
           )}
         </div>
