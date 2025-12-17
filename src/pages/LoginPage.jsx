@@ -1,12 +1,12 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import axios from "axios"; // CRITICAL: Direct axios import for VPN check
+
 import api from "../api";
 import { FiEye, FiEyeOff, FiLoader, FiAlertCircle, FiShield, FiBell } from "react-icons/fi";
 import LoginImageSlider from "../components/login/LoginImageSlider";
 import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
-import { requestNotificationPermission, registerServiceWorker, subscribeToPushNotifications } from "../utils/pushNotifications";
+import { requestNotificationPermission, registerServiceWorker /*, subscribeToPushNotifications */ } from "../utils/pushNotifications";
 
 const LoginPage = () => {
 	const [email, setEmail] = useState("");
@@ -15,7 +15,7 @@ const LoginPage = () => {
 	const [loading, setLoading] = useState(false);
 	const [checkingVpn, setCheckingVpn] = useState(false);
 	const [vpnMode, setVpnMode] = useState(false); // Toggle for VPN mode
-	const [vpnSecret, setVpnSecret] = useState(''); // VPN secret key input
+	const [vpnSecret, setVpnSecret] = useState('');
 	const navigate = useNavigate();
 	const [showPassword, setShowPassword] = useState(false);
 	const { login } = useAuth();
@@ -67,10 +67,138 @@ const LoginPage = () => {
 		}
 	};
 
+	// State for auto-check tracking
+	const [autoCheckAttempted, setAutoCheckAttempted] = React.useState(false);
+
+	// Helper function to handle successful VPN verification
+	const handleVpnSuccess = React.useCallback((vpnData) => {
+		console.log('✅ VPN Verified Successfully:', vpnData);
+		toast.success('Akses VPN terverifikasi! Silakan login.', {
+			duration: 4000,
+			icon: '✅',
+			style: {
+				background: '#10b981',
+				color: '#fff',
+				fontWeight: 'bold'
+			}
+		});
+		
+		// Store VPN verification status
+		localStorage.setItem('vpn_verified', 'true');
+		localStorage.setItem('vpn_ip', vpnData.ip || 'unknown');
+		
+		// Exit VPN mode to show login form
+		setVpnMode(false);
+		setError(null);
+	}, []);
+
+	// SMART VPN CHECK: Try IP first, fallback to secret key
+	const smartVpnCheck = React.useCallback(async () => {
+		try {
+			setCheckingVpn(true);
+			setError(null);
+			
+			console.log('🔍 Smart VPN Check: Step 1 - Trying IP-based authentication...');
+			
+			// Step 1: Try without secret (IP-based)
+			try {
+				const ipResponse = await api.get('/auth/check-vpn-tailscale', {
+					params: { secret: '' },
+					timeout: 5000
+				});
+				
+				console.log('✅ IP Check Response:', ipResponse.data);
+				
+				if (ipResponse.data.success && ipResponse.data.data.isVpn) {
+					console.log('✅ SUCCESS: Authenticated via Tailscale IP!');
+					handleVpnSuccess(ipResponse.data.data);
+					return;
+				}
+			} catch (ipError) {
+				console.log('⚠️  IP-based auth failed, trying secret key...', ipError.response?.data);
+			}
+			
+			// Step 2: IP failed, try with secret key
+			if (vpnSecret && vpnSecret.trim()) {
+				console.log('🔍 Smart VPN Check: Step 2 - Trying secret key authentication...');
+				
+				const secretResponse = await api.get('/auth/check-vpn-tailscale', {
+					params: { secret: vpnSecret },
+					timeout: 5000
+				});
+				
+				console.log('✅ Secret Key Response:', secretResponse.data);
+				
+				if (secretResponse.data.success && secretResponse.data.data.isVpn) {
+					console.log('✅ SUCCESS: Authenticated via secret key!');
+					handleVpnSuccess(secretResponse.data.data);
+					return;
+				}
+			}
+			
+			// Both failed
+			throw new Error('VPN authentication failed with both IP and secret key');
+			
+		} catch (error) {
+			console.error('❌ Smart VPN Check failed:', error);
+			
+			if (error.response?.status === 403) {
+				const responseData = error.response.data?.data || {};
+				const userIP = responseData.ip || 'unknown';
+				const reason = responseData.reason || 'VPN access denied';
+				
+				// Debug: Log detailed error info
+				console.error('🚫 VPN Access Denied:', {
+					ip: userIP,
+					reason: reason,
+					fullResponse: error.response.data
+				});
+				
+				setError(
+					<div className="text-left">
+						<div className="font-bold mb-2">🚫 Akses VPN Ditolak</div>
+						<div className="space-y-1 text-sm">
+							<div>📍 <strong>IP Terdeteksi:</strong> {userIP}</div>
+							<div>⚠️ <strong>Alasan:</strong> {reason}</div>
+							<div className="mt-2 text-xs text-gray-600">
+								💡 Solusi:<br/>
+								• Hubungkan ke Tailscale VPN, atau<br/>
+								• Masukkan Kode Akses Internal yang valid
+							</div>
+						</div>
+					</div>
+				);
+			} else {
+				setError('Gagal memverifikasi akses. Pastikan kode akses benar atau Tailscale aktif.');
+			}
+		} finally {
+			setCheckingVpn(false);
+		}
+	}, [vpnSecret, handleVpnSuccess]);
+
+	// Auto check VPN when VPN mode is enabled
+	React.useEffect(() => {
+		if (vpnMode && !autoCheckAttempted) {
+			setAutoCheckAttempted(true);
+			smartVpnCheck();
+		}
+		if (!vpnMode) {
+			setAutoCheckAttempted(false);
+		}
+	}, [vpnMode, autoCheckAttempted, smartVpnCheck]);
+
+	// Manual VPN check (when button clicked)
 	const checkVpnConnection = async () => {
 		try {
 			setCheckingVpn(true);
 			setError(null);
+			
+			// DEBUG: Log request details
+			console.log('🔍 Manual VPN Check Request:', {
+				secret: vpnSecret,
+				secretLength: vpnSecret.length,
+				apiUrl: import.meta.env.VITE_API_BASE_URL
+			});
 			
 			// HYBRID VERIFICATION: IP check + secret key fallback
 			// Send secret key to backend for verification
@@ -79,46 +207,12 @@ const LoginPage = () => {
 				timeout: 5000
 			});
 			
+			// DEBUG: Log response
+			console.log('✅ VPN Check Response:', response.data);
+			
 			if (response.data.success && response.data.data.isVpn) {
-				// ✅ VPN VERIFIED
-				const accessMethod = response.data.data.accessMethod;
-				const methodText = accessMethod === 'tailscale-ip' 
-					? 'Tailscale IP' 
-					: 'Secret Key';
-				
-				localStorage.setItem('expressToken', 'VPN_ACCESS_TOKEN');
-				localStorage.setItem('user', JSON.stringify({
-					id: 'vpn-user',
-					name: 'VPN User - Internal DPMD',
-					email: 'vpn@internal',
-					role: 'vpn_access',
-					roles: ['vpn_access'],
-					vpnIp: response.data.data.ip,
-					accessMethod
-				}));
-				
-				// Store secret in session for subsequent requests
-				if (accessMethod === 'secret-key') {
-					sessionStorage.setItem('vpn_secret', vpnSecret);
-				}
-				
-				toast.success(
-					`🔒 Akses Diverifikasi via ${methodText}!`,
-					{
-						duration: 3000,
-						icon: '✅',
-						style: {
-							background: '#10b981',
-							color: '#fff',
-							fontWeight: 'bold'
-						}
-					}
-				);
-				
-				setTimeout(() => {
-					// VPN users go to core-dashboard
-					navigate('/core-dashboard/dashboard');
-				}, 1500);
+				// ✅ VPN VERIFIED - Use helper function
+				handleVpnSuccess(response.data.data);
 			} else {
 				// ❌ VERIFICATION FAILED
 				const userIP = response.data.data?.ip || 'unknown';
@@ -133,11 +227,47 @@ const LoginPage = () => {
 				});
 			}
 		} catch (error) {
-			console.error('VPN verification failed:', error);
+			console.error('❌ VPN verification failed:', error);
+			console.error('Error details:', {
+				status: error.response?.status,
+				data: error.response?.data,
+				message: error.message
+			});
 			
 			if (error.response?.status === 403) {
-				const userIP = error.response.data?.data?.ip || 'unknown';
-				setError(`Akses ditolak. IP Anda: ${userIP}. Hubungkan Tailscale ATAU masukkan Kode Akses Internal yang valid.`);
+				const responseData = error.response.data?.data || {};
+				const userIP = responseData.ip || 'unknown';
+				const reason = responseData.reason || 'VPN access denied';
+				const errorMsg = error.response.data?.message || 'Akses ditolak';
+				
+				// Debug: Log detailed error info
+				console.error('🚫 VPN Access Denied (Manual Check):', {
+					ip: userIP,
+					reason: reason,
+					secretProvided: !!vpnSecret,
+					secretLength: vpnSecret?.length || 0,
+					fullResponse: error.response.data
+				});
+				
+				setError(
+					<div className="text-left">
+						<div className="font-bold mb-2">🚫 {errorMsg}</div>
+						<div className="space-y-1 text-sm">
+							<div>📍 <strong>IP Terdeteksi:</strong> {userIP}</div>
+							<div>⚠️ <strong>Alasan:</strong> {reason}</div>
+							{vpnSecret && (
+								<div>🔑 <strong>Kode:</strong> "{vpnSecret}" ({vpnSecret.length} karakter)</div>
+							)}
+							<div className="mt-2 text-xs text-gray-600">
+								💡 Solusi:<br/>
+								• Pastikan Tailscale VPN aktif dan terhubung, atau<br/>
+								• Masukkan Kode Akses Internal yang benar<br/>
+								• Kode harus: "DPMD-INTERNAL-2025" (19 karakter)
+							</div>
+						</div>
+					</div>
+				);
+				
 				toast.error('Akses Ditolak', {
 					duration: 5000,
 					icon: '🚫',
@@ -148,7 +278,7 @@ const LoginPage = () => {
 					}
 				});
 			} else {
-				setError('Gagal memverifikasi akses. Periksa koneksi Tailscale atau Kode Akses Anda.');
+				setError(`Gagal memverifikasi akses. ${error.message || 'Network error'}`);
 				toast.error('Verifikasi Gagal', { duration: 4000, icon: '❌' });
 			}
 		} finally {
@@ -193,15 +323,12 @@ const LoginPage = () => {
 
 			console.log('✅ Express login successful');
 
-			// Normalize role to roles array for compatibility
-			if (newUser.role && !newUser.roles) {
-				newUser.roles = [newUser.role];
-			}
-
 			// Save token and user using context
 			login(newUser, null, expressToken); // No Laravel token
 
 			// Auto-subscribe to push notifications after successful login
+			// TEMPORARILY DISABLED - Push notifications feature not yet implemented
+			/*
 			try {
 				console.log('🔔 Auto-subscribing to push notifications...');
 				const subscription = await subscribeToPushNotifications();
@@ -220,21 +347,20 @@ const LoginPage = () => {
 					icon: '⚠️'
 				});
 			}
+			*/
 
-			// Debug: Log user roles
-			console.log('Login - User roles:', newUser.roles);
-			console.log('Login - Role type:', typeof newUser.roles);
-			console.log('Login - Is array?', Array.isArray(newUser.roles));
-			console.log('Login - User role (single):', newUser.role);
+			// Debug: Log user role
+			console.log('Login - User role:', newUser.role);
+			console.log('Login - Role type:', typeof newUser.role);
 
-			// Routing based on user roles - CHECK SINGLE role FIRST before roles array
-			if (newUser.roles.includes("desa")) {
+			// Routing based on user role (single role only)
+			if (newUser.role === "desa") {
 				navigate("/desa/dashboard");
-			} else if (newUser.roles.includes("kecamatan")) {
+			} else if (newUser.role === "kecamatan") {
 				navigate("/kecamatan/dashboard");
-			} else if (newUser.roles.includes("pegawai")) {
+			} else if (newUser.role === "pegawai") {
 				navigate("/pegawai/dashboard");
-			} else if (newUser.role === "kepala_dinas" || newUser.roles.includes("kepala_dinas")) {
+			} else if (newUser.role === "kepala_dinas") {
 				// Kepala Dinas gets dedicated dashboard with sidebar
 				console.log('✅ Navigating kepala_dinas to /kepala-dinas/dashboard');
 				navigate("/kepala-dinas/dashboard");
@@ -243,33 +369,23 @@ const LoginPage = () => {
 				newUser.role === "kabid_pemerintahan_desa" ||
 				newUser.role === "kabid_spked" ||
 				newUser.role === "kabid_kekayaan_keuangan_desa" ||
-				newUser.role === "kabid_pemberdayaan_masyarakat_desa" ||
-				newUser.roles.includes("kabid_sekretariat") ||
-				newUser.roles.includes("kabid_pemerintahan_desa") ||
-				newUser.roles.includes("kabid_spked") ||
-				newUser.roles.includes("kabid_kekayaan_keuangan_desa") ||
-				newUser.roles.includes("kabid_pemberdayaan_masyarakat_desa")
+				newUser.role === "kabid_pemberdayaan_masyarakat_desa"
 			) {
 				// Kepala Bidang gets dedicated dashboard
 				console.log('✅ Navigating kepala_bidang to /kepala-bidang/dashboard');
 				navigate("/kepala-bidang/dashboard");
-			} else if (
-				newUser.role === "sekretaris_dinas" ||
-				newUser.roles.includes("sekretaris_dinas")
-			) {
+			} else if (newUser.role === "sekretaris_dinas") {
 				// Sekretaris Dinas gets dedicated dashboard
 				console.log('✅ Navigating sekretaris_dinas to /sekretaris-dinas/dashboard');
 				navigate("/sekretaris-dinas/dashboard");
 			} else if (
-				newUser.roles.includes("superadmin") ||
-				newUser.roles.includes("pemerintahan_desa") ||
-				newUser.roles.includes("sarana_prasarana") ||
-				newUser.roles.includes("kekayaan_keuangan") ||
-				newUser.roles.includes("pemberdayaan_masyarakat") ||
-				newUser.roles.includes("sekretariat") ||
-				newUser.roles.includes("prolap") ||
-				newUser.roles.includes("keuangan") ||
-				newUser.roles.includes("dinas")
+				newUser.role === "superadmin" ||
+				newUser.role === "pemerintahan_desa" ||
+				newUser.role === "sarana_prasarana" ||
+				newUser.role === "kekayaan_keuangan" ||
+				newUser.role === "pemberdayaan_masyarakat" ||
+				newUser.role === "sekretariat" ||
+				newUser.role === "dinas"
 			) {
 				navigate("/dashboard");
 			} else {
@@ -448,14 +564,16 @@ const LoginPage = () => {
 										Hubungkan Tailscale VPN atau masukkan Kode Akses Internal
 									</p>
 									
-									{/* Secret Key Input */}
-									<div className="mb-4">
-										<label htmlFor="vpn-secret" className="block text-sm font-medium text-gray-700 mb-2">
-											Kode Akses Internal (Opsional)
-										</label>
-										<input
-											id="vpn-secret"
-											type="password"
+									
+									
+								{/* Secret Key Input */}
+								<div className="mb-4">
+									<label htmlFor="vpn-secret" className="block text-sm font-medium text-gray-700 mb-2">
+										Kode Akses Internal (Opsional)
+									</label>
+									<input
+										id="vpn-secret"
+										type="password"
 											value={vpnSecret}
 											onChange={(e) => setVpnSecret(e.target.value)}
 											placeholder="Masukkan kode jika tidak pakai Tailscale"

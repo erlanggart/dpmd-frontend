@@ -1,10 +1,19 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import {
 	getPengurusById,
 	updatePengurusStatus,
 } from "../../../services/pengurus";
 import { getProdukHukums } from "../../../services/api";
+import { 
+	getRw, 
+	getRt, 
+	getPosyandu, 
+	getKarangTaruna, 
+	getLpm, 
+	getPkk, 
+	getSatlinmas 
+} from "../../../services/kelembagaan";
 import { useAuth } from "../../../context/AuthContext";
 import {
 	FaArrowLeft,
@@ -15,10 +24,40 @@ import {
 	FaCalendarAlt,
 	FaFileAlt,
 	FaExternalLinkAlt,
+	FaChevronRight,
+	FaHome,
 } from "react-icons/fa";
 import Swal from "sweetalert2";
 
 const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
+
+// Helper function to convert pengurusable_type (table name) to route type
+const getRouteType = (pengurusableType) => {
+	const mapping = {
+		'rws': 'rw',
+		'rts': 'rt',
+		'posyandus': 'posyandu',
+		'karang_tarunas': 'karang-taruna',
+		'lpms': 'lpm',
+		'pkks': 'pkk',
+		'satlinmas': 'satlinmas'
+	};
+	return mapping[pengurusableType] || pengurusableType;
+};
+
+// Helper function to get display name
+const getDisplayName = (pengurusableType) => {
+	const mapping = {
+		'rws': 'RW',
+		'rts': 'RT',
+		'posyandus': 'Posyandu',
+		'karang_tarunas': 'Karang Taruna',
+		'lpms': 'LPM',
+		'pkks': 'PKK',
+		'satlinmas': 'Satlinmas'
+	};
+	return mapping[pengurusableType] || pengurusableType;
+};
 
 // Helper function to determine correct routing based on user role
 const getPengurusRoutePath = (user, pengurusId, action = "") => {
@@ -34,11 +73,16 @@ const getPengurusRoutePath = (user, pengurusId, action = "") => {
 };
 
 const PengurusDetailPage = () => {
-	const { pengurusId } = useParams();
+	const params = useParams();
+	const pengurusId = params.id; // Changed from destructuring to direct access
 	const navigate = useNavigate();
 	const { user } = useAuth();
 
+	console.log('🔧 All params:', params);
+	console.log('🆔 Pengurus ID:', pengurusId);
+
 	const [pengurus, setPengurus] = useState(null);
+	const [kelembagaanInfo, setKelembagaanInfo] = useState(null);
 	const [loading, setLoading] = useState(true);
 	const [updating, setUpdating] = useState(false);
 	const [produkHukumList, setProdukHukumList] = useState([]);
@@ -50,7 +94,7 @@ const PengurusDetailPage = () => {
 	const isSuperAdmin = user?.role === "superadmin";
 	const canManage = isAdmin || isUserDesa || isAdminBidang || isSuperAdmin;
 
-	const loadProdukHukumList = useCallback(async () => {
+	const loadProdukHukumList = async () => {
 		try {
 			const response = await getProdukHukums(1, "");
 			const allData = response?.data?.data || [];
@@ -59,31 +103,84 @@ const PengurusDetailPage = () => {
 			console.error("Error loading produk hukum:", error);
 			setProdukHukumList([]);
 		}
-	}, []);
+	};
 
-	const loadPengurusDetail = useCallback(async () => {
-		if (!pengurusId) return;
+	const loadKelembagaanInfo = async (pengurusableType, pengurusableId) => {
+		try {
+			let response;
+			// Map table name to appropriate getter function
+			switch (pengurusableType) {
+				case 'rws':
+					response = await getRw(pengurusableId);
+					break;
+				case 'rts':
+					response = await getRt(pengurusableId);
+					break;
+				case 'posyandus':
+					response = await getPosyandu(pengurusableId);
+					break;
+				case 'karang_tarunas':
+					response = await getKarangTaruna(pengurusableId);
+					break;
+				case 'lpms':
+					response = await getLpm(pengurusableId);
+					break;
+				case 'pkks':
+					response = await getPkk(pengurusableId);
+					break;
+				case 'satlinmas':
+					response = await getSatlinmas(pengurusableId);
+					break;
+				default:
+					console.warn('Unknown kelembagaan type:', pengurusableType);
+					return;
+			}
+			
+			const kelembagaanData = response?.data?.data;
+			setKelembagaanInfo(kelembagaanData || null);
+		} catch (error) {
+			console.error('Error loading kelembagaan info:', error);
+			setKelembagaanInfo(null);
+		}
+	};
 
+	const loadPengurusDetail = async () => {
+		if (!pengurusId) {
+			console.log('⚠️ No pengurusId provided');
+			return;
+		}
+
+		console.log('🔍 Loading pengurus detail for ID:', pengurusId);
 		setLoading(true);
 		try {
 			const response = await getPengurusById(pengurusId);
-			setPengurus(response?.data?.data || null);
+			console.log('✅ Pengurus detail response:', response);
+			const pengurusData = response?.data?.data;
+			console.log('📦 Pengurus data:', pengurusData);
+			setPengurus(pengurusData || null);
+			
+			// Load kelembagaan info if pengurus data is available
+			if (pengurusData?.pengurusable_type && pengurusData?.pengurusable_id) {
+				await loadKelembagaanInfo(pengurusData.pengurusable_type, pengurusData.pengurusable_id);
+			}
 		} catch (error) {
-			console.error("Error loading pengurus detail:", error);
+			console.error('❌ Error loading pengurus detail:', error);
 			Swal.fire({
 				icon: "error",
 				title: "Gagal",
 				text: "Gagal memuat detail pengurus",
 			});
 		} finally {
+			console.log('✨ Loading complete, setting loading to false');
 			setLoading(false);
 		}
-	}, [pengurusId]);
+	};
 
 	useEffect(() => {
 		loadPengurusDetail();
 		loadProdukHukumList();
-	}, [loadPengurusDetail, loadProdukHukumList]);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [pengurusId]); // Only depend on pengurusId to avoid infinite loop
 
 	const handleStatusUpdate = async (newStatus) => {
 		const result = await Swal.fire({
@@ -163,10 +260,51 @@ const PengurusDetailPage = () => {
 	}
 
 	return (
-		<div className="min-h-screen bg-gray-50">
-			<div className="bg-white shadow">
-				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-					<div className="flex items-center justify-between py-4">
+		<div className="min-h-screen">
+			{/* Breadcrumb */}
+			
+				<div className="bg-white p-2 mb-4 rounded-md shadow-sm">
+
+					<nav className="flex items-center space-x-2 text-sm">
+						<Link
+							to="/desa/dashboard"
+							className="flex items-center text-gray-500 hover:text-indigo-600 transition-colors"
+						>
+							<FaHome className="mr-1" />
+							Dashboard
+						</Link>
+						<FaChevronRight className="text-gray-400 text-xs" />
+						<Link
+							to="/desa/kelembagaan"
+							className="text-gray-500 hover:text-indigo-600 transition-colors"
+						>
+							Kelembagaan
+						</Link>
+						<FaChevronRight className="text-gray-400 text-xs" />
+						<Link
+							to={`/desa/kelembagaan/${getRouteType(pengurus.pengurusable_type)}`}
+							className="text-gray-500 hover:text-indigo-600 transition-colors"
+						>
+							{getDisplayName(pengurus.pengurusable_type)}
+						</Link>
+						<FaChevronRight className="text-gray-400 text-xs" />
+						<Link
+							to={`/desa/kelembagaan/${getRouteType(pengurus.pengurusable_type)}/${pengurus.pengurusable_id}`}
+							className="text-gray-500 hover:text-indigo-600 transition-colors"
+						>
+							{kelembagaanInfo?.nomor || kelembagaanInfo?.nama || 'Detail'}
+						</Link>
+						<FaChevronRight className="text-gray-400 text-xs" />
+						<span className="text-gray-900 font-medium">
+							{pengurus.nama_lengkap}
+						</span>
+					</nav>
+				</div>
+				
+			
+
+			
+					<div className="bg-white flex items-center justify-between p-4 mb-4 rounded-md shadow-sm">
 						<div className="flex items-center space-x-4">
 							<button
 								onClick={() => navigate(-1)}
@@ -217,10 +355,9 @@ const PengurusDetailPage = () => {
 							</div>
 						)}
 					</div>
-				</div>
-			</div>
+			
 
-			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+			<div className="">
 				<div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 					{/* Profile Card */}
 					<div className="lg:col-span-1 space-y-4">

@@ -21,7 +21,15 @@ import {
 	LuCalendar,
 	LuBadgeCheck,
 	LuUserX,
+	LuAward,
+	LuUserRoundCog,
+	LuUserRoundCheck,
 } from "react-icons/lu";
+import { 
+	getJabatanList, 
+	getDisplayJabatan, 
+	getJabatanColor 
+} from "../../../constants/jabatanMapping";
 
 const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
 
@@ -39,12 +47,14 @@ const getPengurusRoutePath = (user, pengurusId) => {
 };
 
 // Komponen untuk kartu jabatan individual
-const JabatanCard = ({ jabatan, pengurusList, getDisplayJabatan, user }) => {
+const JabatanCard = ({ jabatan, pengurusList, user }) => {
 	const [isExpanded, setIsExpanded] = useState(false);
 
 	const getJabatanIcon = (jabatanName) => {
 		const lowerJabatan = jabatanName.toLowerCase();
-		if (lowerJabatan.includes("ketua")) return <LuCrown className="w-5 h-5" />;
+		if (lowerJabatan.includes("bidang") ) return <LuUserRoundCheck className="w-5 h-5" />;
+		if (lowerJabatan.includes("ketua") && !lowerJabatan.includes("wakil") && !lowerJabatan.includes("kepala")) return <LuCrown className="w-5 h-5" />;
+
 		if (lowerJabatan.includes("sekretaris"))
 			return <LuUser className="w-5 h-5" />;
 		if (lowerJabatan.includes("bendahara"))
@@ -57,17 +67,6 @@ const JabatanCard = ({ jabatan, pengurusList, getDisplayJabatan, user }) => {
 		return <LuUser className="w-5 h-5" />;
 	};
 
-	const getJabatanColor = (jabatanName) => {
-		const lowerJabatan = jabatanName.toLowerCase();
-		if (lowerJabatan.includes("ketua")) return "from-yellow-400 to-orange-500";
-		if (lowerJabatan.includes("wakil")) return "from-blue-400 to-indigo-500";
-		if (lowerJabatan.includes("sekretaris"))
-			return "from-green-400 to-emerald-500";
-		if (lowerJabatan.includes("bendahara"))
-			return "from-purple-400 to-violet-500";
-		return "from-gray-400 to-slate-500";
-	};
-
 	return (
 		<div className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300">
 			{/* Header Jabatan */}
@@ -77,9 +76,7 @@ const JabatanCard = ({ jabatan, pengurusList, getDisplayJabatan, user }) => {
 			>
 				<div className="flex items-center space-x-3">
 					<div
-						className={`w-10 h-10 bg-gradient-to-br ${getJabatanColor(
-							jabatan
-						)} rounded-lg flex items-center justify-center text-white shadow-md`}
+						className={`w-10 h-10 bg-gradient-to-br ${getJabatanColor(jabatan)} rounded-lg flex items-center justify-center text-white shadow-md`}
 					>
 						{getJabatanIcon(jabatan)}
 					</div>
@@ -210,73 +207,13 @@ const PengurusItem = ({ pengurus, user }) => {
 	);
 };
 
-// Default jabatan untuk setiap tipe kelembagaan
-const getDefaultJabatan = (kelembagaanType) => {
-	const jabatanMap = {
-		"karang-taruna": [
-			"Ketua Karang Taruna",
-			"Wakil Ketua Karang Taruna",
-			"Sekretaris Karang Taruna",
-			"Bendahara Karang Taruna",
-			"Koordinator Bidang Olahraga",
-			"Koordinator Bidang Seni dan Budaya",
-			"Koordinator Bidang Usaha",
-			"Koordinator Bidang Lingkungan",
-		],
-		lpm: [
-			"Ketua LPM",
-			"Wakil Ketua LPM",
-			"Sekretaris LPM",
-			"Bendahara LPM",
-			"Koordinator Ekonomi",
-			"Koordinator Sosial Budaya",
-			"Koordinator Lingkungan Hidup",
-		],
-		pkk: [
-			"Ketua PKK",
-			"Wakil Ketua PKK",
-			"Sekretaris PKK",
-			"Bendahara PKK",
-			"Koordinator Pokja I",
-			"Koordinator Pokja II",
-			"Koordinator Pokja III",
-			"Koordinator Pokja IV",
-		],
-		satlinmas: [
-			"Komandan Satlinmas",
-			"Wakil Komandan Satlinmas",
-			"Sekretaris Satlinmas",
-			"Bendahara Satlinmas",
-			"Koordinator Operasional",
-			"Koordinator Logistik",
-			"Anggota Satlinmas",
-		],
-		posyandu: [
-			"Ketua Posyandu",
-			"Wakil Ketua Posyandu",
-			"Sekretaris Posyandu",
-			"Bendahara Posyandu",
-			"Koordinator Balita",
-			"Koordinator Lansia",
-			"Bidan/Petugas Kesehatan",
-		],
-		rt: ["Ketua RT", "Wakil Ketua RT", "Sekretaris RT", "Bendahara RT"],
-		rw: ["Ketua RW", "Wakil Ketua RW", "Sekretaris RW", "Bendahara RW"],
-	};
-
-	return jabatanMap[kelembagaanType] || [];
-};
-
-// Fungsi untuk menampilkan nama jabatan yang lebih user-friendly
-const getDisplayJabatan = (jabatan) => {
-	return jabatan;
-};
+// Note: Fungsi getJabatanList, getDisplayJabatan, getJabatanColor sudah diimport dari constants/jabatanMapping.js
 
 const PengurusJabatanList = ({
 	kelembagaanType,
 	kelembagaanId,
 	onAddPengurus,
-	onViewHistory,
+	
 	desaId,
 }) => {
 	const { user } = useAuth();
@@ -293,38 +230,38 @@ const PengurusJabatanList = ({
 	const [loading, setLoading] = useState(true);
 	const [showHistory, setShowHistory] = useState(false);
 
-	const defaultJabatan = getDefaultJabatan(kelembagaanType);
-
-	const loadPengurus = async () => {
-		if (!kelembagaanId || !kelembagaanType) return;
-
-		setLoading(true);
-		try {
-			// Pass desaId for superadmin access
-			const superadminDesaId = isSuperAdmin ? desaId : null;
-			const [activeResponse, historyResponse] = await Promise.all([
-				getPengurusByKelembagaan(
-					kelembagaanType,
-					kelembagaanId,
-					superadminDesaId
-				),
-				getPengurusHistory(kelembagaanType, kelembagaanId, superadminDesaId),
-			]);
-
-			setActivePengurus(activeResponse?.data?.data || []);
-			setHistoryPengurus(historyResponse?.data?.data || []);
-		} catch (error) {
-			console.error("Error loading pengurus:", error);
-			setActivePengurus([]);
-			setHistoryPengurus([]);
-		} finally {
-			setLoading(false);
-		}
-	};
+	const defaultJabatan = getJabatanList(kelembagaanType);
 
 	useEffect(() => {
+		const loadPengurus = async () => {
+			if (!kelembagaanId || !kelembagaanType) return;
+
+			setLoading(true);
+			try {
+				// Pass desaId for superadmin access
+				const superadminDesaId = isSuperAdmin ? desaId : null;
+				const [activeResponse, historyResponse] = await Promise.all([
+					getPengurusByKelembagaan(
+						kelembagaanType,
+						kelembagaanId,
+						superadminDesaId
+					),
+					getPengurusHistory(kelembagaanType, kelembagaanId, superadminDesaId),
+				]);
+
+				setActivePengurus(activeResponse?.data?.data || []);
+				setHistoryPengurus(historyResponse?.data?.data || []);
+			} catch (error) {
+				console.error("Error loading pengurus:", error);
+				setActivePengurus([]);
+				setHistoryPengurus([]);
+			} finally {
+				setLoading(false);
+			}
+		};
+
 		loadPengurus();
-	}, [kelembagaanType, kelembagaanId]);
+	}, [kelembagaanType, kelembagaanId, isSuperAdmin, desaId]);
 
 	const toggleHistory = () => {
 		setShowHistory(!showHistory);
@@ -416,7 +353,6 @@ const PengurusJabatanList = ({
 							key={jabatan}
 							jabatan={jabatan}
 							pengurusList={pengurusList}
-							getDisplayJabatan={getDisplayJabatan}
 							user={user}
 						/>
 					))}
