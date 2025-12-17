@@ -614,9 +614,9 @@ const AddDashboard = () => {
                         <div className={`w-12 h-12 ${config.bgClass} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300 ${isSelected ? 'scale-110' : ''}`}>
                           <Activity className={`w-6 h-6 ${config.textClass}`} />
                         </div>
-                        <div className="text-right">
-                          <p className="text-sm text-gray-600 font-medium truncate max-w-[150px]" title={status}>
-                            {status.length > 20 ? status.substring(0, 20) + '...' : status}
+                        <div className="text-right flex-1 ml-3">
+                          <p className="text-sm text-gray-600 font-medium break-words" title={status}>
+                            {status}
                           </p>
                           <p className="text-xs text-gray-500 mt-1">
                             {percentage}%
@@ -728,7 +728,7 @@ const AddDashboard = () => {
                   {selectedStatusFromCard && (
                     <span className="inline-flex items-center gap-1 px-3 py-1 bg-indigo-100 text-indigo-700 rounded-lg text-sm font-semibold border-2 border-indigo-300">
                       <span>🔍</span>
-                      Card: {selectedStatusFromCard.length > 30 ? selectedStatusFromCard.substring(0, 30) + '...' : selectedStatusFromCard}
+                      Card: {selectedStatusFromCard}
                       <button 
                         onClick={() => setSelectedStatusFromCard('')} 
                         className="ml-1 hover:text-indigo-900"

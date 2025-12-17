@@ -29,6 +29,8 @@ const DdDashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterKecamatan, setFilterKecamatan] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  const [selectedStatusFromCard, setSelectedStatusFromCard] = useState('');
+  const [activeTabView, setActiveTabView] = useState('statistic'); // 'statistic' or 'table'
   const { getCachedData, setCachedData, isCached } = useDataCache();
 
   useEffect(() => {
@@ -158,8 +160,9 @@ const DdDashboard = () => {
     
     const matchesKecamatan = filterKecamatan === '' || item.kecamatan === filterKecamatan;
     const matchesStatus = filterStatus === '' || item.status === filterStatus;
+    const matchesCardStatus = selectedStatusFromCard === '' || item.status === selectedStatusFromCard;
     
-    return matchesSearch && matchesKecamatan && matchesStatus;
+    return matchesSearch && matchesKecamatan && matchesStatus && matchesCardStatus;
   });
   
   const stats = calculateStats(activeData);
@@ -167,6 +170,86 @@ const DdDashboard = () => {
   // Get unique values for filters
   const uniqueKecamatan = [...new Set(rawActiveData.map(d => d.kecamatan))].sort();
   const uniqueStatus = [...new Set(rawActiveData.map(d => d.status))].filter(s => s).sort();
+
+  // Dynamic Status Detection - Group by unique status (untuk Table tab - terpengaruh filter)
+  const statusSummary = activeData.reduce((acc, item) => {
+    const status = item.status || 'Tidak Ada Status';
+    if (!acc[status]) {
+      acc[status] = {
+        count: 0,
+        total: 0,
+        items: []
+      };
+    }
+    acc[status].count += 1;
+    acc[status].total += item.realisasi;
+    acc[status].items.push(item);
+    return acc;
+  }, {});
+
+  // Get status configuration for colors and icons
+  const getStatusConfig = (status) => {
+    const statusLower = status.toLowerCase();
+    
+    // Check for keywords to determine color scheme
+    if (statusLower.includes('dicairkan') || statusLower.includes('selesai') || statusLower.includes('cair')) {
+      return {
+        color: 'green',
+        bgClass: 'bg-green-100',
+        textClass: 'text-green-600',
+        borderClass: 'border-green-200',
+        hoverBorderClass: 'hover:border-green-400',
+        badgeBg: 'bg-green-500',
+        badgeBorder: 'border-green-300',
+        gradient: 'from-green-500 to-emerald-600'
+      };
+    } else if (statusLower.includes('proses') || statusLower.includes('spp') || statusLower.includes('pending')) {
+      return {
+        color: 'yellow',
+        bgClass: 'bg-yellow-100',
+        textClass: 'text-yellow-600',
+        borderClass: 'border-yellow-200',
+        hoverBorderClass: 'hover:border-yellow-400',
+        badgeBg: 'bg-yellow-500',
+        badgeBorder: 'border-yellow-300',
+        gradient: 'from-yellow-500 to-amber-600'
+      };
+    } else if (statusLower.includes('kembali') || statusLower.includes('tolak') || statusLower.includes('batal')) {
+      return {
+        color: 'red',
+        bgClass: 'bg-red-100',
+        textClass: 'text-red-600',
+        borderClass: 'border-red-200',
+        hoverBorderClass: 'hover:border-red-400',
+        badgeBg: 'bg-red-500',
+        badgeBorder: 'border-red-300',
+        gradient: 'from-red-500 to-rose-600'
+      };
+    } else if (statusLower.includes('belum') || statusLower.includes('tidak')) {
+      return {
+        color: 'gray',
+        bgClass: 'bg-gray-100',
+        textClass: 'text-gray-600',
+        borderClass: 'border-gray-200',
+        hoverBorderClass: 'hover:border-gray-400',
+        badgeBg: 'bg-gray-500',
+        badgeBorder: 'border-gray-300',
+        gradient: 'from-gray-500 to-slate-600'
+      };
+    } else {
+      // Default blue for unknown status
+      return {
+        color: 'blue',
+        bgClass: 'bg-blue-100',
+        textClass: 'text-blue-600',
+        borderClass: 'border-blue-200',
+        hoverBorderClass: 'hover:border-blue-400',
+        badgeBg: 'bg-blue-500',
+        badgeBorder: 'border-blue-300',
+        gradient: 'from-blue-500 to-indigo-600'
+      };
+    }
+  };
 
   const groupByKecamatanData = () => {
     const grouped = {};
@@ -219,6 +302,18 @@ const DdDashboard = () => {
     } finally {
       setUploading(false);
     }
+  };
+
+  // Handle tab view switch and clear table filters when switching to Table view
+  const handleSetActiveTabView = (view) => {
+    if (view === 'table') {
+      // clear any active filters so Table starts unfiltered when coming from Statistic
+      setSearchTerm('');
+      setFilterKecamatan('');
+      setFilterStatus('');
+      setSelectedStatusFromCard('');
+    }
+    setActiveTabView(view);
   };
 
   const exportToExcel = () => {
@@ -383,117 +478,37 @@ const DdDashboard = () => {
           </button>
         </div>
 
-        {/* Search and Filter Section */}
-        <div className="mb-8 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {/* Search Bar */}
-            <div className="md:col-span-2">
-              <div className="relative">
-                <FiSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input
-                  type="text"
-                  placeholder="Cari desa atau kecamatan..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all duration-200 shadow-sm hover:shadow-md"
-                />
-              </div>
-            </div>
-
-            {/* Filter Kecamatan */}
-            <div className="relative">
-              <FiFilter className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
-              <select
-                value={filterKecamatan}
-                onChange={(e) => setFilterKecamatan(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all duration-200 shadow-sm hover:shadow-md appearance-none cursor-pointer"
-              >
-                <option value="">Semua Kecamatan</option>
-                {uniqueKecamatan.map(kec => (
-                  <option key={kec} value={kec}>{kec}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Filter Status */}
-            <div className="relative">
-              <FiFilter className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all duration-200 shadow-sm hover:shadow-md appearance-none cursor-pointer"
-              >
-                <option value="">Semua Status</option>
-                {uniqueStatus.map(status => (
-                  <option key={status} value={status}>{status}</option>
-                ))}
-              </select>
-            </div>
+        {/* Tab View Navigation (Statistik vs Tabel) */}
+        <div className="mb-8">
+          <div className="flex gap-2 bg-white/90 backdrop-blur-sm rounded-2xl p-2 shadow-lg">
+            <button
+              onClick={() => handleSetActiveTabView('statistic')}
+              className={`flex-1 px-6 py-3 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2 ${
+                activeTabView === 'statistic'
+                  ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg scale-105'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <Activity className="w-5 h-5" />
+              <span>Statistik</span>
+            </button>
+            <button
+              onClick={() => handleSetActiveTabView('table')}
+              className={`flex-1 px-6 py-3 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2 ${
+                activeTabView === 'table'
+                  ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg scale-105'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <FiUsers className="w-5 h-5" />
+              <span>Tabel Data</span>
+            </button>
           </div>
-
-          {/* Active Filters Display */}
-          {(searchTerm || filterKecamatan || filterStatus) && (
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm text-gray-600 font-medium">Filter Aktif:</span>
-              {searchTerm && (
-                <span className="inline-flex items-center gap-1 px-3 py-1 bg-cyan-100 text-cyan-700 rounded-lg text-sm">
-                  <FiSearch className="w-3 h-3" />
-                  {searchTerm}
-                  <button onClick={() => setSearchTerm('')} className="ml-1 hover:text-cyan-900">
-                    <FiX className="w-3 h-3" />
-                  </button>
-                </span>
-              )}
-              {filterKecamatan && (
-                <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-700 rounded-lg text-sm">
-                  <FiMapPin className="w-3 h-3" />
-                  {filterKecamatan}
-                  <button onClick={() => setFilterKecamatan('')} className="ml-1 hover:text-purple-900">
-                    <FiX className="w-3 h-3" />
-                  </button>
-                </span>
-              )}
-              {filterStatus && (
-                <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-lg text-sm">
-                  <Activity className="w-3 h-3" />
-                  {filterStatus}
-                  <button onClick={() => setFilterStatus('')} className="ml-1 hover:text-green-900">
-                    <FiX className="w-3 h-3" />
-                  </button>
-                </span>
-              )}
-              <button
-                onClick={() => {
-                  setSearchTerm('');
-                  setFilterKecamatan('');
-                  setFilterStatus('');
-                }}
-                className="text-sm text-red-600 hover:text-red-700 font-medium underline"
-              >
-                Reset Semua
-              </button>
-            </div>
-          )}
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex gap-3 mb-8 flex-wrap">
-          <button
-            onClick={() => setShowUploadModal(true)}
-            className="group px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center gap-2"
-          >
-            <FiUpload className="w-5 h-5 group-hover:rotate-12 transition-transform duration-300" />
-            <span className="font-medium">Update Data</span>
-          </button>
-          <button
-            onClick={exportToExcel}
-            className="group px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center gap-2"
-          >
-            <FiDownload className="w-5 h-5 group-hover:translate-y-1 transition-transform duration-300" />
-            <span className="font-medium">Export Excel</span>
-          </button>
-        </div>
-
+        {/* Tab Content - Statistic */}
+        {activeTabView === 'statistic' && (
+          <div className="space-y-6 mb-8">
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="group bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] cursor-default">
@@ -560,7 +575,7 @@ const DdDashboard = () => {
                     labels: Object.keys(groupedData),
                     datasets: [{
                       label: 'Total Alokasi',
-                      data: Object.entries(groupedData).map(([_, desas]) => 
+                      data: Object.entries(groupedData).map(([, desas]) => 
                         desas.reduce((sum, d) => sum + d.realisasi, 0)
                       ),
                       backgroundColor: (context) => {
@@ -737,6 +752,180 @@ const DdDashboard = () => {
             </div>
           </div>
         </div>
+          </div>
+        )}
+
+        {/* Tab Content - Table */}
+        {activeTabView === 'table' && (
+          <div className="space-y-6">
+            {/* Status Summary Cards - Dynamic */}
+            {Object.keys(statusSummary).length > 0 && (
+              <div className={`grid grid-cols-1 ${Object.keys(statusSummary).length === 2 ? 'md:grid-cols-2' : Object.keys(statusSummary).length === 1 ? 'md:grid-cols-1 max-w-md mx-auto' : 'md:grid-cols-3'} gap-6 mb-8`}>
+                {Object.entries(statusSummary).map(([status, data]) => {
+                  const config = getStatusConfig(status);
+                  const percentage = stats.totalDesa > 0 ? ((data.count / stats.totalDesa) * 100).toFixed(1) : 0;
+                  const isSelected = selectedStatusFromCard === status;
+                  
+                  return (
+                    <div 
+                      key={status}
+                      onClick={() => {
+                        if (selectedStatusFromCard === status) {
+                          setSelectedStatusFromCard('');
+                          setFilterStatus('');
+                        } else {
+                          setSelectedStatusFromCard(status);
+                          setFilterStatus('');
+                        }
+                      }}
+                      className={`group bg-white rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 border-2 cursor-pointer ${
+                        isSelected 
+                          ? `${config.borderClass.replace('200', '500')} ring-4 ring-opacity-50 ${config.borderClass.replace('border-', 'ring-').replace('200', '300')}` 
+                          : `${config.borderClass} ${config.hoverBorderClass}`
+                      }`}
+                      title={`Klik untuk filter data dengan status: ${status}`}
+                    >
+                      <div className="flex items-center justify-between mb-4">
+                        <div className={`w-12 h-12 ${config.bgClass} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300 ${isSelected ? 'scale-110' : ''}`}>
+                          <Activity className={`w-6 h-6 ${config.textClass}`} />
+                        </div>
+                        <div className="text-right flex-1 ml-3">
+                          <p className="text-sm text-gray-600 font-medium break-words" title={status}>
+                            {status}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {percentage}%
+                          </p>
+                        </div>
+                      </div>
+                      <p className={`text-4xl font-bold ${config.textClass} mb-2`}>{data.count}</p>
+                      <p className="text-sm text-gray-600 mb-2">
+                        {isSelected ? '✓ Filter Aktif' : 'Desa dengan status ini'}
+                      </p>
+                      <div className="mt-3 pt-3 border-t border-gray-100">
+                        <p className="text-xs text-gray-500 mb-1">Total Nominal</p>
+                        <p className={`text-lg font-bold ${config.textClass.replace('600', '700')}`}>
+                          {formatCurrency(data.total)}
+                        </p>
+                      </div>
+                      {isSelected && (
+                        <div className="mt-3 pt-2">
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-600">
+                            <span>🔍</span> Klik lagi untuk hapus filter
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Search and Filter Section */}
+            <div className="mb-8 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {/* Search Bar */}
+                <div className="md:col-span-2">
+                  <div className="relative">
+                    <FiSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <input
+                      type="text"
+                      placeholder="Cari desa atau kecamatan..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full pl-12 pr-4 py-3 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all duration-200 shadow-sm hover:shadow-md"
+                    />
+                  </div>
+                </div>
+
+                {/* Filter Kecamatan */}
+                <div className="relative">
+                  <FiFilter className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
+                  <select
+                    value={filterKecamatan}
+                    onChange={(e) => setFilterKecamatan(e.target.value)}
+                    className="w-full pl-12 pr-4 py-3 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all duration-200 shadow-sm hover:shadow-md appearance-none cursor-pointer"
+                  >
+                    <option value="">Semua Kecamatan</option>
+                    {uniqueKecamatan.map(kec => (
+                      <option key={kec} value={kec}>{kec}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Filter Status */}
+                <div className="relative">
+                  <FiFilter className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
+                  <select
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                    className="w-full pl-12 pr-4 py-3 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all duration-200 shadow-sm hover:shadow-md appearance-none cursor-pointer"
+                  >
+                    <option value="">Semua Status</option>
+                    {uniqueStatus.map(status => (
+                      <option key={status} value={status}>{status}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Active Filters Display */}
+              {(searchTerm || filterKecamatan || filterStatus || selectedStatusFromCard) && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm text-gray-600 font-medium">Filter Aktif:</span>
+                  {searchTerm && (
+                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-cyan-100 text-cyan-700 rounded-lg text-sm">
+                      <FiSearch className="w-3 h-3" />
+                      {searchTerm}
+                      <button onClick={() => setSearchTerm('')} className="ml-1 hover:text-cyan-900">
+                        <FiX className="w-3 h-3" />
+                      </button>
+                    </span>
+                  )}
+                  {filterKecamatan && (
+                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-700 rounded-lg text-sm">
+                      <FiMapPin className="w-3 h-3" />
+                      {filterKecamatan}
+                      <button onClick={() => setFilterKecamatan('')} className="ml-1 hover:text-purple-900">
+                        <FiX className="w-3 h-3" />
+                      </button>
+                    </span>
+                  )}
+                  {filterStatus && (
+                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-lg text-sm">
+                      <Activity className="w-3 h-3" />
+                      {filterStatus}
+                      <button onClick={() => setFilterStatus('')} className="ml-1 hover:text-green-900">
+                        <FiX className="w-3 h-3" />
+                      </button>
+                    </span>
+                  )}
+                  {selectedStatusFromCard && (
+                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-indigo-100 text-indigo-700 rounded-lg text-sm font-semibold border-2 border-indigo-300">
+                      <span>🔍</span>
+                      Card: {selectedStatusFromCard}
+                      <button 
+                        onClick={() => setSelectedStatusFromCard('')} 
+                        className="ml-1 hover:text-indigo-900"
+                      >
+                        <FiX className="w-3 h-3" />
+                      </button>
+                    </span>
+                  )}
+                  <button
+                    onClick={() => {
+                      setSearchTerm('');
+                      setFilterKecamatan('');
+                      setFilterStatus('');
+                      setSelectedStatusFromCard('');
+                    }}
+                    className="text-sm text-red-600 hover:text-red-700 font-medium underline"
+                  >
+                    Reset Semua
+                  </button>
+                </div>
+              )}
+            </div>
 
         {/* Data Table */}
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl overflow-hidden">
@@ -797,18 +986,23 @@ const DdDashboard = () => {
                                   </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-200">
-                                  {desas.map((desa, idx) => (
-                                    <tr key={idx} className="hover:bg-gray-100 transition-colors duration-150">
-                                      <td className="px-4 py-2 text-sm text-gray-700">{idx + 1}</td>
-                                      <td className="px-4 py-2 text-sm text-gray-900">{desa.desa}</td>
-                                      <td className="px-4 py-2">
-                                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                                          {desa.status}
-                                        </span>
-                                      </td>
-                                      <td className="px-4 py-2 text-sm text-gray-900 font-medium">{formatCurrency(desa.realisasi)}</td>
-                                    </tr>
-                                  ))}
+                                  {desas.map((desa, idx) => {
+                                    const config = getStatusConfig(desa.status);
+                                    const badgeClasses = `${config.bgClass} ${config.textClass.replace('600', '800')} ${config.borderClass}`;
+
+                                    return (
+                                      <tr key={idx} className="hover:bg-gray-100 transition-colors duration-150">
+                                        <td className="px-4 py-2 text-sm text-gray-700">{idx + 1}</td>
+                                        <td className="px-4 py-2 text-sm text-gray-900">{desa.desa}</td>
+                                        <td className="px-4 py-2">
+                                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${badgeClasses}`}>
+                                            {desa.status}
+                                          </span>
+                                        </td>
+                                        <td className="px-4 py-2 text-sm text-gray-900 font-medium">{formatCurrency(desa.realisasi)}</td>
+                                      </tr>
+                                    );
+                                  })}
                                 </tbody>
                               </table>
                             </div>
@@ -822,6 +1016,8 @@ const DdDashboard = () => {
             </table>
           </div>
         </div>
+          </div>
+        )}
       </div>
 
       {/* Upload Modal */}
