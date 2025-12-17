@@ -1,6 +1,6 @@
 // src/api.js
 import axios from "axios";
-import { getBaseURL, API_ENDPOINTS } from "./config/apiConfig";
+import { API_ENDPOINTS } from "./config/apiConfig";
 
 const api = axios.create({
 	baseURL: API_ENDPOINTS.EXPRESS_BASE, // Express only
@@ -35,6 +35,31 @@ api.interceptors.request.use(
 			
 			if (user.role === 'vpn_access' && vpnSecret && config.url?.includes('/vpn-core')) {
 				config.headers['x-vpn-secret'] = vpnSecret;
+			}
+
+			// Auto-inject desa_id for admin users on specific endpoints
+			const adminRoles = ['super_admin', 'superadmin', 'admin', 'kepala_dinas', 'sekretaris_dinas', 'kepala_bidang', 'pegawai', 'pemberdayaan_masyarakat', 'pmd'];
+			if (user?.role && adminRoles.includes(user.role)) {
+				// Get desa_id from current URL path (for admin viewing specific desa)
+				const path = window.location.pathname;
+				const match = path.match(/\/kelembagaan\/admin\/([^/]+)/);
+				
+				if (match && match[1]) {
+					const desaId = match[1];
+					
+					// Add desa_id to query params for endpoints that need it
+					const needsDesaId = [
+						'/produk-hukum',
+						'/pengurus',
+						'/bumdes'
+					];
+					
+					const needsInjection = needsDesaId.some(endpoint => config.url?.includes(endpoint));
+					
+					if (needsInjection && !config.params?.desa_id) {
+						config.params = { ...config.params, desa_id: desaId };
+					}
+				}
 			}
 		}
 		

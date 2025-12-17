@@ -1,11 +1,48 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { getPengurusById, updatePengurus } from "../../../services/pengurus";
 import { getProdukHukums } from "../../../services/api";
+import { 
+	getRw, 
+	getRt, 
+	getPosyandu, 
+	getKarangTaruna, 
+	getLpm, 
+	getPkk, 
+	getSatlinmas 
+} from "../../../services/kelembagaan";
 import { useAuth } from "../../../context/AuthContext";
-import { FaArrowLeft, FaSave, FaFileAlt } from "react-icons/fa";
+import { FaArrowLeft, FaSave, FaFileAlt, FaChevronRight, FaHome } from "react-icons/fa";
 import SearchableProdukHukumSelect from "../../../components/shared/SearchableProdukHukumSelect";
 import Swal from "sweetalert2";
+
+// Helper function to convert pengurusable_type (table name) to route type
+const getRouteType = (pengurusableType) => {
+	const mapping = {
+		'rws': 'rw',
+		'rts': 'rt',
+		'posyandus': 'posyandu',
+		'karang_tarunas': 'karang-taruna',
+		'lpms': 'lpm',
+		'pkks': 'pkk',
+		'satlinmas': 'satlinmas'
+	};
+	return mapping[pengurusableType] || pengurusableType;
+};
+
+// Helper function to get display name
+const getDisplayName = (pengurusableType) => {
+	const mapping = {
+		'rws': 'RW',
+		'rts': 'RT',
+		'posyandus': 'Posyandu',
+		'karang_tarunas': 'Karang Taruna',
+		'lpms': 'LPM',
+		'pkks': 'PKK',
+		'satlinmas': 'Satlinmas'
+	};
+	return mapping[pengurusableType] || pengurusableType;
+};
 
 // Helper function to determine correct routing based on user role
 const getPengurusRoutePath = (user, pengurusId, action = "") => {
@@ -21,11 +58,13 @@ const getPengurusRoutePath = (user, pengurusId, action = "") => {
 };
 
 const PengurusEditPage = () => {
-	const { pengurusId } = useParams();
+	const params = useParams();
+	const pengurusId = params.id; // Changed from destructuring to direct access
 	const navigate = useNavigate();
 	const { user } = useAuth();
 
 	const [pengurus, setPengurus] = useState(null);
+	const [kelembagaanInfo, setKelembagaanInfo] = useState(null);
 	const [loading, setLoading] = useState(true);
 	const [saving, setSaving] = useState(false);
 	const [produkHukumList, setProdukHukumList] = useState([]);
@@ -65,6 +104,45 @@ const PengurusEditPage = () => {
 		}
 	}, []);
 
+	const loadKelembagaanInfo = useCallback(async (pengurusableType, pengurusableId) => {
+		try {
+			let response;
+			// Map table name to appropriate getter function
+			switch (pengurusableType) {
+				case 'rws':
+					response = await getRw(pengurusableId);
+					break;
+				case 'rts':
+					response = await getRt(pengurusableId);
+					break;
+				case 'posyandus':
+					response = await getPosyandu(pengurusableId);
+					break;
+				case 'karang_tarunas':
+					response = await getKarangTaruna(pengurusableId);
+					break;
+				case 'lpms':
+					response = await getLpm(pengurusableId);
+					break;
+				case 'pkks':
+					response = await getPkk(pengurusableId);
+					break;
+				case 'satlinmas':
+					response = await getSatlinmas(pengurusableId);
+					break;
+				default:
+					console.warn('Unknown kelembagaan type:', pengurusableType);
+					return;
+			}
+			
+			const kelembagaanData = response?.data?.data;
+			setKelembagaanInfo(kelembagaanData || null);
+		} catch (error) {
+			console.error('Error loading kelembagaan info:', error);
+			setKelembagaanInfo(null);
+		}
+	}, []);
+
 	const loadPengurusDetail = useCallback(async () => {
 		if (!pengurusId) return;
 
@@ -90,6 +168,11 @@ const PengurusEditPage = () => {
 					tanggal_akhir_jabatan: data.tanggal_akhir_jabatan || "",
 					produk_hukum_id: data.produk_hukum_id || "",
 				});
+				
+				// Load kelembagaan info if available
+				if (data.pengurusable_type && data.pengurusable_id) {
+					await loadKelembagaanInfo(data.pengurusable_type, data.pengurusable_id);
+				}
 			}
 		} catch (error) {
 			console.error("Error loading pengurus detail:", error);
@@ -101,7 +184,7 @@ const PengurusEditPage = () => {
 		} finally {
 			setLoading(false);
 		}
-	}, [pengurusId, navigate]);
+	}, [pengurusId, navigate, loadKelembagaanInfo]);
 
 	useEffect(() => {
 		if (!canEdit) {
@@ -215,6 +298,53 @@ const PengurusEditPage = () => {
 
 	return (
 		<div className="min-h-screen bg-gray-50">
+			{/* Breadcrumb */}
+			<div className="bg-white border-b border-gray-200">
+				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+					<nav className="flex items-center space-x-2 text-sm">
+						<Link
+							to="/desa/dashboard"
+							className="flex items-center text-gray-500 hover:text-indigo-600 transition-colors"
+						>
+							<FaHome className="mr-1" />
+							Dashboard
+						</Link>
+						<FaChevronRight className="text-gray-400 text-xs" />
+						<Link
+							to="/desa/kelembagaan"
+							className="text-gray-500 hover:text-indigo-600 transition-colors"
+						>
+							Kelembagaan
+						</Link>
+						<FaChevronRight className="text-gray-400 text-xs" />
+						<Link
+							to={`/desa/kelembagaan/${getRouteType(pengurus.pengurusable_type)}`}
+							className="text-gray-500 hover:text-indigo-600 transition-colors"
+						>
+							{getDisplayName(pengurus.pengurusable_type)}
+						</Link>
+						<FaChevronRight className="text-gray-400 text-xs" />
+						<Link
+							to={`/desa/kelembagaan/${getRouteType(pengurus.pengurusable_type)}/${pengurus.pengurusable_id}`}
+							className="text-gray-500 hover:text-indigo-600 transition-colors"
+						>
+							{kelembagaanInfo?.nomor || kelembagaanInfo?.nama || 'Detail'}
+						</Link>
+						<FaChevronRight className="text-gray-400 text-xs" />
+						<Link
+							to={`/desa/pengurus/${pengurusId}`}
+							className="text-gray-500 hover:text-indigo-600 transition-colors"
+						>
+							{pengurus.nama_lengkap}
+						</Link>
+						<FaChevronRight className="text-gray-400 text-xs" />
+						<span className="text-gray-900 font-medium">
+							Edit
+						</span>
+					</nav>
+				</div>
+			</div>
+
 			<div className="bg-white shadow">
 				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 					<div className="flex items-center justify-between py-4">

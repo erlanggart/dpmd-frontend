@@ -15,13 +15,22 @@ export const getCurrentUser = () => {
 };
 
 /**
- * Check if current user is admin (superadmin, pemberdayaan_masyarakat, pmd)
+ * Check if current user is admin (superadmin, pemberdayaan_masyarakat, pmd, super_admin, admin, kepala_dinas, etc.)
  */
 export const isAdminUser = () => {
 	const user = getCurrentUser();
-	return (
-		user && ["superadmin", "pemberdayaan_masyarakat", "pmd"].includes(user.role)
-	);
+	const adminRoles = [
+		"superadmin",
+		"super_admin", 
+		"admin",
+		"pemberdayaan_masyarakat",
+		"pmd",
+		"kepala_dinas",
+		"sekretaris_dinas",
+		"kepala_bidang",
+		"pegawai"
+	];
+	return user && adminRoles.includes(user.role);
 };
 
 /**
@@ -40,9 +49,9 @@ export const getDesaIdFromUrl = () => {
 	const path = window.location.pathname;
 	// Try different patterns for admin routes
 	const patterns = [
-		/\/kelembagaan\/admin\/([^\/]+)/, // /kelembagaan/admin/{desaId}
-		/\/admin\/desa\/([^\/]+)/, // /admin/desa/{desaId}
-		/\/dashboard\/admin\/([^\/]+)/, // /dashboard/admin/{desaId}
+		/\/kelembagaan\/admin\/([^/]+)/, // /kelembagaan/admin/{desaId}
+		/\/admin\/desa\/([^/]+)/, // /admin/desa/{desaId}
+		/\/dashboard\/admin\/([^/]+)/, // /dashboard/admin/{desaId}
 	];
 
 	for (const pattern of patterns) {
@@ -74,8 +83,24 @@ export const getEndpoint = (resource, operation = "list") => {
 	// Handle special cases for sub-resources like pengurus/by-kelembagaan
 	const baseResource = resource.split("/")[0];
 
+	// Kelembagaan resources that use /kelembagaan endpoint for admin
+	const kelembagaanResources = [
+		"rw",
+		"rt",
+		"posyandu",
+		"karang-taruna",
+		"lpm",
+		"satlinmas",
+		"pkk",
+	];
+
 	// For admin users, some operations use different patterns
 	if (prefix === "admin") {
+		// Kelembagaan resources use /kelembagaan prefix for admin
+		if (kelembagaanResources.includes(baseResource)) {
+			return `/kelembagaan/${resource}`;
+		}
+
 		switch (operation) {
 			case "list":
 			case "show":
@@ -102,8 +127,25 @@ export const getEndpoint = (resource, operation = "list") => {
 /**
  * Get parameters for admin requests (includes desa_id when needed)
  */
-export const getAdminParams = (additionalParams = {}) => {
+export const getAdminParams = (resource = null, operation = null, additionalParams = {}) => {
 	if (!isAdminUser()) return additionalParams;
+
+	// Kelembagaan resources already have desa relationship, no need for desa_id on show operations
+	const kelembagaanResources = [
+		"rw",
+		"rt",
+		"posyandu",
+		"karang-taruna",
+		"lpm",
+		"satlinmas",
+		"pkk",
+	];
+	const baseResource = resource ? resource.split("/")[0] : null;
+
+	// Don't add desa_id for show operations on kelembagaan resources (they have FK to desa)
+	if (operation === "show" && kelembagaanResources.includes(baseResource)) {
+		return additionalParams;
+	}
 
 	const desaId = getDesaIdFromUrl();
 	return desaId ? { desa_id: desaId, ...additionalParams } : additionalParams;
@@ -126,7 +168,7 @@ export const makeApiCall = (
 	config = {}
 ) => {
 	const endpoint = getEndpoint(resource, operation);
-	const params = getAdminParams(config.params || {});
+	const params = getAdminParams(resource, operation, config.params || {});
 	const finalConfig = { ...config, params };
 
 	switch (operation) {

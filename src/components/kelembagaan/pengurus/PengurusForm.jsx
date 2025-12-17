@@ -14,98 +14,11 @@ import {
 import Swal from "sweetalert2";
 import SearchableProdukHukumSelect from "../../shared/SearchableProdukHukumSelect";
 import { getProdukHukumList } from "../../../api/aparaturDesaApi";
+import { getJabatanOptions } from "../../../constants/jabatanMapping";
 
 // Helper function for optional fields
 const emptyToUndef = (schema) =>
 	z.preprocess((v) => (v === "" || v === null ? undefined : v), schema);
-
-// Jabatan mapping berdasarkan tipe kelembagaan
-const getJabatanOptions = (kelembagaanType) => {
-	const jabatanMapping = {
-		rw: [
-			"Ketua RW",
-			"Wakil Ketua RW",
-			"Sekretaris RW",
-			"Bendahara RW",
-			"Koordinator Keamanan",
-			"Koordinator Kebersihan",
-			"Koordinator Sosial",
-			"Anggota",
-		],
-		rt: [
-			"Ketua RT",
-			"Wakil Ketua RT",
-			"Sekretaris RT",
-			"Bendahara RT",
-			"Koordinator Keamanan",
-			"Koordinator Kebersihan",
-			"Anggota",
-		],
-		posyandu: [
-			"Ketua Posyandu",
-			"Wakil Ketua Posyandu",
-			"Sekretaris Posyandu",
-			"Bendahara Posyandu",
-			"Kader Posyandu",
-			"Bidan/Perawat",
-			"Anggota",
-		],
-		satlinmas: [
-			"Komandan Satlinmas",
-			"Wakil Komandan Satlinmas",
-			"Sekretaris Satlinmas",
-			"Bendahara Satlinmas",
-			"Koordinator Operasional",
-			"Koordinator Logistik",
-			"Anggota Satlinmas",
-		],
-		lpm: [
-			"Ketua LPM",
-			"Wakil Ketua LPM",
-			"Sekretaris LPM",
-			"Bendahara LPM",
-			"Koordinator Pembangunan",
-			"Koordinator Sosial",
-			"Koordinator Ekonomi",
-			"Anggota",
-		],
-		"karang-taruna": [
-			"Ketua Karang Taruna",
-			"Wakil Ketua Karang Taruna",
-			"Sekretaris Karang Taruna",
-			"Bendahara Karang Taruna",
-			"Koordinator Olahraga",
-			"Koordinator Kesenian",
-			"Koordinator Keterampilan",
-			"Koordinator Sosial",
-			"Anggota",
-		],
-		pkk: [
-			"Ketua PKK",
-			"Wakil Ketua PKK",
-			"Sekretaris PKK",
-			"Bendahara PKK",
-			"Pokja I (Penghayatan dan Pengamalan Pancasila)",
-			"Pokja II (Gotong Royong)",
-			"Pokja III (Pangan, Sandang, Perumahan)",
-			"Pokja IV (Pendidikan dan Keterampilan)",
-			"Anggota",
-		],
-	};
-
-	const options = jabatanMapping[kelembagaanType] || [
-		"Ketua",
-		"Wakil Ketua",
-		"Sekretaris",
-		"Bendahara",
-		"Anggota",
-	];
-
-	return options.map((jabatan) => ({
-		value: jabatan,
-		label: jabatan,
-	}));
-};
 
 // Zod validation schema with comprehensive frontend validation
 const pengurusSchema = z.object({
@@ -395,7 +308,13 @@ export default function PengurusForm({
 			};
 
 			// Add form fields with proper mapping
+			// Skip pengurusable_type and pengurusable_id as they will be added separately with proper mapping
 			Object.keys(formData).forEach((key) => {
+				// Skip these fields - they will be added separately
+				if (key === 'pengurusable_type' || key === 'pengurusable_id') {
+					return;
+				}
+				
 				if (
 					formData[key] !== "" &&
 					formData[key] !== null &&
@@ -411,15 +330,15 @@ export default function PengurusForm({
 				submitData.append("avatar", avatar);
 			}
 
-			// Map kelembagaan type to backend model class names
+			// Map kelembagaan type to backend table names (Prisma uses table names, not Laravel model classes)
 			const kelembagaanTypeMapping = {
-				rt: "App\\Models\\Rt",
-				rw: "App\\Models\\Rw",
-				posyandu: "App\\Models\\Posyandu",
-				satlinmas: "App\\Models\\Satlinmas",
-				lpm: "App\\Models\\Lpm",
-				"karang-taruna": "App\\Models\\KarangTaruna",
-				pkk: "App\\Models\\Pkk",
+				rt: "rts",
+				rw: "rws",
+				posyandu: "posyandus",
+				satlinmas: "satlinmas",
+				lpm: "lpms",
+				"karang-taruna": "karang_tarunas",
+				pkk: "pkks",
 			};
 
 			const backendKelembagaanType =
