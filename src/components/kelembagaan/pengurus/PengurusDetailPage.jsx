@@ -32,11 +32,6 @@ const PengurusDetailPage = ({
 	const canManagePengurus =
 		isAdmin || isUserDesa || isAdminBidang || isSuperAdmin;
 
-	useEffect(() => {
-		loadPengurusDetail();
-		loadProdukHukumList();
-	}, [loadPengurusDetail, loadProdukHukumList]);
-
 	const loadProdukHukumList = useCallback(async () => {
 		try {
 			const response = await getProdukHukums(1, "");
@@ -46,7 +41,7 @@ const PengurusDetailPage = ({
 			console.error("Error loading produk hukum:", error);
 			setProdukHukumList([]);
 		}
-	}, []);
+	}, []); // No dependencies needed
 
 	const loadPengurusDetail = useCallback(async () => {
 		if (!pengurusId) return;
@@ -67,7 +62,13 @@ const PengurusDetailPage = ({
 		} finally {
 			setLoading(false);
 		}
-	}, [pengurusId, isSuperAdmin, desaId]);
+	}, [pengurusId, isSuperAdmin, desaId]); // Fixed dependencies
+
+	useEffect(() => {
+		loadPengurusDetail();
+		loadProdukHukumList();
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [pengurusId, isSuperAdmin, desaId]); // Only re-run when these change, not when functions change
 
 	const handleStatusChange = async (newStatus) => {
 		if (!pengurus) return;

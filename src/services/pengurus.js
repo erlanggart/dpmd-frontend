@@ -3,20 +3,18 @@ import {
 	makeApiCall,
 	getEndpoint,
 	getAdminParams,
-	isAdminUser,
-	getCurrentUser,
 } from "../utils/apiHelpers";
 
-// Map slug type to model class for polymorphic field
+// Map slug type to table name for polymorphic field (Prisma uses table names)
 export const mapTypeToModel = (type) => {
 	const map = {
-		rw: "App\\Models\\Rw",
-		rt: "App\\Models\\Rt",
-		posyandu: "App\\Models\\Posyandu",
-		"karang-taruna": "App\\Models\\KarangTaruna",
-		lpm: "App\\Models\\Lpm",
-		pkk: "App\\Models\\Pkk",
-		satlinmas: "App\\Models\\Satlinmas",
+		rw: "rws",
+		rt: "rts",
+		posyandu: "posyandus",
+		"karang-taruna": "karang_tarunas",
+		lpm: "lpms",
+		pkk: "pkks",
+		satlinmas: "satlinmas",
 	};
 	return map[type] || null;
 };
@@ -26,9 +24,10 @@ export const listPengurus = () => makeApiCall(api, "pengurus", "list");
 // Lightweight pengurus list by kelembagaan (only essential data)
 export const getPengurusByKelembagaan = (type, id, desaId = null) => {
 	const model = mapTypeToModel(type);
+	
 	const baseParams = {
-		kelembagaan_type: model,
-		kelembagaan_id: id,
+		pengurusable_type: model,
+		pengurusable_id: id,
 	};
 
 	// Add desa_id if provided (for superadmin access)
@@ -37,7 +36,8 @@ export const getPengurusByKelembagaan = (type, id, desaId = null) => {
 	}
 
 	const endpoint = getEndpoint("pengurus/by-kelembagaan", "list");
-	const params = getAdminParams(baseParams);
+	// FIXED: Pass baseParams as third argument (additionalParams)
+	const params = getAdminParams("pengurus", "list", baseParams);
 
 	return api.get(endpoint, { params });
 };
@@ -46,8 +46,8 @@ export const getPengurusByKelembagaan = (type, id, desaId = null) => {
 export const getPengurusHistory = (type, id, desaId = null) => {
 	const model = mapTypeToModel(type);
 	const baseParams = {
-		kelembagaan_type: model,
-		kelembagaan_id: id,
+		pengurusable_type: model,
+		pengurusable_id: id,
 	};
 
 	// Add desa_id if provided (for superadmin access)
@@ -56,7 +56,8 @@ export const getPengurusHistory = (type, id, desaId = null) => {
 	}
 
 	const endpoint = getEndpoint("pengurus/history", "list");
-	const params = getAdminParams(baseParams);
+	// FIXED: Pass baseParams as third argument (additionalParams)
+	const params = getAdminParams("pengurus", "list", baseParams);
 
 	return api.get(endpoint, { params });
 };
@@ -75,7 +76,8 @@ export const updatePengurusStatus = (
 	desaId = null
 ) => {
 	const baseParams = desaId ? { desa_id: desaId } : {};
-	const params = getAdminParams(baseParams);
+	// FIXED: Pass baseParams as third argument
+	const params = getAdminParams("pengurus", "update", baseParams);
 
 	// Status update always uses desa endpoint
 	return api.put(
@@ -108,11 +110,12 @@ export const getPengurusByKelembagaanLegacy = async (type, id) => {
 
 export const addPengurus = (data, opts = {}) => {
 	const isMultipart = data instanceof FormData || opts.multipart;
-	const { desaId, ...restOpts } = opts;
+	const { desaId } = opts;
 
 	// Add desa_id for superadmin access
 	const baseParams = desaId ? { desa_id: desaId } : {};
-	const params = getAdminParams(baseParams);
+	// FIXED: Pass baseParams as third argument
+	const params = getAdminParams("pengurus", "create", baseParams);
 
 	const config = {
 		params,
@@ -124,11 +127,12 @@ export const addPengurus = (data, opts = {}) => {
 
 export const updatePengurus = (id, data, opts = {}) => {
 	const isMultipart = data instanceof FormData || opts.multipart;
-	const { desaId, ...restOpts } = opts;
+	const { desaId } = opts;
 
 	// Add desa_id for superadmin access
 	const baseParams = desaId ? { desa_id: desaId } : {};
-	const params = getAdminParams(baseParams);
+	// FIXED: Pass baseParams as third argument
+	const params = getAdminParams("pengurus", "update", baseParams);
 
 	if (isMultipart) {
 		// For multipart, use POST with _method override for Express

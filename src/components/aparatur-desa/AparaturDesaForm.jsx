@@ -2,14 +2,13 @@ import React, {
 	useState,
 	useEffect,
 	useCallback,
-	useMemo,
-	useRef,
+	
 } from "react";
 import { useForm, Controller, useController } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useDropzone } from "react-dropzone";
-import api from "../../api"; // Asumsi Anda punya file konfigurasi axios
+
 import { FaTrash } from "react-icons/fa";
 import SearchableProdukHukumSelect from "../shared/SearchableProdukHukumSelect";
 

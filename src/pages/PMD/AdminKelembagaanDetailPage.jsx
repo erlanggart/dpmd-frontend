@@ -141,10 +141,11 @@ const AdminKelembagaanDetailPage = () => {
 			return;
 		}
 
-		// Untuk collection (RW, Posyandu), bisa navigate ke list
+		// Untuk collection (RW, Posyandu), tidak ada navigasi khusus
+		// Karena admin view hanya bisa lihat summary di halaman ini
 		if (item.isCollection && item.count > 0) {
-			// TODO: Navigate to list page jika ada
-			console.log("Navigate to", item.type, "list");
+			// TODO: Bisa ditambahkan modal atau expand untuk show detail list
+			console.log("Collection view for", item.type, "- feature coming soon");
 			return;
 		}
 
@@ -199,8 +200,8 @@ const AdminKelembagaanDetailPage = () => {
 	}
 
 	return (
-		<div className="min-h-screen bg-gray-50 p-6">
-			<div className="max-w-7xl mx-auto">
+		<div className="min-h-screen">
+			<div className="">
 				{/* Header dengan Breadcrumb */}
 				<div className="mb-6">
 					<div className="flex items-center space-x-2 text-sm text-gray-600 mb-4">
@@ -217,14 +218,14 @@ const AdminKelembagaanDetailPage = () => {
 						</span>
 					</div>
 
-					<div className="bg-white rounded-xl shadow-sm p-6 border">
+					<div className="bg-white rounded-xl shadow-sm p-6 ">
 						<div className="flex items-center space-x-4">
 							<div className="p-3 bg-blue-100 rounded-full">
 								<LuMapPin className="w-8 h-8 text-blue-600" />
 							</div>
 							<div>
 								<h1 className="text-3xl font-bold text-gray-800">
-									{desaInfo?.nama}
+									{desaInfo?.status_pemerintahan == 'desa' ? "Desa " : "Kelurahan"}{desaInfo?.nama}
 								</h1>
 								<p className="text-lg text-gray-600">
 									Kecamatan {desaInfo?.nama_kecamatan}

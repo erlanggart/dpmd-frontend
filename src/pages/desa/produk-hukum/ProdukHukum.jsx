@@ -25,15 +25,38 @@ const ProdukHukum = () => {
 		try {
 			setIsLoading(true);
 			const response = await getProdukHukums(page, search);
-			setProdukHukums(response.data.data.data);
-			setCurrentPage(response.data.data.current_page);
-			setTotalPages(response.data.data.last_page);
+			
+			// Handle different response structures
+			if (response?.data?.data?.data) {
+				// Paginated response
+				setProdukHukums(response.data.data.data);
+				setCurrentPage(response.data.data.current_page);
+				setTotalPages(response.data.data.last_page);
+			} else if (response?.data?.data) {
+				// Direct data response
+				const data = Array.isArray(response.data.data) ? response.data.data : [];
+				setProdukHukums(data);
+				setCurrentPage(1);
+				setTotalPages(1);
+			} else if (response?.data) {
+				// Fallback: data in root
+				const data = Array.isArray(response.data) ? response.data : [];
+				setProdukHukums(data);
+				setCurrentPage(1);
+				setTotalPages(1);
+			} else {
+				// No data found
+				setProdukHukums([]);
+				setCurrentPage(1);
+				setTotalPages(1);
+			}
 		} catch (error) {
 			console.error("Error fetching produk hukum:", error);
+			setProdukHukums([]);
 			Swal.fire({
 				icon: "error",
 				title: "Oops...",
-				text: "Gagal memuat data produk hukum!",
+				text: error.response?.data?.message || "Gagal memuat data produk hukum!",
 			});
 		} finally {
 			setIsLoading(false);
@@ -50,6 +73,7 @@ const ProdukHukum = () => {
 		}, 500); // 500ms delay
 
 		return () => clearTimeout(delayDebounceFn);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [searchTerm]);
 
 	useEffect(() => {
@@ -57,6 +81,7 @@ const ProdukHukum = () => {
 		if (!searchTerm) {
 			fetchProdukHukums(currentPage);
 		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [currentPage]);
 
 	useEffect(() => {
@@ -66,7 +91,8 @@ const ProdukHukum = () => {
 			// Membersihkan state dari location agar tidak memicu lagi
 			navigate(location.pathname, { replace: true });
 		}
-	}, [location.state, navigate]);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [location.state]);
 
 	const handleFormSubmit = async (formData) => {
 		try {

@@ -46,24 +46,24 @@ const ProfilCard = ({
 			badge:
 				"bg-gradient-to-r from-emerald-400 to-green-500 text-white shadow-lg",
 			indicator: "bg-emerald-500",
-			text: "✓ Aktif",
+			text: "Aktif",
 		},
 		nonaktif: {
 			badge: "bg-gradient-to-r from-red-400 to-red-500 text-white shadow-lg",
 			indicator: "bg-red-500",
-			text: "✗ Tidak Aktif",
+			text: "idak Aktif",
 		},
 		tidak_aktif: {
 			// Backward compatibility
 			badge: "bg-gradient-to-r from-red-400 to-red-500 text-white shadow-lg",
 			indicator: "bg-red-500",
-			text: "✗ Tidak Aktif",
+			text: "idak Aktif",
 		},
 		"tidak aktif": {
 			// Backward compatibility
 			badge: "bg-gradient-to-r from-red-400 to-red-500 text-white shadow-lg",
 			indicator: "bg-red-500",
-			text: "✗ Tidak Aktif",
+			text: "idak Aktif",
 		},
 	};
 
@@ -72,13 +72,13 @@ const ProfilCard = ({
 			badge:
 				"bg-gradient-to-r from-blue-400 to-indigo-500 text-white shadow-lg",
 			indicator: "bg-blue-500",
-			text: "✓ Terverifikasi",
+			text: "Terverifikasi",
 		},
 		pending: {
 			badge:
 				"bg-gradient-to-r from-amber-400 to-yellow-500 text-white shadow-lg",
 			indicator: "bg-yellow-500",
-			text: "⏳ Menunggu",
+			text: "Menunggu Verifikasi",
 		},
 	};
 
@@ -96,8 +96,8 @@ const ProfilCard = ({
 		},
 		posyandu: {
 			icon: <LuHospital className="w-8 h-8" />,
-			color: "from-red-400 to-red-600",
-			bg: "from-red-50 to-red-100",
+			color: "from-purple-500 to-purple-700",
+			bg: "from-purple-50 to-purple-100",
 		},
 		"karang-taruna": {
 			icon: <LuUsers className="w-8 h-8" />,
@@ -111,8 +111,8 @@ const ProfilCard = ({
 		},
 		pkk: {
 			icon: <LuHeartHandshake className="w-8 h-8" />,
-			color: "from-pink-400 to-pink-600",
-			bg: "from-pink-50 to-pink-100",
+			color: "from-pink-500 to-rose-500",
+			bg: "from-pink-50 to-rose-100",
 		},
 		satlinmas: {
 			icon: <LuShield className="w-8 h-8" />,
@@ -328,11 +328,11 @@ const ProfilCard = ({
 
 					{/* Statistics Grid */}
 					<div className="grid grid-cols-2 gap-4">
-						{type === "rw" && (
+						{type === "rw" && rtCount > 0 && (
 							<div className="group/stat p-4 bg-gradient-to-br from-emerald-50 to-green-100 rounded-xl border border-emerald-200 hover:shadow-lg transition-all duration-300 hover:scale-105">
 								<div className="text-center">
 									<div className="text-3xl font-bold text-emerald-700 mb-1">
-										{rtCount ?? 0}
+										{rtCount}
 									</div>
 									<div className="text-sm font-medium text-emerald-600">RT</div>
 									<div className="w-8 h-1 bg-emerald-400 rounded-full mx-auto mt-2 transform group-hover/stat:w-12 transition-all duration-300"></div>
@@ -340,17 +340,19 @@ const ProfilCard = ({
 							</div>
 						)}
 
-						<div className="group/stat p-4 bg-gradient-to-br from-violet-50 to-purple-100 rounded-xl border border-violet-200 hover:shadow-lg transition-all duration-300 hover:scale-105">
-							<div className="text-center">
-								<div className="text-3xl font-bold text-violet-700 mb-1">
-									{pengurusCount ?? 0}
+						{pengurusCount > 0 && (
+							<div className="group/stat p-4 bg-gradient-to-br from-violet-50 to-purple-100 rounded-xl border border-violet-200 hover:shadow-lg transition-all duration-300 hover:scale-105">
+								<div className="text-center">
+									<div className="text-3xl font-bold text-violet-700 mb-1">
+										{pengurusCount}
+									</div>
+									<div className="text-sm font-medium text-violet-600">
+										Pengurus
+									</div>
+									<div className="w-8 h-1 bg-violet-400 rounded-full mx-auto mt-2 transform group-hover/stat:w-12 transition-all duration-300"></div>
 								</div>
-								<div className="text-sm font-medium text-violet-600">
-									Pengurus
-								</div>
-								<div className="w-8 h-1 bg-violet-400 rounded-full mx-auto mt-2 transform group-hover/stat:w-12 transition-all duration-300"></div>
 							</div>
-						</div>
+						)}
 					</div>
 				</div>
 
@@ -364,15 +366,21 @@ const ProfilCard = ({
 
 						<div className="grid gap-3">
 							{/* Status Control */}
-
 							<div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
-								<div className="flex items-center space-x-3">
-									<div
-										className={`w-3 h-3 rounded-full ${currentStatus.indicator} animate-pulse`}
-									></div>
-									<span className="font-medium text-gray-700">
-										Status Kelembagaan
-									</span>
+								<div className="flex flex-col space-y-1">
+									<div className="flex items-center space-x-3">
+										<div
+											className={`w-3 h-3 rounded-full ${currentStatus.indicator} animate-pulse`}
+										></div>
+										<span className="font-medium text-gray-700">
+											Status Kelembagaan
+										</span>
+									</div>
+									<p className="text-xs text-gray-500 ml-6">
+										{profil?.status_kelembagaan === "aktif" 
+											? "Kelembagaan ini sedang aktif beroperasi" 
+											: "Kelembagaan ini tidak aktif"}
+									</p>
 								</div>
 								<button
 									onClick={() =>
@@ -397,13 +405,20 @@ const ProfilCard = ({
 							{/* Verification Control */}
 							{(adminBidang || isAdmin) && (
 								<div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
-									<div className="flex items-center space-x-3">
-										<div
-											className={`w-3 h-3 rounded-full ${currentVerification.indicator} animate-pulse`}
-										></div>
-										<span className="font-medium text-gray-700">
-											Status Verifikasi
-										</span>
+									<div className="flex flex-col space-y-1">
+										<div className="flex items-center space-x-3">
+											<div
+												className={`w-3 h-3 rounded-full ${currentVerification.indicator} animate-pulse`}
+											></div>
+											<span className="font-medium text-gray-700">
+												Status Verifikasi
+											</span>
+										</div>
+										<p className="text-xs text-gray-500 ml-6">
+											{profil?.status_verifikasi === "verified" 
+												? "Data kelembagaan sudah diverifikasi" 
+												: "Data kelembagaan belum diverifikasi"}
+										</p>
 									</div>
 									<button
 										onClick={() =>

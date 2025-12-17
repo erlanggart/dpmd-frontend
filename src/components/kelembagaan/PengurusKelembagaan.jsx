@@ -9,8 +9,6 @@ import PengurusForm from "./pengurus/PengurusForm";
 import PengurusJabatanList from "./pengurus/PengurusJabatanList";
 import PengurusDetailPage from "./pengurus/PengurusDetailPage";
 
-const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
-
 const PengurusKelembagaan = ({
 	kelembagaanType,
 	kelembagaanId,
@@ -18,16 +16,8 @@ const PengurusKelembagaan = ({
 	onPengurusCountChange,
 }) => {
 	const { user } = useAuth();
-	const isAdmin = user?.role === "admin_kabupaten";
-	const isUserDesa = user?.role === "desa";
-	const isAdminBidang = user?.role === "pemberdayaan_masyarakat";
 	const isSuperAdmin = user?.role === "superadmin";
 
-	// User yang bisa mengelola pengurus
-	const canManagePengurus =
-		isAdmin || isUserDesa || isAdminBidang || isSuperAdmin;
-
-	const [pengurusList, setPengurusList] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [showForm, setShowForm] = useState(false);
 	const [editingPengurus, setEditingPengurus] = useState(null);
@@ -47,7 +37,6 @@ const PengurusKelembagaan = ({
 				superadminDesaId
 			);
 			const pengurusData = response?.data?.data || [];
-			setPengurusList(pengurusData);
 
 			// Notify parent component about pengurus count change
 			if (onPengurusCountChange) {
@@ -55,11 +44,10 @@ const PengurusKelembagaan = ({
 			}
 		} catch (error) {
 			console.error("Error loading pengurus:", error);
-			setPengurusList([]);
 		} finally {
 			setLoading(false);
 		}
-	}, [kelembagaanType, kelembagaanId, isSuperAdmin, desaId]);
+	}, [kelembagaanType, kelembagaanId, isSuperAdmin, desaId, onPengurusCountChange]);
 
 	useEffect(() => {
 		loadPengurus();
@@ -74,9 +62,9 @@ const PengurusKelembagaan = ({
 
 	const handleSubmit = async (formData) => {
 		try {
-			// Add kelembagaan type and id to form data
-			formData.append("kelembagaan_type", kelembagaanType);
-			formData.append("kelembagaan_id", kelembagaanId);
+			// Note: pengurusable_type and pengurusable_id are already added in PengurusForm
+			// with proper table name mapping (rws, rts, posyandus, etc.)
+			// Don't add them here to avoid duplication
 
 			// Prepare options with desaId for superadmin access
 			const options =
@@ -107,11 +95,6 @@ const PengurusKelembagaan = ({
 	const handleViewHistory = (pengurus) => {
 		setSelectedPengurusId(pengurus.id);
 		setShowDetailPage(true);
-	};
-
-	const handleCloseDetail = () => {
-		setShowDetailPage(false);
-		setSelectedPengurusId(null);
 	};
 
 	const handleEditFromDetail = (pengurus) => {
