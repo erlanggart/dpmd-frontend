@@ -2,11 +2,12 @@ import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios"; // CRITICAL: Direct axios import for VPN check
 import api from "../api";
-import { FiEye, FiEyeOff, FiLoader, FiAlertCircle, FiShield, FiBell } from "react-icons/fi";
+import { FiEye, FiEyeOff, FiLoader, FiAlertCircle, FiShield, FiBell, FiInfo } from "react-icons/fi";
 import LoginImageSlider from "../components/login/LoginImageSlider";
 import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
 import { requestNotificationPermission, registerServiceWorker, subscribeToPushNotifications } from "../utils/pushNotifications";
+import NotificationSettingsGuide from "../components/NotificationSettingsGuide";
 
 const LoginPage = () => {
 	const [email, setEmail] = useState("");
@@ -18,14 +19,22 @@ const LoginPage = () => {
 	const [vpnSecret, setVpnSecret] = useState(''); // VPN secret key input
 	const navigate = useNavigate();
 	const [showPassword, setShowPassword] = useState(false);
+	const [showNotificationGuide, setShowNotificationGuide] = useState(false);
 	const { login } = useAuth();
 	const [notificationPermission, setNotificationPermission] = useState('default');
 	const [checkingNotification, setCheckingNotification] = useState(false);
 
-	// Check notification permission on mount
+	// Auto check notification permission on mount and force modal if not granted
 	useEffect(() => {
 		if ('Notification' in window) {
-			setNotificationPermission(Notification.permission);
+			const currentPermission = Notification.permission;
+			setNotificationPermission(currentPermission);
+			
+			// Jika permission belum granted, langsung force request
+			if (currentPermission !== 'granted') {
+				// Auto trigger notification request (modal akan muncul)
+				setCheckingNotification(false); // Siap untuk request
+			}
 		}
 	}, []);
 
@@ -42,9 +51,9 @@ const LoginPage = () => {
 			
 			if (granted) {
 				setNotificationPermission('granted');
-				toast.success('Notifikasi diizinkan! Anda bisa login sekarang.', {
-					duration: 3000,
-					icon: '✅',
+				toast.success('Notifikasi diizinkan! Selesaikan setting Android untuk lanjut.', {
+					duration: 4000,
+					icon: '📱',
 					style: {
 						background: '#10b981',
 						color: '#fff',
@@ -337,7 +346,7 @@ const LoginPage = () => {
 					{/* Konten Teks di Atas Overlay */}
 					<div className="absolute inset-0 z-10 flex flex-col items-center justify-center p-8 text-white rounded-2xl">
 						<img
-							src="/logo-kab.png"
+							src="/logo-bogor.png"
 							alt="Logo Kabupaten Bogor"
 							className="h-24 w-auto drop-shadow-lg"
 						/>
@@ -419,18 +428,28 @@ const LoginPage = () => {
 					{/* Success Notification Badge */}
 					{!vpnMode && notificationPermission === 'granted' && (
 						<div className="mt-6 rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-300 p-4">
-							<div className="flex items-center gap-3">
-								<div className="p-2 bg-green-100 rounded-lg">
-									<FiBell className="w-6 h-6 text-green-600" />
+							<div className="flex items-center justify-between">
+								<div className="flex items-center gap-3">
+									<div className="p-2 bg-green-100 rounded-lg">
+										<FiBell className="w-6 h-6 text-green-600" />
+									</div>
+									<div>
+										<p className="text-sm font-semibold text-gray-800">
+											✅ Notifikasi Diizinkan
+										</p>
+										<p className="text-xs text-gray-600">
+											Silakan login untuk melanjutkan
+										</p>
+									</div>
 								</div>
-								<div>
-									<p className="text-sm font-semibold text-gray-800">
-										✅ Notifikasi Diizinkan
-									</p>
-									<p className="text-xs text-gray-600">
-										Silakan login untuk melanjutkan
-									</p>
-								</div>
+								<button
+									type="button"
+									onClick={() => setShowNotificationGuide(true)}
+									className="p-2 hover:bg-green-200 rounded-lg transition-colors"
+									title="Panduan pengaturan notifikasi background"
+								>
+									<FiInfo className="w-5 h-5 text-green-700" />
+								</button>
 							</div>
 						</div>
 					)}
@@ -497,9 +516,10 @@ const LoginPage = () => {
 										type="email"
 										id="email"
 										placeholder="anda@email.com"
-										className="w-full bg-white rounded-lg border border-gray-300 px-4 py-3 focus:border-[rgb(var(--color-primary))] focus:ring-1 focus:ring-[rgb(var(--color-primary))] focus:outline-none"
+										className="w-full bg-white rounded-lg border border-gray-300 px-4 py-3 focus:border-[rgb(var(--color-primary))] focus:ring-1 focus:ring-[rgb(var(--color-primary))] focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
 										value={email}
 										onChange={(e) => setEmail(e.target.value)}
+									disabled={notificationPermission !== 'granted'}
 										required
 									/>
 								</div>
@@ -511,9 +531,10 @@ const LoginPage = () => {
 										type={showPassword ? "text" : "password"}
 										id="password"
 										placeholder="Password"
-										className="w-full bg-white rounded-lg border border-gray-300 px-4 py-3 pr-10 focus:border-[rgb(var(--color-primary))] focus:ring-1 focus:ring-[rgb(var(--color-primary))] focus:outline-none"
+										className="w-full bg-white rounded-lg border border-gray-300 px-4 py-3 pr-10 focus:border-[rgb(var(--color-primary))] focus:ring-1 focus:ring-[rgb(var(--color-primary))] focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
 										value={password}
 										onChange={(e) => setPassword(e.target.value)}
+									disabled={notificationPermission !== 'granted'}
 										required
 									/>
 									<button
@@ -537,10 +558,20 @@ const LoginPage = () => {
 								</div>
 								<button
 									type="submit"
-									disabled={loading}
-									className="flex w-full items-center justify-center rounded-lg bg-[rgb(var(--color-primary))] py-3 font-semibold text-white transition-colors hover:bg-[rgb(var(--color-primary))]/90 disabled:cursor-not-allowed disabled:bg-primary/70 shadow-xl"
+									disabled={loading || notificationPermission !== 'granted'}
+									className="flex w-full items-center justify-center rounded-lg bg-[rgb(var(--color-primary))] py-3 font-semibold text-white transition-colors hover:bg-[rgb(var(--color-primary))]/90 disabled:cursor-not-allowed disabled:bg-gray-400 disabled:opacity-60 shadow-xl relative group"
 								>
-									{loading ? <FiLoader className="animate-spin" /> : "Sign In"}
+									{loading ? (
+										<FiLoader className="animate-spin" />
+									) : notificationPermission !== 'granted' ? (
+										<>
+											<FiBell className="w-5 h-5 mr-2" />
+											<span>Izinkan Notifikasi Terlebih Dahulu</span>
+										</>
+
+									) : (
+										"Sign In"
+									)}
 								</button>
 							</>
 						)}
@@ -562,6 +593,11 @@ const LoginPage = () => {
 					</form>
 				</div>
 			</div>
+
+			{/* Notification Settings Guide Modal */}
+			{showNotificationGuide && (
+				<NotificationSettingsGuide onClose={() => setShowNotificationGuide(false)} />
+			)}
 		</div>
 	);
 };

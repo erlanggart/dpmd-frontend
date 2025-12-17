@@ -42,7 +42,7 @@ const VideoTutorialSection = () => {
 									{/* Logo */}
 									<div className="mb-6">
 										<img
-											src="/logo-kab.png"
+											src="/logo-bogor.png"
 											alt="Logo Kabupaten Bogor"
 											className="h-16 w-16 mx-auto mb-4 filter drop-shadow-2xl"
 											onError={(e) => {

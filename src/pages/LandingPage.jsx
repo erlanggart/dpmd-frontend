@@ -10,7 +10,7 @@ import StatsSection from "../components/landingpage/StatsSection";
 import NewsSection from "../components/landingpage/NewsSection";
 import KegiatanSection from "../components/landingpage/KegiatanSection";
 import PWAInstallPrompt from "../components/PWAInstallPrompt";
-import PWAInstallButton from "../components/PWAInstallButton";
+import InstallPWA from "../components/InstallPWA";
 
 const LandingPage = () => {
 	const scrollY = useScrollPosition();
@@ -49,16 +49,11 @@ const LandingPage = () => {
 				<div className="container max-w-7xl mx-auto flex items-center justify-between">
 					<div className="flex items-center space-x-3">
 						<img
-							src="/logo-kab.png"
+							src="/logo-bogor.png"
 							alt="Logo Kabupaten Bogor"
 							className="h-8 md:h-10"
 						/>
-						<div className="hidden sm:block">
-							<h1 className="text-sm md:text-lg font-bold text-white">
-								Dinas Pemberdayaan Masyarakat dan Desa
-							</h1>
-							<h2 className="text-xs md:text-sm font-semibold text-white/90">Kabupaten Bogor</h2>
-						</div>
+
 					</div>
 					
 					{/* Desktop Navigation */}
@@ -80,7 +75,7 @@ const LandingPage = () => {
 						</ScrollLink>
 					))}
 				</nav>
-				<PWAInstallButton />
+				<InstallPWA compact={true} />
 			</div>				{/* Mobile Menu Button */}
 					<button
 						className="lg:hidden text-white p-2 rounded-md hover:bg-white/10 transition-colors"
@@ -93,7 +88,7 @@ const LandingPage = () => {
 
 				{/* Mobile Navigation Menu */}
 				{isMobileMenuOpen && (
-					<div className="lg:hidden bg-slate-800/95 backdrop-blur-sm border-t border-white/20 relative z-50">
+					<div className="lg:hidden bg-slate-800/95 backdrop-blur-sm border-t border-white/20">
 						<nav className="container max-w-7xl mx-auto px-4 py-4 space-y-2">
 							{navLinks.map((link) => (
 								<ScrollLink
@@ -110,8 +105,13 @@ const LandingPage = () => {
 									{link.label}
 								</ScrollLink>
 							))}
-							<div className="pt-4 pb-2 relative z-10">
-								<PWAInstallButton />
+							
+							{/* Divider */}
+							<div className="border-t border-white/20 my-3"></div>
+							
+							{/* Install PWA Button */}
+							<div className="px-4 pb-2">
+								<InstallPWA />
 							</div>
 						</nav>
 					</div>

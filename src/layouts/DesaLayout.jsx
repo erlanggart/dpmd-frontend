@@ -13,6 +13,7 @@ import {
 	LuUsers,
 } from "react-icons/lu";
 import Footer from "../components/landingpage/Footer";
+import InstallPWA from "../components/InstallPWA";
 
 const DesaLayout = () => {
 	const { user, logout } = useAuth();
@@ -54,7 +55,7 @@ const DesaLayout = () => {
 						>
 							<FiMenu className="h-6 w-6" />
 						</button>
-						<img src="/logo-kab.png" alt="Logo" className="h-10" />
+						<img src="/logo-bogor.png" alt="Logo" className="h-10" />
 						<div>
 							<h1 className="font-bold text-xs lg:text-lg text-gray-800">
 								Dashboard Desa {user?.desa?.nama || ""}
@@ -87,6 +88,13 @@ const DesaLayout = () => {
 						sidebarOpen ? "translate-x- w-64" : "-translate-x-full w-64 lg:w-20"
 					}`}
 				>
+					{/* Install PWA Button */}
+					{sidebarOpen && (
+						<div className="mb-4 px-2">
+							<InstallPWA />
+						</div>
+					)}
+
 					<nav>
 						<ul>
 							<li className="mb-2">
