@@ -99,6 +99,7 @@ const AparaturDesaDetailPage = lazy(() =>
 const AparaturDesaEditPage = lazy(() =>
 	import("./pages/desa/aparatur-desa/AparaturDesaEditPage")
 );
+const DesaSettings = lazy(() => import("./pages/desa/DesaSettings"));
 const KepalaDinasLayout = lazy(() =>
 	import("./pages/kepala-dinas/KepalaDinasLayout")
 );
@@ -385,6 +386,7 @@ function App() {
 						<Route path="aparatur-desa/:id/edit" element={<AparaturDesaEditPage />} />
 						<Route path="produk-hukum" element={<ProdukHukum />} />
 						<Route path="produk-hukum/:id" element={<ProdukHukumDetail />} />
+						<Route path="settings" element={<DesaSettings />} />
 					</Route>
 
 					{/* Rute Pegawai - Untuk role: pegawai */}

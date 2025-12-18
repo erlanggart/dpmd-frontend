@@ -498,9 +498,9 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 	}
 
 	return (
-		<div className="rounded-md shadow-md p-6 space-y-6 bg-white min-h-screen">
+		<div className="min-h-screen space-y-4" >
 			{/* Header */}
-			<div className="text-center mb-8">
+			<div className="bg-white rounded-md shadow-md p-6 text-center">
 				<h1 className="text-4xl font-bold text-gray-800 mb-2">
 					Kelembagaan Desa
 				</h1>

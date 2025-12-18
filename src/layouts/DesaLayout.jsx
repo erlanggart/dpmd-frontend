@@ -1,10 +1,14 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Outlet, useNavigate, NavLink } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useUserProfile } from "../hooks/useUserProfile";
 import {
 	FiLogOut,
 	FiGrid,
 	FiMenu,
+	FiUser,
+	FiSettings,
+	FiChevronDown,
 } from "react-icons/fi";
 
 import {
@@ -52,14 +56,34 @@ const menuItems = [
 ];
 
 const DesaLayout = () => {
-	const { user, logout } = useAuth();
+	const { logout } = useAuth();
+	const user = useUserProfile(); // Fetch and update profile with desa data
 	const navigate = useNavigate();
 	const [sidebarOpen, setSidebarOpen] = useState(false); // Default to closed on mobile
+	const [dropdownOpen, setDropdownOpen] = useState(false);
+	const dropdownRef = useRef(null);
 
 	const handleLogout = () => {
 		logout();
 		navigate("/login");
 	};
+
+	const handleSettings = () => {
+		setDropdownOpen(false);
+		navigate("/desa/settings");
+	};
+
+	// Close dropdown when clicking outside
+	useEffect(() => {
+		const handleClickOutside = (event) => {
+			if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+				setDropdownOpen(false);
+			}
+		};
+
+		document.addEventListener("mousedown", handleClickOutside);
+		return () => document.removeEventListener("mousedown", handleClickOutside);
+	}, []);
 
 	const baseLinkClass = "flex items-center p-2 text-gray-700 rounded-lg";
 	const activeLinkClass = "bg-primary text-white";
@@ -95,6 +119,7 @@ const DesaLayout = () => {
 						<div>
 							<h1 className="font-bold text-xs lg:text-lg text-gray-800">
 								Dashboard Desa {user?.desa?.nama || ""}
+								
 							</h1>
 							<p className="text-xs md:text-sm text-gray-500">
 								Kecamatan {user?.desa?.kecamatan?.nama || ""}
@@ -105,14 +130,43 @@ const DesaLayout = () => {
 						<span className="mr-4 text-gray-600 hidden md:block">
 							Halo, {user?.name}
 						</span>
-						<button
-							onClick={handleLogout}
-							className="flex items-center space-x-2 bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded"
-							title="Logout"
-						>
-							<FiLogOut className="h-5 w-5 md:h-6 md:w-6" />
-							<span className="hidden md:inline">Logout</span>
-						</button>
+						
+						{/* User Dropdown */}
+						<div className="relative" ref={dropdownRef}>
+							<button
+								onClick={() => setDropdownOpen(!dropdownOpen)}
+								className="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors"
+								title="Menu User"
+							>
+								<FiUser className="h-5 w-5" />
+								
+								<FiChevronDown className={`h-4 w-4 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
+							</button>
+
+							{/* Dropdown Menu */}
+							{dropdownOpen && (
+								<div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+									<button
+										onClick={handleSettings}
+										className="flex items-center w-full px-4 py-2 text-left text-gray-700 hover:bg-gray-100 transition-colors"
+									>
+										<FiSettings className="h-5 w-5 mr-3" />
+										<span>Pengaturan</span>
+									</button>
+									<hr className="my-1 border-gray-200" />
+									<button
+										onClick={() => {
+											setDropdownOpen(false);
+											handleLogout();
+										}}
+										className="flex items-center w-full px-4 py-2 text-left text-red-600 hover:bg-red-50 transition-colors"
+									>
+										<FiLogOut className="h-5 w-5 mr-3" />
+										<span>Logout</span>
+									</button>
+								</div>
+							)}
+						</div>
 					</div>
 				</div>
 			</header>
