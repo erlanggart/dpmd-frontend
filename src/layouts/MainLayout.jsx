@@ -13,6 +13,7 @@ import {
 	FiChevronsLeft,
 	FiFileText,
 	FiDollarSign,
+	FiSettings,
 } from "react-icons/fi";
 
 import {
@@ -245,6 +246,14 @@ const MainLayout = () => {
 			children: [
 				{ to: "/dashboard/hero-gallery", label: "Galeri Hero" },
 				{ to: "/dashboard/berita", label: "Manajemen Berita" },
+				
+			],
+		},
+		{
+			key: "settings",
+			label: "Pengaturan",
+			icon: <FiSettings />,
+			children: [
 				{ to: "/dashboard/user", label: "Manajemen User" },
 			],
 		},

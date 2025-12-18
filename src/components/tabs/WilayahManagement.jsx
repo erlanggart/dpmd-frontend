@@ -9,6 +9,8 @@ import {
 	LuHouse,
 	LuPlus,
 	LuShield,
+	LuChevronLeft,
+	LuChevronRight,
 } from "react-icons/lu";
 import api from "../../api";
 import AddUserModal from "../AddUserModal";
@@ -27,28 +29,39 @@ const WilayahManagement = () => {
 	const [showResetModal, setShowResetModal] = useState(false);
 	const [selectedUser, setSelectedUser] = useState(null);
 	const { user: currentUser } = useAuth();
+	const [currentPage, setCurrentPage] = useState(1);
+	const [itemsPerPage] = useState(50); // Tampilkan 50 user per halaman
+	const [totalUsers, setTotalUsers] = useState(0); // Total semua users dari server
+	const [totalPages, setTotalPages] = useState(0); // Total halaman dari server
 
 	// Role-role tingkat wilayah
 	const wilayahRoles = useMemo(() => ["kecamatan", "desa"], []);
 
-	// Function to fetch users
+	// Function to fetch users - dengan server-side pagination
 	const fetchUsers = useCallback(async () => {
 		setLoading(true);
 		try {
-			const response = await api.get("/users");
+			const response = await api.get("/users", {
+				params: {
+					page: currentPage,
+					limit: itemsPerPage, // Hanya ambil 50 data per request
+				},
+			});
 
 			// Filter user dengan role tingkat wilayah
 			const wilayahUsers = response.data.data.filter((user) =>
 				wilayahRoles.includes(user.role)
 			);
 			setUsers(wilayahUsers);
+			setTotalUsers(response.data.pagination.total);
+			setTotalPages(response.data.pagination.totalPages);
 		} catch (err) {
 			setError("Gagal mengambil data user.");
 			console.error(err);
 		} finally {
 			setLoading(false);
 		}
-	}, [wilayahRoles]);
+	}, [wilayahRoles, currentPage, itemsPerPage]);
 
 	useEffect(() => {
 		fetchUsers();
@@ -148,7 +161,7 @@ const WilayahManagement = () => {
 		);
 	};
 
-	// Filter dan search
+	// Filter dan search - HANYA untuk data yang sudah di-fetch dari server
 	const filteredUsers = users.filter((user) => {
 		const matchesSearch =
 			user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -178,9 +191,19 @@ const WilayahManagement = () => {
 		return acc;
 	}, {});
 
-	// Statistik
+	// Reset ke halaman 1 saat search atau filter berubah
+	useEffect(() => {
+		setCurrentPage(1);
+	}, [searchTerm, selectedType]);
+
+	// Re-fetch data saat halaman berubah
+	useEffect(() => {
+		fetchUsers();
+	}, [currentPage, fetchUsers]);
+
+	// Statistik - gunakan totalUsers dari server, bukan users.length
 	const stats = {
-		total: users.length,
+		total: totalUsers, // Total dari server
 		kecamatan: users.filter((u) => u.role === "kecamatan").length,
 		desa: users.filter(
 			(u) =>
@@ -218,25 +241,7 @@ const WilayahManagement = () => {
 				</div>
 
 				<div className="flex flex-col sm:flex-row gap-4 items-end sm:items-center">
-					{/* Statistik Cards */}
-					<div className="flex gap-4">
-						<div className="bg-violet-50 px-4 py-2 rounded-lg border border-violet-200">
-							<div className="text-sm text-violet-600">Kecamatan</div>
-							<div className="font-semibold text-violet-700">
-								{stats.kecamatan}
-							</div>
-						</div>
-						<div className="bg-emerald-50 px-4 py-2 rounded-lg border border-emerald-200">
-							<div className="text-sm text-emerald-600">Desa</div>
-							<div className="font-semibold text-emerald-700">{stats.desa}</div>
-						</div>
-						<div className="bg-purple-50 px-4 py-2 rounded-lg border border-purple-200">
-							<div className="text-sm text-purple-600">Kelurahan</div>
-							<div className="font-semibold text-purple-700">
-								{stats.kelurahan}
-							</div>
-						</div>
-					</div>
+					
 
 					{/* Add User Button */}
 					<div className="flex gap-2">
@@ -419,6 +424,104 @@ const WilayahManagement = () => {
 							? `Tidak ada user wilayah yang sesuai dengan pencarian "${searchTerm}"`
 							: "Tidak ada user wilayah yang ditemukan"}
 					</p>
+				</div>
+			)}
+
+			{/* Pagination Controls - Server Side */}
+			{filteredUsers.length > 0 && totalPages > 1 && (
+				<div className="mt-8 flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6 rounded-lg">
+					<div className="flex flex-1 justify-between sm:hidden">
+						<button
+							onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+							disabled={currentPage === 1}
+							className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+						>
+							Previous
+						</button>
+						<button
+							onClick={() =>
+								setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+							}
+							disabled={currentPage === totalPages}
+							className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+						>
+							Next
+						</button>
+					</div>
+					<div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+						<div>
+							<p className="text-sm text-gray-700">
+								Halaman <span className="font-medium">{currentPage}</span> dari{" "}
+								<span className="font-medium">{totalPages}</span> (
+								<span className="font-medium">{totalUsers}</span> total user)
+							</p>
+						</div>
+						<div>
+							<nav
+								className="isolate inline-flex -space-x-px rounded-md shadow-sm"
+								aria-label="Pagination"
+							>
+								<button
+									onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+									disabled={currentPage === 1}
+									className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
+								>
+									<span className="sr-only">Previous</span>
+									<LuChevronLeft className="h-5 w-5" aria-hidden="true" />
+								</button>
+
+								{/* Page numbers */}
+								{[...Array(totalPages)].map((_, index) => {
+									const pageNumber = index + 1;
+									// Show first page, last page, current page, and pages around current
+									if (
+										pageNumber === 1 ||
+										pageNumber === totalPages ||
+										(pageNumber >= currentPage - 1 &&
+											pageNumber <= currentPage + 1)
+									) {
+										return (
+											<button
+												key={pageNumber}
+												onClick={() => setCurrentPage(pageNumber)}
+												className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${
+													currentPage === pageNumber
+														? "z-10 bg-blue-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+														: "text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
+												}`}
+											>
+												{pageNumber}
+											</button>
+										);
+									} else if (
+										pageNumber === currentPage - 2 ||
+										pageNumber === currentPage + 2
+									) {
+										return (
+											<span
+												key={pageNumber}
+												className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-700 ring-1 ring-inset ring-gray-300"
+											>
+												...
+											</span>
+										);
+									}
+									return null;
+								})}
+
+								<button
+									onClick={() =>
+										setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+									}
+									disabled={currentPage === totalPages}
+									className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
+								>
+									<span className="sr-only">Next</span>
+									<LuChevronRight className="h-5 w-5" aria-hidden="true" />
+								</button>
+							</nav>
+						</div>
+					</div>
 				</div>
 			)}
 

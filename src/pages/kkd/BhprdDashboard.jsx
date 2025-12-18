@@ -1,5 +1,5 @@
 // BHPRD Dashboard dengan Tab Navigation (3 Tabs)
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { FiDollarSign, FiMapPin, FiUsers, FiTrendingUp, FiDownload, FiUpload, FiChevronDown, FiChevronUp, FiX, FiSearch, FiFilter, FiActivity, FiBarChart2 } from 'react-icons/fi';
 import { Activity } from 'lucide-react';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement } from 'chart.js';
@@ -31,19 +31,7 @@ const BhprdDashboard = () => {
   const [activeTabView, setActiveTabView] = useState('statistic'); // 'statistic' or 'table'
   const { getCachedData, setCachedData, isCached } = useDataCache();
 
-  useEffect(() => {
-    if (isCached(CACHE_KEY)) {
-      const cachedData = getCachedData(CACHE_KEY);
-      setDataTahap1(cachedData.data.tahap1);
-      setDataTahap2(cachedData.data.tahap2);
-      setDataTahap3(cachedData.data.tahap3);
-      setLoading(false);
-    } else {
-      fetchAllData();
-    }
-  }, []);
-
-  const fetchAllData = async () => {
+  const fetchAllData = useCallback(async () => {
     setLoading(true);
     
     let t1Data = [], t2Data = [], t3Data = [];
@@ -88,7 +76,19 @@ const BhprdDashboard = () => {
     });
 
     setLoading(false);
-  };
+  }, [setCachedData]);
+
+  useEffect(() => {
+    if (isCached(CACHE_KEY)) {
+      const cachedData = getCachedData(CACHE_KEY);
+      setDataTahap1(cachedData.data.tahap1);
+      setDataTahap2(cachedData.data.tahap2);
+      setDataTahap3(cachedData.data.tahap3);
+      setLoading(false);
+    } else {
+      fetchAllData();
+    }
+  }, [isCached, getCachedData, fetchAllData]);
 
   const getActiveData = () => {
     switch (activeTab) {
