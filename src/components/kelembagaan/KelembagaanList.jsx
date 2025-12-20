@@ -1,14 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams, Link } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams, Link } from "react-router-dom";
 import {
 	listRw,
-	listRt,
 	listPosyandu,
 	createRw,
-	createRt,
 	createPosyandu,
-	
 } from "../../services/kelembagaan";
+import { useAuth } from "../../context/AuthContext";
 import AktivitasLog from "./AktivitasLog";
 // Removed listPengurus import for performance optimization
 import { FaArrowLeft, FaHome, FaChevronRight } from "react-icons/fa";
@@ -36,14 +34,14 @@ import Swal from "sweetalert2";
 export default function KelembagaanList() {
 	const { type } = useParams();
 	const navigate = useNavigate();
+	const [searchParams] = useSearchParams();
+	const desaId = searchParams.get('desaId'); // Get desaId from query params
+	const { user } = useAuth(); // Get user for role-based navigation
 	const [items, setItems] = useState([]);
-	const [rwOptions, setRwOptions] = useState([]);
 	const [loading, setLoading] = useState(true);
-	const [form, setForm] = useState({ nomor: "", nama: "", rw_id: "" });
 	const [addForm, setAddForm] = useState({ nomor: "", nama: "" });
 	const [showAddModal, setShowAddModal] = useState(false);
 	const [activeTab, setActiveTab] = useState("aktif"); // aktif | nonaktif
-	// Removed pengurus and rtList states for better performance
 	const [submitting, setSubmitting] = useState(false);
 
 	useEffect(() => {
@@ -57,9 +55,6 @@ export default function KelembagaanList() {
 					case "rw":
 						res = await listRw();
 						break;
-					case "rt":
-						res = await listRt();
-						break;
 					case "posyandu":
 						res = await listPosyandu();
 						break;
@@ -69,12 +64,6 @@ export default function KelembagaanList() {
 
 				if (mounted) {
 					setItems(res?.data?.data || []);
-				}
-
-				// Fetch additional data based on type - only what's necessary
-				if (type === "rt" && mounted) {
-					const rwRes = await listRw();
-					setRwOptions(rwRes?.data?.data || []);
 				}
 			} catch (error) {
 				console.error("Error fetching data:", error);
@@ -129,12 +118,30 @@ export default function KelembagaanList() {
 	};
 
 	
+	// Helper function to get base path based on user role
+	const getBasePath = () => {
+		if (user?.role === 'desa') {
+			return '/desa';
+		} else if (user?.role === 'superadmin' || user?.role === 'admin') {
+			return '/dashboard';
+		}
+		return '/desa'; // Default fallback
+	};
+
+	const basePath = getBasePath();
+
 	const filteredItems = useMemo(() => {
 		return (items || []).filter((item) => {
+			// Filter by status
 			const status = (item.status_kelembagaan || "aktif").toLowerCase();
-			return activeTab === "aktif" ? status === "aktif" : status !== "aktif";
+			const statusMatch = activeTab === "aktif" ? status === "aktif" : status !== "aktif";
+			
+			// Filter by desaId if provided (for admin view)
+			const desaMatch = !desaId || String(item.desa_id) === String(desaId);
+			
+			return statusMatch && desaMatch;
 		});
-	}, [items, activeTab]);
+	}, [items, activeTab, desaId]);
 
 	const SimpleModal = ({ isOpen, title, children, onClose, onSubmit }) => {
 		const handleBackdropClick = (e) => {
@@ -436,15 +443,15 @@ export default function KelembagaanList() {
 		);
 	};
 
-	// Validasi type parameter
-	const validTypes = ["rw", "rt", "posyandu"];
+	// Validasi type parameter - RT tidak tersedia di sini, hanya di detail RW
+	const validTypes = ["rw", "posyandu"];
 	if (!validTypes.includes(type)) {
 		return (
 			<div className="p-4">
 				<div className="text-red-500">Jenis kelembagaan tidak valid</div>
 				<button
 					className="mt-2 px-3 py-1 bg-blue-600 text-white rounded"
-					onClick={() => navigate("/desa/kelembagaan")}
+					onClick={() => navigate(`${basePath}/kelembagaan`)}
 				>
 					Kembali
 				</button>
@@ -452,246 +459,13 @@ export default function KelembagaanList() {
 		);
 	}
 
-	const title = type === "rw" ? "RW" : type === "rt" ? "RT" : "Posyandu";
+	const title = type === "rw" ? "RW" : "Posyandu";
 
-	// RT: keep old behavior
+	// RT should only be managed from RW detail page via AnakLembagaCard
 	if (type === "rt") {
-		const handleRtSubmit = async (e) => {
-			e.preventDefault();
-			if (submitting) return;
-
-			setSubmitting(true);
-			try {
-				if (!form.rw_id) {
-					alert("Pilih RW terlebih dahulu");
-					return;
-				}
-				if (!form.nomor.trim()) {
-					alert("Nomor RT wajib diisi");
-					return;
-				}
-
-				await createRt({
-					rw_id: form.rw_id,
-					nomor: form.nomor.trim(),
-				});
-
-				setForm({ nomor: "", nama: "", rw_id: "" });
-				const res = await listRt();
-				setItems(res?.data?.data || []);
-			} catch (error) {
-				console.error("Error creating RT:", error);
-				alert("Gagal menyimpan data");
-			} finally {
-				setSubmitting(false);
-			}
-		};
-
-		return (
-			<div className="p-6 space-y-6 bg-gray-50 min-h-screen">
-				{/* Breadcrumb */}
-				<div className="bg-white p-2 rounded-md shadow-sm">
-					<nav className="flex items-center space-x-2 text-sm">
-						<Link
-							to="/desa/dashboard"
-							className="flex items-center text-gray-500 hover:text-indigo-600 transition-colors"
-						>
-							<FaHome className="mr-1" />
-							Dashboard
-						</Link>
-						<FaChevronRight className="text-gray-400 text-xs" />
-						<Link
-							to="/desa/kelembagaan"
-							className="text-gray-500 hover:text-indigo-600 transition-colors"
-						>
-							Kelembagaan
-						</Link>
-						<FaChevronRight className="text-gray-400 text-xs" />
-						<span className="text-gray-900 font-medium">RT</span>
-					</nav>
-				</div>
-
-				{/* Header */}
-				<div className="flex items-center justify-between">
-					<div className="flex items-center space-x-4">
-						<button
-							className="flex items-center justify-center w-12 h-12 bg-white hover:bg-blue-600 rounded-xl shadow-md hover:text-white transition-all duration-200 hover:shadow-lg"
-							onClick={() => navigate(-1)}
-							title="Kembali"
-						>
-							<FaArrowLeft className="w-5 h-5" />
-						</button>
-						<div>
-							<h1 className="text-3xl font-bold text-gray-800">Daftar RT</h1>
-							<p className="text-gray-600">
-								Kelola Rukun Tetangga di desa Anda
-							</p>
-						</div>
-					</div>
-					<div className="flex items-center space-x-2">
-						<LuBuilding2 className="w-8 h-8 text-blue-600" />
-					</div>
-				</div>
-
-				{/* Form Pembentukan RT */}
-				<div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-200">
-					<h2 className="text-lg font-semibold text-blue-900 mb-4 flex items-center">
-						<LuPlus className="w-5 h-5 mr-2" />
-						Bentuk RT Baru
-					</h2>
-					<form
-						onSubmit={handleRtSubmit}
-						className="flex flex-wrap gap-4 items-end"
-					>
-						<div className="flex-1 min-w-[200px]">
-							<label
-								htmlFor="rt-form-rw-id"
-								className="block text-sm font-medium mb-1"
-							>
-								RW
-							</label>
-							<select
-								className="w-full border rounded px-3 py-2"
-								name="rw_id"
-								id="rt-form-rw-id"
-								value={form.rw_id}
-								onChange={(e) =>
-									setForm((f) => ({ ...f, rw_id: e.target.value }))
-								}
-								required
-							>
-								<option value="">Pilih RW</option>
-								{rwOptions.map((rw) => (
-									<option key={rw.id} value={rw.id}>
-										RW {rw.nomor}
-									</option>
-								))}
-							</select>
-						</div>
-
-						<div className="flex-1 min-w-[120px]">
-							<label
-								htmlFor="rt-form-nomor"
-								className="block text-sm font-medium mb-1"
-							>
-								Nomor RT
-							</label>
-							<input
-								className="w-full border rounded px-3 py-2"
-								name="nomor"
-								id="rt-form-nomor"
-								placeholder="Nomor RT"
-								autoComplete="off"
-								value={form.nomor}
-								onChange={(e) =>
-									setForm((f) => ({ ...f, nomor: e.target.value }))
-								}
-								required
-							/>
-						</div>
-
-						<button
-							className="px-6 py-3 rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 flex items-center space-x-2 font-medium shadow-md hover:shadow-lg transition-all duration-200"
-							disabled={submitting}
-						>
-							<LuPlus className="w-4 h-4" />
-							<span>{submitting ? "Membentuk..." : "Bentuk RT"}</span>
-						</button>
-					</form>
-				</div>
-
-				{loading ? (
-					<div className="text-center py-12">
-						<div className="inline-flex items-center px-4 py-2 bg-blue-50 rounded-lg">
-							<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-							<span className="text-blue-700">Memuat data RT...</span>
-						</div>
-					</div>
-				) : items.length === 0 ? (
-					<div className="text-center py-12">
-						<div className="bg-gray-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-							<LuBuilding2 className="w-8 h-8 text-gray-400" />
-						</div>
-						<p className="text-gray-500 text-lg">Belum ada data RT</p>
-						<p className="text-gray-400 text-sm">
-							Mulai bentuk RT pertama dengan form di atas
-						</p>
-					</div>
-				) : (
-					<div>
-						<div className="flex items-center justify-between mb-4">
-							<h3 className="text-xl font-semibold text-gray-800">
-								Daftar RT ({items.length})
-							</h3>
-						</div>
-						<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-							{items.map((item) => {
-								const status = (
-									item.status_kelembagaan || "aktif"
-								).toLowerCase();
-								return (
-									<div
-										key={item.id}
-										className="bg-white rounded-2xl p-6 shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer border border-gray-100 hover:border-blue-200 group"
-										onClick={() => navigate(`/desa/kelembagaan/rt/${item.id}`)}
-									>
-										<div className="flex items-center justify-between mb-4">
-											<div className="flex items-center space-x-3">
-												<div className="p-3 bg-blue-100 text-blue-600 rounded-xl group-hover:bg-blue-600 group-hover:text-white transition-colors">
-													<LuBuilding2 className="w-6 h-6" />
-												</div>
-												<div>
-													<h4 className="font-bold text-xl text-gray-800">
-														RT {item.nomor}
-													</h4>
-													<div className="flex items-center space-x-2">
-														<span
-															className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-																status === "aktif"
-																	? "bg-green-100 text-green-700"
-																	: "bg-red-100 text-red-700"
-															}`}
-														>
-															{status === "aktif" ? "Aktif" : "Nonaktif"}
-														</span>
-													</div>
-												</div>
-											</div>
-											<LuEye className="w-5 h-5 text-gray-400 group-hover:text-blue-600 transition-colors" />
-										</div>
-
-										{item.alamat && (
-											<div className="flex items-start space-x-2 mb-4">
-												<LuMapPin className="w-4 h-4 text-gray-400 mt-0.5" />
-												<span className="text-sm text-gray-600 leading-relaxed">
-													{item.alamat}
-												</span>
-											</div>
-										)}
-
-										<div className="flex items-center justify-between pt-4 border-t border-gray-100">
-											<div className="text-xs text-gray-500">
-												Verifikasi: {item.status_verifikasi || "Belum"}
-											</div>
-											<button
-												className="text-blue-600 text-sm font-medium hover:text-blue-800 flex items-center space-x-1 group-hover:translate-x-1 transition-transform"
-												onClick={(e) => {
-													e.stopPropagation();
-													navigate(`/desa/kelembagaan/rt/${item.id}`);
-												}}
-											>
-												<span>Lihat Detail</span>
-												<LuEye className="w-3 h-3" />
-											</button>
-										</div>
-									</div>
-								);
-							})}
-						</div>
-					</div>
-				)}
-			</div>
-		);
+		// Redirect to kelembagaan page if someone tries to access RT list directly
+		navigate(`${basePath}/kelembagaan`);
+		return null;
 	}
 
 	const getIcon = () => {
@@ -726,7 +500,7 @@ export default function KelembagaanList() {
 			<div className="bg-white p-2 rounded-md shadow-sm">
 				<nav className="flex items-center space-x-2 text-sm">
 					<Link
-						to="/desa/dashboard"
+						to={`${basePath}/dashboard`}
 						className="flex items-center text-gray-500 hover:text-indigo-600 transition-colors"
 					>
 						<FaHome className="mr-1" />
@@ -734,7 +508,7 @@ export default function KelembagaanList() {
 					</Link>
 					<FaChevronRight className="text-gray-400 text-xs" />
 					<Link
-						to="/desa/kelembagaan"
+						to={`${basePath}/kelembagaan`}
 						className="text-gray-500 hover:text-indigo-600 transition-colors"
 					>
 						Kelembagaan
@@ -749,7 +523,7 @@ export default function KelembagaanList() {
 				<div className="flex items-center space-x-4">
 					<button
 						className="flex items-center justify-center w-12 h-12 bg-white hover:bg-blue-600 rounded-xl shadow-md hover:text-white transition-all duration-200 hover:shadow-lg"
-						onClick={() => navigate("/desa/kelembagaan")}
+						onClick={() => navigate(`${basePath}/kelembagaan`)}
 						title="Kembali"
 					>
 						<FaArrowLeft className="w-5 h-5" />
@@ -854,7 +628,7 @@ export default function KelembagaanList() {
 											key={item.id}
 											className="bg-white flex flex-col rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer border border-gray-100 hover:border-blue-200 group overflow-hidden"
 											onClick={() =>
-												navigate(`/desa/kelembagaan/${type}/${item.id}`)
+												navigate(`${basePath}/kelembagaan/${type}/${item.id}`)
 											}
 										>
 											{/* Gradient Bar */}

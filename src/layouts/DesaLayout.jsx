@@ -118,11 +118,12 @@ const DesaLayout = () => {
 						<img src="/logo-bogor.png" alt="Logo" className="h-10" />
 						<div>
 							<h1 className="font-bold text-xs lg:text-lg text-gray-800">
-								Dashboard Desa {user?.desa?.nama || ""}
+								Dinas Pemberdayaan Masyarakat dan Desa Kabupaten Bogor
 								
 							</h1>
-							<p className="text-xs md:text-sm text-gray-500">
-								Kecamatan {user?.desa?.kecamatan?.nama || ""}
+							<p className="text-xs md:text-sm text-gray-500 hidden md:block">
+								Dashboard  <strong> {user?.desa?.status_pemerintahan == "desa" ? "Desa" : "Kelurahan"} {user?.desa?.nama || ""}</strong> Kecamatan {user?.desa?.kecamatan?.nama || ""}
+							
 							</p>
 						</div>
 					</div>

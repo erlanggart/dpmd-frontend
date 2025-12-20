@@ -18,6 +18,23 @@ import ResetPasswordModal from "../ResetPasswordModal";
 import { useAuth } from "../../context/AuthContext";
 import Swal from "sweetalert2";
 
+// Custom debounce hook
+const useDebounce = (value, delay) => {
+	const [debouncedValue, setDebouncedValue] = useState(value);
+
+	useEffect(() => {
+		const handler = setTimeout(() => {
+			setDebouncedValue(value);
+		}, delay);
+
+		return () => {
+			clearTimeout(handler);
+		};
+	}, [value, delay]);
+
+	return debouncedValue;
+};
+
 const WilayahManagement = () => {
 	const [users, setUsers] = useState([]);
 	const [loading, setLoading] = useState(true);
@@ -30,38 +47,49 @@ const WilayahManagement = () => {
 	const [selectedUser, setSelectedUser] = useState(null);
 	const { user: currentUser } = useAuth();
 	const [currentPage, setCurrentPage] = useState(1);
-	const [itemsPerPage] = useState(50); // Tampilkan 50 user per halaman
-	const [totalUsers, setTotalUsers] = useState(0); // Total semua users dari server
-	const [totalPages, setTotalPages] = useState(0); // Total halaman dari server
+	const [totalUsers, setTotalUsers] = useState(0);
+	const [totalPages, setTotalPages] = useState(0);
+	const itemsPerPage = 9;
+
+	// Debounce search term
+	const debouncedSearchTerm = useDebounce(searchTerm, 500);
 
 	// Role-role tingkat wilayah
 	const wilayahRoles = useMemo(() => ["kecamatan", "desa"], []);
 
-	// Function to fetch users - dengan server-side pagination
+	// Fetch users with server-side pagination and search
 	const fetchUsers = useCallback(async () => {
 		setLoading(true);
 		try {
-			const response = await api.get("/users", {
-				params: {
-					page: currentPage,
-					limit: itemsPerPage, // Hanya ambil 50 data per request
-				},
-			});
-
-			// Filter user dengan role tingkat wilayah
-			const wilayahUsers = response.data.data.filter((user) =>
-				wilayahRoles.includes(user.role)
-			);
-			setUsers(wilayahUsers);
-			setTotalUsers(response.data.pagination.total);
-			setTotalPages(response.data.pagination.totalPages);
+			// Build query parameters
+			const params = {
+				page: currentPage,
+				limit: itemsPerPage,
+				role: wilayahRoles.join(','), // "kecamatan,desa"
+			};
+			
+			// Add search if exists
+			if (debouncedSearchTerm) {
+				params.search = debouncedSearchTerm;
+			}
+			
+			// Add type filter if not "all"
+			if (selectedType !== 'all') {
+				params.role = selectedType;
+			}
+			
+			const response = await api.get("/users", { params });
+			
+			setUsers(response.data.data || []);
+			setTotalUsers(response.data.total || 0);
+			setTotalPages(response.data.totalPages || 0);
 		} catch (err) {
 			setError("Gagal mengambil data user.");
 			console.error(err);
 		} finally {
 			setLoading(false);
 		}
-	}, [wilayahRoles, currentPage, itemsPerPage]);
+	}, [currentPage, debouncedSearchTerm, selectedType, wilayahRoles]);
 
 	useEffect(() => {
 		fetchUsers();
@@ -161,49 +189,14 @@ const WilayahManagement = () => {
 		);
 	};
 
-	// Filter dan search - HANYA untuk data yang sudah di-fetch dari server
-	const filteredUsers = users.filter((user) => {
-		const matchesSearch =
-			user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-			user.email.toLowerCase().includes(searchTerm.toLowerCase());
-
-		let matchesType = false;
-		if (selectedType === "all") {
-			matchesType = true;
-		} else if (selectedType === "kelurahan") {
-			matchesType =
-				user.role === "desa" && user.desa?.status_pemerintahan === "kelurahan";
-		} else if (selectedType === "desa") {
-			matchesType =
-				user.role === "desa" &&
-				(!user.desa?.status_pemerintahan ||
-					user.desa?.status_pemerintahan === "desa");
-		} else {
-			matchesType = user.role === selectedType;
-		}
-
-		return matchesSearch && matchesType;
-	});
-
-	// Grup user berdasarkan role
-	const groupedUsers = wilayahRoles.reduce((acc, role) => {
-		acc[role] = filteredUsers.filter((user) => user.role === role);
-		return acc;
-	}, {});
-
-	// Reset ke halaman 1 saat search atau filter berubah
+	// Reset ke halaman pertama saat search atau filter berubah
 	useEffect(() => {
 		setCurrentPage(1);
-	}, [searchTerm, selectedType]);
+	}, [debouncedSearchTerm, selectedType]);
 
-	// Re-fetch data saat halaman berubah
-	useEffect(() => {
-		fetchUsers();
-	}, [currentPage, fetchUsers]);
-
-	// Statistik - gunakan totalUsers dari server, bukan users.length
+	// Statistik - gunakan totalUsers dari server response
 	const stats = {
-		total: totalUsers, // Total dari server
+		total: totalUsers,
 		kecamatan: users.filter((u) => u.role === "kecamatan").length,
 		desa: users.filter(
 			(u) =>
@@ -279,44 +272,31 @@ const WilayahManagement = () => {
 				</select>
 			</div>
 
-			{/* User Lists */}
-			{wilayahRoles.map((role) => {
-				const roleUsers = groupedUsers[role];
-				const roleInfo = getRoleInfo(role);
-				const IconComponent = roleInfo.icon;
+			{/* User List - Gabungan Kecamatan dan Desa */}
+			{users.length === 0 && !loading ? (
+				<div className="text-center p-8 bg-gray-50 rounded-lg">
+					<LuMapPin className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+					<p className="text-gray-500">
+						{debouncedSearchTerm
+							? `Tidak ada user wilayah yang sesuai dengan pencarian`
+							: "Tidak ada user wilayah yang ditemukan"}
+					</p>
+				</div>
+			) : (
+				<>
+					<div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+						{users.map((user) => {
+							const roleInfo = getRoleInfo(user.role);
+							const IconComponent = roleInfo.icon;
 
-				if (
-					roleUsers.length === 0 &&
-					selectedType !== "all" &&
-					selectedType !== role
-				) {
-					return null;
-				}
-
-				return (
-					<div key={role} className="space-y-4">
-						<div
-							className={`p-4 rounded-lg ${roleInfo.bgColor} ${roleInfo.borderColor} border`}
-						>
-							<div className="flex items-center gap-3 mb-4">
-								<IconComponent className={`h-5 w-5 ${roleInfo.textColor}`} />
-								<h3 className={`font-semibold ${roleInfo.textColor}`}>
-									{roleInfo.label} ({roleUsers.length})
-								</h3>
-							</div>
-
-							{roleUsers.length === 0 ? (
-								<p className={`text-sm ${roleInfo.textColor} opacity-70`}>
-									{searchTerm
-										? `Tidak ada ${roleInfo.label} yang sesuai dengan pencarian "${searchTerm}"`
-										: `Belum ada user dengan role ${roleInfo.label}`}
-								</p>
-							) : (
-								<div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-									{roleUsers.map((user) => (
+							return (
 										<div
 											key={user.id}
-											className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all duration-200 hover:scale-105"
+											className={`bg-white rounded-lg shadow-sm border-2 p-4 hover:shadow-md transition-all duration-200 hover:scale-105 ${
+												user.role === 'kecamatan' 
+													? 'border-violet-300 hover:border-violet-400' 
+													: 'border-emerald-300 hover:border-emerald-400'
+											}`}
 										>
 											<div className="flex items-center gap-3 mb-3">
 												<div
@@ -408,122 +388,65 @@ const WilayahManagement = () => {
 												</div>
 											)}
 										</div>
-									))}
-								</div>
-							)}
-						</div>
+						);
+						})}
 					</div>
-				);
-			})}
 
-			{filteredUsers.length === 0 && (
-				<div className="text-center p-8 bg-gray-50 rounded-lg">
-					<LuMapPin className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-					<p className="text-gray-500">
-						{searchTerm
-							? `Tidak ada user wilayah yang sesuai dengan pencarian "${searchTerm}"`
-							: "Tidak ada user wilayah yang ditemukan"}
-					</p>
-				</div>
-			)}
-
-			{/* Pagination Controls - Server Side */}
-			{filteredUsers.length > 0 && totalPages > 1 && (
-				<div className="mt-8 flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6 rounded-lg">
-					<div className="flex flex-1 justify-between sm:hidden">
-						<button
-							onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-							disabled={currentPage === 1}
-							className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-						>
-							Previous
-						</button>
-						<button
-							onClick={() =>
-								setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-							}
-							disabled={currentPage === totalPages}
-							className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-						>
-							Next
-						</button>
-					</div>
-					<div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
-						<div>
-							<p className="text-sm text-gray-700">
-								Halaman <span className="font-medium">{currentPage}</span> dari{" "}
-								<span className="font-medium">{totalPages}</span> (
-								<span className="font-medium">{totalUsers}</span> total user)
-							</p>
-						</div>
-						<div>
-							<nav
-								className="isolate inline-flex -space-x-px rounded-md shadow-sm"
-								aria-label="Pagination"
+					{/* Global Pagination */}
+					{totalPages > 1 && (
+						<div className="flex items-center justify-center gap-2 mt-6">
+							<button
+								onClick={() => setCurrentPage(currentPage - 1)}
+								disabled={currentPage === 1}
+								className="px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
 							>
-								<button
-									onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-									disabled={currentPage === 1}
-									className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
-								>
-									<span className="sr-only">Previous</span>
-									<LuChevronLeft className="h-5 w-5" aria-hidden="true" />
-								</button>
+								<LuChevronLeft className="w-4 h-4" />
+							</button>
 
-								{/* Page numbers */}
-								{[...Array(totalPages)].map((_, index) => {
-									const pageNumber = index + 1;
-									// Show first page, last page, current page, and pages around current
-									if (
-										pageNumber === 1 ||
-										pageNumber === totalPages ||
-										(pageNumber >= currentPage - 1 &&
-											pageNumber <= currentPage + 1)
-									) {
-										return (
-											<button
-												key={pageNumber}
-												onClick={() => setCurrentPage(pageNumber)}
-												className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${
-													currentPage === pageNumber
-														? "z-10 bg-blue-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
-														: "text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
-												}`}
-											>
-												{pageNumber}
-											</button>
-										);
-									} else if (
-										pageNumber === currentPage - 2 ||
-										pageNumber === currentPage + 2
-									) {
-										return (
-											<span
-												key={pageNumber}
-												className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-700 ring-1 ring-inset ring-gray-300"
-											>
-												...
-											</span>
-										);
-									}
-									return null;
-								})}
+							{[...Array(Math.min(5, totalPages))].map((_, idx) => {
+								let pageNum;
+								if (totalPages <= 5) {
+									pageNum = idx + 1;
+								} else if (currentPage <= 3) {
+									pageNum = idx + 1;
+								} else if (currentPage >= totalPages - 2) {
+									pageNum = totalPages - 4 + idx;
+								} else {
+									pageNum = currentPage - 2 + idx;
+								}
 
-								<button
-									onClick={() =>
-										setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-									}
-									disabled={currentPage === totalPages}
-									className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
-								>
-									<span className="sr-only">Next</span>
-									<LuChevronRight className="h-5 w-5" aria-hidden="true" />
-								</button>
-							</nav>
+								return (
+									<button
+										key={pageNum}
+										onClick={() => setCurrentPage(pageNum)}
+										className={`px-3 py-2 rounded-lg border transition-colors ${
+											pageNum === currentPage
+												? "bg-blue-600 text-white border-blue-600"
+												: "border-gray-300 hover:bg-gray-50"
+										}`}
+									>
+										{pageNum}
+									</button>
+								);
+							})}
+
+							<button
+								onClick={() => setCurrentPage(currentPage + 1)}
+								disabled={currentPage === totalPages}
+								className="px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+							>
+								<LuChevronRight className="w-4 h-4" />
+							</button>
+
+							<span className="ml-4 text-sm text-gray-600">
+								Halaman {currentPage} dari {totalPages}
+							</span>
 						</div>
-					</div>
-				</div>
+					)}
+				</>
 			)}
+
+
 
 			{/* Add User Modal */}
 			<AddUserModal

@@ -48,7 +48,7 @@ const BumdesApp = lazy(() => import("./pages/sarpras/Bumdes-app"));
 const Kelembagaan = lazy(() => import("./pages/PMD/Kelembagaan"));
 const PerjalananDinas = lazy(() => import("./pages/sekretariat/perjadin"));
 const DesaLayout = lazy(() => import("./layouts/DesaLayout"));
-const DesaDashboard = lazy(() => import("./components/desa/DesaDashboard"));
+const DesaDashboard = lazy(() => import("./pages/desa/DesaDashboardPage"));
 const BumdesDesaPage = lazy(() =>
 	import("./pages/desa/bumdes/BumdesDesaPage")
 );
