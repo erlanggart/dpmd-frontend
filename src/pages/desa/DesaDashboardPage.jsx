@@ -24,6 +24,7 @@ const DesaDashboardPage = () => {
 	const [error, setError] = useState(null);
 	const [dashboardData, setDashboardData] = useState(null);
 	const [expandedCards, setExpandedCards] = useState({});
+	const [currentDateTime, setCurrentDateTime] = useState(new Date());
 
 	const toggleCard = (index) => {
 		setExpandedCards(prev => ({
@@ -34,6 +35,13 @@ const DesaDashboardPage = () => {
 
 	useEffect(() => {
 		fetchDashboardData();
+
+		// Update time every second
+		const timer = setInterval(() => {
+			setCurrentDateTime(new Date());
+		}, 1000);
+
+		return () => clearInterval(timer);
 	}, []);
 
 	const fetchDashboardData = async () => {
@@ -85,6 +93,25 @@ const DesaDashboardPage = () => {
 
 	const { desa, kelembagaan, keuangan } = dashboardData || {};
 
+	// Format date and time
+	const formatDateTime = (date) => {
+		const options = { 
+			weekday: 'long', 
+			year: 'numeric', 
+			month: 'long', 
+			day: 'numeric' 
+		};
+		const dateStr = date.toLocaleDateString('id-ID', options);
+		const timeStr = date.toLocaleTimeString('id-ID', { 
+			hour: '2-digit', 
+			minute: '2-digit',
+			second: '2-digit'
+		});
+		return { date: dateStr, time: timeStr };
+	};
+
+	const { date: currentDate, time: currentTime } = formatDateTime(currentDateTime);
+
 	// Card data untuk kelembagaan
 	const kelembagaanCards = [
 		{
@@ -95,6 +122,7 @@ const DesaDashboardPage = () => {
 			bgColor: "bg-blue-50",
 			textColor: "text-blue-700",
 			link: "/desa/kelembagaan?type=rw",
+			showCount: true,
 		},
 		{
 			title: "RT",
@@ -104,6 +132,7 @@ const DesaDashboardPage = () => {
 			bgColor: "bg-green-50",
 			textColor: "text-green-700",
 			link: "/desa/kelembagaan",
+			showCount: true,
 		},
 		{
 			title: "Posyandu",
@@ -113,42 +142,51 @@ const DesaDashboardPage = () => {
 			bgColor: "bg-pink-50",
 			textColor: "text-pink-700",
 			link: "/desa/kelembagaan?type=posyandu",
+			showCount: true,
 		},
 		{
 			title: "Karang Taruna",
 			value: kelembagaan?.karang_taruna || 0,
+			isTerbentuk: (kelembagaan?.karang_taruna || 0) > 0,
 			icon: LuUsers,
 			color: "from-purple-400 to-purple-600",
 			bgColor: "bg-purple-50",
 			textColor: "text-purple-700",
 			link: "/desa/kelembagaan?type=karang_taruna",
+			showCount: false,
 		},
 		{
 			title: "LPM",
 			value: kelembagaan?.lpm || 0,
+			isTerbentuk: (kelembagaan?.lpm || 0) > 0,
 			icon: LuUsersRound,
 			color: "from-indigo-400 to-indigo-600",
 			bgColor: "bg-indigo-50",
 			textColor: "text-indigo-700",
 			link: "/desa/kelembagaan?type=lpm",
+			showCount: false,
 		},
 		{
 			title: "PKK",
 			value: kelembagaan?.pkk || 0,
+			isTerbentuk: (kelembagaan?.pkk || 0) > 0,
 			icon: LuActivity,
 			color: "from-orange-400 to-orange-600",
 			bgColor: "bg-orange-50",
 			textColor: "text-orange-700",
 			link: "/desa/kelembagaan?type=pkk",
+			showCount: false,
 		},
 		{
 			title: "Satlinmas",
 			value: kelembagaan?.satlinmas || 0,
+			isTerbentuk: (kelembagaan?.satlinmas || 0) > 0,
 			icon: LuShield,
 			color: "from-red-400 to-red-600",
 			bgColor: "bg-red-50",
 			textColor: "text-red-700",
 			link: "/desa/kelembagaan?type=satlinmas",
+			showCount: false,
 		},
 	];
 
@@ -269,16 +307,35 @@ const DesaDashboardPage = () => {
 	};
 
 	return (
-		<div className="space-y-8">
+		<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+			{/* Left Column - Larger (2/3 width) */}
+			<div className="lg:col-span-2 space-y-6">
+
 			{/* Header */}
-			<div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg shadow-lg p-6 text-white">
-				<div className="flex items-center gap-3 mb-2">
-					<LuMapPin className="w-6 h-6" />
-					<h1 className="text-2xl font-bold">Dashboard {desa?.status_pemerintahan === "kelurahan" ? "Kelurahan" : "Desa"}</h1>
+			<div className="bg-gradient-to-r h-[30vh] from-blue-600 to-blue-800 rounded-lg shadow-lg p-6 text-white flex flex-col justify-between">
+				<div>
+					<div className="flex items-center gap-3 mb-2">
+						<LuMapPin className="w-6 h-6" />
+						<h1 className="text-2xl font-bold">Dashboard {desa?.status_pemerintahan === "kelurahan" ? "Kelurahan" : "Desa"}</h1>
+					</div>
+					<p className="text-blue-100 text-lg">
+						{desa?.status_pemerintahan === "kelurahan" ? "Kelurahan" : "Desa"} {desa?.nama} - Kecamatan {desa?.kecamatan}
+					</p>
 				</div>
-				<p className="text-blue-100 text-lg">
-					{desa?.status_pemerintahan === "kelurahan" ? "Kelurahan" : "Desa"} {desa?.nama} - Kecamatan {desa?.kecamatan}
-				</p>
+
+				{/* Date and Time */}
+				<div className="border-t border-blue-400/30 pt-4">
+					<div className="flex items-center justify-between">
+						<div>
+							<p className="text-blue-100 text-sm mb-1">Tanggal</p>
+							<p className="text-white font-semibold">{currentDate}</p>
+						</div>
+						<div className="text-right">
+							<p className="text-blue-100 text-sm mb-1">Waktu</p>
+							<p className="text-white font-semibold text-2xl">{currentTime}</p>
+						</div>
+					</div>
+				</div>
 			</div>
 
 			{/* Keuangan Section */}
@@ -390,19 +447,20 @@ const DesaDashboardPage = () => {
 															)}
 														</div>
 
-														{/* Status Badge */}
-														{tahap.status && (
-															<div className="mb-3">
-																{getStatusBadge(tahap.status)}
+														{/* Status and Realisasi in one row */}
+														<div className="flex items-center justify-between">
+															{/* Left: Status Badge */}
+															<div className="flex-1">
+																{tahap.status && getStatusBadge(tahap.status)}
 															</div>
-														)}
 
-														{/* Realisasi Amount */}
-														<div className="bg-gray-50 rounded-lg p-3">
-															<p className="text-xs text-gray-600 mb-1">Realisasi</p>
-															<p className="text-lg font-bold text-gray-900">
-																{tahap.hasData ? `Rp ${tahap.realisasi}` : <span className="text-gray-400 text-sm">Tidak ada data</span>}
-															</p>
+															{/* Right: Realisasi Amount */}
+															<div className="bg-gray-50 rounded-lg p-3 min-w-[200px] text-right">
+																<p className="text-xs text-gray-600 mb-1">Realisasi</p>
+																<p className="text-lg font-bold text-gray-900">
+																	{tahap.hasData ? `Rp ${tahap.realisasi}` : <span className="text-gray-400 text-sm">Tidak ada data</span>}
+																</p>
+															</div>
 														</div>
 													</div>
 												))}
@@ -417,9 +475,12 @@ const DesaDashboardPage = () => {
 
 				
 			</div>
+			</div>
 
+			{/* Right Column - Smaller (1/3 width) */}
+			<div className="space-y-6">
 			{/* Kelembagaan Section */}
-			<div>
+			<div className="bg-white p-4 rounded-lg">
 				<div className="flex items-center justify-between mb-4">
 					<h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
 						<LuBuilding2 className="w-5 h-5 text-blue-600" />
@@ -434,49 +495,71 @@ const DesaDashboardPage = () => {
 					</Link>
 				</div>
 
-				<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+				<div className="grid gap-4 grid-cols-1">
 					{kelembagaanCards.map((card, index) => {
 						const IconComponent = card.icon;
+						const isActive = card.showCount ? true : card.isTerbentuk;
+						
 						return (
 							<Link
 								key={index}
 								to={card.link}
-								className={`${card.bgColor} rounded-lg border-2 ${card.textColor.replace('text-', 'border-').replace('-700', '-200')} p-5 hover:shadow-lg transition-all duration-200 hover:scale-105`}
+								className={`${
+									isActive 
+										? card.bgColor 
+										: 'bg-gray-100'
+								} rounded-lg border-2 ${
+									isActive 
+										? card.textColor.replace('text-', 'border-').replace('-700', '-200') 
+										: 'border-gray-300'
+								} p-4 hover:shadow-lg transition-all duration-200 hover:scale-105`}
 							>
-								<div className="flex items-center justify-between mb-3">
-									<div className={`h-12 w-12 bg-gradient-to-r ${card.color} rounded-lg flex items-center justify-center shadow-md`}>
-										<IconComponent className="h-6 w-6 text-white" />
-									</div>
-									<div className="text-right">
-										<div className={`text-3xl font-bold ${card.textColor}`}>
-											{card.value}
+								<div className="flex items-center justify-between">
+									<div className="flex items-center gap-3">
+										<div className={`h-10 w-10 bg-gradient-to-r ${
+											isActive 
+												? card.color 
+												: 'from-gray-400 to-gray-500'
+										} rounded-lg flex items-center justify-center shadow-md`}>
+											<IconComponent className="h-5 w-5 text-white" />
 										</div>
+										<h3 className={`text-sm font-semibold ${
+											isActive 
+												? card.textColor 
+												: 'text-gray-600'
+										}`}>
+											{card.title}
+										</h3>
+									</div>
+									<div className={`text-right ${
+										isActive 
+											? card.textColor 
+											: 'text-gray-600'
+									}`}>
+										{card.showCount ? (
+											<div className="text-2xl font-bold">
+												{card.value}
+											</div>
+										) : (
+											<div className="flex flex-col items-end">
+												<span className={`text-xs font-medium px-2 py-1 rounded-full ${
+													card.isTerbentuk 
+														? 'bg-green-100 text-green-700 border border-green-300' 
+														: 'bg-gray-200 text-gray-600 border border-gray-300'
+												}`}>
+													{card.isTerbentuk ? '✓ Terbentuk' : '✗ Belum'}
+												</span>
+											</div>
+										)}
 									</div>
 								</div>
-								<h3 className={`text-sm font-semibold ${card.textColor}`}>
-									{card.title}
-								</h3>
 							</Link>
 						);
 					})}
 				</div>
 
-				{/* Total Lembaga */}
-				<div className="mt-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-200 p-4">
-					<div className="flex items-center justify-between">
-						<div className="flex items-center gap-3">
-							<div className="h-10 w-10 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
-								<LuBuilding2 className="h-5 w-5 text-white" />
-							</div>
-							<div>
-								<p className="text-sm text-gray-600">Total Lembaga</p>
-								<p className="text-2xl font-bold text-blue-900">
-									{kelembagaan?.total_lembaga || 0} Lembaga
-								</p>
-							</div>
-						</div>
-					</div>
-				</div>
+				
+			</div>
 			</div>
 
 			

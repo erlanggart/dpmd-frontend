@@ -32,10 +32,11 @@ import {
 import Swal from "sweetalert2";
 
 export default function KelembagaanList() {
-	const { type } = useParams();
+	const { type, desaId: routeDesaId } = useParams(); // Get desaId from route params
 	const navigate = useNavigate();
 	const [searchParams] = useSearchParams();
-	const desaId = searchParams.get('desaId'); // Get desaId from query params
+	const queryDesaId = searchParams.get('desaId'); // Get desaId from query params
+	const desaId = routeDesaId || queryDesaId; // Prioritize route param over query param
 	const { user } = useAuth(); // Get user for role-based navigation
 	const [items, setItems] = useState([]);
 	const [loading, setLoading] = useState(true);
@@ -122,7 +123,7 @@ export default function KelembagaanList() {
 	const getBasePath = () => {
 		if (user?.role === 'desa') {
 			return '/desa';
-		} else if (user?.role === 'superadmin' || user?.role === 'admin') {
+		} else if (user?.role === 'superadmin' || user?.role === 'pemberdayaan_masyarakat') {
 			return '/dashboard';
 		}
 		return '/desa'; // Default fallback
@@ -468,6 +469,17 @@ export default function KelembagaanList() {
 		return null;
 	}
 
+	// Back navigation - handle admin route
+	const handleBack = () => {
+		if (desaId) {
+			// If viewing specific desa (admin mode), go back to that desa's detail page
+			navigate(`/dashboard/kelembagaan/admin/${desaId}`);
+		} else {
+			// Normal mode, go back to kelembagaan index
+			navigate(`${basePath}/kelembagaan`);
+		}
+	};
+
 	const getIcon = () => {
 		switch (type) {
 			case "rw":
@@ -508,7 +520,7 @@ export default function KelembagaanList() {
 					</Link>
 					<FaChevronRight className="text-gray-400 text-xs" />
 					<Link
-						to={`${basePath}/kelembagaan`}
+						to={desaId ? `/dashboard/kelembagaan/admin/${desaId}` : `${basePath}/kelembagaan`}
 						className="text-gray-500 hover:text-indigo-600 transition-colors"
 					>
 						Kelembagaan
@@ -523,7 +535,7 @@ export default function KelembagaanList() {
 				<div className="flex items-center space-x-4">
 					<button
 						className="flex items-center justify-center w-12 h-12 bg-white hover:bg-blue-600 rounded-xl shadow-md hover:text-white transition-all duration-200 hover:shadow-lg"
-						onClick={() => navigate(`${basePath}/kelembagaan`)}
+						onClick={handleBack}
 						title="Kembali"
 					>
 						<FaArrowLeft className="w-5 h-5" />

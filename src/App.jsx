@@ -332,7 +332,7 @@ function App() {
 					<Route
 						path="/dashboard"
 						element={
-							<ProtectedRoute allowedRoles={['superadmin', 'admin', 'pegawai', 'kepala_dinas', 'kepala_bidang', 'sekretaris_dinas', 'sarana_prasarana', 'kekayaan_keuangan']}>
+							<ProtectedRoute allowedRoles={['superadmin', 'admin', 'pegawai', 'kepala_dinas', 'kepala_bidang', 'sekretaris_dinas', 'sarana_prasarana', 'kekayaan_keuangan','pemberdayaan_masyarakat']}>
 								<MainLayout />
 							</ProtectedRoute>
 						}
@@ -344,6 +344,7 @@ function App() {
 				<Route path="bumdes" element={<BumdesApp />} />
 				<Route path="kelembagaan" element={<Kelembagaan />} />
 				<Route path="kelembagaan/admin/:desaId" element={<AdminKelembagaanDetailPage />} />
+				<Route path="kelembagaan/admin/:desaId/:type" element={<KelembagaanList />} />
 				<Route path="kelembagaan/:type" element={<KelembagaanList />} />
 				<Route path="kelembagaan/:type/:id" element={<KelembagaanDetailPage />} />
 				<Route path="perjalanan-dinas" element={<PerjalananDinas />} />					{/* Admin Only Routes (Super Admin & Admin) */}
@@ -456,7 +457,7 @@ function App() {
 					<Route
 						path="/core-dashboard"
 						element={
-							<RoleProtectedRoute allowedRoles={['superadmin', 'kepala_dinas', 'sekretaris_dinas', 'kepala_bidang', 'pegawai', 'sarana_prasarana', 'kekayaan_keuangan', ]}>
+							<RoleProtectedRoute allowedRoles={['superadmin', 'kepala_dinas', 'sekretaris_dinas', 'kepala_bidang', 'pegawai', 'sarana_prasarana', 'kekayaan_keuangan', 'pemberdayaan_masyarakat']}>
 								<CoreDashboardLayout />
 							</RoleProtectedRoute>
 						}

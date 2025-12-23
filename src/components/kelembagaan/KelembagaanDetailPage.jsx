@@ -96,7 +96,7 @@ export default function KelembagaanDetailPage({ isAdminView: propIsAdminView }) 
 	const aktivitasLogRef = useRef(null);
 
 	// Auto-detect admin mode
-	const isAdmin = propIsAdminView ?? ['superadmin', 'pemberdayaan_masyarakat', 'pmd'].includes(user?.role);
+	const isAdmin = propIsAdminView ?? ['superadmin', 'pemberdayaan_masyarakat'].includes(user?.role);
 	const targetDesaId = routeDesaId || user?.desa_id;
 
 	const [detail, setDetail] = useState(null);

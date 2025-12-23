@@ -114,6 +114,38 @@ export const getPKKForDesa = () => {
 };
 
 // ================================
+// SUPERADMIN KELEMBAGAAN CREATION
+// ================================
+
+/**
+ * Create Karang Taruna by superadmin for specific desa
+ */
+export const createKarangTarunaByAdmin = (desaId, data) => {
+	return api.post(`/admin/desa/${desaId}/karang-taruna`, data);
+};
+
+/**
+ * Create LPM by superadmin for specific desa
+ */
+export const createLpmByAdmin = (desaId, data) => {
+	return api.post(`/admin/desa/${desaId}/lpm`, data);
+};
+
+/**
+ * Create Satlinmas by superadmin for specific desa
+ */
+export const createSatlinmasByAdmin = (desaId, data) => {
+	return api.post(`/admin/desa/${desaId}/satlinmas`, data);
+};
+
+/**
+ * Create PKK by superadmin for specific desa
+ */
+export const createPkkByAdmin = (desaId, data) => {
+	return api.post(`/admin/desa/${desaId}/pkk`, data);
+};
+
+// ================================
 // GENERAL KELEMBAGAAN ENDPOINTS
 // ================================
 

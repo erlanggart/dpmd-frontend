@@ -1,9 +1,7 @@
 import api from "../api";
 import {
 	makeApiCall,
-	
 	getAdminParams,
-	
 } from "../utils/apiHelpers";
 
 // RW
@@ -74,17 +72,15 @@ export const getKelembagaanSummary = () => api.get("/desa/kelembagaan/summary");
 export const getKelembagaanDetailedSummary = () =>
 	api.get("/desa/kelembagaan/detailed-summary");
 
-// Toggle Status Functions - menggunakan endpoint khusus toggle
+// Toggle Status Functions - menggunakan endpoint yang sesuai dengan role
 export const toggleKelembagaanStatus = (type, id, status) => {
-	// Toggle operations always use desa endpoint (even for admin users)
-	const endpoint = `/desa/${type}/${id}/toggle-status`;
+	const endpoint = `/kelembagaan/${type}/${id}/toggle-status`;
 	const params = getAdminParams();
 	return api.put(endpoint, { status_kelembagaan: status }, { params });
 };
 
 export const toggleKelembagaanVerification = (type, id, status) => {
-	// Toggle operations always use desa endpoint (even for admin users)
-	const endpoint = `/desa/${type}/${id}/toggle-verification`;
+	const endpoint = `/kelembagaan/${type}/${id}/toggle-verification`;
 	const params = getAdminParams();
 	return api.put(endpoint, { status_verifikasi: status }, { params });
 };

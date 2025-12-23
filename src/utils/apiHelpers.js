@@ -49,7 +49,8 @@ export const getDesaIdFromUrl = () => {
 	const path = window.location.pathname;
 	// Try different patterns for admin routes
 	const patterns = [
-		/\/kelembagaan\/admin\/([^/]+)/, // /kelembagaan/admin/{desaId}
+		/\/dashboard\/kelembagaan\/admin\/([^/]+)/, // /dashboard/kelembagaan/admin/{desaId} or /dashboard/kelembagaan/admin/{desaId}/{type}
+		/\/kelembagaan\/admin\/([^/]+)/, // /kelembagaan/admin/{desaId} or /kelembagaan/admin/{desaId}/{type}
 		/\/admin\/desa\/([^/]+)/, // /admin/desa/{desaId}
 		/\/dashboard\/admin\/([^/]+)/, // /dashboard/admin/{desaId}
 	];
@@ -106,9 +107,14 @@ export const getEndpoint = (resource, operation = "list") => {
 			case "show":
 			case "update":
 			case "delete":
+			case "toggle": // Add toggle to use kelembagaan prefix
 				// Admin endpoints: /admin/{resource}
 				return `/${prefix}/${resource}`;
 			case "create":
+				// For kelembagaan resources, use /kelembagaan even for create
+				if (kelembagaanResources.includes(baseResource)) {
+					return `/kelembagaan/${resource}`;
+				}
 				// Create operations usually go through desa endpoints even for admin
 				// Exception: pengurus sub-resources should still use admin for admin users
 				if (baseResource === "pengurus" && resource.includes("/")) {
