@@ -149,7 +149,7 @@ const sendSubscriptionToServer = async (subscription) => {
     };
     console.log('[Push] Payload:', { ...payload, subscription: 'subscription_object' });
     
-    const response = await api.post('/push-notifications/subscribe', payload);
+    const response = await api.post('/push-notification/subscribe', payload);
 
     console.log('[Push] Server response:', response.data);
     return response.data;
@@ -163,7 +163,7 @@ const sendSubscriptionToServer = async (subscription) => {
 // Remove subscription from server
 const removeSubscriptionFromServer = async (subscription) => {
   try {
-    const response = await api.post('/push-notifications/unsubscribe', {
+    const response = await api.post('/push-notification/unsubscribe', {
       subscription: JSON.stringify(subscription)
     });
 
