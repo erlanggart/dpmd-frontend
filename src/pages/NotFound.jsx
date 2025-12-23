@@ -71,7 +71,7 @@ export default function NotFound() {
 							<span>Kembali</span>
 						</button>
 						<button
-							onClick={() => navigate("/")}
+							onClick={() => navigate("/dashboard")}
 							className="group px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-medium transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg hover:shadow-xl"
 						>
 							<LuHouse className="w-5 h-5" />

@@ -50,7 +50,7 @@ export default function Forbidden() {
 							<span>Kembali</span>
 						</button>
 						<button
-							onClick={() => navigate("/")}
+							onClick={() => navigate("/dashboard")}
 							className="group px-6 py-3 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white rounded-xl font-medium transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg hover:shadow-xl"
 						>
 							<LuHouse className="w-5 h-5" />

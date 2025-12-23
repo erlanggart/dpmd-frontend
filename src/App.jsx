@@ -49,6 +49,7 @@ const BeritaManagement = lazy(() =>
 const BumdesApp = lazy(() => import("./pages/sarpras/Bumdes-app"));
 const Kelembagaan = lazy(() => import("./pages/PMD/Kelembagaan"));
 const PerjalananDinas = lazy(() => import("./pages/sekretariat/perjadin"));
+const CetakBonBensin = lazy(() => import("./pages/CetakBonBensin"));
 const DesaLayout = lazy(() => import("./layouts/DesaLayout"));
 const DesaDashboard = lazy(() => import("./pages/desa/DesaDashboardPage"));
 const BumdesDesaPage = lazy(() =>
@@ -349,7 +350,8 @@ function App() {
 				<Route path="kelembagaan/admin/:desaId/:type" element={<KelembagaanList />} />
 				<Route path="kelembagaan/:type" element={<KelembagaanList />} />
 				<Route path="kelembagaan/:type/:id" element={<KelembagaanDetailPage />} />
-				<Route path="perjalanan-dinas" element={<PerjalananDinas />} />					{/* Admin Only Routes (Super Admin & Admin) */}
+				<Route path="perjalanan-dinas" element={<PerjalananDinas />} />
+								{/* Admin Only Routes (Super Admin & Admin) */}
 						<Route element={<RoleProtectedRoute allowedRoles={['superadmin', 'admin', 'sarana_prasarana', 'kekayaan_keuangan','sekretariat']} />}>
 							<Route path="hero-gallery" element={<HeroGalleryManagement />} />
 							<Route path="berita" element={<BeritaManagement />} />
@@ -451,6 +453,7 @@ function App() {
 						<Route path="dashboard" element={<SekretarisDinasDashboard />} />
 						<Route path="disposisi" element={<DisposisiSurat />} />
 						<Route path="disposisi/:id" element={<DisposisiDetail />} />
+						<Route path="etanol" element={<CetakBonBensin />} />	
 					</Route>
 
 					{/* Rute Core Dashboard - DPMD Internal Only */}

@@ -1,7 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import api from "../services/api";
-
-const EditModeContext = createContext();
+import { EditModeContext } from "./EditModeContext";
 
 /**
  * Context untuk mengatur mode edit kelembagaan dan pengurus
@@ -48,12 +47,10 @@ export const EditModeProvider = ({ children }) => {
 			}
 		} catch (error) {
 			console.error("Error updating edit mode:", error);
-			console.error("Error response:", error.response?.data);
-			// Re-throw error with more detail for SweetAlert
-			const errorMessage = error.response?.data?.message || error.message || 'Terjadi kesalahan saat mengubah mode edit';
-			const errorDetail = error.response?.data?.debug ? JSON.stringify(error.response.data.debug) : '';
-			
-			throw new Error(errorMessage + (errorDetail ? '\n\nDebug: ' + errorDetail : ''));
+			// If API fails, still update locally
+			const newValue = !isEditMode;
+			setIsEditMode(newValue);
+			localStorage.setItem("kelembagaan_edit_mode", newValue.toString());
 		}
 	};
 
@@ -104,12 +101,4 @@ export const EditModeProvider = ({ children }) => {
 			{children}
 		</EditModeContext.Provider>
 	);
-};
-
-export const useEditMode = () => {
-	const context = useContext(EditModeContext);
-	if (!context) {
-		throw new Error("useEditMode must be used within EditModeProvider");
-	}
-	return context;
 };
