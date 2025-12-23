@@ -335,34 +335,10 @@ const LoginPage = () => {
 			// Save token and user using context
 			login(newUser, null, expressToken); // No Laravel token
 
-			// Auto-subscribe to push notifications after successful login
-			// TEMPORARILY DISABLED - Push notifications feature not yet implemented
-			/*
-			try {
-				console.log('🔔 Auto-subscribing to push notifications...');
-				const subscription = await subscribeToPushNotifications();
-				if (subscription) {
-					console.log('✅ Push notification subscription successful');
-					toast.success('Notifikasi aktif! Anda akan menerima update disposisi.', {
-						duration: 3000,
-						icon: '🔔'
-					});
-				}
-			} catch (notifError) {
-				console.error('Push notification subscription failed:', notifError);
-				// Don't block login if notification fails
-				toast('⚠️ Notifikasi gagal diaktifkan. Aktifkan manual di Settings.', {
-					duration: 4000,
-					icon: '⚠️'
-				});
-			}
-			*/
+			// Note: Push notification permission akan diminta via toggle button di dashboard
+			// Tidak auto-request saat login untuk UX yang lebih baik
 
-			// Debug: Log user role
-			console.log('Login - User role:', newUser.role);
-			console.log('Login - Role type:', typeof newUser.role);
-
-			// Routing based on user role (single role only)
+			// Navigate based on role
 			if (newUser.role === "desa") {
 				navigate("/desa/dashboard");
 			} else if (newUser.role === "kecamatan") {
