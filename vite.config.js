@@ -14,8 +14,7 @@ export default defineConfig({
 			includeAssets: ['favicon.ico', 'robots.txt', 'logo-bogor.png'],
 			workbox: {
 				globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,jpeg,woff,woff2}'],
-				// Import custom push notification handler AFTER workbox code
-				importScripts: ['sw-custom.js'],
+				// Custom SW will be injected by inject-custom-sw.js script
 				runtimeCaching: [
 					{
 						urlPattern: /^https:\/\/api\.dpmdbogorkab\.id\/api\/.*/i,

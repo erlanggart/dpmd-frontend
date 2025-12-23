@@ -145,7 +145,7 @@ const sendSubscriptionToServer = async (subscription) => {
     
     const payload = {
       user_id: user.id,
-      subscription: JSON.stringify(subscription)
+      subscription: subscription
     };
     console.log('[Push] Payload:', { ...payload, subscription: 'subscription_object' });
     
