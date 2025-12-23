@@ -41,8 +41,7 @@ export const registerServiceWorker = async () => {
 
     // Vite PWA generates sw.js automatically in dist/
     const registration = await navigator.serviceWorker.register('/sw.js', {
-      scope: '/',
-      type: 'module'
+      scope: '/'
     });
 
     console.log('Service Worker registered:', registration);
