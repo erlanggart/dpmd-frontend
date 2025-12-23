@@ -12,8 +12,7 @@ import { Toaster, toast } from "react-hot-toast";
 import { useAuth } from "./context/AuthContext";
 import { useThemeColor } from "./hooks/useThemeColor";
 import { DataCacheProvider } from "./context/DataCacheContext";
-import { registerServiceWorker } from "./utils/pushNotifications";
-import PushNotificationInitializer from "./components/PushNotificationInitializer";
+import { registerServiceWorker, subscribeToPushNotifications } from "./utils/pushNotifications";
 
 // Halaman utama di-import langsung untuk performa awal yang lebih cepat
 import LoginPage from "./pages/LoginPage";
@@ -259,26 +258,92 @@ const ThemeColorWrapper = ({ children }) => {
 			try {
 				// Register service worker
 				await registerServiceWorker();
-				// console.log('PWA Service Worker registered');
+				console.log('✅ [App] PWA Service Worker registered');
+
+				// Message handler function
+				const handleServiceWorkerMessage = (event) => {
+					console.log('[App] 📨 Message from SW:', event.data);
+					
+					// Handle push notification received (from SW push event)
+					if (event.data && event.data.type === 'PUSH_NOTIFICATION_RECEIVED') {
+						const notifData = event.data.payload;
+						console.log('[App] 🔔 Showing popup for:', notifData);
+						
+						// Show toast notification popup on screen
+						toast.success(
+							<div className="flex flex-col gap-1">
+								<div className="font-bold">{notifData.title || 'Notifikasi Baru'}</div>
+								<div className="text-sm">{notifData.body || 'Anda memiliki notifikasi baru'}</div>
+							</div>,
+							{
+								duration: 6000,
+								icon: '🔔',
+								style: {
+									background: '#1e40af',
+									color: '#fff',
+									maxWidth: '450px',
+									padding: '16px'
+								}
+							}
+						);
+						
+						// Trigger custom event untuk refresh data tanpa reload
+						window.dispatchEvent(new CustomEvent('newNotification', {
+							detail: notifData
+						}));
+						console.log('✅ [App] Notification popup shown & event dispatched');
+						
+						// Auto-reload current page setelah 2 detik (beri waktu user lihat toast)
+						setTimeout(() => {
+							console.log('🔄 [App] Auto-reloading page after notification...');
+							window.location.reload();
+						}, 2000);
+					}
+					
+					// Handle notification click navigation
+					if (event.data && event.data.type === 'NOTIFICATION_CLICK_NAVIGATE') {
+						const { url } = event.data;
+						console.log('📍 Navigating from notification click:', url);
+						
+						if (url) {
+							window.location.href = url;
+						}
+					}
+					
+					// Legacy handler for backward compatibility
+					if (event.data && event.data.type === 'NEW_NOTIFICATION') {
+						const notifData = event.data.payload;
+						console.log('[App] 🔔 Legacy notification handler');
+						
+						toast.success(
+							<div className="flex flex-col gap-1">
+								<div className="font-bold">{notifData.title || 'Notifikasi Baru'}</div>
+								<div className="text-sm">{notifData.body || 'Anda memiliki notifikasi baru'}</div>
+							</div>,
+							{
+								duration: 5000,
+								icon: '🔔',
+								style: {
+									background: '#1e40af',
+									color: '#fff',
+									maxWidth: '400px'
+								}
+							}
+						);
+						
+						window.dispatchEvent(new CustomEvent('newNotification', {
+							detail: notifData
+						}));
+					}
+				};
 
 				// Listen for messages from service worker (untuk auto-refresh data)
 				if ('serviceWorker' in navigator) {
-					navigator.serviceWorker.addEventListener('message', (event) => {
-						console.log('[App] Message from SW:', event.data);
-						
-						if (event.data && event.data.type === 'NEW_NOTIFICATION') {
-							// Trigger custom event untuk refresh data tanpa reload
-							window.dispatchEvent(new CustomEvent('newNotification', {
-								detail: event.data.payload
-							}));
-							// console.log('🔔 New notification event dispatched - UI will auto-refresh');
-						}
-					});
+					navigator.serviceWorker.addEventListener('message', handleServiceWorkerMessage);
+					console.log('✅ [App] Service Worker message listener attached');
 				}
 
 				// Auto-initialize push notifications for logged in users
-				// TEMPORARILY DISABLED - Push notifications feature not yet implemented
-				/*
 				if (user && localStorage.getItem('expressToken')) {
 					// Wait a bit for SW to be ready
 					setTimeout(async () => {
@@ -298,7 +363,6 @@ const ThemeColorWrapper = ({ children }) => {
 						}
 					}, 1000);
 				}
-				*/
 			} catch (error) {
 				console.error('Error initializing PWA:', error);
 			}
@@ -346,7 +410,9 @@ function App() {
 				<Route path="kelembagaan/admin/:desaId" element={<AdminKelembagaanDetailPage />} />
 				<Route path="kelembagaan/:type" element={<KelembagaanList />} />
 				<Route path="kelembagaan/:type/:id" element={<KelembagaanDetailPage />} />
-				<Route path="perjalanan-dinas" element={<PerjalananDinas />} />					{/* Admin Only Routes (Super Admin & Admin) */}
+				<Route path="perjalanan-dinas" element={<PerjalananDinas />} />
+					
+					{/* Admin Only Routes (Super Admin & Admin) */}
 						<Route element={<RoleProtectedRoute allowedRoles={['superadmin', 'admin', 'sarana_prasarana', 'kekayaan_keuangan','sekretariat']} />}>
 							<Route path="hero-gallery" element={<HeroGalleryManagement />} />
 							<Route path="berita" element={<BeritaManagement />} />
@@ -517,7 +583,6 @@ function App() {
 					},
 				}}
 			/>
-			<PushNotificationInitializer />
 			</ThemeColorWrapper>
 			</DataCacheProvider>
 		</Router>

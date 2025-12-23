@@ -134,6 +134,8 @@ export default function DisposisiSurat() {
     setSubmitting(true);
 
     try {
+      console.log('📤 Submitting surat data:', formData);
+      
       // Step 1: Create surat masuk
       const suratResponse = await api.post('/surat-masuk', formData);
       const suratId = suratResponse.data.data.id;
@@ -155,7 +157,8 @@ export default function DisposisiSurat() {
       resetForm();
       fetchData();
     } catch (error) {
-      console.error('Error submitting surat:', error);
+      console.error('❌ Error submitting surat:', error);
+      console.error('Error details:', error.response?.data);
       toast.error(error.response?.data?.message || 'Gagal menambahkan surat masuk');
     } finally {
       setSubmitting(false);
