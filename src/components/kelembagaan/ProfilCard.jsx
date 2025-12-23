@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { useEditMode } from "../../context/EditModeContext";
 import {
 	LuMapPin,
 	LuBadgeCheck,
@@ -27,12 +28,18 @@ const ProfilCard = ({
 	produkHukumList = [],
 }) => {
 	const { user } = useAuth();
+	const { isEditMode } = useEditMode();
 	const navigate = useNavigate();
 
 	const adminDesa = user?.role === "desa";
 	const isAdmin = user?.role === "superadmin";
 	// Check admin bidang variations - consistent with AdminKelembagaanDetailWrapper
 	const adminBidang = ["pemberdayaan_masyarakat", "pmd"].includes(user?.role);
+
+	// Determine if edit button should be shown
+	// For admin (superadmin/pemberdayaan_masyarakat): always show
+	// For desa: only show if edit mode is ON
+	const showEditButton = isAdmin || adminBidang || (adminDesa && isEditMode);
 
 	const title = useMemo(() => {
 		if (type === "rt") return `RT ${profil?.nomor ?? "-"}`;
@@ -189,26 +196,28 @@ const ProfilCard = ({
 						</div>
 					</div>
 
-					{/* Action Button */}
-					<button
-						onClick={onEdit}
-						className="px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center space-x-2 font-medium"
-					>
-						<svg
-							className="w-5 h-5"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
+					{/* Action Button - Only show if conditions are met */}
+					{showEditButton && (
+						<button
+							onClick={onEdit}
+							className="px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center space-x-2 font-medium"
 						>
-							<path
-								strokeLinecap="round"
-								strokeLinejoin="round"
-								strokeWidth={2}
-								d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-							/>
-						</svg>
-						<span>Edit</span>
-					</button>
+							<svg
+								className="w-5 h-5"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									strokeLinecap="round"
+									strokeLinejoin="round"
+									strokeWidth={2}
+									d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+								/>
+							</svg>
+							<span>Edit</span>
+						</button>
+					)}
 				</div>
 
 				{/* Info Section */}

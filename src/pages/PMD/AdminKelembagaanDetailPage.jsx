@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import Swal from "sweetalert2";
 import {
 	LuArrowLeft,
 	LuBuilding2,
@@ -15,8 +16,12 @@ import {
 	LuPlus,
 	LuCircleAlert,
 	LuX,
+	LuLock,
+	LuLockOpen,
 } from "react-icons/lu";
 import { getDesaKelembagaanAll } from "../../api/kelembagaanApi";
+import { useAuth } from "../../context/AuthContext";
+import { useEditMode } from "../../context/EditModeContext";
 
 /**
  * AdminKelembagaanDetailPage - Admin PMD mengakses detail kelembagaan desa
@@ -25,6 +30,8 @@ import { getDesaKelembagaanAll } from "../../api/kelembagaanApi";
 const AdminKelembagaanDetailPage = () => {
 	const { desaId } = useParams();
 	const navigate = useNavigate();
+	const { user } = useAuth();
+	const { isEditMode, toggleEditMode } = useEditMode();
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
 	const [desaInfo, setDesaInfo] = useState(null);
@@ -37,6 +44,9 @@ const AdminKelembagaanDetailPage = () => {
 		color: "",
 	});
 	const [creatingLembaga, setCreatingLembaga] = useState(false);
+
+	// Check if user can toggle edit mode
+	const canToggleEdit = ["superadmin", "pemberdayaan_masyarakat"].includes(user?.role);
 
 	const fetchDesaKelembagaan = React.useCallback(async () => {
 		try {
@@ -145,6 +155,40 @@ const AdminKelembagaanDetailPage = () => {
 	useEffect(() => {
 		fetchDesaKelembagaan();
 	}, [fetchDesaKelembagaan]);
+
+	const handleToggleEditMode = async () => {
+		try {
+			// Show loading
+			Swal.fire({
+				title: 'Memproses...',
+				text: 'Mengubah mode edit',
+				allowOutsideClick: false,
+				allowEscapeKey: false,
+				didOpen: () => {
+					Swal.showLoading();
+				}
+			});
+
+			await toggleEditMode();
+
+			// Show success
+			Swal.fire({
+				icon: 'success',
+				title: 'Berhasil!',
+				text: `Mode edit ${!isEditMode ? 'diaktifkan' : 'dinonaktifkan'}`,
+				timer: 2000,
+				showConfirmButton: false
+			});
+		} catch (error) {
+			console.error('Error toggling edit mode:', error);
+			Swal.fire({
+				icon: 'error',
+				title: 'Gagal!',
+				text: error.response?.data?.message || error.message || 'Gagal mengubah mode edit. Silakan coba lagi.',
+				confirmButtonColor: '#3b82f6'
+			});
+		}
+	};
 
 	const handleKelembagaanClick = (item) => {
 		// Untuk collection (RW, Posyandu), selalu bisa diklik - navigate ke list page
@@ -283,37 +327,109 @@ const AdminKelembagaanDetailPage = () => {
 			<div className="">
 				{/* Header dengan Breadcrumb */}
 				<div className="mb-6">
-					<div className="flex items-center space-x-2 text-sm text-gray-600 mb-4">
-						<button
-							onClick={handleBackToList}
-							className="flex items-center space-x-1 hover:text-blue-600 transition-colors"
-						>
-							<LuArrowLeft className="w-4 h-4" />
-							<span>PMD Kelembagaan</span>
-						</button>
-						<LuChevronRight className="w-4 h-4" />
-						<span className="text-gray-800 font-medium">
-							{desaInfo?.nama_desa || "Detail Desa"}
-						</span>
+<div className="flex items-center justify-between mb-4">
+				<div className="flex items-center space-x-2 text-sm text-gray-600">
+					<button
+						onClick={handleBackToList}
+						className="flex items-center space-x-1 hover:text-blue-600 transition-colors"
+					>
+						<LuArrowLeft className="w-4 h-4" />
+						<span>PMD Kelembagaan</span>
+					</button>
+					<LuChevronRight className="w-4 h-4" />
+					<span className="text-gray-800 font-medium">
+						{desaInfo?.nama_desa || "Detail Desa"}
+					</span>
+				</div>
+				
+				{/* Status Badge */}
+				<div className="flex items-center gap-2">
+					<span className="text-xs text-gray-500">Status:</span>
+					<span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
+						isEditMode 
+							? "bg-green-100 text-green-700 border border-green-300" 
+							: "bg-red-100 text-red-700 border border-red-300"
+					}`}>
+						{isEditMode ? (
+							<>
+								<LuLockOpen className="w-3 h-3" />
+								<span>Aplikasi Dibuka</span>
+							</>
+						) : (
+							<>
+								<LuLock className="w-3 h-3" />
+								<span>Aplikasi Ditutup</span>
+							</>
+						)}
+					</span>
+				</div>
 					</div>
 
 					<div className="bg-white rounded-xl shadow-sm p-6 ">
-						<div className="flex items-center space-x-4">
-							<div className="p-3 bg-blue-100 rounded-full">
-								<LuMapPin className="w-8 h-8 text-blue-600" />
+						<div className="flex items-center justify-between">
+							<div className="flex items-center space-x-4">
+								<div className="p-3 bg-blue-100 rounded-full">
+									<LuMapPin className="w-8 h-8 text-blue-600" />
+								</div>
+								<div>
+									<h1 className="text-3xl font-bold text-gray-800">
+										{desaInfo?.status_pemerintahan == 'desa' ? "Desa " : "Kelurahan"}{desaInfo?.nama}
+									</h1>
+									<p className="text-lg text-gray-600">
+										Kecamatan {desaInfo?.nama_kecamatan}
+									</p>
+									<p className="text-sm text-gray-500 capitalize">
+										Status: {desaInfo?.status_pemerintahan}
+									</p>
+								</div>
 							</div>
-							<div>
-								<h1 className="text-3xl font-bold text-gray-800">
-									{desaInfo?.status_pemerintahan == 'desa' ? "Desa " : "Kelurahan"}{desaInfo?.nama}
-								</h1>
-								<p className="text-lg text-gray-600">
-									Kecamatan {desaInfo?.nama_kecamatan}
-								</p>
-								<p className="text-sm text-gray-500 capitalize">
-									Status: {desaInfo?.status_pemerintahan}
-								</p>
-							</div>
+							
+							{/* Toggle Edit Mode Button - Only for superadmin/pemberdayaan_masyarakat */}
+							{canToggleEdit && (
+								<button
+									onClick={handleToggleEditMode}
+									className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 font-medium ${
+										isEditMode
+											? "bg-green-600 text-white hover:bg-green-700 shadow-md"
+											: "bg-gray-200 text-gray-700 hover:bg-gray-300"
+									}`}
+									title={isEditMode ? "Mode edit aktif - Klik untuk menonaktifkan" : "Mode edit nonaktif - Klik untuk mengaktifkan"}
+								>
+									{isEditMode ? (
+										<>
+											<LuLockOpen className="h-5 w-5" />
+											<span>Edit: ON</span>
+										</>
+									) : (
+										<>
+											<LuLock className="h-5 w-5" />
+											<span>Edit: OFF</span>
+										</>
+									)}
+								</button>
+							)}
 						</div>
+						
+						{/* Info message about edit mode */}
+						{canToggleEdit && (
+							<div className={`mt-4 p-3 rounded-lg border ${
+								isEditMode 
+									? "bg-green-50 border-green-200" 
+									: "bg-gray-50 border-gray-200"
+							}`}>
+								<p className="text-sm font-medium">
+									{isEditMode ? (
+										<span className="text-green-700">
+											✓ Mode Edit Aktif - Desa dapat menambah dan mengedit data kelembagaan & pengurus
+										</span>
+									) : (
+										<span className="text-gray-700">
+											⚠ Mode Edit Nonaktif - Tombol tambah dan edit tidak akan ditampilkan untuk desa
+										</span>
+									)}
+								</p>
+							</div>
+						)}
 					</div>
 				</div>
 

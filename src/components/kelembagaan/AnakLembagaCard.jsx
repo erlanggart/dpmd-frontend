@@ -13,6 +13,8 @@ import {
 } from "react-icons/lu";
 import { showWarningAlert } from "../../utils/sweetAlert";
 import RTItemContent from "./RTItemContent";
+import { useAuth } from "../../context/AuthContext";
+import { useEditMode } from "../../context/EditModeContext";
 
 const AnakLembagaCard = ({
 	list = [],
@@ -24,6 +26,16 @@ const AnakLembagaCard = ({
 	const [isAddingRT, setIsAddingRT] = useState(false);
 	const [nomorRT, setNomorRT] = useState("");
 	const [isLoading, setIsLoading] = useState(false);
+	const { user } = useAuth();
+	const { isEditMode } = useEditMode();
+
+	// Check user role
+	const isSuperAdmin = user?.role === "superadmin";
+	const isAdminBidang = user?.role === "pemberdayaan_masyarakat" || user?.role === "pmd";
+	const isUserDesa = user?.role === "desa";
+
+	// Determine if add button should show
+	const showAddButton = (isSuperAdmin || isAdminBidang) || (isUserDesa && isEditMode);
 
 	const handleAddRT = async () => {
 		if (!nomorRT.trim()) {
@@ -72,7 +84,7 @@ const AnakLembagaCard = ({
 						</div>
 					</div>
 
-					{rwId && (
+					{rwId && showAddButton && (
 						<div className="flex items-center space-x-3">
 							<button
 								onClick={() => setIsAddingRT(true)}
@@ -329,7 +341,7 @@ const AnakLembagaCard = ({
 								: "Tidak ada data anak lembaga yang tersedia saat ini."}
 						</p>
 
-						{rwId && (
+						{rwId && showAddButton && (
 							<button
 								onClick={() => setIsAddingRT(true)}
 								className="inline-flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl hover:from-emerald-600 hover:to-green-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"

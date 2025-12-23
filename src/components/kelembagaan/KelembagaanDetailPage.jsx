@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState, useRef } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { useEditMode } from "../../context/EditModeContext";
 import {
 	getRw,
 	getRt,
@@ -29,6 +30,7 @@ import ProfilCard from "./ProfilCard";
 import AnakLembagaCard from "./AnakLembagaCard";
 import AktivitasLog from "./AktivitasLog";
 import { FaArrowLeft, FaHome, FaChevronRight } from "react-icons/fa";
+import { LuLock, LuLockOpen } from "react-icons/lu";
 import {
 	showSuccessAlert,
 	showErrorAlert,
@@ -91,6 +93,7 @@ const EditModal = ({
 
 export default function KelembagaanDetailPage({ isAdminView: propIsAdminView }) {
 	const { user } = useAuth();
+	const { isEditMode } = useEditMode();
 	const { type, id, desaId: routeDesaId } = useParams();
 	const navigate = useNavigate();
 	const aktivitasLogRef = useRef(null);
@@ -431,8 +434,27 @@ export default function KelembagaanDetailPage({ isAdminView: propIsAdminView }) 
 	return (
 		<div className="min-h-full">
 			{/* Breadcrumb */}
-			<div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-4 px-4 py-3">
-				<nav className="flex items-center space-x-2 text-sm">
+			<div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-4 px-4 py-3">					<div className="flex items-center justify-between mb-2">
+						{/* Status Badge */}
+						<div></div>
+						<span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
+							isEditMode 
+								? "bg-green-100 text-green-700 border border-green-300" 
+								: "bg-red-100 text-red-700 border border-red-300"
+						}`}>
+							{isEditMode ? (
+								<>
+									<LuLockOpen className="w-3 h-3" />
+									<span>Aplikasi Dibuka</span>
+								</>
+							) : (
+								<>
+									<LuLock className="w-3 h-3" />
+									<span>Aplikasi Ditutup</span>
+								</>
+							)}
+						</span>
+					</div>				<nav className="flex items-center space-x-2 text-sm">
 					<Link
 						to={isAdmin ? "/dashboard" : "/desa/dashboard"}
 						className="flex items-center text-gray-500 hover:text-indigo-600 transition-colors"

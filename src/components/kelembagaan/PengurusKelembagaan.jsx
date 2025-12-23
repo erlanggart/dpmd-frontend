@@ -16,7 +16,7 @@ const PengurusKelembagaan = ({
 	onPengurusCountChange,
 }) => {
 	const { user } = useAuth();
-	const isSuperAdmin = user?.role === "superadmin";
+	const isSuperAdmin = ["superadmin", "pemberdayaan_masyarakat"].includes(user?.role);
 
 	const [loading, setLoading] = useState(true);
 	const [showForm, setShowForm] = useState(false);

@@ -7,6 +7,7 @@ import {
 	createPosyandu,
 } from "../../services/kelembagaan";
 import { useAuth } from "../../context/AuthContext";
+import { useEditMode } from "../../context/EditModeContext";
 import AktivitasLog from "./AktivitasLog";
 // Removed listPengurus import for performance optimization
 import { FaArrowLeft, FaHome, FaChevronRight } from "react-icons/fa";
@@ -28,6 +29,8 @@ import {
 	LuActivity,
 	LuFileText,
 	LuInfo,
+	LuLock,
+	LuLockOpen,
 } from "react-icons/lu";
 import Swal from "sweetalert2";
 
@@ -38,12 +41,21 @@ export default function KelembagaanList() {
 	const queryDesaId = searchParams.get('desaId'); // Get desaId from query params
 	const desaId = routeDesaId || queryDesaId; // Prioritize route param over query param
 	const { user } = useAuth(); // Get user for role-based navigation
+	const { isEditMode } = useEditMode();
 	const [items, setItems] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [addForm, setAddForm] = useState({ nomor: "", nama: "" });
 	const [showAddModal, setShowAddModal] = useState(false);
 	const [activeTab, setActiveTab] = useState("aktif"); // aktif | nonaktif
 	const [submitting, setSubmitting] = useState(false);
+
+	// Check user role
+	const isSuperAdmin = user?.role === "superadmin";
+	const isAdminBidang = user?.role === "pemberdayaan_masyarakat" || user?.role === "pmd";
+	const isUserDesa = user?.role === "desa";
+
+	// Determine if add button should show
+	const showAddButton = (isSuperAdmin || isAdminBidang) || (isUserDesa && isEditMode);
 
 	useEffect(() => {
 		let mounted = true;
@@ -510,24 +522,45 @@ export default function KelembagaanList() {
 		<div className="space-y-4  min-h-screen">
 			{/* Breadcrumb */}
 			<div className="bg-white p-2 rounded-md shadow-sm">
-				<nav className="flex items-center space-x-2 text-sm">
-					<Link
-						to={`${basePath}/dashboard`}
-						className="flex items-center text-gray-500 hover:text-indigo-600 transition-colors"
-					>
-						<FaHome className="mr-1" />
-						Dashboard
-					</Link>
-					<FaChevronRight className="text-gray-400 text-xs" />
-					<Link
-						to={desaId ? `/dashboard/kelembagaan/admin/${desaId}` : `${basePath}/kelembagaan`}
-						className="text-gray-500 hover:text-indigo-600 transition-colors"
-					>
-						Kelembagaan
-					</Link>
-					<FaChevronRight className="text-gray-400 text-xs" />
-					<span className="text-gray-900 font-medium">{title}</span>
-				</nav>
+				<div className="flex items-center justify-between">
+					<nav className="flex items-center space-x-2 text-sm">
+						<Link
+							to={`${basePath}/dashboard`}
+							className="flex items-center text-gray-500 hover:text-indigo-600 transition-colors"
+						>
+							<FaHome className="mr-1" />
+							Dashboard
+						</Link>
+						<FaChevronRight className="text-gray-400 text-xs" />
+						<Link
+							to={desaId ? `/dashboard/kelembagaan/admin/${desaId}` : `${basePath}/kelembagaan`}
+							className="text-gray-500 hover:text-indigo-600 transition-colors"
+						>
+							Kelembagaan
+						</Link>
+						<FaChevronRight className="text-gray-400 text-xs" />
+						<span className="text-gray-900 font-medium">{title}</span>
+					</nav>
+					
+					{/* Status Badge */}
+					<span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
+						isEditMode 
+							? "bg-green-100 text-green-700 border border-green-300" 
+							: "bg-red-100 text-red-700 border border-red-300"
+					}`}>
+						{isEditMode ? (
+							<>
+								<LuLockOpen className="w-3 h-3" />
+								<span>Dibuka</span>
+							</>
+						) : (
+							<>
+								<LuLock className="w-3 h-3" />
+								<span>Ditutup</span>
+							</>
+						)}
+					</span>
+				</div>
 			</div>
 
 			{/* Header */}
@@ -582,7 +615,7 @@ export default function KelembagaanList() {
 					</div>
 
 					{/* Add Button */}
-					{(type === "rw" || type === "posyandu") && (
+					{showAddButton && (type === "rw" || type === "posyandu") && (
 						<button
 							className="px-6 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 shadow-md hover:shadow-lg transition-all duration-200 flex items-center space-x-2"
 							onClick={() => setShowAddModal(true)}

@@ -12,6 +12,7 @@ import { Toaster, toast } from "react-hot-toast";
 import { useAuth } from "./context/AuthContext";
 import { useThemeColor } from "./hooks/useThemeColor";
 import { DataCacheProvider } from "./context/DataCacheContext";
+import { EditModeProvider } from "./context/EditModeContext";
 import { registerServiceWorker } from "./utils/pushNotifications";
 import PushNotificationInitializer from "./components/PushNotificationInitializer";
 
@@ -314,6 +315,7 @@ function App() {
 	return (
 		<Router>
 			<DataCacheProvider>
+			<EditModeProvider>
 			<ThemeColorWrapper>
 				<Suspense
 					fallback={
@@ -520,6 +522,7 @@ function App() {
 			/>
 			<PushNotificationInitializer />
 			</ThemeColorWrapper>
+			</EditModeProvider>
 			</DataCacheProvider>
 		</Router>
 	);
