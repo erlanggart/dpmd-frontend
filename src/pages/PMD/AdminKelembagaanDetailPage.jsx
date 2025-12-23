@@ -141,17 +141,16 @@ const AdminKelembagaanDetailPage = () => {
 			return;
 		}
 
-		// Untuk collection (RW, Posyandu), tidak ada navigasi khusus
-		// Karena admin view hanya bisa lihat summary di halaman ini
+		// Untuk collection (RW, Posyandu), navigate ke list page
 		if (item.isCollection && item.count > 0) {
-			// TODO: Bisa ditambahkan modal atau expand untuk show detail list
-			console.log("Collection view for", item.type, "- feature coming soon");
+			// Navigate ke KelembagaanList dengan filter desaId
+			navigate(`/dashboard/kelembagaan/${item.type}?desaId=${desaId}`);
 			return;
 		}
 
-		// Untuk single entity, navigate ke detail
+		// Untuk single entity, navigate ke detail page
 		if (!item.isCollection && item.id) {
-			navigate(`/dashboard/kelembagaan/admin/${desaId}/${item.type}/${item.id}`);
+			navigate(`/dashboard/kelembagaan/${item.type}/${item.id}`);
 		}
 	};
 

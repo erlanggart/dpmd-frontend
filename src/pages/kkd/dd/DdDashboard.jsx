@@ -1,5 +1,5 @@
 // DD Dashboard dengan Tab Navigation (5 Tabs)
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { FiDollarSign, FiMapPin, FiUsers, FiTrendingUp, FiDownload, FiUpload, FiChevronDown, FiChevronUp, FiX, FiSearch, FiFilter } from 'react-icons/fi';
 import { Activity } from 'lucide-react';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement } from 'chart.js';
@@ -29,29 +29,12 @@ const DdDashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterKecamatan, setFilterKecamatan] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
-<<<<<<< HEAD
   const [selectedStatusFromCard, setSelectedStatusFromCard] = useState('');
   const [activeTabView, setActiveTabView] = useState('statistic'); // 'statistic' or 'table'
-=======
   const [selectedStatus, setSelectedStatus] = useState(null); // Filter status dari card
->>>>>>> main
   const { getCachedData, setCachedData, isCached } = useDataCache();
 
-  useEffect(() => {
-    if (isCached(CACHE_KEY)) {
-      const cachedData = getCachedData(CACHE_KEY);
-      setDataEarmarkedT1(cachedData.data.earmarkedT1);
-      setDataEarmarkedT2(cachedData.data.earmarkedT2);
-      setDataNonEarmarkedT1(cachedData.data.nonEarmarkedT1);
-      setDataNonEarmarkedT2(cachedData.data.nonEarmarkedT2);
-      setDataInsentif(cachedData.data.insentif);
-      setLoading(false);
-    } else {
-      fetchAllData();
-    }
-  }, []);
-
-  const fetchAllData = async () => {
+  const fetchAllData = useCallback(async () => {
     setLoading(true);
     
     let et1Data = [], et2Data = [], net1Data = [], net2Data = [], insData = [];
@@ -119,7 +102,21 @@ const DdDashboard = () => {
     });
 
     setLoading(false);
-  };
+  }, [setCachedData]);
+
+  useEffect(() => {
+    if (isCached(CACHE_KEY)) {
+      const cachedData = getCachedData(CACHE_KEY);
+      setDataEarmarkedT1(cachedData.data.earmarkedT1);
+      setDataEarmarkedT2(cachedData.data.earmarkedT2);
+      setDataNonEarmarkedT1(cachedData.data.nonEarmarkedT1);
+      setDataNonEarmarkedT2(cachedData.data.nonEarmarkedT2);
+      setDataInsentif(cachedData.data.insentif);
+      setLoading(false);
+    } else {
+      fetchAllData();
+    }
+  }, [isCached, getCachedData, fetchAllData]);
 
   const getActiveData = () => {
     switch (activeTab) {
@@ -554,8 +551,6 @@ const DdDashboard = () => {
               <span>Tabel Data</span>
             </button>
           </div>
-<<<<<<< HEAD
-=======
 
           {/* Active Filters Display */}
           {(searchTerm || filterKecamatan || filterStatus) && (
@@ -675,7 +670,6 @@ const DdDashboard = () => {
             <FiDownload className="w-5 h-5 group-hover:translate-y-1 transition-transform duration-300" />
             <span className="font-medium">Export Excel</span>
           </button>
->>>>>>> main
         </div>
 
         {/* Tab Content - Statistic */}

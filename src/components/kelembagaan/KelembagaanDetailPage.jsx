@@ -524,7 +524,7 @@ export default function KelembagaanDetailPage({ isAdminView: propIsAdminView }) 
 					<AnakLembagaCard
 						list={anak}
 						label="Daftar RT"
-						onClickItem={(rt) => navigate(`/desa/kelembagaan/rt/${rt.id}`)}
+						onClickItem={(rt) => navigate(isAdmin ? `/dashboard/kelembagaan/rt/${rt.id}` : `/desa/kelembagaan/rt/${rt.id}`)}
 						onAddRT={handleAddRT}
 						rwId={detail.id}
 					/>

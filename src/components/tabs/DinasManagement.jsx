@@ -24,7 +24,11 @@ const DinasManagement = () => {
 	const fetchUsers = useCallback(async () => {
 		setLoading(true);
 		try {
-			const response = await api.get("/users");
+			const response = await api.get("/users", {
+				params: {
+					limit: 100, // Cukup untuk user dinas yang sedikit
+				},
+			});
 
 			// Filter user dengan role tingkat dinas
 			const dinasUsers = response.data.data.filter((user) =>

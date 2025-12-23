@@ -58,7 +58,11 @@ const BidangManagement = () => {
 	const fetchUsers = useCallback(async () => {
 		setLoading(true);
 		try {
-			const response = await api.get("/users");
+			const response = await api.get("/users", {
+				params: {
+					limit: 200, // Cukup untuk user bidang & pegawai
+				},
+			});
 
 			// Filter user dengan role tingkat bidang
 			const bidangUsers = response.data.data.filter((user) =>
