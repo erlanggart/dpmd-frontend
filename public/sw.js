@@ -1,19 +1,33 @@
-// Service Worker untuk PWA dengan Push Notifications
-const CACHE_NAME = 'dpmd-cache-v2';
+// Service Worker untuk PWA dengan Modern Push Notifications
+// PWA-First: Notification bekerja seperti native app (WhatsApp-style)
+
+// Detect if running in PWA mode (installed to homescreen)
+const isPWAMode = () => {
+  return self.clients.matchAll({ type: 'window' }).then(clients => {
+    return clients.some(client => {
+      return client.url.includes('?source=pwa') || 
+             client.frameType === 'top-level';
+    });
+  });
+};
+
+const CACHE_NAME = 'dpmd-cache-v3';
 const urlsToCache = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/logo-bogor.png'
+  '/logo-bogor.png',
+  '/logo-192.png',
+  '/logo-96.png'
 ];
 
 // Install event - cache assets
 self.addEventListener('install', (event) => {
-  console.log('Service Worker: Installing...');
+  console.log('✨ Service Worker: Installing...');
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('Service Worker: Caching files');
+        console.log('📦 Service Worker: Caching files');
         return cache.addAll(urlsToCache);
       })
       .then(() => self.skipWaiting())
@@ -22,13 +36,13 @@ self.addEventListener('install', (event) => {
 
 // Activate event - clean old caches
 self.addEventListener('activate', (event) => {
-  console.log('Service Worker: Activating...');
+  console.log('🔄 Service Worker: Activating...');
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cache) => {
           if (cache !== CACHE_NAME) {
-            console.log('Service Worker: Clearing old cache');
+            console.log('🗑️ Service Worker: Clearing old cache:', cache);
             return caches.delete(cache);
           }
         })
@@ -39,51 +53,68 @@ self.addEventListener('activate', (event) => {
 
 // Fetch event - serve from cache, fallback to network
 self.addEventListener('fetch', (event) => {
+  // Skip cache untuk API requests
+  if (event.request.url.includes('/api/')) {
+    return event.respondWith(fetch(event.request));
+  }
+
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
         return response || fetch(event.request);
       })
       .catch(() => {
-        // Return offline page if available
         return caches.match('/index.html');
       })
   );
 });
 
-// Push notification event
-self.addEventListener('push', (event) => {
-  console.log('[SW] Push notification received:', event);
-  console.log('[SW] Push data:', event.data ? event.data.text() : 'No data');
+// Push notification event - WhatsApp-style Native Notification for PWA
+self.addEventListener('push', async (event) => {
+  console.log('🔔 [SW] Push notification received');
+  console.log('🔔 [SW] Notification permission:', Notification.permission);
+  console.log('🔔 [SW] Event data:', event.data ? event.data.text() : 'No data');
   
+  // Check if running in PWA mode
+  const inPWA = await isPWAMode();
+  console.log('📱 [SW] Running in PWA mode:', inPWA);
+  
+  // Default notification - WhatsApp/Telegram style for mobile
   let notificationData = {
-    title: 'DPMD Bogor',
+    title: '📨 DPMD Bogor',
     body: 'Anda memiliki notifikasi baru',
-    icon: '/logo-bogor.png',
-    badge: '/logo-bogor.png',
-    image: '/logo-bogor.png',
-    vibrate: [500, 200, 500, 200, 500, 200, 500], // Vibration pattern kuat seperti WhatsApp
-    tag: 'dpmd-notification',
-    requireInteraction: true, // Notifikasi tetap sampai user klik
-    renotify: true, // Vibrate lagi jika ada notifikasi baru dengan tag sama
-    silent: false, // WAJIB false untuk heads-up notification
+    icon: '/logo-192.png',
+    badge: '/logo-96.png',
+    // Android WhatsApp vibration pattern
+    vibrate: [300, 100, 300, 100, 300, 100, 300],
+    tag: `dpmd-${Date.now()}`, // Unique tag for each notification
+    requireInteraction: true, // Stay visible until clicked
+    renotify: true, // Alert even with same tag
+    silent: false, // MUST make sound + vibrate
     timestamp: Date.now(),
+    // PWA-specific: Show on lock screen
+    visibility: 1, // VISIBILITY_PUBLIC
+    timestamp: Date.now(),
+    urgency: 'high',
+    // Show on lock screen
+    visibility: 1, // VISIBILITY_PUBLIC
     data: {
       url: '/dashboard',
-      timestamp: Date.now()
+      type: 'general'
     }
   };
 
   if (event.data) {
     try {
       const payload = event.data.json();
-      console.log('[SW] Parsed payload:', payload);
+      console.log('📨 [SW] Payload received:', payload);
+      
       notificationData = {
         title: payload.title || notificationData.title,
         body: payload.body || notificationData.body,
         icon: payload.icon || notificationData.icon,
         badge: payload.badge || notificationData.badge,
-        image: payload.image || payload.icon || notificationData.image,
+        image: payload.image,
         vibrate: payload.vibrate || notificationData.vibrate,
         tag: payload.tag || notificationData.tag,
         requireInteraction: payload.requireInteraction !== undefined ? payload.requireInteraction : true,
@@ -92,20 +123,17 @@ self.addEventListener('push', (event) => {
         timestamp: payload.timestamp || Date.now(),
         data: payload.data || notificationData.data,
         actions: payload.actions || [
-          { action: 'open', title: 'BUKA DISPOSISI' },
-          { action: 'mark_read', title: 'TANDAI DIBACA' }
+          { action: 'open', title: '📖 Buka', icon: '/logo-96.png' },
+          { action: 'close', title: '✖️ Tutup' }
         ]
       };
     } catch (e) {
-      console.error('[SW] Error parsing push payload:', e);
-      // Fallback: show simple notification with text data
+      console.error('❌ [SW] Error parsing push payload:', e);
       if (event.data) {
         notificationData.body = event.data.text();
       }
     }
   }
-
-  console.log('[SW] Showing notification:', notificationData);
 
   const promiseChain = self.registration.showNotification(
     notificationData.title,
@@ -121,89 +149,86 @@ self.addEventListener('push', (event) => {
       silent: notificationData.silent,
       timestamp: notificationData.timestamp,
       data: notificationData.data,
-      actions: notificationData.actions
+      actions: notificationData.actions,
+      // Android-specific options
+      dir: 'ltr',
+      lang: 'id-ID'
     }
   ).then(() => {
-    console.log('[SW] Notification shown successfully');
+    console.log('✅ [SW] Notification shown successfully');
+    console.log('📱 [SW] Notification akan muncul di notification drawer Android/iOS');
+    console.log('🔊 [SW] Dengan sound + vibration + pop-up di layar');
     
-    // Broadcast message to all clients to refresh data tanpa reload page
+    // Broadcast ke semua active tabs untuk trigger refresh
     return self.clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then(clients => {
+        console.log(`📢 [SW] Broadcasting to ${clients.length} client(s)`);
         clients.forEach(client => {
           client.postMessage({
-            type: 'NEW_NOTIFICATION',
-            payload: notificationData.data
+            type: 'PUSH_NOTIFICATION_RECEIVED',
+            payload: notificationData.data,
+            timestamp: Date.now()
           });
         });
       });
   }).catch(err => {
-    console.error('[SW] Error showing notification:', err);
+    console.error('❌ [SW] Error showing notification:', err);
   });
 
   event.waitUntil(promiseChain);
 });
 
-// Notification click event
+// Notification click event - Navigate to relevant page
 self.addEventListener('notificationclick', (event) => {
-  console.log('[SW] Notification clicked:', event);
-  console.log('[SW] Notification data:', event.notification.data);
-  console.log('[SW] Action:', event.action);
+  console.log('👆 [SW] Notification clicked');
+  console.log('Action:', event.action);
+  console.log('Data:', event.notification.data);
   
   event.notification.close();
 
-  // Handle mark_read action
-  if (event.action === 'mark_read') {
-    console.log('[SW] Mark read action clicked');
-    // Broadcast to app to mark as read without opening
-    event.waitUntil(
-      self.clients.matchAll({ type: 'window', includeUncontrolled: true })
-        .then(clients => {
-          clients.forEach(client => {
-            client.postMessage({
-              type: 'MARK_DISPOSISI_READ',
-              disposisi_id: event.notification.data?.disposisi_id
-            });
-          });
-        })
-    );
+  // Handle specific actions
+  if (event.action === 'close') {
+    console.log('🚫 [SW] Close action - notification dismissed');
     return;
   }
 
   // Get URL from notification data
-  const urlToOpen = event.notification.data?.url || '/dashboard';
+  const notificationData = event.notification.data || {};
+  const urlToOpen = notificationData.url || '/dashboard';
   const fullUrl = new URL(urlToOpen, self.location.origin).href;
   
-  console.log('[SW] Opening URL:', fullUrl);
-  console.log('[SW] Notification type:', event.notification.data?.type);
+  console.log('🔗 [SW] Opening URL:', fullUrl);
+  console.log('📋 [SW] Notification type:', notificationData.type);
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then((clientList) => {
-        console.log('[SW] Found', clientList.length, 'client(s)');
+        console.log(`🪟 [SW] Found ${clientList.length} client(s)`);
         
-        // Check if there's already a window open with our app
-        for (let i = 0; i < clientList.length; i++) {
-          const client = clientList[i];
-          console.log('[SW] Client URL:', client.url);
-          
-          // If same origin, navigate to the URL
+        // Find existing window with our app
+        for (const client of clientList) {
           if (client.url.startsWith(self.location.origin) && 'focus' in client) {
-            console.log('[SW] Focusing existing client and navigating');
+            console.log('✨ [SW] Focusing existing client');
             return client.focus().then(() => {
-              // Navigate the client to the disposisi detail
-              return client.navigate(fullUrl);
+              // Broadcast navigation request to client
+              client.postMessage({
+                type: 'NOTIFICATION_CLICK_NAVIGATE',
+                url: urlToOpen,
+                data: notificationData
+              });
+              return client;
             });
           }
         }
         
-        // If no window is open, open a new one
-        console.log('[SW] No existing client, opening new window');
+        // No window open, create new one
+        console.log('🆕 [SW] Opening new window');
         if (clients.openWindow) {
           return clients.openWindow(fullUrl);
         }
       })
       .catch(err => {
-        console.error('[SW] Error handling notification click:', err);
+        console.error('❌ [SW] Error handling notification click:', err);
       })
   );
 });

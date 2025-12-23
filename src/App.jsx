@@ -12,7 +12,8 @@ import { Toaster, toast } from "react-hot-toast";
 import { useAuth } from "./context/AuthContext";
 import { useThemeColor } from "./hooks/useThemeColor";
 import { DataCacheProvider } from "./context/DataCacheContext";
-import { registerServiceWorker /*, subscribeToPushNotifications */ } from "./utils/pushNotifications";
+import { registerServiceWorker } from "./utils/pushNotifications";
+import PushNotificationInitializer from "./components/PushNotificationInitializer";
 
 // Halaman utama di-import langsung untuk performa awal yang lebih cepat
 import LoginPage from "./pages/LoginPage";
@@ -330,7 +331,7 @@ function App() {
 					<Route
 						path="/dashboard"
 						element={
-							<ProtectedRoute allowedRoles={['super_admin', 'admin', 'pegawai', 'kepala_dinas', 'kepala_bidang', 'sekretaris_dinas', 'sarana_prasarana', 'kekayaan_keuangan']}>
+							<ProtectedRoute allowedRoles={['superadmin', 'admin', 'pegawai', 'kepala_dinas', 'kepala_bidang', 'sekretaris_dinas', 'sarana_prasarana', 'kekayaan_keuangan']}>
 								<MainLayout />
 							</ProtectedRoute>
 						}
@@ -345,7 +346,7 @@ function App() {
 				<Route path="kelembagaan/:type" element={<KelembagaanList />} />
 				<Route path="kelembagaan/:type/:id" element={<KelembagaanDetailPage />} />
 				<Route path="perjalanan-dinas" element={<PerjalananDinas />} />					{/* Admin Only Routes (Super Admin & Admin) */}
-						<Route element={<RoleProtectedRoute allowedRoles={['super_admin', 'admin', 'sarana_prasarana', 'kekayaan_keuangan']} />}>
+						<Route element={<RoleProtectedRoute allowedRoles={['superadmin', 'admin', 'sarana_prasarana', 'kekayaan_keuangan','sekretariat']} />}>
 							<Route path="hero-gallery" element={<HeroGalleryManagement />} />
 							<Route path="berita" element={<BeritaManagement />} />
 							<Route path="user" element={<UserManagementPage />} />
@@ -357,7 +358,7 @@ function App() {
 						</Route>
 						
 						{/* Disposisi & Settings - DPMD Staff & Admin */}
-						<Route element={<RoleProtectedRoute allowedRoles={['super_admin', 'admin', 'pegawai', 'sekretaris_dinas', 'kepala_bidang']} />}>
+						<Route element={<RoleProtectedRoute allowedRoles={['superadmin', 'admin', 'pegawai', 'sekretaris_dinas', 'kepala_bidang', 'sekretariat']} />}>
 							<Route path="disposisi" element={<DisposisiSurat />} />
 							<Route path="disposisi/:id" element={<DisposisiDetail />} />
 							<Route path="settings" element={<SettingsPage />} />
@@ -406,7 +407,7 @@ function App() {
 					<Route
 						path="/kepala-dinas"
 						element={
-							<RoleProtectedRoute allowedRoles={['super_admin', 'kepala_dinas']}>
+							<RoleProtectedRoute allowedRoles={['superadmin', 'kepala_dinas']}>
 								<KepalaDinasLayout />
 							</RoleProtectedRoute>
 						}
@@ -421,7 +422,7 @@ function App() {
 					<Route
 						path="/kepala-bidang"
 						element={
-							<RoleProtectedRoute allowedRoles={['super_admin', 'kepala_bidang']}>
+							<RoleProtectedRoute allowedRoles={['superadmin', 'kepala_bidang']}>
 								<KepalaBidangLayout />
 							</RoleProtectedRoute>
 						}
@@ -436,7 +437,7 @@ function App() {
 					<Route
 						path="/sekretaris-dinas"
 						element={
-							<RoleProtectedRoute allowedRoles={['super_admin', 'sekretaris_dinas']}>
+							<RoleProtectedRoute allowedRoles={['superadmin', 'sekretaris_dinas']}>
 								<SekretarisDinasLayout />
 							</RoleProtectedRoute>
 						}
@@ -453,7 +454,7 @@ function App() {
 					<Route
 						path="/core-dashboard"
 						element={
-							<RoleProtectedRoute allowedRoles={['super_admin', 'kepala_dinas', 'sekretaris_dinas', 'kepala_bidang', 'pegawai', 'sarana_prasarana', 'kekayaan_keuangan', ]}>
+							<RoleProtectedRoute allowedRoles={['superadmin', 'kepala_dinas', 'sekretaris_dinas', 'kepala_bidang', 'pegawai', 'sarana_prasarana', 'kekayaan_keuangan', ]}>
 								<CoreDashboardLayout />
 							</RoleProtectedRoute>
 						}
@@ -514,6 +515,7 @@ function App() {
 					},
 				}}
 			/>
+			<PushNotificationInitializer />
 			</ThemeColorWrapper>
 			</DataCacheProvider>
 		</Router>
