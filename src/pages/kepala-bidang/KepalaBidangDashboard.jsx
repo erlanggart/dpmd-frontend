@@ -5,18 +5,41 @@ import {
   FileText, 
   Clock, 
   CheckCircle, 
-  AlertCircle,
+  Send,
+  Mail,
+  Inbox,
   TrendingUp,
-  Calendar
+  Activity,
+  Briefcase,
+  Users
 } from 'lucide-react';
 import api from '../../api';
 import { toast } from 'react-hot-toast';
+import MobileHeader from '../../components/mobile/MobileHeader';
+import ServiceGrid from '../../components/mobile/ServiceGrid';
+import InfoCard from '../../components/mobile/InfoCard';
+import SectionHeader from '../../components/mobile/SectionHeader';
+import ActivityCard from '../../components/mobile/ActivityCard';
+
+// Import Lottie animations
+import inboxAnim from '../../assets/lottie/inbox.json';
+import userAnim from '../../assets/lottie/user.json';
 
 const KepalaBidangDashboard = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [statistik, setStatistik] = useState(null);
   const [recentDisposisi, setRecentDisposisi] = useState([]);
+  const [user, setUser] = useState(JSON.parse(localStorage.getItem('user') || '{}'));
+
+  useEffect(() => {
+    const handleProfileUpdate = () => {
+      const updatedUser = JSON.parse(localStorage.getItem('user') || '{}');
+      setUser(updatedUser);
+    };
+    window.addEventListener('userProfileUpdated', handleProfileUpdate);
+    return () => window.removeEventListener('userProfileUpdated', handleProfileUpdate);
+  }, []);
 
   useEffect(() => {
     fetchDashboardData();
@@ -62,186 +85,183 @@ const KepalaBidangDashboard = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-4 border-white border-t-transparent mx-auto mb-4"></div>
+          <p className="text-white font-semibold text-lg">Memuat Dashboard...</p>
+        </div>
       </div>
     );
   }
 
+  // Quick Actions Menu
+  const quickActions = [
+    {
+      lottieAnimation: inboxAnim,
+      label: 'Disposisi Masuk',
+      color: 'blue',
+      badge: statistik?.masuk?.pending || 0,
+      onClick: () => navigate('/kepala-bidang/disposisi')
+    },
+    {
+      icon: Briefcase,
+      label: 'Perjalanan Dinas',
+      color: 'purple',
+      onClick: () => navigate('/kepala-bidang/perjadin')
+    },
+    {
+      lottieAnimation: userAnim,
+      label: 'Pegawai',
+      color: 'green',
+      onClick: () => navigate('/kepala-bidang/pegawai')
+    },
+    {
+      icon: Activity,
+      label: 'Dashboard Utama',
+      color: 'orange',
+      onClick: () => navigate('/core-dashboard/dashboard')
+    }
+  ];
+
   return (
-    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg shadow-lg p-4 sm:p-6 text-white">
-        <h2 className="text-xl sm:text-2xl font-bold mb-2">Selamat Datang, Kepala Bidang</h2>
-        <p className="text-blue-100">DPMD Kabupaten Bogor</p>
-        <p className="text-sm text-blue-200 mt-1">
-          {new Date().toLocaleDateString('id-ID', { 
-            weekday: 'long', 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric' 
-          })}
-        </p>
-      </div>
+    <div className="min-h-screen bg-gray-50 pb-20">
+      {/* Mobile Header - GoJek Style */}
+      <MobileHeader
+        userName={user.name || 'Kepala Bidang'}
+        userRole="Kepala Bidang DPMD"
+        greeting="Selamat Datang"
+        gradient="from-blue-600 via-blue-700 to-blue-800"
+        notificationCount={statistik?.masuk?.pending || 0}
+        onNotificationClick={() => navigate('/kepala-bidang/notifikasi')}
+        onSettingsClick={() => navigate('/kepala-bidang/profil')}
+        avatar={user.avatar ? `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://127.0.0.1:3001'}${user.avatar}` : null}
+      />
 
-      {/* Statistik Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-yellow-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-500 text-sm font-medium">Disposisi Pending</p>
-              <p className="text-3xl font-bold text-gray-900 mt-2">
-                {statistik?.masuk?.pending || 0}
-              </p>
-            </div>
-            <div className="bg-yellow-100 p-3 rounded-full">
-              <Clock className="text-yellow-600" size={24} />
-            </div>
+      {/* Main Content */}
+      <div className="px-4 -mt-4">
+        {/* Quick Actions Section */}
+        <div className="bg-white rounded-3xl shadow-lg p-5 mb-5">
+          <SectionHeader 
+            title="Menu Utama" 
+            subtitle="Akses cepat ke fitur utama"
+            icon={Mail}
+          />
+          <ServiceGrid services={quickActions} columns={4} />
+        </div>
+
+        {/* Summary Stats Section */}
+        <div className="mb-5">
+          <SectionHeader 
+            title="Statistik Disposisi" 
+            subtitle="Ringkasan surat masuk"
+            icon={Activity}
+          />
+          <div className="grid grid-cols-2 gap-3">
+            <InfoCard
+              icon={Clock}
+              title="Pending"
+              value={statistik?.masuk?.pending || 0}
+              color="yellow"
+              badge={statistik?.masuk?.pending > 5 ? '!' : null}
+              onClick={() => navigate('/kepala-bidang/disposisi?filter=pending')}
+            />
+            <InfoCard
+              icon={TrendingUp}
+              title="Diproses"
+              value={(statistik?.masuk?.dibaca || 0) + (statistik?.masuk?.proses || 0)}
+              color="blue"
+            />
+            <InfoCard
+              icon={CheckCircle}
+              title="Selesai"
+              value={statistik?.masuk?.selesai || 0}
+              color="green"
+              trend="up"
+              trendValue="+18%"
+            />
+            <InfoCard
+              icon={Send}
+              title="Diteruskan"
+              value={statistik?.keluar?.total || 0}
+              color="purple"
+            />
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-blue-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-500 text-sm font-medium">Sedang Diproses</p>
-              <p className="text-3xl font-bold text-gray-900 mt-2">
-                {(statistik?.masuk?.dibaca || 0) + (statistik?.masuk?.proses || 0)}
-              </p>
-            </div>
-            <div className="bg-blue-100 p-3 rounded-full">
-              <TrendingUp className="text-blue-600" size={24} />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-green-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-500 text-sm font-medium">Selesai</p>
-              <p className="text-3xl font-bold text-gray-900 mt-2">
-                {statistik?.masuk?.selesai || 0}
-              </p>
-            </div>
-            <div className="bg-green-100 p-3 rounded-full">
-              <CheckCircle className="text-green-600" size={24} />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-gray-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-500 text-sm font-medium">Total Disposisi</p>
-              <p className="text-3xl font-bold text-gray-900 mt-2">
-                {statistik?.masuk?.total || 0}
-              </p>
-            </div>
-            <div className="bg-gray-100 p-3 rounded-full">
-              <FileText className="text-gray-600" size={24} />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
-        <button
-          onClick={() => navigate('/kepala-bidang/disposisi')}
-          className="bg-white rounded-lg shadow-sm p-4 sm:p-6 hover:shadow-md transition-shadow text-left">
-          <div className="flex items-center gap-4">
-            <div className="bg-blue-100 p-3 rounded-full">
-              <FileText className="text-blue-600" size={24} />
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900">Lihat Disposisi</h3>
-              <p className="text-sm text-gray-500">Kelola surat masuk</p>
-            </div>
-          </div>
-        </button>
-
-        <button
-          onClick={() => navigate('/core-dashboard/dashboard')}
-          className="bg-white rounded-lg shadow-sm p-4 sm:p-6 hover:shadow-md transition-shadow text-left">
-          <div className="flex items-center gap-4">
-            <div className="bg-green-100 p-3 rounded-full">
-              <TrendingUp className="text-green-600" size={24} />
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900">Core Dashboard</h3>
-              <p className="text-sm text-gray-500">Statistik & laporan</p>
-            </div>
-          </div>
-        </button>
-
-        <button
-          onClick={() => navigate('/kepala-bidang/disposisi?filter=pending')}
-          className="bg-white rounded-lg shadow-sm p-4 sm:p-6 hover:shadow-md transition-shadow text-left"
-        >
-          <div className="flex items-center gap-4">
-            <div className="bg-yellow-100 p-3 rounded-full">
-              <AlertCircle className="text-yellow-600" size={24} />
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900">Pending Action</h3>
-              <p className="text-sm text-gray-500">Butuh tindakan segera</p>
-            </div>
-          </div>
-        </button>
-      </div>
-
-      {/* Recent Disposisi */}
-      <div className="bg-white rounded-lg shadow-sm">
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-bold text-gray-900">Disposisi Terbaru</h3>
-            <button
-              onClick={() => navigate('/kepala-bidang/disposisi')}
-              className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-            >
-              Lihat Semua →
-            </button>
-          </div>
-        </div>
-        <div className="divide-y divide-gray-200">
+        {/* Recent Activities */}
+        <div className="mb-5">
+          <SectionHeader 
+            title="Disposisi Terbaru" 
+            subtitle="Surat yang perlu ditindaklanjuti"
+            icon={FileText}
+            actionText="Lihat Semua"
+            onActionClick={() => navigate('/kepala-bidang/disposisi')}
+          />
+          
           {recentDisposisi.length === 0 ? (
-            <div className="p-12 text-center">
-              <FileText className="mx-auto text-gray-400 mb-4" size={48} />
-              <p className="text-gray-500">Tidak ada disposisi terbaru</p>
+            <div className="bg-white rounded-2xl p-12 text-center">
+              <FileText className="mx-auto text-gray-300 mb-4" size={48} />
+              <p className="text-gray-400 font-medium">Tidak ada disposisi terbaru</p>
             </div>
           ) : (
-            recentDisposisi.map((disposisi) => (
-              <div
-                key={disposisi.id}
-                className="p-6 hover:bg-gray-50 cursor-pointer transition-colors"
-                onClick={() => navigate(`/kepala-bidang/disposisi/${disposisi.id}`)}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusBadge(disposisi.status)}`}>
-                        {disposisi.status}
+            <div className="space-y-3">
+              {recentDisposisi.slice(0, 5).map((disposisi) => (
+                <ActivityCard
+                  key={disposisi.id}
+                  icon={Mail}
+                  title={disposisi.surat?.perihal || 'Tanpa Perihal'}
+                  subtitle={`Dari: ${disposisi.dari_user?.name || 'Unknown'}`}
+                  time={formatTanggal(disposisi.tanggal_disposisi)}
+                  status={disposisi.status === 'pending' ? 'pending' : 
+                          disposisi.status === 'selesai' ? 'success' : 'info'}
+                  onClick={() => navigate(`/kepala-bidang/disposisi/${disposisi.id}`)}
+                  badge={disposisi.status === 'pending' ? 1 : null}
+                  rightContent={
+                    disposisi.instruksi && (
+                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-medium">
+                        {disposisi.instruksi}
                       </span>
-                      {disposisi.instruksi && (
-                        <span className="px-2 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-800">
-                          {disposisi.instruksi}
-                        </span>
-                      )}
-                    </div>
-                    <h4 className="font-semibold text-gray-900 mb-1">
-                      {disposisi.surat?.perihal || 'Tanpa Perihal'}
-                    </h4>
-                    <p className="text-sm text-gray-600 mb-1">
-                      Dari: <span className="font-medium">{disposisi.dari_user?.name || 'Unknown'}</span>
-                    </p>
-                    <p className="text-xs text-gray-500 flex items-center gap-1">
-                      <Calendar size={14} />
-                      {formatTanggal(disposisi.tanggal_disposisi)}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ))
+                    )
+                  }
+                />
+              ))}
+            </div>
           )}
+        </div>
+
+        {/* Quick Stats Cards */}
+        <div className="mb-5">
+          <SectionHeader 
+            title="Statistik Bulanan" 
+            subtitle="Kinerja bulan ini"
+            icon={TrendingUp}
+          />
+          <div className="space-y-3">
+            <InfoCard
+              icon={Inbox}
+              title="Total Masuk Bulan Ini"
+              value={statistik?.masuk?.total || 0}
+              subtitle="Semua status disposisi masuk"
+              color="indigo"
+            />
+            <InfoCard
+              icon={Send}
+              title="Total Keluar Bulan Ini"
+              value={statistik?.keluar?.total || 0}
+              subtitle="Disposisi yang diteruskan"
+              color="blue"
+            />
+          </div>
+        </div>
+
+        {/* Footer Info */}
+        <div className="text-center py-6">
+          <p className="text-gray-400 text-xs">
+            Dashboard diperbarui secara real-time
+          </p>
+          <p className="text-gray-400 text-xs mt-1">
+            DPMD Kabupaten Bogor © 2025
+          </p>
         </div>
       </div>
     </div>

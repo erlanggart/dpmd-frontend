@@ -118,6 +118,9 @@ const WelcomeDashboard = lazy(() =>
 const KepalaDinasDashboard = lazy(() =>
 	import("./pages/kepala-dinas/KepalaDinasDashboard")
 );
+const ProfilePage = lazy(() =>
+	import("./pages/common/ProfilePage")
+);
 const KepalaBidangDashboard = lazy(() =>
 	import("./pages/kepala-bidang/KepalaBidangDashboard")
 );
@@ -138,6 +141,9 @@ const StatistikPerjadin = lazy(() =>
 );
 const StatistikAdd = lazy(() =>
 	import("./pages/kepala-dinas/StatistikAdd")
+);
+const LottieTest = lazy(() =>
+	import("./pages/test/LottieTest")
 );
 // DD Statistik Sub-categories
 const StatistikDdDashboard = lazy(() =>
@@ -392,7 +398,9 @@ function App() {
 					<Route path="/berita/:slug" element={<BeritaDetailPage />} />
 					<Route path="/bantuan-keuangan" element={<BankeuPublicPage />} />
 					<Route path="/public-dashboard" element={<CoreDashboardPublic />} />
-					<Route path="/login" element={<LoginPage />} />					{/* Rute Admin/Dashboard dengan lazy loading */}
+				<Route path="/login" element={<LoginPage />} />
+				<Route path="/test-lottie" element={<LottieTest />} />
+				{/* Rute Admin/Dashboard dengan lazy loading */}
 					<Route
 						path="/dashboard"
 						element={
@@ -466,8 +474,7 @@ function App() {
 						}
 					>
 						<Route index element={<Navigate to="dashboard" replace />} />
-						<Route path="dashboard" element={<PegawaiDashboard />} />
-						<Route path="disposisi" element={<DisposisiSurat />} />
+						<Route path="dashboard" element={<PegawaiDashboard />} />				<Route path="profile" element={<ProfilePage />} />						<Route path="disposisi" element={<DisposisiSurat />} />
 						<Route path="disposisi/:id" element={<DisposisiDetail />} />
 					</Route>
 
@@ -481,8 +488,7 @@ function App() {
 						}
 					>
 						<Route index element={<Navigate to="dashboard" replace />} />
-						<Route path="dashboard" element={<KepalaDinasDashboard />} />
-						<Route path="disposisi" element={<DisposisiSurat />} />
+						<Route path="dashboard" element={<KepalaDinasDashboard />} />				<Route path="profile" element={<ProfilePage />} />						<Route path="disposisi" element={<DisposisiSurat />} />
 						<Route path="disposisi/:id" element={<DisposisiDetail />} />
 					</Route>
 
@@ -496,8 +502,7 @@ function App() {
 						}
 					>
 						<Route index element={<Navigate to="dashboard" replace />} />
-						<Route path="dashboard" element={<KepalaBidangDashboard />} />
-						<Route path="disposisi" element={<DisposisiSurat />} />
+						<Route path="dashboard" element={<KepalaBidangDashboard />} />				<Route path="profile" element={<ProfilePage />} />						<Route path="disposisi" element={<DisposisiSurat />} />
 						<Route path="disposisi/:id" element={<DisposisiDetail />} />
 					</Route>
 
@@ -511,8 +516,7 @@ function App() {
 						}
 					>
 						<Route index element={<Navigate to="dashboard" replace />} />
-						<Route path="dashboard" element={<SekretarisDinasDashboard />} />
-						<Route path="disposisi" element={<DisposisiSurat />} />
+						<Route path="dashboard" element={<SekretarisDinasDashboard />} />				<Route path="profile" element={<ProfilePage />} />						<Route path="disposisi" element={<DisposisiSurat />} />
 						<Route path="disposisi/:id" element={<DisposisiDetail />} />
 					</Route>
 

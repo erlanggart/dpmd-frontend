@@ -1,23 +1,49 @@
 // src/pages/pegawai/PegawaiLayout.jsx
 import React from "react";
 import { Outlet, Navigate, useNavigate, useLocation } from "react-router-dom";
-import { FiHome, FiUser, FiLogOut, FiBell, FiMenu, FiMail } from "react-icons/fi";
+import { FiHome, FiUser, FiLogOut, FiMenu, FiMail } from "react-icons/fi";
+import { useConfirm } from "../../hooks/useConfirm.jsx";
 
 const PegawaiLayout = () => {
 	const [showMenu, setShowMenu] = React.useState(false);
+	const [user, setUser] = React.useState(JSON.parse(localStorage.getItem("user") || "{}"));
 	const navigate = useNavigate();
 	const location = useLocation();
+	const { confirmDialog, showConfirm } = useConfirm();
 
 	// Check if user is logged in and has pegawai role
-	const user = JSON.parse(localStorage.getItem("user") || "{}");
 	const token = localStorage.getItem("expressToken");
+
+	// Update user data when localStorage changes
+	React.useEffect(() => {
+		const handleStorageChange = () => {
+			const updatedUser = JSON.parse(localStorage.getItem("user") || "{}");
+			setUser(updatedUser);
+		};
+
+		window.addEventListener('storage', handleStorageChange);
+		// Also listen for custom event when profile is updated
+		window.addEventListener('userProfileUpdated', handleStorageChange);
+
+		return () => {
+			window.removeEventListener('storage', handleStorageChange);
+			window.removeEventListener('userProfileUpdated', handleStorageChange);
+		};
+	}, []);
 
 	if (!token || !user.role || user.role !== "pegawai") {
 		return <Navigate to="/login" replace />;
 	}
 
-	const handleLogout = () => {
-		if (window.confirm("Yakin ingin keluar?")) {
+	const handleLogout = async () => {
+		const confirmed = await showConfirm({
+			title: 'Keluar dari Aplikasi',
+			message: 'Apakah Anda yakin ingin keluar?',
+			type: 'warning',
+			confirmText: 'Ya, Keluar',
+			cancelText: 'Batal'
+		});
+		if (confirmed) {
 			localStorage.removeItem("user");
 			localStorage.removeItem("expressToken");
 			window.location.href = "/login";
@@ -27,7 +53,7 @@ const PegawaiLayout = () => {
 	const bottomNavItems = [
 		{ path: "/pegawai/dashboard", label: "Beranda", icon: FiHome },
 		{ path: "/pegawai/disposisi", label: "Disposisi", icon: FiMail },
-		{ path: "#", label: "Profil", icon: FiUser, disabled: true },
+		{ path: "/pegawai/profile", label: "Profil", icon: FiUser },
 		{ path: "/pegawai/menu", label: "Menu", icon: FiMenu, action: () => setShowMenu(true) },
 	];
 
@@ -50,24 +76,20 @@ const PegawaiLayout = () => {
 								<button
 									key={index}
 									onClick={() => {
-										if (item.disabled) return;
 										if (item.action) {
 											item.action();
 										} else {
 											navigate(item.path);
 										}
 									}}
-									disabled={item.disabled}
 									className={`flex flex-col items-center justify-center px-4 py-2 rounded-xl transition-all ${
-										item.disabled
-											? "text-slate-300 cursor-not-allowed"
-											: isActive 
-												? "text-slate-700" 
-												: "text-slate-400 hover:text-slate-600"
+										isActive 
+											? "text-slate-700" 
+											: "text-slate-400 hover:text-slate-600"
 									}`}
 								>
-									<Icon className={`h-6 w-6 mb-1 ${isActive && !item.disabled ? "animate-bounce" : ""}`} />
-									<span className={`text-xs font-medium ${isActive && !item.disabled ? "font-bold" : ""}`}>
+									<Icon className={`h-6 w-6 mb-1 ${isActive ? "animate-bounce" : ""}`} />
+									<span className={`text-xs font-medium ${isActive ? "font-bold" : ""}`}>
 										{item.label}
 									</span>
 								</button>
@@ -94,10 +116,21 @@ const PegawaiLayout = () => {
 							{/* Menu Header */}
 							<div className="px-6 py-4 border-b border-slate-100">
 								<div className="flex items-center gap-3">
-									<div className="h-14 w-14 bg-gradient-to-br from-slate-600 to-slate-800 rounded-full flex items-center justify-center shadow-md">
-										<span className="text-white font-bold text-xl">
-											{user.name?.charAt(0) || "P"}
-										</span>
+								{user.avatar ? (
+									<img 
+										src={user.avatar.startsWith('http') ? user.avatar : `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '')}${user.avatar}`}
+										alt={user.name}
+										className="h-14 w-14 rounded-full object-cover shadow-md border-2 border-slate-200"
+										onError={(e) => {
+											e.target.style.display = 'none';
+											e.target.nextSibling.style.display = 'flex';
+										}}
+									/>
+								) : null}
+								<div 
+									className={`h-14 w-14 bg-gradient-to-br from-slate-600 to-slate-800 rounded-full flex items-center justify-center shadow-md ${user.avatar ? 'hidden' : ''}`}
+									style={{ display: user.avatar ? 'none' : 'flex' }}
+								>
 									</div>
 									<div>
 										<p className="font-bold text-slate-800">{user.name}</p>
@@ -159,17 +192,16 @@ const PegawaiLayout = () => {
 								<button 
 									onClick={() => {
 										setShowMenu(false);
-										navigate("/pegawai/profil");
+										navigate("/pegawai/profile");
 									}}
-									disabled
-									className="w-full flex items-center gap-3 p-4 rounded-xl bg-slate-50 transition-colors text-left opacity-50 cursor-not-allowed"
+									className="w-full flex items-center gap-3 p-4 rounded-xl hover:bg-slate-50 transition-colors text-left"
 								>
-									<div className="h-10 w-10 bg-blue-100 rounded-lg flex items-center justify-center">
-										<FiUser className="h-5 w-5 text-blue-600" />
+									<div className="h-10 w-10 bg-orange-100 rounded-lg flex items-center justify-center">
+										<FiUser className="h-5 w-5 text-orange-600" />
 									</div>
 									<div>
 										<p className="font-semibold text-slate-800">Profil Saya</p>
-										<p className="text-xs text-slate-500">Segera hadir</p>
+										<p className="text-xs text-slate-500">Lihat dan edit profil</p>
 									</div>
 								</button>
 
@@ -196,12 +228,28 @@ const PegawaiLayout = () => {
 									Tutup
 								</button>
 							</div>
-
-							<div className="pb-6"></div>
 						</div>
 					</div>
 				</>
 			)}
+			{confirmDialog}
+
+			<style>{`
+				@keyframes fadeIn {
+					from { opacity: 0; }
+					to { opacity: 1; }
+				}
+				@keyframes slideUp {
+					from { transform: translateY(100%); }
+					to { transform: translateY(0); }
+				}
+				.animate-fadeIn {
+					animation: fadeIn 0.3s ease-out;
+				}
+				.animate-slideUp {
+					animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+				}
+			`}</style>
 		</div>
 	);
 };
