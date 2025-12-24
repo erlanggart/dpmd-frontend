@@ -35,6 +35,13 @@ Options -Indexes
         Header set Cache-Control "no-cache, no-store, must-revalidate"
     </FilesMatch>
     
+    # Service Worker custom handler - MUST be no-cache
+    <FilesMatch "sw-custom\.js$">
+        Header set Service-Worker-Allowed "/"
+        Header set Cache-Control "no-cache, no-store, must-revalidate"
+        Header set Content-Type "application/javascript"
+    </FilesMatch>
+    
     # Manifest file headers
     <FilesMatch "manifest\.json$">
         Header set Cache-Control "no-cache, no-store, must-revalidate"

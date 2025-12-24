@@ -10,28 +10,11 @@ export default defineConfig({
 		tailwindcss(),
 		VitePWA({
 			registerType: 'autoUpdate',
-			includeAssets: ['favicon.ico', 'robots.txt'],
-			manifest: {
-				name: 'DPMD Kabupaten Bogor',
-				short_name: 'DPMD',
-				description: 'Sistem Informasi Dinas Pemberdayaan Masyarakat dan Desa Kabupaten Bogor',
-				theme_color: '#ffffff',
-				background_color: '#ffffff',
-				display: 'standalone',
-				orientation: 'any',
-				scope: '/',
-				start_url: '/',
-				icons: [
-					{
-						src: '/logo-bogor.png',
-						sizes: 'any',
-						type: 'image/png',
-						purpose: 'any maskable'
-					}
-				]
-			},
+			injectRegister: 'auto',
+			includeAssets: ['favicon.ico', 'robots.txt', 'logo-bogor.png'],
 			workbox: {
 				globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,jpeg,woff,woff2}'],
+				// Custom SW will be injected by inject-custom-sw.js script
 				runtimeCaching: [
 					{
 						urlPattern: /^https:\/\/api\.dpmdbogorkab\.id\/api\/.*/i,
@@ -60,6 +43,25 @@ export default defineConfig({
 								statuses: [0, 200]
 							}
 						}
+					}
+				]
+			},
+			manifest: {
+				name: 'DPMD Kabupaten Bogor',
+				short_name: 'DPMD',
+				description: 'Sistem Informasi Dinas Pemberdayaan Masyarakat dan Desa Kabupaten Bogor',
+				theme_color: '#ffffff',
+				background_color: '#ffffff',
+				display: 'standalone',
+				orientation: 'any',
+				scope: '/',
+				start_url: '/',
+				icons: [
+					{
+						src: '/logo-bogor.png',
+						sizes: 'any',
+						type: 'image/png',
+						purpose: 'any maskable'
 					}
 				]
 			},

@@ -2,18 +2,68 @@
   "name": "DPMD Kabupaten Bogor",
   "short_name": "DPMD",
   "description": "Sistem Informasi Dinas Pemberdayaan Masyarakat dan Desa Kabupaten Bogor",
-  "theme_color": "#ffffff",
+  "theme_color": "#1e40af",
   "background_color": "#ffffff",
   "display": "standalone",
   "orientation": "any",
   "scope": "/",
   "start_url": "/",
+  "categories": ["productivity", "government"],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/logo-bogor.png",
       "sizes": "any",
       "type": "image/png",
       "purpose": "any maskable"
+    },
+    {
+      "src": "/logo-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo-96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
     }
-  ]
+  ],
+  "shortcuts": [
+    {
+      "name": "Disposisi Surat",
+      "short_name": "Disposisi",
+      "description": "Lihat dan kelola disposisi surat",
+      "url": "/disposisi",
+      "icons": [{ 
+        "src": "/logo-96.png", 
+        "sizes": "96x96",
+        "type": "image/png",
+        "purpose": "any"
+      }]
+    },
+    {
+      "name": "Surat Masuk",
+      "short_name": "Surat",
+      "description": "Lihat surat masuk",
+      "url": "/surat-masuk",
+      "icons": [{ 
+        "src": "/logo-96.png", 
+        "sizes": "96x96",
+        "type": "image/png",
+        "purpose": "any"
+      }]
+    }
+  ],
+  "permissions": [
+    "notifications"
+  ],
+  "gcm_sender_id": "103953800507"
 }

@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { FiMail, FiSend, FiClock, FiCheck, FiEye, FiPlus, FiUpload, FiX, FiFileText, FiCalendar } from 'react-icons/fi';
 import api from '../../api';
 import { toast } from 'react-hot-toast';
+import useDisposisiAutoReload from '../../hooks/useDisposisiAutoReload';
+import PushNotificationToggle from '../../components/PushNotificationToggle';
 
 export default function DisposisiSurat() {
   const navigate = useNavigate();
@@ -47,17 +49,11 @@ export default function DisposisiSurat() {
   const [currentPageDisposisiKeluar, setCurrentPageDisposisiKeluar] = useState(1);
   const itemsPerPage = 5;
 
-  useEffect(() => {
-    fetchData();
-    // Reset pagination saat ganti tab
-    setCurrentPageSuratMasuk(1);
-    setCurrentPageDisposisiMasuk(1);
-    setCurrentPageDisposisiKeluar(1);
-  }, [activeTab]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
+      console.log('[DisposisiSurat] Fetching data for activeTab:', activeTab);
+      
       if (activeTab === 'surat-masuk') {
         // Fetch surat masuk draft untuk sekretariat
         const suratRes = await api.get('/surat-masuk?status=draft');
@@ -83,7 +79,22 @@ export default function DisposisiSurat() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeTab]); // Hanya dependency activeTab, bukan user
+
+  // Setup auto-reload when push notification received (HANYA untuk new data dari push notification)
+  useDisposisiAutoReload(fetchData, {
+    enabled: true,
+    debounceMs: 2000, // Increase debounce untuk avoid spam
+    notificationTypes: ['new_disposisi', 'disposisi_update']
+  });
+
+  useEffect(() => {
+    fetchData();
+    // Reset pagination saat ganti tab
+    setCurrentPageSuratMasuk(1);
+    setCurrentPageDisposisiMasuk(1);
+    setCurrentPageDisposisiKeluar(1);
+  }, [activeTab]); // Hanya dependency activeTab, BUKAN fetchData (ini yang bikin infinite loop!)
 
   const handleBacaDisposisi = async (id) => {
     try {
@@ -123,6 +134,8 @@ export default function DisposisiSurat() {
     setSubmitting(true);
 
     try {
+      console.log('📤 Submitting surat data:', formData);
+      
       // Step 1: Create surat masuk
       const suratResponse = await api.post('/surat-masuk', formData);
       const suratId = suratResponse.data.data.id;
@@ -144,7 +157,8 @@ export default function DisposisiSurat() {
       resetForm();
       fetchData();
     } catch (error) {
-      console.error('Error submitting surat:', error);
+      console.error('❌ Error submitting surat:', error);
+      console.error('Error details:', error.response?.data);
       toast.error(error.response?.data?.message || 'Gagal menambahkan surat masuk');
     } finally {
       setSubmitting(false);
@@ -358,13 +372,18 @@ export default function DisposisiSurat() {
         {/* Page Header */}
         <div className="mb-4 sm:mb-8">
           <div className="bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-600 rounded-xl sm:rounded-2xl shadow-xl p-4 sm:p-8 text-white">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="bg-white/20 backdrop-blur-sm p-2 sm:p-3 rounded-lg sm:rounded-xl">
-                <FiFileText className="text-xl sm:text-3xl" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="bg-white/20 backdrop-blur-sm p-2 sm:p-3 rounded-lg sm:rounded-xl">
+                  <FiFileText className="text-xl sm:text-3xl" />
+                </div>
+                <div>
+                  <h1 className="text-xl sm:text-3xl font-bold">Manajemen Disposisi</h1>
+                  <p className="text-blue-100 mt-1 text-xs sm:text-base">Kelola surat masuk dan disposisi secara efisien</p>
+                </div>
               </div>
-              <div>
-                <h1 className="text-xl sm:text-3xl font-bold">Manajemen Disposisi</h1>
-                <p className="text-blue-100 mt-1 text-xs sm:text-base">Kelola surat masuk dan disposisi secara efisien</p>
+              <div className="hidden sm:block">
+                <PushNotificationToggle />
               </div>
             </div>
           </div>
