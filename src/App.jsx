@@ -526,7 +526,7 @@ function App() {
 					<Route
 						path="/core-dashboard"
 						element={
-							<RoleProtectedRoute allowedRoles={['superadmin', 'kepala_dinas', 'sekretaris_dinas', 'kepala_bidang', 'pegawai', 'sarana_prasarana', 'kekayaan_keuangan', ]}>
+							<RoleProtectedRoute allowedRoles={['superadmin', 'kepala_dinas', 'sekretaris_dinas', 'kepala_bidang', 'pegawai', 'sarana_prasarana', 'kekayaan_keuangan','sekretariat']}>
 								<CoreDashboardLayout />
 							</RoleProtectedRoute>
 						}

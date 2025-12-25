@@ -64,23 +64,49 @@ export const subscribeToPushNotifications = async () => {
     const registration = await navigator.serviceWorker.ready;
     console.log('[Push] Service Worker ready:', registration);
 
+    // VAPID public key (harus sama dengan backend)
+    const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY || 'BCEEJBfb05GAzlnpuzfPJszt054iCSOhqPVkmAMyTcUGZ8VrNluqShCQ2PVmwcMU0WuXJC35P5_XCXJNaQczX-U';
+    console.log('[Push] VAPID Public Key:', vapidPublicKey.substring(0, 30) + '...');
+
     // Check if already subscribed
     let subscription = await registration.pushManager.getSubscription();
 
     if (subscription) {
-      console.log('[Push] Already subscribed:', subscription.endpoint);
-      // Still send to server in case it's not in DB
-      try {
-        await sendSubscriptionToServer(subscription);
-      } catch (err) {
-        console.warn('[Push] Could not update subscription on server:', err);
+      console.log('[Push] Found existing subscription:', subscription.endpoint);
+      
+      // Check if subscription uses the same VAPID key
+      const currentKey = subscription.options?.applicationServerKey;
+      const newKey = urlBase64ToUint8Array(vapidPublicKey);
+      
+      // Compare keys - if different, unsubscribe and re-subscribe
+      let needsResubscribe = false;
+      if (currentKey && newKey) {
+        const currentKeyStr = btoa(String.fromCharCode(...new Uint8Array(currentKey)));
+        const newKeyStr = btoa(String.fromCharCode(...new Uint8Array(newKey)));
+        if (currentKeyStr !== newKeyStr) {
+          console.warn('[Push] ⚠️ VAPID key mismatch detected!');
+          console.log('[Push] Current key:', currentKeyStr.substring(0, 30) + '...');
+          console.log('[Push] New key:', newKeyStr.substring(0, 30) + '...');
+          needsResubscribe = true;
+        }
       }
-      return subscription;
+      
+      if (needsResubscribe) {
+        console.log('[Push] 🔄 Unsubscribing from old subscription...');
+        await subscription.unsubscribe();
+        console.log('[Push] ✅ Unsubscribed from old subscription');
+        subscription = null;
+      } else {
+        console.log('[Push] ✅ Subscription valid, updating server...');
+        // Still send to server in case it's not in DB
+        try {
+          await sendSubscriptionToServer(subscription);
+        } catch (err) {
+          console.warn('[Push] Could not update subscription on server:', err);
+        }
+        return subscription;
+      }
     }
-
-    // VAPID public key (generate di backend)
-    const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY || 'BL6liNDgLWAzQLvO0rG9EAlJcg3Tf3S7TfeSGG7SN4KTXh7Yhq68IccPWAFfRrMjAcC9xMqVkpes2arRsQwi-m8';
-    console.log('[Push] VAPID Public Key:', vapidPublicKey.substring(0, 30) + '...');
 
     // Convert VAPID key to Uint8Array
     const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
