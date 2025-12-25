@@ -3,6 +3,7 @@ import React from "react";
 import { Outlet, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { FiHome, FiMail, FiTrendingUp, FiMenu, FiLogOut, FiUser } from "react-icons/fi";
 import { useConfirm } from "../../hooks/useConfirm.jsx";
+import { subscribeToPushNotifications } from "../../utils/pushNotifications";
 
 const SekretarisDinasLayout = () => {
 	const [showMenu, setShowMenu] = React.useState(false);
@@ -23,6 +24,29 @@ const SekretarisDinasLayout = () => {
 		window.addEventListener('userProfileUpdated', handleProfileUpdate);
 		return () => window.removeEventListener('userProfileUpdated', handleProfileUpdate);
 	}, []);
+
+	// Initialize push notifications for sekretaris_dinas
+	React.useEffect(() => {
+		const initPushNotifications = async () => {
+			if (token && user.role === 'sekretaris_dinas') {
+				const permission = Notification.permission;
+				
+				if (permission === 'granted') {
+					console.log('[SekretarisDinas] Initializing push notifications...');
+					try {
+						const subscription = await subscribeToPushNotifications();
+						if (subscription) {
+							console.log('✅ [SekretarisDinas] Push notification subscription successful');
+						}
+					} catch (err) {
+						console.warn('[SekretarisDinas] Push notification subscription failed:', err);
+					}
+				}
+			}
+		};
+
+		initPushNotifications();
+	}, [token, user.role]);
 
 	if (!token || !user.role || user.role !== "sekretaris_dinas") {
 		return <Navigate to="/login" replace />;

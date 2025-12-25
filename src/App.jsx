@@ -7,12 +7,19 @@ import {
 	useLocation,
 	Outlet,
 } from "react-router-dom";
-import { Suspense, lazy, useEffect } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import { Toaster, toast } from "react-hot-toast";
 import { useAuth } from "./context/AuthContext";
 import { useThemeColor } from "./hooks/useThemeColor";
 import { DataCacheProvider } from "./context/DataCacheContext";
 import { registerServiceWorker, subscribeToPushNotifications } from "./utils/pushNotifications";
+import { 
+	initSessionPersistence,
+	setupPeriodicBackup,
+	syncSessionAcrossTabs 
+} from "./utils/sessionPersistence";
+import { setupPeriodicVersionCheck, forceUpdate } from "./utils/versionCheck";
+import UpdateNotificationModal from "./components/UpdateNotificationModal";
 
 // Halaman utama di-import langsung untuk performa awal yang lebih cepat
 import LoginPage from "./pages/LoginPage";
@@ -22,6 +29,63 @@ import BankeuPublicPage from "./pages/BankeuPublicPage";
 import NotFound from "./pages/NotFound";
 import Forbidden from "./pages/Forbidden";
 import Spinner from "./components/ui/Spinner";
+
+// HomeRedirect component - smart redirect based on user state and navigation context
+function HomeRedirect() {
+	const { user } = useAuth();
+	const location = useLocation();
+	const [shouldRedirect, setShouldRedirect] = useState(false);
+	
+	useEffect(() => {
+		// Check if user is logged in
+		if (user && user.role) {
+			// Check if user explicitly navigated to home (e.g., clicked "Back to Home" button)
+			const isExplicitNavigation = location.state?.fromNavigation === true;
+			
+			if (isExplicitNavigation) {
+				// User wants to see landing page even if logged in
+				console.log('[HomeRedirect] Explicit navigation to home, showing landing page');
+				setShouldRedirect(false);
+			} else {
+				// Auto-redirect to dashboard (PWA reopen scenario)
+				console.log('[HomeRedirect] Logged in user opening app, will redirect to dashboard');
+				setShouldRedirect(true);
+			}
+		} else {
+			// Not logged in, always show landing page
+			console.log('[HomeRedirect] No user logged in, showing landing page');
+			setShouldRedirect(false);
+		}
+	}, [user, location.state]);
+	
+	// If should redirect, go to appropriate dashboard
+	if (shouldRedirect && user && user.role) {
+		console.log('[HomeRedirect] Redirecting to dashboard for role:', user.role);
+		
+		// Map role to dashboard path
+		const roleDashboardMap = {
+			'superadmin': '/dashboard',
+			'admin': '/dashboard',
+			'pegawai': '/pegawai/dashboard',
+			'kepala_dinas': '/kepala-dinas/dashboard',
+			'kepala_bidang': '/kepala-bidang/dashboard',
+			'sekretaris_dinas': '/sekretaris-dinas/dashboard',
+			'sarana_prasarana': '/dashboard',
+			'kekayaan_keuangan': '/dashboard',
+			'pemberdayaan_masyarakat': '/dashboard',
+			'pmd': '/dashboard',
+			'desa': '/desa/dashboard',
+			'kecamatan': '/dashboard'
+		};
+		
+		const dashboardPath = roleDashboardMap[user.role] || '/dashboard';
+		console.log('[HomeRedirect] Redirecting to:', dashboardPath);
+		return <Navigate to={dashboardPath} replace />;
+	}
+	
+	// Show landing page
+	return <LandingPage />;
+}
 
 // Role constants for better maintainability
 const ROLES = {
@@ -381,6 +445,49 @@ const ThemeColorWrapper = ({ children }) => {
 };
 
 function App() {
+	const [showUpdateModal, setShowUpdateModal] = useState(false);
+
+	// Initialize session persistence on app start
+	useEffect(() => {
+		console.log('[App] 🚀 Initializing session persistence for PWA');
+		
+		// Initialize IndexedDB for session backup
+		initSessionPersistence();
+		
+		// Setup periodic backup to IndexedDB (every 5 minutes + before unload)
+		setupPeriodicBackup();
+		
+		// Sync session across tabs
+		syncSessionAcrossTabs();
+		
+		console.log('[App] ✅ Session persistence initialized');
+		console.log('[App] ℹ️  AuthContext will handle session restore automatically');
+	}, []);
+
+	// Setup version checking
+	useEffect(() => {
+		console.log('[App] Setting up version checking...');
+		
+		// Setup periodic version check
+		const cleanup = setupPeriodicVersionCheck(() => {
+			console.log('[App] 🆕 New version detected!');
+			setShowUpdateModal(true);
+		});
+		
+		return cleanup;
+	}, []);
+
+	const handleUpdate = async () => {
+		console.log('[App] User initiated update...');
+		setShowUpdateModal(false);
+		await forceUpdate();
+	};
+
+	const handleDismissUpdate = () => {
+		console.log('[App] User dismissed update');
+		setShowUpdateModal(false);
+	};
+
 	return (
 		<Router>
 			<DataCacheProvider>
@@ -394,7 +501,7 @@ function App() {
 				>
 					<Routes>
 					{/* Rute yang di-load secara statis */}
-					<Route path="/" element={<LandingPage />} />
+					<Route path="/" element={<HomeRedirect />} />
 					<Route path="/berita/:slug" element={<BeritaDetailPage />} />
 					<Route path="/bantuan-keuangan" element={<BankeuPublicPage />} />
 					<Route path="/public-dashboard" element={<CoreDashboardPublic />} />
@@ -433,7 +540,7 @@ function App() {
 						</Route>
 						
 						{/* Disposisi & Settings - DPMD Staff & Admin */}
-						<Route element={<RoleProtectedRoute allowedRoles={['superadmin', 'admin', 'pegawai', 'sekretaris_dinas', 'kepala_bidang', 'sekretariat']} />}>
+						<Route element={<RoleProtectedRoute allowedRoles={['superadmin','kepala_dinas', 'admin', 'pegawai', 'sekretaris_dinas', 'kepala_bidang', 'sekretariat']} />}>
 							<Route path="disposisi" element={<DisposisiSurat />} />
 							<Route path="disposisi/:id" element={<DisposisiDetail />} />
 							<Route path="settings" element={<SettingsPage />} />
@@ -587,6 +694,14 @@ function App() {
 					},
 				}}
 			/>
+
+			{/* Update Notification Modal */}
+			<UpdateNotificationModal
+				isOpen={showUpdateModal}
+				onUpdate={handleUpdate}
+				onDismiss={handleDismissUpdate}
+			/>
+
 			</ThemeColorWrapper>
 			</DataCacheProvider>
 		</Router>

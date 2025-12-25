@@ -3,6 +3,7 @@ import React from "react";
 import { Outlet, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { FiHome, FiMail, FiTrendingUp, FiMenu, FiLogOut, FiUser } from "react-icons/fi";
 import { useConfirm } from "../../hooks/useConfirm.jsx";
+import { subscribeToPushNotifications } from "../../utils/pushNotifications";
 import './KepalaBidangLayout.css';
 
 const KepalaBidangLayout = () => {
@@ -32,6 +33,29 @@ const KepalaBidangLayout = () => {
 		'kabid_kekayaan_keuangan_desa',
 		'kabid_pemberdayaan_masyarakat_desa'
 	].includes(user.role);
+
+	// Initialize push notifications for kepala_bidang
+	React.useEffect(() => {
+		const initPushNotifications = async () => {
+			if (token && isKepalaBidang) {
+				const permission = Notification.permission;
+				
+				if (permission === 'granted') {
+					console.log('[KepalaBidang] Initializing push notifications...');
+					try {
+						const subscription = await subscribeToPushNotifications();
+						if (subscription) {
+							console.log('✅ [KepalaBidang] Push notification subscription successful');
+						}
+					} catch (err) {
+						console.warn('[KepalaBidang] Push notification subscription failed:', err);
+					}
+				}
+			}
+		};
+
+		initPushNotifications();
+	}, [token, isKepalaBidang]);
 
 	if (!token || !isKepalaBidang) {
 		return <Navigate to="/login" replace />;

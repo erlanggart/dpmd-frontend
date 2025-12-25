@@ -3,6 +3,7 @@ import React from "react";
 import { Outlet, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { FiHome, FiUser, FiLogOut, FiMenu, FiMail } from "react-icons/fi";
 import { useConfirm } from "../../hooks/useConfirm.jsx";
+import { subscribeToPushNotifications } from "../../utils/pushNotifications";
 
 const PegawaiLayout = () => {
 	const [showMenu, setShowMenu] = React.useState(false);
@@ -30,6 +31,29 @@ const PegawaiLayout = () => {
 			window.removeEventListener('userProfileUpdated', handleStorageChange);
 		};
 	}, []);
+
+	// Initialize push notifications for pegawai
+	React.useEffect(() => {
+		const initPushNotifications = async () => {
+			if (token && user.role === 'pegawai') {
+				const permission = Notification.permission;
+				
+				if (permission === 'granted') {
+					console.log('[Pegawai] Initializing push notifications...');
+					try {
+						const subscription = await subscribeToPushNotifications();
+						if (subscription) {
+							console.log('✅ [Pegawai] Push notification subscription successful');
+						}
+					} catch (err) {
+						console.warn('[Pegawai] Push notification subscription failed:', err);
+					}
+				}
+			}
+		};
+
+		initPushNotifications();
+	}, [token, user.role]);
 
 	if (!token || !user.role || user.role !== "pegawai") {
 		return <Navigate to="/login" replace />;
