@@ -12,7 +12,7 @@ import { Toaster, toast } from "react-hot-toast";
 import { useAuth } from "./context/AuthContext";
 import { useThemeColor } from "./hooks/useThemeColor";
 import { DataCacheProvider } from "./context/DataCacheContext";
-import { EditModeProvider } from "./context/EditModeContext";
+import { EditModeProvider } from "./context/EditModeContext.jsx";
 import { registerServiceWorker } from "./utils/pushNotifications";
 import PushNotificationInitializer from "./components/PushNotificationInitializer";
 
