@@ -108,9 +108,9 @@ const KepalaDinasDashboard = () => {
     return null;
   }
 
-  const { summary, bumdes, perjalanan_dinas } = dashboardData;
+  const { summary } = dashboardData;
 
-  // Quick Actions Menu
+  // Quick Actions Menu - Simplified
   const quickActions = [
     {
       icon: FileText,
@@ -119,22 +119,22 @@ const KepalaDinasDashboard = () => {
       onClick: () => navigate('/kepala-dinas/laporan-desa')
     },
     {
-      icon: Building2,
-      label: 'Statistik BUMDes',
-      color: 'green',
-      onClick: () => navigate('/kepala-dinas/statistik-bumdes')
-    },
-    {
-      icon: Briefcase,
-      label: 'Perjalanan Dinas',
-      color: 'purple',
-      onClick: () => navigate('/kepala-dinas/statistik-perjadin')
-    },
-    {
       icon: BarChart3,
       label: 'Dashboard Overview',
       color: 'orange',
       onClick: () => navigate('/kepala-dinas/overview')
+    },
+    {
+      icon: TrendingUp,
+      label: 'Statistik',
+      color: 'green',
+      onClick: () => navigate('/core-dashboard/dashboard')
+    },
+    {
+      icon: Activity,
+      label: 'Disposisi',
+      color: 'purple',
+      onClick: () => navigate('/kepala-dinas/disposisi')
     }
   ];
 
@@ -180,93 +180,12 @@ const KepalaDinasDashboard = () => {
               onClick={() => navigate('/kepala-dinas/laporan-desa')}
             />
             <InfoCard
-              icon={Building2}
-              title="BUMDes"
-              value={summary?.total_bumdes || 0}
-              color="green"
-              onClick={() => navigate('/kepala-dinas/statistik-bumdes')}
-            />
-            <InfoCard
               icon={Users}
               title="Pegawai"
               value={summary?.total_pegawai || 0}
               color="purple"
             />
-            <InfoCard
-              icon={Briefcase}
-              title="Kegiatan"
-              value={summary?.total_kegiatan || 0}
-              color="orange"
-            />
           </div>
-        </div>
-
-        {/* BUMDes Statistics */}
-        <div className="mb-5">
-          <SectionHeader 
-            title="Statistik BUMDes" 
-            subtitle="Data BUMDes per status"
-            icon={Building2}
-            actionText="Detail"
-            onActionClick={() => navigate('/kepala-dinas/statistik-bumdes')}
-          />
-          <div className="space-y-3">
-            <InfoCard
-              icon={Building2}
-              title="BUMDes Aktif"
-              value={bumdes?.stats?.aktif || 0}
-              subtitle="Beroperasi dengan baik"
-              color="green"
-              trend="up"
-              trendValue="+12%"
-            />
-            <InfoCard
-              icon={Building2}
-              title="BUMDes Tidak Aktif"
-              value={bumdes?.stats?.tidak_aktif || 0}
-              subtitle="Memerlukan perhatian"
-              color="red"
-            />
-            <InfoCard
-              icon={Building2}
-              title="BUMDes Baru Dibentuk"
-              value={bumdes?.stats?.baru_dibentuk || 0}
-              subtitle="Dalam tahap awal"
-              color="yellow"
-            />
-          </div>
-        </div>
-
-        {/* Perjalanan Dinas Statistics */}
-        <div className="mb-5">
-          <SectionHeader 
-            title="Perjalanan Dinas" 
-            subtitle="Statistik perjalanan dinas"
-            icon={Briefcase}
-            actionText="Detail"
-            onActionClick={() => navigate('/kepala-dinas/statistik-perjadin')}
-          />
-          <div className="grid grid-cols-2 gap-3 mb-3">
-            <InfoCard
-              icon={Calendar}
-              title="Minggu Ini"
-              value={perjalanan_dinas?.stats?.minggu_ini || 0}
-              color="blue"
-            />
-            <InfoCard
-              icon={Calendar}
-              title="Bulan Ini"
-              value={perjalanan_dinas?.stats?.bulan_ini || 0}
-              color="indigo"
-            />
-          </div>
-          <InfoCard
-            icon={TrendingUp}
-            title="Total Tahun Ini"
-            value={perjalanan_dinas?.stats?.tahun_ini || 0}
-            subtitle="Perjalanan dinas 2025"
-            color="purple"
-          />
         </div>
 
         {/* Recent Activities */}
@@ -280,21 +199,21 @@ const KepalaDinasDashboard = () => {
             <ActivityCard
               icon={FileText}
               title="Laporan Desa Diperbarui"
-              subtitle="3 desa telah mengirim laporan baru"
+              subtitle="Data desa telah diperbarui"
               time="2 jam lalu"
               status="info"
             />
             <ActivityCard
-              icon={Building2}
-              title="BUMDes Baru Terdaftar"
-              subtitle="BUMDes Makmur Jaya - Desa Ciawi"
+              icon={Users}
+              title="Data Pegawai"
+              subtitle="Informasi pegawai terkini"
               time="5 jam lalu"
               status="success"
             />
             <ActivityCard
-              icon={Briefcase}
-              title="Perjalanan Dinas Selesai"
-              subtitle="Kunjungan ke Desa Dramaga"
+              icon={Activity}
+              title="Sistem Aktif"
+              subtitle="Semua layanan berjalan normal"
               time="1 hari lalu"
               status="success"
             />
@@ -310,19 +229,19 @@ const KepalaDinasDashboard = () => {
           />
           <div className="grid grid-cols-2 gap-3">
             <div 
-              onClick={() => navigate('/kepala-dinas/statistik-bumdes')}
+              onClick={() => navigate('/core-dashboard/statistik-bankeu')}
               className="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl p-5 text-white cursor-pointer active:scale-95 transition-transform shadow-lg"
             >
               <PieChart className="w-8 h-8 mb-3" />
-              <h4 className="font-bold text-sm mb-1">Grafik BUMDes</h4>
+              <h4 className="font-bold text-sm mb-1">Statistik Bankeu</h4>
               <p className="text-xs text-green-100">Lihat detail</p>
             </div>
             <div 
-              onClick={() => navigate('/kepala-dinas/statistik-perjadin')}
+              onClick={() => navigate('/core-dashboard/statistik-add')}
               className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl p-5 text-white cursor-pointer active:scale-95 transition-transform shadow-lg"
             >
               <BarChart3 className="w-8 h-8 mb-3" />
-              <h4 className="font-bold text-sm mb-1">Grafik Perjadin</h4>
+              <h4 className="font-bold text-sm mb-1">Statistik ADD</h4>
               <p className="text-xs text-purple-100">Lihat detail</p>
             </div>
           </div>
