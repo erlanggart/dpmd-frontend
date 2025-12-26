@@ -173,6 +173,9 @@ const KepalaBidangLayout = lazy(() =>
 const SekretarisDinasLayout = lazy(() =>
 	import("./pages/sekretaris-dinas/SekretarisDinasLayout")
 );
+const KetuaTimLayout = lazy(() =>
+	import("./pages/ketua-tim/KetuaTimLayout")
+);
 const CoreDashboardLayout = lazy(() =>
 	import("./layouts/CoreDashboardLayout")
 );
@@ -592,6 +595,22 @@ function App() {
 					>
 						<Route index element={<Navigate to="dashboard" replace />} />
 						<Route path="dashboard" element={<PegawaiDashboard />} />				<Route path="profile" element={<ProfilePage />} />						<Route path="disposisi" element={<DisposisiSurat />} />
+						<Route path="disposisi/:id" element={<DisposisiDetail />} />
+					</Route>
+
+					{/* Rute Ketua Tim - Untuk role: ketua_tim */}
+					<Route
+						path="/ketua-tim"
+						element={
+							<RoleProtectedRoute allowedRoles={['ketua_tim']}>
+								<KetuaTimLayout />
+							</RoleProtectedRoute>
+						}
+					>
+						<Route index element={<Navigate to="dashboard" replace />} />
+						<Route path="dashboard" element={<PegawaiDashboard />} />
+						<Route path="profile" element={<ProfilePage />} />
+						<Route path="disposisi" element={<DisposisiSurat />} />
 						<Route path="disposisi/:id" element={<DisposisiDetail />} />
 					</Route>
 

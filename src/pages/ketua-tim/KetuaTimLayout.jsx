@@ -1,13 +1,13 @@
-// src/pages/kepala-bidang/KepalaBidangLayout.jsx
+// src/pages/ketua-tim/KetuaTimLayout.jsx
 import React from "react";
 import { Outlet, Navigate, useNavigate, useLocation } from "react-router-dom";
-import { FiHome, FiMail, FiBarChart2, FiMenu, FiLogOut, FiUser, FiBell, FiCalendar } from "react-icons/fi";
+import { FiHome, FiUser, FiLogOut, FiMenu, FiMail, FiBell, FiCalendar, FiBarChart2 } from "react-icons/fi";
 import { useConfirm } from "../../hooks/useConfirm.jsx";
 import { subscribeToPushNotifications } from "../../utils/pushNotifications";
-import { toast } from 'react-hot-toast';
-import './KepalaBidangLayout.css';
+import toast from 'react-hot-toast';
+import './KetuaTimLayout.css';
 
-const KepalaBidangLayout = () => {
+const KetuaTimLayout = () => {
 	const [showMenu, setShowMenu] = React.useState(false);
 	const [showNotifications, setShowNotifications] = React.useState(false);
 	const [notifications, setNotifications] = React.useState([]);
@@ -17,37 +17,52 @@ const KepalaBidangLayout = () => {
 	const location = useLocation();
 	const { confirmDialog, showConfirm } = useConfirm();
 
-	// Check if user is logged in and has kepala bidang role
+	// Check if user is logged in and has ketua_tim role
 	const token = localStorage.getItem("expressToken");
 
-	// Update user data when profile changes
+	// Update user data when localStorage changes
 	React.useEffect(() => {
-		const handleProfileUpdate = () => {
+		const handleStorageChange = () => {
 			const updatedUser = JSON.parse(localStorage.getItem("user") || "{}");
 			setUser(updatedUser);
 		};
-		window.addEventListener('userProfileUpdated', handleProfileUpdate);
-		return () => window.removeEventListener('userProfileUpdated', handleProfileUpdate);
+
+		window.addEventListener('storage', handleStorageChange);
+		// Also listen for custom event when profile is updated
+		window.addEventListener('userProfileUpdated', handleStorageChange);
+
+		return () => {
+			window.removeEventListener('storage', handleStorageChange);
+			window.removeEventListener('userProfileUpdated', handleStorageChange);
+		};
 	}, []);
 
-	// Load notifications
+	// Load dummy notifications
 	React.useEffect(() => {
 		const dummyNotifications = [
 			{
 				id: 1,
 				title: 'Disposisi Baru',
-				message: 'Anda memiliki disposisi surat baru yang perlu ditinjau',
-				time: '10 menit lalu',
+				message: 'Anda mendapat disposisi baru dari Kepala Bidang',
+				time: '1 jam yang lalu',
 				read: false,
 				type: 'disposisi'
 			},
 			{
 				id: 2,
-				title: 'Rapat Koordinasi',
-				message: 'Rapat koordinasi akan dimulai besok pukul 09.00',
-				time: '3 jam lalu',
-				read: true,
+				title: 'Jadwal Kegiatan',
+				message: 'Rapat Tim besok pukul 10.00 WIB',
+				time: '3 jam yang lalu',
+				read: false,
 				type: 'kegiatan'
+			},
+			{
+				id: 3,
+				title: 'Update Tugas',
+				message: 'Tugas mingguan telah diperbarui',
+				time: '1 hari yang lalu',
+				read: true,
+				type: 'system'
 			}
 		];
 		setNotifications(dummyNotifications);
@@ -57,6 +72,7 @@ const KepalaBidangLayout = () => {
 	const handleNotificationClick = () => {
 		setShowNotifications(!showNotifications);
 		if (!showNotifications) {
+			// Mark all as read
 			setNotifications(prev => prev.map(n => ({ ...n, read: true })));
 			setUnreadCount(0);
 		}
@@ -64,45 +80,37 @@ const KepalaBidangLayout = () => {
 
 	const handleNotificationItemClick = (notification) => {
 		if (notification.type === 'disposisi') {
-			navigate('/kepala-bidang/disposisi');
+			navigate('/ketua-tim/disposisi');
 		} else if (notification.type === 'kegiatan') {
 			navigate('/core-dashboard/kegiatan');
 		}
 		setShowNotifications(false);
 	};
 
-	const isKepalaBidang = user.role && [
-		'kabid_sekretariat',
-		'kabid_pemerintahan_desa', 
-		'kabid_spked',
-		'kabid_kekayaan_keuangan_desa',
-		'kabid_pemberdayaan_masyarakat_desa'
-	].includes(user.role);
-
-	// Initialize push notifications for kepala_bidang
+	// Initialize push notifications for ketua_tim
 	React.useEffect(() => {
 		const initPushNotifications = async () => {
-			if (token && isKepalaBidang) {
+			if (token && user.role === 'ketua_tim') {
 				const permission = Notification.permission;
 				
 				if (permission === 'granted') {
-					console.log('[KepalaBidang] Initializing push notifications...');
+					console.log('[KetuaTim] Initializing push notifications...');
 					try {
 						const subscription = await subscribeToPushNotifications();
 						if (subscription) {
-							console.log('✅ [KepalaBidang] Push notification subscription successful');
+							console.log('✅ [KetuaTim] Push notification subscription successful');
 						}
 					} catch (err) {
-						console.warn('[KepalaBidang] Push notification subscription failed:', err);
+						console.warn('[KetuaTim] Push notification subscription failed:', err);
 					}
 				}
 			}
 		};
 
 		initPushNotifications();
-	}, [token, isKepalaBidang]);
+	}, [token, user.role]);
 
-	if (!token || !isKepalaBidang) {
+	if (!token || !user.role || user.role !== "ketua_tim") {
 		return <Navigate to="/login" replace />;
 	}
 
@@ -124,14 +132,14 @@ const KepalaBidangLayout = () => {
 	const bottomNavItems = [
 		{ path: "/core-dashboard/dashboard", label: "Core Dashboard", icon: FiBarChart2 },
 		{ path: "/core-dashboard/kegiatan", label: "Jadwal Kegiatan", icon: FiCalendar },
-		{ path: "/kepala-bidang/disposisi", label: "Disposisi", icon: FiMail },
-		{ path: "/kepala-bidang/menu", label: "Menu", icon: FiMenu, action: () => setShowMenu(true) },
+		{ path: "/ketua-tim/disposisi", label: "Disposisi", icon: FiMail },
+		{ path: "/ketua-tim/menu", label: "Menu", icon: FiMenu, action: () => setShowMenu(true) },
 	];
 
 	return (
 		<div className="min-h-screen bg-gray-50 pb-20">
-			{/* Fixed Header - Green Theme */}
-			<header className="fixed top-0 left-0 right-0 bg-gradient-to-r from-green-600 to-green-700 text-white shadow-lg z-40">
+			{/* Fixed Header - Teal Theme */}
+			<header className="fixed top-0 left-0 right-0 bg-gradient-to-r from-teal-600 to-teal-700 text-white shadow-lg z-40">
 				<div className="max-w-lg mx-auto px-4 py-3">
 					<div className="flex items-center justify-between">
 						<div className="flex items-center gap-3">
@@ -152,8 +160,8 @@ const KepalaBidangLayout = () => {
 								</span>
 							</div>
 							<div>
-								<h2 className="font-bold text-sm leading-tight">{user.name || "Kepala Bidang"}</h2>
-								<p className="text-xs text-green-100 capitalize">{user.role?.replace(/_/g, ' ')}</p>
+								<h2 className="font-bold text-sm leading-tight">{user.name || "Ketua Tim"}</h2>
+								<p className="text-xs text-teal-100 capitalize">{user.role?.replace(/_/g, ' ')}</p>
 							</div>
 						</div>
 						
@@ -182,9 +190,9 @@ const KepalaBidangLayout = () => {
 					></div>
 					<div className="fixed top-16 left-0 right-0 bg-white shadow-xl z-50 animate-slideDown max-h-96 overflow-y-auto">
 						<div className="max-w-lg mx-auto">
-							<div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-green-50 to-green-100">
+							<div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-teal-50 to-teal-100">
 								<h3 className="font-bold text-gray-800 flex items-center gap-2">
-									<FiBell className="text-green-600" />
+									<FiBell className="text-teal-600" />
 									Notifikasi
 								</h3>
 							</div>
@@ -199,16 +207,16 @@ const KepalaBidangLayout = () => {
 										<button
 											key={notification.id}
 											onClick={() => handleNotificationItemClick(notification)}
-											className={`w-full px-4 py-3 text-left hover:bg-green-50 transition-colors ${
-												!notification.read ? 'bg-green-50/50' : ''
+											className={`w-full px-4 py-3 text-left hover:bg-teal-50 transition-colors ${
+												!notification.read ? 'bg-teal-50/50' : ''
 											}`}
 										>
 											<div className="flex items-start gap-3">
 												<div className={`h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-													notification.type === 'disposisi' ? 'bg-green-100' : 'bg-blue-100'
+													notification.type === 'disposisi' ? 'bg-teal-100' : 'bg-blue-100'
 												}`}>
 													{notification.type === 'disposisi' ? (
-														<FiMail className="h-5 w-5 text-green-600" />
+														<FiMail className="h-5 w-5 text-teal-600" />
 													) : (
 														<FiCalendar className="h-5 w-5 text-blue-600" />
 													)}
@@ -219,7 +227,7 @@ const KepalaBidangLayout = () => {
 													<span className="text-xs text-gray-400 mt-1 inline-block">{notification.time}</span>
 												</div>
 												{!notification.read && (
-													<div className="h-2 w-2 bg-green-500 rounded-full flex-shrink-0 mt-2"></div>
+													<div className="h-2 w-2 bg-teal-500 rounded-full flex-shrink-0 mt-2"></div>
 												)}
 											</div>
 										</button>
@@ -236,8 +244,8 @@ const KepalaBidangLayout = () => {
 				<Outlet />
 			</main>
 
-			{/* Bottom Navigation - Green Theme for Kepala Bidang */}
-			<nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-green-200 shadow-lg z-50">
+			{/* Bottom Navigation - Teal Theme */}
+			<nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-teal-200 shadow-lg z-50">
 				<div className="max-w-lg mx-auto px-2">
 					<div className="flex items-center justify-around py-2">
 						{bottomNavItems.map((item, index) => {
@@ -256,8 +264,8 @@ const KepalaBidangLayout = () => {
 									}}
 									className={`flex flex-col items-center justify-center px-3 py-2 rounded-xl transition-all ${
 										isActive 
-											? "text-green-700" 
-											: "text-green-400 hover:text-green-600"
+											? "text-teal-700" 
+											: "text-teal-400 hover:text-teal-600"
 									}`}
 								>
 									<Icon className={`h-6 w-6 mb-1 ${isActive ? "animate-bounce" : ""}`} />
@@ -286,7 +294,7 @@ const KepalaBidangLayout = () => {
 							</div>
 
 							{/* Menu Header */}
-							<div className="px-6 py-4 border-b border-blue-100">
+							<div className="px-6 py-4 border-b border-teal-100">
 								<div className="flex items-center gap-3">
 								{user.avatar ? (
 									<img 
@@ -299,15 +307,15 @@ const KepalaBidangLayout = () => {
 										}}
 									/>
 								) : null}
-								<div className={`h-14 w-14 bg-gradient-to-br from-blue-600 to-blue-800 rounded-full flex items-center justify-center shadow-md ${user.avatar ? 'hidden' : ''}`}>
+								<div className={`h-14 w-14 bg-gradient-to-br from-teal-600 to-teal-800 rounded-full flex items-center justify-center shadow-md ${user.avatar ? 'hidden' : ''}`}>
 										<span className="text-white font-bold text-xl">
 											{user.name?.charAt(0) || "K"}
 										</span>
 									</div>
 									<div className="flex-1">
-										<h3 className="font-bold text-gray-800 text-lg">{user.name || "Kepala Bidang"}</h3>
+										<h3 className="font-bold text-gray-800 text-lg">{user.name || "Ketua Tim"}</h3>
 										<p className="text-sm text-gray-500">{user.email}</p>
-										<span className="inline-block mt-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium capitalize">
+										<span className="inline-block mt-1 px-2 py-0.5 bg-teal-100 text-teal-700 rounded-full text-xs font-medium capitalize">
 											{user.role?.replace(/_/g, ' ')}
 										</span>
 									</div>
@@ -321,10 +329,10 @@ const KepalaBidangLayout = () => {
 										setShowMenu(false);
 										navigate("/core-dashboard/dashboard");
 									}}
-									className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-green-50 transition-colors text-left"
+									className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-teal-50 transition-colors text-left"
 								>
-									<div className="h-12 w-12 bg-green-100 rounded-xl flex items-center justify-center">
-										<FiBarChart2 className="h-6 w-6 text-green-600" />
+									<div className="h-12 w-12 bg-teal-100 rounded-xl flex items-center justify-center">
+										<FiBarChart2 className="h-6 w-6 text-teal-600" />
 									</div>
 									<div>
 										<h4 className="font-semibold text-gray-800">Core Dashboard</h4>
@@ -337,10 +345,10 @@ const KepalaBidangLayout = () => {
 										setShowMenu(false);
 										navigate("/core-dashboard/kegiatan");
 									}}
-									className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-green-50 transition-colors text-left"
+									className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-teal-50 transition-colors text-left"
 								>
-									<div className="h-12 w-12 bg-green-100 rounded-xl flex items-center justify-center">
-										<FiCalendar className="h-6 w-6 text-green-600" />
+									<div className="h-12 w-12 bg-teal-100 rounded-xl flex items-center justify-center">
+										<FiCalendar className="h-6 w-6 text-teal-600" />
 									</div>
 									<div>
 										<h4 className="font-semibold text-gray-800">Jadwal Kegiatan</h4>
@@ -351,12 +359,12 @@ const KepalaBidangLayout = () => {
 								<button
 									onClick={() => {
 										setShowMenu(false);
-										navigate("/kepala-bidang/disposisi");
+										navigate("/ketua-tim/disposisi");
 									}}
-									className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-green-50 transition-colors text-left"
+									className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-teal-50 transition-colors text-left"
 								>
-									<div className="h-12 w-12 bg-green-100 rounded-xl flex items-center justify-center">
-										<FiMail className="h-6 w-6 text-green-600" />
+									<div className="h-12 w-12 bg-teal-100 rounded-xl flex items-center justify-center">
+										<FiMail className="h-6 w-6 text-teal-600" />
 									</div>
 									<div>
 										<h4 className="font-semibold text-gray-800">Disposisi</h4>
@@ -366,22 +374,24 @@ const KepalaBidangLayout = () => {
 
 								<div className="border-t border-gray-200 my-2"></div>
 
-								<button								onClick={() => {
-									setShowMenu(false);
-									navigate("/kepala-bidang/profile");
-								}}
-								className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-green-50 transition-colors text-left"
-							>
-								<div className="h-12 w-12 bg-green-100 rounded-xl flex items-center justify-center">
-									<FiUser className="h-6 w-6 text-green-600" />
-								</div>
-								<div>
-									<h4 className="font-semibold text-gray-800">Profil Saya</h4>
-									<p className="text-sm text-gray-500">Lihat dan edit profil</p>
-								</div>
-							</button>
+								<button
+									onClick={() => {
+										setShowMenu(false);
+										navigate("/ketua-tim/profile");
+									}}
+									className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-teal-50 transition-colors text-left"
+								>
+									<div className="h-12 w-12 bg-teal-100 rounded-xl flex items-center justify-center">
+										<FiUser className="h-6 w-6 text-teal-600" />
+									</div>
+									<div>
+										<h4 className="font-semibold text-gray-800">Profil Saya</h4>
+										<p className="text-sm text-gray-500">Lihat dan edit profil</p>
+									</div>
+								</button>
 
-							<button									onClick={handleLogout}
+								<button
+									onClick={handleLogout}
 									className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-red-50 transition-colors text-left"
 								>
 									<div className="h-12 w-12 bg-red-100 rounded-xl flex items-center justify-center">
@@ -412,4 +422,4 @@ const KepalaBidangLayout = () => {
 	);
 };
 
-export default KepalaBidangLayout;
+export default KetuaTimLayout;
