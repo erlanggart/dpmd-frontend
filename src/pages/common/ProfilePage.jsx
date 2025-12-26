@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { FiUser, FiMail, FiShield, FiEdit2, FiSave, FiX, FiCamera, FiArrowLeft } from 'react-icons/fi';
 import api from '../../services/api';
 import { toast } from 'react-hot-toast';
+import { getAvatarUrl } from '../../utils/avatarUtils';
 
 const ProfilePage = () => {
   const navigate = useNavigate();
@@ -14,7 +15,7 @@ const ProfilePage = () => {
     name: user.name || '',
     email: user.email || '',
   });
-  const [avatarUrl, setAvatarUrl] = useState(user.avatar || null);
+  const [avatarUrl, setAvatarUrl] = useState(getAvatarUrl(user.avatar));
 
   const roleLabels = {
     kepala_dinas: 'Kepala Dinas',
@@ -130,13 +131,17 @@ const ProfilePage = () => {
       });
 
       if (response.data.success) {
-        const avatarPath = response.data.data.avatar;
-        setAvatarUrl(avatarPath);
+        const updatedUserData = response.data.data;
+        const avatarPath = updatedUserData.avatar;
         
+        setAvatarUrl(getAvatarUrl(avatarPath));
+        
+        // Preserve existing user data, only update avatar
         const updatedUser = {
           ...user,
           avatar: avatarPath
         };
+        
         setUser(updatedUser);
         localStorage.setItem('user', JSON.stringify(updatedUser));
         
@@ -149,7 +154,17 @@ const ProfilePage = () => {
       }
     } catch (error) {
       console.error('Error uploading photo:', error);
-      toast.error(error.response?.data?.message || 'Gagal mengupload foto. Silakan coba lagi.');
+      
+      // Better error handling
+      if (error.response?.status === 404) {
+        toast.error('User tidak ditemukan. Silakan login ulang.');
+      } else if (error.response?.status === 400) {
+        toast.error('File tidak valid. Pastikan Anda mengupload gambar (JPG/PNG).');
+      } else if (error.response?.status === 413) {
+        toast.error('Ukuran file terlalu besar. Maksimal 2MB.');
+      } else {
+        toast.error(error.response?.data?.message || 'Gagal mengupload foto. Silakan coba lagi.');
+      }
     } finally {
       setIsUploadingPhoto(false);
     }
@@ -192,10 +207,11 @@ const ProfilePage = () => {
             <div className="relative">
               {avatarUrl ? (
                 <img 
-                  src={avatarUrl.startsWith('http') ? avatarUrl : `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '')}${avatarUrl}`}
+                  src={avatarUrl}
                   alt={user.name}
                   className={`h-24 w-24 rounded-full object-cover shadow-lg border-4 border-${color}-200`}
                   onError={(e) => {
+                    console.error('Avatar load error:', e.target.src);
                     e.target.style.display = 'none';
                     e.target.nextSibling.style.display = 'flex';
                   }}
