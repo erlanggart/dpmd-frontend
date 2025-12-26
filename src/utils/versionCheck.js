@@ -2,6 +2,7 @@
 // Detects when new version is available and prompts user to update
 
 const VERSION_KEY = 'app_version';
+const LAST_UPDATE_KEY = 'app_last_update';
 const VERSION_CHECK_INTERVAL = 30 * 60 * 1000; // Check every 30 minutes
 
 /**
@@ -20,10 +21,20 @@ export const getStoredVersion = () => {
 };
 
 /**
- * Store current version to localStorage
+ * Get last update timestamp
+ */
+export const getLastUpdateTime = () => {
+  const timestamp = localStorage.getItem(LAST_UPDATE_KEY);
+  return timestamp ? parseInt(timestamp, 10) : null;
+};
+
+/**
+ * Store current version to localStorage with timestamp
  */
 export const storeVersion = (version) => {
   localStorage.setItem(VERSION_KEY, version);
+  localStorage.setItem(LAST_UPDATE_KEY, Date.now().toString());
+  console.log(`[Version] Stored version: ${version} at ${new Date().toISOString()}`);
 };
 
 /**
@@ -33,11 +44,21 @@ export const storeVersion = (version) => {
 export const needsUpdate = () => {
   const currentVersion = getCurrentVersion();
   const storedVersion = getStoredVersion();
+  const lastUpdateTime = getLastUpdateTime();
   
   // First time user
   if (!storedVersion) {
     storeVersion(currentVersion);
     return false;
+  }
+  
+  // If user just updated (within last 10 seconds), don't show update prompt
+  if (lastUpdateTime) {
+    const timeSinceUpdate = Date.now() - lastUpdateTime;
+    if (timeSinceUpdate < 10000) {
+      console.log('[Version] Just updated, skipping version check');
+      return false;
+    }
   }
   
   // Compare versions
@@ -97,11 +118,22 @@ export const forceUpdate = async () => {
  */
 export const checkForServerUpdate = async () => {
   try {
+    // Don't check if just updated
+    const lastUpdateTime = getLastUpdateTime();
+    if (lastUpdateTime) {
+      const timeSinceUpdate = Date.now() - lastUpdateTime;
+      if (timeSinceUpdate < 30000) { // 30 seconds grace period
+        console.log('[Version] Just updated, skipping server check');
+        return false;
+      }
+    }
+    
     // Fetch version.json with cache-busting
     const response = await fetch(`/version.json?t=${Date.now()}`, {
       cache: 'no-store',
       headers: {
-        'Cache-Control': 'no-cache'
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
       }
     });
     
@@ -119,8 +151,16 @@ export const checkForServerUpdate = async () => {
     console.log('[Version] Current version:', currentVersion);
     console.log('[Version] Stored version:', storedVersion);
     
+    // If stored version matches current version, we're up to date
+    if (storedVersion === currentVersion) {
+      console.log('[Version] ✅ App is up to date');
+      return false;
+    }
+    
     // Check if server has newer version than what's stored
-    if (serverVersion !== storedVersion) {
+    if (serverVersion !== storedVersion && serverVersion === currentVersion) {
+      // Server version matches current version, but stored is old
+      // This means user needs to update stored version
       console.log('[Version] 🆕 New version available from server!');
       return true;
     }

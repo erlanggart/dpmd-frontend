@@ -11,6 +11,7 @@ import MobileHeader from '../../components/mobile/MobileHeader';
 import InfoCard from '../../components/mobile/InfoCard';
 import SectionHeader from '../../components/mobile/SectionHeader';
 import ServiceGrid from '../../components/mobile/ServiceGrid';
+import { getUserAvatarUrl } from '../../utils/avatarUtils';
 
 const PegawaiDashboard = () => {
 	const navigate = useNavigate();
@@ -137,7 +138,7 @@ const PegawaiDashboard = () => {
 				notificationCount={0}
 				onNotificationClick={() => navigate('/pegawai/notifikasi')}
 				onSettingsClick={() => navigate('/pegawai/profil')}
-				avatar={user.avatar ? `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://127.0.0.1:3001'}${user.avatar}` : null}
+				avatar={getUserAvatarUrl(user)}
 			/>
 
 			{/* Main Content */}

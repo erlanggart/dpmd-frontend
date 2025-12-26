@@ -20,6 +20,7 @@ import ServiceGrid from '../../components/mobile/ServiceGrid';
 import InfoCard from '../../components/mobile/InfoCard';
 import SectionHeader from '../../components/mobile/SectionHeader';
 import ActivityCard from '../../components/mobile/ActivityCard';
+import { getUserAvatarUrl } from '../../utils/avatarUtils';
 
 // Import Lottie animations
 // Using Lottie CDN URLs instead of local imports
@@ -148,7 +149,7 @@ const KepalaDinasDashboard = () => {
         notificationCount={0}
         onNotificationClick={() => navigate('/kepala-dinas/notifikasi')}
         onSettingsClick={() => navigate('/kepala-dinas/profil')}
-        avatar={user.avatar ? `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://127.0.0.1:3001'}${user.avatar}` : null}
+        avatar={getUserAvatarUrl(user)}
       />
 
       {/* Main Content */}
