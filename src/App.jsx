@@ -288,11 +288,21 @@ const ProtectedRoute = ({ children }) => {
 
 const RoleProtectedRoute = ({ children, allowedRoles }) => {
 	const token = localStorage.getItem("expressToken");
-	const { user } = useAuth();
+	const { user, isCheckingSession } = useAuth();
 	const location = useLocation();
 
 	if (!token) {
 		return <Navigate to="/login" state={{ from: location }} replace />;
+	}
+
+	// Wait for session check to complete before checking roles
+	if (isCheckingSession) {
+		console.log('⏳ RoleProtectedRoute: Waiting for session check to complete...');
+		return (
+			<div className="flex items-center justify-center min-h-screen">
+				<Spinner size="lg" />
+			</div>
+		);
 	}
 
 	// Check if user role is allowed
