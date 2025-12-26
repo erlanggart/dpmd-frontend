@@ -1,5 +1,6 @@
 // src/components/tabs/PegawaiManagement.jsx
 import React, { useEffect, useState, useCallback, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import {
 	LuUsers,
 	LuUser,
@@ -17,6 +18,8 @@ import {
 	LuChevronLeft,
 	LuChevronRight,
 	LuFilter,
+	LuClock,
+	LuArrowRight,
 } from "react-icons/lu";
 import api from "../../api";
 import { useAuth } from "../../context/AuthContext";
@@ -26,10 +29,18 @@ const PegawaiManagement = () => {
 	const [pegawaiList, setPegawaiList] = useState([]);
 	const [pegawaiUsers, setPegawaiUsers] = useState([]);
 	const [bidangs, setBidangs] = useState([]);
+	const [positions, setPositions] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
 	const [showAddModal, setShowAddModal] = useState(false);
+	const [showPositionModal, setShowPositionModal] = useState(false);
+	const [selectedUserForPosition, setSelectedUserForPosition] = useState(null);
+	const [selectedPosition, setSelectedPosition] = useState('');
+	const [positionReason, setPositionReason] = useState('');
+	const [showHistoryModal, setShowHistoryModal] = useState(false);
+	const [positionHistory, setPositionHistory] = useState([]);
 	const { user: currentUser } = useAuth();
+	const navigate = useNavigate();
 
 	// Search and filter states
 	const [searchWithAccount, setSearchWithAccount] = useState("");
@@ -95,10 +106,21 @@ const PegawaiManagement = () => {
 		}
 	}, []);
 
+	// Fetch positions
+	const fetchPositions = useCallback(async () => {
+		try {
+			const response = await api.get("/positions");
+			setPositions(response.data.data || []);
+		} catch (err) {
+			console.error("Error fetching positions:", err);
+		}
+	}, []);
+
 	useEffect(() => {
 		fetchPegawai();
 		fetchBidangs();
-	}, [fetchPegawai, fetchBidangs]);
+		fetchPositions();
+	}, [fetchPegawai, fetchBidangs, fetchPositions]);
 
 	// Create pegawai account
 	const handleCreateAccount = async (pegawai) => {
@@ -292,10 +314,111 @@ const PegawaiManagement = () => {
 		}
 	};
 
+	// Handle edit position
+	const handleEditPosition = (user) => {
+		setSelectedUserForPosition(user);
+		setSelectedPosition(user.position_id || '');
+		setPositionReason('');
+		setShowPositionModal(true);
+	};
+
+	// Handle update position
+	const handleUpdatePosition = async () => {
+		if (!selectedUserForPosition) return;
+
+		try {
+			await api.put(`/positions/users/${selectedUserForPosition.id}`, {
+				position_id: selectedPosition || null,
+				reason: positionReason || 'Perubahan posisi oleh admin'
+			});
+
+			Swal.fire({
+				title: "Berhasil!",
+				text: `Posisi untuk ${selectedUserForPosition.name} berhasil diupdate!`,
+				icon: "success",
+				confirmButtonText: "OK",
+				confirmButtonColor: "#10b981",
+			});
+
+			setShowPositionModal(false);
+			setSelectedUserForPosition(null);
+			setSelectedPosition('');
+			setPositionReason('');
+			fetchPegawai(); // Refresh data
+		} catch (error) {
+			console.error("Error updating position:", error);
+			Swal.fire({
+				title: "Gagal!",
+				text: error.response?.data?.message || "Gagal mengupdate posisi.",
+				icon: "error",
+				confirmButtonText: "OK",
+				confirmButtonColor: "#ef4444",
+			});
+		}
+	};
+
+	// Handle view position history
+	const handleViewHistory = async (user) => {
+		try {
+			setSelectedUserForPosition(user);
+			setShowHistoryModal(true);
+			
+			const response = await api.get(`/positions/users/${user.id}/history`);
+			setPositionHistory(response.data.data || []);
+		} catch (error) {
+			console.error("Error loading history:", error);
+			Swal.fire({
+				title: "Gagal!",
+				text: "Gagal memuat riwayat posisi.",
+				icon: "error",
+				confirmButtonText: "OK",
+				confirmButtonColor: "#ef4444",
+			});
+		}
+	};
+
 	// Get bidang name
 	const getBidangName = (bidangId) => {
 		const bidang = bidangs.find((b) => String(b.id) === String(bidangId));
 		return bidang?.nama || "N/A";
+	};
+
+	// Get position badge color based on level
+	const getPositionBadgeColor = (level) => {
+		const colors = {
+			1: 'bg-red-100 text-red-700 border-red-200',
+			2: 'bg-blue-100 text-blue-700 border-blue-200',
+			3: 'bg-purple-100 text-purple-700 border-purple-200',
+			4: 'bg-green-100 text-green-700 border-green-200',
+			5: 'bg-teal-100 text-teal-700 border-teal-200',
+			6: 'bg-orange-100 text-orange-700 border-orange-200'
+		};
+		return colors[level] || 'bg-gray-100 text-gray-700 border-gray-200';
+	};
+
+	// Get dashboard URL based on bidang_id
+	const getBidangDashboardUrl = (bidangId) => {
+		// Map bidang_id to dashboard URLs based on actual database
+		const bidangMap = {
+			2: '/dashboard/perjalanan-dinas', // Sekretariat
+			3: '/dashboard/bankeu',           // Sarana Prasarana Kewilayahan dan Ekonomi Desa (SPKED)
+			4: '/dashboard/add',              // Kekayaan dan Keuangan Desa (KKD)
+			5: '/dashboard/kelembagaan',      // Pemberdayaan Masyarakat Desa
+			6: '/dashboard/kelembagaan',      // Pemerintahan Desa
+		};
+		return bidangMap[bidangId] || null;
+	};
+
+	// Get bidang dashboard name
+	const getBidangDashboardName = (bidangId) => {
+		const bidangNames = {
+			2: 'Dashboard Sekretariat',
+			3: 'Dashboard Sarpras',
+			4: 'Dashboard KKD',
+			5: 'Dashboard Pemmas',
+			6: 'Dashboard Pemdes',
+		};
+		return bidangNames[bidangId] || null;
 	};
 
 	// Filter and search logic for pegawai with accounts
@@ -627,6 +750,19 @@ const PegawaiManagement = () => {
 													{user.pegawai_data?.bidangs?.nama || getBidangName(user.bidang_id)}
 												</span>
 											</div>
+											
+											{/* Position Display */}
+											<div className="flex items-center gap-2">
+												<LuShield className="h-4 w-4 flex-shrink-0 text-purple-600" />
+												{user.position ? (
+													<span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${getPositionBadgeColor(user.position.level)}`}>
+														{user.position.name}
+													</span>
+												) : (
+													<span className="text-gray-400 text-xs italic">Belum ada posisi</span>
+												)}
+											</div>
+
 											<div className="flex items-center gap-2">
 												<LuUserCheck className="h-4 w-4 flex-shrink-0" />
 												{user.is_active ? (
@@ -645,43 +781,79 @@ const PegawaiManagement = () => {
 											)}
 										</div>
 
-										<div className="flex items-center gap-2 pt-4 border-t border-gray-100">
-											<button
-												onClick={() => handleResetPassword(user)}
-												className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-xs bg-yellow-50 text-yellow-700 rounded-lg hover:bg-yellow-100 transition-colors"
-												title="Reset Password"
-											>
-												<LuKey className="w-3 h-3" />
-												Reset
-											</button>
-											<button
-												onClick={() => handleToggleActive(user)}
-												className={`flex-1 flex items-center justify-center gap-1 px-3 py-2 text-xs rounded-lg transition-colors ${
-													user.is_active
-														? "bg-red-50 text-red-700 hover:bg-red-100"
-														: "bg-green-50 text-green-700 hover:bg-green-100"
-												}`}
-												title={user.is_active ? "Nonaktifkan" : "Aktifkan"}
-											>
-												{user.is_active ? (
-													<>
-														<LuX className="w-3 h-3" />
-														Nonaktif
-													</>
-												) : (
-													<>
-														<LuCheck className="w-3 h-3" />
-														Aktifkan
-													</>
-												)}
-											</button>
-											<button
-												onClick={() => handleDeleteAccount(user)}
-												className="flex items-center justify-center p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-												title="Hapus Akun"
-											>
-												<LuTrash2 className="w-4 h-4" />
-											</button>
+										<div className="space-y-2">
+											{/* Dashboard Bidang Button - BARU */}
+											{user.bidang_id && getBidangDashboardUrl(user.bidang_id) && (
+												<button
+													onClick={() => navigate(getBidangDashboardUrl(user.bidang_id))}
+													className="w-full flex items-center justify-center gap-2 px-3 py-2.5 text-sm bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all shadow-sm hover:shadow font-medium"
+													title={`Buka ${getBidangDashboardName(user.bidang_id)}`}
+												>
+													<LuBriefcase className="w-4 h-4" />
+													{getBidangDashboardName(user.bidang_id)}
+													<LuArrowRight className="w-4 h-4" />
+												</button>
+											)}
+
+											{/* Position Management Buttons */}
+											<div className="flex items-center gap-2">
+												<button
+													onClick={() => handleEditPosition(user)}
+													className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-xs bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors"
+													title="Edit Posisi"
+												>
+													<LuShield className="w-3 h-3" />
+													Edit Posisi
+												</button>
+												<button
+													onClick={() => handleViewHistory(user)}
+													className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-xs bg-gray-50 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+													title="Riwayat Posisi"
+												>
+													<LuClock className="w-3 h-3" />
+													Riwayat
+												</button>
+											</div>
+
+											{/* Account Management Buttons */}
+											<div className="flex items-center gap-2 pt-2 border-t border-gray-100">
+												<button
+													onClick={() => handleResetPassword(user)}
+													className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-xs bg-yellow-50 text-yellow-700 rounded-lg hover:bg-yellow-100 transition-colors"
+													title="Reset Password"
+												>
+													<LuKey className="w-3 h-3" />
+													Reset
+												</button>
+												<button
+													onClick={() => handleToggleActive(user)}
+													className={`flex-1 flex items-center justify-center gap-1 px-3 py-2 text-xs rounded-lg transition-colors ${
+														user.is_active
+															? "bg-red-50 text-red-700 hover:bg-red-100"
+															: "bg-green-50 text-green-700 hover:bg-green-100"
+													}`}
+													title={user.is_active ? "Nonaktifkan" : "Aktifkan"}
+												>
+													{user.is_active ? (
+														<>
+															<LuX className="w-3 h-3" />
+															Nonaktif
+														</>
+													) : (
+														<>
+															<LuCheck className="w-3 h-3" />
+															Aktifkan
+														</>
+													)}
+												</button>
+												<button
+													onClick={() => handleDeleteAccount(user)}
+													className="flex items-center justify-center p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+													title="Hapus Akun"
+												>
+													<LuTrash2 className="w-4 h-4" />
+												</button>
+											</div>
 										</div>
 									</div>
 								);
@@ -776,6 +948,281 @@ const PegawaiManagement = () => {
 					)}
 				</div>
 			</div>
+
+			{/* Edit Position Modal - Redesigned */}
+			{showPositionModal && selectedUserForPosition && (
+				<>
+					<div 
+						className="fixed inset-0 bg-black bg-opacity-60 z-50 backdrop-blur-sm transition-opacity"
+						onClick={() => setShowPositionModal(false)}
+					/>
+					<div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+						<div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+							{/* Header */}
+							<div className="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-5 rounded-t-2xl">
+								<div className="flex items-center justify-between">
+									<h3 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+										<LuShield className="w-6 h-6" />
+										Update Posisi
+									</h3>
+									<button
+										onClick={() => setShowPositionModal(false)}
+										className="text-white/80 hover:text-white transition-colors"
+									>
+										<LuX className="w-6 h-6" />
+									</button>
+								</div>
+							</div>
+
+							<div className="p-6 space-y-6">
+								{/* User Info Card */}
+								<div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100">
+									<div className="flex items-center gap-4">
+										<div className="h-14 w-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
+											<LuUser className="h-7 w-7 text-white" />
+										</div>
+										<div className="flex-1 min-w-0">
+											<h4 className="font-semibold text-gray-900 text-base sm:text-lg truncate">
+												{selectedUserForPosition.name}
+											</h4>
+											<p className="text-sm text-gray-600 truncate">{selectedUserForPosition.email}</p>
+											{selectedUserForPosition.position && (
+												<div className="mt-2">
+													<span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium border ${getPositionBadgeColor(selectedUserForPosition.position.level)}`}>
+														Saat ini: {selectedUserForPosition.position.name}
+													</span>
+												</div>
+											)}
+										</div>
+									</div>
+								</div>
+
+								{/* Position Selection */}
+								<div>
+									<label className="block text-sm font-semibold text-gray-700 mb-3">
+										Pilih Posisi Baru <span className="text-red-500">*</span>
+									</label>
+									<div className="relative">
+										<select
+											value={selectedPosition}
+											onChange={(e) => setSelectedPosition(e.target.value)}
+											className="w-full appearance-none px-4 py-3 pr-10 bg-white border-2 border-gray-200 rounded-xl text-gray-900 focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all outline-none text-sm sm:text-base"
+										>
+											<option value="" className="text-gray-500">-- Pilih Posisi --</option>
+											{positions.map((pos) => (
+												<option key={pos.id} value={pos.id} className="py-2">
+													{pos.name} - Level {pos.level}
+												</option>
+											))}
+										</select>
+										<div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+											<svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+											</svg>
+										</div>
+									</div>
+									
+									{/* Position Level Info */}
+									{selectedPosition && (
+										<div className="mt-3 p-3 bg-purple-50 border border-purple-100 rounded-lg">
+											<div className="flex items-start gap-2">
+												<LuShield className="w-4 h-4 text-purple-600 mt-0.5 flex-shrink-0" />
+												<div className="text-xs text-purple-700">
+													<span className="font-medium">Info:</span> {positions.find(p => p.id === parseInt(selectedPosition))?.description || 'Posisi dalam struktur organisasi DPMD'}
+												</div>
+											</div>
+										</div>
+									)}
+								</div>
+
+								{/* Reason Field */}
+								<div>
+									<label className="block text-sm font-semibold text-gray-700 mb-3">
+										Alasan Perubahan <span className="text-gray-400 text-xs">(Opsional)</span>
+									</label>
+									<textarea
+										value={positionReason}
+										onChange={(e) => setPositionReason(e.target.value)}
+										placeholder="Contoh: Promosi jabatan, Mutasi internal, Rotasi, Penyesuaian struktur organisasi..."
+										rows={3}
+										className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all outline-none resize-none text-sm"
+									/>
+									<p className="mt-2 text-xs text-gray-500">
+										Alasan ini akan tercatat dalam riwayat perubahan posisi
+									</p>
+								</div>
+
+								{/* Action Buttons */}
+								<div className="flex flex-col-reverse sm:flex-row gap-3 pt-2">
+									<button
+										onClick={() => setShowPositionModal(false)}
+										className="flex-1 px-5 py-3 border-2 border-gray-200 text-gray-700 font-medium rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all"
+									>
+										Batal
+									</button>
+									<button
+										onClick={handleUpdatePosition}
+										disabled={!selectedPosition}
+										className="flex-1 px-5 py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white font-medium rounded-xl hover:from-purple-700 hover:to-purple-800 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-purple-600 disabled:hover:to-purple-700"
+									>
+										Simpan Perubahan
+									</button>
+								</div>
+							</div>
+						</div>
+					</div>
+				</>
+			)}
+
+			{/* Position History Modal - Redesigned */}
+			{showHistoryModal && selectedUserForPosition && (
+				<>
+					<div 
+						className="fixed inset-0 bg-black bg-opacity-60 z-50 backdrop-blur-sm transition-opacity"
+						onClick={() => setShowHistoryModal(false)}
+					/>
+					<div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+						<div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+							{/* Header */}
+							<div className="bg-gradient-to-r from-indigo-600 to-purple-700 px-6 py-5">
+								<div className="flex items-center justify-between">
+									<h3 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+										<LuClock className="w-6 h-6" />
+										Riwayat Perubahan Posisi
+									</h3>
+									<button
+										onClick={() => setShowHistoryModal(false)}
+										className="text-white/80 hover:text-white transition-colors"
+									>
+										<LuX className="w-6 h-6" />
+									</button>
+								</div>
+							</div>
+
+							{/* User Info */}
+							<div className="px-6 py-4 bg-gradient-to-br from-blue-50 to-indigo-50 border-b border-indigo-100">
+								<div className="flex items-center gap-3">
+									<div className="h-12 w-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
+										<LuUser className="h-6 w-6 text-white" />
+									</div>
+									<div className="flex-1 min-w-0">
+										<h4 className="font-semibold text-gray-900 text-base truncate">
+											{selectedUserForPosition.name}
+										</h4>
+										<p className="text-sm text-gray-600 truncate">{selectedUserForPosition.email}</p>
+									</div>
+								</div>
+							</div>
+
+							{/* History Content */}
+							<div className="flex-1 overflow-y-auto p-6">
+								{positionHistory.length === 0 ? (
+									<div className="flex flex-col items-center justify-center py-12 px-4">
+										<div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+											<LuClock className="h-10 w-10 text-gray-400" />
+										</div>
+										<h4 className="text-lg font-semibold text-gray-700 mb-2">
+											Belum Ada Riwayat
+										</h4>
+										<p className="text-sm text-gray-500 text-center max-w-sm">
+											Belum ada perubahan posisi yang tercatat untuk pegawai ini
+										</p>
+									</div>
+								) : (
+									<div className="space-y-4">
+										{positionHistory.map((item, index) => (
+											<div 
+												key={item.id} 
+												className="relative bg-white border-2 border-gray-100 rounded-xl p-4 hover:border-indigo-200 hover:shadow-md transition-all"
+											>
+												{/* Timeline Line */}
+												{index < positionHistory.length - 1 && (
+													<div className="absolute left-8 top-16 bottom-0 w-0.5 bg-gradient-to-b from-indigo-200 to-transparent"></div>
+												)}
+												
+												<div className="flex items-start gap-4">
+													{/* Number Badge */}
+													<div className="flex-shrink-0">
+														<div className="h-10 w-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+															<span className="text-white font-bold text-sm">
+																{index + 1}
+															</span>
+														</div>
+													</div>
+													
+													<div className="flex-1 min-w-0">
+														{/* Position Change */}
+														<div className="flex flex-wrap items-center gap-2 mb-3">
+															{item.old_position && (
+																<>
+																	<span className={`inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium border-2 ${getPositionBadgeColor(item.old_position.level)}`}>
+																		{item.old_position.name}
+																	</span>
+																	<svg className="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																		<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+																	</svg>
+																</>
+															)}
+															{item.new_position ? (
+																<span className={`inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium border-2 ${getPositionBadgeColor(item.new_position.level)}`}>
+																	{item.new_position.name}
+																</span>
+															) : (
+																<span className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100 text-gray-600 border-2 border-gray-200">
+																	<LuX className="w-3 h-3 mr-1" />
+																	Posisi Dihapus
+																</span>
+															)}
+														</div>
+														
+														{/* Reason */}
+														{item.reason && (
+															<div className="mb-3 p-3 bg-amber-50 border border-amber-100 rounded-lg">
+																<div className="flex items-start gap-2">
+																	<span className="text-amber-600 font-medium text-xs">Alasan:</span>
+																	<p className="text-sm text-amber-900 flex-1">{item.reason}</p>
+																</div>
+															</div>
+														)}
+														
+														{/* Metadata */}
+														<div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
+															<div className="flex items-center gap-1">
+																<LuUser className="w-3.5 h-3.5" />
+																<span className="font-medium text-gray-700">{item.changer?.name || 'N/A'}</span>
+															</div>
+															<div className="flex items-center gap-1">
+																<LuCalendar className="w-3.5 h-3.5" />
+																<span>{new Date(item.created_at).toLocaleString('id-ID', { 
+																	day: 'numeric', 
+																	month: 'short', 
+																	year: 'numeric',
+																	hour: '2-digit',
+																	minute: '2-digit'
+																})}</span>
+															</div>
+														</div>
+													</div>
+												</div>
+											</div>
+										))}
+									</div>
+								)}
+							</div>
+
+							{/* Footer */}
+							<div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
+								<button
+									onClick={() => setShowHistoryModal(false)}
+									className="w-full px-5 py-3 bg-gray-700 text-white font-medium rounded-xl hover:bg-gray-800 transition-all"
+								>
+									Tutup
+								</button>
+							</div>
+						</div>
+					</div>
+				</>
+			)}
 		</div>
 	);
 };

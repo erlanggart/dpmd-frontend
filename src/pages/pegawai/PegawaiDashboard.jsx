@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
 	User, Briefcase, Mail, Calendar, Award, 
 	Phone, MapPin, TrendingUp, FileText,
-	Clock, Activity, Users, Building
+	Clock, Activity, Users, Building, Bell, Info, X
 } from "lucide-react";
 import api from "../../api";
 import MobileHeader from '../../components/mobile/MobileHeader';
@@ -19,6 +19,7 @@ const PegawaiDashboard = () => {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
 	const [user, setUser] = useState(JSON.parse(localStorage.getItem('user') || '{}'));
+	const [showNotifications, setShowNotifications] = useState(false);
 
 	useEffect(() => {
 		const handleProfileUpdate = () => {
@@ -99,75 +100,99 @@ const PegawaiDashboard = () => {
 
 	const firstName = pegawaiData?.nama_pegawai?.split(' ')[0] || "Pegawai";
 
-	// Quick Actions Menu
+	// Quick Actions Menu - Simplified to 3 items
 	const quickActions = [
 		{
 			icon: Briefcase,
 			label: 'Perjadin',
-			color: 'blue',
-			onClick: () => navigate('/pegawai/perjadin')
+			color: 'green',
+			onClick: () => navigate('/dashboard/perjalanan-dinas')
 		},
 		{
 			icon: Calendar,
 			label: 'Jadwal',
-			color: 'purple',
-			onClick: () => navigate('/pegawai/jadwal')
+			color: 'blue',
+			onClick: () => navigate('/dashboard/jadwal')
 		},
 		{
-			icon: User,
-			label: 'Profil',
-			color: 'green',
-			onClick: () => navigate('/pegawai/profil')
-		},
-		{
-			icon: Activity,
-			label: 'Aktivitas',
+			icon: Info,
+			label: 'Informasi',
 			color: 'orange',
-			onClick: () => navigate('/pegawai/aktivitas')
+			onClick: () => navigate('/dashboard/informasi')
 		}
 	];
 
 	return (
-		<div className="min-h-screen bg-gray-50 pb-20">
+		<div className="min-h-screen bg-gray-50 pb-20 lg:pb-4">
 			{/* Mobile Header - GoJek Style */}
 			<MobileHeader
-				userName={firstName}
-				userRole="Pegawai DPMD"
-				greeting="Halo"
+				userName={user.name || firstName}
+				userRole="Pegawai"
+				greeting="Selamat Datang"
 				gradient="from-green-600 via-green-700 to-green-800"
 				notificationCount={0}
-				onNotificationClick={() => navigate('/pegawai/notifikasi')}
-				onSettingsClick={() => navigate('/pegawai/profil')}
+				onNotificationClick={() => setShowNotifications(!showNotifications)}
 				avatar={getUserAvatarUrl(user)}
 			/>
 
-			{/* Main Content */}
-			<div className="px-4 -mt-4">
-				{/* Profile Card */}
-				<div className="bg-white rounded-3xl shadow-lg p-5 mb-5">
-					<div className="flex items-center gap-4 mb-4">
-						<div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-md">
-							{firstName.charAt(0).toUpperCase()}
+			{/* Notification Popup - Modern Design */}
+			{showNotifications && (
+				<>
+					{/* Backdrop with blur effect */}
+					<div 
+						className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 transition-opacity"
+						onClick={() => setShowNotifications(false)}
+					></div>
+					
+					{/* Notification Panel */}
+					<div className="fixed top-4 right-4 w-96 max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-2xl z-50 overflow-hidden border border-gray-100 animate-slideDown">
+						{/* Header */}
+						<div className="relative bg-gradient-to-r from-green-500 to-emerald-600 px-5 py-4">
+							<div className="flex items-center justify-between">
+								<div className="flex items-center gap-3">
+									<div className="h-10 w-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+										<Bell className="h-5 w-5 text-white" />
+									</div>
+									<div>
+										<h3 className="font-bold text-white text-base">Notifikasi</h3>
+										<p className="text-xs text-green-50">Tidak ada notifikasi baru</p>
+									</div>
+								</div>
+								<button
+									onClick={() => setShowNotifications(false)}
+									className="h-8 w-8 flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+								>
+									<X className="h-4 w-4 text-white" />
+								</button>
+							</div>
 						</div>
-						<div className="flex-1">
-							<h3 className="text-lg font-bold text-gray-900">{pegawaiData?.nama_pegawai}</h3>
-							<p className="text-sm text-gray-600">{pegawaiData?.jabatan || 'Pegawai'}</p>
-							<p className="text-xs text-gray-500 mt-1">NIP: {pegawaiData?.nip || '-'}</p>
+
+						{/* Content */}
+						<div className="max-h-[calc(100vh-12rem)] overflow-y-auto">
+							{/* Empty State */}
+							<div className="px-6 py-12 text-center">
+								<div className="mx-auto mb-4 h-20 w-20 bg-gradient-to-br from-green-50 to-emerald-100 rounded-2xl flex items-center justify-center">
+									<Bell className="h-10 w-10 text-green-400" />
+								</div>
+								<h4 className="font-semibold text-gray-700 mb-1">Belum Ada Notifikasi</h4>
+								<p className="text-sm text-gray-500">Notifikasi penting akan muncul di sini</p>
+							</div>
 						</div>
 					</div>
-				</div>
+				</>
+			)}
 
-				{/* Quick Actions Section */}
-				<div className="bg-white rounded-3xl shadow-lg p-5 mb-5">
-					<SectionHeader 
-						title="Menu Utama" 
-						subtitle="Akses cepat fitur pegawai"
-						icon={Activity}
-					/>
-					<ServiceGrid services={quickActions} columns={4} />
-				</div>
-
-				{/* Info Section */}
+		{/* Main Content */}
+		<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-4">
+			{/* Quick Actions Section */}
+			<div className="bg-white rounded-[24px] sm:rounded-[28px] shadow-lg shadow-gray-200/60 p-5 sm:p-6 mb-5 border border-gray-100">
+				<SectionHeader 
+					title="Menu Utama" 
+					subtitle="Akses cepat fitur pegawai"
+					icon={Activity}
+				/>
+				<ServiceGrid services={quickActions} columns={3} />
+			</div>				{/* Info Section */}
 				<div className="mb-5">
 					<SectionHeader 
 						title="Informasi Pegawai" 
@@ -175,58 +200,104 @@ const PegawaiDashboard = () => {
 						icon={User}
 					/>
 					<div className="space-y-3">
-						<InfoCard
-							icon={Building}
-							title="Bidang"
-							value={pegawaiData?.bidang?.nama_bidang || '-'}
-							subtitle="Unit Kerja"
-							color="blue"
-						/>
-						<InfoCard
-							icon={Mail}
-							title="Email"
-							value={pegawaiData?.users?.[0]?.email || '-'}
-							subtitle="Email resmi"
-							color="purple"
-						/>
+						{/* Bidang */}
+						{pegawaiData?.bidang?.nama_bidang && (
+							<div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-4 border border-blue-200">
+								<div className="flex items-center gap-3">
+									<div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center flex-shrink-0">
+										<Building className="h-6 w-6 text-white" />
+									</div>
+									<div className="flex-1 min-w-0">
+										<p className="text-xs text-blue-600 font-medium mb-0.5">Bidang</p>
+										<p className="text-sm font-bold text-gray-900 truncate">{pegawaiData.bidang.nama_bidang}</p>
+										<p className="text-xs text-gray-500 mt-0.5">Unit Kerja</p>
+									</div>
+								</div>
+							</div>
+						)}
+
+						{/* Email */}
+						<div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl p-4 border border-purple-200">
+							<div className="flex items-center gap-3">
+								<div className="w-12 h-12 bg-purple-600 rounded-xl flex items-center justify-center flex-shrink-0">
+									<Mail className="h-6 w-6 text-white" />
+								</div>
+								<div className="flex-1 min-w-0">
+									<p className="text-xs text-purple-600 font-medium mb-0.5">Email</p>
+									<p className="text-sm font-bold text-gray-900 truncate break-all">{pegawaiData?.users?.[0]?.email || user.email || '-'}</p>
+									<p className="text-xs text-gray-500 mt-0.5">Email resmi</p>
+								</div>
+							</div>
+						</div>
+
+						{/* NIP - Only show if exists */}
+						{pegawaiData?.nip && (
+							<div className="bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-4 border border-green-200">
+								<div className="flex items-center gap-3">
+									<div className="w-12 h-12 bg-green-600 rounded-xl flex items-center justify-center flex-shrink-0">
+										<FileText className="h-6 w-6 text-white" />
+									</div>
+									<div className="flex-1 min-w-0">
+										<p className="text-xs text-green-600 font-medium mb-0.5">NIP</p>
+										<p className="text-sm font-bold text-gray-900">{pegawaiData.nip}</p>
+										<p className="text-xs text-gray-500 mt-0.5">Nomor Induk Pegawai</p>
+									</div>
+								</div>
+							</div>
+						)}
+
+						{/* No HP - Only show if exists */}
 						{pegawaiData?.no_hp && (
-							<InfoCard
-								icon={Phone}
-								title="No. HP"
-								value={pegawaiData.no_hp}
-								subtitle="Kontak pegawai"
-								color="green"
-							/>
+							<div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-2xl p-4 border border-orange-200">
+								<div className="flex items-center gap-3">
+									<div className="w-12 h-12 bg-orange-600 rounded-xl flex items-center justify-center flex-shrink-0">
+										<Phone className="h-6 w-6 text-white" />
+									</div>
+									<div className="flex-1 min-w-0">
+										<p className="text-xs text-orange-600 font-medium mb-0.5">No. HP</p>
+										<p className="text-sm font-bold text-gray-900">{pegawaiData.no_hp}</p>
+										<p className="text-xs text-gray-500 mt-0.5">Kontak pegawai</p>
+									</div>
+								</div>
+							</div>
 						)}
 					</div>
 				</div>
 
-				{/* Additional Info Cards */}
-				<div className="mb-5">
-					<SectionHeader 
-						title="Informasi Tambahan" 
-						subtitle="Detail pegawai"
-						icon={FileText}
-					/>
-					<div className="grid grid-cols-2 gap-3">
-						{pegawaiData?.pangkat && (
-							<InfoCard
-								icon={Award}
-								title="Pangkat"
-								value={pegawaiData.pangkat}
-								color="indigo"
-							/>
-						)}
-						{pegawaiData?.golongan && (
-							<InfoCard
-								icon={TrendingUp}
-								title="Golongan"
-								value={pegawaiData.golongan}
-								color="orange"
-							/>
-						)}
+				{/* Additional Info Cards - Only show if data exists */}
+				{(pegawaiData?.pangkat || pegawaiData?.golongan) && (
+					<div className="mb-5">
+						<SectionHeader 
+							title="Informasi Tambahan" 
+							subtitle="Detail pegawai"
+							icon={FileText}
+						/>
+						<div className="grid grid-cols-2 gap-3">
+							{pegawaiData?.pangkat && (
+								<div className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-2xl p-4 border border-indigo-200">
+									<div className="flex flex-col items-center text-center">
+										<div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center mb-3">
+											<Award className="h-6 w-6 text-white" />
+										</div>
+										<p className="text-xs text-indigo-600 font-medium mb-1">Pangkat</p>
+										<p className="text-sm font-bold text-gray-900 break-words">{pegawaiData.pangkat}</p>
+									</div>
+								</div>
+							)}
+							{pegawaiData?.golongan && (
+								<div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-2xl p-4 border border-orange-200">
+									<div className="flex flex-col items-center text-center">
+										<div className="w-12 h-12 bg-orange-600 rounded-xl flex items-center justify-center mb-3">
+											<TrendingUp className="h-6 w-6 text-white" />
+										</div>
+										<p className="text-xs text-orange-600 font-medium mb-1">Golongan</p>
+										<p className="text-sm font-bold text-gray-900">{pegawaiData.golongan}</p>
+									</div>
+								</div>
+							)}
+						</div>
 					</div>
-				</div>
+				)}
 
 				{/* Activity Summary */}
 				<div className="mb-5">
@@ -236,20 +307,26 @@ const PegawaiDashboard = () => {
 						icon={Clock}
 					/>
 					<div className="grid grid-cols-2 gap-3">
-						<InfoCard
-							icon={Briefcase}
-							title="Perjalanan Dinas"
-							value="0"
-							subtitle="Bulan ini"
-							color="blue"
-						/>
-						<InfoCard
-							icon={Calendar}
-							title="Kegiatan"
-							value="0"
-							subtitle="Terjadwal"
-							color="purple"
-						/>
+						<div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-4 border border-blue-200">
+							<div className="flex flex-col items-center text-center">
+								<div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center mb-3">
+									<Briefcase className="h-6 w-6 text-white" />
+								</div>
+								<p className="text-2xl font-bold text-gray-900 mb-1">0</p>
+								<p className="text-xs text-gray-600 font-medium">Perjalanan Dinas</p>
+								<p className="text-xs text-gray-400 mt-0.5">Bulan ini</p>
+							</div>
+						</div>
+						<div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl p-4 border border-purple-200">
+							<div className="flex flex-col items-center text-center">
+								<div className="w-12 h-12 bg-purple-600 rounded-xl flex items-center justify-center mb-3">
+									<Calendar className="h-6 w-6 text-white" />
+								</div>
+								<p className="text-2xl font-bold text-gray-900 mb-1">0</p>
+								<p className="text-xs text-gray-600 font-medium">Kegiatan</p>
+								<p className="text-xs text-gray-400 mt-0.5">Terjadwal</p>
+							</div>
+						</div>
 					</div>
 				</div>
 

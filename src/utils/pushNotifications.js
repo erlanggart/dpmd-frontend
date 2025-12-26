@@ -44,11 +44,8 @@ export const registerServiceWorker = async () => {
       scope: '/'
     });
 
-    console.log('Service Worker registered:', registration);
-
     // Wait for service worker to be ready
     await navigator.serviceWorker.ready;
-    console.log('Service Worker ready');
 
     return registration;
   } catch (error) {
@@ -58,11 +55,19 @@ export const registerServiceWorker = async () => {
 };
 
 // Subscribe to push notifications
+let isSubscribing = false; // Flag to prevent duplicate subscriptions
+
 export const subscribeToPushNotifications = async () => {
+  if (isSubscribing) {
+    console.log('[Push] ⏭️ Subscription already in progress, skipping...');
+    return null;
+  }
+  
   try {
+    isSubscribing = true;
     console.log('[Push] Starting subscription process...');
     const registration = await navigator.serviceWorker.ready;
-    console.log('[Push] Service Worker ready:', registration);
+    console.log('[Push] Service Worker ready');
 
     // VAPID public key (harus sama dengan backend)
     const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY || 'BCEEJBfb05GAzlnpuzfPJszt054iCSOhqPVkmAMyTcUGZ8VrNluqShCQ2PVmwcMU0WuXJC35P5_XCXJNaQczX-U';
@@ -72,7 +77,7 @@ export const subscribeToPushNotifications = async () => {
     let subscription = await registration.pushManager.getSubscription();
 
     if (subscription) {
-      console.log('[Push] Found existing subscription:', subscription.endpoint);
+      console.log('[Push] Found existing subscription');
       
       // Check if subscription uses the same VAPID key
       const currentKey = subscription.options?.applicationServerKey;
@@ -85,8 +90,6 @@ export const subscribeToPushNotifications = async () => {
         const newKeyStr = btoa(String.fromCharCode(...new Uint8Array(newKey)));
         if (currentKeyStr !== newKeyStr) {
           console.warn('[Push] ⚠️ VAPID key mismatch detected!');
-          console.log('[Push] Current key:', currentKeyStr.substring(0, 30) + '...');
-          console.log('[Push] New key:', newKeyStr.substring(0, 30) + '...');
           needsResubscribe = true;
         }
       }
@@ -110,7 +113,6 @@ export const subscribeToPushNotifications = async () => {
 
     // Convert VAPID key to Uint8Array
     const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
-    console.log('[Push] Converted VAPID key to Uint8Array');
 
     // Subscribe
     console.log('[Push] Requesting push subscription from browser...');
@@ -120,22 +122,17 @@ export const subscribeToPushNotifications = async () => {
     });
 
     console.log('[Push] ✅ Push subscription created!');
-    console.log('[Push] Endpoint:', subscription.endpoint);
 
     // Send subscription to server
-    console.log('[Push] Sending subscription to server...');
     await sendSubscriptionToServer(subscription);
     console.log('[Push] ✅ Subscription sent to server successfully!');
 
     return subscription;
   } catch (error) {
     console.error('[Push] ❌ Error subscribing to push notifications:', error);
-    console.error('[Push] Error details:', {
-      name: error.name,
-      message: error.message,
-      stack: error.stack
-    });
     return null;
+  } finally {
+    isSubscribing = false;
   }
 };
 
@@ -166,21 +163,16 @@ export const unsubscribeFromPushNotifications = async () => {
 const sendSubscriptionToServer = async (subscription) => {
   try {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
-    console.log('[Push] Sending for user:', user.id, user.email);
     
     const payload = {
       user_id: user.id,
       subscription: subscription
     };
-    console.log('[Push] Payload:', { ...payload, subscription: 'subscription_object' });
     
     const response = await api.post('/push-notification/subscribe', payload);
-
-    console.log('[Push] Server response:', response.data);
     return response.data;
   } catch (error) {
     console.error('[Push] ❌ Error sending subscription to server:', error);
-    console.error('[Push] Error response:', error.response?.data);
     throw error;
   }
 };

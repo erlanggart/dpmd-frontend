@@ -11,7 +11,12 @@ import {
   TrendingUp,
   Activity,
   Briefcase,
-  Users
+  Users,
+  Bell,
+  Info,
+  X,
+  ChevronRight,
+  Calendar
 } from 'lucide-react';
 import api from '../../api';
 import { toast } from 'react-hot-toast';
@@ -32,6 +37,7 @@ const KepalaBidangDashboard = () => {
   const [statistik, setStatistik] = useState(null);
   const [recentDisposisi, setRecentDisposisi] = useState([]);
   const [user, setUser] = useState(JSON.parse(localStorage.getItem('user') || '{}'));
+  const [showNotifications, setShowNotifications] = useState(false);
 
   useEffect(() => {
     const handleProfileUpdate = () => {
@@ -95,37 +101,30 @@ const KepalaBidangDashboard = () => {
     );
   }
 
-  // Quick Actions Menu
+  // Quick Actions Menu - Simplified to 3 items
   const quickActions = [
     {
-      lottieAnimation: inboxAnim,
-      label: 'Disposisi Masuk',
-      color: 'blue',
-      badge: statistik?.masuk?.pending || 0,
-      onClick: () => navigate('/kepala-bidang/disposisi')
-    },
-    {
       icon: Briefcase,
-      label: 'Perjalanan Dinas',
-      color: 'purple',
-      onClick: () => navigate('/kepala-bidang/perjadin')
+      label: 'Perjadin',
+      color: 'blue',
+      onClick: () => navigate('/dashboard/perjalanan-dinas')
     },
     {
-      lottieAnimation: userAnim,
-      label: 'Pegawai',
+      icon: Calendar,
+      label: 'Jadwal',
       color: 'green',
-      onClick: () => navigate('/kepala-bidang/pegawai')
+      onClick: () => navigate('/dashboard/jadwal')
     },
     {
-      icon: Activity,
-      label: 'Dashboard Utama',
+      icon: Info,
+      label: 'Informasi',
       color: 'orange',
-      onClick: () => navigate('/core-dashboard/dashboard')
+      onClick: () => navigate('/dashboard/informasi')
     }
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <div className="min-h-screen bg-gray-50 pb-20 lg:pb-4">
       {/* Mobile Header - GoJek Style */}
       <MobileHeader
         userName={user.name || 'Kepala Bidang'}
@@ -133,21 +132,102 @@ const KepalaBidangDashboard = () => {
         greeting="Selamat Datang"
         gradient="from-blue-600 via-blue-700 to-blue-800"
         notificationCount={statistik?.masuk?.pending || 0}
-        onNotificationClick={() => navigate('/kepala-bidang/notifikasi')}
-        onSettingsClick={() => navigate('/kepala-bidang/profil')}
+        onNotificationClick={() => setShowNotifications(!showNotifications)}
         avatar={getUserAvatarUrl(user)}
       />
 
+      {/* Notification Popup - Modern Design */}
+      {showNotifications && (
+        <>
+          {/* Backdrop with blur effect */}
+          <div 
+            className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 transition-opacity"
+            onClick={() => setShowNotifications(false)}
+          ></div>
+          
+          {/* Notification Panel */}
+          <div className="fixed top-4 right-4 w-96 max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-2xl z-50 overflow-hidden border border-gray-100 animate-slideDown">
+            {/* Header */}
+            <div className="relative bg-gradient-to-r from-blue-500 to-cyan-600 px-5 py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                    <Bell className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-white text-base">Notifikasi</h3>
+                    <p className="text-xs text-blue-50">
+                      {statistik?.masuk?.pending > 0 ? `${statistik.masuk.pending} notifikasi baru` : 'Tidak ada notifikasi baru'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowNotifications(false)}
+                  className="h-8 w-8 flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+                >
+                  <X className="h-4 w-4 text-white" />
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="max-h-[calc(100vh-12rem)] overflow-y-auto">
+              {statistik?.masuk?.pending > 0 ? (
+                <div className="p-4">
+                  {/* Notification Item */}
+                  <div 
+                    className="group relative bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl p-4 border border-blue-100 hover:border-blue-300 cursor-pointer transition-all hover:shadow-md"
+                    onClick={() => {
+                      setShowNotifications(false);
+                      navigate('/kepala-bidang/disposisi');
+                    }}
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="h-12 w-12 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
+                        <Mail className="h-6 w-6 text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                          <h4 className="font-semibold text-gray-800 text-sm">Disposisi Pending</h4>
+                          <span className="px-2 py-1 bg-blue-600 text-white text-xs font-bold rounded-full">
+                            {statistik.masuk.pending}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600 mb-2">
+                          Anda memiliki {statistik.masuk.pending} disposisi yang menunggu persetujuan
+                        </p>
+                        <div className="flex items-center gap-2 text-xs text-blue-600 font-medium group-hover:text-blue-700">
+                          <span>Klik untuk melihat detail</span>
+                          <ChevronRight className="h-3 w-3 group-hover:translate-x-1 transition-transform" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="px-6 py-12 text-center">
+                  <div className="mx-auto mb-4 h-20 w-20 bg-gradient-to-br from-blue-50 to-cyan-100 rounded-2xl flex items-center justify-center">
+                    <Bell className="h-10 w-10 text-blue-400" />
+                  </div>
+                  <h4 className="font-semibold text-gray-700 mb-1">Belum Ada Notifikasi</h4>
+                  <p className="text-sm text-gray-500">Notifikasi penting akan muncul di sini</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+
       {/* Main Content */}
-      <div className="px-4 -mt-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-4">
         {/* Quick Actions Section */}
-        <div className="bg-white rounded-3xl shadow-lg p-5 mb-5">
+        <div className="bg-white rounded-[24px] sm:rounded-[28px] shadow-lg shadow-gray-200/60 p-5 sm:p-6 mb-5 border border-gray-100">
           <SectionHeader 
             title="Menu Utama" 
-            subtitle="Akses cepat ke fitur utama"
+            subtitle="Akses cepat fitur pegawai"
             icon={Mail}
           />
-          <ServiceGrid services={quickActions} columns={4} />
+          <ServiceGrid services={quickActions} columns={3} />
         </div>
 
         {/* Summary Stats Section */}

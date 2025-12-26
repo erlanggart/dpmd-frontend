@@ -3,7 +3,7 @@
 
 const VERSION_KEY = 'app_version';
 const LAST_UPDATE_KEY = 'app_last_update';
-const VERSION_CHECK_INTERVAL = 30 * 60 * 1000; // Check every 30 minutes
+const VERSION_CHECK_INTERVAL = 60 * 60 * 1000; // Check every 60 minutes (reduced from 30)
 
 /**
  * Get current app version from package.json (injected at build time)
@@ -138,12 +138,25 @@ export const checkForServerUpdate = async () => {
     });
     
     if (!response.ok) {
-      console.warn('[Version] Could not fetch version.json');
+      // Silently skip if version.json not found (common in dev)
+      return false;
+    }
+    
+    // Check if response is JSON
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      // Not a JSON response, skip silently
       return false;
     }
     
     const data = await response.json();
     const serverVersion = data.version;
+    
+    if (!serverVersion) {
+      // No version in response, skip
+      return false;
+    }
+    
     const currentVersion = getCurrentVersion();
     const storedVersion = getStoredVersion();
     
@@ -167,7 +180,12 @@ export const checkForServerUpdate = async () => {
     
     return false;
   } catch (error) {
-    console.error('[Version] Error checking server version:', error);
+    // Silently handle errors (common in development)
+    if (error.name === 'SyntaxError') {
+      // JSON parse error, ignore
+      return false;
+    }
+    console.warn('[Version] Could not check for updates:', error.message);
     return false;
   }
 };

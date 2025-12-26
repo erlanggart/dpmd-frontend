@@ -1,7 +1,8 @@
 // src/pages/pegawai/PegawaiLayout.jsx
 import React from "react";
 import { Outlet, Navigate, useNavigate, useLocation } from "react-router-dom";
-import { FiHome, FiUser, FiLogOut, FiMenu, FiMail, FiBell, FiCalendar, FiBarChart2 } from "react-icons/fi";
+import { FiHome, FiUser, FiLogOut, FiMenu, FiMail, FiBell, FiCalendar, FiBarChart2, FiFileText, FiDollarSign, FiUsers, FiBriefcase } from "react-icons/fi";
+import { Landmark } from "lucide-react";
 import { useConfirm } from "../../hooks/useConfirm.jsx";
 import { subscribeToPushNotifications } from "../../utils/pushNotifications";
 import toast from 'react-hot-toast';
@@ -94,12 +95,8 @@ const PegawaiLayout = () => {
 				const permission = Notification.permission;
 				
 				if (permission === 'granted') {
-					console.log('[Pegawai] Initializing push notifications...');
 					try {
-						const subscription = await subscribeToPushNotifications();
-						if (subscription) {
-							console.log('✅ [Pegawai] Push notification subscription successful');
-						}
+						await subscribeToPushNotifications();
 					} catch (err) {
 						console.warn('[Pegawai] Push notification subscription failed:', err);
 					}
@@ -130,57 +127,15 @@ const PegawaiLayout = () => {
 	};
 
 	const bottomNavItems = [
-		{ path: "/core-dashboard/dashboard", label: "Core Dashboard", icon: FiBarChart2 },
-		{ path: "/core-dashboard/kegiatan", label: "Jadwal Kegiatan", icon: FiCalendar },
+		{ path: "/pegawai/dashboard", label: "Dashboard", icon: FiHome },
+		{ path: "/core-dashboard/dashboard", label: "Statistik", icon: FiBarChart2 },
+		{ path: "/core-dashboard/kegiatan", label: "Kegiatan", icon: FiCalendar },
 		{ path: "/pegawai/disposisi", label: "Disposisi", icon: FiMail },
 		{ path: "/pegawai/menu", label: "Menu", icon: FiMenu, action: () => setShowMenu(true) },
 	];
 
 	return (
 		<div className="min-h-screen bg-gray-50 pb-20">
-			{/* Fixed Header - Orange Theme */}
-			<header className="fixed top-0 left-0 right-0 bg-gradient-to-r from-orange-600 to-orange-700 text-white shadow-lg z-40">
-				<div className="max-w-lg mx-auto px-4 py-3">
-					<div className="flex items-center justify-between">
-						<div className="flex items-center gap-3">
-							{user.avatar ? (
-								<img 
-									src={`${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://127.0.0.1:3001'}${user.avatar}`}
-									alt={user.name}
-									className="h-10 w-10 rounded-full object-cover border-2 border-white shadow-md"
-									onError={(e) => {
-										e.target.style.display = 'none';
-										e.target.nextElementSibling.style.display = 'flex';
-									}}
-								/>
-							) : null}
-							<div className={`h-10 w-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center border-2 border-white shadow-md ${user.avatar ? 'hidden' : ''}`}>
-								<span className="text-white font-bold text-lg">
-									{user.name?.charAt(0) || "P"}
-								</span>
-							</div>
-							<div>
-								<h2 className="font-bold text-sm leading-tight">{user.name || "Pegawai"}</h2>
-								<p className="text-xs text-orange-100 capitalize">{user.role?.replace(/_/g, ' ')}</p>
-							</div>
-						</div>
-						
-						{/* Notification Bell */}
-						<button
-							onClick={handleNotificationClick}
-							className="relative p-2 hover:bg-white/10 rounded-full transition-colors"
-						>
-							<FiBell className="h-6 w-6" />
-							{unreadCount > 0 && (
-								<span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
-									{unreadCount}
-								</span>
-							)}
-						</button>
-					</div>
-				</div>
-			</header>
-
 			{/* Notification Panel */}
 			{showNotifications && (
 				<>
@@ -240,14 +195,14 @@ const PegawaiLayout = () => {
 			)}
 
 			{/* Main Content */}
-			<main className="min-h-screen pt-16">
+			<main className="min-h-screen">
 				<Outlet />
 			</main>
 
 			{/* Bottom Navigation - Orange Theme */}
 			<nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-orange-200 shadow-lg z-50">
 				<div className="max-w-lg mx-auto px-2">
-					<div className="flex items-center justify-around py-2">
+					<div className="flex items-center justify-around py-3">
 						{bottomNavItems.map((item, index) => {
 							const isActive = location.pathname === item.path;
 							const Icon = item.icon;
@@ -262,16 +217,13 @@ const PegawaiLayout = () => {
 											navigate(item.path);
 										}
 									}}
-									className={`flex flex-col items-center justify-center px-3 py-2 rounded-xl transition-all ${
+									className={`flex items-center justify-center p-3 rounded-xl transition-all duration-200 ${
 										isActive 
-											? "text-orange-700" 
-											: "text-orange-400 hover:text-orange-600"
+											? "text-orange-700 bg-orange-50 scale-110" 
+											: "text-gray-400 hover:text-orange-600 hover:bg-orange-50"
 									}`}
 								>
-									<Icon className={`h-6 w-6 mb-1 ${isActive ? "animate-bounce" : ""}`} />
-									<span className={`text-xs font-medium ${isActive ? "font-bold" : ""}`}>
-										{item.label}
-									</span>
+									<Icon className="h-6 w-6" />
 								</button>
 							);
 						})}
@@ -324,56 +276,6 @@ const PegawaiLayout = () => {
 
 							{/* Menu Items */}
 							<div className="px-6 py-4 space-y-2 max-h-96 overflow-y-auto">
-								<button
-									onClick={() => {
-										setShowMenu(false);
-										navigate("/core-dashboard/dashboard");
-									}}
-									className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-orange-50 transition-colors text-left"
-								>
-									<div className="h-12 w-12 bg-orange-100 rounded-xl flex items-center justify-center">
-										<FiBarChart2 className="h-6 w-6 text-orange-600" />
-									</div>
-									<div>
-										<h4 className="font-semibold text-gray-800">Core Dashboard</h4>
-										<p className="text-sm text-gray-500">Dashboard utama analisis</p>
-									</div>
-								</button>
-
-								<button
-									onClick={() => {
-										setShowMenu(false);
-										navigate("/core-dashboard/kegiatan");
-									}}
-									className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-orange-50 transition-colors text-left"
-								>
-									<div className="h-12 w-12 bg-orange-100 rounded-xl flex items-center justify-center">
-										<FiCalendar className="h-6 w-6 text-orange-600" />
-									</div>
-									<div>
-										<h4 className="font-semibold text-gray-800">Jadwal Kegiatan</h4>
-										<p className="text-sm text-gray-500">Lihat jadwal kegiatan</p>
-									</div>
-								</button>
-
-								<button
-									onClick={() => {
-										setShowMenu(false);
-										navigate("/pegawai/disposisi");
-									}}
-									className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-orange-50 transition-colors text-left"
-								>
-									<div className="h-12 w-12 bg-orange-100 rounded-xl flex items-center justify-center">
-										<FiMail className="h-6 w-6 text-orange-600" />
-									</div>
-									<div>
-										<h4 className="font-semibold text-gray-800">Disposisi</h4>
-										<p className="text-sm text-gray-500">Kelola disposisi surat</p>
-									</div>
-								</button>
-
-								<div className="border-t border-gray-200 my-2"></div>
-
 								<button 
 									onClick={() => {
 										setShowMenu(false);
@@ -386,9 +288,42 @@ const PegawaiLayout = () => {
 									</div>
 									<div>
 										<h4 className="font-semibold text-gray-800">Profil Saya</h4>
-										<p className="text-sm text-gray-500">Lihat dan edit profil</p>
+										<p className="text-sm text-gray-500">Lihat & edit profil</p>
 									</div>
 								</button>
+
+								{/* Bidang Navigation - Only show if user has bidang_id */}
+								{user.bidang_id && (() => {
+									const bidangRoutes = {
+										2: { name: 'Sekretariat', path: '/bidang/sekretariat', icon: FiFileText },
+										3: { name: 'SPKED', path: '/bidang/spked', icon: Landmark },
+										4: { name: 'KKD', path: '/bidang/kkd', icon: FiDollarSign },
+										5: { name: 'PMD', path: '/bidang/pmd', icon: FiUsers },
+										6: { name: 'Pemdes', path: '/bidang/pemdes', icon: FiBriefcase }
+									};
+
+									const bidangNav = bidangRoutes[user.bidang_id];
+
+									return bidangNav ? (
+										<button
+											onClick={() => {
+												setShowMenu(false);
+												navigate(bidangNav.path);
+											}}
+											className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-orange-50 transition-colors text-left"
+										>
+											<div className="h-12 w-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center">
+												<bidangNav.icon className="h-6 w-6 text-white" />
+											</div>
+											<div>
+												<h4 className="font-semibold text-gray-800">Bidang {bidangNav.name}</h4>
+												<p className="text-sm text-gray-500">Kelola data bidang</p>
+											</div>
+										</button>
+									) : null;
+								})()}
+
+								<div className="border-t border-gray-200 my-2"></div>
 
 								<button 
 									onClick={handleLogout}
@@ -402,6 +337,7 @@ const PegawaiLayout = () => {
 										<p className="text-sm text-gray-500">Logout dari sistem</p>
 									</div>
 								</button>
+
 							</div>
 
 							{/* Close Button */}

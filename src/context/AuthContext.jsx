@@ -1,5 +1,5 @@
 // src/context/AuthContext.jsx
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import { clearAllSessionData, backupSessionToIndexedDB, restoreSessionFromIndexedDB } from "../utils/sessionPersistence";
 
 // 1. Membuat Context
@@ -107,7 +107,13 @@ export const AuthProvider = ({ children }) => {
 	const [isCheckingSession, setIsCheckingSession] = useState(true);
 
 	// PROACTIVE SESSION CHECK - Runs once on mount
+	// Use ref to ensure this only runs once
+	const sessionCheckedRef = useRef(false);
+
 	useEffect(() => {
+		if (sessionCheckedRef.current) return; // Prevent duplicate execution
+		sessionCheckedRef.current = true;
+
 		async function checkAndRestoreSession() {
 			console.log('[Auth] 🔍 Checking for existing session...');
 			
@@ -158,24 +164,23 @@ export const AuthProvider = ({ children }) => {
 	useEffect(() => {
 		if (!user || !expressToken) return;
 
-		// Update activity AND backup on user interaction
+		// Update activity on user interaction (no backup, just activity update)
 		const updateOnActivity = () => {
 			updateActivity();
-			// IMMEDIATE backup on every interaction
-			backupSessionToIndexedDB();
+			// Backup is handled by periodic interval only
 		};
 
-		// Listen to MANY user activity events
-		const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click', 'touchend', 'touchmove'];
+		// Listen to user activity events
+		const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
 		events.forEach(event => {
 			window.addEventListener(event, updateOnActivity, { passive: true });
 		});
 
-		// VERY FREQUENT periodic backup (every 30 seconds)
+		// Periodic backup (every 5 minutes - reduced from 30 seconds)
 		const backupInterval = setInterval(() => {
 			console.log('[Auth] ⏰ Periodic backup triggered');
 			backupSessionToIndexedDB();
-		}, 30 * 1000); // 30 seconds
+		}, 5 * 60 * 1000); // 5 minutes
 
 		return () => {
 			events.forEach(event => {

@@ -113,62 +113,24 @@ const SekretarisDinasLayout = () => {
 	};
 
 	const bottomNavItems = [
-		{ path: "/core-dashboard/dashboard", label: "Core Dashboard", icon: FiBarChart2 },
-		{ path: "/core-dashboard/kegiatan", label: "Jadwal Kegiatan", icon: FiCalendar },
+		{ path: "/sekretaris-dinas/dashboard", label: "Dashboard", icon: FiHome },
+		{ path: "/core-dashboard/dashboard", label: "Statistik", icon: FiBarChart2 },
+		{ path: "/core-dashboard/kegiatan", label: "Kegiatan", icon: FiCalendar },
 		{ path: "/sekretaris-dinas/disposisi", label: "Disposisi", icon: FiMail },
 		{ path: "/sekretaris-dinas/menu", label: "Menu", icon: FiMenu, action: () => setShowMenu(true) },
 	];
 
 	return (
 		<div className="min-h-screen bg-gray-50 pb-20">
-			{/* Header with Notification */}
-			<header className="fixed top-0 left-0 right-0 bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg z-40">
-				<div className="max-w-lg mx-auto px-4 py-3">
-					<div className="flex items-center justify-between">
-						<div className="flex items-center gap-3">
-							{user.avatar ? (
-								<img 
-									src={`${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://127.0.0.1:3001'}${user.avatar}`}
-									alt={user.name}
-									className="h-10 w-10 rounded-full object-cover border-2 border-white shadow-md"
-									onError={(e) => {
-										e.target.style.display = 'none';
-										e.target.nextElementSibling.style.display = 'flex';
-									}}
-								/>
-							) : null}
-							<div className={`h-10 w-10 bg-white/20 rounded-full flex items-center justify-center shadow-md ${user.avatar ? 'hidden' : ''}`}>
-								<FiUser className="h-5 w-5 text-white" />
-							</div>
-							<div>
-								<h3 className="font-bold text-sm">{user.name || "Sekretaris Dinas"}</h3>
-								<p className="text-xs text-purple-100">Sekretaris Dinas</p>
-							</div>
-						</div>
-						
-						<button
-							onClick={handleNotificationClick}
-							className="relative p-2 hover:bg-white/10 rounded-full transition-colors"
-						>
-							<FiBell className="h-6 w-6" />
-							{unreadCount > 0 && (
-								<span className="absolute top-0 right-0 h-5 w-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
-									{unreadCount}
-								</span>
-							)}
-						</button>
-					</div>
-				</div>
-			</header>
-
-			<main className="min-h-screen pt-16">
+			{/* Main Content */}
+			<main className="min-h-screen">
 				<Outlet />
 			</main>
 
 			{/* Bottom Navigation - Purple Theme for Sekretaris Dinas */}
 			<nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-purple-200 shadow-lg z-50">
 				<div className="max-w-lg mx-auto px-2">
-					<div className="flex items-center justify-around py-2">
+					<div className="flex items-center justify-around py-3">
 						{bottomNavItems.map((item, index) => {
 							const isActive = location.pathname === item.path;
 							const Icon = item.icon;
@@ -183,16 +145,13 @@ const SekretarisDinasLayout = () => {
 											navigate(item.path);
 										}
 									}}
-									className={`flex flex-col items-center justify-center px-3 py-2 rounded-xl transition-all ${
+									className={`flex items-center justify-center p-3 rounded-xl transition-all duration-200 ${
 										isActive 
-											? "text-purple-700" 
-											: "text-purple-400 hover:text-purple-600"
+											? "text-purple-700 bg-purple-50 scale-110" 
+											: "text-gray-400 hover:text-purple-600 hover:bg-purple-50"
 									}`}
 								>
-									<Icon className={`h-6 w-6 mb-1 ${isActive ? "animate-bounce" : ""}`} />
-									<span className={`text-xs font-medium ${isActive ? "font-bold" : ""}`}>
-										{item.label}
-									</span>
+									<Icon className="h-6 w-6" />
 								</button>
 							);
 						})}
@@ -321,7 +280,7 @@ const SekretarisDinasLayout = () => {
 										<FiBarChart2 className="h-6 w-6 text-purple-600" />
 									</div>
 									<div>
-										<h4 className="font-semibold text-gray-800">Core Dashboard</h4>
+										<h4 className="font-semibold text-gray-800">Statistik</h4>
 										<p className="text-sm text-gray-500">Analisis dan statistik</p>
 									</div>
 								</button>
@@ -337,8 +296,8 @@ const SekretarisDinasLayout = () => {
 										<FiCalendar className="h-6 w-6 text-blue-600" />
 									</div>
 									<div>
-										<h4 className="font-semibold text-gray-800">Jadwal Kegiatan</h4>
-										<p className="text-sm text-gray-500">Kelola jadwal kegiatan</p>
+										<h4 className="font-semibold text-gray-800">Kegiatan</h4>
+										<p className="text-sm text-gray-500">Kelola kegiatan</p>
 									</div>
 								</button>
 

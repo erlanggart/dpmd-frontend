@@ -1,6 +1,10 @@
 // Session Persistence Utility for PWA
 // Ensures user session persists across app closes and device restarts
 
+// Debounce timer to prevent excessive backups
+let backupTimer = null;
+const BACKUP_DEBOUNCE_MS = 2000; // Wait 2 seconds before backing up
+
 /**
  * Initialize session persistence
  * Call this once when the app starts
@@ -19,7 +23,7 @@ export const initSessionPersistence = () => {
   };
 
   request.onsuccess = () => {
-    console.log('[Session] IndexedDB initialized for session backup');
+    // Silent success
   };
 
   request.onupgradeneeded = (event) => {
@@ -32,52 +36,77 @@ export const initSessionPersistence = () => {
 };
 
 /**
- * Backup session to IndexedDB
+ * Backup session to IndexedDB with debouncing
  * This provides an additional layer of persistence
  * SYNCHRONOUSLY waits for completion
  */
 export const backupSessionToIndexedDB = async () => {
-  try {
-    const sessionStr = localStorage.getItem('authSession');
-    if (!sessionStr) {
-      console.log('[Session] No session in localStorage to backup');
-      return false;
-    }
-
-    const db = await openSessionDB();
-    
-    // Use Promise to wait for transaction to complete
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction('sessions', 'readwrite');
-      const store = tx.objectStore('sessions');
-
-      const session = JSON.parse(sessionStr);
-      const backupData = {
-        id: 'current',
-        ...session,
-        backedUpAt: Date.now()
-      };
-      
-      store.put(backupData);
-
-      tx.oncomplete = () => {
-        console.log('[Session] ✅ Session backed up to IndexedDB:', {
-          user: session.user?.nama || 'unknown',
-          expiresAt: new Date(session.expiresAt).toLocaleString('id-ID'),
-          backedUpAt: new Date(backupData.backedUpAt).toLocaleString('id-ID')
-        });
-        resolve(true);
-      };
-
-      tx.onerror = () => {
-        console.error('[Session] ❌ Failed to backup:', tx.error);
-        reject(tx.error);
-      };
-    });
-  } catch (error) {
-    console.error('[Session] ❌ Failed to backup to IndexedDB:', error);
-    return false;
+  // Clear existing timer
+  if (backupTimer) {
+    clearTimeout(backupTimer);
   }
+
+  // Debounce: wait before actually backing up
+  return new Promise((resolve) => {
+    backupTimer = setTimeout(async () => {
+      try {
+        const sessionStr = localStorage.getItem('authSession');
+        if (!sessionStr) {
+          // Silently skip if no session
+          resolve(false);
+          return;
+        }
+
+        const session = JSON.parse(sessionStr);
+        
+        // Validate session data before backing up (NO expiresAt required - permanent session)
+        if (!session.user || !session.token) {
+          console.warn('[Session] Invalid session data, skipping backup');
+          resolve(false);
+          return;
+        }
+
+        const db = await openSessionDB();
+        
+        // Use Promise to wait for transaction to complete
+        const result = await new Promise((resolveDB, rejectDB) => {
+          const tx = db.transaction('sessions', 'readwrite');
+          const store = tx.objectStore('sessions');
+
+          const backupData = {
+            id: 'current',
+            ...session,
+            backedUpAt: Date.now()
+          };
+          
+          store.put(backupData);
+
+          tx.oncomplete = () => {
+            // Only log occasionally (every 10th backup) to reduce console spam
+            const shouldLog = Math.random() < 0.1; // 10% chance
+            if (shouldLog) {
+              console.log('[Session] ✅ Session backed up to IndexedDB:', {
+                user: session.user?.name || session.user?.nama || 'unknown',
+                lastActivity: new Date(session.lastActivity).toLocaleString('id-ID'),
+                backedUpAt: new Date(backupData.backedUpAt).toLocaleString('id-ID')
+              });
+            }
+            resolveDB(true);
+          };
+
+          tx.onerror = () => {
+            console.error('[Session] ❌ Failed to backup:', tx.error);
+            rejectDB(tx.error);
+          };
+        });
+
+        resolve(result);
+      } catch (error) {
+        console.error('[Session] ❌ Failed to backup to IndexedDB:', error);
+        resolve(false);
+      }
+    }, BACKUP_DEBOUNCE_MS);
+  });
 };
 
 /**
@@ -192,8 +221,6 @@ export const syncSessionAcrossTabs = () => {
  * Backs up session to IndexedDB every minute and on critical events
  */
 export const setupPeriodicBackup = () => {
-  console.log('[Session] 🔄 Setting up aggressive backup strategy...');
-  
   // Initial backup
   backupSessionToIndexedDB();
   
@@ -205,33 +232,26 @@ export const setupPeriodicBackup = () => {
   // Backup when app goes to background (CRITICAL for mobile)
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') {
-      console.log('[Session] 📴 App going to background, forcing backup...');
       backupSessionToIndexedDB();
     } else if (document.visibilityState === 'visible') {
-      console.log('[Session] 👁️ App visible again, backing up...');
       backupSessionToIndexedDB();
     }
   });
   
   // Backup before page unload (desktop browsers)
   window.addEventListener('beforeunload', () => {
-    console.log('[Session] 🚪 beforeunload: forcing backup...');
     backupSessionToIndexedDB();
   });
   
   // Backup on pagehide (better for mobile/PWA than beforeunload)
   window.addEventListener('pagehide', () => {
-    console.log('[Session] 🚪 pagehide: forcing backup...');
     backupSessionToIndexedDB();
   });
   
   // Backup on freeze event (iOS Safari specific)
   window.addEventListener('freeze', () => {
-    console.log('[Session] ❄️ freeze: forcing backup...');
     backupSessionToIndexedDB();
   });
-  
-  console.log('[Session] ✅ Backup strategy activated');
   
   return () => {
     clearInterval(backupInterval);

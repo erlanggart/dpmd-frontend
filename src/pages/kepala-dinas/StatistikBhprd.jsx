@@ -1,5 +1,5 @@
 import React from 'react';
-import BhprdDashboard from '../kkd/BhprdDashboard';
+import BhprdDashboard from '../bidang/kkd/BhprdDashboard';
 
 const StatistikBhprd = () => {
   return <BhprdDashboard />;

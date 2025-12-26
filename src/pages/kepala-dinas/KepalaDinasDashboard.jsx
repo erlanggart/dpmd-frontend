@@ -13,7 +13,10 @@ import {
   Calendar,
   BarChart3,
   PieChart,
-  Activity
+  Activity,
+  Bell,
+  Info,
+  X
 } from 'lucide-react';
 import MobileHeader from '../../components/mobile/MobileHeader';
 import ServiceGrid from '../../components/mobile/ServiceGrid';
@@ -35,6 +38,7 @@ const KepalaDinasDashboard = () => {
   const [dashboardData, setDashboardData] = useState(null);
   const [error, setError] = useState(null);
   const [user, setUser] = useState(JSON.parse(localStorage.getItem('user') || '{}'));
+  const [showNotifications, setShowNotifications] = useState(false);
 
   useEffect(() => {
     const handleProfileUpdate = () => {
@@ -110,36 +114,30 @@ const KepalaDinasDashboard = () => {
 
   const { summary } = dashboardData;
 
-  // Quick Actions Menu - Simplified
+  // Quick Actions Menu - Simplified to 3 items
   const quickActions = [
     {
-      icon: FileText,
-      label: 'Laporan Desa',
+      icon: Briefcase,
+      label: 'Perjadin',
       color: 'blue',
-      onClick: () => navigate('/kepala-dinas/laporan-desa')
+      onClick: () => navigate('/dashboard/perjalanan-dinas')
     },
     {
-      icon: BarChart3,
-      label: 'Dashboard Overview',
-      color: 'orange',
-      onClick: () => navigate('/kepala-dinas/overview')
-    },
-    {
-      icon: TrendingUp,
-      label: 'Statistik',
+      icon: Calendar,
+      label: 'Jadwal',
       color: 'green',
-      onClick: () => navigate('/core-dashboard/dashboard')
+      onClick: () => navigate('/dashboard/jadwal')
     },
     {
-      icon: Activity,
-      label: 'Disposisi',
-      color: 'purple',
-      onClick: () => navigate('/kepala-dinas/disposisi')
+      icon: Info,
+      label: 'Informasi',
+      color: 'orange',
+      onClick: () => navigate('/dashboard/informasi')
     }
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <div className="min-h-screen bg-gray-50 pb-20 lg:pb-4">
       {/* Mobile Header - GoJek Style */}
       <MobileHeader
         userName={user.name || 'Kepala Dinas'}
@@ -147,21 +145,66 @@ const KepalaDinasDashboard = () => {
         greeting="Selamat Datang"
         gradient="from-blue-600 via-blue-700 to-blue-800"
         notificationCount={0}
-        onNotificationClick={() => navigate('/kepala-dinas/notifikasi')}
-        onSettingsClick={() => navigate('/kepala-dinas/profil')}
+        onNotificationClick={() => setShowNotifications(!showNotifications)}
         avatar={getUserAvatarUrl(user)}
       />
 
+      {/* Notification Popup */}
+      {showNotifications && (
+        <>
+          <div 
+            className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 transition-opacity"
+            onClick={() => setShowNotifications(false)}
+          ></div>
+          
+          {/* Notification Panel */}
+          <div className="fixed top-4 right-4 w-96 max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-2xl z-50 overflow-hidden border border-gray-100 animate-slideDown">
+            {/* Header */}
+            <div className="relative bg-gradient-to-r from-blue-500 to-blue-600 px-5 py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                    <Bell className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-white text-base">Notifikasi</h3>
+                    <p className="text-xs text-blue-50">Tidak ada notifikasi baru</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowNotifications(false)}
+                  className="h-8 w-8 flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+                >
+                  <X className="h-4 w-4 text-white" />
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="max-h-[calc(100vh-12rem)] overflow-y-auto">
+              {/* Empty State */}
+              <div className="px-6 py-12 text-center">
+                <div className="mx-auto mb-4 h-20 w-20 bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl flex items-center justify-center">
+                  <Bell className="h-10 w-10 text-blue-400" />
+                </div>
+                <h4 className="font-semibold text-gray-700 mb-1">Belum Ada Notifikasi</h4>
+                <p className="text-sm text-gray-500">Notifikasi penting akan muncul di sini</p>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
       {/* Main Content */}
-      <div className="px-4 -mt-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-4">
         {/* Quick Actions Section */}
-        <div className="bg-white rounded-3xl shadow-lg p-5 mb-5">
+        <div className="bg-white rounded-[24px] sm:rounded-[28px] shadow-lg shadow-gray-200/60 p-5 sm:p-6 mb-5 border border-gray-100">
           <SectionHeader 
             title="Menu Utama" 
-            subtitle="Akses cepat ke fitur utama"
+            subtitle="Akses cepat fitur pegawai"
             icon={LayoutDashboard}
           />
-          <ServiceGrid services={quickActions} columns={4} />
+          <ServiceGrid services={quickActions} columns={3} />
         </div>
 
         {/* Summary Stats Section */}
