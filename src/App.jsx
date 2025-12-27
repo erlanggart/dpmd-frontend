@@ -221,6 +221,9 @@ const StatistikAdd = lazy(() =>
 const LottieTest = lazy(() =>
 	import("./pages/test/LottieTest")
 );
+const PushNotificationDebug = lazy(() =>
+	import("./pages/PushNotificationDebug")
+);
 // DD Statistik Sub-categories
 const StatistikDdDashboard = lazy(() =>
 	import("./pages/kepala-dinas/StatistikDdDashboard")
@@ -516,6 +519,7 @@ function App() {
 					<Route path="/public-dashboard" element={<CoreDashboardPublic />} />
 				<Route path="/login" element={<LoginPage />} />
 				<Route path="/test-lottie" element={<LottieTest />} />
+				<Route path="/push-debug" element={<PushNotificationDebug />} />
 				{/* Rute Admin/Dashboard dengan lazy loading */}
 					<Route
 						path="/dashboard"

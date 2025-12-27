@@ -181,7 +181,7 @@ const sendSubscriptionToServer = async (subscription) => {
 const removeSubscriptionFromServer = async (subscription) => {
   try {
     const response = await api.post('/push-notification/unsubscribe', {
-      subscription: JSON.stringify(subscription)
+      endpoint: subscription.endpoint
     });
 
     console.log('Subscription removed from server:', response.data);
