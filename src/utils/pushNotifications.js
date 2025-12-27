@@ -26,7 +26,7 @@ export const requestNotificationPermission = async () => {
     
     return false;
   } catch (error) {
-    console.error('Error requesting notification permission:', error);
+    // Error requesting notification permission
     return false;
   }
 };
@@ -49,7 +49,7 @@ export const registerServiceWorker = async () => {
 
     return registration;
   } catch (error) {
-    console.error('Service Worker registration failed:', error);
+    // Service Worker registration failed
     return null;
   }
 };
@@ -105,7 +105,7 @@ export const subscribeToPushNotifications = async () => {
         try {
           await sendSubscriptionToServer(subscription);
         } catch (err) {
-          console.warn('[Push] Could not update subscription on server:', err);
+          // Could not update subscription on server
         }
         return subscription;
       }
@@ -129,7 +129,7 @@ export const subscribeToPushNotifications = async () => {
 
     return subscription;
   } catch (error) {
-    console.error('[Push] ❌ Error subscribing to push notifications:', error);
+    // Error subscribing to push notifications
     return null;
   } finally {
     isSubscribing = false;
@@ -154,7 +154,7 @@ export const unsubscribeFromPushNotifications = async () => {
 
     return false;
   } catch (error) {
-    console.error('Error unsubscribing from push notifications:', error);
+    // Error unsubscribing from push notifications
     return false;
   }
 };
@@ -172,7 +172,7 @@ const sendSubscriptionToServer = async (subscription) => {
     const response = await api.post('/push-notification/subscribe', payload);
     return response.data;
   } catch (error) {
-    console.error('[Push] ❌ Error sending subscription to server:', error);
+    // Error sending subscription to server
     throw error;
   }
 };
@@ -184,10 +184,9 @@ const removeSubscriptionFromServer = async (subscription) => {
       endpoint: subscription.endpoint
     });
 
-    console.log('Subscription removed from server:', response.data);
     return response.data;
   } catch (error) {
-    console.error('Error removing subscription from server:', error);
+    // Error removing subscription from server
     throw error;
   }
 };
@@ -240,7 +239,7 @@ export const showLocalNotification = async (title, options = {}) => {
       console.log('Local notification shown');
     }
   } catch (error) {
-    console.error('Error showing local notification:', error);
+    // Error showing local notification
   }
 };
 
@@ -286,7 +285,7 @@ export const initializePWANotifications = async () => {
     console.log('PWA notifications initialized successfully');
     return true;
   } catch (error) {
-    console.error('Error initializing PWA notifications:', error);
+    // Error initializing PWA notifications
     return false;
   }
 };

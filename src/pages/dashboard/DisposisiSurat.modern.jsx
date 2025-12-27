@@ -480,7 +480,24 @@ export default function DisposisiSuratModern() {
                       return (
                         <div
                           key={disposisi.id}
-                          onClick={() => navigate(`/dashboard/disposisi/${disposisi.id}`)}
+                          onClick={() => {
+                            const basePath = location.pathname.includes('/kepala-dinas') 
+                              ? '/kepala-dinas' 
+                              : location.pathname.includes('/kepala-bidang')
+                              ? '/kepala-bidang'
+                              : location.pathname.includes('/sekretaris-dinas')
+                              ? '/sekretaris-dinas'
+                              : location.pathname.includes('/ketua-tim')
+                              ? '/ketua-tim'
+                              : location.pathname.includes('/pegawai')
+                              ? '/pegawai'
+                              : location.pathname.includes('/bidang')
+                              ? '/bidang'
+                              : location.pathname.includes('/sekretariat')
+                              ? '/sekretariat'
+                              : '/dashboard';
+                            navigate(`${basePath}/disposisi/${disposisi.id}`);
+                          }}
                           className="group bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-200 border border-gray-100 hover:border-blue-400 cursor-pointer overflow-hidden"
                         >
                           {/* Color Accent Bar */}

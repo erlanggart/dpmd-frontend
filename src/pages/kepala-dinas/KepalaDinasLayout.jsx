@@ -5,6 +5,7 @@ import { FiHome, FiMail, FiBarChart2, FiMenu, FiLogOut, FiTrendingUp, FiUser, Fi
 import { useConfirm } from "../../hooks/useConfirm.jsx";
 import { subscribeToPushNotifications } from "../../utils/pushNotifications";
 import { toast } from 'react-hot-toast';
+import api from "../../api";
 
 const KepalaDinasLayout = () => {
 	const [showMenu, setShowMenu] = React.useState(false);
@@ -29,37 +30,28 @@ const KepalaDinasLayout = () => {
 		return () => window.removeEventListener('userProfileUpdated', handleProfileUpdate);
 	}, []);
 
-	// Load notifications (dummy data for now - replace with API call)
+	// Load notifications from backend
 	React.useEffect(() => {
-		// Simulated notifications - in production, fetch from API
-		const dummyNotifications = [
-			{
-				id: 1,
-				title: 'Disposisi Baru',
-				message: 'Anda memiliki disposisi surat baru yang perlu ditinjau',
-				time: '10 menit lalu',
-				read: false,
-				type: 'disposisi'
-			},
-			{
-				id: 2,
-				title: 'Laporan Desa',
-				message: 'Laporan bulanan dari 5 desa telah diterima',
-				time: '1 jam lalu',
-				read: false,
-				type: 'laporan'
-			},
-			{
-				id: 3,
-				title: 'Rapat Koordinasi',
-				message: 'Rapat koordinasi akan dimulai besok pukul 09.00',
-				time: '3 jam lalu',
-				read: true,
-				type: 'kegiatan'
+		const fetchNotifications = async () => {
+			try {
+				const response = await api.get('/push-notification/notifications?limit=10');
+				if (response.data.success) {
+					setNotifications(response.data.data || []);
+					setUnreadCount(response.data.unreadCount || 0);
+				}
+			} catch (error) {
+				console.error('Error fetching notifications:', error);
+				setNotifications([]);
+				setUnreadCount(0);
 			}
-		];
-		setNotifications(dummyNotifications);
-		setUnreadCount(dummyNotifications.filter(n => !n.read).length);
+		};
+
+		fetchNotifications();
+		
+		// Refresh notifications every 30 seconds
+		const interval = setInterval(fetchNotifications, 30000);
+		
+		return () => clearInterval(interval);
 	}, []);
 
 	const handleNotificationClick = () => {
@@ -105,6 +97,65 @@ const KepalaDinasLayout = () => {
 
 		initPushNotifications();
 	}, [token, user.role]);
+
+	// Listen for push notifications from Service Worker
+	React.useEffect(() => {
+		const handlePushMessage = (event) => {
+			console.log('[KepalaDinas] 🔔 Push message received from SW:', event.data);
+			
+			if (event.data && event.data.type === 'PUSH_NOTIFICATION_RECEIVED') {
+				const { payload } = event.data;
+				console.log('[KepalaDinas] Notification payload:', payload);
+				
+				// Show toast notification (pop-up on screen)
+				const title = payload.title || 'Notifikasi Baru';
+				const body = payload.body || 'Anda memiliki notifikasi baru';
+				
+				toast.success(
+					<div className="flex flex-col gap-1">
+						<div className="font-bold text-sm">{title}</div>
+						<div className="text-xs text-gray-700">{body}</div>
+					</div>,
+					{
+						duration: 5000,
+						position: 'top-right',
+						icon: '🔔',
+						style: {
+							background: '#10b981',
+							color: '#fff',
+							minWidth: '300px'
+						}
+					}
+				);
+
+				// Update notification badge (optional)
+				setUnreadCount(prev => prev + 1);
+				
+				// Add to notifications list
+				const newNotification = {
+					id: Date.now(),
+					title: title,
+					message: body,
+					time: 'Baru saja',
+					read: false,
+					type: payload.type || 'disposisi'
+				};
+				setNotifications(prev => [newNotification, ...prev]);
+			}
+		};
+
+		// Add message listener
+		if ('serviceWorker' in navigator) {
+			navigator.serviceWorker.addEventListener('message', handlePushMessage);
+			console.log('[KepalaDinas] ✅ Push notification listener attached');
+		}
+
+		return () => {
+			if ('serviceWorker' in navigator) {
+				navigator.serviceWorker.removeEventListener('message', handlePushMessage);
+			}
+		};
+	}, []);
 
 	if (!token || !user.role || user.role !== "kepala_dinas") {
 		return <Navigate to="/login" replace />;
@@ -287,67 +338,18 @@ const KepalaDinasLayout = () => {
 								<button
 									onClick={() => {
 										setShowMenu(false);
-										navigate("/core-dashboard/dashboard");
+										navigate("/kepala-dinas/profile");
 									}}
 									className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-blue-50 transition-colors text-left"
 								>
 									<div className="h-12 w-12 bg-blue-100 rounded-xl flex items-center justify-center">
-										<FiBarChart2 className="h-6 w-6 text-blue-600" />
+										<FiUser className="h-6 w-6 text-blue-600" />
 									</div>
 									<div>
-										<h4 className="font-semibold text-gray-800">Statistik</h4>
-										<p className="text-sm text-gray-500">Analisis dan statistik</p>
+										<h4 className="font-semibold text-gray-800">Profil Saya</h4>
+										<p className="text-sm text-gray-500">Lihat dan edit profil</p>
 									</div>
 								</button>
-
-								<button
-									onClick={() => {
-										setShowMenu(false);
-										navigate("/core-dashboard/kegiatan");
-									}}
-									className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-purple-50 transition-colors text-left"
-								>
-									<div className="h-12 w-12 bg-purple-100 rounded-xl flex items-center justify-center">
-										<FiCalendar className="h-6 w-6 text-purple-600" />
-									</div>
-									<div>
-										<h4 className="font-semibold text-gray-800">Kegiatan</h4>
-										<p className="text-sm text-gray-500">Kelola kegiatan</p>
-									</div>
-								</button>
-
-								<button
-									onClick={() => {
-										setShowMenu(false);
-										navigate("/kepala-dinas/disposisi");
-									}}
-									className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-blue-50 transition-colors text-left"
-								>
-									<div className="h-12 w-12 bg-blue-100 rounded-xl flex items-center justify-center">
-										<FiMail className="h-6 w-6 text-blue-600" />
-									</div>
-									<div>
-										<h4 className="font-semibold text-gray-800">Disposisi Surat</h4>
-										<p className="text-sm text-gray-500">Kelola disposisi</p>
-									</div>
-								</button>
-
-								<div className="border-t border-gray-200 my-2"></div>
-
-								<button								onClick={() => {
-									setShowMenu(false);
-									navigate("/kepala-dinas/profile");
-								}}
-								className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-blue-50 transition-colors text-left"
-							>
-								<div className="h-12 w-12 bg-blue-100 rounded-xl flex items-center justify-center">
-									<FiUser className="h-6 w-6 text-blue-600" />
-								</div>
-								<div>
-									<h4 className="font-semibold text-gray-800">Profil Saya</h4>
-									<p className="text-sm text-gray-500">Lihat dan edit profil</p>
-								</div>
-							</button>
 
 							<button									onClick={handleLogout}
 									className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-red-50 transition-colors text-left"

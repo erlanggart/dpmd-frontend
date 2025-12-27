@@ -349,13 +349,7 @@ const LoginPage = () => {
 				// Kepala Dinas gets dedicated dashboard with sidebar
 				console.log('✅ Navigating kepala_dinas to /kepala-dinas/dashboard');
 				navigate("/kepala-dinas/dashboard");
-			} else if (
-				newUser.role === "kabid_sekretariat" ||
-				newUser.role === "kabid_pemerintahan_desa" ||
-				newUser.role === "kabid_spked" ||
-				newUser.role === "kabid_kekayaan_keuangan_desa" ||
-				newUser.role === "kabid_pemberdayaan_masyarakat_desa"
-			) {
+			} else if (newUser.role === "kepala_bidang") {
 				// Kepala Bidang gets dedicated dashboard
 				console.log('✅ Navigating kepala_bidang to /kepala-bidang/dashboard');
 				navigate("/kepala-bidang/dashboard");
@@ -363,8 +357,11 @@ const LoginPage = () => {
 				// Sekretaris Dinas gets dedicated dashboard
 				console.log('✅ Navigating sekretaris_dinas to /sekretaris-dinas/dashboard');
 				navigate("/sekretaris-dinas/dashboard");
+			} else if (newUser.role === "superadmin") {
+				// Superadmin gets dedicated dashboard
+				console.log('✅ Navigating superadmin to /superadmin/dashboard');
+				navigate("/superadmin/dashboard");
 			} else if (
-				newUser.role === "superadmin" ||
 				newUser.role === "pemerintahan_desa" ||
 				newUser.role === "sarana_prasarana" ||
 				newUser.role === "kekayaan_keuangan" ||

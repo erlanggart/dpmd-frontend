@@ -26,16 +26,13 @@ const ManageRolesPage = () => {
   // Role options
   const roleOptions = [
     { value: 'superadmin', label: 'Super Admin', color: 'red' },
-    { value: 'admin', label: 'Admin', color: 'purple' },
     { value: 'kepala_dinas', label: 'Kepala Dinas', color: 'blue' },
     { value: 'sekretaris_dinas', label: 'Sekretaris Dinas', color: 'indigo' },
-    { value: 'kabid_spked', label: 'Kepala Bidang SPKED', color: 'green' },
-    { value: 'kabid_pmd', label: 'Kepala Bidang PMD', color: 'green' },
-    { value: 'kabid_kkd', label: 'Kepala Bidang KKD', color: 'green' },
-    { value: 'kabid_bmd', label: 'Kepala Bidang BMD', color: 'green' },
-    { value: 'kabid_ti', label: 'Kepala Bidang TI', color: 'green' },
+    { value: 'kepala_bidang', label: 'Kepala Bidang', color: 'green' },
     { value: 'ketua_tim', label: 'Ketua Tim', color: 'teal' },
-    { value: 'pegawai', label: 'Pegawai/Staff', color: 'gray' }
+    { value: 'pegawai', label: 'Pegawai/Staff', color: 'gray' },
+    { value: 'desa', label: 'Admin Desa', color: 'yellow' },
+    { value: 'kecamatan', label: 'Admin Kecamatan', color: 'orange' }
   ];
 
   // Load initial data
@@ -82,7 +79,7 @@ const ManageRolesPage = () => {
     }
 
     // If role requires bidang, make sure bidang_id is filled
-    const requiresBidang = ['kabid_spked', 'kabid_pmd', 'kabid_kkd', 'kabid_bmd', 'kabid_ti', 'ketua_tim', 'pegawai'].includes(editForm.role);
+    const requiresBidang = ['kepala_bidang', 'ketua_tim', 'pegawai'].includes(editForm.role);
     if (requiresBidang && !editForm.bidang_id) {
       toast.error('Role ini memerlukan bidang');
       return;

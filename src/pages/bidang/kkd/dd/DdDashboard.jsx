@@ -7,8 +7,8 @@ import { Pie, Bar } from 'react-chartjs-2';
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 import api from "../../../../api";
-import { useDataCache } from '../../../context/DataCacheContext';
-import { isVpnUser } from "../../../../utils/vpnHelper';
+import { useDataCache } from '../../../../context/DataCacheContext';
+import { isVpnUser } from "../../../../utils/vpnHelper";
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
 

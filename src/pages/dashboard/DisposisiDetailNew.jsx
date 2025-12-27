@@ -48,8 +48,6 @@ export default function DisposisiDetail() {
   const fetchDisposisi = async () => {
     try {
       const response = await api.get(`/disposisi/${id}`);
-      console.log('📋 Disposisi Response:', response.data.data);
-      console.log('📧 Surat Masuk:', response.data.data?.surat_masuk);
       setDisposisi(response.data.data);
     } catch (error) {
       console.error('Error fetching disposisi:', error);
@@ -272,13 +270,13 @@ export default function DisposisiDetail() {
                   <div className="space-y-1">
                     <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Nomor Surat</label>
                     <p className="text-base font-bold text-gray-900 bg-gray-50 px-3 py-2 rounded-lg">
-                      {disposisi.surat_masuk?.nomor_surat}
+                      {disposisi.surat?.nomor_surat}
                     </p>
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Jenis</label>
                     <p className="text-base font-medium text-gray-900 bg-gray-50 px-3 py-2 rounded-lg capitalize">
-                      {disposisi.surat_masuk?.jenis_surat}
+                      {disposisi.surat?.jenis_surat}
                     </p>
                   </div>
                 </div>
@@ -286,7 +284,7 @@ export default function DisposisiDetail() {
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Perihal</label>
                   <p className="text-base text-gray-900 bg-blue-50 px-4 py-3 rounded-lg border border-blue-200">
-                    {disposisi.surat_masuk?.perihal}
+                    {disposisi.surat?.perihal}
                   </p>
                 </div>
 
@@ -294,19 +292,19 @@ export default function DisposisiDetail() {
                   <div className="space-y-1">
                     <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Pengirim</label>
                     <p className="text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg">
-                      {disposisi.surat_masuk?.pengirim}
+                      {disposisi.surat?.pengirim}
                     </p>
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Tanggal Surat</label>
                     <p className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-lg flex items-center gap-2">
                       <FiCalendar className="text-gray-400" />
-                      {formatTanggal(disposisi.surat_masuk?.tanggal_surat)}
+                      {formatTanggal(disposisi.surat?.tanggal_surat)}
                     </p>
                   </div>
                 </div>
 
-                {disposisi.surat_masuk?.file_path && (
+                {disposisi.surat?.file_path && (
                   <div className="pt-4 border-t border-gray-200">
                     <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-3">
                       File Lampiran
@@ -315,7 +313,7 @@ export default function DisposisiDetail() {
                       <button
                         onClick={() => {
                           const baseUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/api$/, '') || 'http://127.0.0.1:3001';
-                          const filePath = disposisi.surat_masuk.file_path.startsWith('/') ? disposisi.surat_masuk.file_path : `/${disposisi.surat_masuk.file_path}`;
+                          const filePath = disposisi.surat.file_path.startsWith('/') ? disposisi.surat.file_path : `/${disposisi.surat.file_path}`;
                           setPdfUrl(`${baseUrl}${filePath}`);
                           setShowPdfModal(true);
                         }}
@@ -325,7 +323,7 @@ export default function DisposisiDetail() {
                         Lihat PDF
                       </button>
                       <a
-                        href={`${import.meta.env.VITE_API_BASE_URL?.replace(/\/api$/, '') || 'http://127.0.0.1:3001'}${disposisi.surat_masuk.file_path.startsWith('/') ? disposisi.surat_masuk.file_path : '/' + disposisi.surat_masuk.file_path}`}
+                        href={`${import.meta.env.VITE_API_BASE_URL?.replace(/\/api$/, '') || 'http://127.0.0.1:3001'}${disposisi.surat.file_path.startsWith('/') ? disposisi.surat.file_path : '/' + disposisi.surat.file_path}`}
                         download
                         className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl hover:from-blue-600 hover:to-cyan-600 font-medium shadow-md hover:shadow-lg transition-all transform hover:scale-105"
                       >
@@ -427,7 +425,7 @@ export default function DisposisiDetail() {
             </div>
 
             {/* Riwayat Disposisi */}
-            {disposisi.surat_masuk?.disposisi && disposisi.surat_masuk.disposisi.length > 1 && (
+            {disposisi.surat?.disposisi && disposisi.surat.disposisi.length > 1 && (
               <div className="bg-white rounded-2xl shadow-md border border-gray-200 overflow-hidden hover:shadow-xl transition-shadow">
                 <div className="bg-gradient-to-r from-orange-600 to-red-600 px-6 py-4">
                   <div className="flex items-center gap-3">
@@ -440,7 +438,7 @@ export default function DisposisiDetail() {
 
                 <div className="p-6">
                   <div className="space-y-4">
-                    {disposisi.surat_masuk.disposisi.map((item, index) => {
+                    {disposisi.surat.disposisi.map((item, index) => {
                       const itemStatusInfo = getStatusBadge(item.status);
                       const ItemStatusIcon = itemStatusInfo.icon;
                       
@@ -454,7 +452,7 @@ export default function DisposisiDetail() {
                             }`}>
                               {item.level_disposisi}
                             </div>
-                            {index < disposisi.surat_masuk.disposisi.length - 1 && (
+                            {index < disposisi.surat.disposisi.length - 1 && (
                               <div className="w-0.5 h-full bg-gradient-to-b from-gray-300 to-transparent my-2"></div>
                             )}
                           </div>

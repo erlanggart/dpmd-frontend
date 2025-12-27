@@ -773,8 +773,14 @@ export default function DisposisiSurat() {
                               ? '/kepala-bidang'
                               : location.pathname.includes('/sekretaris-dinas')
                               ? '/sekretaris-dinas'
+                              : location.pathname.includes('/ketua-tim')
+                              ? '/ketua-tim'
                               : location.pathname.includes('/pegawai')
                               ? '/pegawai'
+                              : location.pathname.includes('/bidang')
+                              ? '/bidang'
+                              : location.pathname.includes('/sekretariat')
+                              ? '/sekretariat'
                               : '/dashboard';
                             navigate(`${basePath}/disposisi/${disposisi.id}`);
                           }}
@@ -886,8 +892,14 @@ export default function DisposisiSurat() {
                               ? '/kepala-bidang'
                               : location.pathname.includes('/sekretaris-dinas')
                               ? '/sekretaris-dinas'
+                              : location.pathname.includes('/ketua-tim')
+                              ? '/ketua-tim'
                               : location.pathname.includes('/pegawai')
                               ? '/pegawai'
+                              : location.pathname.includes('/bidang')
+                              ? '/bidang'
+                              : location.pathname.includes('/sekretariat')
+                              ? '/sekretariat'
                               : '/dashboard';
                             navigate(`${basePath}/disposisi/${disposisi.id}`);
                           }}

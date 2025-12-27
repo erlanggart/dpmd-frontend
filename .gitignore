@@ -17,9 +17,10 @@ dist-ssr
 .env.local
 .env.development
 .env.test
+# Keep .env.production for production deployment
+!.env.production
 # Keep these for reference
 !.env.example
-!.env.production
 
 
 
@@ -35,5 +36,11 @@ dist-ssr
 *.sln
 *.sw?
 
-# Test files
-tes
+# Development documentation (temporary files)
+*_REDESIGN.md
+*_REFACTORING.md
+*_SUMMARY.md
+*_FIX.md
+*_UPDATE.md
+DISPOSISI_REDESIGN.md
+REFACTORING_SUMMARY.md

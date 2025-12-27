@@ -6,6 +6,7 @@ import { Landmark } from "lucide-react";
 import { useConfirm } from "../../hooks/useConfirm.jsx";
 import { subscribeToPushNotifications } from "../../utils/pushNotifications";
 import toast from 'react-hot-toast';
+import api from "../../api";
 import './PegawaiLayout.css';
 
 const PegawaiLayout = () => {
@@ -38,36 +39,28 @@ const PegawaiLayout = () => {
 		};
 	}, []);
 
-	// Load dummy notifications
+	// Load notifications from backend
 	React.useEffect(() => {
-		const dummyNotifications = [
-			{
-				id: 1,
-				title: 'Disposisi Baru',
-				message: 'Anda mendapat disposisi baru dari Kepala Bidang',
-				time: '2 jam yang lalu',
-				read: false,
-				type: 'disposisi'
-			},
-			{
-				id: 2,
-				title: 'Jadwal Kegiatan',
-				message: 'Rapat Koordinasi Tim besok pukul 09.00 WIB',
-				time: '5 jam yang lalu',
-				read: false,
-				type: 'kegiatan'
-			},
-			{
-				id: 3,
-				title: 'Update Sistem',
-				message: 'Sistem telah diperbarui dengan fitur terbaru',
-				time: '1 hari yang lalu',
-				read: true,
-				type: 'system'
+		const fetchNotifications = async () => {
+			try {
+				const response = await api.get('/push-notification/notifications?limit=10');
+				if (response.data.success) {
+					setNotifications(response.data.data || []);
+					setUnreadCount(response.data.unreadCount || 0);
+				}
+			} catch (error) {
+				console.error('Error fetching notifications:', error);
+				setNotifications([]);
+				setUnreadCount(0);
 			}
-		];
-		setNotifications(dummyNotifications);
-		setUnreadCount(dummyNotifications.filter(n => !n.read).length);
+		};
+
+		fetchNotifications();
+		
+		// Refresh notifications every 30 seconds
+		const interval = setInterval(fetchNotifications, 30000);
+		
+		return () => clearInterval(interval);
 	}, []);
 
 	const handleNotificationClick = () => {
@@ -107,7 +100,15 @@ const PegawaiLayout = () => {
 		initPushNotifications();
 	}, [token, user.role]);
 
-	if (!token || !user.role || user.role !== "pegawai") {
+	// Check if user has valid role for PegawaiLayout
+	const validRoles = [
+		'pegawai', 
+		'kepala_bidang',
+		'kepala_dinas',
+		'superadmin'
+	];
+
+	if (!token || !user.role || !validRoles.includes(user.role)) {
 		return <Navigate to="/login" replace />;
 	}
 

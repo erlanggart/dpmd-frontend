@@ -13,7 +13,7 @@ import {
 	LuEye,
 	LuUserCheck,
 } from "react-icons/lu";
-import { getDesaKelembagaanAll } from "../../api/kelembagaanApi";
+import { getDesaKelembagaanAll } from "../../../api/kelembagaanApi";
 
 /**
  * AdminKelembagaanDetailPage - Admin PMD mengakses detail kelembagaan desa

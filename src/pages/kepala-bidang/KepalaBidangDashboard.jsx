@@ -48,6 +48,18 @@ const KepalaBidangDashboard = () => {
     return () => window.removeEventListener('userProfileUpdated', handleProfileUpdate);
   }, []);
 
+  // Get bidang name based on bidang_id
+  const getBidangName = (user) => {
+    const bidangMap = {
+      2: 'Sekretariat',
+      3: 'SPKED',
+      4: 'Kekayaan dan Keuangan Desa',
+      5: 'Pemberdayaan Masyarakat Desa',
+      6: 'Pemerintahan Desa'
+    };
+    return bidangMap[user.bidang_id] || 'Bidang';
+  };
+
   useEffect(() => {
     fetchDashboardData();
   }, []);
@@ -106,13 +118,13 @@ const KepalaBidangDashboard = () => {
     {
       icon: Briefcase,
       label: 'Perjadin',
-      color: 'blue',
+      color: 'green',
       onClick: () => navigate('/dashboard/perjalanan-dinas')
     },
     {
       icon: Calendar,
       label: 'Jadwal',
-      color: 'green',
+      color: 'blue',
       onClick: () => navigate('/dashboard/jadwal')
     },
     {
@@ -128,7 +140,7 @@ const KepalaBidangDashboard = () => {
       {/* Mobile Header - GoJek Style */}
       <MobileHeader
         userName={user.name || 'Kepala Bidang'}
-        userRole="Kepala Bidang DPMD"
+        userRole={`Kepala Bidang ${getBidangName(user)}`}
         greeting="Selamat Datang"
         gradient="from-blue-600 via-blue-700 to-blue-800"
         notificationCount={statistik?.masuk?.pending || 0}

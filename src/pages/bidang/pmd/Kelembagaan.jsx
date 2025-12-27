@@ -14,7 +14,7 @@ import {
 	LuX,
 	LuLoader,
 } from "react-icons/lu";
-import kelembagaanApi from "../../api/kelembagaan";
+import kelembagaanApi from "../../../api/kelembagaan";
 
 const Kelembagaan = () => {
 	const [kecamatanData, setKecamatanData] = useState([]);

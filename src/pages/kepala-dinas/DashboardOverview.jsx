@@ -100,7 +100,7 @@ const DashboardOverview = () => {
       
       setBankeuData(stats);
     } catch (err) {
-      console.error('Error loading bankeu data:', err);
+      console.error('Error loading bankeu data:', err?.message || String(err));
     }
   };
 

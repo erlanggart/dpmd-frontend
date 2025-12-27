@@ -5,6 +5,7 @@ import { FiHome, FiUser, FiLogOut, FiMenu, FiMail, FiBell, FiCalendar, FiBarChar
 import { useConfirm } from "../../hooks/useConfirm.jsx";
 import { subscribeToPushNotifications } from "../../utils/pushNotifications";
 import toast from 'react-hot-toast';
+import api from "../../api";
 import './KetuaTimLayout.css';
 
 const KetuaTimLayout = () => {
@@ -37,36 +38,28 @@ const KetuaTimLayout = () => {
 		};
 	}, []);
 
-	// Load dummy notifications
+	// Load notifications from backend
 	React.useEffect(() => {
-		const dummyNotifications = [
-			{
-				id: 1,
-				title: 'Disposisi Baru',
-				message: 'Anda mendapat disposisi baru dari Kepala Bidang',
-				time: '1 jam yang lalu',
-				read: false,
-				type: 'disposisi'
-			},
-			{
-				id: 2,
-				title: 'Jadwal Kegiatan',
-				message: 'Rapat Tim besok pukul 10.00 WIB',
-				time: '3 jam yang lalu',
-				read: false,
-				type: 'kegiatan'
-			},
-			{
-				id: 3,
-				title: 'Update Tugas',
-				message: 'Tugas mingguan telah diperbarui',
-				time: '1 hari yang lalu',
-				read: true,
-				type: 'system'
+		const fetchNotifications = async () => {
+			try {
+				const response = await api.get('/push-notification/notifications?limit=10');
+				if (response.data.success) {
+					setNotifications(response.data.data || []);
+					setUnreadCount(response.data.unreadCount || 0);
+				}
+			} catch (error) {
+				console.error('Error fetching notifications:', error);
+				setNotifications([]);
+				setUnreadCount(0);
 			}
-		];
-		setNotifications(dummyNotifications);
-		setUnreadCount(dummyNotifications.filter(n => !n.read).length);
+		};
+
+		fetchNotifications();
+		
+		// Refresh notifications every 30 seconds
+		const interval = setInterval(fetchNotifications, 30000);
+		
+		return () => clearInterval(interval);
 	}, []);
 
 	const handleNotificationClick = () => {
@@ -109,6 +102,70 @@ const KetuaTimLayout = () => {
 
 		initPushNotifications();
 	}, [token, user.role]);
+
+	// Listen for push notifications from Service Worker
+	React.useEffect(() => {
+		if (!('serviceWorker' in navigator)) return;
+
+		const handlePushMessage = (event) => {
+			if (event.data && event.data.type === 'PUSH_NOTIFICATION_RECEIVED') {
+				const { payload } = event.data;
+				console.log('🔔 [KetuaTim] Received push notification:', payload);
+				
+				// Show toast notification
+				toast.success(
+					<div className="flex items-start space-x-3">
+						<div className="flex-shrink-0 mt-1">
+							<div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+								<svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+								</svg>
+							</div>
+						</div>
+						<div className="flex-1 min-w-0">
+							<p className="text-sm font-semibold text-gray-900">
+								{payload.title || 'Notifikasi Baru'}
+							</p>
+							<p className="text-sm text-gray-600 mt-1 line-clamp-2">
+								{payload.body || payload.message || 'Anda memiliki notifikasi baru'}
+							</p>
+						</div>
+					</div>,
+					{
+						duration: 5000,
+						position: 'top-right',
+						style: {
+							maxWidth: '400px',
+							padding: '16px',
+							background: 'white',
+							boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
+							borderRadius: '12px',
+						},
+					}
+				);
+
+				// Update unread count badge
+				setUnreadCount(prev => prev + 1);
+
+				// Add to notifications list
+				const newNotification = {
+					id: Date.now(),
+					title: payload.title || 'Notifikasi Baru',
+					message: payload.body || payload.message || 'Anda memiliki notifikasi baru',
+					timestamp: new Date().toISOString(),
+					read: false,
+					data: payload.data
+				};
+				setNotifications(prev => [newNotification, ...prev]);
+			}
+		};
+
+		navigator.serviceWorker.addEventListener('message', handlePushMessage);
+
+		return () => {
+			navigator.serviceWorker.removeEventListener('message', handlePushMessage);
+		};
+	}, []);
 
 	if (!token || !user.role || user.role !== "ketua_tim") {
 		return <Navigate to="/login" replace />;
@@ -279,56 +336,6 @@ const KetuaTimLayout = () => {
 
 							{/* Menu Items */}
 							<div className="px-6 py-4 space-y-2 max-h-96 overflow-y-auto">
-								<button
-									onClick={() => {
-										setShowMenu(false);
-										navigate("/core-dashboard/dashboard");
-									}}
-									className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-teal-50 transition-colors text-left"
-								>
-									<div className="h-12 w-12 bg-teal-100 rounded-xl flex items-center justify-center">
-										<FiBarChart2 className="h-6 w-6 text-teal-600" />
-									</div>
-									<div>
-										<h4 className="font-semibold text-gray-800">Statistik</h4>
-										<p className="text-sm text-gray-500">Dashboard utama analisis</p>
-									</div>
-								</button>
-
-								<button
-									onClick={() => {
-										setShowMenu(false);
-										navigate("/core-dashboard/kegiatan");
-									}}
-									className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-teal-50 transition-colors text-left"
-								>
-									<div className="h-12 w-12 bg-teal-100 rounded-xl flex items-center justify-center">
-										<FiCalendar className="h-6 w-6 text-teal-600" />
-									</div>
-									<div>
-										<h4 className="font-semibold text-gray-800">Kegiatan</h4>
-										<p className="text-sm text-gray-500">Lihat kegiatan</p>
-									</div>
-								</button>
-
-								<button
-									onClick={() => {
-										setShowMenu(false);
-										navigate("/ketua-tim/disposisi");
-									}}
-									className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-teal-50 transition-colors text-left"
-								>
-									<div className="h-12 w-12 bg-teal-100 rounded-xl flex items-center justify-center">
-										<FiMail className="h-6 w-6 text-teal-600" />
-									</div>
-									<div>
-										<h4 className="font-semibold text-gray-800">Disposisi</h4>
-										<p className="text-sm text-gray-500">Kelola disposisi surat</p>
-									</div>
-								</button>
-
-								<div className="border-t border-gray-200 my-2"></div>
-
 								<button
 									onClick={() => {
 										setShowMenu(false);

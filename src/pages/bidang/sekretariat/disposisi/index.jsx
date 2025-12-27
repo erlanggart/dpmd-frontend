@@ -38,19 +38,27 @@ const DisposisiPersuratan = () => {
         // Redirect otomatis ke dashboard role-specific
         switch (userData.role) {
           case 'kepala_dinas':
-            navigate('/dashboard/disposisi/kepala-dinas', { replace: true });
+            navigate('/kepala-dinas/disposisi', { replace: true });
             break;
           case 'sekretaris_dinas':
-            navigate('/dashboard/disposisi/sekretaris-dinas', { replace: true });
+            navigate('/sekretaris-dinas/disposisi', { replace: true });
             break;
+          case 'kepala_bidang':
           case 'kepala_bidang_pemerintahan':
           case 'kepala_bidang_kesra':
           case 'kepala_bidang_ekonomi':
           case 'kepala_bidang_fisik':
-            navigate('/dashboard/disposisi/kepala-bidang', { replace: true });
+            navigate('/kepala-bidang/disposisi', { replace: true });
+            break;
+          case 'ketua_tim':
+            navigate('/ketua-tim/disposisi', { replace: true });
+            break;
+          case 'pegawai':
+            navigate('/pegawai/disposisi', { replace: true });
             break;
           default:
             // Untuk staff sekretariat atau role lain yang bisa input surat
+            navigate('/sekretariat/disposisi', { replace: true });
             break;
         }
       } else {
