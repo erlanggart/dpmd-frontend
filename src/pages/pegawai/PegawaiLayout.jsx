@@ -104,8 +104,10 @@ const PegawaiLayout = () => {
 	const validRoles = [
 		'pegawai', 
 		'kepala_bidang',
+		'ketua_tim',
 		'kepala_dinas',
-		'superadmin'
+		'superadmin',
+		'sekretaris_dinas'
 	];
 
 	if (!token || !user.role || !validRoles.includes(user.role)) {
@@ -130,7 +132,7 @@ const PegawaiLayout = () => {
 	const bottomNavItems = [
 		{ path: "/pegawai/dashboard", label: "Dashboard", icon: FiHome },
 		{ path: "/core-dashboard/dashboard", label: "Statistik", icon: FiBarChart2 },
-		{ path: "/core-dashboard/kegiatan", label: "Kegiatan", icon: FiCalendar },
+		{ path: "/pegawai/jadwal-kegiatan", label: "Kegiatan", icon: FiCalendar },
 		{ path: "/pegawai/disposisi", label: "Disposisi", icon: FiMail },
 		{ path: "/pegawai/menu", label: "Menu", icon: FiMenu, action: () => setShowMenu(true) },
 	];

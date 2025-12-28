@@ -345,6 +345,10 @@ const LoginPage = () => {
 				navigate("/kecamatan/dashboard");
 			} else if (newUser.role === "pegawai") {
 				navigate("/pegawai/dashboard");
+			} else if (newUser.role === "ketua_tim") {
+				// Ketua Tim gets dedicated dashboard
+				console.log('✅ Navigating ketua_tim to /ketua-tim/dashboard');
+				navigate("/ketua-tim/dashboard");
 			} else if (newUser.role === "kepala_dinas") {
 				// Kepala Dinas gets dedicated dashboard with sidebar
 				console.log('✅ Navigating kepala_dinas to /kepala-dinas/dashboard');

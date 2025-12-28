@@ -179,7 +179,7 @@ const KepalaDinasLayout = () => {
 	const bottomNavItems = [
 		{ path: "/kepala-dinas/dashboard", label: "Dashboard", icon: FiHome },
 		{ path: "/core-dashboard/dashboard", label: "Statistik", icon: FiBarChart2 },
-		{ path: "/core-dashboard/kegiatan", label: "Kegiatan", icon: FiCalendar },
+		{ path: "/kepala-dinas/jadwal-kegiatan", label: "Kegiatan", icon: FiCalendar },
 		{ path: "/kepala-dinas/disposisi", label: "Disposisi", icon: FiMail },
 		{ path: "/kepala-dinas/menu", label: "Menu", icon: FiMenu, action: () => setShowMenu(true) },
 	];

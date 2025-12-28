@@ -196,7 +196,7 @@ const KepalaBidangLayout = () => {
 	const bottomNavItems = [
 		{ path: "/kepala-bidang/dashboard", label: "Dashboard", icon: FiHome },
 		{ path: "/core-dashboard/dashboard", label: "Statistik", icon: FiBarChart2 },
-		{ path: "/core-dashboard/kegiatan", label: "Kegiatan", icon: FiCalendar },
+		{ path: "/kepala-bidang/jadwal-kegiatan", label: "Kegiatan", icon: FiCalendar },
 		{ path: "/kepala-bidang/disposisi", label: "Disposisi", icon: FiMail },
 		{ path: "/kepala-bidang/menu", label: "Menu", icon: FiMenu, action: () => setShowMenu(true) },
 	];
