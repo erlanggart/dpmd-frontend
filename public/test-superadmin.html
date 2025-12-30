@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Superadmin Route Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 32px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .test-section {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+        }
+        
+        .test-section h3 {
+            color: #333;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .status.success {
+            background: #10b981;
+            color: white;
+        }
+        
+        .status.error {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .status.warning {
+            background: #f59e0b;
+            color: white;
+        }
+        
+        .status.info {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        
+        .info-label {
+            color: #666;
+            font-weight: 500;
+        }
+        
+        .info-value {
+            color: #333;
+            font-weight: 600;
+        }
+        
+        .button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin-right: 10px;
+        }
+        
+        .button:hover {
+            transform: translateY(-2px);
+        }
+        
+        .button.secondary {
+            background: #6b7280;
+        }
+        
+        .button.danger {
+            background: #ef4444;
+        }
+        
+        .console-output {
+            background: #1e293b;
+            color: #10b981;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 20px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        .actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-left: 8px;
+        }
+        
+        .badge.ok {
+            background: #dcfce7;
+            color: #16a34a;
+        }
+        
+        .badge.fail {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Superadmin Route Test</h1>
+        <p class="subtitle">Diagnostic tool untuk troubleshoot route superadmin dashboard</p>
+        
+        <div class="test-section">
+            <h3>
+                <span>1️⃣ User Authentication</span>
+                <span class="status" id="auth-status">Checking...</span>
+            </h3>
+            <div id="auth-info"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>
+                <span>2️⃣ Role Verification</span>
+                <span class="status" id="role-status">Checking...</span>
+            </h3>
+            <div id="role-info"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>
+                <span>3️⃣ Route Configuration</span>
+                <span class="status" id="route-status">Checking...</span>
+            </h3>
+            <div id="route-info"></div>
+        </div>
+        
+        <div class="actions">
+            <button class="button" onclick="testRoute()">🧪 Test Route Access</button>
+            <button class="button secondary" onclick="navigateToDashboard()">🚀 Go to Dashboard</button>
+            <button class="button secondary" onclick="checkDatabase()">💾 Check Database Role</button>
+            <button class="button danger" onclick="clearSession()">🗑️ Clear Session</button>
+        </div>
+        
+        <div class="console-output" id="console-output">
+Waiting for test results...
+        </div>
+    </div>
+
+    <script>
+        let consoleLog = '';
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const prefix = {
+                'info': '📘',
+                'success': '✅',
+                'error': '❌',
+                'warning': '⚠️'
+            }[type] || 'ℹ️';
+            
+            consoleLog += `[${timestamp}] ${prefix} ${message}\n`;
+            document.getElementById('console-output').textContent = consoleLog;
+            console.log(message);
+        }
+
+        function runTests() {
+            log('Starting diagnostic tests...', 'info');
+            consoleLog = '';
+            
+            // Test 1: Authentication
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            const token = localStorage.getItem('expressToken');
+            
+            let authHTML = '';
+            let authStatus = 'error';
+            
+            if (token && user.email) {
+                authStatus = 'success';
+                authHTML = `
+                    <div class="info-row">
+                        <span class="info-label">Name:</span>
+                        <span class="info-value">${user.nama || 'N/A'}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Email:</span>
+                        <span class="info-value">${user.email}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Token:</span>
+                        <span class="info-value">✅ Present (${token.substring(0, 20)}...)</span>
+                    </div>
+                `;
+                log('Authentication: PASSED ✅', 'success');
+            } else {
+                authHTML = '<p style="color: #ef4444;">❌ Not logged in. Please login first.</p>';
+                log('Authentication: FAILED ❌ - No valid session found', 'error');
+            }
+            
+            document.getElementById('auth-info').innerHTML = authHTML;
+            document.getElementById('auth-status').className = `status ${authStatus}`;
+            document.getElementById('auth-status').textContent = authStatus === 'success' ? '✅ OK' : '❌ Failed';
+            
+            // Test 2: Role Verification
+            let roleHTML = '';
+            let roleStatus = 'error';
+            
+            if (user.role) {
+                const isSuperadmin = user.role === 'superadmin';
+                const hasWhitespace = user.role !== user.role.trim();
+                
+                roleStatus = isSuperadmin ? 'success' : 'error';
+                
+                roleHTML = `
+                    <div class="info-row">
+                        <span class="info-label">Current Role:</span>
+                        <span class="info-value">"${user.role}"</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Expected Role:</span>
+                        <span class="info-value">"superadmin"</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Match:</span>
+                        <span class="info-value">${isSuperadmin ? '✅ YES' : '❌ NO'}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Character Count:</span>
+                        <span class="info-value">${user.role.length} chars</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Has Whitespace:</span>
+                        <span class="info-value">${hasWhitespace ? '⚠️ YES (Problem!)' : '✅ NO'}</span>
+                    </div>
+                `;
+                
+                if (isSuperadmin) {
+                    log('Role Verification: PASSED ✅ - Role is exactly "superadmin"', 'success');
+                } else {
+                    log(`Role Verification: FAILED ❌ - Role is "${user.role}" instead of "superadmin"`, 'error');
+                    log('💡 TIP: Check database. Role must be exactly "superadmin" (lowercase, no spaces)', 'warning');
+                }
+            } else {
+                roleHTML = '<p style="color: #ef4444;">❌ No role found in user data</p>';
+                log('Role Verification: FAILED ❌ - No role found', 'error');
+            }
+            
+            document.getElementById('role-info').innerHTML = roleHTML;
+            document.getElementById('role-status').className = `status ${roleStatus}`;
+            document.getElementById('role-status').textContent = roleStatus === 'success' ? '✅ OK' : '❌ Failed';
+            
+            // Test 3: Route Configuration
+            const currentPath = window.location.pathname;
+            const targetPath = '/superadmin/dashboard';
+            const is404 = currentPath === '/404' || document.title.includes('404');
+            
+            let routeHTML = `
+                <div class="info-row">
+                    <span class="info-label">Current Path:</span>
+                    <span class="info-value">${currentPath}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Target Path:</span>
+                    <span class="info-value">${targetPath}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Port:</span>
+                    <span class="info-value">${window.location.port || '80'}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">404 Detected:</span>
+                    <span class="info-value">${is404 ? '⚠️ YES' : '✅ NO'}</span>
+                </div>
+            `;
+            
+            let routeStatus = 'info';
+            if (currentPath === targetPath) {
+                routeStatus = 'success';
+                log('Route Configuration: SUCCESS ✅ - Already on superadmin dashboard', 'success');
+            } else if (is404) {
+                routeStatus = 'error';
+                log('Route Configuration: 404 ERROR ❌ - Route not found', 'error');
+                log('💡 Possible causes:', 'warning');
+                log('   1. Route not registered in App.jsx', 'warning');
+                log('   2. RoleProtectedRoute blocking access', 'warning');
+                log('   3. Component loading error', 'warning');
+            } else {
+                log(`Route Configuration: INFO ℹ️ - Currently at ${currentPath}`, 'info');
+            }
+            
+            document.getElementById('route-info').innerHTML = routeHTML;
+            document.getElementById('route-status').className = `status ${routeStatus}`;
+            document.getElementById('route-status').textContent = 
+                routeStatus === 'success' ? '✅ OK' : 
+                routeStatus === 'error' ? '❌ Error' : 'ℹ️ Info';
+            
+            log('=== Diagnostic Complete ===', 'success');
+            
+            // Overall recommendation
+            if (authStatus === 'success' && roleStatus === 'success') {
+                log('✅ All checks passed! Safe to navigate to dashboard.', 'success');
+            } else {
+                log('⚠️ Issues detected. Please fix above errors before accessing dashboard.', 'warning');
+            }
+        }
+
+        function testRoute() {
+            log('Testing route access...', 'info');
+            
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            const token = localStorage.getItem('expressToken');
+            
+            if (!token || !user.email) {
+                log('❌ Cannot test - Not logged in', 'error');
+                alert('Please login first!');
+                return;
+            }
+            
+            if (user.role !== 'superadmin') {
+                log(`❌ Cannot test - Role is "${user.role}" not "superadmin"`, 'error');
+                alert(`Your role is "${user.role}". Only "superadmin" can access this route.`);
+                return;
+            }
+            
+            log('✅ Credentials valid. Will navigate in 2 seconds...', 'success');
+            
+            setTimeout(() => {
+                log('🚀 Navigating to /superadmin/dashboard', 'info');
+                window.location.href = '/superadmin/dashboard';
+            }, 2000);
+        }
+
+        function navigateToDashboard() {
+            log('🚀 Manual navigation to /superadmin/dashboard', 'info');
+            window.location.href = '/superadmin/dashboard';
+        }
+
+        function checkDatabase() {
+            log('💾 Checking database role...', 'info');
+            log('⚠️ This requires database access. Run this SQL:', 'warning');
+            log('', 'info');
+            log('SELECT id, nama, email, role FROM users WHERE role LIKE "%admin%";', 'info');
+            log('', 'info');
+            log('Expected: role = "superadmin" (exact match, lowercase)', 'info');
+            
+            alert('Check console for SQL query to run on database.');
+        }
+
+        function clearSession() {
+            if (confirm('Are you sure you want to clear session and logout?')) {
+                log('🗑️ Clearing session...', 'warning');
+                localStorage.clear();
+                sessionStorage.clear();
+                log('✅ Session cleared. Redirecting to login...', 'success');
+                setTimeout(() => {
+                    window.location.href = '/login';
+                }, 1000);
+            }
+        }
+
+        // Run tests on load
+        window.addEventListener('load', () => {
+            setTimeout(runTests, 500);
+        });
+    </script>
+</body>
+</html>

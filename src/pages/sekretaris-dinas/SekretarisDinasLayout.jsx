@@ -1,11 +1,17 @@
 // src/pages/sekretaris-dinas/SekretarisDinasLayout.jsx
 import React from "react";
 import { Outlet, Navigate, useNavigate, useLocation } from "react-router-dom";
-import { FiHome, FiMail, FiTrendingUp, FiMenu, FiLogOut, FiUser } from "react-icons/fi";
+import { FiHome, FiMail, FiBarChart2, FiMenu, FiLogOut, FiUser, FiBell, FiCalendar } from "react-icons/fi";
 import { useConfirm } from "../../hooks/useConfirm.jsx";
+import { subscribeToPushNotifications } from "../../utils/pushNotifications";
+import { toast } from 'react-hot-toast';
+import api from "../../api";
 
 const SekretarisDinasLayout = () => {
 	const [showMenu, setShowMenu] = React.useState(false);
+	const [showNotifications, setShowNotifications] = React.useState(false);
+	const [notifications, setNotifications] = React.useState([]);
+	const [unreadCount, setUnreadCount] = React.useState(0);
 	const [user, setUser] = React.useState(JSON.parse(localStorage.getItem("user") || "{}"));
 	const navigate = useNavigate();
 	const location = useLocation();
@@ -22,6 +28,134 @@ const SekretarisDinasLayout = () => {
 		};
 		window.addEventListener('userProfileUpdated', handleProfileUpdate);
 		return () => window.removeEventListener('userProfileUpdated', handleProfileUpdate);
+	}, []);
+
+	// Load notifications from backend
+	React.useEffect(() => {
+		const fetchNotifications = async () => {
+			try {
+				const response = await api.get('/push-notification/notifications?limit=10');
+				if (response.data.success) {
+					setNotifications(response.data.data || []);
+					setUnreadCount(response.data.unreadCount || 0);
+				}
+			} catch (error) {
+				console.error('Error fetching notifications:', error);
+				setNotifications([]);
+				setUnreadCount(0);
+			}
+		};
+
+		fetchNotifications();
+		
+		// Refresh notifications every 30 seconds
+		const interval = setInterval(fetchNotifications, 30000);
+		
+		return () => clearInterval(interval);
+	}, []);
+
+	const handleNotificationClick = () => {
+		setShowNotifications(!showNotifications);
+		if (!showNotifications) {
+			setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+			setUnreadCount(0);
+		}
+	};
+
+	const handleNotificationItemClick = (notification) => {
+		if (notification.type === 'disposisi') {
+			navigate('/sekretaris-dinas/disposisi');
+		} else if (notification.type === 'kegiatan') {
+			navigate('/core-dashboard/kegiatan');
+		}
+		setShowNotifications(false);
+	};
+
+	// Initialize push notifications for sekretaris_dinas
+	React.useEffect(() => {
+		const initPushNotifications = async () => {
+			if (token && user.role === 'sekretaris_dinas') {
+				const permission = Notification.permission;
+				
+				if (permission === 'granted') {
+					console.log('[SekretarisDinas] Initializing push notifications...');
+					try {
+						const subscription = await subscribeToPushNotifications();
+						if (subscription) {
+							console.log('✅ [SekretarisDinas] Push notification subscription successful');
+						}
+					} catch (err) {
+						console.warn('[SekretarisDinas] Push notification subscription failed:', err);
+					}
+				}
+			}
+		};
+
+		initPushNotifications();
+	}, [token, user.role]);
+
+	// Listen for push notifications from Service Worker
+	React.useEffect(() => {
+		if (!('serviceWorker' in navigator)) return;
+
+		const handlePushMessage = (event) => {
+			if (event.data && event.data.type === 'PUSH_NOTIFICATION_RECEIVED') {
+				const { payload } = event.data;
+				console.log('🔔 [SekretarisDinas] Received push notification:', payload);
+				
+				// Show toast notification
+				toast.success(
+					<div className="flex items-start space-x-3">
+						<div className="flex-shrink-0 mt-1">
+							<div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+								<svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+								</svg>
+							</div>
+						</div>
+						<div className="flex-1 min-w-0">
+							<p className="text-sm font-semibold text-gray-900">
+								{payload.title || 'Notifikasi Baru'}
+							</p>
+							<p className="text-sm text-gray-600 mt-1 line-clamp-2">
+								{payload.body || payload.message || 'Anda memiliki notifikasi baru'}
+							</p>
+						</div>
+					</div>,
+					{
+						duration: 5000,
+						position: 'top-right',
+						style: {
+							maxWidth: '400px',
+							padding: '16px',
+							background: 'white',
+							boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
+							borderRadius: '12px',
+						},
+					}
+				);
+
+				// Update unread count badge
+				setUnreadCount(prev => prev + 1);
+
+				// Add to notifications list
+				const newNotification = {
+					id: Date.now(),
+					title: payload.title || 'Notifikasi Baru',
+					message: payload.body || payload.message || 'Anda memiliki notifikasi baru',
+					timestamp: new Date().toISOString(),
+					read: false,
+					data: payload.data
+				};
+				setNotifications(prev => [newNotification, ...prev]);
+			}
+		};
+
+		navigator.serviceWorker.addEventListener('message', handlePushMessage);
+
+		return () => {
+			navigator.serviceWorker.removeEventListener('message', handlePushMessage);
+		};
 	}, []);
 
 	if (!token || !user.role || user.role !== "sekretaris_dinas") {
@@ -45,8 +179,9 @@ const SekretarisDinasLayout = () => {
 
 	const bottomNavItems = [
 		{ path: "/sekretaris-dinas/dashboard", label: "Dashboard", icon: FiHome },
+		{ path: "/core-dashboard/dashboard", label: "Statistik", icon: FiBarChart2 },
+		{ path: "/sekretaris-dinas/jadwal-kegiatan", label: "Kegiatan", icon: FiCalendar },
 		{ path: "/sekretaris-dinas/disposisi", label: "Disposisi", icon: FiMail },
-		{ path: "/core-dashboard/dashboard", label: "Core", icon: FiTrendingUp },
 		{ path: "/sekretaris-dinas/menu", label: "Menu", icon: FiMenu, action: () => setShowMenu(true) },
 	];
 
@@ -60,7 +195,7 @@ const SekretarisDinasLayout = () => {
 			{/* Bottom Navigation - Purple Theme for Sekretaris Dinas */}
 			<nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-purple-200 shadow-lg z-50">
 				<div className="max-w-lg mx-auto px-2">
-					<div className="flex items-center justify-around py-2">
+					<div className="flex items-center justify-around py-3">
 						{bottomNavItems.map((item, index) => {
 							const isActive = location.pathname === item.path;
 							const Icon = item.icon;
@@ -75,22 +210,84 @@ const SekretarisDinasLayout = () => {
 											navigate(item.path);
 										}
 									}}
-									className={`flex flex-col items-center justify-center px-3 py-2 rounded-xl transition-all ${
+									className={`flex items-center justify-center p-3 rounded-xl transition-all duration-200 ${
 										isActive 
-											? "text-purple-700" 
-											: "text-purple-400 hover:text-purple-600"
+											? "text-purple-700 bg-purple-50 scale-110" 
+											: "text-gray-400 hover:text-purple-600 hover:bg-purple-50"
 									}`}
 								>
-									<Icon className={`h-6 w-6 mb-1 ${isActive ? "animate-bounce" : ""}`} />
-									<span className={`text-xs font-medium ${isActive ? "font-bold" : ""}`}>
-										{item.label}
-									</span>
+									<Icon className="h-6 w-6" />
 								</button>
 							);
 						})}
 					</div>
 				</div>
 			</nav>
+
+			{/* Notification Panel */}
+			{showNotifications && (
+				<>
+					<div 
+						className="fixed inset-0 bg-black bg-opacity-50 z-50 animate-fadeIn"
+						onClick={() => setShowNotifications(false)}
+					></div>
+					<div className="fixed top-16 left-0 right-0 bg-white rounded-b-3xl shadow-2xl z-50 animate-slideDown max-h-96 overflow-hidden">
+						<div className="max-w-lg mx-auto">
+							<div className="px-6 py-4 border-b border-gray-200">
+								<h3 className="font-bold text-gray-800 text-lg">Notifikasi</h3>
+							</div>
+							<div className="overflow-y-auto max-h-80">
+								{notifications.length > 0 ? (
+									notifications.map((notification) => (
+										<button
+											key={notification.id}
+											onClick={() => handleNotificationItemClick(notification)}
+											className={`w-full flex gap-3 p-4 border-b border-gray-100 hover:bg-purple-50 transition-colors text-left ${
+												!notification.read ? 'bg-purple-50/50' : ''
+											}`}
+										>
+											<div className={`h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+												notification.type === 'disposisi' ? 'bg-purple-100' :
+												notification.type === 'laporan' ? 'bg-green-100' :
+												'bg-blue-100'
+											}`}>
+												{notification.type === 'disposisi' ? <FiMail className="h-5 w-5 text-purple-600" /> :
+												 notification.type === 'laporan' ? <FiBarChart2 className="h-5 w-5 text-green-600" /> :
+												 <FiCalendar className="h-5 w-5 text-blue-600" />}
+											</div>
+											<div className="flex-1 min-w-0">
+												<div className="flex items-start justify-between gap-2">
+													<h4 className={`font-semibold text-sm ${!notification.read ? 'text-gray-900' : 'text-gray-700'}`}>
+														{notification.title}
+													</h4>
+													{!notification.read && (
+														<span className="h-2 w-2 bg-purple-600 rounded-full flex-shrink-0 mt-1"></span>
+													)}
+												</div>
+												<p className="text-sm text-gray-600 mt-1 line-clamp-2">{notification.message}</p>
+												<p className="text-xs text-gray-400 mt-1">{notification.time}</p>
+											</div>
+										</button>
+									))
+								) : (
+									<div className="flex flex-col items-center justify-center py-12 text-gray-400">
+										<FiBell className="h-12 w-12 mb-2" />
+										<p className="text-sm">Tidak ada notifikasi</p>
+									</div>
+								)}
+							</div>
+							<div className="px-6 py-3 border-t border-gray-200">
+								<button
+									onClick={() => setShowNotifications(false)}
+									className="w-full py-2 text-gray-600 font-medium hover:text-gray-800 transition-colors text-sm"
+								>
+									Tutup
+								</button>
+							</div>
+						</div>
+					</div>
+				</>
+			)}
 
 			{/* Menu Modal - Slide from bottom */}
 			{showMenu && (
@@ -140,67 +337,18 @@ const SekretarisDinasLayout = () => {
 								<button
 									onClick={() => {
 										setShowMenu(false);
-										navigate("/sekretaris-dinas/dashboard");
+										navigate("/sekretaris-dinas/profile");
 									}}
 									className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-purple-50 transition-colors text-left"
 								>
 									<div className="h-12 w-12 bg-purple-100 rounded-xl flex items-center justify-center">
-										<FiHome className="h-6 w-6 text-purple-600" />
+										<FiUser className="h-6 w-6 text-purple-600" />
 									</div>
 									<div>
-										<h4 className="font-semibold text-gray-800">Dashboard</h4>
-										<p className="text-sm text-gray-500">Lihat ringkasan data</p>
+										<h4 className="font-semibold text-gray-800">Profil Saya</h4>
+										<p className="text-sm text-gray-500">Lihat dan edit profil</p>
 									</div>
 								</button>
-
-								<button
-									onClick={() => {
-										setShowMenu(false);
-										navigate("/sekretaris-dinas/disposisi");
-									}}
-									className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-purple-50 transition-colors text-left"
-								>
-									<div className="h-12 w-12 bg-purple-100 rounded-xl flex items-center justify-center">
-										<FiMail className="h-6 w-6 text-purple-600" />
-									</div>
-									<div>
-										<h4 className="font-semibold text-gray-800">Disposisi Surat</h4>
-										<p className="text-sm text-gray-500">Kelola disposisi</p>
-									</div>
-								</button>
-
-								<button
-									onClick={() => {
-										setShowMenu(false);
-										navigate("/core-dashboard/dashboard");
-									}}
-									className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-indigo-50 transition-colors text-left"
-								>
-									<div className="h-12 w-12 bg-indigo-100 rounded-xl flex items-center justify-center">
-										<FiTrendingUp className="h-6 w-6 text-indigo-600" />
-									</div>
-									<div>
-										<h4 className="font-semibold text-gray-800">Core Dashboard</h4>
-										<p className="text-sm text-gray-500">Analisis mendalam</p>
-									</div>
-								</button>
-
-								<div className="border-t border-gray-200 my-2"></div>
-
-								<button								onClick={() => {
-									setShowMenu(false);
-									navigate("/sekretaris-dinas/profile");
-								}}
-								className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-purple-50 transition-colors text-left"
-							>
-								<div className="h-12 w-12 bg-purple-100 rounded-xl flex items-center justify-center">
-									<FiUser className="h-6 w-6 text-purple-600" />
-								</div>
-								<div>
-									<h4 className="font-semibold text-gray-800">Profil Saya</h4>
-									<p className="text-sm text-gray-500">Lihat dan edit profil</p>
-								</div>
-							</button>
 
 							<button									onClick={handleLogout}
 									className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-red-50 transition-colors text-left"
@@ -239,11 +387,18 @@ const SekretarisDinasLayout = () => {
 					from { transform: translateY(100%); }
 					to { transform: translateY(0); }
 				}
+				@keyframes slideDown {
+					from { transform: translateY(-100%); opacity: 0; }
+					to { transform: translateY(0); opacity: 1; }
+				}
 				.animate-fadeIn {
 					animation: fadeIn 0.3s ease-out;
 				}
 				.animate-slideUp {
 					animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+				}
+				.animate-slideDown {
+					animation: slideDown 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 				}
 			`}</style>
 		</div>

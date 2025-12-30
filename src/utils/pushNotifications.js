@@ -26,7 +26,7 @@ export const requestNotificationPermission = async () => {
     
     return false;
   } catch (error) {
-    console.error('Error requesting notification permission:', error);
+    // Error requesting notification permission
     return false;
   }
 };
@@ -44,47 +44,75 @@ export const registerServiceWorker = async () => {
       scope: '/'
     });
 
-    console.log('Service Worker registered:', registration);
-
     // Wait for service worker to be ready
     await navigator.serviceWorker.ready;
-    console.log('Service Worker ready');
 
     return registration;
   } catch (error) {
-    console.error('Service Worker registration failed:', error);
+    // Service Worker registration failed
     return null;
   }
 };
 
 // Subscribe to push notifications
+let isSubscribing = false; // Flag to prevent duplicate subscriptions
+
 export const subscribeToPushNotifications = async () => {
+  if (isSubscribing) {
+    console.log('[Push] ⏭️ Subscription already in progress, skipping...');
+    return null;
+  }
+  
   try {
+    isSubscribing = true;
     console.log('[Push] Starting subscription process...');
     const registration = await navigator.serviceWorker.ready;
-    console.log('[Push] Service Worker ready:', registration);
+    console.log('[Push] Service Worker ready');
+
+    // VAPID public key (harus sama dengan backend)
+    const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY || 'BCEEJBfb05GAzlnpuzfPJszt054iCSOhqPVkmAMyTcUGZ8VrNluqShCQ2PVmwcMU0WuXJC35P5_XCXJNaQczX-U';
+    console.log('[Push] VAPID Public Key:', vapidPublicKey.substring(0, 30) + '...');
 
     // Check if already subscribed
     let subscription = await registration.pushManager.getSubscription();
 
     if (subscription) {
-      console.log('[Push] Already subscribed:', subscription.endpoint);
-      // Still send to server in case it's not in DB
-      try {
-        await sendSubscriptionToServer(subscription);
-      } catch (err) {
-        console.warn('[Push] Could not update subscription on server:', err);
+      console.log('[Push] Found existing subscription');
+      
+      // Check if subscription uses the same VAPID key
+      const currentKey = subscription.options?.applicationServerKey;
+      const newKey = urlBase64ToUint8Array(vapidPublicKey);
+      
+      // Compare keys - if different, unsubscribe and re-subscribe
+      let needsResubscribe = false;
+      if (currentKey && newKey) {
+        const currentKeyStr = btoa(String.fromCharCode(...new Uint8Array(currentKey)));
+        const newKeyStr = btoa(String.fromCharCode(...new Uint8Array(newKey)));
+        if (currentKeyStr !== newKeyStr) {
+          console.warn('[Push] ⚠️ VAPID key mismatch detected!');
+          needsResubscribe = true;
+        }
       }
-      return subscription;
+      
+      if (needsResubscribe) {
+        console.log('[Push] 🔄 Unsubscribing from old subscription...');
+        await subscription.unsubscribe();
+        console.log('[Push] ✅ Unsubscribed from old subscription');
+        subscription = null;
+      } else {
+        console.log('[Push] ✅ Subscription valid, updating server...');
+        // Still send to server in case it's not in DB
+        try {
+          await sendSubscriptionToServer(subscription);
+        } catch (err) {
+          // Could not update subscription on server
+        }
+        return subscription;
+      }
     }
-
-    // VAPID public key (generate di backend)
-    const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY || 'BL6liNDgLWAzQLvO0rG9EAlJcg3Tf3S7TfeSGG7SN4KTXh7Yhq68IccPWAFfRrMjAcC9xMqVkpes2arRsQwi-m8';
-    console.log('[Push] VAPID Public Key:', vapidPublicKey.substring(0, 30) + '...');
 
     // Convert VAPID key to Uint8Array
     const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
-    console.log('[Push] Converted VAPID key to Uint8Array');
 
     // Subscribe
     console.log('[Push] Requesting push subscription from browser...');
@@ -94,22 +122,17 @@ export const subscribeToPushNotifications = async () => {
     });
 
     console.log('[Push] ✅ Push subscription created!');
-    console.log('[Push] Endpoint:', subscription.endpoint);
 
     // Send subscription to server
-    console.log('[Push] Sending subscription to server...');
     await sendSubscriptionToServer(subscription);
     console.log('[Push] ✅ Subscription sent to server successfully!');
 
     return subscription;
   } catch (error) {
-    console.error('[Push] ❌ Error subscribing to push notifications:', error);
-    console.error('[Push] Error details:', {
-      name: error.name,
-      message: error.message,
-      stack: error.stack
-    });
+    // Error subscribing to push notifications
     return null;
+  } finally {
+    isSubscribing = false;
   }
 };
 
@@ -131,7 +154,7 @@ export const unsubscribeFromPushNotifications = async () => {
 
     return false;
   } catch (error) {
-    console.error('Error unsubscribing from push notifications:', error);
+    // Error unsubscribing from push notifications
     return false;
   }
 };
@@ -140,21 +163,16 @@ export const unsubscribeFromPushNotifications = async () => {
 const sendSubscriptionToServer = async (subscription) => {
   try {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
-    console.log('[Push] Sending for user:', user.id, user.email);
     
     const payload = {
       user_id: user.id,
       subscription: subscription
     };
-    console.log('[Push] Payload:', { ...payload, subscription: 'subscription_object' });
     
     const response = await api.post('/push-notification/subscribe', payload);
-
-    console.log('[Push] Server response:', response.data);
     return response.data;
   } catch (error) {
-    console.error('[Push] ❌ Error sending subscription to server:', error);
-    console.error('[Push] Error response:', error.response?.data);
+    // Error sending subscription to server
     throw error;
   }
 };
@@ -163,13 +181,12 @@ const sendSubscriptionToServer = async (subscription) => {
 const removeSubscriptionFromServer = async (subscription) => {
   try {
     const response = await api.post('/push-notification/unsubscribe', {
-      subscription: JSON.stringify(subscription)
+      endpoint: subscription.endpoint
     });
 
-    console.log('Subscription removed from server:', response.data);
     return response.data;
   } catch (error) {
-    console.error('Error removing subscription from server:', error);
+    // Error removing subscription from server
     throw error;
   }
 };
@@ -222,7 +239,7 @@ export const showLocalNotification = async (title, options = {}) => {
       console.log('Local notification shown');
     }
   } catch (error) {
-    console.error('Error showing local notification:', error);
+    // Error showing local notification
   }
 };
 
@@ -268,7 +285,7 @@ export const initializePWANotifications = async () => {
     console.log('PWA notifications initialized successfully');
     return true;
   } catch (error) {
-    console.error('Error initializing PWA notifications:', error);
+    // Error initializing PWA notifications
     return false;
   }
 };

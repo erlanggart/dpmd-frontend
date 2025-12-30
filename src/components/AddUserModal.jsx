@@ -70,16 +70,23 @@ const AddUserModal = ({ isOpen, onClose, onUserAdded }) => {
 				roles: [{ value: "superadmin", label: "Super Administrator" }],
 			},
 			{
-				label: "Tingkat Dinas",
+				label: "Pimpinan Dinas",
 				roles: [
-					{ value: "dinas", label: "Staff Dinas" },
 					{ value: "kepala_dinas", label: "Kepala Dinas" },
 					{ value: "sekretaris_dinas", label: "Sekretaris Dinas" },
 				],
 			},
 			{
+				label: "Struktural",
+				roles: [
+					{ value: "kepala_bidang", label: "Kepala Bidang" },
+					{ value: "ketua_tim", label: "Ketua Tim" },
+				],
+			},
+			{
 				label: "Bidang-Bidang DPMD",
 				roles: [
+					{ value: "sekretariat", label: "Sekretariat" },
 					{ value: "pemerintahan_desa", label: "Pemerintahan Desa" },
 					{ value: "sarana_prasarana", label: "Sarana Prasarana" },
 					{ value: "kekayaan_keuangan", label: "Kekayaan Keuangan" },
@@ -90,11 +97,9 @@ const AddUserModal = ({ isOpen, onClose, onUserAdded }) => {
 				],
 			},
 			{
-				label: "Departemen DPMD",
+				label: "Pegawai",
 				roles: [
-					{ value: "sekretariat", label: "Sekretariat" },
-					{ value: "prolap", label: "Program dan Pelaporan" },
-					{ value: "keuangan", label: "Keuangan" },
+					{ value: "pegawai", label: "Pegawai/Staff" },
 				],
 			},
 			{

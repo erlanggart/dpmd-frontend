@@ -4,7 +4,6 @@ import { FiMail, FiSend, FiClock, FiCheck, FiEye, FiPlus, FiUpload, FiX, FiFileT
 import api from '../../api';
 import { toast } from 'react-hot-toast';
 import useDisposisiAutoReload from '../../hooks/useDisposisiAutoReload';
-import PushNotificationToggle from '../../components/PushNotificationToggle';
 
 export default function DisposisiSurat() {
   const navigate = useNavigate();
@@ -381,9 +380,6 @@ export default function DisposisiSurat() {
                   <h1 className="text-xl sm:text-3xl font-bold">Manajemen Disposisi</h1>
                   <p className="text-blue-100 mt-1 text-xs sm:text-base">Kelola surat masuk dan disposisi secara efisien</p>
                 </div>
-              </div>
-              <div className="hidden sm:block">
-                <PushNotificationToggle />
               </div>
             </div>
           </div>
@@ -777,8 +773,14 @@ export default function DisposisiSurat() {
                               ? '/kepala-bidang'
                               : location.pathname.includes('/sekretaris-dinas')
                               ? '/sekretaris-dinas'
+                              : location.pathname.includes('/ketua-tim')
+                              ? '/ketua-tim'
                               : location.pathname.includes('/pegawai')
                               ? '/pegawai'
+                              : location.pathname.includes('/bidang')
+                              ? '/bidang'
+                              : location.pathname.includes('/sekretariat')
+                              ? '/sekretariat'
                               : '/dashboard';
                             navigate(`${basePath}/disposisi/${disposisi.id}`);
                           }}
@@ -890,8 +892,14 @@ export default function DisposisiSurat() {
                               ? '/kepala-bidang'
                               : location.pathname.includes('/sekretaris-dinas')
                               ? '/sekretaris-dinas'
+                              : location.pathname.includes('/ketua-tim')
+                              ? '/ketua-tim'
                               : location.pathname.includes('/pegawai')
                               ? '/pegawai'
+                              : location.pathname.includes('/bidang')
+                              ? '/bidang'
+                              : location.pathname.includes('/sekretariat')
+                              ? '/sekretariat'
                               : '/dashboard';
                             navigate(`${basePath}/disposisi/${disposisi.id}`);
                           }}

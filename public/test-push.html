@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Push Notification - DPMD</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .status-box {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+        
+        .status-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .status-label {
+            color: #666;
+            font-weight: 500;
+        }
+        
+        .status-value {
+            font-weight: 600;
+        }
+        
+        .status-value.success {
+            color: #10b981;
+        }
+        
+        .status-value.error {
+            color: #ef4444;
+        }
+        
+        .status-value.warning {
+            color: #f59e0b;
+        }
+        
+        .input-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 10px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-primary:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn-secondary {
+            background: #f3f4f6;
+            color: #333;
+        }
+        
+        .btn-secondary:hover {
+            background: #e5e7eb;
+        }
+        
+        .log-box {
+            background: #1f2937;
+            color: #10b981;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+        
+        .log-box p {
+            margin-bottom: 8px;
+            word-wrap: break-word;
+        }
+        
+        .log-box .error {
+            color: #ef4444;
+        }
+        
+        .log-box .warning {
+            color: #f59e0b;
+        }
+        
+        .log-box .success {
+            color: #10b981;
+        }
+        
+        .log-box .info {
+            color: #60a5fa;
+        }
+        
+        .icon {
+            font-size: 48px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">🔔</div>
+        <h1>Test Push Notification</h1>
+        <p class="subtitle">DPMD Kabupaten Bogor - Development Mode</p>
+        
+        <div class="status-box">
+            <div class="status-item">
+                <span class="status-label">Service Worker:</span>
+                <span class="status-value" id="sw-status">Checking...</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Notification Permission:</span>
+                <span class="status-value" id="notif-status">Checking...</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Push Subscription:</span>
+                <span class="status-value" id="sub-status">Checking...</span>
+            </div>
+        </div>
+        
+        <div class="input-group">
+            <label for="notif-title">Notification Title</label>
+            <input type="text" id="notif-title" value="Test Notification" placeholder="Enter title...">
+        </div>
+        
+        <div class="input-group">
+            <label for="notif-body">Notification Body</label>
+            <textarea id="notif-body" placeholder="Enter notification message...">Ini adalah test push notification dari Service Worker</textarea>
+        </div>
+        
+        <button class="btn btn-primary" id="btn-request-permission">
+            📢 Request Notification Permission
+        </button>
+        
+        <button class="btn btn-primary" id="btn-subscribe">
+            ✅ Subscribe to Push
+        </button>
+        
+        <button class="btn btn-secondary" id="btn-unsubscribe">
+            🚫 Unsubscribe from Push
+        </button>
+        
+        <button class="btn btn-primary" id="btn-send-test" disabled>
+            🚀 Send Test Notification
+        </button>
+        
+        <button class="btn btn-secondary" id="btn-clear-log">
+            🗑️ Clear Log
+        </button>
+        
+        <div class="log-box" id="log-box">
+            <p class="info">📝 Initializing...</p>
+        </div>
+    </div>
+
+    <script>
+        const logBox = document.getElementById('log-box');
+        const swStatus = document.getElementById('sw-status');
+        const notifStatus = document.getElementById('notif-status');
+        const subStatus = document.getElementById('sub-status');
+        
+        let registration = null;
+        let subscription = null;
+        
+        function log(message, type = 'info') {
+            const p = document.createElement('p');
+            p.className = type;
+            p.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logBox.appendChild(p);
+            logBox.scrollTop = logBox.scrollHeight;
+            console.log(message);
+        }
+        
+        function updateStatus() {
+            // SW Status
+            if (registration) {
+                swStatus.textContent = '✅ Registered';
+                swStatus.className = 'status-value success';
+            } else {
+                swStatus.textContent = '❌ Not Registered';
+                swStatus.className = 'status-value error';
+            }
+            
+            // Notification Permission
+            const permission = Notification.permission;
+            if (permission === 'granted') {
+                notifStatus.textContent = '✅ Granted';
+                notifStatus.className = 'status-value success';
+            } else if (permission === 'denied') {
+                notifStatus.textContent = '❌ Denied';
+                notifStatus.className = 'status-value error';
+            } else {
+                notifStatus.textContent = '⚠️ Default (Not asked)';
+                notifStatus.className = 'status-value warning';
+            }
+            
+            // Subscription Status
+            if (subscription) {
+                subStatus.textContent = '✅ Subscribed';
+                subStatus.className = 'status-value success';
+                document.getElementById('btn-send-test').disabled = false;
+            } else {
+                subStatus.textContent = '❌ Not Subscribed';
+                subStatus.className = 'status-value error';
+                document.getElementById('btn-send-test').disabled = true;
+            }
+        }
+        
+        async function registerServiceWorker() {
+            try {
+                log('🔄 Registering Service Worker...', 'info');
+                registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+                log('✅ Service Worker registered successfully', 'success');
+                
+                await navigator.serviceWorker.ready;
+                log('✅ Service Worker is ready', 'success');
+                
+                updateStatus();
+                return registration;
+            } catch (error) {
+                log(`❌ Service Worker registration failed: ${error.message}`, 'error');
+                updateStatus();
+                return null;
+            }
+        }
+        
+        async function requestPermission() {
+            try {
+                log('🔄 Requesting notification permission...', 'info');
+                const permission = await Notification.requestPermission();
+                
+                if (permission === 'granted') {
+                    log('✅ Notification permission granted', 'success');
+                } else if (permission === 'denied') {
+                    log('❌ Notification permission denied', 'error');
+                } else {
+                    log('⚠️ Notification permission dismissed', 'warning');
+                }
+                
+                updateStatus();
+                return permission;
+            } catch (error) {
+                log(`❌ Error requesting permission: ${error.message}`, 'error');
+                return null;
+            }
+        }
+        
+        async function subscribeToPush() {
+            try {
+                if (!registration) {
+                    log('❌ Service Worker not registered yet', 'error');
+                    return;
+                }
+                
+                if (Notification.permission !== 'granted') {
+                    log('❌ Notification permission not granted', 'error');
+                    return;
+                }
+                
+                // Check existing subscription
+                const existingSub = await registration.pushManager.getSubscription();
+                if (existingSub) {
+                    log('⚠️ Found existing subscription, unsubscribing first...', 'warning');
+                    await existingSub.unsubscribe();
+                    log('✅ Unsubscribed from old subscription', 'success');
+                }
+                
+                log('🔄 Subscribing to push notifications...', 'info');
+                
+                // VAPID key dari backend (hardcoded untuk test)
+                const vapidPublicKey = 'BCEEJBfb05GAzlnpuzfPJszt054iCSOhqPVkmAMyTcUGZ8VrNluqShCQ2PVmwcMU0WuXJC35P5_XCXJNaQczX-U';
+                
+                subscription = await registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: vapidPublicKey
+                });
+                
+                log('✅ Push subscription successful', 'success');
+                log(`📋 Endpoint: ${subscription.endpoint.substring(0, 50)}...`, 'info');
+                
+                updateStatus();
+                return subscription;
+            } catch (error) {
+                log(`❌ Push subscription failed: ${error.message}`, 'error');
+                updateStatus();
+                return null;
+            }
+        }
+        
+        async function unsubscribeFromPush() {
+            try {
+                if (!registration) {
+                    log('❌ Service Worker not registered yet', 'error');
+                    return;
+                }
+                
+                log('🔄 Unsubscribing from push notifications...', 'info');
+                
+                const existingSub = await registration.pushManager.getSubscription();
+                if (existingSub) {
+                    await existingSub.unsubscribe();
+                    log('✅ Unsubscribed successfully', 'success');
+                    subscription = null;
+                } else {
+                    log('⚠️ No active subscription found', 'warning');
+                }
+                
+                updateStatus();
+            } catch (error) {
+                log(`❌ Unsubscribe failed: ${error.message}`, 'error');
+            }
+        }
+        
+        async function sendTestNotification() {
+            try {
+                if (!registration) {
+                    log('❌ Service Worker not registered', 'error');
+                    return;
+                }
+                
+                const title = document.getElementById('notif-title').value || 'Test Notification';
+                const body = document.getElementById('notif-body').value || 'Test message';
+                
+                log('🔄 Sending test notification...', 'info');
+                
+                // Simulasi push event dengan postMessage ke service worker
+                if (registration.active) {
+                    // Kirim pesan ke SW untuk trigger notifikasi
+                    const notificationData = {
+                        title: title,
+                        body: body,
+                        icon: '/logo-bogor.png',
+                        data: {
+                            id: Date.now(),
+                            url: '/admin/disposisi',
+                            timestamp: new Date().toISOString()
+                        }
+                    };
+                    
+                    // Show notification langsung dari client (untuk test)
+                    await registration.showNotification(title, {
+                        body: body,
+                        icon: '/logo-bogor.png',
+                        badge: '/logo-bogor.png',
+                        tag: 'test-' + Date.now(),
+                        requireInteraction: true,
+                        vibrate: [500, 200, 500],
+                        data: notificationData.data
+                    });
+                    
+                    log('✅ Test notification sent successfully!', 'success');
+                    log('📢 Check your screen for the notification popup', 'info');
+                } else {
+                    log('❌ Service Worker not active', 'error');
+                }
+            } catch (error) {
+                log(`❌ Error sending notification: ${error.message}`, 'error');
+            }
+        }
+        
+        // Event Listeners
+        document.getElementById('btn-request-permission').addEventListener('click', requestPermission);
+        document.getElementById('btn-subscribe').addEventListener('click', subscribeToPush);
+        document.getElementById('btn-unsubscribe').addEventListener('click', unsubscribeFromPush);
+        document.getElementById('btn-send-test').addEventListener('click', sendTestNotification);
+        document.getElementById('btn-clear-log').addEventListener('click', () => {
+            logBox.innerHTML = '<p class="info">📝 Log cleared</p>';
+        });
+        
+        // Listen for messages from Service Worker
+        navigator.serviceWorker.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'PUSH_NOTIFICATION_RECEIVED') {
+                log('📨 Received message from SW: ' + event.data.payload.title, 'success');
+            }
+        });
+        
+        // Initialize
+        window.addEventListener('load', async () => {
+            log('🚀 Application started', 'info');
+            
+            if ('serviceWorker' in navigator) {
+                log('✅ Service Worker API supported', 'success');
+                await registerServiceWorker();
+                
+                // Check for existing subscription
+                if (registration) {
+                    const existingSub = await registration.pushManager.getSubscription();
+                    if (existingSub) {
+                        log('⚠️ Found existing push subscription', 'warning');
+                        subscription = existingSub;
+                    }
+                }
+            } else {
+                log('❌ Service Worker API not supported', 'error');
+            }
+            
+            if ('Notification' in window) {
+                log('✅ Notification API supported', 'success');
+            } else {
+                log('❌ Notification API not supported', 'error');
+            }
+            
+            if ('PushManager' in window) {
+                log('✅ Push API supported', 'success');
+            } else {
+                log('❌ Push API not supported', 'error');
+            }
+            
+            updateStatus();
+        });
+    </script>
+</body>
+</html>

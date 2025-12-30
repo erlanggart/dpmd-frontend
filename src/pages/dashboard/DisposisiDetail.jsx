@@ -12,7 +12,12 @@ import {
   FiX,
   FiCheck,
   FiDownload,
-  FiAlertCircle
+  FiAlertCircle,
+  FiActivity,
+  FiLayers,
+  FiInbox,
+  FiZap,
+  FiMessageSquare
 } from 'react-icons/fi';
 import api from '../../api';
 import { toast } from 'react-hot-toast';
@@ -43,6 +48,8 @@ export default function DisposisiDetail() {
   const fetchDisposisi = async () => {
     try {
       const response = await api.get(`/disposisi/${id}`);
+      console.log('📋 Disposisi Response:', response.data.data);
+      console.log('📧 Surat Masuk:', response.data.data?.surat_masuk);
       setDisposisi(response.data.data);
     } catch (error) {
       console.error('Error fetching disposisi:', error);
@@ -55,12 +62,10 @@ export default function DisposisiDetail() {
 
   const fetchAvailableUsers = async () => {
     try {
-      // Use new endpoint that filters users based on workflow hierarchy
       const response = await api.get('/disposisi/available-users');
       setUsers(response.data.data || []);
     } catch (error) {
       console.error('Error fetching available users:', error);
-      toast.error('Gagal memuat daftar user');
     }
   };
 
@@ -98,7 +103,6 @@ export default function DisposisiDetail() {
         level_disposisi: currentLevel + 1
       });
 
-      // Update status disposisi saat ini menjadi 'teruskan'
       await api.put(`/disposisi/${id}/status`, { status: 'teruskan' });
 
       toast.success('Disposisi berhasil diteruskan');
@@ -114,13 +118,26 @@ export default function DisposisiDetail() {
 
   const getStatusBadge = (status) => {
     const badges = {
-      pending: 'bg-yellow-100 text-yellow-800',
-      dibaca: 'bg-blue-100 text-blue-800',
-      proses: 'bg-indigo-100 text-indigo-800',
-      selesai: 'bg-green-100 text-green-800',
-      teruskan: 'bg-purple-100 text-purple-800'
+      pending: { bg: 'bg-amber-100', text: 'text-amber-700', icon: FiInbox, label: 'Pending' },
+      dibaca: { bg: 'bg-blue-100', text: 'text-blue-700', icon: FiEye, label: 'Dibaca' },
+      proses: { bg: 'bg-indigo-100', text: 'text-indigo-700', icon: FiActivity, label: 'Diproses' },
+      selesai: { bg: 'bg-emerald-100', text: 'text-emerald-700', icon: FiCheck, label: 'Selesai' },
+      teruskan: { bg: 'bg-purple-100', text: 'text-purple-700', icon: FiSend, label: 'Diteruskan' }
     };
-    return badges[status] || 'bg-gray-100 text-gray-800';
+    return badges[status] || { bg: 'bg-gray-100', text: 'text-gray-700', icon: FiInbox, label: status };
+  };
+
+  const getInstruksiBadge = (instruksi) => {
+    const badges = {
+      segera: { bg: 'bg-red-100', text: 'text-red-700', icon: FiZap },
+      penting: { bg: 'bg-orange-100', text: 'text-orange-700', icon: FiAlertCircle },
+      biasa: { bg: 'bg-gray-100', text: 'text-gray-700', icon: FiMail },
+      koordinasi: { bg: 'bg-blue-100', text: 'text-blue-700', icon: FiLayers },
+      teliti_lapor: { bg: 'bg-purple-100', text: 'text-purple-700', icon: FiFileText },
+      edarkan: { bg: 'bg-cyan-100', text: 'text-cyan-700', icon: FiSend },
+      simpan: { bg: 'bg-teal-100', text: 'text-teal-700', icon: FiInbox }
+    };
+    return badges[instruksi] || badges.biasa;
   };
 
   const formatTanggal = (tanggal) => {
@@ -136,10 +153,13 @@ export default function DisposisiDetail() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Memuat detail disposisi...</p>
+          <div className="relative w-20 h-20 mx-auto mb-4">
+            <div className="absolute inset-0 rounded-full border-4 border-blue-200 animate-pulse"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-t-blue-600 animate-spin"></div>
+          </div>
+          <p className="text-gray-600 font-medium">Memuat detail disposisi...</p>
         </div>
       </div>
     );
@@ -147,14 +167,18 @@ export default function DisposisiDetail() {
 
   if (!disposisi) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <FiAlertCircle className="mx-auto text-red-500 text-5xl mb-4" />
-          <p className="text-gray-600">Disposisi tidak ditemukan</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center p-4">
+        <div className="text-center bg-white rounded-2xl shadow-xl p-8 max-w-md">
+          <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <FiAlertCircle className="text-red-500 text-4xl" />
+          </div>
+          <h3 className="text-xl font-bold text-gray-900 mb-2">Disposisi Tidak Ditemukan</h3>
+          <p className="text-gray-600 mb-6">Data disposisi yang Anda cari tidak tersedia.</p>
           <button
             onClick={() => navigate(-1)}
-            className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 font-medium shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
           >
+            <FiArrowLeft className="inline mr-2" />
             Kembali
           </button>
         </div>
@@ -163,106 +187,150 @@ export default function DisposisiDetail() {
   }
 
   const isRecipient = disposisi.ke_user_id.toString() === user.id.toString();
+  const statusInfo = getStatusBadge(disposisi.status);
+  const instruksiInfo = getInstruksiBadge(disposisi.instruksi);
+  const StatusIcon = statusInfo.icon;
+  const InstruksiIcon = instruksiInfo.icon;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
-      {/* Modern Header with Gradient */}
-      <div className="bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-600 text-white shadow-xl">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
-          <button
-            onClick={() => navigate(-1)}
-            className="flex items-center gap-2 text-white/80 hover:text-white mb-3 sm:mb-4 transition-colors"
-          >
-            <FiArrowLeft size={18} className="sm:w-5 sm:h-5" />
-            <span className="font-medium text-sm sm:text-base">Kembali</span>
-          </button>
-          <div className="flex items-center gap-2 sm:gap-4">
-            <div className="p-2 sm:p-3 bg-white/20 backdrop-blur-sm rounded-lg sm:rounded-xl">
-              <FiFileText size={24} className="sm:w-8 sm:h-8" />
-            </div>
-            <div>
-              <h1 className="text-xl sm:text-3xl font-bold mb-1">Detail Disposisi</h1>
-              <p className="text-white/80 text-xs sm:text-base">Informasi lengkap surat dan disposisi</p>
-            </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      {/* Modern Header */}
+      <div className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40 backdrop-blur-sm bg-white/90">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <button
+              onClick={() => navigate(-1)}
+              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors group"
+            >
+              <FiArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+              <span className="font-medium hidden sm:inline">Kembali</span>
+            </button>
+            <h1 className="text-lg sm:text-xl font-bold text-gray-900">Detail Disposisi</h1>
+            <div className="w-20"></div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-6">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-3 sm:space-y-6">
-            {/* Info Surat */}
-            <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-              <div className="bg-gradient-to-r from-blue-500 to-cyan-500 px-4 sm:px-6 py-3 sm:py-4">
-                <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
-                  <FiFileText className="text-lg sm:text-xl" />
-                  Informasi Surat
-                </h2>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        {/* Status Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          <div className={`${statusInfo.bg} rounded-xl p-4 border-2 border-transparent hover:border-current transition-all transform hover:scale-105`}>
+            <div className="flex items-center gap-3">
+              <div className={`p-2 ${statusInfo.text} bg-white rounded-lg`}>
+                <StatusIcon className="w-5 h-5" />
               </div>
-              <div className="p-3 sm:p-6">
-              
-              <div className="space-y-3 sm:space-y-4">
-                <div>
-                  <label className="text-xs sm:text-sm font-medium text-gray-500">Nomor Surat</label>
-                  <p className="text-sm sm:text-base text-gray-900 font-medium">{disposisi.surat?.nomor_surat}</p>
+              <div>
+                <p className="text-xs text-gray-600 font-medium">Status</p>
+                <p className={`text-sm font-bold ${statusInfo.text}`}>{statusInfo.label}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className={`${instruksiInfo.bg} rounded-xl p-4 border-2 border-transparent hover:border-current transition-all transform hover:scale-105`}>
+            <div className="flex items-center gap-3">
+              <div className={`p-2 ${instruksiInfo.text} bg-white rounded-lg`}>
+                <InstruksiIcon className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-600 font-medium">Instruksi</p>
+                <p className={`text-sm font-bold ${instruksiInfo.text} capitalize`}>
+                  {disposisi.instruksi.replace('_', ' ')}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-blue-100 to-indigo-100 rounded-xl p-4 border-2 border-transparent hover:border-blue-300 transition-all transform hover:scale-105">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-white text-blue-600 rounded-lg">
+                <FiLayers className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-600 font-medium">Level</p>
+                <p className="text-sm font-bold text-blue-700">Level {disposisi.level_disposisi}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main Content */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Informasi Surat Card */}
+            <div className="bg-white rounded-2xl shadow-md border border-gray-200 overflow-hidden hover:shadow-xl transition-shadow">
+              <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg">
+                    <FiFileText className="w-6 h-6 text-white" />
+                  </div>
+                  <h2 className="text-xl font-bold text-white">Informasi Surat</h2>
+                </div>
+              </div>
+
+              <div className="p-6 space-y-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Nomor Surat</label>
+                    <p className="text-base font-bold text-gray-900 bg-gray-50 px-3 py-2 rounded-lg">
+                      {disposisi.surat_masuk?.nomor_surat}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Jenis</label>
+                    <p className="text-base font-medium text-gray-900 bg-gray-50 px-3 py-2 rounded-lg capitalize">
+                      {disposisi.surat_masuk?.jenis_surat}
+                    </p>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="text-xs sm:text-sm font-medium text-gray-500">Perihal</label>
-                  <p className="text-sm sm:text-base text-gray-900">{disposisi.surat?.perihal}</p>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Perihal</label>
+                  <p className="text-base text-gray-900 bg-blue-50 px-4 py-3 rounded-lg border border-blue-200">
+                    {disposisi.surat_masuk?.perihal}
+                  </p>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                  <div>
-                    <label className="text-xs sm:text-sm font-medium text-gray-500">Pengirim</label>
-                    <p className="text-sm sm:text-base text-gray-900">{disposisi.surat?.pengirim}</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Pengirim</label>
+                    <p className="text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg">
+                      {disposisi.surat_masuk?.pengirim}
+                    </p>
                   </div>
-                  <div>
-                    <label className="text-xs sm:text-sm font-medium text-gray-500">Jenis Surat</label>
-                    <p className="text-sm sm:text-base text-gray-900 capitalize">{disposisi.surat?.jenis_surat}</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                  <div>
-                    <label className="text-xs sm:text-sm font-medium text-gray-500">Tanggal Surat</label>
-                    <p className="text-sm sm:text-base text-gray-900">{formatTanggal(disposisi.surat?.tanggal_surat)}</p>
-                  </div>
-                  <div>
-                    <label className="text-xs sm:text-sm font-medium text-gray-500">Tanggal Terima</label>
-                    <p className="text-sm sm:text-base text-gray-900">{formatTanggal(disposisi.surat?.tanggal_terima)}</p>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Tanggal Surat</label>
+                    <p className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-lg flex items-center gap-2">
+                      <FiCalendar className="text-gray-400" />
+                      {formatTanggal(disposisi.surat_masuk?.tanggal_surat)}
+                    </p>
                   </div>
                 </div>
 
-                {disposisi.surat?.file_path && (
-                  <div>
-                    <label className="text-xs sm:text-sm font-medium text-gray-500 block mb-2">File Lampiran</label>
-                    <div className="flex flex-col sm:flex-row gap-2">
+                {disposisi.surat_masuk?.file_path && (
+                  <div className="pt-4 border-t border-gray-200">
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-3">
+                      File Lampiran
+                    </label>
+                    <div className="flex flex-wrap gap-3">
                       <button
                         onClick={() => {
                           const baseUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/api$/, '') || 'http://127.0.0.1:3001';
-                          const filePath = disposisi.surat.file_path.startsWith('/') ? disposisi.surat.file_path : `/${disposisi.surat.file_path}`;
-                          const url = `${baseUrl}${filePath}`;
-                          console.log('PDF URL:', url);
-                          setPdfUrl(url);
+                          const filePath = disposisi.surat_masuk.file_path.startsWith('/') ? disposisi.surat_masuk.file_path : `/${disposisi.surat_masuk.file_path}`;
+                          setPdfUrl(`${baseUrl}${filePath}`);
                           setShowPdfModal(true);
                         }}
-                        className="inline-flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:from-green-600 hover:to-emerald-600 text-sm font-medium shadow-lg hover:shadow-xl transition-all"
+                        className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-green-500 text-white rounded-xl hover:from-emerald-600 hover:to-green-600 font-medium shadow-md hover:shadow-lg transition-all transform hover:scale-105"
                       >
-                        <FiEye className="text-base sm:text-lg" />
+                        <FiEye className="w-4 h-4" />
                         Lihat PDF
                       </button>
                       <a
-                        href={`${import.meta.env.VITE_API_BASE_URL?.replace(/\/api$/, '') || 'http://127.0.0.1:3001'}${disposisi.surat.file_path.startsWith('/') ? disposisi.surat.file_path : '/' + disposisi.surat.file_path}`}
-                        target="_blank"
+                        href={`${import.meta.env.VITE_API_BASE_URL?.replace(/\/api$/, '') || 'http://127.0.0.1:3001'}${disposisi.surat_masuk.file_path.startsWith('/') ? disposisi.surat_masuk.file_path : '/' + disposisi.surat_masuk.file_path}`}
                         download
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg hover:from-blue-600 hover:to-cyan-600 text-sm font-medium shadow-lg hover:shadow-xl transition-all"
+                        className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl hover:from-blue-600 hover:to-cyan-600 font-medium shadow-md hover:shadow-lg transition-all transform hover:scale-105"
                       >
-                        <FiDownload className="text-base sm:text-lg" />
-                        Download File
+                        <FiDownload className="w-4 h-4" />
+                        Download
                       </a>
                     </div>
                   </div>
@@ -270,137 +338,162 @@ export default function DisposisiDetail() {
               </div>
             </div>
 
-            {/* Info Disposisi */}
-            <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-              <div className="bg-gradient-to-r from-purple-500 to-pink-500 px-4 sm:px-6 py-3 sm:py-4">
-                <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
-                  <FiMail className="text-lg sm:text-xl" />
-                  Informasi Disposisi
-                </h2>
-              </div>
-              <div className="p-6">
-              
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getStatusBadge(disposisi.status)}`}>
-                    {disposisi.status}
-                  </span>
-                  <span className="px-3 py-1 rounded-full text-sm font-semibold bg-gray-100 text-gray-800 capitalize">
-                    {disposisi.instruksi.replace('_', ' ')}
-                  </span>
-                  <span className="px-3 py-1 rounded-full text-sm font-semibold bg-blue-100 text-blue-800">
-                    Level {disposisi.level_disposisi}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-500 flex items-center gap-2">
-                      <FiUser className="text-blue-600" />
-                      Dari
-                    </label>
-                    <p className="text-gray-900 font-medium">{disposisi.dari_user?.name}</p>
-                    <p className="text-sm text-gray-500">{disposisi.dari_user?.role}</p>
+            {/* Informasi Disposisi Card */}
+            <div className="bg-white rounded-2xl shadow-md border border-gray-200 overflow-hidden hover:shadow-xl transition-shadow">
+              <div className="bg-gradient-to-r from-purple-600 to-pink-600 px-6 py-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg">
+                    <FiMail className="w-6 h-6 text-white" />
                   </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-500 flex items-center gap-2">
-                      <FiUser className="text-green-600" />
-                      Kepada
-                    </label>
-                    <p className="text-gray-900 font-medium">{disposisi.ke_user?.name}</p>
-                    <p className="text-sm text-gray-500">{disposisi.ke_user?.role}</p>
+                  <h2 className="text-xl font-bold text-white">Informasi Disposisi</h2>
+                </div>
+              </div>
+
+              <div className="p-6 space-y-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-200">
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 bg-blue-600 text-white rounded-lg">
+                        <FiUser className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide block mb-1">
+                          Dari
+                        </label>
+                        <p className="font-bold text-gray-900">{disposisi.dari_user?.name}</p>
+                        <p className="text-sm text-gray-600 mt-1 capitalize">{disposisi.dari_user?.role?.replace(/_/g, ' ')}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-emerald-50 to-green-50 p-4 rounded-xl border border-emerald-200">
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 bg-emerald-600 text-white rounded-lg">
+                        <FiUser className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide block mb-1">
+                          Kepada
+                        </label>
+                        <p className="font-bold text-gray-900">{disposisi.ke_user?.name}</p>
+                        <p className="text-sm text-gray-600 mt-1 capitalize">{disposisi.ke_user?.role?.replace(/_/g, ' ')}</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
                 {disposisi.catatan && (
-                  <div>
-                    <label className="text-sm font-medium text-gray-500 block mb-2">Catatan</label>
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <p className="text-gray-900">{disposisi.catatan}</p>
+                  <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl">
+                    <div className="flex items-start gap-3">
+                      <FiMessageSquare className="w-5 h-5 text-amber-600 mt-0.5" />
+                      <div className="flex-1">
+                        <label className="text-xs font-semibold text-amber-700 uppercase tracking-wide block mb-2">
+                          Catatan
+                        </label>
+                        <p className="text-gray-900">{disposisi.catatan}</p>
+                      </div>
                     </div>
                   </div>
                 )}
 
-                <div className="grid grid-cols-3 gap-4 pt-4 border-t">
-                  <div>
-                    <label className="text-sm font-medium text-gray-500 flex items-center gap-2">
-                      <FiCalendar className="text-gray-400" />
-                      Dikirim
-                    </label>
-                    <p className="text-sm text-gray-900">{formatTanggal(disposisi.tanggal_disposisi)}</p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-5 border-t border-gray-200">
+                  <div className="flex items-start gap-2">
+                    <FiCalendar className="w-4 h-4 text-gray-400 mt-1" />
+                    <div>
+                      <label className="text-xs font-semibold text-gray-500 block">Dikirim</label>
+                      <p className="text-sm text-gray-900 font-medium">{formatTanggal(disposisi.tanggal_disposisi)}</p>
+                    </div>
                   </div>
                   {disposisi.tanggal_dibaca && (
-                    <div>
-                      <label className="text-sm font-medium text-gray-500 flex items-center gap-2">
-                        <FiClock className="text-blue-400" />
-                        Dibaca
-                      </label>
-                      <p className="text-sm text-gray-900">{formatTanggal(disposisi.tanggal_dibaca)}</p>
+                    <div className="flex items-start gap-2">
+                      <FiEye className="w-4 h-4 text-blue-500 mt-1" />
+                      <div>
+                        <label className="text-xs font-semibold text-gray-500 block">Dibaca</label>
+                        <p className="text-sm text-gray-900 font-medium">{formatTanggal(disposisi.tanggal_dibaca)}</p>
+                      </div>
                     </div>
                   )}
                   {disposisi.tanggal_selesai && (
-                    <div>
-                      <label className="text-sm font-medium text-gray-500 flex items-center gap-2">
-                        <FiCheck className="text-green-400" />
-                        Selesai
-                      </label>
-                      <p className="text-sm text-gray-900">{formatTanggal(disposisi.tanggal_selesai)}</p>
+                    <div className="flex items-start gap-2">
+                      <FiCheck className="w-4 h-4 text-green-500 mt-1" />
+                      <div>
+                        <label className="text-xs font-semibold text-gray-500 block">Selesai</label>
+                        <p className="text-sm text-gray-900 font-medium">{formatTanggal(disposisi.tanggal_selesai)}</p>
+                      </div>
                     </div>
                   )}
                 </div>
               </div>
             </div>
 
-            {/* History Disposisi */}
-            {disposisi.surat?.disposisi && disposisi.surat.disposisi.length > 0 && (
-              <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-                <div className="bg-gradient-to-r from-orange-500 to-red-500 px-6 py-4">
-                  <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                    <FiClock />
-                    Riwayat Disposisi
-                  </h2>
-                </div>
-                <div className="p-6">
-                
-                <div className="space-y-4">
-                  {disposisi.surat.disposisi.map((item, index) => (
-                    <div key={item.id} className="flex gap-4">
-                      <div className="flex flex-col items-center">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                          item.status === 'selesai' ? 'bg-green-100 text-green-600' :
-                          item.status === 'proses' ? 'bg-blue-100 text-blue-600' :
-                          'bg-gray-100 text-gray-600'
-                        }`}>
-                          <span className="text-sm font-bold">{item.level_disposisi}</span>
-                        </div>
-                        {index < disposisi.surat.disposisi.length - 1 && (
-                          <div className="w-0.5 h-full bg-gray-200 my-1"></div>
-                        )}
-                      </div>
-                      
-                      <div className="flex-1 pb-4">
-                        <div className="flex items-start justify-between mb-2">
-                          <div>
-                            <p className="font-medium text-gray-900">{item.dari_user?.name}</p>
-                            <p className="text-sm text-gray-500">{item.dari_user?.role}</p>
-                          </div>
-                          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusBadge(item.status)}`}>
-                            {item.status}
-                          </span>
-                        </div>
-                        <p className="text-sm text-gray-600 mb-1">
-                          <span className="font-medium">Kepada:</span> {item.ke_user?.name} ({item.ke_user?.role})
-                        </p>
-                        {item.catatan && (
-                          <p className="text-sm text-gray-600 bg-gray-50 p-2 rounded mt-2">
-                            {item.catatan}
-                          </p>
-                        )}
-                        <p className="text-xs text-gray-500 mt-2">{formatTanggal(item.tanggal_disposisi)}</p>
-                      </div>
+            {/* Riwayat Disposisi */}
+            {disposisi.surat_masuk?.disposisi && disposisi.surat_masuk.disposisi.length > 1 && (
+              <div className="bg-white rounded-2xl shadow-md border border-gray-200 overflow-hidden hover:shadow-xl transition-shadow">
+                <div className="bg-gradient-to-r from-orange-600 to-red-600 px-6 py-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg">
+                      <FiClock className="w-6 h-6 text-white" />
                     </div>
-                  ))}
+                    <h2 className="text-xl font-bold text-white">Riwayat Disposisi</h2>
+                  </div>
                 </div>
+
+                <div className="p-6">
+                  <div className="space-y-4">
+                    {disposisi.surat_masuk.disposisi.map((item, index) => {
+                      const itemStatusInfo = getStatusBadge(item.status);
+                      const ItemStatusIcon = itemStatusInfo.icon;
+                      
+                      return (
+                        <div key={item.id} className="flex gap-4">
+                          <div className="flex flex-col items-center">
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-md ${
+                              item.status === 'selesai' ? 'bg-gradient-to-br from-emerald-500 to-green-500' :
+                              item.status === 'proses' ? 'bg-gradient-to-br from-blue-500 to-indigo-500' :
+                              'bg-gradient-to-br from-gray-400 to-gray-500'
+                            }`}>
+                              {item.level_disposisi}
+                            </div>
+                            {index < disposisi.surat_masuk.disposisi.length - 1 && (
+                              <div className="w-0.5 h-full bg-gradient-to-b from-gray-300 to-transparent my-2"></div>
+                            )}
+                          </div>
+                          
+                          <div className="flex-1 pb-6">
+                            <div className="bg-gray-50 rounded-xl p-4 border border-gray-200 hover:border-gray-300 transition-colors">
+                              <div className="flex items-start justify-between mb-3">
+                                <div>
+                                  <p className="font-bold text-gray-900 mb-1">{item.dari_user?.name}</p>
+                                  <p className="text-sm text-gray-600 capitalize">{item.dari_user?.role?.replace(/_/g, ' ')}</p>
+                                </div>
+                                <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg ${itemStatusInfo.bg} ${itemStatusInfo.text}`}>
+                                  <ItemStatusIcon className="w-3.5 h-3.5" />
+                                  <span className="text-xs font-bold">{itemStatusInfo.label}</span>
+                                </div>
+                              </div>
+                              
+                              <div className="flex items-center gap-2 text-sm text-gray-700 mb-2">
+                                <FiArrowLeft className="rotate-180 text-gray-400" />
+                                <span className="font-medium">{item.ke_user?.name}</span>
+                                <span className="text-gray-500 text-xs">({item.ke_user?.role?.replace(/_/g, ' ')})</span>
+                              </div>
+
+                              {item.catatan && (
+                                <p className="text-sm text-gray-700 bg-white p-3 rounded-lg border border-gray-200 mb-2">
+                                  {item.catatan}
+                                </p>
+                              )}
+                              
+                              <div className="flex items-center gap-2 text-xs text-gray-500 mt-3">
+                                <FiCalendar className="w-3 h-3" />
+                                {formatTanggal(item.tanggal_disposisi)}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             )}
@@ -408,89 +501,102 @@ export default function DisposisiDetail() {
 
           {/* Actions Sidebar */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-gray-100 overflow-hidden lg:sticky lg:top-6">
-              <div className="bg-gradient-to-r from-green-500 to-emerald-500 px-4 sm:px-6 py-3 sm:py-4">
-                <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-                  <FiCheck className="text-base sm:text-lg" />
-                  Panel Aksi
-                </h3>
-              </div>
-              <div className="p-3 sm:p-6">
-              
-              {isRecipient && (
-                <div className="space-y-2 sm:space-y-3">
-                  {disposisi.status === 'pending' && (
-                    <button
-                      onClick={handleMarkAsRead}
-                      className="w-full flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg sm:rounded-xl hover:from-blue-600 hover:to-cyan-600 text-sm font-medium shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
-                    >
-                      <FiMail className="text-base sm:text-lg" />
-                      Tandai Dibaca
-                    </button>
-                  )}
-
-                  {(disposisi.status === 'dibaca' || disposisi.status === 'proses') && (
-                    <>
-                      {disposisi.status === 'dibaca' && (
-                        <button
-                          onClick={() => handleUpdateStatus('proses')}
-                          className="w-full flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-lg sm:rounded-xl hover:from-indigo-600 hover:to-purple-600 text-sm font-medium shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
-                        >
-                          <FiClock className="text-base sm:text-lg" />
-                          Tandai Diproses
-                        </button>
-                      )}
-
-                      {/* Tombol Teruskan hanya untuk Kepala Dinas, Sekretaris Dinas, dan Kepala Bidang */}
-                      {(user.role === 'kepala_dinas' || 
-                        user.role === 'sekretaris_dinas' || 
-                        user.role?.startsWith('kabid_')) && (
-                        <button
-                          onClick={() => setShowTeruskanModal(true)}
-                          className="w-full flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 text-sm font-medium shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
-                        >
-                          <FiSend className="text-base sm:text-lg" />
-                          Teruskan
-                        </button>
-                      )}
-
-                      <button
-                        onClick={() => handleUpdateStatus('selesai')}
-                        className="w-full flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg sm:rounded-xl hover:from-green-600 hover:to-emerald-600 text-sm font-medium shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
-                      >
-                        <FiCheck className="text-base sm:text-lg" />
-                        Tandai Selesai
-                      </button>
-                    </>
-                  )}
+            <div className="bg-white rounded-2xl shadow-md border border-gray-200 overflow-hidden sticky top-24 hover:shadow-xl transition-shadow">
+              <div className="bg-gradient-to-r from-emerald-600 to-green-600 px-6 py-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg">
+                    <FiZap className="w-5 h-5 text-white" />
+                  </div>
+                  <h3 className="text-lg font-bold text-white">Panel Aksi</h3>
                 </div>
-              )}
+              </div>
 
-              {!isRecipient && (
-                <p className="text-sm text-gray-500 text-center py-4">
-                  Anda tidak memiliki akses untuk mengubah disposisi ini
-                </p>
-              )}
+              <div className="p-6">
+                {isRecipient ? (
+                  <div className="space-y-3">
+                    {disposisi.status === 'pending' && (
+                      <button
+                        onClick={handleMarkAsRead}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-xl hover:from-blue-700 hover:to-cyan-700 font-medium shadow-md hover:shadow-lg transition-all transform hover:scale-105"
+                      >
+                        <FiMail className="w-5 h-5" />
+                        Tandai Dibaca
+                      </button>
+                    )}
+
+                    {(disposisi.status === 'dibaca' || disposisi.status === 'proses') && (
+                      <>
+                        {disposisi.status === 'dibaca' && (
+                          <button
+                            onClick={() => handleUpdateStatus('proses')}
+                            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 font-medium shadow-md hover:shadow-lg transition-all transform hover:scale-105"
+                          >
+                            <FiActivity className="w-5 h-5" />
+                            Mulai Proses
+                          </button>
+                        )}
+
+                        {(user.role === 'kepala_dinas' || 
+                          user.role === 'sekretaris_dinas' || 
+                          user.role === 'kepala_bidang' ||
+                          user.role === 'ketua_tim') && (
+                          <button
+                            onClick={() => setShowTeruskanModal(true)}
+                            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:from-purple-700 hover:to-pink-700 font-medium shadow-md hover:shadow-lg transition-all transform hover:scale-105"
+                          >
+                            <FiSend className="w-5 h-5" />
+                            Teruskan
+                          </button>
+                        )}
+
+                        <button
+                          onClick={() => handleUpdateStatus('selesai')}
+                          className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-emerald-600 to-green-600 text-white rounded-xl hover:from-emerald-700 hover:to-green-700 font-medium shadow-md hover:shadow-lg transition-all transform hover:scale-105"
+                        >
+                          <FiCheck className="w-5 h-5" />
+                          Tandai Selesai
+                        </button>
+                      </>
+                    )}
+
+                    {disposisi.status === 'selesai' && (
+                      <div className="text-center py-6">
+                        <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                          <FiCheck className="w-8 h-8 text-emerald-600" />
+                        </div>
+                        <p className="text-sm font-medium text-gray-600">Disposisi Selesai</p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <FiAlertCircle className="w-8 h-8 text-gray-400" />
+                    </div>
+                    <p className="text-sm text-gray-600">Anda tidak memiliki akses untuk mengubah disposisi ini</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </div>
       </div>
-      </div>
 
-      {/* Modal Teruskan */}
+      {/* Modal Teruskan - Redesigned */}
       {showTeruskanModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden transform transition-all">
             <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-5">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-white flex items-center gap-3">
-                  <FiSend className="text-2xl" />
-                  Teruskan Disposisi
-                </h2>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg">
+                    <FiSend className="w-6 h-6 text-white" />
+                  </div>
+                  <h2 className="text-xl font-bold text-white">Teruskan Disposisi</h2>
+                </div>
                 <button
                   onClick={() => setShowTeruskanModal(false)}
-                  className="text-white hover:bg-white/20 rounded-lg p-1.5 transition-colors"
+                  className="text-white/80 hover:text-white hover:bg-white/20 rounded-lg p-2 transition-colors"
                 >
                   <FiX size={24} />
                 </button>
@@ -499,32 +605,32 @@ export default function DisposisiDetail() {
 
             <form onSubmit={handleTeruskan} className="p-6 space-y-5">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-bold text-gray-700 mb-2">
                   Teruskan Kepada <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={formTeruskan.ke_user_id}
                   onChange={(e) => setFormTeruskan({ ...formTeruskan, ke_user_id: e.target.value })}
                   required
-                  className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all text-gray-900 font-medium"
                 >
                   <option value="">-- Pilih Penerima --</option>
                   {users.filter(u => u.id.toString() !== user.id.toString()).map((u) => (
                     <option key={u.id} value={u.id}>
-                      {u.name}
+                      {u.name} - {u.role?.replace(/_/g, ' ')}
                     </option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-bold text-gray-700 mb-2">
                   Instruksi
                 </label>
                 <select
                   value={formTeruskan.instruksi}
                   onChange={(e) => setFormTeruskan({ ...formTeruskan, instruksi: e.target.value })}
-                  className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all text-gray-900 font-medium"
                 >
                   <option value="biasa">Biasa</option>
                   <option value="penting">Penting</option>
@@ -537,23 +643,23 @@ export default function DisposisiDetail() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-bold text-gray-700 mb-2">
                   Catatan
                 </label>
                 <textarea
                   value={formTeruskan.catatan}
                   onChange={(e) => setFormTeruskan({ ...formTeruskan, catatan: e.target.value })}
                   rows="4"
-                  className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors resize-none"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all resize-none text-gray-900"
                   placeholder="Tambahkan catatan untuk disposisi ini..."
                 />
               </div>
 
-              <div className="flex gap-3 pt-6 border-t">
+              <div className="flex gap-3 pt-6 border-t border-gray-200">
                 <button
                   type="button"
                   onClick={() => setShowTeruskanModal(false)}
-                  className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
+                  className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 font-medium transition-all"
                   disabled={submitting}
                 >
                   Batal
@@ -561,10 +667,19 @@ export default function DisposisiDetail() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 disabled:bg-gray-400 font-medium shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center justify-center gap-2"
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl hover:from-purple-700 hover:to-indigo-700 disabled:opacity-50 font-medium shadow-lg hover:shadow-xl transition-all transform hover:scale-105 flex items-center justify-center gap-2"
                 >
-                  <FiSend />
-                  {submitting ? 'Mengirim...' : 'Kirim Sekarang'}
+                  {submitting ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                      Mengirim...
+                    </>
+                  ) : (
+                    <>
+                      <FiSend />
+                      Kirim
+                    </>
+                  )}
                 </button>
               </div>
             </form>
@@ -572,56 +687,46 @@ export default function DisposisiDetail() {
         </div>
       )}
 
-      {/* Modal PDF Viewer */}
+      {/* Modal PDF Viewer - Enhanced */}
       {showPdfModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg w-full h-full max-w-6xl max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between p-4 border-b border-gray-200">
-              <h3 className="text-lg font-bold text-gray-900">Preview Surat</h3>
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl w-full h-full max-w-6xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-600 text-white rounded-lg">
+                  <FiFileText className="w-5 h-5" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900">Preview Surat</h3>
+              </div>
               <button
                 onClick={() => {
                   setShowPdfModal(false);
                   setPdfUrl('');
                 }}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg p-2 transition-colors"
               >
                 <FiX size={24} />
               </button>
             </div>
             <div className="flex-1 overflow-hidden bg-gray-100">
               {pdfUrl ? (
-                <object
-                  data={`${pdfUrl}#toolbar=0&navpanes=0&scrollbar=1`}
-                  type="application/pdf"
+                <iframe
+                  src={`${pdfUrl}#toolbar=0&navpanes=0&scrollbar=1`}
                   className="w-full h-full"
-                >
-                  <embed
-                    src={`${pdfUrl}#toolbar=0&navpanes=0&scrollbar=1`}
-                    type="application/pdf"
-                    className="w-full h-full"
-                  />
-                  <div className="flex flex-col items-center justify-center h-full p-8 text-center">
-                    <p className="text-gray-600 mb-4">Browser tidak support preview PDF inline.</p>
-                    <a
-                      href={pdfUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                    >
-                      Buka PDF di Tab Baru
-                    </a>
-                  </div>
-                </object>
+                  title="PDF Preview"
+                />
               ) : (
                 <div className="flex items-center justify-center h-full">
-                  <p className="text-gray-500">Loading PDF...</p>
+                  <div className="text-center">
+                    <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-gray-500 font-medium">Loading PDF...</p>
+                  </div>
                 </div>
               )}
             </div>
           </div>
         </div>
       )}
-      </div>
     </div>
   );
 }

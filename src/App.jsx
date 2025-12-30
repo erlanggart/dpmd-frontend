@@ -7,7 +7,7 @@ import {
 	useLocation,
 	Outlet,
 } from "react-router-dom";
-import { Suspense, lazy, useEffect } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import { Toaster, toast } from "react-hot-toast";
 import { useAuth } from "./context/AuthContext";
 import { useThemeColor } from "./hooks/useThemeColor";
@@ -16,6 +16,13 @@ import { EditModeProvider } from "./context/EditModeContext.jsx";
 import { registerServiceWorker } from "./utils/pushNotifications";
 import PushNotificationInitializer from "./components/PushNotificationInitializer";
 import { registerServiceWorker, subscribeToPushNotifications } from "./utils/pushNotifications";
+import { 
+	initSessionPersistence,
+	setupPeriodicBackup,
+	syncSessionAcrossTabs 
+} from "./utils/sessionPersistence";
+import { setupPeriodicVersionCheck, forceUpdate } from "./utils/versionCheck";
+import UpdateNotificationModal from "./components/UpdateNotificationModal";
 
 // Halaman utama di-import langsung untuk performa awal yang lebih cepat
 import LoginPage from "./pages/LoginPage";
@@ -25,6 +32,55 @@ import BankeuPublicPage from "./pages/BankeuPublicPage";
 import NotFound from "./pages/NotFound";
 import Forbidden from "./pages/Forbidden";
 import Spinner from "./components/ui/Spinner";
+
+// HomeRedirect component - smart redirect based on user state and navigation context
+function HomeRedirect() {
+	const { user } = useAuth();
+	const location = useLocation();
+	const [shouldRedirect, setShouldRedirect] = useState(false);
+	
+	useEffect(() => {
+		// Check if user is logged in
+		if (user && user.role) {
+			// Check if user explicitly navigated to home (e.g., clicked "Back to Home" button)
+			const isExplicitNavigation = location.state?.fromNavigation === true;
+			
+			if (isExplicitNavigation) {
+				// User wants to see landing page even if logged in
+				setShouldRedirect(false);
+			} else {
+				// Auto-redirect to dashboard (PWA reopen scenario)
+				setShouldRedirect(true);
+			}
+		} else {
+			// Not logged in, always show landing page
+			setShouldRedirect(false);
+		}
+	}, [user, location.state]);
+	
+	// If should redirect, go to appropriate dashboard
+	if (shouldRedirect && user && user.role) {
+		// Redirecting to dashboard for user role
+		
+		// Map role to dashboard path
+		const roleDashboardMap = {
+			'superadmin': '/superadmin/dashboard',
+			'kepala_dinas': '/kepala-dinas/dashboard',
+			'sekretaris_dinas': '/sekretaris-dinas/dashboard',
+			'kepala_bidang': '/kepala-bidang/dashboard',
+			'ketua_tim': '/ketua-tim/dashboard',
+			'pegawai': '/pegawai/dashboard',
+			'desa': '/desa/dashboard',
+			'kecamatan': '/kecamatan/dashboard'
+		};
+		
+		const dashboardPath = roleDashboardMap[user.role] || '/dashboard';
+		return <Navigate to={dashboardPath} replace />;
+	}
+	
+	// Show landing page
+	return <LandingPage />;
+}
 
 // Role constants for better maintainability
 const ROLES = {
@@ -47,10 +103,17 @@ const HeroGalleryManagement = lazy(() =>
 const BeritaManagement = lazy(() =>
 	import("./pages/dashboard/BeritaManagement")
 );
-const BumdesApp = lazy(() => import("./pages/sarpras/Bumdes-app"));
-const Kelembagaan = lazy(() => import("./pages/PMD/Kelembagaan"));
-const PerjalananDinas = lazy(() => import("./pages/sekretariat/perjadin"));
-const CetakBonBensin = lazy(() => import("./pages/CetakBonBensin"));
+// Admin management pages
+const MusdesusMonitoringPage = lazy(() =>
+	import("./pages/admin/MusdesusMonitoringPage")
+);
+// Bidang apps
+const BumdesApp = lazy(() => import("./pages/bidang/spked/bumdes"));
+const Kelembagaan = lazy(() => import("./pages/bidang/pmd/Kelembagaan"));
+const PerjalananDinas = lazy(() => import("./pages/bidang/sekretariat/perjadin"));
+const DisposisiRouter = lazy(() => import("./pages/bidang/sekretariat/disposisi/DisposisiRouter"));
+const JadwalKegiatanPage = lazy(() => import("./pages/bidang/sekretariat/JadwalKegiatanPage"));
+const KelolaNotifikasiPage = lazy(() => import("./pages/bidang/sekretariat/KelolaNotifikasiPage"));
 const DesaLayout = lazy(() => import("./layouts/DesaLayout"));
 const DesaDashboard = lazy(() => import("./pages/desa/DesaDashboardPage"));
 const BumdesDesaPage = lazy(() =>
@@ -60,6 +123,14 @@ const BumdesDesaPage = lazy(() =>
 // Pegawai routes
 const PegawaiLayout = lazy(() => import("./pages/pegawai/PegawaiLayout"));
 const PegawaiDashboard = lazy(() => import("./pages/pegawai/PegawaiDashboard"));
+
+// Bidang pages
+const SekretariatPage = lazy(() => import("./pages/bidang/SekretariatPage"));
+const SpkedPage = lazy(() => import("./pages/bidang/SpkedPage"));
+const KKDPage = lazy(() => import("./pages/bidang/KKDPage"));
+const PMDPage = lazy(() => import("./pages/bidang/PMDPage"));
+const PemdesPage = lazy(() => import("./pages/bidang/PemdesPage"));
+
 const KelembagaanDesaPage = lazy(() =>
 	import("./pages/desa/kelembagaan/KelembagaanDesaPage")
 );
@@ -70,7 +141,7 @@ const KelembagaanDetailPage = lazy(() =>
 	import("./components/kelembagaan/KelembagaanDetailPage")
 );
 const AdminKelembagaanDetailPage = lazy(() =>
-	import("./pages/PMD/AdminKelembagaanDetailPage")
+	import("./pages/bidang/pmd/AdminKelembagaanDetailPage")
 );
 const PengurusDetailPage = lazy(() =>
 	import("./pages/desa/pengurus/PengurusDetailPage")
@@ -86,7 +157,7 @@ const PengurusEditPage = lazy(() =>
 );
 const SettingsPage = lazy(() => import("./pages/dashboard/SettingsPage"));
 const DisposisiSurat = lazy(() =>
-	import("./pages/dashboard/DisposisiSurat")
+	import("./pages/dashboard/DisposisiSurat.modern")
 );
 const DisposisiDetail = lazy(() =>
 	import("./pages/dashboard/DisposisiDetail")
@@ -112,6 +183,27 @@ const KepalaBidangLayout = lazy(() =>
 );
 const SekretarisDinasLayout = lazy(() =>
 	import("./pages/sekretaris-dinas/SekretarisDinasLayout")
+);
+const KetuaTimLayout = lazy(() =>
+	import("./pages/ketua-tim/KetuaTimLayout")
+);
+const KetuaTimDashboard = lazy(() =>
+	import("./pages/ketua-tim/KetuaTimDashboard")
+);
+const SuperadminLayout = lazy(() =>
+	import("./pages/superadmin/SuperadminLayout")
+);
+const SuperadminDashboard = lazy(() =>
+	import("./pages/superadmin/SuperadminDashboard")
+);
+const BidangNavigationPage = lazy(() =>
+	import("./pages/superadmin/BidangNavigationPage")
+);
+const ActivityLogsPage = lazy(() =>
+	import("./pages/superadmin/ActivityLogsPage")
+);
+const KecamatanDashboardPage = lazy(() =>
+	import("./pages/kecamatan/KecamatanDashboardPage")
 );
 const CoreDashboardLayout = lazy(() =>
 	import("./layouts/CoreDashboardLayout")
@@ -146,9 +238,6 @@ const StatistikPerjadin = lazy(() =>
 const StatistikAdd = lazy(() =>
 	import("./pages/kepala-dinas/StatistikAdd")
 );
-const LottieTest = lazy(() =>
-	import("./pages/test/LottieTest")
-);
 // DD Statistik Sub-categories
 const StatistikDdDashboard = lazy(() =>
 	import("./pages/kepala-dinas/StatistikDdDashboard")
@@ -157,20 +246,20 @@ const TrendsPage = lazy(() =>
 	import("./pages/kepala-dinas/TrendsPage")
 );
 const BankeuDashboard = lazy(() =>
-	import("./pages/sarana-prasarana/bankeu/BankeuDashboard")
+	import("./pages/bidang/spked/bankeu/BankeuDashboard")
 );
 const StatistikBankeuDashboard = lazy(() =>
 	import("./pages/kepala-dinas/StatistikBankeuDashboard")
 );
 const AddDashboard = lazy(() =>
-	import("./pages/kkd/add/AddDashboard")
+	import("./pages/bidang/kkd/add/AddDashboard")
 );
 const BhprdDashboard = lazy(() =>
-	import("./pages/kkd/BhprdDashboard")
+	import("./pages/bidang/kkd/BhprdDashboard")
 );
 // DD Sub-categories
 const DdDashboard = lazy(() =>
-	import("./pages/kkd/dd/DdDashboard")
+	import("./pages/bidang/kkd/dd/DdDashboard")
 );
 // Statistik untuk Core Dashboard
 const StatistikAddDashboard = lazy(() =>
@@ -205,34 +294,43 @@ const StatistikInsentifDd = lazy(() =>
 const UserManagementPage = lazy(() =>
 	import("./pages/dashboard/UserManagementPage")
 );
+const ManageRolesPage = lazy(() =>
+	import("./pages/admin/ManageRolesPage")
+);
 
 const ProtectedRoute = ({ children }) => {
 	const token = localStorage.getItem("expressToken");
 	const location = useLocation();
 
 	if (!token) {
-		console.log("🔒 ProtectedRoute: No token found, redirecting to login");
 		// Simpan lokasi yang dituju agar bisa redirect kembali setelah login
 		return <Navigate to="/login" state={{ from: location }} replace />;
 	}
 
 	// Allow VPN access token to bypass normal auth
 	if (token === 'VPN_ACCESS_TOKEN') {
-		console.log("✅ ProtectedRoute: VPN access token detected, allowing access");
 		return children;
 	}
 
-	console.log("✅ ProtectedRoute: Token found, allowing access");
 	return children;
 };
 
 const RoleProtectedRoute = ({ children, allowedRoles }) => {
 	const token = localStorage.getItem("expressToken");
-	const { user } = useAuth();
+	const { user, isCheckingSession } = useAuth();
 	const location = useLocation();
 
 	if (!token) {
 		return <Navigate to="/login" state={{ from: location }} replace />;
+	}
+
+	// Wait for session check to complete before checking roles
+	if (isCheckingSession) {
+		return (
+			<div className="flex items-center justify-center min-h-screen">
+				<Spinner size="lg" />
+			</div>
+		);
 	}
 
 	// Check if user role is allowed
@@ -243,7 +341,7 @@ const RoleProtectedRoute = ({ children, allowedRoles }) => {
 		const hasAccess = userRole && allowedRoles.includes(userRole);
 		
 		if (!hasAccess) {
-			console.log(`🚫 Access denied: User role "${userRole}" not in allowed roles:`, allowedRoles);
+			// Access denied - redirect to forbidden page
 			return <Navigate to="/forbidden" replace />;
 		}
 	}
@@ -264,20 +362,23 @@ const ThemeColorWrapper = ({ children }) => {
 
 	// Initialize PWA and Push Notifications on mount (only for logged in users)
 	useEffect(() => {
+		let isInitialized = false;
+		
 		const initPWA = async () => {
+			if (isInitialized) return;
+			isInitialized = true;
+			
 			try {
 				// Register service worker
 				await registerServiceWorker();
-				console.log('✅ [App] PWA Service Worker registered');
 
 				// Message handler function
 				const handleServiceWorkerMessage = (event) => {
-					console.log('[App] 📨 Message from SW:', event.data);
 					
 					// Handle push notification received (from SW push event)
 					if (event.data && event.data.type === 'PUSH_NOTIFICATION_RECEIVED') {
 						const notifData = event.data.payload;
-						console.log('[App] 🔔 Showing popup for:', notifData);
+						// Show push notification received
 						
 						// Show toast notification popup on screen
 						toast.success(
@@ -301,11 +402,9 @@ const ThemeColorWrapper = ({ children }) => {
 						window.dispatchEvent(new CustomEvent('newNotification', {
 							detail: notifData
 						}));
-						console.log('✅ [App] Notification popup shown & event dispatched');
 						
 						// Auto-reload current page setelah 2 detik (beri waktu user lihat toast)
 						setTimeout(() => {
-							console.log('🔄 [App] Auto-reloading page after notification...');
 							window.location.reload();
 						}, 2000);
 					}
@@ -313,7 +412,6 @@ const ThemeColorWrapper = ({ children }) => {
 					// Handle notification click navigation
 					if (event.data && event.data.type === 'NOTIFICATION_CLICK_NAVIGATE') {
 						const { url } = event.data;
-						console.log('📍 Navigating from notification click:', url);
 						
 						if (url) {
 							window.location.href = url;
@@ -323,7 +421,6 @@ const ThemeColorWrapper = ({ children }) => {
 					// Legacy handler for backward compatibility
 					if (event.data && event.data.type === 'NEW_NOTIFICATION') {
 						const notifData = event.data.payload;
-						console.log('[App] 🔔 Legacy notification handler');
 						
 						toast.success(
 							<div className="flex flex-col gap-1">
@@ -350,7 +447,6 @@ const ThemeColorWrapper = ({ children }) => {
 				// Listen for messages from service worker (untuk auto-refresh data)
 				if ('serviceWorker' in navigator) {
 					navigator.serviceWorker.addEventListener('message', handleServiceWorkerMessage);
-					console.log('✅ [App] Service Worker message listener attached');
 				}
 
 				// Auto-initialize push notifications for logged in users
@@ -361,20 +457,16 @@ const ThemeColorWrapper = ({ children }) => {
 						
 						// Only auto-init if already granted (from login page)
 						if (permission === 'granted') {
-							console.log('Auto-initializing push notifications for logged in user');
 							try {
-								const subscription = await subscribeToPushNotifications();
-								if (subscription) {
-									console.log('✅ Background push subscription successful');
-								}
+								await subscribeToPushNotifications();
 							} catch (err) {
-								console.warn('Background push subscription failed:', err);
+								// Background push subscription failed
 							}
 						}
 					}, 1000);
 				}
 			} catch (error) {
-				console.error('Error initializing PWA:', error);
+				// Error initializing PWA
 			}
 		};
 
@@ -385,6 +477,43 @@ const ThemeColorWrapper = ({ children }) => {
 };
 
 function App() {
+	const [showUpdateModal, setShowUpdateModal] = useState(false);
+
+	// Initialize session persistence on app start
+	useEffect(() => {
+		// Initialize IndexedDB for session backup
+		initSessionPersistence();
+		
+		// Setup periodic backup to IndexedDB (every 5 minutes + before unload)
+		setupPeriodicBackup();
+		
+		// Sync session across tabs
+		syncSessionAcrossTabs();
+	}, []);
+
+	// Setup version checking
+	useEffect(() => {
+		
+		// Setup periodic version check
+		const cleanup = setupPeriodicVersionCheck(() => {
+			// New version detected
+			setShowUpdateModal(true);
+		});
+		
+		return cleanup;
+	}, []);
+
+	const handleUpdate = async () => {
+		// User initiated update
+		setShowUpdateModal(false);
+		await forceUpdate();
+	};
+
+	const handleDismissUpdate = () => {
+		// User dismissed update
+		setShowUpdateModal(false);
+	};
+
 	return (
 		<Router>
 			<DataCacheProvider>
@@ -399,55 +528,13 @@ function App() {
 				>
 					<Routes>
 					{/* Rute yang di-load secara statis */}
-					<Route path="/" element={<LandingPage />} />
+					<Route path="/" element={<HomeRedirect />} />
 					<Route path="/berita/:slug" element={<BeritaDetailPage />} />
 					<Route path="/bantuan-keuangan" element={<BankeuPublicPage />} />
 					<Route path="/public-dashboard" element={<CoreDashboardPublic />} />
 				<Route path="/login" element={<LoginPage />} />
-				<Route path="/test-lottie" element={<LottieTest />} />
-				{/* Rute Admin/Dashboard dengan lazy loading */}
-					<Route
-						path="/dashboard"
-						element={
-							<ProtectedRoute allowedRoles={['superadmin', 'admin', 'pegawai', 'kepala_dinas', 'kepala_bidang', 'sekretaris_dinas', 'sarana_prasarana', 'kekayaan_keuangan','pemberdayaan_masyarakat']}>
-								<MainLayout />
-							</ProtectedRoute>
-						}
-					>
-						{/* Dashboard Home - Accessible by all authenticated users */}
-						<Route index element={<DashboardPage />} />
-						
-					{/* Data Management - Accessible by all authenticated users */}
-				<Route path="bumdes" element={<BumdesApp />} />
-				<Route path="kelembagaan" element={<Kelembagaan />} />
-				<Route path="kelembagaan/admin/:desaId" element={<AdminKelembagaanDetailPage />} />
-				<Route path="kelembagaan/admin/:desaId/:type" element={<KelembagaanList />} />
-				<Route path="kelembagaan/:type" element={<KelembagaanList />} />
-				<Route path="kelembagaan/:type/:id" element={<KelembagaanDetailPage />} />
-				<Route path="perjalanan-dinas" element={<PerjalananDinas />} />
-								{/* Admin Only Routes (Super Admin & Admin) */}
-					
-					{/* Admin Only Routes (Super Admin & Admin) */}
-						<Route element={<RoleProtectedRoute allowedRoles={['superadmin', 'admin', 'sarana_prasarana', 'kekayaan_keuangan','sekretariat']} />}>
-							<Route path="hero-gallery" element={<HeroGalleryManagement />} />
-							<Route path="berita" element={<BeritaManagement />} />
-							<Route path="user" element={<UserManagementPage />} />
-							{/* Financial Data Management */}
-							<Route path="bankeu" element={<BankeuDashboard />} />
-							<Route path="add" element={<AddDashboard />} />
-							<Route path="bhprd" element={<BhprdDashboard />} />
-							<Route path="dd" element={<DdDashboard />} />
-						</Route>
-						
-						{/* Disposisi & Settings - DPMD Staff & Admin */}
-						<Route element={<RoleProtectedRoute allowedRoles={['superadmin', 'admin', 'pegawai', 'sekretaris_dinas', 'kepala_bidang', 'sekretariat']} />}>
-							<Route path="disposisi" element={<DisposisiSurat />} />
-							<Route path="disposisi/:id" element={<DisposisiDetail />} />
-							<Route path="settings" element={<SettingsPage />} />
-						</Route>
-					</Route>
-
-					{/* Rute Desa - Exclusive untuk role: desa, TERPISAH dari MainLayout */}
+				
+				{/* Rute Desa - Exclusive untuk role: desa */}
 					<Route
 						path="/desa"
 						element={
@@ -471,11 +558,11 @@ function App() {
 						<Route path="settings" element={<DesaSettings />} />
 					</Route>
 
-					{/* Rute Pegawai - Untuk role: pegawai */}
+					{/* Rute Pegawai - Untuk role: pegawai dan kepala bidang */}
 					<Route
 						path="/pegawai"
 						element={
-							<RoleProtectedRoute allowedRoles={['pegawai']}>
+							<RoleProtectedRoute allowedRoles={['pegawai', 'kepala_bidang', 'ketua_tim']}>
 								<PegawaiLayout />
 							</RoleProtectedRoute>
 						}
@@ -483,7 +570,129 @@ function App() {
 						<Route index element={<Navigate to="dashboard" replace />} />
 						<Route path="dashboard" element={<PegawaiDashboard />} />				<Route path="profile" element={<ProfilePage />} />						<Route path="disposisi" element={<DisposisiSurat />} />
 						<Route path="disposisi/:id" element={<DisposisiDetail />} />
+						<Route path="jadwal-kegiatan" element={<JadwalKegiatanPage />} />
 					</Route>
+
+					{/* Rute Bidang - Accessible by pegawai/kepala_bidang/ketua_tim (their own bidang) & kepala_dinas/superadmin (all) */}
+					<Route
+						path="/bidang"
+						element={
+							<RoleProtectedRoute allowedRoles={['pegawai', 'kepala_bidang', 'ketua_tim', 'kepala_dinas', 'superadmin']}>
+								<PegawaiLayout />
+							</RoleProtectedRoute>
+						}
+				>
+					{/* Sekretariat */}
+					<Route path="sekretariat" element={<SekretariatPage />} />
+					
+					{/* SPKED (Sarana Prasarana Kewilayahan dan Ekonomi Desa) */}
+					<Route path="spked" element={<SpkedPage />} />
+					
+					{/* KKD (Kekayaan dan Keuangan Desa) */}
+					<Route path="kkd" element={<KKDPage />} />
+					
+					{/* PMD (Pemberdayaan Masyarakat Desa) */}
+					<Route path="pmd" element={<PMDPage />} />
+					
+					{/* Pemdes (Pemerintahan Desa) */}
+					<Route path="pemdes" element={<PemdesPage />} />
+					
+					{/* Detail Disposisi - Accessible dari semua bidang */}
+					<Route path="disposisi/:id" element={<DisposisiDetail />} />
+				</Route>					{/* Routes KKD - Nested under /kkd */}
+					<Route
+						path="/kkd"
+						element={
+							<RoleProtectedRoute allowedRoles={['pegawai', 'kepala_bidang', 'ketua_tim', 'kepala_dinas', 'superadmin']}>
+								<PegawaiLayout />
+							</RoleProtectedRoute>
+						}
+					>
+						<Route path="add" element={<AddDashboard />} />
+						<Route path="bhprd" element={<BhprdDashboard />} />
+						<Route path="dd" element={<DdDashboard />} />
+					</Route>
+
+					{/* Routes PMD - Nested under /pmd */}
+					<Route
+						path="/pmd"
+						element={
+							<RoleProtectedRoute allowedRoles={['pegawai', 'kepala_bidang', 'ketua_tim', 'kepala_dinas', 'superadmin']}>
+								<PegawaiLayout />
+							</RoleProtectedRoute>
+						}
+					>
+						<Route path="kelembagaan" element={<Kelembagaan />} />
+						<Route path="kelembagaan/admin/:desaId" element={<AdminKelembagaanDetailPage />} />
+						<Route path="kelembagaan/:type" element={<KelembagaanList />} />
+						<Route path="kelembagaan/:type/:id" element={<KelembagaanDetailPage />} />
+					</Route>
+
+					{/* Routes Sekretariat - Nested under /sekretariat (moved from /pegawai) */}
+					<Route
+						path="/sekretariat"
+						element={
+							<RoleProtectedRoute allowedRoles={['pegawai', 'kepala_bidang', 'ketua_tim', 'kepala_dinas', 'superadmin', 'sekretaris_dinas']}>
+								<PegawaiLayout />
+							</RoleProtectedRoute>
+						}
+					>
+						<Route path="perjadin" element={<PerjalananDinas />} />
+						<Route path="disposisi" element={<DisposisiRouter />} />
+						<Route path="disposisi/:id" element={<DisposisiDetail />} />
+						<Route path="pegawai" element={<UserManagementPage />} />
+						<Route path="jadwal-kegiatan" element={<JadwalKegiatanPage />} />
+						<Route path="notifikasi" element={<KelolaNotifikasiPage />} />
+					</Route>
+
+					{/* Rute Ketua Tim - Untuk role: ketua_tim */}
+					<Route
+						path="/ketua-tim"
+						element={
+							<RoleProtectedRoute allowedRoles={['ketua_tim']}>
+								<KetuaTimLayout />
+							</RoleProtectedRoute>
+						}
+					>
+						<Route index element={<Navigate to="dashboard" replace />} />
+						<Route path="dashboard" element={<KetuaTimDashboard />} />
+						<Route path="profile" element={<ProfilePage />} />
+						<Route path="disposisi" element={<DisposisiSurat />} />
+						<Route path="disposisi/:id" element={<DisposisiDetail />} />
+						<Route path="jadwal-kegiatan" element={<JadwalKegiatanPage />} />
+					</Route>
+
+					{/* Rute Superadmin - Full System Control */}
+					<Route
+						path="/superadmin"
+						element={
+							<RoleProtectedRoute allowedRoles={['superadmin']}>
+								<SuperadminLayout />
+						</RoleProtectedRoute>
+					}
+				>
+					<Route index element={<Navigate to="dashboard" replace />} />
+					<Route path="dashboard" element={<SuperadminDashboard />} />
+					<Route path="users" element={<UserManagementPage />} />
+					{/* Role Management removed - already in User Management tabs */}
+					<Route path="bidang" element={<BidangNavigationPage />} />
+					<Route path="activity-logs" element={<ActivityLogsPage />} />
+					<Route path="berita" element={<BeritaManagement />} />
+					<Route path="hero-gallery" element={<HeroGalleryManagement />} />
+					<Route path="musdesus" element={<MusdesusMonitoringPage />} />
+					<Route path="settings" element={<SettingsPage />} />
+					<Route path="profile" element={<ProfilePage />} />
+				</Route>
+
+				{/* Rute Kecamatan - Exclusive untuk Admin Kecamatan */}
+				<Route
+						path="/kecamatan"
+						element={
+							<RoleProtectedRoute allowedRoles={['kecamatan']}>
+								<KecamatanDashboardPage />
+							</RoleProtectedRoute>
+						}
+					/>
 
 					{/* Rute Kepala Dinas - Exclusive untuk Kepala Dinas */}
 					<Route
@@ -497,6 +706,7 @@ function App() {
 						<Route index element={<Navigate to="dashboard" replace />} />
 						<Route path="dashboard" element={<KepalaDinasDashboard />} />				<Route path="profile" element={<ProfilePage />} />						<Route path="disposisi" element={<DisposisiSurat />} />
 						<Route path="disposisi/:id" element={<DisposisiDetail />} />
+						<Route path="jadwal-kegiatan" element={<JadwalKegiatanPage />} />
 					</Route>
 
 					{/* Rute Kepala Bidang - Exclusive untuk Kepala Bidang */}
@@ -511,6 +721,7 @@ function App() {
 						<Route index element={<Navigate to="dashboard" replace />} />
 						<Route path="dashboard" element={<KepalaBidangDashboard />} />				<Route path="profile" element={<ProfilePage />} />						<Route path="disposisi" element={<DisposisiSurat />} />
 						<Route path="disposisi/:id" element={<DisposisiDetail />} />
+						<Route path="jadwal-kegiatan" element={<JadwalKegiatanPage />} />
 					</Route>
 
 					{/* Rute Sekretaris Dinas - Exclusive untuk Sekretaris Dinas */}
@@ -525,16 +736,16 @@ function App() {
 						<Route index element={<Navigate to="dashboard" replace />} />
 						<Route path="dashboard" element={<SekretarisDinasDashboard />} />				<Route path="profile" element={<ProfilePage />} />						<Route path="disposisi" element={<DisposisiSurat />} />
 						<Route path="disposisi/:id" element={<DisposisiDetail />} />
-						<Route path="etanol" element={<CetakBonBensin />} />	
+						<Route path="jadwal-kegiatan" element={<JadwalKegiatanPage />} />
 					</Route>
 
 					{/* Rute Core Dashboard - DPMD Internal Only */}
-					{/* HANYA untuk: Super Admin, Kepala Dinas, Sekretaris Dinas, Kepala Bidang, Pegawai */}
+					{/* HANYA untuk: Super Admin, Kepala Dinas, Sekretaris Dinas, Kepala Bidang, Ketua Tim, Pegawai */}
 					{/* TIDAK BOLEH diakses oleh: desa, kecamatan */}
 					<Route
 						path="/core-dashboard"
 						element={
-							<RoleProtectedRoute allowedRoles={['superadmin', 'kepala_dinas', 'sekretaris_dinas', 'kepala_bidang', 'pegawai', 'sarana_prasarana', 'kekayaan_keuangan', 'pemberdayaan_masyarakat']}>
+							<RoleProtectedRoute allowedRoles={['superadmin', 'kepala_dinas', 'sekretaris_dinas', 'kepala_bidang', 'ketua_tim', 'pegawai']}>
 								<CoreDashboardLayout />
 							</RoleProtectedRoute>
 						}
@@ -595,6 +806,14 @@ function App() {
 					},
 				}}
 			/>
+
+			{/* Update Notification Modal */}
+			<UpdateNotificationModal
+				isOpen={showUpdateModal}
+				onUpdate={handleUpdate}
+				onDismiss={handleDismissUpdate}
+			/>
+
 			</ThemeColorWrapper>
 			</EditModeProvider>
 			</DataCacheProvider>

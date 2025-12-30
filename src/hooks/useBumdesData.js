@@ -34,26 +34,20 @@ export const useBumdesData = (initialData = null) => {
     try {
       setLoading(true);
       setError(null);
-      console.log('🔄 BUMDes Hook: Fetching fresh data...');
-      console.log('🔄 BUMDes Hook: API Base URL:', api.defaults.baseURL);
       
       const response = await api.get('/bumdes', {
         timeout: 60000 // 60 seconds timeout for BUMDes data (187 records)
       });
-      console.log('📊 BUMDes Hook: Raw response:', response);
       
       const apiData = response.data && Array.isArray(response.data.data) ? response.data.data : [];
-      console.log('📊 BUMDes Hook: Processed data length:', apiData.length);
       
       // Check if data actually changed
       const newHash = generateDataHash(apiData);
       if (dataHash === newHash && !forceRefresh) {
-        console.log('📋 BUMDes Hook: Data unchanged, skipping update');
         setLoading(false);
         return;
       }
       
-      console.log('✅ BUMDes Hook: Setting new data');
       setBumdesData(apiData);
       setDataHash(newHash);
       setLastFetch(Date.now());

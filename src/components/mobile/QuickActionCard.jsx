@@ -2,8 +2,8 @@
 import React from 'react';
 
 /**
- * QuickActionCard - GoJek Style Quick Action Button
- * Mobile-first card untuk quick actions di dashboard
+ * QuickActionCard - Modern Rounded Style Quick Action Button
+ * Elegant card dengan rounded design dan smooth animations
  */
 const QuickActionCard = ({ 
   icon: Icon, 
@@ -32,22 +32,35 @@ const QuickActionCard = ({
   return (
     <div 
       onClick={onClick}
-      className="relative flex flex-col items-center justify-center cursor-pointer group active:scale-95 transition-transform duration-150"
+      className="relative flex flex-col items-center justify-center cursor-pointer group active:scale-95 transition-all duration-200"
     >
-      {/* Icon Container with Gradient */}
-      <div className={`relative w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br ${selectedGradient} rounded-2xl shadow-md group-hover:shadow-lg transition-all group-hover:scale-110 flex items-center justify-center mb-2 overflow-hidden`}>
-        {Icon && <Icon className="w-6 h-6 sm:w-7 sm:h-7 text-white" />}
+      {/* Icon Container with Modern Rounded Design */}
+      <div className={`
+        relative w-16 h-16 sm:w-20 sm:h-20
+        bg-gradient-to-br ${selectedGradient} 
+        rounded-[28px] sm:rounded-[32px]
+        shadow-lg shadow-${color}-500/30
+        group-hover:shadow-xl group-hover:shadow-${color}-500/40
+        transition-all duration-300
+        group-hover:scale-105
+        flex items-center justify-center 
+        overflow-hidden
+      `}>
+        {/* Subtle Shine Effect */}
+        <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/20 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        
+        {Icon && <Icon className="w-8 h-8 sm:w-10 sm:h-10 text-white relative z-10 drop-shadow-md" />}
         
         {/* Badge */}
         {badge && (
-          <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5 shadow-md">
+          <div className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[22px] h-[22px] flex items-center justify-center px-1.5 shadow-lg ring-2 ring-white">
             {badge > 99 ? '99+' : badge}
           </div>
         )}
       </div>
       
-      {/* Label */}
-      <p className="text-xs sm:text-sm text-gray-700 font-medium text-center max-w-[80px] leading-tight">
+      {/* Label with Better Spacing */}
+      <p className="mt-3 text-xs sm:text-sm text-gray-800 font-semibold text-center max-w-[85px] leading-snug">
         {label}
       </p>
     </div>

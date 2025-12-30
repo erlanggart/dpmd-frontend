@@ -17,9 +17,9 @@ import {
 } from "react-icons/fi";
 
 import {
-	TbMap,
 	TbBuildingBank,
 } from "react-icons/tb";
+import { Landmark } from "lucide-react";
 import SearchPalette from "../components/SearchPalatte";
 import InstallPWA from "../components/InstallPWA";
 
@@ -201,7 +201,7 @@ const MainLayout = () => {
 			{
 				key: "spked",
 				label: "SPKED",
-				icon: <TbMap />,
+				icon: <Landmark size={20} />,
 				children: [
 					{ to: "/dashboard/bumdes", label: "BUMDes" },
 					{ to: "/dashboard/bankeu", label: "Bantuan Keuangan" },
@@ -234,7 +234,7 @@ const MainLayout = () => {
 				label: "Sekretariat",
 				icon: <FiClipboard />,
 				children: [
-					{ to: "/dashboard/pegawai", label: "Pegawai" },
+					{ to: "/dashboard/user", label: "Manajemen Pegawai" },
 					{ to: "/dashboard/perjalanan-dinas", label: "Perjalanan Dinas" },
 					{ to: "/dashboard/disposisi", label: "Disposisi Surat" },
 				],

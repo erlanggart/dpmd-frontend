@@ -55,7 +55,7 @@ const ResetPasswordModal = ({
 										Password akan direset menjadi:
 									</p>
 									<p className="font-mono bg-white px-2 py-1 rounded border text-gray-800">
-										dpmdbogorkab
+										password
 									</p>
 								</div>
 							</div>
