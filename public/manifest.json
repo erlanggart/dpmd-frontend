@@ -33,7 +33,7 @@
       "src": "/logo-96.png",
       "sizes": "96x96",
       "type": "image/png",
-      "purpose": "badge"
+      "purpose": "any"
     }
   ],
   "shortcuts": [
@@ -42,14 +42,24 @@
       "short_name": "Disposisi",
       "description": "Lihat dan kelola disposisi surat",
       "url": "/disposisi",
-      "icons": [{ "src": "/logo-96.png", "sizes": "96x96" }]
+      "icons": [{ 
+        "src": "/logo-96.png", 
+        "sizes": "96x96",
+        "type": "image/png",
+        "purpose": "any"
+      }]
     },
     {
       "name": "Surat Masuk",
       "short_name": "Surat",
       "description": "Lihat surat masuk",
       "url": "/surat-masuk",
-      "icons": [{ "src": "/logo-96.png", "sizes": "96x96" }]
+      "icons": [{ 
+        "src": "/logo-96.png", 
+        "sizes": "96x96",
+        "type": "image/png",
+        "purpose": "any"
+      }]
     }
   ],
   "permissions": [
