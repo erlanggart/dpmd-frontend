@@ -5,6 +5,7 @@ import {
 	getPengurusHistory,
 } from "../../../services/pengurus";
 import { useAuth } from "../../../context/AuthContext";
+import { useEditMode } from "../../../context/EditModeContext";
 import {
 	LuUsers,
 	LuPlus,
@@ -217,6 +218,7 @@ const PengurusJabatanList = ({
 	desaId,
 }) => {
 	const { user } = useAuth();
+	const { isEditMode } = useEditMode();
 	const isAdmin = user?.role === "admin_kabupaten";
 	const isUserDesa = user?.role === "desa";
 	const isAdminBidang = user?.role === "pemberdayaan_masyarakat";
@@ -224,6 +226,11 @@ const PengurusJabatanList = ({
 
 	const canManagePengurus =
 		isAdmin || isUserDesa || isAdminBidang || isSuperAdmin;
+		
+	// Determine if add button should be shown
+	// For admin (superadmin/pemberdayaan_masyarakat): always show
+	// For desa: only show if edit mode is ON
+	const showAddButton = (isSuperAdmin || isAdminBidang || isAdmin) || (isUserDesa && isEditMode);
 
 	const [activePengurus, setActivePengurus] = useState([]);
 	const [historyPengurus, setHistoryPengurus] = useState([]);
@@ -332,7 +339,7 @@ const PengurusJabatanList = ({
 								</span>
 							</button>
 						)}
-						{canManagePengurus && (
+						{canManagePengurus && showAddButton && (
 							<button
 								onClick={() => onAddPengurus?.()}
 								className="flex items-center space-x-2 px-4 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 transform hover:scale-105 transition-all duration-200 shadow-md hover:shadow-lg"

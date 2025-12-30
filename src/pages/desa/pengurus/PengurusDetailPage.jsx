@@ -15,6 +15,7 @@ import {
 	getSatlinmas 
 } from "../../../services/kelembagaan";
 import { useAuth } from "../../../context/AuthContext";
+import { useEditMode } from "../../../context/EditModeContext";
 import {
 	FaArrowLeft,
 	FaEdit,
@@ -26,6 +27,8 @@ import {
 	FaExternalLinkAlt,
 	FaChevronRight,
 	FaHome,
+	FaLock,
+	FaLockOpen,
 } from "react-icons/fa";
 import Swal from "sweetalert2";
 
@@ -77,6 +80,7 @@ const PengurusDetailPage = () => {
 	const pengurusId = params.id; // Changed from destructuring to direct access
 	const navigate = useNavigate();
 	const { user } = useAuth();
+	const { isEditMode } = useEditMode();
 
 	console.log('🔧 All params:', params);
 	console.log('🆔 Pengurus ID:', pengurusId);
@@ -261,103 +265,146 @@ const PengurusDetailPage = () => {
 
 	return (
 		<div className="min-h-screen">
-			{/* Breadcrumb */}
-			
-				<div className="bg-white p-2 mb-4 rounded-md shadow-sm">
-
-					<nav className="flex items-center space-x-2 text-sm">
-						<Link
-							to="/desa/dashboard"
-							className="flex items-center text-gray-500 hover:text-indigo-600 transition-colors"
-						>
-							<FaHome className="mr-1" />
-							Dashboard
-						</Link>
-						<FaChevronRight className="text-gray-400 text-xs" />
-						<Link
-							to="/desa/kelembagaan"
-							className="text-gray-500 hover:text-indigo-600 transition-colors"
-						>
-							Kelembagaan
-						</Link>
-						<FaChevronRight className="text-gray-400 text-xs" />
-						<Link
-							to={`/desa/kelembagaan/${getRouteType(pengurus.pengurusable_type)}`}
-							className="text-gray-500 hover:text-indigo-600 transition-colors"
-						>
-							{getDisplayName(pengurus.pengurusable_type)}
-						</Link>
-						<FaChevronRight className="text-gray-400 text-xs" />
-						<Link
-							to={`/desa/kelembagaan/${getRouteType(pengurus.pengurusable_type)}/${pengurus.pengurusable_id}`}
-							className="text-gray-500 hover:text-indigo-600 transition-colors"
-						>
-							{kelembagaanInfo?.nomor || kelembagaanInfo?.nama || 'Detail'}
-						</Link>
-						<FaChevronRight className="text-gray-400 text-xs" />
-						<span className="text-gray-900 font-medium">
-							{pengurus.nama_lengkap}
-						</span>
-					</nav>
-				</div>
-				
-			
-
-			
-					<div className="bg-white flex items-center justify-between p-4 mb-4 rounded-md shadow-sm">
-						<div className="flex items-center space-x-4">
-							<button
-								onClick={() => navigate(-1)}
-								className="flex items-center justify-center w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors"
-								title="Kembali"
-							>
-								<FaArrowLeft className="text-gray-600" />
-							</button>
-							<div>
-								<h1 className="text-2xl font-bold text-gray-900">
-									Detail Pengurus
-								</h1>
-								<p className="text-sm text-gray-500">
-									Informasi lengkap pengurus kelembagaan
-								</p>
-							</div>
-						</div>
-
-						{canManage && (
-							<div className="flex items-center space-x-3">
-								<button
-									onClick={handleEdit}
-									className="flex items-center space-x-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-								>
-									<FaEdit className="text-sm" />
-									<span>Edit</span>
-								</button>
-
-								<button
-									onClick={() =>
-										handleStatusUpdate(
-											pengurus.status_jabatan === "aktif" ? "selesai" : "aktif"
-										)
-									}
-									disabled={updating}
-									className={`px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 ${
-										pengurus.status_jabatan === "aktif"
-											? "bg-red-100 text-red-700 hover:bg-red-200"
-											: "bg-green-100 text-green-700 hover:bg-green-200"
-									}`}
-								>
-									{updating
-										? "Memproses..."
-										: pengurus.status_jabatan === "aktif"
-										? "Nonaktifkan"
-										: "Aktifkan"}
-								</button>
-							</div>
+			{/* Status Badge */}
+			<div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-4 px-4 py-3">
+				<div className="flex items-center justify-between gap-4">
+					<span
+						className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
+							isEditMode
+								? "bg-green-100 text-green-700 border border-green-300"
+								: "bg-red-100 text-red-700 border border-red-300"
+						}`}
+					>
+						{isEditMode ? (
+							<>
+								<FaLockOpen className="w-3 h-3" />
+								<span>Aplikasi Dibuka</span>
+							</>
+						) : (
+							<>
+								<FaLock className="w-3 h-3" />
+								<span>Aplikasi Ditutup</span>
+							</>
+						)}
+					</span>
+					<div className="text-sm text-gray-600 flex-1">
+						{isEditMode ? (
+							<span className="text-green-700">
+								Fitur edit dan perubahan status pengurus aktif
+							</span>
+						) : (
+							<span className="text-red-700">
+								Fitur edit dan perubahan status pengurus ditutup
+							</span>
 						)}
 					</div>
-			
+				</div>
+			</div>
 
-			<div className="">
+			{/* Breadcrumb */}
+			<div className="bg-white p-2 mb-4 rounded-md shadow-sm">
+				<nav className="flex items-center space-x-2 text-sm">
+					<Link
+						to="/desa/dashboard"
+						className="flex items-center text-gray-500 hover:text-indigo-600 transition-colors"
+					>
+						<FaHome className="mr-1" />
+						Dashboard
+					</Link>
+					<FaChevronRight className="text-gray-400 text-xs" />
+					<Link
+						to="/desa/kelembagaan"
+						className="text-gray-500 hover:text-indigo-600 transition-colors"
+					>
+						Kelembagaan
+					</Link>
+					<FaChevronRight className="text-gray-400 text-xs" />
+					<Link
+						to={`/desa/kelembagaan/${getRouteType(pengurus.pengurusable_type)}`}
+						className="text-gray-500 hover:text-indigo-600 transition-colors"
+					>
+						{getDisplayName(pengurus.pengurusable_type)}
+					</Link>
+					<FaChevronRight className="text-gray-400 text-xs" />
+					<Link
+						to={`/desa/kelembagaan/${getRouteType(pengurus.pengurusable_type)}/${pengurus.pengurusable_id}`}
+						className="text-gray-500 hover:text-indigo-600 transition-colors"
+					>
+						{kelembagaanInfo?.nomor || kelembagaanInfo?.nama || 'Detail'}
+					</Link>
+					<FaChevronRight className="text-gray-400 text-xs" />
+					<span className="text-gray-900 font-medium">
+						{pengurus.nama_lengkap}
+					</span>
+				</nav>
+			</div>
+
+			{/* Header with Actions */}
+			<div className="bg-white flex items-center justify-between p-4 mb-4 rounded-md shadow-sm">
+				<div className="flex items-center space-x-4">
+					<button
+						onClick={() => navigate(-1)}
+						className="flex items-center justify-center w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors"
+						title="Kembali"
+					>
+						<FaArrowLeft className="text-gray-600" />
+					</button>
+					<div>
+						<h1 className="text-2xl font-bold text-gray-900">
+							Detail Pengurus
+						</h1>
+						<p className="text-sm text-gray-500">
+							Informasi lengkap pengurus kelembagaan
+						</p>
+					</div>
+				</div>
+
+				{canManage && (
+					<div className="flex items-center space-x-3">
+						<button
+							onClick={handleEdit}
+							disabled={!isEditMode}
+							className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+								isEditMode
+									? "bg-indigo-600 text-white hover:bg-indigo-700"
+									: "bg-gray-300 text-gray-500 cursor-not-allowed"
+							}`}
+							title={!isEditMode ? "Fitur edit ditutup" : "Edit pengurus"}
+						>
+							<FaEdit className="text-sm" />
+							<span>Edit</span>
+						</button>
+
+						<button
+							onClick={() =>
+								handleStatusUpdate(
+									pengurus.status_jabatan === "aktif" ? "selesai" : "aktif"
+								)
+							}
+							disabled={updating || !isEditMode}
+							className={`px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+								!isEditMode
+									? "bg-gray-300 text-gray-500"
+									: pengurus.status_jabatan === "aktif"
+									? "bg-red-100 text-red-700 hover:bg-red-200"
+									: "bg-green-100 text-green-700 hover:bg-green-200"
+							}`}
+							title={!isEditMode ? "Fitur perubahan status ditutup" : ""}
+						>
+							{updating ? (
+								<span>Memproses...</span>
+							) : pengurus.status_jabatan === "aktif" ? (
+								<span>Nonaktifkan</span>
+							) : (
+								<span>Aktifkan</span>
+							)}
+						</button>
+					</div>
+				)}
+			</div>
+
+			{/* Main Content */}
+			<div>
 				<div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 					{/* Profile Card */}
 					<div className="lg:col-span-1 space-y-4">

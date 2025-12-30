@@ -12,6 +12,9 @@ import { Toaster, toast } from "react-hot-toast";
 import { useAuth } from "./context/AuthContext";
 import { useThemeColor } from "./hooks/useThemeColor";
 import { DataCacheProvider } from "./context/DataCacheContext";
+import { EditModeProvider } from "./context/EditModeContext.jsx";
+import { registerServiceWorker } from "./utils/pushNotifications";
+import PushNotificationInitializer from "./components/PushNotificationInitializer";
 import { registerServiceWorker, subscribeToPushNotifications } from "./utils/pushNotifications";
 
 // Halaman utama di-import langsung untuk performa awal yang lebih cepat
@@ -47,6 +50,7 @@ const BeritaManagement = lazy(() =>
 const BumdesApp = lazy(() => import("./pages/sarpras/Bumdes-app"));
 const Kelembagaan = lazy(() => import("./pages/PMD/Kelembagaan"));
 const PerjalananDinas = lazy(() => import("./pages/sekretariat/perjadin"));
+const CetakBonBensin = lazy(() => import("./pages/CetakBonBensin"));
 const DesaLayout = lazy(() => import("./layouts/DesaLayout"));
 const DesaDashboard = lazy(() => import("./pages/desa/DesaDashboardPage"));
 const BumdesDesaPage = lazy(() =>
@@ -384,6 +388,7 @@ function App() {
 	return (
 		<Router>
 			<DataCacheProvider>
+			<EditModeProvider>
 			<ThemeColorWrapper>
 				<Suspense
 					fallback={
@@ -404,7 +409,7 @@ function App() {
 					<Route
 						path="/dashboard"
 						element={
-							<ProtectedRoute allowedRoles={['superadmin', 'admin', 'pegawai', 'kepala_dinas', 'kepala_bidang', 'sekretaris_dinas', 'sarana_prasarana', 'kekayaan_keuangan']}>
+							<ProtectedRoute allowedRoles={['superadmin', 'admin', 'pegawai', 'kepala_dinas', 'kepala_bidang', 'sekretaris_dinas', 'sarana_prasarana', 'kekayaan_keuangan','pemberdayaan_masyarakat']}>
 								<MainLayout />
 							</ProtectedRoute>
 						}
@@ -416,9 +421,11 @@ function App() {
 				<Route path="bumdes" element={<BumdesApp />} />
 				<Route path="kelembagaan" element={<Kelembagaan />} />
 				<Route path="kelembagaan/admin/:desaId" element={<AdminKelembagaanDetailPage />} />
+				<Route path="kelembagaan/admin/:desaId/:type" element={<KelembagaanList />} />
 				<Route path="kelembagaan/:type" element={<KelembagaanList />} />
 				<Route path="kelembagaan/:type/:id" element={<KelembagaanDetailPage />} />
 				<Route path="perjalanan-dinas" element={<PerjalananDinas />} />
+								{/* Admin Only Routes (Super Admin & Admin) */}
 					
 					{/* Admin Only Routes (Super Admin & Admin) */}
 						<Route element={<RoleProtectedRoute allowedRoles={['superadmin', 'admin', 'sarana_prasarana', 'kekayaan_keuangan','sekretariat']} />}>
@@ -518,6 +525,7 @@ function App() {
 						<Route index element={<Navigate to="dashboard" replace />} />
 						<Route path="dashboard" element={<SekretarisDinasDashboard />} />				<Route path="profile" element={<ProfilePage />} />						<Route path="disposisi" element={<DisposisiSurat />} />
 						<Route path="disposisi/:id" element={<DisposisiDetail />} />
+						<Route path="etanol" element={<CetakBonBensin />} />	
 					</Route>
 
 					{/* Rute Core Dashboard - DPMD Internal Only */}
@@ -526,7 +534,7 @@ function App() {
 					<Route
 						path="/core-dashboard"
 						element={
-							<RoleProtectedRoute allowedRoles={['superadmin', 'kepala_dinas', 'sekretaris_dinas', 'kepala_bidang', 'pegawai', 'sarana_prasarana', 'kekayaan_keuangan', ]}>
+							<RoleProtectedRoute allowedRoles={['superadmin', 'kepala_dinas', 'sekretaris_dinas', 'kepala_bidang', 'pegawai', 'sarana_prasarana', 'kekayaan_keuangan', 'pemberdayaan_masyarakat']}>
 								<CoreDashboardLayout />
 							</RoleProtectedRoute>
 						}
@@ -588,6 +596,7 @@ function App() {
 				}}
 			/>
 			</ThemeColorWrapper>
+			</EditModeProvider>
 			</DataCacheProvider>
 		</Router>
 	);

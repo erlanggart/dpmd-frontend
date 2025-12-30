@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useEditMode } from "../../../context/EditModeContext";
 import {
 	getKelembagaanSummary,
 	createKarangTaruna,
@@ -26,6 +27,8 @@ import {
 	LuFileText,
 	LuDownload,
 	LuExternalLink,
+	LuLock,
+	LuLockOpen,
 } from "react-icons/lu";
 
 // Confirmation Modal Component
@@ -211,6 +214,7 @@ const SmallCard = ({
 	</div>
 	);
 };export default function KelembagaanDesaPage() {
+	const { isEditMode } = useEditMode();
 	const [summary, setSummary] = useState({
 		rt: 0,
 		rw: 0,
@@ -498,14 +502,13 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 	}
 
 	return (
-		<div className="min-h-screen space-y-4" >
-			{/* Header */}
-			<div className="bg-white rounded-md shadow-md p-6 text-center">
-				<h1 className="text-4xl font-bold text-gray-800 mb-2">
-					Kelembagaan Desa
-				</h1>
-				<p className="text-gray-600">Kelola semua kelembagaan di desa Anda</p>
-			</div>
+		<div className="min-h-screen">
+			
+
+			{/* 2 Column Layout */}
+			<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+				{/* Left Column - Main Content (2/3) */}
+				<div className="lg:col-span-2 space-y-6">
 
 			{/* Info Section - Tentang Lembaga Kemasyarakatan Desa */}
 			<div className="mb-8 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-2xl border border-blue-200 shadow-md overflow-hidden">
@@ -624,6 +627,42 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 							<p className="font-medium mb-1">Ketentuan Pengurus:</p>
 							<p>Pengurus LKD menjabat selama <strong>5 tahun</strong> dan dapat dipilih kembali maksimal <strong>2 kali masa jabatan</strong>. Pengurus tidak boleh merangkap jabatan di LKD lain atau menjadi anggota partai politik.</p>
 						</div>
+					</div>
+				</div>
+			</div>
+
+			{/* Status Badge */}
+			<div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6 px-4 py-3">
+				<div className="flex items-center justify-between gap-4">
+					<span
+						className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
+							isEditMode
+								? "bg-green-100 text-green-700 border border-green-300"
+								: "bg-red-100 text-red-700 border border-red-300"
+						}`}
+					>
+						{isEditMode ? (
+							<>
+								<LuLockOpen className="w-3 h-3" />
+								<span>Aplikasi Dibuka</span>
+							</>
+						) : (
+							<>
+								<LuLock className="w-3 h-3" />
+								<span>Aplikasi Ditutup</span>
+							</>
+						)}
+					</span>
+					<div className="text-sm text-gray-600">
+						{isEditMode ? (
+							<span className="text-green-700">
+								Pengguna dapat menambah dan mengedit data kelembagaan
+							</span>
+						) : (
+							<span className="text-red-700">
+								Fitur penambahan dan pengeditan data sementara ditutup
+							</span>
+						)}
 					</div>
 				</div>
 			</div>
@@ -994,82 +1033,165 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 				</div>
 			</div>
 
-			{/* Dokumen Peraturan Section */}
-			<div className="mt-12">
-				<div className="bg-gradient-to-r from-blue-700 to-indigo-800 rounded-t-2xl p-6">
-					<div className="flex items-center space-x-3">
-						<div className="p-3 bg-white/10 rounded-xl backdrop-blur-sm">
-							<LuFileText className="w-6 h-6 text-white" />
+				</div>
+				{/* End of Left Column */}
+
+				{/* Right Column - Document List (1/3) */}
+				<div className="lg:col-span-1">
+					<div className="bg-white rounded-xl shadow-lg border border-slate-200 sticky top-4">
+						<div className="bg-gradient-to-r from-slate-700 to-slate-900 rounded-t-xl p-5">
+							<div className="flex items-center space-x-3">
+								<div className="p-2 bg-white/10 rounded-lg backdrop-blur-sm">
+									<LuFileText className="w-5 h-5 text-white" />
+								</div>
+								<div>
+									<h2 className="text-lg font-bold text-white">Dokumen Peraturan</h2>
+									<p className="text-slate-300 text-xs mt-0.5">Regulasi Lembaga Kemasyarakatan</p>
+								</div>
+							</div>
 						</div>
-						<div>
-							<h2 className="text-2xl font-bold text-white">Dokumen Peraturan</h2>
-							<p className="text-blue-200 text-sm mt-1">Unduh peraturan terkait Lembaga Kemasyarakatan Desa</p>
+
+						<div className="p-4 max-h-[calc(100vh-12rem)] overflow-y-auto">
+							<div className="space-y-2">
+								{/* Permendagri 18/2018 */}
+								<a
+									href="/peraturan/Permendagri No. 18 Tahun 2018.pdf"
+									target="_blank"
+									rel="noopener noreferrer"
+									className="group flex items-start justify-between p-3 border-l-4 border-emerald-500 bg-emerald-50 hover:bg-emerald-100 rounded-r transition-all duration-200"
+								>
+									<div className="flex items-start space-x-3 flex-1">
+										<LuFileText className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+										<div className="flex-1 min-w-0">
+											<p className="font-semibold text-sm text-slate-900 group-hover:text-emerald-700 transition-colors">
+												Permendagri No. 18 Tahun 2018
+											</p>
+											<p className="text-xs text-slate-600 mt-0.5">Lembaga Kemasyarakatan Desa</p>
+										</div>
+									</div>
+									<LuDownload className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 flex-shrink-0 ml-2 transition-colors" />
+								</a>
+
+								{/* Permendagri 26/2020 - Linmas */}
+								<a
+									href="/peraturan/Permendagri-26-Thn-2020-ttg-Linmas.pdf"
+									target="_blank"
+									rel="noopener noreferrer"
+									className="group flex items-start justify-between p-3 border-l-4 border-amber-500 bg-amber-50 hover:bg-amber-100 rounded-r transition-all duration-200"
+								>
+									<div className="flex items-start space-x-3 flex-1">
+										<LuFileText className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+										<div className="flex-1 min-w-0">
+											<p className="font-semibold text-sm text-slate-900 group-hover:text-amber-700 transition-colors">
+												Permendagri No. 26 Tahun 2020
+											</p>
+											<p className="text-xs text-slate-600 mt-0.5">Tibum Tranmas & Linmas</p>
+										</div>
+									</div>
+									<LuDownload className="w-4 h-4 text-slate-400 group-hover:text-amber-600 flex-shrink-0 ml-2 transition-colors" />
+								</a>
+
+								{/* Permendagri 36/2020 */}
+								<a
+									href="/peraturan/PERMENDAGRI_36_TAHUN_2020 (1).pdf"
+									target="_blank"
+									rel="noopener noreferrer"
+									className="group flex items-start justify-between p-3 border-l-4 border-blue-500 bg-blue-50 hover:bg-blue-100 rounded-r transition-all duration-200"
+								>
+									<div className="flex items-start space-x-3 flex-1">
+										<LuFileText className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+										<div className="flex-1 min-w-0">
+											<p className="font-semibold text-sm text-slate-900 group-hover:text-blue-700 transition-colors">
+												Permendagri No. 36 Tahun 2020
+											</p>
+											<p className="text-xs text-slate-600 mt-0.5">Gerakan PKK</p>
+										</div>
+									</div>
+									<LuDownload className="w-4 h-4 text-slate-400 group-hover:text-blue-600 flex-shrink-0 ml-2 transition-colors" />
+								</a>
+
+								{/* Permendagri 11/2023 */}
+								<a
+									href="/peraturan/Permendagri Nomor 11 Tahun 2023.pdf"
+									target="_blank"
+									rel="noopener noreferrer"
+									className="group flex items-start justify-between p-3 border-l-4 border-teal-500 bg-teal-50 hover:bg-teal-100 rounded-r transition-all duration-200"
+								>
+									<div className="flex items-start space-x-3 flex-1">
+										<LuFileText className="w-5 h-5 text-teal-600 flex-shrink-0 mt-0.5" />
+										<div className="flex-1 min-w-0">
+											<p className="font-semibold text-sm text-slate-900 group-hover:text-teal-700 transition-colors">
+												Permendagri No. 11 Tahun 2023
+											</p>
+											<p className="text-xs text-slate-600 mt-0.5">Sarana Prasarana Linmas</p>
+										</div>
+									</div>
+									<LuDownload className="w-4 h-4 text-slate-400 group-hover:text-teal-600 flex-shrink-0 ml-2 transition-colors" />
+								</a>
+
+								{/* Permendagri 13/2024 */}
+								<a
+									href="/peraturan/Permendagri No 13 Tahun 2024.pdf"
+									target="_blank"
+									rel="noopener noreferrer"
+									className="group flex items-start justify-between p-3 border-l-4 border-purple-500 bg-purple-50 hover:bg-purple-100 rounded-r transition-all duration-200"
+								>
+									<div className="flex items-start space-x-3 flex-1">
+										<LuFileText className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+										<div className="flex-1 min-w-0">
+											<p className="font-semibold text-sm text-slate-900 group-hover:text-purple-700 transition-colors">
+												Permendagri No. 13 Tahun 2024
+											</p>
+											<p className="text-xs text-slate-600 mt-0.5">Pos Pelayanan Terpadu (Posyandu)</p>
+										</div>
+									</div>
+									<LuDownload className="w-4 h-4 text-slate-400 group-hover:text-purple-600 flex-shrink-0 ml-2 transition-colors" />
+								</a>
+
+								{/* Perda 9/2011 */}
+								<a
+									href="/peraturan/perda no 9 tahun 2011.pdf"
+									target="_blank"
+									rel="noopener noreferrer"
+									className="group flex items-start justify-between p-3 border-l-4 border-rose-500 bg-rose-50 hover:bg-rose-100 rounded-r transition-all duration-200"
+								>
+									<div className="flex items-start space-x-3 flex-1">
+										<LuFileText className="w-5 h-5 text-rose-600 flex-shrink-0 mt-0.5" />
+										<div className="flex-1 min-w-0">
+											<p className="font-semibold text-sm text-slate-900 group-hover:text-rose-700 transition-colors">
+												Perda No. 9 Tahun 2011
+											</p>
+											<p className="text-xs text-slate-600 mt-0.5">Lembaga Kemasyarakatan Kab. Bogor</p>
+										</div>
+									</div>
+									<LuDownload className="w-4 h-4 text-slate-400 group-hover:text-rose-600 flex-shrink-0 ml-2 transition-colors" />
+								</a>
+
+								{/* Perbup 31/2012 */}
+								<a
+									href="/peraturan/Perbup 31 Tahun 2012 - Tata Cara Pembentukan LPM Desa, Kel, RW dan RT.pdf"
+									target="_blank"
+									rel="noopener noreferrer"
+									className="group flex items-start justify-between p-3 border-l-4 border-indigo-500 bg-indigo-50 hover:bg-indigo-100 rounded-r transition-all duration-200"
+								>
+									<div className="flex items-start space-x-3 flex-1">
+										<LuFileText className="w-5 h-5 text-indigo-600 flex-shrink-0 mt-0.5" />
+										<div className="flex-1 min-w-0">
+											<p className="font-semibold text-sm text-slate-900 group-hover:text-indigo-700 transition-colors">
+												Perbup No. 31 Tahun 2012
+											</p>
+											<p className="text-xs text-slate-600 mt-0.5">Tata Cara Pembentukan LPM & RT/RW</p>
+										</div>
+									</div>
+									<LuDownload className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 flex-shrink-0 ml-2 transition-colors" />
+								</a>
+							</div>
 						</div>
 					</div>
 				</div>
-
-				<div className="bg-white rounded-b-2xl shadow-lg border border-slate-200 p-6">
-					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-						{/* Permendagri 18/2018 */}
-						<PeraturanCard
-							title="Permendagri No. 18 Tahun 2018"
-							description="Peraturan Menteri Dalam Negeri Nomor 18 Tahun 2018 tentang Lembaga Kemasyarakatan Desa dan Lembaga Adat Desa"
-							fileUrl="/peraturan/Permendagri No. 18 Tahun 2018.pdf"
-							color="emerald"
-						/>
-
-							{/* Permendagri 26/2020 - Linmas */}
-						<PeraturanCard
-							title="Permendagri No. 26 Tahun 2020"
-							description="Permendagri Nomor 26 Tahun 2020 tentang Penyelenggaraan Ketertiban Umum dan Ketenteraman Masyarakat serta Pelindungan Masyarakat (Tibum Tranmas)"
-							fileUrl="/peraturan/Permendagri-26-Thn-2020-ttg-Linmas.pdf"
-							color="amber"
-						/>
-
-						{/* Permendagri 36/2020 */}
-						<PeraturanCard
-							title="Permendagri No. 36 Tahun 2020"
-							description="Peraturan Menteri Dalam Negeri tentang Peraturan Pelaksanaan Peraturan Presiden Nomor 99 Tahun 2017 tentang Gerakan Pemberdayaan dan Kesejahteraan Keluarga (Gerakan PKK)"
-							fileUrl="/peraturan/PERMENDAGRI_36_TAHUN_2020 (1).pdf"
-							color="blue"
-						/>						
-
-						{/* Permendagri 11/2023 */}
-						<PeraturanCard
-							title="Permendagri No. 11 Tahun 2023"
-							description="Peraturan Menteri Dalam Negeri No. 11 Tahun 2023 adalah Peraturan Menteri Dalam Negeri tentang
-Sarana dan Prasarana bagi Satuan Tugas (Satgas) Linmas dan Satuan Perlindungan Masyarakat (Satlinmas)"
-							fileUrl="/peraturan/Permendagri Nomor 11 Tahun 2023.pdf"
-							color="teal"
-						/>
-
-						{/* Permendagri 13/2024 */}
-						<PeraturanCard
-							title="Permendagri No. 13 Tahun 2024"
-							description="Permendagri Nomor 13 Tahun 2024 adalah peraturan Menteri Dalam Negeri tentang
-Pos Pelayanan Terpadu (Posyandu)"
-							fileUrl="/peraturan/Permendagri No 13 Tahun 2024.pdf"
-							color="purple"
-						/>
-
-						{/* Perda 9/2011 */}
-						<PeraturanCard
-							title="Perda No. 9 Tahun 2011"
-							description="Peraturan Daerah Kabupaten Bogor Nomor 9 Tahun 2011 Tentang Lembaga Kemasyarakatan di Desa dan Kelurahan"
-							fileUrl="/peraturan/perda no 9 tahun 2011.pdf"
-							color="rose"
-						/>
-
-						{/* Perbup 31/2012 */}
-						<PeraturanCard
-							title="Perbup No. 31 Tahun 2012"
-							description="Peraturan Bupati Bogor Nomor 31 Tahun 2012 Tentang Tata Cara Pembentukan, Pengangkatan Dan Pemberhentian Pengurus Lembaga Pemberdayaan Masyarakat Desa/Kelurahan, Rukun Warga Dan Rukun Tetangga"
-							fileUrl="/peraturan/Perbup 31 Tahun 2012 - Tata Cara Pembentukan LPM Desa, Kel, RW dan RT.pdf"
-							color="indigo"
-						/>
-					</div>
-				</div>
+				{/* End of Right Column */}
 			</div>
+			{/* End of Grid Layout */}
 
 			{/* Confirmation Modal */}
 			<ConfirmationModal

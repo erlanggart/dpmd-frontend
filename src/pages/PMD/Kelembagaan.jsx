@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import Swal from "sweetalert2";
 import {
 	LuChevronDown,
 	LuChevronUp,
@@ -13,10 +14,16 @@ import {
 	LuCheck,
 	LuX,
 	LuLoader,
+	LuLock,
+	LuLockOpen,
 } from "react-icons/lu";
 import kelembagaanApi from "../../api/kelembagaan";
+import { useAuth } from "../../context/AuthContext";
+import { useEditMode } from "../../context/EditModeContext";
 
 const Kelembagaan = () => {
+	const { user } = useAuth();
+	const { isEditMode, toggleEditMode } = useEditMode();
 	const [kecamatanData, setKecamatanData] = useState([]);
 	const [summaryData, setSummaryData] = useState(null);
 	const [loading, setLoading] = useState(true);
@@ -24,6 +31,9 @@ const Kelembagaan = () => {
 	const [error, setError] = useState(null);
 	const [expandedKecamatan, setExpandedKecamatan] = useState({});
 	const navigate = useNavigate();
+
+	// Check if user can toggle edit mode
+	const canToggleEdit = ["superadmin", "pemberdayaan_masyarakat"].includes(user?.role);
 
 	// Fetch data kecamatan dan desa dengan kelembagaan menggunakan service API
 	const fetchKelembagaanData = async () => {
@@ -101,6 +111,40 @@ const Kelembagaan = () => {
 		}
 	};
 
+	const handleToggleEditMode = async () => {
+		try {
+			// Show loading
+			Swal.fire({
+				title: 'Memproses...',
+				text: 'Mengubah mode edit',
+				allowOutsideClick: false,
+				allowEscapeKey: false,
+				didOpen: () => {
+					Swal.showLoading();
+				}
+			});
+
+			await toggleEditMode();
+
+			// Show success
+			Swal.fire({
+				icon: 'success',
+				title: 'Berhasil!',
+				text: `Mode edit ${!isEditMode ? 'diaktifkan' : 'dinonaktifkan'}`,
+				timer: 2000,
+				showConfirmButton: false
+			});
+		} catch (error) {
+			console.error('Error toggling edit mode:', error);
+			Swal.fire({
+				icon: 'error',
+				title: 'Gagal!',
+				text: error.response?.data?.message || error.message || 'Gagal mengubah mode edit. Silakan coba lagi.',
+				confirmButtonColor: '#3b82f6'
+			});
+		}
+	};
+
 	// Render status badge
 	const StatusBadge = ({ status }) => {
 		const isFormed = status === "Terbentuk";
@@ -152,22 +196,66 @@ const Kelembagaan = () => {
 							Data Kelembagaan Desa
 						</h1>
 					</div>
-					<button
-						onClick={handleRefresh}
-						disabled={refreshing}
-						className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-					>
-						<LuLoader
-							className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
-						/>
-						<span>{refreshing ? "Memuat..." : "Refresh"}</span>
-					</button>
+					<div className="flex items-center gap-3">
+						{/* Toggle Edit Mode Button - Only for superadmin/pemberdayaan_masyarakat */}
+						{canToggleEdit && (
+							<button
+								onClick={handleToggleEditMode}
+								className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 font-medium ${
+									isEditMode
+										? "bg-green-600 text-white hover:bg-green-700 shadow-md"
+										: "bg-gray-200 text-gray-700 hover:bg-gray-300"
+								}`}
+							>
+								{isEditMode ? (
+									<>
+										<LuLockOpen className="h-4 w-4" />
+										<span>Mode Edit: ON</span>
+									</>
+								) : (
+									<>
+										<LuLock className="h-4 w-4" />
+										<span>Mode Edit: OFF</span>
+									</>
+								)}
+							</button>
+						)}
+						<button
+							onClick={handleRefresh}
+							disabled={refreshing}
+							className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+						>
+							<LuLoader
+								className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
+							/>
+							<span>{refreshing ? "Memuat..." : "Refresh"}</span>
+						</button>
+					</div>
 				</div>
 				<p className="text-gray-600">
 					Informasi lengkap kelembagaan di setiap desa meliputi RW, RT,
 					Posyandu, Karang Taruna, LPM, dan Satlinmas (hanya kelembagaan dan
 					pengurus yang aktif)
 				</p>
+				{canToggleEdit && (
+					<div className={`mt-3 p-3 rounded-lg border ${
+						isEditMode 
+							? "bg-green-50 border-green-200" 
+							: "bg-gray-50 border-gray-200"
+					}`}>
+						<p className="text-sm font-medium">
+							{isEditMode ? (
+								<span className="text-green-700">
+									✓ Mode Edit Aktif - Desa dapat menambah dan mengedit data kelembagaan & pengurus
+								</span>
+							) : (
+								<span className="text-gray-700">
+									⚠ Mode Edit Nonaktif - Tombol tambah dan edit tidak akan ditampilkan untuk desa
+								</span>
+							)}
+						</p>
+					</div>
+				)}
 			</div>
 
 			{/* Summary Cards */}

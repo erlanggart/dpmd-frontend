@@ -1,7 +1,7 @@
 // src/pages/DashboardPage.jsx
 import React from "react";
 import { useAuth } from "../context/AuthContext";
-import DesaDashboard from "./desa/DesaDashboardPage";
+
 import UniversalDashboard from "../components/UniversalDashboard";
 
 const DashboardPage = () => {
