@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useEditMode } from "../../../context/EditModeContext";
 import {
 	getKelembagaanSummary,
 	createKarangTaruna,
@@ -26,6 +27,8 @@ import {
 	LuFileText,
 	LuDownload,
 	LuExternalLink,
+	LuLock,
+	LuLockOpen,
 } from "react-icons/lu";
 
 // Confirmation Modal Component
@@ -211,6 +214,7 @@ const SmallCard = ({
 	</div>
 	);
 };export default function KelembagaanDesaPage() {
+	const { isEditMode } = useEditMode();
 	const [summary, setSummary] = useState({
 		rt: 0,
 		rw: 0,
@@ -623,6 +627,42 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 							<p className="font-medium mb-1">Ketentuan Pengurus:</p>
 							<p>Pengurus LKD menjabat selama <strong>5 tahun</strong> dan dapat dipilih kembali maksimal <strong>2 kali masa jabatan</strong>. Pengurus tidak boleh merangkap jabatan di LKD lain atau menjadi anggota partai politik.</p>
 						</div>
+					</div>
+				</div>
+			</div>
+
+			{/* Status Badge */}
+			<div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6 px-4 py-3">
+				<div className="flex items-center justify-between gap-4">
+					<span
+						className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
+							isEditMode
+								? "bg-green-100 text-green-700 border border-green-300"
+								: "bg-red-100 text-red-700 border border-red-300"
+						}`}
+					>
+						{isEditMode ? (
+							<>
+								<LuLockOpen className="w-3 h-3" />
+								<span>Aplikasi Dibuka</span>
+							</>
+						) : (
+							<>
+								<LuLock className="w-3 h-3" />
+								<span>Aplikasi Ditutup</span>
+							</>
+						)}
+					</span>
+					<div className="text-sm text-gray-600">
+						{isEditMode ? (
+							<span className="text-green-700">
+								Pengguna dapat menambah dan mengedit data kelembagaan
+							</span>
+						) : (
+							<span className="text-red-700">
+								Fitur penambahan dan pengeditan data sementara ditutup
+							</span>
+						)}
 					</div>
 				</div>
 			</div>

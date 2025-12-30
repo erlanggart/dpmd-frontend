@@ -124,22 +124,15 @@ export default function KelembagaanDetailPage({
     try {
       let data = null;
       if (type === "rw") {
-        console.log("🟢 [loadDetail] Fetching RW data for ID:", id);
         const res = await getRw(id);
         data = res?.data?.data;
-        console.log("✅ [loadDetail] Loaded RW detail:", data);
 
         // RT data already included in RW response, no need for separate fetch
         if (data?.rts) {
           setAnak(data.rts);
-          console.log(
-            "📊 [loadDetail] RT list from RW response:",
-            data.rts.length,
-            "items"
-          );
+          
         }
       } else if (type === "rt") {
-        console.log("🟢 [loadDetail] Fetching RT data for ID:", id);
         const res = await getRt(id);
         data = res?.data?.data;
       } else if (type === "posyandu") {
@@ -277,7 +270,6 @@ export default function KelembagaanDetailPage({
       // Show success alert
       showSuccessAlert("Berhasil!", "Data kelembagaan berhasil disimpan");
     } catch (err) {
-      console.error("Gagal menyimpan perubahan:", err);
 
       const errorMessage = err.response?.data?.message || err.message;
 
@@ -328,7 +320,6 @@ export default function KelembagaanDetailPage({
         }
       }, 500);
     } catch (err) {
-      console.error("Gagal mengubah status kelembagaan:", err);
 
       const errorMessage =
         err.response?.data?.message || err.response?.data?.errors
@@ -385,7 +376,6 @@ export default function KelembagaanDetailPage({
         }
       }, 500);
     } catch (err) {
-      console.error("Gagal mengubah status verifikasi:", err);
 
       const errorMessage =
         err.response?.data?.message || err.response?.data?.errors
@@ -424,7 +414,6 @@ export default function KelembagaanDetailPage({
       // Show success alert
       showSuccessAlert("Berhasil!", `RT ${nomorRT} berhasil ditambahkan`);
     } catch (error) {
-      console.error("Error creating RT:", error);
 
       const errorMessage = error.response?.data?.message || error.message;
 
