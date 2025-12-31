@@ -14,7 +14,7 @@ import {
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { FiBarChart2, FiCalendar, FiTrendingUp, FiUsers, FiFilter } from 'react-icons/fi';
 import api from "../../../../api";
-import { generateSafeDataHashLong } from "../../../../utils/hashUtils';
+import { generateSafeDataHashLong } from "../../../../utils/hashUtils";
 
 ChartJS.register(
   CategoryScale,
