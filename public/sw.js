@@ -58,7 +58,6 @@ self.addEventListener('push', async (event) => {
 				requireInteraction: true,
 				renotify: true,
 				silent: true,
-				vibrate: [500, 200, 500, 200, 500],
 				actions: notificationData.actions || []
 			}).then(() => {
 				console.log('[SW] ✅ Browser notification shown');
@@ -80,7 +79,7 @@ self.addEventListener('push', async (event) => {
 						payload: data || notificationData,
 						timestamp: Date.now(),
 						playSound: true,
-						soundUrl: '/peraturan/dpmd.mp3'
+						soundUrl: '/dpmd.mp3'
 					});
 					console.log('[SW] Message sent to client:', client.url);
 				});

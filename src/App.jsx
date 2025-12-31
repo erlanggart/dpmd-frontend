@@ -370,7 +370,7 @@ const ThemeColorWrapper = ({ children }) => {
 						
 						// Play notification sound - ALWAYS play regardless of message flag
 						try {
-							const audio = new Audio('/peraturan/dpmd.mp3');
+						const audio = new Audio('/dpmd.mp3');
 							audio.volume = 1.0; // Full volume
 							const playPromise = audio.play();
 							if (playPromise !== undefined) {
@@ -386,7 +386,9 @@ const ThemeColorWrapper = ({ children }) => {
 							console.error('❌ Error creating audio:', err);
 						}
 						
-						// Show toast notification popup on screen
+					// Show toast ONLY if app is visible (foreground)
+					// Browser notification already shown by service worker for background
+					if (document.visibilityState === 'visible') {
 						toast.success(
 							<div className="flex flex-col gap-1">
 								<div className="font-bold">{notifData.title || 'Notifikasi Baru'}</div>
@@ -403,17 +405,13 @@ const ThemeColorWrapper = ({ children }) => {
 								}
 							}
 						);
-						
-						// Trigger custom event untuk refresh data tanpa reload
-						window.dispatchEvent(new CustomEvent('newNotification', {
-							detail: notifData
-						}));
-						
-						// Auto-reload current page setelah 2 detik (beri waktu user lihat toast)
-						setTimeout(() => {
-							window.location.reload();
-						}, 2000);
 					}
+					
+					// Auto-reload current page setelah 2 detik (beri waktu user lihat toast)
+					setTimeout(() => {
+						window.location.reload();
+					}, 2000);
+				}
 					
 					// Handle notification click navigation
 					if (event.data && event.data.type === 'NOTIFICATION_CLICK_NAVIGATE') {
@@ -430,7 +428,7 @@ const ThemeColorWrapper = ({ children }) => {
 						
 						// Play notification sound
 						try {
-							const audio = new Audio('/peraturan/dpmd.mp3');
+						const audio = new Audio('/dpmd.mp3');
 							audio.volume = 1.0; // Full volume
 							const playPromise = audio.play();
 							if (playPromise !== undefined) {
@@ -442,6 +440,8 @@ const ThemeColorWrapper = ({ children }) => {
 							console.error('❌ Error creating audio:', err);
 						}
 						
+					// Show toast only if app is visible (foreground)
+					if (document.visibilityState === 'visible') {
 						toast.success(
 							<div className="flex flex-col gap-1">
 								<div className="font-bold">{notifData.title || 'Notifikasi Baru'}</div>
@@ -457,10 +457,7 @@ const ThemeColorWrapper = ({ children }) => {
 								}
 							}
 						);
-						
-						window.dispatchEvent(new CustomEvent('newNotification', {
-							detail: notifData
-						}));
+					}
 					}
 				};
 
