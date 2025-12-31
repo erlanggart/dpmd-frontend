@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileText, Mail, Plane, Users, Activity, TrendingUp, ArrowLeft, Clock, Info, Zap, ChevronRight, Building, BarChart } from 'lucide-react';
+import { FileText, Mail, Plane, Users, Activity, TrendingUp, ArrowLeft, Clock, Info, Zap, ChevronRight, Building, BarChart, Calendar, Bell } from 'lucide-react';
 import api from '../../api';
 import toast from 'react-hot-toast';
 
@@ -227,7 +227,7 @@ const SekretariatPage = () => {
 									<Zap className="h-5 w-5 text-yellow-500" />
 									Aksi Cepat
 								</h3>
-								<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+								<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 									<button
 										onClick={() => navigate('/sekretariat/disposisi')}
 										className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border border-gray-100 p-6 hover:border-blue-300 transition-all duration-300 text-left overflow-hidden hover:-translate-y-1"
@@ -276,6 +276,40 @@ const SekretariatPage = () => {
 												<p className="text-sm text-gray-500">Data pegawai & kepegawaian</p>
 											</div>
 											<ChevronRight className="h-6 w-6 text-gray-400 group-hover:text-indigo-600 group-hover:translate-x-1 transition-all" />
+										</div>
+									</button>
+
+									<button
+										onClick={() => navigate('/sekretariat/jadwal-kegiatan')}
+										className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border border-gray-100 p-6 hover:border-purple-300 transition-all duration-300 text-left overflow-hidden hover:-translate-y-1"
+									>
+										<div className="absolute inset-0 bg-gradient-to-br from-purple-400/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+										<div className="relative flex items-center gap-5">
+											<div className="h-16 w-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg shadow-purple-500/25">
+												<Calendar className="h-8 w-8 text-white" />
+											</div>
+											<div className="flex-1">
+												<h3 className="font-bold text-gray-800 text-lg mb-1">Jadwal Kegiatan</h3>
+												<p className="text-sm text-gray-500">Kelola jadwal & agenda</p>
+											</div>
+											<ChevronRight className="h-6 w-6 text-gray-400 group-hover:text-purple-600 group-hover:translate-x-1 transition-all" />
+										</div>
+									</button>
+
+									<button
+										onClick={() => navigate('/sekretariat/notifikasi')}
+										className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border border-gray-100 p-6 hover:border-orange-300 transition-all duration-300 text-left overflow-hidden hover:-translate-y-1"
+									>
+										<div className="absolute inset-0 bg-gradient-to-br from-orange-400/5 to-orange-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+										<div className="relative flex items-center gap-5">
+											<div className="h-16 w-16 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg shadow-orange-500/25">
+												<Bell className="h-8 w-8 text-white" />
+											</div>
+											<div className="flex-1">
+												<h3 className="font-bold text-gray-800 text-lg mb-1">Kelola Notifikasi</h3>
+												<p className="text-sm text-gray-500">Push notification & pengumuman</p>
+											</div>
+											<ChevronRight className="h-6 w-6 text-gray-400 group-hover:text-orange-600 group-hover:translate-x-1 transition-all" />
 										</div>
 									</button>
 								</div>

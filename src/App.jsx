@@ -101,6 +101,8 @@ const BumdesApp = lazy(() => import("./pages/bidang/spked/bumdes"));
 const Kelembagaan = lazy(() => import("./pages/bidang/pmd/Kelembagaan"));
 const PerjalananDinas = lazy(() => import("./pages/bidang/sekretariat/perjadin"));
 const DisposisiRouter = lazy(() => import("./pages/bidang/sekretariat/disposisi/DisposisiRouter"));
+const JadwalKegiatanPage = lazy(() => import("./pages/bidang/sekretariat/JadwalKegiatanPage"));
+const KelolaNotifikasiPage = lazy(() => import("./pages/bidang/sekretariat/KelolaNotifikasiPage"));
 const DesaLayout = lazy(() => import("./layouts/DesaLayout"));
 const DesaDashboard = lazy(() => import("./pages/desa/DesaDashboardPage"));
 const BumdesDesaPage = lazy(() =>
@@ -173,6 +175,9 @@ const SekretarisDinasLayout = lazy(() =>
 );
 const KetuaTimLayout = lazy(() =>
 	import("./pages/ketua-tim/KetuaTimLayout")
+);
+const KetuaTimDashboard = lazy(() =>
+	import("./pages/ketua-tim/KetuaTimDashboard")
 );
 const SuperadminLayout = lazy(() =>
 	import("./pages/superadmin/SuperadminLayout")
@@ -584,13 +589,14 @@ function App() {
 						<Route index element={<Navigate to="dashboard" replace />} />
 						<Route path="dashboard" element={<PegawaiDashboard />} />				<Route path="profile" element={<ProfilePage />} />						<Route path="disposisi" element={<DisposisiSurat />} />
 						<Route path="disposisi/:id" element={<DisposisiDetail />} />
+						<Route path="jadwal-kegiatan" element={<JadwalKegiatanPage />} />
 					</Route>
 
-					{/* Rute Bidang - Accessible by pegawai/kepala_bidang (their own bidang) & kepala_dinas/superadmin (all) */}
+					{/* Rute Bidang - Accessible by pegawai/kepala_bidang/ketua_tim (their own bidang) & kepala_dinas/superadmin (all) */}
 					<Route
 						path="/bidang"
 						element={
-							<RoleProtectedRoute allowedRoles={['pegawai', 'kepala_bidang', 'kepala_dinas', 'superadmin']}>
+							<RoleProtectedRoute allowedRoles={['pegawai', 'kepala_bidang', 'ketua_tim', 'kepala_dinas', 'superadmin']}>
 								<PegawaiLayout />
 							</RoleProtectedRoute>
 						}
@@ -616,7 +622,7 @@ function App() {
 					<Route
 						path="/kkd"
 						element={
-							<RoleProtectedRoute allowedRoles={['pegawai', 'kepala_bidang', 'kepala_dinas', 'superadmin']}>
+							<RoleProtectedRoute allowedRoles={['pegawai', 'kepala_bidang', 'ketua_tim', 'kepala_dinas', 'superadmin']}>
 								<PegawaiLayout />
 							</RoleProtectedRoute>
 						}
@@ -630,7 +636,7 @@ function App() {
 					<Route
 						path="/pmd"
 						element={
-							<RoleProtectedRoute allowedRoles={['pegawai', 'kepala_bidang', 'kepala_dinas', 'superadmin']}>
+							<RoleProtectedRoute allowedRoles={['pegawai', 'kepala_bidang', 'ketua_tim', 'kepala_dinas', 'superadmin']}>
 								<PegawaiLayout />
 							</RoleProtectedRoute>
 						}
@@ -645,7 +651,7 @@ function App() {
 					<Route
 						path="/sekretariat"
 						element={
-							<RoleProtectedRoute allowedRoles={['pegawai', 'kepala_bidang', 'kepala_dinas', 'superadmin', 'sekretaris_dinas']}>
+							<RoleProtectedRoute allowedRoles={['pegawai', 'kepala_bidang', 'ketua_tim', 'kepala_dinas', 'superadmin', 'sekretaris_dinas']}>
 								<PegawaiLayout />
 							</RoleProtectedRoute>
 						}
@@ -654,6 +660,8 @@ function App() {
 						<Route path="disposisi" element={<DisposisiRouter />} />
 						<Route path="disposisi/:id" element={<DisposisiDetail />} />
 						<Route path="pegawai" element={<UserManagementPage />} />
+						<Route path="jadwal-kegiatan" element={<JadwalKegiatanPage />} />
+						<Route path="notifikasi" element={<KelolaNotifikasiPage />} />
 					</Route>
 
 					{/* Rute Ketua Tim - Untuk role: ketua_tim */}
@@ -666,10 +674,11 @@ function App() {
 						}
 					>
 						<Route index element={<Navigate to="dashboard" replace />} />
-						<Route path="dashboard" element={<PegawaiDashboard />} />
+						<Route path="dashboard" element={<KetuaTimDashboard />} />
 						<Route path="profile" element={<ProfilePage />} />
 						<Route path="disposisi" element={<DisposisiSurat />} />
 						<Route path="disposisi/:id" element={<DisposisiDetail />} />
+						<Route path="jadwal-kegiatan" element={<JadwalKegiatanPage />} />
 					</Route>
 
 					{/* Rute Superadmin - Full System Control */}
@@ -716,6 +725,7 @@ function App() {
 						<Route index element={<Navigate to="dashboard" replace />} />
 						<Route path="dashboard" element={<KepalaDinasDashboard />} />				<Route path="profile" element={<ProfilePage />} />						<Route path="disposisi" element={<DisposisiSurat />} />
 						<Route path="disposisi/:id" element={<DisposisiDetail />} />
+						<Route path="jadwal-kegiatan" element={<JadwalKegiatanPage />} />
 					</Route>
 
 					{/* Rute Kepala Bidang - Exclusive untuk Kepala Bidang */}
@@ -730,6 +740,7 @@ function App() {
 						<Route index element={<Navigate to="dashboard" replace />} />
 						<Route path="dashboard" element={<KepalaBidangDashboard />} />				<Route path="profile" element={<ProfilePage />} />						<Route path="disposisi" element={<DisposisiSurat />} />
 						<Route path="disposisi/:id" element={<DisposisiDetail />} />
+						<Route path="jadwal-kegiatan" element={<JadwalKegiatanPage />} />
 					</Route>
 
 					{/* Rute Sekretaris Dinas - Exclusive untuk Sekretaris Dinas */}
@@ -744,6 +755,7 @@ function App() {
 						<Route index element={<Navigate to="dashboard" replace />} />
 						<Route path="dashboard" element={<SekretarisDinasDashboard />} />				<Route path="profile" element={<ProfilePage />} />						<Route path="disposisi" element={<DisposisiSurat />} />
 						<Route path="disposisi/:id" element={<DisposisiDetail />} />
+						<Route path="jadwal-kegiatan" element={<JadwalKegiatanPage />} />
 					</Route>
 
 					{/* Rute Core Dashboard - DPMD Internal Only */}

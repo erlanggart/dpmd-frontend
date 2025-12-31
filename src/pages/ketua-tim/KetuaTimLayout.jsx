@@ -1,7 +1,8 @@
 // src/pages/ketua-tim/KetuaTimLayout.jsx
 import React from "react";
 import { Outlet, Navigate, useNavigate, useLocation } from "react-router-dom";
-import { FiHome, FiUser, FiLogOut, FiMenu, FiMail, FiBell, FiCalendar, FiBarChart2 } from "react-icons/fi";
+import { FiHome, FiUser, FiLogOut, FiMenu, FiMail, FiBell, FiCalendar, FiBarChart2, FiFileText, FiDollarSign, FiUsers, FiBriefcase } from "react-icons/fi";
+import { Landmark } from 'lucide-react';
 import { useConfirm } from "../../hooks/useConfirm.jsx";
 import { subscribeToPushNotifications } from "../../utils/pushNotifications";
 import toast from 'react-hot-toast';
@@ -189,7 +190,7 @@ const KetuaTimLayout = () => {
 	const bottomNavItems = [
 		{ path: "/ketua-tim/dashboard", label: "Dashboard", icon: FiHome },
 		{ path: "/core-dashboard/dashboard", label: "Statistik", icon: FiBarChart2 },
-		{ path: "/core-dashboard/kegiatan", label: "Kegiatan", icon: FiCalendar },
+		{ path: "/ketua-tim/jadwal-kegiatan", label: "Kegiatan", icon: FiCalendar },
 		{ path: "/ketua-tim/disposisi", label: "Disposisi", icon: FiMail },
 		{ path: "/ketua-tim/menu", label: "Menu", icon: FiMenu, action: () => setShowMenu(true) },
 	];
@@ -351,6 +352,43 @@ const KetuaTimLayout = () => {
 										<p className="text-sm text-gray-500">Lihat dan edit profil</p>
 									</div>
 								</button>
+
+								{/* Bidang Navigation - Only show if user has bidang_id */}
+								{user.bidang_id && (() => {
+									const bidangRoutes = {
+										2: { name: 'Sekretariat', path: '/bidang/sekretariat', icon: FiFileText },
+										3: { name: 'SPKED', path: '/bidang/spked', icon: Landmark },
+										4: { name: 'KKD', path: '/bidang/kkd', icon: FiDollarSign },
+										5: { name: 'PMD', path: '/bidang/pmd', icon: FiUsers },
+										6: { name: 'Pemdes', path: '/bidang/pemdes', icon: FiBriefcase }
+									};
+
+									const bidangNav = bidangRoutes[user.bidang_id];
+									
+									if (!bidangNav) return null;
+									
+									const BidangIcon = bidangNav.icon;
+
+									return (
+										<button
+											onClick={() => {
+												setShowMenu(false);
+												navigate(bidangNav.path);
+											}}
+											className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-teal-50 transition-colors text-left"
+										>
+											<div className="h-12 w-12 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl flex items-center justify-center">
+												<BidangIcon className="h-6 w-6 text-white" />
+											</div>
+											<div>
+												<h4 className="font-semibold text-gray-800">Bidang {bidangNav.name}</h4>
+												<p className="text-sm text-gray-500">Kelola data bidang</p>
+											</div>
+										</button>
+									);
+								})()}
+
+								<div className="border-t border-gray-200 my-2"></div>
 
 								<button
 									onClick={handleLogout}
