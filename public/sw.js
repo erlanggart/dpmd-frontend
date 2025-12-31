@@ -57,7 +57,7 @@ self.addEventListener('push', async (event) => {
 				tag: data?.id || 'notification-' + Date.now(),
 				requireInteraction: true,
 				renotify: true,
-				silent: false,
+				silent: true,
 				vibrate: [500, 200, 500, 200, 500],
 				actions: notificationData.actions || []
 			}).then(() => {
@@ -78,7 +78,9 @@ self.addEventListener('push', async (event) => {
 					client.postMessage({
 						type: 'PUSH_NOTIFICATION_RECEIVED',
 						payload: data || notificationData,
-						timestamp: Date.now()
+						timestamp: Date.now(),
+						playSound: true,
+						soundUrl: '/peraturan/dpmd.mp3'
 					});
 					console.log('[SW] Message sent to client:', client.url);
 				});

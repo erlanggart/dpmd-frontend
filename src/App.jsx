@@ -34,31 +34,23 @@ import Spinner from "./components/ui/Spinner";
 function HomeRedirect() {
 	const { user } = useAuth();
 	const location = useLocation();
-	const [shouldRedirect, setShouldRedirect] = useState(false);
+	const token = localStorage.getItem('expressToken');
 	
-	useEffect(() => {
-		// Check if user is logged in
-		if (user && user.role) {
-			// Check if user explicitly navigated to home (e.g., clicked "Back to Home" button)
-			const isExplicitNavigation = location.state?.fromNavigation === true;
-			
-			if (isExplicitNavigation) {
-				// User wants to see landing page even if logged in
-				setShouldRedirect(false);
-			} else {
-				// Auto-redirect to dashboard (PWA reopen scenario)
-				setShouldRedirect(true);
-			}
-		} else {
-			// Not logged in, always show landing page
-			setShouldRedirect(false);
-		}
-	}, [user, location.state]);
+	// Not logged in, always show landing page
+	if (!token || !user) {
+		return <LandingPage />;
+	}
 	
-	// If should redirect, go to appropriate dashboard
-	if (shouldRedirect && user && user.role) {
-		// Redirecting to dashboard for user role
-		
+	// Check if user explicitly navigated to home (e.g., clicked "Back to Home" button)
+	const isExplicitNavigation = location.state?.fromNavigation === true;
+	
+	if (isExplicitNavigation) {
+		// User wants to see landing page even if logged in
+		return <LandingPage />;
+	}
+	
+	// User is logged in and accessing root - redirect to appropriate dashboard
+	if (user && user.role) {
 		// Map role to dashboard path
 		const roleDashboardMap = {
 			'superadmin': '/superadmin/dashboard',
@@ -75,7 +67,7 @@ function HomeRedirect() {
 		return <Navigate to={dashboardPath} replace />;
 	}
 	
-	// Show landing page
+	// Fallback: show landing page
 	return <LandingPage />;
 }
 
@@ -370,7 +362,24 @@ const ThemeColorWrapper = ({ children }) => {
 					// Handle push notification received (from SW push event)
 					if (event.data && event.data.type === 'PUSH_NOTIFICATION_RECEIVED') {
 						const notifData = event.data.payload;
-						// Show push notification received
+						
+						// Play notification sound - ALWAYS play regardless of message flag
+						try {
+							const audio = new Audio('/peraturan/dpmd.mp3');
+							audio.volume = 1.0; // Full volume
+							const playPromise = audio.play();
+							if (playPromise !== undefined) {
+								playPromise
+									.then(() => {
+										console.log('🔊 Notification sound played successfully');
+									})
+									.catch(err => {
+										console.warn('⚠️ Could not play notification sound:', err.message);
+									});
+							}
+						} catch (err) {
+							console.error('❌ Error creating audio:', err);
+						}
 						
 						// Show toast notification popup on screen
 						toast.success(
@@ -413,6 +422,20 @@ const ThemeColorWrapper = ({ children }) => {
 					// Legacy handler for backward compatibility
 					if (event.data && event.data.type === 'NEW_NOTIFICATION') {
 						const notifData = event.data.payload;
+						
+						// Play notification sound
+						try {
+							const audio = new Audio('/peraturan/dpmd.mp3');
+							audio.volume = 1.0; // Full volume
+							const playPromise = audio.play();
+							if (playPromise !== undefined) {
+								playPromise
+									.then(() => console.log('🔊 Legacy notification sound played'))
+									.catch(err => console.warn('⚠️ Could not play sound:', err.message));
+							}
+						} catch (err) {
+							console.error('❌ Error creating audio:', err);
+						}
 						
 						toast.success(
 							<div className="flex flex-col gap-1">
