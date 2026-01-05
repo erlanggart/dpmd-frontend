@@ -238,7 +238,7 @@ const PegawaiLayout = () => {
 			{showMenu && (
 				<>
 					<div 
-						className="fixed inset-0 bg-black bg-opacity-50 z-50 animate-fadeIn"
+						className="fixed inset-0 bg-black/75 z-50 animate-fadeIn"
 						onClick={() => setShowMenu(false)}
 					></div>
 					<div className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl z-50 animate-slideUp">

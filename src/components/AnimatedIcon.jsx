@@ -10,7 +10,8 @@ const AnimatedIcon = ({ type, isActive, isHovered, className = "w-5 h-5" }) => {
     briefcase: String.fromCodePoint(0x1F4BC),
     dollar: String.fromCodePoint(0x1F4B0),
     trending: String.fromCodePoint(0x1F4C8),
-    logout: String.fromCodePoint(0x1F6AA)
+    logout: String.fromCodePoint(0x1F6AA),
+    landmark: String.fromCodePoint(0x1F3DB)
   };
 
   const emoji = emojiMap[type] || String.fromCodePoint(0x2B50);

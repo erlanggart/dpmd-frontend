@@ -17,7 +17,10 @@ import {
 	LuLock,
 	LuLockOpen,
 } from "react-icons/lu";
+import { useAuth } from "../../../context/AuthContext";
+import { useEditMode } from "../../../context/EditModeContext";
 import kelembagaanApi from "../../../api/kelembagaan";
+import StatistikKelembagaanSummary from "../../../components/kelembagaan/StatistikKelembagaanSummary";
 
 const Kelembagaan = () => {
 	const { user } = useAuth();
@@ -31,7 +34,9 @@ const Kelembagaan = () => {
 	const navigate = useNavigate();
 
 	// Check if user can toggle edit mode
-	const canToggleEdit = ["superadmin", "pemberdayaan_masyarakat"].includes(user?.role);
+	const canToggleEdit = 
+		["superadmin"].includes(user?.role) ||
+		(user?.role === "kepala_bidang" && user?.bidang_id === 5);
 
 	// Fetch data kecamatan dan desa dengan kelembagaan menggunakan service API
 	const fetchKelembagaanData = async () => {
@@ -97,7 +102,7 @@ const Kelembagaan = () => {
 
 	const handleDesaClick = (desaId) => {
 		// Navigate ke admin kelembagaan detail dengan list RW/kelembagaan
-		navigate(`/dashboard/kelembagaan/admin/${desaId}`);
+		navigate(`/bidang/pmd/kelembagaan/admin/${desaId}`);
 	};
 
 	const handleRefresh = async () => {
@@ -257,322 +262,7 @@ const Kelembagaan = () => {
 			</div>
 
 			{/* Summary Cards */}
-			{summaryData && (
-				<div className="space-y-6">
-					{/* Overview Cards */}
-					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-						<div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-sm p-6 text-white">
-							<div className="flex items-center justify-between">
-								<div>
-									<div className="text-2xl font-bold">
-										{summaryData.overview.kecamatan}
-									</div>
-									<div className="text-blue-100">Total Kecamatan</div>
-								</div>
-								<LuBuilding2 className="h-8 w-8 text-blue-200" />
-							</div>
-						</div>
-
-						<div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg shadow-sm p-6 text-white">
-							<div className="flex items-center justify-between">
-								<div>
-									<div className="text-2xl font-bold">
-										{summaryData.overview.desa}
-									</div>
-									<div className="text-green-100">Total Desa</div>
-								</div>
-								<LuHouse className="h-8 w-8 text-green-200" />
-							</div>
-						</div>
-
-						<div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg shadow-sm p-6 text-white">
-							<div className="flex items-center justify-between">
-								<div>
-									<div className="text-2xl font-bold">
-										{summaryData.overview.kelurahan}
-									</div>
-									<div className="text-purple-100">Total Kelurahan</div>
-								</div>
-								<LuBuilding2 className="h-8 w-8 text-purple-200" />
-							</div>
-						</div>
-
-						<div className="bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg shadow-sm p-6 text-white">
-							<div className="flex items-center justify-between">
-								<div>
-									<div className="text-2xl font-bold">
-										{summaryData.overview.desa_kelurahan_total}
-									</div>
-									<div className="text-indigo-100">Total Desa & Kelurahan</div>
-								</div>
-								<LuMapPin className="h-8 w-8 text-indigo-200" />
-							</div>
-						</div>
-					</div>
-
-					{/* Kelembagaan Statistics */}
-					<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-						<h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-							<LuUsers className="h-5 w-5 text-blue-600" />
-							Statistik Kelembagaan Kabupaten
-						</h2>
-
-						<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-							<div className="bg-purple-50 border border-purple-200 rounded-lg p-4 text-center">
-								<div className="text-2xl font-bold text-purple-600">
-									{summaryData.total_kelembagaan.rw}
-								</div>
-								<div className="text-sm text-purple-700 font-medium">
-									Total RW
-								</div>
-								{summaryData.total_pengurus && (
-									<div className="text-xs text-purple-600 mt-1">
-										{summaryData.total_pengurus.rw} Pengurus
-									</div>
-								)}
-							</div>
-							<div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
-								<div className="text-2xl font-bold text-green-600">
-									{summaryData.total_kelembagaan.rt}
-								</div>
-								<div className="text-sm text-green-700 font-medium">
-									Total RT
-								</div>
-								{summaryData.total_pengurus && (
-									<div className="text-xs text-green-600 mt-1">
-										{summaryData.total_pengurus.rt} Pengurus
-									</div>
-								)}
-							</div>
-							<div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
-								<div className="text-2xl font-bold text-red-600">
-									{summaryData.total_kelembagaan.posyandu}
-								</div>
-								<div className="text-sm text-red-700 font-medium">
-									Total Posyandu
-								</div>
-								{summaryData.total_pengurus && (
-									<div className="text-xs text-red-600 mt-1">
-										{summaryData.total_pengurus.posyandu} Pengurus
-									</div>
-								)}
-							</div>
-							<div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
-								<div className="text-2xl font-bold text-blue-600">
-									{summaryData.total_kelembagaan.karangTaruna}
-								</div>
-								<div className="text-sm text-blue-700 font-medium">
-									Karang Taruna
-								</div>
-								<div className="text-xs text-blue-600 mt-1">
-									{summaryData.formation_stats.karangTaruna.persentase}%
-									Terbentuk
-								</div>
-								{summaryData.total_pengurus && (
-									<div className="text-xs text-blue-500 font-semibold">
-										{summaryData.total_pengurus.karangTaruna} Pengurus
-									</div>
-								)}
-							</div>
-							<div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 text-center">
-								<div className="text-2xl font-bold text-indigo-600">
-									{summaryData.total_kelembagaan.lpm}
-								</div>
-								<div className="text-sm text-indigo-700 font-medium">LPM</div>
-								<div className="text-xs text-indigo-600 mt-1">
-									{summaryData.formation_stats.lpm.persentase}% Terbentuk
-								</div>
-								{summaryData.total_pengurus && (
-									<div className="text-xs text-indigo-500 font-semibold">
-										{summaryData.total_pengurus.lpm} Pengurus
-									</div>
-								)}
-							</div>
-							<div className="bg-orange-50 border border-orange-200 rounded-lg p-4 text-center">
-								<div className="text-2xl font-bold text-orange-600">
-									{summaryData.total_kelembagaan.satlinmas}
-								</div>
-								<div className="text-sm text-orange-700 font-medium">
-									Satlinmas
-								</div>
-								<div className="text-xs text-orange-600 mt-1">
-									{summaryData.formation_stats.satlinmas.persentase}% Terbentuk
-								</div>
-								{summaryData.total_pengurus && (
-									<div className="text-xs text-orange-500 font-semibold">
-										{summaryData.total_pengurus.satlinmas} Pengurus
-									</div>
-								)}
-							</div>
-						</div>
-
-						{/* Breakdown by Desa vs Kelurahan */}
-						<div className="grid md:grid-cols-2 gap-6">
-							{/* Desa Statistics */}
-							<div className="bg-green-50 border border-green-200 rounded-lg p-4">
-								<h3 className="text-lg font-semibold text-green-800 mb-4 flex items-center gap-2">
-									<LuHouse className="h-5 w-5" />
-									Statistik Desa ({summaryData.by_status.desa.count})
-								</h3>
-								<div className="grid grid-cols-2 gap-3">
-									<div className="text-center p-2 bg-white rounded border">
-										<div className="text-lg font-bold text-green-700">
-											{summaryData.by_status.desa.rw}
-										</div>
-										<div className="text-xs text-green-600 mb-1">RW</div>
-										{summaryData.by_status.desa.pengurus && (
-											<div className="text-xs text-green-500 font-semibold">
-												{summaryData.by_status.desa.pengurus.rw} Pengurus
-											</div>
-										)}
-									</div>
-									<div className="text-center p-2 bg-white rounded border">
-										<div className="text-lg font-bold text-green-700">
-											{summaryData.by_status.desa.rt}
-										</div>
-										<div className="text-xs text-green-600 mb-1">RT</div>
-										{summaryData.by_status.desa.pengurus && (
-											<div className="text-xs text-green-500 font-semibold">
-												{summaryData.by_status.desa.pengurus.rt} Pengurus
-											</div>
-										)}
-									</div>
-									<div className="text-center p-2 bg-white rounded border">
-										<div className="text-lg font-bold text-green-700">
-											{summaryData.by_status.desa.posyandu}
-										</div>
-										<div className="text-xs text-green-600 mb-1">Posyandu</div>
-										{summaryData.by_status.desa.pengurus && (
-											<div className="text-xs text-green-500 font-semibold">
-												{summaryData.by_status.desa.pengurus.posyandu} Pengurus
-											</div>
-										)}
-									</div>
-									<div className="text-center p-2 bg-white rounded border">
-										<div className="text-lg font-bold text-green-700">
-											{summaryData.by_status.desa.karangTaruna}
-										</div>
-										<div className="text-xs text-green-600 mb-1">
-											Karang Taruna
-										</div>
-										{summaryData.by_status.desa.pengurus && (
-											<div className="text-xs text-green-500 font-semibold">
-												{summaryData.by_status.desa.pengurus.karangTaruna}{" "}
-												Pengurus
-											</div>
-										)}
-									</div>
-									<div className="text-center p-2 bg-white rounded border">
-										<div className="text-lg font-bold text-green-700">
-											{summaryData.by_status.desa.lpm}
-										</div>
-										<div className="text-xs text-green-600 mb-1">LPM</div>
-										{summaryData.by_status.desa.pengurus && (
-											<div className="text-xs text-green-500 font-semibold">
-												{summaryData.by_status.desa.pengurus.lpm} Pengurus
-											</div>
-										)}
-									</div>
-									<div className="text-center p-2 bg-white rounded border">
-										<div className="text-lg font-bold text-green-700">
-											{summaryData.by_status.desa.satlinmas}
-										</div>
-										<div className="text-xs text-green-600 mb-1">Satlinmas</div>
-										{summaryData.by_status.desa.pengurus && (
-											<div className="text-xs text-green-500 font-semibold">
-												{summaryData.by_status.desa.pengurus.satlinmas} Pengurus
-											</div>
-										)}
-									</div>
-								</div>
-							</div>
-
-							{/* Kelurahan Statistics */}
-							<div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-								<h3 className="text-lg font-semibold text-purple-800 mb-4 flex items-center gap-2">
-									<LuBuilding2 className="h-5 w-5" />
-									Statistik Kelurahan ({summaryData.by_status.kelurahan.count})
-								</h3>
-								<div className="grid grid-cols-2 gap-3">
-									<div className="text-center p-2 bg-white rounded border">
-										<div className="text-lg font-bold text-purple-700">
-											{summaryData.by_status.kelurahan.rw}
-										</div>
-										<div className="text-xs text-purple-600 mb-1">RW</div>
-										{summaryData.by_status.kelurahan.pengurus && (
-											<div className="text-xs text-purple-500 font-semibold">
-												{summaryData.by_status.kelurahan.pengurus.rw} Pengurus
-											</div>
-										)}
-									</div>
-									<div className="text-center p-2 bg-white rounded border">
-										<div className="text-lg font-bold text-purple-700">
-											{summaryData.by_status.kelurahan.rt}
-										</div>
-										<div className="text-xs text-purple-600 mb-1">RT</div>
-										{summaryData.by_status.kelurahan.pengurus && (
-											<div className="text-xs text-purple-500 font-semibold">
-												{summaryData.by_status.kelurahan.pengurus.rt} Pengurus
-											</div>
-										)}
-									</div>
-									<div className="text-center p-2 bg-white rounded border">
-										<div className="text-lg font-bold text-purple-700">
-											{summaryData.by_status.kelurahan.posyandu}
-										</div>
-										<div className="text-xs text-purple-600 mb-1">Posyandu</div>
-										{summaryData.by_status.kelurahan.pengurus && (
-											<div className="text-xs text-purple-500 font-semibold">
-												{summaryData.by_status.kelurahan.pengurus.posyandu}{" "}
-												Pengurus
-											</div>
-										)}
-									</div>
-									<div className="text-center p-2 bg-white rounded border">
-										<div className="text-lg font-bold text-purple-700">
-											{summaryData.by_status.kelurahan.karangTaruna}
-										</div>
-										<div className="text-xs text-purple-600 mb-1">
-											Karang Taruna
-										</div>
-										{summaryData.by_status.kelurahan.pengurus && (
-											<div className="text-xs text-purple-500 font-semibold">
-												{summaryData.by_status.kelurahan.pengurus.karangTaruna}{" "}
-												Pengurus
-											</div>
-										)}
-									</div>
-									<div className="text-center p-2 bg-white rounded border">
-										<div className="text-lg font-bold text-purple-700">
-											{summaryData.by_status.kelurahan.lpm}
-										</div>
-										<div className="text-xs text-purple-600 mb-1">LPM</div>
-										{summaryData.by_status.kelurahan.pengurus && (
-											<div className="text-xs text-purple-500 font-semibold">
-												{summaryData.by_status.kelurahan.pengurus.lpm} Pengurus
-											</div>
-										)}
-									</div>
-									<div className="text-center p-2 bg-white rounded border">
-										<div className="text-lg font-bold text-purple-700">
-											{summaryData.by_status.kelurahan.satlinmas}
-										</div>
-										<div className="text-xs text-purple-600 mb-1">
-											Satlinmas
-										</div>
-										{summaryData.by_status.kelurahan.pengurus && (
-											<div className="text-xs text-purple-500 font-semibold">
-												{summaryData.by_status.kelurahan.pengurus.satlinmas}{" "}
-												Pengurus
-											</div>
-										)}
-									</div>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
-			)}
+			<StatistikKelembagaanSummary summaryData={summaryData} loading={loading} />
 
 			{/* Kecamatan Accordion */}
 			<div className="space-y-4">
@@ -611,8 +301,10 @@ const Kelembagaan = () => {
 									<div className="flex items-center gap-1">
 										<LuHeart className="h-4 w-4 text-red-600" />
 										<span>Posyandu: {kecamatan.totalKelembagaan.posyandu}</span>
-									</div>
-								</div>
+									</div>								<div className="flex items-center gap-1">
+									<LuUsers className="h-4 w-4 text-pink-600" />
+									<span>PKK: {kecamatan.totalKelembagaan.pkk}</span>
+								</div>								</div>
 								{expandedKecamatan[kecamatan.id] ? (
 									<LuChevronUp className="h-5 w-5 text-gray-500" />
 								) : (
@@ -629,7 +321,7 @@ const Kelembagaan = () => {
 									<h4 className="text-md font-semibold text-gray-800 mb-4">
 										Ringkasan Kelembagaan Kecamatan
 									</h4>
-									<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+								<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4">
 										<div className="bg-white p-4 rounded-lg border text-center">
 											<div className="text-2xl font-bold text-purple-600">
 												{kecamatan.totalKelembagaan.rw}
@@ -688,6 +380,17 @@ const Kelembagaan = () => {
 											)}
 										</div>
 										<div className="bg-white p-4 rounded-lg border text-center">
+											<div className="text-2xl font-bold text-pink-600">
+												{kecamatan.totalKelembagaan.pkk}
+											</div>
+											<div className="text-sm text-gray-600 mb-1">PKK</div>
+											{kecamatan.totalPengurus && (
+												<div className="text-xs text-pink-500 font-semibold">
+													{kecamatan.totalPengurus.pkk} Pengurus
+												</div>
+											)}
+										</div>
+										<div className="bg-white p-4 rounded-lg border text-center">
 											<div className="text-2xl font-bold text-orange-600">
 												{kecamatan.totalKelembagaan.satlinmas}
 											</div>
@@ -733,8 +436,9 @@ const Kelembagaan = () => {
 													<th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-800">
 														LPM
 													</th>
-													<th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-800">
-														Satlinmas
+													<th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-800">													PKK
+												</th>
+												<th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-800">														Satlinmas
 													</th>
 												</tr>
 											</thead>
@@ -784,8 +488,9 @@ const Kelembagaan = () => {
 														<td className="border border-gray-300 px-4 py-3 text-center">
 															<StatusBadge status={desa.kelembagaan?.lpm || "Belum Terbentuk"} />
 														</td>
-														<td className="border border-gray-300 px-4 py-3 text-center">
-															<StatusBadge
+														<td className="border border-gray-300 px-4 py-3 text-center">														<StatusBadge status={desa.kelembagaan?.pkk || "Belum Terbentuk"} />
+													</td>
+													<td className="border border-gray-300 px-4 py-3 text-center">															<StatusBadge
 																status={desa.kelembagaan?.satlinmas || "Belum Terbentuk"}
 															/>
 														</td>

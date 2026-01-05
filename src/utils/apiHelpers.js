@@ -49,7 +49,7 @@ export const getDesaIdFromUrl = () => {
 	const path = window.location.pathname;
 	// Try different patterns for admin routes
 	const patterns = [
-		/\/dashboard\/kelembagaan\/admin\/([^/]+)/, // /dashboard/kelembagaan/admin/{desaId} or /dashboard/kelembagaan/admin/{desaId}/{type}
+		/\/bidang\/pmd\/kelembagaan\/admin\/([^/]+)/, // /bidang/pmd/kelembagaan/admin/{desaId} or /bidang/pmd/kelembagaan/admin/{desaId}/{type}
 		/\/kelembagaan\/admin\/([^/]+)/, // /kelembagaan/admin/{desaId} or /kelembagaan/admin/{desaId}/{type}
 		/\/admin\/desa\/([^/]+)/, // /admin/desa/{desaId}
 		/\/dashboard\/admin\/([^/]+)/, // /dashboard/admin/{desaId}

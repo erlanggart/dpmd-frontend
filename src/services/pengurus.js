@@ -5,11 +5,11 @@ import {
 	getAdminParams,
 } from "../utils/apiHelpers";
 
-// Map slug type to table name for polymorphic field (Prisma uses table names)
+// Map slug type to pengurusable_type value (as stored in database)
 export const mapTypeToModel = (type) => {
 	const map = {
-		rw: "rws",
-		rt: "rts",
+		rw: "rw",
+		rt: "rt",
 		posyandu: "posyandus",
 		"karang-taruna": "karang_tarunas",
 		lpm: "lpms",
@@ -159,4 +159,17 @@ export const deletePengurus = (id) =>
 export const getPengurusById = (id, desaId = null) => {
 	const baseParams = desaId ? { desa_id: desaId } : {};
 	return makeApiCall(api, "pengurus", "show", id, null, { params: baseParams });
+};
+
+// Update pengurus verification status (admin only)
+export const updatePengurusVerifikasi = (id, status_verifikasi, desaId = null) => {
+	const baseParams = desaId ? { desa_id: desaId } : {};
+	const params = getAdminParams("pengurus", "update", baseParams);
+	
+	const endpoint = getEndpoint("pengurus", "update");
+	return api.put(
+		`${endpoint}/${id}/verifikasi`,
+		{ status_verifikasi },
+		{ params }
+	);
 };

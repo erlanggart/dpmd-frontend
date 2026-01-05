@@ -19,6 +19,8 @@ import {
 	LuLock,
 	LuLockOpen,
 } from "react-icons/lu";
+import { useAuth } from "../../../context/AuthContext";
+import { useEditMode } from "../../../context/EditModeContext";
 import { getDesaKelembagaanAll } from "../../../api/kelembagaanApi";
 
 /**
@@ -44,7 +46,7 @@ const AdminKelembagaanDetailPage = () => {
 	const [creatingLembaga, setCreatingLembaga] = useState(false);
 
 	// Check if user can toggle edit mode
-	const canToggleEdit = ["superadmin", "pemberdayaan_masyarakat"].includes(user?.role);
+	const canToggleEdit = ["superadmin"].includes(user?.role);
 
 	const fetchDesaKelembagaan = React.useCallback(async () => {
 		try {
@@ -192,7 +194,7 @@ const AdminKelembagaanDetailPage = () => {
 		// Untuk collection (RW, Posyandu), selalu bisa diklik - navigate ke list page
 		if (item.isCollection) {
 			// Navigate ke list page dengan filter desaId
-			navigate(`/dashboard/kelembagaan/admin/${desaId}/${item.type}`);
+			navigate(`/bidang/pmd/kelembagaan/admin/${desaId}/${item.type}`);
 			return;
 		}
 
@@ -204,7 +206,7 @@ const AdminKelembagaanDetailPage = () => {
 
 		// Untuk single entity yang sudah terbentuk, navigate ke detail page
 		if (!item.isCollection && item.id) {
-			navigate(`/dashboard/kelembagaan/${item.type}/${item.id}`);
+			navigate(`/bidang/pmd/kelembagaan/${item.type}/${item.id}`);
 		}
 	};
 
@@ -236,22 +238,22 @@ const AdminKelembagaanDetailPage = () => {
 			let createFunction;
 			switch (modalConfig.type) {
 				case 'karang-taruna': {
-					const { createKarangTarunaByAdmin } = await import("../../api/kelembagaanApi");
+					const { createKarangTarunaByAdmin } = await import("../../../api/kelembagaanApi");
 					createFunction = createKarangTarunaByAdmin;
 					break;
 				}
 				case 'lpm': {
-					const { createLpmByAdmin } = await import("../../api/kelembagaanApi");
+					const { createLpmByAdmin } = await import("../../../api/kelembagaanApi");
 					createFunction = createLpmByAdmin;
 					break;
 				}
 				case 'satlinmas': {
-					const { createSatlinmasByAdmin } = await import("../../api/kelembagaanApi");
+					const { createSatlinmasByAdmin } = await import("../../../api/kelembagaanApi");
 					createFunction = createSatlinmasByAdmin;
 					break;
 				}
 				case 'pkk': {
-					const { createPkkByAdmin } = await import("../../api/kelembagaanApi");
+					const { createPkkByAdmin } = await import("../../../api/kelembagaanApi");
 					createFunction = createPkkByAdmin;
 					break;
 				}
@@ -277,7 +279,7 @@ const AdminKelembagaanDetailPage = () => {
 	};
 
 	const handleBackToList = () => {
-		navigate("/dashboard/kelembagaan");
+		navigate("/bidang/pmd/kelembagaan");
 	};
 
 	if (loading) {

@@ -13,7 +13,6 @@ import { useAuth } from "./context/AuthContext";
 import { useThemeColor } from "./hooks/useThemeColor";
 import { DataCacheProvider } from "./context/DataCacheContext";
 import { EditModeProvider } from "./context/EditModeContext.jsx";
-import { registerServiceWorker } from "./utils/pushNotifications";
 import PushNotificationInitializer from "./components/PushNotificationInitializer";
 import { registerServiceWorker, subscribeToPushNotifications } from "./utils/pushNotifications";
 import { 
@@ -144,7 +143,7 @@ const AdminKelembagaanDetailPage = lazy(() =>
 	import("./pages/bidang/pmd/AdminKelembagaanDetailPage")
 );
 const PengurusDetailPage = lazy(() =>
-	import("./pages/desa/pengurus/PengurusDetailPage")
+	import("./components/kelembagaan/pengurus/PengurusDetailPage")
 );
 const ProdukHukum = lazy(() =>
 	import("./pages/desa/produk-hukum/ProdukHukum")
@@ -153,7 +152,7 @@ const ProdukHukumDetail = lazy(() =>
 	import("./pages/desa/produk-hukum/ProdukHukumDetail")
 );
 const PengurusEditPage = lazy(() =>
-	import("./pages/desa/pengurus/PengurusEditPage")
+	import("./components/kelembagaan/pengurus/PengurusEditPage")
 );
 const SettingsPage = lazy(() => import("./pages/dashboard/SettingsPage"));
 const DisposisiSurat = lazy(() =>
@@ -234,6 +233,9 @@ const StatistikBumdes = lazy(() =>
 );
 const StatistikPerjadin = lazy(() =>
 	import("./pages/kepala-dinas/StatistikPerjadin")
+);
+const StatistikKelembagaan = lazy(() =>
+	import("./pages/core-dashboard/StatistikKelembagaan")
 );
 const StatistikAdd = lazy(() =>
 	import("./pages/kepala-dinas/StatistikAdd")
@@ -460,13 +462,13 @@ const ThemeColorWrapper = ({ children }) => {
 							try {
 								await subscribeToPushNotifications();
 							} catch (err) {
-								// Background push subscription failed
+								console.error('Background push subscription failed:', err);
 							}
 						}
 					}, 1000);
 				}
 			} catch (error) {
-				// Error initializing PWA
+				console.error('Error initializing PWA:', error);
 			}
 		};
 
@@ -591,15 +593,33 @@ function App() {
 					{/* KKD (Kekayaan dan Keuangan Desa) */}
 					<Route path="kkd" element={<KKDPage />} />
 					
-					{/* PMD (Pemberdayaan Masyarakat Desa) */}
-					<Route path="pmd" element={<PMDPage />} />
-					
 					{/* Pemdes (Pemerintahan Desa) */}
 					<Route path="pemdes" element={<PemdesPage />} />
 					
 					{/* Detail Disposisi - Accessible dari semua bidang */}
 					<Route path="disposisi/:id" element={<DisposisiDetail />} />
-				</Route>					{/* Routes KKD - Nested under /kkd */}
+				</Route>
+
+					{/* Rute Bidang PMD - Menggunakan MainLayout (dipisah dari bidang lainnya) */}
+					<Route
+						path="/bidang/pmd"
+						element={
+							<RoleProtectedRoute allowedRoles={['pegawai', 'kepala_bidang', 'ketua_tim', 'kepala_dinas', 'superadmin']}>
+								<MainLayout />
+							</RoleProtectedRoute>
+						}
+					>
+						{/* PMD (Pemberdayaan Masyarakat Desa) */}
+						<Route index element={<PMDPage />} />
+						<Route path="core-dashboard" element={<WelcomeDashboard />} />
+						<Route path="kelembagaan" element={<Kelembagaan />} />
+						<Route path="kelembagaan/admin/:desaId" element={<AdminKelembagaanDetailPage />} />
+						<Route path="kelembagaan/admin/:desaId/:type" element={<KelembagaanList />} />
+						<Route path="kelembagaan/:type" element={<KelembagaanList />} />
+						<Route path="kelembagaan/:type/:id" element={<KelembagaanDetailPage />} />
+						<Route path="pengurus/:id" element={<PengurusDetailPage />} />
+						<Route path="pengurus/:id/edit" element={<PengurusEditPage />} />
+					</Route>					{/* Routes KKD - Nested under /kkd */}
 					<Route
 						path="/kkd"
 						element={
@@ -611,21 +631,6 @@ function App() {
 						<Route path="add" element={<AddDashboard />} />
 						<Route path="bhprd" element={<BhprdDashboard />} />
 						<Route path="dd" element={<DdDashboard />} />
-					</Route>
-
-					{/* Routes PMD - Nested under /pmd */}
-					<Route
-						path="/pmd"
-						element={
-							<RoleProtectedRoute allowedRoles={['pegawai', 'kepala_bidang', 'ketua_tim', 'kepala_dinas', 'superadmin']}>
-								<PegawaiLayout />
-							</RoleProtectedRoute>
-						}
-					>
-						<Route path="kelembagaan" element={<Kelembagaan />} />
-						<Route path="kelembagaan/admin/:desaId" element={<AdminKelembagaanDetailPage />} />
-						<Route path="kelembagaan/:type" element={<KelembagaanList />} />
-						<Route path="kelembagaan/:type/:id" element={<KelembagaanDetailPage />} />
 					</Route>
 
 					{/* Routes Sekretariat - Nested under /sekretariat (moved from /pegawai) */}
@@ -755,6 +760,7 @@ function App() {
 					<Route path="laporan-desa" element={<LaporanDesa />} />
 					<Route path="statistik-bumdes" element={<StatistikBumdes />} />
 					<Route path="statistik-perjadin" element={<StatistikPerjadin />} />
+					<Route path="statistik-kelembagaan" element={<StatistikKelembagaan />} />
 					<Route path="statistik-bankeu" element={<StatistikBankeuDashboard />} />
 					<Route path="statistik-add" element={<StatistikAddDashboard />} />
 					<Route path="statistik-bhprd" element={<BhprdDashboard />} />

@@ -94,16 +94,14 @@ const EditModal = ({
 export default function KelembagaanDetailPage({
   isAdminView: propIsAdminView,
 }) {
-  const { user } = useAuth();
+  const { user, isKelembagaanAdmin } = useAuth();
   const { isEditMode } = useEditMode();
   const { type, id, desaId: routeDesaId } = useParams();
   const navigate = useNavigate();
   const aktivitasLogRef = useRef(null);
 
   // Auto-detect admin mode
-  const isAdmin =
-    propIsAdminView ??
-    ["superadmin", "pemberdayaan_masyarakat"].includes(user?.role);
+  const isAdmin = propIsAdminView ?? isKelembagaanAdmin();
   const targetDesaId = routeDesaId || user?.desa_id;
 
   const [detail, setDetail] = useState(null);
@@ -440,7 +438,7 @@ export default function KelembagaanDetailPage({
           {/* Breadcrumb */}
           <nav className="flex items-center space-x-2 text-sm flex-1 overflow-x-auto">
           <Link
-            to={isAdmin ? "/dashboard" : "/desa/dashboard"}
+            to={isAdmin ? "/bidang/pmd/kelembagaan" : "/desa/dashboard"}
             className="flex items-center text-gray-500 hover:text-indigo-600 transition-colors"
           >
             <FaHome className="mr-1" />
@@ -448,20 +446,32 @@ export default function KelembagaanDetailPage({
           </Link>
           <FaChevronRight className="text-gray-400 text-xs" />
           <Link
-            to={isAdmin ? `/dashboard/kelembagaan` : `/desa/kelembagaan`}
+            to={isAdmin ? `/bidang/pmd/kelembagaan` : `/desa/kelembagaan`}
             className="text-gray-500 hover:text-indigo-600 transition-colors"
           >
             Kelembagaan
           </Link>
           <FaChevronRight className="text-gray-400 text-xs" />
-          {type === "rt" && detail?.rws ? (
+          
+          {/* Admin: Show Desa name and link */}
+          {isAdmin && detail?.desa_id && (
+            <>
+              <Link
+                to={`/bidang/pmd/kelembagaan/admin/${detail.desa_id}`}
+                className="text-gray-500 hover:text-indigo-600 transition-colors"
+              >
+                {detail?.desas?.nama || detail?.desa?.nama || "Desa"}
+              </Link>
+              <FaChevronRight className="text-gray-400 text-xs" />
+            </>
+          )}
+          
+          {type === "rt" && detail?.rw ? (
             <>
               <Link
                 to={
                   isAdmin
-                    ? `/dashboard/kelembagaan/admin/${
-                        routeDesaId || targetDesaId
-                      }/rw`
+                    ? `/bidang/pmd/kelembagaan/rw`
                     : `/desa/kelembagaan/rw`
                 }
                 className="text-gray-500 hover:text-indigo-600 transition-colors"
@@ -472,31 +482,16 @@ export default function KelembagaanDetailPage({
               <Link
                 to={
                   isAdmin
-                    ? `/dashboard/kelembagaan/admin/${
-                        routeDesaId || targetDesaId
-                      }/rw/${detail.rw_id}`
+                    ? `/bidang/pmd/kelembagaan/rw/${detail.rw_id}`
                     : `/desa/kelembagaan/rw/${detail.rw_id}`
                 }
                 className="text-gray-500 hover:text-indigo-600 transition-colors"
               >
-                {detail.rws?.nomor || "RW"}
-              </Link>
-              <FaChevronRight className="text-gray-400 text-xs" />
-              <Link
-                to={
-                  isAdmin
-                    ? `/dashboard/kelembagaan/admin/${
-                        routeDesaId || targetDesaId
-                      }/rt`
-                    : `/desa/kelembagaan/rt`
-                }
-                className="text-gray-500 hover:text-indigo-600 transition-colors"
-              >
-                RT
+                RW {detail.rw?.nomor || ""}
               </Link>
               <FaChevronRight className="text-gray-400 text-xs" />
               <span className="text-gray-900 font-medium">
-                {detail?.nomor || "Detail"}
+                RT {detail?.nomor || "Detail"}
               </span>
             </>
           ) : ["satlinmas", "karang-taruna", "lpm", "pkk"].includes(type) ? (
@@ -510,7 +505,7 @@ export default function KelembagaanDetailPage({
               <Link
                 to={
                   isAdmin
-                    ? `/dashboard/kelembagaan/${type}`
+                    ? `/bidang/pmd/kelembagaan/${type}`
                     : `/desa/kelembagaan/${type}`
                 }
                 className="text-gray-500 hover:text-indigo-600 transition-colors"
@@ -575,7 +570,7 @@ export default function KelembagaanDetailPage({
               onClickItem={(rt) =>
                 navigate(
                   isAdmin
-                    ? `/dashboard/kelembagaan/rt/${rt.id}`
+                    ? `/bidang/pmd/kelembagaan/rt/${rt.id}`
                     : `/desa/kelembagaan/rt/${rt.id}`
                 )
               }

@@ -12,13 +12,13 @@ const InstallPWA = ({ compact = false }) => {
 
   // Debug state changes
   useEffect(() => {
-    console.log('[PWA] State changed:', { 
-      isInstallable, 
-      isStandalone, 
-      isIOS,
-      hasDeferredPrompt: !!deferredPrompt,
-      windowPrompt: !!window.__pwaInstallPrompt
-    });
+    // console.log('[PWA] State changed:', { 
+    //   isInstallable, 
+    //   isStandalone, 
+    //   isIOS,
+    //   hasDeferredPrompt: !!deferredPrompt,
+    //   windowPrompt: !!window.__pwaInstallPrompt
+    // });
   }, [isInstallable, isStandalone, isIOS, deferredPrompt]);
 
   useEffect(() => {
@@ -46,12 +46,12 @@ const InstallPWA = ({ compact = false }) => {
     setIsStandalone(standalone);
     setIsIOS(iosDevice);
 
-    console.log('[PWA] Platform detection:', { 
-      isIOS: iosDevice, 
-      isAndroid: androidDevice,
-      isStandalone: standalone,
-      userAgent: navigator.userAgent
-    });
+    // console.log('[PWA] Platform detection:', { 
+    //   isIOS: iosDevice, 
+    //   isAndroid: androidDevice,
+    //   isStandalone: standalone,
+    //   userAgent: navigator.userAgent
+    // });
 
     // Jika sudah diinstall, tidak perlu show button install
     if (standalone) {
@@ -105,12 +105,12 @@ const InstallPWA = ({ compact = false }) => {
     window.addEventListener('beforeinstallprompt', handler);
     window.addEventListener('appinstalled', installedHandler);
 
-    console.log('[PWA] Event listeners attached');
+    // console.log('[PWA] Event listeners attached');
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handler);
       window.removeEventListener('appinstalled', installedHandler);
-      console.log('[PWA] Event listeners removed');
+      // console.log('[PWA] Event listeners removed');
     };
   }, []);
 
@@ -159,7 +159,7 @@ const InstallPWA = ({ compact = false }) => {
 
   // Jangan tampilkan button jika sudah diinstall atau tidak installable
   if (isStandalone || !isInstallable) {
-    console.log('[PWA] Not showing button:', { isStandalone, isInstallable, deferredPrompt: !!deferredPrompt });
+    // console.log('[PWA] Not showing button:', { isStandalone, isInstallable, deferredPrompt: !!deferredPrompt });
     return null;
   }
 

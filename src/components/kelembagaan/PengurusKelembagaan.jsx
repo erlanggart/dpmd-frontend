@@ -15,8 +15,8 @@ const PengurusKelembagaan = ({
 	desaId,
 	onPengurusCountChange,
 }) => {
-	const { user } = useAuth();
-	const isSuperAdmin = ["superadmin", "pemberdayaan_masyarakat"].includes(user?.role);
+	const { isSuperAdmin, isAdminBidang } = useAuth();
+	const isAdmin = isSuperAdmin() || isAdminBidang();
 
 	const [loading, setLoading] = useState(true);
 	const [showForm, setShowForm] = useState(false);
@@ -29,8 +29,8 @@ const PengurusKelembagaan = ({
 
 		setLoading(true);
 		try {
-			// Pass desaId for superadmin access
-			const superadminDesaId = isSuperAdmin ? desaId : null;
+			// Pass desaId for admin access
+			const superadminDesaId = isAdmin ? desaId : null;
 			const response = await getPengurusByKelembagaan(
 				kelembagaanType,
 				kelembagaanId,
@@ -47,7 +47,7 @@ const PengurusKelembagaan = ({
 		} finally {
 			setLoading(false);
 		}
-	}, [kelembagaanType, kelembagaanId, isSuperAdmin, desaId, onPengurusCountChange]);
+	}, [kelembagaanType, kelembagaanId, isAdmin, desaId, onPengurusCountChange]);
 
 	useEffect(() => {
 		loadPengurus();
@@ -66,9 +66,9 @@ const PengurusKelembagaan = ({
 			// with proper table name mapping (rws, rts, posyandus, etc.)
 			// Don't add them here to avoid duplication
 
-			// Prepare options with desaId for superadmin access
+			// Prepare options with desaId for admin access
 			const options =
-				isSuperAdmin && desaId
+				isAdmin && desaId
 					? { desaId, multipart: true }
 					: { multipart: true };
 

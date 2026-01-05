@@ -26,16 +26,13 @@ const AnakLembagaCard = ({
 	const [isAddingRT, setIsAddingRT] = useState(false);
 	const [nomorRT, setNomorRT] = useState("");
 	const [isLoading, setIsLoading] = useState(false);
-	const { user } = useAuth();
+	const { isSuperAdmin, isAdminBidang, isUserDesa } = useAuth();
 	const { isEditMode } = useEditMode();
 
-	// Check user role
-	const isSuperAdmin = user?.role === "superadmin";
-	const isAdminBidang = user?.role === "pemberdayaan_masyarakat" || user?.role === "pmd";
-	const isUserDesa = user?.role === "desa";
-
 	// Determine if add button should show
-	const showAddButton = (isSuperAdmin || isAdminBidang) || (isUserDesa && isEditMode);
+	// For admin (superadmin/admin bidang): always show
+	// For desa: only show if edit mode is ON
+	const showAddButton = (isSuperAdmin() || isAdminBidang()) || (isUserDesa() && isEditMode);
 
 	const handleAddRT = async () => {
 		if (!nomorRT.trim()) {

@@ -65,7 +65,7 @@ const loadSession = () => {
 		session.lastActivity = Date.now();
 		localStorage.setItem("authSession", JSON.stringify(session));
 		
-		console.log('[Auth] ✅ Session loaded (no expiry check)');
+		// console.log('[Auth] ✅ Session loaded (no expiry check)');
 		return session;
 	} catch (error) {
 		console.error('[Auth] Error loading session:', error);
@@ -115,14 +115,14 @@ export const AuthProvider = ({ children }) => {
 		sessionCheckedRef.current = true;
 
 		async function checkAndRestoreSession() {
-			console.log('[Auth] 🔍 Checking for existing session...');
+			// console.log('[Auth] 🔍 Checking for existing session...');
 			
 			try {
 				// Step 1: Check localStorage first
 				let session = loadSession();
 				
 				if (session) {
-					console.log('[Auth] ✅ Session found in localStorage');
+					// console.log('[Auth] ✅ Session found in localStorage');
 					setUser(session.user);
 					setExpressToken(session.token);
 					setIsCheckingSession(false);
@@ -152,7 +152,7 @@ export const AuthProvider = ({ children }) => {
 				console.error('[Auth] ❌ Error checking session:', error);
 			} finally {
 				setIsCheckingSession(false);
-				console.log('[Auth] ✅ Session check complete');
+				// console.log('[Auth] ✅ Session check complete');
 			}
 		}
 		
@@ -270,6 +270,43 @@ export const AuthProvider = ({ children }) => {
 		console.log('[Auth] User logged out, all session data cleared');
 	};
 
+	// Role helper functions
+	// Memeriksa apakah user adalah superadmin
+	const isSuperAdmin = () => {
+		return user?.role === "superadmin";
+	};
+
+	// Memeriksa apakah user adalah admin bidang pemberdayaan masyarakat
+	// (kepala_bidang atau pegawai dengan bidang_id === 5)
+	const isAdminBidang = () => {
+		if (!user) return false;
+		
+		// Bidang Pemberdayaan Masyarakat memiliki bidang_id = 5
+		const isPMDBidang = user.bidang_id === 5;
+		
+		return (
+			(user.role === "kepala_bidang" && isPMDBidang) ||
+			(user.role === "pegawai" && isPMDBidang)
+		);
+	};
+
+	// Memeriksa apakah user adalah user desa
+	const isUserDesa = () => {
+		return user?.role === "desa";
+	};
+
+	// Memeriksa apakah user memiliki akses admin untuk kelembagaan
+	// (superadmin atau admin bidang)
+	const isKelembagaanAdmin = () => {
+		return isSuperAdmin() || isAdminBidang();
+	};
+
+	// Memeriksa apakah user dapat mengelola kelembagaan
+	// (superadmin, admin bidang, atau user desa)
+	const canManageKelembagaan = () => {
+		return isSuperAdmin() || isAdminBidang() || isUserDesa();
+	};
+
 	// Nilai yang akan dibagikan ke semua komponen
 	const value = {
 		user,
@@ -279,6 +316,12 @@ export const AuthProvider = ({ children }) => {
 		logout,
 		updateActivity, // Expose for manual updates if needed
 		isCheckingSession, // Expose loading state
+		// Role helpers
+		isSuperAdmin,
+		isAdminBidang,
+		isUserDesa,
+		isKelembagaanAdmin,
+		canManageKelembagaan,
 	};
 
 	return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
