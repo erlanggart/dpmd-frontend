@@ -44,24 +44,11 @@ const getDisplayName = (pengurusableType) => {
 	return mapping[pengurusableType] || pengurusableType;
 };
 
-// Helper function to determine correct routing based on user role
-const getPengurusRoutePath = (user, pengurusId, action = "") => {
-	const isSuperAdminRole = user?.role === "superadmin";
-	const isAdminBidangRole = (user?.role === "kepala_bidang" && user?.bidang_id === 5) || (user?.role === "pegawai" && user?.bidang_id === 5);
-
-	if (isSuperAdminRole || isAdminBidangRole) {
-		return `/dashboard/pengurus/${pengurusId}${action ? `/${action}` : ""}`;
-	}
-
-	// Default for desa users
-	return `/desa/pengurus/${pengurusId}${action ? `/${action}` : ""}`;
-};
-
 const PengurusEditPage = () => {
 	const params = useParams();
-	const pengurusId = params.id; // Changed from destructuring to direct access
+	const pengurusId = params.id;
 	const navigate = useNavigate();
-	const { user, isSuperAdmin, isAdminBidang, isUserDesa } = useAuth();
+	const { user } = useAuth();
 
 	const [pengurus, setPengurus] = useState(null);
 	const [kelembagaanInfo, setKelembagaanInfo] = useState(null);
@@ -87,8 +74,21 @@ const PengurusEditPage = () => {
 	const [avatarFile, setAvatarFile] = useState(null);
 	const [avatarPreview, setAvatarPreview] = useState(null);
 
-	// Check permissions using AuthContext helpers
-	const canEdit = isSuperAdmin() || isAdminBidang() || isUserDesa();
+	// Check permissions using role from useAuth
+	const isSuperAdmin = user?.role === "superadmin";
+	const isAdminBidang = user?.role === "pemberdayaan_masyarakat" || 
+						   (user?.role === "kepala_bidang" && user?.bidang_id === 5) ||
+						   (user?.role === "pegawai" && user?.bidang_id === 5);
+	const isUserDesa = user?.role === "desa";
+	const canEdit = isSuperAdmin || isAdminBidang || isUserDesa;
+
+	// Determine base path based on role
+	const getBasePath = () => {
+		if (isSuperAdmin || isAdminBidang) {
+			return "/bidang/pmd";
+		}
+		return "/desa";
+	};
 
 	const loadProdukHukumList = useCallback(async () => {
 		try {
@@ -252,7 +252,7 @@ const PengurusEditPage = () => {
 				showConfirmButton: false,
 			});
 
-			navigate(getPengurusRoutePath(user, pengurusId));
+			navigate(`${getBasePath()}/pengurus/${pengurusId}`);
 		} catch (error) {
 			console.error("Error updating pengurus:", error);
 			Swal.fire({
@@ -292,6 +292,8 @@ const PengurusEditPage = () => {
 		);
 	}
 
+	const basePath = getBasePath();
+
 	return (
 		<div className="min-h-screen bg-gray-50">
 			{/* Breadcrumb */}
@@ -299,7 +301,7 @@ const PengurusEditPage = () => {
 				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
 					<nav className="flex items-center space-x-2 text-sm">
 						<Link
-							to="/desa/dashboard"
+							to={`${basePath}/dashboard`}
 							className="flex items-center text-gray-500 hover:text-indigo-600 transition-colors"
 						>
 							<FaHome className="mr-1" />
@@ -307,28 +309,28 @@ const PengurusEditPage = () => {
 						</Link>
 						<FaChevronRight className="text-gray-400 text-xs" />
 						<Link
-							to="/desa/kelembagaan"
+							to={`${basePath}/kelembagaan`}
 							className="text-gray-500 hover:text-indigo-600 transition-colors"
 						>
 							Kelembagaan
 						</Link>
 						<FaChevronRight className="text-gray-400 text-xs" />
 						<Link
-							to={`/desa/kelembagaan/${getRouteType(pengurus.pengurusable_type)}`}
+							to={`${basePath}/kelembagaan/${getRouteType(pengurus.pengurusable_type)}`}
 							className="text-gray-500 hover:text-indigo-600 transition-colors"
 						>
 							{getDisplayName(pengurus.pengurusable_type)}
 						</Link>
 						<FaChevronRight className="text-gray-400 text-xs" />
 						<Link
-							to={`/desa/kelembagaan/${getRouteType(pengurus.pengurusable_type)}/${pengurus.pengurusable_id}`}
+							to={`${basePath}/kelembagaan/${getRouteType(pengurus.pengurusable_type)}/${pengurus.pengurusable_id}`}
 							className="text-gray-500 hover:text-indigo-600 transition-colors"
 						>
 							{kelembagaanInfo?.nomor || kelembagaanInfo?.nama || 'Detail'}
 						</Link>
 						<FaChevronRight className="text-gray-400 text-xs" />
 						<Link
-							to={`/desa/pengurus/${pengurusId}`}
+							to={`${basePath}/pengurus/${pengurusId}`}
 							className="text-gray-500 hover:text-indigo-600 transition-colors"
 						>
 							{pengurus.nama_lengkap}
