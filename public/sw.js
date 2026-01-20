@@ -57,8 +57,7 @@ self.addEventListener('push', async (event) => {
 				tag: data?.id || 'notification-' + Date.now(),
 				requireInteraction: true,
 				renotify: true,
-				silent: false,
-				vibrate: [500, 200, 500, 200, 500],
+				silent: true,
 				actions: notificationData.actions || []
 			}).then(() => {
 				console.log('[SW] ✅ Browser notification shown');
@@ -78,7 +77,9 @@ self.addEventListener('push', async (event) => {
 					client.postMessage({
 						type: 'PUSH_NOTIFICATION_RECEIVED',
 						payload: data || notificationData,
-						timestamp: Date.now()
+						timestamp: Date.now(),
+						playSound: true,
+						soundUrl: '/dpmd.mp3'
 					});
 					console.log('[SW] Message sent to client:', client.url);
 				});

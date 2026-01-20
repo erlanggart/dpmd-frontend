@@ -36,31 +36,23 @@ import Spinner from "./components/ui/Spinner";
 function HomeRedirect() {
 	const { user } = useAuth();
 	const location = useLocation();
-	const [shouldRedirect, setShouldRedirect] = useState(false);
+	const token = localStorage.getItem('expressToken');
 	
-	useEffect(() => {
-		// Check if user is logged in
-		if (user && user.role) {
-			// Check if user explicitly navigated to home (e.g., clicked "Back to Home" button)
-			const isExplicitNavigation = location.state?.fromNavigation === true;
-			
-			if (isExplicitNavigation) {
-				// User wants to see landing page even if logged in
-				setShouldRedirect(false);
-			} else {
-				// Auto-redirect to dashboard (PWA reopen scenario)
-				setShouldRedirect(true);
-			}
-		} else {
-			// Not logged in, always show landing page
-			setShouldRedirect(false);
-		}
-	}, [user, location.state]);
+	// Not logged in, always show landing page
+	if (!token || !user) {
+		return <LandingPage />;
+	}
 	
-	// If should redirect, go to appropriate dashboard
-	if (shouldRedirect && user && user.role) {
-		// Redirecting to dashboard for user role
-		
+	// Check if user explicitly navigated to home (e.g., clicked "Back to Home" button)
+	const isExplicitNavigation = location.state?.fromNavigation === true;
+	
+	if (isExplicitNavigation) {
+		// User wants to see landing page even if logged in
+		return <LandingPage />;
+	}
+	
+	// User is logged in and accessing root - redirect to appropriate dashboard
+	if (user && user.role) {
 		// Map role to dashboard path
 		const roleDashboardMap = {
 			'superadmin': '/superadmin/dashboard',
@@ -77,7 +69,7 @@ function HomeRedirect() {
 		return <Navigate to={dashboardPath} replace />;
 	}
 	
-	// Show landing page
+	// Fallback: show landing page
 	return <LandingPage />;
 }
 
@@ -380,9 +372,28 @@ const ThemeColorWrapper = ({ children }) => {
 					// Handle push notification received (from SW push event)
 					if (event.data && event.data.type === 'PUSH_NOTIFICATION_RECEIVED') {
 						const notifData = event.data.payload;
-						// Show push notification received
 						
-						// Show toast notification popup on screen
+						// Play notification sound - ALWAYS play regardless of message flag
+						try {
+						const audio = new Audio('/dpmd.mp3');
+							audio.volume = 1.0; // Full volume
+							const playPromise = audio.play();
+							if (playPromise !== undefined) {
+								playPromise
+									.then(() => {
+										console.log('🔊 Notification sound played successfully');
+									})
+									.catch(err => {
+										console.warn('⚠️ Could not play notification sound:', err.message);
+									});
+							}
+						} catch (err) {
+							console.error('❌ Error creating audio:', err);
+						}
+						
+					// Show toast ONLY if app is visible (foreground)
+					// Browser notification already shown by service worker for background
+					if (document.visibilityState === 'visible') {
 						toast.success(
 							<div className="flex flex-col gap-1">
 								<div className="font-bold">{notifData.title || 'Notifikasi Baru'}</div>
@@ -399,17 +410,13 @@ const ThemeColorWrapper = ({ children }) => {
 								}
 							}
 						);
-						
-						// Trigger custom event untuk refresh data tanpa reload
-						window.dispatchEvent(new CustomEvent('newNotification', {
-							detail: notifData
-						}));
-						
-						// Auto-reload current page setelah 2 detik (beri waktu user lihat toast)
-						setTimeout(() => {
-							window.location.reload();
-						}, 2000);
 					}
+					
+					// Auto-reload current page setelah 2 detik (beri waktu user lihat toast)
+					setTimeout(() => {
+						window.location.reload();
+					}, 2000);
+				}
 					
 					// Handle notification click navigation
 					if (event.data && event.data.type === 'NOTIFICATION_CLICK_NAVIGATE') {
@@ -424,6 +431,22 @@ const ThemeColorWrapper = ({ children }) => {
 					if (event.data && event.data.type === 'NEW_NOTIFICATION') {
 						const notifData = event.data.payload;
 						
+						// Play notification sound
+						try {
+						const audio = new Audio('/dpmd.mp3');
+							audio.volume = 1.0; // Full volume
+							const playPromise = audio.play();
+							if (playPromise !== undefined) {
+								playPromise
+									.then(() => console.log('🔊 Legacy notification sound played'))
+									.catch(err => console.warn('⚠️ Could not play sound:', err.message));
+							}
+						} catch (err) {
+							console.error('❌ Error creating audio:', err);
+						}
+						
+					// Show toast only if app is visible (foreground)
+					if (document.visibilityState === 'visible') {
 						toast.success(
 							<div className="flex flex-col gap-1">
 								<div className="font-bold">{notifData.title || 'Notifikasi Baru'}</div>
@@ -439,10 +462,7 @@ const ThemeColorWrapper = ({ children }) => {
 								}
 							}
 						);
-						
-						window.dispatchEvent(new CustomEvent('newNotification', {
-							detail: notifData
-						}));
+					}
 					}
 				};
 
