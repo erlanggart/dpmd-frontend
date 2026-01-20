@@ -169,6 +169,9 @@ const ProfilDesaPage = lazy(() =>
 	import("./pages/desa/ProfilDesaPage")
 );
 const DesaSettings = lazy(() => import("./pages/desa/DesaSettings"));
+const BankeuProposalPage = lazy(() =>
+	import("./pages/desa/bankeu/BankeuProposalPage")
+);
 const KepalaDinasLayout = lazy(() =>
 	import("./pages/kepala-dinas/KepalaDinasLayout")
 );
@@ -198,6 +201,15 @@ const ActivityLogsPage = lazy(() =>
 );
 const KecamatanDashboardPage = lazy(() =>
 	import("./pages/kecamatan/KecamatanDashboardPage")
+);
+const KecamatanLayout = lazy(() =>
+	import("./layouts/KecamatanLayout")
+);
+const BankeuVerificationPage = lazy(() =>
+	import("./pages/kecamatan/bankeu/BankeuVerificationPage")
+);
+const BankeuVerificationDetailPage = lazy(() =>
+	import("./pages/kecamatan/bankeu/BankeuVerificationDetailPage")
 );
 const CoreDashboardLayout = lazy(() =>
 	import("./layouts/CoreDashboardLayout")
@@ -581,6 +593,7 @@ function App() {
 						<Route path="aparatur-desa/:id/edit" element={<AparaturDesaEditPage />} />
 						<Route path="produk-hukum" element={<ProdukHukum />} />
 						<Route path="produk-hukum/:id" element={<ProdukHukumDetail />} />
+						<Route path="bankeu" element={<BankeuProposalPage />} />
 						<Route path="settings" element={<DesaSettings />} />
 					</Route>
 
@@ -715,13 +728,18 @@ function App() {
 
 				{/* Rute Kecamatan - Exclusive untuk Admin Kecamatan */}
 				<Route
-						path="/kecamatan"
-						element={
-							<RoleProtectedRoute allowedRoles={['kecamatan']}>
-								<KecamatanDashboardPage />
-							</RoleProtectedRoute>
-						}
-					/>
+					path="/kecamatan"
+					element={
+						<RoleProtectedRoute allowedRoles={['kecamatan']}>
+							<KecamatanLayout />
+						</RoleProtectedRoute>
+					}
+				>
+					<Route index element={<Navigate to="dashboard" replace />} />
+					<Route path="dashboard" element={<KecamatanDashboardPage />} />
+					<Route path="bankeu" element={<BankeuVerificationPage />} />
+					<Route path="bankeu/verifikasi/:desaId" element={<BankeuVerificationDetailPage />} />
+				</Route>
 
 					{/* Rute Kepala Dinas - Exclusive untuk Kepala Dinas */}
 					<Route
