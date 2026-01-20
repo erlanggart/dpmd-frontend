@@ -10,9 +10,10 @@ import {
   FiSettings,
   FiChevronDown,
   FiSearch,
+  FiMapPin,
 } from "react-icons/fi";
 
-import { LuStore, LuFileText, LuUsers, LuUserCheck } from "react-icons/lu";
+import { LuStore, LuFileText, LuUsers, LuUserCheck, LuWallpaper, LuLayoutDashboard, LuLandmark } from "react-icons/lu";
 import Footer from "../components/landingpage/Footer";
 import InstallPWA from "../components/InstallPWA";
 
@@ -22,7 +23,13 @@ const menuItems = [
     id: "dashboard",
     label: "Dashboard",
     path: "/desa/dashboard",
-    icon: FiGrid,
+    icon: LuLayoutDashboard,
+  },
+  {
+    id: "profil-desa",
+    label: "Profil Desa",
+    path: "/desa/profil-desa",
+    icon: LuWallpaper,
   },
   {
     id: "aparatur-desa",
@@ -46,7 +53,7 @@ const menuItems = [
     id: "kelembagaan",
     label: "Kelembagaan",
     path: "/desa/kelembagaan",
-    icon: LuUsers,
+    icon: LuLandmark,
   },
 ];
 

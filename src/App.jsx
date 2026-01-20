@@ -165,6 +165,9 @@ const AparaturDesaDetailPage = lazy(() =>
 const AparaturDesaEditPage = lazy(() =>
 	import("./pages/desa/aparatur-desa/AparaturDesaEditPage")
 );
+const ProfilDesaPage = lazy(() =>
+	import("./pages/desa/ProfilDesaPage")
+);
 const DesaSettings = lazy(() => import("./pages/desa/DesaSettings"));
 const KepalaDinasLayout = lazy(() =>
 	import("./pages/kepala-dinas/KepalaDinasLayout")
@@ -566,6 +569,7 @@ function App() {
 						}
 					>
 					<Route path="dashboard" element={<DesaDashboard />} />
+					<Route path="profil-desa" element={<ProfilDesaPage />} />
 					<Route path="bumdes" element={<BumdesDesaPage />} />
 					<Route path="kelembagaan" element={<KelembagaanDesaPage />} />
 					<Route path="kelembagaan/:type" element={<KelembagaanList />} />
