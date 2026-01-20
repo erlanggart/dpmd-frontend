@@ -76,15 +76,11 @@ const PengurusEditPage = () => {
 
 	// Check permissions using role from useAuth
 	const isSuperAdmin = user?.role === "superadmin";
-	const isAdminBidang = user?.role === "pemberdayaan_masyarakat" || 
-						   (user?.role === "kepala_bidang" && user?.bidang_id === 5) ||
-						   (user?.role === "pegawai" && user?.bidang_id === 5);
+	const isAdminBidangPMD = user?.role === "pemberdayaan_masyarakat" || 
+					   (user?.role === "kepala_bidang" && user?.bidang_id === 5) ||
+					   (user?.role === "pegawai" && user?.bidang_id === 5);
 	const isUserDesa = user?.role === "desa";
-	const canEdit = isSuperAdmin || isAdminBidang || isUserDesa;
-
-	// Determine base path based on role
-	const getBasePath = () => {
-		if (isSuperAdmin || isAdminBidang) {
+	const canEdit = isSuperAdmin || isAdminBidangPMD || isUserDesa;
 			return "/bidang/pmd";
 		}
 		return "/desa";
@@ -607,7 +603,7 @@ const PengurusEditPage = () => {
 					</div>
 
 					{/* Status Verifikasi - Only for Admin Bidang */}
-					{(isSuperAdmin() || isAdminBidang()) && (
+					{(isSuperAdmin() || isAdminBidangPMD()) && (
 						<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
 							<h3 className="text-lg font-semibold text-gray-900 mb-4">
 								Status Verifikasi

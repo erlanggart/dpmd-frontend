@@ -66,9 +66,9 @@ const getDisplayName = (pengurusableType) => {
 // Helper function to determine correct routing based on user role
 const getPengurusRoutePath = (user, pengurusId, action = "") => {
 	const isSuperAdmin = user?.role === "superadmin";
-	const isAdminBidang = ["pemberdayaan_masyarakat", "pmd"].includes(user?.role);
+	const isAdminBidangPMD = ["pemberdayaan_masyarakat", "pmd"].includes(user?.role);
 
-	if (isSuperAdmin || isAdminBidang) {
+	if (isSuperAdmin || isAdminBidangPMD) {
 		return `/dashboard/pengurus/${pengurusId}${action ? `/${action}` : ""}`;
 	}
 
@@ -80,7 +80,7 @@ const PengurusDetailPage = () => {
 	const params = useParams();
 	const pengurusId = params.id; // Changed from destructuring to direct access
 	const navigate = useNavigate();
-	const { user, isSuperAdmin, isAdminBidang, isUserDesa, canManageKelembagaan } = useAuth();
+\tconst { user, isSuperAdmin, isAdminBidangPMD, isUserDesa, canManageKelembagaan } = useAuth();
 	const { isEditMode } = useEditMode();
 
 	console.log('🔧 All params:', params);
@@ -351,7 +351,7 @@ const PengurusDetailPage = () => {
 				<nav className="flex items-center space-x-2 text-sm">
 					{/* Dashboard */}
 					<Link
-						to={(isSuperAdmin() || isAdminBidang()) ? "/bidang/pmd/kelembagaan" : "/desa/dashboard"}
+						to={(isSuperAdmin() || isAdminBidangPMD()) ? "/bidang/pmd/kelembagaan" : "/desa/dashboard"}
 						className="flex items-center text-gray-500 hover:text-indigo-600 transition-colors"
 					>
 						<FaHome className="mr-1" />
@@ -361,7 +361,7 @@ const PengurusDetailPage = () => {
 
 					{/* Kelembagaan */}
 					<Link
-						to={(isSuperAdmin() || isAdminBidang()) ? "/bidang/pmd/kelembagaan" : "/desa/kelembagaan"}
+						to={(isSuperAdmin() || isAdminBidangPMD()) ? "/bidang/pmd/kelembagaan" : "/desa/kelembagaan"}
 						className="text-gray-500 hover:text-indigo-600 transition-colors"
 					>
 						Kelembagaan
@@ -369,7 +369,7 @@ const PengurusDetailPage = () => {
 					<FaChevronRight className="text-gray-400 text-xs" />
 
 					{/* Desa Name (for admin only) */}
-					{(isSuperAdmin() || isAdminBidang()) && desaInfo && (
+					{(isSuperAdmin() || isAdminBidangPMD()) && desaInfo && (
 						<>
 							<Link
 								to={`/bidang/pmd/kelembagaan/admin/${pengurus.desa_id}`}
@@ -386,7 +386,7 @@ const PengurusDetailPage = () => {
 						<>
 							{/* RW Link */}
 							<Link
-								to={(isSuperAdmin() || isAdminBidang()) 
+								to={(isSuperAdmin() || isAdminBidangPMD()) 
 									? `/bidang/pmd/kelembagaan/rw` 
 									: `/desa/kelembagaan/rw`}
 								className="text-gray-500 hover:text-indigo-600 transition-colors"
@@ -397,7 +397,7 @@ const PengurusDetailPage = () => {
 							
 							{/* RW Number */}
 							<Link
-								to={(isSuperAdmin() || isAdminBidang()) 
+								to={(isSuperAdmin() || isAdminBidangPMD()) 
 									? `/bidang/pmd/kelembagaan/rw/${rwInfo.id}` 
 									: `/desa/kelembagaan/rw/${rwInfo.id}`}
 								className="text-gray-500 hover:text-indigo-600 transition-colors"
@@ -408,7 +408,7 @@ const PengurusDetailPage = () => {
 							
 							{/* RT Number */}
 							<Link
-								to={(isSuperAdmin() || isAdminBidang()) 
+								to={(isSuperAdmin() || isAdminBidangPMD()) 
 									? `/bidang/pmd/kelembagaan/rt/${pengurus.pengurusable_id}` 
 									: `/desa/kelembagaan/rt/${pengurus.pengurusable_id}`}
 								className="text-gray-500 hover:text-indigo-600 transition-colors"
@@ -423,7 +423,7 @@ const PengurusDetailPage = () => {
 					{['satlinmas', 'karang_taruna', 'lpm', 'pkk'].includes(pengurus.pengurusable_type) ? (
 						<>
 							<Link
-								to={(isSuperAdmin() || isAdminBidang()) 
+								to={(isSuperAdmin() || isAdminBidangPMD()) 
 									? `/bidang/pmd/kelembagaan/${getRouteType(pengurus.pengurusable_type)}/${pengurus.pengurusable_id}` 
 									: `/desa/kelembagaan/${getRouteType(pengurus.pengurusable_type)}/${pengurus.pengurusable_id}`}
 								className="text-gray-500 hover:text-indigo-600 transition-colors"
@@ -436,7 +436,7 @@ const PengurusDetailPage = () => {
 						<>
 							{/* For other types (RW, Posyandu) - show type link, then item */}
 							<Link
-								to={(isSuperAdmin() || isAdminBidang()) 
+								to={(isSuperAdmin() || isAdminBidangPMD()) 
 									? `/bidang/pmd/kelembagaan/${getRouteType(pengurus.pengurusable_type)}` 
 									: `/desa/kelembagaan/${getRouteType(pengurus.pengurusable_type)}`}
 								className="text-gray-500 hover:text-indigo-600 transition-colors"
@@ -447,7 +447,7 @@ const PengurusDetailPage = () => {
 
 							{/* Kelembagaan Number/Name */}
 							<Link
-								to={(isSuperAdmin() || isAdminBidang()) 
+								to={(isSuperAdmin() || isAdminBidangPMD()) 
 									? `/bidang/pmd/kelembagaan/${getRouteType(pengurus.pengurusable_type)}/${pengurus.pengurusable_id}` 
 									: `/desa/kelembagaan/${getRouteType(pengurus.pengurusable_type)}/${pengurus.pengurusable_id}`}
 								className="text-gray-500 hover:text-indigo-600 transition-colors"
@@ -549,7 +549,7 @@ const PengurusDetailPage = () => {
 				)}
 
 				{/* Verification Button - Only for superadmin or admin bidang PMD */}
-				{(isSuperAdmin() || isAdminBidang()) && (
+				{(isSuperAdmin() || isAdminBidangPMD()) && (
 					<button
 						onClick={() =>
 							handleVerificationUpdate(

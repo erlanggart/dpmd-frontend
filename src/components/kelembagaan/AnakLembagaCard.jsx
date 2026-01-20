@@ -26,13 +26,14 @@ const AnakLembagaCard = ({
 	const [isAddingRT, setIsAddingRT] = useState(false);
 	const [nomorRT, setNomorRT] = useState("");
 	const [isLoading, setIsLoading] = useState(false);
-	const { isSuperAdmin, isAdminBidang, isUserDesa } = useAuth();
+	const { isSuperAdmin, isAdminBidangPMD, isUserDesa } = useAuth();
 	const { isEditMode } = useEditMode();
 
 	// Determine if add button should show
 	// For admin (superadmin/admin bidang): always show
 	// For desa: only show if edit mode is ON
-	const showAddButton = (isSuperAdmin() || isAdminBidang()) || (isUserDesa() && isEditMode);
+	const showAddButton =
+		isSuperAdmin() || isAdminBidangPMD() || (isUserDesa() && isEditMode);
 
 	const handleAddRT = async () => {
 		if (!nomorRT.trim()) {
@@ -97,7 +98,7 @@ const AnakLembagaCard = ({
 				{/* Add RT Modal */}
 				{isAddingRT && (
 					<div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-						<div 
+						<div
 							className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full mx-auto transform transition-all max-h-[90vh] overflow-y-auto"
 							onClick={(e) => e.stopPropagation()}
 						>
@@ -108,7 +109,9 @@ const AnakLembagaCard = ({
 										<div className="w-10 h-10 bg-white bg-opacity-20 rounded-xl flex items-center justify-center backdrop-blur-sm">
 											<LuPlus className="w-6 h-6 text-white" />
 										</div>
-										<h3 className="text-xl font-bold text-white">Pembentukan RT Baru</h3>
+										<h3 className="text-xl font-bold text-white">
+											Pembentukan RT Baru
+										</h3>
 									</div>
 									<button
 										onClick={() => {
@@ -134,7 +137,7 @@ const AnakLembagaCard = ({
 										</h4>
 									</div>
 								</div>
-								
+
 								{/* Tata Cara Pembentukan */}
 								<div className="space-y-3 mb-4">
 									<div className="bg-white rounded-lg p-4 shadow-sm border border-blue-100">
@@ -143,56 +146,69 @@ const AnakLembagaCard = ({
 												1
 											</div>
 											<p className="text-sm text-gray-700 leading-relaxed">
-												Pembentukan RT dapat berasal <strong>pembentukan RT baru</strong>, <strong>pemekaran</strong> dari 1 (satu) RT menjadi 2 (dua) RT atau lebih dan <strong>penggabungan</strong> dari beberapa RT atau bagian RT yang bersandingan.
+												Pembentukan RT dapat berasal{" "}
+												<strong>pembentukan RT baru</strong>,{" "}
+												<strong>pemekaran</strong> dari 1 (satu) RT menjadi 2
+												(dua) RT atau lebih dan <strong>penggabungan</strong>{" "}
+												dari beberapa RT atau bagian RT yang bersandingan.
 											</p>
 										</div>
 									</div>
-									
+
 									<div className="bg-white rounded-lg p-4 shadow-sm border border-blue-100">
 										<div className="flex items-start space-x-3">
 											<div className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
 												2
 											</div>
 											<p className="text-sm text-gray-700 leading-relaxed">
-												Pembentukan RT dapat berasal dari <strong>prakarsa masyarakat</strong> setelah mendapatkan pertimbangan dari Kepala Desa/Lurah.
+												Pembentukan RT dapat berasal dari{" "}
+												<strong>prakarsa masyarakat</strong> setelah mendapatkan
+												pertimbangan dari Kepala Desa/Lurah.
 											</p>
 										</div>
 									</div>
-									
+
 									<div className="bg-white rounded-lg p-4 shadow-sm border border-blue-100">
 										<div className="flex items-start space-x-3">
 											<div className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
 												3
 											</div>
 											<p className="text-sm text-gray-700 leading-relaxed">
-												Setiap RT paling sedikit terdiri dari <strong>50 KK untuk desa</strong> dan <strong>75 KK untuk kelurahan</strong>.
+												Setiap RT paling sedikit terdiri dari{" "}
+												<strong>50 KK untuk desa</strong> dan{" "}
+												<strong>75 KK untuk kelurahan</strong>.
 											</p>
 										</div>
 									</div>
-									
+
 									<div className="bg-white rounded-lg p-4 shadow-sm border border-blue-100">
 										<div className="flex items-start space-x-3">
 											<div className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
 												4
 											</div>
 											<p className="text-sm text-gray-700 leading-relaxed">
-												Pembentukan RT dapat dilaksanakan apabila dihadiri oleh paling sedikit <strong>2/3 (dua per tiga)</strong> dari jumlah Kepala Keluarga.
+												Pembentukan RT dapat dilaksanakan apabila dihadiri oleh
+												paling sedikit <strong>2/3 (dua per tiga)</strong> dari
+												jumlah Kepala Keluarga.
 											</p>
 										</div>
 									</div>
-									
+
 									<div className="bg-white rounded-lg p-4 shadow-sm border border-blue-100">
 										<div className="flex items-start space-x-3">
 											<div className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
 												5
 											</div>
 											<p className="text-sm text-gray-700 leading-relaxed">
-												Pembentukan RT dinyatakan sah apabila disetujui sekurang-kurangnya <strong>1/2 (satu per dua) ditambah 1 (satu)</strong> dari jumlah yang hadir dalam musyawarah tersebut.
+												Pembentukan RT dinyatakan sah apabila disetujui
+												sekurang-kurangnya{" "}
+												<strong>1/2 (satu per dua) ditambah 1 (satu)</strong>{" "}
+												dari jumlah yang hadir dalam musyawarah tersebut.
 											</p>
 										</div>
 									</div>
 								</div>
-								
+
 								{/* Prosedur Pembentukan */}
 								<div className="mt-5 pt-4 border-t border-blue-200">
 									<h5 className="font-semibold text-blue-900 mb-3 flex items-center">
@@ -206,29 +222,36 @@ const AnakLembagaCard = ({
 													1
 												</div>
 												<p className="text-sm text-gray-700 leading-relaxed">
-													Pembentukan RT dilakukan melalui <strong>musyawarah</strong> oleh para Kepala Keluarga atau yang mewakili, pengurus RT dan tokoh masyarakat serta dihadiri oleh <strong>Ketua RW setempat</strong>.
+													Pembentukan RT dilakukan melalui{" "}
+													<strong>musyawarah</strong> oleh para Kepala Keluarga
+													atau yang mewakili, pengurus RT dan tokoh masyarakat
+													serta dihadiri oleh <strong>Ketua RW setempat</strong>
+													.
 												</p>
 											</div>
 										</div>
-										
+
 										<div className="bg-white rounded-lg p-4 shadow-sm border border-blue-100">
 											<div className="flex items-start space-x-3">
 												<div className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
 													2
 												</div>
 												<p className="text-sm text-gray-700 leading-relaxed">
-													Hasil musyawarah dituangkan dalam <strong>berita acara</strong> dan disampaikan kepada Kepala Desa/Lurah untuk mendapat penetapan.
+													Hasil musyawarah dituangkan dalam{" "}
+													<strong>berita acara</strong> dan disampaikan kepada
+													Kepala Desa/Lurah untuk mendapat penetapan.
 												</p>
 											</div>
 										</div>
-										
+
 										<div className="bg-white rounded-lg p-4 shadow-sm border border-blue-100">
 											<div className="flex items-start space-x-3">
 												<div className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
 													3
 												</div>
 												<p className="text-sm text-gray-700 leading-relaxed">
-													Pembentukan RT di Desa ditetapkan dengan <strong>Peraturan Desa</strong>.
+													Pembentukan RT di Desa ditetapkan dengan{" "}
+													<strong>Peraturan Desa</strong>.
 												</p>
 											</div>
 										</div>
@@ -238,25 +261,28 @@ const AnakLembagaCard = ({
 													4
 												</div>
 												<p className="text-sm text-gray-700 leading-relaxed">
-													Pembentukan RT di Kelurahan ditetapkan dengan <strong>Keputusan Camat</strong>.
+													Pembentukan RT di Kelurahan ditetapkan dengan{" "}
+													<strong>Keputusan Camat</strong>.
 												</p>
 											</div>
 										</div>
 									</div>
 								</div>
-								
-								<div className="mt-4 flex items-start space-x-2 bg-blue-100 rounded-lg p-3">
-								<LuInfo className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-								<div>
 
-								<p className="text-md font-semibold">
-									Sesuai Dengan Peraturan Bupati Bogor Nomor 31 Tahun 2012
-								</p>
-								<p className="text-xs text-blue-800">
-									Tentang Tata Cara Pembentukan, Pengangkatan, dan Pemberhentian Pengurus Lembaga Pemberdayaan Masyarakat Desa/Kelurahan (LPMD/LPMK), Rukun Warga (RW), dan Rukun Tetangga (RT)
-								</p>
+								<div className="mt-4 flex items-start space-x-2 bg-blue-100 rounded-lg p-3">
+									<LuInfo className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+									<div>
+										<p className="text-md font-semibold">
+											Sesuai Dengan Peraturan Bupati Bogor Nomor 31 Tahun 2012
+										</p>
+										<p className="text-xs text-blue-800">
+											Tentang Tata Cara Pembentukan, Pengangkatan, dan
+											Pemberhentian Pengurus Lembaga Pemberdayaan Masyarakat
+											Desa/Kelurahan (LPMD/LPMK), Rukun Warga (RW), dan Rukun
+											Tetangga (RT)
+										</p>
+									</div>
 								</div>
-							</div>
 							</div>
 
 							{/* Modal Body */}
@@ -271,7 +297,7 @@ const AnakLembagaCard = ({
 										value={nomorRT}
 										onChange={(e) => setNomorRT(e.target.value)}
 										onKeyPress={(e) => {
-											if (e.key === 'Enter' && nomorRT.trim() && !isLoading) {
+											if (e.key === "Enter" && nomorRT.trim() && !isLoading) {
 												handleAddRT();
 											}
 										}}

@@ -26,10 +26,10 @@ import {
 	LuUserRoundCog,
 	LuUserRoundCheck,
 } from "react-icons/lu";
-import { 
-	getJabatanList, 
-	getDisplayJabatan, 
-	getJabatanColor 
+import {
+	getJabatanList,
+	getDisplayJabatan,
+	getJabatanColor,
 } from "../../../constants/jabatanMapping";
 
 const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
@@ -39,10 +39,10 @@ const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
 const getPengurusRoutePath = (user, pengurusId) => {
 	// Check if user is superadmin
 	const isSuperAdminRole = user?.role === "superadmin";
-	
+
 	// Check if user is admin bidang PMD (kepala_bidang or pegawai with bidang_id = 5)
-	const isAdminBidangRole = 
-		(user?.role === "kepala_bidang" || user?.role === "pegawai") && 
+	const isAdminBidangRole =
+		(user?.role === "kepala_bidang" || user?.role === "pegawai") &&
 		user?.bidang_id === 5;
 
 	if (isSuperAdminRole || isAdminBidangRole) {
@@ -59,8 +59,14 @@ const JabatanCard = ({ jabatan, pengurusList, user }) => {
 
 	const getJabatanIcon = (jabatanName) => {
 		const lowerJabatan = jabatanName.toLowerCase();
-		if (lowerJabatan.includes("bidang") ) return <LuUserRoundCheck className="w-5 h-5" />;
-		if (lowerJabatan.includes("ketua") && !lowerJabatan.includes("wakil") && !lowerJabatan.includes("kepala")) return <LuCrown className="w-5 h-5" />;
+		if (lowerJabatan.includes("bidang"))
+			return <LuUserRoundCheck className="w-5 h-5" />;
+		if (
+			lowerJabatan.includes("ketua") &&
+			!lowerJabatan.includes("wakil") &&
+			!lowerJabatan.includes("kepala")
+		)
+			return <LuCrown className="w-5 h-5" />;
 
 		if (lowerJabatan.includes("sekretaris"))
 			return <LuUser className="w-5 h-5" />;
@@ -220,18 +226,20 @@ const PengurusJabatanList = ({
 	kelembagaanType,
 	kelembagaanId,
 	onAddPengurus,
-	
+
 	desaId,
 }) => {
-	const { user, isSuperAdmin, isAdminBidang, isUserDesa } = useAuth();
+	const { user, isSuperAdmin, isAdminBidangPMD, isUserDesa } = useAuth();
 	const { isEditMode } = useEditMode();
 
-	const canManagePengurus = isSuperAdmin() || isAdminBidang() || isUserDesa();
-		
+	const canManagePengurus =
+		isSuperAdmin() || isAdminBidangPMD() || isUserDesa();
+
 	// Determine if add button should be shown
 	// For admin (superadmin/admin bidang): always show
 	// For desa: only show if edit mode is ON
-	const showAddButton = (isSuperAdmin() || isAdminBidang()) || (isUserDesa() && isEditMode);
+	const showAddButton =
+		isSuperAdmin() || isAdminBidangPMD() || (isUserDesa() && isEditMode);
 
 	const [activePengurus, setActivePengurus] = useState([]);
 	const [historyPengurus, setHistoryPengurus] = useState([]);
@@ -247,13 +255,10 @@ const PengurusJabatanList = ({
 			setLoading(true);
 			try {
 				// Pass desaId for admin access
-				const adminDesaId = (isSuperAdmin() || isAdminBidang()) ? desaId : null;
+				const adminDesaId =
+					isSuperAdmin() || isAdminBidangPMD() ? desaId : null;
 				const [activeResponse, historyResponse] = await Promise.all([
-					getPengurusByKelembagaan(
-						kelembagaanType,
-						kelembagaanId,
-						adminDesaId
-					),
+					getPengurusByKelembagaan(kelembagaanType, kelembagaanId, adminDesaId),
 					getPengurusHistory(kelembagaanType, kelembagaanId, adminDesaId),
 				]);
 
@@ -269,17 +274,12 @@ const PengurusJabatanList = ({
 		};
 
 		loadPengurus();
-	}, [kelembagaanType, kelembagaanId, desaId, isSuperAdmin, isAdminBidang]);
-
-	const toggleHistory = () => {
-		setShowHistory(!showHistory);
-	};
-
+	}, [kelembagaanType, kelembagaanId, desaId, isSuperAdmin, isAdminBidangPMD]);
 	// Buat mapping jabatan dengan pengurus
 	const jabatanMap = {};
 	defaultJabatan.forEach((jabatan) => {
 		jabatanMap[jabatan] = activePengurus.filter(
-			(pengurus) => pengurus.jabatan === jabatan
+			(pengurus) => pengurus.jabatan === jabatan,
 		);
 	});
 
@@ -471,11 +471,11 @@ const PengurusJabatanList = ({
 																	<LuCalendar className="w-3 h-3" />
 																	<span>
 																		{new Date(
-																			pengurus.tanggal_mulai_jabatan
+																			pengurus.tanggal_mulai_jabatan,
 																		).getFullYear()}{" "}
 																		-{" "}
 																		{new Date(
-																			pengurus.tanggal_akhir_jabatan
+																			pengurus.tanggal_akhir_jabatan,
 																		).getFullYear()}
 																	</span>
 																</div>
