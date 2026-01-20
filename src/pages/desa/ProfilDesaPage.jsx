@@ -157,7 +157,7 @@ const ProfilDesa = () => {
 
 
 		try {
-			const response = await api.post("/profil-desa", formData, {
+			await api.post("/profil-desa", formData, {
 				headers: { "Content-Type": "multipart/form-data" },
 			});
 			Swal.fire("Berhasil!", "Profil desa telah diperbarui.", "success");
@@ -190,7 +190,9 @@ const ProfilDesa = () => {
 	return (
 		<div className="bg-white border border-white p-6 rounded-2xl shadow-lg">
 			<div className="flex justify-between items-center mb-6 border-b pb-4">
-				<h2 className="text-2xl font-bold text-gray-800">Profil Desa</h2>
+				<h2 className="text-2xl font-bold text-gray-800">
+					Profil {profil.desa?.status_pemerintahan === "desa" ? "Desa" : "Kelurahan"} {profil.desa?.nama || ""} {profil.desa?.kecamatan?.nama ? `Kecamatan ${profil.desa.kecamatan.nama}` : ""}
+				</h2>
 				{!editMode ? (
 					<button
 						onClick={() => setEditMode(true)}
@@ -758,7 +760,7 @@ const ProfilDesa = () => {
 						<div className="lg:col-span-1">
 							{profil.foto_kantor_desa_path ? (
 								<img
-									src={`${ImageBaseUrl}/uploads/${profil.foto_kantor_desa_path}`}
+									src={`${ImageBaseUrl}/uploads/profil_desa/${profil.foto_kantor_desa_path}`}
 									alt={`Kantor Desa ${profil.desa?.nama}`}
 									className="w-full h-auto object-cover rounded-lg shadow-md"
 								/>

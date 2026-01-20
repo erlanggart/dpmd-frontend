@@ -278,7 +278,7 @@ export const AuthProvider = ({ children }) => {
 
 	// Memeriksa apakah user adalah admin bidang pemberdayaan masyarakat
 	// (kepala_bidang atau pegawai dengan bidang_id === 5)
-	const isAdminBidang = () => {
+	const isAdminBidangPMD = () => {
 		if (!user) return false;
 		
 		// Bidang Pemberdayaan Masyarakat memiliki bidang_id = 5
@@ -298,13 +298,13 @@ export const AuthProvider = ({ children }) => {
 	// Memeriksa apakah user memiliki akses admin untuk kelembagaan
 	// (superadmin atau admin bidang)
 	const isKelembagaanAdmin = () => {
-		return isSuperAdmin() || isAdminBidang();
+		return isSuperAdmin() || isAdminBidangPMD();
 	};
 
 	// Memeriksa apakah user dapat mengelola kelembagaan
 	// (superadmin, admin bidang, atau user desa)
 	const canManageKelembagaan = () => {
-		return isSuperAdmin() || isAdminBidang() || isUserDesa();
+		return isSuperAdmin() || isAdminBidangPMD() || isUserDesa();
 	};
 
 	// Nilai yang akan dibagikan ke semua komponen
@@ -318,7 +318,7 @@ export const AuthProvider = ({ children }) => {
 		isCheckingSession, // Expose loading state
 		// Role helpers
 		isSuperAdmin,
-		isAdminBidang,
+		isAdminBidangPMD,
 		isUserDesa,
 		isKelembagaanAdmin,
 		canManageKelembagaan,
