@@ -79,6 +79,10 @@ export const getAllDesas = () => {
 	return api.get('/desas');
 };
 
+export const getDesa = (desaId) => {
+	return api.get(`/desas/${desaId}`);
+};
+
 // --- Produk Hukum ---
 export const getProdukHukums = async (pageOrParams = {}, search = "") => {
 	try {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
 import {
 	FiGrid,
@@ -23,140 +23,8 @@ import { Landmark } from "lucide-react";
 import SearchPalette from "../components/SearchPalatte";
 import InstallPWA from "../components/InstallPWA";
 
-// Komponen Submenu (Accordion Item)
-const SubMenu = ({ item, openMenu, toggleMenu, isMinimized }) => {
-	const location = useLocation();
-	const isOpen = openMenu === item.key;
-	const [expandedSubmenu, setExpandedSubmenu] = useState(null);
-
-	// Cek apakah salah satu submenu aktif - logika yang disederhanakan
-	const isChildActive = item.children.some((child) => {
-		if (child.to) {
-			return location.pathname.startsWith(child.to);
-		}
-		if (child.submenu) {
-			return child.submenu.some((sub) => location.pathname.startsWith(sub.to));
-		}
-		return false;
-	});
-
-	return (
-		<div>
-			<button
-				onClick={() => !isMinimized && toggleMenu(item.key)}
-				className={`flex w-full items-center p-3 rounded-lg transition-colors ${
-					isMinimized ? "justify-center" : "justify-between"
-				} ${
-					isChildActive 
-						? "bg-primary/10 text-primary font-semibold" 
-						: "text-gray-600 hover:bg-gray-100"
-				}`}
-				disabled={isMinimized}
-			>
-				<div className="flex items-center">
-					{React.cloneElement(item.icon, {
-						className: `h-5 w-5 flex-shrink-0 ${isMinimized ? "" : "mr-3"}`,
-					})}
-					<span
-						className={`transition-all duration-200 whitespace-nowrap ${
-							isMinimized ? "w-0 opacity-0" : "w-auto opacity-100 ml-3"
-						}`}
-					>
-						{item.label}
-					</span>
-				</div>
-				<FiChevronDown
-					className={`transform transition-all duration-300 flex-shrink-0 ${
-						isOpen ? "rotate-180" : ""
-					} ${isMinimized ? "w-0 opacity-0" : "w-auto opacity-100"}`}
-				/>
-			</button>
-			<div
-				className={`overflow-hidden transition-all duration-300 ${
-					isOpen && !isMinimized ? "max-h-[600px]" : "max-h-0"
-				}`}
-			>
-				<div className="flex flex-col space-y-1 py-2 pl-9">
-					{item.children.map((child, index) => {
-						// Handle nested submenu (DD dengan 5 submenu)
-						if (child.submenu) {
-							const isSubmenuOpen = expandedSubmenu === child.label;
-							const isSubmenuActive = child.submenu.some((sub) =>
-								location.pathname.startsWith(sub.to)
-							);
-
-							return (
-								<div key={`submenu-${index}`}>
-									<button
-										onClick={() =>
-											setExpandedSubmenu(isSubmenuOpen ? null : child.label)
-										}
-										className={`w-full py-2 px-3 text-sm rounded-md transition-colors flex items-center justify-between ${
-											isSubmenuActive
-												? "bg-primary/10 text-primary font-semibold"
-												: "text-gray-500 hover:bg-gray-100 hover:text-primary"
-										}`}
-									>
-										<span>{child.label}</span>
-										<FiChevronDown
-											className={`transform transition-all duration-200 ${
-												isSubmenuOpen ? "rotate-180" : ""
-											}`}
-										/>
-									</button>
-									<div
-										className={`overflow-hidden transition-all duration-300 ${
-											isSubmenuOpen ? "max-h-96" : "max-h-0"
-										}`}
-									>
-										<div className="flex flex-col space-y-1 py-1 pl-4">
-											{child.submenu.map((sub) => (
-												<NavLink
-													key={sub.to}
-													to={sub.to}
-													className={({ isActive }) =>
-														`py-2 px-3 text-sm rounded-md transition-colors ${
-															isActive
-																? "sidebar-active font-semibold"
-																: "text-gray-500 hover:bg-gray-100 hover:text-primary"
-														}`
-													}
-												>
-													{sub.label}
-												</NavLink>
-											))}
-										</div>
-									</div>
-								</div>
-							);
-						}
-
-						// Handle regular menu item
-						return (
-							<NavLink
-								key={child.to}
-								to={child.to}
-								className={({ isActive }) =>
-									`py-2 px-3 text-sm rounded-md transition-colors ${
-										isActive
-											? "sidebar-active font-semibold"
-											: "text-gray-500 hover:bg-gray-100 hover:text-primary"
-									}`
-								}
-							>
-								{child.label}
-							</NavLink>
-						);
-					})}
-				</div>
-			</div>
-		</div>
-	);
-};
-
 const MainLayout = () => {
 	const [user, setUser] = useState(null);
-	const [openMenu, setOpenMenu] = useState(null);
 	const navigate = useNavigate();
 	const location = useLocation();
 
@@ -164,6 +32,8 @@ const MainLayout = () => {
 	const [isSidebarOpen, setSidebarOpen] = useState(false);
 	// --- STATE BARU untuk sidebar desktop ---
 	const [isSidebarMinimized, setSidebarMinimized] = useState(false);
+	const [dropdownOpen, setDropdownOpen] = useState(false);
+	const dropdownRef = useRef(null);
 
 	useEffect(() => {
 		const handleKeyDown = (e) => {
@@ -174,6 +44,17 @@ const MainLayout = () => {
 		};
 		window.addEventListener("keydown", handleKeyDown);
 		return () => window.removeEventListener("keydown", handleKeyDown);
+	}, []);
+
+	// Close dropdown when clicking outside
+	useEffect(() => {
+		const handleClickOutside = (event) => {
+			if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+				setDropdownOpen(false);
+			}
+		};
+		document.addEventListener("mousedown", handleClickOutside);
+		return () => document.removeEventListener("mousedown", handleClickOutside);
 	}, []);
 
 	useEffect(() => {
@@ -191,133 +72,64 @@ const MainLayout = () => {
 		navigate("/login");
 	};
 
-	const toggleMenu = (key) => {
-		setOpenMenu(openMenu === key ? null : key);
-	};
-
 	// Definisikan menu berdasarkan role user menggunakan useMemo
 	const menuItems = useMemo(() => {
-		const baseMenuItems = [
-			{
-				key: "spked",
-				label: "SPKED",
-				icon: <Landmark size={20} />,
-				children: [
-					{ to: "/dashboard/bumdes", label: "BUMDes" },
-					{ to: "/dashboard/bankeu", label: "Bantuan Keuangan" },
-				],
-			},
-			{
-				key: "kkd",
-				label: "KKD",
-				icon: <FiDollarSign />,
-				children: [
-					{ to: "/dashboard/add", label: "ADD" },
-					{ to: "/dashboard/bhprd", label: "BHPRD" },
-					{ to: "/dashboard/dd", label: "DD" },
-				],
-			},
-			{
-				key: "pemmas",
-				label: "PMD",
-				icon: <TbBuildingBank />,
-				children: [
-					{ to: "/dashboard/kelembagaan", label: "Kelembagaan (RT/RW/Posyandu)" },
-				],
-			},
+		// Mapping bidang_id ke bidang type
+		const bidangMapping = {
+			1: 'sekretariat', // Sekretariat
+			2: 'pemerintahan_desa', // Pemerintahan Desa
+			3: 'kekayaan_keuangan', // Kekayaan dan Keuangan Desa (KKD)
+			4: 'sarana_prasarana', // Sarana Prasarana dan Kekayaan Desa (SPKED)
+			5: 'pemberdayaan_masyarakat', // Pemberdayaan Masyarakat Desa
+		};
+
+		// Flat menu items untuk semua user (tanpa dropdown)
+		const flatMenuItems = [
+			{ to: "/dashboard/bumdes", label: "BUMDes", icon: <Landmark size={20} />, bidangId: 4 },
+			{ to: "/dashboard/bankeu", label: "Bantuan Keuangan", icon: <Landmark size={20} />, bidangId: 4 },
+			{ to: "/dashboard/add", label: "ADD", icon: <FiDollarSign />, bidangId: 3 },
+			{ to: "/dashboard/bhprd", label: "BHPRD", icon: <FiDollarSign />, bidangId: 3 },
+			{ to: "/dashboard/dd", label: "DD", icon: <FiDollarSign />, bidangId: 3 },
+			{ to: "/bidang/pmd/kelembagaan", label: "Kelembagaan", icon: <TbBuildingBank />, bidangId: 5 },
+			{ to: "/dashboard/user", label: "Manajemen Pegawai", icon: <FiClipboard />, bidangId: 1, superadminOnly: true },
+			{ to: "/dashboard/perjalanan-dinas", label: "Perjalanan Dinas", icon: <FiClipboard />, bidangId: 1 },
+			{ to: "/dashboard/disposisi", label: "Disposisi Surat", icon: <FiClipboard />, bidangId: 1 },
+			{ to: "/dashboard/hero-gallery", label: "Galeri Hero", icon: <FiLayout />, superadminOnly: true },
+			{ to: "/dashboard/berita", label: "Manajemen Berita", icon: <FiLayout />, superadminOnly: true },
+			{ to: "/dashboard/user", label: "Manajemen User", icon: <FiSettings />, superadminOnly: true },
 		];
 
-		// Menu admin yang akan ditambahkan jika user adalah superadmin atau bidang
-		const adminMenuItems = [
-			{
-				key: "sekretariat",
-				label: "Sekretariat",
-				icon: <FiClipboard />,
-				children: [
-					{ to: "/dashboard/user", label: "Manajemen Pegawai" },
-					{ to: "/dashboard/perjalanan-dinas", label: "Perjalanan Dinas" },
-					{ to: "/dashboard/disposisi", label: "Disposisi Surat" },
-				],
-		},
-		{
-			key: "landing",
-			label: "Landing Page",
-			icon: <FiLayout />,
-			children: [
-				{ to: "/dashboard/hero-gallery", label: "Galeri Hero" },
-				{ to: "/dashboard/berita", label: "Manajemen Berita" },
-				
-			],
-		},
-		{
-			key: "settings",
-			label: "Pengaturan",
-			icon: <FiSettings />,
-			children: [
-				{ to: "/dashboard/user", label: "Manajemen User" },
-			],
-		},
-	];		// Gabungkan menu berdasarkan role user
 		if (!user) {
-			return baseMenuItems;
+			return [];
 		}
 
-		const userRoles = user.roles || [];
-		const userRole = user.role; // Role langsung dari database
-		const bidangRole = user.bidangRole; // Role bidang spesifik
-		const bidangRoles = ['sekretariat', 'sarana_prasarana', 'kekayaan_keuangan', 'pemberdayaan_masyarakat', 'pemerintahan_desa'];
+		// console.log("User Role:", user);
+		const userRole = user.role;
+		const userBidangId = user.bidang_id;
 		
-		const isSuperAdmin = userRoles.includes("superadmin") || userRole === 'superadmin';
-		const isBidangUser = userRoles.includes("bidang") || Boolean(user.bidangRole) || bidangRoles.includes(userRole);
+		const isSuperAdmin = userRole === 'superadmin';
 		
-		// Only superadmin can access all menus
+		// Superadmin melihat semua menu
 		if (isSuperAdmin) {
-			const finalMenu = [...baseMenuItems, ...adminMenuItems];
-			return finalMenu;
+			return flatMenuItems;
 		}
 		
-		// Bidang users get filtered menu based on their bidangRole
-		if (isBidangUser) {
-			const filteredMenu = [];
+		// Pegawai/Bidang user hanya melihat menu sesuai bidang_id mereka
+		return flatMenuItems.filter(item => {
+			// Skip menu yang hanya untuk superadmin
+			if (item.superadminOnly) return false;
 			
-			// Sarana Prasarana: only SPKED and KKD menu
-			if (bidangRole === 'sarana_prasarana' || userRole === 'sarana_prasarana') {
-				filteredMenu.push(baseMenuItems.find(item => item.key === 'spked'));
-				filteredMenu.push(baseMenuItems.find(item => item.key === 'kkd'));
-			}
-			// Pemberdayaan Masyarakat: only PMD menu
-			else if (bidangRole === 'pemberdayaan_masyarakat' || userRole === 'pemberdayaan_masyarakat') {
-				filteredMenu.push(baseMenuItems.find(item => item.key === 'pemmas'));
-			}
-			// Sekretariat: only Sekretariat menu
-			else if (bidangRole === 'sekretariat' || userRole === 'sekretariat') {
-				filteredMenu.push(adminMenuItems.find(item => item.key === 'sekretariat'));
-			}
-			// Other bidang: show all base menus (fallback)
-			else {
-				return baseMenuItems;
+			// Filter berdasarkan bidang_id
+			if (userBidangId && item.bidangId === userBidangId) {
+				return true;
 			}
 			
-			return filteredMenu.filter(Boolean); // Remove undefined items
-		}
-		
-		return baseMenuItems;
-	}, [user]); // Dependency hanya pada user
-
-	// Secara otomatis membuka menu yang relevan saat halaman dimuat
-	useEffect(() => {
-		if (!menuItems) return;
-		
-		const currentMenu = menuItems.find((item) =>
-			item.children.some((child) => location.pathname.startsWith(child.to))
-		);
-		if (currentMenu) {
-			setOpenMenu(currentMenu.key);
-		}
-	}, [location.pathname, menuItems]);
+			return false;
+		});
+	}, [user]);
 
 	return (
-		<div className="flex h-screen bg-slate-100">
+		<div className="flex h-screen bg-indigo-200">
 			{isSidebarOpen && (
 				<div
 					onClick={() => {
@@ -327,17 +139,14 @@ const MainLayout = () => {
 					className="fixed inset-0 z-30 bg-black/50 lg:hidden"
 				></div>
 			)}
+			
 			<aside
 				className={`fixed inset-y-0 left-0 z-40 flex flex-col bg-white shadow-lg border border-slate-200 transition-all duration-300 ease-in-out lg:static lg:translate-x-0 lg:m-4 rounded-xl ${
 					isSidebarOpen ? "translate-x-0" : "-translate-x-full"
 				} ${isSidebarMinimized ? "w-24" : "w-72"}`}
 			>
-				<div
-					className={`flex h-16 flex-shrink-0 items-center border-b border-slate-200 transition-all duration-300 ${
-						isSidebarMinimized ? "justify-center px-2" : "justify-start px-4"
-					}`}
-				>
-					<div className="flex items-center overflow-hidden">
+				<div className="flex h-16 flex-shrink-0 items-center justify-between border-b border-slate-200 transition-all duration-300">
+					<div className="flex items-center overflow-hidden px-4">
 						<img
 							src="/logo-bogor.png"
 							alt="Logo"
@@ -352,147 +161,264 @@ const MainLayout = () => {
 							<p className="text-xs text-gray-500">Kabupaten Bogor</p>
 						</div>
 					</div>
-					<div className="flex items-center">
-						<button
-							onClick={() => {
-								setSidebarOpen(false);
-								setSidebarMinimized(false);
-							}}
-							className="text-gray-500 hover:text-primary lg:hidden"
-						>
-							<FiX size={24} />
-						</button>
-					</div>
+					
+					{/* Toggle Sidebar Button - Desktop only */}
+					<button
+						onClick={() => setSidebarMinimized(!isSidebarMinimized)}
+						className="hidden lg:flex bg-purple-700 w-7 h-full items-center justify-center text-white rounded-tr-xl hover:bg-purple-800 transition-colors"
+						aria-label="Toggle Sidebar"
+					>
+						{isSidebarMinimized ? (
+							<FiChevronsRight size={18} />
+						) : (
+							<FiChevronsLeft size={18} />
+						)}
+					</button>
+					
+					{/* Close Button - Mobile only */}
+					<button
+						onClick={() => {
+							setSidebarOpen(false);
+							setSidebarMinimized(false);
+						}}
+						className="lg:hidden text-gray-500 hover:text-primary px-4"
+					>
+						<FiX size={24} />
+					</button>
 				</div>
 
 				<nav
-					className={`flex-1 space-y-1 ${
-						isSidebarMinimized ? "overflow-y-hidden" : "overflow-y-auto"
-					} p-4`}
+					className={`flex-1 space-y-1 p-4 ${
+						isSidebarMinimized ? "overflow-hidden" : "overflow-y-auto"
+					}`}
 				>
-					{/* Link Dashboard Utama - Hidden for kepala_dinas */}
-					{user?.role !== 'kepala_dinas' && (
-						<NavLink
-							to="/dashboard"
-							className={({ isActive }) =>
-								`flex items-center p-3 rounded-lg transition-colors ${
-									isSidebarMinimized ? "justify-center" : ""
-								} ${
-									isActive
-										? "sidebar-active font-semibold"
-										: "text-gray-600 hover:bg-gray-100"
-								}`
-							}
-							end
-						>
-							<FiGrid
-								className={`h-5 w-5 flex-shrink-0 ${
-									isSidebarMinimized ? "" : "mr-3"
-								}`}
-							/>
-							<span
-								className={`transition-all duration-200 ${
-									isSidebarMinimized ? "w-0 opacity-0" : "w-auto opacity-100"
-								}`}
-							>
-								Dashboard
-							</span>
-						</NavLink>
-					)}
+	
 
 					{/* Link Core Dashboard Analytics - Available for all roles */}
 					<NavLink
-						to="/core-dashboard/dashboard"
+						to="/bidang/pmd/core-dashboard"
 						className={({ isActive }) =>
-							`flex items-center p-3 rounded-lg transition-colors ${
+							`flex items-center p-3 rounded-lg transition-colors relative ${
 								isSidebarMinimized ? "justify-center" : ""
 							} ${
 								isActive
-									? "sidebar-active font-semibold"
+									? "text-purple-700 font-semibold"
 									: "text-gray-600 hover:bg-gray-100"
 							}`
 						}
 					>
-						<FiLayout
-							className={`h-5 w-5 flex-shrink-0 ${
-								isSidebarMinimized ? "" : "mr-3"
-							}`}
-						/>
-						<span
-							className={`transition-all duration-200 ${
-								isSidebarMinimized ? "w-0 opacity-0" : "w-auto opacity-100"
-							}`}
-						>
-							Core Dashboard
-						</span>
+						{({ isActive }) => (
+							<>
+								<FiLayout
+									className={`h-5 w-5 flex-shrink-0 ${
+										isSidebarMinimized ? "" : "mr-3"
+									}`}
+								/>
+								<span
+									className={`transition-all duration-200 ${
+										isSidebarMinimized ? "w-0 opacity-0" : "w-auto opacity-100"
+									}`}
+								>
+									Core Dashboard
+								</span>
+								{isActive && (
+									<div className="absolute right-0 top-0 bottom-0 w-1 bg-purple-700 rounded-l-lg"></div>
+								)}
+							</>
+						)}
 					</NavLink>
 
-					{/* Render Menu - Semua menu dalam satu sidebar tanpa pemisahan */}
+					{/* Link Dashboard Bidang - Show based on bidang_id */}
+					{user && user.bidang_id && (() => {
+						// Mapping bidang_id ke path dashboard bidang
+						const bidangPathMapping = {
+							1: '/bidang/sekretariat', // Sekretariat
+							2: '/bidang/pemdes', // Pemerintahan Desa
+							3: '/bidang/kkd', // Kekayaan dan Keuangan Desa (KKD)
+							4: '/bidang/spked', // Sarana Prasarana dan Kekayaan Desa (SPKED)
+							5: '/bidang/pmd', // Pemberdayaan Masyarakat Desa
+						};
+						
+						const dashboardPath = bidangPathMapping[user.bidang_id];
+						
+						if (!dashboardPath) return null;
+						
+						return (
+							<NavLink
+								to={dashboardPath}
+								end
+								className={({ isActive }) =>
+									`flex items-center p-3 rounded-lg transition-colors relative ${
+										isSidebarMinimized ? "justify-center" : ""
+									} ${
+										isActive
+											? "text-purple-700 font-semibold"
+											: "text-gray-600 hover:bg-gray-100"
+									}`
+								}
+							>
+								{({ isActive }) => (
+									<>
+										<FiGrid
+											className={`h-5 w-5 flex-shrink-0 ${
+												isSidebarMinimized ? "" : "mr-3"
+											}`}
+										/>
+										<span
+											className={`transition-all duration-200 ${
+												isSidebarMinimized ? "w-0 opacity-0" : "w-auto opacity-100"
+											}`}
+										>
+											Dashboard Bidang
+										</span>
+										{isActive && (
+											<div className="absolute right-0 top-0 bottom-0 w-1 bg-purple-700 rounded-l-lg"></div>
+										)}
+									</>
+								)}
+							</NavLink>
+						);
+					})()}
+
+					{/* Render Flat Menu Items */}
 					{menuItems.map((item) => (
-						<SubMenu
-							key={item.key}
-							item={item}
-							openMenu={openMenu}
-							toggleMenu={toggleMenu}
-							isMinimized={isSidebarMinimized}
-						/>
+						<NavLink
+							key={item.to}
+							to={item.to}
+							className={({ isActive }) =>
+								`flex items-center p-3 rounded-lg transition-colors relative ${
+									isSidebarMinimized ? "justify-center" : ""
+								} ${
+									isActive
+										? "text-purple-700 font-semibold"
+										: "text-gray-600 hover:bg-gray-100"
+								}`
+							}
+						>
+							{({ isActive }) => (
+								<>
+									{React.cloneElement(item.icon, {
+										className: `h-5 w-5 flex-shrink-0 ${
+											isSidebarMinimized ? "" : "mr-3"
+										}`,
+									})}
+									<span
+										className={`transition-all duration-200 ${
+											isSidebarMinimized ? "w-0 opacity-0" : "w-auto opacity-100"
+										}`}
+									>
+										{item.label}
+									</span>
+									{isActive && (
+										<div className="absolute right-0 top-0 bottom-0 w-1 bg-purple-700 rounded-l-lg"></div>
+									)}
+								</>
+							)}
+						</NavLink>
 					))}
 				</nav>
+				
+				{/* User Profile Bubble */}
+				<div className="p-4 border-t border-gray-200">
+					<div className="relative" ref={dropdownRef}>
+						{/* User Profile Button */}
+						<button
+							onClick={() => setDropdownOpen(!dropdownOpen)}
+							className={`flex items-center w-full p-3 rounded-lg transition-colors hover:bg-gray-100 ${
+								isSidebarMinimized ? "justify-center" : ""
+							}`}
+							title={user?.name}
+						>
+							{/* User Avatar */}
+							<div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold shadow-md flex-shrink-0">
+								{user?.name?.charAt(0).toUpperCase() || "U"}
+							</div>
+							
+							{/* User Info */}
+							{!isSidebarMinimized && (
+								<div className="flex-1 flex flex-col ml-3 text-left overflow-hidden">
+									<span className="text-sm font-semibold text-gray-800 truncate">
+										{user?.name}
+									</span>
+									<span className="text-xs text-gray-500 truncate">
+										{user?.role === 'superadmin' ? 'Super Admin' : user?.bidang?.nama || 'User'}
+									</span>
+								</div>
+							)}
+							
+							{/* Chevron */}
+							{!isSidebarMinimized && (
+								<FiChevronDown
+									className={`h-4 w-4 transition-transform text-gray-600 ${
+										dropdownOpen ? "rotate-180" : ""
+									}`}
+								/>
+							)}
+						</button>
+
+					{/* Bubble Menu - Muncul di samping kanan saat minimized, di atas saat expanded */}
+					{dropdownOpen && (
+						<div 
+							className={`absolute bg-white rounded-xl shadow-2xl border border-gray-200 z-50 ${
+								isSidebarMinimized 
+									? "left-full ml-2 bottom-0 w-64" 
+									: "bottom-full mb-2 left-0 right-0"
+							}`}
+						>
+							{/* User Profile Info di dalam bubble */}
+							<div className="p-4 border-b border-gray-200">
+								<div className="flex items-center space-x-3">
+									<div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold shadow-md">
+										{user?.name?.charAt(0).toUpperCase() || "U"}
+									</div>
+									<div className="flex-1 overflow-hidden">
+										<p className="text-sm font-bold text-gray-800 truncate">
+											{user?.name}
+										</p>
+										<p className="text-xs text-gray-500 truncate">
+											{user?.role === 'superadmin' ? 'Super Admin' : user?.bidang?.nama || 'User'}
+										</p>
+									</div>
+								</div>
+							</div>
+							
+							{/* Menu Actions */}
+							<div className="py-1">
+								<button
+									onClick={() => {
+										setDropdownOpen(false);
+										handleLogout();
+									}}
+									className="flex items-center w-full px-4 py-3 text-left text-red-600 hover:bg-red-50 transition-colors"
+								>
+									<FiLogOut className="h-5 w-5 mr-3" />
+									<span className="font-medium">Logout</span>
+								</button>
+							</div>
+						</div>
+					)}
+					</div>
+				</div>
+
 				{/* Install PWA Button */}
 				{!isSidebarMinimized && (
-					<div className="p-4 border-t border-gray-200">
+					<div className="px-4 pb-4">
 						<InstallPWA />
 					</div>
-				)}			</aside>
-			<div className="flex flex-1 flex-col overflow-hidden ">
-				<header className="flex h-16 flex-shrink-0 items-center justify-between bg-white m-4 px-6 rounded-lg shadow-md border border-slate-200">
-					<div className="flex space-x-2 w-full justify-between items-center">
-						<div className="flex items-center space-x-2">
-							<button
-								onClick={() => setSidebarOpen(true)}
-								className="mr-4 text-gray-600 hover:text-primary lg:hidden"
-							>
-								<FiMenu size={24} />
-							</button>
-
-							{/* --- Tombol untuk minimize sidebar (hanya di desktop) --- */}
-							<button
-								onClick={() => setSidebarMinimized(!isSidebarMinimized)}
-								className="hidden text-gray-600 hover:text-primary lg:block"
-								aria-label="Toggle Sidebar"
-							>
-								{isSidebarMinimized ? (
-									<FiChevronsRight size={24} />
-								) : (
-									<FiChevronsLeft size={24} />
-								)}
-							</button>
-							<span className="mr-4 text-gray-700">
-								Halo, <span className="font-semibold">{user?.name}</span>
-								
-							</span>
-						</div>
-
-						<button
-							onClick={() => setSearchOpen(true)}
-							className="flex w-xs items-center justify-between text-gray-500 bg-slate-200 hover:bg-gray-200/50 px-3 py-1.5 rounded-lg border border-slate-300 text-sm"
-						>
-							<FiSearch className="mr-2 h-4 " />
-							Cari...
-							{/* <span className="ml-4 text-xs border rounded px-1.5 py-0.5">
-								Ctrl+K
-							</span> */}
-						</button>
-						<button
-							onClick={handleLogout}
-							className="text-gray-500 hover:text-red-500"
-							title="Logout"
-						>
-							<FiLogOut className="h-6 w-6" />
-						</button>
-					</div>
-					<div className="flex items-center"></div>
-				</header>
+				)}
+			</aside>
+			
+			<div className="flex flex-1 flex-col overflow-hidden">
+				{/* Mobile Menu Button - Only visible on mobile */}
+				<div className="lg:hidden fixed top-4 left-4 z-50">
+					<button
+						onClick={() => setSidebarOpen(true)}
+						className="p-3 bg-white rounded-lg shadow-md border border-slate-200 text-gray-600 hover:text-primary"
+					>
+						<FiMenu size={24} />
+					</button>
+				</div>
+				
 				<main className="flex-1 overflow-y-auto p-4">
 					<Outlet />
 				</main>

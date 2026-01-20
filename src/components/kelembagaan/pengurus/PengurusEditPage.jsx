@@ -44,22 +44,9 @@ const getDisplayName = (pengurusableType) => {
 	return mapping[pengurusableType] || pengurusableType;
 };
 
-// Helper function to determine correct routing based on user role
-const getPengurusRoutePath = (user, pengurusId, action = "") => {
-	const isSuperAdmin = user?.role === "superadmin";
-	const isAdminBidang = ["pemberdayaan_masyarakat", "pmd"].includes(user?.role);
-
-	if (isSuperAdmin || isAdminBidang) {
-		return `/dashboard/pengurus/${pengurusId}${action ? `/${action}` : ""}`;
-	}
-
-	// Default for desa users
-	return `/desa/pengurus/${pengurusId}${action ? `/${action}` : ""}`;
-};
-
 const PengurusEditPage = () => {
 	const params = useParams();
-	const pengurusId = params.id; // Changed from destructuring to direct access
+	const pengurusId = params.id;
 	const navigate = useNavigate();
 	const { user } = useAuth();
 
@@ -82,16 +69,26 @@ const PengurusEditPage = () => {
 		tanggal_mulai_jabatan: "",
 		tanggal_akhir_jabatan: "",
 		produk_hukum_id: "",
+		status_verifikasi: "",
 	});
 	const [avatarFile, setAvatarFile] = useState(null);
 	const [avatarPreview, setAvatarPreview] = useState(null);
 
-	// Check permissions
-	const isAdmin = user?.role === "admin_kabupaten";
-	const isUserDesa = user?.role === "desa";
-	const isAdminBidang = user?.role === "pemberdayaan_masyarakat";
+	// Check permissions using role from useAuth
 	const isSuperAdmin = user?.role === "superadmin";
-	const canEdit = isAdmin || isUserDesa || isAdminBidang || isSuperAdmin;
+	const isAdminBidang = user?.role === "pemberdayaan_masyarakat" || 
+						   (user?.role === "kepala_bidang" && user?.bidang_id === 5) ||
+						   (user?.role === "pegawai" && user?.bidang_id === 5);
+	const isUserDesa = user?.role === "desa";
+	const canEdit = isSuperAdmin || isAdminBidang || isUserDesa;
+
+	// Determine base path based on role
+	const getBasePath = () => {
+		if (isSuperAdmin || isAdminBidang) {
+			return "/bidang/pmd";
+		}
+		return "/desa";
+	};
 
 	const loadProdukHukumList = useCallback(async () => {
 		try {
@@ -166,8 +163,7 @@ const PengurusEditPage = () => {
 					jabatan: data.jabatan || "",
 					tanggal_mulai_jabatan: data.tanggal_mulai_jabatan || "",
 					tanggal_akhir_jabatan: data.tanggal_akhir_jabatan || "",
-					produk_hukum_id: data.produk_hukum_id || "",
-				});
+					produk_hukum_id: data.produk_hukum_id || "",				status_verifikasi: data.status_verifikasi || "unverified",				});
 				
 				// Load kelembagaan info if available
 				if (data.pengurusable_type && data.pengurusable_id) {
@@ -256,7 +252,7 @@ const PengurusEditPage = () => {
 				showConfirmButton: false,
 			});
 
-			navigate(getPengurusRoutePath(user, pengurusId));
+			navigate(`${getBasePath()}/pengurus/${pengurusId}`);
 		} catch (error) {
 			console.error("Error updating pengurus:", error);
 			Swal.fire({
@@ -296,6 +292,8 @@ const PengurusEditPage = () => {
 		);
 	}
 
+	const basePath = getBasePath();
+
 	return (
 		<div className="min-h-screen bg-gray-50">
 			{/* Breadcrumb */}
@@ -303,7 +301,7 @@ const PengurusEditPage = () => {
 				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
 					<nav className="flex items-center space-x-2 text-sm">
 						<Link
-							to="/desa/dashboard"
+							to={`${basePath}/dashboard`}
 							className="flex items-center text-gray-500 hover:text-indigo-600 transition-colors"
 						>
 							<FaHome className="mr-1" />
@@ -311,28 +309,28 @@ const PengurusEditPage = () => {
 						</Link>
 						<FaChevronRight className="text-gray-400 text-xs" />
 						<Link
-							to="/desa/kelembagaan"
+							to={`${basePath}/kelembagaan`}
 							className="text-gray-500 hover:text-indigo-600 transition-colors"
 						>
 							Kelembagaan
 						</Link>
 						<FaChevronRight className="text-gray-400 text-xs" />
 						<Link
-							to={`/desa/kelembagaan/${getRouteType(pengurus.pengurusable_type)}`}
+							to={`${basePath}/kelembagaan/${getRouteType(pengurus.pengurusable_type)}`}
 							className="text-gray-500 hover:text-indigo-600 transition-colors"
 						>
 							{getDisplayName(pengurus.pengurusable_type)}
 						</Link>
 						<FaChevronRight className="text-gray-400 text-xs" />
 						<Link
-							to={`/desa/kelembagaan/${getRouteType(pengurus.pengurusable_type)}/${pengurus.pengurusable_id}`}
+							to={`${basePath}/kelembagaan/${getRouteType(pengurus.pengurusable_type)}/${pengurus.pengurusable_id}`}
 							className="text-gray-500 hover:text-indigo-600 transition-colors"
 						>
 							{kelembagaanInfo?.nomor || kelembagaanInfo?.nama || 'Detail'}
 						</Link>
 						<FaChevronRight className="text-gray-400 text-xs" />
 						<Link
-							to={`/desa/pengurus/${pengurusId}`}
+							to={`${basePath}/pengurus/${pengurusId}`}
 							className="text-gray-500 hover:text-indigo-600 transition-colors"
 						>
 							{pengurus.nama_lengkap}
@@ -607,6 +605,60 @@ const PengurusEditPage = () => {
 							</div>
 						</div>
 					</div>
+
+					{/* Status Verifikasi - Only for Admin Bidang */}
+					{(isSuperAdmin() || isAdminBidang()) && (
+						<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+							<h3 className="text-lg font-semibold text-gray-900 mb-4">
+								Status Verifikasi
+							</h3>
+
+							<div className="space-y-4">
+								<div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+									<div className="flex items-center space-x-3">
+										<div className={`w-3 h-3 rounded-full ${
+											formData.status_verifikasi === "verified" 
+												? "bg-green-500" 
+												: "bg-yellow-500"
+										}`}></div>
+										<div>
+											<p className="font-medium text-gray-900">
+												{formData.status_verifikasi === "verified" 
+													? "Terverifikasi" 
+													: "Belum Terverifikasi"
+												}
+											</p>
+											<p className="text-sm text-gray-500">
+												Status verifikasi data pengurus
+											</p>
+										</div>
+									</div>
+									
+									<label className="relative inline-flex items-center cursor-pointer">
+										<input
+											type="checkbox"
+											checked={formData.status_verifikasi === "verified"}
+											onChange={(e) => {
+												setFormData(prev => ({
+													...prev,
+													status_verifikasi: e.target.checked ? "verified" : "unverified"
+												}));
+											}}
+											className="sr-only peer"
+										/>
+										<div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+									</label>
+								</div>
+								
+								<div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+									<p className="text-xs text-blue-800">
+										<strong>Info:</strong> Toggle ini hanya dapat diubah oleh Admin Bidang. 
+										Status verifikasi menandakan bahwa data pengurus telah diperiksa dan divalidasi oleh admin.
+									</p>
+								</div>
+							</div>
+						</div>
+					)}
 
 					{/* SK Pengangkatan */}
 					<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">

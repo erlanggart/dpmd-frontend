@@ -34,7 +34,7 @@ const ProfilCard = ({
 	const adminDesa = user?.role === "desa";
 	const isAdmin = user?.role === "superadmin";
 	// Check admin bidang variations - consistent with AdminKelembagaanDetailWrapper
-	const adminBidang = ["pemberdayaan_masyarakat", "pmd"].includes(user?.role);
+	const adminBidang = ["pemberdayaan_masyarakat", "kepala_bidang", "pegawai"].includes(user?.role) && (user?.bidang_id === 5);
 
 	// Determine if edit button should be shown
 	// For admin (superadmin/pemberdayaan_masyarakat): always show

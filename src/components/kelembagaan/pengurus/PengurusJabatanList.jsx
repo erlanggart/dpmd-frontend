@@ -35,12 +35,18 @@ import {
 const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
 
 // Helper function to determine correct routing based on user role
+// Uses same logic pattern as AuthContext helpers
 const getPengurusRoutePath = (user, pengurusId) => {
-	const isSuperAdmin = user?.role === "superadmin";
-	const isAdminBidang = ["pemberdayaan_masyarakat", "pmd"].includes(user?.role);
+	// Check if user is superadmin
+	const isSuperAdminRole = user?.role === "superadmin";
+	
+	// Check if user is admin bidang PMD (kepala_bidang or pegawai with bidang_id = 5)
+	const isAdminBidangRole = 
+		(user?.role === "kepala_bidang" || user?.role === "pegawai") && 
+		user?.bidang_id === 5;
 
-	if (isSuperAdmin || isAdminBidang) {
-		return `/dashboard/pengurus/${pengurusId}`;
+	if (isSuperAdminRole || isAdminBidangRole) {
+		return `/bidang/pmd/pengurus/${pengurusId}`;
 	}
 
 	// Default for desa users
@@ -49,7 +55,7 @@ const getPengurusRoutePath = (user, pengurusId) => {
 
 // Komponen untuk kartu jabatan individual
 const JabatanCard = ({ jabatan, pengurusList, user }) => {
-	const [isExpanded, setIsExpanded] = useState(false);
+	const [isExpanded, setIsExpanded] = useState(true);
 
 	const getJabatanIcon = (jabatanName) => {
 		const lowerJabatan = jabatanName.toLowerCase();
@@ -217,20 +223,15 @@ const PengurusJabatanList = ({
 	
 	desaId,
 }) => {
-	const { user } = useAuth();
+	const { user, isSuperAdmin, isAdminBidang, isUserDesa } = useAuth();
 	const { isEditMode } = useEditMode();
-	const isAdmin = user?.role === "admin_kabupaten";
-	const isUserDesa = user?.role === "desa";
-	const isAdminBidang = user?.role === "pemberdayaan_masyarakat";
-	const isSuperAdmin = user?.role === "superadmin";
 
-	const canManagePengurus =
-		isAdmin || isUserDesa || isAdminBidang || isSuperAdmin;
+	const canManagePengurus = isSuperAdmin() || isAdminBidang() || isUserDesa();
 		
 	// Determine if add button should be shown
-	// For admin (superadmin/pemberdayaan_masyarakat): always show
+	// For admin (superadmin/admin bidang): always show
 	// For desa: only show if edit mode is ON
-	const showAddButton = (isSuperAdmin || isAdminBidang || isAdmin) || (isUserDesa && isEditMode);
+	const showAddButton = (isSuperAdmin() || isAdminBidang()) || (isUserDesa() && isEditMode);
 
 	const [activePengurus, setActivePengurus] = useState([]);
 	const [historyPengurus, setHistoryPengurus] = useState([]);
@@ -245,15 +246,15 @@ const PengurusJabatanList = ({
 
 			setLoading(true);
 			try {
-				// Pass desaId for superadmin access
-				const superadminDesaId = isSuperAdmin ? desaId : null;
+				// Pass desaId for admin access
+				const adminDesaId = (isSuperAdmin() || isAdminBidang()) ? desaId : null;
 				const [activeResponse, historyResponse] = await Promise.all([
 					getPengurusByKelembagaan(
 						kelembagaanType,
 						kelembagaanId,
-						superadminDesaId
+						adminDesaId
 					),
-					getPengurusHistory(kelembagaanType, kelembagaanId, superadminDesaId),
+					getPengurusHistory(kelembagaanType, kelembagaanId, adminDesaId),
 				]);
 
 				setActivePengurus(activeResponse?.data?.data || []);
@@ -268,7 +269,7 @@ const PengurusJabatanList = ({
 		};
 
 		loadPengurus();
-	}, [kelembagaanType, kelembagaanId, isSuperAdmin, desaId]);
+	}, [kelembagaanType, kelembagaanId, desaId, isSuperAdmin, isAdminBidang]);
 
 	const toggleHistory = () => {
 		setShowHistory(!showHistory);

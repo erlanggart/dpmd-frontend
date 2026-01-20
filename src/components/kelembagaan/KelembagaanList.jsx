@@ -40,7 +40,7 @@ export default function KelembagaanList() {
 	const [searchParams] = useSearchParams();
 	const queryDesaId = searchParams.get('desaId'); // Get desaId from query params
 	const desaId = routeDesaId || queryDesaId; // Prioritize route param over query param
-	const { user } = useAuth(); // Get user for role-based navigation
+	const { user, isSuperAdmin, isAdminBidang, isUserDesa } = useAuth(); // Get user for role-based navigation
 	const { isEditMode } = useEditMode();
 	const [items, setItems] = useState([]);
 	const [loading, setLoading] = useState(true);
@@ -49,13 +49,10 @@ export default function KelembagaanList() {
 	const [activeTab, setActiveTab] = useState("aktif"); // aktif | nonaktif
 	const [submitting, setSubmitting] = useState(false);
 
-	// Check user role
-	const isSuperAdmin = user?.role === "superadmin";
-	const isAdminBidang = user?.role === "pemberdayaan_masyarakat" || user?.role === "pmd";
-	const isUserDesa = user?.role === "desa";
-
 	// Determine if add button should show
-	const showAddButton = (isSuperAdmin || isAdminBidang) || (isUserDesa && isEditMode);
+	// For admin (superadmin/admin bidang): always show
+	// For desa: only show if edit mode is ON
+	const showAddButton = (isSuperAdmin() || isAdminBidang()) || (isUserDesa() && isEditMode);
 
 	useEffect(() => {
 		let mounted = true;
@@ -135,8 +132,8 @@ export default function KelembagaanList() {
 	const getBasePath = () => {
 		if (user?.role === 'desa') {
 			return '/desa';
-		} else if (user?.role === 'superadmin' || user?.role === 'pemberdayaan_masyarakat') {
-			return '/dashboard';
+		} else if (user?.role === 'superadmin' || user?.role === 'kepala_dinas' || user?.role === 'kepala_bidang' && user?.bidang_id === 5 || (user?.role === 'pegawai' && user?.bidang_id === 5)) {
+			return '/bidang/pmd';
 		}
 		return '/desa'; // Default fallback
 	};
@@ -485,7 +482,7 @@ export default function KelembagaanList() {
 	const handleBack = () => {
 		if (desaId) {
 			// If viewing specific desa (admin mode), go back to that desa's detail page
-			navigate(`/dashboard/kelembagaan/admin/${desaId}`);
+			navigate(`/bidang/pmd/kelembagaan/admin/${desaId}`);
 		} else {
 			// Normal mode, go back to kelembagaan index
 			navigate(`${basePath}/kelembagaan`);
@@ -525,7 +522,7 @@ export default function KelembagaanList() {
 				<div className="flex items-center justify-between">
 					<nav className="flex items-center space-x-2 text-sm">
 						<Link
-							to={`${basePath}/dashboard`}
+							to={`${basePath}/kelembagaan`}
 							className="flex items-center text-gray-500 hover:text-indigo-600 transition-colors"
 						>
 							<FaHome className="mr-1" />
@@ -533,12 +530,26 @@ export default function KelembagaanList() {
 						</Link>
 						<FaChevronRight className="text-gray-400 text-xs" />
 						<Link
-							to={desaId ? `/dashboard/kelembagaan/admin/${desaId}` : `${basePath}/kelembagaan`}
+							to={`${basePath}/kelembagaan`}
 							className="text-gray-500 hover:text-indigo-600 transition-colors"
 						>
 							Kelembagaan
 						</Link>
 						<FaChevronRight className="text-gray-400 text-xs" />
+						
+						{/* Admin: Show Desa name and link */}
+						{desaId && filteredItems.length > 0 && (
+							<>
+								<Link
+									to={`/bidang/pmd/kelembagaan/admin/${desaId}`}
+									className="text-gray-500 hover:text-indigo-600 transition-colors"
+								>
+									{filteredItems[0]?.desas?.nama || filteredItems[0]?.desa?.nama || "Desa"}
+								</Link>
+								<FaChevronRight className="text-gray-400 text-xs" />
+							</>
+						)}
+						
 						<span className="text-gray-900 font-medium">{title}</span>
 					</nav>
 					
@@ -723,14 +734,14 @@ export default function KelembagaanList() {
 											<div className="flex flex-col items-end space-y-3 ">
 												{item.ketua_nama || item.nama_ketua ? (
 													<div className="flex items-center space-x-2">
+														<span className="text-sm text-gray-600">
+															{item.ketua_nama || item.nama_ketua}
+														</span>
 														<div className="flex bg-yellow-500 items-center space-x-2 rounded-md p-1"> 
 
 														<LuCrown className="w-4 h-4 text-white" />
 														<span className="text-sm text-white">Ketua</span>
 														</div>
-														<span className="text-sm text-gray-600">
-															{item.ketua_nama || item.nama_ketua}
-														</span>
 													</div>
 												) : (
 													<div className="flex items-center space-x-2">

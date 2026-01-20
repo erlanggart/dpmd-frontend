@@ -113,12 +113,12 @@ const DesaLayout = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const baseLinkClass = "flex items-center p-2 text-gray-700 rounded-lg";
-  const activeLinkClass = "bg-primary text-white";
+  const baseLinkClass = "flex items-center p-2 rounded-lg relative";
+  const activeLinkClass = "text-blue-600 font-semibold border-r-4 border-blue-600";
   const inactiveLinkClass = "hover:bg-gray-100";
 
   return (
-    <div className="h-screen flex overflow-hidden bg-slate-200">
+    <div className="h-screen flex overflow-hidden bg-blue-200">
       {/* Backdrop for mobile */}
       {sidebarOpen && (
         <div
@@ -181,7 +181,7 @@ const DesaLayout = () => {
           {/* User Profile Info - Expanded view */}
           <div className={`mb-3 ${!sidebarOpen && "lg:hidden"}`}>
             <div className="flex items-center space-x-3 mb-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-primary to-blue-600 rounded-full flex items-center justify-center text-white font-semibold shadow-md flex-shrink-0">
+              <div className="w-10 h-10 bg-gradient-to-br from-[rgb(var(--color-primary))] to-blue-600 rounded-full flex items-center justify-center text-white font-semibold shadow-md flex-shrink-0">
                 {user?.name?.charAt(0).toUpperCase() || "U"}
               </div>
               <div className="flex flex-col min-w-0 flex-1">

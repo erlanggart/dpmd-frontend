@@ -211,7 +211,7 @@ const PMDPage = () => {
 								</h3>
 								<div className="grid grid-cols-1 gap-4">
 									<button
-										onClick={() => navigate('/pmd/kelembagaan')}
+										onClick={() => navigate('/bidang/pmd/kelembagaan')}
 										className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border border-gray-100 p-6 hover:border-orange-300 transition-all duration-300 text-left overflow-hidden hover:-translate-y-1"
 									>
 										<div className="absolute inset-0 bg-gradient-to-br from-orange-400/5 to-yellow-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>

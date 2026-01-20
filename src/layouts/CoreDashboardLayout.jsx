@@ -11,7 +11,8 @@ import {
   LogOut,
   ChevronLeft,
   ChevronDown,
-  DollarSign
+  DollarSign,
+  Landmark
 } from 'lucide-react';
 import AnimatedIcon from '../components/AnimatedIcon';
 
@@ -71,6 +72,15 @@ const CoreDashboardLayout = () => {
       gradient: 'from-purple-500 to-indigo-600',
       color: 'text-purple-600'
     },
+
+    {
+      path: '/core-dashboard/statistik-kelembagaan',
+      icon: 'landmark',
+      label: 'Statistik Kelembagaan',
+      gradient: 'from-cyan-500 to-teal-600',
+      color: 'text-cyan-600'
+    },
+
     {
       path: '/core-dashboard/statistik-perjadin',
       icon: 'briefcase',

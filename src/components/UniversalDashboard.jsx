@@ -101,7 +101,7 @@ const UniversalDashboard = () => {
                 quickActions: [
                     { title: 'Kelola User', path: '/dashboard/users', icon: <FiUsers /> },
                     { title: 'Hero Gallery', path: '/dashboard/hero-gallery', icon: <FiGrid /> },
-                    { title: 'Kelembagaan', path: '/dashboard/kelembagaan', icon: <TbUserPentagon /> },
+                    { title: 'Kelembagaan', path: '/bidang/pmd/kelembagaan', icon: <TbUserPentagon /> },
                     { title: 'Data BUMDes', path: '/dashboard/bumdes', icon: <TbBuildingBank /> }
                 ]
             },
@@ -122,7 +122,7 @@ const UniversalDashboard = () => {
                 quickActions: [
                     { title: 'Kelola User', path: '/dashboard/users', icon: <FiUsers /> },
                     { title: 'Hero Gallery', path: '/dashboard/hero-gallery', icon: <FiGrid /> },
-                    { title: 'Kelembagaan', path: '/dashboard/kelembagaan', icon: <TbUserPentagon /> },
+                    { title: 'Kelembagaan', path: '/bidang/pmd/kelembagaan', icon: <TbUserPentagon /> },
                     { title: 'Data BUMDes', path: '/dashboard/bumdes', icon: <TbBuildingBank /> }
                 ]
             },
@@ -205,7 +205,7 @@ const UniversalDashboard = () => {
                     'Workshop keterampilan menjahit'
                 ],
                 quickActions: [
-                    { title: 'Kelembagaan', path: '/dashboard/kelembagaan', icon: <TbUserPentagon /> },
+                    { title: 'Kelembagaan', path: '/bidang/pmd/kelembagaan', icon: <TbUserPentagon /> },
                     { title: getDisposisiMenuLabel(getUserRole()), path: getDisposisiMenuPath(getUserRole()), icon: <FiFileText /> },
                     { title: 'Hero Gallery', path: '/dashboard/hero-gallery', icon: <FiGrid /> },
                     { title: 'Kelola User', path: '/dashboard/users', icon: <FiUsers /> }

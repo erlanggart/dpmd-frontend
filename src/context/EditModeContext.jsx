@@ -1,6 +1,17 @@
-import React, { useState, useEffect } from "react";
+import React, { createContext, useState, useEffect, useContext } from "react";
 import api from "../services/api";
-import { EditModeContext } from "./EditModeContext";
+
+// Create context
+export const EditModeContext = createContext();
+
+// Custom hook to use edit mode
+export const useEditMode = () => {
+	const context = useContext(EditModeContext);
+	if (!context) {
+		throw new Error("useEditMode must be used within EditModeProvider");
+	}
+	return context;
+};
 
 /**
  * Context untuk mengatur mode edit kelembagaan dan pengurus

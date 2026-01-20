@@ -1,38 +1,103 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import {
-	getPengurusDetail,
+	getPengurusById,
 	updatePengurusStatus,
+	updatePengurusVerifikasi,
 } from "../../../services/pengurus";
+import { getProdukHukums, getDesa } from "../../../services/api";
+import { 
+	getRw, 
+	getRt, 
+	getPosyandu, 
+	getKarangTaruna, 
+	getLpm, 
+	getPkk, 
+	getSatlinmas 
+} from "../../../services/kelembagaan";
 import { useAuth } from "../../../context/AuthContext";
-import { getProdukHukums } from "../../../services/api";
-import { useNavigate } from "react-router-dom";
+import { useEditMode } from "../../../context/EditModeContext";
+import {
+	FaArrowLeft,
+	FaEdit,
+	FaUser,
+	FaPhone,
+	FaMapMarkerAlt,
+	FaCalendarAlt,
+	FaFileAlt,
+	FaExternalLinkAlt,
+	FaChevronRight,
+	FaHome,
+	FaLock,
+	FaLockOpen,
+} from "react-icons/fa";
 import Swal from "sweetalert2";
 
 const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
 
-const PengurusDetailPage = ({
-	pengurusId,
-	onClose,
-	onEdit,
-	onStatusUpdate,
-	desaId,
-}) => {
-	const { user } = useAuth();
+// Helper function to convert pengurusable_type (table name) to route type
+const getRouteType = (pengurusableType) => {
+	const mapping = {
+		'rws': 'rw',
+		'rts': 'rt',
+		'posyandus': 'posyandu',
+		'karang_tarunas': 'karang-taruna',
+		'lpms': 'lpm',
+		'pkks': 'pkk',
+		'satlinmas': 'satlinmas'
+	};
+	return mapping[pengurusableType] || pengurusableType;
+};
+
+// Helper function to get display name
+const getDisplayName = (pengurusableType) => {
+	const mapping = {
+		'rws': 'RW',
+		'rts': 'RT',
+		'posyandus': 'Posyandu',
+		'karang_tarunas': 'Karang Taruna',
+		'lpms': 'LPM',
+		'pkks': 'PKK',
+		'satlinmas': 'Satlinmas'
+	};
+	return mapping[pengurusableType] || pengurusableType;
+};
+
+// Helper function to determine correct routing based on user role
+const getPengurusRoutePath = (user, pengurusId, action = "") => {
+	const isSuperAdmin = user?.role === "superadmin";
+	const isAdminBidang = ["pemberdayaan_masyarakat", "pmd"].includes(user?.role);
+
+	if (isSuperAdmin || isAdminBidang) {
+		return `/dashboard/pengurus/${pengurusId}${action ? `/${action}` : ""}`;
+	}
+
+	// Default for desa users
+	return `/desa/pengurus/${pengurusId}${action ? `/${action}` : ""}`;
+};
+
+const PengurusDetailPage = () => {
+	const params = useParams();
+	const pengurusId = params.id; // Changed from destructuring to direct access
 	const navigate = useNavigate();
+	const { user, isSuperAdmin, isAdminBidang, isUserDesa, canManageKelembagaan } = useAuth();
+	const { isEditMode } = useEditMode();
+
+	console.log('🔧 All params:', params);
+	console.log('🆔 Pengurus ID:', pengurusId);
+
 	const [pengurus, setPengurus] = useState(null);
+	const [kelembagaanInfo, setKelembagaanInfo] = useState(null);
+	const [desaInfo, setDesaInfo] = useState(null);
+	const [rwInfo, setRwInfo] = useState(null);
 	const [loading, setLoading] = useState(true);
 	const [updating, setUpdating] = useState(false);
 	const [produkHukumList, setProdukHukumList] = useState([]);
 
-	const isAdmin = user?.role === "admin_kabupaten";
-	const isUserDesa = user?.role === "desa";
-	const isAdminBidang = user?.role === "pemberdayaan_masyarakat";
-	const isSuperAdmin = user?.role === "superadmin";
+	// Check permissions using AuthContext helpers
+	const canManage = canManageKelembagaan();
 
-	const canManagePengurus =
-		isAdmin || isUserDesa || isAdminBidang || isSuperAdmin;
-
-	const loadProdukHukumList = useCallback(async () => {
+	const loadProdukHukumList = async () => {
 		try {
 			const response = await getProdukHukums(1, "");
 			const allData = response?.data?.data || [];
@@ -41,154 +106,221 @@ const PengurusDetailPage = ({
 			console.error("Error loading produk hukum:", error);
 			setProdukHukumList([]);
 		}
-	}, []); // No dependencies needed
+	};
 
-	const loadPengurusDetail = useCallback(async () => {
-		if (!pengurusId) return;
+	const loadDesaInfo = async (desaId) => {
+		try {
+			const response = await getDesa(desaId);
+			const desaData = response?.data?.data;
+			setDesaInfo(desaData || null);
+		} catch (error) {
+			console.error('Error loading desa info:', error);
+			setDesaInfo(null);
+		}
+	};
 
+	const loadRwForRt = async (rtData) => {
+		try {
+			if (rtData?.rw_id) {
+				const response = await getRw(rtData.rw_id);
+				const rwData = response?.data?.data;
+				setRwInfo(rwData || null);
+			}
+		} catch (error) {
+			console.error('Error loading RW info for RT:', error);
+			setRwInfo(null);
+		}
+	};
+
+	const loadKelembagaanInfo = async (pengurusableType, pengurusableId) => {
+		try {
+			let response;
+			// Map table name to appropriate getter function
+			// Note: pengurusable_type from database is singular (rw, rt, etc)
+			switch (pengurusableType) {
+				case 'rw':
+					response = await getRw(pengurusableId);
+					break;
+				case 'rt':
+					response = await getRt(pengurusableId);
+					break;
+				case 'posyandu':
+					response = await getPosyandu(pengurusableId);
+					break;
+				case 'karang_taruna':
+					response = await getKarangTaruna(pengurusableId);
+					break;
+				case 'lpm':
+					response = await getLpm(pengurusableId);
+					break;
+				case 'pkk':
+					response = await getPkk(pengurusableId);
+					break;
+				case 'satlinmas':
+					response = await getSatlinmas(pengurusableId);
+					break;
+				default:
+					console.warn('Unknown kelembagaan type:', pengurusableType);
+					return;
+			}
+			
+			const kelembagaanData = response?.data?.data;
+			setKelembagaanInfo(kelembagaanData || null);
+
+			// If it's RT, load the parent RW
+			if (pengurusableType === 'rt' && kelembagaanData) {
+				await loadRwForRt(kelembagaanData);
+			}
+		} catch (error) {
+			console.error('Error loading kelembagaan info:', error);
+			setKelembagaanInfo(null);
+		}
+	};
+
+	const loadPengurusDetail = async () => {
+		if (!pengurusId) {
+			console.log('⚠️ No pengurusId provided');
+			return;
+		}
+
+		console.log('🔍 Loading pengurus detail for ID:', pengurusId);
 		setLoading(true);
 		try {
-			// Pass desaId for superadmin access
-			const superadminDesaId = isSuperAdmin ? desaId : null;
-			const response = await getPengurusDetail(pengurusId, superadminDesaId);
-			setPengurus(response?.data?.data || null);
+			const response = await getPengurusById(pengurusId);
+			console.log('✅ Pengurus detail response:', response);
+			const pengurusData = response?.data?.data;
+			console.log('📦 Pengurus data:', pengurusData);
+			setPengurus(pengurusData || null);
+			
+			// Load desa info
+			if (pengurusData?.desa_id) {
+				await loadDesaInfo(pengurusData.desa_id);
+			}
+
+			// Load kelembagaan info if pengurus data is available
+			if (pengurusData?.pengurusable_type && pengurusData?.pengurusable_id) {
+				await loadKelembagaanInfo(pengurusData.pengurusable_type, pengurusData.pengurusable_id);
+			}
 		} catch (error) {
-			console.error("Error loading pengurus detail:", error);
+			console.error('❌ Error loading pengurus detail:', error);
 			Swal.fire({
-				title: "Error!",
-				text: "Gagal memuat detail pengurus",
 				icon: "error",
+				title: "Gagal",
+				text: "Gagal memuat detail pengurus",
 			});
 		} finally {
+			console.log('✨ Loading complete, setting loading to false');
 			setLoading(false);
 		}
-	}, [pengurusId, isSuperAdmin, desaId]); // Fixed dependencies
+	};
 
 	useEffect(() => {
 		loadPengurusDetail();
 		loadProdukHukumList();
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [pengurusId, isSuperAdmin, desaId]); // Only re-run when these change, not when functions change
+	}, [pengurusId]); // Only depend on pengurusId to avoid infinite loop
 
-	const handleStatusChange = async (newStatus) => {
-		if (!pengurus) return;
-
+	const handleStatusUpdate = async (newStatus) => {
 		const result = await Swal.fire({
-			title: `${newStatus === "aktif" ? "Aktifkan" : "Nonaktifkan"} Pengurus?`,
+			title: `${
+				newStatus === "selesai" ? "Nonaktifkan" : "Aktifkan"
+			} Pengurus?`,
 			text: `Apakah Anda yakin ingin ${
-				newStatus === "aktif" ? "mengaktifkan kembali" : "menonaktifkan"
-			} ${pengurus.nama_lengkap}?`,
+				newStatus === "selesai" ? "menonaktifkan" : "mengaktifkan"
+			} pengurus ini?`,
 			icon: "warning",
 			showCancelButton: true,
-			confirmButtonText: "Ya, Ubah Status",
+			confirmButtonText: "Ya, lanjutkan",
 			cancelButtonText: "Batal",
-			confirmButtonColor: newStatus === "aktif" ? "#059669" : "#DC2626",
+			confirmButtonColor: newStatus === "selesai" ? "#dc2626" : "#059669",
 		});
 
 		if (!result.isConfirmed) return;
 
-		let endDate = null;
-		if (newStatus === "selesai") {
-			const { value: inputDate } = await Swal.fire({
-				title: "Tanggal Berakhir Jabatan",
-				html: '<input id="endDate" type="date" class="swal2-input" required>',
-				focusConfirm: false,
-				preConfirm: () => {
-					const date = document.getElementById("endDate").value;
-					if (!date) {
-						Swal.showValidationMessage("Tanggal berakhir jabatan diperlukan");
-					}
-					return date;
-				},
-			});
-
-			if (!inputDate) return;
-			endDate = inputDate;
-		}
-
 		setUpdating(true);
 		try {
-			// Pass desaId for superadmin access
-			const superadminDesaId = isSuperAdmin ? desaId : null;
-			await updatePengurusStatus(
-				pengurus.id,
-				newStatus,
-				endDate,
-				superadminDesaId
-			);
+			await updatePengurusStatus(pengurusId, newStatus);
 
-			Swal.fire({
-				title: "Berhasil!",
-				text: `Status pengurus berhasil diubah`,
+			await Swal.fire({
 				icon: "success",
+				title: "Berhasil",
+				text: `Status pengurus berhasil ${
+					newStatus === "selesai" ? "dinonaktifkan" : "diaktifkan"
+				}`,
+				timer: 2000,
+				showConfirmButton: false,
 			});
 
 			// Reload data
-			await loadPengurusDetail();
-
-			// Notify parent component
-			onStatusUpdate?.();
+			loadPengurusDetail();
 		} catch (error) {
 			console.error("Error updating status:", error);
 			Swal.fire({
-				title: "Error!",
-				text: "Gagal mengubah status pengurus",
 				icon: "error",
+				title: "Gagal",
+				text: "Gagal mengubah status pengurus",
 			});
 		} finally {
 			setUpdating(false);
 		}
 	};
 
-	const formatDate = (dateString) => {
-		if (!dateString) return "-";
-		return new Date(dateString).toLocaleDateString("id-ID", {
-			year: "numeric",
-			month: "long",
-			day: "numeric",
+	const handleVerificationUpdate = async (newStatus) => {
+		const result = await Swal.fire({
+			title: `${
+				newStatus === "verified" ? "Verifikasi" : "Batalkan Verifikasi"
+			} Pengurus?`,
+			text: `Apakah Anda yakin ingin ${
+				newStatus === "verified" ? "memverifikasi" : "membatalkan verifikasi"
+			} pengurus ini?`,
+			icon: "warning",
+			showCancelButton: true,
+			confirmButtonText: "Ya, lanjutkan",
+			cancelButtonText: "Batal",
+			confirmButtonColor: newStatus === "verified" ? "#059669" : "#dc2626",
 		});
+
+		if (!result.isConfirmed) return;
+
+		setUpdating(true);
+		try {
+			await updatePengurusVerifikasi(pengurusId, newStatus, pengurus.desa_id);
+
+			await Swal.fire({
+				icon: "success",
+				title: "Berhasil",
+				text: `Status verifikasi berhasil ${
+					newStatus === "verified" ? "diverifikasi" : "dibatalkan"
+				}`,
+				timer: 2000,
+				showConfirmButton: false,
+			});
+
+			// Reload data
+			loadPengurusDetail();
+		} catch (error) {
+			console.error("Error updating verification:", error);
+			Swal.fire({
+				icon: "error",
+				title: "Gagal",
+				text: error.response?.data?.message || "Gagal mengubah status verifikasi",
+			});
+		} finally {
+			setUpdating(false);
+		}
 	};
 
-	const calculateAge = (birthDate) => {
-		if (!birthDate) return "-";
-		const today = new Date();
-		const birth = new Date(birthDate);
-		let age = today.getFullYear() - birth.getFullYear();
-		const monthDiff = today.getMonth() - birth.getMonth();
-
-		if (
-			monthDiff < 0 ||
-			(monthDiff === 0 && today.getDate() < birth.getDate())
-		) {
-			age--;
-		}
-
-		return `${age} tahun`;
+	const handleEdit = () => {
+		// Navigate to edit page using role-based routing
+		navigate(getPengurusRoutePath(user, pengurusId, "edit"));
 	};
 
 	if (loading) {
 		return (
-			<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-				<div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden">
-					<div className="p-6">
-						<div className="animate-pulse">
-							<div className="flex items-center space-x-4 mb-6">
-								<div className="w-24 h-24 bg-gray-200 rounded-full"></div>
-								<div className="flex-1">
-									<div className="h-6 bg-gray-200 rounded w-1/3 mb-2"></div>
-									<div className="h-4 bg-gray-200 rounded w-1/4"></div>
-								</div>
-							</div>
-							<div className="grid grid-cols-2 gap-4">
-								{[1, 2, 3, 4, 5, 6].map((i) => (
-									<div key={i} className="space-y-2">
-										<div className="h-4 bg-gray-200 rounded w-1/3"></div>
-										<div className="h-6 bg-gray-200 rounded w-2/3"></div>
-									</div>
-								))}
-							</div>
-						</div>
-					</div>
+			<div className="min-h-screen bg-gray-50 flex items-center justify-center">
+				<div className="text-center">
+					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+					<p className="text-gray-600">Memuat detail pengurus...</p>
 				</div>
 			</div>
 		);
@@ -196,19 +328,14 @@ const PengurusDetailPage = ({
 
 	if (!pengurus) {
 		return (
-			<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-				<div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-					<h3 className="text-lg font-semibold text-gray-900 mb-4">
-						Data Tidak Ditemukan
-					</h3>
-					<p className="text-gray-600 mb-6">
-						Pengurus yang Anda cari tidak ditemukan.
-					</p>
+			<div className="min-h-screen bg-gray-50 flex items-center justify-center">
+				<div className="text-center">
+					<p className="text-gray-600 mb-4">Data pengurus tidak ditemukan</p>
 					<button
-						onClick={onClose}
-						className="w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+						onClick={() => navigate(-1)}
+						className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
 					>
-						Tutup
+						Kembali
 					</button>
 				</div>
 			</div>
@@ -216,189 +343,494 @@ const PengurusDetailPage = ({
 	}
 
 	return (
-		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-			<div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-				{/* Header */}
-				<div className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
-					<div className="flex items-center justify-between">
-						<div className="flex items-center space-x-4">
-							{pengurus.avatar ? (
-								<img
-									src={`${imageBaseUrl}/uploads/${pengurus.avatar}`}
-									alt={pengurus.nama_lengkap}
-									className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
-								/>
-							) : (
-								<div className="w-24 h-24 bg-gray-300 rounded-full flex items-center justify-center border-4 border-white shadow-lg">
-									<span className="text-gray-600 font-bold text-2xl">
-										{pengurus.nama_lengkap.charAt(0).toUpperCase()}
-									</span>
-								</div>
-							)}
-							<div>
-								<h2 className="text-2xl font-bold text-gray-900">
-									{pengurus.nama_lengkap}
-								</h2>
-								<p className="text-lg text-blue-600 font-semibold">
-									{pengurus.jabatan}
-								</p>
-								<div className="flex items-center space-x-2 mt-1">
-									<span
-										className={`px-2 py-1 rounded-full text-xs font-medium ${
-											pengurus.status_jabatan === "aktif"
-												? "bg-green-100 text-green-800"
-												: "bg-gray-100 text-gray-800"
-										}`}
-									>
-										{pengurus.status_jabatan === "aktif" ? "Aktif" : "Selesai"}
-									</span>
-									<span
-										className={`px-2 py-1 rounded-full text-xs font-medium ${
-											pengurus.status_verifikasi === "verified"
-												? "bg-blue-100 text-blue-800"
-												: "bg-yellow-100 text-yellow-800"
-										}`}
-									>
-										{pengurus.status_verifikasi === "verified"
-											? "Terverifikasi"
-											: "Belum Verifikasi"}
-									</span>
-								</div>
-							</div>
-						</div>
-						<button
-							onClick={onClose}
-							className="text-gray-400 hover:text-gray-600 text-2xl"
-						>
-							×
-						</button>
+		<div className="min-h-screen">
+			
+
+			{/* Breadcrumb */}
+			<div className="flex bg-white p-2 mb-4 rounded-md shadow-sm justify-between items-center">
+				<nav className="flex items-center space-x-2 text-sm">
+					{/* Dashboard */}
+					<Link
+						to={(isSuperAdmin() || isAdminBidang()) ? "/bidang/pmd/kelembagaan" : "/desa/dashboard"}
+						className="flex items-center text-gray-500 hover:text-indigo-600 transition-colors"
+					>
+						<FaHome className="mr-1" />
+						Dashboard
+					</Link>
+					<FaChevronRight className="text-gray-400 text-xs" />
+
+					{/* Kelembagaan */}
+					<Link
+						to={(isSuperAdmin() || isAdminBidang()) ? "/bidang/pmd/kelembagaan" : "/desa/kelembagaan"}
+						className="text-gray-500 hover:text-indigo-600 transition-colors"
+					>
+						Kelembagaan
+					</Link>
+					<FaChevronRight className="text-gray-400 text-xs" />
+
+					{/* Desa Name (for admin only) */}
+					{(isSuperAdmin() || isAdminBidang()) && desaInfo && (
+						<>
+							<Link
+								to={`/bidang/pmd/kelembagaan/admin/${pengurus.desa_id}`}
+								className="text-gray-500 hover:text-indigo-600 transition-colors"
+							>
+								{desaInfo.nama}
+							</Link>
+							<FaChevronRight className="text-gray-400 text-xs" />
+						</>
+					)}
+
+					{/* If RT, show RW first */}
+					{pengurus.pengurusable_type === 'rt' && rwInfo && (
+						<>
+							{/* RW Link */}
+							<Link
+								to={(isSuperAdmin() || isAdminBidang()) 
+									? `/bidang/pmd/kelembagaan/rw` 
+									: `/desa/kelembagaan/rw`}
+								className="text-gray-500 hover:text-indigo-600 transition-colors"
+							>
+								RW
+							</Link>
+							<FaChevronRight className="text-gray-400 text-xs" />
+							
+							{/* RW Number */}
+							<Link
+								to={(isSuperAdmin() || isAdminBidang()) 
+									? `/bidang/pmd/kelembagaan/rw/${rwInfo.id}` 
+									: `/desa/kelembagaan/rw/${rwInfo.id}`}
+								className="text-gray-500 hover:text-indigo-600 transition-colors"
+							>
+								RW {rwInfo.nomor}
+							</Link>
+							<FaChevronRight className="text-gray-400 text-xs" />
+							
+							{/* RT Number */}
+							<Link
+								to={(isSuperAdmin() || isAdminBidang()) 
+									? `/bidang/pmd/kelembagaan/rt/${pengurus.pengurusable_id}` 
+									: `/desa/kelembagaan/rt/${pengurus.pengurusable_id}`}
+								className="text-gray-500 hover:text-indigo-600 transition-colors"
+							>
+								RT {kelembagaanInfo?.nomor || 'Detail'}
+							</Link>
+							<FaChevronRight className="text-gray-400 text-xs" />
+						</>
+					)}
+
+					{/* For single-instance types (satlinmas, karang-taruna, lpm, pkk) - direct link */}
+					{['satlinmas', 'karang_taruna', 'lpm', 'pkk'].includes(pengurus.pengurusable_type) ? (
+						<>
+							<Link
+								to={(isSuperAdmin() || isAdminBidang()) 
+									? `/bidang/pmd/kelembagaan/${getRouteType(pengurus.pengurusable_type)}/${pengurus.pengurusable_id}` 
+									: `/desa/kelembagaan/${getRouteType(pengurus.pengurusable_type)}/${pengurus.pengurusable_id}`}
+								className="text-gray-500 hover:text-indigo-600 transition-colors"
+							>
+								{getDisplayName(pengurus.pengurusable_type)}
+							</Link>
+							<FaChevronRight className="text-gray-400 text-xs" />
+						</>
+					) : pengurus.pengurusable_type !== 'rt' && (
+						<>
+							{/* For other types (RW, Posyandu) - show type link, then item */}
+							<Link
+								to={(isSuperAdmin() || isAdminBidang()) 
+									? `/bidang/pmd/kelembagaan/${getRouteType(pengurus.pengurusable_type)}` 
+									: `/desa/kelembagaan/${getRouteType(pengurus.pengurusable_type)}`}
+								className="text-gray-500 hover:text-indigo-600 transition-colors"
+							>
+								{getDisplayName(pengurus.pengurusable_type)}
+							</Link>
+							<FaChevronRight className="text-gray-400 text-xs" />
+
+							{/* Kelembagaan Number/Name */}
+							<Link
+								to={(isSuperAdmin() || isAdminBidang()) 
+									? `/bidang/pmd/kelembagaan/${getRouteType(pengurus.pengurusable_type)}/${pengurus.pengurusable_id}` 
+									: `/desa/kelembagaan/${getRouteType(pengurus.pengurusable_type)}/${pengurus.pengurusable_id}`}
+								className="text-gray-500 hover:text-indigo-600 transition-colors"
+							>
+								{kelembagaanInfo?.nomor || kelembagaanInfo?.nama || 'Detail'}
+							</Link>
+							<FaChevronRight className="text-gray-400 text-xs" />
+						</>
+					)}
+
+					{/* Pengurus Name */}
+					<span className="text-gray-900 font-medium">
+						{pengurus.nama_lengkap}
+					</span>
+				</nav>
+				<span
+						className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
+							isEditMode
+								? "bg-green-100 text-green-700 border border-green-300"
+								: "bg-red-100 text-red-700 border border-red-300"
+						}`}
+					>
+						{isEditMode ? (
+							<>
+								<FaLockOpen className="w-3 h-3" />
+								<span>Aplikasi Dibuka</span>
+							</>
+						) : (
+							<>
+								<FaLock className="w-3 h-3" />
+								<span>Aplikasi Ditutup</span>
+							</>
+						)}
+						</span>
+			</div>
+
+			{/* Header with Actions */}
+			<div className="bg-white flex items-center justify-between p-4 mb-4 rounded-md shadow-sm">
+				<div className="flex items-center space-x-4">
+					<button
+						onClick={() => navigate(-1)}
+						className="flex items-center justify-center w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors"
+						title="Kembali"
+					>
+						<FaArrowLeft className="text-gray-600" />
+					</button>
+					<div>
+						<h1 className="text-2xl font-bold text-gray-900">
+							Detail Pengurus
+						</h1>
+						<p className="text-sm text-gray-500">
+							Informasi lengkap pengurus kelembagaan
+						</p>
 					</div>
 				</div>
 
-				{/* Content */}
-				<div className="p-6">
-					<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+				<div className="flex gap-3">
+				{canManage && (
+					<div className="flex items-center space-x-3">
+						<button
+							onClick={handleEdit}
+							disabled={!isEditMode}
+							className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+								isEditMode
+									? "bg-indigo-600 text-white hover:bg-indigo-700"
+									: "bg-gray-300 text-gray-500 cursor-not-allowed"
+							}`}
+							title={!isEditMode ? "Fitur edit ditutup" : "Edit pengurus"}
+						>
+							<FaEdit className="text-sm" />
+							<span>Edit</span>
+						</button>
+
+						<button
+							onClick={() =>
+								handleStatusUpdate(
+									pengurus.status_jabatan === "aktif" ? "selesai" : "aktif"
+								)
+							}
+							disabled={updating || !isEditMode}
+							className={`px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+								!isEditMode
+									? "bg-gray-300 text-gray-500"
+									: pengurus.status_jabatan === "aktif"
+									? "bg-red-100 text-red-700 hover:bg-red-200"
+									: "bg-green-100 text-green-700 hover:bg-green-200"
+							}`}
+							title={!isEditMode ? "Fitur perubahan status ditutup" : ""}
+						>
+							{updating ? (
+								<span>Memproses...</span>
+							) : pengurus.status_jabatan === "aktif" ? (
+								<span>Nonaktifkan</span>
+							) : (
+								<span>Aktifkan</span>
+							)}
+						</button>
+					</div>
+				)}
+
+				{/* Verification Button - Only for superadmin or admin bidang PMD */}
+				{(isSuperAdmin() || isAdminBidang()) && (
+					<button
+						onClick={() =>
+							handleVerificationUpdate(
+								pengurus.status_verifikasi === "verified"
+									? "unverified"
+									: "verified"
+							)
+						}
+						disabled={updating}
+						className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+							pengurus.status_verifikasi === "verified"
+								? "bg-yellow-100 text-yellow-700 hover:bg-yellow-200 border border-yellow-300"
+								: "bg-green-100 text-green-700 hover:bg-green-200 border border-green-300"
+						}`}
+						title={
+							pengurus.status_verifikasi === "verified"
+								? "Batalkan verifikasi pengurus"
+								: "Verifikasi pengurus"
+						}
+					>
+						{pengurus.status_verifikasi === "verified" ? (
+							<>
+								<svg
+									className="w-4 h-4"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M6 18L18 6M6 6l12 12"
+									/>
+								</svg>
+								<span>Batalkan Verifikasi</span>
+							</>
+						) : (
+							<>
+								<svg
+									className="w-4 h-4"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+									/>
+								</svg>
+								<span>Verifikasi Pengurus</span>
+							</>
+						)}
+					</button>
+				)}
+				</div>
+
+			</div>
+
+			{/* Main Content */}
+			<div>
+				<div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+					{/* Profile Card */}
+					<div className="lg:col-span-1 space-y-4">
+						<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+							<div className="text-center">
+								<div className="relative inline-block">
+									{pengurus.avatar ? (
+										<img
+											src={`${imageBaseUrl}/uploads/${pengurus.avatar}`}
+											alt={pengurus.nama_lengkap}
+											className="w-32 h-32 rounded-full object-cover mx-auto border-4 border-white shadow-lg"
+										/>
+									) : (
+										<div className="w-32 h-32 rounded-full bg-gray-200 flex items-center justify-center mx-auto border-4 border-white shadow-lg">
+											<FaUser className="text-gray-400 text-4xl" />
+										</div>
+									)}
+
+									<div
+										className={`absolute bottom-2 right-2 w-6 h-6 rounded-full border-2 border-white ${
+											pengurus.status_jabatan === "aktif"
+												? "bg-green-500"
+												: "bg-red-500"
+										}`}
+										title={`Status: ${pengurus.status_jabatan}`}
+									></div>
+								</div>
+
+								<div className="mt-4">
+									<h2 className="text-2xl font-bold text-gray-900">
+										{pengurus.nama_lengkap}
+									</h2>
+									<p className="text-lg text-indigo-600 font-medium mt-1">
+										{pengurus.jabatan}
+									</p>
+									<div className="mt-2">
+										<span
+											className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${
+												pengurus.status_jabatan === "aktif"
+													? "bg-green-100 text-green-800"
+													: "bg-red-100 text-red-800"
+											}`}
+										>
+											{pengurus.status_jabatan === "aktif"
+												? "Aktif"
+												: "Selesai"}
+										</span>
+									</div>
+								</div>
+							</div>
+						</div>
+						{/* Contact Information */}
+						<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+							<h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+								<FaPhone className="mr-2 text-indigo-600" />
+								Informasi Kontak
+							</h3>
+
+							<div className="space-y-4">
+								<div>
+									<label className="block text-sm font-medium text-gray-700 mb-1">
+										No. Telepon
+									</label>
+									<p className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
+										{pengurus.no_telepon || "-"}
+									</p>
+								</div>
+
+								<div>
+									<label className="flex items-center text-sm font-medium text-gray-700 mb-1">
+										<FaMapMarkerAlt className="mr-1" />
+										Alamat
+									</label>
+									<p className="text-sm text-gray-900 bg-gray-50 p-3 rounded">
+										{pengurus.alamat || "-"}
+									</p>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					{/* Details */}
+					<div className="lg:col-span-2 space-y-6">
 						{/* Personal Information */}
-						<div className="space-y-4">
-							<h3 className="text-lg font-semibold text-gray-900 border-b pb-2">
+						<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+							<h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+								<FaUser className="mr-2 text-indigo-600" />
 								Informasi Pribadi
 							</h3>
 
-							<div className="space-y-3">
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 								<div>
-									<label className="block text-sm font-medium text-gray-500">
+									<label className="block text-sm font-medium text-gray-700 mb-1">
 										NIK
 									</label>
-									<p className="text-gray-900">{pengurus.nik || "-"}</p>
-								</div>
-
-								<div className="grid grid-cols-2 gap-4">
-									<div>
-										<label className="block text-sm font-medium text-gray-500">
-											Tempat Lahir
-										</label>
-										<p className="text-gray-900">
-											{pengurus.tempat_lahir || "-"}
-										</p>
-									</div>
-									<div>
-										<label className="block text-sm font-medium text-gray-500">
-											Tanggal Lahir
-										</label>
-										<p className="text-gray-900">
-											{pengurus.tanggal_lahir ? (
-												<>
-													{formatDate(pengurus.tanggal_lahir)}
-													<span className="text-gray-500 ml-2">
-														({calculateAge(pengurus.tanggal_lahir)})
-													</span>
-												</>
-											) : (
-												"-"
-											)}
-										</p>
-									</div>
-								</div>
-
-								<div className="grid grid-cols-2 gap-4">
-									<div>
-										<label className="block text-sm font-medium text-gray-500">
-											Jenis Kelamin
-										</label>
-										<p className="text-gray-900">
-											{pengurus.jenis_kelamin || "-"}
-										</p>
-									</div>
-									<div>
-										<label className="block text-sm font-medium text-gray-500">
-											Status Perkawinan
-										</label>
-										<p className="text-gray-900">
-											{pengurus.status_perkawinan || "-"}
-										</p>
-									</div>
+									<p className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
+										{pengurus.nik || "-"}
+									</p>
 								</div>
 
 								<div>
-									<label className="block text-sm font-medium text-gray-500">
+									<label className="block text-sm font-medium text-gray-700 mb-1">
+										Jenis Kelamin
+									</label>
+									<p className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
+										{pengurus.jenis_kelamin || "-"}
+									</p>
+								</div>
+
+								<div>
+									<label className="block text-sm font-medium text-gray-700 mb-1">
+										Tempat Lahir
+									</label>
+									<p className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
+										{pengurus.tempat_lahir || "-"}
+									</p>
+								</div>
+
+								<div>
+									<label className="block text-sm font-medium text-gray-700 mb-1">
+										Tanggal Lahir
+									</label>
+									<p className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
+										{pengurus.tanggal_lahir
+											? new Date(pengurus.tanggal_lahir).toLocaleDateString(
+													"id-ID"
+											  )
+											: "-"}
+									</p>
+								</div>
+
+								<div>
+									<label className="block text-sm font-medium text-gray-700 mb-1">
+										Status Perkawinan
+									</label>
+									<p className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
+										{pengurus.status_perkawinan || "-"}
+									</p>
+								</div>
+
+								<div>
+									<label className="block text-sm font-medium text-gray-700 mb-1">
 										Pendidikan
 									</label>
-									<p className="text-gray-900">{pengurus.pendidikan || "-"}</p>
-								</div>
-
-								<div>
-									<label className="block text-sm font-medium text-gray-500">
-										No. Telepon
-									</label>
-									<p className="text-gray-900">{pengurus.no_telepon || "-"}</p>
-								</div>
-
-								<div>
-									<label className="block text-sm font-medium text-gray-500">
-										Alamat
-									</label>
-									<p className="text-gray-900">{pengurus.alamat || "-"}</p>
+									<p className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
+										{pengurus.pendidikan || "-"}
+									</p>
 								</div>
 							</div>
 						</div>
 
-						{/* Jabatan Information */}
-						<div className="space-y-4">
-							<h3 className="text-lg font-semibold text-gray-900 border-b pb-2">
+						{/* Position Information */}
+						<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+							<h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+								<FaCalendarAlt className="mr-2 text-indigo-600" />
 								Informasi Jabatan
 							</h3>
 
-							<div className="space-y-3">
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 								<div>
-									<label className="block text-sm font-medium text-gray-500">
-										Jabatan
+									<label className="block text-sm font-medium text-gray-700 mb-1">
+										Tanggal Mulai Jabatan
 									</label>
-									<p className="text-gray-900 font-semibold">
-										{pengurus.jabatan}
+									<p className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
+										{pengurus.tanggal_mulai_jabatan
+											? new Date(
+													pengurus.tanggal_mulai_jabatan
+											  ).toLocaleDateString("id-ID")
+											: "-"}
 									</p>
 								</div>
 
-								<div className="grid grid-cols-2 gap-4">
-									<div>
-										<label className="block text-sm font-medium text-gray-500">
-											Mulai Jabatan
-										</label>
-										<p className="text-gray-900">
-											{formatDate(pengurus.tanggal_mulai_jabatan)}
-										</p>
-									</div>
-									<div>
-										<label className="block text-sm font-medium text-gray-500">
-											Akhir Jabatan
-										</label>
-										<p className="text-gray-900">
-											{formatDate(pengurus.tanggal_akhir_jabatan)}
-										</p>
-									</div>
+								<div>
+									<label className="block text-sm font-medium text-gray-700 mb-1">
+										Tanggal Akhir Jabatan
+									</label>
+									<p className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
+										{pengurus.tanggal_akhir_jabatan
+											? new Date(
+													pengurus.tanggal_akhir_jabatan
+											  ).toLocaleDateString("id-ID")
+											: "-"}
+									</p>
 								</div>
 
-								{/* SK Pengangkatan */}
-								<div className="p-4 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-100 border border-emerald-200">
+								<div className="md:col-span-2">
+									<label className="block text-sm font-medium text-gray-700 mb-1">
+										Status Verifikasi
+									</label>
+									<div className="flex items-center space-x-2">
+										<span
+											className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+												pengurus.status_verifikasi === "verified"
+													? "bg-green-100 text-green-800"
+													: "bg-yellow-100 text-yellow-800"
+											}`}
+										>
+											{pengurus.status_verifikasi === "verified"
+												? "Terverifikasi"
+												: "Belum Verifikasi"}
+										</span>
+									</div>
+								</div>
+							</div>
+						</div>
+
+						{/* SK Pengangkatan */}
+						<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+							<h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+								<FaFileAlt className="mr-2 text-indigo-600" />
+								SK Pengangkatan Pengurus
+							</h3>
+
+							{pengurus.produk_hukum_id &&
+							produkHukumList.find(
+								(ph) => ph.id === pengurus.produk_hukum_id
+							) ? (
+								<div className="p-4 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-100 border border-emerald-200 hover:shadow-md transition-shadow duration-300">
 									<div className="flex items-start space-x-3">
 										<div className="mt-1">
 											<svg
@@ -416,147 +848,78 @@ const PengurusDetailPage = ({
 											</svg>
 										</div>
 										<div className="flex-1">
-											<h4 className="font-semibold text-gray-800 text-sm mb-1">
-												SK Pengangkatan Pengurus
-											</h4>
-											{pengurus.produk_hukum_id &&
-											produkHukumList.find(
-												(ph) => ph.id === pengurus.produk_hukum_id
-											) ? (
-												<button
-													onClick={() =>
-														navigate(
-															`/desa/produk-hukum/${pengurus.produk_hukum_id}`
-														)
-													}
-													className="w-full text-left hover:bg-emerald-100 rounded-lg p-2 -m-2 transition-colors duration-200 group"
-												>
-													<div className="text-sm">
-														{(() => {
-															const ph = produkHukumList.find(
-																(ph) => ph.id === pengurus.produk_hukum_id
-															);
-															return (
-																<div className="space-y-1">
-																	<div className="flex items-center justify-between">
-																		<p className="text-emerald-700 font-medium group-hover:text-emerald-800">
-																			Nomor {ph.nomor} Tahun {ph.tahun}
-																		</p>
-																		<svg
-																			className="w-4 h-4 text-emerald-600 group-hover:text-emerald-800 transform group-hover:translate-x-1 transition-all duration-200"
-																			fill="none"
-																			stroke="currentColor"
-																			viewBox="0 0 24 24"
-																		>
-																			<path
-																				strokeLinecap="round"
-																				strokeLinejoin="round"
-																				strokeWidth={2}
-																				d="M9 5l7 7-7 7"
-																			/>
-																		</svg>
-																	</div>
-																	<p className="text-gray-600 leading-relaxed group-hover:text-gray-700">
-																		{ph.judul}
-																	</p>
-																	<p className="text-xs text-emerald-600 group-hover:text-emerald-700 font-medium mt-1">
-																		Klik untuk melihat detail SK →
-																	</p>
-																</div>
-															);
-														})()}
+											{(() => {
+												const ph = produkHukumList.find(
+													(ph) => ph.id === pengurus.produk_hukum_id
+												);
+												return (
+													<div className="space-y-3">
+														<div>
+															<h4 className="font-semibold text-emerald-800 text-base mb-1">
+																Nomor {ph.nomor} Tahun {ph.tahun}
+															</h4>
+															<p className="text-gray-700 leading-relaxed text-sm">
+																{ph.judul}
+															</p>
+														</div>
+
+														<div className="flex items-center justify-between pt-2 border-t border-emerald-200">
+															<div className="text-xs text-emerald-600">
+																<span className="font-medium">Jenis:</span>{" "}
+																{ph.jenis}
+															</div>
+															<button
+																onClick={() =>
+																	navigate(
+																		`/desa/produk-hukum/${pengurus.produk_hukum_id}`
+																	)
+																}
+																className="inline-flex items-center space-x-1 px-3 py-1.5 bg-emerald-600 text-white text-xs font-medium rounded-lg hover:bg-emerald-700 transition-colors duration-200"
+															>
+																<FaExternalLinkAlt className="w-3 h-3" />
+																<span>Lihat Detail SK</span>
+															</button>
+														</div>
 													</div>
-												</button>
-											) : (
-												<p className="text-gray-500 text-sm italic">
-													Belum terhubung dengan SK pengangkatan
-												</p>
-											)}
+												);
+											})()}
 										</div>
 									</div>
 								</div>
-
-								<div className="grid grid-cols-2 gap-4">
-									<div>
-										<label className="block text-sm font-medium text-gray-500">
-											Status Jabatan
-										</label>
-										<p className="text-gray-900">
-											<span
-												className={`px-3 py-1 rounded-full text-sm font-medium ${
-													pengurus.status_jabatan === "aktif"
-														? "bg-green-100 text-green-800"
-														: "bg-gray-100 text-gray-800"
-												}`}
+							) : (
+								<div className="p-4 rounded-xl bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-200">
+									<div className="flex items-start space-x-3">
+										<div className="mt-1">
+											<svg
+												className="w-5 h-5 text-yellow-600"
+												fill="none"
+												stroke="currentColor"
+												viewBox="0 0 24 24"
 											>
-												{pengurus.status_jabatan === "aktif"
-													? "Aktif"
-													: "Selesai"}
-											</span>
-										</p>
-									</div>
-									<div>
-										<label className="block text-sm font-medium text-gray-500">
-											Status Verifikasi
-										</label>
-										<p className="text-gray-900">
-											<span
-												className={`px-3 py-1 rounded-full text-sm font-medium ${
-													pengurus.status_verifikasi === "verified"
-														? "bg-blue-100 text-blue-800"
-														: "bg-yellow-100 text-yellow-800"
-												}`}
-											>
-												{pengurus.status_verifikasi === "verified"
-													? "Terverifikasi"
-													: "Belum Verifikasi"}
-											</span>
-										</p>
+												<path
+													strokeLinecap="round"
+													strokeLinejoin="round"
+													strokeWidth={2}
+													d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16c-.77.833.192 2.5 1.732 2.5z"
+												/>
+											</svg>
+										</div>
+										<div className="flex-1">
+											<h4 className="font-semibold text-yellow-800 text-sm mb-1">
+												Belum Terhubung dengan SK Pengangkatan
+											</h4>
+											<p className="text-yellow-700 text-xs">
+												Pengurus ini belum memiliki SK pengangkatan yang
+												terdaftar. Silakan hubungi admin untuk melengkapi
+												dokumen legal.
+											</p>
+										</div>
 									</div>
 								</div>
-							</div>
+							)}
 						</div>
 					</div>
 				</div>
-
-				{/* Action Buttons */}
-				{canManagePengurus && (
-					<div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
-						<div className="flex justify-between">
-							<button
-								onClick={onClose}
-								className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
-							>
-								Tutup
-							</button>
-							<div className="flex space-x-3">
-								<button
-									onClick={() => onEdit?.(pengurus)}
-									className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-								>
-									Edit Data
-								</button>
-								{pengurus.status_jabatan === "aktif" ? (
-									<button
-										onClick={() => handleStatusChange("selesai")}
-										disabled={updating}
-										className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
-									>
-										{updating ? "Memproses..." : "Nonaktifkan"}
-									</button>
-								) : (
-									<button
-										onClick={() => handleStatusChange("aktif")}
-										disabled={updating}
-										className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
-									>
-										{updating ? "Memproses..." : "Aktifkan Kembali"}
-									</button>
-								)}
-							</div>
-						</div>
-					</div>
-				)}
 			</div>
 		</div>
 	);
