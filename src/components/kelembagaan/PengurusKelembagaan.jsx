@@ -15,8 +15,8 @@ const PengurusKelembagaan = ({
 	desaId,
 	onPengurusCountChange,
 }) => {
-	const { isSuperAdmin, isAdminBidang } = useAuth();
-	const isAdmin = isSuperAdmin() || isAdminBidang();
+	const { isSuperAdmin, isAdminBidangPMD } = useAuth();
+	const isAdmin = isSuperAdmin() || isAdminBidangPMD();
 
 	const [loading, setLoading] = useState(true);
 	const [showForm, setShowForm] = useState(false);
@@ -34,7 +34,7 @@ const PengurusKelembagaan = ({
 			const response = await getPengurusByKelembagaan(
 				kelembagaanType,
 				kelembagaanId,
-				superadminDesaId
+				superadminDesaId,
 			);
 			const pengurusData = response?.data?.data || [];
 
@@ -68,9 +68,7 @@ const PengurusKelembagaan = ({
 
 			// Prepare options with desaId for admin access
 			const options =
-				isAdmin && desaId
-					? { desaId, multipart: true }
-					: { multipart: true };
+				isAdmin && desaId ? { desaId, multipart: true } : { multipart: true };
 
 			if (editingPengurus) {
 				await updatePengurus(editingPengurus.id, formData, options);

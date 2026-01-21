@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams, useSearchParams, Link } from "react-router-dom";
+import {
+	useNavigate,
+	useParams,
+	useSearchParams,
+	Link,
+} from "react-router-dom";
 import {
 	listRw,
 	listPosyandu,
@@ -38,9 +43,9 @@ export default function KelembagaanList() {
 	const { type, desaId: routeDesaId } = useParams(); // Get desaId from route params
 	const navigate = useNavigate();
 	const [searchParams] = useSearchParams();
-	const queryDesaId = searchParams.get('desaId'); // Get desaId from query params
+	const queryDesaId = searchParams.get("desaId"); // Get desaId from query params
 	const desaId = routeDesaId || queryDesaId; // Prioritize route param over query param
-	const { user, isSuperAdmin, isAdminBidang, isUserDesa } = useAuth(); // Get user for role-based navigation
+	const { user, isSuperAdmin, isAdminBidangPMD, isUserDesa } = useAuth(); // Get user for role-based navigation
 	const { isEditMode } = useEditMode();
 	const [items, setItems] = useState([]);
 	const [loading, setLoading] = useState(true);
@@ -52,7 +57,8 @@ export default function KelembagaanList() {
 	// Determine if add button should show
 	// For admin (superadmin/admin bidang): always show
 	// For desa: only show if edit mode is ON
-	const showAddButton = (isSuperAdmin() || isAdminBidang()) || (isUserDesa() && isEditMode);
+	const showAddButton =
+		isSuperAdmin() || isAdminBidangPMD() || (isUserDesa() && isEditMode);
 
 	useEffect(() => {
 		let mounted = true;
@@ -127,15 +133,19 @@ export default function KelembagaanList() {
 		}
 	};
 
-	
 	// Helper function to get base path based on user role
 	const getBasePath = () => {
-		if (user?.role === 'desa') {
-			return '/desa';
-		} else if (user?.role === 'superadmin' || user?.role === 'kepala_dinas' || user?.role === 'kepala_bidang' && user?.bidang_id === 5 || (user?.role === 'pegawai' && user?.bidang_id === 5)) {
-			return '/bidang/pmd';
+		if (user?.role === "desa") {
+			return "/desa";
+		} else if (
+			user?.role === "superadmin" ||
+			user?.role === "kepala_dinas" ||
+			(user?.role === "kepala_bidang" && user?.bidang_id === 5) ||
+			(user?.role === "pegawai" && user?.bidang_id === 5)
+		) {
+			return "/bidang/pmd";
 		}
-		return '/desa'; // Default fallback
+		return "/desa"; // Default fallback
 	};
 
 	const basePath = getBasePath();
@@ -144,11 +154,12 @@ export default function KelembagaanList() {
 		return (items || []).filter((item) => {
 			// Filter by status
 			const status = (item.status_kelembagaan || "aktif").toLowerCase();
-			const statusMatch = activeTab === "aktif" ? status === "aktif" : status !== "aktif";
-			
+			const statusMatch =
+				activeTab === "aktif" ? status === "aktif" : status !== "aktif";
+
 			// Filter by desaId if provided (for admin view)
 			const desaMatch = !desaId || String(item.desa_id) === String(desaId);
-			
+
 			return statusMatch && desaMatch;
 		});
 	}, [items, activeTab, desaId]);
@@ -185,7 +196,9 @@ export default function KelembagaanList() {
 				aria-modal="true"
 				onClick={handleBackdropClick}
 			>
-				<div className={`bg-white rounded-2xl shadow-2xl w-full ${(isRwModal || isPosyanduModal) ? 'max-w-5xl' : 'max-w-md'} mx-4 transform transition-all max-h-[90vh] overflow-y-auto`}>
+				<div
+					className={`bg-white rounded-2xl shadow-2xl w-full ${isRwModal || isPosyanduModal ? "max-w-5xl" : "max-w-md"} mx-4 transform transition-all max-h-[90vh] overflow-y-auto`}
+				>
 					<div
 						className={`flex items-center justify-between p-6 border-b border-gray-100 bg-gradient-to-r ${getGradient()} rounded-t-2xl`}
 					>
@@ -204,7 +217,7 @@ export default function KelembagaanList() {
 							✕
 						</button>
 					</div>
-					
+
 					{/* Informasi Pembentukan RW */}
 					{isRwModal && (
 						<div className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 border-b border-blue-100">
@@ -217,11 +230,12 @@ export default function KelembagaanList() {
 										Ketentuan Pembentukan Rukun Warga
 									</h4>
 									<p className="text-sm text-blue-800 mb-3">
-										Pembentukan Rukun Warga diatur dengan tata cara sebagai berikut:
+										Pembentukan Rukun Warga diatur dengan tata cara sebagai
+										berikut:
 									</p>
 								</div>
 							</div>
-							
+
 							<div className="space-y-3">
 								<div className="bg-white rounded-lg p-4 shadow-sm border border-blue-100">
 									<div className="flex items-start space-x-3">
@@ -229,60 +243,73 @@ export default function KelembagaanList() {
 											1
 										</div>
 										<p className="text-sm text-gray-700 leading-relaxed">
-											Pembentukan RW dapat berasal dari <strong>Pembentukan RW baru</strong>, <strong>Pemekaran</strong> dari 1 (satu) RW menjadi 2 (dua) RW atau lebih dan/atau <strong>penggabungan</strong> dari beberapa RW atau bagian RW yang bersandingan.
+											Pembentukan RW dapat berasal dari{" "}
+											<strong>Pembentukan RW baru</strong>,{" "}
+											<strong>Pemekaran</strong> dari 1 (satu) RW menjadi 2
+											(dua) RW atau lebih dan/atau <strong>penggabungan</strong>{" "}
+											dari beberapa RW atau bagian RW yang bersandingan.
 										</p>
 									</div>
 								</div>
-								
+
 								<div className="bg-white rounded-lg p-4 shadow-sm border border-blue-100">
 									<div className="flex items-start space-x-3">
 										<div className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
 											2
 										</div>
 										<p className="text-sm text-gray-700 leading-relaxed">
-											Pembentukan RW dapat berasal dari <strong>prakarsa masyarakat</strong> setelah mendapatkan pertimbangan dari Kepala Desa/Lurah.
+											Pembentukan RW dapat berasal dari{" "}
+											<strong>prakarsa masyarakat</strong> setelah mendapatkan
+											pertimbangan dari Kepala Desa/Lurah.
 										</p>
 									</div>
 								</div>
-								
+
 								<div className="bg-white rounded-lg p-4 shadow-sm border border-blue-100">
 									<div className="flex items-start space-x-3">
 										<div className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
 											3
 										</div>
 										<p className="text-sm text-gray-700 leading-relaxed">
-											Setiap RW paling sedikit terdiri dari <strong>3 (tiga) RT untuk desa</strong> dan <strong>5 (lima) RT untuk kelurahan</strong>.
+											Setiap RW paling sedikit terdiri dari{" "}
+											<strong>3 (tiga) RT untuk desa</strong> dan{" "}
+											<strong>5 (lima) RT untuk kelurahan</strong>.
 										</p>
 									</div>
 								</div>
-								
+
 								<div className="bg-white rounded-lg p-4 shadow-sm border border-blue-100">
 									<div className="flex items-start space-x-3">
 										<div className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
 											4
 										</div>
 										<p className="text-sm text-gray-700 leading-relaxed">
-											Bagi wilayah pemukiman tertentu yang tidak memenuhi ketentuan di atas, tetapi mempunyai jarak yang cukup jauh dari RW terdekat, dapat dibentuk RW baru yang terdiri dari sekurang-kurangnya <strong>2 (dua) RT</strong>.
+											Bagi wilayah pemukiman tertentu yang tidak memenuhi
+											ketentuan di atas, tetapi mempunyai jarak yang cukup jauh
+											dari RW terdekat, dapat dibentuk RW baru yang terdiri dari
+											sekurang-kurangnya <strong>2 (dua) RT</strong>.
 										</p>
 									</div>
 								</div>
 							</div>
-							
+
 							<div className="mt-4 flex items-start space-x-2 bg-blue-100 rounded-lg p-3">
 								<LuInfo className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
 								<div>
-
-								<p className="text-md font-semibold">
-									Sesuai Dengan Peraturan Bupati Bogor Nomor 31 Tahun 2012
-								</p>
-								<p className="text-xs text-blue-800">
-									Tentang Tata Cara Pembentukan, Pengangkatan, dan Pemberhentian Pengurus Lembaga Pemberdayaan Masyarakat Desa/Kelurahan (LPMD/LPMK), Rukun Warga (RW), dan Rukun Tetangga (RT)
-								</p>
+									<p className="text-md font-semibold">
+										Sesuai Dengan Peraturan Bupati Bogor Nomor 31 Tahun 2012
+									</p>
+									<p className="text-xs text-blue-800">
+										Tentang Tata Cara Pembentukan, Pengangkatan, dan
+										Pemberhentian Pengurus Lembaga Pemberdayaan Masyarakat
+										Desa/Kelurahan (LPMD/LPMK), Rukun Warga (RW), dan Rukun
+										Tetangga (RT)
+									</p>
 								</div>
 							</div>
 						</div>
 					)}
-					
+
 					{/* Informasi Pembentukan Posyandu */}
 					{isPosyanduModal && (
 						<div className="p-6 bg-gradient-to-br from-purple-50 to-pink-50 border-b border-purple-100">
@@ -296,7 +323,7 @@ export default function KelembagaanList() {
 									</h4>
 								</div>
 							</div>
-							
+
 							{/* Kedudukan dan Pembentukan */}
 							<div className="space-y-3 mb-4">
 								<div className="bg-white rounded-lg p-4 shadow-sm border border-purple-100">
@@ -305,45 +332,54 @@ export default function KelembagaanList() {
 											1
 										</div>
 										<p className="text-sm text-gray-700 leading-relaxed">
-											Posyandu <strong>berkedudukan di Desa/Kelurahan</strong> setempat.
+											Posyandu <strong>berkedudukan di Desa/Kelurahan</strong>{" "}
+											setempat.
 										</p>
 									</div>
 								</div>
-								
+
 								<div className="bg-white rounded-lg p-4 shadow-sm border border-purple-100">
 									<div className="flex items-start space-x-3">
 										<div className="flex-shrink-0 w-6 h-6 bg-purple-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
 											2
 										</div>
 										<p className="text-sm text-gray-700 leading-relaxed">
-											Posyandu dibentuk atas <strong>prakarsa Pemerintah Desa/Kelurahan dan masyarakat</strong>.
+											Posyandu dibentuk atas{" "}
+											<strong>
+												prakarsa Pemerintah Desa/Kelurahan dan masyarakat
+											</strong>
+											.
 										</p>
 									</div>
 								</div>
-								
+
 								<div className="bg-white rounded-lg p-4 shadow-sm border border-purple-100">
 									<div className="flex items-start space-x-3">
 										<div className="flex-shrink-0 w-6 h-6 bg-purple-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
 											3
 										</div>
 										<p className="text-sm text-gray-700 leading-relaxed">
-											Pembentukan Posyandu disertai/diikuti dengan pemberian <strong>nomor registrasi</strong> yang ditetapkan oleh Menteri melalui Direktorat Jenderal Bina Pemerintahan Desa.
+											Pembentukan Posyandu disertai/diikuti dengan pemberian{" "}
+											<strong>nomor registrasi</strong> yang ditetapkan oleh
+											Menteri melalui Direktorat Jenderal Bina Pemerintahan
+											Desa.
 										</p>
 									</div>
 								</div>
-								
+
 								<div className="bg-white rounded-lg p-4 shadow-sm border border-purple-100">
 									<div className="flex items-start space-x-3">
 										<div className="flex-shrink-0 w-6 h-6 bg-purple-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
 											4
 										</div>
 										<p className="text-sm text-gray-700 leading-relaxed">
-											Tata cara pemberian nomor registrasi ditetapkan oleh Menteri.
+											Tata cara pemberian nomor registrasi ditetapkan oleh
+											Menteri.
 										</p>
 									</div>
 								</div>
 							</div>
-							
+
 							{/* Syarat Pembentukan */}
 							<div className="mt-5 pt-4 border-t border-purple-200">
 								<h5 className="font-semibold text-purple-900 mb-3 flex items-center">
@@ -353,72 +389,93 @@ export default function KelembagaanList() {
 								<div className="space-y-3">
 									<div className="bg-white rounded-lg p-4 shadow-sm border border-purple-100">
 										<div className="flex items-start space-x-3">
-										<div className="flex-shrink-0 w-6 h-6 bg-purple-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
+											<div className="flex-shrink-0 w-6 h-6 bg-purple-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
 												1
 											</div>
-										<p className="text-sm text-gray-700 font-medium mb-2">
-											Pembentukan Posyandu dengan memenuhi persyaratan:
-										</p>
+											<p className="text-sm text-gray-700 font-medium mb-2">
+												Pembentukan Posyandu dengan memenuhi persyaratan:
+											</p>
 										</div>
 										<ol className="space-y-2 ml-4">
 											<li className="flex items-start space-x-2 text-sm text-gray-700">
 												<span className="text-purple-600 font-bold">a.</span>
-												<span>Keberadaannya <strong>bermanfaat dan dibutuhkan</strong> masyarakat Desa/Kelurahan</span>
+												<span>
+													Keberadaannya{" "}
+													<strong>bermanfaat dan dibutuhkan</strong> masyarakat
+													Desa/Kelurahan
+												</span>
 											</li>
 											<li className="flex items-start space-x-2 text-sm text-gray-700">
 												<span className="text-purple-600 font-bold">b.</span>
-												<span>Memiliki <strong>kepengurusan yang tetap</strong></span>
+												<span>
+													Memiliki <strong>kepengurusan yang tetap</strong>
+												</span>
 											</li>
 											<li className="flex items-start space-x-2 text-sm text-gray-700">
 												<span className="text-purple-600 font-bold">c.</span>
-												<span>Memiliki <strong>sekretariat, tempat pelayanan, dan sarana pendukung lainnya</strong> yang bersifat tetap</span>
+												<span>
+													Memiliki{" "}
+													<strong>
+														sekretariat, tempat pelayanan, dan sarana pendukung
+														lainnya
+													</strong>{" "}
+													yang bersifat tetap
+												</span>
 											</li>
 											<li className="flex items-start space-x-2 text-sm text-gray-700">
 												<span className="text-purple-600 font-bold">d.</span>
-												<span><strong>Tidak berafiliasi kepada partai politik</strong></span>
+												<span>
+													<strong>
+														Tidak berafiliasi kepada partai politik
+													</strong>
+												</span>
 											</li>
 										</ol>
 									</div>
-									
+
 									<div className="bg-white rounded-lg p-4 shadow-sm border border-purple-100">
 										<div className="flex items-start space-x-3">
 											<div className="flex-shrink-0 w-6 h-6 bg-purple-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
 												2
 											</div>
 											<p className="text-sm text-gray-700 leading-relaxed">
-												Sekretariat, tempat pelayanan, dan sarana pendukung lainnya merupakan <strong>aset Desa/Kelurahan</strong>.
+												Sekretariat, tempat pelayanan, dan sarana pendukung
+												lainnya merupakan <strong>aset Desa/Kelurahan</strong>.
 											</p>
 										</div>
 									</div>
-									
+
 									<div className="bg-white rounded-lg p-4 shadow-sm border border-purple-100">
 										<div className="flex items-start space-x-3">
 											<div className="flex-shrink-0 w-6 h-6 bg-purple-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
 												3
 											</div>
 											<p className="text-sm text-gray-700 leading-relaxed">
-												Dalam hal Pemerintah Desa/Kelurahan tidak memiliki sekretariat, tempat pelayanan, dan sarana pendukung lainnya, dapat <strong>menggunakan fasilitas lainnya</strong>.
+												Dalam hal Pemerintah Desa/Kelurahan tidak memiliki
+												sekretariat, tempat pelayanan, dan sarana pendukung
+												lainnya, dapat{" "}
+												<strong>menggunakan fasilitas lainnya</strong>.
 											</p>
 										</div>
 									</div>
 								</div>
 							</div>
-							
+
 							<div className="mt-4 flex items-start space-x-2 bg-blue-100 rounded-lg p-3">
 								<LuInfo className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
 								<div>
-
-								<p className="text-md font-semibold">
-									Sesuai Dengan Peratuuran Menteri Dalam Negeri Nomor 13 Tahun 2024
-								</p>
-								<p className="text-xs text-blue-800">
-									Tentang Pos Pelayanan Terpadu								
-								</p>
+									<p className="text-md font-semibold">
+										Sesuai Dengan Peratuuran Menteri Dalam Negeri Nomor 13 Tahun
+										2024
+									</p>
+									<p className="text-xs text-blue-800">
+										Tentang Pos Pelayanan Terpadu
+									</p>
 								</div>
 							</div>
 						</div>
 					)}
-					
+
 					<div className="p-6 space-y-4">{children}</div>
 					<div className="flex justify-end gap-3 p-6 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
 						<button
@@ -536,7 +593,7 @@ export default function KelembagaanList() {
 							Kelembagaan
 						</Link>
 						<FaChevronRight className="text-gray-400 text-xs" />
-						
+
 						{/* Admin: Show Desa name and link */}
 						{desaId && filteredItems.length > 0 && (
 							<>
@@ -544,21 +601,25 @@ export default function KelembagaanList() {
 									to={`/bidang/pmd/kelembagaan/admin/${desaId}`}
 									className="text-gray-500 hover:text-indigo-600 transition-colors"
 								>
-									{filteredItems[0]?.desas?.nama || filteredItems[0]?.desa?.nama || "Desa"}
+									{filteredItems[0]?.desas?.nama ||
+										filteredItems[0]?.desa?.nama ||
+										"Desa"}
 								</Link>
 								<FaChevronRight className="text-gray-400 text-xs" />
 							</>
 						)}
-						
+
 						<span className="text-gray-900 font-medium">{title}</span>
 					</nav>
-					
+
 					{/* Status Badge */}
-					<span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
-						isEditMode 
-							? "bg-green-100 text-green-700 border border-green-300" 
-							: "bg-red-100 text-red-700 border border-red-300"
-					}`}>
+					<span
+						className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
+							isEditMode
+								? "bg-green-100 text-green-700 border border-green-300"
+								: "bg-red-100 text-red-700 border border-red-300"
+						}`}
+					>
 						{isEditMode ? (
 							<>
 								<LuLockOpen className="w-3 h-3" />
@@ -669,107 +730,106 @@ export default function KelembagaanList() {
 						</div>
 					) : (
 						<div>
-
-
-
 							{/* Cards Grid */}
 							<div className="space-y-4">
 								{filteredItems.map((item) => {
-									const status = (item.status_kelembagaan || "aktif").toLowerCase();
+									const status = (
+										item.status_kelembagaan || "aktif"
+									).toLowerCase();
 
 									return (
 										<>
+											<div
+												key={item.id}
+												className="bg-white flex flex-col rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer border border-gray-100 hover:border-blue-200 group overflow-hidden"
+												onClick={() =>
+													navigate(`${basePath}/kelembagaan/${type}/${item.id}`)
+												}
+											>
+												{/* Gradient Bar */}
+												<div
+													className={`h-1.5 bg-gradient-to-r ${
+														type === "rw"
+															? "from-blue-400 to-blue-500"
+															: type === "posyandu"
+																? "from-purple-500 to-purple-700"
+																: type === "pkk"
+																	? "from-pink-500 to-rose-500"
+																	: "from-gray-400 to-gray-500"
+													} rounded-t-2xl`}
+												></div>
 
-										<div
-											key={item.id}
-											className="bg-white flex flex-col rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer border border-gray-100 hover:border-blue-200 group overflow-hidden"
-											onClick={() =>
-												navigate(`${basePath}/kelembagaan/${type}/${item.id}`)
-											}
-										>
-											{/* Gradient Bar */}
-											<div className={`h-1.5 bg-gradient-to-r ${
-												type === "rw" 
-													? "from-blue-400 to-blue-500" 
-													: type === "posyandu"
-													? "from-purple-500 to-purple-700"
-													: type === "pkk"
-													? "from-pink-500 to-rose-500"
-													: "from-gray-400 to-gray-500"
-											} rounded-t-2xl`}></div>
-											
-											{/* Card Content Wrapper */}
-											<div className="flex justify-between p-6">
-											{/* Card Header */}
-											
-											<div className="flex items-center justify-between ">
-												
-												<div className="flex items-center space-x-3">
-													<div
-														className={`p-3 bg-gradient-to-br ${getGradient()} rounded-xl group-hover:scale-110 transition-transform`}
-													>
-														<IconComponent className="w-6 h-6 text-white" />
-													</div>
-													<div>
-														<h4 className="font-bold text-lg text-gray-800">
-															{type === "rw" ? `RW ${item.nomor}` : item.nama}
-														</h4>
-														<div className="flex items-center space-x-2">
-															<span
-																className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-																	status === "aktif"
-																		? "bg-green-100 text-green-700"
-																		: "bg-red-100 text-red-700"
-																}`}
+												{/* Card Content Wrapper */}
+												<div className="flex justify-between p-6">
+													{/* Card Header */}
+
+													<div className="flex items-center justify-between ">
+														<div className="flex items-center space-x-3">
+															<div
+																className={`p-3 bg-gradient-to-br ${getGradient()} rounded-xl group-hover:scale-110 transition-transform`}
 															>
-																{status === "aktif" ? "Aktif" : "Nonaktif"}
-															</span>
+																<IconComponent className="w-6 h-6 text-white" />
+															</div>
+															<div>
+																<h4 className="font-bold text-lg text-gray-800">
+																	{type === "rw"
+																		? `RW ${item.nomor}`
+																		: item.nama}
+																</h4>
+																<div className="flex items-center space-x-2">
+																	<span
+																		className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+																			status === "aktif"
+																				? "bg-green-100 text-green-700"
+																				: "bg-red-100 text-red-700"
+																		}`}
+																	>
+																		{status === "aktif" ? "Aktif" : "Nonaktif"}
+																	</span>
+																</div>
+															</div>
 														</div>
+													</div>
+
+													{/* Card Content */}
+													<div className="flex flex-col items-end space-y-3 ">
+														{item.ketua_nama || item.nama_ketua ? (
+															<div className="flex items-center space-x-2">
+																<span className="text-sm text-gray-600">
+																	{item.ketua_nama || item.nama_ketua}
+																</span>
+																<div className="flex bg-yellow-500 items-center space-x-2 rounded-md p-1">
+																	<LuCrown className="w-4 h-4 text-white" />
+																	<span className="text-sm text-white">
+																		Ketua
+																	</span>
+																</div>
+															</div>
+														) : (
+															<div className="flex items-center space-x-2">
+																<LuUsers className="w-4 h-4 text-gray-400" />
+																<span className="text-sm text-gray-400">
+																	Belum ada ketua
+																</span>
+															</div>
+														)}
+
+														{type === "rw" && (
+															<div className="flex items-center space-x-2">
+																<LuBuilding2 className="w-4 h-4 text-blue-500" />
+																<span className="text-sm text-gray-600">
+																	{item.jumlah_rt || item.rt_count || 0} RT
+																</span>
+															</div>
+														)}
 													</div>
 												</div>
-												
+												{/* End Card Content Wrapper */}
 											</div>
-
-											{/* Card Content */}
-											<div className="flex flex-col items-end space-y-3 ">
-												{item.ketua_nama || item.nama_ketua ? (
-													<div className="flex items-center space-x-2">
-														<span className="text-sm text-gray-600">
-															{item.ketua_nama || item.nama_ketua}
-														</span>
-														<div className="flex bg-yellow-500 items-center space-x-2 rounded-md p-1"> 
-
-														<LuCrown className="w-4 h-4 text-white" />
-														<span className="text-sm text-white">Ketua</span>
-														</div>
-													</div>
-												) : (
-													<div className="flex items-center space-x-2">
-														<LuUsers className="w-4 h-4 text-gray-400" />
-														<span className="text-sm text-gray-400">
-															Belum ada ketua
-														</span>
-													</div>
-												)}
-
-												{type === "rw" && (
-													<div className="flex items-center space-x-2">
-														<LuBuilding2 className="w-4 h-4 text-blue-500" />
-														<span className="text-sm text-gray-600">
-															{item.jumlah_rt || item.rt_count || 0} RT
-														</span>
-													</div>
-												)}
-											</div>
-											</div>
-											{/* End Card Content Wrapper */}
-											
-										</div>
 										</>
 									);
 								})}
 							</div>
-							
 						</div>
 					)}
 				</div>
@@ -777,11 +837,7 @@ export default function KelembagaanList() {
 				{/* Right Column - Activity Log (1/3 width) */}
 				<div className="lg:col-span-1">
 					<div className="sticky top-6">
-						<AktivitasLog 
-							lembagaType={type}
-							mode="list"
-							title={title}
-						/>
+						<AktivitasLog lembagaType={type} mode="list" title={title} />
 					</div>
 				</div>
 			</div>
@@ -794,7 +850,6 @@ export default function KelembagaanList() {
 			>
 				{type === "rw" ? (
 					<div>
-
 						<label
 							htmlFor="modal-rw-nomor"
 							className="block text-sm font-medium mb-2 text-gray-700"
