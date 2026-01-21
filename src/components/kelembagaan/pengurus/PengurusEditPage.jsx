@@ -2,30 +2,36 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { getPengurusById, updatePengurus } from "../../../services/pengurus";
 import { getProdukHukums } from "../../../services/api";
-import { 
-	getRw, 
-	getRt, 
-	getPosyandu, 
-	getKarangTaruna, 
-	getLpm, 
-	getPkk, 
-	getSatlinmas 
+import {
+	getRw,
+	getRt,
+	getPosyandu,
+	getKarangTaruna,
+	getLpm,
+	getPkk,
+	getSatlinmas,
 } from "../../../services/kelembagaan";
 import { useAuth } from "../../../context/AuthContext";
-import { FaArrowLeft, FaSave, FaFileAlt, FaChevronRight, FaHome } from "react-icons/fa";
+import {
+	FaArrowLeft,
+	FaSave,
+	FaFileAlt,
+	FaChevronRight,
+	FaHome,
+} from "react-icons/fa";
 import SearchableProdukHukumSelect from "../../../components/shared/SearchableProdukHukumSelect";
 import Swal from "sweetalert2";
 
 // Helper function to convert pengurusable_type (table name) to route type
 const getRouteType = (pengurusableType) => {
 	const mapping = {
-		'rws': 'rw',
-		'rts': 'rt',
-		'posyandus': 'posyandu',
-		'karang_tarunas': 'karang-taruna',
-		'lpms': 'lpm',
-		'pkks': 'pkk',
-		'satlinmas': 'satlinmas'
+		rws: "rw",
+		rts: "rt",
+		posyandus: "posyandu",
+		karang_tarunas: "karang-taruna",
+		lpms: "lpm",
+		pkks: "pkk",
+		satlinmas: "satlinmas",
 	};
 	return mapping[pengurusableType] || pengurusableType;
 };
@@ -33,13 +39,13 @@ const getRouteType = (pengurusableType) => {
 // Helper function to get display name
 const getDisplayName = (pengurusableType) => {
 	const mapping = {
-		'rws': 'RW',
-		'rts': 'RT',
-		'posyandus': 'Posyandu',
-		'karang_tarunas': 'Karang Taruna',
-		'lpms': 'LPM',
-		'pkks': 'PKK',
-		'satlinmas': 'Satlinmas'
+		rws: "RW",
+		rts: "RT",
+		posyandus: "Posyandu",
+		karang_tarunas: "Karang Taruna",
+		lpms: "LPM",
+		pkks: "PKK",
+		satlinmas: "Satlinmas",
 	};
 	return mapping[pengurusableType] || pengurusableType;
 };
@@ -76,11 +82,16 @@ const PengurusEditPage = () => {
 
 	// Check permissions using role from useAuth
 	const isSuperAdmin = user?.role === "superadmin";
-	const isAdminBidangPMD = user?.role === "pemberdayaan_masyarakat" || 
-					   (user?.role === "kepala_bidang" && user?.bidang_id === 5) ||
-					   (user?.role === "pegawai" && user?.bidang_id === 5);
+	const isAdminBidangPMD =
+		user?.role === "pemberdayaan_masyarakat" ||
+		(user?.role === "kepala_bidang" && user?.bidang_id === 5) ||
+		(user?.role === "pegawai" && user?.bidang_id === 5);
 	const isUserDesa = user?.role === "desa";
 	const canEdit = isSuperAdmin || isAdminBidangPMD || isUserDesa;
+
+	// Determine base path based on role
+	const getBasePath = () => {
+		if (isSuperAdmin || isAdminBidangPMD) {
 			return "/bidang/pmd";
 		}
 		return "/desa";
@@ -97,44 +108,47 @@ const PengurusEditPage = () => {
 		}
 	}, []);
 
-	const loadKelembagaanInfo = useCallback(async (pengurusableType, pengurusableId) => {
-		try {
-			let response;
-			// Map table name to appropriate getter function
-			switch (pengurusableType) {
-				case 'rws':
-					response = await getRw(pengurusableId);
-					break;
-				case 'rts':
-					response = await getRt(pengurusableId);
-					break;
-				case 'posyandus':
-					response = await getPosyandu(pengurusableId);
-					break;
-				case 'karang_tarunas':
-					response = await getKarangTaruna(pengurusableId);
-					break;
-				case 'lpms':
-					response = await getLpm(pengurusableId);
-					break;
-				case 'pkks':
-					response = await getPkk(pengurusableId);
-					break;
-				case 'satlinmas':
-					response = await getSatlinmas(pengurusableId);
-					break;
-				default:
-					console.warn('Unknown kelembagaan type:', pengurusableType);
-					return;
+	const loadKelembagaanInfo = useCallback(
+		async (pengurusableType, pengurusableId) => {
+			try {
+				let response;
+				// Map table name to appropriate getter function
+				switch (pengurusableType) {
+					case "rws":
+						response = await getRw(pengurusableId);
+						break;
+					case "rts":
+						response = await getRt(pengurusableId);
+						break;
+					case "posyandus":
+						response = await getPosyandu(pengurusableId);
+						break;
+					case "karang_tarunas":
+						response = await getKarangTaruna(pengurusableId);
+						break;
+					case "lpms":
+						response = await getLpm(pengurusableId);
+						break;
+					case "pkks":
+						response = await getPkk(pengurusableId);
+						break;
+					case "satlinmas":
+						response = await getSatlinmas(pengurusableId);
+						break;
+					default:
+						console.warn("Unknown kelembagaan type:", pengurusableType);
+						return;
+				}
+
+				const kelembagaanData = response?.data?.data;
+				setKelembagaanInfo(kelembagaanData || null);
+			} catch (error) {
+				console.error("Error loading kelembagaan info:", error);
+				setKelembagaanInfo(null);
 			}
-			
-			const kelembagaanData = response?.data?.data;
-			setKelembagaanInfo(kelembagaanData || null);
-		} catch (error) {
-			console.error('Error loading kelembagaan info:', error);
-			setKelembagaanInfo(null);
-		}
-	}, []);
+		},
+		[],
+	);
 
 	const loadPengurusDetail = useCallback(async () => {
 		if (!pengurusId) return;
@@ -159,11 +173,16 @@ const PengurusEditPage = () => {
 					jabatan: data.jabatan || "",
 					tanggal_mulai_jabatan: data.tanggal_mulai_jabatan || "",
 					tanggal_akhir_jabatan: data.tanggal_akhir_jabatan || "",
-					produk_hukum_id: data.produk_hukum_id || "",				status_verifikasi: data.status_verifikasi || "unverified",				});
-				
+					produk_hukum_id: data.produk_hukum_id || "",
+					status_verifikasi: data.status_verifikasi || "unverified",
+				});
+
 				// Load kelembagaan info if available
 				if (data.pengurusable_type && data.pengurusable_id) {
-					await loadKelembagaanInfo(data.pengurusable_type, data.pengurusable_id);
+					await loadKelembagaanInfo(
+						data.pengurusable_type,
+						data.pengurusable_id,
+					);
 				}
 			}
 		} catch (error) {
@@ -322,7 +341,7 @@ const PengurusEditPage = () => {
 							to={`${basePath}/kelembagaan/${getRouteType(pengurus.pengurusable_type)}/${pengurus.pengurusable_id}`}
 							className="text-gray-500 hover:text-indigo-600 transition-colors"
 						>
-							{kelembagaanInfo?.nomor || kelembagaanInfo?.nama || 'Detail'}
+							{kelembagaanInfo?.nomor || kelembagaanInfo?.nama || "Detail"}
 						</Link>
 						<FaChevronRight className="text-gray-400 text-xs" />
 						<Link
@@ -332,9 +351,7 @@ const PengurusEditPage = () => {
 							{pengurus.nama_lengkap}
 						</Link>
 						<FaChevronRight className="text-gray-400 text-xs" />
-						<span className="text-gray-900 font-medium">
-							Edit
-						</span>
+						<span className="text-gray-900 font-medium">Edit</span>
 					</nav>
 				</div>
 			</div>
@@ -603,7 +620,7 @@ const PengurusEditPage = () => {
 					</div>
 
 					{/* Status Verifikasi - Only for Admin Bidang */}
-					{(isSuperAdmin() || isAdminBidangPMD()) && (
+					{(isSuperAdmin || isAdminBidangPMD) && (
 						<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
 							<h3 className="text-lg font-semibold text-gray-900 mb-4">
 								Status Verifikasi
@@ -612,32 +629,35 @@ const PengurusEditPage = () => {
 							<div className="space-y-4">
 								<div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
 									<div className="flex items-center space-x-3">
-										<div className={`w-3 h-3 rounded-full ${
-											formData.status_verifikasi === "verified" 
-												? "bg-green-500" 
-												: "bg-yellow-500"
-										}`}></div>
+										<div
+											className={`w-3 h-3 rounded-full ${
+												formData.status_verifikasi === "verified"
+													? "bg-green-500"
+													: "bg-yellow-500"
+											}`}
+										></div>
 										<div>
 											<p className="font-medium text-gray-900">
-												{formData.status_verifikasi === "verified" 
-													? "Terverifikasi" 
-													: "Belum Terverifikasi"
-												}
+												{formData.status_verifikasi === "verified"
+													? "Terverifikasi"
+													: "Belum Terverifikasi"}
 											</p>
 											<p className="text-sm text-gray-500">
 												Status verifikasi data pengurus
 											</p>
 										</div>
 									</div>
-									
+
 									<label className="relative inline-flex items-center cursor-pointer">
 										<input
 											type="checkbox"
 											checked={formData.status_verifikasi === "verified"}
 											onChange={(e) => {
-												setFormData(prev => ({
+												setFormData((prev) => ({
 													...prev,
-													status_verifikasi: e.target.checked ? "verified" : "unverified"
+													status_verifikasi: e.target.checked
+														? "verified"
+														: "unverified",
 												}));
 											}}
 											className="sr-only peer"
@@ -645,11 +665,12 @@ const PengurusEditPage = () => {
 										<div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
 									</label>
 								</div>
-								
+
 								<div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
 									<p className="text-xs text-blue-800">
-										<strong>Info:</strong> Toggle ini hanya dapat diubah oleh Admin Bidang. 
-										Status verifikasi menandakan bahwa data pengurus telah diperiksa dan divalidasi oleh admin.
+										<strong>Info:</strong> Toggle ini hanya dapat diubah oleh
+										Admin Bidang. Status verifikasi menandakan bahwa data
+										pengurus telah diperiksa dan divalidasi oleh admin.
 									</p>
 								</div>
 							</div>
@@ -690,7 +711,7 @@ const PengurusEditPage = () => {
 							{/* Preview SK yang dipilih */}
 							{formData.produk_hukum_id &&
 								produkHukumList.find(
-									(ph) => ph.id === formData.produk_hukum_id
+									(ph) => ph.id === formData.produk_hukum_id,
 								) && (
 									<div className="p-4 rounded-lg bg-emerald-50 border border-emerald-200">
 										<div className="flex items-start space-x-3">
@@ -715,7 +736,7 @@ const PengurusEditPage = () => {
 												</h4>
 												{(() => {
 													const ph = produkHukumList.find(
-														(ph) => ph.id === formData.produk_hukum_id
+														(ph) => ph.id === formData.produk_hukum_id,
 													);
 													return (
 														<div className="space-y-1">

@@ -6,14 +6,14 @@ import {
 	updatePengurusVerifikasi,
 } from "../../../services/pengurus";
 import { getProdukHukums, getDesa } from "../../../services/api";
-import { 
-	getRw, 
-	getRt, 
-	getPosyandu, 
-	getKarangTaruna, 
-	getLpm, 
-	getPkk, 
-	getSatlinmas 
+import {
+	getRw,
+	getRt,
+	getPosyandu,
+	getKarangTaruna,
+	getLpm,
+	getPkk,
+	getSatlinmas,
 } from "../../../services/kelembagaan";
 import { useAuth } from "../../../context/AuthContext";
 import { useEditMode } from "../../../context/EditModeContext";
@@ -38,13 +38,13 @@ const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
 // Helper function to convert pengurusable_type (table name) to route type
 const getRouteType = (pengurusableType) => {
 	const mapping = {
-		'rws': 'rw',
-		'rts': 'rt',
-		'posyandus': 'posyandu',
-		'karang_tarunas': 'karang-taruna',
-		'lpms': 'lpm',
-		'pkks': 'pkk',
-		'satlinmas': 'satlinmas'
+		rws: "rw",
+		rts: "rt",
+		posyandus: "posyandu",
+		karang_tarunas: "karang-taruna",
+		lpms: "lpm",
+		pkks: "pkk",
+		satlinmas: "satlinmas",
 	};
 	return mapping[pengurusableType] || pengurusableType;
 };
@@ -52,13 +52,13 @@ const getRouteType = (pengurusableType) => {
 // Helper function to get display name
 const getDisplayName = (pengurusableType) => {
 	const mapping = {
-		'rws': 'RW',
-		'rts': 'RT',
-		'posyandus': 'Posyandu',
-		'karang_tarunas': 'Karang Taruna',
-		'lpms': 'LPM',
-		'pkks': 'PKK',
-		'satlinmas': 'Satlinmas'
+		rws: "RW",
+		rts: "RT",
+		posyandus: "Posyandu",
+		karang_tarunas: "Karang Taruna",
+		lpms: "LPM",
+		pkks: "PKK",
+		satlinmas: "Satlinmas",
 	};
 	return mapping[pengurusableType] || pengurusableType;
 };
@@ -66,7 +66,9 @@ const getDisplayName = (pengurusableType) => {
 // Helper function to determine correct routing based on user role
 const getPengurusRoutePath = (user, pengurusId, action = "") => {
 	const isSuperAdmin = user?.role === "superadmin";
-	const isAdminBidangPMD = ["pemberdayaan_masyarakat", "pmd"].includes(user?.role);
+	const isAdminBidangPMD = ["pemberdayaan_masyarakat", "pmd"].includes(
+		user?.role,
+	);
 
 	if (isSuperAdmin || isAdminBidangPMD) {
 		return `/dashboard/pengurus/${pengurusId}${action ? `/${action}` : ""}`;
@@ -80,11 +82,14 @@ const PengurusDetailPage = () => {
 	const params = useParams();
 	const pengurusId = params.id; // Changed from destructuring to direct access
 	const navigate = useNavigate();
-\tconst { user, isSuperAdmin, isAdminBidangPMD, isUserDesa, canManageKelembagaan } = useAuth();
+	const {
+		user,
+		isSuperAdmin,
+		isAdminBidangPMD,
+		isUserDesa,
+		canManageKelembagaan,
+	} = useAuth();
 	const { isEditMode } = useEditMode();
-
-	console.log('🔧 All params:', params);
-	console.log('🆔 Pengurus ID:', pengurusId);
 
 	const [pengurus, setPengurus] = useState(null);
 	const [kelembagaanInfo, setKelembagaanInfo] = useState(null);
@@ -114,7 +119,7 @@ const PengurusDetailPage = () => {
 			const desaData = response?.data?.data;
 			setDesaInfo(desaData || null);
 		} catch (error) {
-			console.error('Error loading desa info:', error);
+			console.error("Error loading desa info:", error);
 			setDesaInfo(null);
 		}
 	};
@@ -127,7 +132,7 @@ const PengurusDetailPage = () => {
 				setRwInfo(rwData || null);
 			}
 		} catch (error) {
-			console.error('Error loading RW info for RT:', error);
+			console.error("Error loading RW info for RT:", error);
 			setRwInfo(null);
 		}
 	};
@@ -138,60 +143,60 @@ const PengurusDetailPage = () => {
 			// Map table name to appropriate getter function
 			// Note: pengurusable_type from database is singular (rw, rt, etc)
 			switch (pengurusableType) {
-				case 'rw':
+				case "rw":
 					response = await getRw(pengurusableId);
 					break;
-				case 'rt':
+				case "rt":
 					response = await getRt(pengurusableId);
 					break;
-				case 'posyandu':
+				case "posyandu":
 					response = await getPosyandu(pengurusableId);
 					break;
-				case 'karang_taruna':
+				case "karang_taruna":
 					response = await getKarangTaruna(pengurusableId);
 					break;
-				case 'lpm':
+				case "lpm":
 					response = await getLpm(pengurusableId);
 					break;
-				case 'pkk':
+				case "pkk":
 					response = await getPkk(pengurusableId);
 					break;
-				case 'satlinmas':
+				case "satlinmas":
 					response = await getSatlinmas(pengurusableId);
 					break;
 				default:
-					console.warn('Unknown kelembagaan type:', pengurusableType);
+					console.warn("Unknown kelembagaan type:", pengurusableType);
 					return;
 			}
-			
+
 			const kelembagaanData = response?.data?.data;
 			setKelembagaanInfo(kelembagaanData || null);
 
 			// If it's RT, load the parent RW
-			if (pengurusableType === 'rt' && kelembagaanData) {
+			if (pengurusableType === "rt" && kelembagaanData) {
 				await loadRwForRt(kelembagaanData);
 			}
 		} catch (error) {
-			console.error('Error loading kelembagaan info:', error);
+			console.error("Error loading kelembagaan info:", error);
 			setKelembagaanInfo(null);
 		}
 	};
 
 	const loadPengurusDetail = async () => {
 		if (!pengurusId) {
-			console.log('⚠️ No pengurusId provided');
+			console.log("⚠️ No pengurusId provided");
 			return;
 		}
 
-		console.log('🔍 Loading pengurus detail for ID:', pengurusId);
+		console.log("🔍 Loading pengurus detail for ID:", pengurusId);
 		setLoading(true);
 		try {
 			const response = await getPengurusById(pengurusId);
-			console.log('✅ Pengurus detail response:', response);
+			console.log("✅ Pengurus detail response:", response);
 			const pengurusData = response?.data?.data;
-			console.log('📦 Pengurus data:', pengurusData);
+			console.log("📦 Pengurus data:", pengurusData);
 			setPengurus(pengurusData || null);
-			
+
 			// Load desa info
 			if (pengurusData?.desa_id) {
 				await loadDesaInfo(pengurusData.desa_id);
@@ -199,17 +204,20 @@ const PengurusDetailPage = () => {
 
 			// Load kelembagaan info if pengurus data is available
 			if (pengurusData?.pengurusable_type && pengurusData?.pengurusable_id) {
-				await loadKelembagaanInfo(pengurusData.pengurusable_type, pengurusData.pengurusable_id);
+				await loadKelembagaanInfo(
+					pengurusData.pengurusable_type,
+					pengurusData.pengurusable_id,
+				);
 			}
 		} catch (error) {
-			console.error('❌ Error loading pengurus detail:', error);
+			console.error("❌ Error loading pengurus detail:", error);
 			Swal.fire({
 				icon: "error",
 				title: "Gagal",
 				text: "Gagal memuat detail pengurus",
 			});
 		} finally {
-			console.log('✨ Loading complete, setting loading to false');
+			console.log("✨ Loading complete, setting loading to false");
 			setLoading(false);
 		}
 	};
@@ -303,7 +311,8 @@ const PengurusDetailPage = () => {
 			Swal.fire({
 				icon: "error",
 				title: "Gagal",
-				text: error.response?.data?.message || "Gagal mengubah status verifikasi",
+				text:
+					error.response?.data?.message || "Gagal mengubah status verifikasi",
 			});
 		} finally {
 			setUpdating(false);
@@ -344,14 +353,16 @@ const PengurusDetailPage = () => {
 
 	return (
 		<div className="min-h-screen">
-			
-
 			{/* Breadcrumb */}
 			<div className="flex bg-white p-2 mb-4 rounded-md shadow-sm justify-between items-center">
 				<nav className="flex items-center space-x-2 text-sm">
 					{/* Dashboard */}
 					<Link
-						to={(isSuperAdmin() || isAdminBidangPMD()) ? "/bidang/pmd/kelembagaan" : "/desa/dashboard"}
+						to={
+							isSuperAdmin() || isAdminBidangPMD()
+								? "/bidang/pmd/kelembagaan"
+								: "/desa/dashboard"
+						}
 						className="flex items-center text-gray-500 hover:text-indigo-600 transition-colors"
 					>
 						<FaHome className="mr-1" />
@@ -361,7 +372,11 @@ const PengurusDetailPage = () => {
 
 					{/* Kelembagaan */}
 					<Link
-						to={(isSuperAdmin() || isAdminBidangPMD()) ? "/bidang/pmd/kelembagaan" : "/desa/kelembagaan"}
+						to={
+							isSuperAdmin() || isAdminBidangPMD()
+								? "/bidang/pmd/kelembagaan"
+								: "/desa/kelembagaan"
+						}
 						className="text-gray-500 hover:text-indigo-600 transition-colors"
 					>
 						Kelembagaan
@@ -382,80 +397,96 @@ const PengurusDetailPage = () => {
 					)}
 
 					{/* If RT, show RW first */}
-					{pengurus.pengurusable_type === 'rt' && rwInfo && (
+					{pengurus.pengurusable_type === "rt" && rwInfo && (
 						<>
 							{/* RW Link */}
 							<Link
-								to={(isSuperAdmin() || isAdminBidangPMD()) 
-									? `/bidang/pmd/kelembagaan/rw` 
-									: `/desa/kelembagaan/rw`}
+								to={
+									isSuperAdmin() || isAdminBidangPMD()
+										? `/bidang/pmd/kelembagaan/rw`
+										: `/desa/kelembagaan/rw`
+								}
 								className="text-gray-500 hover:text-indigo-600 transition-colors"
 							>
 								RW
 							</Link>
 							<FaChevronRight className="text-gray-400 text-xs" />
-							
+
 							{/* RW Number */}
 							<Link
-								to={(isSuperAdmin() || isAdminBidangPMD()) 
-									? `/bidang/pmd/kelembagaan/rw/${rwInfo.id}` 
-									: `/desa/kelembagaan/rw/${rwInfo.id}`}
+								to={
+									isSuperAdmin() || isAdminBidangPMD()
+										? `/bidang/pmd/kelembagaan/rw/${rwInfo.id}`
+										: `/desa/kelembagaan/rw/${rwInfo.id}`
+								}
 								className="text-gray-500 hover:text-indigo-600 transition-colors"
 							>
 								RW {rwInfo.nomor}
 							</Link>
 							<FaChevronRight className="text-gray-400 text-xs" />
-							
+
 							{/* RT Number */}
 							<Link
-								to={(isSuperAdmin() || isAdminBidangPMD()) 
-									? `/bidang/pmd/kelembagaan/rt/${pengurus.pengurusable_id}` 
-									: `/desa/kelembagaan/rt/${pengurus.pengurusable_id}`}
+								to={
+									isSuperAdmin() || isAdminBidangPMD()
+										? `/bidang/pmd/kelembagaan/rt/${pengurus.pengurusable_id}`
+										: `/desa/kelembagaan/rt/${pengurus.pengurusable_id}`
+								}
 								className="text-gray-500 hover:text-indigo-600 transition-colors"
 							>
-								RT {kelembagaanInfo?.nomor || 'Detail'}
+								RT {kelembagaanInfo?.nomor || "Detail"}
 							</Link>
 							<FaChevronRight className="text-gray-400 text-xs" />
 						</>
 					)}
 
 					{/* For single-instance types (satlinmas, karang-taruna, lpm, pkk) - direct link */}
-					{['satlinmas', 'karang_taruna', 'lpm', 'pkk'].includes(pengurus.pengurusable_type) ? (
+					{["satlinmas", "karang_taruna", "lpm", "pkk"].includes(
+						pengurus.pengurusable_type,
+					) ? (
 						<>
 							<Link
-								to={(isSuperAdmin() || isAdminBidangPMD()) 
-									? `/bidang/pmd/kelembagaan/${getRouteType(pengurus.pengurusable_type)}/${pengurus.pengurusable_id}` 
-									: `/desa/kelembagaan/${getRouteType(pengurus.pengurusable_type)}/${pengurus.pengurusable_id}`}
+								to={
+									isSuperAdmin() || isAdminBidangPMD()
+										? `/bidang/pmd/kelembagaan/${getRouteType(pengurus.pengurusable_type)}/${pengurus.pengurusable_id}`
+										: `/desa/kelembagaan/${getRouteType(pengurus.pengurusable_type)}/${pengurus.pengurusable_id}`
+								}
 								className="text-gray-500 hover:text-indigo-600 transition-colors"
 							>
 								{getDisplayName(pengurus.pengurusable_type)}
 							</Link>
 							<FaChevronRight className="text-gray-400 text-xs" />
 						</>
-					) : pengurus.pengurusable_type !== 'rt' && (
-						<>
-							{/* For other types (RW, Posyandu) - show type link, then item */}
-							<Link
-								to={(isSuperAdmin() || isAdminBidangPMD()) 
-									? `/bidang/pmd/kelembagaan/${getRouteType(pengurus.pengurusable_type)}` 
-									: `/desa/kelembagaan/${getRouteType(pengurus.pengurusable_type)}`}
-								className="text-gray-500 hover:text-indigo-600 transition-colors"
-							>
-								{getDisplayName(pengurus.pengurusable_type)}
-							</Link>
-							<FaChevronRight className="text-gray-400 text-xs" />
+					) : (
+						pengurus.pengurusable_type !== "rt" && (
+							<>
+								{/* For other types (RW, Posyandu) - show type link, then item */}
+								<Link
+									to={
+										isSuperAdmin() || isAdminBidangPMD()
+											? `/bidang/pmd/kelembagaan/${getRouteType(pengurus.pengurusable_type)}`
+											: `/desa/kelembagaan/${getRouteType(pengurus.pengurusable_type)}`
+									}
+									className="text-gray-500 hover:text-indigo-600 transition-colors"
+								>
+									{getDisplayName(pengurus.pengurusable_type)}
+								</Link>
+								<FaChevronRight className="text-gray-400 text-xs" />
 
-							{/* Kelembagaan Number/Name */}
-							<Link
-								to={(isSuperAdmin() || isAdminBidangPMD()) 
-									? `/bidang/pmd/kelembagaan/${getRouteType(pengurus.pengurusable_type)}/${pengurus.pengurusable_id}` 
-									: `/desa/kelembagaan/${getRouteType(pengurus.pengurusable_type)}/${pengurus.pengurusable_id}`}
-								className="text-gray-500 hover:text-indigo-600 transition-colors"
-							>
-								{kelembagaanInfo?.nomor || kelembagaanInfo?.nama || 'Detail'}
-							</Link>
-							<FaChevronRight className="text-gray-400 text-xs" />
-						</>
+								{/* Kelembagaan Number/Name */}
+								<Link
+									to={
+										isSuperAdmin() || isAdminBidangPMD()
+											? `/bidang/pmd/kelembagaan/${getRouteType(pengurus.pengurusable_type)}/${pengurus.pengurusable_id}`
+											: `/desa/kelembagaan/${getRouteType(pengurus.pengurusable_type)}/${pengurus.pengurusable_id}`
+									}
+									className="text-gray-500 hover:text-indigo-600 transition-colors"
+								>
+									{kelembagaanInfo?.nomor || kelembagaanInfo?.nama || "Detail"}
+								</Link>
+								<FaChevronRight className="text-gray-400 text-xs" />
+							</>
+						)
 					)}
 
 					{/* Pengurus Name */}
@@ -464,24 +495,24 @@ const PengurusDetailPage = () => {
 					</span>
 				</nav>
 				<span
-						className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
-							isEditMode
-								? "bg-green-100 text-green-700 border border-green-300"
-								: "bg-red-100 text-red-700 border border-red-300"
-						}`}
-					>
-						{isEditMode ? (
-							<>
-								<FaLockOpen className="w-3 h-3" />
-								<span>Aplikasi Dibuka</span>
-							</>
-						) : (
-							<>
-								<FaLock className="w-3 h-3" />
-								<span>Aplikasi Ditutup</span>
-							</>
-						)}
-						</span>
+					className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
+						isEditMode
+							? "bg-green-100 text-green-700 border border-green-300"
+							: "bg-red-100 text-red-700 border border-red-300"
+					}`}
+				>
+					{isEditMode ? (
+						<>
+							<FaLockOpen className="w-3 h-3" />
+							<span>Aplikasi Dibuka</span>
+						</>
+					) : (
+						<>
+							<FaLock className="w-3 h-3" />
+							<span>Aplikasi Ditutup</span>
+						</>
+					)}
+				</span>
 			</div>
 
 			{/* Header with Actions */}
@@ -505,110 +536,109 @@ const PengurusDetailPage = () => {
 				</div>
 
 				<div className="flex gap-3">
-				{canManage && (
-					<div className="flex items-center space-x-3">
-						<button
-							onClick={handleEdit}
-							disabled={!isEditMode}
-							className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
-								isEditMode
-									? "bg-indigo-600 text-white hover:bg-indigo-700"
-									: "bg-gray-300 text-gray-500 cursor-not-allowed"
-							}`}
-							title={!isEditMode ? "Fitur edit ditutup" : "Edit pengurus"}
-						>
-							<FaEdit className="text-sm" />
-							<span>Edit</span>
-						</button>
+					{canManage && (
+						<div className="flex items-center space-x-3">
+							<button
+								onClick={handleEdit}
+								disabled={!isEditMode}
+								className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+									isEditMode
+										? "bg-indigo-600 text-white hover:bg-indigo-700"
+										: "bg-gray-300 text-gray-500 cursor-not-allowed"
+								}`}
+								title={!isEditMode ? "Fitur edit ditutup" : "Edit pengurus"}
+							>
+								<FaEdit className="text-sm" />
+								<span>Edit</span>
+							</button>
 
+							<button
+								onClick={() =>
+									handleStatusUpdate(
+										pengurus.status_jabatan === "aktif" ? "selesai" : "aktif",
+									)
+								}
+								disabled={updating || !isEditMode}
+								className={`px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+									!isEditMode
+										? "bg-gray-300 text-gray-500"
+										: pengurus.status_jabatan === "aktif"
+											? "bg-red-100 text-red-700 hover:bg-red-200"
+											: "bg-green-100 text-green-700 hover:bg-green-200"
+								}`}
+								title={!isEditMode ? "Fitur perubahan status ditutup" : ""}
+							>
+								{updating ? (
+									<span>Memproses...</span>
+								) : pengurus.status_jabatan === "aktif" ? (
+									<span>Nonaktifkan</span>
+								) : (
+									<span>Aktifkan</span>
+								)}
+							</button>
+						</div>
+					)}
+
+					{/* Verification Button - Only for superadmin or admin bidang PMD */}
+					{(isSuperAdmin() || isAdminBidangPMD()) && (
 						<button
 							onClick={() =>
-								handleStatusUpdate(
-									pengurus.status_jabatan === "aktif" ? "selesai" : "aktif"
+								handleVerificationUpdate(
+									pengurus.status_verifikasi === "verified"
+										? "unverified"
+										: "verified",
 								)
 							}
-							disabled={updating || !isEditMode}
-							className={`px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-								!isEditMode
-									? "bg-gray-300 text-gray-500"
-									: pengurus.status_jabatan === "aktif"
-									? "bg-red-100 text-red-700 hover:bg-red-200"
-									: "bg-green-100 text-green-700 hover:bg-green-200"
+							disabled={updating}
+							className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+								pengurus.status_verifikasi === "verified"
+									? "bg-yellow-100 text-yellow-700 hover:bg-yellow-200 border border-yellow-300"
+									: "bg-green-100 text-green-700 hover:bg-green-200 border border-green-300"
 							}`}
-							title={!isEditMode ? "Fitur perubahan status ditutup" : ""}
+							title={
+								pengurus.status_verifikasi === "verified"
+									? "Batalkan verifikasi pengurus"
+									: "Verifikasi pengurus"
+							}
 						>
-							{updating ? (
-								<span>Memproses...</span>
-							) : pengurus.status_jabatan === "aktif" ? (
-								<span>Nonaktifkan</span>
+							{pengurus.status_verifikasi === "verified" ? (
+								<>
+									<svg
+										className="w-4 h-4"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M6 18L18 6M6 6l12 12"
+										/>
+									</svg>
+									<span>Batalkan Verifikasi</span>
+								</>
 							) : (
-								<span>Aktifkan</span>
+								<>
+									<svg
+										className="w-4 h-4"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+										/>
+									</svg>
+									<span>Verifikasi Pengurus</span>
+								</>
 							)}
 						</button>
-					</div>
-				)}
-
-				{/* Verification Button - Only for superadmin or admin bidang PMD */}
-				{(isSuperAdmin() || isAdminBidangPMD()) && (
-					<button
-						onClick={() =>
-							handleVerificationUpdate(
-								pengurus.status_verifikasi === "verified"
-									? "unverified"
-									: "verified"
-							)
-						}
-						disabled={updating}
-						className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-							pengurus.status_verifikasi === "verified"
-								? "bg-yellow-100 text-yellow-700 hover:bg-yellow-200 border border-yellow-300"
-								: "bg-green-100 text-green-700 hover:bg-green-200 border border-green-300"
-						}`}
-						title={
-							pengurus.status_verifikasi === "verified"
-								? "Batalkan verifikasi pengurus"
-								: "Verifikasi pengurus"
-						}
-					>
-						{pengurus.status_verifikasi === "verified" ? (
-							<>
-								<svg
-									className="w-4 h-4"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-								>
-									<path
-										strokeLinecap="round"
-										strokeLinejoin="round"
-										strokeWidth={2}
-										d="M6 18L18 6M6 6l12 12"
-									/>
-								</svg>
-								<span>Batalkan Verifikasi</span>
-							</>
-						) : (
-							<>
-								<svg
-									className="w-4 h-4"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-								>
-									<path
-										strokeLinecap="round"
-										strokeLinejoin="round"
-										strokeWidth={2}
-										d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-									/>
-								</svg>
-								<span>Verifikasi Pengurus</span>
-							</>
-						)}
-					</button>
-				)}
+					)}
 				</div>
-
 			</div>
 
 			{/* Main Content */}
@@ -738,8 +768,8 @@ const PengurusDetailPage = () => {
 									<p className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
 										{pengurus.tanggal_lahir
 											? new Date(pengurus.tanggal_lahir).toLocaleDateString(
-													"id-ID"
-											  )
+													"id-ID",
+												)
 											: "-"}
 									</p>
 								</div>
@@ -779,8 +809,8 @@ const PengurusDetailPage = () => {
 									<p className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
 										{pengurus.tanggal_mulai_jabatan
 											? new Date(
-													pengurus.tanggal_mulai_jabatan
-											  ).toLocaleDateString("id-ID")
+													pengurus.tanggal_mulai_jabatan,
+												).toLocaleDateString("id-ID")
 											: "-"}
 									</p>
 								</div>
@@ -792,8 +822,8 @@ const PengurusDetailPage = () => {
 									<p className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
 										{pengurus.tanggal_akhir_jabatan
 											? new Date(
-													pengurus.tanggal_akhir_jabatan
-											  ).toLocaleDateString("id-ID")
+													pengurus.tanggal_akhir_jabatan,
+												).toLocaleDateString("id-ID")
 											: "-"}
 									</p>
 								</div>
@@ -828,7 +858,7 @@ const PengurusDetailPage = () => {
 
 							{pengurus.produk_hukum_id &&
 							produkHukumList.find(
-								(ph) => ph.id === pengurus.produk_hukum_id
+								(ph) => ph.id === pengurus.produk_hukum_id,
 							) ? (
 								<div className="p-4 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-100 border border-emerald-200 hover:shadow-md transition-shadow duration-300">
 									<div className="flex items-start space-x-3">
@@ -850,7 +880,7 @@ const PengurusDetailPage = () => {
 										<div className="flex-1">
 											{(() => {
 												const ph = produkHukumList.find(
-													(ph) => ph.id === pengurus.produk_hukum_id
+													(ph) => ph.id === pengurus.produk_hukum_id,
 												);
 												return (
 													<div className="space-y-3">
@@ -871,7 +901,7 @@ const PengurusDetailPage = () => {
 															<button
 																onClick={() =>
 																	navigate(
-																		`/desa/produk-hukum/${pengurus.produk_hukum_id}`
+																		`/desa/produk-hukum/${pengurus.produk_hukum_id}`,
 																	)
 																}
 																className="inline-flex items-center space-x-1 px-3 py-1.5 bg-emerald-600 text-white text-xs font-medium rounded-lg hover:bg-emerald-700 transition-colors duration-200"

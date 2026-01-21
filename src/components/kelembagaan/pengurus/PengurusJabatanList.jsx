@@ -246,6 +246,8 @@ const PengurusJabatanList = ({
 	const [loading, setLoading] = useState(true);
 	const [showHistory, setShowHistory] = useState(false);
 
+	const toggleHistory = () => setShowHistory(!showHistory);
+
 	const defaultJabatan = getJabatanList(kelembagaanType);
 
 	useEffect(() => {

@@ -27,19 +27,15 @@ const ProfilCard = ({
 	onToggleVerification,
 	produkHukumList = [],
 }) => {
-	const { user } = useAuth();
+	const { isSuperAdmin, isAdminBidangPMD, isUserDesa } = useAuth();
 	const { isEditMode } = useEditMode();
 	const navigate = useNavigate();
 
-	const adminDesa = user?.role === "desa";
-	const isAdmin = user?.role === "superadmin";
-	// Check admin bidang variations - consistent with AdminKelembagaanDetailWrapper
-	const adminBidang = ["pemberdayaan_masyarakat", "kepala_bidang", "pegawai"].includes(user?.role) && (user?.bidang_id === 5);
-
 	// Determine if edit button should be shown
-	// For admin (superadmin/pemberdayaan_masyarakat): always show
+	// For admin (superadmin/admin bidang PMD): always show
 	// For desa: only show if edit mode is ON
-	const showEditButton = isAdmin || adminBidang || (adminDesa && isEditMode);
+	const showEditButton =
+		isSuperAdmin() || isAdminBidangPMD() || (isUserDesa() && isEditMode);
 
 	const title = useMemo(() => {
 		if (type === "rt") return `RT ${profil?.nomor ?? "-"}`;
@@ -254,7 +250,7 @@ const ProfilCard = ({
 								{profil?.produk_hukum_id &&
 								produkHukumList &&
 								produkHukumList.find(
-									(ph) => ph.id === profil.produk_hukum_id
+									(ph) => ph.id === profil.produk_hukum_id,
 								) ? (
 									<button
 										onClick={() =>
@@ -265,7 +261,7 @@ const ProfilCard = ({
 										<div className="text-sm">
 											{(() => {
 												const ph = produkHukumList.find(
-													(ph) => ph.id === profil.produk_hukum_id
+													(ph) => ph.id === profil.produk_hukum_id,
 												);
 												return (
 													<div className="space-y-1">
@@ -366,7 +362,7 @@ const ProfilCard = ({
 				</div>
 
 				{/* Admin Controls */}
-				{(adminDesa || adminBidang || isAdmin) && (
+				{(isUserDesa() || isAdminBidangPMD() || isSuperAdmin()) && (
 					<div className="pt-4 border-t border-gray-200 space-y-4">
 						<h4 className="text-sm font-semibold text-gray-700 flex items-center space-x-2">
 							<LuSettings className="w-5 h-5 text-gray-600" />
@@ -386,8 +382,8 @@ const ProfilCard = ({
 										</span>
 									</div>
 									<p className="text-xs text-gray-500 ml-6">
-										{profil?.status_kelembagaan === "aktif" 
-											? "Kelembagaan ini sedang aktif beroperasi" 
+										{profil?.status_kelembagaan === "aktif"
+											? "Kelembagaan ini sedang aktif beroperasi"
 											: "Kelembagaan ini tidak aktif"}
 									</p>
 								</div>
@@ -412,7 +408,7 @@ const ProfilCard = ({
 							</div>
 
 							{/* Verification Control */}
-							{(adminBidang || isAdmin) && (
+							{(isAdminBidangPMD() || isSuperAdmin()) && (
 								<div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
 									<div className="flex flex-col space-y-1">
 										<div className="flex items-center space-x-3">
@@ -424,8 +420,8 @@ const ProfilCard = ({
 											</span>
 										</div>
 										<p className="text-xs text-gray-500 ml-6">
-											{profil?.status_verifikasi === "verified" 
-												? "Data kelembagaan sudah diverifikasi" 
+											{profil?.status_verifikasi === "verified"
+												? "Data kelembagaan sudah diverifikasi"
 												: "Data kelembagaan belum diverifikasi"}
 										</p>
 									</div>
@@ -433,7 +429,7 @@ const ProfilCard = ({
 										onClick={() =>
 											onToggleVerification(
 												profil?.id,
-												profil?.status_verifikasi
+												profil?.status_verifikasi,
 											)
 										}
 										className={`relative inline-flex h-8 w-14 items-center rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 shadow-lg hover:shadow-xl transform hover:scale-105 ${
