@@ -13,7 +13,7 @@ import {
   FiMapPin,
 } from "react-icons/fi";
 
-import { LuStore, LuFileText, LuUsers, LuUserCheck, LuWallpaper, LuLayoutDashboard, LuLandmark } from "react-icons/lu";
+import { LuStore, LuFileText, LuUsers, LuUserCheck, LuWallpaper, LuLayoutDashboard, LuLandmark, LuBanknote } from "react-icons/lu";
 import Footer from "../components/landingpage/Footer";
 import InstallPWA from "../components/InstallPWA";
 
@@ -54,6 +54,12 @@ const menuItems = [
     label: "Kelembagaan",
     path: "/desa/kelembagaan",
     icon: LuLandmark,
+  },
+  {
+    id: "bankeu",
+    label: "Bantuan Keuangan",
+    path: "/desa/bankeu",
+    icon: LuBanknote,
   },
 ];
 
