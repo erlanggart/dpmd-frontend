@@ -54,10 +54,16 @@ const getDisplayName = (pengurusableType) => {
 	const mapping = {
 		rws: "RW",
 		rts: "RT",
+		rw: "RW",
+		rt: "RT",
 		posyandus: "Posyandu",
+		posyandu: "Posyandu",
 		karang_tarunas: "Karang Taruna",
+		karang_taruna: "Karang Taruna",
 		lpms: "LPM",
+		lpm: "LPM",
 		pkks: "PKK",
+		pkk: "PKK",
 		satlinmas: "Satlinmas",
 	};
 	return mapping[pengurusableType] || pengurusableType;
@@ -82,13 +88,8 @@ const PengurusDetailPage = () => {
 	const params = useParams();
 	const pengurusId = params.id; // Changed from destructuring to direct access
 	const navigate = useNavigate();
-	const {
-		user,
-		isSuperAdmin,
-		isAdminBidangPMD,
-		isUserDesa,
-		canManageKelembagaan,
-	} = useAuth();
+	const { user, isSuperAdmin, isAdminBidangPMD, canManageKelembagaan } =
+		useAuth();
 	const { isEditMode } = useEditMode();
 
 	const [pengurus, setPengurus] = useState(null);
@@ -184,17 +185,15 @@ const PengurusDetailPage = () => {
 
 	const loadPengurusDetail = async () => {
 		if (!pengurusId) {
-			console.log("⚠️ No pengurusId provided");
 			return;
 		}
 
-		console.log("🔍 Loading pengurus detail for ID:", pengurusId);
 		setLoading(true);
 		try {
 			const response = await getPengurusById(pengurusId);
-			console.log("✅ Pengurus detail response:", response);
+
 			const pengurusData = response?.data?.data;
-			console.log("📦 Pengurus data:", pengurusData);
+
 			setPengurus(pengurusData || null);
 
 			// Load desa info
@@ -217,7 +216,6 @@ const PengurusDetailPage = () => {
 				text: "Gagal memuat detail pengurus",
 			});
 		} finally {
-			console.log("✨ Loading complete, setting loading to false");
 			setLoading(false);
 		}
 	};
@@ -403,7 +401,7 @@ const PengurusDetailPage = () => {
 							<Link
 								to={
 									isSuperAdmin() || isAdminBidangPMD()
-										? `/bidang/pmd/kelembagaan/rw`
+										? `/bidang/pmd/kelembagaan/admin/${pengurus.desa_id}/rw`
 										: `/desa/kelembagaan/rw`
 								}
 								className="text-gray-500 hover:text-indigo-600 transition-colors"
@@ -464,7 +462,7 @@ const PengurusDetailPage = () => {
 								<Link
 									to={
 										isSuperAdmin() || isAdminBidangPMD()
-											? `/bidang/pmd/kelembagaan/${getRouteType(pengurus.pengurusable_type)}`
+											? `/bidang/pmd/kelembagaan/admin/${pengurus.desa_id}/${getRouteType(pengurus.pengurusable_type)}`
 											: `/desa/kelembagaan/${getRouteType(pengurus.pengurusable_type)}`
 									}
 									className="text-gray-500 hover:text-indigo-600 transition-colors"
