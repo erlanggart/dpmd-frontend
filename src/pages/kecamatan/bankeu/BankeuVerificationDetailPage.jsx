@@ -1,13 +1,146 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../../../api";
 import Swal from "sweetalert2";
 import {
   LuEye, LuCheck, LuX, LuRefreshCw, LuClock, LuArrowLeft,
-  LuChevronDown, LuChevronRight, LuDownload
+  LuChevronDown, LuChevronRight, LuDownload, LuClipboardList
 } from "react-icons/lu";
 
 const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
+
+// Komponen Status Tracking Timeline - Level Desa
+const StatusTracking = ({ proposals }) => {
+  const getTrackingSteps = () => {
+    const steps = [
+      { id: 1, label: 'Desa', status: 'pending', icon: LuClock, color: 'gray' },
+      { id: 2, label: 'Review Dinas Terkait', status: 'pending', icon: LuClock, color: 'gray' },
+      { id: 3, label: 'Review Kecamatan', status: 'pending', icon: LuClock, color: 'gray' },
+      { id: 4, label: 'Review DPMD', status: 'pending', icon: LuClock, color: 'gray' },
+      { id: 5, label: 'Review BPKAD', status: 'pending', icon: LuClock, color: 'gray' },
+      { id: 6, label: 'Terbit SP2D', status: 'pending', icon: LuClock, color: 'gray' }
+    ];
+
+    if (!proposals || proposals.length === 0) {
+      return steps;
+    }
+
+    const submittedProposals = proposals.filter(p => p.submitted_to_kecamatan);
+    if (submittedProposals.length === 0) {
+      steps[0].status = 'active';
+      steps[0].icon = LuClock;
+      steps[0].color = 'blue';
+      steps[0].label = 'Desa (Belum dikirim)';
+      return steps;
+    }
+
+    // Desa step completed (sudah submit)
+    steps[0].status = 'completed';
+    steps[0].icon = LuCheck;
+    steps[0].color = 'green';
+
+    // Check dinas status
+    const hasDinasApproved = submittedProposals.some(p => p.dinas_status === 'approved');
+    const hasDinasRejected = submittedProposals.some(p => p.dinas_status === 'rejected' || p.dinas_status === 'revision');
+    const hasDinasPending = submittedProposals.some(p => !p.dinas_status || p.dinas_status === 'pending');
+
+    if (hasDinasPending) {
+      steps[1].status = 'active';
+      steps[1].icon = LuClock;
+      steps[1].color = 'blue';
+      steps[1].label = 'Sedang direview Dinas';
+      return steps;
+    }
+
+    if (hasDinasRejected) {
+      steps[1].status = 'rejected';
+      steps[1].icon = LuX;
+      steps[1].color = 'red';
+      steps[1].label = 'Ditolak Dinas - Kembali ke Desa';
+      return steps;
+    }
+
+    if (hasDinasApproved) {
+      steps[1].status = 'completed';
+      steps[1].icon = LuCheck;
+      steps[1].color = 'green';
+      steps[1].label = 'Disetujui Dinas';
+    }
+
+    // Check kecamatan status
+    const pendingProposals = submittedProposals.filter(p => p.status === 'pending');
+    const rejectedProposals = submittedProposals.filter(p => p.status === 'revision' || p.status === 'rejected');
+    const verifiedProposals = submittedProposals.filter(p => p.status === 'verified');
+
+    if (pendingProposals.length > 0) {
+      steps[2].status = 'active';
+      steps[2].icon = LuClock;
+      steps[2].color = 'blue';
+      steps[2].label = 'Sedang direview Kecamatan';
+      return steps;
+    }
+
+    if (rejectedProposals.length > 0) {
+      steps[2].status = 'rejected';
+      steps[2].icon = LuX;
+      steps[2].color = 'red';
+      steps[2].label = 'Ditolak - Kembali ke Desa';
+      return steps;
+    }
+
+    if (verifiedProposals.length > 0 && rejectedProposals.length === 0 && pendingProposals.length === 0) {
+      steps[2].status = 'completed';
+      steps[2].icon = LuCheck;
+      steps[2].color = 'green';
+      steps[2].label = 'Disetujui Kecamatan';
+      steps[3].status = 'active';
+      steps[3].icon = LuClock;
+      steps[3].color = 'blue';
+      steps[3].label = 'Sedang direview DPMD';
+    }
+
+    return steps;
+  };
+
+  const steps = getTrackingSteps();
+
+  return (
+    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
+      <div className="flex items-center justify-between">
+        {steps.map((step, index) => (
+          <React.Fragment key={step.id}>
+            <div className="flex flex-col items-center flex-1">
+              <div className={`
+                w-10 h-10 rounded-full flex items-center justify-center mb-2 transition-all
+                ${step.status === 'completed' ? 'bg-green-500 text-white shadow-lg' : ''}
+                ${step.status === 'active' ? 'bg-blue-500 text-white shadow-lg animate-pulse' : ''}
+                ${step.status === 'rejected' ? 'bg-red-500 text-white shadow-lg' : ''}
+                ${step.status === 'pending' ? 'bg-gray-300 text-gray-600' : ''}
+              `}>
+                <step.icon className="w-5 h-5" />
+              </div>
+              <span className={`text-xs font-medium text-center leading-tight ${
+                step.status === 'completed' ? 'text-green-700' :
+                step.status === 'active' ? 'text-blue-700' :
+                step.status === 'rejected' ? 'text-red-700' :
+                'text-gray-500'
+              }`}>
+                {step.label}
+              </span>
+            </div>
+            {index < steps.length - 1 && (
+              <div className={`h-0.5 flex-1 mx-2 ${
+                steps[index + 1].status === 'completed' ? 'bg-green-500' :
+                steps[index + 1].status === 'active' ? 'bg-blue-500' :
+                'bg-gray-300'
+              }`} />
+            )}
+          </React.Fragment>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 const BankeuVerificationDetailPage = () => {
   const { desaId } = useParams();
@@ -18,6 +151,8 @@ const BankeuVerificationDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [expandedInfra, setExpandedInfra] = useState(true);
   const [expandedNonInfra, setExpandedNonInfra] = useState(true);
+  const [showPdfModal, setShowPdfModal] = useState(false);
+  const [selectedPdf, setSelectedPdf] = useState(null);
 
   useEffect(() => {
     fetchData();
@@ -38,7 +173,7 @@ const BankeuVerificationDetailPage = () => {
 
       // Flatten master kegiatan
       const masterData = masterRes.data.data;
-      const allKegiatan = [];
+      let allKegiatan = [];
       
       if (masterData.infrastruktur && Array.isArray(masterData.infrastruktur)) {
         allKegiatan.push(...masterData.infrastruktur);
@@ -47,7 +182,12 @@ const BankeuVerificationDetailPage = () => {
         allKegiatan.push(...masterData.non_infrastruktur);
       }
       
-      setMasterKegiatan(allKegiatan);
+      // Deduplikasi berdasarkan ID kegiatan (safety net)
+      const uniqueKegiatan = allKegiatan.filter((kegiatan, index, self) => 
+        index === self.findIndex(k => parseInt(k.id) === parseInt(kegiatan.id))
+      );
+      
+      setMasterKegiatan(uniqueKegiatan);
       
       // Filter proposals for this desa ONLY (per-desa review)
       const desaIdNum = parseInt(desaId);
@@ -56,12 +196,6 @@ const BankeuVerificationDetailPage = () => {
         const pDesaId = parseInt(p.desa_id);
         return pDesaId === desaIdNum;
       });
-      
-      console.log('=== Fetch Data ===');
-      console.log('Target Desa ID:', desaIdNum);
-      console.log('All proposals from API:', allProposals.length);
-      console.log('Filtered proposals for this desa:', desaProposals.length);
-      console.log('==================');
       
       setProposals(desaProposals);
       
@@ -77,56 +211,130 @@ const BankeuVerificationDetailPage = () => {
     }
   };
 
+  const handleViewPdf = (proposal, kegiatanNama) => {
+    setSelectedPdf({
+      url: `${imageBaseUrl}/storage/uploads/${proposal.file_proposal}`,
+      kegiatanName: kegiatanNama,
+      status: proposal.status,
+      anggaran: proposal.anggaran_usulan
+    });
+    setShowPdfModal(true);
+  };
+
+  const handleClosePdfModal = () => {
+    setShowPdfModal(false);
+    setSelectedPdf(null);
+  };
+
   const handleVerify = async (proposalId, status) => {
     const isApprove = status === "verified";
     
+    // Jika approve, langsung proses tanpa popup
+    if (isApprove) {
+      try {
+        const response = await api.patch(`/kecamatan/bankeu/proposals/${proposalId}/verify`, {
+          status,
+          catatan_verifikasi: ''
+        });
+
+        // Toast notification singkat
+        Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'success',
+          title: 'Proposal disetujui',
+          showConfirmButton: false,
+          timer: 1500,
+          timerProgressBar: true
+        });
+
+        // Refresh data untuk update state lengkap
+        await fetchData();
+      } catch (error) {
+        console.error("Error verifying proposal:", error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Gagal!',
+          text: error.response?.data?.message || 'Terjadi kesalahan saat memproses verifikasi',
+        });
+      }
+      return;
+    }
+    
+    // Jika tolak, tampilkan modal untuk input catatan
     const result = await Swal.fire({
       title: '',
       html: `
         <div class="text-center">
-          <div class="mx-auto flex items-center justify-center w-20 h-20 rounded-full ${isApprove ? 'bg-gradient-to-br from-green-100 to-emerald-100' : 'bg-gradient-to-br from-red-100 to-rose-100'} mb-4">
-            <svg class="w-12 h-12 ${isApprove ? 'text-green-600' : 'text-red-600'}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              ${isApprove 
-                ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>'
-                : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>'
-              }
+          <div class="mx-auto flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-red-100 to-rose-100 mb-4">
+            <svg class="w-12 h-12 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
             </svg>
           </div>
           
-          <h3 class="text-2xl font-bold ${isApprove ? 'text-green-700' : 'text-red-700'} mb-2">
-            ${isApprove ? 'Setujui Proposal' : 'Tolak Proposal'}
+          <h3 class="text-2xl font-bold text-red-700 mb-2">
+            Tandai untuk Revisi
           </h3>
           
           <p class="text-gray-600 mb-6">
-            ${isApprove 
-              ? 'Proposal akan disetujui dan dapat dilanjutkan ke tahap berikutnya' 
-              : 'Proposal akan ditolak dan dikembalikan untuk revisi'
-            }
+            Proposal akan ditolak dan dikembalikan. Pilih akan dikembalikan ke mana.
           </p>
           
-          <div class="text-left">
-            <label class="block text-sm font-semibold text-gray-700 mb-2">
-              ${isApprove ? 'Catatan (opsional)' : 'Alasan Penolakan *'}
-            </label>
-            <textarea 
-              id="catatan-verifikasi" 
-              rows="4"
-              placeholder="${isApprove ? 'Tambahkan catatan jika diperlukan...' : 'Jelaskan alasan penolakan dan hal yang perlu diperbaiki...'}"
-              class="w-full px-4 py-3 border-2 ${isApprove ? 'border-green-200 focus:border-green-500' : 'border-red-200 focus:border-red-500'} rounded-xl focus:outline-none focus:ring-4 ${isApprove ? 'focus:ring-green-100' : 'focus:ring-red-100'} transition-all duration-200 resize-none"
-              style="font-family: inherit;"
-            ></textarea>
+          <div class="text-left space-y-4">
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">
+                Kembalikan ke *
+              </label>
+              <div class="space-y-2">
+                <label class="flex items-center gap-3 p-3 border-2 border-gray-200 rounded-lg hover:border-blue-300 cursor-pointer transition-all">
+                  <input 
+                    type="radio" 
+                    name="return_to" 
+                    value="dinas" 
+                    checked
+                    class="w-4 h-4 text-blue-600"
+                  />
+                  <div class="flex-1">
+                    <div class="font-semibold text-gray-800">Dinas Terkait</div>
+                    <div class="text-xs text-gray-500">Jika kesalahan ada di validasi Dinas</div>
+                  </div>
+                </label>
+                <label class="flex items-center gap-3 p-3 border-2 border-gray-200 rounded-lg hover:border-blue-300 cursor-pointer transition-all">
+                  <input 
+                    type="radio" 
+                    name="return_to" 
+                    value="desa" 
+                    class="w-4 h-4 text-blue-600"
+                  />
+                  <div class="flex-1">
+                    <div class="font-semibold text-gray-800">Desa</div>
+                    <div class="text-xs text-gray-500">Jika kesalahan ada di proposal Desa</div>
+                  </div>
+                </label>
+              </div>
+            </div>
+            
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">
+                Alasan Penolakan *
+              </label>
+              <textarea 
+                id="catatan-verifikasi" 
+                rows="4"
+                placeholder="Jelaskan alasan penolakan dan hal yang perlu diperbaiki..."
+                class="w-full px-4 py-3 border-2 border-red-200 focus:border-red-500 rounded-xl focus:outline-none focus:ring-4 focus:ring-red-100 transition-all duration-200 resize-none"
+                style="font-family: inherit;"
+              ></textarea>
+            </div>
           </div>
         </div>
       `,
       showCancelButton: true,
       confirmButtonText: `<span class="flex items-center gap-2">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          ${isApprove 
-            ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>'
-            : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>'
-          }
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
         </svg>
-        ${isApprove ? 'Ya, Setujui' : 'Ya, Tolak'}
+        Ya, Tolak
       </span>`,
       cancelButtonText: `<span class="flex items-center gap-2">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -137,7 +345,7 @@ const BankeuVerificationDetailPage = () => {
       customClass: {
         popup: 'rounded-2xl shadow-2xl',
         actions: 'gap-3 w-full',
-        confirmButton: `${isApprove ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700' : 'bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700'} text-white font-semibold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 border-0 flex-1`,
+        confirmButton: 'bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white font-semibold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 border-0 flex-1',
         cancelButton: 'bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 px-6 rounded-xl transition-all duration-200 border-0 flex-1'
       },
       buttonsStyling: false,
@@ -149,117 +357,59 @@ const BankeuVerificationDetailPage = () => {
       },
       preConfirm: () => {
         const catatan = document.getElementById("catatan-verifikasi").value;
-        if (!isApprove && !catatan.trim()) {
+        const returnTo = document.querySelector('input[name="return_to"]:checked').value;
+        
+        if (!catatan.trim()) {
           Swal.showValidationMessage("Alasan penolakan wajib diisi");
           return false;
         }
-        return catatan;
+        
+        return { catatan, returnTo };
       }
     });
 
     if (result.isConfirmed) {
       try {
-        await api.patch(`/kecamatan/bankeu/proposals/${proposalId}/verify`, {
+        const response = await api.patch(`/kecamatan/bankeu/proposals/${proposalId}/verify`, {
           status,
-          catatan_verifikasi: result.value
+          catatan_verifikasi: result.value.catatan,
+          return_to: result.value.returnTo
         });
 
-        // Update state langsung tanpa refresh
-        setProposals(prevProposals => 
-          prevProposals.map(p => 
-            p.id === proposalId 
-              ? { ...p, status, catatan_verifikasi: result.value, verified_at: new Date().toISOString() }
-              : p
-          )
-        );
-
+        // Toast notification untuk revision
+        const destination = result.value.returnTo === 'dinas' ? 'Dinas Terkait' : 'Desa';
         Swal.fire({
-          title: '',
-          html: `
-            <div class="text-center py-4">
-              <div class="mx-auto flex items-center justify-center w-20 h-20 rounded-full ${status === "verified" ? 'bg-gradient-to-br from-green-100 to-emerald-100' : 'bg-gradient-to-br from-orange-100 to-amber-100'} mb-4">
-                <svg class="w-12 h-12 ${status === "verified" ? 'text-green-600' : 'text-orange-600'}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                </svg>
-              </div>
-              <h3 class="text-2xl font-bold ${status === "verified" ? 'text-green-700' : 'text-orange-700'} mb-2">
-                Berhasil!
-              </h3>
-              <p class="text-gray-600">
-                Proposal berhasil ${status === "verified" ? "disetujui" : "ditolak untuk revisi"}
-              </p>
-            </div>
-          `,
-          customClass: {
-            popup: 'rounded-2xl shadow-2xl'
-          },
+          toast: true,
+          position: 'top-end',
+          icon: 'warning',
+          title: `Proposal dikembalikan ke ${destination}`,
           showConfirmButton: false,
-          timer: 2500,
-          showClass: {
-            popup: 'animate__animated animate__bounceIn animate__faster'
-          },
-          hideClass: {
-            popup: 'animate__animated animate__fadeOut animate__faster'
-          }
+          timer: 2000,
+          timerProgressBar: true
         });
+
+        // Refresh data untuk update state lengkap
+        await fetchData();
       } catch (error) {
         console.error("Error verifying proposal:", error);
         Swal.fire({
-          title: '',
-          html: `
-            <div class="text-center py-4">
-              <div class="mx-auto flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-red-100 to-rose-100 mb-4">
-                <svg class="w-12 h-12 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-              </div>
-              <h3 class="text-2xl font-bold text-red-700 mb-2">
-                Gagal!
-              </h3>
-              <p class="text-gray-600">
-                ${error.response?.data?.message || "Gagal memverifikasi proposal"}
-              </p>
-            </div>
-          `,
-          customClass: {
-            popup: 'rounded-2xl shadow-2xl',
-            confirmButton: 'bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white font-semibold py-3 px-6 rounded-xl shadow-lg transition-all duration-200 border-0'
-          },
-          buttonsStyling: false,
-          confirmButtonText: 'Tutup'
+          icon: 'error',
+          title: 'Gagal!',
+          text: error.response?.data?.message || 'Terjadi kesalahan saat memproses verifikasi',
         });
       }
     }
   };
 
-  const checkReviewCompletion = () => {
+  // Memoize review status untuk menghindari re-calculation berkali-kali
+  const reviewStatus = useMemo(() => {
     // Check if all uploaded proposals for THIS DESA ONLY have been reviewed
     // proposals state already filtered by desaId in fetchData()
-    const uploadedProposals = proposals.filter(p => p); // proposals that exist
+    // HANYA hitung proposal yang MASIH di kecamatan (submitted_to_kecamatan = TRUE)
+    const uploadedProposals = proposals.filter(p => p && p.submitted_to_kecamatan);
     const pendingProposals = uploadedProposals.filter(p => p.status === 'pending');
     const rejectedProposals = uploadedProposals.filter(p => p.status === 'revision');
     const verifiedProposals = uploadedProposals.filter(p => p.status === 'verified');
-    
-    console.log('=== Review Status for Desa', desaId, desa?.nama, '===');
-    console.log('Total proposals in state:', proposals.length);
-    console.log('Uploaded proposals:', uploadedProposals.length);
-    console.log('Pending:', pendingProposals.length, pendingProposals.map(p => `${p.id}: ${p.kegiatan_nama}`));
-    console.log('Rejected/Revision:', rejectedProposals.length);
-    console.log('Verified:', verifiedProposals.length);
-    
-    // Check for duplicates
-    const kegiatanIds = uploadedProposals.map(p => p.kegiatan_id);
-    const duplicates = kegiatanIds.filter((id, index) => kegiatanIds.indexOf(id) !== index);
-    if (duplicates.length > 0) {
-      console.warn('⚠️ DUPLICATE kegiatan_id found:', duplicates);
-      console.log('Duplicate proposals:', uploadedProposals.filter(p => duplicates.includes(p.kegiatan_id)).map(p => ({
-        proposal_id: p.id,
-        kegiatan_id: p.kegiatan_id,
-        kegiatan_nama: p.kegiatan_nama,
-        status: p.status
-      })));
-    }
-    console.log('=================================');
     
     return {
       allReviewed: pendingProposals.length === 0 && uploadedProposals.length > 0,
@@ -269,10 +419,9 @@ const BankeuVerificationDetailPage = () => {
       totalVerified: verifiedProposals.length,
       totalRejected: rejectedProposals.length
     };
-  };
+  }, [proposals, desaId, desa?.nama]);
 
   const handleSubmitReview = async () => {
-    const reviewStatus = checkReviewCompletion();
     
     // Validation: must have uploaded proposals
     if (reviewStatus.totalUploaded === 0) {
@@ -355,7 +504,7 @@ const BankeuVerificationDetailPage = () => {
           
           <p class="text-gray-600 mb-4">
             ${action === 'return' 
-              ? `Terdapat proposal <strong>Desa ${desa?.nama}</strong> yang ditolak. Proposal akan dikembalikan ke desa untuk diperbaiki.`
+              ? `Terdapat <strong>${reviewStatus.totalRejected} proposal</strong> dari <strong>Desa ${desa?.nama}</strong> yang ditandai untuk revisi. Kembalikan ke desa untuk diperbaiki?`
               : `Semua proposal <strong>Desa ${desa?.nama}</strong> telah disetujui. Kirim hasil verifikasi ke DPMD?`
             }
           </p>
@@ -546,7 +695,7 @@ const BankeuVerificationDetailPage = () => {
                 Berita Acara berhasil dibuat
               </p>
               <a
-                href="${imageBaseUrl}/storage/uploads/${response.data.data.file_path}"
+                href="${imageBaseUrl}${response.data.data.file_path}"
                 target="_blank"
                 class="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg"
               >
@@ -600,7 +749,7 @@ const BankeuVerificationDetailPage = () => {
       pending: { icon: LuClock, text: "Menunggu", color: "bg-yellow-100 text-yellow-700" },
       verified: { icon: LuCheck, text: "Disetujui", color: "bg-green-100 text-green-700" },
       rejected: { icon: LuX, text: "Ditolak", color: "bg-red-100 text-red-700" },
-      revision: { icon: LuRefreshCw, text: "Revisi", color: "bg-orange-100 text-orange-700" }
+      revision: { icon: LuRefreshCw, text: "Perlu Revisi", color: "bg-orange-100 text-orange-700" }
     };
 
     const badge = badges[status] || badges.pending;
@@ -614,89 +763,194 @@ const BankeuVerificationDetailPage = () => {
     );
   };
 
-  // Group kegiatan by type
-  const infrastruktur = masterKegiatan
-    .filter(k => k.jenis_kegiatan === 'infrastruktur')
-    .map(kegiatan => {
-      const proposal = proposals.find(p => parseInt(p.kegiatan_id) === parseInt(kegiatan.id));
-      return { kegiatan, proposal: proposal || null };
-    });
+  // Group kegiatan by type - dengan useMemo untuk menghindari re-calculation
+  const infrastruktur = useMemo(() => {
+    return masterKegiatan
+      .filter(k => k.jenis_kegiatan === 'infrastruktur')
+      // Deduplicate by kegiatan id
+      .filter((kegiatan, index, self) => 
+        index === self.findIndex(k => parseInt(k.id) === parseInt(kegiatan.id))
+      )
+      .map(kegiatan => {
+        const proposal = proposals.find(p => parseInt(p.kegiatan_id) === parseInt(kegiatan.id));
+        return { kegiatan, proposal: proposal || null };
+      });
+  }, [masterKegiatan, proposals]);
 
-  const nonInfrastruktur = masterKegiatan
-    .filter(k => k.jenis_kegiatan === 'non_infrastruktur')
-    .map(kegiatan => {
-      const proposal = proposals.find(p => parseInt(p.kegiatan_id) === parseInt(kegiatan.id));
-      return { kegiatan, proposal: proposal || null };
-    });
+  const nonInfrastruktur = useMemo(() => {
+    return masterKegiatan
+      .filter(k => k.jenis_kegiatan === 'non_infrastruktur')
+      // Deduplicate by kegiatan id
+      .filter((kegiatan, index, self) => 
+        index === self.findIndex(k => parseInt(k.id) === parseInt(kegiatan.id))
+      )
+      .map(kegiatan => {
+        const proposal = proposals.find(p => parseInt(p.kegiatan_id) === parseInt(kegiatan.id));
+        return { kegiatan, proposal: proposal || null };
+      });
+  }, [masterKegiatan, proposals]);
+
+
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-gray-600">Memuat data...</div>
+      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+        <div className="relative">
+          <div className="w-16 h-16 border-4 border-violet-200 border-t-violet-600 rounded-full animate-spin"></div>
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+            <div className="w-8 h-8 bg-gradient-to-r from-violet-500 to-purple-500 rounded-full animate-pulse"></div>
+          </div>
+        </div>
+        <div className="text-lg font-semibold bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent animate-pulse">
+          Memuat data...
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="min-h-screen bg-gray-50 space-y-6 pb-8">
       {/* Header */}
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <button
-          onClick={() => navigate('/kecamatan/bankeu')}
-          className="flex items-center gap-2 text-violet-600 hover:text-violet-700 mb-4 transition-colors"
-        >
-          <LuArrowLeft className="w-5 h-5" />
-          <span className="font-medium">Kembali ke Daftar Desa</span>
-        </button>
-        
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900">Verifikasi Proposal - {desa?.nama}</h1>
+      <div className="bg-white border-b border-gray-200 shadow-sm">
+        <div className="max-w-7xl mx-auto px-6 py-6">
+          <button
+            onClick={() => navigate('/kecamatan/bankeu')}
+            className="flex items-center gap-2 text-gray-600 hover:text-violet-600 mb-4 transition-colors duration-200"
+          >
+            <LuArrowLeft className="w-5 h-5" />
+            <span className="font-medium">Kembali ke Daftar Desa</span>
+          </button>
           
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleGenerateBeritaAcara}
-              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-semibold hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl"
-            >
-              <LuDownload className="w-5 h-5" />
-              <span>Buat Berita Acara</span>
-            </button>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Verifikasi Proposal</h1>
+              <p className="text-gray-600">Desa <span className="font-semibold text-violet-600">{desa?.nama}</span></p>
+            </div>
             
-            <button
-              onClick={handleSubmitReview}
-              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-semibold hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl"
-            >
-              <LuCheck className="w-5 h-5" />
-              <span>Selesai Review</span>
-            </button>
+            <div className="flex items-center gap-3">
+              {/* Review Status Indicator */}
+              {(() => {
+                const allReviewed = reviewStatus.allReviewed;
+                const hasRejected = reviewStatus.hasRejected;
+                const totalPending = reviewStatus.totalPending;
+                const totalRejected = reviewStatus.totalRejected;
+                
+                if (!allReviewed && totalPending > 0) {
+                  return (
+                    <div className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 border-2 border-amber-200 rounded-lg">
+                      <LuClock className="w-5 h-5 text-amber-600" />
+                      <span className="font-semibold text-amber-800 text-sm">
+                        {totalPending} proposal belum direview
+                      </span>
+                    </div>
+                  );
+                } else if (allReviewed && hasRejected) {
+                  return (
+                    <div className="flex items-center gap-2 px-4 py-2.5 bg-orange-50 border-2 border-orange-200 rounded-lg">
+                      <LuRefreshCw className="w-5 h-5 text-orange-600" />
+                      <span className="font-semibold text-orange-800 text-sm">
+                        {totalRejected} proposal perlu revisi
+                      </span>
+                    </div>
+                  );
+                } else if (allReviewed && !hasRejected) {
+                  return (
+                    <div className="flex items-center gap-2 px-4 py-2.5 bg-green-50 border-2 border-green-200 rounded-lg">
+                      <LuCheck className="w-5 h-5 text-green-600" />
+                      <span className="font-semibold text-green-800 text-sm">
+                        Semua proposal disetujui
+                      </span>
+                    </div>
+                  );
+                }
+                
+                return null;
+              })()}
+              
+              <button
+                onClick={handleGenerateBeritaAcara}
+                disabled={!reviewStatus.allReviewed}
+                className={`flex items-center gap-2 px-4 py-2.5 border-2 rounded-lg font-semibold transition-all duration-200 ${
+                  reviewStatus.allReviewed
+                    ? 'bg-white border-violet-600 text-violet-600 hover:bg-violet-50'
+                    : 'bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed'
+                }`}
+              >
+                <LuDownload className="w-5 h-5" />
+                <span>Berita Acara</span>
+              </button>
+              
+              {/* Tombol Final Action - hanya muncul jika semua sudah direview */}
+              {reviewStatus.allReviewed && (
+                <button
+                  onClick={handleSubmitReview}
+                  className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold transition-all duration-200 shadow-lg ${
+                    reviewStatus.hasRejected
+                      ? 'bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white'
+                      : 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white'
+                  }`}
+                >
+                  {reviewStatus.hasRejected ? (
+                    <>
+                      <LuRefreshCw className="w-5 h-5" />
+                      <span>Kembalikan ke Desa</span>
+                    </>
+                  ) : (
+                    <>
+                      <LuCheck className="w-5 h-5" />
+                      <span>Kirim ke DPMD</span>
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
           </div>
         </div>
-        <p className="text-gray-600 mt-2">Review dan verifikasi proposal bantuan keuangan dari desa {desa?.nama}</p>
       </div>
 
+      {/* Status Tracking - Level Desa */}
+      <div className="max-w-7xl mx-auto px-6 mb-4">
+        <StatusTracking proposals={proposals} />
+      </div>
+
+      <div className="max-w-7xl mx-auto px-6 space-y-4">
+
       {/* Infrastruktur */}
-      <div className="bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <button
           onClick={() => setExpandedInfra(!expandedInfra)}
-          className="w-full px-6 py-4 flex items-center justify-between bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 transition-all"
+          className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors duration-200"
         >
-          <div className="flex items-center gap-3">
-            {expandedInfra ? <LuChevronDown className="w-5 h-5 text-blue-600" /> : <LuChevronRight className="w-5 h-5 text-blue-600" />}
-            <h3 className="text-xl font-bold text-gray-900">Infrastruktur</h3>
-            <span className="px-3 py-1 bg-blue-600 text-white rounded-full text-sm font-semibold shadow-md">
-              {infrastruktur.filter(i => i.proposal).length} / {infrastruktur.length}
+          <div className="flex items-center gap-4">
+            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-blue-100">
+              {expandedInfra ? <LuChevronDown className="w-6 h-6 text-blue-600" /> : <LuChevronRight className="w-6 h-6 text-blue-600" />}
+            </div>
+            <div className="text-left">
+              <h3 className="text-xl font-bold text-gray-900">Infrastruktur</h3>
+              <p className="text-sm text-gray-500">Pembangunan fisik dan sarana prasarana</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="px-3 py-1 bg-blue-600 text-white rounded-full text-sm font-semibold">
+              {infrastruktur.filter(i => i.proposal).length}
+            </span>
+            <span className="text-gray-400">/</span>
+            <span className="px-3 py-1 bg-gray-200 text-gray-700 rounded-full text-sm font-semibold">
+              {infrastruktur.length}
             </span>
           </div>
         </button>
         
         {expandedInfra && (
-          <div className="divide-y divide-gray-100 max-h-[10000px] opacity-100 transition-all duration-500">
+          <div className="border-t border-gray-200">
             {infrastruktur.map((item, index) => (
               <ProposalRow
-                key={item.kegiatan.id}
+                key={`infra-${item.kegiatan.id}`}
                 kegiatan={item.kegiatan}
                 proposal={item.proposal}
                 index={index}
                 onVerify={handleVerify}
+                onViewPdf={handleViewPdf}
                 getStatusBadge={getStatusBadge}
                 imageBaseUrl={imageBaseUrl}
               />
@@ -706,29 +960,41 @@ const BankeuVerificationDetailPage = () => {
       </div>
 
       {/* Non-Infrastruktur */}
-      <div className="bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <button
           onClick={() => setExpandedNonInfra(!expandedNonInfra)}
-          className="w-full px-6 py-4 flex items-center justify-between bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 transition-all"
+          className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors duration-200"
         >
-          <div className="flex items-center gap-3">
-            {expandedNonInfra ? <LuChevronDown className="w-5 h-5 text-purple-600" /> : <LuChevronRight className="w-5 h-5 text-purple-600" />}
-            <h3 className="text-xl font-bold text-gray-900">Non-Infrastruktur</h3>
-            <span className="px-3 py-1 bg-purple-600 text-white rounded-full text-sm font-semibold shadow-md">
-              {nonInfrastruktur.filter(i => i.proposal).length} / {nonInfrastruktur.length}
+          <div className="flex items-center gap-4">
+            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-purple-100">
+              {expandedNonInfra ? <LuChevronDown className="w-6 h-6 text-purple-600" /> : <LuChevronRight className="w-6 h-6 text-purple-600" />}
+            </div>
+            <div className="text-left">
+              <h3 className="text-xl font-bold text-gray-900">Non-Infrastruktur</h3>
+              <p className="text-sm text-gray-500">Pemberdayaan dan pengembangan masyarakat</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="px-3 py-1 bg-purple-600 text-white rounded-full text-sm font-semibold">
+              {nonInfrastruktur.filter(i => i.proposal).length}
+            </span>
+            <span className="text-gray-400">/</span>
+            <span className="px-3 py-1 bg-gray-200 text-gray-700 rounded-full text-sm font-semibold">
+              {nonInfrastruktur.length}
             </span>
           </div>
         </button>
         
         {expandedNonInfra && (
-          <div className="divide-y divide-gray-100 max-h-[10000px] opacity-100 transition-all duration-500">
+          <div className="border-t border-gray-200">
             {nonInfrastruktur.map((item, index) => (
               <ProposalRow
-                key={item.kegiatan.id}
+                key={`non-infra-${item.kegiatan.id}`}
                 kegiatan={item.kegiatan}
                 proposal={item.proposal}
                 index={index}
                 onVerify={handleVerify}
+                onViewPdf={handleViewPdf}
                 getStatusBadge={getStatusBadge}
                 imageBaseUrl={imageBaseUrl}
               />
@@ -736,36 +1002,39 @@ const BankeuVerificationDetailPage = () => {
           </div>
         )}
       </div>
+      </div>
+
+      {/* Modal PDF Viewer */}
+      {showPdfModal && selectedPdf && (
+        <PdfViewerModal
+          show={showPdfModal}
+          onClose={handleClosePdfModal}
+          pdfData={selectedPdf}
+        />
+      )}
     </div>
   );
 };
 
 // Proposal Row Component
-const ProposalRow = ({ kegiatan, proposal, index, onVerify, getStatusBadge, imageBaseUrl }) => {
+const ProposalRow = ({ kegiatan, proposal, index, onVerify, onViewPdf, getStatusBadge, imageBaseUrl }) => {
   return (
-    <div className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} p-4 hover:bg-blue-50 transition-colors`}>
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex-1 min-w-0">
-          <h4 className="font-semibold text-gray-900 text-sm mb-2">{kegiatan.nama_kegiatan}</h4>
+    <div className={`p-3 border-b border-gray-100 hover:bg-gray-50 transition-colors duration-150 ${index === 0 ? '' : ''}`}>
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex-1 space-y-2">
+          <h4 className="text-sm text-gray-900 leading-snug">{kegiatan.nama_kegiatan}</h4>
           
           {proposal ? (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium">
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs">
                   <LuCheck className="w-3 h-3" />
                   Sudah Upload
                 </span>
                 {getStatusBadge(proposal.status)}
               </div>
               
-              <div>
-                <div className="font-medium text-gray-900 text-sm">{proposal.judul_proposal}</div>
-                {proposal.deskripsi && (
-                  <div className="text-xs text-gray-500 mt-1 line-clamp-2">{proposal.deskripsi}</div>
-                )}
-              </div>
-              
-              <div className="text-sm font-medium text-gray-900">
+              <div className="text-xs text-gray-900">
                 {new Intl.NumberFormat("id-ID", {
                   style: "currency",
                   currency: "IDR",
@@ -774,55 +1043,129 @@ const ProposalRow = ({ kegiatan, proposal, index, onVerify, getStatusBadge, imag
               </div>
               
               {proposal.catatan_verifikasi && (
-                <div className="p-2 bg-yellow-50 border-l-4 border-yellow-400 rounded text-xs">
-                  <span className="font-medium text-yellow-800">Catatan:</span>
-                  <span className="text-yellow-700"> {proposal.catatan_verifikasi}</span>
+                <div className="p-2 bg-amber-50 border-l-2 border-amber-400 rounded text-xs">
+                  <span className="font-medium text-amber-800">Catatan: </span>
+                  <span className="text-amber-700">{proposal.catatan_verifikasi}</span>
                 </div>
               )}
             </div>
           ) : (
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-medium">
-                <LuX className="w-3 h-3" />
-                Belum Upload
-              </span>
-            </div>
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-100 text-red-700 rounded text-xs">
+              <LuX className="w-3 h-3" />
+              Belum Upload
+            </span>
           )}
         </div>
 
         {proposal && (
-          <div className="flex items-center gap-2">
-            <a
-              href={`${imageBaseUrl}/storage/uploads/${proposal.file_proposal}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-1 text-xs font-medium transition-colors"
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <button
+              onClick={() => onViewPdf(proposal, kegiatan.nama_kegiatan)}
+              className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs transition-colors duration-150"
             >
               <LuEye className="w-3.5 h-3.5" />
               Lihat
-            </a>
+            </button>
 
-            {proposal.status === "pending" && (
+            {/* Show action buttons only for pending or revision status */}
+            {(proposal.status === "pending" || proposal.status === "revision") && (
               <>
                 <button
                   onClick={() => onVerify(proposal.id, "verified")}
-                  className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-1 text-xs font-medium transition-colors"
+                  className="p-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-150"
                   title="Setujui"
                 >
-                  <LuCheck className="w-3.5 h-3.5" />
+                  <LuCheck className="w-4 h-4" />
                 </button>
 
                 <button
                   onClick={() => onVerify(proposal.id, "revision")}
-                  className="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-1 text-xs font-medium transition-colors"
-                  title="Tolak"
+                  className="p-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-150"
+                  title="Tandai untuk Revisi"
                 >
-                  <LuX className="w-3.5 h-3.5" />
+                  <LuX className="w-4 h-4" />
                 </button>
               </>
             )}
           </div>
         )}
+      </div>
+    </div>
+  );
+};
+
+// PdfViewerModal Component
+const PdfViewerModal = ({ show, onClose, pdfData }) => {
+  if (!show || !pdfData) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto">
+      <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+        {/* Background Overlay */}
+        <div
+          className="fixed inset-0 transition-opacity bg-gray-900 bg-opacity-75"
+          onClick={onClose}
+        />
+
+        {/* Modal Panel */}
+        <div className="inline-block w-full my-4 sm:my-8 overflow-hidden text-left align-middle transition-all transform bg-white rounded-lg shadow-2xl sm:max-w-7xl sm:w-full relative z-10">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 px-4 sm:px-6 py-3 sm:py-4 bg-gradient-to-r from-blue-600 to-blue-700 border-b border-blue-800">
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm sm:text-lg font-semibold text-white truncate">
+                {pdfData.kegiatanName}
+              </h3>
+            </div>
+            
+            <button
+              onClick={onClose}
+              className="absolute top-2 right-2 sm:relative sm:top-0 sm:right-0 p-2 text-white hover:bg-blue-800 rounded-lg transition-colors flex-shrink-0"
+              title="Tutup"
+            >
+              <LuX className="w-5 h-5 sm:w-6 sm:h-6" />
+            </button>
+          </div>
+
+          {/* PDF Viewer */}
+          <div className="relative bg-gray-100" style={{ height: '80vh' }}>
+            <iframe
+              src={pdfData.url}
+              className="w-full h-full border-0"
+              title="PDF Viewer"
+            />
+          </div>
+
+          {/* Footer */}
+          <div className="px-4 sm:px-6 py-3 sm:py-4 bg-gray-50 border-t border-gray-200">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
+              <div className="space-y-1">
+                <p className="text-xs sm:text-sm text-gray-600">
+                  <span className="font-medium">Status:</span>{' '}
+                  <span className={`font-semibold ${
+                    pdfData.status === 'approved' ? 'text-green-600' :
+                    pdfData.status === 'rejected' ? 'text-red-600' : 'text-yellow-600'
+                  }`}>
+                    {pdfData.status === 'approved' ? 'Disetujui' :
+                     pdfData.status === 'rejected' ? 'Ditolak' : 'Menunggu Verifikasi'}
+                  </span>
+                </p>
+                <p className="text-xs sm:text-sm text-gray-600">
+                  <span className="font-medium">Anggaran:</span>{' '}
+                  <span className="font-semibold text-blue-600">
+                    Rp {pdfData.anggaran?.toLocaleString('id-ID') || 0}
+                  </span>
+                </p>
+              </div>
+              
+              <button
+                onClick={onClose}
+                className="w-full sm:w-auto px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

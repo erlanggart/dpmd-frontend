@@ -343,6 +343,8 @@ const LoginPage = () => {
 				navigate("/desa/dashboard");
 			} else if (newUser.role === "kecamatan") {
 				navigate("/kecamatan/dashboard");
+			} else if (newUser.role === "dinas_terkait") {
+				navigate("/dinas/dashboard");
 			} else if (newUser.role === "pegawai") {
 				navigate("/pegawai/dashboard");
 			} else if (newUser.role === "ketua_tim") {
