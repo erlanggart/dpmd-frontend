@@ -62,7 +62,8 @@ function HomeRedirect() {
 			'ketua_tim': '/ketua-tim/dashboard',
 			'pegawai': '/pegawai/dashboard',
 			'desa': '/desa/dashboard',
-			'kecamatan': '/kecamatan/dashboard'
+			'kecamatan': '/kecamatan/dashboard',
+			'dinas_terkait': '/dinas/dashboard'
 		};
 		
 		const dashboardPath = roleDashboardMap[user.role] || '/dashboard';
@@ -205,11 +206,23 @@ const KecamatanDashboardPage = lazy(() =>
 const KecamatanLayout = lazy(() =>
 	import("./layouts/KecamatanLayout")
 );
+const DinasLayout = lazy(() =>
+	import("./layouts/DinasLayout")
+);
 const BankeuVerificationPage = lazy(() =>
 	import("./pages/kecamatan/bankeu/BankeuVerificationPage")
 );
 const BankeuVerificationDetailPage = lazy(() =>
 	import("./pages/kecamatan/bankeu/BankeuVerificationDetailPage")
+);
+const DinasVerificationPage = lazy(() =>
+	import("./pages/dinas/DinasVerificationPage")
+);
+const DinasVerificationDetailPage = lazy(() =>
+	import("./pages/dinas/DinasVerificationDetailPage")
+);
+const DinasDashboardPage = lazy(() =>
+	import("./pages/dinas/DinasDashboardPage")
 );
 const CoreDashboardLayout = lazy(() =>
 	import("./layouts/CoreDashboardLayout")
@@ -741,21 +754,36 @@ function App() {
 					<Route path="bankeu/verifikasi/:desaId" element={<BankeuVerificationDetailPage />} />
 				</Route>
 
-					{/* Rute Kepala Dinas - Exclusive untuk Kepala Dinas */}
-					<Route
-						path="/kepala-dinas"
-						element={
-							<RoleProtectedRoute allowedRoles={['superadmin', 'kepala_dinas']}>
-								<KepalaDinasLayout />
-							</RoleProtectedRoute>
-						}
-					>
-						<Route index element={<Navigate to="dashboard" replace />} />
-						<Route path="dashboard" element={<KepalaDinasDashboard />} />				<Route path="profile" element={<ProfilePage />} />						<Route path="disposisi" element={<DisposisiSurat />} />
-						<Route path="disposisi/:id" element={<DisposisiDetail />} />
-						<Route path="jadwal-kegiatan" element={<JadwalKegiatanPage />} />
-					</Route>
+				{/* Rute Dinas Terkait - Untuk verifikasi teknis */}
+				<Route
+					path="/dinas"
+					element={
+						<RoleProtectedRoute allowedRoles={['dinas_terkait']}>
+							<DinasLayout />
+						</RoleProtectedRoute>
+					}
+				>
+				<Route index element={<Navigate to="dashboard" replace />} />
+				<Route path="dashboard" element={<DinasDashboardPage />} />
+				<Route path="bankeu" element={<DinasVerificationPage />} />
+				<Route path="bankeu/verifikasi/:proposalId" element={<DinasVerificationDetailPage />} />
+			</Route>
 
+				{/* Rute Kepala Dinas - Exclusive untuk Kepala Dinas */}
+				<Route
+					path="/kepala-dinas"
+					element={
+						<RoleProtectedRoute allowedRoles={['superadmin', 'kepala_dinas']}>						<KepalaDinasLayout />
+					</RoleProtectedRoute>
+				}
+			>
+				<Route index element={<Navigate to="dashboard" replace />} />
+				<Route path="dashboard" element={<KepalaDinasDashboard />} />
+				<Route path="profile" element={<ProfilePage />} />
+				<Route path="disposisi" element={<DisposisiSurat />} />
+				<Route path="disposisi/:id" element={<DisposisiDetail />} />
+				<Route path="jadwal-kegiatan" element={<JadwalKegiatanPage />} />
+			</Route>
 					{/* Rute Kepala Bidang - Exclusive untuk Kepala Bidang */}
 					<Route
 						path="/kepala-bidang"

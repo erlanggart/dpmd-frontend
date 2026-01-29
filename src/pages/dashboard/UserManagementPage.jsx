@@ -42,8 +42,10 @@ const UserManagementPage = () => {
 	// Filters
 	const [searchTerm, setSearchTerm] = useState("");
 	const [filterBidang, setFilterBidang] = useState("all"); // Filter bidang untuk tab Pegawai DPMD
+	const [filterDinas, setFilterDinas] = useState("all"); // Filter dinas untuk tab Dinas Terkait
 	const [activeTab, setActiveTab] = useState("superadmin"); // Tab aktif
 	const [bidangList, setBidangList] = useState([]); // List bidang untuk dropdown
+	const [dinasList, setDinasList] = useState([]); // List dinas untuk dropdown
 
 	// Pagination
 	const [currentPage, setCurrentPage] = useState(1);
@@ -66,6 +68,7 @@ const UserManagementPage = () => {
 		},
 		{ id: "desa", label: "Admin Desa", role: "desa", icon: LuHouse, color: "emerald" },
 		{ id: "kecamatan", label: "Admin Kecamatan", role: "kecamatan", icon: LuMapPin, color: "violet" },
+		{ id: "dinas_terkait", label: "Dinas Terkait", role: "dinas_terkait", icon: LuBuilding2, color: "amber" },
 	];
 
 	// Fetch users
@@ -96,10 +99,21 @@ const UserManagementPage = () => {
 		}
 	}, []);
 
+	// Fetch dinas list
+	const fetchDinasList = useCallback(async () => {
+		try {
+			const response = await api.get("/api/dinas/list");
+			setDinasList(response.data.data || []);
+		} catch (err) {
+			console.error("Error fetching dinas:", err);
+		}
+	}, []);
+
 	useEffect(() => {
 		fetchUsers();
 		fetchBidangList();
-	}, [fetchUsers, fetchBidangList]);
+		fetchDinasList();
+	}, [fetchUsers, fetchBidangList, fetchDinasList]);
 
 	// Handle user added
 	const handleUserAdded = () => {
@@ -221,6 +235,7 @@ const UserManagementPage = () => {
 			pemerintahan_desa: { label: "Pemerintahan Desa", color: "bg-indigo-100 text-indigo-700 border-indigo-200" },
 			desa: { label: "Admin Desa", color: "bg-emerald-100 text-emerald-700 border-emerald-200" },
 			kecamatan: { label: "Admin Kecamatan", color: "bg-violet-100 text-violet-700 border-violet-200" },
+			dinas_terkait: { label: "Dinas Terkait", color: "bg-amber-100 text-amber-700 border-amber-200" },
 		};
 		return roleMap[role] || { label: role, color: "bg-gray-100 text-gray-700 border-gray-200" };
 	};
@@ -263,9 +278,15 @@ const UserManagementPage = () => {
 				filterBidang === "all" ||
 				user.bidang_id === parseInt(filterBidang);
 
-			return matchTab && matchSearch && matchBidang;
+			// Filter berdasarkan dinas (hanya untuk tab Dinas Terkait)
+			const matchDinas = 
+				activeTab !== "dinas_terkait" ||
+				filterDinas === "all" ||
+				user.dinas_id === parseInt(filterDinas);
+
+			return matchTab && matchSearch && matchBidang && matchDinas;
 		});
-	}, [users, searchTerm, activeTab, filterBidang, tabs]);
+	}, [users, searchTerm, activeTab, filterBidang, filterDinas, tabs]);
 
 	// Pagination calculations
 	const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
@@ -276,7 +297,7 @@ const UserManagementPage = () => {
 	// Reset to page 1 when filters change
 	useEffect(() => {
 		setCurrentPage(1);
-	}, [searchTerm, activeTab, filterBidang]);
+	}, [searchTerm, activeTab, filterBidang, filterDinas]);
 
 	// Group by role for stats
 	const statsByRole = useMemo(() => {
@@ -362,6 +383,7 @@ const UserManagementPage = () => {
 									setActiveTab(tab.id);
 									setSearchTerm('');
 									setFilterBidang('all'); // Reset filter bidang
+									setFilterDinas('all'); // Reset filter dinas
 								}}
 								className={`
 									flex items-center gap-2 px-4 py-3 rounded-xl font-medium transition-all
@@ -384,9 +406,9 @@ const UserManagementPage = () => {
 
 			{/* Filters & Actions */}
 			<div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
-				<div className={`grid grid-cols-1 gap-4 ${activeTab === "pegawai" ? "md:grid-cols-3" : "md:grid-cols-1"}`}>
+				<div className={`grid grid-cols-1 gap-4 ${(activeTab === "pegawai" || activeTab === "dinas_terkait") ? "md:grid-cols-3" : "md:grid-cols-1"}`}>
 					{/* Search */}
-					<div className={activeTab === "pegawai" ? "" : "md:col-span-1"}>
+					<div className={(activeTab === "pegawai" || activeTab === "dinas_terkait") ? "" : "md:col-span-1"}>
 						<div className="relative">
 							<LuSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
 							<input
@@ -412,6 +434,26 @@ const UserManagementPage = () => {
 								{bidangList.map((bidang) => (
 									<option key={bidang.id} value={bidang.id}>
 										{bidang.nama}
+									</option>
+								))}
+							</select>
+							<LuChevronDown className="absolute right-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+						</div>
+					)}
+
+					{/* Filter Dinas - Hanya muncul di tab Dinas Terkait */}
+					{activeTab === "dinas_terkait" && (
+						<div className="relative">
+							<LuBuilding2 className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+							<select
+								value={filterDinas}
+								onChange={(e) => setFilterDinas(e.target.value)}
+								className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all appearance-none bg-white"
+							>
+								<option value="all">Semua Dinas</option>
+								{dinasList.map((dinas) => (
+									<option key={dinas.id} value={dinas.id}>
+										{dinas.nama_dinas}
 									</option>
 								))}
 							</select>
@@ -449,12 +491,12 @@ const UserManagementPage = () => {
 						</div>
 						<div>
 							<p className="text-gray-700 font-semibold text-lg mb-1">
-								{searchTerm || filterBidang !== "all"
+								{searchTerm || filterBidang !== "all" || filterDinas !== "all"
 									? "Tidak ada user yang sesuai"
 									: "Belum ada user"}
 							</p>
 							<p className="text-sm text-gray-500">
-								{searchTerm || filterBidang !== "all"
+								{searchTerm || filterBidang !== "all" || filterDinas !== "all"
 									? "Coba ubah filter atau kata kunci pencarian"
 									: 'Klik tombol "Tambah User" untuk menambahkan user baru'}
 							</p>
@@ -493,6 +535,7 @@ const UserManagementPage = () => {
 									user.role === "ketua_tim" ? "bg-gradient-to-br from-teal-500 to-cyan-600" :
 									user.role === "desa" ? "bg-gradient-to-br from-emerald-500 to-green-600" :
 									user.role === "kecamatan" ? "bg-gradient-to-br from-violet-500 to-purple-600" :
+									user.role === "dinas_terkait" ? "bg-gradient-to-br from-amber-500 to-orange-600" :
 									"bg-gradient-to-br from-gray-500 to-slate-600"
 								}`}>
 									<div className="flex items-center gap-3">
@@ -547,6 +590,15 @@ const UserManagementPage = () => {
 											</div>
 										)}
 
+										{user.dinas && (
+											<div className="flex items-center gap-3 text-gray-600">
+												<div className="h-9 w-9 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
+													<LuBuilding2 className="h-4 w-4 text-amber-600" />
+												</div>
+												<span className="text-sm truncate flex-1">{user.dinas.nama_dinas}</span>
+											</div>
+										)}
+
 										<div className="flex items-center gap-3 text-gray-600">
 											<div className="h-9 w-9 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
 												<LuCalendar className="h-4 w-4 text-blue-600" />
@@ -563,11 +615,11 @@ const UserManagementPage = () => {
 
 									{/* Actions */}
 									<div className={`grid ${
-										['superadmin', 'desa', 'kecamatan'].includes(user.role) 
+										['superadmin', 'desa', 'kecamatan', 'dinas_terkait'].includes(user.role) 
 											? 'grid-cols-2' 
 											: 'grid-cols-4'
 									} gap-2 pt-3 border-t border-gray-100`}>
-										{!['superadmin', 'desa', 'kecamatan'].includes(user.role) && (
+										{!['superadmin', 'desa', 'kecamatan', 'dinas_terkait'].includes(user.role) && (
 											<>
 												<button
 													onClick={() => handleEditRole(user)}
