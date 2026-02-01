@@ -233,8 +233,8 @@ const BankeuVerificationDetailPage = () => {
     if (isApprove) {
       try {
         const response = await api.patch(`/kecamatan/bankeu/proposals/${proposalId}/verify`, {
-          status,
-          catatan_verifikasi: ''
+          action: 'approved',
+          catatan: ''
         });
 
         // Toast notification singkat
@@ -277,43 +277,10 @@ const BankeuVerificationDetailPage = () => {
           </h3>
           
           <p class="text-gray-600 mb-6">
-            Proposal akan ditolak dan dikembalikan. Pilih akan dikembalikan ke mana.
+            Proposal akan ditolak dan dikembalikan ke <strong>Desa</strong> untuk diperbaiki.
           </p>
           
           <div class="text-left space-y-4">
-            <div>
-              <label class="block text-sm font-semibold text-gray-700 mb-2">
-                Kembalikan ke *
-              </label>
-              <div class="space-y-2">
-                <label class="flex items-center gap-3 p-3 border-2 border-gray-200 rounded-lg hover:border-blue-300 cursor-pointer transition-all">
-                  <input 
-                    type="radio" 
-                    name="return_to" 
-                    value="dinas" 
-                    checked
-                    class="w-4 h-4 text-blue-600"
-                  />
-                  <div class="flex-1">
-                    <div class="font-semibold text-gray-800">Dinas Terkait</div>
-                    <div class="text-xs text-gray-500">Jika kesalahan ada di validasi Dinas</div>
-                  </div>
-                </label>
-                <label class="flex items-center gap-3 p-3 border-2 border-gray-200 rounded-lg hover:border-blue-300 cursor-pointer transition-all">
-                  <input 
-                    type="radio" 
-                    name="return_to" 
-                    value="desa" 
-                    class="w-4 h-4 text-blue-600"
-                  />
-                  <div class="flex-1">
-                    <div class="font-semibold text-gray-800">Desa</div>
-                    <div class="text-xs text-gray-500">Jika kesalahan ada di proposal Desa</div>
-                  </div>
-                </label>
-              </div>
-            </div>
-            
             <div>
               <label class="block text-sm font-semibold text-gray-700 mb-2">
                 Alasan Penolakan *
@@ -357,32 +324,29 @@ const BankeuVerificationDetailPage = () => {
       },
       preConfirm: () => {
         const catatan = document.getElementById("catatan-verifikasi").value;
-        const returnTo = document.querySelector('input[name="return_to"]:checked').value;
         
         if (!catatan.trim()) {
           Swal.showValidationMessage("Alasan penolakan wajib diisi");
           return false;
         }
         
-        return { catatan, returnTo };
+        return { catatan };
       }
     });
 
     if (result.isConfirmed) {
       try {
         const response = await api.patch(`/kecamatan/bankeu/proposals/${proposalId}/verify`, {
-          status,
-          catatan_verifikasi: result.value.catatan,
-          return_to: result.value.returnTo
+          action: status,
+          catatan: result.value.catatan || ''
         });
 
         // Toast notification untuk revision
-        const destination = result.value.returnTo === 'dinas' ? 'Dinas Terkait' : 'Desa';
         Swal.fire({
           toast: true,
           position: 'top-end',
           icon: 'warning',
-          title: `Proposal dikembalikan ke ${destination}`,
+          title: 'Proposal dikembalikan ke Desa',
           showConfirmButton: false,
           timer: 2000,
           timerProgressBar: true

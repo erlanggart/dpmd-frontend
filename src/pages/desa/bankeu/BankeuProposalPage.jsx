@@ -8,7 +8,8 @@ import {
 
 const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
 
-// Komponen Status Tracking Timeline - Level Desa (bukan per proposal)
+// Komponen Status Tracking Timeline - Level Desa (NEW FLOW 2026-01-30)
+// Flow: Desa → Dinas Terkait → Kecamatan → DPMD
 const StatusTracking = ({ proposals }) => {
   // Tentukan status tracking berdasarkan keseluruhan proposal desa
   const getTrackingSteps = () => {
@@ -16,13 +17,11 @@ const StatusTracking = ({ proposals }) => {
       { id: 1, label: 'Desa', status: 'pending', icon: LuClock, color: 'gray' },
       { id: 2, label: 'Review Dinas Terkait', status: 'pending', icon: LuClock, color: 'gray' },
       { id: 3, label: 'Review Kecamatan', status: 'pending', icon: LuClock, color: 'gray' },
-      { id: 4, label: 'Review DPMD', status: 'pending', icon: LuClock, color: 'gray' },
-      { id: 5, label: 'Review BPKAD', status: 'pending', icon: LuClock, color: 'gray' },
-      { id: 6, label: 'Terbit SP2D', status: 'pending', icon: LuClock, color: 'gray' }
+      { id: 4, label: 'Review DPMD', status: 'pending', icon: LuClock, color: 'gray' }
     ];
 
-    // Jika belum ada proposal yang dikirim
-    const submittedProposals = proposals.filter(p => p.submitted_to_kecamatan);
+    // Jika belum ada proposal yang dikirim ke Dinas
+    const submittedProposals = proposals.filter(p => p.submitted_to_dinas_at);
     if (submittedProposals.length === 0) {
       steps[0].status = 'active';
       steps[0].icon = LuClock;
@@ -31,25 +30,25 @@ const StatusTracking = ({ proposals }) => {
       return steps;
     }
 
-    // Desa step completed (sudah kirim ke kecamatan)
+    // Desa step completed (sudah kirim ke Dinas)
     steps[0].status = 'completed';
     steps[0].icon = LuCheck;
     steps[0].color = 'green';
 
-    // Check dinas status
-    const hasDinasApproved = submittedProposals.some(p => p.dinas_status === 'approved');
-    const hasDinasRejected = submittedProposals.some(p => p.dinas_status === 'rejected' || p.dinas_status === 'revision');
-    const hasDinasPending = submittedProposals.some(p => !p.dinas_status || p.dinas_status === 'pending');
+    // NEW FLOW 2026-01-30: Check Dinas status (step 2)
+    const pendingDinas = submittedProposals.filter(p => p.dinas_status === 'pending' || p.dinas_status === 'in_review');
+    const rejectedDinas = submittedProposals.filter(p => (p.dinas_status === 'rejected' || p.dinas_status === 'revision') && !p.submitted_to_dinas_at);
+    const approvedDinas = submittedProposals.filter(p => p.dinas_status === 'approved');
 
-    if (hasDinasPending) {
+    if (pendingDinas.length > 0) {
       steps[1].status = 'active';
       steps[1].icon = LuClock;
       steps[1].color = 'blue';
-      steps[1].label = 'Sedang direview Dinas';
+      steps[1].label = 'Sedang direview Dinas Terkait';
       return steps;
     }
 
-    if (hasDinasRejected) {
+    if (rejectedDinas.length > 0) {
       steps[1].status = 'rejected';
       steps[1].icon = LuX;
       steps[1].color = 'red';
@@ -57,20 +56,19 @@ const StatusTracking = ({ proposals }) => {
       return steps;
     }
 
-    if (hasDinasApproved) {
+    if (approvedDinas.length > 0) {
       steps[1].status = 'completed';
       steps[1].icon = LuCheck;
       steps[1].color = 'green';
-      steps[1].label = 'Disetujui Dinas';
+      steps[1].label = 'Disetujui Dinas Terkait';
     }
 
-    // Ada proposal yang dikirim ke kecamatan
-    const pendingProposals = submittedProposals.filter(p => p.status === 'pending');
-    const rejectedProposals = submittedProposals.filter(p => p.status === 'revision' || p.status === 'rejected');
-    const verifiedProposals = submittedProposals.filter(p => p.status === 'verified');
+    // Check Kecamatan status (step 3)
+    const pendingKecamatan = approvedDinas.filter(p => p.kecamatan_status === 'pending' || p.kecamatan_status === 'in_review');
+    const rejectedKecamatan = approvedDinas.filter(p => (p.kecamatan_status === 'rejected' || p.kecamatan_status === 'revision'));
+    const approvedKecamatan = approvedDinas.filter(p => p.kecamatan_status === 'approved');
 
-    // Jika ada yang masih pending atau ditolak
-    if (pendingProposals.length > 0) {
+    if (pendingKecamatan.length > 0) {
       steps[2].status = 'active';
       steps[2].icon = LuClock;
       steps[2].color = 'blue';
@@ -78,26 +76,47 @@ const StatusTracking = ({ proposals }) => {
       return steps;
     }
 
-    if (rejectedProposals.length > 0) {
+    if (rejectedKecamatan.length > 0) {
       steps[2].status = 'rejected';
       steps[2].icon = LuX;
       steps[2].color = 'red';
-      steps[2].label = 'Ditolak - Kembali ke Desa';
+      steps[2].label = 'Ditolak Kecamatan - Kembali ke Desa';
       return steps;
     }
 
-    // Semua proposal disetujui kecamatan
-    if (verifiedProposals.length > 0 && rejectedProposals.length === 0 && pendingProposals.length === 0) {
+    if (approvedKecamatan.length > 0) {
       steps[2].status = 'completed';
       steps[2].icon = LuCheck;
       steps[2].color = 'green';
       steps[2].label = 'Disetujui Kecamatan';
+    }
 
-      // Lanjut ke DPMD
+    // Check DPMD status (step 4)
+    const pendingDPMD = approvedKecamatan.filter(p => p.dpmd_status === 'pending' || p.dpmd_status === 'in_review');
+    const rejectedDPMD = approvedKecamatan.filter(p => p.dpmd_status === 'rejected' || p.dpmd_status === 'revision');
+    const approvedDPMD = approvedKecamatan.filter(p => p.dpmd_status === 'approved');
+
+    if (pendingDPMD.length > 0) {
       steps[3].status = 'active';
       steps[3].icon = LuClock;
       steps[3].color = 'blue';
       steps[3].label = 'Sedang direview DPMD';
+      return steps;
+    }
+
+    if (rejectedDPMD.length > 0) {
+      steps[3].status = 'rejected';
+      steps[3].icon = LuX;
+      steps[3].color = 'red';
+      steps[3].label = 'Ditolak DPMD - Kembali ke Desa';
+      return steps;
+    }
+
+    if (approvedDPMD.length > 0) {
+      steps[3].status = 'completed';
+      steps[3].icon = LuCheck;
+      steps[3].color = 'green';
+      steps[3].label = 'Disetujui DPMD (Final)';
     }
 
     return steps;
@@ -656,8 +675,8 @@ const BankeuProposalPage = () => {
     const count = unsendToKecamatanCount;
     
     const result = await Swal.fire({
-      title: 'Kirim ke Kecamatan?',
-      html: `<strong>${count} proposal</strong> akan dikirim ke Kecamatan untuk diverifikasi.<br><strong>Proses ini tidak dapat dibatalkan!</strong>`,
+      title: 'Kirim ke Dinas Terkait?',
+      html: `<strong>${count} proposal</strong> akan dikirim ke Dinas Terkait untuk diverifikasi.<br><strong>Proses ini tidak dapat dibatalkan!</strong>`,
       icon: "question",
       showCancelButton: true,
       confirmButtonColor: "#10b981",
@@ -677,13 +696,13 @@ const BankeuProposalPage = () => {
           }
         });
 
-        const response = await api.post('/desa/bankeu/submit-to-kecamatan');
+        const response = await api.post('/desa/bankeu/submit-to-dinas-terkait');
         await fetchData();
 
         Swal.fire({
           icon: "success",
           title: "Berhasil!",
-          text: response.data.message || "Proposal berhasil dikirim ke Kecamatan",
+          text: response.data.message || "Proposal berhasil dikirim ke Dinas Terkait",
           timer: 2500,
           showConfirmButton: false
         });
@@ -702,20 +721,20 @@ const BankeuProposalPage = () => {
     const count = unsendToDinasCount;
     
     const result = await Swal.fire({
-      title: 'Kirim ke Dinas Terkait?',
-      html: `<strong>${count} proposal</strong> akan dikirim ke Dinas Terkait untuk diverifikasi.<br><strong>Proses ini tidak dapat dibatalkan!</strong>`,
+      title: 'Kirim Ulang Proposal Revisi?',
+      html: `<strong>${count} proposal revisi</strong> akan dikirim ulang ke <strong>${resubmitDestination}</strong>.<br><strong>Proses ini tidak dapat dibatalkan!</strong>`,
       icon: "question",
       showCancelButton: true,
       confirmButtonColor: "#10b981",
       cancelButtonColor: "#6b7280",
-      confirmButtonText: "Ya, Kirim!",
+      confirmButtonText: "Ya, Kirim Ulang!",
       cancelButtonText: "Batal"
     });
 
     if (result.isConfirmed) {
       try {
         Swal.fire({
-          title: 'Mengirim ke Dinas Terkait...',
+          title: 'Mengirim ulang proposal...',
           text: 'Mohon tunggu',
           allowOutsideClick: false,
           didOpen: () => {
@@ -723,18 +742,18 @@ const BankeuProposalPage = () => {
           }
         });
 
-        const response = await api.post('/desa/bankeu/submit-to-dinas');
+        const response = await api.post('/desa/bankeu/resubmit');
         await fetchData();
 
         Swal.fire({
           icon: "success",
           title: "Berhasil!",
-          text: response.data.message || "Proposal berhasil dikirim ke Dinas Terkait",
+          text: response.data.message || "Proposal revisi berhasil dikirim ulang",
           timer: 2500,
           showConfirmButton: false
         });
       } catch (error) {
-        console.error('Error submit to Dinas:', error);
+        console.error('Error resubmit proposals:', error);
         Swal.fire({
           icon: "error",
           title: "Gagal",
@@ -813,28 +832,64 @@ const BankeuProposalPage = () => {
   // Hitung per status
   const verifiedProposals = proposals.filter(p => p.status === 'verified');
   const pendingProposals = proposals.filter(p => p.status === 'pending');
-  // Hanya hitung revision yang sudah dikembalikan ke desa (submitted_to_kecamatan = FALSE)
+  // Hanya hitung revision yang sudah dikembalikan ke desa (submitted_to_dinas_at = NULL)
   const revisionProposals = proposals.filter(p => 
-    (p.status === 'revision' || p.status === 'rejected') && !p.submitted_to_kecamatan
+    (p.status === 'revision' || p.status === 'rejected') && !p.submitted_to_dinas_at
   );
   
-  // Hitung proposal yang belum dikirim (pending dan belum submit)
+  // NEW FLOW 2026-01-30: Hitung proposal yang belum dikirim ke Dinas
   const unsendProposals = proposals.filter(p => 
     p.status === 'pending' && 
-    !p.submitted_to_kecamatan &&
     !p.submitted_to_dinas_at
   );
   
-  // PISAHKAN: Proposal dari Kecamatan vs dari Dinas
-  // Dari Kecamatan: verified_at !== null (pernah diverifikasi Kecamatan)
-  const unsendToKecamatan = unsendProposals.filter(p => p.verified_at !== null);
+  // DETEKSI ASAL REVISI (NEW FLOW) - Pisah per level:
+  // PENTING: Cek p.status dulu! Kalau sudah upload ulang (status='pending'), tidak masuk sini
   
-  // Dari Dinas atau baru: verified_at === null (belum pernah ke Kecamatan)
-  const unsendToDinas = unsendProposals.filter(p => p.verified_at === null);
+  // Dari DPMD: status masih revision/rejected DAN dpmd_status ada
+  const fromDPMDRevision = proposals.filter(p => 
+    (p.status === 'revision' || p.status === 'rejected') &&
+    (p.dpmd_status === 'rejected' || p.dpmd_status === 'revision') &&
+    !p.submitted_to_dinas_at // Belum upload ulang
+  );
   
-  const unsendToKecamatanCount = unsendToKecamatan.length;
-  const unsendToDinasCount = unsendToDinas.length;
-  const unsendCount = unsendProposals.length; // Total semua yang belum dikirim
+  // Dari Kecamatan: status masih revision/rejected DAN kecamatan_status ada (tapi bukan dari DPMD)
+  const fromKecamatanRevision = proposals.filter(p => 
+    (p.status === 'revision' || p.status === 'rejected') &&
+    (p.kecamatan_status === 'rejected' || p.kecamatan_status === 'revision') &&
+    !p.dpmd_status && // Bukan dari DPMD (prioritas lebih tinggi)
+    !p.submitted_to_dinas_at
+  );
+  
+  // Dari Dinas: status masih revision/rejected DAN dinas_status ada (tapi bukan dari level lain)
+  const fromDinasRevisionNotUploaded = proposals.filter(p => 
+    (p.status === 'revision' || p.status === 'rejected') &&
+    (p.dinas_status === 'rejected' || p.dinas_status === 'revision') &&
+    !p.kecamatan_status && // Bukan dari Kecamatan
+    !p.dpmd_status && // Bukan dari DPMD
+    !p.submitted_to_dinas_at
+  );
+  
+  // Semua revisi belum upload
+  const fromAnyLevelRevisionNotUploaded = proposals.filter(p => 
+    (p.status === 'revision' || p.status === 'rejected') &&
+    !p.submitted_to_dinas_at
+  );
+  
+  // Revisi yang SUDAH UPLOAD ULANG: status=pending (siap dikirim ulang)
+  const fromRevisionUploaded = proposals.filter(p => 
+    p.status === 'pending' &&
+    !p.submitted_to_dinas_at &&
+    !p.submitted_to_kecamatan &&
+    (p.dinas_status || p.kecamatan_status || p.dpmd_status) // Pernah direview
+  );
+  
+  // Count untuk tombol submit
+  const unsendToKecamatanCount = unsendProposals.filter(p => 
+    !p.dinas_status && !p.kecamatan_status && !p.dpmd_status // Benar-benar baru
+  ).length;
+  
+  const unsendToDinasCount = fromRevisionUploaded.length; // Revisi SUDAH upload ulang
   
   const verifiedCount = verifiedProposals.length;
   const pendingCount = pendingProposals.length;
@@ -853,13 +908,41 @@ const BankeuProposalPage = () => {
   const kegiatanPerluDiisi = totalKegiatan - filledCount;
   
   // Cek apakah ada proposal yang perlu direvisi (belum diupload ulang)
-  const hasUnresolvedRevisions = revisionCount > 0;
+  const hasUnresolvedRevisions = fromAnyLevelRevisionNotUploaded.length > 0;
+  const hasUnresolvedDinasRevisions = fromDinasRevisionNotUploaded.length > 0;
+  const hasUnresolvedKecamatanRevisions = fromKecamatanRevision.length > 0;
   
-  // Tombol kirim ke Kecamatan: Ada proposal dari Kecamatan DAN tidak ada revision
+  // Deteksi asal revisi YANG SUDAH DIUPLOAD (untuk tentukan destination)
+  const fromKecamatanUploaded = fromRevisionUploaded.filter(p => 
+    p.kecamatan_status && !p.dpmd_status
+  );
+  const fromDinasOrDPMDUploaded = fromRevisionUploaded.filter(p => 
+    !fromKecamatanUploaded.includes(p)
+  );
+  const resubmitDestination = fromKecamatanUploaded.length > 0 ? 'Kecamatan' : 'Dinas Terkait';
+  
+  // Tombol kirim ke Dinas Terkait: Ada proposal pending BARU DAN tidak ada revision yang belum diupload
   const canSubmitToKecamatan = unsendToKecamatanCount > 0 && !hasUnresolvedRevisions;
   
-  // Tombol kirim ke Dinas: Ada proposal dari Dinas DAN tidak ada revision
-  const canSubmitToDinas = unsendToDinasCount > 0 && !hasUnresolvedRevisions;
+  // Tombol kirim ulang (resubmit): Ada proposal revisi yang SUDAH diupload ulang
+  const canSubmitToDinas = unsendToDinasCount > 0;
+  
+  // DEBUG: Log untuk troubleshooting
+  console.log('🔍 DEBUG COUNTING:', {
+    proposals: proposals.length,
+    fromRevisionUploaded: fromRevisionUploaded.length,
+    fromRevisionUploadedData: fromRevisionUploaded.map(p => ({
+      id: p.id,
+      status: p.status,
+      dinas_status: p.dinas_status,
+      kecamatan_status: p.kecamatan_status,
+      dpmd_status: p.dpmd_status,
+      submitted_to_dinas_at: p.submitted_to_dinas_at
+    })),
+    unsendToDinasCount,
+    canSubmitToDinas,
+    resubmitDestination
+  });
 
   const getStatusBadge = (status) => {
     const badges = {
@@ -1103,21 +1186,34 @@ const BankeuProposalPage = () => {
             {/* Buttons Kirim - 2 tombol terpisah */}
             {(canSubmitToKecamatan || canSubmitToDinas) && (
               <div className="mt-4 pt-4 border-t border-gray-200">
-                {hasUnresolvedRevisions ? (
-                  <div className="text-center">
-                    <div className="px-6 py-3 bg-orange-50 border-2 border-orange-200 rounded-xl">
-                      <LuRefreshCw className="w-6 h-6 mx-auto mb-2 text-orange-600 animate-spin" />
-                      <p className="text-sm font-bold text-orange-800">
-                        {revisionCount} proposal perlu diupload ulang
-                      </p>
-                      <p className="text-xs text-orange-600 mt-1">
-                        Upload semua revisi untuk mengirim ulang
-                      </p>
-                    </div>
+                {(hasUnresolvedKecamatanRevisions || hasUnresolvedDinasRevisions) ? (
+                  <div className="text-center space-y-2">
+                    {hasUnresolvedKecamatanRevisions && (
+                      <div className="px-6 py-3 bg-orange-50 border-2 border-orange-200 rounded-xl">
+                        <LuRefreshCw className="w-6 h-6 mx-auto mb-2 text-orange-600 animate-spin" />
+                        <p className="text-sm font-bold text-orange-800">
+                          {fromKecamatanRevision.length} proposal dari Kecamatan perlu diupload ulang
+                        </p>
+                        <p className="text-xs text-orange-600 mt-1">
+                          Upload semua revisi untuk mengirim ke Kecamatan
+                        </p>
+                      </div>
+                    )}
+                    {hasUnresolvedDinasRevisions && (
+                      <div className="px-6 py-3 bg-purple-50 border-2 border-purple-200 rounded-xl">
+                        <LuRefreshCw className="w-6 h-6 mx-auto mb-2 text-purple-600 animate-spin" />
+                        <p className="text-sm font-bold text-purple-800">
+                          {fromDinasRevisionNotUploaded.length} proposal dari Dinas perlu diupload ulang
+                        </p>
+                        <p className="text-xs text-purple-600 mt-1">
+                          Upload semua revisi untuk mengirim ke Dinas
+                        </p>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {/* Tombol Kirim ke Kecamatan */}
+                    {/* Tombol Kirim ke Dinas Terkait (First Submission) */}
                     {canSubmitToKecamatan && (
                       <div>
                         <button
@@ -1125,15 +1221,15 @@ const BankeuProposalPage = () => {
                           className="w-full px-6 py-3 rounded-xl flex items-center justify-center gap-2 font-bold text-sm shadow-md transition-all bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 hover:shadow-lg transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
                         >
                           <LuSend className="w-5 h-5" />
-                          <span>Kirim ke Kecamatan</span>
+                          <span>Kirim ke Dinas Terkait</span>
                         </button>
                         <p className="text-xs text-blue-600 mt-2 text-center font-medium">
-                          ✓ Siap dikirim ke Kecamatan ({unsendToKecamatanCount} proposal revisi dari Kecamatan)
+                          ✓ Siap dikirim ke Dinas Terkait ({unsendToKecamatanCount} proposal)
                         </p>
                       </div>
                     )}
 
-                    {/* Tombol Kirim ke Dinas Terkait */}
+                    {/* Tombol Kirim Ulang (Resubmit Revisi) */}
                     {canSubmitToDinas && (
                       <div>
                         <button
@@ -1141,10 +1237,10 @@ const BankeuProposalPage = () => {
                           className="w-full px-6 py-3 rounded-xl flex items-center justify-center gap-2 font-bold text-sm shadow-md transition-all bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 hover:shadow-lg transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
                         >
                           <LuSend className="w-5 h-5" />
-                          <span>Kirim ke Dinas Terkait</span>
+                          <span>Kirim Ulang ke {resubmitDestination}</span>
                         </button>
                         <p className="text-xs text-green-600 mt-2 text-center font-medium">
-                          ✓ Siap dikirim ke Dinas Terkait ({unsendToDinasCount} proposal baru/revisi dari Dinas)
+                          ✓ Revisi siap dikirim ke {resubmitDestination} ({unsendToDinasCount} proposal)
                         </p>
                       </div>
                     )}
@@ -1495,16 +1591,26 @@ const KegiatanRow = ({ item, index, onUpload, onRevisionUpload, onReplaceFile, o
                   <span className="font-bold text-orange-900 text-base">Upload Ulang Proposal</span>
                 </div>
                 
-                {/* Badge Info: Dari mana revisi berasal */}
-                {proposal.verified_at ? (
+                {/* Badge Info: Dari mana revisi berasal - NEW FLOW 2026-01-30 */}
+                {(proposal.dpmd_status === 'revision' || proposal.dpmd_status === 'rejected') ? (
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-red-100 border-2 border-red-300 rounded-lg">
+                    <LuInfo className="w-4 h-4 text-red-700" />
+                    <span className="text-xs font-bold text-red-800">Revisi dari DPMD → Kirim Ulang</span>
+                  </div>
+                ) : (proposal.kecamatan_status === 'revision' || proposal.kecamatan_status === 'rejected') ? (
                   <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-100 border-2 border-blue-300 rounded-lg">
                     <LuInfo className="w-4 h-4 text-blue-700" />
-                    <span className="text-xs font-bold text-blue-800">Revisi dari KECAMATAN → Kirim ke Kecamatan</span>
+                    <span className="text-xs font-bold text-blue-800">Revisi dari KECAMATAN → Kirim Ulang</span>
                   </div>
-                ) : (
+                ) : (proposal.dinas_status === 'revision' || proposal.dinas_status === 'rejected') ? (
                   <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-100 border-2 border-purple-300 rounded-lg">
                     <LuInfo className="w-4 h-4 text-purple-700" />
-                    <span className="text-xs font-bold text-purple-800">Revisi dari DINAS TERKAIT → Kirim ke Dinas</span>
+                    <span className="text-xs font-bold text-purple-800">Revisi dari DINAS TERKAIT → Kirim Ulang</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-orange-100 border-2 border-orange-300 rounded-lg">
+                    <LuInfo className="w-4 h-4 text-orange-700" />
+                    <span className="text-xs font-bold text-orange-800">Perlu Revisi → Kirim Ulang</span>
                   </div>
                 )}
               </div>
