@@ -6,6 +6,8 @@ import {
 } from 'react-icons/lu';
 import api from '../../api';
 
+const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
+
 const DinasVerificationDetailPage = () => {
   const { proposalId } = useParams();
   const navigate = useNavigate();
@@ -222,7 +224,7 @@ const DinasVerificationDetailPage = () => {
         {proposal.file_proposal && (
           <div className="mt-4 pt-4 border-t border-gray-100">
             <a
-              href={`${import.meta.env.VITE_API_URL}/uploads/bankeu/${proposal.file_proposal}`}
+              href={`${imageBaseUrl.replace(/\/api$/, '')}/storage/uploads/bankeu/${proposal.file_proposal}`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"

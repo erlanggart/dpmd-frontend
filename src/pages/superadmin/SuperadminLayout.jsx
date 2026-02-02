@@ -147,7 +147,7 @@ const SuperadminLayout = () => {
 			{confirmDialog}
 
 			{/* Modern Collapsible Sidebar - Desktop */}
-			<aside className={`hidden lg:flex fixed left-0 top-0 h-screen bg-white border-r border-gray-200 shadow-xl flex-col z-40 transition-all duration-300 ease-in-out ${
+			<aside className={`hidden lg:flex fixed left-0 top-0 h-screen bg-white border-r border-gray-100 shadow-sm flex-col z-40 transition-all duration-300 ease-in-out ${
 				sidebarOpen ? 'w-72' : 'w-20'
 			}`}>
 				{/* Logo & Brand */}

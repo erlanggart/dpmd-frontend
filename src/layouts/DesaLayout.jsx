@@ -131,7 +131,7 @@ const DesaLayout = () => {
   const inactiveLinkClass = "hover:bg-gray-100";
 
   return (
-    <div className="h-screen flex overflow-hidden bg-blue-200">
+    <div className="h-screen flex overflow-hidden bg-gradient-to-br from-gray-50 via-slate-50 to-gray-100">
       {/* Backdrop for mobile */}
       {sidebarOpen && (
         <div
@@ -142,12 +142,12 @@ const DesaLayout = () => {
 
       {/* Sidebar */}
       <aside
-        className={`fixed m-4 top-0 left-0 h-[97vh] bg-white shadow-xl rounded-md border-r border-slate-200 transform transition-all duration-300 ease-in-out z-30 lg:relative lg:translate-x-0 flex flex-col ${
+        className={`fixed m-4 top-0 left-0 h-[97vh] bg-white shadow-sm rounded-md border-r border-gray-100 transform transition-all duration-300 ease-in-out z-30 lg:relative lg:translate-x-0 flex flex-col ${
           sidebarOpen ? "translate-x-0 w-64" : "-translate-x-full w-64 lg:w-20"
         }`}
       >
         {/* Logo Section */}
-        <div className={`flex items-center ${!sidebarOpen && "justify-center"} p-4 border-b border-slate-200 flex-shrink-0`}>
+        <div className={`flex items-center ${!sidebarOpen && "justify-center"} p-4 border-b border-gray-100 flex-shrink-0`}>
           <img src="/logo-bogor.png" alt="Logo" className="h-10" />
           <div className={`flex flex-col ml-3 ${!sidebarOpen && "lg:hidden"}`}>
             <span className="font-semibold text-gray-800">DPMD</span>
@@ -190,7 +190,7 @@ const DesaLayout = () => {
         </nav>
 
         {/* Bottom Profile Section - Fixed at bottom */}
-        <div className="border-t border-slate-200 p-4 flex-shrink-0">
+        <div className="border-t border-gray-100 p-4 flex-shrink-0">
           {/* User Profile Info - Expanded view */}
           <div className={`mb-3 ${!sidebarOpen && "lg:hidden"}`}>
             <div className="flex items-center space-x-3 mb-3">

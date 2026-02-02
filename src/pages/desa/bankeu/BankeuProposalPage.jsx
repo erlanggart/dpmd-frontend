@@ -300,7 +300,9 @@ const BankeuProposalPage = () => {
   const [loading, setLoading] = useState(true);
   const [expandedInfra, setExpandedInfra] = useState(true);
   const [expandedNonInfra, setExpandedNonInfra] = useState(true);
-  const [expandedStats, setExpandedStats] = useState(true);
+  const [expandedSurat, setExpandedSurat] = useState(true);
+  const [expandedStats, setExpandedStats] = useState(false);
+  const [desaSurat, setDesaSurat] = useState({ surat_pengantar: null, surat_permohonan: null, submitted_to_kecamatan: false });
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [uploadForms, setUploadForms] = useState({});
   const [showContohModal, setShowContohModal] = useState(false);
@@ -313,12 +315,47 @@ const BankeuProposalPage = () => {
     fetchContohProposal();
   }, []);
 
+  // Auto-expand stats panel ketika tombol kirim sudah tersedia
+  useEffect(() => {
+    // Hitung canSubmitToKecamatan dan canSubmitToDinas
+    const unsendToKecamatan = proposals.filter(p => 
+      p.status === 'pending' && 
+      !p.submitted_to_kecamatan && 
+      !p.verified_at &&
+      !p.dinas_status && !p.kecamatan_status && !p.dpmd_status
+    );
+    
+    const fromRevisionUploaded = proposals.filter(p => 
+      p.status === 'pending' && 
+      !p.submitted_to_kecamatan && 
+      p.verified_at &&
+      (p.dinas_status || p.kecamatan_status || p.dpmd_status)
+    );
+    
+    const fromAnyLevelRevisionNotUploaded = proposals.filter(p => 
+      (p.status === 'rejected' || p.status === 'revision') && 
+      !p.submitted_to_kecamatan
+    );
+    
+    const hasUnresolvedRevisions = fromAnyLevelRevisionNotUploaded.length > 0;
+    const canSubmit = (unsendToKecamatan.length > 0 && !hasUnresolvedRevisions) || fromRevisionUploaded.length > 0;
+    
+    if (canSubmit) {
+      setExpandedStats(true);
+    }
+  }, [proposals]);
+
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [masterRes, proposalsRes] = await Promise.all([
+      
+      // Get current year untuk surat
+      const currentYear = new Date().getFullYear();
+      
+      const [masterRes, proposalsRes, suratRes] = await Promise.all([
         api.get("/desa/bankeu/master-kegiatan"),
-        api.get("/desa/bankeu/proposals")
+        api.get("/desa/bankeu/proposals"),
+        api.get("/desa/bankeu/surat", { params: { tahun: currentYear } }).catch(() => ({ data: { data: { surat_pengantar: null, surat_permohonan: null, submitted_to_kecamatan: false } } }))
       ]);
 
       // Flatten master kegiatan
@@ -334,6 +371,14 @@ const BankeuProposalPage = () => {
       
       setMasterKegiatan(allKegiatan);
       setProposals(proposalsRes.data.data);
+      
+      const suratData = suratRes.data.data || { surat_pengantar: null, surat_permohonan: null, submitted_to_kecamatan: false };
+      console.log('✅ Surat API Response:', suratRes.data);
+      console.log('📄 Surat Data yang akan di-set ke state:', suratData);
+      console.log('📎 Surat Pengantar:', suratData.surat_pengantar);
+      console.log('📎 Surat Permohonan:', suratData.surat_permohonan);
+      
+      setDesaSurat(suratData);
       
       // Check if already submitted to kecamatan OR dinas
       const submittedProposal = proposalsRes.data.data.find(p => p.submitted_to_kecamatan || p.submitted_to_dinas_at);
@@ -365,12 +410,20 @@ const BankeuProposalPage = () => {
   };
 
   const handleViewPdf = (proposal, kegiatanNama) => {
+    // Strip /api suffix dari imageBaseUrl untuk static file access
+    const apiBaseUrl = imageBaseUrl.replace(/\/api$/, '');
+    
     setSelectedPdf({
-      url: `${imageBaseUrl}/storage/uploads/${proposal.file_proposal}`,
+      url: `${apiBaseUrl}/storage/uploads/bankeu/${proposal.file_proposal}`,
       title: kegiatanNama,
       proposal: proposal
     });
     setShowPdfModal(true);
+    
+    console.log('📄 Opening Bankeu PDF:', {
+      file: proposal.file_proposal,
+      url: `${apiBaseUrl}/storage/uploads/bankeu/${proposal.file_proposal}`
+    });
   };
 
   const handleClosePdfModal = () => {
@@ -833,6 +886,55 @@ const BankeuProposalPage = () => {
   };
 
   const handleSubmitToKecamatan = async () => {
+    // Validasi 1: Surat harus sudah dikirim ke kecamatan
+    if (!desaSurat.submitted_to_kecamatan) {
+      Swal.fire({
+        icon: "warning",
+        title: "Surat Belum Dikirim",
+        html: `
+          <div class="text-left">
+            <p class="mb-2">Sebelum mengirim proposal ke Dinas Terkait, Anda harus:</p>
+            <ol class="list-decimal ml-6 text-sm text-gray-700 space-y-1">
+              <li>Upload Surat Pengantar Proposal</li>
+              <li>Upload Surat Permohonan Proposal</li>
+              <li>Kirim kedua surat tersebut ke Kecamatan</li>
+              <li>Tunggu approval dari Kecamatan</li>
+            </ol>
+            <p class="mt-3 text-sm text-amber-600">
+              <strong>Catatan:</strong> Silakan scroll ke atas untuk melengkapi dokumen di section <strong>"Dokumen Pendukung Proposal"</strong>.
+            </p>
+          </div>
+        `,
+        confirmButtonText: "OK"
+      });
+      return;
+    }
+
+    // Validasi 2: Surat harus sudah diapprove kecamatan
+    if (desaSurat.kecamatan_status !== 'approved') {
+      const statusMessage = desaSurat.kecamatan_status === 'rejected' 
+        ? 'Surat Anda <strong>ditolak</strong> oleh Kecamatan. Silakan perbaiki dan upload ulang surat sesuai catatan, lalu kirim kembali.'
+        : 'Surat Anda masih dalam status <strong>Menunggu Review</strong> dari Kecamatan. Mohon tunggu konfirmasi terlebih dahulu.';
+      
+      Swal.fire({
+        icon: desaSurat.kecamatan_status === 'rejected' ? "error" : "warning",
+        title: desaSurat.kecamatan_status === 'rejected' ? "Surat Ditolak" : "Menunggu Approval",
+        html: `
+          <div class="text-left">
+            <p class="mb-3">${statusMessage}</p>
+            ${desaSurat.kecamatan_catatan ? `
+              <div class="p-3 bg-gray-100 rounded-lg">
+                <p class="text-sm font-semibold text-gray-700 mb-1">Catatan Kecamatan:</p>
+                <p class="text-sm text-gray-600">${desaSurat.kecamatan_catatan}</p>
+              </div>
+            ` : ''}
+          </div>
+        `,
+        confirmButtonText: "OK"
+      });
+      return;
+    }
+
     const count = unsendToKecamatanCount;
     
     const result = await Swal.fire({
@@ -849,7 +951,7 @@ const BankeuProposalPage = () => {
     if (result.isConfirmed) {
       try {
         Swal.fire({
-          title: 'Mengirim ke Kecamatan...',
+          title: 'Mengirim ke Dinas Terkait...',
           text: 'Mohon tunggu',
           allowOutsideClick: false,
           didOpen: () => {
@@ -921,6 +1023,225 @@ const BankeuProposalPage = () => {
           text: error.response?.data?.message || "Gagal mengirim proposal"
         });
       }
+    }
+  };
+
+  const handleUploadSurat = async (proposalId, jenis, file) => {
+    console.log("=== DEBUG UPLOAD SURAT ===");
+    console.log("Proposal ID:", proposalId);
+    console.log("Jenis:", jenis);
+    console.log("File:", file);
+
+    // Validation
+    if (!file) {
+      Swal.fire({
+        icon: "warning",
+        title: "Perhatian",
+        text: "Silakan pilih file PDF terlebih dahulu"
+      });
+      return;
+    }
+
+    if (file.type !== "application/pdf") {
+      Swal.fire({
+        icon: "warning",
+        title: "Perhatian",
+        text: "File harus berformat PDF"
+      });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      Swal.fire({
+        icon: "warning",
+        title: "Perhatian",
+        text: "Ukuran file maksimal 5MB"
+      });
+      return;
+    }
+
+    try {
+      Swal.fire({
+        title: `Mengupload Surat ${jenis === 'pengantar' ? 'Pengantar' : 'Permohonan'}...`,
+        text: 'Mohon tunggu',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("jenis", jenis);
+
+      console.log("=== FORM DATA UPLOAD SURAT ===");
+      for (let pair of formData.entries()) {
+        console.log(pair[0] + ': ' + pair[1]);
+      }
+
+      const response = await api.post(`/desa/bankeu/proposals/${proposalId}/upload-surat`, formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+
+      console.log("Response upload surat:", response.data);
+
+      // Fetch data baru untuk refresh tampilan
+      await fetchData();
+
+      await Swal.fire({
+        icon: "success",
+        title: "Berhasil!",
+        text: `Surat ${jenis === 'pengantar' ? 'Pengantar' : 'Permohonan'} berhasil diupload`,
+        timer: 2000,
+        showConfirmButton: false
+      });
+    } catch (error) {
+      console.error("Error saat upload surat:", error);
+      console.error("Error response:", error.response);
+      Swal.fire({
+        icon: "error",
+        title: "Gagal Upload",
+        text: error.response?.data?.message || error.message || "Gagal mengupload surat",
+        confirmButtonText: "OK"
+      });
+    }
+  };
+
+  // Handler baru untuk upload surat desa-level (pengantar & permohonan)
+  const handleUploadDesaSurat = async (jenis, file) => {
+    // Validation
+    if (!file) {
+      Swal.fire({
+        icon: "warning",
+        title: "Perhatian",
+        text: "Silakan pilih file PDF terlebih dahulu"
+      });
+      return;
+    }
+
+    if (file.type !== "application/pdf") {
+      Swal.fire({
+        icon: "warning",
+        title: "Perhatian",
+        text: "File harus berformat PDF"
+      });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      Swal.fire({
+        icon: "warning",
+        title: "Perhatian",
+        text: "Ukuran file maksimal 5MB"
+      });
+      return;
+    }
+
+    try {
+      Swal.fire({
+        title: `Mengupload Surat ${jenis === 'pengantar' ? 'Pengantar' : 'Permohonan'}...`,
+        text: 'Mohon tunggu',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("jenis", jenis);
+
+      await api.post('/desa/bankeu/surat/upload', formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+
+      // Fetch data baru untuk refresh tampilan
+      await fetchData();
+
+      await Swal.fire({
+        icon: "success",
+        title: "Berhasil!",
+        text: `Surat ${jenis === 'pengantar' ? 'Pengantar' : 'Permohonan'} berhasil diupload`,
+        timer: 2000,
+        showConfirmButton: false
+      });
+    } catch (error) {
+      console.error("Error saat upload surat desa:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Gagal Upload",
+        text: error.response?.data?.message || error.message || "Gagal mengupload surat",
+        confirmButtonText: "OK"
+      });
+    }
+  };
+
+  // Handler untuk submit surat ke kecamatan
+  const handleSubmitDesaSurat = async () => {
+    // Validasi: kedua surat harus sudah diupload
+    if (!desaSurat.surat_pengantar || !desaSurat.surat_permohonan) {
+      Swal.fire({
+        icon: "warning",
+        title: "Perhatian",
+        text: "Upload kedua surat (Pengantar & Permohonan) terlebih dahulu sebelum mengirim ke Kecamatan",
+        confirmButtonText: "OK"
+      });
+      return;
+    }
+
+    // Confirm submit
+    const result = await Swal.fire({
+      title: "Kirim Surat ke Kecamatan?",
+      html: `
+        <div class="text-left">
+          <p class="mb-2">Pastikan dokumen yang Anda upload sudah benar:</p>
+          <ul class="list-disc ml-6 text-sm text-gray-700">
+            <li>Surat Pengantar ✅</li>
+            <li>Surat Permohonan ✅</li>
+          </ul>
+          <p class="mt-3 text-sm text-amber-600">
+            <strong>Catatan:</strong> Setelah dikirim, Anda masih bisa upload proposal sampai semua proposal dikirim ke Dinas Terkait.
+          </p>
+        </div>
+      `,
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: "#10b981",
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: "Ya, Kirim Surat",
+      cancelButtonText: "Batal"
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      Swal.fire({
+        title: 'Mengirim surat ke Kecamatan...',
+        text: 'Mohon tunggu',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
+      await api.post('/desa/bankeu/surat/submit-to-kecamatan');
+      await fetchData();
+
+      await Swal.fire({
+        icon: "success",
+        title: "Berhasil!",
+        text: "Surat berhasil dikirim ke Kecamatan",
+        timer: 2000,
+        showConfirmButton: false
+      });
+    } catch (error) {
+      console.error("Error submit surat:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Gagal Mengirim Surat",
+        text: error.response?.data?.message || error.message || "Gagal mengirim surat ke Kecamatan",
+        confirmButtonText: "OK"
+      });
     }
   };
 
@@ -1132,6 +1453,11 @@ const BankeuProposalPage = () => {
     );
   }
 
+  // Debug: Log desaSurat state setiap kali component render
+  console.log('🔍 [RENDER] Current desaSurat state:', desaSurat);
+  console.log('🔍 [RENDER] Surat Pengantar:', desaSurat.surat_pengantar);
+  console.log('🔍 [RENDER] Surat Permohonan:', desaSurat.surat_permohonan);
+
   return (
     <>
       <div className="space-y-6">
@@ -1151,14 +1477,14 @@ const BankeuProposalPage = () => {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setExpandedStats(!expandedStats)}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-all duration-300 group"
                   title={expandedStats ? "Tutup statistik" : "Buka statistik"}
                 >
-                  {expandedStats ? (
-                    <LuChevronDown className="w-5 h-5 text-gray-600" />
-                  ) : (
-                    <LuChevronRight className="w-5 h-5 text-gray-600" />
-                  )}
+                  <LuChevronRight 
+                    className={`w-5 h-5 text-gray-600 transition-transform duration-300 group-hover:scale-110 ${
+                      expandedStats ? 'rotate-90' : 'rotate-0'
+                    }`} 
+                  />
                 </button>
                 <button
                   onClick={() => setShowContohModal(true)}
@@ -1427,14 +1753,320 @@ const BankeuProposalPage = () => {
               </div>
             )}
           </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Status Tracking - Tampil di level atas sebelum list kegiatan */}
         <StatusTracking proposals={proposals} />
 
+        {/* Section Dokumen Pendukung - Surat Pengantar & Surat Permohonan (Desa-Level) */}
+        <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
+          <button
+            onClick={() => setExpandedSurat(!expandedSurat)}
+            className="w-full px-6 py-5 flex items-center justify-between bg-gradient-to-r from-green-50 via-emerald-50 to-green-50 hover:from-green-100 hover:via-emerald-100 hover:to-green-100 transition-all group"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                {expandedSurat ? <LuChevronDown className="w-5 h-5 text-white" /> : <LuChevronRight className="w-5 h-5 text-white" />}
+              </div>
+              <div className="text-left">
+                <h3 className="text-xl font-bold text-gray-900">Dokumen Pendukung Proposal</h3>
+                <p className="text-sm text-gray-600">
+                  Upload Surat Pengantar & Surat Permohonan untuk desa ini {desaSurat.submitted_to_kecamatan && <span className="text-green-600 font-medium">(Sudah Dikirim ke Kecamatan)</span>}
+                </p>
+              </div>
+            </div>
+            <div className="px-4 py-2 bg-white rounded-xl shadow-md border border-gray-100">
+              {desaSurat.surat_pengantar && desaSurat.surat_permohonan ? (
+                <span className="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                  <LuCheck className="inline w-6 h-6" /> Lengkap
+                </span>
+              ) : (
+                <span className="text-2xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+                  {[desaSurat.surat_pengantar, desaSurat.surat_permohonan].filter(Boolean).length}/2
+                </span>
+              )}
+            </div>
+          </button>
+        
+          <div className={`transition-all duration-500 ease-in-out overflow-hidden ${
+            expandedSurat ? 'max-h-[10000px] opacity-100' : 'max-h-0 opacity-0'
+          }`}>
+            <div className="p-6">
+              {/* Info Box */}
+              <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <LuInfo className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm text-blue-900">
+                    <p className="font-semibold mb-1">Informasi Penting:</p>
+                    <ul className="list-disc ml-4 space-y-1">
+                      <li>Upload kedua dokumen (Surat Pengantar & Surat Permohonan) untuk seluruh proposal di desa ini</li>
+                      <li>Maksimal ukuran file 5MB, format PDF</li>
+                      <li>Surat harus dikirim ke Kecamatan terlebih dahulu sebelum mengirim proposal ke Dinas Terkait</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              {/* Upload Forms */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                {/* Surat Pengantar */}
+                <div className="bg-blue-50 p-5 rounded-xl border-2 border-blue-200">
+                  <div className="flex items-center justify-between gap-2 mb-4">
+                    <label className="text-base font-bold text-gray-800">Surat Pengantar Proposal</label>
+                    {desaSurat.surat_pengantar && (
+                      <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-lg text-sm font-semibold shadow-sm">
+                        <LuCheck className="w-4 h-4" />
+                        Uploaded
+                      </span>
+                    )}
+                  </div>
+                  
+                  {desaSurat.surat_pengantar ? (
+                    <div className="space-y-3">
+                      <a
+                        href={`${imageBaseUrl}/storage/uploads/bankeu/${desaSurat.surat_pengantar}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block w-full px-5 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 text-center text-sm font-semibold transition-all shadow-md hover:shadow-lg"
+                      >
+                        <div className="flex items-center justify-center gap-2">
+                          <LuEye className="w-5 h-5" />
+                          Lihat PDF
+                        </div>
+                      </a>
+                      {!desaSurat.submitted_to_kecamatan && (
+                        <>
+                          <input
+                            type="file"
+                            accept=".pdf"
+                            onChange={(e) => {
+                              const file = e.target.files[0];
+                              if (file) {
+                                handleUploadDesaSurat('pengantar', file);
+                                e.target.value = null;
+                              }
+                            }}
+                            className="hidden"
+                            id="desa-surat-pengantar"
+                          />
+                          <label
+                            htmlFor="desa-surat-pengantar"
+                            className="block w-full px-5 py-3 bg-amber-600 text-white rounded-xl hover:bg-amber-700 cursor-pointer text-center text-sm font-semibold transition-all shadow-md hover:shadow-lg"
+                          >
+                            <div className="flex items-center justify-center gap-2">
+                              <LuRefreshCw className="w-5 h-5" />
+                              Ganti PDF
+                            </div>
+                          </label>
+                        </>
+                      )}
+                    </div>
+                  ) : (
+                    <>
+                      <input
+                        type="file"
+                        accept=".pdf"
+                        onChange={(e) => {
+                          const file = e.target.files[0];
+                          if (file) {
+                            handleUploadDesaSurat('pengantar', file);
+                            e.target.value = null;
+                          }
+                        }}
+                        className="hidden"
+                        id="desa-surat-pengantar"
+                      />
+                      <label
+                        htmlFor="desa-surat-pengantar"
+                        className="block w-full px-5 py-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 cursor-pointer text-center text-sm font-semibold transition-all shadow-md hover:shadow-lg"
+                      >
+                        <div className="flex items-center justify-center gap-2">
+                          <LuUpload className="w-5 h-5" />
+                          Upload Surat Pengantar
+                        </div>
+                      </label>
+                    </>
+                  )}
+                  <p className="text-xs text-gray-600 mt-3 text-center">Max 5MB, Format PDF</p>
+                </div>
+
+                {/* Surat Permohonan */}
+                <div className="bg-purple-50 p-5 rounded-xl border-2 border-purple-200">
+                  <div className="flex items-center justify-between gap-2 mb-4">
+                    <label className="text-base font-bold text-gray-800">Surat Permohonan Proposal</label>
+                    {desaSurat.surat_permohonan && (
+                      <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-lg text-sm font-semibold shadow-sm">
+                        <LuCheck className="w-4 h-4" />
+                        Uploaded
+                      </span>
+                    )}
+                  </div>
+                  
+                  {desaSurat.surat_permohonan ? (
+                    <div className="space-y-3">
+                      <a
+                        href={`${imageBaseUrl}/storage/uploads/bankeu/${desaSurat.surat_permohonan}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block w-full px-5 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 text-center text-sm font-semibold transition-all shadow-md hover:shadow-lg"
+                      >
+                        <div className="flex items-center justify-center gap-2">
+                          <LuEye className="w-5 h-5" />
+                          Lihat PDF
+                        </div>
+                      </a>
+                      {!desaSurat.submitted_to_kecamatan && (
+                        <>
+                          <input
+                            type="file"
+                            accept=".pdf"
+                            onChange={(e) => {
+                              const file = e.target.files[0];
+                              if (file) {
+                                handleUploadDesaSurat('permohonan', file);
+                                e.target.value = null;
+                              }
+                            }}
+                            className="hidden"
+                            id="desa-surat-permohonan"
+                          />
+                          <label
+                            htmlFor="desa-surat-permohonan"
+                            className="block w-full px-5 py-3 bg-amber-600 text-white rounded-xl hover:bg-amber-700 cursor-pointer text-center text-sm font-semibold transition-all shadow-md hover:shadow-lg"
+                          >
+                            <div className="flex items-center justify-center gap-2">
+                              <LuRefreshCw className="w-5 h-5" />
+                              Ganti PDF
+                            </div>
+                          </label>
+                        </>
+                      )}
+                    </div>
+                  ) : (
+                    <>
+                      <input
+                        type="file"
+                        accept=".pdf"
+                        onChange={(e) => {
+                          const file = e.target.files[0];
+                          if (file) {
+                            handleUploadDesaSurat('permohonan', file);
+                            e.target.value = null;
+                          }
+                        }}
+                        className="hidden"
+                        id="desa-surat-permohonan"
+                      />
+                      <label
+                        htmlFor="desa-surat-permohonan"
+                        className="block w-full px-5 py-4 bg-purple-600 text-white rounded-xl hover:bg-purple-700 cursor-pointer text-center text-sm font-semibold transition-all shadow-md hover:shadow-lg"
+                      >
+                        <div className="flex items-center justify-center gap-2">
+                          <LuUpload className="w-5 h-5" />
+                          Upload Surat Permohonan
+                        </div>
+                      </label>
+                    </>
+                  )}
+                  <p className="text-xs text-gray-600 mt-3 text-center">Max 5MB, Format PDF</p>
+                </div>
+              </div>
+
+              {/* Submit Button */}
+              {desaSurat.surat_pengantar && desaSurat.surat_permohonan && !desaSurat.submitted_to_kecamatan && (
+                <div className="flex justify-center">
+                  <button
+                    onClick={handleSubmitDesaSurat}
+                    className="px-8 py-4 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl hover:from-green-700 hover:to-emerald-700 font-bold text-base shadow-lg hover:shadow-xl transition-all flex items-center gap-3"
+                  >
+                    <LuSend className="w-5 h-5" />
+                    Kirim Surat ke Kecamatan
+                  </button>
+                </div>
+              )}
+
+              {/* Status Review Kecamatan */}
+              {desaSurat.submitted_to_kecamatan && desaSurat.kecamatan_status === 'approved' && (
+                <div className="p-5 bg-green-50 border-2 border-green-300 rounded-xl">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0">
+                      <LuCheck className="w-7 h-7 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-bold text-green-900 text-lg mb-1">Surat Disetujui Kecamatan</h4>
+                      <p className="text-sm text-green-700 mb-2">
+                        Direview oleh: <span className="font-semibold">{desaSurat.reviewer_name || 'Kecamatan'}</span>
+                        {desaSurat.kecamatan_reviewed_at && (
+                          <span className="ml-2">pada {new Date(desaSurat.kecamatan_reviewed_at).toLocaleString('id-ID')}</span>
+                        )}
+                      </p>
+                      {desaSurat.kecamatan_catatan && (
+                        <div className="mt-3 p-3 bg-white border border-green-200 rounded-lg">
+                          <p className="text-sm font-semibold text-gray-700 mb-1">Catatan:</p>
+                          <p className="text-sm text-gray-600">{desaSurat.kecamatan_catatan}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {desaSurat.submitted_to_kecamatan && desaSurat.kecamatan_status === 'pending' && (
+                <div className="p-5 bg-amber-50 border-2 border-amber-300 rounded-xl">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-amber-600 rounded-full flex items-center justify-center flex-shrink-0">
+                      <LuClock className="w-7 h-7 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-bold text-amber-900 text-lg mb-1">Menunggu Review Kecamatan</h4>
+                      <p className="text-sm text-amber-700">
+                        Surat Anda telah dikirim ke Kecamatan pada {new Date(desaSurat.submitted_at).toLocaleString('id-ID')}.
+                        Mohon menunggu konfirmasi dari pihak Kecamatan.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {desaSurat.kecamatan_status === 'rejected' && (
+                <div className="p-5 bg-red-50 border-2 border-red-300 rounded-xl">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center flex-shrink-0">
+                      <LuX className="w-7 h-7 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-bold text-red-900 text-lg mb-1">Surat Ditolak Kecamatan</h4>
+                      <p className="text-sm text-red-700 mb-2">
+                        Direview oleh: <span className="font-semibold">{desaSurat.reviewer_name || 'Kecamatan'}</span>
+                        {desaSurat.kecamatan_reviewed_at && (
+                          <span className="ml-2">pada {new Date(desaSurat.kecamatan_reviewed_at).toLocaleString('id-ID')}</span>
+                        )}
+                      </p>
+                      {desaSurat.kecamatan_catatan && (
+                        <div className="mt-3 p-3 bg-white border border-red-200 rounded-lg">
+                          <p className="text-sm font-semibold text-gray-700 mb-1">Alasan Penolakan:</p>
+                          <p className="text-sm text-gray-600">{desaSurat.kecamatan_catatan}</p>
+                        </div>
+                      )}
+                      <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                        <p className="text-sm font-semibold text-amber-900 mb-2">⚠️ Tindak Lanjut:</p>
+                        <p className="text-sm text-amber-800">
+                          Silakan perbaiki surat sesuai catatan di atas, kemudian upload ulang kedua surat dan kirim kembali ke Kecamatan.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
         {/* List Kegiatan */}
-        <div className="space-y-4">
-          {/* Infrastruktur */}
+        <div className="space-y-4">{/* Infrastruktur */}
           <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
             <button
               onClick={() => setExpandedInfra(!expandedInfra)}
@@ -1468,6 +2100,7 @@ const BankeuProposalPage = () => {
                     onUpload={handleUpload}
                     onRevisionUpload={handleRevisionUpload}
                     onReplaceFile={handleReplaceFile}
+                    onUploadSurat={handleUploadSurat}
                     onDelete={handleDelete}
                     onViewPdf={handleViewPdf}
                     getStatusBadge={getStatusBadge}
@@ -1516,6 +2149,7 @@ const BankeuProposalPage = () => {
                   onUpload={handleUpload}
                   onRevisionUpload={handleRevisionUpload}
                   onReplaceFile={handleReplaceFile}
+                  onUploadSurat={handleUploadSurat}
                   onDelete={handleDelete}
                   onViewPdf={handleViewPdf}
                   getStatusBadge={getStatusBadge}
@@ -1530,6 +2164,7 @@ const BankeuProposalPage = () => {
             </div>
           </div>
         </div>
+      </div>
 
       {/* Modal Contoh Proposal */}
       <ContohProposalModal
@@ -1550,7 +2185,7 @@ const BankeuProposalPage = () => {
 };
 
 // Kegiatan Row Component
-const KegiatanRow = ({ item, index, onUpload, onRevisionUpload, onReplaceFile, onDelete, onViewPdf, getStatusBadge, imageBaseUrl, isSubmitted, uploadForms, updateUploadForm, formatRupiah }) => {
+const KegiatanRow = ({ item, index, onUpload, onRevisionUpload, onReplaceFile, onUploadSurat, onDelete, onViewPdf, getStatusBadge, imageBaseUrl, isSubmitted, uploadForms, updateUploadForm, formatRupiah }) => {
   const { kegiatan, proposal } = item;
   const formData = uploadForms[kegiatan.id] || {};
   const [showReplaceForm, setShowReplaceForm] = React.useState(false);
@@ -1726,6 +2361,164 @@ const KegiatanRow = ({ item, index, onUpload, onRevisionUpload, onReplaceFile, o
                   >
                     Batal
                   </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Upload Surat Pengantar & Surat Permohonan */}
+          {!isSubmitted && proposal.status === "pending" && (
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <div className="flex items-center gap-2 mb-3">
+                <LuFileText className="w-5 h-5 text-blue-600" />
+                <span className="font-semibold text-blue-900">Dokumen Pendukung</span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Surat Pengantar */}
+                <div className="bg-white p-3 rounded-lg border border-blue-100">
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <label className="text-sm font-medium text-gray-700">Surat Pengantar</label>
+                    {proposal.surat_pengantar && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs font-medium">
+                        <LuCheck className="w-3 h-3" />
+                        Uploaded
+                      </span>
+                    )}
+                  </div>
+                  
+                  {proposal.surat_pengantar ? (
+                    <div className="flex items-center gap-2">
+                      <a
+                        href={`${imageBaseUrl}/storage/uploads/bankeu/${proposal.surat_pengantar}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2 text-sm font-medium transition-all"
+                      >
+                        <LuEye className="w-4 h-4" />
+                        Lihat PDF
+                      </a>
+                      <input
+                        type="file"
+                        accept=".pdf"
+                        onChange={(e) => {
+                          const file = e.target.files[0];
+                          if (file) {
+                            onUploadSurat(proposal.id, 'pengantar', file);
+                            e.target.value = null;
+                          }
+                        }}
+                        className="hidden"
+                        id={`surat-pengantar-replace-${proposal.id}`}
+                      />
+                      <label
+                        htmlFor={`surat-pengantar-replace-${proposal.id}`}
+                        className="px-3 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 cursor-pointer transition-all"
+                        title="Ganti Surat"
+                      >
+                        <LuRefreshCw className="w-4 h-4" />
+                      </label>
+                    </div>
+                  ) : (
+                    <>
+                      <input
+                        type="file"
+                        accept=".pdf"
+                        onChange={(e) => {
+                          const file = e.target.files[0];
+                          if (file) {
+                            onUploadSurat(proposal.id, 'pengantar', file);
+                            e.target.value = null;
+                          }
+                        }}
+                        className="hidden"
+                        id={`surat-pengantar-${proposal.id}`}
+                      />
+                      <label
+                        htmlFor={`surat-pengantar-${proposal.id}`}
+                        className="block w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer text-center text-sm font-medium transition-all"
+                      >
+                        <div className="flex items-center justify-center gap-2">
+                          <LuUpload className="w-4 h-4" />
+                          Upload PDF
+                        </div>
+                      </label>
+                    </>
+                  )}
+                  <p className="text-xs text-gray-500 mt-2">Max 5MB, Format PDF</p>
+                </div>
+
+                {/* Surat Permohonan */}
+                <div className="bg-white p-3 rounded-lg border border-blue-100">
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <label className="text-sm font-medium text-gray-700">Surat Permohonan</label>
+                    {proposal.surat_permohonan && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs font-medium">
+                        <LuCheck className="w-3 h-3" />
+                        Uploaded
+                      </span>
+                    )}
+                  </div>
+                  
+                  {proposal.surat_permohonan ? (
+                    <div className="flex items-center gap-2">
+                      <a
+                        href={`${imageBaseUrl}/storage/uploads/bankeu/${proposal.surat_permohonan}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2 text-sm font-medium transition-all"
+                      >
+                        <LuEye className="w-4 h-4" />
+                        Lihat PDF
+                      </a>
+                      <input
+                        type="file"
+                        accept=".pdf"
+                        onChange={(e) => {
+                          const file = e.target.files[0];
+                          if (file) {
+                            onUploadSurat(proposal.id, 'permohonan', file);
+                            e.target.value = null;
+                          }
+                        }}
+                        className="hidden"
+                        id={`surat-permohonan-replace-${proposal.id}`}
+                      />
+                      <label
+                        htmlFor={`surat-permohonan-replace-${proposal.id}`}
+                        className="px-3 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 cursor-pointer transition-all"
+                        title="Ganti Surat"
+                      >
+                        <LuRefreshCw className="w-4 h-4" />
+                      </label>
+                    </div>
+                  ) : (
+                    <>
+                      <input
+                        type="file"
+                        accept=".pdf"
+                        onChange={(e) => {
+                          const file = e.target.files[0];
+                          if (file) {
+                            onUploadSurat(proposal.id, 'permohonan', file);
+                            e.target.value = null;
+                          }
+                        }}
+                        className="hidden"
+                        id={`surat-permohonan-${proposal.id}`}
+                      />
+                      <label
+                        htmlFor={`surat-permohonan-${proposal.id}`}
+                        className="block w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer text-center text-sm font-medium transition-all"
+                      >
+                        <div className="flex items-center justify-center gap-2">
+                          <LuUpload className="w-4 h-4" />
+                          Upload PDF
+                        </div>
+                      </label>
+                    </>
+                  )}
+                  <p className="text-xs text-gray-500 mt-2">Max 5MB, Format PDF</p>
                 </div>
               </div>
             </div>

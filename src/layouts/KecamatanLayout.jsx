@@ -4,19 +4,19 @@ import { useAuth } from "../context/AuthContext";
 import { useUserProfile } from "../hooks/useUserProfile";
 import {
   FiLogOut,
-  FiMenu,
   FiUser,
   FiSettings,
   FiChevronDown,
   FiSearch,
   FiMapPin,
-  FiX,
 } from "react-icons/fi";
 import { 
   LuLayoutDashboard, 
   LuBanknote, 
   LuBuilding2,
-  LuClipboardCheck 
+  LuClipboardCheck,
+  LuPanelLeftClose,
+  LuPanelLeft
 } from "react-icons/lu";
 import InstallPWA from "../components/InstallPWA";
 
@@ -33,12 +33,6 @@ const menuItems = [
     label: "Verifikasi Bankeu",
     path: "/kecamatan/bankeu",
     icon: LuBanknote,
-  },
-  {
-    id: "data-desa",
-    label: "Data Desa",
-    path: "/kecamatan/data-desa",
-    icon: LuBuilding2,
   },
 ];
 
@@ -107,45 +101,57 @@ const KecamatanLayout = () => {
   }, []);
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-gradient-to-br from-gray-50 via-slate-50 to-gray-100">
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 h-full bg-gradient-to-b from-violet-600 to-violet-800 text-white transition-all duration-300 z-40 ${
+        className={`fixed top-0 left-0 h-full bg-white border-r border-gray-100 transition-all duration-300 z-40 ${
           sidebarOpen ? "w-72" : "w-0 lg:w-20"
-        } overflow-hidden shadow-2xl`}
+        } overflow-hidden shadow-sm`}
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="flex items-center justify-between px-6 py-6 border-b border-violet-500/30">
+          <div className="flex items-center justify-between px-6 py-6 border-b border-gray-100">
             <div className={`flex items-center gap-3 ${!sidebarOpen && "lg:justify-center"}`}>
-              <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-lg">
-                <FiMapPin className="text-violet-600 text-xl" />
+              <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-violet-600 rounded-lg flex items-center justify-center shadow-md">
+                <FiMapPin className="text-white text-xl" />
               </div>
               {sidebarOpen && (
                 <div>
-                  <h1 className="text-lg font-bold">DPMD Bogor</h1>
-                  <p className="text-xs text-violet-200">Admin Kecamatan</p>
+                  <h1 className="text-lg font-bold text-gray-800">DPMD Bogor</h1>
+                  <p className="text-xs text-gray-600">Admin Kecamatan</p>
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Toggle Button - Floating di Sidebar */}
+          <div className="px-4 py-3">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="lg:hidden text-white hover:bg-violet-500/30 p-2 rounded-lg transition-colors"
+              className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-gradient-to-r from-violet-50 to-purple-50 hover:from-violet-100 hover:to-purple-100 rounded-xl transition-all duration-300 border border-violet-200 group shadow-sm hover:shadow-md"
+              title={sidebarOpen ? "Tutup Sidebar" : "Buka Sidebar"}
             >
-              <FiX className="text-xl" />
+              {sidebarOpen ? (
+                <>
+                  <LuPanelLeftClose className="text-xl text-violet-600 group-hover:scale-110 transition-transform" />
+                  <span className="font-semibold text-sm text-violet-700">Tutup Sidebar</span>
+                </>
+              ) : (
+                <LuPanelLeft className="text-xl text-violet-600 group-hover:scale-110 transition-transform" />
+              )}
             </button>
           </div>
 
           {/* User Info Card */}
           {sidebarOpen && user && (
-            <div className="mx-4 my-4 p-4 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20">
+            <div className="mx-4 my-4 p-4 bg-gradient-to-br from-violet-50 to-purple-50 rounded-xl border border-violet-100">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-violet-400 to-violet-600 rounded-full flex items-center justify-center text-lg font-bold shadow-lg">
+                <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-violet-600 rounded-full flex items-center justify-center text-lg font-bold text-white shadow-md">
                   {user.name?.charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm truncate">{user.name}</p>
-                  <p className="text-xs text-violet-200 truncate">
+                  <p className="font-semibold text-sm text-gray-800 truncate">{user.name}</p>
+                  <p className="text-xs text-gray-600 truncate">
                     {user.kecamatan?.nama || "Kecamatan"}
                   </p>
                 </div>
@@ -154,7 +160,7 @@ const KecamatanLayout = () => {
           )}
 
           {/* Navigation Menu */}
-          <nav className="flex-1 overflow-y-auto px-4 py-4 space-y-2 scrollbar-thin scrollbar-thumb-violet-500 scrollbar-track-transparent">
+          <nav className="flex-1 overflow-y-auto px-4 py-4 space-y-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
             {menuItems.map((item) => {
               const Icon = item.icon;
               return (
@@ -164,8 +170,8 @@ const KecamatanLayout = () => {
                   className={({ isActive }) =>
                     `flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-200 group ${
                       isActive
-                        ? "bg-white text-violet-600 shadow-lg"
-                        : "text-white hover:bg-white/10 hover:translate-x-1"
+                        ? "bg-gradient-to-r from-violet-500 to-violet-600 text-white shadow-md"
+                        : "text-gray-600 hover:bg-gray-50 hover:translate-x-1"
                     } ${!sidebarOpen && "lg:justify-center lg:px-2"}`
                   }
                 >
@@ -179,10 +185,10 @@ const KecamatanLayout = () => {
           </nav>
 
           {/* Logout Button */}
-          <div className="p-4 border-t border-violet-500/30">
+          <div className="p-4 border-t border-gray-100">
             <button
               onClick={handleLogout}
-              className={`flex items-center gap-3 px-4 py-3 w-full rounded-xl text-white hover:bg-red-500/20 transition-all duration-200 group ${
+              className={`flex items-center gap-3 px-4 py-3 w-full rounded-xl text-red-600 hover:bg-red-50 transition-all duration-200 group ${
                 !sidebarOpen && "lg:justify-center lg:px-2"
               }`}
             >
@@ -203,13 +209,6 @@ const KecamatanLayout = () => {
         <header className="bg-white shadow-sm sticky top-0 z-30">
           <div className="flex items-center justify-between px-6 py-4">
             <div className="flex items-center gap-4">
-              <button
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <FiMenu className="text-xl text-gray-700" />
-              </button>
-
               {/* Search Bar */}
               <div className="relative" ref={searchRef}>
                 <div className="relative">
