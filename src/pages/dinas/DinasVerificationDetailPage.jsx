@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   LuArrowLeft, LuFileText, LuSave, LuDownload, LuUser, LuMapPin,
-  LuCalendar, LuDollarSign, LuClipboardList, LuCircleCheck, LuCircleX
+  LuCalendar, LuDollarSign, LuClipboardList, LuCircleCheck, LuCircleX, LuPackage
 } from 'react-icons/lu';
 import api from '../../api';
 
@@ -158,8 +158,32 @@ const DinasVerificationDetailPage = () => {
             <LuFileText className="w-8 h-8 text-amber-600" />
           </div>
           <div className="flex-1">
-            <h2 className="text-xl font-bold text-gray-800">{proposal.judul_proposal}</h2>
-            <p className="text-gray-500 mt-1">{proposal.deskripsi || 'Tidak ada deskripsi'}</p>
+            <h2 className="text-xl font-bold text-gray-800">{proposal.nama_kegiatan_spesifik || proposal.judul_proposal}</h2>
+            <p className="text-sm text-gray-500 mt-1">{proposal.bankeu_master_kegiatan?.nama_kegiatan}</p>
+            {proposal.deskripsi && (
+              <p className="text-gray-600 mt-2">{proposal.deskripsi}</p>
+            )}
+            
+            {/* Detail kegiatan dari desa */}
+            {(proposal.volume || proposal.lokasi) && (
+              <div className="mt-3 p-3 bg-blue-50 border-l-4 border-blue-400 rounded-lg">
+                <div className="text-sm font-semibold text-blue-800 mb-2">Detail Kegiatan:</div>
+                <div className="space-y-1.5 text-sm text-blue-700">
+                  {proposal.volume && (
+                    <div className="flex items-center gap-2">
+                      <LuPackage className="w-4 h-4" />
+                      <span><span className="font-medium">Volume:</span> {proposal.volume}</span>
+                    </div>
+                  )}
+                  {proposal.lokasi && (
+                    <div className="flex items-center gap-2">
+                      <LuMapPin className="w-4 h-4" />
+                      <span><span className="font-medium">Lokasi:</span> {proposal.lokasi}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

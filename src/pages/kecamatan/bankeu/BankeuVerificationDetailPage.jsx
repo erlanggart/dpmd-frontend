@@ -4,7 +4,8 @@ import api from "../../../api";
 import Swal from "sweetalert2";
 import {
   LuEye, LuCheck, LuX, LuRefreshCw, LuClock, LuArrowLeft,
-  LuChevronDown, LuChevronRight, LuDownload, LuClipboardList
+  LuChevronDown, LuChevronRight, LuDownload, LuClipboardList,
+  LuMapPin, LuPackage, LuDollarSign
 } from "react-icons/lu";
 
 const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
@@ -986,7 +987,7 @@ const ProposalRow = ({ kegiatan, proposal, index, onVerify, onViewPdf, getStatus
     <div className={`p-3 border-b border-gray-100 hover:bg-gray-50 transition-colors duration-150 ${index === 0 ? '' : ''}`}>
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 space-y-2">
-          <h4 className="text-sm text-gray-900 leading-snug">{kegiatan.nama_kegiatan}</h4>
+          <h4 className="text-sm font-medium text-gray-500 leading-snug">{kegiatan.nama_kegiatan}</h4>
           
           {proposal ? (
             <div className="space-y-1.5">
@@ -998,7 +999,28 @@ const ProposalRow = ({ kegiatan, proposal, index, onVerify, onViewPdf, getStatus
                 {getStatusBadge(proposal.status)}
               </div>
               
-              <div className="text-xs text-gray-900">
+              {/* Judul yang dipilih desa */}
+              <div className="text-sm font-semibold text-gray-900">
+                {proposal.nama_kegiatan_spesifik || proposal.judul_proposal}
+              </div>
+              
+              {/* Detail kegiatan yang di-input desa */}
+              {proposal.volume && (
+                <div className="flex items-center gap-1.5 text-xs text-gray-700">
+                  <LuPackage className="w-3.5 h-3.5 text-blue-600" />
+                  <span className="font-medium">Volume:</span> {proposal.volume}
+                </div>
+              )}
+              {proposal.lokasi && (
+                <div className="flex items-center gap-1.5 text-xs text-gray-700">
+                  <LuMapPin className="w-3.5 h-3.5 text-red-600" />
+                  <span className="font-medium">Lokasi:</span> {proposal.lokasi}
+                </div>
+              )}
+              
+              <div className="flex items-center gap-1.5 text-xs text-gray-900">
+                <LuDollarSign className="w-3.5 h-3.5 text-green-600" />
+                <span className="font-medium">Anggaran:</span>{' '}
                 {new Intl.NumberFormat("id-ID", {
                   style: "currency",
                   currency: "IDR",
@@ -1006,9 +1028,24 @@ const ProposalRow = ({ kegiatan, proposal, index, onVerify, onViewPdf, getStatus
                 }).format(proposal.anggaran_usulan)}
               </div>
               
+              {/* Catatan dari berbagai level verifikasi */}
+              {proposal.dinas_catatan && (
+                <div className="p-2 bg-blue-50 border-l-2 border-blue-400 rounded text-xs">
+                  <span className="font-medium text-blue-800">Catatan Dinas: </span>
+                  <span className="text-blue-700">{proposal.dinas_catatan}</span>
+                </div>
+              )}
+              
+              {proposal.kecamatan_catatan && (
+                <div className="p-2 bg-purple-50 border-l-2 border-purple-400 rounded text-xs">
+                  <span className="font-medium text-purple-800">Catatan Kecamatan: </span>
+                  <span className="text-purple-700">{proposal.kecamatan_catatan}</span>
+                </div>
+              )}
+              
               {proposal.catatan_verifikasi && (
                 <div className="p-2 bg-amber-50 border-l-2 border-amber-400 rounded text-xs">
-                  <span className="font-medium text-amber-800">Catatan: </span>
+                  <span className="font-medium text-amber-800">Catatan Verifikasi: </span>
                   <span className="text-amber-700">{proposal.catatan_verifikasi}</span>
                 </div>
               )}

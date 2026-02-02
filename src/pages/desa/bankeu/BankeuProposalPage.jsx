@@ -3,10 +3,102 @@ import api from "../../../api";
 import Swal from "sweetalert2";
 import {
   LuUpload, LuEye, LuClock, LuCheck, LuX, LuRefreshCw, 
-  LuChevronDown, LuChevronRight, LuSend, LuTrash2, LuInfo, LuDownload, LuFileText, LuImage
+  LuChevronDown, LuChevronRight, LuSend, LuTrash2, LuInfo, LuDownload, LuFileText, LuImage,
+  LuPackage, LuMapPin, LuDollarSign
 } from "react-icons/lu";
 
 const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
+
+// Helper function untuk parse judul kegiatan yang memiliki "/" dan "," menjadi pilihan  
+const parseKegiatanTitles = (namaKegiatan) => {
+  // Cek apakah ada "/" di judul
+  const hasSlash = namaKegiatan.includes('/');
+  
+  if (!hasSlash) {
+    // KASUS: Tidak ada "/" -> koma sebagai separator pilihan
+    const options = namaKegiatan.split(',').map(s => s.trim()).filter(s => s);
+    return options;
+  }
+  
+  // KASUS: Ada "/" -> parsing subjek dan objek
+  // Format bisa:
+  // 1. "Subjek1/Subjek2 ,Objek1,Objek2,..." (format baru dengan koma setelah subjek)
+  // 2. "Subjek1/Subjek2 Objek1/Objek2/Objek3, Objek4 dan Objek5" (format lama mixed)
+  
+  // Cari posisi SPACE pertama setelah subjek
+  // Subjek = kata-kata di awal yang dipisah "/"
+  let subjekEnd = -1;
+  let inSlashGroup = false;
+  
+  for (let i = 0; i < namaKegiatan.length; i++) {
+    if (namaKegiatan[i] === '/') {
+      inSlashGroup = true;
+    } else if (namaKegiatan[i] === ' ' && inSlashGroup) {
+      // Cek apakah setelah space ini ada huruf kapital
+      if (i + 1 < namaKegiatan.length) {
+        const nextChar = namaKegiatan[i + 1];
+        if (nextChar === nextChar.toUpperCase() && nextChar.match(/[A-Z]/)) {
+          // Ini adalah end dari subjek
+          subjekEnd = i;
+          break;
+        }
+      }
+    }
+  }
+  
+  if (subjekEnd === -1) {
+    // Tidak ketemu pattern subjek-objek, fallback ke split by "/" aja
+    const options = namaKegiatan.split('/').map(s => s.trim()).filter(s => s);
+    return options;
+  }
+  
+  // Parse subjek
+  const subjekPart = namaKegiatan.slice(0, subjekEnd).trim();
+  const subjekOptions = subjekPart.split('/').map(s => s.trim()).filter(s => s);
+  
+  // Parse objek (sisanya setelah subjek)
+  const objekPart = namaKegiatan.slice(subjekEnd + 1).trim();
+  
+  // Objek bisa dipisah dengan:
+  // 1. Koma ","
+  // 2. Slash "/" (jika ada grup objek dengan slash)
+  // 3. " dan " (kata "dan" sebagai separator)
+  
+  let objekOptions = [];
+  
+  // Split by koma dulu
+  const komaSplits = objekPart.split(',').map(s => s.trim()).filter(s => s);
+  
+  for (const segment of komaSplits) {
+    // Cek apakah segment ini punya "/"
+    if (segment.includes('/')) {
+      // Split by "/"
+      const slashParts = segment.split('/').map(s => s.trim()).filter(s => s);
+      objekOptions.push(...slashParts);
+    } else if (segment.includes(' dan ')) {
+      // Split by " dan "
+      const danParts = segment.split(' dan ').map(s => s.trim()).filter(s => s);
+      objekOptions.push(...danParts);
+    } else {
+      objekOptions.push(segment);
+    }
+  }
+  
+  // Jika tidak ada objek, return subjek aja
+  if (objekOptions.length === 0) {
+    return subjekOptions;
+  }
+  
+  // Generate kombinasi: setiap subjek + setiap objek
+  const combinations = [];
+  for (const subjek of subjekOptions) {
+    for (const objek of objekOptions) {
+      combinations.push(`${subjek} ${objek}`);
+    }
+  }
+  
+  return combinations;
+};
 
 // Komponen Status Tracking Timeline - Level Desa (NEW FLOW 2026-01-30)
 // Flow: Desa → Dinas Terkait → Kecamatan → DPMD
@@ -208,6 +300,7 @@ const BankeuProposalPage = () => {
   const [loading, setLoading] = useState(true);
   const [expandedInfra, setExpandedInfra] = useState(true);
   const [expandedNonInfra, setExpandedNonInfra] = useState(true);
+  const [expandedStats, setExpandedStats] = useState(true);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [uploadForms, setUploadForms] = useState({});
   const [showContohModal, setShowContohModal] = useState(false);
@@ -293,7 +386,43 @@ const BankeuProposalPage = () => {
     console.log("File:", file);
     console.log("Form Data:", formData);
     
+    // Parse title options
+    const titleOptions = parseKegiatanTitles(kegiatan.nama_kegiatan);
+    const hasMultipleOptions = titleOptions.length > 1;
+    
     // Validation
+    if (hasMultipleOptions && !formData?.judul_kegiatan?.trim()) {
+      Swal.fire({
+        icon: "warning",
+        title: "Perhatian",
+        text: "Silakan pilih judul kegiatan terlebih dahulu"
+      });
+      return;
+    }
+    if (!formData?.nama_kegiatan?.trim()) {
+      Swal.fire({
+        icon: "warning",
+        title: "Perhatian",
+        text: "Nama kegiatan wajib diisi terlebih dahulu"
+      });
+      return;
+    }
+    if (!formData?.volume?.trim()) {
+      Swal.fire({
+        icon: "warning",
+        title: "Perhatian",
+        text: "Volume kegiatan wajib diisi terlebih dahulu"
+      });
+      return;
+    }
+    if (!formData?.lokasi?.trim()) {
+      Swal.fire({
+        icon: "warning",
+        title: "Perhatian",
+        text: "Lokasi kegiatan wajib diisi terlebih dahulu"
+      });
+      return;
+    }
     if (!formData?.anggaran?.trim()) {
       Swal.fire({
         icon: "warning",
@@ -341,7 +470,12 @@ const BankeuProposalPage = () => {
       const formDataUpload = new FormData();
       formDataUpload.append("file", file);
       formDataUpload.append("kegiatan_id", kegiatan.id);
-      formDataUpload.append("judul_proposal", kegiatan.nama_kegiatan);
+      // Gunakan judul_kegiatan jika ada pilihan, kalau tidak pakai nama kegiatan master
+      const judulFinal = hasMultipleOptions && formData.judul_kegiatan ? formData.judul_kegiatan : kegiatan.nama_kegiatan;
+      formDataUpload.append("judul_proposal", judulFinal);
+      formDataUpload.append("nama_kegiatan_spesifik", formData.nama_kegiatan);
+      formDataUpload.append("volume", formData.volume);
+      formDataUpload.append("lokasi", formData.lokasi);
       formDataUpload.append("deskripsi", kegiatan.nama_kegiatan);
       formDataUpload.append("anggaran_usulan", formData.anggaran.replace(/\D/g, ""));
 
@@ -535,6 +669,30 @@ const BankeuProposalPage = () => {
     console.log("Form Data:", formData);
     
     // Validation
+    if (!formData?.nama_kegiatan?.trim()) {
+      Swal.fire({
+        icon: "warning",
+        title: "Perhatian",
+        text: "Nama kegiatan wajib diisi terlebih dahulu"
+      });
+      return;
+    }
+    if (!formData?.volume?.trim()) {
+      Swal.fire({
+        icon: "warning",
+        title: "Perhatian",
+        text: "Volume kegiatan wajib diisi terlebih dahulu"
+      });
+      return;
+    }
+    if (!formData?.lokasi?.trim()) {
+      Swal.fire({
+        icon: "warning",
+        title: "Perhatian",
+        text: "Lokasi kegiatan wajib diisi terlebih dahulu"
+      });
+      return;
+    }
     if (!formData?.anggaran?.trim()) {
       Swal.fire({
         icon: "warning",
@@ -580,6 +738,9 @@ const BankeuProposalPage = () => {
 
       const formDataUpload = new FormData();
       formDataUpload.append("file", file);
+      formDataUpload.append("nama_kegiatan_spesifik", formData.nama_kegiatan);
+      formDataUpload.append("volume", formData.volume);
+      formDataUpload.append("lokasi", formData.lokasi);
       formDataUpload.append("anggaran_usulan", formData.anggaran.replace(/\D/g, ""));
 
       console.log("=== FORM DATA REVISI YANG DIKIRIM ===");
@@ -975,27 +1136,44 @@ const BankeuProposalPage = () => {
     <>
       <div className="space-y-6">
         {/* Header & Progress */}
-        <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-lg p-8 border border-gray-100">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
-                <LuUpload className="w-6 h-6 text-white" />
+        <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-lg border border-gray-100">
+          <div className="p-8">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <LuUpload className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-900">Proposal Bantuan Keuangan</h1>
+                  <p className="text-sm text-gray-600">Kelola proposal kegiatan desa Anda</p>
+                </div>
               </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Proposal Bantuan Keuangan</h1>
-                <p className="text-sm text-gray-600">Kelola proposal kegiatan desa Anda</p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setExpandedStats(!expandedStats)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  title={expandedStats ? "Tutup statistik" : "Buka statistik"}
+                >
+                  {expandedStats ? (
+                    <LuChevronDown className="w-5 h-5 text-gray-600" />
+                  ) : (
+                    <LuChevronRight className="w-5 h-5 text-gray-600" />
+                  )}
+                </button>
+                <button
+                  onClick={() => setShowContohModal(true)}
+                  className="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-lg hover:from-purple-600 hover:to-pink-700 flex items-center gap-2 font-semibold text-sm shadow-md hover:shadow-lg transition-all transform hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  <LuDownload className="w-4 h-4" />
+                  <span>Contoh Proposal</span>
+                </button>
               </div>
             </div>
-            <button
-              onClick={() => setShowContohModal(true)}
-              className="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-lg hover:from-purple-600 hover:to-pink-700 flex items-center gap-2 font-semibold text-sm shadow-md hover:shadow-lg transition-all transform hover:scale-[1.02] active:scale-[0.98]"
-            >
-              <LuDownload className="w-4 h-4" />
-              <span>Contoh Proposal</span>
-            </button>
-        </div>
+          </div>
         
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          {expandedStats && (
+            <div className="px-8 pb-8">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           {/* Progress Upload */}
           <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-3">
@@ -1251,16 +1429,13 @@ const BankeuProposalPage = () => {
           </div>
         </div>
 
+        {/* Status Tracking - Tampil di level atas sebelum list kegiatan */}
+        <StatusTracking proposals={proposals} />
 
-      </div>
-
-      {/* Status Tracking - Tampil di level atas sebelum list kegiatan */}
-      <StatusTracking proposals={proposals} />
-
-      {/* List Kegiatan */}
-      <div className="space-y-4">
-        {/* Infrastruktur */}
-        <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
+        {/* List Kegiatan */}
+        <div className="space-y-4">
+          {/* Infrastruktur */}
+          <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
             <button
               onClick={() => setExpandedInfra(!expandedInfra)}
               className="w-full px-6 py-5 flex items-center justify-between bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-50 hover:from-blue-100 hover:via-indigo-100 hover:to-blue-100 transition-all group"
@@ -1307,7 +1482,7 @@ const BankeuProposalPage = () => {
             </div>
           </div>
 
-        {/* Non-Infrastruktur */}
+          {/* Non-Infrastruktur */}
           <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
             <button
               onClick={() => setExpandedNonInfra(!expandedNonInfra)}
@@ -1355,7 +1530,6 @@ const BankeuProposalPage = () => {
             </div>
           </div>
         </div>
-      </div>
 
       {/* Modal Contoh Proposal */}
       <ContohProposalModal
@@ -1380,6 +1554,10 @@ const KegiatanRow = ({ item, index, onUpload, onRevisionUpload, onReplaceFile, o
   const { kegiatan, proposal } = item;
   const formData = uploadForms[kegiatan.id] || {};
   const [showReplaceForm, setShowReplaceForm] = React.useState(false);
+
+  // Parse kegiatan untuk mendapat list judul yang mungkin
+  const titleOptions = React.useMemo(() => parseKegiatanTitles(kegiatan.nama_kegiatan), [kegiatan.nama_kegiatan]);
+  const hasMultipleOptions = titleOptions.length > 1;
 
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
@@ -1427,36 +1605,56 @@ const KegiatanRow = ({ item, index, onUpload, onRevisionUpload, onReplaceFile, o
       data-kegiatan-id={kegiatan.id}
     >
       {proposal ? (
-        // Proposal sudah ada - Horizontal Layout
+        // Proposal sudah ada - Layout simpel dan elegan
         <div className="space-y-3">
-          {/* Main Info - 1 Baris Horizontal */}
-          <div className="flex items-center justify-between gap-4">
-            {/* Judul & Tanggal */}
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <h4 className="text-gray-900 text-base">{kegiatan.nama_kegiatan}</h4>
-                {/* Badge untuk proposal yang sudah diupload ulang dan siap dikirim */}
+          {/* Main Info */}
+          <div className="flex items-start justify-between gap-4">
+            {/* Judul & Detail */}
+            <div className="flex-1 space-y-2">
+              <div className="flex items-center gap-2">
+                <h4 className="text-base font-semibold text-gray-900">{kegiatan.nama_kegiatan}</h4>
                 {proposal.status === 'pending' && !proposal.submitted_to_kecamatan && !proposal.submitted_to_dinas_at && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-50 text-green-600 rounded text-xs font-medium">
                     <LuCheck className="w-3 h-3" />
-                    Siap dikirim
+                    Siap
                   </span>
                 )}
               </div>
-              <p className="text-sm text-gray-600">
-                Diupload {new Date(proposal.created_at).toLocaleDateString("id-ID", { 
-                  day: 'numeric', 
-                  month: 'long', 
-                  year: 'numeric'
+              
+              {/* Nama Kegiatan Spesifik */}
+              {proposal.nama_kegiatan_spesifik && (
+                <p className="text-sm text-gray-700 font-medium flex items-center gap-2">
+                  <LuFileText className="w-4 h-4 text-gray-400" />
+                  {proposal.nama_kegiatan_spesifik}
+                </p>
+              )}
+              
+              {/* Volume & Lokasi in one line */}
+              <div className="flex items-center gap-4 text-sm text-gray-600">
+                {proposal.volume && (
+                  <span className="flex items-center gap-1.5">
+                    <LuPackage className="w-4 h-4 text-gray-400" />
+                    {proposal.volume}
+                  </span>
+                )}
+                {proposal.lokasi && (
+                  <span className="flex items-center gap-1.5">
+                    <LuMapPin className="w-4 h-4 text-gray-400" />
+                    {proposal.lokasi}
+                  </span>
+                )}
+                {proposal.anggaran_usulan && (
+                  <span className="flex items-center gap-1.5 text-green-600 font-medium">
+                    <LuDollarSign className="w-4 h-4" />
+                    Rp {new Intl.NumberFormat("id-ID").format(proposal.anggaran_usulan)}
+                  </span>
+                )}
+              </div>
+              
+              <p className="text-xs text-gray-500">
+                Upload: {new Date(proposal.created_at).toLocaleDateString("id-ID", { 
+                  day: 'numeric', month: 'short', year: 'numeric'
                 })}
-              </p>
-            </div>
-
-            {/* Anggaran */}
-            <div className="text-right px-4">
-              <span className="text-xs text-gray-500 uppercase block">Anggaran</span>
-              <p className="text-lg text-green-600">
-                Rp {new Intl.NumberFormat("id-ID").format(proposal.anggaran_usulan)}
               </p>
             </div>
 
@@ -1464,7 +1662,7 @@ const KegiatanRow = ({ item, index, onUpload, onRevisionUpload, onReplaceFile, o
             <div className="flex items-center gap-2">
               <button
                 onClick={() => onViewPdf(proposal, kegiatan.nama_kegiatan)}
-                className="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 flex items-center gap-2 font-semibold text-sm shadow-md hover:shadow-lg transition-all transform hover:scale-[1.02] active:scale-[0.98]"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 font-medium text-sm shadow-sm transition-all"
               >
                 <LuEye className="w-4 h-4" />
                 Lihat
@@ -1474,94 +1672,103 @@ const KegiatanRow = ({ item, index, onUpload, onRevisionUpload, onReplaceFile, o
                 <>
                   <button
                     onClick={() => setShowReplaceForm(!showReplaceForm)}
-                    className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-lg hover:from-amber-600 hover:to-orange-700 flex items-center gap-2 font-semibold text-sm shadow-md hover:shadow-lg transition-all transform hover:scale-[1.02] active:scale-[0.98]"
+                    className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 flex items-center gap-2 font-medium text-sm shadow-sm transition-all"
                   >
                     <LuRefreshCw className="w-4 h-4" />
-                    Ganti File
+                    Ganti
                   </button>
                   <button
                     onClick={() => onDelete(proposal.id)}
-                    className="px-4 py-2 bg-gradient-to-r from-red-500 to-rose-600 text-white rounded-lg hover:from-red-600 hover:to-rose-700 flex items-center gap-2 font-semibold text-sm shadow-md hover:shadow-lg transition-all transform hover:scale-[1.02] active:scale-[0.98]"
+                    className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all"
                   >
                     <LuTrash2 className="w-4 h-4" />
-                    Hapus
                   </button>
                 </>
               )}
             </div>
           </div>
 
-          {/* Form Ganti File - muncul saat tombol Ganti File diklik */}
+          {/* Form Ganti File - layout simpel */}
           {!isSubmitted && proposal.status === "pending" && showReplaceForm && (
-            <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-lg border-2 border-amber-300">
+            <div className="bg-amber-50 p-4 rounded-lg border border-amber-200">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <LuRefreshCw className="w-5 h-5 text-amber-600" />
-                  <span className="font-bold text-amber-900 text-base">Ganti File Proposal</span>
+                  <span className="font-semibold text-amber-900">Ganti File Proposal</span>
                 </div>
                 
                 <div className="flex items-center gap-3">
-                  <div className="w-52">
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 text-sm font-medium">Rp</span>
-                      <input
-                        type="text"
-                        value={formatRupiah(formData.anggaran || '')}
-                        onChange={(e) => updateUploadForm(kegiatan.id, 'anggaran', e.target.value.replace(/\D/g, ''))}
-                        placeholder={`${new Intl.NumberFormat("id-ID").format(proposal.anggaran_usulan)}`}
-                        className="w-full pl-10 pr-3 py-2.5 text-sm border-2 border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-200 focus:border-amber-500 bg-white transition-all font-medium"
-                      />
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">Kosongkan jika tidak ingin mengubah anggaran</p>
-                  </div>
+                  <input
+                    type="text"
+                    value={formatRupiah(formData.anggaran || '')}
+                    onChange={(e) => updateUploadForm(kegiatan.id, 'anggaran', e.target.value.replace(/\D/g, ''))}
+                    placeholder="Anggaran baru (opsional)"
+                    className="w-48 px-3 py-2 text-sm border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-300 focus:border-amber-400 bg-white"
+                  />
 
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="file"
-                      accept=".pdf"
-                      onChange={handleReplaceFileSelect}
-                      className="hidden"
-                      id={`file-replace-${kegiatan.id}`}
-                    />
-                    <label
-                      htmlFor={`file-replace-${kegiatan.id}`}
-                      className="flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-lg font-bold text-sm shadow-lg transition-all cursor-pointer hover:from-amber-600 hover:to-orange-700 hover:shadow-xl transform hover:scale-105 active:scale-95 whitespace-nowrap"
-                    >
-                      <LuUpload className="w-5 h-5" />
-                      Pilih File Baru
-                    </label>
-                    <button
-                      onClick={() => setShowReplaceForm(false)}
-                      className="px-4 py-2.5 bg-gray-200 text-gray-700 rounded-lg font-semibold text-sm hover:bg-gray-300 transition-all"
-                    >
-                      Batal
-                    </button>
-                  </div>
+                  <input
+                    type="file"
+                    accept=".pdf"
+                    onChange={handleReplaceFileSelect}
+                    className="hidden"
+                    id={`file-replace-${kegiatan.id}`}
+                  />
+                  <label
+                    htmlFor={`file-replace-${kegiatan.id}`}
+                    className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg font-medium text-sm hover:bg-amber-700 cursor-pointer transition-all"
+                  >
+                    <LuUpload className="w-4 h-4" />
+                    Pilih File
+                  </label>
+                  <button
+                    onClick={() => setShowReplaceForm(false)}
+                    className="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-300 transition-all"
+                  >
+                    Batal
+                  </button>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Catatan Verifikasi Dinas */}
+          {/* Catatan - Simplified dengan icon */}
           {proposal.dinas_catatan && (proposal.dinas_status === 'rejected' || proposal.dinas_status === 'revision') && (
-            <div className="p-3 border-l-4 rounded-lg bg-red-50 border-red-400">
+            <div className="p-3 bg-red-50 border-l-3 border-red-400 rounded">
               <div className="flex items-start gap-2">
-                <LuInfo className="w-4 h-4 flex-shrink-0 mt-0.5 text-red-600" />
-                <div className="flex-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold uppercase text-red-800">
-                      Catatan Dinas - {proposal.dinas_status === 'rejected' ? 'Ditolak' : 'Revisi'}:
-                    </span>
-                    {proposal.submitted_to_kecamatan && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium">
-                        <LuClock className="w-3 h-3" />
-                        Menunggu dikembalikan ke desa
-                      </span>
-                    )}
-                  </div>
-                  <span className="text-sm text-red-700">
-                    {proposal.dinas_catatan}
-                  </span>
+                <LuInfo className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-red-800 mb-1">
+                    Catatan Dinas {proposal.dinas_status === 'rejected' ? '(Ditolak)' : '(Revisi)'}
+                  </p>
+                  <p className="text-sm text-red-700">{proposal.dinas_catatan}</p>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {proposal.kecamatan_catatan && (proposal.kecamatan_status === 'rejected' || proposal.kecamatan_status === 'revision') && (
+            <div className="p-3 bg-purple-50 border-l-3 border-purple-400 rounded">
+              <div className="flex items-start gap-2">
+                <LuInfo className="w-4 h-4 text-purple-600 mt-0.5 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-purple-800 mb-1">
+                    Catatan Kecamatan {proposal.kecamatan_status === 'rejected' ? '(Ditolak)' : '(Revisi)'}
+                  </p>
+                  <p className="text-sm text-purple-700">{proposal.kecamatan_catatan}</p>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {proposal.catatan_verifikasi && (proposal.status === 'rejected' || proposal.status === 'revision') && (
+            <div className="p-3 bg-orange-50 border-l-3 border-orange-400 rounded">
+              <div className="flex items-start gap-2">
+                <LuInfo className="w-4 h-4 text-orange-600 mt-0.5 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-orange-800 mb-1">
+                    Catatan Umum {proposal.status === 'rejected' ? '(Ditolak)' : '(Revisi)'}
+                  </p>
+                  <p className="text-sm text-orange-700">{proposal.catatan_verifikasi}</p>
                 </div>
               </div>
             </div>
@@ -1615,89 +1822,185 @@ const KegiatanRow = ({ item, index, onUpload, onRevisionUpload, onReplaceFile, o
                 )}
               </div>
               
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex-1"></div>
-                
-                <div className="flex items-center gap-3">
-                  <div className="w-52">
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 text-sm font-medium">Rp</span>
-                      <input
-                        type="text"
-                        value={formatRupiah(formData.anggaran || '')}
-                        onChange={(e) => updateUploadForm(kegiatan.id, 'anggaran', e.target.value.replace(/\D/g, ''))}
-                        placeholder="Anggaran baru"
-                        className="w-full pl-10 pr-3 py-2.5 text-sm border-2 border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-200 focus:border-orange-500 bg-white transition-all font-medium"
-                      />
-                    </div>
-                  </div>
+              {/* Form input untuk revisi */}
+              <div className="grid grid-cols-2 gap-3">
+                {/* Nama Kegiatan */}
+                <div className="space-y-1">
+                  <label className="text-sm font-semibold text-orange-800">Nama Kegiatan Baru</label>
+                  <input
+                    type="text"
+                    value={formData.nama_kegiatan || ''}
+                    onChange={(e) => updateUploadForm(kegiatan.id, 'nama_kegiatan', e.target.value)}
+                    placeholder="Nama kegiatan baru"
+                    className="w-full px-3 py-2.5 text-sm border-2 border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-200 focus:border-orange-500 bg-white transition-all font-medium"
+                  />
+                </div>
 
-                  <div>
+                {/* Volume */}
+                <div className="space-y-1">
+                  <label className="text-sm font-semibold text-orange-800">Volume Baru</label>
+                  <input
+                    type="text"
+                    value={formData.volume || ''}
+                    onChange={(e) => updateUploadForm(kegiatan.id, 'volume', e.target.value)}
+                    placeholder="Volume baru"
+                    className="w-full px-3 py-2.5 text-sm border-2 border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-200 focus:border-orange-500 bg-white transition-all font-medium"
+                  />
+                </div>
+
+                {/* Lokasi */}
+                <div className="space-y-1">
+                  <label className="text-sm font-semibold text-orange-800">Lokasi Baru</label>
+                  <input
+                    type="text"
+                    value={formData.lokasi || ''}
+                    onChange={(e) => updateUploadForm(kegiatan.id, 'lokasi', e.target.value)}
+                    placeholder="Lokasi baru"
+                    className="w-full px-3 py-2.5 text-sm border-2 border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-200 focus:border-orange-500 bg-white transition-all font-medium"
+                  />
+                </div>
+
+                {/* Anggaran */}
+                <div className="space-y-1">
+                  <label className="text-sm font-semibold text-orange-800">Anggaran Baru</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 text-sm font-medium">Rp</span>
                     <input
-                      type="file"
-                      accept=".pdf"
-                      onChange={handleRevisionFileSelect}
-                      className="hidden"
-                      id={`file-revisi-${kegiatan.id}`}
+                      type="text"
+                      value={formatRupiah(formData.anggaran || '')}
+                      onChange={(e) => updateUploadForm(kegiatan.id, 'anggaran', e.target.value.replace(/\D/g, ''))}
+                      placeholder="Anggaran baru"
+                      className="w-full pl-10 pr-3 py-2.5 text-sm border-2 border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-200 focus:border-orange-500 bg-white transition-all font-medium"
                     />
-                    <label
-                      htmlFor={`file-revisi-${kegiatan.id}`}
-                      className="flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-lg font-bold text-sm shadow-lg transition-all cursor-pointer hover:from-orange-600 hover:to-red-700 hover:shadow-xl transform hover:scale-105 active:scale-95 whitespace-nowrap"
-                    >
-                      <LuRefreshCw className="w-5 h-5" />
-                      Upload Ulang
-                    </label>
                   </div>
+                </div>
+              </div>
+              
+              {/* Upload button */}
+              <div className="flex justify-end mt-3">
+                <div>
+                  <input
+                    type="file"
+                    accept=".pdf"
+                    onChange={handleRevisionFileSelect}
+                    className="hidden"
+                    id={`file-revisi-${kegiatan.id}`}
+                  />
+                  <label
+                    htmlFor={`file-revisi-${kegiatan.id}`}
+                    className="flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-lg font-bold text-sm shadow-lg transition-all cursor-pointer hover:from-orange-600 hover:to-red-700 hover:shadow-xl transform hover:scale-105 active:scale-95 whitespace-nowrap"
+                  >
+                    <LuRefreshCw className="w-5 h-5" />
+                    Upload Ulang
+                  </label>
                 </div>
               </div>
             </div>
           )}
         </div>
       ) : (
-        // Form upload - Horizontal dengan judul
-        <div className="flex items-center gap-4">
-          {/* Judul Kegiatan */}
-          <div className="flex-1">
-            <h4 className="text-gray-900 text-base">{kegiatan.nama_kegiatan}</h4>
+        // Form upload - Layout simpel
+        <div className="space-y-4">
+          {/* Judul Kegiatan Master */}
+          <div>
+            <p className="text-sm text-gray-500 mb-3">{kegiatan.nama_kegiatan}</p>
           </div>
 
-          {/* Form Input */}
-          <div className="flex items-center gap-3">
-            {/* Anggaran Input */}
-            <div className="w-64">
+          {/* Dropdown pilihan judul (jika ada /) */}
+          {hasMultipleOptions && (
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-gray-700">1. Pilih Judul Kegiatan <span className="text-red-500">*</span></label>
+              <select
+                value={formData.judul_kegiatan || ''}
+                onChange={(e) => updateUploadForm(kegiatan.id, 'judul_kegiatan', e.target.value)}
+                disabled={isSubmitted}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <option value="">-- Pilih Judul --</option>
+                {titleOptions.map((title, idx) => (
+                  <option key={idx} value={title}>{title}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Input fields dalam grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {/* Nama Kegiatan */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-gray-700">2. Nama Kegiatan <span className="text-red-500">*</span></label>
+              <input
+                type="text"
+                value={formData.nama_kegiatan || ''}
+                onChange={(e) => updateUploadForm(kegiatan.id, 'nama_kegiatan', e.target.value)}
+                placeholder="Contoh: Pembangunan Jalan"
+                disabled={isSubmitted}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+            </div>
+
+            {/* Volume */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-gray-700">3. Volume <span className="text-red-500">*</span></label>
+              <input
+                type="text"
+                value={formData.volume || ''}
+                onChange={(e) => updateUploadForm(kegiatan.id, 'volume', e.target.value)}
+                placeholder="Contoh: 500 m"
+                disabled={isSubmitted}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+            </div>
+
+            {/* Lokasi */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-gray-700">4. Lokasi <span className="text-red-500">*</span></label>
+              <input
+                type="text"
+                value={formData.lokasi || ''}
+                onChange={(e) => updateUploadForm(kegiatan.id, 'lokasi', e.target.value)}
+                placeholder="Contoh: Kampung Baru"
+                disabled={isSubmitted}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+            </div>
+
+            {/* Anggaran */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-gray-700">5. Anggaran <span className="text-red-500">*</span></label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 text-sm">Rp</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">Rp</span>
                 <input
                   type="text"
                   value={formatRupiah(formData.anggaran || '')}
                   onChange={(e) => updateUploadForm(kegiatan.id, 'anggaran', e.target.value.replace(/\D/g, ''))}
-                  placeholder="Anggaran usulan"
+                  placeholder="0"
                   disabled={isSubmitted}
-                  className="w-full pl-10 pr-4 py-2.5 text-base border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-500 bg-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full pl-10 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               </div>
             </div>
+          </div>
 
-            {/* Upload Button */}
-            <div>
-              <input
-                type="file"
-                accept=".pdf"
-                onChange={handleFileSelect}
-                disabled={isSubmitted}
-                className="hidden"
-                id={`file-${kegiatan.id}`}
-              />
-              <label
-                htmlFor={`file-${kegiatan.id}`}
-                className={`flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg font-semibold text-sm shadow-md transition-all whitespace-nowrap ${
-                  isSubmitted ? 'opacity-50 cursor-not-allowed pointer-events-none' : 'hover:from-green-600 hover:to-emerald-700 hover:shadow-lg transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer'
-                }`}
-              >
-                <LuUpload className="w-4 h-4" />
-                Upload
-              </label>
-            </div>
+          {/* Upload Button */}
+          <div className="flex justify-end pt-2">
+            <input
+              type="file"
+              accept=".pdf"
+              onChange={handleFileSelect}
+              disabled={isSubmitted}
+              className="hidden"
+              id={`file-${kegiatan.id}`}
+            />
+            <label
+              htmlFor={`file-${kegiatan.id}`}
+              className={`flex items-center gap-2 px-5 py-2 bg-green-600 text-white rounded-lg font-medium text-sm shadow-sm transition-all ${
+                isSubmitted ? 'opacity-50 cursor-not-allowed pointer-events-none' : 'hover:bg-green-700 cursor-pointer'
+              }`}
+            >
+              <LuUpload className="w-4 h-4" />
+              Upload Proposal
+            </label>
           </div>
         </div>
       )}

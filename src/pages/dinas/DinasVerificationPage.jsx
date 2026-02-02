@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { 
   LuSearch, LuEye, LuCircleCheck, LuCircleX, 
   LuRefreshCw, LuClock, LuFileText, LuTriangleAlert,
-  LuChevronDown, LuChevronUp, LuMapPin, LuX
+  LuChevronDown, LuChevronUp, LuMapPin, LuX, LuPackage
 } from 'react-icons/lu';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
@@ -515,7 +515,27 @@ const DinasVerificationPage = () => {
                                           <LuFileText className="w-4 h-4 text-amber-600" />
                                         </div>
                                         <div>
-                                          <p className="font-medium text-gray-800 text-sm line-clamp-2">{proposal.nama_kegiatan}</p>
+                                          <p className="text-xs text-gray-500 mb-0.5">{proposal.nama_kegiatan}</p>
+                                          <p className="font-semibold text-gray-900 text-sm line-clamp-2">{proposal.nama_kegiatan_spesifik || proposal.judul_proposal}</p>
+                                          
+                                          {/* Detail kegiatan dari desa */}
+                                          {(proposal.volume || proposal.lokasi) && (
+                                            <div className="mt-1.5 space-y-0.5">
+                                              {proposal.volume && (
+                                                <div className="flex items-center gap-1">
+                                                  <LuPackage className="w-3 h-3 text-blue-600" />
+                                                  <p className="text-xs text-gray-600">Volume: {proposal.volume}</p>
+                                                </div>
+                                              )}
+                                              {proposal.lokasi && (
+                                                <div className="flex items-center gap-1">
+                                                  <LuMapPin className="w-3 h-3 text-red-600" />
+                                                  <p className="text-xs text-gray-600">Lokasi: {proposal.lokasi}</p>
+                                                </div>
+                                              )}
+                                            </div>
+                                          )}
+                                          
                                           <div className="flex items-center gap-2 mt-1">
                                             <p className="text-xs text-gray-500">ID: {proposal.id.toString()}</p>
                                             <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
@@ -605,7 +625,27 @@ const DinasVerificationPage = () => {
                                   <LuFileText className="w-4 h-4 text-amber-600" />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <p className="font-medium text-gray-800 text-sm line-clamp-2">{proposal.nama_kegiatan}</p>
+                                  <p className="text-xs text-gray-500 mb-0.5">{proposal.nama_kegiatan}</p>
+                                  <p className="font-semibold text-gray-900 text-sm line-clamp-2">{proposal.nama_kegiatan_spesifik || proposal.judul_proposal}</p>
+                                  
+                                  {/* Detail kegiatan dari desa */}
+                                  {(proposal.volume || proposal.lokasi) && (
+                                    <div className="mt-1.5 space-y-0.5">
+                                      {proposal.volume && (
+                                        <div className="flex items-center gap-1">
+                                          <LuPackage className="w-3 h-3 text-blue-600" />
+                                          <p className="text-xs text-gray-600">Volume: {proposal.volume}</p>
+                                        </div>
+                                      )}
+                                      {proposal.lokasi && (
+                                        <div className="flex items-center gap-1">
+                                          <LuMapPin className="w-3 h-3 text-red-600" />
+                                          <p className="text-xs text-gray-600">Lokasi: {proposal.lokasi}</p>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                  
                                   <div className="flex items-center gap-2 mt-1">
                                     <p className="text-xs text-gray-500">ID: {proposal.id.toString()}</p>
                                     <span className={`px-2 py-0.5 rounded text-xs font-medium ${
