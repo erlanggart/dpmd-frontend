@@ -309,6 +309,19 @@ const BankeuProposalPage = () => {
   const [contohFiles, setContohFiles] = useState({ cover: [], desa: [], kecamatan: [] });
   const [showPdfModal, setShowPdfModal] = useState(false);
   const [selectedPdf, setSelectedPdf] = useState(null);
+  
+  // NEW: State untuk multiple proposal upload
+  const [showNewProposalForm, setShowNewProposalForm] = useState(false);
+  const [selectedKegiatanIds, setSelectedKegiatanIds] = useState([]);
+  const [newProposalData, setNewProposalData] = useState({
+    judul_proposal: '',
+    nama_kegiatan_spesifik: '',
+    volume: '',
+    lokasi: '',
+    deskripsi: '',
+    anggaran_usulan: '',
+    file: null
+  });
 
   useEffect(() => {
     fetchData();
@@ -1245,6 +1258,122 @@ const BankeuProposalPage = () => {
     }
   };
 
+  // NEW: Handler untuk submit proposal dengan multiple kegiatan
+  const handleSubmitNewProposal = async () => {
+    // Validasi
+    if (selectedKegiatanIds.length === 0) {
+      Swal.fire({
+        icon: "warning",
+        title: "Perhatian",
+        text: "Pilih minimal 1 kegiatan"
+      });
+      return;
+    }
+
+    if (!newProposalData.judul_proposal.trim()) {
+      Swal.fire({
+        icon: "warning",
+        title: "Perhatian",
+        text: "Judul proposal wajib diisi"
+      });
+      return;
+    }
+
+    if (!newProposalData.file) {
+      Swal.fire({
+        icon: "warning",
+        title: "Perhatian",
+        text: "File proposal wajib diupload"
+      });
+      return;
+    }
+
+    if (newProposalData.file.type !== "application/pdf") {
+      Swal.fire({
+        icon: "warning",
+        title: "Perhatian",
+        text: "File harus berformat PDF"
+      });
+      return;
+    }
+
+    if (newProposalData.file.size > 10 * 1024 * 1024) {
+      Swal.fire({
+        icon: "warning",
+        title: "Perhatian",
+        text: "Ukuran file maksimal 10MB"
+      });
+      return;
+    }
+
+    try {
+      Swal.fire({
+        title: 'Mengupload Proposal...',
+        text: 'Mohon tunggu',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
+      const formData = new FormData();
+      formData.append("file", newProposalData.file);
+      formData.append("kegiatan_ids", JSON.stringify(selectedKegiatanIds));
+      formData.append("judul_proposal", newProposalData.judul_proposal);
+      formData.append("nama_kegiatan_spesifik", newProposalData.nama_kegiatan_spesifik || '');
+      formData.append("volume", newProposalData.volume || '');
+      formData.append("lokasi", newProposalData.lokasi || '');
+      formData.append("deskripsi", newProposalData.deskripsi || '');
+      formData.append("anggaran_usulan", newProposalData.anggaran_usulan.replace(/\D/g, "") || '0');
+
+      await api.post("/desa/bankeu/proposals", formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+
+      // Reset form
+      setShowNewProposalForm(false);
+      setSelectedKegiatanIds([]);
+      setNewProposalData({
+        judul_proposal: '',
+        nama_kegiatan_spesifik: '',
+        volume: '',
+        lokasi: '',
+        deskripsi: '',
+        anggaran_usulan: '',
+        file: null
+      });
+
+      await fetchData();
+
+      await Swal.fire({
+        icon: "success",
+        title: "Berhasil!",
+        text: `Proposal dengan ${selectedKegiatanIds.length} kegiatan berhasil diupload`,
+        timer: 2000,
+        showConfirmButton: false
+      });
+    } catch (error) {
+      console.error("Error submit proposal:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Gagal Upload",
+        text: error.response?.data?.message || error.message || "Gagal mengupload proposal",
+        confirmButtonText: "OK"
+      });
+    }
+  };
+
+  // NEW: Toggle kegiatan selection
+  const toggleKegiatanSelection = (kegiatanId) => {
+    setSelectedKegiatanIds(prev => {
+      if (prev.includes(kegiatanId)) {
+        return prev.filter(id => id !== kegiatanId);
+      } else {
+        return [...prev, kegiatanId];
+      }
+    });
+  };
+
   const handleDelete = async (proposalId) => {
     const result = await Swal.fire({
       title: "Hapus Proposal?",
@@ -1475,6 +1604,13 @@ const BankeuProposalPage = () => {
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowNewProposalForm(true)}
+                  className="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 flex items-center gap-2 font-semibold text-sm shadow-md hover:shadow-lg transition-all transform hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  <LuUpload className="w-4 h-4" />
+                  <span>Buat Proposal Baru</span>
+                </button>
                 <button
                   onClick={() => setExpandedStats(!expandedStats)}
                   className="p-2 hover:bg-gray-100 rounded-lg transition-all duration-300 group"
@@ -2165,6 +2301,187 @@ const BankeuProposalPage = () => {
           </div>
         </div>
       </div>
+
+      {/* NEW: Modal Form Proposal Baru */}
+      {showNewProposalForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-green-500 to-emerald-600 px-6 py-4 flex items-center justify-between sticky top-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-white bg-opacity-30 rounded-lg flex items-center justify-center">
+                  <LuUpload className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-white">Buat Proposal Baru</h2>
+                  <p className="text-sm text-white text-opacity-90">Upload proposal dengan multiple kegiatan</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowNewProposalForm(false);
+                  setSelectedKegiatanIds([]);
+                }}
+                className="w-8 h-8 bg-white bg-opacity-30 hover:bg-opacity-40 rounded-lg flex items-center justify-center transition-all"
+              >
+                <LuX className="w-5 h-5 text-white" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 space-y-6">
+              {/* Pilih Kegiatan */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                  Pilih Kegiatan <span className="text-red-500">*</span>
+                </label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-60 overflow-y-auto border border-gray-200 rounded-lg p-3">
+                  {masterKegiatan.map((kegiatan) => (
+                    <label
+                      key={kegiatan.id}
+                      className={`flex items-start gap-3 p-3 border-2 rounded-lg cursor-pointer transition-all ${
+                        selectedKegiatanIds.includes(kegiatan.id)
+                          ? 'border-green-500 bg-green-50'
+                          : 'border-gray-200 hover:border-green-300'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedKegiatanIds.includes(kegiatan.id)}
+                        onChange={() => toggleKegiatanSelection(kegiatan.id)}
+                        className="mt-1 w-4 h-4 text-green-600 rounded focus:ring-green-500"
+                      />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900">{kegiatan.nama_kegiatan}</p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {kegiatan.jenis_kegiatan === 'infrastruktur' ? 'Infrastruktur' : 'Non-Infrastruktur'}
+                        </p>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+                {selectedKegiatanIds.length > 0 && (
+                  <p className="text-sm text-green-600 mt-2 font-medium">
+                    {selectedKegiatanIds.length} kegiatan dipilih
+                  </p>
+                )}
+              </div>
+
+              {/* Judul Proposal */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Judul Proposal <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={newProposalData.judul_proposal}
+                  onChange={(e) => setNewProposalData({ ...newProposalData, judul_proposal: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  placeholder="Contoh: Pembangunan Infrastruktur Desa Tahun 2026"
+                />
+              </div>
+
+              {/* Nama Kegiatan Spesifik */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Nama Kegiatan Spesifik
+                </label>
+                <input
+                  type="text"
+                  value={newProposalData.nama_kegiatan_spesifik}
+                  onChange={(e) => setNewProposalData({ ...newProposalData, nama_kegiatan_spesifik: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  placeholder="Opsional"
+                />
+              </div>
+
+              {/* Volume & Lokasi */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Volume
+                  </label>
+                  <input
+                    type="text"
+                    value={newProposalData.volume}
+                    onChange={(e) => setNewProposalData({ ...newProposalData, volume: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="Contoh: 500 meter"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Lokasi
+                  </label>
+                  <input
+                    type="text"
+                    value={newProposalData.lokasi}
+                    onChange={(e) => setNewProposalData({ ...newProposalData, lokasi: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="Contoh: Kampung Babakan"
+                  />
+                </div>
+              </div>
+
+              {/* Anggaran Usulan */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Anggaran Usulan
+                </label>
+                <input
+                  type="text"
+                  value={newProposalData.anggaran_usulan}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '');
+                    const formatted = new Intl.NumberFormat('id-ID').format(value);
+                    setNewProposalData({ ...newProposalData, anggaran_usulan: formatted });
+                  }}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  placeholder="Contoh: 50000000"
+                />
+              </div>
+
+              {/* Upload File */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  File Proposal (PDF) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="file"
+                  accept=".pdf"
+                  onChange={(e) => setNewProposalData({ ...newProposalData, file: e.target.files[0] })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                />
+                {newProposalData.file && (
+                  <p className="text-sm text-gray-600 mt-2">
+                    File dipilih: {newProposalData.file.name}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex items-center justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowNewProposalForm(false);
+                  setSelectedKegiatanIds([]);
+                }}
+                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-semibold transition-all"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleSubmitNewProposal}
+                className="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-lg font-semibold transition-all flex items-center gap-2"
+              >
+                <LuUpload className="w-4 h-4" />
+                Upload Proposal
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal Contoh Proposal */}
       <ContohProposalModal
