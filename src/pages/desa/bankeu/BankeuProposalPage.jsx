@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import api from "../../../api";
 import Swal from "sweetalert2";
 import {
@@ -300,8 +300,10 @@ const BankeuProposalPage = () => {
   const [loading, setLoading] = useState(true);
   const [expandedInfra, setExpandedInfra] = useState(true);
   const [expandedNonInfra, setExpandedNonInfra] = useState(true);
-  const [expandedSurat, setExpandedSurat] = useState(true);
+  const [expandedSurat, setExpandedSurat] = useState(false);
   const [expandedStats, setExpandedStats] = useState(false);
+  const [expandedProposalListInfra, setExpandedProposalListInfra] = useState(false);
+  const [expandedProposalListNonInfra, setExpandedProposalListNonInfra] = useState(false);
   const [desaSurat, setDesaSurat] = useState({ surat_pengantar: null, surat_permohonan: null, submitted_to_kecamatan: false });
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [uploadForms, setUploadForms] = useState({});
@@ -310,7 +312,15 @@ const BankeuProposalPage = () => {
   const [showPdfModal, setShowPdfModal] = useState(false);
   const [selectedPdf, setSelectedPdf] = useState(null);
   
-  // NEW: State untuk multiple proposal upload
+  // NEW: State untuk upload proposal dengan dropdown
+  const [showUploadFormInfra, setShowUploadFormInfra] = useState(false);
+  const [showUploadFormNonInfra, setShowUploadFormNonInfra] = useState(false);
+  const [selectedKegiatanIdInfra, setSelectedKegiatanIdInfra] = useState('');
+  const [selectedKegiatanIdNonInfra, setSelectedKegiatanIdNonInfra] = useState('');
+  const [dropdownOpenInfra, setDropdownOpenInfra] = useState(false);
+  const [dropdownOpenNonInfra, setDropdownOpenNonInfra] = useState(false);
+  const dropdownButtonRefInfra = useRef(null);
+  const dropdownButtonRefNonInfra = useRef(null);
   const [showNewProposalForm, setShowNewProposalForm] = useState(false);
   const [selectedKegiatanIds, setSelectedKegiatanIds] = useState([]);
   const [newProposalData, setNewProposalData] = useState({
@@ -327,6 +337,48 @@ const BankeuProposalPage = () => {
     fetchData();
     fetchContohProposal();
   }, []);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownOpenInfra && !event.target.closest('.dropdown-container-infra')) {
+        setDropdownOpenInfra(false);
+      }
+      if (dropdownOpenNonInfra && !event.target.closest('.dropdown-container-noninf')) {
+        setDropdownOpenNonInfra(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [dropdownOpenInfra, dropdownOpenNonInfra]);
+
+  // Auto-expand sections jika ada proposal rejected/revision
+  useEffect(() => {
+    if (proposals.length === 0) return;
+
+    const hasRejectedInfra = proposals.some(p => 
+      p.kegiatan_list?.some(k => k.jenis_kegiatan === 'infrastruktur') &&
+      ((p.dinas_status === 'rejected' || p.dinas_status === 'revision') && !p.submitted_to_dinas_at ||
+       (p.kecamatan_status === 'rejected' || p.kecamatan_status === 'revision') && !p.submitted_to_kecamatan)
+    );
+    
+    const hasRejectedNonInfra = proposals.some(p => 
+      p.kegiatan_list?.some(k => k.jenis_kegiatan === 'non_infrastruktur') &&
+      ((p.dinas_status === 'rejected' || p.dinas_status === 'revision') && !p.submitted_to_dinas_at ||
+       (p.kecamatan_status === 'rejected' || p.kecamatan_status === 'revision') && !p.submitted_to_kecamatan)
+    );
+
+    if (hasRejectedInfra) {
+      setExpandedInfra(true);
+      setExpandedProposalListInfra(true);
+    }
+    
+    if (hasRejectedNonInfra) {
+      setExpandedNonInfra(true);
+      setExpandedProposalListNonInfra(true);
+    }
+  }, [proposals]);
 
   // Auto-expand stats panel ketika tombol kirim sudah tersedia
   useEffect(() => {
@@ -535,7 +587,7 @@ const BankeuProposalPage = () => {
 
       const formDataUpload = new FormData();
       formDataUpload.append("file", file);
-      formDataUpload.append("kegiatan_id", kegiatan.id);
+      formDataUpload.append("kegiatan_ids", JSON.stringify([kegiatan.id])); // Convert to array for new API
       // Gunakan judul_kegiatan jika ada pilihan, kalau tidak pakai nama kegiatan master
       const judulFinal = hasMultipleOptions && formData.judul_kegiatan ? formData.judul_kegiatan : kegiatan.nama_kegiatan;
       formDataUpload.append("judul_proposal", judulFinal);
@@ -726,47 +778,18 @@ const BankeuProposalPage = () => {
   };
 
   const handleRevisionUpload = async (proposal, kegiatan, file) => {
-    const formData = uploadForms[kegiatan.id];
+    // Cek form data dari kegiatan.id (untuk form kegiatan) atau proposal.id (untuk form compact card)
+    const formData = uploadForms[kegiatan?.id] || uploadForms[proposal.id];
     
     console.log("=== DEBUG REVISION UPLOAD ===");
     console.log("Proposal ID:", proposal.id);
     console.log("Kegiatan:", kegiatan);
     console.log("File:", file);
-    console.log("Form Data:", formData);
+    console.log("Form Data from kegiatan.id:", uploadForms[kegiatan?.id]);
+    console.log("Form Data from proposal.id:", uploadForms[proposal.id]);
+    console.log("Selected Form Data:", formData);
     
-    // Validation
-    if (!formData?.nama_kegiatan?.trim()) {
-      Swal.fire({
-        icon: "warning",
-        title: "Perhatian",
-        text: "Nama kegiatan wajib diisi terlebih dahulu"
-      });
-      return;
-    }
-    if (!formData?.volume?.trim()) {
-      Swal.fire({
-        icon: "warning",
-        title: "Perhatian",
-        text: "Volume kegiatan wajib diisi terlebih dahulu"
-      });
-      return;
-    }
-    if (!formData?.lokasi?.trim()) {
-      Swal.fire({
-        icon: "warning",
-        title: "Perhatian",
-        text: "Lokasi kegiatan wajib diisi terlebih dahulu"
-      });
-      return;
-    }
-    if (!formData?.anggaran?.trim()) {
-      Swal.fire({
-        icon: "warning",
-        title: "Perhatian",
-        text: "Anggaran usulan wajib diisi terlebih dahulu"
-      });
-      return;
-    }
+    // Validation - Semua field OPSIONAL untuk revisi
     if (!file) {
       Swal.fire({
         icon: "warning",
@@ -804,10 +827,20 @@ const BankeuProposalPage = () => {
 
       const formDataUpload = new FormData();
       formDataUpload.append("file", file);
-      formDataUpload.append("nama_kegiatan_spesifik", formData.nama_kegiatan);
-      formDataUpload.append("volume", formData.volume);
-      formDataUpload.append("lokasi", formData.lokasi);
-      formDataUpload.append("anggaran_usulan", formData.anggaran.replace(/\D/g, ""));
+      
+      // Semua field opsional - hanya kirim jika diisi
+      if (formData?.nama_kegiatan?.trim()) {
+        formDataUpload.append("nama_kegiatan_spesifik", formData.nama_kegiatan.trim());
+      }
+      if (formData?.volume?.trim()) {
+        formDataUpload.append("volume", formData.volume.trim());
+      }
+      if (formData?.lokasi?.trim()) {
+        formDataUpload.append("lokasi", formData.lokasi.trim());
+      }
+      if (formData?.anggaran?.trim()) {
+        formDataUpload.append("anggaran_usulan", formData.anggaran.replace(/\D/g, ""));
+      }
 
       console.log("=== FORM DATA REVISI YANG DIKIRIM ===");
       for (let pair of formDataUpload.entries()) {
@@ -832,12 +865,13 @@ const BankeuProposalPage = () => {
       // Clear form setelah data ter-refresh
       setUploadForms(prev => {
         const newForms = { ...prev };
-        delete newForms[kegiatan.id];
+        delete newForms[kegiatan?.id];
+        delete newForms[proposal.id];
         return newForms;
       });
       
-      // Simpan kegiatan ID untuk scroll nanti
-      const uploadedKegiatanId = kegiatan.id;
+      // Simpan kegiatan ID untuk scroll nanti (jika ada)
+      const uploadedKegiatanId = kegiatan?.id;
 
       await Swal.fire({
         icon: "success",
@@ -899,7 +933,7 @@ const BankeuProposalPage = () => {
   };
 
   const handleSubmitToKecamatan = async () => {
-    // Validasi 1: Surat harus sudah dikirim ke kecamatan
+    // Validasi: Surat harus sudah dikirim ke kecamatan (tidak perlu menunggu approval)
     if (!desaSurat.submitted_to_kecamatan) {
       Swal.fire({
         icon: "warning",
@@ -911,36 +945,10 @@ const BankeuProposalPage = () => {
               <li>Upload Surat Pengantar Proposal</li>
               <li>Upload Surat Permohonan Proposal</li>
               <li>Kirim kedua surat tersebut ke Kecamatan</li>
-              <li>Tunggu approval dari Kecamatan</li>
             </ol>
             <p class="mt-3 text-sm text-amber-600">
               <strong>Catatan:</strong> Silakan scroll ke atas untuk melengkapi dokumen di section <strong>"Dokumen Pendukung Proposal"</strong>.
             </p>
-          </div>
-        `,
-        confirmButtonText: "OK"
-      });
-      return;
-    }
-
-    // Validasi 2: Surat harus sudah diapprove kecamatan
-    if (desaSurat.kecamatan_status !== 'approved') {
-      const statusMessage = desaSurat.kecamatan_status === 'rejected' 
-        ? 'Surat Anda <strong>ditolak</strong> oleh Kecamatan. Silakan perbaiki dan upload ulang surat sesuai catatan, lalu kirim kembali.'
-        : 'Surat Anda masih dalam status <strong>Menunggu Review</strong> dari Kecamatan. Mohon tunggu konfirmasi terlebih dahulu.';
-      
-      Swal.fire({
-        icon: desaSurat.kecamatan_status === 'rejected' ? "error" : "warning",
-        title: desaSurat.kecamatan_status === 'rejected' ? "Surat Ditolak" : "Menunggu Approval",
-        html: `
-          <div class="text-left">
-            <p class="mb-3">${statusMessage}</p>
-            ${desaSurat.kecamatan_catatan ? `
-              <div class="p-3 bg-gray-100 rounded-lg">
-                <p class="text-sm font-semibold text-gray-700 mb-1">Catatan Kecamatan:</p>
-                <p class="text-sm text-gray-600">${desaSurat.kecamatan_catatan}</p>
-              </div>
-            ` : ''}
           </div>
         `,
         confirmButtonText: "OK"
@@ -1605,13 +1613,6 @@ const BankeuProposalPage = () => {
               </div>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setShowNewProposalForm(true)}
-                  className="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 flex items-center gap-2 font-semibold text-sm shadow-md hover:shadow-lg transition-all transform hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  <LuUpload className="w-4 h-4" />
-                  <span>Buat Proposal Baru</span>
-                </button>
-                <button
                   onClick={() => setExpandedStats(!expandedStats)}
                   className="p-2 hover:bg-gray-100 rounded-lg transition-all duration-300 group"
                   title={expandedStats ? "Tutup statistik" : "Buka statistik"}
@@ -1632,6 +1633,69 @@ const BankeuProposalPage = () => {
               </div>
             </div>
           </div>
+
+          {/* Alert Banner for Rejected/Revision Proposals */}
+          {proposals.some(p => (p.dinas_status === 'rejected' || p.dinas_status === 'revision') && !p.submitted_to_dinas_at) && (
+            <div className="px-8">
+              <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-4 shadow-md">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0">
+                    <LuInfo className="w-6 h-6 text-red-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-base font-bold text-red-900 mb-1">
+                      ⚠️ Ada Proposal yang Ditolak/Perlu Revisi oleh Dinas!
+                    </h3>
+                    <p className="text-sm text-red-800 mb-2">
+                      Dinas telah menolak atau meminta revisi pada {proposals.filter(p => (p.dinas_status === 'rejected' || p.dinas_status === 'revision') && !p.submitted_to_dinas_at).length} proposal Anda. 
+                      Silakan periksa catatan dari Dinas, perbaiki proposal, lalu kirim ulang.
+                    </p>
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {proposals.filter(p => (p.dinas_status === 'rejected' || p.dinas_status === 'revision') && !p.submitted_to_dinas_at).map(p => (
+                        <div key={p.id} className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-red-200 rounded-lg shadow-sm">
+                          <span className="text-xs font-medium text-red-700">{p.judul_proposal}</span>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${p.dinas_status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                            {p.dinas_status === 'rejected' ? 'DITOLAK' : 'REVISI'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {proposals.some(p => (p.kecamatan_status === 'rejected' || p.kecamatan_status === 'revision') && !p.submitted_to_kecamatan) && (
+            <div className="px-8">
+              <div className="bg-orange-50 border-l-4 border-orange-500 rounded-lg p-4 shadow-md">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0">
+                    <LuInfo className="w-6 h-6 text-orange-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-base font-bold text-orange-900 mb-1">
+                      ⚠️ Ada Proposal yang Ditolak/Perlu Revisi oleh Kecamatan!
+                    </h3>
+                    <p className="text-sm text-orange-800 mb-2">
+                      Kecamatan telah menolak atau meminta revisi pada {proposals.filter(p => (p.kecamatan_status === 'rejected' || p.kecamatan_status === 'revision') && !p.submitted_to_kecamatan).length} proposal Anda. 
+                      Silakan periksa catatan dari Kecamatan, perbaiki proposal, lalu kirim ulang.
+                    </p>
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {proposals.filter(p => (p.kecamatan_status === 'rejected' || p.kecamatan_status === 'revision') && !p.submitted_to_kecamatan).map(p => (
+                        <div key={p.id} className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-orange-200 rounded-lg shadow-sm">
+                          <span className="text-xs font-medium text-orange-700">{p.judul_proposal}</span>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${p.kecamatan_status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                            {p.kecamatan_status === 'rejected' ? 'DITOLAK' : 'REVISI'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         
           {expandedStats && (
             <div className="px-8 pb-8">
@@ -1916,8 +1980,9 @@ const BankeuProposalPage = () => {
             </div>
             <div className="px-4 py-2 bg-white rounded-xl shadow-md border border-gray-100">
               {desaSurat.surat_pengantar && desaSurat.surat_permohonan ? (
-                <span className="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-                  <LuCheck className="inline w-6 h-6" /> Lengkap
+                <span className="text-xl font-bold flex items-center gap-2 text-green-600">
+                  <LuCheck className="w-6 h-6" /> 
+                  <span>Lengkap</span>
                 </span>
               ) : (
                 <span className="text-2xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
@@ -2214,40 +2279,393 @@ const BankeuProposalPage = () => {
                 </div>
                 <div className="text-left">
                   <h3 className="text-xl font-bold text-gray-900">Infrastruktur</h3>
-                  <p className="text-sm text-gray-600">{infrastrukturData.filter(d => d.proposal).length} dari {infrastrukturData.length} kegiatan</p>
+                  <p className="text-sm text-gray-600">
+                    {(() => {
+                      const uniqueKegiatanIds = new Set();
+                      proposals.forEach(p => {
+                        p.kegiatan_list?.forEach(k => {
+                          if (k.jenis_kegiatan === 'infrastruktur') {
+                            uniqueKegiatanIds.add(k.id);
+                          }
+                        });
+                      });
+                      return uniqueKegiatanIds.size;
+                    })()} dari {infrastrukturData.length} program
+                  </p>
                 </div>
               </div>
               <div className="px-4 py-2 bg-white rounded-xl shadow-md border border-gray-100">
                 <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                  {infrastrukturData.filter(d => d.proposal).length}/{infrastrukturData.length}
+                  {(() => {
+                    const uniqueKegiatanIds = new Set();
+                    proposals.forEach(p => {
+                      p.kegiatan_list?.forEach(k => {
+                        if (k.jenis_kegiatan === 'infrastruktur') {
+                          uniqueKegiatanIds.add(k.id);
+                        }
+                      });
+                    });
+                    return uniqueKegiatanIds.size;
+                  })()}/{infrastrukturData.length}
                 </span>
               </div>
             </button>
           
-            <div className={`transition-all duration-500 ease-in-out overflow-hidden ${
-              expandedInfra ? 'max-h-[10000px] opacity-100' : 'max-h-0 opacity-0'
-            }`}>
-              <div className="divide-y divide-gray-100">
-                {infrastrukturData.map((item, index) => (
-                  <KegiatanRow
-                    key={`desa-infra-${item.kegiatan.id}`}
-                    item={item}
-                    index={index}
-                    onUpload={handleUpload}
-                    onRevisionUpload={handleRevisionUpload}
-                    onReplaceFile={handleReplaceFile}
-                    onUploadSurat={handleUploadSurat}
-                    onDelete={handleDelete}
-                    onViewPdf={handleViewPdf}
-                    getStatusBadge={getStatusBadge}
-                    imageBaseUrl={imageBaseUrl}
-                    isSubmitted={isSubmitted}
-                    uploadForms={uploadForms}
-                    updateUploadForm={updateUploadForm}
-                    formatRupiah={formatRupiah}
-                  />
-                ))}
-              </div>
+            <div className={`transition-all duration-500 ease-in-out ${expandedInfra ? 'max-h-[10000px] opacity-100' : 'max-h-0 opacity-0'}`} style={{ overflow: expandedInfra ? 'visible' : 'hidden' }}>
+              {/* Daftar Proposal yang Sudah Diupload */}
+              {proposals.filter(p => p.kegiatan_list?.some(k => k.jenis_kegiatan === 'infrastruktur')).length > 0 && (
+                <div className="border-b border-gray-200">
+                  <button
+                    onClick={() => setExpandedProposalListInfra(!expandedProposalListInfra)}
+                    className="w-full p-4 bg-gray-50 hover:bg-gray-100 transition-colors flex items-center justify-between group"
+                  >
+                    <h4 className="font-semibold text-gray-700 flex items-center gap-2">
+                      <LuFileText className="w-4 h-4" />
+                      Proposal yang Sudah Diupload ({proposals.filter(p => p.kegiatan_list?.some(k => k.jenis_kegiatan === 'infrastruktur')).length})
+                    </h4>
+                    {expandedProposalListInfra ? 
+                      <LuChevronDown className="w-5 h-5 text-gray-500 group-hover:text-gray-700" /> : 
+                      <LuChevronRight className="w-5 h-5 text-gray-500 group-hover:text-gray-700" />
+                    }
+                  </button>
+                  <div className={`transition-all duration-300 ${expandedProposalListInfra ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`} style={{ overflow: expandedProposalListInfra ? 'visible' : 'hidden' }}>
+                    <div className="p-4 bg-gray-50 space-y-2">
+                    {proposals.filter(p => p.kegiatan_list?.some(k => k.jenis_kegiatan === 'infrastruktur')).map((proposal) => (
+                      <div key={proposal.id} className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+                        <div className="p-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1">
+                              <p className="font-bold text-gray-900 text-base leading-tight">{proposal.judul_proposal}</p>
+                              {proposal.kegiatan_list && proposal.kegiatan_list.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-2">
+                                  {proposal.kegiatan_list.map((kegiatan) => (
+                                    <span 
+                                      key={kegiatan.id}
+                                      className={`px-2 py-1 rounded text-xs font-medium ${
+                                        kegiatan.jenis_kegiatan === 'infrastruktur' 
+                                          ? 'bg-blue-100 text-blue-700' 
+                                          : 'bg-purple-100 text-purple-700'
+                                      }`}
+                                    >
+                                      {kegiatan.nama_kegiatan.substring(0, 30)}...
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                              <p className="text-xs text-gray-500 mt-2">
+                                {new Date(proposal.created_at).toLocaleDateString('id-ID', { 
+                                  day: 'numeric', 
+                                  month: 'short', 
+                                  year: 'numeric' 
+                                })}
+                              </p>
+                            </div>
+                            <div className="flex flex-col items-end gap-2">
+                              {getStatusBadge(proposal)}
+                              {proposal.anggaran_usulan && (
+                                <span className="text-xs font-semibold text-green-600">
+                                  Rp {new Intl.NumberFormat('id-ID').format(proposal.anggaran_usulan)}
+                                </span>
+                              )}
+                              <button
+                                onClick={() => {
+                                  const apiBaseUrl = imageBaseUrl.replace(/\/api$/, '');
+                                  window.open(`${apiBaseUrl}/storage/uploads/bankeu/${proposal.file_proposal}`, '_blank');
+                                }}
+                                className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-1.5 text-xs font-medium transition-all"
+                              >
+                                <LuEye className="w-3 h-3" />
+                                Lihat
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Catatan Dinas */}
+                          {proposal.dinas_catatan && (proposal.dinas_status === 'rejected' || proposal.dinas_status === 'revision') && (
+                            <div className="mt-3 p-3 bg-red-50 border-l-3 border-red-400 rounded">
+                              <div className="flex items-start gap-2">
+                                <LuInfo className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs font-semibold text-red-800 mb-1">
+                                    Catatan Dinas {proposal.dinas_status === 'rejected' ? '(Ditolak)' : '(Revisi)'}
+                                  </p>
+                                  <p className="text-sm text-red-700">{proposal.dinas_catatan}</p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Catatan Kecamatan */}
+                          {proposal.kecamatan_catatan && (proposal.kecamatan_status === 'rejected' || proposal.kecamatan_status === 'revision') && (
+                            <div className="mt-3 p-3 bg-purple-50 border-l-3 border-purple-400 rounded">
+                              <div className="flex items-start gap-2">
+                                <LuInfo className="w-4 h-4 text-purple-600 mt-0.5 flex-shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs font-semibold text-purple-800 mb-1">
+                                    Catatan Kecamatan {proposal.kecamatan_status === 'rejected' ? '(Ditolak)' : '(Revisi)'}
+                                  </p>
+                                  <p className="text-sm text-purple-700">{proposal.kecamatan_catatan}</p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Form Upload Ulang */}
+                          {(
+                            ((proposal.dinas_status === "rejected" || proposal.dinas_status === "revision") && !proposal.submitted_to_dinas_at) ||
+                            ((proposal.kecamatan_status === "rejected" || proposal.kecamatan_status === "revision") && !proposal.submitted_to_kecamatan)
+                          ) && (
+                            <div className="mt-3 bg-gradient-to-r from-orange-50 to-red-50 p-4 rounded-lg border-2 border-orange-300">
+                              <div className="flex items-center gap-2 mb-3">
+                                <LuRefreshCw className="w-5 h-5 text-orange-600" />
+                                <span className="font-bold text-orange-900 text-base">Upload Ulang Proposal</span>
+                                {(proposal.dinas_status === 'revision' || proposal.dinas_status === 'rejected') && (
+                                  <div className="flex items-center gap-1 px-2 py-1 bg-purple-100 border border-purple-300 rounded-lg ml-auto">
+                                    <LuInfo className="w-3 h-3 text-purple-700" />
+                                    <span className="text-xs font-bold text-purple-800">Dari DINAS</span>
+                                  </div>
+                                )}
+                                {(proposal.kecamatan_status === 'revision' || proposal.kecamatan_status === 'rejected') && (
+                                  <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 border border-blue-300 rounded-lg ml-auto">
+                                    <LuInfo className="w-3 h-3 text-blue-700" />
+                                    <span className="text-xs font-bold text-blue-800">Dari KECAMATAN</span>
+                                  </div>
+                                )}
+                              </div>
+                              
+                              <div className="grid grid-cols-2 gap-3 mb-3">
+                                <div className="space-y-1">
+                                  <label className="text-xs font-semibold text-orange-800">Nama Kegiatan Baru (opsional)</label>
+                                  <input
+                                    type="text"
+                                    value={uploadForms[proposal.id]?.nama_kegiatan || ''}
+                                    onChange={(e) => updateUploadForm(proposal.id, 'nama_kegiatan', e.target.value)}
+                                    placeholder="Kosongkan jika tidak diubah"
+                                    className="w-full px-3 py-2 text-sm border-2 border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-200 focus:border-orange-500 bg-white"
+                                  />
+                                </div>
+
+                                <div className="space-y-1">
+                                  <label className="text-xs font-semibold text-orange-800">Volume Baru (opsional)</label>
+                                  <input
+                                    type="text"
+                                    value={uploadForms[proposal.id]?.volume || ''}
+                                    onChange={(e) => updateUploadForm(proposal.id, 'volume', e.target.value)}
+                                    placeholder="Kosongkan jika tidak diubah"
+                                    className="w-full px-3 py-2 text-sm border-2 border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-200 focus:border-orange-500 bg-white"
+                                  />
+                                </div>
+
+                                <div className="space-y-1">
+                                  <label className="text-xs font-semibold text-orange-800">Lokasi Baru (opsional)</label>
+                                  <input
+                                    type="text"
+                                    value={uploadForms[proposal.id]?.lokasi || ''}
+                                    onChange={(e) => updateUploadForm(proposal.id, 'lokasi', e.target.value)}
+                                    placeholder="Kosongkan jika tidak diubah"
+                                    className="w-full px-3 py-2 text-sm border-2 border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-200 focus:border-orange-500 bg-white"
+                                  />
+                                </div>
+
+                                <div className="space-y-1">
+                                  <label className="text-xs font-semibold text-orange-800">Anggaran Baru (opsional)</label>
+                                  <div className="relative">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 text-sm font-medium">Rp</span>
+                                    <input
+                                      type="text"
+                                      value={formatRupiah(uploadForms[proposal.id]?.anggaran || '')}
+                                      onChange={(e) => updateUploadForm(proposal.id, 'anggaran', e.target.value.replace(/\D/g, ''))}
+                                      placeholder="Kosongkan jika tidak diubah"
+                                      className="w-full pl-10 pr-3 py-2 text-sm border-2 border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-200 focus:border-orange-500 bg-white"
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <div className="flex items-center gap-3">
+                                <input
+                                  type="file"
+                                  accept=".pdf"
+                                  onChange={(e) => {
+                                    const file = e.target.files[0];
+                                    if (file) {
+                                      // Panggil handleRevisionUpload dengan proposal dan file
+                                      handleRevisionUpload(proposal, proposal.kegiatan_list[0], file);
+                                      e.target.value = null;
+                                    }
+                                  }}
+                                  className="hidden"
+                                  id={`file-revision-compact-${proposal.id}`}
+                                />
+                                <label
+                                  htmlFor={`file-revision-compact-${proposal.id}`}
+                                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-lg font-semibold text-sm hover:from-orange-700 hover:to-red-700 cursor-pointer transition-all shadow-md"
+                                >
+                                  <LuUpload className="w-4 h-4" />
+                                  Pilih File PDF Baru
+                                </label>
+                                <p className="text-xs text-gray-600">
+                                  Max 5MB • Setelah upload, gunakan tombol <strong>"Kirim ke Dinas Terkait"</strong> di atas
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Tombol Upload Proposal Baru - Flow 3 Step */}
+              {!isSubmitted && (
+                <div className="p-6">
+                  <button
+                    onClick={() => {
+                      setShowUploadFormInfra(!showUploadFormInfra);
+                      if (!showUploadFormInfra) {
+                        setSelectedKegiatanIdInfra('');
+                      }
+                    }}
+                    className="w-full px-6 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 flex items-center justify-center gap-3 font-bold text-lg shadow-lg hover:shadow-xl transition-all transform hover:scale-[1.02]"
+                  >
+                    <LuUpload className="w-6 h-6" />
+                    {showUploadFormInfra ? 'Tutup Form' : 'Tambah Proposal Infrastruktur Baru'}
+                  </button>
+
+                  {/* Dropdown & Form Upload Inline */}
+                  {showUploadFormInfra && (
+                    <div className="mt-4 p-4 sm:p-6 bg-white rounded-2xl border-2 border-blue-300 shadow-xl">
+                      <div className="space-y-5">
+                        {/* Dropdown Pilih Program */}
+                        <div className="dropdown-container-infra">
+                          <label className="flex items-center gap-3 text-lg sm:text-xl font-bold text-blue-900 mb-4">
+                            <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-full shadow-md">
+                              <span className="text-base font-bold">1</span>
+                            </div>
+                            <span>Pilih Program Infrastruktur</span>
+                          </label>
+                          <div className="relative">
+                            {/* Custom Dropdown Button */}
+                            <button
+                              ref={dropdownButtonRefInfra}
+                              type="button"
+                              onClick={() => setDropdownOpenInfra(!dropdownOpenInfra)}
+                              className="w-full pl-5 pr-12 py-5 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-xl text-base sm:text-lg font-semibold text-left shadow-sm focus:outline-none focus:ring-4 focus:ring-blue-200 focus:border-blue-500 hover:border-blue-400 transition-all duration-200 cursor-pointer"
+                            >
+                              <span className={selectedKegiatanIdInfra ? 'text-gray-800' : 'text-gray-500'}>
+                                {selectedKegiatanIdInfra 
+                                  ? (() => {
+                                      const selected = infrastrukturData.find(i => i.kegiatan.id.toString() === selectedKegiatanIdInfra);
+                                      const name = selected?.kegiatan.nama_kegiatan || '';
+                                      return name.length > 100 ? name.substring(0, 100) + '...' : name;
+                                    })()
+                                  : '-- Pilih Salah Satu Program --'
+                                }
+                              </span>
+                            </button>
+                            {/* Custom Dropdown Arrow */}
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                              <svg 
+                                className={`w-7 h-7 text-blue-600 transition-transform duration-200 ${dropdownOpenInfra ? 'rotate-180' : ''}`} 
+                                fill="none" 
+                                stroke="currentColor" 
+                                viewBox="0 0 24 24"
+                              >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </div>
+                            
+                            {/* Dropdown Menu with Scroll - Fixed Position */}
+                            {dropdownOpenInfra && dropdownButtonRefInfra.current && (() => {
+                              const rect = dropdownButtonRefInfra.current.getBoundingClientRect();
+                              return (
+                                <div 
+                                  className="fixed z-[9999] bg-white border-2 border-blue-300 rounded-xl shadow-2xl overflow-hidden"
+                                  style={{
+                                    top: `${rect.bottom + window.scrollY + 8}px`,
+                                    left: `${rect.left + window.scrollX}px`,
+                                    width: `${rect.width}px`
+                                  }}
+                                >
+                                  <div className="max-h-96 overflow-y-auto custom-scrollbar">
+                                    {infrastrukturData.map((item, idx) => (
+                                      <button
+                                        key={item.kegiatan.id}
+                                        type="button"
+                                        onClick={() => {
+                                          setSelectedKegiatanIdInfra(item.kegiatan.id.toString());
+                                          setDropdownOpenInfra(false);
+                                        }}
+                                        className={`w-full px-5 py-4 text-left text-base sm:text-lg font-medium transition-colors leading-relaxed ${
+                                          selectedKegiatanIdInfra === item.kegiatan.id.toString()
+                                            ? 'bg-blue-100 text-blue-900 font-semibold'
+                                            : 'text-gray-800 hover:bg-blue-50'
+                                        } ${idx !== infrastrukturData.length - 1 ? 'border-b border-gray-200' : ''}`}
+                                      >
+                                        <span className="block">
+                                          {item.kegiatan.nama_kegiatan}
+                                        </span>
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            })()}
+                          </div>
+                          {selectedKegiatanIdInfra && (
+                            <p className="mt-3 text-sm sm:text-base text-gray-600 flex items-center gap-2">
+                              <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                              </svg>
+                              Program terpilih. Silakan isi detail proposal di bawah.
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Form Input - Muncul setelah pilih program */}
+                        {selectedKegiatanIdInfra && (
+                          <div className="pt-5 border-t-2 border-blue-200">
+                            <div className="flex items-center gap-2 mb-4">
+                              <div className="flex items-center justify-center w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-600 text-white rounded-full shadow-md">
+                                <span className="text-sm font-bold">2</span>
+                              </div>
+                              <h4 className="text-base sm:text-lg font-bold text-gray-900">
+                                Isi Detail Proposal
+                              </h4>
+                            </div>
+                            {/* Reuse KegiatanRow component untuk form */}
+                            {(() => {
+                              const selectedItem = infrastrukturData.find(i => i.kegiatan.id.toString() === selectedKegiatanIdInfra);
+                              if (!selectedItem) return null;
+                              return (
+                                <KegiatanRow
+                                  key={`upload-infra-${selectedItem.kegiatan.id}`}
+                                  item={selectedItem}
+                                  index={0}
+                                  onUpload={handleUpload}
+                                  onRevisionUpload={handleRevisionUpload}
+                                  onReplaceFile={handleReplaceFile}
+                                  onUploadSurat={handleUploadSurat}
+                                  onDelete={handleDelete}
+                                  onViewPdf={handleViewPdf}
+                                  getStatusBadge={getStatusBadge}
+                                  imageBaseUrl={imageBaseUrl}
+                                  isSubmitted={isSubmitted}
+                                  uploadForms={uploadForms}
+                                  updateUploadForm={updateUploadForm}
+                                  formatRupiah={formatRupiah}
+                                />
+                              );
+                            })()}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -2263,225 +2681,397 @@ const BankeuProposalPage = () => {
                 </div>
                 <div className="text-left">
                   <h3 className="text-xl font-bold text-gray-900">Non-Infrastruktur</h3>
-                  <p className="text-sm text-gray-600">{nonInfrastrukturData.filter(d => d.proposal).length} dari {nonInfrastrukturData.length} kegiatan</p>
+                  <p className="text-sm text-gray-600">
+                    {(() => {
+                      const uniqueKegiatanIds = new Set();
+                      proposals.forEach(p => {
+                        p.kegiatan_list?.forEach(k => {
+                          if (k.jenis_kegiatan === 'non_infrastruktur') {
+                            uniqueKegiatanIds.add(k.id);
+                          }
+                        });
+                      });
+                      return uniqueKegiatanIds.size;
+                    })()} dari {nonInfrastrukturData.length} program
+                  </p>
                 </div>
               </div>
               <div className="px-4 py-2 bg-white rounded-xl shadow-md border border-gray-100">
                 <span className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-fuchsia-600 bg-clip-text text-transparent">
-                  {nonInfrastrukturData.filter(d => d.proposal).length}/{nonInfrastrukturData.length}
+                  {(() => {
+                    const uniqueKegiatanIds = new Set();
+                    proposals.forEach(p => {
+                      p.kegiatan_list?.forEach(k => {
+                        if (k.jenis_kegiatan === 'non_infrastruktur') {
+                          uniqueKegiatanIds.add(k.id);
+                        }
+                      });
+                    });
+                    return uniqueKegiatanIds.size;
+                  })()}/{nonInfrastrukturData.length}
                 </span>
               </div>
             </button>
           
-            <div className={`transition-all duration-500 ease-in-out overflow-hidden ${
-              expandedNonInfra ? 'max-h-[10000px] opacity-100' : 'max-h-0 opacity-0'
-            }`}>
-              <div className="divide-y divide-gray-100">
-                {nonInfrastrukturData.map((item, index) => (
-                <KegiatanRow
-                  key={`desa-non-infra-${item.kegiatan.id}`}
-                  item={item}
-                  index={index}
-                  onUpload={handleUpload}
-                  onRevisionUpload={handleRevisionUpload}
-                  onReplaceFile={handleReplaceFile}
-                  onUploadSurat={handleUploadSurat}
-                  onDelete={handleDelete}
-                  onViewPdf={handleViewPdf}
-                  getStatusBadge={getStatusBadge}
-                  imageBaseUrl={imageBaseUrl}
-                  isSubmitted={isSubmitted}
-                  uploadForms={uploadForms}
-                  updateUploadForm={updateUploadForm}
-                  formatRupiah={formatRupiah}
-                />
-              ))}
-              </div>
+            <div className={`transition-all duration-500 ease-in-out ${expandedNonInfra ? 'max-h-[10000px] opacity-100' : 'max-h-0 opacity-0'}`} style={{ overflow: expandedNonInfra && !dropdownOpenNonInfra ? 'visible' : (expandedNonInfra && dropdownOpenNonInfra ? 'visible' : 'hidden') }}>
+              {/* Daftar Proposal yang Sudah Diupload */}
+              {proposals.filter(p => p.kegiatan_list?.some(k => k.jenis_kegiatan === 'non_infrastruktur')).length > 0 && (
+                <div className="border-b border-gray-200">
+                  <button
+                    onClick={() => setExpandedProposalListNonInfra(!expandedProposalListNonInfra)}
+                    className="w-full p-4 bg-gray-50 hover:bg-gray-100 transition-colors flex items-center justify-between group"
+                  >
+                    <h4 className="font-semibold text-gray-700 flex items-center gap-2">
+                      <LuFileText className="w-4 h-4" />
+                      Proposal yang Sudah Diupload ({proposals.filter(p => p.kegiatan_list?.some(k => k.jenis_kegiatan === 'non_infrastruktur')).length})
+                    </h4>
+                    {expandedProposalListNonInfra ? 
+                      <LuChevronDown className="w-5 h-5 text-gray-500 group-hover:text-gray-700" /> : 
+                      <LuChevronRight className="w-5 h-5 text-gray-500 group-hover:text-gray-700" />
+                    }
+                  </button>
+                  <div className={`transition-all duration-300 ${expandedProposalListNonInfra ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`} style={{ overflow: expandedProposalListNonInfra ? 'visible' : 'hidden' }}>
+                    <div className="p-4 bg-gray-50 space-y-2">
+                    {proposals.filter(p => p.kegiatan_list?.some(k => k.jenis_kegiatan === 'non_infrastruktur')).map((proposal) => (
+                      <div key={proposal.id} className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+                        <div className="p-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1">
+                              <p className="font-bold text-gray-900 text-base leading-tight">{proposal.judul_proposal}</p>
+                              {proposal.kegiatan_list && proposal.kegiatan_list.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-2">
+                                  {proposal.kegiatan_list.map((kegiatan) => (
+                                    <span 
+                                      key={kegiatan.id}
+                                      className={`px-2 py-1 rounded text-xs font-medium ${
+                                        kegiatan.jenis_kegiatan === 'infrastruktur' 
+                                          ? 'bg-blue-100 text-blue-700' 
+                                          : 'bg-purple-100 text-purple-700'
+                                      }`}
+                                    >
+                                      {kegiatan.nama_kegiatan.substring(0, 30)}...
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                              <p className="text-xs text-gray-500 mt-2">
+                                {new Date(proposal.created_at).toLocaleDateString('id-ID', { 
+                                  day: 'numeric', 
+                                  month: 'short', 
+                                  year: 'numeric' 
+                                })}
+                              </p>
+                            </div>
+                            <div className="flex flex-col items-end gap-2">
+                              {getStatusBadge(proposal)}
+                              {proposal.anggaran_usulan && (
+                                <span className="text-xs font-semibold text-green-600">
+                                  Rp {new Intl.NumberFormat('id-ID').format(proposal.anggaran_usulan)}
+                                </span>
+                              )}
+                              <button
+                                onClick={() => {
+                                  const apiBaseUrl = imageBaseUrl.replace(/\/api$/, '');
+                                  window.open(`${apiBaseUrl}/storage/uploads/bankeu/${proposal.file_proposal}`, '_blank');
+                                }}
+                                className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-1.5 text-xs font-medium transition-all"
+                              >
+                                <LuEye className="w-3 h-3" />
+                                Lihat
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Catatan Dinas */}
+                          {proposal.dinas_catatan && (proposal.dinas_status === 'rejected' || proposal.dinas_status === 'revision') && (
+                            <div className="mt-3 p-3 bg-red-50 border-l-3 border-red-400 rounded">
+                              <div className="flex items-start gap-2">
+                                <LuInfo className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs font-semibold text-red-800 mb-1">
+                                    Catatan Dinas {proposal.dinas_status === 'rejected' ? '(Ditolak)' : '(Revisi)'}
+                                  </p>
+                                  <p className="text-sm text-red-700">{proposal.dinas_catatan}</p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Catatan Kecamatan */}
+                          {proposal.kecamatan_catatan && (proposal.kecamatan_status === 'rejected' || proposal.kecamatan_status === 'revision') && (
+                            <div className="mt-3 p-3 bg-purple-50 border-l-3 border-purple-400 rounded">
+                              <div className="flex items-start gap-2">
+                                <LuInfo className="w-4 h-4 text-purple-600 mt-0.5 flex-shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs font-semibold text-purple-800 mb-1">
+                                    Catatan Kecamatan {proposal.kecamatan_status === 'rejected' ? '(Ditolak)' : '(Revisi)'}
+                                  </p>
+                                  <p className="text-sm text-purple-700">{proposal.kecamatan_catatan}</p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Form Upload Ulang */}
+                          {(
+                            ((proposal.dinas_status === "rejected" || proposal.dinas_status === "revision") && !proposal.submitted_to_dinas_at) ||
+                            ((proposal.kecamatan_status === "rejected" || proposal.kecamatan_status === "revision") && !proposal.submitted_to_kecamatan)
+                          ) && (
+                            <div className="mt-3 bg-gradient-to-r from-orange-50 to-red-50 p-4 rounded-lg border-2 border-orange-300">
+                              <div className="flex items-center gap-2 mb-3">
+                                <LuRefreshCw className="w-5 h-5 text-orange-600" />
+                                <span className="font-bold text-orange-900 text-base">Upload Ulang Proposal</span>
+                                {(proposal.dinas_status === 'revision' || proposal.dinas_status === 'rejected') && (
+                                  <div className="flex items-center gap-1 px-2 py-1 bg-purple-100 border border-purple-300 rounded-lg ml-auto">
+                                    <LuInfo className="w-3 h-3 text-purple-700" />
+                                    <span className="text-xs font-bold text-purple-800">Dari DINAS</span>
+                                  </div>
+                                )}
+                                {(proposal.kecamatan_status === 'revision' || proposal.kecamatan_status === 'rejected') && (
+                                  <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 border border-blue-300 rounded-lg ml-auto">
+                                    <LuInfo className="w-3 h-3 text-blue-700" />
+                                    <span className="text-xs font-bold text-blue-800">Dari KECAMATAN</span>
+                                  </div>
+                                )}
+                              </div>
+                              
+                              <div className="grid grid-cols-2 gap-3 mb-3">
+                                <div className="space-y-1">
+                                  <label className="text-xs font-semibold text-orange-800">Nama Kegiatan Baru (opsional)</label>
+                                  <input
+                                    type="text"
+                                    value={uploadForms[proposal.id]?.nama_kegiatan || ''}
+                                    onChange={(e) => updateUploadForm(proposal.id, 'nama_kegiatan', e.target.value)}
+                                    placeholder="Kosongkan jika tidak diubah"
+                                    className="w-full px-3 py-2 text-sm border-2 border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-200 focus:border-orange-500 bg-white"
+                                  />
+                                </div>
+
+                                <div className="space-y-1">
+                                  <label className="text-xs font-semibold text-orange-800">Volume Baru (opsional)</label>
+                                  <input
+                                    type="text"
+                                    value={uploadForms[proposal.id]?.volume || ''}
+                                    onChange={(e) => updateUploadForm(proposal.id, 'volume', e.target.value)}
+                                    placeholder="Kosongkan jika tidak diubah"
+                                    className="w-full px-3 py-2 text-sm border-2 border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-200 focus:border-orange-500 bg-white"
+                                  />
+                                </div>
+
+                                <div className="space-y-1">
+                                  <label className="text-xs font-semibold text-orange-800">Lokasi Baru (opsional)</label>
+                                  <input
+                                    type="text"
+                                    value={uploadForms[proposal.id]?.lokasi || ''}
+                                    onChange={(e) => updateUploadForm(proposal.id, 'lokasi', e.target.value)}
+                                    placeholder="Kosongkan jika tidak diubah"
+                                    className="w-full px-3 py-2 text-sm border-2 border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-200 focus:border-orange-500 bg-white"
+                                  />
+                                </div>
+
+                                <div className="space-y-1">
+                                  <label className="text-xs font-semibold text-orange-800">Anggaran Baru (opsional)</label>
+                                  <div className="relative">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 text-sm font-medium">Rp</span>
+                                    <input
+                                      type="text"
+                                      value={formatRupiah(uploadForms[proposal.id]?.anggaran || '')}
+                                      onChange={(e) => updateUploadForm(proposal.id, 'anggaran', e.target.value.replace(/\D/g, ''))}
+                                      placeholder="Kosongkan jika tidak diubah"
+                                      className="w-full pl-10 pr-3 py-2 text-sm border-2 border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-200 focus:border-orange-500 bg-white"
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <div className="flex items-center gap-3">
+                                <input
+                                  type="file"
+                                  accept=".pdf"
+                                  onChange={(e) => {
+                                    const file = e.target.files[0];
+                                    if (file) {
+                                      handleRevisionUpload(proposal, proposal.kegiatan_list[0], file);
+                                      e.target.value = null;
+                                    }
+                                  }}
+                                  className="hidden"
+                                  id={`file-revision-compact-noninf-${proposal.id}`}
+                                />
+                                <label
+                                  htmlFor={`file-revision-compact-noninf-${proposal.id}`}
+                                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-lg font-semibold text-sm hover:from-orange-700 hover:to-red-700 cursor-pointer transition-all shadow-md"
+                                >
+                                  <LuUpload className="w-4 h-4" />
+                                  Pilih File PDF Baru
+                                </label>
+                                <p className="text-xs text-gray-600">
+                                  Max 5MB • Setelah upload, gunakan tombol <strong>"Kirim ke Dinas Terkait"</strong> di atas
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Tombol Upload Proposal Baru - Flow 3 Step */}
+              {!isSubmitted && (
+                <div className="p-6">
+                  <button
+                    onClick={() => {
+                      setShowUploadFormNonInfra(!showUploadFormNonInfra);
+                      if (!showUploadFormNonInfra) {
+                        setSelectedKegiatanIdNonInfra('');
+                      }
+                    }}
+                    className="w-full px-6 py-4 bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white rounded-xl hover:from-purple-700 hover:to-fuchsia-700 flex items-center justify-center gap-3 font-bold text-lg shadow-lg hover:shadow-xl transition-all transform hover:scale-[1.02]"
+                  >
+                    <LuUpload className="w-6 h-6" />
+                    {showUploadFormNonInfra ? 'Tutup Form' : 'Tambah Proposal Non-Infrastruktur Baru'}
+                  </button>
+
+                  {/* Dropdown & Form Upload Inline */}
+                  {showUploadFormNonInfra && (
+                    <div className="mt-4 p-4 sm:p-6 bg-white rounded-2xl border-2 border-purple-300 shadow-xl">
+                      <div className="space-y-5">
+                        {/* Dropdown Pilih Program */}
+                        <div className="dropdown-container-noninf">
+                          <label className="flex items-center gap-3 text-lg sm:text-xl font-bold text-purple-900 mb-4">
+                            <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 text-white rounded-full shadow-md">
+                              <span className="text-base font-bold">1</span>
+                            </div>
+                            <span>Pilih Program Non-Infrastruktur</span>
+                          </label>
+                          <div className="relative">
+                            {/* Custom Dropdown Button */}
+                            <button
+                              ref={dropdownButtonRefNonInfra}
+                              type="button"
+                              onClick={() => setDropdownOpenNonInfra(!dropdownOpenNonInfra)}
+                              className="w-full pl-5 pr-12 py-5 bg-gradient-to-r from-purple-50 to-fuchsia-50 border-2 border-purple-300 rounded-xl text-base sm:text-lg font-semibold text-left shadow-sm focus:outline-none focus:ring-4 focus:ring-purple-200 focus:border-purple-500 hover:border-purple-400 transition-all duration-200 cursor-pointer"
+                            >
+                              <span className={selectedKegiatanIdNonInfra ? 'text-gray-800' : 'text-gray-500'}>
+                                {selectedKegiatanIdNonInfra 
+                                  ? (() => {
+                                      const selected = nonInfrastrukturData.find(i => i.kegiatan.id.toString() === selectedKegiatanIdNonInfra);
+                                      const name = selected?.kegiatan.nama_kegiatan || '';
+                                      return name.length > 100 ? name.substring(0, 100) + '...' : name;
+                                    })()
+                                  : '-- Pilih Salah Satu Program --'
+                                }
+                              </span>
+                            </button>
+                            {/* Custom Dropdown Arrow */}
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                              <svg 
+                                className={`w-7 h-7 text-purple-600 transition-transform duration-200 ${dropdownOpenNonInfra ? 'rotate-180' : ''}`} 
+                                fill="none" 
+                                stroke="currentColor" 
+                                viewBox="0 0 24 24"
+                              >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </div>
+                            
+                            {/* Dropdown Menu with Scroll - Fixed Position */}
+                            {dropdownOpenNonInfra && dropdownButtonRefNonInfra.current && (() => {
+                              const rect = dropdownButtonRefNonInfra.current.getBoundingClientRect();
+                              return (
+                                <div 
+                                  className="fixed z-[9999] bg-white border-2 border-purple-300 rounded-xl shadow-2xl overflow-hidden"
+                                  style={{
+                                    top: `${rect.bottom + window.scrollY + 8}px`,
+                                    left: `${rect.left + window.scrollX}px`,
+                                    width: `${rect.width}px`
+                                  }}
+                                >
+                                  <div className="max-h-96 overflow-y-auto custom-scrollbar">
+                                    {nonInfrastrukturData.map((item, idx) => (
+                                      <button
+                                        key={item.kegiatan.id}
+                                        type="button"
+                                        onClick={() => {
+                                          setSelectedKegiatanIdNonInfra(item.kegiatan.id.toString());
+                                          setDropdownOpenNonInfra(false);
+                                        }}
+                                        className={`w-full px-5 py-4 text-left text-base sm:text-lg font-medium transition-colors leading-relaxed ${
+                                          selectedKegiatanIdNonInfra === item.kegiatan.id.toString()
+                                            ? 'bg-purple-100 text-purple-900 font-semibold'
+                                            : 'text-gray-800 hover:bg-purple-50'
+                                        } ${idx !== nonInfrastrukturData.length - 1 ? 'border-b border-gray-200' : ''}`}
+                                      >
+                                        <span className="block">
+                                          {item.kegiatan.nama_kegiatan}
+                                        </span>
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            })()}
+                          </div>
+                          {selectedKegiatanIdNonInfra && (
+                            <p className="mt-3 text-sm sm:text-base text-gray-600 flex items-center gap-2">
+                              <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                              </svg>
+                              Program terpilih. Silakan isi detail proposal di bawah.
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Form Input - Muncul setelah pilih program */}
+                        {selectedKegiatanIdNonInfra && (
+                          <div className="pt-5 border-t-2 border-purple-200">
+                            <div className="flex items-center gap-2 mb-4">
+                              <div className="flex items-center justify-center w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-600 text-white rounded-full shadow-md">
+                                <span className="text-sm font-bold">2</span>
+                              </div>
+                              <h4 className="text-base sm:text-lg font-bold text-gray-900">
+                                Isi Detail Proposal
+                              </h4>
+                            </div>
+                            {/* Reuse KegiatanRow component untuk form */}
+                            {(() => {
+                              const selectedItem = nonInfrastrukturData.find(i => i.kegiatan.id.toString() === selectedKegiatanIdNonInfra);
+                              if (!selectedItem) return null;
+                              return (
+                                <KegiatanRow
+                                  key={`upload-noninf-${selectedItem.kegiatan.id}`}
+                                  item={selectedItem}
+                                  index={0}
+                                  onUpload={handleUpload}
+                                  onRevisionUpload={handleRevisionUpload}
+                                  onReplaceFile={handleReplaceFile}
+                                  onUploadSurat={handleUploadSurat}
+                                  onDelete={handleDelete}
+                                  onViewPdf={handleViewPdf}
+                                  getStatusBadge={getStatusBadge}
+                                  imageBaseUrl={imageBaseUrl}
+                                  isSubmitted={isSubmitted}
+                                  uploadForms={uploadForms}
+                                  updateUploadForm={updateUploadForm}
+                                  formatRupiah={formatRupiah}
+                                />
+                              );
+                            })()}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
       </div>
 
-      {/* NEW: Modal Form Proposal Baru */}
-      {showNewProposalForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-green-500 to-emerald-600 px-6 py-4 flex items-center justify-between sticky top-0">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-white bg-opacity-30 rounded-lg flex items-center justify-center">
-                  <LuUpload className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold text-white">Buat Proposal Baru</h2>
-                  <p className="text-sm text-white text-opacity-90">Upload proposal dengan multiple kegiatan</p>
-                </div>
-              </div>
-              <button
-                onClick={() => {
-                  setShowNewProposalForm(false);
-                  setSelectedKegiatanIds([]);
-                }}
-                className="w-8 h-8 bg-white bg-opacity-30 hover:bg-opacity-40 rounded-lg flex items-center justify-center transition-all"
-              >
-                <LuX className="w-5 h-5 text-white" />
-              </button>
-            </div>
-
-            {/* Body */}
-            <div className="p-6 space-y-6">
-              {/* Pilih Kegiatan */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-3">
-                  Pilih Kegiatan <span className="text-red-500">*</span>
-                </label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-60 overflow-y-auto border border-gray-200 rounded-lg p-3">
-                  {masterKegiatan.map((kegiatan) => (
-                    <label
-                      key={kegiatan.id}
-                      className={`flex items-start gap-3 p-3 border-2 rounded-lg cursor-pointer transition-all ${
-                        selectedKegiatanIds.includes(kegiatan.id)
-                          ? 'border-green-500 bg-green-50'
-                          : 'border-gray-200 hover:border-green-300'
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedKegiatanIds.includes(kegiatan.id)}
-                        onChange={() => toggleKegiatanSelection(kegiatan.id)}
-                        className="mt-1 w-4 h-4 text-green-600 rounded focus:ring-green-500"
-                      />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-900">{kegiatan.nama_kegiatan}</p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {kegiatan.jenis_kegiatan === 'infrastruktur' ? 'Infrastruktur' : 'Non-Infrastruktur'}
-                        </p>
-                      </div>
-                    </label>
-                  ))}
-                </div>
-                {selectedKegiatanIds.length > 0 && (
-                  <p className="text-sm text-green-600 mt-2 font-medium">
-                    {selectedKegiatanIds.length} kegiatan dipilih
-                  </p>
-                )}
-              </div>
-
-              {/* Judul Proposal */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Judul Proposal <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={newProposalData.judul_proposal}
-                  onChange={(e) => setNewProposalData({ ...newProposalData, judul_proposal: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  placeholder="Contoh: Pembangunan Infrastruktur Desa Tahun 2026"
-                />
-              </div>
-
-              {/* Nama Kegiatan Spesifik */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Nama Kegiatan Spesifik
-                </label>
-                <input
-                  type="text"
-                  value={newProposalData.nama_kegiatan_spesifik}
-                  onChange={(e) => setNewProposalData({ ...newProposalData, nama_kegiatan_spesifik: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  placeholder="Opsional"
-                />
-              </div>
-
-              {/* Volume & Lokasi */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Volume
-                  </label>
-                  <input
-                    type="text"
-                    value={newProposalData.volume}
-                    onChange={(e) => setNewProposalData({ ...newProposalData, volume: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    placeholder="Contoh: 500 meter"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Lokasi
-                  </label>
-                  <input
-                    type="text"
-                    value={newProposalData.lokasi}
-                    onChange={(e) => setNewProposalData({ ...newProposalData, lokasi: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    placeholder="Contoh: Kampung Babakan"
-                  />
-                </div>
-              </div>
-
-              {/* Anggaran Usulan */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Anggaran Usulan
-                </label>
-                <input
-                  type="text"
-                  value={newProposalData.anggaran_usulan}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, '');
-                    const formatted = new Intl.NumberFormat('id-ID').format(value);
-                    setNewProposalData({ ...newProposalData, anggaran_usulan: formatted });
-                  }}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  placeholder="Contoh: 50000000"
-                />
-              </div>
-
-              {/* Upload File */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  File Proposal (PDF) <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="file"
-                  accept=".pdf"
-                  onChange={(e) => setNewProposalData({ ...newProposalData, file: e.target.files[0] })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                />
-                {newProposalData.file && (
-                  <p className="text-sm text-gray-600 mt-2">
-                    File dipilih: {newProposalData.file.name}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex items-center justify-end gap-3">
-              <button
-                onClick={() => {
-                  setShowNewProposalForm(false);
-                  setSelectedKegiatanIds([]);
-                }}
-                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-semibold transition-all"
-              >
-                Batal
-              </button>
-              <button
-                onClick={handleSubmitNewProposal}
-                className="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-lg font-semibold transition-all flex items-center gap-2"
-              >
-                <LuUpload className="w-4 h-4" />
-                Upload Proposal
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Modal Contoh Proposal */}
       <ContohProposalModal
@@ -2564,7 +3154,7 @@ const KegiatanRow = ({ item, index, onUpload, onRevisionUpload, onReplaceFile, o
             {/* Judul & Detail */}
             <div className="flex-1 space-y-2">
               <div className="flex items-center gap-2">
-                <h4 className="text-base font-semibold text-gray-900">{kegiatan.nama_kegiatan}</h4>
+                <h4 className="text-base font-bold text-gray-900 leading-tight">{kegiatan.nama_kegiatan}</h4>
                 {proposal.status === 'pending' && !proposal.submitted_to_kecamatan && !proposal.submitted_to_dinas_at && (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-50 text-green-600 rounded text-xs font-medium">
                     <LuCheck className="w-3 h-3" />
@@ -2897,9 +3487,10 @@ const KegiatanRow = ({ item, index, onUpload, onRevisionUpload, onReplaceFile, o
           )}
 
           {/* Form Upload Ulang - Horizontal - Muncul jika: 1) Kecamatan reject/revisi ATAU 2) Dinas reject/revisi */}
-          {!proposal.submitted_to_kecamatan && (
-            (proposal.status === "rejected" || proposal.status === "revision") ||
-            (proposal.dinas_status === "rejected" || proposal.dinas_status === "revision")
+          {(
+            ((proposal.dinas_status === "rejected" || proposal.dinas_status === "revision") && !proposal.submitted_to_dinas_at) ||
+            ((proposal.kecamatan_status === "rejected" || proposal.kecamatan_status === "revision") && !proposal.submitted_to_kecamatan) ||
+            ((proposal.status === "rejected" || proposal.status === "revision") && !proposal.submitted_to_dinas_at)
           ) && (
             <div className="bg-gradient-to-r from-orange-50 to-red-50 p-4 rounded-lg border-2 border-orange-300">
               <div className="flex items-center justify-between gap-3 mb-3">
@@ -3013,7 +3604,7 @@ const KegiatanRow = ({ item, index, onUpload, onRevisionUpload, onReplaceFile, o
         <div className="space-y-4">
           {/* Judul Kegiatan Master */}
           <div>
-            <p className="text-sm text-gray-500 mb-3">{kegiatan.nama_kegiatan}</p>
+            <p className="text-base font-bold text-gray-900 mb-3 leading-tight">{kegiatan.nama_kegiatan}</p>
           </div>
 
           {/* Dropdown pilihan judul (jika ada /) */}

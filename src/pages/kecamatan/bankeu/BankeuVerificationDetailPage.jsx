@@ -788,7 +788,10 @@ const BankeuVerificationDetailPage = () => {
         index === self.findIndex(k => parseInt(k.id) === parseInt(kegiatan.id))
       )
       .map(kegiatan => {
-        const proposal = proposals.find(p => parseInt(p.kegiatan_id) === parseInt(kegiatan.id));
+        // Many-to-many: Find proposals yang include kegiatan ini di kegiatan_list
+        const proposal = proposals.find(p => 
+          p.kegiatan_list?.some(k => parseInt(k.id) === parseInt(kegiatan.id))
+        );
         return { kegiatan, proposal: proposal || null };
       });
   }, [masterKegiatan, proposals]);
@@ -801,7 +804,10 @@ const BankeuVerificationDetailPage = () => {
         index === self.findIndex(k => parseInt(k.id) === parseInt(kegiatan.id))
       )
       .map(kegiatan => {
-        const proposal = proposals.find(p => parseInt(p.kegiatan_id) === parseInt(kegiatan.id));
+        // Many-to-many: Find proposals yang include kegiatan ini di kegiatan_list
+        const proposal = proposals.find(p => 
+          p.kegiatan_list?.some(k => parseInt(k.id) === parseInt(kegiatan.id))
+        );
         return { kegiatan, proposal: proposal || null };
       });
   }, [masterKegiatan, proposals]);
@@ -1047,15 +1053,38 @@ const ProposalRow = ({ kegiatan, proposal, index, onVerify, onViewPdf, getStatus
                   <LuCheck className="w-3 h-3" />
                   Sudah Upload
                 </span>
-                {getStatusBadge(proposal.status)}
+                {getStatusBadge(proposal.kecamatan_status || proposal.status)}
               </div>
               
-              {/* Judul yang dipilih desa */}
+              {/* Judul Proposal */}
               <div className="text-sm font-semibold text-gray-900">
-                {proposal.nama_kegiatan_spesifik || proposal.judul_proposal}
+                {proposal.judul_proposal}
               </div>
+
+              {/* Tampilkan semua kegiatan dalam proposal ini (many-to-many) */}
+              {proposal.kegiatan_list && proposal.kegiatan_list.length > 1 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {proposal.kegiatan_list.map((k) => (
+                    <span 
+                      key={k.id}
+                      className={`px-2 py-0.5 rounded text-xs font-medium ${
+                        k.jenis_kegiatan === 'infrastruktur' 
+                          ? 'bg-blue-100 text-blue-700' 
+                          : 'bg-purple-100 text-purple-700'
+                      }`}
+                    >
+                      {k.nama_kegiatan.substring(0, 30)}{k.nama_kegiatan.length > 30 ? '...' : ''}
+                    </span>
+                  ))}
+                </div>
+              )}
               
               {/* Detail kegiatan yang di-input desa */}
+              {proposal.nama_kegiatan_spesifik && (
+                <div className="text-xs text-gray-600 italic">
+                  {proposal.nama_kegiatan_spesifik}
+                </div>
+              )}
               {proposal.volume && (
                 <div className="flex items-center gap-1.5 text-xs text-gray-700">
                   <LuPackage className="w-3.5 h-3.5 text-blue-600" />

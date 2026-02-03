@@ -70,7 +70,7 @@ const DinasVerificationPage = () => {
         p.judul_proposal?.toLowerCase().includes(query) ||
         p.nama_desa?.toLowerCase().includes(query) ||
         p.nama_kecamatan?.toLowerCase().includes(query) ||
-        p.nama_kegiatan?.toLowerCase().includes(query)
+        p.kegiatan_list?.some(k => k.nama_kegiatan?.toLowerCase().includes(query))
       );
     }
 
@@ -79,7 +79,9 @@ const DinasVerificationPage = () => {
     }
 
     if (jenisFilter !== 'all') {
-      filtered = filtered.filter(p => p.jenis_kegiatan === jenisFilter);
+      filtered = filtered.filter(p => 
+        p.kegiatan_list?.some(k => k.jenis_kegiatan === jenisFilter)
+      );
     }
 
     // Group by kecamatan -> desa
@@ -515,8 +517,23 @@ const DinasVerificationPage = () => {
                                           <LuFileText className="w-4 h-4 text-amber-600" />
                                         </div>
                                         <div>
-                                          <p className="text-xs text-gray-500 mb-0.5">{proposal.nama_kegiatan}</p>
-                                          <p className="font-semibold text-gray-900 text-sm line-clamp-2">{proposal.nama_kegiatan_spesifik || proposal.judul_proposal}</p>
+                                          <p className="font-semibold text-gray-900 text-sm line-clamp-2 mb-1.5">{proposal.judul_proposal}</p>
+                                          {proposal.kegiatan_list && proposal.kegiatan_list.length > 0 && (
+                                            <div className="flex flex-wrap gap-1">
+                                              {proposal.kegiatan_list.map((kegiatan) => (
+                                                <span 
+                                                  key={kegiatan.id}
+                                                  className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                                    kegiatan.jenis_kegiatan === 'infrastruktur' 
+                                                      ? 'bg-blue-100 text-blue-700' 
+                                                      : 'bg-purple-100 text-purple-700'
+                                                  }`}
+                                                >
+                                                  {kegiatan.nama_kegiatan.substring(0, 30)}...
+                                                </span>
+                                              ))}
+                                            </div>
+                                          )}
                                           
                                           {/* Detail kegiatan dari desa */}
                                           {(proposal.volume || proposal.lokasi) && (
@@ -625,8 +642,23 @@ const DinasVerificationPage = () => {
                                   <LuFileText className="w-4 h-4 text-amber-600" />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-xs text-gray-500 mb-0.5">{proposal.nama_kegiatan}</p>
-                                  <p className="font-semibold text-gray-900 text-sm line-clamp-2">{proposal.nama_kegiatan_spesifik || proposal.judul_proposal}</p>
+                                  <p className="font-semibold text-gray-900 text-sm line-clamp-2 mb-1.5">{proposal.judul_proposal}</p>
+                                  {proposal.kegiatan_list && proposal.kegiatan_list.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mt-1.5">
+                                      {proposal.kegiatan_list.map((kegiatan) => (
+                                        <span 
+                                          key={kegiatan.id}
+                                          className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                            kegiatan.jenis_kegiatan === 'infrastruktur' 
+                                              ? 'bg-blue-100 text-blue-700' 
+                                              : 'bg-purple-100 text-purple-700'
+                                          }`}
+                                        >
+                                          {kegiatan.nama_kegiatan.substring(0, 30)}...
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
                                   
                                   {/* Detail kegiatan dari desa */}
                                   {(proposal.volume || proposal.lokasi) && (

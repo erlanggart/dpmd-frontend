@@ -160,8 +160,23 @@ const DinasVerificationDetailPage = () => {
             <LuFileText className="w-8 h-8 text-amber-600" />
           </div>
           <div className="flex-1">
-            <h2 className="text-xl font-bold text-gray-800">{proposal.nama_kegiatan_spesifik || proposal.judul_proposal}</h2>
-            <p className="text-sm text-gray-500 mt-1">{proposal.bankeu_master_kegiatan?.nama_kegiatan}</p>
+            <h2 className="text-xl font-bold text-gray-800">{proposal.judul_proposal}</h2>
+            {proposal.kegiatan_list && proposal.kegiatan_list.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {proposal.kegiatan_list.map((kegiatan) => (
+                  <span 
+                    key={kegiatan.id}
+                    className={`px-2 py-1 rounded text-xs font-medium ${
+                      kegiatan.jenis_kegiatan === 'infrastruktur' 
+                        ? 'bg-blue-100 text-blue-700' 
+                        : 'bg-purple-100 text-purple-700'
+                    }`}
+                  >
+                    {kegiatan.nama_kegiatan}
+                  </span>
+                ))}
+              </div>
+            )}
             {proposal.deskripsi && (
               <p className="text-gray-600 mt-2">{proposal.deskripsi}</p>
             )}
@@ -199,9 +214,24 @@ const DinasVerificationDetailPage = () => {
           </div>
           <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
             <LuClipboardList className="w-5 h-5 text-gray-400" />
-            <div>
-              <p className="text-xs text-gray-500">Kegiatan</p>
-              <p className="font-medium text-gray-800 text-sm line-clamp-1">{proposal.bankeu_master_kegiatan?.nama_kegiatan}</p>
+            <div className="flex-1">
+              <p className="text-xs text-gray-500">Kegiatan ({proposal.kegiatan_list?.length || 0})</p>
+              {proposal.kegiatan_list && proposal.kegiatan_list.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {proposal.kegiatan_list.map((kegiatan) => (
+                    <span 
+                      key={kegiatan.id}
+                      className={`px-1.5 py-0.5 rounded text-xs ${
+                        kegiatan.jenis_kegiatan === 'infrastruktur' 
+                          ? 'bg-blue-100 text-blue-700' 
+                          : 'bg-purple-100 text-purple-700'
+                      }`}
+                    >
+                      {kegiatan.nama_kegiatan.substring(0, 20)}...
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
