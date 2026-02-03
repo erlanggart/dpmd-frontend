@@ -2536,10 +2536,10 @@ const BankeuProposalPage = () => {
 
                   {/* Dropdown & Form Upload Inline */}
                   {showUploadFormInfra && (
-                    <div className="mt-4 p-4 sm:p-6 bg-white rounded-2xl border-2 border-blue-300 shadow-xl">
+                    <div className="mt-4 p-4 sm:p-6 bg-white rounded-2xl border-2 border-blue-300 shadow-xl transition-all duration-300">
                       <div className="space-y-5">
                         {/* Dropdown Pilih Program */}
-                        <div className="dropdown-container-infra">
+                        <div className={`dropdown-container-infra relative ${dropdownOpenInfra ? 'mb-96' : 'mb-6'}`}>
                           <label className="flex items-center gap-3 text-lg sm:text-xl font-bold text-blue-900 mb-4">
                             <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-full shadow-md">
                               <span className="text-base font-bold">1</span>
@@ -2578,18 +2578,9 @@ const BankeuProposalPage = () => {
                             </div>
                             
                             {/* Dropdown Menu with Scroll - Fixed Position */}
-                            {dropdownOpenInfra && dropdownButtonRefInfra.current && (() => {
-                              const rect = dropdownButtonRefInfra.current.getBoundingClientRect();
-                              return (
-                                <div 
-                                  className="fixed z-[9999] bg-white border-2 border-blue-300 rounded-xl shadow-2xl overflow-hidden"
-                                  style={{
-                                    top: `${rect.bottom + window.scrollY + 8}px`,
-                                    left: `${rect.left + window.scrollX}px`,
-                                    width: `${rect.width}px`
-                                  }}
-                                >
-                                  <div className="max-h-96 overflow-y-auto custom-scrollbar">
+                            {dropdownOpenInfra && (
+                              <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-white border-2 border-blue-300 rounded-xl shadow-2xl overflow-hidden">
+                                <div className="max-h-80 overflow-y-auto custom-scrollbar">
                                     {infrastrukturData.map((item, idx) => (
                                       <button
                                         key={item.kegiatan.id}
@@ -2602,17 +2593,16 @@ const BankeuProposalPage = () => {
                                           selectedKegiatanIdInfra === item.kegiatan.id.toString()
                                             ? 'bg-blue-100 text-blue-900 font-semibold'
                                             : 'text-gray-800 hover:bg-blue-50'
-                                        } ${idx !== infrastrukturData.length - 1 ? 'border-b border-gray-200' : ''}`}
+                                        } ${idx !== infrastrukturData.length - 1 ? 'border-b border-gray-200' : 'mb-2'}`}
                                       >
                                         <span className="block">
                                           {item.kegiatan.nama_kegiatan}
                                         </span>
                                       </button>
                                     ))}
-                                  </div>
                                 </div>
-                              );
-                            })()}
+                              </div>
+                            )}
                           </div>
                           {selectedKegiatanIdInfra && (
                             <p className="mt-3 text-sm sm:text-base text-gray-600 flex items-center gap-2">
@@ -2937,10 +2927,10 @@ const BankeuProposalPage = () => {
 
                   {/* Dropdown & Form Upload Inline */}
                   {showUploadFormNonInfra && (
-                    <div className="mt-4 p-4 sm:p-6 bg-white rounded-2xl border-2 border-purple-300 shadow-xl">
+                    <div className="mt-4 p-4 sm:p-6 bg-white rounded-2xl border-2 border-purple-300 shadow-xl transition-all duration-300">
                       <div className="space-y-5">
                         {/* Dropdown Pilih Program */}
-                        <div className="dropdown-container-noninf">
+                        <div className={`dropdown-container-noninf relative ${dropdownOpenNonInfra ? 'mb-96' : 'mb-6'}`}>
                           <label className="flex items-center gap-3 text-lg sm:text-xl font-bold text-purple-900 mb-4">
                             <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 text-white rounded-full shadow-md">
                               <span className="text-base font-bold">1</span>
@@ -2979,18 +2969,9 @@ const BankeuProposalPage = () => {
                             </div>
                             
                             {/* Dropdown Menu with Scroll - Fixed Position */}
-                            {dropdownOpenNonInfra && dropdownButtonRefNonInfra.current && (() => {
-                              const rect = dropdownButtonRefNonInfra.current.getBoundingClientRect();
-                              return (
-                                <div 
-                                  className="fixed z-[9999] bg-white border-2 border-purple-300 rounded-xl shadow-2xl overflow-hidden"
-                                  style={{
-                                    top: `${rect.bottom + window.scrollY + 8}px`,
-                                    left: `${rect.left + window.scrollX}px`,
-                                    width: `${rect.width}px`
-                                  }}
-                                >
-                                  <div className="max-h-96 overflow-y-auto custom-scrollbar">
+                            {dropdownOpenNonInfra && (
+                              <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-white border-2 border-purple-300 rounded-xl shadow-2xl overflow-hidden">
+                                <div className="max-h-80 overflow-y-auto custom-scrollbar">
                                     {nonInfrastrukturData.map((item, idx) => (
                                       <button
                                         key={item.kegiatan.id}
@@ -3003,17 +2984,16 @@ const BankeuProposalPage = () => {
                                           selectedKegiatanIdNonInfra === item.kegiatan.id.toString()
                                             ? 'bg-purple-100 text-purple-900 font-semibold'
                                             : 'text-gray-800 hover:bg-purple-50'
-                                        } ${idx !== nonInfrastrukturData.length - 1 ? 'border-b border-gray-200' : ''}`}
+                                        } ${idx !== nonInfrastrukturData.length - 1 ? 'border-b border-gray-200' : 'mb-2'}`}
                                       >
                                         <span className="block">
                                           {item.kegiatan.nama_kegiatan}
                                         </span>
                                       </button>
                                     ))}
-                                  </div>
                                 </div>
-                              );
-                            })()}
+                              </div>
+                            )}
                           </div>
                           {selectedKegiatanIdNonInfra && (
                             <p className="mt-3 text-sm sm:text-base text-gray-600 flex items-center gap-2">
