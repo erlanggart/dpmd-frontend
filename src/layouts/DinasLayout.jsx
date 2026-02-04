@@ -13,7 +13,9 @@ import {
 import { 
   LuLayoutDashboard, 
   LuClipboardCheck,
-  LuBuilding2
+  LuBuilding2,
+  LuSettings,
+  LuUsers
 } from "react-icons/lu";
 import InstallPWA from "../components/InstallPWA";
 
@@ -31,6 +33,18 @@ const menuItems = [
     path: "/dinas/bankeu",
     icon: LuClipboardCheck,
   },
+  {
+    id: "verifikator",
+    label: "Kelola Verifikator",
+    path: "/dinas/verifikator",
+    icon: LuUsers,
+  },
+  {
+    id: "konfigurasi",
+    label: "Konfigurasi",
+    path: "/dinas/konfigurasi",
+    icon: LuSettings,
+  },
 ];
 
 const DinasLayout = () => {
@@ -44,6 +58,15 @@ const DinasLayout = () => {
   const [showSearchResults, setShowSearchResults] = useState(false);
   const dropdownRef = useRef(null);
   const searchRef = useRef(null);
+
+  // Filter menu items based on user's dinas_id (Konfigurasi only for dinas users)
+  const filteredMenuItems = menuItems.filter(item => {
+    if (item.id === 'konfigurasi') {
+      // Only show konfigurasi if user has dinas_id
+      return user?.dinas_id != null;
+    }
+    return true;
+  });
 
   const handleLogout = () => {
     logout();
@@ -66,7 +89,7 @@ const DinasLayout = () => {
       return;
     }
 
-    const results = menuItems.filter(
+    const results = filteredMenuItems.filter(
       (item) =>
         item.label.toLowerCase().includes(query.toLowerCase()) ||
         item.path.toLowerCase().includes(query.toLowerCase())

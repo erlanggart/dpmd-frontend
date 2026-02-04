@@ -397,7 +397,7 @@ const BankeuProposalPage = () => {
 
   // Auto-expand stats panel ketika tombol kirim sudah tersedia
   useEffect(() => {
-    // Hitung canSubmitToKecamatan dan canSubmitToDinas
+    // Hitung canSubmitNewProposals dan canResubmitRevisions
     const unsendToKecamatan = proposals.filter(p => 
       p.status === 'pending' && 
       !p.submitted_to_kecamatan && 
@@ -1069,11 +1069,11 @@ const BankeuProposalPage = () => {
   };
 
   const handleSubmitToDinas = async () => {
-    const count = unsendToDinasCount;
+    const count = fromDinasOrDPMDUploaded.length;
     
     const result = await Swal.fire({
-      title: 'Kirim Ulang Proposal Revisi?',
-      html: `<strong>${count} proposal revisi</strong> akan dikirim ulang ke <strong>${resubmitDestination}</strong>.<br><strong>Proses ini tidak dapat dibatalkan!</strong>`,
+      title: 'Kirim Ulang ke Dinas Terkait?',
+      html: `<strong>${count} proposal revisi</strong> dari Dinas akan dikirim ulang ke <strong>Dinas Terkait</strong>.<br><strong>Proses ini tidak dapat dibatalkan!</strong>`,
       icon: "question",
       showCancelButton: true,
       confirmButtonColor: "#10b981",
@@ -1085,7 +1085,7 @@ const BankeuProposalPage = () => {
     if (result.isConfirmed) {
       try {
         Swal.fire({
-          title: 'Mengirim ulang proposal...',
+          title: 'Mengirim ulang ke Dinas...',
           text: 'Mohon tunggu',
           allowOutsideClick: false,
           didOpen: () => {
@@ -1093,18 +1093,66 @@ const BankeuProposalPage = () => {
           }
         });
 
-        const response = await api.post('/desa/bankeu/resubmit');
+        // Kirim dengan parameter destination=dinas
+        const response = await api.post('/desa/bankeu/resubmit', { destination: 'dinas' });
         await fetchData();
 
         Swal.fire({
           icon: "success",
           title: "Berhasil!",
-          text: response.data.message || "Proposal revisi berhasil dikirim ulang",
+          text: response.data.message || "Proposal revisi berhasil dikirim ulang ke Dinas",
           timer: 2500,
           showConfirmButton: false
         });
       } catch (error) {
-        console.error('Error resubmit proposals:', error);
+        console.error('Error resubmit to Dinas:', error);
+        Swal.fire({
+          icon: "error",
+          title: "Gagal",
+          text: error.response?.data?.message || "Gagal mengirim proposal"
+        });
+      }
+    }
+  };
+
+  const handleSubmitToKecamatanResubmit = async () => {
+    const count = fromKecamatanUploaded.length;
+    
+    const result = await Swal.fire({
+      title: 'Kirim Ulang ke Kecamatan?',
+      html: `<strong>${count} proposal revisi</strong> dari Kecamatan akan dikirim ulang ke <strong>Kecamatan</strong>.<br><strong>Proses ini tidak dapat dibatalkan!</strong>`,
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: "#10b981",
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: "Ya, Kirim Ulang!",
+      cancelButtonText: "Batal"
+    });
+
+    if (result.isConfirmed) {
+      try {
+        Swal.fire({
+          title: 'Mengirim ulang ke Kecamatan...',
+          text: 'Mohon tunggu',
+          allowOutsideClick: false,
+          didOpen: () => {
+            Swal.showLoading();
+          }
+        });
+
+        // Kirim dengan parameter destination=kecamatan
+        const response = await api.post('/desa/bankeu/resubmit', { destination: 'kecamatan' });
+        await fetchData();
+
+        Swal.fire({
+          icon: "success",
+          title: "Berhasil!",
+          text: response.data.message || "Proposal revisi berhasil dikirim ulang ke Kecamatan",
+          timer: 2500,
+          showConfirmButton: false
+        });
+      } catch (error) {
+        console.error('Error resubmit to Kecamatan:', error);
         Swal.fire({
           icon: "error",
           title: "Gagal",
@@ -1605,13 +1653,18 @@ const BankeuProposalPage = () => {
   );
   
   // NEW FLOW 2026-01-30: Hitung proposal yang belum dikirim ke Dinas
+  // FIXED: Hanya proposal BARU (belum pernah direview)
   const unsendProposals = proposals.filter(p => 
     p.status === 'pending' && 
-    !p.submitted_to_dinas_at
+    !p.submitted_to_dinas_at &&
+    !p.dinas_status && !p.kecamatan_status && !p.dpmd_status // BENAR-BENAR BARU (belum pernah direview)
   );
   
   // DETEKSI ASAL REVISI (NEW FLOW) - Pisah per level:
   // PENTING: Cek p.status dulu! Kalau sudah upload ulang (status='pending'), tidak masuk sini
+  
+  // CRITICAL FIX: Jika ada multiple rejections, tentukan berdasarkan flow terakhir
+  // Priority: DPMD > Kecamatan > Dinas (dari belakang ke depan)
   
   // Dari DPMD: status masih revision/rejected DAN dpmd_status ada
   const fromDPMDRevision = proposals.filter(p => 
@@ -1620,19 +1673,20 @@ const BankeuProposalPage = () => {
     !p.submitted_to_dinas_at // Belum upload ulang
   );
   
-  // Dari Kecamatan: status masih revision/rejected DAN kecamatan_status ada (tapi bukan dari DPMD)
+  // Dari Kecamatan: status masih revision/rejected DAN kecamatan_status ada
+  // TIDAK exclude jika ada dinas_status, karena bisa reject bersamaan
   const fromKecamatanRevision = proposals.filter(p => 
     (p.status === 'revision' || p.status === 'rejected') &&
     (p.kecamatan_status === 'rejected' || p.kecamatan_status === 'revision') &&
-    !p.dpmd_status && // Bukan dari DPMD (prioritas lebih tinggi)
+    !p.dpmd_status && // HANYA exclude jika dari DPMD (prioritas lebih tinggi)
     !p.submitted_to_dinas_at
   );
   
-  // Dari Dinas: status masih revision/rejected DAN dinas_status ada (tapi bukan dari level lain)
+  // Dari Dinas: status masih revision/rejected DAN dinas_status ada DAN TIDAK ada kecamatan/dpmd rejection
   const fromDinasRevisionNotUploaded = proposals.filter(p => 
     (p.status === 'revision' || p.status === 'rejected') &&
     (p.dinas_status === 'rejected' || p.dinas_status === 'revision') &&
-    !p.kecamatan_status && // Bukan dari Kecamatan
+    !(p.kecamatan_status === 'rejected' || p.kecamatan_status === 'revision') && // BUKAN dari Kecamatan
     !p.dpmd_status && // Bukan dari DPMD
     !p.submitted_to_dinas_at
   );
@@ -1647,14 +1701,12 @@ const BankeuProposalPage = () => {
   const fromRevisionUploaded = proposals.filter(p => 
     p.status === 'pending' &&
     !p.submitted_to_dinas_at &&
-    !p.submitted_to_kecamatan &&
-    (p.dinas_status || p.kecamatan_status || p.dpmd_status) // Pernah direview
+    (p.dinas_status || p.kecamatan_status || p.dpmd_status) // Pernah direview (ini yang bedakan dari proposal baru)
   );
   
   // Count untuk tombol submit
-  const unsendToKecamatanCount = unsendProposals.filter(p => 
-    !p.dinas_status && !p.kecamatan_status && !p.dpmd_status // Benar-benar baru
-  ).length;
+  // FIXED: unsendToKecamatanCount sekarang sudah tidak perlu filter lagi karena unsendProposals sudah filter proposal baru
+  const unsendToKecamatanCount = unsendProposals.length;
   
   const unsendToDinasCount = fromRevisionUploaded.length; // Revisi SUDAH upload ulang
   
@@ -1680,24 +1732,36 @@ const BankeuProposalPage = () => {
   const hasUnresolvedKecamatanRevisions = fromKecamatanRevision.length > 0;
   
   // Deteksi asal revisi YANG SUDAH DIUPLOAD (untuk tentukan destination)
+  // CRITICAL: Jika dari kecamatan, kirim ke Kecamatan
+  // Jika dari Dinas atau DPMD atau keduanya bersamaan, kirim ke Dinas
   const fromKecamatanUploaded = fromRevisionUploaded.filter(p => 
-    p.kecamatan_status && !p.dpmd_status
+    (p.kecamatan_status === 'rejected' || p.kecamatan_status === 'revision') && 
+    !(p.dinas_status === 'rejected' || p.dinas_status === 'revision') && // TIDAK ada rejection dari Dinas
+    !p.dpmd_status
   );
+  
   const fromDinasOrDPMDUploaded = fromRevisionUploaded.filter(p => 
-    !fromKecamatanUploaded.includes(p)
+    (p.dinas_status === 'rejected' || p.dinas_status === 'revision') || // Ada rejection dari Dinas
+    p.dpmd_status || // Atau dari DPMD
+    ((p.kecamatan_status === 'rejected' || p.kecamatan_status === 'revision') && 
+     (p.dinas_status === 'rejected' || p.dinas_status === 'revision')) // Atau KEDUANYA reject
   );
+  
   const resubmitDestination = fromKecamatanUploaded.length > 0 ? 'Kecamatan' : 'Dinas Terkait';
   
-  // Tombol kirim ke Dinas Terkait: Ada proposal pending BARU DAN tidak ada revision yang belum diupload
-  const canSubmitToKecamatan = unsendToKecamatanCount > 0 && !hasUnresolvedRevisions;
+  // Tombol kirim proposal BARU ke Dinas Terkait: Ada proposal pending BARU DAN tidak ada revision yang belum diupload
+  const canSubmitNewProposals = unsendToKecamatanCount > 0 && !hasUnresolvedRevisions;
   
-  // Tombol kirim ulang (resubmit): Ada proposal revisi yang SUDAH diupload ulang
-  const canSubmitToDinas = unsendToDinasCount > 0;
+  // Tombol kirim ulang REVISI - PISAH PER LEVEL
+  const canResubmitToKecamatan = fromKecamatanUploaded.length > 0; // Ada revisi dari Kecamatan yang sudah diupload
+  const canResubmitToDinas = fromDinasOrDPMDUploaded.length > 0; // Ada revisi dari Dinas/DPMD yang sudah diupload
   
   // DEBUG: Log untuk troubleshooting
   console.log('🔍 DEBUG COUNTING:', {
     proposals: proposals.length,
     fromRevisionUploaded: fromRevisionUploaded.length,
+    fromKecamatanUploaded: fromKecamatanUploaded.length,
+    fromDinasOrDPMDUploaded: fromDinasOrDPMDUploaded.length,
     fromRevisionUploadedData: fromRevisionUploaded.map(p => ({
       id: p.id,
       status: p.status,
@@ -1706,8 +1770,8 @@ const BankeuProposalPage = () => {
       dpmd_status: p.dpmd_status,
       submitted_to_dinas_at: p.submitted_to_dinas_at
     })),
-    unsendToDinasCount,
-    canSubmitToDinas,
+    canResubmitToKecamatan,
+    canResubmitToDinas,
     resubmitDestination
   });
 
@@ -2036,7 +2100,7 @@ const BankeuProposalPage = () => {
             )}
             
             {/* Buttons Kirim - 2 tombol terpisah */}
-            {(canSubmitToKecamatan || canSubmitToDinas) && (
+            {(canSubmitNewProposals || canResubmitToKecamatan || canResubmitToDinas) && (
               <div className="mt-4 pt-4 border-t border-gray-200">
                 {(hasUnresolvedKecamatanRevisions || hasUnresolvedDinasRevisions) ? (
                   <div className="text-center space-y-2">
@@ -2065,8 +2129,8 @@ const BankeuProposalPage = () => {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {/* Tombol Kirim ke Dinas Terkait (First Submission) */}
-                    {canSubmitToKecamatan && (
+                    {/* Tombol Kirim Proposal BARU ke Dinas Terkait */}
+                    {canSubmitNewProposals && (
                       <div>
                         <button
                           onClick={handleSubmitToKecamatan}
@@ -2076,23 +2140,39 @@ const BankeuProposalPage = () => {
                           <span>Kirim ke Dinas Terkait</span>
                         </button>
                         <p className="text-xs text-blue-600 mt-2 text-center font-medium">
-                          ✓ Siap dikirim ke Dinas Terkait ({unsendToKecamatanCount} proposal)
+                          ✓ Proposal baru siap dikirim ke Dinas ({unsendToKecamatanCount} proposal)
                         </p>
                       </div>
                     )}
 
-                    {/* Tombol Kirim Ulang (Resubmit Revisi) */}
-                    {canSubmitToDinas && (
+                    {/* Tombol Kirim Ulang REVISI ke Kecamatan */}
+                    {canResubmitToKecamatan && (
+                      <div>
+                        <button
+                          onClick={handleSubmitToKecamatanResubmit}
+                          className="w-full px-6 py-3 rounded-xl flex items-center justify-center gap-2 font-bold text-sm shadow-md transition-all bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-700 hover:shadow-lg transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                        >
+                          <LuSend className="w-5 h-5" />
+                          <span>Kirim Ulang ke Kecamatan</span>
+                        </button>
+                        <p className="text-xs text-orange-600 mt-2 text-center font-medium">
+                          ✓ Revisi siap dikirim ke Kecamatan ({fromKecamatanUploaded.length} proposal)
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Tombol Kirim Ulang REVISI ke Dinas Terkait */}
+                    {canResubmitToDinas && (
                       <div>
                         <button
                           onClick={handleSubmitToDinas}
                           className="w-full px-6 py-3 rounded-xl flex items-center justify-center gap-2 font-bold text-sm shadow-md transition-all bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 hover:shadow-lg transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
                         >
                           <LuSend className="w-5 h-5" />
-                          <span>Kirim Ulang ke {resubmitDestination}</span>
+                          <span>Kirim Ulang ke Dinas Terkait</span>
                         </button>
                         <p className="text-xs text-green-600 mt-2 text-center font-medium">
-                          ✓ Revisi siap dikirim ke {resubmitDestination} ({unsendToDinasCount} proposal)
+                          ✓ Revisi siap dikirim ke Dinas Terkait ({fromDinasOrDPMDUploaded.length} proposal)
                         </p>
                       </div>
                     )}
@@ -2558,10 +2638,13 @@ const BankeuProposalPage = () => {
                             </div>
                           )}
 
-                          {/* Form Upload Ulang */}
+                          {/* Form Upload Ulang - HANYA TAMPIL jika status masih rejected/revision */}
                           {(
-                            ((proposal.dinas_status === "rejected" || proposal.dinas_status === "revision") && !proposal.submitted_to_dinas_at) ||
-                            ((proposal.kecamatan_status === "rejected" || proposal.kecamatan_status === "revision") && !proposal.submitted_to_kecamatan)
+                            (proposal.status === 'rejected' || proposal.status === 'revision') &&
+                            (
+                              ((proposal.dinas_status === "rejected" || proposal.dinas_status === "revision") && !proposal.submitted_to_dinas_at) ||
+                              ((proposal.kecamatan_status === "rejected" || proposal.kecamatan_status === "revision") && !proposal.submitted_to_kecamatan)
+                            )
                           ) && (
                             <div className="mt-3 bg-gradient-to-r from-orange-50 to-red-50 p-4 rounded-lg border-2 border-orange-300">
                               <div className="flex items-center gap-2 mb-3">
@@ -2954,10 +3037,13 @@ const BankeuProposalPage = () => {
                             </div>
                           )}
 
-                          {/* Form Upload Ulang */}
+                          {/* Form Upload Ulang - HANYA TAMPIL jika status masih rejected/revision */}
                           {(
-                            ((proposal.dinas_status === "rejected" || proposal.dinas_status === "revision") && !proposal.submitted_to_dinas_at) ||
-                            ((proposal.kecamatan_status === "rejected" || proposal.kecamatan_status === "revision") && !proposal.submitted_to_kecamatan)
+                            (proposal.status === 'rejected' || proposal.status === 'revision') &&
+                            (
+                              ((proposal.dinas_status === "rejected" || proposal.dinas_status === "revision") && !proposal.submitted_to_dinas_at) ||
+                              ((proposal.kecamatan_status === "rejected" || proposal.kecamatan_status === "revision") && !proposal.submitted_to_kecamatan)
+                            )
                           ) && (
                             <div className="mt-3 bg-gradient-to-r from-orange-50 to-red-50 p-4 rounded-lg border-2 border-orange-300">
                               <div className="flex items-center gap-2 mb-3">

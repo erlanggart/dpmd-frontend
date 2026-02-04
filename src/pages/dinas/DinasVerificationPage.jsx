@@ -174,12 +174,87 @@ const DinasVerificationPage = () => {
     if (!proposal) return;
     
     try {
+      // VALIDASI: Cek PIC + TTD untuk approve
+      if (action === 'approve') {
+        setSubmitting(true);
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const dinasId = user.dinas_id;
+
+        // Check PIC config + TTD completion
+        const checkRes = await api.get(`/dinas/${dinasId}/config`);
+
+        if (!checkRes.data.success || !checkRes.data.data) {
+          setSubmitting(false);
+          
+          Swal.fire({
+            icon: 'warning',
+            title: 'Konfigurasi Belum Lengkap',
+            html: `
+              <p class="text-gray-700 mb-3">Sebelum menyetujui proposal, Anda harus melengkapi konfigurasi dinas:</p>
+              <ul class="text-left list-disc list-inside text-red-600 mb-4">
+                <li>Data Penanggung Jawab (PIC)</li>
+                <li>Tanda Tangan Digital</li>
+              </ul>
+              <p class="text-sm text-gray-600">
+                Silakan ke menu <strong>Konfigurasi Dinas</strong> untuk melengkapi data.
+              </p>
+            `,
+            confirmButtonText: 'Ke Halaman Konfigurasi',
+            confirmButtonColor: '#3085d6',
+            showCancelButton: true,
+            cancelButtonText: 'Tutup'
+          }).then((result) => {
+            if (result.isConfirmed) {
+              navigate('/dinas/config');
+            }
+          });
+          return;
+        }
+
+        const config = checkRes.data.data;
+        const missing = [];
+        
+        if (!config.nama_pic || !config.jabatan_pic) {
+          missing.push('Data Penanggung Jawab (Nama & Jabatan)');
+        }
+        if (!config.ttd_path) {
+          missing.push('Tanda Tangan Digital');
+        }
+
+        if (missing.length > 0) {
+          setSubmitting(false);
+          
+          Swal.fire({
+            icon: 'warning',
+            title: 'Data Belum Lengkap',
+            html: `
+              <p class="text-gray-700 mb-3">Sebelum menyetujui proposal, Anda harus melengkapi:</p>
+              <ul class="text-left list-disc list-inside text-red-600 mb-4">
+                ${missing.map(item => `<li>${item}</li>`).join('')}
+              </ul>
+              <p class="text-sm text-gray-600">
+                Silakan ke menu <strong>Konfigurasi Dinas</strong> untuk melengkapi data.
+              </p>
+            `,
+            confirmButtonText: 'Ke Halaman Konfigurasi',
+            confirmButtonColor: '#3085d6',
+            showCancelButton: true,
+            cancelButtonText: 'Tutup'
+          }).then((result) => {
+            if (result.isConfirmed) {
+              navigate('/dinas/config');
+            }
+          });
+          return;
+        }
+      }
+
       setSubmitting(true);
       const actionValue = action === 'approve' ? 'approved' : 'revision';
       
       await api.post(`/dinas/bankeu/proposals/${proposal.id}/questionnaire/submit`, {
         action: actionValue,
-        answers: [], // Empty answers, dinas can approve/reject without filling questionnaire
+        answers: [], // Empty answers, dinas only provides signature
         catatan_umum: catatanText
       });
 
@@ -593,15 +668,6 @@ const DinasVerificationPage = () => {
                                           <LuFileText className="w-4 h-4" />
                                         </button>
 
-                                        {/* Isi Kuesioner */}
-                                        <button
-                                          onClick={() => navigate(`/dinas/bankeu/verifikasi/${proposal.id}`)}
-                                        className="p-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-all hover:scale-105 shadow-sm"
-                                        title="Isi Kuesioner"
-                                      >
-                                        <LuEye className="w-4 h-4" />
-                                      </button>
-
                                       {/* Approve & Reject - Show for pending or returned from Kecamatan */}
                                       {(!proposal.dinas_status || proposal.dinas_status === 'pending' || proposal.dinas_status === 'in_review' || proposal.dinas_status === 'rejected' || proposal.dinas_status === 'revision') && (
                                         <>
@@ -723,14 +789,6 @@ const DinasVerificationPage = () => {
                                 >
                                   <LuFileText className="w-3.5 h-3.5" />
                                   <span>Proposal</span>
-                                </button>
-
-                                <button
-                                  onClick={() => navigate(`/dinas/bankeu/verifikasi/${proposal.id}`)}
-                                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors text-xs font-medium"
-                                >
-                                  <LuEye className="w-3.5 h-3.5" />
-                                  <span>Kuesioner</span>
                                 </button>
 
                                 {(!proposal.dinas_status || proposal.dinas_status === 'pending' || proposal.dinas_status === 'in_review' || proposal.dinas_status === 'rejected' || proposal.dinas_status === 'revision') && (

@@ -215,11 +215,20 @@ const BankeuVerificationPage = lazy(() =>
 const BankeuVerificationDetailPage = lazy(() =>
 	import("./pages/kecamatan/bankeu/BankeuVerificationDetailPage")
 );
+const KecamatanTimVerifikasiPage = lazy(() =>
+	import("./pages/kecamatan/bankeu/KecamatanTimVerifikasiPage")
+);
 const DinasVerificationPage = lazy(() =>
 	import("./pages/dinas/DinasVerificationPage")
 );
 const DinasVerificationDetailPage = lazy(() =>
 	import("./pages/dinas/DinasVerificationDetailPage")
+);
+const DinasConfigPage = lazy(() =>
+	import("./pages/dinas/DinasConfigPage")
+);
+const DinasVerifikatorPage = lazy(() =>
+	import("./pages/dinas/DinasVerifikatorPage")
 );
 const DinasDashboardPage = lazy(() =>
 	import("./pages/dinas/DinasDashboardPage")
@@ -752,13 +761,14 @@ function App() {
 					<Route path="dashboard" element={<KecamatanDashboardPage />} />
 					<Route path="bankeu" element={<BankeuVerificationPage />} />
 					<Route path="bankeu/verifikasi/:desaId" element={<BankeuVerificationDetailPage />} />
+					<Route path="bankeu/tim-verifikasi/:desaId" element={<KecamatanTimVerifikasiPage />} />
 				</Route>
 
 				{/* Rute Dinas Terkait - Untuk verifikasi teknis */}
 				<Route
 					path="/dinas"
 					element={
-						<RoleProtectedRoute allowedRoles={['dinas_terkait']}>
+						<RoleProtectedRoute allowedRoles={['dinas_terkait', 'kepala_bidang', 'pegawai']}>
 							<DinasLayout />
 						</RoleProtectedRoute>
 					}
@@ -767,6 +777,8 @@ function App() {
 				<Route path="dashboard" element={<DinasDashboardPage />} />
 				<Route path="bankeu" element={<DinasVerificationPage />} />
 				<Route path="bankeu/verifikasi/:proposalId" element={<DinasVerificationDetailPage />} />
+				<Route path="konfigurasi" element={<DinasConfigPage />} />
+				<Route path="verifikator" element={<DinasVerifikatorPage />} />
 			</Route>
 
 				{/* Rute Kepala Dinas - Exclusive untuk Kepala Dinas */}

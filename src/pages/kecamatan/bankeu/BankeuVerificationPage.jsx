@@ -14,7 +14,6 @@ const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
 
 const BankeuVerificationPage = () => {
   const navigate = useNavigate();
-  const [masterKegiatan, setMasterKegiatan] = useState([]);
   const [proposals, setProposals] = useState([]);
   const [desas, setDesas] = useState([]);
   const [statistics, setStatistics] = useState(null);
@@ -37,26 +36,13 @@ const BankeuVerificationPage = () => {
     try {
       setLoading(true);
 
-      const [masterRes, proposalsRes, statsRes, desasRes, suratRes] = await Promise.all([
-        api.get("/desa/bankeu/master-kegiatan"),
+      const [proposalsRes, statsRes, desasRes, suratRes] = await Promise.all([
         api.get("/kecamatan/bankeu/proposals"),
         api.get("/kecamatan/bankeu/statistics"),
         api.get("/desas"),
         api.get("/kecamatan/bankeu/surat", { params: { tahun: 2026 } }).catch(() => ({ data: { data: [] } }))
       ]);
-
-      // Handle master kegiatan - extract from nested structure
-      const masterData = masterRes.data.data;
-      const allKegiatan = [];
       
-      if (masterData.infrastruktur && Array.isArray(masterData.infrastruktur)) {
-        allKegiatan.push(...masterData.infrastruktur);
-      }
-      if (masterData.non_infrastruktur && Array.isArray(masterData.non_infrastruktur)) {
-        allKegiatan.push(...masterData.non_infrastruktur);
-      }
-      
-      setMasterKegiatan(allKegiatan);
       setProposals(proposalsRes.data.data);
       setStatistics(statsRes.data.data);
       
@@ -762,13 +748,6 @@ const BankeuVerificationPage = () => {
                                       
                                       <div className="flex items-center gap-2 mt-1">
                                         <p className="text-xs text-gray-500">ID: {proposal.id.toString()}</p>
-                                        <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
-                                          proposal.jenis_kegiatan === 'infrastruktur' 
-                                            ? 'bg-blue-100 text-blue-700' 
-                                            : 'bg-purple-100 text-purple-700'
-                                        }`}>
-                                          {proposal.jenis_kegiatan === 'infrastruktur' ? 'Infrastruktur' : 'Non-Infrastruktur'}
-                                        </span>
                                       </div>
                                     </div>
                                   </div>
@@ -845,13 +824,6 @@ const BankeuVerificationPage = () => {
                                 
                                 <div className="flex items-center gap-2 mt-1">
                                   <p className="text-xs text-gray-500">ID: {proposal.id.toString()}</p>
-                                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                                    proposal.jenis_kegiatan === 'infrastruktur' 
-                                      ? 'bg-blue-100 text-blue-700' 
-                                      : 'bg-purple-100 text-purple-700'
-                                  }`}>
-                                    {proposal.jenis_kegiatan === 'infrastruktur' ? 'Infrastruktur' : 'Non-Infrastruktur'}
-                                  </span>
                                 </div>
                               </div>
                             </div>

@@ -148,48 +148,43 @@ const BankeuVerificationDetailPage = () => {
   const { desaId } = useParams();
   const navigate = useNavigate();
   const [desa, setDesa] = useState(null);
-  const [masterKegiatan, setMasterKegiatan] = useState([]);
   const [proposals, setProposals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedInfra, setExpandedInfra] = useState(true);
   const [expandedNonInfra, setExpandedNonInfra] = useState(true);
   const [showPdfModal, setShowPdfModal] = useState(false);
   const [selectedPdf, setSelectedPdf] = useState(null);
+  const [timCompletionStatus, setTimCompletionStatus] = useState({});
 
   useEffect(() => {
     fetchData();
   }, [desaId]);
 
+  // Fungsi untuk check completion status semua tim verifikasi
+  const checkTimCompletion = async (proposalId, kecamatanId) => {
+    try {
+      const response = await api.get(
+        `/bankeu/questionnaire/${proposalId}/kecamatan/check-all?kecamatanId=${kecamatanId}`
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error checking tim completion:", error);
+      return { all_complete: false, tim_status: [] };
+    }
+  };
+
   const fetchData = async () => {
     try {
       setLoading(true);
       
-      const [desaRes, masterRes, proposalsRes] = await Promise.all([
+      const [desaRes, proposalsRes] = await Promise.all([
         api.get(`/desas/${desaId}`),
-        api.get("/desa/bankeu/master-kegiatan"),
         api.get("/kecamatan/bankeu/proposals")
       ]);
 
       // Set desa
-      setDesa(desaRes.data.data);
-
-      // Flatten master kegiatan
-      const masterData = masterRes.data.data;
-      let allKegiatan = [];
-      
-      if (masterData.infrastruktur && Array.isArray(masterData.infrastruktur)) {
-        allKegiatan.push(...masterData.infrastruktur);
-      }
-      if (masterData.non_infrastruktur && Array.isArray(masterData.non_infrastruktur)) {
-        allKegiatan.push(...masterData.non_infrastruktur);
-      }
-      
-      // Deduplikasi berdasarkan ID kegiatan (safety net)
-      const uniqueKegiatan = allKegiatan.filter((kegiatan, index, self) => 
-        index === self.findIndex(k => parseInt(k.id) === parseInt(kegiatan.id))
-      );
-      
-      setMasterKegiatan(uniqueKegiatan);
+      const desaData = desaRes.data.data;
+      setDesa(desaData);
       
       // Filter proposals for this desa ONLY (per-desa review)
       const desaIdNum = parseInt(desaId);
@@ -200,6 +195,23 @@ const BankeuVerificationDetailPage = () => {
       });
       
       setProposals(desaProposals);
+
+      // Check tim completion untuk setiap proposal
+      if (desaProposals.length > 0 && desaData?.kecamatan_id) {
+        const completionChecks = await Promise.all(
+          desaProposals.map(async (proposal) => {
+            const status = await checkTimCompletion(proposal.id, desaData.kecamatan_id);
+            return { proposalId: proposal.id, status };
+          })
+        );
+
+        // Store completion status dalam object dengan proposalId sebagai key
+        const statusMap = {};
+        completionChecks.forEach(({ proposalId, status }) => {
+          statusMap[proposalId] = status;
+        });
+        setTimCompletionStatus(statusMap);
+      }
       
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -423,9 +435,17 @@ const BankeuVerificationDetailPage = () => {
     // proposals state already filtered by desaId in fetchData()
     // HANYA hitung proposal yang MASIH di kecamatan (submitted_to_kecamatan = TRUE)
     const uploadedProposals = proposals.filter(p => p && p.submitted_to_kecamatan);
-    const pendingProposals = uploadedProposals.filter(p => p.status === 'pending');
-    const rejectedProposals = uploadedProposals.filter(p => p.status === 'revision');
-    const verifiedProposals = uploadedProposals.filter(p => p.status === 'verified');
+    
+    // PERBAIKAN: Cek kecamatan_status, bukan status global
+    const pendingProposals = uploadedProposals.filter(p => 
+      p.kecamatan_status === 'pending' || !p.kecamatan_status
+    );
+    const rejectedProposals = uploadedProposals.filter(p => 
+      p.kecamatan_status === 'rejected' || p.kecamatan_status === 'revision'
+    );
+    const verifiedProposals = uploadedProposals.filter(p => 
+      p.kecamatan_status === 'verified'
+    );
     
     return {
       allReviewed: pendingProposals.length === 0 && uploadedProposals.length > 0,
@@ -760,6 +780,129 @@ const BankeuVerificationDetailPage = () => {
     }
   };
 
+  // Handler untuk generate berita acara per kegiatan
+  const handleGenerateBeritaAcaraKegiatan = async (kegiatanId, namaKegiatan) => {
+    const result = await Swal.fire({
+      title: '',
+      html: `
+        <div class="text-center">
+          <div class="mx-auto flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-violet-100 to-purple-100 mb-4">
+            <svg class="w-12 h-12 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+          </div>
+          
+          <h3 class="text-2xl font-bold text-violet-700 mb-2">
+            Buat Berita Acara Kegiatan
+          </h3>
+          
+          <p class="text-gray-600 mb-2">
+            <strong>Desa:</strong> ${desa?.nama}<br/>
+            <strong>Kegiatan:</strong> ${namaKegiatan}
+          </p>
+          <p class="text-gray-500 text-sm">
+            Lanjutkan membuat Berita Acara untuk kegiatan ini?
+          </p>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: `<span class="flex items-center gap-2">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+        </svg>
+        Ya, Buat
+      </span>`,
+      cancelButtonText: `<span class="flex items-center gap-2">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+        Batal
+      </span>`,
+      customClass: {
+        popup: 'rounded-2xl shadow-2xl',
+        actions: 'gap-3 w-full',
+        confirmButton: 'bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-semibold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 border-0 flex-1',
+        cancelButton: 'bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 px-6 rounded-xl transition-all duration-200 border-0 flex-1'
+      },
+      buttonsStyling: false,
+      showClass: {
+        popup: 'animate__animated animate__zoomIn animate__faster'
+      }
+    });
+
+    if (result.isConfirmed) {
+      try {
+        const response = await api.post(`/kecamatan/bankeu/desa/${desaId}/berita-acara`, {
+          kegiatanId
+        });
+        
+        await fetchData();
+
+        Swal.fire({
+          title: '',
+          html: `
+            <div class="text-center py-4">
+              <div class="mx-auto flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-green-100 to-emerald-100 mb-4">
+                <svg class="w-12 h-12 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+              </div>
+              <h3 class="text-2xl font-bold text-green-700 mb-2">
+                Berhasil!
+              </h3>
+              <p class="text-gray-600 mb-4">
+                Berita Acara untuk <strong>${namaKegiatan}</strong> berhasil dibuat
+              </p>
+              <a
+                href="${imageBaseUrl}${response.data.data.file_path}"
+                target="_blank"
+                class="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-xl font-semibold hover:from-violet-700 hover:to-purple-700 transition-all duration-200 shadow-lg"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                Download Berita Acara
+              </a>
+            </div>
+          `,
+          customClass: {
+            popup: 'rounded-2xl shadow-2xl'
+          },
+          showConfirmButton: false,
+          showClass: {
+            popup: 'animate__animated animate__bounceIn animate__faster'
+          }
+        });
+      } catch (error) {
+        console.error("Error generating berita acara kegiatan:", error);
+        Swal.fire({
+          title: '',
+          html: `
+            <div class="text-center py-4">
+              <div class="mx-auto flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-red-100 to-rose-100 mb-4">
+                <svg class="w-12 h-12 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </div>
+              <h3 class="text-2xl font-bold text-red-700 mb-2">
+                Gagal!
+              </h3>
+              <p class="text-gray-600">
+                ${error.response?.data?.message || "Gagal membuat Berita Acara"}
+              </p>
+            </div>
+          `,
+          customClass: {
+            popup: 'rounded-2xl shadow-2xl',
+            confirmButton: 'bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white font-semibold py-3 px-6 rounded-xl shadow-lg transition-all duration-200 border-0'
+          },
+          buttonsStyling: false,
+          confirmButtonText: 'Tutup'
+        });
+      }
+    }
+  };
+
   const getStatusBadge = (status) => {
     const badges = {
       pending: { icon: LuClock, text: "Menunggu", color: "bg-yellow-100 text-yellow-700" },
@@ -779,56 +922,24 @@ const BankeuVerificationDetailPage = () => {
     );
   };
 
-  // Group kegiatan by type - dengan useMemo untuk menghindari re-calculation
+  // Group kegiatan by type - HANYA TAMPILKAN YANG SUDAH DIUPLOAD
   const infrastruktur = useMemo(() => {
-    return masterKegiatan
-      .filter(k => k.jenis_kegiatan === 'infrastruktur')
-      // Deduplicate by kegiatan id
-      .filter((kegiatan, index, self) => 
-        index === self.findIndex(k => parseInt(k.id) === parseInt(kegiatan.id))
-      )
-      .map(kegiatan => {
-        // Many-to-many: Find proposals yang include kegiatan ini di kegiatan_list
-        const proposal = proposals.find(p => 
-          p.kegiatan_list?.some(k => parseInt(k.id) === parseInt(kegiatan.id))
-        );
-        return { kegiatan, proposal: proposal || null };
-      });
-  }, [masterKegiatan, proposals]);
+    return proposals
+      .filter(p => p.kegiatan_list?.some(k => k.jenis_kegiatan === 'infrastruktur'))
+      .map(proposal => ({
+        proposal,
+        kegiatan: proposal.kegiatan_list.find(k => k.jenis_kegiatan === 'infrastruktur')
+      }));
+  }, [proposals]);
 
   const nonInfrastruktur = useMemo(() => {
-    return masterKegiatan
-      .filter(k => k.jenis_kegiatan === 'non_infrastruktur')
-      // Deduplicate by kegiatan id
-      .filter((kegiatan, index, self) => 
-        index === self.findIndex(k => parseInt(k.id) === parseInt(kegiatan.id))
-      )
-      .map(kegiatan => {
-        // Many-to-many: Find proposals yang include kegiatan ini di kegiatan_list
-        const proposal = proposals.find(p => 
-          p.kegiatan_list?.some(k => parseInt(k.id) === parseInt(kegiatan.id))
-        );
-        return { kegiatan, proposal: proposal || null };
-      });
-  }, [masterKegiatan, proposals]);
-
-
-
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64 space-y-4">
-        <div className="relative">
-          <div className="w-16 h-16 border-4 border-violet-200 border-t-violet-600 rounded-full animate-spin"></div>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-            <div className="w-8 h-8 bg-gradient-to-r from-violet-500 to-purple-500 rounded-full animate-pulse"></div>
-          </div>
-        </div>
-        <div className="text-lg font-semibold bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent animate-pulse">
-          Memuat data...
-        </div>
-      </div>
-    );
-  }
+    return proposals
+      .filter(p => p.kegiatan_list?.some(k => k.jenis_kegiatan === 'non_infrastruktur'))
+      .map(proposal => ({
+        proposal,
+        kegiatan: proposal.kegiatan_list.find(k => k.jenis_kegiatan === 'non_infrastruktur')
+      }));
+  }, [proposals]);
 
   return (
     <div className="min-h-screen bg-gray-50 space-y-6 pb-8">
@@ -850,6 +961,15 @@ const BankeuVerificationDetailPage = () => {
             </div>
             
             <div className="flex items-center gap-3">
+              {/* Tombol Tim Verifikasi */}
+              <button
+                onClick={() => navigate(`/kecamatan/bankeu/tim-verifikasi/${desaId}`)}
+                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-lg font-semibold transition-all duration-200 shadow-lg"
+              >
+                <LuClipboardList className="w-5 h-5" />
+                <span>Tim Verifikasi</span>
+              </button>
+
               {/* Review Status Indicator */}
               {(() => {
                 const allReviewed = reviewStatus.allReviewed;
@@ -888,19 +1008,6 @@ const BankeuVerificationDetailPage = () => {
                 
                 return null;
               })()}
-              
-              <button
-                onClick={handleGenerateBeritaAcara}
-                disabled={!reviewStatus.allReviewed}
-                className={`flex items-center gap-2 px-4 py-2.5 border-2 rounded-lg font-semibold transition-all duration-200 ${
-                  reviewStatus.allReviewed
-                    ? 'bg-white border-violet-600 text-violet-600 hover:bg-violet-50'
-                    : 'bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed'
-                }`}
-              >
-                <LuDownload className="w-5 h-5" />
-                <span>Berita Acara</span>
-              </button>
               
               {/* Tombol Final Action - hanya muncul jika semua sudah direview */}
               {reviewStatus.allReviewed && (
@@ -967,14 +1074,16 @@ const BankeuVerificationDetailPage = () => {
           <div className="border-t border-gray-200">
             {infrastruktur.map((item, index) => (
               <ProposalRow
-                key={`infra-${item.kegiatan.id}`}
+                key={`infra-${item.proposal?.id || item.kegiatan.id}-${index}`}
                 kegiatan={item.kegiatan}
                 proposal={item.proposal}
                 index={index}
                 onVerify={handleVerify}
                 onViewPdf={handleViewPdf}
+                onGenerateBeritaAcara={handleGenerateBeritaAcaraKegiatan}
                 getStatusBadge={getStatusBadge}
                 imageBaseUrl={imageBaseUrl}
+                timCompletionStatus={timCompletionStatus}
               />
             ))}
           </div>
@@ -1011,14 +1120,16 @@ const BankeuVerificationDetailPage = () => {
           <div className="border-t border-gray-200">
             {nonInfrastruktur.map((item, index) => (
               <ProposalRow
-                key={`non-infra-${item.kegiatan.id}`}
+                key={`non-infra-${item.proposal?.id || item.kegiatan.id}-${index}`}
                 kegiatan={item.kegiatan}
                 proposal={item.proposal}
                 index={index}
                 onVerify={handleVerify}
                 onViewPdf={handleViewPdf}
+                onGenerateBeritaAcara={handleGenerateBeritaAcaraKegiatan}
                 getStatusBadge={getStatusBadge}
                 imageBaseUrl={imageBaseUrl}
+                timCompletionStatus={timCompletionStatus}
               />
             ))}
           </div>
@@ -1039,7 +1150,11 @@ const BankeuVerificationDetailPage = () => {
 };
 
 // Proposal Row Component
-const ProposalRow = ({ kegiatan, proposal, index, onVerify, onViewPdf, getStatusBadge, imageBaseUrl }) => {
+const ProposalRow = ({ kegiatan, proposal, index, onVerify, onViewPdf, onGenerateBeritaAcara, getStatusBadge, imageBaseUrl, timCompletionStatus }) => {
+  // Get completion status untuk proposal ini
+  const completionStatus = proposal ? timCompletionStatus[proposal.id] : null;
+  const isTimComplete = completionStatus?.all_complete || false;
+  
   return (
     <div className={`p-3 border-b border-gray-100 hover:bg-gray-50 transition-colors duration-150 ${index === 0 ? '' : ''}`}>
       <div className="flex items-start justify-between gap-4">
@@ -1216,6 +1331,57 @@ const ProposalRow = ({ kegiatan, proposal, index, onVerify, onViewPdf, getStatus
                   <LuX className="w-4 h-4" />
                 </button>
               </>
+            )}
+            
+            {/* Tombol Berita Acara - hanya muncul jika proposal sudah verified DAN semua tim verifikasi sudah lengkap */}
+            {proposal.kecamatan_status === 'approved' && (
+              <div className="relative group">
+                <button
+                  onClick={() => {
+                    if (isTimComplete) {
+                      onGenerateBeritaAcara(proposal.kegiatan_id, proposal.judul_proposal || kegiatan.nama_kegiatan);
+                    }
+                  }}
+                  disabled={!isTimComplete}
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded-lg transition-all duration-150 shadow-sm text-xs font-medium ${
+                    isTimComplete
+                      ? 'bg-violet-600 text-white hover:bg-violet-700 cursor-pointer'
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-60'
+                  }`}
+                  title={isTimComplete ? 'Generate Berita Acara' : 'Semua tim verifikasi harus mengisi quisioner dan upload TTD'}
+                >
+                  {isTimComplete ? (
+                    <>
+                      <LuCheck className="w-3.5 h-3.5" />
+                      <LuDownload className="w-3.5 h-3.5" />
+                      <span>Berita Acara</span>
+                    </>
+                  ) : (
+                    <>
+                      <LuClock className="w-3.5 h-3.5" />
+                      <span>Berita Acara</span>
+                    </>
+                  )}
+                </button>
+                
+                {/* Tooltip informatif jika belum lengkap */}
+                {!isTimComplete && completionStatus && (
+                  <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block z-10 w-64">
+                    <div className="bg-gray-900 text-white text-xs rounded-lg p-3 shadow-xl">
+                      <p className="font-bold mb-2">Tim Verifikasi Belum Lengkap:</p>
+                      {completionStatus.tim_status?.map((tim, idx) => (
+                        <div key={idx} className={`flex items-center gap-2 py-1 ${!tim.is_complete ? 'text-yellow-300' : 'text-green-300'}`}>
+                          {tim.is_complete ? <LuCheck className="w-3 h-3" /> : <LuX className="w-3 h-3" />}
+                          <span className="capitalize">{tim.posisi.replace('_', ' ')}</span>
+                          {!tim.configured && <span className="text-xs">(belum config)</span>}
+                          {tim.configured && !tim.questionnaire_filled && <span className="text-xs">(belum isi quisioner)</span>}
+                          {tim.configured && tim.questionnaire_filled && !tim.ttd_uploaded && <span className="text-xs">(belum upload TTD)</span>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         )}
