@@ -63,7 +63,8 @@ function HomeRedirect() {
 			'pegawai': '/pegawai/dashboard',
 			'desa': '/desa/dashboard',
 			'kecamatan': '/kecamatan/dashboard',
-			'dinas_terkait': '/dinas/dashboard'
+			'dinas_terkait': '/dinas/dashboard',
+			'verifikator_dinas': '/dinas/dashboard'
 		};
 		
 		const dashboardPath = roleDashboardMap[user.role] || '/dashboard';
@@ -229,6 +230,9 @@ const DinasConfigPage = lazy(() =>
 );
 const DinasVerifikatorPage = lazy(() =>
 	import("./pages/dinas/DinasVerifikatorPage")
+);
+const VerifikatorProfilePage = lazy(() =>
+	import("./pages/dinas/VerifikatorProfilePage")
 );
 const DinasDashboardPage = lazy(() =>
 	import("./pages/dinas/DinasDashboardPage")
@@ -768,7 +772,7 @@ function App() {
 				<Route
 					path="/dinas"
 					element={
-						<RoleProtectedRoute allowedRoles={['dinas_terkait', 'kepala_bidang', 'pegawai']}>
+						<RoleProtectedRoute allowedRoles={['dinas_terkait', 'kepala_bidang', 'pegawai', 'verifikator_dinas']}>
 							<DinasLayout />
 						</RoleProtectedRoute>
 					}
@@ -779,6 +783,7 @@ function App() {
 				<Route path="bankeu/verifikasi/:proposalId" element={<DinasVerificationDetailPage />} />
 				<Route path="konfigurasi" element={<DinasConfigPage />} />
 				<Route path="verifikator" element={<DinasVerifikatorPage />} />
+				<Route path="profil" element={<VerifikatorProfilePage />} />
 			</Route>
 
 				{/* Rute Kepala Dinas - Exclusive untuk Kepala Dinas */}

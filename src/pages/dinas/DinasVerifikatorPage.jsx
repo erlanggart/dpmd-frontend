@@ -1,17 +1,29 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import Swal from 'sweetalert2';
-import { LuUsers, LuPlus, LuPencil, LuTrash2, LuKey, LuToggleLeft, LuToggleRight, LuMail, LuUser, LuIdCard, LuBriefcase, LuLock } from 'react-icons/lu';
+import { LuUsers, LuPlus, LuPencil, LuTrash2, LuKey, LuToggleLeft, LuToggleRight, LuMail, LuUser, LuIdCard, LuBriefcase, LuLock, LuMapPin, LuCheck, LuSquare, LuSearch } from 'react-icons/lu';
 
 const DinasVerifikatorPage = () => {
+  const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const dinasId = user.dinas_id;
+  
+  // Only manager roles can access this page
+  const allowedRoles = ['dinas_terkait', 'superadmin', 'kepala_dinas', 'sekretaris_dinas'];
 
   const [loading, setLoading] = useState(false);
   const [verifikators, setVerifikators] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showAksesDesaModal, setShowAksesDesaModal] = useState(false);
   const [selectedVerifikator, setSelectedVerifikator] = useState(null);
+  const [aksesDesa, setAksesDesa] = useState([]);
+  const [availableDesas, setAvailableDesas] = useState([]);
+  const [selectedDesas, setSelectedDesas] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [kecamatans, setKecamatans] = useState([]);
+  const [selectedKecamatan, setSelectedKecamatan] = useState('');
   const [formData, setFormData] = useState({
     nama: '',
     nip: '',
@@ -21,6 +33,18 @@ const DinasVerifikatorPage = () => {
   });
 
   useEffect(() => {
+    // Check role access
+    if (!allowedRoles.includes(user.role)) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Akses Ditolak',
+        text: 'Anda tidak memiliki akses ke halaman ini.'
+      }).then(() => {
+        navigate('/dinas/dashboard');
+      });
+      return;
+    }
+    
     if (!dinasId) {
       Swal.fire({
         icon: 'warning',
@@ -30,7 +54,7 @@ const DinasVerifikatorPage = () => {
       return;
     }
     fetchVerifikators();
-  }, [dinasId]);
+  }, [dinasId, user.role]);
 
   const fetchVerifikators = async () => {
     try {
@@ -252,6 +276,153 @@ const DinasVerifikatorPage = () => {
     setShowEditModal(true);
   };
 
+  // Akses Desa Functions
+  const openAksesDesaModal = async (verifikator) => {
+    setSelectedVerifikator(verifikator);
+    setShowAksesDesaModal(true);
+    setSelectedKecamatan('');
+    setSelectedDesas([]);
+    setSearchTerm('');
+    setLoading(true);
+    try {
+      const [aksesResponse, availableResponse] = await Promise.all([
+        api.get(`/dinas/verifikator/${verifikator.id}/akses-desa`),
+        api.get(`/dinas/verifikator/${verifikator.id}/akses-desa/available`)
+      ]);
+      setAksesDesa(aksesResponse.data.data || []);
+      setAvailableDesas(availableResponse.data.data || []);
+      
+      // Extract unique kecamatans from available desas
+      const uniqueKecamatans = [...new Set(availableResponse.data.data.map(desa => desa.nama_kecamatan))]
+        .sort();
+      setKecamatans(uniqueKecamatans);
+    } catch (error) {
+      console.error('Error fetching akses desa:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal',
+        text: 'Gagal memuat data akses desa'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddAksesDesa = async () => {
+    if (selectedDesas.length === 0) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Pilih Desa',
+        text: 'Pilih minimal 1 desa untuk ditambahkan'
+      });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await api.post(`/dinas/verifikator/${selectedVerifikator.id}/akses-desa`, {
+        desa_ids: selectedDesas
+      });
+      Swal.fire({
+        icon: 'success',
+        title: 'Berhasil',
+        text: `${selectedDesas.length} desa berhasil ditambahkan`,
+        timer: 2000
+      });
+      setSelectedDesas([]);
+      setSelectedKecamatan('');
+      // Refresh data
+      const [aksesResponse, availableResponse] = await Promise.all([
+        api.get(`/dinas/verifikator/${selectedVerifikator.id}/akses-desa`),
+        api.get(`/dinas/verifikator/${selectedVerifikator.id}/akses-desa/available`)
+      ]);
+      setAksesDesa(aksesResponse.data.data || []);
+      setAvailableDesas(availableResponse.data.data || []);
+      
+      // Update kecamatans list
+      const uniqueKecamatans = [...new Set(availableResponse.data.data.map(desa => desa.nama_kecamatan))]
+        .sort();
+      setKecamatans(uniqueKecamatans);
+    } catch (error) {
+      console.error('Error adding akses desa:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal',
+        text: error.response?.data?.message || 'Gagal menambahkan akses desa'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRemoveAksesDesa = async (aksesId, namaDesaRemove) => {
+    const result = await Swal.fire({
+      title: 'Hapus Akses?',
+      text: `Hapus akses verifikator ke desa ${namaDesaRemove}?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#dc2626',
+      confirmButtonText: 'Hapus',
+      cancelButtonText: 'Batal'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        setLoading(true);
+        await api.delete(`/dinas/verifikator/${selectedVerifikator.id}/akses-desa/${aksesId}`);
+        Swal.fire({
+          icon: 'success',
+          title: 'Berhasil',
+          text: 'Akses desa berhasil dihapus',
+          timer: 2000
+        });
+        // Refresh data
+        const [aksesResponse, availableResponse] = await Promise.all([
+          api.get(`/dinas/verifikator/${selectedVerifikator.id}/akses-desa`),
+          api.get(`/dinas/verifikator/${selectedVerifikator.id}/akses-desa/available`)
+        ]);
+        setAksesDesa(aksesResponse.data.data || []);
+        setAvailableDesas(availableResponse.data.data || []);
+        
+        // Update kecamatans list
+        const uniqueKecamatans = [...new Set(availableResponse.data.data.map(desa => desa.nama_kecamatan))]
+          .sort();
+        setKecamatans(uniqueKecamatans);
+        setSelectedKecamatan('');
+        setSelectedDesas([]);
+      } catch (error) {
+        console.error('Error removing akses desa:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Gagal',
+          text: 'Gagal menghapus akses desa'
+        });
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  const toggleDesaSelection = (desaId) => {
+    setSelectedDesas(prev =>
+      prev.includes(desaId)
+        ? prev.filter(id => id !== desaId)
+        : [...prev, desaId]
+    );
+  };
+
+  const filteredAvailableDesas = availableDesas.filter(desa => {
+    // Filter by selected kecamatan first
+    if (selectedKecamatan && desa.nama_kecamatan !== selectedKecamatan) {
+      return false;
+    }
+    // Then filter by search term
+    if (searchTerm) {
+      return desa.nama.toLowerCase().includes(searchTerm.toLowerCase());
+    }
+    return true;
+  });
+
   if (loading && verifikators.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -386,6 +557,13 @@ const DinasVerifikatorPage = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => openAksesDesaModal(verifikator)}
+                            className="text-green-600 hover:text-green-900 p-1.5 hover:bg-green-50 rounded transition-colors"
+                            title="Kelola Akses Desa"
+                          >
+                            <LuMapPin className="w-4 h-4" />
+                          </button>
                           <button
                             onClick={() => openEditModal(verifikator)}
                             className="text-blue-600 hover:text-blue-900 p-1.5 hover:bg-blue-50 rounded transition-colors"
@@ -615,6 +793,167 @@ const DinasVerifikatorPage = () => {
                     </button>
                   </div>
                 </form>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Akses Desa Modal */}
+        {showAksesDesaModal && selectedVerifikator && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+              <div className="p-6 border-b">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">Kelola Akses Desa</h2>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Verifikator: <span className="font-medium">{selectedVerifikator.nama}</span>
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowAksesDesaModal(false);
+                      setSelectedVerifikator(null);
+                      setSelectedDesas([]);
+                      setSearchTerm('');
+                      setSelectedKecamatan('');
+                    }}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Desa yang Sudah Diberi Akses */}
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-3">
+                      Desa dengan Akses ({aksesDesa.length})
+                    </h3>
+                    <div className="bg-gray-50 rounded-lg p-4 max-h-96 overflow-y-auto">
+                      {aksesDesa.length === 0 ? (
+                        <p className="text-sm text-gray-500 text-center py-8">
+                          Belum ada desa yang diberi akses
+                        </p>
+                      ) : (
+                        <div className="space-y-2">
+                          {aksesDesa.map((akses) => (
+                            <div
+                              key={akses.id}
+                              className="flex items-center justify-between bg-white p-3 rounded-lg border"
+                            >
+                              <div>
+                                <p className="font-medium text-sm text-gray-900">{akses.nama_desa}</p>
+                                <p className="text-xs text-gray-500">Kec. {akses.nama_kecamatan}</p>
+                              </div>
+                              <button
+                                onClick={() => handleRemoveAksesDesa(akses.id, akses.nama_desa)}
+                                className="text-red-600 hover:bg-red-50 p-2 rounded transition-colors"
+                                title="Hapus"
+                              >
+                                <LuTrash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Desa Tersedia untuk Ditambahkan */}
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-3">
+                      Tambah Akses Desa ({selectedDesas.length} dipilih)
+                    </h3>
+                    
+                    {/* Pilih Kecamatan */}
+                    <div className="mb-3">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Pilih Kecamatan <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        value={selectedKecamatan}
+                        onChange={(e) => {
+                          setSelectedKecamatan(e.target.value);
+                          setSelectedDesas([]);
+                          setSearchTerm('');
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="">-- Pilih Kecamatan --</option>
+                        {kecamatans.map((kec) => (
+                          <option key={kec} value={kec}>
+                            {kec}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Search (only show when kecamatan selected) */}
+                    {selectedKecamatan && (
+                      <div className="relative mb-3">
+                        <LuSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                        <input
+                          type="text"
+                          placeholder="Cari desa..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                      </div>
+                    )}
+
+                    <div className="bg-gray-50 rounded-lg p-4 max-h-80 overflow-y-auto">
+                      {!selectedKecamatan ? (
+                        <p className="text-sm text-gray-500 text-center py-8">
+                          Silakan pilih kecamatan terlebih dahulu
+                        </p>
+                      ) : filteredAvailableDesas.length === 0 ? (
+                        <p className="text-sm text-gray-500 text-center py-8">
+                          {searchTerm ? 'Tidak ada desa yang cocok' : 'Semua desa di kecamatan ini sudah diberi akses'}
+                        </p>
+                      ) : (
+                        <div className="space-y-2">
+                          {filteredAvailableDesas.map((desa) => (
+                            <div
+                              key={desa.id}
+                              onClick={() => toggleDesaSelection(Number(desa.id))}
+                              className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                                selectedDesas.includes(Number(desa.id))
+                                  ? 'bg-blue-50 border-blue-500'
+                                  : 'bg-white hover:bg-gray-50'
+                              }`}
+                            >
+                              {selectedDesas.includes(Number(desa.id)) ? (
+                                <div className="w-5 h-5 bg-blue-600 rounded flex items-center justify-center flex-shrink-0">
+                                  <LuCheck className="w-3 h-3 text-white" />
+                                </div>
+                              ) : (
+                                <LuSquare className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                              )}
+                              <div className="flex-1">
+                                <p className="font-medium text-sm text-gray-900">{desa.nama}</p>
+                                <p className="text-xs text-gray-500">Kec. {desa.nama_kecamatan}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {selectedDesas.length > 0 && (
+                      <button
+                        onClick={handleAddAksesDesa}
+                        disabled={loading}
+                        className="w-full mt-3 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                      >
+                        {loading ? 'Menambahkan...' : `Tambahkan ${selectedDesas.length} Desa`}
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           </div>

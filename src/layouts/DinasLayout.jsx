@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Outlet, useNavigate, NavLink } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useUserProfile } from "../hooks/useUserProfile";
+import api from "../services/api";
 import {
   FiLogOut,
   FiMenu,
@@ -15,7 +16,8 @@ import {
   LuClipboardCheck,
   LuBuilding2,
   LuSettings,
-  LuUsers
+  LuUsers,
+  LuUser
 } from "react-icons/lu";
 import InstallPWA from "../components/InstallPWA";
 
@@ -34,6 +36,14 @@ const menuItems = [
     icon: LuClipboardCheck,
   },
   {
+    id: "profil",
+    label: "Profil Saya",
+    path: "/dinas/profil",
+    icon: LuUser,
+    // Only for verifikator_dinas role
+    forVerifikatorOnly: true,
+  },
+  {
     id: "verifikator",
     label: "Kelola Verifikator",
     path: "/dinas/verifikator",
@@ -49,21 +59,50 @@ const menuItems = [
 
 const DinasLayout = () => {
   const { logout } = useAuth();
-  const user = useUserProfile();
+  const userFromHook = useUserProfile();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
+  const [dinasName, setDinasName] = useState(null);
   const dropdownRef = useRef(null);
   const searchRef = useRef(null);
 
-  // Filter menu items based on user's dinas_id (Konfigurasi only for dinas users)
+  // Fallback to localStorage if hook hasn't loaded yet
+  const user = userFromHook || JSON.parse(localStorage.getItem('user') || '{}');
+
+  // Roles yang bisa mengelola verifikator dan konfigurasi
+  const managerRoles = ['dinas_terkait', 'superadmin', 'kepala_dinas', 'sekretaris_dinas'];
+  const isVerifikator = user?.role === 'verifikator_dinas';
+
+  // Fetch dinas name for verifikator
+  useEffect(() => {
+    const fetchDinasName = async () => {
+      if (isVerifikator && user.dinas_id && !user.dinas) {
+        try {
+          const response = await api.get('/verifikator/profile');
+          if (response.data.success) {
+            setDinasName(response.data.data.nama_dinas);
+          }
+        } catch (error) {
+          console.error('Error fetching dinas name:', error);
+        }
+      }
+    };
+    fetchDinasName();
+  }, [isVerifikator, user.dinas_id]);
+
+  // Filter menu items based on user's role and dinas_id
   const filteredMenuItems = menuItems.filter(item => {
-    if (item.id === 'konfigurasi') {
-      // Only show konfigurasi if user has dinas_id
-      return user?.dinas_id != null;
+    // Profil Saya hanya untuk verifikator_dinas
+    if (item.forVerifikatorOnly) {
+      return isVerifikator;
+    }
+    // Konfigurasi & Kelola Verifikator hanya untuk manager roles
+    if (item.id === 'konfigurasi' || item.id === 'verifikator') {
+      return user?.dinas_id != null && managerRoles.includes(user?.role);
     }
     return true;
   });
@@ -138,7 +177,9 @@ const DinasLayout = () => {
               {sidebarOpen && (
                 <div>
                   <h1 className="text-base sm:text-lg font-bold text-gray-900">DPMD Bogor</h1>
-                  <p className="text-xs text-gray-500">Dinas Terkait</p>
+                  <p className="text-xs text-gray-500">
+                    {user?.role === 'verifikator_dinas' ? 'Verifikator Dinas' : 'Dinas Terkait'}
+                  </p>
                 </div>
               )}
             </div>
@@ -160,7 +201,10 @@ const DinasLayout = () => {
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-sm truncate text-gray-900">{user.name}</p>
                   <p className="text-xs text-gray-600 truncate">
-                    {user.dinas?.nama_dinas || user.dinas?.singkatan || "Dinas"}
+                    {isVerifikator 
+                      ? (dinasName || "Verifikator Dinas")
+                      : (user.dinas?.nama_dinas || user.dinas?.singkatan || "Dinas Terkait")
+                    }
                   </p>
                 </div>
               </div>
@@ -169,7 +213,7 @@ const DinasLayout = () => {
 
           {/* Navigation Menu */}
           <nav className="flex-1 overflow-y-auto px-4 py-4 space-y-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
-            {menuItems.map((item) => {
+            {filteredMenuItems.map((item) => {
               const Icon = item.icon;
               return (
                 <NavLink

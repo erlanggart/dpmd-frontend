@@ -8,9 +8,12 @@ import { LuTrash2, LuSave, LuPenTool, LuUser, LuBriefcase, LuIdCard, LuRotateCcw
 const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
 
 const DinasConfigPage = () => {
-  const navigate = useNavigate();
+  const navigate = useNavigate()
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const dinasId = user.dinas_id;
+  
+  // Only manager roles can access this page
+  const allowedRoles = ['dinas_terkait', 'superadmin', 'kepala_dinas', 'sekretaris_dinas'];
 
   const [loading, setLoading] = useState(false);
   const [config, setConfig] = useState(null);
@@ -24,6 +27,18 @@ const DinasConfigPage = () => {
   const sigCanvasRef = useRef(null);
 
   useEffect(() => {
+    // Check role access
+    if (!allowedRoles.includes(user.role)) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Akses Ditolak',
+        text: 'Anda tidak memiliki akses ke halaman ini. Gunakan menu Profil Saya untuk mengatur data Anda.'
+      }).then(() => {
+        navigate('/dinas/profil');
+      });
+      return;
+    }
+    
     // Check if user has dinas_id
     if (!dinasId) {
       Swal.fire({
@@ -37,7 +52,7 @@ const DinasConfigPage = () => {
       return;
     }
     fetchConfig();
-  }, [dinasId]);
+  }, [dinasId, user.role]);
 
   const fetchConfig = async () => {
     try {
