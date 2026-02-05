@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   LuArrowLeft, LuFileText, LuDownload, LuUser, LuMapPin,
-  LuCalendar, LuDollarSign, LuPackage
+  LuCalendar, LuDollarSign, LuPackage, LuClipboardList
 } from 'react-icons/lu';
 import api from '../../api';
 
@@ -151,26 +151,34 @@ const DinasVerificationDetailPage = () => {
               <p className="text-gray-600 mt-2">{proposal.deskripsi}</p>
             )}
             
-            {/* Detail kegiatan dari desa */}
-            {(proposal.volume || proposal.lokasi) && (
-              <div className="mt-3 p-3 bg-blue-50 border-l-4 border-blue-400 rounded-lg">
-                <div className="text-sm font-semibold text-blue-800 mb-2">Detail Kegiatan:</div>
-                <div className="space-y-1.5 text-sm text-blue-700">
-                  {proposal.volume && (
-                    <div className="flex items-center gap-2">
-                      <LuPackage className="w-4 h-4" />
-                      <span><span className="font-medium">Volume:</span> {proposal.volume}</span>
-                    </div>
-                  )}
-                  {proposal.lokasi && (
-                    <div className="flex items-center gap-2">
-                      <LuMapPin className="w-4 h-4" />
-                      <span><span className="font-medium">Lokasi:</span> {proposal.lokasi}</span>
-                    </div>
-                  )}
+            {/* Info Grid - Volume, Lokasi, Anggaran */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3">
+              {proposal.volume && (
+                <div className="flex items-center gap-2 p-2.5 bg-blue-50 rounded-lg">
+                  <LuPackage className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                  <div>
+                    <p className="text-xs text-blue-600 font-medium">Volume</p>
+                    <p className="text-sm font-semibold text-blue-900">{proposal.volume}</p>
+                  </div>
+                </div>
+              )}
+              {proposal.lokasi && (
+                <div className="flex items-center gap-2 p-2.5 bg-red-50 rounded-lg">
+                  <LuMapPin className="w-4 h-4 text-red-600 flex-shrink-0" />
+                  <div>
+                    <p className="text-xs text-red-600 font-medium">Lokasi</p>
+                    <p className="text-sm font-semibold text-red-900">{proposal.lokasi}</p>
+                  </div>
+                </div>
+              )}
+              <div className="flex items-center gap-2 p-2.5 bg-green-50 rounded-lg">
+                <LuDollarSign className="w-4 h-4 text-green-600 flex-shrink-0" />
+                <div>
+                  <p className="text-xs text-green-600 font-medium">Anggaran</p>
+                  <p className="text-sm font-semibold text-green-900">{formatCurrency(proposal.anggaran_usulan)}</p>
                 </div>
               </div>
-            )}
+            </div>
           </div>
         </div>
 

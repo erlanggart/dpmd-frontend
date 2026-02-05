@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { 
   LuSearch, LuEye, LuCircleCheck, LuCircleX, 
   LuRefreshCw, LuClock, LuFileText, LuTriangleAlert,
-  LuChevronDown, LuChevronUp, LuMapPin, LuX, LuPackage
+  LuChevronDown, LuChevronUp, LuMapPin, LuX, LuPackage, LuDollarSign
 } from 'react-icons/lu';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
@@ -174,50 +174,48 @@ const DinasVerificationPage = () => {
     if (!proposal) return;
     
     try {
-      // VALIDASI: Cek PIC + TTD untuk approve
+      // VALIDASI: Cek profil verifikator + TTD untuk approve
       if (action === 'approve') {
         setSubmitting(true);
-        const user = JSON.parse(localStorage.getItem('user') || '{}');
-        const dinasId = user.dinas_id;
 
-        // Check PIC config + TTD completion
-        const checkRes = await api.get(`/dinas/${dinasId}/config`);
+        // Check verifikator profile + TTD completion
+        const checkRes = await api.get('/verifikator/profile');
 
         if (!checkRes.data.success || !checkRes.data.data) {
           setSubmitting(false);
           
           Swal.fire({
             icon: 'warning',
-            title: 'Konfigurasi Belum Lengkap',
+            title: 'Profil Belum Lengkap',
             html: `
-              <p class="text-gray-700 mb-3">Sebelum menyetujui proposal, Anda harus melengkapi konfigurasi dinas:</p>
+              <p class="text-gray-700 mb-3">Sebelum menyetujui proposal, Anda harus melengkapi profil verifikator:</p>
               <ul class="text-left list-disc list-inside text-red-600 mb-4">
-                <li>Data Penanggung Jawab (PIC)</li>
+                <li>Data Diri (Nama, NIP, Jabatan)</li>
                 <li>Tanda Tangan Digital</li>
               </ul>
               <p class="text-sm text-gray-600">
-                Silakan ke menu <strong>Konfigurasi Dinas</strong> untuk melengkapi data.
+                Silakan ke menu <strong>Profil Saya</strong> untuk melengkapi data.
               </p>
             `,
-            confirmButtonText: 'Ke Halaman Konfigurasi',
+            confirmButtonText: 'Ke Halaman Profil',
             confirmButtonColor: '#3085d6',
             showCancelButton: true,
             cancelButtonText: 'Tutup'
           }).then((result) => {
             if (result.isConfirmed) {
-              navigate('/dinas/config');
+              navigate('/dinas/profil');
             }
           });
           return;
         }
 
-        const config = checkRes.data.data;
+        const profile = checkRes.data.data;
         const missing = [];
         
-        if (!config.nama_pic || !config.jabatan_pic) {
-          missing.push('Data Penanggung Jawab (Nama & Jabatan)');
+        if (!profile.nama || !profile.jabatan) {
+          missing.push('Data Diri (Nama & Jabatan)');
         }
-        if (!config.ttd_path) {
+        if (!profile.ttd_path) {
           missing.push('Tanda Tangan Digital');
         }
 
@@ -233,16 +231,16 @@ const DinasVerificationPage = () => {
                 ${missing.map(item => `<li>${item}</li>`).join('')}
               </ul>
               <p class="text-sm text-gray-600">
-                Silakan ke menu <strong>Konfigurasi Dinas</strong> untuk melengkapi data.
+                Silakan ke menu <strong>Profil Saya</strong> untuk melengkapi data.
               </p>
             `,
-            confirmButtonText: 'Ke Halaman Konfigurasi',
+            confirmButtonText: 'Ke Halaman Profil',
             confirmButtonColor: '#3085d6',
             showCancelButton: true,
             cancelButtonText: 'Tutup'
           }).then((result) => {
             if (result.isConfirmed) {
-              navigate('/dinas/config');
+              navigate('/dinas/profil');
             }
           });
           return;
@@ -578,73 +576,70 @@ const DinasVerificationPage = () => {
                               <thead className="bg-gray-50 border-b border-gray-200">
                                 <tr>
                                   <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Proposal</th>
-                                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Anggaran</th>
                                   <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
                                   <th className="px-4 py-2 text-center text-xs font-semibold text-gray-600 uppercase">Aksi</th>
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-gray-100">
                                 {desa.proposals.map((proposal) => (
-                                  <tr key={proposal.id} className="hover:bg-gray-50 transition-colors">
-                                    <td className="px-4 py-3">
-                                      <div className="flex items-start gap-2">
-                                        <div className="p-1.5 bg-amber-100 rounded">
-                                          <LuFileText className="w-4 h-4 text-amber-600" />
-                                        </div>
-                                        <div>
-                                          <p className="font-semibold text-gray-900 text-sm line-clamp-2 mb-1.5">{proposal.judul_proposal}</p>
-                                          {proposal.kegiatan_list && proposal.kegiatan_list.length > 0 && (
-                                            <div className="flex flex-wrap gap-1">
-                                              {proposal.kegiatan_list.map((kegiatan) => (
-                                                <span 
-                                                  key={kegiatan.id}
-                                                  className={`px-2 py-0.5 rounded text-xs font-medium ${
-                                                    kegiatan.jenis_kegiatan === 'infrastruktur' 
-                                                      ? 'bg-blue-100 text-blue-700' 
-                                                      : 'bg-purple-100 text-purple-700'
-                                                  }`}
-                                                >
-                                                  {kegiatan.nama_kegiatan.substring(0, 30)}...
+                                  <tr key={proposal.id} className="hover:bg-gray-50/50 transition-colors">
+                                    <td className="px-4 py-4">
+                                      <div className="space-y-3">
+                                        {/* Header - Judul & Badge Jenis */}
+                                        <div className="flex items-start justify-between gap-3">
+                                          <div className="flex items-start gap-3">
+                                            <div className="p-2 bg-gradient-to-br from-amber-100 to-amber-50 rounded-lg shadow-sm">
+                                              <LuFileText className="w-5 h-5 text-amber-600" />
+                                            </div>
+                                            <div>
+                                              <p className="font-semibold text-gray-900 text-sm leading-tight">{proposal.judul_proposal}</p>
+                                              <div className="flex items-center gap-2 mt-1">
+                                                <span className="text-xs text-gray-400">ID: {proposal.id}</span>
+                                                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                                  proposal.jenis_kegiatan === 'infrastruktur' 
+                                                    ? 'bg-blue-100 text-blue-700' 
+                                                    : 'bg-purple-100 text-purple-700'
+                                                }`}>
+                                                  {proposal.jenis_kegiatan === 'infrastruktur' ? 'Infrastruktur' : 'Non-Infrastruktur'}
                                                 </span>
-                                              ))}
+                                              </div>
                                             </div>
-                                          )}
-                                          
-                                          {/* Detail kegiatan dari desa */}
-                                          {(proposal.volume || proposal.lokasi) && (
-                                            <div className="mt-1.5 space-y-0.5">
-                                              {proposal.volume && (
-                                                <div className="flex items-center gap-1">
-                                                  <LuPackage className="w-3 h-3 text-blue-600" />
-                                                  <p className="text-xs text-gray-600">Volume: {proposal.volume}</p>
-                                                </div>
-                                              )}
-                                              {proposal.lokasi && (
-                                                <div className="flex items-center gap-1">
-                                                  <LuMapPin className="w-3 h-3 text-red-600" />
-                                                  <p className="text-xs text-gray-600">Lokasi: {proposal.lokasi}</p>
-                                                </div>
-                                              )}
+                                          </div>
+                                        </div>
+                                        
+                                        {/* Info Cards - Volume, Lokasi, Anggaran */}
+                                        <div className="grid grid-cols-3 gap-2">
+                                          <div className="flex items-center gap-2 p-2.5 bg-blue-50/80 rounded-xl border border-blue-100">
+                                            <div className="p-1.5 bg-blue-100 rounded-lg">
+                                              <LuPackage className="w-3.5 h-3.5 text-blue-600" />
                                             </div>
-                                          )}
-                                          
-                                          <div className="flex items-center gap-2 mt-1">
-                                            <p className="text-xs text-gray-500">ID: {proposal.id.toString()}</p>
-                                            <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
-                                              proposal.jenis_kegiatan === 'infrastruktur' 
-                                                ? 'bg-blue-100 text-blue-700' 
-                                                : 'bg-purple-100 text-purple-700'
-                                            }`}>
-                                              {proposal.jenis_kegiatan === 'infrastruktur' ? 'Infrastruktur' : 'Non-Infrastruktur'}
-                                            </span>
+                                            <div className="min-w-0">
+                                              <p className="text-[10px] text-blue-500 font-medium uppercase tracking-wide">Volume</p>
+                                              <p className="text-xs font-semibold text-blue-900 truncate">{proposal.volume || '-'}</p>
+                                            </div>
+                                          </div>
+                                          <div className="flex items-center gap-2 p-2.5 bg-red-50/80 rounded-xl border border-red-100">
+                                            <div className="p-1.5 bg-red-100 rounded-lg">
+                                              <LuMapPin className="w-3.5 h-3.5 text-red-600" />
+                                            </div>
+                                            <div className="min-w-0">
+                                              <p className="text-[10px] text-red-500 font-medium uppercase tracking-wide">Lokasi</p>
+                                              <p className="text-xs font-semibold text-red-900 truncate">{proposal.lokasi || '-'}</p>
+                                            </div>
+                                          </div>
+                                          <div className="flex items-center gap-2 p-2.5 bg-green-50/80 rounded-xl border border-green-100">
+                                            <div className="p-1.5 bg-green-100 rounded-lg">
+                                              <LuDollarSign className="w-3.5 h-3.5 text-green-600" />
+                                            </div>
+                                            <div className="min-w-0">
+                                              <p className="text-[10px] text-green-500 font-medium uppercase tracking-wide">Anggaran</p>
+                                              <p className="text-xs font-semibold text-green-900 truncate">{formatCurrency(proposal.anggaran_usulan)}</p>
+                                            </div>
                                           </div>
                                         </div>
                                       </div>
                                     </td>
-                                    <td className="px-4 py-3">
-                                      <p className="font-medium text-gray-800 text-sm">{formatCurrency(proposal.anggaran_usulan)}</p>
-                                    </td>
-                                    <td className="px-4 py-3">
+                                    <td className="px-4 py-4 align-middle">
                                       {getStatusBadge(proposal.dinas_status)}
                                       {/* Show alert if returned from Kecamatan */}
                                       {proposal.verified_at && !proposal.submitted_to_kecamatan && proposal.catatan_verifikasi && (
@@ -657,36 +652,36 @@ const DinasVerificationPage = () => {
                                         </div>
                                       )}
                                     </td>
-                                    <td className="px-4 py-3">
-                                      <div className="flex items-center justify-center gap-1.5">
+                                    <td className="px-4 py-3 align-middle">
+                                      <div className="flex items-center justify-center gap-2">
                                         {/* Lihat Proposal */}
                                         <button
                                           onClick={() => handleViewProposal(proposal)}
-                                          className="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-all hover:scale-105 shadow-sm"
-                                          title="Lihat Proposal"
+                                          className="group flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-blue-50 text-blue-600 border-2 border-blue-200 hover:border-blue-400 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md text-xs font-semibold"
                                         >
-                                          <LuFileText className="w-4 h-4" />
+                                          <LuEye className="w-4 h-4 transition-transform group-hover:scale-110" />
+                                          <span>Detail</span>
                                         </button>
 
-                                      {/* Approve & Reject - Show for pending or returned from Kecamatan */}
+                                      {/* Approve & Reject */}
                                       {(!proposal.dinas_status || proposal.dinas_status === 'pending' || proposal.dinas_status === 'in_review' || proposal.dinas_status === 'rejected' || proposal.dinas_status === 'revision') && (
                                         <>
                                           <button
                                             onClick={() => handleAction(proposal, 'approve')}
                                             disabled={submitting}
-                                            className="p-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-all hover:scale-105 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                                            title="Setujui"
+                                            className="group flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-green-500 text-green-600 hover:text-white border-2 border-green-200 hover:border-green-500 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-green-600 text-xs font-semibold"
                                           >
-                                            <LuCircleCheck className="w-4 h-4" />
+                                            <LuCircleCheck className="w-4 h-4 transition-transform group-hover:scale-110" />
+                                            <span>Setujui</span>
                                           </button>
 
                                           <button
                                             onClick={() => handleAction(proposal, 'reject')}
                                             disabled={submitting}
-                                            className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-all hover:scale-105 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                                            title="Tolak (Revisi)"
+                                            className="group flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-red-500 text-red-600 hover:text-white border-2 border-red-200 hover:border-red-500 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-red-600 text-xs font-semibold"
                                           >
-                                            <LuCircleX className="w-4 h-4" />
+                                            <LuCircleX className="w-4 h-4 transition-transform group-hover:scale-110" />
+                                            <span>Revisi</span>
                                           </button>
                                         </>
                                       )}
@@ -701,52 +696,17 @@ const DinasVerificationPage = () => {
                         {/* Mobile Card View - Visible only on mobile */}
                         <div className="md:hidden space-y-3 p-3">
                           {desa.proposals.map((proposal) => (
-                            <div key={proposal.id} className="bg-white rounded-lg border border-gray-200 p-3 space-y-3">
+                            <div key={proposal.id} className="bg-white rounded-xl border border-gray-200 p-4 space-y-3 shadow-sm">
                               {/* Header */}
-                              <div className="flex items-start gap-2">
-                                <div className="p-1.5 bg-amber-100 rounded flex-shrink-0">
+                              <div className="flex items-start gap-3">
+                                <div className="p-2 bg-gradient-to-br from-amber-100 to-amber-50 rounded-lg shadow-sm flex-shrink-0">
                                   <LuFileText className="w-4 h-4 text-amber-600" />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <p className="font-semibold text-gray-900 text-sm line-clamp-2 mb-1.5">{proposal.judul_proposal}</p>
-                                  {proposal.kegiatan_list && proposal.kegiatan_list.length > 0 && (
-                                    <div className="flex flex-wrap gap-1 mt-1.5">
-                                      {proposal.kegiatan_list.map((kegiatan) => (
-                                        <span 
-                                          key={kegiatan.id}
-                                          className={`px-2 py-0.5 rounded text-xs font-medium ${
-                                            kegiatan.jenis_kegiatan === 'infrastruktur' 
-                                              ? 'bg-blue-100 text-blue-700' 
-                                              : 'bg-purple-100 text-purple-700'
-                                          }`}
-                                        >
-                                          {kegiatan.nama_kegiatan.substring(0, 30)}...
-                                        </span>
-                                      ))}
-                                    </div>
-                                  )}
-                                  
-                                  {/* Detail kegiatan dari desa */}
-                                  {(proposal.volume || proposal.lokasi) && (
-                                    <div className="mt-1.5 space-y-0.5">
-                                      {proposal.volume && (
-                                        <div className="flex items-center gap-1">
-                                          <LuPackage className="w-3 h-3 text-blue-600" />
-                                          <p className="text-xs text-gray-600">Volume: {proposal.volume}</p>
-                                        </div>
-                                      )}
-                                      {proposal.lokasi && (
-                                        <div className="flex items-center gap-1">
-                                          <LuMapPin className="w-3 h-3 text-red-600" />
-                                          <p className="text-xs text-gray-600">Lokasi: {proposal.lokasi}</p>
-                                        </div>
-                                      )}
-                                    </div>
-                                  )}
-                                  
+                                  <p className="font-semibold text-gray-900 text-sm leading-tight">{proposal.judul_proposal}</p>
                                   <div className="flex items-center gap-2 mt-1">
-                                    <p className="text-xs text-gray-500">ID: {proposal.id.toString()}</p>
-                                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                    <span className="text-xs text-gray-400">ID: {proposal.id}</span>
+                                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                                       proposal.jenis_kegiatan === 'infrastruktur' 
                                         ? 'bg-blue-100 text-blue-700' 
                                         : 'bg-purple-100 text-purple-700'
@@ -756,39 +716,64 @@ const DinasVerificationPage = () => {
                                   </div>
                                 </div>
                               </div>
-
-                              {/* Info */}
-                              <div className="space-y-1.5 text-xs">
-                                <div>
-                                  <span className="text-gray-500">Anggaran:</span>
-                                  <p className="text-gray-800 font-semibold mt-0.5">{formatCurrency(proposal.anggaran_usulan)}</p>
-                                </div>
-                                <div>
-                                  <span className="text-gray-500">Status:</span>
-                                  <div className="mt-1">
-                                    {getStatusBadge(proposal.dinas_status)}
+                                  
+                              {/* Info Cards - Volume, Lokasi, Anggaran */}
+                              <div className="grid grid-cols-3 gap-2">
+                                <div className="flex items-center gap-1.5 p-2 bg-blue-50/80 rounded-xl border border-blue-100">
+                                  <div className="p-1 bg-blue-100 rounded-md">
+                                    <LuPackage className="w-3 h-3 text-blue-600" />
                                   </div>
-                                  {/* Show alert if returned from Kecamatan */}
-                                  {proposal.verified_at && !proposal.submitted_to_kecamatan && proposal.catatan_verifikasi && (
-                                    <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
-                                      <p className="text-xs font-semibold text-amber-800 mb-1 flex items-center gap-1">
-                                        <LuTriangleAlert className="w-3 h-3" />
-                                        Dikembalikan dari Kecamatan:
-                                      </p>
-                                      <p className="text-xs text-amber-700 italic">{proposal.catatan_verifikasi}</p>
-                                    </div>
-                                  )}
+                                  <div className="min-w-0">
+                                    <p className="text-[10px] text-blue-500 font-medium uppercase">Volume</p>
+                                    <p className="text-xs font-semibold text-blue-900 truncate">{proposal.volume || '-'}</p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-1.5 p-2 bg-red-50/80 rounded-xl border border-red-100">
+                                  <div className="p-1 bg-red-100 rounded-md">
+                                    <LuMapPin className="w-3 h-3 text-red-600" />
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className="text-[10px] text-red-500 font-medium uppercase">Lokasi</p>
+                                    <p className="text-xs font-semibold text-red-900 truncate">{proposal.lokasi || '-'}</p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-1.5 p-2 bg-green-50/80 rounded-xl border border-green-100">
+                                  <div className="p-1 bg-green-100 rounded-md">
+                                    <LuDollarSign className="w-3 h-3 text-green-600" />
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className="text-[10px] text-green-500 font-medium uppercase">Anggaran</p>
+                                    <p className="text-xs font-semibold text-green-900 truncate">{formatCurrency(proposal.anggaran_usulan)}</p>
+                                  </div>
                                 </div>
                               </div>
 
+                              {/* Status */}
+                              <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                                <div>
+                                  {getStatusBadge(proposal.dinas_status)}
+                                </div>
+                              </div>
+                              
+                              {/* Alert if returned */}
+                              {proposal.verified_at && !proposal.submitted_to_kecamatan && proposal.catatan_verifikasi && (
+                                <div className="p-2 bg-amber-50 border border-amber-200 rounded-lg">
+                                  <p className="text-xs font-semibold text-amber-800 mb-1 flex items-center gap-1">
+                                    <LuTriangleAlert className="w-3 h-3" />
+                                    Dikembalikan dari Kecamatan:
+                                  </p>
+                                  <p className="text-xs text-amber-700 italic">{proposal.catatan_verifikasi}</p>
+                                </div>
+                              )}
+
                               {/* Action Buttons */}
-                              <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
+                              <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
                                 <button
                                   onClick={() => handleViewProposal(proposal)}
-                                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors text-xs font-medium"
+                                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-white hover:bg-blue-50 text-blue-600 border-2 border-blue-200 hover:border-blue-400 rounded-lg transition-all shadow-sm hover:shadow text-xs font-semibold"
                                 >
-                                  <LuFileText className="w-3.5 h-3.5" />
-                                  <span>Proposal</span>
+                                  <LuEye className="w-4 h-4" />
+                                  <span>Detail Proposal</span>
                                 </button>
 
                                 {(!proposal.dinas_status || proposal.dinas_status === 'pending' || proposal.dinas_status === 'in_review' || proposal.dinas_status === 'rejected' || proposal.dinas_status === 'revision') && (
@@ -796,19 +781,19 @@ const DinasVerificationPage = () => {
                                     <button
                                       onClick={() => handleAction(proposal, 'approve')}
                                       disabled={submitting}
-                                      className="p-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors disabled:opacity-50"
-                                      title="Setujui"
+                                      className="flex items-center gap-1.5 px-3 py-2.5 bg-white hover:bg-green-500 text-green-600 hover:text-white border-2 border-green-200 hover:border-green-500 rounded-lg transition-all shadow-sm hover:shadow disabled:opacity-50 disabled:hover:bg-white disabled:hover:text-green-600"
                                     >
                                       <LuCircleCheck className="w-4 h-4" />
+                                      <span className="text-xs font-semibold">Setujui</span>
                                     </button>
 
                                     <button
                                       onClick={() => handleAction(proposal, 'reject')}
                                       disabled={submitting}
-                                      className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors disabled:opacity-50"
-                                      title="Tolak"
+                                      className="flex items-center gap-1.5 px-3 py-2.5 bg-white hover:bg-red-500 text-red-600 hover:text-white border-2 border-red-200 hover:border-red-500 rounded-lg transition-all shadow-sm hover:shadow disabled:opacity-50 disabled:hover:bg-white disabled:hover:text-red-600"
                                     >
                                       <LuCircleX className="w-4 h-4" />
+                                      <span className="text-xs font-semibold">Revisi</span>
                                     </button>
                                   </>
                                 )}

@@ -100,169 +100,6 @@ const parseKegiatanTitles = (namaKegiatan) => {
   return combinations;
 };
 
-// Komponen Status Tracking Timeline - Level Desa (NEW FLOW 2026-01-30)
-// Flow: Desa → Dinas Terkait → Kecamatan → DPMD
-const StatusTracking = ({ proposals }) => {
-  // Tentukan status tracking berdasarkan keseluruhan proposal desa
-  const getTrackingSteps = () => {
-    const steps = [
-      { id: 1, label: 'Desa', status: 'pending', icon: LuClock, color: 'gray' },
-      { id: 2, label: 'Review Dinas Terkait', status: 'pending', icon: LuClock, color: 'gray' },
-      { id: 3, label: 'Review Kecamatan', status: 'pending', icon: LuClock, color: 'gray' },
-      { id: 4, label: 'Review DPMD', status: 'pending', icon: LuClock, color: 'gray' }
-    ];
-
-    // Jika belum ada proposal yang dikirim ke Dinas
-    const submittedProposals = proposals.filter(p => p.submitted_to_dinas_at);
-    if (submittedProposals.length === 0) {
-      steps[0].status = 'active';
-      steps[0].icon = LuClock;
-      steps[0].color = 'blue';
-      steps[0].label = 'Desa (Belum dikirim)';
-      return steps;
-    }
-
-    // Desa step completed (sudah kirim ke Dinas)
-    steps[0].status = 'completed';
-    steps[0].icon = LuCheck;
-    steps[0].color = 'green';
-
-    // NEW FLOW 2026-01-30: Check Dinas status (step 2)
-    const pendingDinas = submittedProposals.filter(p => p.dinas_status === 'pending' || p.dinas_status === 'in_review');
-    const rejectedDinas = submittedProposals.filter(p => (p.dinas_status === 'rejected' || p.dinas_status === 'revision') && !p.submitted_to_dinas_at);
-    const approvedDinas = submittedProposals.filter(p => p.dinas_status === 'approved');
-
-    if (pendingDinas.length > 0) {
-      steps[1].status = 'active';
-      steps[1].icon = LuClock;
-      steps[1].color = 'blue';
-      steps[1].label = 'Sedang direview Dinas Terkait';
-      return steps;
-    }
-
-    if (rejectedDinas.length > 0) {
-      steps[1].status = 'rejected';
-      steps[1].icon = LuX;
-      steps[1].color = 'red';
-      steps[1].label = 'Ditolak Dinas - Kembali ke Desa';
-      return steps;
-    }
-
-    if (approvedDinas.length > 0) {
-      steps[1].status = 'completed';
-      steps[1].icon = LuCheck;
-      steps[1].color = 'green';
-      steps[1].label = 'Disetujui Dinas Terkait';
-    }
-
-    // Check Kecamatan status (step 3)
-    const pendingKecamatan = approvedDinas.filter(p => p.kecamatan_status === 'pending' || p.kecamatan_status === 'in_review');
-    const rejectedKecamatan = approvedDinas.filter(p => (p.kecamatan_status === 'rejected' || p.kecamatan_status === 'revision'));
-    const approvedKecamatan = approvedDinas.filter(p => p.kecamatan_status === 'approved');
-
-    if (pendingKecamatan.length > 0) {
-      steps[2].status = 'active';
-      steps[2].icon = LuClock;
-      steps[2].color = 'blue';
-      steps[2].label = 'Sedang direview Kecamatan';
-      return steps;
-    }
-
-    if (rejectedKecamatan.length > 0) {
-      steps[2].status = 'rejected';
-      steps[2].icon = LuX;
-      steps[2].color = 'red';
-      steps[2].label = 'Ditolak Kecamatan - Kembali ke Desa';
-      return steps;
-    }
-
-    if (approvedKecamatan.length > 0) {
-      steps[2].status = 'completed';
-      steps[2].icon = LuCheck;
-      steps[2].color = 'green';
-      steps[2].label = 'Disetujui Kecamatan';
-    }
-
-    // Check DPMD status (step 4)
-    const pendingDPMD = approvedKecamatan.filter(p => p.dpmd_status === 'pending' || p.dpmd_status === 'in_review');
-    const rejectedDPMD = approvedKecamatan.filter(p => p.dpmd_status === 'rejected' || p.dpmd_status === 'revision');
-    const approvedDPMD = approvedKecamatan.filter(p => p.dpmd_status === 'approved');
-
-    if (pendingDPMD.length > 0) {
-      steps[3].status = 'active';
-      steps[3].icon = LuClock;
-      steps[3].color = 'blue';
-      steps[3].label = 'Sedang direview DPMD';
-      return steps;
-    }
-
-    if (rejectedDPMD.length > 0) {
-      steps[3].status = 'rejected';
-      steps[3].icon = LuX;
-      steps[3].color = 'red';
-      steps[3].label = 'Ditolak DPMD - Kembali ke Desa';
-      return steps;
-    }
-
-    if (approvedDPMD.length > 0) {
-      steps[3].status = 'completed';
-      steps[3].icon = LuCheck;
-      steps[3].color = 'green';
-      steps[3].label = 'Disetujui DPMD (Final)';
-    }
-
-    return steps;
-  };
-
-  const steps = getTrackingSteps();
-  
-  // Jangan tampilkan jika belum ada yang submit
-  const hasSubmitted = proposals.some(p => p.submitted_to_kecamatan);
-  if (!hasSubmitted) {
-    return null;
-  }
-
-  return (
-    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
-      <div className="flex items-center justify-between">
-        {steps.map((step, index) => (
-          <React.Fragment key={step.id}>
-            {/* Step */}
-            <div className="flex flex-col items-center flex-1">
-              <div className={`
-                w-10 h-10 rounded-full flex items-center justify-center mb-2 transition-all
-                ${step.status === 'completed' ? 'bg-green-500 text-white shadow-lg' : ''}
-                ${step.status === 'active' ? 'bg-blue-500 text-white shadow-lg animate-pulse' : ''}
-                ${step.status === 'rejected' ? 'bg-red-500 text-white shadow-lg' : ''}
-                ${step.status === 'pending' ? 'bg-gray-300 text-gray-600' : ''}
-              `}>
-                <step.icon className="w-5 h-5" />
-              </div>
-              <span className={`text-xs font-medium text-center leading-tight ${
-                step.status === 'completed' ? 'text-green-700' :
-                step.status === 'active' ? 'text-blue-700' :
-                step.status === 'rejected' ? 'text-red-700' :
-                'text-gray-500'
-              }`}>
-                {step.label}
-              </span>
-            </div>
-            
-            {/* Connector Line */}
-            {index < steps.length - 1 && (
-              <div className={`h-0.5 flex-1 mx-2 ${
-                steps[index + 1].status === 'completed' ? 'bg-green-500' :
-                steps[index + 1].status === 'active' ? 'bg-blue-500' :
-                'bg-gray-300'
-              }`} />
-            )}
-          </React.Fragment>
-        ))}
-      </div>
-    </div>
-  );
-};
-
 // Fungsi untuk mengkonversi angka ke terbilang
 const angkaTerbilang = (angka) => {
   const bilangan = [
@@ -304,6 +141,7 @@ const BankeuProposalPage = () => {
   const [expandedStats, setExpandedStats] = useState(false);
   const [expandedProposalListInfra, setExpandedProposalListInfra] = useState(false);
   const [expandedProposalListNonInfra, setExpandedProposalListNonInfra] = useState(false);
+  const [expandedProposalId, setExpandedProposalId] = useState(null);
   const [desaSurat, setDesaSurat] = useState({ surat_pengantar: null, surat_permohonan: null, submitted_to_kecamatan: false });
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [uploadForms, setUploadForms] = useState({});
@@ -2186,9 +2024,6 @@ const BankeuProposalPage = () => {
           )}
         </div>
 
-        {/* Status Tracking - Tampil di level atas sebelum list kegiatan */}
-        <StatusTracking proposals={proposals} />
-
         {/* Section Dokumen Pendukung - Surat Pengantar & Surat Permohonan (Desa-Level) */}
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
           <button
@@ -2560,12 +2395,22 @@ const BankeuProposalPage = () => {
                     <div className="p-4 bg-gray-50 space-y-2">
                     {proposals.filter(p => p.kegiatan_list?.some(k => k.jenis_kegiatan === 'infrastruktur')).map((proposal) => (
                       <div key={proposal.id} className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-                        <div className="p-3">
+                        {/* Header Card - Selalu Terlihat */}
+                        <button
+                          onClick={() => setExpandedProposalId(expandedProposalId === proposal.id ? null : proposal.id)}
+                          className="w-full p-3 hover:bg-gray-50 transition-colors"
+                        >
                           <div className="flex items-start justify-between gap-3">
-                            <div className="flex-1">
-                              <p className="font-bold text-gray-900 text-base leading-tight">{proposal.judul_proposal}</p>
+                            <div className="flex-1 text-left">
+                              <div className="flex items-center gap-2">
+                                {expandedProposalId === proposal.id ? 
+                                  <LuChevronDown className="w-4 h-4 text-gray-600 flex-shrink-0" /> : 
+                                  <LuChevronRight className="w-4 h-4 text-gray-600 flex-shrink-0" />
+                                }
+                                <p className="font-bold text-gray-900 text-base leading-tight">{proposal.judul_proposal}</p>
+                              </div>
                               {proposal.kegiatan_list && proposal.kegiatan_list.length > 0 && (
-                                <div className="flex flex-wrap gap-1 mt-2">
+                                <div className="flex flex-wrap gap-1 mt-2 ml-6">
                                   {proposal.kegiatan_list.map((kegiatan) => (
                                     <span 
                                       key={kegiatan.id}
@@ -2580,7 +2425,7 @@ const BankeuProposalPage = () => {
                                   ))}
                                 </div>
                               )}
-                              <p className="text-xs text-gray-500 mt-2">
+                              <p className="text-xs text-gray-500 mt-2 ml-6">
                                 {new Date(proposal.created_at).toLocaleDateString('id-ID', { 
                                   day: 'numeric', 
                                   month: 'short', 
@@ -2595,18 +2440,63 @@ const BankeuProposalPage = () => {
                                   Rp {new Intl.NumberFormat('id-ID').format(proposal.anggaran_usulan)}
                                 </span>
                               )}
+                            </div>
+                          </div>
+                        </button>
+
+                        {/* Detail Expanded - Muncul saat di-expand */}
+                        {expandedProposalId === proposal.id && (
+                          <div className="px-3 pb-3 border-t border-gray-100">
+                            {/* Detail Informasi */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3 mb-3">
+                              {/* Volume */}
+                              {proposal.volume && (
+                                <div className="flex items-start gap-2 p-2 bg-blue-50 rounded-lg">
+                                  <LuPackage className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs font-semibold text-blue-900">Volume</p>
+                                    <p className="text-sm text-blue-800 break-words">{proposal.volume}</p>
+                                  </div>
+                                </div>
+                              )}
+                              {/* Lokasi */}
+                              {proposal.lokasi && (
+                                <div className="flex items-start gap-2 p-2 bg-green-50 rounded-lg">
+                                  <LuMapPin className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs font-semibold text-green-900">Lokasi</p>
+                                    <p className="text-sm text-green-800 break-words">{proposal.lokasi}</p>
+                                  </div>
+                                </div>
+                              )}
+                              {/* Anggaran Detail */}
+                              {proposal.anggaran_usulan && (
+                                <div className="flex items-start gap-2 p-2 bg-amber-50 rounded-lg">
+                                  <LuDollarSign className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs font-semibold text-amber-900">Anggaran</p>
+                                    <p className="text-sm text-amber-800 font-medium">Rp {new Intl.NumberFormat('id-ID').format(proposal.anggaran_usulan)}</p>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex gap-2 mt-3">
                               <button
-                                onClick={() => {
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   const apiBaseUrl = imageBaseUrl.replace(/\/api$/, '');
                                   window.open(`${apiBaseUrl}/storage/uploads/bankeu/${proposal.file_proposal}`, '_blank');
                                 }}
-                                className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-1.5 text-xs font-medium transition-all"
+                                className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center gap-1.5 text-xs font-medium transition-all"
                               >
-                                <LuEye className="w-3 h-3" />
-                                Lihat
+                                <LuEye className="w-4 h-4" />
+                                Lihat File PDF
                               </button>
                             </div>
                           </div>
+                        )}
 
                           {/* Catatan Dinas */}
                           {proposal.dinas_catatan && (proposal.dinas_status === 'rejected' || proposal.dinas_status === 'revision') && (
@@ -2742,7 +2632,6 @@ const BankeuProposalPage = () => {
                             </div>
                           )}
                         </div>
-                      </div>
                     ))}
                     </div>
                   </div>
@@ -2959,12 +2848,22 @@ const BankeuProposalPage = () => {
                     <div className="p-4 bg-gray-50 space-y-2">
                     {proposals.filter(p => p.kegiatan_list?.some(k => k.jenis_kegiatan === 'non_infrastruktur')).map((proposal) => (
                       <div key={proposal.id} className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-                        <div className="p-3">
+                        {/* Header Card - Selalu Terlihat */}
+                        <button
+                          onClick={() => setExpandedProposalId(expandedProposalId === proposal.id ? null : proposal.id)}
+                          className="w-full p-3 hover:bg-gray-50 transition-colors"
+                        >
                           <div className="flex items-start justify-between gap-3">
-                            <div className="flex-1">
-                              <p className="font-bold text-gray-900 text-base leading-tight">{proposal.judul_proposal}</p>
+                            <div className="flex-1 text-left">
+                              <div className="flex items-center gap-2">
+                                {expandedProposalId === proposal.id ? 
+                                  <LuChevronDown className="w-4 h-4 text-gray-600 flex-shrink-0" /> : 
+                                  <LuChevronRight className="w-4 h-4 text-gray-600 flex-shrink-0" />
+                                }
+                                <p className="font-bold text-gray-900 text-base leading-tight">{proposal.judul_proposal}</p>
+                              </div>
                               {proposal.kegiatan_list && proposal.kegiatan_list.length > 0 && (
-                                <div className="flex flex-wrap gap-1 mt-2">
+                                <div className="flex flex-wrap gap-1 mt-2 ml-6">
                                   {proposal.kegiatan_list.map((kegiatan) => (
                                     <span 
                                       key={kegiatan.id}
@@ -2979,7 +2878,7 @@ const BankeuProposalPage = () => {
                                   ))}
                                 </div>
                               )}
-                              <p className="text-xs text-gray-500 mt-2">
+                              <p className="text-xs text-gray-500 mt-2 ml-6">
                                 {new Date(proposal.created_at).toLocaleDateString('id-ID', { 
                                   day: 'numeric', 
                                   month: 'short', 
@@ -2994,18 +2893,63 @@ const BankeuProposalPage = () => {
                                   Rp {new Intl.NumberFormat('id-ID').format(proposal.anggaran_usulan)}
                                 </span>
                               )}
+                            </div>
+                          </div>
+                        </button>
+
+                        {/* Detail Expanded - Muncul saat di-expand */}
+                        {expandedProposalId === proposal.id && (
+                          <div className="px-3 pb-3 border-t border-gray-100">
+                            {/* Detail Informasi */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3 mb-3">
+                              {/* Volume */}
+                              {proposal.volume && (
+                                <div className="flex items-start gap-2 p-2 bg-blue-50 rounded-lg">
+                                  <LuPackage className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs font-semibold text-blue-900">Volume</p>
+                                    <p className="text-sm text-blue-800 break-words">{proposal.volume}</p>
+                                  </div>
+                                </div>
+                              )}
+                              {/* Lokasi */}
+                              {proposal.lokasi && (
+                                <div className="flex items-start gap-2 p-2 bg-green-50 rounded-lg">
+                                  <LuMapPin className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs font-semibold text-green-900">Lokasi</p>
+                                    <p className="text-sm text-green-800 break-words">{proposal.lokasi}</p>
+                                  </div>
+                                </div>
+                              )}
+                              {/* Anggaran Detail */}
+                              {proposal.anggaran_usulan && (
+                                <div className="flex items-start gap-2 p-2 bg-amber-50 rounded-lg">
+                                  <LuDollarSign className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs font-semibold text-amber-900">Anggaran</p>
+                                    <p className="text-sm text-amber-800 font-medium">Rp {new Intl.NumberFormat('id-ID').format(proposal.anggaran_usulan)}</p>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex gap-2 mt-3">
                               <button
-                                onClick={() => {
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   const apiBaseUrl = imageBaseUrl.replace(/\/api$/, '');
                                   window.open(`${apiBaseUrl}/storage/uploads/bankeu/${proposal.file_proposal}`, '_blank');
                                 }}
-                                className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-1.5 text-xs font-medium transition-all"
+                                className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center gap-1.5 text-xs font-medium transition-all"
                               >
-                                <LuEye className="w-3 h-3" />
-                                Lihat
+                                <LuEye className="w-4 h-4" />
+                                Lihat File PDF
                               </button>
                             </div>
                           </div>
+                        )}
 
                           {/* Catatan Dinas */}
                           {proposal.dinas_catatan && (proposal.dinas_status === 'rejected' || proposal.dinas_status === 'revision') && (
@@ -3140,7 +3084,6 @@ const BankeuProposalPage = () => {
                             </div>
                           )}
                         </div>
-                      </div>
                     ))}
                     </div>
                   </div>

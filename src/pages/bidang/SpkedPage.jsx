@@ -11,6 +11,7 @@ const BumdesDokumenManager = lazy(() => import('./spked/bumdes/BumdesDokumenMana
 
 // Lazy load Bankeu component
 const BankeuDashboard = lazy(() => import('./spked/bankeu/BankeuDashboard'));
+const DpmdVerificationPage = lazy(() => import('./spked/bankeu/DpmdVerificationPage'));
 
 // Loading component
 const LoadingFallback = () => (
@@ -23,7 +24,7 @@ const SpkedPage = () => {
 	const navigate = useNavigate();
 	const [loading, setLoading] = useState(true);
 	const [data, setData] = useState(null);
-	const [activeTab, setActiveTab] = useState('overview'); // overview, bumdes, bankeu, activity
+	const [activeTab, setActiveTab] = useState('overview'); // overview, bumdes, bankeu, verification, activity
 	const [bumdesView, setBumdesView] = useState('dashboard'); // dashboard, form, dokumen
 	const [sidebarOpen, setSidebarOpen] = useState(false); // Mobile sidebar state
 	
@@ -180,16 +181,26 @@ const SpkedPage = () => {
 	return (
 		<div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/20 to-green-50/20">
 			{/* Header */}
-			<div className="bg-gradient-to-br from-green-600 via-green-700 to-green-800 text-white shadow-xl">
-				<div className="container mx-auto max-w-[1920px] px-4 sm:px-6 lg:px-12 py-6 lg:py-8">
-					<div className="flex items-center justify-between mb-4">
-						<button 
-							onClick={() => navigate(-1)}
-							className="flex items-center gap-2 text-green-100 hover:text-white transition-colors group"
-						>
-							<ArrowLeft className="h-5 w-5 group-hover:-translate-x-1 transition-transform" />
-							<span className="hidden sm:inline">Kembali</span>
-						</button>
+			<div className="bg-gradient-to-r from-green-600 to-green-700 text-white shadow-lg">
+				<div className="container mx-auto px-4 py-4">
+					<button 
+						onClick={() => navigate(-1)}
+						className="flex items-center gap-2 text-white/80 hover:text-white transition-colors mb-3"
+					>
+						<ArrowLeft className="h-4 w-4" />
+						<span className="text-sm">Kembali</span>
+					</button>
+					
+					<div className="flex items-center justify-between">
+						<div className="flex items-center gap-4">
+							<div className="p-4 bg-white/20 rounded-2xl backdrop-blur-sm">
+								<Building2 className="h-8 w-8" />
+							</div>
+							<div>
+								<h1 className="text-2xl font-bold mb-1">Bidang SPKED</h1>
+								<p className="text-white/90 text-sm">Sarana Prasarana Kewilayahan dan Ekonomi Desa</p>
+							</div>
+						</div>
 						
 						{/* Mobile Hamburger Menu */}
 						<button
@@ -198,16 +209,6 @@ const SpkedPage = () => {
 						>
 							{sidebarOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
 						</button>
-					</div>
-					
-					<div className="flex items-center gap-4 lg:gap-5">
-						<div className="h-16 w-16 lg:h-20 lg:w-20 bg-white/20 backdrop-blur-sm rounded-2xl lg:rounded-3xl flex items-center justify-center shadow-2xl flex-shrink-0">
-							<Landmark className="h-8 w-8 lg:h-10 lg:w-10" />
-						</div>
-						<div className="min-w-0">
-							<h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold truncate">Bidang SPKED</h1>
-							<p className="text-green-100 mt-1 lg:mt-2 text-sm sm:text-base lg:text-lg">Sarana Prasarana Kewilayahan dan Ekonomi Desa</p>
-						</div>
 					</div>
 				</div>
 			</div>
@@ -319,6 +320,33 @@ const SpkedPage = () => {
 						</div>
 					</button>
 
+					{/* Verifikasi Proposal */}
+					<button
+						onClick={() => {
+							setActiveTab('verification');
+							setSidebarOpen(false);
+						}}
+						className={`w-full group relative flex items-center gap-4 px-5 py-4 rounded-2xl font-semibold transition-all duration-300 ${
+							activeTab === 'verification'
+								? 'bg-gradient-to-br from-green-600 to-emerald-600 text-white shadow-xl shadow-green-500/40'
+								: 'bg-white text-gray-700 hover:bg-gray-50 hover:shadow-lg border border-gray-200'
+						}`}
+					>
+						<div className={`h-12 w-12 rounded-xl flex items-center justify-center transition-all ${
+							activeTab === 'verification' 
+								? 'bg-white/20 backdrop-blur-sm' 
+								: 'bg-gradient-to-br from-gray-100 to-gray-200'
+						}`}>
+							<FileText className={`h-6 w-6 ${activeTab === 'verification' ? 'text-white' : 'text-gray-600'}`} />
+						</div>
+						<div className="flex-1 text-left">
+							<div className="font-bold">Verifikasi Proposal</div>
+							<div className={`text-xs ${activeTab === 'verification' ? 'text-green-100' : 'text-gray-500'}`}>
+								Review proposal bankeu
+							</div>
+						</div>
+					</button>
+
 					{/* Aktivitas */}
 					<button
 						onClick={() => {
@@ -350,115 +378,142 @@ const SpkedPage = () => {
 
 			{/* Layout with Sidebar */}
 			<div className="container mx-auto max-w-[1920px] px-4 sm:px-6 lg:px-12 py-6 lg:py-8 xl:py-12">
-				<div className="flex gap-8 lg:gap-10">
+				<div className="flex gap-6">
 					{/* Desktop Sidebar Navigation */}
-					<aside className="hidden lg:block w-80 xl:w-96 flex-shrink-0">
-						<div className="sticky top-8 space-y-4">
+					<aside className="hidden lg:block w-64 flex-shrink-0">
+						<div className="sticky top-8 space-y-3">
 							{/* Overview */}
 							<button
 								onClick={() => setActiveTab('overview')}
-								className={`w-full group relative flex items-center gap-5 px-6 py-5 rounded-2xl font-semibold transition-all duration-300 ${
+								className={`w-full group relative flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-300 ${
 									activeTab === 'overview'
-										? 'bg-gradient-to-br from-green-600 to-emerald-600 text-white shadow-2xl shadow-green-500/40 scale-[1.02]'
-										: 'bg-white text-gray-700 hover:bg-gray-50 hover:shadow-xl border border-gray-200'
+										? 'bg-gradient-to-br from-green-600 to-emerald-600 text-white shadow-lg shadow-green-500/30'
+										: 'bg-white text-gray-700 hover:bg-gray-50 hover:shadow-md border border-gray-200'
 								}`}
 							>
-								<div className={`h-14 w-14 rounded-xl flex items-center justify-center transition-all ${
+								<div className={`h-10 w-10 rounded-lg flex items-center justify-center transition-all ${
 									activeTab === 'overview' 
 										? 'bg-white/20 backdrop-blur-sm' 
 										: 'bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-green-100 group-hover:to-green-200'
 								}`}>
-									<BarChart3 className={`h-7 w-7 ${activeTab === 'overview' ? 'text-white' : 'text-gray-600 group-hover:text-green-600'}`} />
+									<BarChart3 className={`h-5 w-5 ${activeTab === 'overview' ? 'text-white' : 'text-gray-600 group-hover:text-green-600'}`} />
 								</div>
-								<div className="flex-1 text-left">
-									<div className="font-bold text-lg">Overview</div>
-									<div className={`text-sm ${activeTab === 'overview' ? 'text-green-100' : 'text-gray-500'}`}>
+								<div className="flex-1 text-left min-w-0">
+									<div className="font-semibold truncate">Overview</div>
+									<div className={`text-xs ${activeTab === 'overview' ? 'text-green-100' : 'text-gray-500'}`}>
 										Ringkasan data
 									</div>
 								</div>
 								{activeTab === 'overview' && (
-									<div className="absolute right-0 top-1/2 -translate-y-1/2 w-1.5 h-10 bg-white rounded-l-full"></div>
+									<div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-l-full"></div>
 								)}
 							</button>
 
 							{/* BUMDes */}
 							<button
 								onClick={() => setActiveTab('bumdes')}
-								className={`w-full group relative flex items-center gap-5 px-6 py-5 rounded-2xl font-semibold transition-all duration-300 ${
+								className={`w-full group relative flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-300 ${
 									activeTab === 'bumdes'
-										? 'bg-gradient-to-br from-green-600 to-emerald-600 text-white shadow-2xl shadow-green-500/40 scale-[1.02]'
-										: 'bg-white text-gray-700 hover:bg-gray-50 hover:shadow-xl border border-gray-200'
+										? 'bg-gradient-to-br from-green-600 to-emerald-600 text-white shadow-lg shadow-green-500/30'
+										: 'bg-white text-gray-700 hover:bg-gray-50 hover:shadow-md border border-gray-200'
 								}`}
 							>
-								<div className={`h-14 w-14 rounded-xl flex items-center justify-center transition-all ${
+								<div className={`h-10 w-10 rounded-lg flex items-center justify-center transition-all ${
 									activeTab === 'bumdes' 
 										? 'bg-white/20 backdrop-blur-sm' 
 										: 'bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-green-100 group-hover:to-green-200'
 								}`}>
-									<Building2 className={`h-7 w-7 ${activeTab === 'bumdes' ? 'text-white' : 'text-gray-600 group-hover:text-green-600'}`} />
+									<Building2 className={`h-5 w-5 ${activeTab === 'bumdes' ? 'text-white' : 'text-gray-600 group-hover:text-green-600'}`} />
 								</div>
-								<div className="flex-1 text-left">
-									<div className="font-bold text-lg">BUMDes</div>
-									<div className={`text-sm ${activeTab === 'bumdes' ? 'text-green-100' : 'text-gray-500'}`}>
+								<div className="flex-1 text-left min-w-0">
+									<div className="font-semibold truncate">BUMDes</div>
+									<div className={`text-xs ${activeTab === 'bumdes' ? 'text-green-100' : 'text-gray-500'}`}>
 										Data BUMDes desa
 									</div>
 								</div>
 								{activeTab === 'bumdes' && (
-									<div className="absolute right-0 top-1/2 -translate-y-1/2 w-1.5 h-10 bg-white rounded-l-full"></div>
+									<div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-l-full"></div>
 								)}
 							</button>
 
 							{/* Bantuan Keuangan */}
 							<button
 								onClick={() => setActiveTab('bankeu')}
-								className={`w-full group relative flex items-center gap-5 px-6 py-5 rounded-2xl font-semibold transition-all duration-300 ${
+								className={`w-full group relative flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-300 ${
 									activeTab === 'bankeu'
-										? 'bg-gradient-to-br from-green-600 to-emerald-600 text-white shadow-2xl shadow-green-500/40 scale-[1.02]'
-										: 'bg-white text-gray-700 hover:bg-gray-50 hover:shadow-xl border border-gray-200'
+										? 'bg-gradient-to-br from-green-600 to-emerald-600 text-white shadow-lg shadow-green-500/30'
+										: 'bg-white text-gray-700 hover:bg-gray-50 hover:shadow-md border border-gray-200'
 								}`}
 							>
-								<div className={`h-14 w-14 rounded-xl flex items-center justify-center transition-all ${
+								<div className={`h-10 w-10 rounded-lg flex items-center justify-center transition-all ${
 									activeTab === 'bankeu' 
 										? 'bg-white/20 backdrop-blur-sm' 
 										: 'bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-blue-100 group-hover:to-blue-200'
 								}`}>
-									<DollarSign className={`h-7 w-7 ${activeTab === 'bankeu' ? 'text-white' : 'text-gray-600 group-hover:text-blue-600'}`} />
+									<DollarSign className={`h-5 w-5 ${activeTab === 'bankeu' ? 'text-white' : 'text-gray-600 group-hover:text-blue-600'}`} />
 								</div>
-								<div className="flex-1 text-left">
-									<div className="font-bold text-lg">Bantuan Keuangan</div>
-									<div className={`text-sm ${activeTab === 'bankeu' ? 'text-green-100' : 'text-gray-500'}`}>
+								<div className="flex-1 text-left min-w-0">
+									<div className="font-semibold truncate">Bantuan Keuangan</div>
+									<div className={`text-xs ${activeTab === 'bankeu' ? 'text-green-100' : 'text-gray-500'}`}>
 										Bankeu Tahap 1 & 2
 									</div>
 								</div>
 								{activeTab === 'bankeu' && (
-									<div className="absolute right-0 top-1/2 -translate-y-1/2 w-1.5 h-10 bg-white rounded-l-full"></div>
+									<div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-l-full"></div>
+								)}
+							</button>
+
+							{/* Verifikasi Proposal */}
+							<button
+								onClick={() => setActiveTab('verification')}
+								className={`w-full group relative flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-300 ${
+									activeTab === 'verification'
+										? 'bg-gradient-to-br from-green-600 to-emerald-600 text-white shadow-lg shadow-green-500/30'
+										: 'bg-white text-gray-700 hover:bg-gray-50 hover:shadow-md border border-gray-200'
+								}`}
+							>
+								<div className={`h-10 w-10 rounded-lg flex items-center justify-center transition-all ${
+									activeTab === 'verification' 
+										? 'bg-white/20 backdrop-blur-sm' 
+										: 'bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-purple-100 group-hover:to-purple-200'
+								}`}>
+									<FileText className={`h-5 w-5 ${activeTab === 'verification' ? 'text-white' : 'text-gray-600 group-hover:text-purple-600'}`} />
+								</div>
+								<div className="flex-1 text-left min-w-0">
+									<div className="font-semibold truncate">Verifikasi Proposal</div>
+									<div className={`text-xs ${activeTab === 'verification' ? 'text-green-100' : 'text-gray-500'}`}>
+										Review proposal bankeu
+									</div>
+								</div>
+								{activeTab === 'verification' && (
+									<div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-l-full"></div>
 								)}
 							</button>
 
 							{/* Aktivitas */}
 							<button
 								onClick={() => setActiveTab('activity')}
-								className={`w-full group relative flex items-center gap-5 px-6 py-5 rounded-2xl font-semibold transition-all duration-300 ${
+								className={`w-full group relative flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-300 ${
 									activeTab === 'activity'
-										? 'bg-gradient-to-br from-green-600 to-emerald-600 text-white shadow-2xl shadow-green-500/40 scale-[1.02]'
-										: 'bg-white text-gray-700 hover:bg-gray-50 hover:shadow-xl border border-gray-200'
+										? 'bg-gradient-to-br from-green-600 to-emerald-600 text-white shadow-lg shadow-green-500/30'
+										: 'bg-white text-gray-700 hover:bg-gray-50 hover:shadow-md border border-gray-200'
 								}`}
 							>
-								<div className={`h-14 w-14 rounded-xl flex items-center justify-center transition-all ${
+								<div className={`h-10 w-10 rounded-lg flex items-center justify-center transition-all ${
 									activeTab === 'activity' 
 										? 'bg-white/20 backdrop-blur-sm' 
 										: 'bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-orange-100 group-hover:to-orange-200'
 								}`}>
-									<Activity className={`h-7 w-7 ${activeTab === 'activity' ? 'text-white' : 'text-gray-600 group-hover:text-orange-600'}`} />
+									<Activity className={`h-5 w-5 ${activeTab === 'activity' ? 'text-white' : 'text-gray-600 group-hover:text-orange-600'}`} />
 								</div>
-								<div className="flex-1 text-left">
-									<div className="font-bold text-lg">Aktivitas</div>
-									<div className={`text-sm ${activeTab === 'activity' ? 'text-green-100' : 'text-gray-500'}`}>
+								<div className="flex-1 text-left min-w-0">
+									<div className="font-semibold truncate">Aktivitas</div>
+									<div className={`text-xs ${activeTab === 'activity' ? 'text-green-100' : 'text-gray-500'}`}>
 										Log aktivitas
 									</div>
 								</div>
 								{activeTab === 'activity' && (
-									<div className="absolute right-0 top-1/2 -translate-y-1/2 w-1.5 h-10 bg-white rounded-l-full"></div>
+									<div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-l-full"></div>
 								)}
 							</button>
 						</div>
@@ -690,6 +745,14 @@ const SpkedPage = () => {
 					<div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl border border-gray-200/50 overflow-hidden">
 						<Suspense fallback={<LoadingFallback />}>
 							<BankeuDashboard />
+						</Suspense>
+					</div>
+				)}
+
+				{activeTab === 'verification' && (
+					<div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl border border-gray-200/50 overflow-hidden">
+						<Suspense fallback={<LoadingFallback />}>
+							<DpmdVerificationPage />
 						</Suspense>
 					</div>
 				)}

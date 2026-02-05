@@ -1,35 +1,40 @@
 import React, { useState, useEffect } from 'react';
-import { LuCircleCheck, LuCircleX, LuSave, LuInfo } from 'react-icons/lu';
+import { LuCircleCheck, LuSave, LuInfo, LuTriangleAlert } from 'react-icons/lu';
 import api from '../api';
 import Swal from 'sweetalert2';
 
 /**
  * Component untuk Form Quisioner Verifikasi 13 Item (Berita Acara)
  * Digunakan oleh Dinas dan Tim Verifikasi Kecamatan
+ * 
+ * Logika baru:
+ * - Semua item harus dicentang (tersedia) untuk bisa simpan
+ * - Jika ada item yang tidak tersedia, proposal harus dikembalikan ke desa
  */
 const BankeuQuestionnaireForm = ({ 
   proposalId, 
   verifierType, 
   verifierId,
   readOnly = false,
-  onSaveSuccess 
+  onSaveSuccess,
+  onLoad
 }) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
-    item_1: 'ok',
-    item_2: 'ok',
-    item_3: 'ok',
-    item_4: 'ok',
-    item_5: 'ok',
-    item_6: 'ok',
-    item_7: 'ok',
-    item_8: 'ok',
-    item_9: 'ok',
-    item_10: 'ok',
-    item_11: 'ok',
-    item_12: 'ok',
-    item_13: 'ok',
+    item_1: false,
+    item_2: false,
+    item_3: false,
+    item_4: false,
+    item_5: false,
+    item_6: false,
+    item_7: false,
+    item_8: false,
+    item_9: false,
+    item_10: false,
+    item_11: false,
+    item_12: false,
+    item_13: false,
     catatan: ''
   });
 
@@ -59,47 +64,101 @@ const BankeuQuestionnaireForm = ({
       setLoading(true);
       const params = { verifier_type: verifierType };
       if (verifierId) params.verifier_id = verifierId;
+      params.proposal_id = proposalId;
 
       const response = await api.get(`/bankeu/questionnaire/${proposalId}`, { params });
       
       if (response.data.success && response.data.data) {
         const data = response.data.data;
+        // Map qX (boolean/tinyint) to item_X (boolean)
         setFormData({
-          item_1: data.item_1 || 'ok',
-          item_2: data.item_2 || 'ok',
-          item_3: data.item_3 || 'ok',
-          item_4: data.item_4 || 'ok',
-          item_5: data.item_5 || 'ok',
-          item_6: data.item_6 || 'ok',
-          item_7: data.item_7 || 'ok',
-          item_8: data.item_8 || 'ok',
-          item_9: data.item_9 || 'ok',
-          item_10: data.item_10 || 'ok',
-          item_11: data.item_11 || 'ok',
-          item_12: data.item_12 || 'ok',
-          item_13: data.item_13 || 'ok',
-          catatan: data.catatan || ''
+          item_1: data.q1 === true || data.q1 === 1,
+          item_2: data.q2 === true || data.q2 === 1,
+          item_3: data.q3 === true || data.q3 === 1,
+          item_4: data.q4 === true || data.q4 === 1,
+          item_5: data.q5 === true || data.q5 === 1,
+          item_6: data.q6 === true || data.q6 === 1,
+          item_7: data.q7 === true || data.q7 === 1,
+          item_8: data.q8 === true || data.q8 === 1,
+          item_9: data.q9 === true || data.q9 === 1,
+          item_10: data.q10 === true || data.q10 === 1,
+          item_11: data.q11 === true || data.q11 === 1,
+          item_12: data.q12 === true || data.q12 === 1,
+          item_13: data.q13 === true || data.q13 === 1,
+          catatan: data.overall_notes || ''
         });
+        if (onLoad) onLoad(!!data.id);
+      } else {
+        if (onLoad) onLoad(false);
       }
     } catch (error) {
       console.error('Error fetching questionnaire:', error);
+      if (onLoad) onLoad(false);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleItemChange = (itemKey, value) => {
-    setFormData(prev => ({ ...prev, [itemKey]: value }));
+  const handleItemChange = (itemKey) => {
+    setFormData(prev => ({ ...prev, [itemKey]: !prev[itemKey] }));
+  };
+
+  // Check if all items are checked
+  const allItemsChecked = () => {
+    return checklistItems.every(item => formData[item.key] === true);
+  };
+
+  // Get unchecked items
+  const getUncheckedItems = () => {
+    return checklistItems.filter(item => formData[item.key] !== true);
   };
 
   const handleSave = async () => {
+    // Validate all items must be checked
+    if (!allItemsChecked()) {
+      const unchecked = getUncheckedItems();
+      Swal.fire({
+        icon: 'warning',
+        title: 'Tidak Dapat Menyimpan',
+        html: `
+          <div class="text-left">
+            <p class="mb-3">Semua item harus dicentang (tersedia) untuk menyimpan quisioner.</p>
+            <p class="font-bold mb-2">Item yang belum dicentang:</p>
+            <ul class="list-disc pl-5 text-sm text-gray-600">
+              ${unchecked.map(item => `<li>${item.label}</li>`).join('')}
+            </ul>
+            <p class="mt-4 text-sm text-red-600">
+              <strong>Jika dokumen tidak tersedia, silakan kembalikan proposal ke desa untuk dilengkapi.</strong>
+            </p>
+          </div>
+        `,
+        confirmButtonText: 'Mengerti',
+        confirmButtonColor: '#3B82F6'
+      });
+      return;
+    }
+
     try {
       setSaving(true);
 
+      // All items are true (checked)
       const payload = {
         verifier_type: verifierType,
         verifier_id: verifierId,
-        ...formData
+        q1: true,
+        q2: true,
+        q3: true,
+        q4: true,
+        q5: true,
+        q6: true,
+        q7: true,
+        q8: true,
+        q9: true,
+        q10: true,
+        q11: true,
+        q12: true,
+        q13: true,
+        overall_notes: formData.catatan
       };
 
       const response = await api.post(`/bankeu/questionnaire/${proposalId}`, payload);
@@ -108,7 +167,7 @@ const BankeuQuestionnaireForm = ({
         Swal.fire({
           icon: 'success',
           title: 'Berhasil',
-          text: 'Quisioner berhasil disimpan',
+          text: 'Quisioner berhasil disimpan. Semua dokumen terverifikasi lengkap.',
           timer: 2000,
           showConfirmButton: false
         });
@@ -127,11 +186,16 @@ const BankeuQuestionnaireForm = ({
     }
   };
 
+  // Count checked items
+  const checkedCount = checklistItems.filter(item => formData[item.key] === true).length;
+  const totalItems = checklistItems.length;
+  const isComplete = checkedCount === totalItems;
+
   if (loading) {
     return (
       <div className="bg-white rounded-lg shadow-sm p-6">
         <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-600 mx-auto"></div>
           <p className="mt-2 text-gray-600">Memuat quisioner...</p>
         </div>
       </div>
@@ -141,26 +205,54 @@ const BankeuQuestionnaireForm = ({
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
       <div className="p-6 border-b border-gray-200">
-        <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-          <LuCircleCheck className="w-5 h-5 text-green-600" />
-          Quisioner Verifikasi Kelengkapan Dokumen
-        </h3>
-        <p className="text-sm text-gray-600 mt-1">
-          Checklist 13 item untuk Berita Acara Verifikasi
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+              <LuCircleCheck className="w-5 h-5 text-violet-600" />
+              Quisioner Verifikasi Kelengkapan Dokumen
+            </h3>
+            <p className="text-sm text-gray-600 mt-1">
+              Checklist 13 item untuk Berita Acara Verifikasi
+            </p>
+          </div>
+          
+          {/* Progress indicator */}
+          <div className={`px-4 py-2 rounded-full text-sm font-bold ${
+            isComplete 
+              ? 'bg-green-100 text-green-700' 
+              : 'bg-amber-100 text-amber-700'
+          }`}>
+            {checkedCount}/{totalItems} Terverifikasi
+          </div>
+        </div>
       </div>
 
-      <div className="p-6 space-y-4">
+      <div className="p-6 space-y-3">
         {checklistItems.map((item, index) => (
-          <div key={item.key} className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
+          <div 
+            key={item.key} 
+            className={`border rounded-lg p-4 transition-all duration-200 ${
+              formData[item.key] 
+                ? 'border-green-300 bg-green-50' 
+                : 'border-gray-200 hover:border-violet-300'
+            }`}
+          >
             <div className="flex items-start gap-3">
-              <span className="flex-shrink-0 w-8 h-8 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center text-sm font-bold">
-                {index + 1}
+              <span className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                formData[item.key]
+                  ? 'bg-green-500 text-white'
+                  : 'bg-gray-200 text-gray-600'
+              }`}>
+                {formData[item.key] ? '✓' : index + 1}
               </span>
               <div className="flex-1">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
-                    <p className="text-gray-800 font-medium mb-1">{item.label}</p>
+                    <p className={`font-medium mb-1 ${
+                      formData[item.key] ? 'text-green-800' : 'text-gray-800'
+                    }`}>
+                      {item.label}
+                    </p>
                     {item.ket && (
                       <span className="inline-block px-2 py-1 bg-amber-100 text-amber-700 text-xs rounded-md">
                         {item.ket}
@@ -169,33 +261,20 @@ const BankeuQuestionnaireForm = ({
                   </div>
                   
                   {!readOnly && (
-                    <div className="flex items-center gap-3 flex-shrink-0">
+                    <div className="flex-shrink-0">
                       <label className="flex items-center gap-2 cursor-pointer group">
                         <input
-                          type="radio"
-                          name={item.key}
-                          value="ok"
-                          checked={formData[item.key] === 'ok'}
-                          onChange={() => handleItemChange(item.key, 'ok')}
-                          className="w-4 h-4 text-green-600 focus:ring-green-500"
+                          type="checkbox"
+                          checked={formData[item.key]}
+                          onChange={() => handleItemChange(item.key)}
+                          className="w-5 h-5 text-green-600 rounded focus:ring-green-500 cursor-pointer"
                         />
-                        <span className="flex items-center gap-1 text-sm font-medium text-green-700 group-hover:text-green-800">
-                          <LuCircleCheck className="w-4 h-4" />
-                          Lengkap
-                        </span>
-                      </label>
-                      <label className="flex items-center gap-2 cursor-pointer group">
-                        <input
-                          type="radio"
-                          name={item.key}
-                          value="not_ok"
-                          checked={formData[item.key] === 'not_ok'}
-                          onChange={() => handleItemChange(item.key, 'not_ok')}
-                          className="w-4 h-4 text-red-600 focus:ring-red-500"
-                        />
-                        <span className="flex items-center gap-1 text-sm font-medium text-red-700 group-hover:text-red-800">
-                          <LuCircleX className="w-4 h-4" />
-                          Tidak Lengkap
+                        <span className={`text-sm font-semibold ${
+                          formData[item.key] 
+                            ? 'text-green-700' 
+                            : 'text-gray-500'
+                        }`}>
+                          Tersedia
                         </span>
                       </label>
                     </div>
@@ -203,15 +282,15 @@ const BankeuQuestionnaireForm = ({
 
                   {readOnly && (
                     <div className="flex-shrink-0">
-                      {formData[item.key] === 'ok' ? (
+                      {formData[item.key] ? (
                         <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
                           <LuCircleCheck className="w-4 h-4" />
-                          Lengkap
+                          Tersedia
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-medium">
-                          <LuCircleX className="w-4 h-4" />
-                          Tidak Lengkap
+                          <LuTriangleAlert className="w-4 h-4" />
+                          Tidak Tersedia
                         </span>
                       )}
                     </div>
@@ -233,18 +312,35 @@ const BankeuQuestionnaireForm = ({
             disabled={readOnly}
             rows={4}
             placeholder="Masukkan catatan tambahan jika diperlukan..."
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
           />
         </div>
 
-        {/* Info */}
-        {!readOnly && (
-          <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-start gap-3">
-            <LuInfo className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-blue-800">
-              Quisioner ini akan digunakan untuk mengisi Berita Acara Verifikasi. 
-              Pastikan semua item sudah diverifikasi sebelum menyimpan.
-            </p>
+        {/* Warning jika belum lengkap */}
+        {!readOnly && !isComplete && (
+          <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
+            <LuTriangleAlert className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-amber-800">
+              <p className="font-bold mb-1">Dokumen Belum Lengkap</p>
+              <p>
+                Masih ada {totalItems - checkedCount} item yang belum dicentang. 
+                Semua dokumen harus tersedia untuk menyimpan quisioner. 
+                Jika dokumen tidak tersedia, kembalikan proposal ke desa untuk dilengkapi.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Info jika sudah lengkap */}
+        {!readOnly && isComplete && (
+          <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-4 flex items-start gap-3">
+            <LuCircleCheck className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-green-800">
+              <p className="font-bold mb-1">Semua Dokumen Terverifikasi</p>
+              <p>
+                Semua 13 item sudah dicentang. Anda dapat menyimpan quisioner ini.
+              </p>
+            </div>
           </div>
         )}
       </div>
@@ -254,11 +350,15 @@ const BankeuQuestionnaireForm = ({
         <div className="p-6 border-t border-gray-200 bg-gray-50">
           <button
             onClick={handleSave}
-            disabled={saving}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2 disabled:opacity-50"
+            disabled={saving || !isComplete}
+            className={`w-full font-semibold py-3 px-6 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2 ${
+              isComplete
+                ? 'bg-violet-600 hover:bg-violet-700 text-white'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
           >
             <LuSave className="w-5 h-5" />
-            {saving ? 'Menyimpan...' : 'Simpan Quisioner'}
+            {saving ? 'Menyimpan...' : isComplete ? 'Simpan Quisioner' : 'Lengkapi Semua Item'}
           </button>
         </div>
       )}
