@@ -85,7 +85,7 @@ const BeritaManagement = () => {
           text: 'Silakan login terlebih dahulu',
           confirmButtonText: 'Login'
         }).then(() => {
-          window.location.href = '/login';
+          window.location.href = '/';
         });
         return;
       }
@@ -131,7 +131,7 @@ const BeritaManagement = () => {
           confirmButtonText: 'Login'
         }).then(() => {
           localStorage.removeItem('expressToken');
-          window.location.href = '/login';
+          window.location.href = '/';
         });
       } else {
         Swal.fire({

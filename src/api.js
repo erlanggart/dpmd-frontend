@@ -73,11 +73,12 @@ api.interceptors.response.use(
 	(error) => {
 		// Check if error is 401
 		if (error.response && error.response.status === 401) {
-			// Only redirect if NOT on login page
-			if (window.location.pathname !== "/login") {
+			// Only redirect if NOT on login or landing page
+			if (window.location.pathname !== "/login" && window.location.pathname !== "/") {
 				localStorage.removeItem("expressToken");
 				localStorage.removeItem("user");
-				window.location.href = "/login";
+				localStorage.removeItem("authSession");
+				window.location.href = "/";
 			}
 		}
 

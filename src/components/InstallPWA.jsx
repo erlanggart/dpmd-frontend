@@ -1,14 +1,15 @@
 // src/components/InstallPWA.jsx
 import React, { useEffect, useState } from 'react';
-import { FiDownload, FiCheck, FiInfo } from 'react-icons/fi';
+import { FiDownload, FiCheck, FiInfo, FiSmartphone } from 'react-icons/fi';
 import { IoLogoApple } from 'react-icons/io5';
 
 const InstallPWA = ({ compact = false }) => {
-  const [deferredPrompt, setDeferredPrompt] = useState(window.__pwaInstallPrompt || null);
-  const [isInstallable, setIsInstallable] = useState(!!window.__pwaInstallPrompt);
+  const [deferredPrompt, setDeferredPrompt] = useState(window.__pwaInstallPrompt || window.deferredPrompt || null);
+  const [isInstallable, setIsInstallable] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
+  const [isAndroid, setIsAndroid] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
-  const [showIOSGuide, setShowIOSGuide] = useState(false);
+  const [showInstallGuide, setShowInstallGuide] = useState(false);
 
   // Debug state changes
   useEffect(() => {
@@ -45,13 +46,7 @@ const InstallPWA = ({ compact = false }) => {
 
     setIsStandalone(standalone);
     setIsIOS(iosDevice);
-
-    // console.log('[PWA] Platform detection:', { 
-    //   isIOS: iosDevice, 
-    //   isAndroid: androidDevice,
-    //   isStandalone: standalone,
-    //   userAgent: navigator.userAgent
-    // });
+    setIsAndroid(androidDevice);
 
     // Jika sudah diinstall, tidak perlu show button install
     if (standalone) {
@@ -59,38 +54,30 @@ const InstallPWA = ({ compact = false }) => {
       return;
     }
 
-    // Untuk iOS, selalu tampilkan button karena tidak ada beforeinstallprompt
-    if (iosDevice) {
+    // Untuk iOS & Android, selalu tampilkan button
+    // iOS tidak punya beforeinstallprompt, Android kadang terlambat fire
+    if (iosDevice || androidDevice) {
       setIsInstallable(true);
-      console.log('[PWA] iOS detected - showing install guide button');
-      return;
+      console.log(`[PWA] ${iosDevice ? 'iOS' : 'Android'} detected - showing install button`);
     }
 
-    // Untuk Android, tampilkan button meskipun beforeinstallprompt belum fire
-    // (akan ditangani oleh event listener)
-    if (androidDevice) {
-      console.log('[PWA] Android detected - waiting for beforeinstallprompt or showing fallback');
+    // Cek jika prompt sudah tersedia dari global listener
+    if (window.__pwaInstallPrompt || window.deferredPrompt) {
+      setDeferredPrompt(window.__pwaInstallPrompt || window.deferredPrompt);
+      setIsInstallable(true);
     }
 
     // Handler untuk beforeinstallprompt (desktop & Android)
     const handler = (e) => {
-      console.log('[PWA] ✅ beforeinstallprompt event FIRED!', e);
+      console.log('[PWA] ✅ beforeinstallprompt event FIRED!');
       e.preventDefault();
       
       // Simpan ke window object agar persist antar remount
       window.__pwaInstallPrompt = e;
+      window.deferredPrompt = e;
       
-      // Force update state
       setDeferredPrompt(e);
       setIsInstallable(true);
-      
-      // Double check with timeout
-      setTimeout(() => {
-        console.log('[PWA] ⏰ Timeout check - forcing state update');
-        setIsInstallable(true);
-      }, 100);
-      
-      console.log('[PWA] State should be updated - isInstallable=true, deferredPrompt=', e);
     };
 
     // Handler untuk appinstalled event
@@ -116,10 +103,12 @@ const InstallPWA = ({ compact = false }) => {
 
   // Handler untuk install di Desktop/Android
   const handleInstallDesktopAndroid = async () => {
-    const prompt = deferredPrompt || window.__pwaInstallPrompt;
+    const prompt = deferredPrompt || window.__pwaInstallPrompt || window.deferredPrompt;
     
     if (!prompt) {
-      console.warn('[PWA] No install prompt available - PWA criteria not met yet');
+      // Tidak ada native prompt — tampilkan panduan manual
+      console.log('[PWA] No native prompt - showing manual guide');
+      setShowInstallGuide(true);
       return;
     }
 
@@ -133,6 +122,7 @@ const InstallPWA = ({ compact = false }) => {
       if (outcome === 'accepted') {
         console.log('[PWA] User accepted install');
         window.__pwaInstallPrompt = null;
+        window.deferredPrompt = null;
         setIsStandalone(true);
         setIsInstallable(false);
       }
@@ -140,18 +130,15 @@ const InstallPWA = ({ compact = false }) => {
       setDeferredPrompt(null);
     } catch (error) {
       console.error('[PWA] Install error:', error);
+      // Jika prompt gagal, tampilkan panduan manual
+      setShowInstallGuide(true);
     }
-  };
-
-  // Handler untuk iOS - tampilkan panduan
-  const handleInstallIOS = () => {
-    setShowIOSGuide(true);
   };
 
   // Handler klik button utama
   const handleInstallClick = () => {
     if (isIOS) {
-      handleInstallIOS();
+      setShowInstallGuide(true);
     } else {
       handleInstallDesktopAndroid();
     }
@@ -192,113 +179,75 @@ const InstallPWA = ({ compact = false }) => {
         )}
       </button>
 
-      {/* Modal Panduan iOS - Hanya muncul jika device iOS */}
-      {isIOS && showIOSGuide && (
+      {/* Modal Panduan Install */}
+      {showInstallGuide && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
             {/* Header */}
-            <div className="bg-primary text-white p-4 rounded-t-lg sticky top-0">
+            <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 rounded-t-2xl sticky top-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <IoLogoApple className="w-6 h-6" />
-                  <h3 className="font-bold text-lg">Panduan Install di iOS</h3>
+                  {isIOS ? <IoLogoApple className="w-6 h-6" /> : <FiSmartphone className="w-6 h-6" />}
+                  <h3 className="font-bold text-lg">Install Aplikasi</h3>
                 </div>
                 <button
-                  onClick={() => setShowIOSGuide(false)}
-                  className="text-white hover:text-gray-200"
+                  onClick={() => setShowInstallGuide(false)}
+                  className="text-white/80 hover:text-white bg-white/20 rounded-full w-8 h-8 flex items-center justify-center"
                 >
-                  <span className="text-2xl">&times;</span>
+                  <span className="text-xl leading-none">&times;</span>
                 </button>
               </div>
             </div>
 
             {/* Content */}
-            <div className="p-6 space-y-4">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="p-5 space-y-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
                 <div className="flex items-start gap-3">
                   <FiInfo className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
                   <p className="text-sm text-blue-800">
-                    iOS tidak mendukung instalasi otomatis. Ikuti langkah berikut untuk menambahkan aplikasi ke Home Screen:
+                    {isIOS 
+                      ? 'Ikuti langkah berikut untuk install aplikasi di iPhone/iPad:'
+                      : 'Ikuti langkah berikut untuk install aplikasi di perangkat Anda:'
+                    }
                   </p>
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <div className="bg-primary text-white rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 text-sm font-bold">
-                    1
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-900">Buka Safari</p>
-                    <p className="text-sm text-gray-600 mt-1">
-                      Pastikan Anda membuka aplikasi ini menggunakan browser Safari
-                    </p>
-                  </div>
+              {isIOS ? (
+                /* Panduan iOS */
+                <div className="space-y-3">
+                  <StepItem number={1} title="Buka di Safari" desc="Pastikan Anda membuka web ini menggunakan browser Safari" />
+                  <StepItem number={2} title="Tap Tombol Share" desc='Tap ikon Share (kotak dengan panah ke atas) di bagian bawah layar' icon="⬆️" />
+                  <StepItem number={3} title='Pilih "Add to Home Screen"' desc='Scroll ke bawah dan tap "Add to Home Screen"' icon="➕" />
+                  <StepItem number={4} title="Konfirmasi" desc='Tap "Add" di pojok kanan atas' />
                 </div>
-
-                <div className="flex items-start gap-3">
-                  <div className="bg-primary text-white rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 text-sm font-bold">
-                    2
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-900">Tap Icon Share</p>
-                    <p className="text-sm text-gray-600 mt-1">
-                      Klik tombol <span className="font-semibold">Share</span> (ikon kotak dengan panah ke atas) di bagian bawah layar
-                    </p>
-                    <div className="mt-2 bg-gray-100 rounded p-2 text-center">
-                      <span className="text-2xl">⬆️📤</span>
-                    </div>
-                  </div>
+              ) : (
+                /* Panduan Android / Chrome */
+                <div className="space-y-3">
+                  <StepItem number={1} title="Tap Menu Browser" desc='Tap ikon titik tiga (⋮) di pojok kanan atas browser Chrome' icon="⋮" />
+                  <StepItem number={2} title='Pilih "Install Aplikasi"' desc='Tap "Install aplikasi" atau "Tambahkan ke Layar utama"' icon="📲" />
+                  <StepItem number={3} title="Konfirmasi Install" desc='Tap "Install" pada dialog yang muncul' />
                 </div>
+              )}
 
-                <div className="flex items-start gap-3">
-                  <div className="bg-primary text-white rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 text-sm font-bold">
-                    3
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-900">Pilih "Add to Home Screen"</p>
-                    <p className="text-sm text-gray-600 mt-1">
-                      Scroll ke bawah dan tap <span className="font-semibold">"Add to Home Screen"</span>
-                    </p>
-                    <div className="mt-2 bg-gray-100 rounded p-2 text-center">
-                      <span className="text-2xl">➕🏠</span>
-                    </div>
-                  </div>
+              <div className="flex items-start gap-3 bg-green-50 rounded-xl p-3">
+                <div className="bg-green-500 text-white rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0">
+                  <FiCheck className="w-4 h-4" />
                 </div>
-
-                <div className="flex items-start gap-3">
-                  <div className="bg-primary text-white rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 text-sm font-bold">
-                    4
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-900">Konfirmasi</p>
-                    <p className="text-sm text-gray-600 mt-1">
-                      Tap tombol <span className="font-semibold">"Add"</span> di pojok kanan atas
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <div className="bg-green-500 text-white rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0">
-                    <FiCheck className="w-4 h-4" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-green-700">Selesai!</p>
-                    <p className="text-sm text-gray-600 mt-1">
-                      Icon aplikasi akan muncul di Home Screen Anda
-                    </p>
-                  </div>
+                <div className="flex-1">
+                  <p className="font-medium text-green-700 text-sm">Selesai!</p>
+                  <p className="text-xs text-gray-600 mt-0.5">
+                    Icon aplikasi DPMD akan muncul di Home Screen Anda
+                  </p>
                 </div>
               </div>
 
-              <div className="border-t pt-4 mt-6">
-                <button
-                  onClick={() => setShowIOSGuide(false)}
-                  className="w-full bg-primary hover:bg-primary/90 text-white py-2.5 px-4 rounded-lg font-medium transition-colors"
-                >
-                  Mengerti
-                </button>
-              </div>
+              <button
+                onClick={() => setShowInstallGuide(false)}
+                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white py-2.5 px-4 rounded-xl font-medium transition-all"
+              >
+                Mengerti
+              </button>
             </div>
           </div>
         </div>
@@ -306,5 +255,25 @@ const InstallPWA = ({ compact = false }) => {
     </>
   );
 };
+
+// Reusable step item component
+function StepItem({ number, title, desc, icon }) {
+  return (
+    <div className="flex items-start gap-3">
+      <div className="bg-blue-600 text-white rounded-full w-7 h-7 flex items-center justify-center flex-shrink-0 text-sm font-bold">
+        {number}
+      </div>
+      <div className="flex-1">
+        <p className="font-medium text-gray-900 text-sm">{title}</p>
+        <p className="text-xs text-gray-600 mt-0.5">{desc}</p>
+        {icon && (
+          <div className="mt-1.5 bg-gray-100 rounded-lg py-1.5 px-3 inline-block">
+            <span className="text-lg">{icon}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default InstallPWA;

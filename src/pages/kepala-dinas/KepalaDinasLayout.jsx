@@ -172,7 +172,8 @@ const KepalaDinasLayout = () => {
 		if (confirmed) {
 			localStorage.removeItem("user");
 			localStorage.removeItem("expressToken");
-			window.location.href = "/login";
+			localStorage.removeItem("authSession");
+			window.location.href = "/";
 		}
 	};
 

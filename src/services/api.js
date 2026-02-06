@@ -52,12 +52,12 @@ api.interceptors.response.use(
 	(error) => {
 		// Cek jika error adalah 401
 		if (error.response && error.response.status === 401) {
-			// TAMBAHKAN PENGECEKAN INI:
-			// Hanya redirect jika kita TIDAK sedang di halaman login.
-			if (window.location.pathname !== "/login") {
+			// Hanya redirect jika bukan di halaman login atau landing
+			if (window.location.pathname !== "/login" && window.location.pathname !== "/") {
 				localStorage.removeItem("expressToken");
 				localStorage.removeItem("user");
-				window.location.href = "/login";
+				localStorage.removeItem("authSession");
+				window.location.href = "/";
 			}
 		}
 
