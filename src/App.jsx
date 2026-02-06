@@ -335,7 +335,20 @@ const ManageRolesPage = lazy(() =>
 
 const ProtectedRoute = ({ children }) => {
 	const token = localStorage.getItem("expressToken");
+	const { isCheckingSession } = useAuth();
 	const location = useLocation();
+
+	// CRITICAL: Wait for session restore (IndexedDB) before deciding to redirect
+	if (isCheckingSession) {
+		return (
+			<div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800">
+				<div className="text-center">
+					<div className="animate-spin rounded-full h-12 w-12 border-4 border-white/30 border-t-white mx-auto mb-4"></div>
+					<p className="text-white/80 text-sm font-medium">Memuat...</p>
+				</div>
+			</div>
+		);
+	}
 
 	if (!token) {
 		// Simpan lokasi yang dituju agar bisa redirect kembali setelah login
@@ -351,21 +364,25 @@ const ProtectedRoute = ({ children }) => {
 };
 
 const RoleProtectedRoute = ({ children, allowedRoles }) => {
-	const token = localStorage.getItem("expressToken");
 	const { user, isCheckingSession } = useAuth();
 	const location = useLocation();
 
-	if (!token) {
-		return <Navigate to="/login" state={{ from: location }} replace />;
-	}
-
-	// Wait for session check to complete before checking roles
+	// CRITICAL: Wait for session restore (IndexedDB) before deciding to redirect
 	if (isCheckingSession) {
 		return (
-			<div className="flex items-center justify-center min-h-screen">
-				<Spinner size="lg" />
+			<div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800">
+				<div className="text-center">
+					<div className="animate-spin rounded-full h-12 w-12 border-4 border-white/30 border-t-white mx-auto mb-4"></div>
+					<p className="text-white/80 text-sm font-medium">Memuat...</p>
+				</div>
 			</div>
 		);
+	}
+
+	const token = localStorage.getItem("expressToken");
+
+	if (!token) {
+		return <Navigate to="/login" state={{ from: location }} replace />;
 	}
 
 	// Check if user role is allowed
