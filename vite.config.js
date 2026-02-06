@@ -63,7 +63,7 @@ export default defineConfig({
 				description: 'Sistem Informasi Dinas Pemberdayaan Masyarakat dan Desa Kabupaten Bogor',
 				theme_color: '#2563EB',
 				background_color: '#2563EB',
-				display: 'fullscreen',
+				display: 'standalone',
 				orientation: 'any',
 				scope: '/',
 				start_url: '/',
