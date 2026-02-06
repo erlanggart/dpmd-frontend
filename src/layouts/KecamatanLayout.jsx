@@ -110,18 +110,12 @@ const KecamatanLayout = () => {
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="flex items-center justify-between px-6 py-6 border-b border-gray-100">
-            <div className={`flex items-center gap-3 ${!sidebarOpen && "lg:justify-center"}`}>
-              <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-violet-600 rounded-lg flex items-center justify-center shadow-md">
-                <FiMapPin className="text-white text-xl" />
-              </div>
-              {sidebarOpen && (
-                <div>
-                  <h1 className="text-lg font-bold text-gray-800">DPMD Bogor</h1>
-                  <p className="text-xs text-gray-600">Admin Kecamatan</p>
-                </div>
-              )}
-            </div>
+          <div className="flex items-center justify-center px-6 py-6 border-b border-gray-100 bg-gradient-to-r from-violet-50 to-purple-100">
+            <img 
+              src="/logo-dpmd.png" 
+              alt="DPMD Logo" 
+              className={`transition-all duration-300 ${sidebarOpen ? "h-20" : "h-14"}`} 
+            />
           </div>
 
           {/* Toggle Button - Floating di Sidebar */}
@@ -147,11 +141,11 @@ const KecamatanLayout = () => {
             <div className="mx-4 my-4 p-4 bg-gradient-to-br from-violet-50 to-purple-50 rounded-xl border border-violet-100">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-violet-600 rounded-full flex items-center justify-center text-lg font-bold text-white shadow-md">
-                  {(user.kecamatan?.nama || user.name)?.charAt(0).toUpperCase()}
+                  {(user.kecamatan_name || user.kecamatan?.nama || 'K')?.charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-sm text-gray-800 truncate">
-                    {user.kecamatan?.nama || user.name}
+                    {user.kecamatan_name || user.kecamatan?.nama || 'Kecamatan'}
                   </p>
                   <p className="text-xs text-gray-600 truncate">Kecamatan</p>
                 </div>

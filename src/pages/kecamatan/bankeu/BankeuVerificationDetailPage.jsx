@@ -6,7 +6,7 @@ import {
   LuEye, LuCheck, LuX, LuRefreshCw, LuClock, LuArrowLeft,
   LuChevronDown, LuChevronRight, LuDownload, LuClipboardList,
   LuMapPin, LuPackage, LuDollarSign, LuInfo,
-  LuShield, LuFileText
+  LuShield, LuFileText, LuTriangleAlert
 } from "react-icons/lu";
 
 const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
@@ -23,10 +23,22 @@ const BankeuVerificationDetailPage = () => {
   const [showPdfModal, setShowPdfModal] = useState(false);
   const [selectedPdf, setSelectedPdf] = useState(null);
   const [timCompletionStatus, setTimCompletionStatus] = useState({});
+  const [submissionOpen, setSubmissionOpen] = useState(true);
 
   useEffect(() => {
     fetchData();
+    fetchSubmissionSetting();
   }, [desaId]);
+
+  const fetchSubmissionSetting = async () => {
+    try {
+      const res = await api.get('/app-settings/bankeu_submission_kecamatan').catch(() => ({ data: { data: { value: true } } }));
+      setSubmissionOpen(res.data?.data?.value ?? true);
+    } catch (error) {
+      console.error('Error fetching submission setting:', error);
+      setSubmissionOpen(true);
+    }
+  };
 
   // Fungsi untuk check completion status semua tim verifikasi
   const checkTimCompletion = async (proposalId, kecamatanId) => {
@@ -429,8 +441,40 @@ const BankeuVerificationDetailPage = () => {
     // Determine action based on rejected proposals
     const action = reviewStatus.hasRejected ? 'return' : 'submit';
     
-    // If submitting to DPMD (not returning to desa), check berita acara and surat pengantar
+    // If submitting to DPMD (not returning to desa), check submission setting first
     if (action === 'submit') {
+      // Check if submission is open
+      if (!submissionOpen) {
+        Swal.fire({
+          title: '',
+          html: `
+            <div class="text-center py-4">
+              <div class="mx-auto flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-red-100 to-rose-100 mb-4">
+                <svg class="w-12 h-12 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path>
+                </svg>
+              </div>
+              <h3 class="text-2xl font-bold text-red-700 mb-2">
+                Pengajuan Ditutup
+              </h3>
+              <p class="text-gray-600 mb-2">
+                DPMD sedang menutup laju pengajuan proposal untuk sementara waktu.
+              </p>
+              <p class="text-sm text-red-600">
+                Silakan hubungi DPMD untuk informasi lebih lanjut mengenai jadwal pembukaan pengajuan berikutnya.
+              </p>
+            </div>
+          `,
+          customClass: {
+            popup: 'rounded-2xl shadow-2xl',
+            confirmButton: 'bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white font-semibold py-3 px-6 rounded-xl shadow-lg transition-all duration-200 border-0'
+          },
+          buttonsStyling: false,
+          confirmButtonText: 'Mengerti'
+        });
+        return;
+      }
+
       // Check Berita Acara
       if (!reviewStatus.hasAllBeritaAcara) {
         Swal.fire({
@@ -1242,6 +1286,31 @@ const BankeuVerificationDetailPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 space-y-6 pb-8">
+      {/* Submission Closed Warning Banner */}
+      {!submissionOpen && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-gradient-to-r from-red-50 via-rose-50 to-red-50 border-b-2 border-red-200"
+        >
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div className="flex items-center justify-center gap-3">
+              <div className="p-2 bg-red-100 rounded-full">
+                <LuTriangleAlert className="w-5 h-5 text-red-600" />
+              </div>
+              <div className="text-center">
+                <p className="text-red-800 font-semibold">
+                  Laju Pengajuan ke DPMD Sedang Ditutup
+                </p>
+                <p className="text-red-600 text-sm">
+                  DPMD sedang menutup laju pengajuan proposal untuk sementara waktu. Anda masih bisa melakukan review, tetapi tidak bisa mengirim ke DPMD.
+                </p>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
       {/* Header */}
       <div className="bg-white border-b border-gray-200 shadow-sm">
         <div className="w-full px-4 sm:px-6 lg:px-8 py-6">

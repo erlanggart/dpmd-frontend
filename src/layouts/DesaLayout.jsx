@@ -147,12 +147,12 @@ const DesaLayout = () => {
         }`}
       >
         {/* Logo Section */}
-        <div className={`flex items-center ${!sidebarOpen && "justify-center"} p-4 border-b border-gray-100 flex-shrink-0`}>
-          <img src="/logo-bogor.png" alt="Logo" className="h-10" />
-          <div className={`flex flex-col ml-3 ${!sidebarOpen && "lg:hidden"}`}>
-            <span className="font-semibold text-gray-800">DPMD</span>
-            <span className="text-xs text-gray-600">Kabupaten Bogor</span>
-          </div>
+        <div className={`flex items-center justify-center p-4 border-b border-gray-100 flex-shrink-0 bg-gradient-to-r from-emerald-50 to-green-100`}>
+          <img 
+            src="/logo-dpmd.png" 
+            alt="DPMD Logo" 
+            className={`transition-all duration-300 ${sidebarOpen ? "h-20" : "h-14"}`} 
+          />
         </div>
 
         {/* Navigation Menu - Scrollable */}

@@ -29,10 +29,66 @@ const BankeuVerificationPage = () => {
   const [suratStatusFilter, setSuratStatusFilter] = useState('all');
   const [expandedSuratDesa, setExpandedSuratDesa] = useState({});
   const [showFilters, setShowFilters] = useState(false);
+  const [submittingDesa, setSubmittingDesa] = useState(null); // Track which desa is being submitted
+  const [submissionOpen, setSubmissionOpen] = useState(true); // Track if submission to DPMD is open
+  const [refreshing, setRefreshing] = useState(false); // Track refresh state
 
   useEffect(() => {
     fetchData();
+    fetchSubmissionSetting();
+    
+    // Polling untuk cek status submission setiap 10 detik (lebih responsif)
+    const intervalId = setInterval(() => {
+      fetchSubmissionSetting();
+    }, 10000); // 10 detik
+    
+    return () => clearInterval(intervalId);
   }, []);
+
+  const fetchSubmissionSetting = async () => {
+    try {
+      const res = await api.get('/app-settings/bankeu_submission_kecamatan').catch(() => ({ data: { data: { value: true } } }));
+      const newValue = res.data?.data?.value ?? true;
+      
+      setSubmissionOpen(prev => {
+        if (prev !== newValue) {
+          if (newValue === false) {
+            Swal.fire({
+              icon: 'warning',
+              title: 'Pengiriman ke DPMD Ditutup',
+              html: `
+                <div class="text-left">
+                  <p class="text-red-600 font-semibold">⚠️ Pengiriman proposal ke DPMD telah ditutup.</p>
+                  <p class="text-sm text-gray-700 mt-2">
+                    Anda tidak dapat mengirim proposal ke DPMD sampai dibuka kembali.
+                  </p>
+                </div>
+              `,
+              confirmButtonText: 'Mengerti'
+            });
+          } else {
+            Swal.fire({
+              icon: 'success',
+              title: 'Pengiriman ke DPMD Dibuka',
+              html: `
+                <div class="text-left">
+                  <p class="text-green-600 font-semibold">✅ Pengiriman proposal ke DPMD telah dibuka.</p>
+                  <p class="text-sm text-gray-700 mt-2">
+                    Anda sekarang dapat mengirim proposal ke DPMD.
+                  </p>
+                </div>
+              `,
+              timer: 3000,
+              showConfirmButton: false
+            });
+          }
+        }
+        return newValue;
+      });
+    } catch (error) {
+      console.error('Error fetching submission setting:', error);
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -137,7 +193,7 @@ const BankeuVerificationPage = () => {
       
       // Count by kecamatan_status (yang lebih akurat untuk tracking kecamatan)
       const pending = desaProposals.filter(p => !p.kecamatan_status || p.kecamatan_status === 'pending').length;
-      const verified = desaProposals.filter(p => p.kecamatan_status === 'verified').length;
+      const verified = desaProposals.filter(p => p.kecamatan_status === 'approved').length;
       const rejected = desaProposals.filter(p => p.kecamatan_status === 'rejected').length;
       const revision = desaProposals.filter(p => p.kecamatan_status === 'revision').length;
       
@@ -148,10 +204,10 @@ const BankeuVerificationPage = () => {
       const totalAnggaran = desaProposals.reduce((sum, p) => sum + (parseFloat(p.anggaran_usulan) || 0), 0);
 
       // Cek apakah semua proposal sudah punya berita acara
-      const hasBeritaAcara = desaProposals.every(p => p.berita_acara_kecamatan);
+      const hasBeritaAcara = desaProposals.every(p => p.berita_acara_path && p.berita_acara_path !== '');
       
       // Cek apakah semua proposal sudah punya surat pengantar kecamatan
-      const hasSuratPengantar = desaProposals.every(p => p.surat_pengantar_kecamatan);
+      const hasSuratPengantar = desaProposals.every(p => p.surat_pengantar && p.surat_pengantar !== '');
 
       // Status tracking per desa
       const allReviewed = pending === 0 && totalProposals > 0;
@@ -159,7 +215,7 @@ const BankeuVerificationPage = () => {
       const readyForDPMD = allApproved && hasBeritaAcara && hasSuratPengantar;
       
       // Cek apakah sudah dikirim ke DPMD
-      const alreadySentToDPMD = desaProposals.some(p => p.dpmd_status);
+      const alreadySentToDPMD = desaProposals.some(p => p.submitted_to_dpmd);
       
       return {
         desa,
@@ -191,16 +247,16 @@ const BankeuVerificationPage = () => {
       
       const totalProposals = desaProposals.length;
       const pending = desaProposals.filter(p => !p.kecamatan_status || p.kecamatan_status === 'pending').length;
-      const verified = desaProposals.filter(p => p.kecamatan_status === 'verified').length;
+      const verified = desaProposals.filter(p => p.kecamatan_status === 'approved').length;
       
       const desaSurat = desaSuratList.find(s => parseInt(s.desa_id) === desaIdNum);
       const totalAnggaran = desaProposals.reduce((sum, p) => sum + (parseFloat(p.anggaran_usulan) || 0), 0);
-      const hasBeritaAcara = desaProposals.length > 0 && desaProposals.every(p => p.berita_acara_kecamatan);
-      const hasSuratPengantar = desaProposals.length > 0 && desaProposals.every(p => p.surat_pengantar_kecamatan);
+      const hasBeritaAcara = desaProposals.length > 0 && desaProposals.every(p => p.berita_acara_path && p.berita_acara_path !== '');
+      const hasSuratPengantar = desaProposals.length > 0 && desaProposals.every(p => p.surat_pengantar && p.surat_pengantar !== '');
       const allReviewed = pending === 0 && totalProposals > 0;
       const allApproved = verified === totalProposals && totalProposals > 0;
       const readyForDPMD = allApproved && hasBeritaAcara && hasSuratPengantar;
-      const alreadySentToDPMD = desaProposals.some(p => p.dpmd_status);
+      const alreadySentToDPMD = desaProposals.some(p => p.submitted_to_dpmd);
       
       return {
         desa,
@@ -246,6 +302,102 @@ const BankeuVerificationPage = () => {
       ...prev,
       [desaId]: !prev[desaId]
     }));
+  };
+
+  // Submit single desa to DPMD
+  const handleSubmitDesaToDPMD = async (desaId, desaName, totalProposals) => {
+    // Check if submission is open
+    if (!submissionOpen) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Pengiriman Ditutup',
+        html: `
+          <div class="text-left">
+            <p class="text-red-600 font-semibold">⚠️ Pengiriman proposal ke DPMD saat ini ditutup.</p>
+            <p class="text-sm text-gray-700 mt-2">
+              Silakan hubungi DPMD untuk informasi lebih lanjut.
+            </p>
+          </div>
+        `,
+        confirmButtonText: 'OK'
+      });
+      return;
+    }
+
+    const result = await Swal.fire({
+      title: 'Kirim ke DPMD?',
+      html: `
+        <div class="text-left">
+          <p class="mb-2">Anda akan mengirim <strong>${totalProposals} proposal</strong> dari <strong>Desa ${desaName}</strong> ke DPMD.</p>
+          <p class="text-sm text-gray-600">Pastikan semua dokumen sudah lengkap dan benar.</p>
+        </div>
+      `,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#10b981',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Ya, Kirim ke DPMD',
+      cancelButtonText: 'Batal'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        setSubmittingDesa(desaId);
+        
+        Swal.fire({
+          title: 'Mengirim ke DPMD...',
+          text: `Mengirim proposal dari Desa ${desaName}`,
+          allowOutsideClick: false,
+          didOpen: () => {
+            Swal.showLoading();
+          }
+        });
+
+        await api.post(`/kecamatan/bankeu/submit-review/${desaId}`, {
+          action: 'submit'
+        });
+
+        await fetchData();
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Berhasil!',
+          html: `<p><strong>${totalProposals} proposal</strong> dari <strong>Desa ${desaName}</strong> berhasil dikirim ke DPMD.</p>`,
+          timer: 3000,
+          showConfirmButton: false
+        });
+      } catch (error) {
+        console.error('Error submitting to DPMD:', error);
+        
+        // Check if submission was blocked (403)
+        if (error.response?.status === 403) {
+          // Refresh submission status
+          await fetchSubmissionSetting();
+          
+          Swal.fire({
+            icon: 'warning',
+            title: 'Pengiriman Ditutup',
+            html: `
+              <div class="text-left">
+                <p class="text-red-600 font-semibold">⚠️ Pengiriman ke DPMD telah ditutup.</p>
+                <p class="text-sm text-gray-700 mt-2">
+                  ${error.response?.data?.message || 'Silakan hubungi DPMD untuk informasi lebih lanjut.'}
+                </p>
+              </div>
+            `,
+            confirmButtonText: 'Mengerti'
+          });
+        } else {
+          Swal.fire({
+            icon: 'error',
+            title: 'Gagal',
+            text: error.response?.data?.message || 'Gagal mengirim ke DPMD'
+          });
+        }
+      } finally {
+        setSubmittingDesa(null);
+      }
+    }
   };
 
   const handleReviewSurat = async (suratId, status, catatan = '') => {
@@ -390,6 +542,7 @@ const BankeuVerificationPage = () => {
     <div className="space-y-4 sm:space-y-6">
       {/* Tab Navigation */}
       <div className="bg-white rounded-lg shadow-md border-b border-gray-200">
+        <div className="flex items-center justify-between">
         <div className="flex gap-0 overflow-x-auto">
           <button
             onClick={() => setActiveTab('verifikasi')}
@@ -434,16 +587,80 @@ const BankeuVerificationPage = () => {
             <span>Konfigurasi</span>
           </button>
         </div>
+        
+        {/* Refresh Button */}
+        <button
+          onClick={async () => {
+            setRefreshing(true);
+            await fetchData();
+            setRefreshing(false);
+            Swal.fire({
+              icon: 'success',
+              title: 'Data Diperbarui',
+              text: 'Data berhasil dimuat ulang',
+              timer: 1500,
+              showConfirmButton: false
+            });
+          }}
+          disabled={refreshing}
+          className={`flex items-center gap-2 px-4 py-2 mr-4 bg-violet-50 rounded-lg font-medium text-sm transition-all hover:bg-violet-100 ${
+            refreshing ? 'opacity-70 cursor-not-allowed' : ''
+          }`}
+        >
+          <LuRefreshCw className={`w-4 h-4 text-violet-600 ${refreshing ? 'animate-spin' : ''}`} />
+          <span className="text-violet-700 hidden sm:inline">{refreshing ? 'Memuat...' : 'Refresh'}</span>
+        </button>
+        </div>
       </div>
 
       {activeTab === 'verifikasi' && (
         <div className="space-y-4 sm:space-y-6">
+          {/* Warning Banner when submission to DPMD is closed */}
+          {!submissionOpen && (
+            <div className="bg-red-50 border-2 border-red-300 rounded-xl p-4 flex items-start gap-3">
+              <div className="p-2 bg-red-500 rounded-lg shrink-0">
+                <LuCircleAlert className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h3 className="font-bold text-red-800 text-lg">🚫 Pengiriman ke DPMD Ditutup</h3>
+                <p className="text-red-700 text-sm mt-1">
+                  DPMD sedang menutup laju pengiriman proposal untuk sementara waktu. 
+                  Anda tidak dapat mengirim proposal ke DPMD sampai dibuka kembali.
+                </p>
+                <p className="text-red-600 text-xs mt-2">
+                  Silakan hubungi DPMD untuk informasi lebih lanjut.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Header - Responsive */}
           <div className="bg-gradient-to-r from-violet-500 to-purple-500 rounded-xl p-4 sm:p-6 text-white">
-            <h1 className="text-xl sm:text-2xl font-bold">Verifikasi Proposal Bankeu</h1>
-            <p className="text-violet-100 mt-1 text-sm sm:text-base">
-              {kecamatanInfo ? `Kecamatan ${kecamatanInfo.nama}` : 'Kecamatan'}
-            </p>
+            <div className="flex items-start justify-between">
+              <div>
+                <h1 className="text-xl sm:text-2xl font-bold">Verifikasi Proposal Bankeu</h1>
+                <p className="text-violet-100 mt-1 text-sm sm:text-base">
+                  {kecamatanInfo ? `Kecamatan ${kecamatanInfo.nama}` : 'Kecamatan'}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  fetchData();
+                  Swal.fire({
+                    icon: 'info',
+                    title: 'Memperbarui Data',
+                    text: 'Data sedang diperbarui...',
+                    timer: 1500,
+                    showConfirmButton: false
+                  });
+                }}
+                disabled={loading}
+                className="flex items-center gap-2 px-3 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors disabled:opacity-50"
+              >
+                <LuRefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline text-sm font-medium">Refresh</span>
+              </button>
+            </div>
           </div>
 
           {/* Statistics Cards - Responsive */}
@@ -757,69 +974,30 @@ const BankeuVerificationPage = () => {
             </div>
           </div>
 
-          {/* Alert if not ready */}
-          {!trackingStatus.allReadyForDPMD && trackingStatus.totalDesa > 0 && (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
-              <LuCircleAlert className="w-6 h-6 text-amber-600 flex-shrink-0 mt-0.5" />
+          {/* Status Summary */}
+          {trackingStatus.totalDesa > 0 && (
+            <div className={`rounded-xl p-4 flex items-start gap-3 ${
+              trackingStatus.desaReadyForDPMD > 0 
+                ? 'bg-emerald-50 border border-emerald-200' 
+                : 'bg-blue-50 border border-blue-200'
+            }`}>
+              {trackingStatus.desaReadyForDPMD > 0 ? (
+                <LuCircleCheck className="w-6 h-6 text-emerald-600 flex-shrink-0 mt-0.5" />
+              ) : (
+                <LuInfo className="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5" />
+              )}
               <div>
-                <h3 className="font-semibold text-amber-800">Belum Bisa Mengirim ke DPMD</h3>
-                <p className="text-sm text-amber-700 mt-1">
-                  Semua desa harus sudah diverifikasi, memiliki berita acara, dan surat pengantar sebelum dapat mengirim ke DPMD.
-                  Saat ini baru <strong>{trackingStatus.desaReadyForDPMD}</strong> dari <strong>{trackingStatus.totalDesa}</strong> desa yang siap.
+                <h3 className={`font-semibold ${trackingStatus.desaReadyForDPMD > 0 ? 'text-emerald-800' : 'text-blue-800'}`}>
+                  {trackingStatus.desaReadyForDPMD > 0 
+                    ? `${trackingStatus.desaReadyForDPMD} Desa Siap Dikirim ke DPMD` 
+                    : 'Belum Ada Desa yang Siap'}
+                </h3>
+                <p className={`text-sm mt-1 ${trackingStatus.desaReadyForDPMD > 0 ? 'text-emerald-700' : 'text-blue-700'}`}>
+                  {trackingStatus.desaReadyForDPMD > 0 
+                    ? 'Anda dapat mengirim proposal per desa ke DPMD menggunakan tombol "Kirim DPMD" di kolom Aksi.'
+                    : 'Setiap desa perlu semua proposal sudah direview, memiliki Berita Acara, dan Surat Pengantar sebelum dapat dikirim ke DPMD.'}
                 </p>
               </div>
-            </div>
-          )}
-
-          {/* Ready Alert */}
-          {trackingStatus.allReadyForDPMD && trackingStatus.totalDesa > 0 && (
-            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-start gap-3">
-              <LuCircleCheck className="w-6 h-6 text-emerald-600 flex-shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <h3 className="font-semibold text-emerald-800">Semua Desa Siap!</h3>
-                <p className="text-sm text-emerald-700 mt-1">
-                  Semua desa sudah diverifikasi dan memiliki dokumen lengkap. Anda dapat mengirim hasil verifikasi ke DPMD.
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  Swal.fire({
-                    title: 'Kirim Semua ke DPMD?',
-                    html: `
-                      <p class="text-gray-600">
-                        Anda akan mengirim hasil verifikasi dari <strong>${trackingStatus.totalDesa} desa</strong> ke DPMD.
-                      </p>
-                    `,
-                    icon: 'question',
-                    showCancelButton: true,
-                    confirmButtonColor: '#10b981',
-                    cancelButtonColor: '#6b7280',
-                    confirmButtonText: 'Ya, Kirim ke DPMD',
-                    cancelButtonText: 'Batal'
-                  }).then(async (result) => {
-                    if (result.isConfirmed) {
-                      try {
-                        // TODO: Implement batch submit to DPMD
-                        Swal.fire({
-                          icon: 'info',
-                          title: 'Dalam Pengembangan',
-                          text: 'Fitur ini sedang dalam pengembangan'
-                        });
-                      } catch (error) {
-                        Swal.fire({
-                          icon: 'error',
-                          title: 'Gagal',
-                          text: error.response?.data?.message || 'Gagal mengirim ke DPMD'
-                        });
-                      }
-                    }
-                  });
-                }}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold text-sm flex items-center gap-2 transition-colors"
-              >
-                <LuSend className="w-4 h-4" />
-                Kirim ke DPMD
-              </button>
             </div>
           )}
 
@@ -899,12 +1077,38 @@ const BankeuVerificationPage = () => {
                         )}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <button
-                          onClick={() => navigate(`/kecamatan/bankeu/verifikasi/${group.desa.id}`)}
-                          className="px-3 py-1.5 bg-violet-100 hover:bg-violet-200 text-violet-700 rounded-lg text-xs font-medium transition-colors"
-                        >
-                          Detail
-                        </button>
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => navigate(`/kecamatan/bankeu/verifikasi/${group.desa.id}`)}
+                            className="px-3 py-1.5 bg-violet-100 hover:bg-violet-200 text-violet-700 rounded-lg text-xs font-medium transition-colors"
+                          >
+                            Detail
+                          </button>
+                          {group.readyForDPMD && !group.alreadySentToDPMD && (
+                            <button
+                              onClick={() => handleSubmitDesaToDPMD(group.desa.id, group.desa.nama, group.totalProposals)}
+                              disabled={submittingDesa === group.desa.id || !submissionOpen}
+                              title={!submissionOpen ? 'Pengiriman ke DPMD ditutup' : ''}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed ${
+                                !submissionOpen 
+                                  ? 'bg-gray-400 text-gray-100 cursor-not-allowed' 
+                                  : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                              }`}
+                            >
+                              {submittingDesa === group.desa.id ? (
+                                <>
+                                  <LuRefreshCw className="w-3 h-3 animate-spin" />
+                                  <span>Mengirim...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <LuSend className="w-3 h-3" />
+                                  <span>Kirim DPMD</span>
+                                </>
+                              )}
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}

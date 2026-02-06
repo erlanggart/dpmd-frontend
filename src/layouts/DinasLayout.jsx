@@ -169,19 +169,13 @@ const DinasLayout = () => {
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="flex items-center justify-between px-4 sm:px-6 py-4 sm:py-6 border-b border-gray-200">
-            <div className={`flex items-center gap-2 sm:gap-3 ${!sidebarOpen && "lg:justify-center"}`}>
-              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg flex items-center justify-center shadow-lg">
-                <LuBuilding2 className="text-white text-lg sm:text-xl" />
-              </div>
-              {sidebarOpen && (
-                <div>
-                  <h1 className="text-base sm:text-lg font-bold text-gray-900">DPMD Bogor</h1>
-                  <p className="text-xs text-gray-500">
-                    {user?.role === 'verifikator_dinas' ? 'Verifikator Dinas' : 'Dinas Terkait'}
-                  </p>
-                </div>
-              )}
+          <div className="flex items-center justify-between px-4 sm:px-6 py-4 sm:py-6 border-b border-gray-200 bg-gradient-to-r from-amber-50 to-orange-100">
+            <div className="flex items-center justify-center flex-1">
+              <img 
+                src="/logo-dpmd.png" 
+                alt="DPMD Logo" 
+                className={`transition-all duration-300 ${sidebarOpen ? "h-16 sm:h-20" : "h-14"}`} 
+              />
             </div>
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}

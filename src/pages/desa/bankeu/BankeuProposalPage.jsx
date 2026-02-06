@@ -4,7 +4,7 @@ import Swal from "sweetalert2";
 import {
   LuUpload, LuEye, LuClock, LuCheck, LuX, LuRefreshCw, 
   LuChevronDown, LuChevronRight, LuSend, LuTrash2, LuInfo, LuDownload, LuFileText, LuImage,
-  LuPackage, LuMapPin, LuDollarSign
+  LuPackage, LuMapPin, LuDollarSign, LuTriangleAlert
 } from "react-icons/lu";
 
 const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
@@ -186,10 +186,75 @@ const BankeuProposalPage = () => {
     file: null
   }]);
 
+  // Submission control state
+  const [submissionOpen, setSubmissionOpen] = useState(true);
+
   useEffect(() => {
     fetchData();
     fetchContohProposal();
+    fetchSubmissionSetting();
+    
+    // Polling untuk cek status submission setiap 10 detik (lebih responsif)
+    const intervalId = setInterval(() => {
+      fetchSubmissionSetting();
+    }, 10000); // 10 detik
+    
+    return () => clearInterval(intervalId);
   }, []);
+
+  const fetchSubmissionSetting = async () => {
+    try {
+      const res = await api.get('/app-settings/bankeu_submission_desa').catch(() => ({ data: { data: { value: true } } }));
+      const newValue = res.data?.data?.value ?? true;
+      
+      // Tampilkan notifikasi jika status berubah
+      setSubmissionOpen(prev => {
+        if (prev !== newValue) {
+          // Status berubah
+          if (newValue === false) {
+            // Baru ditutup
+            import('sweetalert2').then(Swal => {
+              Swal.default.fire({
+                icon: 'warning',
+                title: 'Pengajuan Ditutup',
+                html: `
+                  <div class="text-left">
+                    <p class="text-red-600 font-semibold">⚠️ Pengajuan Bankeu telah ditutup oleh DPMD.</p>
+                    <p class="text-sm text-gray-700 mt-2">
+                      Anda tidak dapat mengirim proposal atau surat baru sampai pengajuan dibuka kembali.
+                    </p>
+                  </div>
+                `,
+                confirmButtonText: 'Mengerti'
+              });
+            });
+          } else {
+            // Baru dibuka
+            import('sweetalert2').then(Swal => {
+              Swal.default.fire({
+                icon: 'success',
+                title: 'Pengajuan Dibuka',
+                html: `
+                  <div class="text-left">
+                    <p class="text-green-600 font-semibold">✅ Pengajuan Bankeu telah dibuka oleh DPMD.</p>
+                    <p class="text-sm text-gray-700 mt-2">
+                      Anda sekarang dapat mengirim proposal dan surat ke Dinas Terkait.
+                    </p>
+                  </div>
+                `,
+                timer: 3000,
+                showConfirmButton: false
+              });
+            });
+          }
+        }
+        return newValue;
+      });
+    } catch (error) {
+      console.error('Error fetching submission setting:', error);
+      // Keep current state if error
+    }
+  };
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -838,6 +903,24 @@ const BankeuProposalPage = () => {
   };
 
   const handleSubmitToKecamatan = async () => {
+    // Check if submission is open
+    if (!submissionOpen) {
+      Swal.fire({
+        icon: "warning",
+        title: "Pengajuan Ditutup",
+        html: `
+          <div class="text-left">
+            <p class="mb-2 text-red-600 font-semibold">⚠️ Laju pengajuan saat ini ditutup oleh DPMD.</p>
+            <p class="text-sm text-gray-700">
+              Silakan hubungi DPMD untuk informasi lebih lanjut mengenai jadwal pembukaan pengajuan berikutnya.
+            </p>
+          </div>
+        `,
+        confirmButtonText: "OK"
+      });
+      return;
+    }
+
     // Validasi: Surat harus sudah dikirim ke kecamatan (tidak perlu menunggu approval)
     if (!desaSurat.submitted_to_kecamatan) {
       Swal.fire({
@@ -864,14 +947,36 @@ const BankeuProposalPage = () => {
     const count = unsendToKecamatanCount;
     
     const result = await Swal.fire({
-      title: 'Kirim ke Dinas Terkait?',
-      html: `<strong>${count} proposal</strong> akan dikirim ke Dinas Terkait untuk diverifikasi.<br><strong>Proses ini tidak dapat dibatalkan!</strong>`,
-      icon: "question",
+      title: 'Konfirmasi Pengiriman',
+      html: `
+        <div class="text-left space-y-3">
+          <div class="bg-amber-50 border-l-4 border-amber-500 p-3 rounded">
+            <p class="font-semibold text-amber-800">⚠️ PERHATIAN PENTING!</p>
+            <p class="text-sm text-amber-700 mt-1">
+              Pengiriman ke Dinas Terkait <strong>hanya dapat dilakukan 1 KALI</strong> untuk pengajuan awal.
+            </p>
+          </div>
+          
+          <div class="bg-blue-50 border-l-4 border-blue-500 p-3 rounded">
+            <p class="font-semibold text-blue-800">📋 Sebelum mengirim, pastikan:</p>
+            <ul class="list-disc ml-5 text-sm text-blue-700 mt-1 space-y-1">
+              <li>Semua kegiatan yang ingin diajukan <strong>sudah di-upload</strong></li>
+              <li>File proposal sudah benar dan lengkap</li>
+              <li>Data kegiatan sudah sesuai</li>
+            </ul>
+          </div>
+          
+          <p class="text-gray-700 text-center">
+            <strong>${count} proposal</strong> akan dikirim ke Dinas Terkait untuk diverifikasi.
+          </p>
+        </div>
+      `,
+      icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#10b981",
       cancelButtonColor: "#6b7280",
-      confirmButtonText: "Ya, Kirim!",
-      cancelButtonText: "Batal"
+      confirmButtonText: "Ya, Saya Yakin & Kirim!",
+      cancelButtonText: "Batal, Cek Kembali"
     });
 
     if (result.isConfirmed) {
@@ -896,17 +1001,56 @@ const BankeuProposalPage = () => {
           showConfirmButton: false
         });
       } catch (error) {
-        console.error('Error submit to Kecamatan:', error);
-        Swal.fire({
-          icon: "error",
-          title: "Gagal",
-          text: error.response?.data?.message || "Gagal mengirim proposal"
-        });
+        console.error('Error submit to Dinas:', error);
+        
+        // Check if submission was blocked (403)
+        if (error.response?.status === 403) {
+          // Refresh submission status
+          await fetchSubmissionSetting();
+          
+          Swal.fire({
+            icon: "warning",
+            title: "Pengajuan Ditutup",
+            html: `
+              <div class="text-left">
+                <p class="text-red-600 font-semibold">⚠️ Pengajuan telah ditutup oleh DPMD.</p>
+                <p class="text-sm text-gray-700 mt-2">
+                  ${error.response?.data?.message || 'Silakan hubungi DPMD untuk informasi lebih lanjut.'}
+                </p>
+              </div>
+            `,
+            confirmButtonText: 'Mengerti'
+          });
+        } else {
+          Swal.fire({
+            icon: "error",
+            title: "Gagal",
+            text: error.response?.data?.message || "Gagal mengirim proposal"
+          });
+        }
       }
     }
   };
 
   const handleSubmitToDinas = async () => {
+    // Check if submission is open
+    if (!submissionOpen) {
+      Swal.fire({
+        icon: "warning",
+        title: "Pengajuan Ditutup",
+        html: `
+          <div class="text-left">
+            <p class="mb-2 text-red-600 font-semibold">⚠️ Laju pengajuan saat ini ditutup oleh DPMD.</p>
+            <p class="text-sm text-gray-700">
+              Silakan hubungi DPMD untuk informasi lebih lanjut mengenai jadwal pembukaan pengajuan berikutnya.
+            </p>
+          </div>
+        `,
+        confirmButtonText: "OK"
+      });
+      return;
+    }
+
     const count = fromDinasOrDPMDUploaded.length;
     
     const result = await Swal.fire({
@@ -954,6 +1098,24 @@ const BankeuProposalPage = () => {
   };
 
   const handleSubmitToKecamatanResubmit = async () => {
+    // Check if submission is open
+    if (!submissionOpen) {
+      Swal.fire({
+        icon: "warning",
+        title: "Pengajuan Ditutup",
+        html: `
+          <div class="text-left">
+            <p class="mb-2 text-red-600 font-semibold">⚠️ Laju pengajuan saat ini ditutup oleh DPMD.</p>
+            <p class="text-sm text-gray-700">
+              Silakan hubungi DPMD untuk informasi lebih lanjut mengenai jadwal pembukaan pengajuan berikutnya.
+            </p>
+          </div>
+        `,
+        confirmButtonText: "OK"
+      });
+      return;
+    }
+
     const count = fromKecamatanUploaded.length;
     
     const result = await Swal.fire({
@@ -1210,6 +1372,19 @@ const BankeuProposalPage = () => {
       });
     } catch (error) {
       console.error("Error submit surat:", error);
+      
+      // Handle 403 - pengajuan ditutup
+      if (error.response?.status === 403) {
+        await fetchSubmissionSetting();
+        Swal.fire({
+          icon: "warning",
+          title: "Pengajuan Ditutup",
+          text: "Pengajuan Bankeu telah ditutup oleh DPMD. Silakan coba lagi nanti.",
+          confirmButtonText: "OK"
+        });
+        return;
+      }
+      
       Swal.fire({
         icon: "error",
         title: "Gagal Mengirim Surat",
@@ -1648,6 +1823,25 @@ const BankeuProposalPage = () => {
   return (
     <>
       <div className="space-y-6">
+        {/* Warning Banner when submission is closed */}
+        {!submissionOpen && (
+          <div className="bg-red-50 border-2 border-red-300 rounded-xl p-4 flex items-start gap-3">
+            <div className="p-2 bg-red-500 rounded-lg shrink-0">
+              <LuTriangleAlert className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-red-800 text-lg">🚫 Pengajuan Proposal Ditutup</h3>
+              <p className="text-red-700 text-sm mt-1">
+                DPMD sedang menutup laju pengajuan proposal untuk sementara waktu. 
+                Anda tidak dapat mengirim proposal baru ke Dinas Terkait sampai pengajuan dibuka kembali.
+              </p>
+              <p className="text-red-600 text-xs mt-2">
+                Silakan hubungi DPMD untuk informasi lebih lanjut.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Header & Progress */}
         <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-lg border border-gray-100">
           <div className="p-8">

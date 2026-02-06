@@ -24,8 +24,9 @@ const SpkedPage = () => {
 	const navigate = useNavigate();
 	const [loading, setLoading] = useState(true);
 	const [data, setData] = useState(null);
-	const [activeTab, setActiveTab] = useState('overview'); // overview, bumdes, bankeu, verification, activity
+	const [activeTab, setActiveTab] = useState('overview'); // overview, bumdes, bankeu, activity
 	const [bumdesView, setBumdesView] = useState('dashboard'); // dashboard, form, dokumen
+	const [bankeuYear, setBankeuYear] = useState(null); // null (picker), 2025, or 2026
 	const [sidebarOpen, setSidebarOpen] = useState(false); // Mobile sidebar state
 	
 	// Activity logs state
@@ -297,6 +298,7 @@ const SpkedPage = () => {
 					<button
 						onClick={() => {
 							setActiveTab('bankeu');
+							setBankeuYear(null);
 							setSidebarOpen(false);
 						}}
 						className={`w-full group relative flex items-center gap-4 px-5 py-4 rounded-2xl font-semibold transition-all duration-300 ${
@@ -315,34 +317,7 @@ const SpkedPage = () => {
 						<div className="flex-1 text-left">
 							<div className="font-bold">Bantuan Keuangan</div>
 							<div className={`text-xs ${activeTab === 'bankeu' ? 'text-green-100' : 'text-gray-500'}`}>
-								Bankeu Tahap 1 & 2
-							</div>
-						</div>
-					</button>
-
-					{/* Verifikasi Proposal */}
-					<button
-						onClick={() => {
-							setActiveTab('verification');
-							setSidebarOpen(false);
-						}}
-						className={`w-full group relative flex items-center gap-4 px-5 py-4 rounded-2xl font-semibold transition-all duration-300 ${
-							activeTab === 'verification'
-								? 'bg-gradient-to-br from-green-600 to-emerald-600 text-white shadow-xl shadow-green-500/40'
-								: 'bg-white text-gray-700 hover:bg-gray-50 hover:shadow-lg border border-gray-200'
-						}`}
-					>
-						<div className={`h-12 w-12 rounded-xl flex items-center justify-center transition-all ${
-							activeTab === 'verification' 
-								? 'bg-white/20 backdrop-blur-sm' 
-								: 'bg-gradient-to-br from-gray-100 to-gray-200'
-						}`}>
-							<FileText className={`h-6 w-6 ${activeTab === 'verification' ? 'text-white' : 'text-gray-600'}`} />
-						</div>
-						<div className="flex-1 text-left">
-							<div className="font-bold">Verifikasi Proposal</div>
-							<div className={`text-xs ${activeTab === 'verification' ? 'text-green-100' : 'text-gray-500'}`}>
-								Review proposal bankeu
+								Bankeu & Verifikasi
 							</div>
 						</div>
 					</button>
@@ -438,7 +413,7 @@ const SpkedPage = () => {
 
 							{/* Bantuan Keuangan */}
 							<button
-								onClick={() => setActiveTab('bankeu')}
+								onClick={() => { setActiveTab('bankeu'); setBankeuYear(null); }}
 								className={`w-full group relative flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-300 ${
 									activeTab === 'bankeu'
 										? 'bg-gradient-to-br from-green-600 to-emerald-600 text-white shadow-lg shadow-green-500/30'
@@ -455,37 +430,10 @@ const SpkedPage = () => {
 								<div className="flex-1 text-left min-w-0">
 									<div className="font-semibold truncate">Bantuan Keuangan</div>
 									<div className={`text-xs ${activeTab === 'bankeu' ? 'text-green-100' : 'text-gray-500'}`}>
-										Bankeu Tahap 1 & 2
+										Bankeu & Verifikasi
 									</div>
 								</div>
 								{activeTab === 'bankeu' && (
-									<div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-l-full"></div>
-								)}
-							</button>
-
-							{/* Verifikasi Proposal */}
-							<button
-								onClick={() => setActiveTab('verification')}
-								className={`w-full group relative flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-300 ${
-									activeTab === 'verification'
-										? 'bg-gradient-to-br from-green-600 to-emerald-600 text-white shadow-lg shadow-green-500/30'
-										: 'bg-white text-gray-700 hover:bg-gray-50 hover:shadow-md border border-gray-200'
-								}`}
-							>
-								<div className={`h-10 w-10 rounded-lg flex items-center justify-center transition-all ${
-									activeTab === 'verification' 
-										? 'bg-white/20 backdrop-blur-sm' 
-										: 'bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-purple-100 group-hover:to-purple-200'
-								}`}>
-									<FileText className={`h-5 w-5 ${activeTab === 'verification' ? 'text-white' : 'text-gray-600 group-hover:text-purple-600'}`} />
-								</div>
-								<div className="flex-1 text-left min-w-0">
-									<div className="font-semibold truncate">Verifikasi Proposal</div>
-									<div className={`text-xs ${activeTab === 'verification' ? 'text-green-100' : 'text-gray-500'}`}>
-										Review proposal bankeu
-									</div>
-								</div>
-								{activeTab === 'verification' && (
 									<div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-l-full"></div>
 								)}
 							</button>
@@ -672,7 +620,7 @@ const SpkedPage = () => {
 									</button>
 
 									<button
-										onClick={() => setActiveTab('bankeu')}
+										onClick={() => { setActiveTab('bankeu'); setBankeuYear(null); }}
 										className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border border-gray-100 p-6 hover:border-blue-300 transition-all duration-300 text-left overflow-hidden hover:-translate-y-1"
 									>
 										<div className="absolute inset-0 bg-gradient-to-br from-blue-400/5 to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -743,17 +691,58 @@ const SpkedPage = () => {
 
 				{activeTab === 'bankeu' && (
 					<div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl border border-gray-200/50 overflow-hidden">
-						<Suspense fallback={<LoadingFallback />}>
-							<BankeuDashboard />
-						</Suspense>
-					</div>
-				)}
+						{!bankeuYear ? (
+							/* Year Selection Screen */
+							<div className="flex flex-col items-center justify-center py-20 px-6">
+								<div className="inline-flex h-20 w-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-3xl items-center justify-center mb-6 shadow-2xl shadow-blue-500/30">
+									<DollarSign className="h-10 w-10 text-white" />
+								</div>
+								<h2 className="text-2xl font-bold bg-gradient-to-r from-gray-800 via-blue-700 to-blue-600 bg-clip-text text-transparent mb-2">
+									Bantuan Keuangan Desa
+								</h2>
+								<p className="text-gray-500 mb-10 text-center max-w-md">
+									Pilih tahun anggaran terlebih dahulu untuk melihat data
+								</p>
 
-				{activeTab === 'verification' && (
-					<div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl border border-gray-200/50 overflow-hidden">
-						<Suspense fallback={<LoadingFallback />}>
-							<DpmdVerificationPage />
-						</Suspense>
+								<div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full max-w-lg">
+									<button
+										onClick={() => setBankeuYear(2025)}
+										className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border-2 border-gray-200 hover:border-blue-400 p-8 transition-all duration-300 text-center overflow-hidden hover:-translate-y-1"
+									>
+										<div className="absolute inset-0 bg-gradient-to-br from-blue-400/5 to-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+										<div className="relative">
+											<div className="h-16 w-16 mx-auto bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg shadow-blue-500/25">
+												<span className="text-2xl">📋</span>
+											</div>
+											<h3 className="text-xl font-bold text-gray-800 mb-2">TA 2025</h3>
+											<p className="text-sm text-gray-500 leading-relaxed">Bantuan Keuangan<br/>Tahap 1 & Tahap 2</p>
+										</div>
+									</button>
+
+									<button
+										onClick={() => setBankeuYear(2026)}
+										className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border-2 border-gray-200 hover:border-green-400 p-8 transition-all duration-300 text-center overflow-hidden hover:-translate-y-1"
+									>
+										<div className="absolute inset-0 bg-gradient-to-br from-green-400/5 to-emerald-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+										<div className="relative">
+											<div className="h-16 w-16 mx-auto bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg shadow-green-500/25">
+												<span className="text-2xl">📝</span>
+											</div>
+											<h3 className="text-xl font-bold text-gray-800 mb-2">TA 2026</h3>
+											<p className="text-sm text-gray-500 leading-relaxed">Verifikasi Proposal<br/>Bantuan Keuangan</p>
+										</div>
+									</button>
+								</div>
+							</div>
+						) : (
+							<Suspense fallback={<LoadingFallback />}>
+								{bankeuYear === 2025 ? (
+									<BankeuDashboard />
+								) : (
+									<DpmdVerificationPage />
+								)}
+							</Suspense>
+						)}
 					</div>
 				)}
 

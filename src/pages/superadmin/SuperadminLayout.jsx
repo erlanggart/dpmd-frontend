@@ -151,19 +151,13 @@ const SuperadminLayout = () => {
 				sidebarOpen ? 'w-72' : 'w-20'
 			}`}>
 				{/* Logo & Brand */}
-				<div className="p-4 border-b border-gray-100">
-					<div className="flex items-center gap-3 overflow-hidden">
-						<div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
-							<FiLayers className="w-6 h-6 text-white" />
-						</div>
-						{sidebarOpen && (
-							<div className="animate-in fade-in slide-in-from-left duration-200">
-								<h1 className="text-lg font-bold text-gray-800">
-									Super Admin
-								</h1>
-								<p className="text-xs text-gray-500">DPMD Kab. Bogor</p>
-							</div>
-						)}
+				<div className="p-4 border-b border-gray-100 bg-gradient-to-r from-slate-50 to-gray-100">
+					<div className="flex items-center justify-center overflow-hidden">
+						<img 
+							src="/logo-dpmd.png" 
+							alt="DPMD Logo" 
+							className={`transition-all duration-300 ${sidebarOpen ? "h-20" : "h-14"}`}
+						/>
 					</div>
 				</div>
 

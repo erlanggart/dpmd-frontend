@@ -23,6 +23,44 @@ const DinasVerificationPage = () => {
   const [proposalModal, setProposalModal] = useState({ show: false, proposal: null });
   const [catatan, setCatatan] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Handle refresh data
+  const handleRefresh = async () => {
+    try {
+      setRefreshing(true);
+      const [proposalsRes, statsRes] = await Promise.all([
+        api.get('/dinas/bankeu/proposals'),
+        api.get('/dinas/bankeu/statistics')
+      ]);
+
+      if (proposalsRes.data.success) {
+        setProposals(proposalsRes.data.data);
+        setDinasInfo(proposalsRes.data.dinas_info);
+      }
+
+      if (statsRes.data.success) {
+        setStatistics(statsRes.data.data);
+      }
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Data Diperbarui',
+        text: 'Data berhasil dimuat ulang',
+        timer: 1500,
+        showConfirmButton: false
+      });
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal',
+        text: 'Gagal memuat ulang data'
+      });
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   useEffect(() => {
     fetchData();
@@ -345,10 +383,24 @@ const DinasVerificationPage = () => {
     <div className="space-y-4 sm:space-y-6">
       {/* Header - Responsive */}
       <div className="bg-gradient-to-r from-amber-500 to-orange-500 rounded-xl p-4 sm:p-6 text-white">
-        <h1 className="text-xl sm:text-2xl font-bold">Verifikasi Proposal Bankeu</h1>
-        <p className="text-amber-100 mt-1 text-sm sm:text-base">
-          {dinasInfo ? `${dinasInfo.nama} (${dinasInfo.singkatan})` : 'Dinas Terkait'}
-        </p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold">Verifikasi Proposal Bankeu</h1>
+            <p className="text-amber-100 mt-1 text-sm sm:text-base">
+              {dinasInfo ? `${dinasInfo.nama} (${dinasInfo.singkatan})` : 'Dinas Terkait'}
+            </p>
+          </div>
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className={`flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg font-medium text-sm transition-all ${
+              refreshing ? 'opacity-70 cursor-not-allowed' : ''
+            }`}
+          >
+            <LuRefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">{refreshing ? 'Memuat...' : 'Refresh Data'}</span>
+          </button>
+        </div>
       </div>
 
       {/* Statistics Cards - Responsive */}

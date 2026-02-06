@@ -183,46 +183,42 @@ const DinasVerifikatorPage = () => {
   };
 
   const handleResetPassword = async (verifikator) => {
-    const { value: newPassword } = await Swal.fire({
-      title: 'Reset Password',
-      text: `Reset password untuk ${verifikator.nama}?`,
-      input: 'password',
-      inputLabel: 'Password Baru',
-      inputPlaceholder: 'Masukkan password baru (min. 6 karakter)',
-      inputAttributes: {
-        minlength: 6
-      },
+    const result = await Swal.fire({
+      title: 'Buat Password Baru?',
+      html: `Password baru akan dibuat untuk <strong>${verifikator.nama}</strong>.<br/>Password baru akan ditampilkan setelah dibuat.`,
+      icon: 'question',
       showCancelButton: true,
-      confirmButtonText: 'Reset',
-      cancelButtonText: 'Batal',
-      confirmButtonColor: '#ef4444',
-      inputValidator: (value) => {
-        if (!value || value.length < 6) {
-          return 'Password minimal 6 karakter!';
-        }
-      }
+      confirmButtonColor: '#f59e0b',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Ya, Buat Password Baru',
+      cancelButtonText: 'Batal'
     });
 
-    if (newPassword) {
+    if (result.isConfirmed) {
       try {
-        const response = await api.post(`/dinas/${dinasId}/verifikator/${verifikator.id}/reset-password`, {
-          new_password: newPassword
-        });
+        const response = await api.post(`/dinas/${dinasId}/verifikator/${verifikator.id}/reset-password`);
+        const newPassword = response.data?.data?.newPassword || response.data?.newPassword;
         
-        if (response.data.success) {
-          Swal.fire({
-            icon: 'success',
-            title: 'Berhasil',
-            text: `Password untuk ${verifikator.nama} berhasil direset`,
-            timer: 2000
-          });
-        }
+        await Swal.fire({
+          title: 'Password Baru Berhasil Dibuat',
+          html: `
+            <div class="text-left">
+              <p class="mb-3">Password baru untuk <strong>${verifikator.nama}</strong>:</p>
+              <div class="bg-gray-100 p-3 rounded-lg font-mono text-lg text-center select-all">
+                ${newPassword}
+              </div>
+              <p class="text-sm text-gray-500 mt-3">⚠️ Simpan password ini! Password hanya ditampilkan sekali.</p>
+            </div>
+          `,
+          icon: 'success',
+          confirmButtonText: 'Saya Sudah Menyimpan'
+        });
       } catch (error) {
-        console.error('Error resetting password:', error);
+        console.error('Error creating new password:', error);
         Swal.fire({
           icon: 'error',
           title: 'Gagal',
-          text: 'Gagal reset password'
+          text: 'Gagal membuat password baru'
         });
       }
     }
@@ -574,7 +570,7 @@ const DinasVerifikatorPage = () => {
                           <button
                             onClick={() => handleResetPassword(verifikator)}
                             className="text-amber-600 hover:text-amber-900 p-1.5 hover:bg-amber-50 rounded transition-colors"
-                            title="Reset Password"
+                            title="Buat Password Baru"
                           >
                             <LuKey className="w-4 h-4" />
                           </button>
@@ -767,7 +763,7 @@ const DinasVerifikatorPage = () => {
                     <div className="bg-gray-50 p-3 rounded-lg">
                       <p className="text-xs text-gray-600">
                         <LuLock className="w-3 h-3 inline mr-1" />
-                        Untuk reset password, gunakan tombol "Reset Password" di daftar verifikator.
+                        Untuk membuat password baru, gunakan tombol kunci di daftar verifikator.
                       </p>
                     </div>
                   </div>
