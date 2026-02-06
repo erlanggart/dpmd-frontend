@@ -461,9 +461,34 @@ const ThemeColorWrapper = ({ children }) => {
 					
 					// Handle notification click navigation
 					if (event.data && event.data.type === 'NOTIFICATION_CLICK_NAVIGATE') {
-						const { url } = event.data;
+						const { url, notificationData } = event.data;
+						const notifType = notificationData?.type || '';
 						
-						if (url) {
+						// Smart routing based on notification type and user role
+						if (notifType.includes('disposisi') || notifType === 'new_disposisi' || notifType === 'disposisi_update') {
+							// Get user role from localStorage to determine correct disposisi route
+							const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+							const userRole = storedUser.role || '';
+							
+							const roleRouteMap = {
+								'kepala_dinas': '/kepala-dinas/disposisi',
+								'sekretaris_dinas': '/sekretaris-dinas/disposisi',
+								'kepala_bidang': '/kepala-bidang/disposisi',
+								'ketua_tim': '/ketua-tim/disposisi',
+								'pegawai': '/pegawai/disposisi',
+								'superadmin': '/kepala-dinas/disposisi',
+							};
+							
+							let targetUrl = roleRouteMap[userRole] || '/pegawai/disposisi';
+							
+							// If notification has a specific disposisi ID, navigate to detail
+							if (notificationData?.disposisi_id) {
+								targetUrl = `${targetUrl}/${notificationData.disposisi_id}`;
+							}
+							
+							console.log(`[App] Navigating to disposisi: ${targetUrl} (role: ${userRole})`);
+							window.location.href = targetUrl;
+						} else if (url && url !== '/') {
 							window.location.href = url;
 						}
 					}

@@ -298,27 +298,9 @@ const LoginPage = () => {
 	const handleLogin = async (e) => {
 		e.preventDefault();
 		
-		// Check notification permission first
-		if (!('Notification' in window)) {
-			setError("Browser Anda tidak mendukung notifikasi. Gunakan browser modern seperti Chrome atau Firefox.");
-			return;
-		}
-
-		const currentPermission = Notification.permission;
-		setNotificationPermission(currentPermission);
-
-		if (currentPermission !== 'granted') {
-			setError("Anda harus mengizinkan notifikasi untuk dapat login. Klik tombol 'Izinkan Notifikasi' di bawah.");
-			toast.error('Izinkan notifikasi terlebih dahulu!', {
-				duration: 4000,
-				icon: '🔔',
-				style: {
-					background: '#ef4444',
-					color: '#fff',
-					fontWeight: 'bold'
-				}
-			});
-			return;
+		// Update notification permission state (informational only, not blocking)
+		if ('Notification' in window) {
+			setNotificationPermission(Notification.permission);
 		}
 
 		setLoading(true);
@@ -485,37 +467,36 @@ const LoginPage = () => {
 						</span>
 					</div>
 
-					{/* Notification Permission Warning/Button */}
+					{/* Notification Permission - Soft Prompt (not blocking login) */}
 					{!vpnMode && notificationPermission !== 'granted' && (
-						<div className="mt-6 rounded-xl bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-amber-300 p-5 animate-pulse">
-							<div className="flex items-start gap-4">
-								<FiBell className="w-8 h-8 text-amber-600 flex-shrink-0 mt-1" />
-								<div className="flex-1">
-									<h3 className="text-lg font-bold text-gray-800 mb-2">
-										Izinkan Notifikasi Diperlukan
-									</h3>
-									<p className="text-sm text-gray-700 mb-4">
-										Anda harus mengizinkan notifikasi push untuk dapat login dan menerima update disposisi secara real-time.
-									</p>
-									<button
-										type="button"
-										onClick={handleRequestNotification}
-										disabled={checkingNotification}
-										className="flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg font-semibold shadow-lg hover:from-amber-600 hover:to-orange-600 transition-all disabled:opacity-70 disabled:cursor-not-allowed w-full sm:w-auto"
-									>
-										{checkingNotification ? (
-											<>
-												<FiLoader className="animate-spin w-5 h-5" />
-												<span>Memproses...</span>
-											</>
-										) : (
-											<>
-												<FiBell className="w-5 h-5" />
-												<span>Izinkan Notifikasi</span>
-											</>
-										)}
-									</button>
+						<div className="mt-6 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 p-4">
+							<div className="flex items-center gap-3">
+								<div className="p-2 bg-blue-100 rounded-lg flex-shrink-0">
+									<FiBell className="w-5 h-5 text-blue-600" />
 								</div>
+								<div className="flex-1">
+									<p className="text-sm font-semibold text-gray-800">
+										Aktifkan Notifikasi
+									</p>
+									<p className="text-xs text-gray-600">
+										Untuk menerima update disposisi real-time
+									</p>
+								</div>
+								<button
+									type="button"
+									onClick={handleRequestNotification}
+									disabled={checkingNotification}
+									className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium text-sm hover:bg-blue-700 transition-all disabled:opacity-70 disabled:cursor-not-allowed flex-shrink-0"
+								>
+									{checkingNotification ? (
+										<FiLoader className="animate-spin w-4 h-4" />
+									) : (
+										<>
+											<FiBell className="w-4 h-4" />
+											<span>Izinkan</span>
+										</>
+									)}
+								</button>
 							</div>
 						</div>
 					)}
@@ -616,7 +597,6 @@ const LoginPage = () => {
 										className="w-full bg-white rounded-lg border border-gray-300 px-4 py-3 focus:border-[rgb(var(--color-primary))] focus:ring-1 focus:ring-[rgb(var(--color-primary))] focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
 										value={email}
 										onChange={(e) => setEmail(e.target.value)}
-									disabled={notificationPermission !== 'granted'}
 										required
 									/>
 								</div>
@@ -631,7 +611,6 @@ const LoginPage = () => {
 										className="w-full bg-white rounded-lg border border-gray-300 px-4 py-3 pr-10 focus:border-[rgb(var(--color-primary))] focus:ring-1 focus:ring-[rgb(var(--color-primary))] focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
 										value={password}
 										onChange={(e) => setPassword(e.target.value)}
-									disabled={notificationPermission !== 'granted'}
 										required
 									/>
 									<button
@@ -655,17 +634,11 @@ const LoginPage = () => {
 								</div>
 								<button
 									type="submit"
-									disabled={loading || notificationPermission !== 'granted'}
-									className="flex w-full items-center justify-center rounded-lg bg-[rgb(var(--color-primary))] py-3 font-semibold text-white transition-colors hover:bg-[rgb(var(--color-primary))]/90 disabled:cursor-not-allowed disabled:bg-gray-400 disabled:opacity-60 shadow-xl relative group"
-								>
-									{loading ? (
-										<FiLoader className="animate-spin" />
-									) : notificationPermission !== 'granted' ? (
-										<>
-											<FiBell className="w-5 h-5 mr-2" />
-											<span>Izinkan Notifikasi Terlebih Dahulu</span>
-										</>
-
+										disabled={loading}
+										className="flex w-full items-center justify-center rounded-lg bg-[rgb(var(--color-primary))] py-3 font-semibold text-white transition-colors hover:bg-[rgb(var(--color-primary))]/90 disabled:cursor-not-allowed disabled:bg-gray-400 disabled:opacity-60 shadow-xl relative group"
+									>
+										{loading ? (
+											<FiLoader className="animate-spin" />
 									) : (
 										"Sign In"
 									)}
