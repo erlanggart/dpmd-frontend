@@ -34,9 +34,21 @@ import Spinner from "./components/ui/Spinner";
 
 // HomeRedirect component - smart redirect based on user state and navigation context
 function HomeRedirect() {
-	const { user } = useAuth();
+	const { user, isCheckingSession } = useAuth();
 	const location = useLocation();
 	const token = localStorage.getItem('expressToken');
+	
+	// Wait for session restore before deciding
+	if (isCheckingSession) {
+		return (
+			<div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800">
+				<div className="text-center">
+					<div className="animate-spin rounded-full h-12 w-12 border-4 border-white/30 border-t-white mx-auto mb-4"></div>
+					<p className="text-white/80 text-sm font-medium">Memuat...</p>
+				</div>
+			</div>
+		);
+	}
 	
 	// Not logged in, always show landing page
 	if (!token || !user) {
