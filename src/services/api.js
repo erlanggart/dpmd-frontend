@@ -1,5 +1,6 @@
 // src/services/api.js
 import axios from "axios";
+import { performFullLogout } from "../utils/sessionPersistence";
 
 // Helper: Detect if in VPN mode
 const isVpnMode = () => {
@@ -54,10 +55,9 @@ api.interceptors.response.use(
 		if (error.response && error.response.status === 401) {
 			// Hanya redirect jika bukan di halaman login atau landing
 			if (window.location.pathname !== "/login" && window.location.pathname !== "/") {
-				localStorage.removeItem("expressToken");
-				localStorage.removeItem("user");
-				localStorage.removeItem("authSession");
-				window.location.href = "/";
+				performFullLogout().then(() => {
+					window.location.href = "/";
+				});
 			}
 		}
 

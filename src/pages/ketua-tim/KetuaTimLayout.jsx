@@ -2,6 +2,7 @@
 import React from "react";
 import { Outlet, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { FiHome, FiUser, FiLogOut, FiMenu, FiMail, FiBell, FiCalendar, FiBarChart2, FiFileText, FiDollarSign, FiUsers, FiBriefcase } from "react-icons/fi";
+import { performFullLogout } from "../../utils/sessionPersistence";
 import { Landmark } from 'lucide-react';
 import { useConfirm } from "../../hooks/useConfirm.jsx";
 import { subscribeToPushNotifications } from "../../utils/pushNotifications";
@@ -169,7 +170,7 @@ const KetuaTimLayout = () => {
 	}, []);
 
 	if (!token || !user.role || user.role !== "ketua_tim") {
-		return <Navigate to="/login" replace />;
+		return <Navigate to="/" replace />;
 	}
 
 	const handleLogout = async () => {
@@ -181,9 +182,7 @@ const KetuaTimLayout = () => {
 			cancelText: 'Batal'
 		});
 		if (confirmed) {
-			localStorage.removeItem("user");
-			localStorage.removeItem("expressToken");
-			localStorage.removeItem("authSession");
+			await performFullLogout();
 			window.location.href = "/";
 		}
 	};

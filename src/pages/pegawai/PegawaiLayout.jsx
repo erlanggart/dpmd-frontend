@@ -3,6 +3,7 @@ import React from "react";
 import { Outlet, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { FiHome, FiUser, FiLogOut, FiMenu, FiMail, FiBell, FiCalendar, FiBarChart2, FiFileText, FiDollarSign, FiUsers, FiBriefcase } from "react-icons/fi";
 import { Landmark } from "lucide-react";
+import { performFullLogout } from "../../utils/sessionPersistence";
 import { useConfirm } from "../../hooks/useConfirm.jsx";
 import { subscribeToPushNotifications } from "../../utils/pushNotifications";
 import toast from 'react-hot-toast';
@@ -111,7 +112,7 @@ const PegawaiLayout = () => {
 	];
 
 	if (!token || !user.role || !validRoles.includes(user.role)) {
-		return <Navigate to="/login" replace />;
+		return <Navigate to="/" replace />;
 	}
 
 	const handleLogout = async () => {
@@ -123,9 +124,7 @@ const PegawaiLayout = () => {
 			cancelText: 'Batal'
 		});
 		if (confirmed) {
-			localStorage.removeItem("user");
-			localStorage.removeItem("expressToken");
-			localStorage.removeItem("authSession");
+			await performFullLogout();
 			window.location.href = "/";
 		}
 	};

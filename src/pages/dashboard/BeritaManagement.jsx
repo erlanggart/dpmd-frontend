@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useDropzone } from 'react-dropzone';
 import Swal from 'sweetalert2';
+import { performFullLogout } from '../../utils/sessionPersistence';
 import { 
   FiPlus, 
   FiEdit2, 
@@ -130,8 +131,9 @@ const BeritaManagement = () => {
           text: 'Token tidak valid atau telah expired. Silakan login kembali.',
           confirmButtonText: 'Login'
         }).then(() => {
-          localStorage.removeItem('expressToken');
-          window.location.href = '/';
+          performFullLogout().then(() => {
+            window.location.href = '/';
+          });
         });
       } else {
         Swal.fire({

@@ -364,7 +364,7 @@ const ProtectedRoute = ({ children }) => {
 
 	if (!token) {
 		// Simpan lokasi yang dituju agar bisa redirect kembali setelah login
-		return <Navigate to="/login" state={{ from: location }} replace />;
+		return <Navigate to="/" state={{ from: location }} replace />;
 	}
 
 	// Allow VPN access token to bypass normal auth
@@ -394,7 +394,7 @@ const RoleProtectedRoute = ({ children, allowedRoles }) => {
 	const token = localStorage.getItem("expressToken");
 
 	if (!token) {
-		return <Navigate to="/login" state={{ from: location }} replace />;
+		return <Navigate to="/" state={{ from: location }} replace />;
 	}
 
 	// Check if user role is allowed

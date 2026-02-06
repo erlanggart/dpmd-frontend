@@ -1,6 +1,6 @@
 // src/context/AuthContext.jsx
 import React, { createContext, useContext, useState, useEffect, useRef } from "react";
-import { clearAllSessionData, backupSessionToIndexedDB, restoreSessionFromIndexedDB } from "../utils/sessionPersistence";
+import { clearAllSessionData, backupSessionToIndexedDB, restoreSessionFromIndexedDB, performFullLogout } from "../utils/sessionPersistence";
 
 // 1. Membuat Context
 const AuthContext = createContext(null);
@@ -262,9 +262,8 @@ export const AuthProvider = ({ children }) => {
 
 	// Fungsi untuk menghapus data saat logout
 	const logout = async () => {
-		clearSession();
-		// Also clear IndexedDB backup
-		await clearAllSessionData();
+		// Use performFullLogout to clear everything including IndexedDB + set logout flag
+		await performFullLogout();
 		setUser(null);
 		setExpressToken(null);
 		console.log('[Auth] User logged out, all session data cleared');

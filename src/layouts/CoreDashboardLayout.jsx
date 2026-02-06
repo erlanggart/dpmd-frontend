@@ -45,11 +45,11 @@ const CoreDashboardLayout = () => {
     };
   }, []);
 
-  const handleLogout = useCallback(() => {
-    localStorage.removeItem('expressToken');
-    localStorage.removeItem('user');
-    navigate('/login');
-  }, [navigate]);
+  const handleLogout = useCallback(async () => {
+    const { performFullLogout } = await import('../utils/sessionPersistence');
+    await performFullLogout();
+    window.location.href = '/';
+  }, []);
 
   const toggleSidebar = useCallback(() => {
     setSidebarOpen(prev => !prev);

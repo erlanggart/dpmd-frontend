@@ -23,6 +23,8 @@ import { Landmark } from "lucide-react";
 import SearchPalette from "../components/SearchPalatte";
 import InstallPWA from "../components/InstallPWA";
 
+import { performFullLogout } from "../utils/sessionPersistence";
+
 const MainLayout = () => {
 	const [user, setUser] = useState(null);
 	const navigate = useNavigate();
@@ -66,10 +68,9 @@ const MainLayout = () => {
 		}
 	}, []);
 
-	const handleLogout = () => {
-		localStorage.removeItem("expressToken");
-		localStorage.removeItem("user");
-		navigate("/login");
+	const handleLogout = async () => {
+		await performFullLogout();
+		window.location.href = "/";
 	};
 
 	// Definisikan menu berdasarkan role user menggunakan useMemo

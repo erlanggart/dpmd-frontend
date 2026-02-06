@@ -6,6 +6,7 @@ import {
 	FiBarChart2, FiFileText, FiImage, FiBell, FiUser,
 	FiActivity, FiLayers, FiBriefcase, FiX, FiChevronRight
 } from "react-icons/fi";
+import { performFullLogout } from "../../utils/sessionPersistence";
 import { useConfirm } from "../../hooks/useConfirm.jsx";
 import { toast } from 'react-hot-toast';
 import api from "../../api";
@@ -58,7 +59,7 @@ const SuperadminLayout = () => {
 	}, []);
 
 	if (!token || user.role !== "superadmin") {
-		return <Navigate to="/login" replace />;
+		return <Navigate to="/" replace />;
 	}
 
 	const handleLogout = async () => {
@@ -68,10 +69,9 @@ const SuperadminLayout = () => {
 		);
 
 		if (confirmed) {
-			localStorage.removeItem("expressToken");
-			localStorage.removeItem("user");
+			await performFullLogout();
 			toast.success("Berhasil logout");
-			navigate("/login");
+			window.location.href = "/";
 		}
 	};
 
