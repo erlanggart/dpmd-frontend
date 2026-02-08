@@ -54,29 +54,29 @@ const JadwalKegiatanModal = ({
 					<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 						<div>
 							<label className="block text-sm font-medium text-gray-700 mb-2">
-								Bidang
-							</label>
-							<select
-								name="bidang_id"
-								value={formData.bidang_id}
-								onChange={onChange}
-								className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-							>
-								<option value="">Pilih Bidang</option>
-								{bidangList.map((bidang) => (
-									<option key={bidang.id} value={bidang.id}>
-										{bidang.nama}
-									</option>
-								))}
-							</select>
-						</div>
-
-						<div>
-							<label className="block text-sm font-medium text-gray-700 mb-2">
-								Kategori
-							</label>
-							<select
-								name="kategori"
+							Bidang Pelaksana <span className="text-red-500">*</span>
+						</label>
+						<select
+							name="bidang_id"
+							value={formData.bidang_id}
+							onChange={onChange}
+							required
+							className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+						>
+							<option value="">-- Pilih Bidang yang Melaksanakan --</option>
+							{bidangList.map((bidang) => (
+								<option key={bidang.id} value={bidang.id}>
+									{bidang.nama}
+								</option>
+							))}
+						</select>
+						<p className="mt-1 text-xs text-gray-500">Pilih bidang yang akan melaksanakan kegiatan ini</p>
+					</div>
+					<div>
+						<label className="block text-sm font-medium text-gray-700 mb-2">
+							Kategori
+						</label>
+						<select								name="kategori"
 								value={formData.kategori}
 								onChange={onChange}
 								className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"

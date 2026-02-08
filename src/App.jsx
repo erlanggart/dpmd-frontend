@@ -115,10 +115,11 @@ const MusdesusMonitoringPage = lazy(() =>
 // Bidang apps
 const BumdesApp = lazy(() => import("./pages/bidang/spked/bumdes"));
 const Kelembagaan = lazy(() => import("./pages/bidang/pmd/Kelembagaan"));
-const PerjalananDinas = lazy(() => import("./pages/bidang/sekretariat/perjadin"));
 const DisposisiRouter = lazy(() => import("./pages/bidang/sekretariat/disposisi/DisposisiRouter"));
 const JadwalKegiatanPage = lazy(() => import("./pages/bidang/sekretariat/JadwalKegiatanPage"));
 const KelolaNotifikasiPage = lazy(() => import("./pages/bidang/sekretariat/KelolaNotifikasiPage"));
+const PerjadinMain = lazy(() => import("./pages/pegawai/perjadin/PerjadinMain"));
+const PerjadinDetail = lazy(() => import("./pages/pegawai/perjadin/PerjadinDetail"));
 const DesaLayout = lazy(() => import("./layouts/DesaLayout"));
 const DesaDashboard = lazy(() => import("./pages/desa/DesaDashboardPage"));
 const BumdesDesaPage = lazy(() =>
@@ -276,9 +277,6 @@ const LaporanDesa = lazy(() =>
 const StatistikBumdes = lazy(() =>
 	import("./pages/kepala-dinas/StatistikBumdes")
 );
-const StatistikPerjadin = lazy(() =>
-	import("./pages/kepala-dinas/StatistikPerjadin")
-);
 const StatistikKelembagaan = lazy(() =>
 	import("./pages/core-dashboard/StatistikKelembagaan")
 );
@@ -365,11 +363,6 @@ const ProtectedRoute = ({ children }) => {
 	if (!token) {
 		// Simpan lokasi yang dituju agar bisa redirect kembali setelah login
 		return <Navigate to="/" state={{ from: location }} replace />;
-	}
-
-	// Allow VPN access token to bypass normal auth
-	if (token === 'VPN_ACCESS_TOKEN') {
-		return children;
 	}
 
 	return children;
@@ -690,6 +683,8 @@ function App() {
 						<Route path="dashboard" element={<PegawaiDashboard />} />				<Route path="profile" element={<ProfilePage />} />						<Route path="disposisi" element={<DisposisiSurat />} />
 						<Route path="disposisi/:id" element={<DisposisiDetail />} />
 						<Route path="jadwal-kegiatan" element={<JadwalKegiatanPage />} />
+						<Route path="perjadin" element={<PerjadinMain />} />
+							<Route path="perjadin/detail/:id" element={<PerjadinDetail />} />
 					</Route>
 
 					{/* Rute Bidang - Accessible by pegawai/kepala_bidang/ketua_tim (their own bidang) & kepala_dinas/superadmin (all) */}
@@ -759,11 +754,12 @@ function App() {
 							</RoleProtectedRoute>
 						}
 					>
-						<Route path="perjadin" element={<PerjalananDinas />} />
 						<Route path="disposisi" element={<DisposisiRouter />} />
 						<Route path="disposisi/:id" element={<DisposisiDetail />} />
 						<Route path="pegawai" element={<UserManagementPage />} />
 						<Route path="jadwal-kegiatan" element={<JadwalKegiatanPage />} />
+						<Route path="perjadin" element={<PerjadinMain />} />
+							<Route path="perjadin/detail/:id" element={<PerjadinDetail />} />
 						<Route path="notifikasi" element={<KelolaNotifikasiPage />} />
 					</Route>
 
@@ -854,6 +850,8 @@ function App() {
 				<Route path="disposisi" element={<DisposisiSurat />} />
 				<Route path="disposisi/:id" element={<DisposisiDetail />} />
 				<Route path="jadwal-kegiatan" element={<JadwalKegiatanPage />} />
+				<Route path="perjadin" element={<PerjadinMain />} />
+				<Route path="perjadin/detail/:id" element={<PerjadinDetail />} />
 			</Route>
 					{/* Rute Kepala Bidang - Exclusive untuk Kepala Bidang */}
 					<Route
@@ -883,6 +881,8 @@ function App() {
 						<Route path="dashboard" element={<SekretarisDinasDashboard />} />				<Route path="profile" element={<ProfilePage />} />						<Route path="disposisi" element={<DisposisiSurat />} />
 						<Route path="disposisi/:id" element={<DisposisiDetail />} />
 						<Route path="jadwal-kegiatan" element={<JadwalKegiatanPage />} />
+						<Route path="perjadin" element={<PerjadinMain />} />
+							<Route path="perjadin/detail/:id" element={<PerjadinDetail />} />
 					</Route>
 
 					{/* Rute Core Dashboard - DPMD Internal Only */}
@@ -900,7 +900,6 @@ function App() {
 					<Route path="dashboard" element={<WelcomeDashboard />} />
 					<Route path="laporan-desa" element={<LaporanDesa />} />
 					<Route path="statistik-bumdes" element={<StatistikBumdes />} />
-					<Route path="statistik-perjadin" element={<StatistikPerjadin />} />
 					<Route path="statistik-kelembagaan" element={<StatistikKelembagaan />} />
 					<Route path="statistik-bankeu" element={<StatistikBankeuDashboard />} />
 					<Route path="statistik-add" element={<StatistikAddDashboard />} />
