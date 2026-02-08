@@ -820,7 +820,7 @@ function App() {
 				<Route
 					path="/dinas"
 					element={
-						<RoleProtectedRoute allowedRoles={['dinas_terkait', 'kepala_bidang', 'pegawai', 'verifikator_dinas']}>
+						<RoleProtectedRoute allowedRoles={['dinas_terkait', 'verifikator_dinas']}>
 							<DinasLayout />
 						</RoleProtectedRoute>
 					}
