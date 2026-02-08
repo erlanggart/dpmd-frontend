@@ -61,7 +61,16 @@ const PegawaiLayout = () => {
 		// Refresh notifications every 30 seconds
 		const interval = setInterval(fetchNotifications, 30000);
 		
-		return () => clearInterval(interval);
+		// Listen for new push notifications to refresh immediately
+		const handleNewNotification = () => {
+			fetchNotifications();
+		};
+		window.addEventListener('newNotification', handleNewNotification);
+		
+		return () => {
+			clearInterval(interval);
+			window.removeEventListener('newNotification', handleNewNotification);
+		};
 	}, []);
 
 	const handleNotificationClick = () => {
@@ -134,6 +143,13 @@ const PegawaiLayout = () => {
 		{ path: "/core-dashboard/dashboard", label: "Statistik", icon: FiBarChart2 },
 		{ path: "/pegawai/jadwal-kegiatan", label: "Kegiatan", icon: FiCalendar },
 		{ path: "/pegawai/disposisi", label: "Disposisi", icon: FiMail },
+		{ 
+			path: "/pegawai/notifications", 
+			label: "Notifikasi", 
+			icon: FiBell, 
+			action: handleNotificationClick,
+			badge: unreadCount
+		},
 		{ path: "/pegawai/menu", label: "Menu", icon: FiMenu, action: () => setShowMenu(true) },
 	];
 
@@ -220,13 +236,18 @@ const PegawaiLayout = () => {
 											navigate(item.path);
 										}
 									}}
-									className={`flex items-center justify-center p-3 rounded-xl transition-all duration-200 ${
-										isActive 
-											? "text-orange-700 bg-orange-50 scale-110" 
-											: "text-gray-400 hover:text-orange-600 hover:bg-orange-50"
-									}`}
-								>
-									<Icon className="h-6 w-6" />
+								className={`relative flex items-center justify-center p-3 rounded-xl transition-all duration-200 ${
+									isActive 
+										? "text-orange-700 bg-orange-50 scale-110" 
+										: "text-gray-400 hover:text-orange-600 hover:bg-orange-50"
+								}`}
+							>
+								<Icon className="h-6 w-6" />
+								{item.badge > 0 && (
+									<span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
+										{item.badge > 99 ? '99+' : item.badge}
+									</span>
+								)}
 								</button>
 							);
 						})}

@@ -475,10 +475,8 @@ const ThemeColorWrapper = ({ children }) => {
 						);
 					}
 					
-					// Auto-reload current page setelah 2 detik (beri waktu user lihat toast)
-					setTimeout(() => {
-						window.location.reload();
-					}, 2000);
+					// Trigger notification event for layouts to refresh notification count
+					window.dispatchEvent(new CustomEvent('newNotification', { detail: notifData }));
 				}
 					
 					// Handle notification click navigation
