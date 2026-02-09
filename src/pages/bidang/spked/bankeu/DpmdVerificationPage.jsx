@@ -107,7 +107,7 @@ const DpmdVerificationPage = () => {
   const [loadingVerifikator, setLoadingVerifikator] = useState(false);
   const [loadingSettings, setLoadingSettings] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const imageBaseUrl = api.defaults.baseURL.replace('/api', '');
+  const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL || 'http://127.0.0.1:3001';
 
   // Handle refresh data without full loading screen
   const handleRefresh = async () => {
@@ -3073,20 +3073,33 @@ const KegiatanForm = ({ data, onSave, onCancel, dinasList = [] }) => {
 const DinasForm = ({ data, onSave, onCancel }) => {
   const [formData, setFormData] = useState({
     nama: data?.nama || '',
-    singkatan: data?.singkatan || ''
+    singkatan: data?.singkatan || '',
+    kode_dinas: data?.kode_dinas || ''
   });
   const [accountEmail, setAccountEmail] = useState('');
+  const [accountPassword, setAccountPassword] = useState('');
   const [showCreateAccount, setShowCreateAccount] = useState(false);
+  const [showEditEmail, setShowEditEmail] = useState(false);
+  const [showResetPassword, setShowResetPassword] = useState(false);
+  const [editEmailValue, setEditEmailValue] = useState('');
+  const [resetPasswordValue, setResetPasswordValue] = useState('');
   const [isResetting, setIsResetting] = useState(false);
   const [isCreatingAccount, setIsCreatingAccount] = useState(false);
+  const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
 
   useEffect(() => {
     setFormData({
       nama: data?.nama || '',
-      singkatan: data?.singkatan || ''
+      singkatan: data?.singkatan || '',
+      kode_dinas: data?.kode_dinas || ''
     });
     setShowCreateAccount(false);
+    setShowEditEmail(false);
+    setShowResetPassword(false);
     setAccountEmail('');
+    setAccountPassword('');
+    setEditEmailValue('');
+    setResetPasswordValue('');
   }, [data]);
 
   const handleSubmit = (e) => {
@@ -3095,44 +3108,35 @@ const DinasForm = ({ data, onSave, onCancel }) => {
   };
 
   const handleResetPassword = async () => {
-    if (!data?.id) return;
-    
-    const result = await Swal.fire({
-      title: 'Buat Password Baru Akun Dinas?',
-      html: `Password baru akan dibuat untuk akun <strong>${data.user_account?.email}</strong>.<br/>Password baru akan ditampilkan setelah dibuat.`,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonColor: '#f59e0b',
-      cancelButtonColor: '#6b7280',
-      confirmButtonText: 'Ya, Buat Password Baru',
-      cancelButtonText: 'Batal'
-    });
+    if (!data?.id || !resetPasswordValue.trim()) {
+      Swal.fire('Error', 'Password baru harus diisi', 'error');
+      return;
+    }
 
-    if (result.isConfirmed) {
-      setIsResetting(true);
-      try {
-        const response = await api.post(`/master/dinas/${data.id}/reset-password`);
-        const newPassword = response.data?.data?.newPassword;
-        
-        await Swal.fire({
-          title: 'Password Baru Berhasil Dibuat',
-          html: `
-            <div class="text-left">
-              <p class="mb-3">Password baru untuk <strong>${data.user_account?.email}</strong>:</p>
-              <div class="bg-gray-100 p-3 rounded-lg font-mono text-lg text-center select-all">
-                ${newPassword}
-              </div>
-              <p class="text-sm text-gray-500 mt-3">⚠️ Simpan password ini! Password hanya ditampilkan sekali.</p>
-            </div>
-          `,
-          icon: 'success',
-          confirmButtonText: 'Saya Sudah Menyimpan'
-        });
-      } catch (error) {
-        Swal.fire('Gagal', error.response?.data?.message || 'Gagal membuat password baru', 'error');
-      } finally {
-        setIsResetting(false);
-      }
+    if (resetPasswordValue.trim().length < 6) {
+      Swal.fire('Error', 'Password minimal 6 karakter', 'error');
+      return;
+    }
+
+    setIsResetting(true);
+    try {
+      await api.post(`/master/dinas/${data.id}/reset-password`, {
+        password: resetPasswordValue.trim()
+      });
+      
+      await Swal.fire({
+        title: 'Password Berhasil Diubah',
+        html: `Password untuk akun <strong>${data.user_account?.email}</strong> berhasil diubah.`,
+        icon: 'success',
+        confirmButtonText: 'OK'
+      });
+      
+      setShowResetPassword(false);
+      setResetPasswordValue('');
+    } catch (error) {
+      Swal.fire('Gagal', error.response?.data?.message || 'Gagal mengubah password', 'error');
+    } finally {
+      setIsResetting(false);
     }
   };
 
@@ -3142,38 +3146,28 @@ const DinasForm = ({ data, onSave, onCancel }) => {
       return;
     }
 
+    if (!accountPassword.trim() || accountPassword.trim().length < 6) {
+      Swal.fire('Error', 'Password harus minimal 6 karakter', 'error');
+      return;
+    }
+
     setIsCreatingAccount(true);
     try {
-      const response = await api.post(`/master/dinas/${data.id}/create-account`, {
-        email: accountEmail.trim()
+      await api.post(`/master/dinas/${data.id}/create-account`, {
+        email: accountEmail.trim(),
+        password: accountPassword.trim()
       });
-      
-      const { email, password } = response.data?.data || {};
       
       await Swal.fire({
         title: 'Akun Berhasil Dibuat',
-        html: `
-          <div class="text-left">
-            <p class="mb-3">Akun dinas berhasil dibuat:</p>
-            <div class="bg-gray-100 p-3 rounded-lg space-y-2">
-              <div>
-                <span class="text-gray-600 text-sm">Email:</span>
-                <span class="font-mono text-sm ml-2">${email}</span>
-              </div>
-              <div>
-                <span class="text-gray-600 text-sm">Password:</span>
-                <span class="font-mono text-sm ml-2 select-all">${password}</span>
-              </div>
-            </div>
-            <p class="text-sm text-gray-500 mt-3">⚠️ Simpan kredensial ini! Password hanya ditampilkan sekali.</p>
-          </div>
-        `,
+        html: `Akun untuk <strong>${accountEmail.trim()}</strong> berhasil dibuat.`,
         icon: 'success',
-        confirmButtonText: 'Saya Sudah Menyimpan'
+        confirmButtonText: 'OK'
       });
       
       setShowCreateAccount(false);
       setAccountEmail('');
+      setAccountPassword('');
       // Trigger refresh
       onCancel();
     } catch (error) {
@@ -3183,20 +3177,79 @@ const DinasForm = ({ data, onSave, onCancel }) => {
     }
   };
 
+  const handleUpdateEmail = async () => {
+    if (!data?.id || !editEmailValue.trim()) {
+      Swal.fire('Error', 'Email harus diisi', 'error');
+      return;
+    }
+
+    const result = await Swal.fire({
+      title: 'Ubah Email Akun?',
+      html: `Email akun akan diubah dari <strong>${data.user_account?.email}</strong> menjadi <strong>${editEmailValue.trim()}</strong>.<br/><br/>Kredensial login akan berubah.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#f59e0b',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Ya, Ubah Email',
+      cancelButtonText: 'Batal'
+    });
+
+    if (result.isConfirmed) {
+      setIsUpdatingEmail(true);
+      try {
+        await api.put(`/master/dinas/${data.id}/update-account`, {
+          email: editEmailValue.trim()
+        });
+        
+        await Swal.fire({
+          title: 'Email Berhasil Diubah',
+          html: `Email akun berhasil diubah menjadi <strong>${editEmailValue.trim()}</strong>`,
+          icon: 'success',
+          confirmButtonText: 'OK'
+        });
+        
+        setShowEditEmail(false);
+        setEditEmailValue('');
+        // Trigger refresh
+        onCancel();
+      } catch (error) {
+        Swal.fire('Gagal', error.response?.data?.message || 'Gagal mengubah email', 'error');
+      } finally {
+        setIsUpdatingEmail(false);
+      }
+    }
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-2">
-          Nama Dinas
-        </label>
-        <input
-          type="text"
-          value={formData.nama}
-          onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-          placeholder="Contoh: Dinas Kesehatan"
-          required
-        />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
+            Nama Dinas
+          </label>
+          <input
+            type="text"
+            value={formData.nama}
+            onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+            placeholder="Contoh: Dinas Kesehatan"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
+            Kode Dinas
+          </label>
+          <input
+            type="text"
+            value={formData.kode_dinas}
+            onChange={(e) => setFormData({ ...formData, kode_dinas: e.target.value.toUpperCase().replace(/\s+/g, '_') })}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 font-mono"
+            placeholder="Contoh: DINKES"
+          />
+          <p className="text-xs text-gray-500 mt-1">Kode unik untuk identifikasi dinas (otomatis uppercase, spasi diganti _)</p>
+        </div>
       </div>
 
       <div>
@@ -3223,29 +3276,114 @@ const DinasForm = ({ data, onSave, onCancel }) => {
           {data.user_account ? (
             <div className="bg-gray-50 rounded-lg p-4">
               <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-gray-400" />
-                  <span className="text-sm text-gray-600">Email:</span>
-                  <span className="text-sm font-mono text-gray-800 bg-white px-2 py-1 rounded">{data.user_account.email}</span>
-                </div>
+                {showEditEmail ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Mail className="h-4 w-4 text-gray-400" />
+                      <span className="text-sm text-gray-600">Email Baru:</span>
+                    </div>
+                    <input
+                      type="email"
+                      value={editEmailValue}
+                      onChange={(e) => setEditEmailValue(e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                      placeholder={data.user_account.email}
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={handleUpdateEmail}
+                        disabled={isUpdatingEmail}
+                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm text-white bg-amber-600 hover:bg-amber-700 rounded-lg transition-colors disabled:opacity-50"
+                      >
+                        {isUpdatingEmail ? (
+                          <RefreshCw className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Save className="h-4 w-4" />
+                        )}
+                        Simpan Email
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowEditEmail(false);
+                          setEditEmailValue('');
+                        }}
+                        className="px-3 py-2 text-sm text-gray-600 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors"
+                      >
+                        Batal
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-4 w-4 text-gray-400" />
+                    <span className="text-sm text-gray-600">Email:</span>
+                    <span className="text-sm font-mono text-gray-800 bg-white px-2 py-1 rounded">{data.user_account.email}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowEditEmail(true);
+                        setEditEmailValue(data.user_account.email);
+                      }}
+                      className="ml-2 flex items-center gap-1 px-2 py-1 text-xs text-blue-700 bg-blue-100 hover:bg-blue-200 rounded transition-colors"
+                    >
+                      <Edit className="h-3 w-3" />
+                      Edit
+                    </button>
+                  </div>
+                )}
                 <div className="flex items-center gap-2">
                   <Lock className="h-4 w-4 text-gray-400" />
                   <span className="text-sm text-gray-600">Password:</span>
                   <span className="text-sm text-gray-500 italic">••••••••</span>
-                  <button
-                    type="button"
-                    onClick={handleResetPassword}
-                    disabled={isResetting}
-                    className="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-sm text-amber-700 bg-amber-100 hover:bg-amber-200 rounded-lg transition-colors disabled:opacity-50"
-                  >
-                    {isResetting ? (
-                      <RefreshCw className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <RefreshCw className="h-4 w-4" />
-                    )}
-                    Buat Password Baru
-                  </button>
+                  {!showResetPassword && (
+                    <button
+                      type="button"
+                      onClick={() => setShowResetPassword(true)}
+                      className="ml-auto flex items-center gap-1 px-2 py-1 text-xs text-amber-700 bg-amber-100 hover:bg-amber-200 rounded transition-colors"
+                    >
+                      <Edit className="h-3 w-3" />
+                      Ubah Password
+                    </button>
+                  )}
                 </div>
+                {showResetPassword && (
+                  <div className="space-y-2 mt-2 p-3 bg-amber-50 rounded-lg">
+                    <input
+                      type="password"
+                      value={resetPasswordValue}
+                      onChange={(e) => setResetPasswordValue(e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                      placeholder="Password baru (min. 6 karakter)"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={handleResetPassword}
+                        disabled={isResetting}
+                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm text-white bg-amber-600 hover:bg-amber-700 rounded-lg transition-colors disabled:opacity-50"
+                      >
+                        {isResetting ? (
+                          <RefreshCw className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Save className="h-4 w-4" />
+                        )}
+                        Simpan Password
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowResetPassword(false);
+                          setResetPasswordValue('');
+                        }}
+                        className="px-3 py-2 text-sm text-gray-600 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors"
+                      >
+                        Batal
+                      </button>
+                    </div>
+                  </div>
+                )}
                 <div className="flex items-center gap-2 pt-2">
                   <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                     data.user_account.is_active 
@@ -3273,6 +3411,13 @@ const DinasForm = ({ data, onSave, onCancel }) => {
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
                     placeholder="Email untuk login dinas"
                   />
+                  <input
+                    type="password"
+                    value={accountPassword}
+                    onChange={(e) => setAccountPassword(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                    placeholder="Password (min. 6 karakter)"
+                  />
                   <div className="flex gap-2">
                     <button
                       type="button"
@@ -3292,6 +3437,7 @@ const DinasForm = ({ data, onSave, onCancel }) => {
                       onClick={() => {
                         setShowCreateAccount(false);
                         setAccountEmail('');
+                        setAccountPassword('');
                       }}
                       className="px-3 py-2 text-sm text-gray-600 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors"
                     >
@@ -3419,9 +3565,8 @@ const VerifikatorForm = ({ data, onSave, onCancel }) => {
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
             placeholder="email@dinas.go.id"
             required
-            disabled={!!data}
           />
-          {data && <p className="text-xs text-gray-500 mt-1">Email tidak dapat diubah</p>}
+          {data && <p className="text-xs text-gray-500 mt-1">⚠️ Mengubah email akan mengubah kredensial login</p>}
         </div>
 
         {!data && (
