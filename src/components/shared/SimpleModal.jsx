@@ -1,5 +1,5 @@
 import React from "react";
-import { LuX, LuAlertTriangle } from "react-icons/lu";
+import { LuX, LuTriangleAlert } from "react-icons/lu";
 
 const SimpleModal = ({
 	show,
@@ -59,7 +59,7 @@ const SimpleModal = ({
 						<div
 							className={`mx-auto flex items-center justify-center w-16 h-16 ${currentVariant.iconBg} rounded-full mb-4`}
 						>
-							<LuAlertTriangle className={`w-8 h-8 ${currentVariant.icon}`} />
+							<LuTriangleAlert className={`w-8 h-8 ${currentVariant.icon}`} />
 						</div>
 
 						{/* Title */}

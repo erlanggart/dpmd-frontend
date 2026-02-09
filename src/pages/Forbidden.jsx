@@ -64,9 +64,10 @@ export default function Forbidden() {
 							Mencoba login dengan akun lain?
 						</p>
 						<button
-							onClick={() => {
-								localStorage.clear();
-								navigate("/login");
+							onClick={async () => {
+								const { performFullLogout } = await import('../utils/sessionPersistence');
+								await performFullLogout();
+								window.location.href = "/";
 							}}
 							className="text-red-600 hover:text-red-700 font-medium text-sm underline"
 						>

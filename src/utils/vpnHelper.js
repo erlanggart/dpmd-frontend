@@ -1,27 +1,32 @@
-// Helper to check if user is VPN access
+// src/utils/vpnHelper.js
+// VPN feature removed - these are stub functions for backward compatibility
+
+/**
+ * Stub function - VPN feature removed
+ * Always returns false since VPN is no longer used
+ */
 export const isVpnUser = () => {
-  const token = localStorage.getItem('expressToken');
-  return token === 'VPN_ACCESS_TOKEN';
+  return false;
 };
 
-// Get API base path based on user type
-export const getApiBasePath = () => {
-  return isVpnUser() ? '/vpn-core' : '';
+/**
+ * Stub function - VPN feature removed
+ * Always returns null since VPN is no longer used
+ */
+export const getVpnAccessData = () => {
+  return null;
 };
 
-// Create axios instance with VPN-aware configuration
-import axios from 'axios';
+/**
+ * Stub function - VPN feature removed
+ */
+export const clearVpnAccess = () => {
+  // No-op
+};
 
-export const createApiClient = () => {
-  const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:3001/api';
-  const basePath = getApiBasePath();
-  
-  return axios.create({
-    baseURL: `${baseURL}${basePath}`,
-    timeout: 30000,
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
-    }
-  });
+/**
+ * Stub function - VPN feature removed
+ */
+export const setVpnAccess = () => {
+  // No-op
 };

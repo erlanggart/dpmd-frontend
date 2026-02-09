@@ -5,20 +5,16 @@ import SignatureCanvas from "react-signature-canvas";
 import {
   LuSave, LuPencil, LuX, LuCheck, LuCog, LuUsers, LuUpload, LuImage, LuChevronDown, LuPenTool
 } from "react-icons/lu";
-import { JABATAN_OPTIONS, getJabatanBgColor } from "../../constants/jabatanOptions";
 
 const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
 
 const KecamatanBankeuConfigTab = () => {
   const [config, setConfig] = useState(null);
-  const [timVerifikasi, setTimVerifikasi] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
-  const [editingTeam, setEditingTeam] = useState(false);
   const [openSections, setOpenSections] = useState({
     kopSurat: false,
-    penandatanganan: false,
-    timVerifikasi: false
+    penandatanganan: false
   });
   const [formData, setFormData] = useState({
     nama_camat: "",
@@ -29,15 +25,8 @@ const KecamatanBankeuConfigTab = () => {
     website: "",
     kode_pos: ""
   });
-  const [newTeamMember, setNewTeamMember] = useState({
-    jabatan: "anggota",
-    nama: "",
-    nip: "",
-    jabatan_label: ""
-  });
-  const [uploadingSignatures, setUploadingSignatures] = useState({});
-  const [signaturePads, setSignaturePads] = useState({});
-  const sigCanvasRefs = useRef({});
+  const [showCamatSignaturePad, setShowCamatSignaturePad] = useState(false);
+  const [uploadingCamatSignature, setUploadingCamatSignature] = useState(false);
   const camatSigCanvasRef = useRef(null);
 
   const toggleSection = (section) => {
@@ -56,10 +45,7 @@ const KecamatanBankeuConfigTab = () => {
       setLoading(true);
       const user = JSON.parse(localStorage.getItem("user"));
       
-      const [configRes, timRes] = await Promise.all([
-        api.get(`/kecamatan/bankeu/config/${user.kecamatan_id}`),
-        api.get(`/kecamatan/bankeu/tim-verifikasi/${user.kecamatan_id}`)
-      ]);
+      const configRes = await api.get(`/kecamatan/bankeu/config/${user.kecamatan_id}`);
 
       setConfig(configRes.data.data);
       setFormData({
@@ -71,7 +57,6 @@ const KecamatanBankeuConfigTab = () => {
         website: configRes.data.data?.website || "",
         kode_pos: configRes.data.data?.kode_pos || ""
       });
-      setTimVerifikasi(timRes.data.data || []);
     } catch (error) {
       console.error("Error fetching config:", error);
       if (error.response?.status !== 404) {
@@ -111,133 +96,8 @@ const KecamatanBankeuConfigTab = () => {
     }
   };
 
-  const handleAddTeamMember = async () => {
-    if (!newTeamMember.nama || !newTeamMember.nip) {
-      Swal.fire({
-        icon: "warning",
-        title: "Data Tidak Lengkap",
-        text: "Nama dan NIP wajib diisi"
-      });
-      return;
-    }
-
-    try {
-      const user = JSON.parse(localStorage.getItem("user"));
-      
-      const response = await api.post(
-        `/kecamatan/bankeu/tim-verifikasi/${user.kecamatan_id}`,
-        newTeamMember
-      );
-
-      setTimVerifikasi([...timVerifikasi, response.data.data]);
-      setNewTeamMember({
-        jabatan: "anggota",
-        nama: "",
-        nip: "",
-        jabatan_label: ""
-      });
-      setEditingTeam(false);
-
-      Swal.fire({
-        icon: "success",
-        title: "Berhasil",
-        text: "Anggota tim verifikasi berhasil ditambahkan",
-        timer: 2000
-      });
-    } catch (error) {
-      console.error("Error adding team member:", error);
-      Swal.fire({
-        icon: "error",
-        title: "Gagal",
-        text: error.response?.data?.message || "Gagal menambahkan anggota tim"
-      });
-    }
-  };
-
-  const handleRemoveTeamMember = async (id) => {
-    const result = await Swal.fire({
-      title: "Hapus Anggota",
-      text: "Apakah Anda yakin ingin menghapus anggota tim ini?",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#dc2626",
-      cancelButtonColor: "#6b7280",
-      confirmButtonText: "Ya, Hapus",
-      cancelButtonText: "Batal"
-    });
-
-    if (result.isConfirmed) {
-      try {
-        await api.delete(`/kecamatan/bankeu/tim-verifikasi/${id}`);
-        setTimVerifikasi(timVerifikasi.filter(t => t.id !== id));
-        
-        Swal.fire({
-          icon: "success",
-          title: "Berhasil",
-          text: "Anggota tim verifikasi berhasil dihapus",
-          timer: 2000
-        });
-      } catch (error) {
-        console.error("Error removing team member:", error);
-        Swal.fire({
-          icon: "error",
-          title: "Gagal",
-          text: error.response?.data?.message || "Gagal menghapus anggota tim"
-        });
-      }
-    }
-  };
-
-  const handleUploadSignature = async (memberId, file) => {
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      Swal.fire({
-        icon: "error",
-        title: "Format File Salah",
-        text: "Hanya file gambar yang diizinkan (PNG, JPG, dst)"
-      });
-      return;
-    }
-
-    try {
-      setUploadingSignatures({ ...uploadingSignatures, [memberId]: true });
-
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const response = await api.post(
-        `/kecamatan/bankeu/tim-verifikasi/${memberId}/upload-signature`,
-        formData,
-        { headers: { "Content-Type": "multipart/form-data" } }
-      );
-
-      setTimVerifikasi(
-        timVerifikasi.map(t =>
-          t.id === memberId ? { ...t, ttd_path: response.data.data.ttd_path } : t
-        )
-      );
-
-      Swal.fire({
-        icon: "success",
-        title: "Berhasil",
-        text: "Tanda tangan berhasil diupload",
-        timer: 2000
-      });
-    } catch (error) {
-      console.error("Error uploading signature:", error);
-      Swal.fire({
-        icon: "error",
-        title: "Gagal",
-        text: error.response?.data?.message || "Gagal mengupload tanda tangan"
-      });
-    } finally {
-      setUploadingSignatures({ ...uploadingSignatures, [memberId]: false });
-    }
-  };
-
   const handleSaveSignature = async (memberId) => {
-    // Handle camat signature
+    // Handle camat signature only
     if (memberId === 'camat') {
       const sigCanvas = camatSigCanvasRef.current;
       if (!sigCanvas || sigCanvas.isEmpty()) {
@@ -250,7 +110,7 @@ const KecamatanBankeuConfigTab = () => {
       }
 
       try {
-        setUploadingSignatures({ ...uploadingSignatures, camat: true });
+        setUploadingCamatSignature(true);
 
         // Convert canvas to blob
         const dataUrl = sigCanvas.toDataURL();
@@ -271,7 +131,7 @@ const KecamatanBankeuConfigTab = () => {
         });
 
         // Close signature pad
-        setSignaturePads({ ...signaturePads, camat: false });
+        setShowCamatSignaturePad(false);
 
         Swal.fire({
           icon: "success",
@@ -288,62 +148,8 @@ const KecamatanBankeuConfigTab = () => {
           text: error.response?.data?.message || "Gagal menyimpan tanda tangan"
         });
       } finally {
-        setUploadingSignatures({ ...uploadingSignatures, camat: false });
+        setUploadingCamatSignature(false);
       }
-      return;
-    }
-
-    // Handle tim verifikasi signature
-    const sigCanvas = sigCanvasRefs.current[memberId];
-    if (!sigCanvas || sigCanvas.isEmpty()) {
-      Swal.fire({
-        icon: "warning",
-        title: "Tanda Tangan Kosong",
-        text: "Silakan gambar tanda tangan terlebih dahulu"
-      });
-      return;
-    }
-
-    try {
-      setUploadingSignatures({ ...uploadingSignatures, [memberId]: true });
-
-      // Convert canvas to blob
-      const dataUrl = sigCanvas.toDataURL();
-      const blob = await fetch(dataUrl).then(res => res.blob());
-      
-      const formData = new FormData();
-      formData.append("file", blob, "signature.png");
-
-      const response = await api.post(
-        `/kecamatan/bankeu/tim-verifikasi/${memberId}/upload-signature`,
-        formData,
-        { headers: { "Content-Type": "multipart/form-data" } }
-      );
-
-      setTimVerifikasi(
-        timVerifikasi.map(t =>
-          t.id === memberId ? { ...t, ttd_path: response.data.data.ttd_path } : t
-        )
-      );
-
-      // Close signature pad
-      setSignaturePads({ ...signaturePads, [memberId]: false });
-
-      Swal.fire({
-        icon: "success",
-        title: "Berhasil",
-        text: "Tanda tangan berhasil disimpan",
-        timer: 2000
-      });
-    } catch (error) {
-      console.error("Error saving signature:", error);
-      Swal.fire({
-        icon: "error",
-        title: "Gagal",
-        text: error.response?.data?.message || "Gagal menyimpan tanda tangan"
-      });
-    } finally {
-      setUploadingSignatures({ ...uploadingSignatures, [memberId]: false });
     }
   };
 
@@ -748,10 +554,10 @@ const KecamatanBankeuConfigTab = () => {
                 
                 {!config?.ttd_camat_path ? (
                   <div>
-                    {!signaturePads.camat ? (
+                    {!showCamatSignaturePad ? (
                       <button
                         type="button"
-                        onClick={() => setSignaturePads({ ...signaturePads, camat: true })}
+                        onClick={() => setShowCamatSignaturePad(true)}
                         className="px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors flex items-center gap-2"
                       >
                         <LuPenTool className="w-4 h-4" />
@@ -784,7 +590,7 @@ const KecamatanBankeuConfigTab = () => {
                           </button>
                           <button
                             type="button"
-                            onClick={() => setSignaturePads({ ...signaturePads, camat: false })}
+                            onClick={() => setShowCamatSignaturePad(false)}
                             className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
                           >
                             Batal
@@ -808,7 +614,7 @@ const KecamatanBankeuConfigTab = () => {
                       onClick={() => {
                         if (confirm('Hapus tanda tangan yang ada dan gambar ulang?')) {
                           handleDeleteCamatSignature();
-                          setSignaturePads({ ...signaturePads, camat: true });
+                          setShowCamatSignaturePad(true);
                         }
                       }}
                       className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
@@ -974,274 +780,20 @@ const KecamatanBankeuConfigTab = () => {
         </div>
       </div>
 
-      {/* Tim Verifikasi */}
-      <div className="bg-white rounded-lg shadow-md overflow-hidden">
-        <button
-          onClick={() => toggleSection('timVerifikasi')}
-          className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
-        >
-          <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-            <LuUsers className="w-6 h-6 text-violet-600" />
-            Tim Verifikasi Kecamatan
-          </h2>
-          <LuChevronDown 
-            className={`w-5 h-5 text-gray-600 transition-transform duration-300 ${
-              openSections.timVerifikasi ? 'rotate-180' : ''
-            }`}
-          />
-        </button>
-
-        <div 
-          className={`transition-all duration-300 ease-in-out ${
-            openSections.timVerifikasi ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'
-          } overflow-hidden`}
-        >
-          <div className="px-6 pb-6 pt-2 border-t">
-            {!editingTeam && (
-              <div className="flex justify-end mb-4">
-                <button
-                  onClick={() => setEditingTeam(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors"
-                >
-                  <LuPencil className="w-4 h-4" />
-                  Tambah Anggota
-                </button>
-              </div>
-            )}
-
-            {editingTeam && (
-          <div className="bg-gray-50 p-4 rounded-lg mb-6 border border-gray-200">
-            <h3 className="font-semibold text-gray-900 mb-4">Tambah Anggota Tim Verifikasi</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Jabatan
-                </label>
-                <select
-                  value={newTeamMember.jabatan}
-                  onChange={(e) => setNewTeamMember({ 
-                    ...newTeamMember, 
-                    jabatan: e.target.value,
-                    jabatan_label: e.target.value === 'anggota' ? '' : null 
-                  })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-600 focus:border-transparent outline-none"
-                >
-                  {JABATAN_OPTIONS.map(option => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {newTeamMember.jabatan === 'anggota' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Label Jabatan Anggota
-                  </label>
-                  <input
-                    type="text"
-                    value={newTeamMember.jabatan_label || ''}
-                    onChange={(e) => setNewTeamMember({ ...newTeamMember, jabatan_label: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-600 focus:border-transparent outline-none"
-                    placeholder="Contoh: Unsur Perangkat Daerah, Tim P3MD, dll"
-                  />
-                </div>
-              )}
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nama
-                </label>
-                <input
-                  type="text"
-                  value={newTeamMember.nama}
-                  onChange={(e) => setNewTeamMember({ ...newTeamMember, nama: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-600 focus:border-transparent outline-none"
-                  placeholder="Masukkan nama anggota"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  NIP
-                </label>
-                <input
-                  type="text"
-                  value={newTeamMember.nip}
-                  onChange={(e) => setNewTeamMember({ ...newTeamMember, nip: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-600 focus:border-transparent outline-none"
-                  placeholder="Masukkan NIP"
-                />
-              </div>
-
-              <div className="flex gap-2 justify-end">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditingTeam(false);
-                    setNewTeamMember({
-                      jabatan: "anggota",
-                      nama: "",
-                      nip: "",
-                      jabatan_label: ""
-                    });
-                  }}
-                  className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
-                >
-                  <LuX className="w-4 h-4" />
-                  Batal
-                </button>
-                <button
-                  type="button"
-                  onClick={handleAddTeamMember}
-                  className="flex items-center gap-2 px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors"
-                >
-                  <LuCheck className="w-4 h-4" />
-                  Tambah
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {timVerifikasi.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            Belum ada anggota tim verifikasi
-          </div>
-        ) : (
-          <div className="space-y-6">
-            <h3 className="font-bold text-gray-900 text-center mb-4">TIM VERIFIKASI KECAMATAN</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {timVerifikasi
-                .sort((a, b) => {
-                  const order = { ketua: 1, sekretaris: 2, anggota: 3 };
-                  return (order[a.jabatan] || 4) - (order[b.jabatan] || 4);
-                })
-                .map((member, index) => {
-                  // Tentukan label berdasarkan jabatan dan urutan
-                  let positionLabel = '';
-                  if (member.jabatan === 'ketua') {
-                    positionLabel = 'Sekretaris Kecamatan';
-                  } else if (member.jabatan === 'sekretaris') {
-                    positionLabel = 'Kepala Seksi Ekbang';
-                  } else if (member.jabatan === 'anggota') {
-                    // Gunakan jabatan_label jika ada, fallback ke default
-                    positionLabel = member.jabatan_label || 'Anggota';
-                  }
-
-                  return (
-                    <div
-                      key={member.id}
-                      className="bg-gray-50 rounded-lg border border-gray-200 p-4"
-                    >
-                      <div className="text-center space-y-3">
-                        {/* Nomor dan Jabatan */}
-                        <div className="flex items-start gap-2">
-                          <span className="font-semibold text-gray-700 min-w-[20px]">
-                            {index + 1}.
-                          </span>
-                          <div className="flex-1 text-left">
-                            <div className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getJabatanBgColor(member.jabatan)} mb-2`}>
-                              {JABATAN_OPTIONS.find(opt => opt.value === member.jabatan)?.label || member.jabatan}
-                            </div>
-                            <p className="text-sm text-gray-600 font-medium">{positionLabel}</p>
-                          </div>
-                        </div>
-
-                        {/* Area Tanda Tangan */}
-                        <div className="space-y-2">
-                          {!member.id ? (
-                            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-gray-100 min-h-[120px] flex items-center justify-center">
-                              <p className="text-gray-400 text-sm italic text-center">Simpan anggota terlebih dahulu untuk menambahkan tanda tangan</p>
-                            </div>
-                          ) : signaturePads[member.id] ? (
-                            <div className="space-y-2">
-                              <div className="border-2 border-violet-300 rounded-lg bg-white">
-                                <SignatureCanvas
-                                  ref={(ref) => {
-                                    if (ref) sigCanvasRefs.current[member.id] = ref;
-                                  }}
-                                  penColor="black"
-                                  canvasProps={{
-                                    className: 'w-full h-[150px]',
-                                    style: { touchAction: 'none' }
-                                  }}
-                                />
-                              </div>
-                              <div className="flex gap-2">
-                                <button
-                                  onClick={() => sigCanvasRefs.current[member.id]?.clear()}
-                                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
-                                >
-                                  <LuX className="w-4 h-4" />
-                                  Clear
-                                </button>
-                                <button
-                                  onClick={() => handleSaveSignature(member.id)}
-                                  disabled={uploadingSignatures[member.id]}
-                                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
-                                >
-                                  <LuCheck className="w-4 h-4" />
-                                  Simpan
-                                </button>
-                              </div>
-                              <button
-                                onClick={() => setSignaturePads({ ...signaturePads, [member.id]: false })}
-                                className="w-full px-3 py-2 text-sm bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors"
-                              >
-                                Batal
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="space-y-2">
-                              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-white min-h-[120px] flex items-center justify-center">
-                                {member.ttd_path ? (
-                                  <img 
-                                    src={`${imageBaseUrl}/storage/uploads/${member.ttd_path}`}
-                                    alt="Tanda Tangan"
-                                    className="max-h-[100px] max-w-full object-contain"
-                                  />
-                                ) : (
-                                  <p className="text-gray-400 text-sm italic">Belum ada tanda tangan</p>
-                                )}
-                              </div>
-                              
-                              {/* Tombol Tanda Tangan - Hanya Gambar TTD */}
-                              <button
-                                onClick={() => setSignaturePads({ ...signaturePads, [member.id]: true })}
-                                className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors"
-                              >
-                                <LuPencil className="w-4 h-4" />
-                                Gambar TTD
-                              </button>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Nama dan NIP */}
-                        <div className="border-t pt-3">
-                          <p className="font-bold text-gray-900">{member.nama}</p>
-                          <p className="text-sm text-gray-600">NIP. {member.nip}</p>
-                        </div>
-
-                        {/* Tombol Hapus */}
-                        <div className="flex items-center justify-center pt-2">
-                          <button
-                            onClick={() => handleRemoveTeamMember(member.id)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Hapus anggota"
-                          >
-                            <LuX className="w-5 h-5" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-            </div>
-          </div>
-        )}
+      {/* Info Tim Verifikasi - Redirect ke halaman baru */}
+      <div className="bg-amber-50 border border-amber-200 rounded-lg p-6">
+        <div className="flex items-start gap-3">
+          <LuUsers className="w-6 h-6 text-amber-600 flex-shrink-0 mt-1" />
+          <div className="flex-1">
+            <h3 className="text-lg font-bold text-amber-900 mb-2">Tim Verifikasi Kecamatan</h3>
+            <p className="text-amber-800 text-sm leading-relaxed mb-4">
+              Konfigurasi Tim Verifikasi (Ketua, Sekretaris, dan Anggota) beserta pengisian quisioner verifikasi 
+              sudah dipindahkan ke halaman khusus untuk memudahkan proses verifikasi proposal.
+            </p>
+            <p className="text-amber-700 text-sm mb-4">
+              Silakan ke halaman <strong>Verifikasi Proposal</strong>, pilih desa, lalu klik tombol <strong>"Tim Verifikasi"</strong> 
+              untuk mengatur tim dan mengisi quisioner.
+            </p>
           </div>
         </div>
       </div>

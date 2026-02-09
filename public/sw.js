@@ -57,7 +57,7 @@ self.addEventListener('push', async (event) => {
 				tag: data?.id || 'notification-' + Date.now(),
 				requireInteraction: true,
 				renotify: true,
-				silent: true,
+				silent: false,
 				actions: notificationData.actions || []
 			}).then(() => {
 				console.log('[SW] ✅ Browser notification shown');
@@ -96,22 +96,36 @@ self.addEventListener('notificationclick', (event) => {
 	event.notification.close();
 
 	const notificationData = event.notification.data || {};
-	const urlToOpen = notificationData.url || '/admin/disposisi';
+	const notificationType = notificationData.type || '';
+	
+	// Determine URL - if notification has a specific url use it, otherwise let the app handle routing
+	let urlToOpen = notificationData.url || '/';
+	
+	// For disposisi notifications without a proper role-prefixed URL, 
+	// we'll navigate to root and let the app figure out the right route
+	if (urlToOpen === '/disposisi' || urlToOpen === '/admin/disposisi') {
+		urlToOpen = '/'; // App will handle smart redirect
+	}
 
-	console.log('[SW] Opening URL:', urlToOpen);
+	console.log('[SW] Opening URL:', urlToOpen, 'Type:', notificationType);
 
-	// Open or focus window
+	// Open or focus window and send navigation message
 	event.waitUntil(
 		self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
-			// Check if already open
+			// If we have an active client, send message to navigate
 			for (const client of clientList) {
-				if (client.url.includes(urlToOpen.split('?')[0]) && 'focus' in client) {
-					console.log('[SW] Focusing existing window');
+				if ('focus' in client) {
+					console.log('[SW] Focusing existing window and sending nav message');
+					client.postMessage({
+						type: 'NOTIFICATION_CLICK_NAVIGATE',
+						url: urlToOpen,
+						notificationData: notificationData
+					});
 					return client.focus();
 				}
 			}
 
-			// Open new window
+			// No client open - open new window
 			if (self.clients.openWindow) {
 				console.log('[SW] Opening new window');
 				return self.clients.openWindow(urlToOpen);

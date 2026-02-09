@@ -175,7 +175,7 @@ const KepalaBidangLayout = () => {
 	}, []);
 
 	if (!token || !isKepalaBidang) {
-		return <Navigate to="/login" replace />;
+		return <Navigate to="/" replace />;
 	}
 
 	const handleLogout = async () => {
@@ -187,9 +187,8 @@ const KepalaBidangLayout = () => {
 			cancelText: 'Batal'
 		});
 		if (confirmed) {
-			localStorage.removeItem("user");
-			localStorage.removeItem("expressToken");
-			window.location.href = "/login";
+			await performFullLogout();
+			window.location.href = "/";
 		}
 	};
 

@@ -1,0 +1,365 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { 
+  FileText, 
+  MapPin, 
+  Building2,
+  Eye,
+  Download,
+  ArrowLeft,
+  Search,
+  ChevronDown,
+  ChevronUp,
+  Folder,
+  FolderOpen,
+  FileCheck,
+  Calendar
+} from 'lucide-react';
+import api from '../../../../api';
+import Swal from 'sweetalert2';
+
+const DpmdVerificationPage = () => {
+  const navigate = useNavigate();
+  const [proposals, setProposals] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [statistics, setStatistics] = useState({});
+  const [searchTerm, setSearchTerm] = useState('');
+  const [expandedKecamatan, setExpandedKecamatan] = useState([]);
+  const [selectedKecamatan, setSelectedKecamatan] = useState('all');
+  const imageBaseUrl = api.defaults.baseURL.replace('/api', '');
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [proposalsRes, statsRes] = await Promise.all([
+        api.get('/dpmd/bankeu/proposals'),
+        api.get('/dpmd/bankeu/statistics')
+      ]);
+
+      if (proposalsRes.data.success) {
+        setProposals(proposalsRes.data.data || []);
+      }
+
+      if (statsRes.data.success) {
+        setStatistics(statsRes.data.data || {});
+      }
+    } catch (error) {
+      console.error('Error fetching DPMD data:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal',
+        text: error.response?.data?.message || 'Gagal memuat data'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filterProposals = () => {
+    let filtered = [...proposals];
+
+    // Filter by status
+  // Group proposals by kecamatan
+  const groupedProposals = proposals.reduce((acc, proposal) => {
+    const kecamatanName = proposal.desas?.kecamatans?.nama || 'Tidak Diketahui';
+    if (!acc[kecamatanName]) {
+      acc[kecamatanName] = [];
+    }
+    acc[kecamatanName].push(proposal);
+    return acc;
+  }, {});
+
+  // Filter grouped proposals
+  const filteredGrouped = Object.entries(groupedProposals).reduce((acc, [kecName, kecProposals]) => {
+    // Filter by selected kecamatan
+    if (selectedKecamatan !== 'all' && kecName !== selectedKecamatan) {
+      return acc;
+    }
+
+    // Filter by search term
+    let filtered = kecProposals;
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filtered = kecProposals.filter(p =>
+        p.judul_proposal?.toLowerCase().includes(term) ||
+        p.desas?.nama?.toLowerCase().includes(term)
+      );
+    }
+
+    if (filtered.length > 0) {
+      acc[kecName] = filtered;
+    }
+    return acc;
+  }, {});
+
+  const toggleKecamatan = (kecamatanName) => {
+    setExpandedKecamatan(prev => 
+      prev.includes(kecamatanName)
+        ? prev.filter(k => k !== kecamatanName)
+        : [...prev, kecamatanName]
+    );
+  };
+
+  const toggleAllKecamatan = () => {
+    if (expandedKecamatan.length === Object.keys(filteredGrouped).length) {
+      setExpandedKecamatan([]);
+    } else {
+      setExpandedKecamatan(Object.keys(filteredGrouped));
+    }
+  }
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Memuat data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-green-50/30">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-blue-600 to-green-600 text-white shadow-lg">
+        <div className="container mx-auto px-4 py-6">
+          <button
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-2 text-blue-100 hover:text-white transition-colors mb-4"
+          >
+            <ArrowLeft className="h-5 w-5" />
+            Kembali
+          </button>
+          
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold mb-2">Verifikasi Proposal Bankeu</h1>
+              <p className="text-blue-100">DPMD - Bidang Sarana Prasarana Kewilayahan dan Ekonomi Desa</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Statistics Cards */}
+      <div className="container mx-auto px-4 py-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div 
+            onClick={() => setSelectedStatus('all')}
+            className={`bg-white rounded-xl shadow-sm p-6 cursor-pointer transition-all hover:shadow-md ${selectedStatus === 'all' ? 'ring-2 ring-blue-500' : ''}`}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Total Proposal</p>
+                <p className="text-3xl font-bold text-gray-900">{statistics.total || 0}</p>
+              </div>
+              <div className="p-3 bg-blue-100 rounded-lg">
+                <FileText className="h-6 w-6 text-blue-600" />
+              </div>
+            </div>
+          </div>
+
+          <div 
+            onClick={() => setSelectedStatus('pending')}
+            className={`bg-white rounded-xl shadow-sm p-6 cursor-pointer transition-all hover:shadow-md ${selectedStatus === 'pending' ? 'ring-2 ring-yellow-500' : ''}`}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Menunggu</p>
+                <p className="text-3xl font-bold text-yellow-600">{statistics.pending || 0}</p>
+              </div>
+              <div className="p-3 bg-yellow-100 rounded-lg">
+                <Clock className="h-6 w-6 text-yellow-600" />
+              </div>
+            </div>
+          </div>
+
+          <div 
+            onClick={() => setSelectedStatus('approved')}
+            className={`bg-white rounded-xl shadow-sm p-6 cursor-pointer transition-all hover:shadow-md ${selectedStatus === 'approved' ? 'ring-2 ring-green-500' : ''}`}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Disetujui</p>
+                <p className="text-3xl font-bold text-green-600">{statistics.approved || 0}</p>
+              </div>
+              <div className="p-3 bg-green-100 rounded-lg">
+                <CheckCircle2 className="h-6 w-6 text-green-600" />
+              </div>
+            </div>
+          </div>
+
+          <div 
+            onClick={() => setSelectedStatus('rejected')}
+            className={`bg-white rounded-xl shadow-sm p-6 cursor-pointer transition-all hover:shadow-md ${selectedStatus === 'rejected' ? 'ring-2 ring-red-500' : ''}`}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Ditolak/Revisi</p>
+                <p className="text-3xl font-bold text-red-600">{statistics.rejected || 0}</p>
+              </div>
+              <div className="p-3 bg-red-100 rounded-lg">
+                <XCircle className="h-6 w-6 text-red-600" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Filters */}
+        <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Cari proposal atau desa..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
+            <div className="relative">
+              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <select
+                value={selectedKecamatan}
+                onChange={(e) => setSelectedKecamatan(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none"
+              >
+                <option value="all">Semua Kecamatan</option>
+                {kecamatanList.map(kec => (
+                  <option key={kec} value={kec}>{kec}</option>
+                ))}
+              </select>
+            </div>
+
+            {(selectedStatus !== 'all' || searchTerm || selectedKecamatan !== 'all') && (
+              <button
+                onClick={() => {
+                  setSelectedStatus('all');
+                  setSearchTerm('');
+                  setSelectedKecamatan('all');
+                }}
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+              >
+                Reset Filter
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Proposals List */}
+        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+          {filteredProposals.length === 0 ? (
+            <div className="text-center py-12">
+              <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500">Tidak ada proposal ditemukan</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {filteredProposals.map((proposal) => (
+                <div key={proposal.id.toString()} className="p-6 hover:bg-gray-50 transition-colors">
+                  <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-start gap-3 mb-3">
+                        <div className="p-2 bg-blue-100 rounded-lg flex-shrink-0">
+                          <FileText className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-gray-900 mb-1 line-clamp-2">
+                            {proposal.judul_proposal}
+                          </h3>
+                          <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
+                            <div className="flex items-center gap-1">
+                              <MapPin className="h-4 w-4" />
+                              <span>{proposal.desas?.nama}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Building2 className="h-4 w-4" />
+                              <span>{proposal.desas?.kecamatans?.nama}</span>
+                            </div>
+                          </div>
+                          
+                          {proposal.bankeu_master_kegiatan && (
+                            <div className="mt-2">
+                              <span className="inline-block px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded">
+                                {proposal.bankeu_master_kegiatan.dinas_terkait}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2 mt-3">
+                        {getStatusBadge(proposal.dpmd_status)}
+                        
+                        {proposal.dpmd_catatan && (
+                          <div className="text-xs text-gray-600 bg-gray-100 px-3 py-1 rounded-full">
+                            Catatan: {proposal.dpmd_catatan}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex flex-wrap gap-2 lg:flex-col lg:flex-shrink-0">
+                      <a
+                        href={`${imageBaseUrl}/storage/uploads/${proposal.file_proposal}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm"
+                      >
+                        <Eye className="h-4 w-4" />
+                        Lihat Proposal
+                      </a>
+
+                      {proposal.berita_acara_path && (
+                        <a
+                          href={`${imageBaseUrl}${proposal.berita_acara_path}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors text-sm"
+                        >
+                          <Download className="h-4 w-4" />
+                          Berita Acara
+                        </a>
+                      )}
+
+                      {(!proposal.dpmd_status || proposal.dpmd_status === 'pending') && (
+                        <>
+                          <button
+                            onClick={() => handleVerifyProposal(proposal.id, 'approved', proposal.judul_proposal)}
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors text-sm"
+                          >
+                            <CheckCircle2 className="h-4 w-4" />
+                            Setujui
+                          </button>
+                          <button
+                            onClick={() => handleVerifyProposal(proposal.id, 'revision', proposal.judul_proposal)}
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors text-sm"
+                          >
+                            <AlertCircle className="h-4 w-4" />
+                            Revisi
+                          </button>
+                          <button
+                            onClick={() => handleVerifyProposal(proposal.id, 'rejected', proposal.judul_proposal)}
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm"
+                          >
+                            <XCircle className="h-4 w-4" />
+                            Tolak
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default DpmdVerificationPage;

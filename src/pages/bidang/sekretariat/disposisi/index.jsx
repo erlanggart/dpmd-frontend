@@ -20,7 +20,7 @@ const DisposisiPersuratan = () => {
       // Ambil role user dari API atau localStorage
       const token = localStorage.getItem('authToken');
       if (!token) {
-        navigate('/login');
+        navigate('/');
         return;
       }
 

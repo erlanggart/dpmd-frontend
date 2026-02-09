@@ -22,9 +22,9 @@ export default defineConfig({
 		VitePWA({
 			registerType: 'autoUpdate',
 			injectRegister: 'auto',
-			includeAssets: ['favicon.ico', 'robots.txt', 'logo-bogor.png'],
+			includeAssets: ['favicon.ico', 'robots.txt', 'logo-bogor.png', 'dpmd.mp3'],
 			workbox: {
-				globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,jpeg,woff,woff2}'],
+				globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,jpeg,woff,woff2,mp3}'],
 				// Custom SW will be injected by inject-custom-sw.js script
 				runtimeCaching: [
 					{
@@ -61,8 +61,8 @@ export default defineConfig({
 				name: 'DPMD Kabupaten Bogor',
 				short_name: 'DPMD',
 				description: 'Sistem Informasi Dinas Pemberdayaan Masyarakat dan Desa Kabupaten Bogor',
-				theme_color: '#ffffff',
-				background_color: '#ffffff',
+				theme_color: '#2563EB',
+				background_color: '#2563EB',
 				display: 'standalone',
 				orientation: 'any',
 				scope: '/',

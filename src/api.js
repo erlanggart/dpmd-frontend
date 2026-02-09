@@ -1,6 +1,7 @@
 // src/api.js
 import axios from "axios";
 import { API_ENDPOINTS } from "./config/apiConfig";
+import { performFullLogout } from "./utils/sessionPersistence";
 
 const api = axios.create({
 	baseURL: API_ENDPOINTS.EXPRESS_BASE, // Express only
@@ -73,11 +74,11 @@ api.interceptors.response.use(
 	(error) => {
 		// Check if error is 401
 		if (error.response && error.response.status === 401) {
-			// Only redirect if NOT on login page
-			if (window.location.pathname !== "/login") {
-				localStorage.removeItem("expressToken");
-				localStorage.removeItem("user");
-				window.location.href = "/login";
+			// Only redirect if NOT on login or landing page
+			if (window.location.pathname !== "/login" && window.location.pathname !== "/") {
+				performFullLogout().then(() => {
+					window.location.href = "/";
+				});
 			}
 		}
 

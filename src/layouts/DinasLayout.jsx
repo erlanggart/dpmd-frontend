@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Outlet, useNavigate, NavLink } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useUserProfile } from "../hooks/useUserProfile";
+import api from "../services/api";
 import {
   FiLogOut,
   FiMenu,
@@ -13,7 +14,10 @@ import {
 import { 
   LuLayoutDashboard, 
   LuClipboardCheck,
-  LuBuilding2
+  LuBuilding2,
+  LuSettings,
+  LuUsers,
+  LuUser
 } from "react-icons/lu";
 import InstallPWA from "../components/InstallPWA";
 
@@ -31,23 +35,81 @@ const menuItems = [
     path: "/dinas/bankeu",
     icon: LuClipboardCheck,
   },
+  {
+    id: "profil",
+    label: "Profil Saya",
+    path: "/dinas/profil",
+    icon: LuUser,
+    // Only for verifikator_dinas role
+    forVerifikatorOnly: true,
+  },
+  {
+    id: "verifikator",
+    label: "Kelola Verifikator",
+    path: "/dinas/verifikator",
+    icon: LuUsers,
+  },
+  {
+    id: "konfigurasi",
+    label: "Konfigurasi",
+    path: "/dinas/konfigurasi",
+    icon: LuSettings,
+  },
 ];
 
 const DinasLayout = () => {
   const { logout } = useAuth();
-  const user = useUserProfile();
+  const userFromHook = useUserProfile();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
+  const [dinasName, setDinasName] = useState(null);
   const dropdownRef = useRef(null);
   const searchRef = useRef(null);
 
+  // Fallback to localStorage if hook hasn't loaded yet
+  const user = userFromHook || JSON.parse(localStorage.getItem('user') || '{}');
+
+  // Roles yang bisa mengelola verifikator dan konfigurasi
+  const managerRoles = ['dinas_terkait', 'superadmin', 'kepala_dinas', 'sekretaris_dinas'];
+  const isVerifikator = user?.role === 'verifikator_dinas';
+
+  // Fetch dinas name for verifikator
+  useEffect(() => {
+    const fetchDinasName = async () => {
+      if (isVerifikator && user.dinas_id && !user.dinas) {
+        try {
+          const response = await api.get('/verifikator/profile');
+          if (response.data.success) {
+            setDinasName(response.data.data.nama_dinas);
+          }
+        } catch (error) {
+          console.error('Error fetching dinas name:', error);
+        }
+      }
+    };
+    fetchDinasName();
+  }, [isVerifikator, user.dinas_id]);
+
+  // Filter menu items based on user's role and dinas_id
+  const filteredMenuItems = menuItems.filter(item => {
+    // Profil Saya hanya untuk verifikator_dinas
+    if (item.forVerifikatorOnly) {
+      return isVerifikator;
+    }
+    // Konfigurasi & Kelola Verifikator hanya untuk manager roles
+    if (item.id === 'konfigurasi' || item.id === 'verifikator') {
+      return user?.dinas_id != null && managerRoles.includes(user?.role);
+    }
+    return true;
+  });
+
   const handleLogout = () => {
     logout();
-    navigate("/login");
+    window.location.href = "/";
   };
 
   const handleSettings = () => {
@@ -66,7 +128,7 @@ const DinasLayout = () => {
       return;
     }
 
-    const results = menuItems.filter(
+    const results = filteredMenuItems.filter(
       (item) =>
         item.label.toLowerCase().includes(query.toLowerCase()) ||
         item.path.toLowerCase().includes(query.toLowerCase())
@@ -107,17 +169,13 @@ const DinasLayout = () => {
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="flex items-center justify-between px-4 sm:px-6 py-4 sm:py-6 border-b border-gray-200">
-            <div className={`flex items-center gap-2 sm:gap-3 ${!sidebarOpen && "lg:justify-center"}`}>
-              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg flex items-center justify-center shadow-lg">
-                <LuBuilding2 className="text-white text-lg sm:text-xl" />
-              </div>
-              {sidebarOpen && (
-                <div>
-                  <h1 className="text-base sm:text-lg font-bold text-gray-900">DPMD Bogor</h1>
-                  <p className="text-xs text-gray-500">Dinas Terkait</p>
-                </div>
-              )}
+          <div className="flex items-center justify-between px-4 sm:px-6 py-4 sm:py-6 border-b border-gray-200 bg-gradient-to-r from-amber-50 to-orange-100">
+            <div className="flex items-center justify-center flex-1">
+              <img 
+                src="/logo-dpmd.png" 
+                alt="DPMD Logo" 
+                className={`transition-all duration-300 ${sidebarOpen ? "h-16 sm:h-20" : "h-14"}`} 
+              />
             </div>
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -137,7 +195,10 @@ const DinasLayout = () => {
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-sm truncate text-gray-900">{user.name}</p>
                   <p className="text-xs text-gray-600 truncate">
-                    {user.dinas?.nama_dinas || user.dinas?.singkatan || "Dinas"}
+                    {isVerifikator 
+                      ? (dinasName || "Verifikator Dinas")
+                      : (user.dinas?.nama_dinas || user.dinas?.singkatan || "Dinas Terkait")
+                    }
                   </p>
                 </div>
               </div>
@@ -146,7 +207,7 @@ const DinasLayout = () => {
 
           {/* Navigation Menu */}
           <nav className="flex-1 overflow-y-auto px-4 py-4 space-y-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
-            {menuItems.map((item) => {
+            {filteredMenuItems.map((item) => {
               const Icon = item.icon;
               return (
                 <NavLink
@@ -190,116 +251,6 @@ const DinasLayout = () => {
           sidebarOpen ? "lg:ml-72" : "ml-0 lg:ml-20"
         }`}
       >
-        {/* Top Bar - Responsive */}
-        <header className="bg-white shadow-sm sticky top-0 z-30 border-b border-gray-200">
-          <div className="flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4">
-            <div className="flex items-center gap-2 sm:gap-4 flex-1">
-              <button
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <FiMenu className="text-lg sm:text-xl text-gray-700" />
-              </button>
-
-              {/* Search Bar - Hidden on mobile, visible on tablet+ */}
-              <div className="hidden md:block relative flex-1 max-w-md" ref={searchRef}>
-                <div className="relative">
-                  <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Cari menu..."
-                    value={searchQuery}
-                    onChange={handleSearch}
-                    className="pl-10 pr-4 py-2 w-full border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                  />
-                </div>
-
-                {/* Search Results Dropdown */}
-                {showSearchResults && searchResults.length > 0 && (
-                  <div className="absolute top-full mt-2 w-full bg-white rounded-lg shadow-xl border border-gray-200 py-2 max-h-96 overflow-y-auto">
-                    {searchResults.map((result) => {
-                      const Icon = result.icon;
-                      return (
-                        <button
-                          key={result.id}
-                          onClick={() => handleSearchResultClick(result.path)}
-                          className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left"
-                        >
-                          <Icon className="text-amber-600" />
-                          <div>
-                            <p className="font-medium text-gray-900 text-sm">
-                              {result.label}
-                            </p>
-                            <p className="text-xs text-gray-500">{result.path}</p>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* User Dropdown - Responsive */}
-            <div className="relative" ref={dropdownRef}>
-              <button
-                onClick={() => setDropdownOpen(!dropdownOpen)}
-                className="flex items-center gap-2 sm:gap-3 px-2 sm:px-4 py-2 hover:bg-gray-50 rounded-lg transition-colors"
-              >
-                <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-amber-500 to-orange-600 rounded-full flex items-center justify-center text-white text-sm sm:text-base font-semibold shadow-md">
-                  {user?.name?.charAt(0).toUpperCase()}
-                </div>
-                <div className="hidden sm:block text-left">
-                  <p className="text-xs sm:text-sm font-semibold text-gray-700">
-                    {user?.name}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {user?.dinas?.singkatan}
-                  </p>
-                </div>
-                <FiChevronDown
-                  className={`hidden sm:block text-gray-400 transition-transform ${
-                    dropdownOpen ? "rotate-180" : ""
-                  }`}
-                />
-              </button>
-
-              {/* Dropdown Menu - Responsive */}
-              {dropdownOpen && (
-                <div className="absolute right-0 mt-2 w-64 sm:w-56 bg-white rounded-xl shadow-2xl border border-gray-100 py-2 z-50">
-                  <div className="px-4 py-3 border-b border-gray-100">
-                    <p className="text-sm font-semibold text-gray-900">
-                      {user?.name}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">{user?.email}</p>
-                    <p className="text-xs text-amber-600 mt-1 font-medium">
-                      {user?.dinas?.nama_dinas}
-                    </p>
-                  </div>
-
-                  <button
-                    onClick={handleSettings}
-                    className="w-full px-4 py-2.5 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left"
-                  >
-                    <FiSettings className="text-gray-400" />
-                    <span className="text-sm text-gray-700">Pengaturan</span>
-                  </button>
-
-                  <div className="border-t border-gray-100 mt-2 pt-2">
-                    <button
-                      onClick={handleLogout}
-                      className="w-full px-4 py-2.5 flex items-center gap-3 hover:bg-red-50 transition-colors text-left text-red-600"
-                    >
-                      <FiLogOut className="text-red-500" />
-                      <span className="text-sm font-medium">Keluar</span>
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </header>
-
         {/* Page Content - Responsive */}
         <main className="flex-1 overflow-y-auto">
           <div className="p-3 sm:p-4 md:p-6">

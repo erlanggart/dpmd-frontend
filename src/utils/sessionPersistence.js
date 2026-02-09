@@ -5,6 +5,65 @@
 let backupTimer = null;
 const BACKUP_DEBOUNCE_MS = 2000; // Wait 2 seconds before backing up
 
+// Logout flag key - prevents IndexedDB from restoring after explicit logout
+const LOGOUT_FLAG_KEY = 'dpmd_logged_out';
+
+/**
+ * Set logout flag so IndexedDB restore is skipped on next load
+ */
+export const setLogoutFlag = () => {
+  try {
+    localStorage.setItem(LOGOUT_FLAG_KEY, 'true');
+  } catch (e) { /* ignore */ }
+};
+
+/**
+ * Check and clear logout flag. Returns true if flag was set.
+ */
+export const checkAndClearLogoutFlag = () => {
+  try {
+    const flag = localStorage.getItem(LOGOUT_FLAG_KEY);
+    if (flag) {
+      localStorage.removeItem(LOGOUT_FLAG_KEY);
+      return true;
+    }
+  } catch (e) { /* ignore */ }
+  return false;
+};
+
+/**
+ * Perform a complete logout - clears localStorage, IndexedDB, and sets flag
+ * Use this instead of manually removing localStorage items
+ */
+export const performFullLogout = async () => {
+  console.log('[Session] 🚪 Performing full logout...');
+  
+  // Set flag FIRST so restore doesn't kick in on reload
+  setLogoutFlag();
+  
+  // Clear localStorage
+  localStorage.removeItem('authSession');
+  localStorage.removeItem('user');
+  localStorage.removeItem('expressToken');
+  
+  // Clear IndexedDB
+  try {
+    const db = await openSessionDB();
+    const tx = db.transaction('sessions', 'readwrite');
+    const store = tx.objectStore('sessions');
+    store.delete('current');
+    await new Promise((resolve, reject) => {
+      tx.oncomplete = resolve;
+      tx.onerror = reject;
+    });
+    console.log('[Session] ✅ IndexedDB session cleared');
+  } catch (error) {
+    console.error('[Session] Error clearing IndexedDB:', error);
+  }
+  
+  console.log('[Session] ✅ Full logout complete');
+};
+
 /**
  * Initialize session persistence
  * Call this once when the app starts
@@ -116,6 +175,12 @@ export const backupSessionToIndexedDB = async () => {
 export const restoreSessionFromIndexedDB = async () => {
   try {
     console.log('[Session] 🔍 Checking for session restore...');
+    
+    // Check logout flag - if user explicitly logged out, do NOT restore
+    if (checkAndClearLogoutFlag()) {
+      console.log('[Session] 🚫 Logout flag detected, skipping restore');
+      return false;
+    }
     
     // Check if session already exists in localStorage
     const existingSession = localStorage.getItem('authSession');
