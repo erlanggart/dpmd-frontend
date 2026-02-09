@@ -1054,7 +1054,7 @@ const KecamatanTimVerifikasiPage = () => {
                         {selectedProposal.dinas_verifikator_ttd ? (
                           <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl border-2 border-dashed border-gray-300 p-4">
                             <img 
-                              src={`${imageBaseUrl}/storage/${selectedProposal.dinas_verifikator_ttd}`}
+                              src={`${imageBaseUrl}/storage/${selectedProposal.dinas_verifikator_ttd?.startsWith('uploads/') ? '' : 'uploads/'}${selectedProposal.dinas_verifikator_ttd}`}
                               alt="Tanda Tangan Verifikator Dinas" 
                               className="max-w-xs mx-auto bg-white rounded-lg shadow-sm"
                             />
