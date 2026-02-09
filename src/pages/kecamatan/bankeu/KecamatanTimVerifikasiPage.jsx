@@ -1014,6 +1014,12 @@ const KecamatanTimVerifikasiPage = () => {
                           <label className="block text-sm font-semibold text-gray-500 mb-1">Nama Verifikator</label>
                           <p className="text-gray-900 font-medium text-lg">{selectedProposal.dinas_verifikator_nama}</p>
                         </div>
+                        {selectedProposal.dinas_verifikator_nip && (
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-500 mb-1">NIP</label>
+                            <p className="text-gray-900">{selectedProposal.dinas_verifikator_nip}</p>
+                          </div>
+                        )}
                         {selectedProposal.dinas_verifikator_jabatan && (
                           <div>
                             <label className="block text-sm font-semibold text-gray-500 mb-1">Jabatan</label>
