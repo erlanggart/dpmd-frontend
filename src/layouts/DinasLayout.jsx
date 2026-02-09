@@ -19,7 +19,6 @@ import {
   LuUsers,
   LuUser
 } from "react-icons/lu";
-import InstallPWA from "../components/InstallPWA";
 
 // Menu items configuration for Dinas
 const menuItems = [
@@ -260,8 +259,6 @@ const DinasLayout = () => {
             <Outlet />
           </div>
         </main>
-
-        <InstallPWA />
       </div>
 
       {/* Mobile Overlay - Only show on mobile when sidebar is open */}
