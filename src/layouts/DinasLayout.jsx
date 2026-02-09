@@ -87,7 +87,10 @@ const DinasLayout = () => {
             setDinasName(response.data.data.nama_dinas);
           }
         } catch (error) {
-          console.error('Error fetching dinas name:', error);
+          // Ignore 403 errors - user may not have verifikator profile
+          if (error.response?.status !== 403) {
+            console.error('Error fetching dinas name:', error);
+          }
         }
       }
     };
