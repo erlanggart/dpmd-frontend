@@ -20,7 +20,7 @@ import {
 	setupPeriodicBackup,
 	syncSessionAcrossTabs 
 } from "./utils/sessionPersistence";
-import { setupPeriodicVersionCheck, forceUpdate } from "./utils/versionCheck";
+import { setupPeriodicVersionCheck, forceUpdate, dismissUpdate } from "./utils/versionCheck";
 import UpdateNotificationModal from "./components/UpdateNotificationModal";
 
 // Halaman utama di-import langsung untuk performa awal yang lebih cepat
@@ -618,8 +618,9 @@ function App() {
 	};
 
 	const handleDismissUpdate = () => {
-		// User dismissed update
+		// User dismissed update - don't re-show for 24 hours
 		setShowUpdateModal(false);
+		dismissUpdate();
 	};
 
 	return (
