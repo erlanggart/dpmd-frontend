@@ -1304,6 +1304,58 @@ const DpmdVerificationPage = () => {
         ) : activeView === 'tracking' ? (
           /* Tracking Status View - Per Desa */
           <div className="space-y-6">
+            {/* Tracking Summary Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-gradient-to-br from-orange-500 to-amber-500 rounded-xl p-4 text-white shadow-lg">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-orange-100 text-sm">Di Dinas</p>
+                    <p className="text-3xl font-bold mt-1">
+                      {proposals.filter(p => getProposalStage(p) === 'di_dinas').length}
+                    </p>
+                    <p className="text-orange-100 text-xs mt-1">proposal menunggu</p>
+                  </div>
+                  <Building className="h-12 w-12 text-white/30" />
+                </div>
+              </div>
+              <div className="bg-gradient-to-br from-blue-500 to-indigo-500 rounded-xl p-4 text-white shadow-lg">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-blue-100 text-sm">Di Kecamatan</p>
+                    <p className="text-3xl font-bold mt-1">
+                      {proposals.filter(p => getProposalStage(p) === 'di_kecamatan').length}
+                    </p>
+                    <p className="text-blue-100 text-xs mt-1">proposal diproses</p>
+                  </div>
+                  <Building2 className="h-12 w-12 text-white/30" />
+                </div>
+              </div>
+              <div className="bg-gradient-to-br from-purple-500 to-violet-500 rounded-xl p-4 text-white shadow-lg">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-purple-100 text-sm">Di DPMD</p>
+                    <p className="text-3xl font-bold mt-1">
+                      {proposals.filter(p => getProposalStage(p) === 'di_dpmd').length}
+                    </p>
+                    <p className="text-purple-100 text-xs mt-1">proposal masuk</p>
+                  </div>
+                  <Shield className="h-12 w-12 text-white/30" />
+                </div>
+              </div>
+              <div className="bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl p-4 text-white shadow-lg">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-green-100 text-sm">Selesai</p>
+                    <p className="text-3xl font-bold mt-1">
+                      {proposals.filter(p => p.dpmd_status === 'approved').length}
+                    </p>
+                    <p className="text-green-100 text-xs mt-1">proposal disetujui</p>
+                  </div>
+                  <CheckCircle className="h-12 w-12 text-white/30" />
+                </div>
+              </div>
+            </div>
+
             {/* Search and Filter for Tracking */}
             <div className="bg-white rounded-xl shadow-sm p-4">
               <div className="flex items-center gap-2 mb-4">
@@ -1405,9 +1457,11 @@ const DpmdVerificationPage = () => {
                   .map(([key, data]) => {
                     const isExpanded = expandedTrackingDesa.includes(key);
                     const totalProposals = data.proposals.length;
-                    const approvedCount = data.proposals.filter(p => p.dinas_status === 'approved').length;
-                    const pendingCount = data.proposals.filter(p => !p.dinas_status || p.dinas_status === 'pending').length;
-                    const dpmdReceivedCount = data.proposals.filter(p => p.dpmd_status === 'pending').length;
+                    const diDinasCount = data.proposals.filter(p => getProposalStage(p) === 'di_dinas').length;
+                    const diKecamatanCount = data.proposals.filter(p => getProposalStage(p) === 'di_kecamatan').length;
+                    const diDpmdCount = data.proposals.filter(p => getProposalStage(p) === 'di_dpmd').length;
+                    const selesaiCount = data.proposals.filter(p => p.dpmd_status === 'approved').length;
+                    const totalAnggaran = data.proposals.reduce((sum, p) => sum + (Number(p.anggaran_usulan) || 0), 0);
 
                     return (
                       <motion.div
@@ -1434,20 +1488,38 @@ const DpmdVerificationPage = () => {
                           </div>
                           <div className="flex items-center gap-4">
                             {/* Status Summary Pills */}
-                            <div className="hidden sm:flex items-center gap-2">
+                            <div className="hidden sm:flex flex-wrap items-center gap-2">
                               <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
                                 {totalProposals} Proposal
                               </span>
-                              {approvedCount > 0 && (
-                                <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
-                                  {approvedCount} Disetujui
+                              {diDinasCount > 0 && (
+                                <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-semibold flex items-center gap-1">
+                                  <Building className="h-3 w-3" />
+                                  {diDinasCount} Dinas
                                 </span>
                               )}
-                              {dpmdReceivedCount > 0 && (
-                                <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold">
-                                  {dpmdReceivedCount} di DPMD
+                              {diKecamatanCount > 0 && (
+                                <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold flex items-center gap-1">
+                                  <Building2 className="h-3 w-3" />
+                                  {diKecamatanCount} Kec
                                 </span>
                               )}
+                              {diDpmdCount > 0 && (
+                                <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold flex items-center gap-1">
+                                  <Shield className="h-3 w-3" />
+                                  {diDpmdCount} DPMD
+                                </span>
+                              )}
+                              {selesaiCount > 0 && (
+                                <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold flex items-center gap-1">
+                                  <CheckCircle className="h-3 w-3" />
+                                  {selesaiCount} Selesai
+                                </span>
+                              )}
+                            </div>
+                            <div className="hidden md:block text-right">
+                              <p className="text-xs text-gray-500">Total Anggaran</p>
+                              <p className="text-sm font-bold text-gray-800">Rp {totalAnggaran.toLocaleString('id-ID')}</p>
                             </div>
                             {isExpanded ? (
                               <ChevronUp className="h-5 w-5 text-gray-400" />
@@ -1486,53 +1558,144 @@ const DpmdVerificationPage = () => {
                                     </div>
 
                                     {/* Compact Timeline */}
-                                    <div className="flex flex-wrap items-center gap-2 ml-11">
-                                      {/* Step 1: Desa Submit */}
-                                      <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${
-                                        true ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
-                                      }`}>
-                                        <CheckCircle2 className="h-3.5 w-3.5" />
-                                        Desa Submit
+                                    <div className="ml-11 space-y-3">
+                                      {/* Visual Progress Bar */}
+                                      <div className="relative">
+                                        <div className="flex items-center">
+                                          {/* Step 1: Desa Submit */}
+                                          <div className="flex flex-col items-center z-10">
+                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                                              true ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-500'
+                                            }`}>
+                                              <CheckCircle2 className="h-5 w-5" />
+                                            </div>
+                                            <span className="text-xs mt-1 font-medium text-gray-700">Desa</span>
+                                            <span className="text-[10px] text-gray-500">
+                                              {proposal.created_at ? new Date(proposal.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) : '-'}
+                                            </span>
+                                          </div>
+                                          
+                                          {/* Line 1-2 */}
+                                          <div className={`flex-1 h-1 mx-1 ${proposal.submitted_to_dinas_at ? 'bg-green-400' : 'bg-gray-200'}`}></div>
+                                          
+                                          {/* Step 2: Dinas */}
+                                          <div className="flex flex-col items-center z-10">
+                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                                              proposal.dinas_status === 'approved' ? 'bg-green-500 text-white' :
+                                              proposal.dinas_status === 'rejected' ? 'bg-red-500 text-white' :
+                                              proposal.dinas_status === 'revision' ? 'bg-orange-500 text-white' :
+                                              proposal.submitted_to_dinas_at ? 'bg-blue-500 text-white animate-pulse' :
+                                              'bg-gray-200 text-gray-500'
+                                            }`}>
+                                              {proposal.dinas_status === 'approved' ? <CheckCircle2 className="h-5 w-5" /> :
+                                               proposal.dinas_status === 'rejected' ? <XCircle className="h-5 w-5" /> :
+                                               proposal.dinas_status === 'revision' ? <RefreshCw className="h-5 w-5" /> :
+                                               <Building className="h-5 w-5" />}
+                                            </div>
+                                            <span className="text-xs mt-1 font-medium text-gray-700">Dinas</span>
+                                            <span className="text-[10px] text-gray-500">
+                                              {proposal.dinas_verified_at ? new Date(proposal.dinas_verified_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) : 
+                                               proposal.submitted_to_dinas_at ? 'Menunggu' : '-'}
+                                            </span>
+                                          </div>
+                                          
+                                          {/* Line 2-3 */}
+                                          <div className={`flex-1 h-1 mx-1 ${proposal.dinas_status === 'approved' ? 'bg-green-400' : 'bg-gray-200'}`}></div>
+                                          
+                                          {/* Step 3: Kecamatan */}
+                                          <div className="flex flex-col items-center z-10">
+                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                                              proposal.surat_pengantar ? 'bg-green-500 text-white' :
+                                              proposal.kecamatan_status === 'approved' ? 'bg-green-500 text-white' :
+                                              proposal.kecamatan_status === 'rejected' ? 'bg-red-500 text-white' :
+                                              proposal.kecamatan_status === 'revision' ? 'bg-orange-500 text-white' :
+                                              proposal.dinas_status === 'approved' ? 'bg-blue-500 text-white animate-pulse' :
+                                              'bg-gray-200 text-gray-500'
+                                            }`}>
+                                              {proposal.surat_pengantar || proposal.kecamatan_status === 'approved' ? <CheckCircle2 className="h-5 w-5" /> :
+                                               proposal.kecamatan_status === 'rejected' ? <XCircle className="h-5 w-5" /> :
+                                               proposal.kecamatan_status === 'revision' ? <RefreshCw className="h-5 w-5" /> :
+                                               <Building2 className="h-5 w-5" />}
+                                            </div>
+                                            <span className="text-xs mt-1 font-medium text-gray-700">Kecamatan</span>
+                                            <span className="text-[10px] text-gray-500">
+                                              {proposal.kecamatan_verified_at ? new Date(proposal.kecamatan_verified_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) : 
+                                               proposal.dinas_status === 'approved' ? 'Menunggu' : '-'}
+                                            </span>
+                                          </div>
+                                          
+                                          {/* Line 3-4 */}
+                                          <div className={`flex-1 h-1 mx-1 ${proposal.submitted_to_dpmd_at ? 'bg-green-400' : 'bg-gray-200'}`}></div>
+                                          
+                                          {/* Step 4: DPMD */}
+                                          <div className="flex flex-col items-center z-10">
+                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                                              proposal.dpmd_status === 'approved' ? 'bg-green-500 text-white' :
+                                              proposal.dpmd_status === 'rejected' ? 'bg-red-500 text-white' :
+                                              proposal.dpmd_status === 'revision' ? 'bg-orange-500 text-white' :
+                                              proposal.submitted_to_dpmd_at || proposal.dpmd_status === 'pending' ? 'bg-purple-500 text-white animate-pulse' :
+                                              'bg-gray-200 text-gray-500'
+                                            }`}>
+                                              {proposal.dpmd_status === 'approved' ? <CheckCircle2 className="h-5 w-5" /> :
+                                               proposal.dpmd_status === 'rejected' ? <XCircle className="h-5 w-5" /> :
+                                               proposal.dpmd_status === 'revision' ? <RefreshCw className="h-5 w-5" /> :
+                                               <Shield className="h-5 w-5" />}
+                                            </div>
+                                            <span className="text-xs mt-1 font-medium text-gray-700">DPMD</span>
+                                            <span className="text-[10px] text-gray-500">
+                                              {proposal.dpmd_verified_at ? new Date(proposal.dpmd_verified_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) : 
+                                               proposal.dpmd_status === 'pending' ? 'Menunggu' : '-'}
+                                            </span>
+                                          </div>
+                                        </div>
                                       </div>
-                                      <div className="w-4 h-0.5 bg-gray-300"></div>
                                       
-                                      {/* Step 2: Dinas */}
-                                      <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${
-                                        proposal.dinas_status === 'approved' ? 'bg-green-100 text-green-700' :
-                                        proposal.dinas_status === 'rejected' ? 'bg-red-100 text-red-700' :
-                                        proposal.dinas_status === 'revision' ? 'bg-orange-100 text-orange-700' :
-                                        proposal.dinas_status === 'pending' ? 'bg-blue-100 text-blue-700 animate-pulse' :
-                                        'bg-gray-100 text-gray-500'
-                                      }`}>
-                                        {proposal.dinas_status === 'approved' ? <CheckCircle2 className="h-3.5 w-3.5" /> :
-                                         proposal.dinas_status === 'rejected' ? <XCircle className="h-3.5 w-3.5" /> :
-                                         <Clock className="h-3.5 w-3.5" />}
-                                        Dinas {proposal.dinas_status === 'approved' ? '✓' : 
-                                               proposal.dinas_status === 'rejected' ? '✗' : 
-                                               proposal.dinas_status === 'revision' ? '↻' : '...'}
+                                      {/* Detail Status Info */}
+                                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                                        <div className="bg-gray-50 rounded-lg p-2">
+                                          <p className="text-gray-500">Anggaran</p>
+                                          <p className="font-semibold text-gray-800">Rp {(proposal.anggaran_usulan || 0).toLocaleString('id-ID')}</p>
+                                        </div>
+                                        <div className="bg-gray-50 rounded-lg p-2">
+                                          <p className="text-gray-500">Jenis Kegiatan</p>
+                                          <p className="font-semibold text-gray-800 truncate">{proposal.bankeu_master_kegiatan?.nama_kegiatan || '-'}</p>
+                                        </div>
+                                        <div className="bg-gray-50 rounded-lg p-2">
+                                          <p className="text-gray-500">Posisi Saat Ini</p>
+                                          <p className={`font-semibold ${
+                                            getProposalStage(proposal) === 'di_dpmd' ? 'text-purple-700' :
+                                            getProposalStage(proposal) === 'di_kecamatan' ? 'text-blue-700' :
+                                            'text-orange-700'
+                                          }`}>
+                                            {getProposalStage(proposal) === 'di_dpmd' ? '📋 Di DPMD' :
+                                             getProposalStage(proposal) === 'di_kecamatan' ? '🏛️ Di Kecamatan' :
+                                             '🏢 Di Dinas'}
+                                          </p>
+                                        </div>
+                                        <div className="bg-gray-50 rounded-lg p-2">
+                                          <p className="text-gray-500">Status Akhir</p>
+                                          <p className={`font-semibold ${
+                                            proposal.dpmd_status === 'approved' ? 'text-green-700' :
+                                            proposal.dpmd_status === 'rejected' ? 'text-red-700' :
+                                            'text-blue-700'
+                                          }`}>
+                                            {proposal.dpmd_status === 'approved' ? '✅ Disetujui' :
+                                             proposal.dpmd_status === 'rejected' ? '❌ Ditolak' :
+                                             proposal.dpmd_status === 'revision' ? '🔄 Revisi' :
+                                             '⏳ Proses'}
+                                          </p>
+                                        </div>
                                       </div>
-                                      <div className="w-4 h-0.5 bg-gray-300"></div>
                                       
-                                      {/* Step 3: Kecamatan */}
-                                      <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${
-                                        proposal.surat_pengantar ? 'bg-green-100 text-green-700' :
-                                        proposal.dinas_status === 'approved' ? 'bg-blue-100 text-blue-700 animate-pulse' :
-                                        'bg-gray-100 text-gray-500'
-                                      }`}>
-                                        {proposal.surat_pengantar ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Clock className="h-3.5 w-3.5" />}
-                                        Kecamatan {proposal.surat_pengantar ? '✓' : '...'}
-                                      </div>
-                                      <div className="w-4 h-0.5 bg-gray-300"></div>
-                                      
-                                      {/* Step 4: DPMD */}
-                                      <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${
-                                        proposal.dpmd_status === 'pending' ? 'bg-green-100 text-green-700' :
-                                        proposal.surat_pengantar ? 'bg-blue-100 text-blue-700 animate-pulse' :
-                                        'bg-gray-100 text-gray-500'
-                                      }`}>
-                                        {proposal.dpmd_status === 'pending' ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Clock className="h-3.5 w-3.5" />}
-                                        DPMD {proposal.dpmd_status === 'pending' ? '✓' : '...'}
-                                      </div>
+                                      {/* Show catatan if any */}
+                                      {(proposal.dinas_catatan || proposal.kecamatan_catatan || proposal.dpmd_catatan) && (
+                                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                                          <p className="text-xs font-semibold text-amber-800 mb-1">📝 Catatan:</p>
+                                          {proposal.dpmd_catatan && <p className="text-xs text-amber-700">DPMD: {proposal.dpmd_catatan}</p>}
+                                          {proposal.kecamatan_catatan && <p className="text-xs text-amber-700">Kecamatan: {proposal.kecamatan_catatan}</p>}
+                                          {proposal.dinas_catatan && <p className="text-xs text-amber-700">Dinas: {proposal.dinas_catatan}</p>}
+                                        </div>
+                                      )}
                                     </div>
                                   </div>
                                 ))}
