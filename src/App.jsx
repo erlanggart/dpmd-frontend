@@ -302,6 +302,9 @@ const BankeuDashboard = lazy(() =>
 const StatistikBankeuDashboard = lazy(() =>
 	import("./pages/kepala-dinas/StatistikBankeuDashboard")
 );
+const StatistikPerjadinDashboard = lazy(() =>
+	import("./pages/kepala-dinas/StatistikPerjadinDashboard")
+);
 const AddDashboard = lazy(() =>
 	import("./pages/bidang/kkd/add/AddDashboard")
 );
@@ -870,6 +873,7 @@ function App() {
 					<Route path="statistik-bumdes" element={<StatistikBumdes />} />
 					<Route path="statistik-kelembagaan" element={<StatistikKelembagaan />} />
 					<Route path="statistik-bankeu" element={<StatistikBankeuDashboard />} />
+					<Route path="statistik-perjadin" element={<StatistikPerjadinDashboard />} />
 					<Route path="statistik-add" element={<StatistikAddDashboard />} />
 					<Route path="statistik-bhprd" element={<BhprdDashboard />} />
 					{/* BHPRD Submenu Routes */}
