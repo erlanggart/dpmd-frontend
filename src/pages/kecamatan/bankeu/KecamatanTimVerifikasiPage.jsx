@@ -809,13 +809,6 @@ const KecamatanTimVerifikasiPage = () => {
                   {selectedProposal.judul_proposal} — Rp {selectedProposal.anggaran_usulan?.toLocaleString('id-ID')}
                 </p>
               </div>
-              <button
-                onClick={() => setShowProposalModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 font-semibold text-sm shadow-md hover:shadow-lg transition-all transform hover:scale-[1.02] active:scale-[0.98]"
-              >
-                <LuEye className="w-4 h-4" />
-                <span>Lihat Proposal</span>
-              </button>
             </div>
           </div>
         )}
@@ -973,6 +966,19 @@ const KecamatanTimVerifikasiPage = () => {
                 )}
               </div>
             </div>
+
+            {/* Sticky Button Lihat Proposal */}
+            {selectedProposal && (
+              <div className="sticky bottom-4 mt-4">
+                <button
+                  onClick={() => setShowProposalModal(true)}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 font-bold text-sm shadow-lg hover:shadow-xl transition-all transform hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  <LuEye className="w-5 h-5" />
+                  <span>Lihat Proposal</span>
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Main Content Area */}
