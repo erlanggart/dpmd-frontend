@@ -18,6 +18,7 @@ const KecamatanTimVerifikasiPage = () => {
   const { desaId } = useParams();
   const [searchParams] = useSearchParams();
   const proposalIdFromUrl = searchParams.get('proposalId');
+  const tahunAnggaran = parseInt(searchParams.get('tahun')) || 2027;
   const navigate = useNavigate();
   const [desa, setDesa] = useState(null);
   const [kecamatanId, setKecamatanId] = useState(null);
@@ -718,7 +719,7 @@ const KecamatanTimVerifikasiPage = () => {
         <div className="bg-gradient-to-r from-violet-600 via-purple-600 to-violet-700 rounded-2xl p-5 mb-6 shadow-lg">
           {/* Back Button */}
           <button
-            onClick={() => navigate(`/kecamatan/bankeu/verifikasi/${desaId}`)}
+            onClick={() => navigate(`/kecamatan/bankeu/verifikasi/${desaId}?tahun=${tahunAnggaran}`)}
             className="flex items-center gap-1.5 text-white/80 hover:text-white transition-colors group mb-3"
           >
             <LuArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />

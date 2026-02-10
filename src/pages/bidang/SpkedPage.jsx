@@ -704,7 +704,7 @@ const SpkedPage = () => {
 									Pilih tahun anggaran terlebih dahulu untuk melihat data
 								</p>
 
-								<div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full max-w-lg">
+								<div className="grid grid-cols-1 sm:grid-cols-3 gap-6 w-full max-w-4xl">
 									<button
 										onClick={() => setBankeuYear(2025)}
 										className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border-2 border-gray-200 hover:border-blue-400 p-8 transition-all duration-300 text-center overflow-hidden hover:-translate-y-1"
@@ -732,15 +732,29 @@ const SpkedPage = () => {
 											<p className="text-sm text-gray-500 leading-relaxed">Verifikasi Proposal<br/>Bantuan Keuangan</p>
 										</div>
 									</button>
+
+									<button
+										onClick={() => setBankeuYear(2027)}
+										className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border-2 border-gray-200 hover:border-purple-400 p-8 transition-all duration-300 text-center overflow-hidden hover:-translate-y-1"
+									>
+										<div className="absolute inset-0 bg-gradient-to-br from-purple-400/5 to-violet-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+										<div className="relative">
+											<div className="h-16 w-16 mx-auto bg-gradient-to-br from-purple-500 to-violet-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg shadow-purple-500/25">
+												<span className="text-2xl">🚀</span>
+											</div>
+											<h3 className="text-xl font-bold text-gray-800 mb-2">TA 2027</h3>
+											<p className="text-sm text-gray-500 leading-relaxed">Verifikasi Proposal<br/>Bantuan Keuangan</p>
+										</div>
+									</button>
 								</div>
 							</div>
 						) : (
 							<Suspense fallback={<LoadingFallback />}>
 								{bankeuYear === 2025 ? (
 									<BankeuDashboard />
-								) : (
+								) : bankeuYear === 2026 || bankeuYear === 2027 ? (
 									<DpmdVerificationPage />
-								)}
+								) : null}
 							</Suspense>
 						)}
 					</div>
