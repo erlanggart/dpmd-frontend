@@ -964,21 +964,21 @@ const KecamatanTimVerifikasiPage = () => {
                     </p>
                   </div>
                 )}
+
+                {/* Button Lihat Proposal - Inside sticky container */}
+                {selectedProposal && (
+                  <div className="mt-4 pt-3 border-t border-violet-100">
+                    <button
+                      onClick={() => setShowProposalModal(true)}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 font-bold text-sm shadow-lg hover:shadow-xl transition-all transform hover:scale-[1.02] active:scale-[0.98]"
+                    >
+                      <LuEye className="w-5 h-5" />
+                      <span>Lihat Proposal</span>
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
-
-            {/* Sticky Button Lihat Proposal */}
-            {selectedProposal && (
-              <div className="sticky bottom-4 mt-4">
-                <button
-                  onClick={() => setShowProposalModal(true)}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 font-bold text-sm shadow-lg hover:shadow-xl transition-all transform hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  <LuEye className="w-5 h-5" />
-                  <span>Lihat Proposal</span>
-                </button>
-              </div>
-            )}
           </div>
 
           {/* Main Content Area */}
