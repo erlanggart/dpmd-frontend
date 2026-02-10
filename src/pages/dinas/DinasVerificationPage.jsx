@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import api from '../../api';
 
-const DinasVerificationPage = () => {
+const DinasVerificationPage = ({ tahun = 2027 }) => {
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const [proposals, setProposals] = useState([]);
@@ -18,7 +18,7 @@ const DinasVerificationPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [jenisFilter, setJenisFilter] = useState('all');
-  const [tahunAnggaran, setTahunAnggaran] = useState(2027);
+  const tahunAnggaran = tahun; // Use prop instead of internal state
   const [expandedKecamatan, setExpandedKecamatan] = useState({});
   const [expandedDesa, setExpandedDesa] = useState({});
   const [actionModal, setActionModal] = useState({ show: false, proposal: null, action: null });
@@ -464,26 +464,16 @@ const DinasVerificationPage = () => {
               {dinasInfo ? `${dinasInfo.nama} (${dinasInfo.singkatan})` : 'Dinas Terkait'}
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <select
-              value={tahunAnggaran}
-              onChange={(e) => setTahunAnggaran(Number(e.target.value))}
-              className="px-3 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-white text-sm font-medium cursor-pointer border-none outline-none"
-            >
-              <option value={2026} className="text-gray-800">2026</option>
-              <option value={2027} className="text-gray-800">2027</option>
-            </select>
-            <button
-              onClick={handleRefresh}
-              disabled={refreshing}
-              className={`flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg font-medium text-sm transition-all ${
-                refreshing ? 'opacity-70 cursor-not-allowed' : ''
-              }`}
-            >
-              <LuRefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">{refreshing ? 'Memuat...' : 'Refresh Data'}</span>
-            </button>
-          </div>
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className={`flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg font-medium text-sm transition-all ${
+              refreshing ? 'opacity-70 cursor-not-allowed' : ''
+            }`}
+          >
+            <LuRefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">{refreshing ? 'Memuat...' : 'Refresh Data'}</span>
+          </button>
         </div>
       </div>
 
