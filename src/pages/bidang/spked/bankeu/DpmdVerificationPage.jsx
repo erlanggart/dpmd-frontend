@@ -88,6 +88,10 @@ const DpmdVerificationPage = () => {
   const [trackingStatusFilter, setTrackingStatusFilter] = useState('all'); // all, di_dinas, di_kecamatan, di_dpmd
   const [trackingDinasFilter, setTrackingDinasFilter] = useState('all'); // filter by specific dinas when di_dinas
   const [expandedTrackingDesa, setExpandedTrackingDesa] = useState([]);
+  const [trackingProposals, setTrackingProposals] = useState([]); // All proposals for tracking
+  const [trackingTahunAnggaran, setTrackingTahunAnggaran] = useState(2027);
+  const [trackingSummary, setTrackingSummary] = useState(null);
+  const [loadingTracking, setLoadingTracking] = useState(false);
   // Export dropdown state
   const [showExportMenu, setShowExportMenu] = useState(false);
   // Modal states for statistics detail
@@ -156,13 +160,41 @@ const DpmdVerificationPage = () => {
       fetchMasterKegiatan();
       fetchDinas();
     }
-    if (activeView === 'statistics' || activeView === 'tracking') {
+    if (activeView === 'statistics') {
       fetchAllDesaKecamatan();
+    }
+    if (activeView === 'tracking') {
+      fetchAllDesaKecamatan();
+      fetchTrackingData();
     }
     if (activeView === 'control') {
       fetchSubmissionSettings();
     }
   }, [activeView]);
+
+  // Fetch tracking data when tahun changes
+  useEffect(() => {
+    if (activeView === 'tracking') {
+      fetchTrackingData();
+    }
+  }, [trackingTahunAnggaran]);
+
+  // Fetch tracking proposals (ALL proposals regardless of status)
+  const fetchTrackingData = async () => {
+    try {
+      setLoadingTracking(true);
+      const res = await api.get(`/dpmd/bankeu/tracking?tahun_anggaran=${trackingTahunAnggaran}`);
+      if (res.data.success) {
+        setTrackingProposals(res.data.data || []);
+        setTrackingSummary(res.data.summary || null);
+        console.log(`📊 Tracking loaded: ${res.data.data?.length || 0} proposals for tahun ${trackingTahunAnggaran}`);
+      }
+    } catch (error) {
+      console.error('Error fetching tracking data:', error);
+    } finally {
+      setLoadingTracking(false);
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -552,10 +584,10 @@ const DpmdVerificationPage = () => {
     return acc;
   }, {});
 
-  // Group proposals by desa for tracking view
+  // Group proposals by desa for tracking view (uses trackingProposals)
   const groupedByDesa = useMemo(() => {
     const grouped = {};
-    proposals.forEach(proposal => {
+    trackingProposals.forEach(proposal => {
       const desaId = proposal.desa_id;
       const desaName = proposal.desas?.nama || 'Tidak Diketahui';
       const kecamatanName = proposal.desas?.kecamatans?.nama || 'Tidak Diketahui';
@@ -572,25 +604,30 @@ const DpmdVerificationPage = () => {
       grouped[key].proposals.push(proposal);
     });
     return grouped;
-  }, [proposals]);
+  }, [trackingProposals]);
 
   // Helper function to determine proposal stage
   const getProposalStage = (proposal) => {
-    if (proposal.dpmd_status === 'pending') return 'di_dpmd';
-    if (proposal.dinas_status === 'approved' && proposal.surat_pengantar) return 'di_dpmd';
-    if (proposal.dinas_status === 'approved') return 'di_kecamatan';
+    // Check if still at desa (not yet submitted to dinas)
+    if (!proposal.submitted_to_dinas_at) return 'di_desa';
+    // Check if at dinas (submitted but not yet approved)
+    if (proposal.submitted_to_dinas_at && (!proposal.dinas_status || proposal.dinas_status === 'pending' || proposal.dinas_status === 'revision')) return 'di_dinas';
+    // Check if at kecamatan (dinas approved but not yet submitted to dpmd)
+    if (proposal.dinas_status === 'approved' && !proposal.submitted_to_dpmd) return 'di_kecamatan';
+    // If submitted to DPMD
+    if (proposal.submitted_to_dpmd || proposal.dpmd_status === 'pending') return 'di_dpmd';
     return 'di_dinas';
   };
 
-  // Get unique dinas list from proposals
+  // Get unique dinas list from tracking proposals
   const availableDinasList = useMemo(() => {
     const dinasSet = new Set();
-    proposals.forEach(p => {
+    trackingProposals.forEach(p => {
       const dinasName = p.bankeu_master_kegiatan?.dinas_terkait;
       if (dinasName) dinasSet.add(dinasName);
     });
     return [...dinasSet].sort();
-  }, [proposals]);
+  }, [trackingProposals]);
 
   // Filter grouped by desa for tracking view
   const filteredTrackingDesa = useMemo(() => {
@@ -610,6 +647,10 @@ const DpmdVerificationPage = () => {
       // Filter by status - filter the proposals within each desa
       if (trackingStatusFilter !== 'all') {
         const filteredProposals = data.proposals.filter(p => {
+          // Handle 'selesai' filter
+          if (trackingStatusFilter === 'selesai') {
+            return p.dpmd_status === 'approved';
+          }
           const stage = getProposalStage(p);
           if (stage !== trackingStatusFilter) return false;
           // If filtering by dinas and status is di_dinas, also filter by specific dinas
@@ -1304,16 +1345,68 @@ const DpmdVerificationPage = () => {
         ) : activeView === 'tracking' ? (
           /* Tracking Status View - Per Desa */
           <div className="space-y-6">
+            {/* Year Selector */}
+            <div className="bg-gradient-to-r from-violet-600 to-purple-700 rounded-xl p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Calendar className="h-6 w-6 text-white" />
+                <div>
+                  <h2 className="text-lg font-bold text-white">Tracking Proposal Tahun {trackingTahunAnggaran}</h2>
+                  <p className="text-violet-200 text-sm">Pantau status proposal di semua tahap verifikasi</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setTrackingTahunAnggaran(2026)}
+                  className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
+                    trackingTahunAnggaran === 2026 
+                      ? 'bg-white text-violet-700' 
+                      : 'bg-white/20 text-white hover:bg-white/30'
+                  }`}
+                >
+                  2026
+                </button>
+                <button
+                  onClick={() => setTrackingTahunAnggaran(2027)}
+                  className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
+                    trackingTahunAnggaran === 2027 
+                      ? 'bg-white text-violet-700' 
+                      : 'bg-white/20 text-white hover:bg-white/30'
+                  }`}
+                >
+                  2027
+                </button>
+                <button
+                  onClick={() => fetchTrackingData()}
+                  disabled={loadingTracking}
+                  className="ml-2 p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-all"
+                >
+                  <RefreshCw className={`h-5 w-5 text-white ${loadingTracking ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
+            </div>
+
             {/* Tracking Summary Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div className="bg-gradient-to-br from-gray-500 to-slate-600 rounded-xl p-4 text-white shadow-lg">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-100 text-sm">Di Desa</p>
+                    <p className="text-3xl font-bold mt-1">
+                      {trackingProposals.filter(p => getProposalStage(p) === 'di_desa').length}
+                    </p>
+                    <p className="text-gray-200 text-xs mt-1">belum kirim</p>
+                  </div>
+                  <MapPin className="h-12 w-12 text-white/30" />
+                </div>
+              </div>
               <div className="bg-gradient-to-br from-orange-500 to-amber-500 rounded-xl p-4 text-white shadow-lg">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-orange-100 text-sm">Di Dinas</p>
                     <p className="text-3xl font-bold mt-1">
-                      {proposals.filter(p => getProposalStage(p) === 'di_dinas').length}
+                      {trackingProposals.filter(p => getProposalStage(p) === 'di_dinas').length}
                     </p>
-                    <p className="text-orange-100 text-xs mt-1">proposal menunggu</p>
+                    <p className="text-orange-100 text-xs mt-1">menunggu review</p>
                   </div>
                   <Building className="h-12 w-12 text-white/30" />
                 </div>
@@ -1323,9 +1416,9 @@ const DpmdVerificationPage = () => {
                   <div>
                     <p className="text-blue-100 text-sm">Di Kecamatan</p>
                     <p className="text-3xl font-bold mt-1">
-                      {proposals.filter(p => getProposalStage(p) === 'di_kecamatan').length}
+                      {trackingProposals.filter(p => getProposalStage(p) === 'di_kecamatan').length}
                     </p>
-                    <p className="text-blue-100 text-xs mt-1">proposal diproses</p>
+                    <p className="text-blue-100 text-xs mt-1">diproses</p>
                   </div>
                   <Building2 className="h-12 w-12 text-white/30" />
                 </div>
@@ -1335,9 +1428,9 @@ const DpmdVerificationPage = () => {
                   <div>
                     <p className="text-purple-100 text-sm">Di DPMD</p>
                     <p className="text-3xl font-bold mt-1">
-                      {proposals.filter(p => getProposalStage(p) === 'di_dpmd').length}
+                      {trackingProposals.filter(p => getProposalStage(p) === 'di_dpmd').length}
                     </p>
-                    <p className="text-purple-100 text-xs mt-1">proposal masuk</p>
+                    <p className="text-purple-100 text-xs mt-1">masuk review</p>
                   </div>
                   <Shield className="h-12 w-12 text-white/30" />
                 </div>
@@ -1347,9 +1440,9 @@ const DpmdVerificationPage = () => {
                   <div>
                     <p className="text-green-100 text-sm">Selesai</p>
                     <p className="text-3xl font-bold mt-1">
-                      {proposals.filter(p => p.dpmd_status === 'approved').length}
+                      {trackingProposals.filter(p => p.dpmd_status === 'approved').length}
                     </p>
-                    <p className="text-green-100 text-xs mt-1">proposal disetujui</p>
+                    <p className="text-green-100 text-xs mt-1">disetujui</p>
                   </div>
                   <CheckCircle className="h-12 w-12 text-white/30" />
                 </div>
@@ -1381,7 +1474,7 @@ const DpmdVerificationPage = () => {
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none"
                   >
                     <option value="all">Semua Kecamatan</option>
-                    {[...new Set(proposals.map(p => p.desas?.kecamatans?.nama))].filter(Boolean).sort().map(kec => (
+                    {[...new Set(trackingProposals.map(p => p.desas?.kecamatans?.nama))].filter(Boolean).sort().map(kec => (
                       <option key={kec} value={kec}>{kec}</option>
                     ))}
                   </select>
@@ -1397,9 +1490,11 @@ const DpmdVerificationPage = () => {
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none"
                   >
                     <option value="all">Semua Status</option>
+                    <option value="di_desa">📍 Di Desa</option>
                     <option value="di_dinas">🏢 Di Dinas Terkait</option>
                     <option value="di_kecamatan">🏛️ Di Kecamatan</option>
                     <option value="di_dpmd">✅ Di DPMD</option>
+                    <option value="selesai">🎉 Selesai (Disetujui)</option>
                   </select>
                 </div>
                 {trackingStatusFilter === 'di_dinas' && (
