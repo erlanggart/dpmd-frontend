@@ -808,6 +808,13 @@ const KecamatanTimVerifikasiPage = () => {
                   {selectedProposal.judul_proposal} — Rp {selectedProposal.anggaran_usulan?.toLocaleString('id-ID')}
                 </p>
               </div>
+              <button
+                onClick={() => window.open(`/kecamatan/bankeu/verifikasi/${desaId}?tahun=${tahunAnggaran}&proposalId=${selectedProposal.id}`, '_blank')}
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 font-semibold text-sm shadow-md hover:shadow-lg transition-all transform hover:scale-[1.02] active:scale-[0.98]"
+              >
+                <LuEye className="w-4 h-4" />
+                <span>Lihat Proposal</span>
+              </button>
             </div>
           </div>
         )}
