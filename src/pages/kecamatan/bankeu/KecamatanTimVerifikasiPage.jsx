@@ -1014,6 +1014,12 @@ const KecamatanTimVerifikasiPage = () => {
                           <label className="block text-sm font-semibold text-gray-500 mb-1">Nama Verifikator</label>
                           <p className="text-gray-900 font-medium text-lg">{selectedProposal.dinas_verifikator_nama}</p>
                         </div>
+                        {selectedProposal.dinas_verifikator_nip && (
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-500 mb-1">NIP</label>
+                            <p className="text-gray-900">{selectedProposal.dinas_verifikator_nip}</p>
+                          </div>
+                        )}
                         {selectedProposal.dinas_verifikator_jabatan && (
                           <div>
                             <label className="block text-sm font-semibold text-gray-500 mb-1">Jabatan</label>
@@ -1048,7 +1054,7 @@ const KecamatanTimVerifikasiPage = () => {
                         {selectedProposal.dinas_verifikator_ttd ? (
                           <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl border-2 border-dashed border-gray-300 p-4">
                             <img 
-                              src={`${imageBaseUrl}/storage/${selectedProposal.dinas_verifikator_ttd}`}
+                              src={`${imageBaseUrl}/storage/${selectedProposal.dinas_verifikator_ttd?.startsWith('uploads/') ? '' : 'uploads/'}${selectedProposal.dinas_verifikator_ttd}`}
                               alt="Tanda Tangan Verifikator Dinas" 
                               className="max-w-xs mx-auto bg-white rounded-lg shadow-sm"
                             />

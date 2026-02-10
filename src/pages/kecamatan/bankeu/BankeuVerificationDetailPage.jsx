@@ -24,6 +24,7 @@ const BankeuVerificationDetailPage = () => {
   const [selectedPdf, setSelectedPdf] = useState(null);
   const [timCompletionStatus, setTimCompletionStatus] = useState({});
   const [submissionOpen, setSubmissionOpen] = useState(true);
+  const [kecamatanConfig, setKecamatanConfig] = useState(null);
 
   useEffect(() => {
     fetchData();
@@ -90,6 +91,17 @@ const BankeuVerificationDetailPage = () => {
       const suratList = suratRes.data.data || [];
       const desaSurat = suratList.find(s => parseInt(s.desa_id) === desaIdNum);
       setSurat(desaSurat || null);
+
+      // Fetch kecamatan config for validation
+      if (desaData?.kecamatan_id) {
+        try {
+          const configRes = await api.get(`/kecamatan/bankeu/config/${desaData.kecamatan_id}`);
+          setKecamatanConfig(configRes.data.data || null);
+        } catch (e) {
+          console.error('Error fetching kecamatan config:', e);
+          setKecamatanConfig(null);
+        }
+      }
 
       // Check tim completion untuk setiap proposal
       if (desaProposals.length > 0 && desaData?.kecamatan_id) {
@@ -896,8 +908,56 @@ const BankeuVerificationDetailPage = () => {
     }
   };
 
+  // Helper function untuk validasi konfigurasi kecamatan
+  const isKecamatanConfigComplete = () => {
+    if (!kecamatanConfig) return false;
+    const { nama_camat, ttd_camat_path, stempel_path, alamat } = kecamatanConfig;
+    return !!(nama_camat && ttd_camat_path && stempel_path && alamat);
+  };
+
+  const getConfigMissingItems = () => {
+    const missing = [];
+    if (!kecamatanConfig) {
+      return ['Konfigurasi Kecamatan belum diatur'];
+    }
+    if (!kecamatanConfig.nama_camat) missing.push('Nama Camat');
+    if (!kecamatanConfig.ttd_camat_path) missing.push('Tanda Tangan Camat');
+    if (!kecamatanConfig.stempel_path) missing.push('Stempel Kecamatan');
+    if (!kecamatanConfig.alamat) missing.push('Alamat Kecamatan');
+    return missing;
+  };
+
   // Handler untuk generate berita acara per proposal
   const handleGenerateBeritaAcaraKegiatan = async (kegiatanId, namaKegiatan, proposalId) => {
+    // Validasi konfigurasi kecamatan
+    if (!isKecamatanConfigComplete()) {
+      const missing = getConfigMissingItems();
+      await Swal.fire({
+        title: '',
+        html: `
+          <div class="text-center">
+            <div class="mx-auto flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-amber-100 to-orange-100 mb-4">
+              <svg class="w-12 h-12 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+              </svg>
+            </div>
+            <h3 class="text-2xl font-bold text-amber-700 mb-2">Konfigurasi Belum Lengkap</h3>
+            <p class="text-gray-600 mb-4">Lengkapi konfigurasi berikut di menu <strong>Konfigurasi</strong> sebelum membuat Berita Acara:</p>
+            <ul class="text-left bg-amber-50 rounded-lg p-4 mb-4">
+              ${missing.map(item => `<li class="text-amber-800 mb-1">• ${item}</li>`).join('')}
+            </ul>
+          </div>
+        `,
+        customClass: {
+          popup: 'rounded-2xl shadow-2xl',
+          confirmButton: 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-semibold py-3 px-6 rounded-xl shadow-lg transition-all duration-200 border-0'
+        },
+        buttonsStyling: false,
+        confirmButtonText: 'Mengerti'
+      });
+      return;
+    }
+
     const result = await Swal.fire({
       title: '',
       html: `
@@ -1022,6 +1082,35 @@ const BankeuVerificationDetailPage = () => {
 
   // Handler untuk generate surat pengantar per proposal
   const handleGenerateSuratPengantar = async (proposalId, judulProposal) => {
+    // Validasi konfigurasi kecamatan
+    if (!isKecamatanConfigComplete()) {
+      const missing = getConfigMissingItems();
+      await Swal.fire({
+        title: '',
+        html: `
+          <div class="text-center">
+            <div class="mx-auto flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-amber-100 to-orange-100 mb-4">
+              <svg class="w-12 h-12 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+              </svg>
+            </div>
+            <h3 class="text-2xl font-bold text-amber-700 mb-2">Konfigurasi Belum Lengkap</h3>
+            <p class="text-gray-600 mb-4">Lengkapi konfigurasi berikut di menu <strong>Konfigurasi</strong> sebelum membuat Surat Pengantar:</p>
+            <ul class="text-left bg-amber-50 rounded-lg p-4 mb-4">
+              ${missing.map(item => `<li class="text-amber-800 mb-1">• ${item}</li>`).join('')}
+            </ul>
+          </div>
+        `,
+        customClass: {
+          popup: 'rounded-2xl shadow-2xl',
+          confirmButton: 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-semibold py-3 px-6 rounded-xl shadow-lg transition-all duration-200 border-0'
+        },
+        buttonsStyling: false,
+        confirmButtonText: 'Mengerti'
+      });
+      return;
+    }
+
     const result = await Swal.fire({
       title: '',
       html: `

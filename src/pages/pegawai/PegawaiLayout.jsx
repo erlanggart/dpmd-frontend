@@ -143,76 +143,11 @@ const PegawaiLayout = () => {
 		{ path: "/core-dashboard/dashboard", label: "Statistik", icon: FiBarChart2 },
 		{ path: "/pegawai/jadwal-kegiatan", label: "Kegiatan", icon: FiCalendar },
 		{ path: "/pegawai/disposisi", label: "Disposisi", icon: FiMail },
-		{ 
-			path: "/pegawai/notifications", 
-			label: "Notifikasi", 
-			icon: FiBell, 
-			action: handleNotificationClick,
-			badge: unreadCount
-		},
 		{ path: "/pegawai/menu", label: "Menu", icon: FiMenu, action: () => setShowMenu(true) },
 	];
 
 	return (
 		<div className="min-h-screen bg-gray-50 pb-20">
-			{/* Notification Panel */}
-			{showNotifications && (
-				<>
-					<div 
-						className="fixed inset-0 bg-black bg-opacity-50 z-40 animate-fadeIn"
-						onClick={() => setShowNotifications(false)}
-					></div>
-					<div className="fixed top-16 left-0 right-0 bg-white shadow-xl z-50 animate-slideDown max-h-96 overflow-y-auto">
-						<div className="max-w-lg mx-auto">
-							<div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-orange-50 to-orange-100">
-								<h3 className="font-bold text-gray-800 flex items-center gap-2">
-									<FiBell className="text-orange-600" />
-									Notifikasi
-								</h3>
-							</div>
-							<div className="divide-y divide-gray-100">
-								{notifications.length === 0 ? (
-									<div className="px-4 py-8 text-center text-gray-500">
-										<FiBell className="h-12 w-12 mx-auto mb-2 text-gray-300" />
-										<p>Tidak ada notifikasi</p>
-									</div>
-								) : (
-									notifications.map((notification) => (
-										<button
-											key={notification.id}
-											onClick={() => handleNotificationItemClick(notification)}
-											className={`w-full px-4 py-3 text-left hover:bg-orange-50 transition-colors ${
-												!notification.read ? 'bg-orange-50/50' : ''
-											}`}
-										>
-											<div className="flex items-start gap-3">
-												<div className={`h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-													notification.type === 'disposisi' ? 'bg-orange-100' : 'bg-blue-100'
-												}`}>
-													{notification.type === 'disposisi' ? (
-														<FiMail className="h-5 w-5 text-orange-600" />
-													) : (
-														<FiCalendar className="h-5 w-5 text-blue-600" />
-													)}
-												</div>
-												<div className="flex-1 min-w-0">
-													<h4 className="font-semibold text-gray-800 text-sm">{notification.title}</h4>
-													<p className="text-sm text-gray-600 mt-0.5 line-clamp-2">{notification.message}</p>
-													<span className="text-xs text-gray-400 mt-1 inline-block">{notification.time}</span>
-												</div>
-												{!notification.read && (
-													<div className="h-2 w-2 bg-orange-500 rounded-full flex-shrink-0 mt-2"></div>
-												)}
-											</div>
-										</button>
-									))
-								)}
-							</div>
-						</div>
-					</div>
-				</>
-			)}
-
 			{/* Main Content */}
 			<main className="min-h-screen">
 				<Outlet />

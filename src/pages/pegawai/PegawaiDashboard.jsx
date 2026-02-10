@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
 	User, Briefcase, Mail, Calendar, Award, 
 	Phone, MapPin, TrendingUp, FileText,
-	Clock, Activity, Users, Building, Bell, Info, X
+	Clock, Activity, Users, Building, Info, Bell, X
 } from "lucide-react";
 import api from "../../api";
 import MobileHeader from '../../components/mobile/MobileHeader';

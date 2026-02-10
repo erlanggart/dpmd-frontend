@@ -18,7 +18,6 @@ import {
   LuPanelLeftClose,
   LuPanelLeft
 } from "react-icons/lu";
-import InstallPWA from "../components/InstallPWA";
 
 // Menu items configuration
 const menuItems = [
@@ -205,8 +204,6 @@ const KecamatanLayout = () => {
             <Outlet />
           </div>
         </main>
-
-        <InstallPWA />
       </div>
 
       {/* Mobile Overlay */}

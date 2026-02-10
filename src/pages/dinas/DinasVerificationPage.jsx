@@ -10,6 +10,7 @@ import api from '../../api';
 
 const DinasVerificationPage = () => {
   const navigate = useNavigate();
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
   const [proposals, setProposals] = useState([]);
   const [statistics, setStatistics] = useState(null);
   const [dinasInfo, setDinasInfo] = useState(null);
@@ -212,76 +213,148 @@ const DinasVerificationPage = () => {
     if (!proposal) return;
     
     try {
-      // VALIDASI: Cek profil verifikator + TTD untuk approve
+      // VALIDASI: Cek profil verifikator + TTD untuk approve (hanya untuk verifikator_dinas)
       if (action === 'approve') {
         setSubmitting(true);
 
-        // Check verifikator profile + TTD completion
-        const checkRes = await api.get('/verifikator/profile');
+        // Try to check verifikator profile, but skip if user is dinas_terkait (403 error)
+        try {
+          const checkRes = await api.get('/verifikator/profile');
 
-        if (!checkRes.data.success || !checkRes.data.data) {
-          setSubmitting(false);
-          
-          Swal.fire({
-            icon: 'warning',
-            title: 'Profil Belum Lengkap',
-            html: `
-              <p class="text-gray-700 mb-3">Sebelum menyetujui proposal, Anda harus melengkapi profil verifikator:</p>
-              <ul class="text-left list-disc list-inside text-red-600 mb-4">
-                <li>Data Diri (Nama, NIP, Jabatan)</li>
-                <li>Tanda Tangan Digital</li>
-              </ul>
-              <p class="text-sm text-gray-600">
-                Silakan ke menu <strong>Profil Saya</strong> untuk melengkapi data.
-              </p>
-            `,
-            confirmButtonText: 'Ke Halaman Profil',
-            confirmButtonColor: '#3085d6',
-            showCancelButton: true,
-            cancelButtonText: 'Tutup'
-          }).then((result) => {
-            if (result.isConfirmed) {
-              navigate('/dinas/profil');
+          if (checkRes.data.success && checkRes.data.data) {
+            const profile = checkRes.data.data;
+            const missing = [];
+            
+            if (!profile.nama || !profile.jabatan) {
+              missing.push('Data Diri (Nama & Jabatan)');
             }
-          });
-          return;
-        }
-
-        const profile = checkRes.data.data;
-        const missing = [];
-        
-        if (!profile.nama || !profile.jabatan) {
-          missing.push('Data Diri (Nama & Jabatan)');
-        }
-        if (!profile.ttd_path) {
-          missing.push('Tanda Tangan Digital');
-        }
-
-        if (missing.length > 0) {
-          setSubmitting(false);
-          
-          Swal.fire({
-            icon: 'warning',
-            title: 'Data Belum Lengkap',
-            html: `
-              <p class="text-gray-700 mb-3">Sebelum menyetujui proposal, Anda harus melengkapi:</p>
-              <ul class="text-left list-disc list-inside text-red-600 mb-4">
-                ${missing.map(item => `<li>${item}</li>`).join('')}
-              </ul>
-              <p class="text-sm text-gray-600">
-                Silakan ke menu <strong>Profil Saya</strong> untuk melengkapi data.
-              </p>
-            `,
-            confirmButtonText: 'Ke Halaman Profil',
-            confirmButtonColor: '#3085d6',
-            showCancelButton: true,
-            cancelButtonText: 'Tutup'
-          }).then((result) => {
-            if (result.isConfirmed) {
-              navigate('/dinas/profil');
+            if (!profile.ttd_path) {
+              missing.push('Tanda Tangan Digital');
             }
-          });
-          return;
+
+            if (missing.length > 0) {
+              setSubmitting(false);
+              
+              Swal.fire({
+                icon: 'warning',
+                title: 'Data Belum Lengkap',
+                html: `
+                  <p class="text-gray-700 mb-3">Sebelum menyetujui proposal, Anda harus melengkapi:</p>
+                  <ul class="text-left list-disc list-inside text-red-600 mb-4">
+                    ${missing.map(item => `<li>${item}</li>`).join('')}
+                  </ul>
+                  <p class="text-sm text-gray-600">
+                    Silakan ke menu <strong>Profil Saya</strong> untuk melengkapi data.
+                  </p>
+                `,
+                confirmButtonText: 'Ke Halaman Profil',
+                confirmButtonColor: '#3085d6',
+                showCancelButton: true,
+                cancelButtonText: 'Tutup'
+              }).then((result) => {
+                if (result.isConfirmed) {
+                  navigate('/dinas/profil');
+                }
+              });
+              return;
+            }
+          }
+        } catch (profileError) {
+          // If 403 Forbidden, user is dinas_terkait (not verifikator_dinas)
+          // Check dinas_config instead
+          if (profileError.response?.status === 403) {
+            try {
+              const dinasConfigRes = await api.get(`/dinas/${user.dinas_id}/config`);
+              if (dinasConfigRes.data.success && dinasConfigRes.data.data) {
+                const dinasConfig = dinasConfigRes.data.data;
+                const missing = [];
+                
+                if (!dinasConfig.nama_pic || !dinasConfig.jabatan_pic) {
+                  missing.push('Data Diri PIC (Nama & Jabatan)');
+                }
+                if (!dinasConfig.ttd_path) {
+                  missing.push('Tanda Tangan Digital PIC');
+                }
+
+                if (missing.length > 0) {
+                  setSubmitting(false);
+                  
+                  Swal.fire({
+                    icon: 'warning',
+                    title: 'Konfigurasi Dinas Belum Lengkap',
+                    html: `
+                      <p class="text-gray-700 mb-3">Sebelum menyetujui proposal, Anda harus melengkapi:</p>
+                      <ul class="text-left list-disc list-inside text-red-600 mb-4">
+                        ${missing.map(item => `<li>${item}</li>`).join('')}
+                      </ul>
+                      <p class="text-sm text-gray-600">
+                        Silakan ke menu <strong>Konfigurasi</strong> → <strong>Dinas</strong> untuk melengkapi data PIC.
+                      </p>
+                    `,
+                    confirmButtonText: 'Ke Halaman Konfigurasi',
+                    confirmButtonColor: '#3085d6',
+                    showCancelButton: true,
+                    cancelButtonText: 'Tutup'
+                  }).then((result) => {
+                    if (result.isConfirmed) {
+                      navigate('/dinas/konfigurasi/dinas');
+                    }
+                  });
+                  return;
+                }
+              } else {
+                // No config found, require setup
+                setSubmitting(false);
+                
+                Swal.fire({
+                  icon: 'warning',
+                  title: 'Konfigurasi Dinas Belum Diisi',
+                  html: `
+                    <p class="text-gray-700 mb-3">Data PIC Dinas belum dikonfigurasi.</p>
+                    <p class="text-sm text-gray-600">
+                      Silakan ke menu <strong>Konfigurasi</strong> → <strong>Dinas</strong> untuk mengisi data PIC.
+                    </p>
+                  `,
+                  confirmButtonText: 'Ke Halaman Konfigurasi',
+                  confirmButtonColor: '#3085d6',
+                  showCancelButton: true,
+                  cancelButtonText: 'Tutup'
+                }).then((result) => {
+                  if (result.isConfirmed) {
+                    navigate('/dinas/konfigurasi/dinas');
+                  }
+                });
+                return;
+              }
+            } catch (configError) {
+              console.error('Error checking dinas config:', configError);
+              // No config found at all
+              setSubmitting(false);
+              
+              Swal.fire({
+                icon: 'warning',
+                title: 'Konfigurasi Dinas Belum Diisi',
+                html: `
+                  <p class="text-gray-700 mb-3">Data PIC Dinas belum dikonfigurasi.</p>
+                  <p class="text-sm text-gray-600">
+                    Silakan ke menu <strong>Konfigurasi</strong> → <strong>Dinas</strong> untuk mengisi data PIC.
+                  </p>
+                `,
+                confirmButtonText: 'Ke Halaman Konfigurasi',
+                confirmButtonColor: '#3085d6',
+                showCancelButton: true,
+                cancelButtonText: 'Tutup'
+              }).then((result) => {
+                if (result.isConfirmed) {
+                  navigate('/dinas/konfigurasi/dinas');
+                }
+              });
+              return;
+            }
+          } else {
+            console.error('Error checking verifikator profile:', profileError);
+          }
+          // Continue with approval - dinas_terkait can approve directly after validation
         }
       }
 
@@ -960,7 +1033,7 @@ const DinasVerificationPage = () => {
             {/* PDF Viewer */}
             <div className="flex-1 overflow-hidden">
               <iframe
-                src={`${api.defaults.baseURL.replace('/api', '')}/storage/uploads/bankeu/${proposalModal.proposal.file_proposal}`}
+                src={`${import.meta.env.VITE_IMAGE_BASE_URL || 'http://127.0.0.1:3001'}/storage/uploads/bankeu/${proposalModal.proposal.file_proposal}`}
                 className="w-full h-full border-0"
                 title="Proposal Document"
               />
@@ -969,7 +1042,7 @@ const DinasVerificationPage = () => {
             {/* Footer */}
             <div className="p-3 sm:p-4 border-t border-gray-200 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2 sm:gap-0">
               <a
-                href={`${api.defaults.baseURL.replace('/api', '')}/storage/uploads/bankeu/${proposalModal.proposal.file_proposal}`}
+                href={`${import.meta.env.VITE_IMAGE_BASE_URL || 'http://127.0.0.1:3001'}/storage/uploads/bankeu/${proposalModal.proposal.file_proposal}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center justify-center gap-2 px-4 py-2 text-blue-600 hover:text-blue-700 font-medium transition-colors text-sm sm:text-base"

@@ -19,7 +19,6 @@ import {
   LuUsers,
   LuUser
 } from "react-icons/lu";
-import InstallPWA from "../components/InstallPWA";
 
 // Menu items configuration for Dinas
 const menuItems = [
@@ -87,7 +86,10 @@ const DinasLayout = () => {
             setDinasName(response.data.data.nama_dinas);
           }
         } catch (error) {
-          console.error('Error fetching dinas name:', error);
+          // Ignore 403 errors - user may not have verifikator profile
+          if (error.response?.status !== 403) {
+            console.error('Error fetching dinas name:', error);
+          }
         }
       }
     };
@@ -257,8 +259,6 @@ const DinasLayout = () => {
             <Outlet />
           </div>
         </main>
-
-        <InstallPWA />
       </div>
 
       {/* Mobile Overlay - Only show on mobile when sidebar is open */}

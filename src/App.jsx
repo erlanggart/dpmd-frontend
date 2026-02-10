@@ -436,44 +436,7 @@ const ThemeColorWrapper = ({ children }) => {
 					if (event.data && event.data.type === 'PUSH_NOTIFICATION_RECEIVED') {
 						const notifData = event.data.payload;
 						
-						// Play notification sound - ALWAYS play regardless of message flag
-						try {
-						const audio = new Audio('/dpmd.mp3');
-							audio.volume = 1.0; // Full volume
-							const playPromise = audio.play();
-							if (playPromise !== undefined) {
-								playPromise
-									.then(() => {
-										console.log('🔊 Notification sound played successfully');
-									})
-									.catch(err => {
-										console.warn('⚠️ Could not play notification sound:', err.message);
-									});
-							}
-						} catch (err) {
-							console.error('❌ Error creating audio:', err);
-						}
-						
-					// Show toast ONLY if app is visible (foreground)
-					// Browser notification already shown by service worker for background
-					if (document.visibilityState === 'visible') {
-						toast.success(
-							<div className="flex flex-col gap-1">
-								<div className="font-bold">{notifData.title || 'Notifikasi Baru'}</div>
-								<div className="text-sm">{notifData.body || 'Anda memiliki notifikasi baru'}</div>
-							</div>,
-							{
-								duration: 6000,
-								icon: '🔔',
-								style: {
-									background: '#1e40af',
-									color: '#fff',
-									maxWidth: '450px',
-									padding: '16px'
-								}
-							}
-						);
-					}
+						// Sound and toast notifications disabled - browser notification already shown by service worker
 					
 					// Trigger notification event for layouts to refresh notification count
 					window.dispatchEvent(new CustomEvent('newNotification', { detail: notifData }));
