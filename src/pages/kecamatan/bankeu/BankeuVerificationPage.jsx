@@ -13,7 +13,7 @@ import KecamatanBankeuConfigTab from "../../../components/kecamatan/KecamatanBan
 
 const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
 
-const BankeuVerificationPage = () => {
+const BankeuVerificationPage = ({ tahun = 2027 }) => {
   const navigate = useNavigate();
   const [proposals, setProposals] = useState([]);
   const [desas, setDesas] = useState([]);
@@ -24,7 +24,7 @@ const BankeuVerificationPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [jenisFilter, setJenisFilter] = useState('all');
-  const [tahunAnggaran, setTahunAnggaran] = useState(2027); // Default tahun anggaran
+  const tahunAnggaran = tahun; // Use prop instead of internal state
   const [expandedDesa, setExpandedDesa] = useState({});
   const [desaSuratList, setDesaSuratList] = useState([]);
   const [suratStatusFilter, setSuratStatusFilter] = useState('all');
@@ -643,33 +643,6 @@ const BankeuVerificationPage = () => {
                 <p className="text-violet-100 mt-1 text-sm sm:text-base">
                   {kecamatanInfo ? `Kecamatan ${kecamatanInfo.nama}` : 'Kecamatan'}
                 </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <select
-                  value={tahunAnggaran}
-                  onChange={(e) => setTahunAnggaran(Number(e.target.value))}
-                  className="px-3 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-white text-sm font-medium cursor-pointer border-none outline-none"
-                >
-                  <option value={2026} className="text-gray-800">2026</option>
-                  <option value={2027} className="text-gray-800">2027</option>
-                </select>
-                <button
-                  onClick={() => {
-                    fetchData();
-                    Swal.fire({
-                      icon: 'info',
-                      title: 'Memperbarui Data',
-                      text: 'Data sedang diperbarui...',
-                      timer: 1500,
-                      showConfirmButton: false
-                    });
-                  }}
-                  disabled={loading}
-                  className="flex items-center gap-2 px-3 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors disabled:opacity-50"
-                >
-                  <LuRefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                  <span className="hidden sm:inline text-sm font-medium">Refresh</span>
-                </button>
               </div>
             </div>
           </div>

@@ -1871,7 +1871,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                   className="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-lg hover:from-purple-600 hover:to-pink-700 flex items-center gap-2 font-semibold text-sm shadow-md hover:shadow-lg transition-all transform hover:scale-[1.02] active:scale-[0.98]"
                 >
                   <LuDownload className="w-4 h-4" />
-                  <span>Contoh Proposal</span>
+                  <span>Download Format Dokumen</span>
                 </button>
               </div>
             </div>
@@ -3678,7 +3678,7 @@ const ContohProposalModal = ({ show, onClose, contohFiles, onDownload }) => {
               <LuDownload className="w-5 h-5 text-gray-800" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white">Contoh Proposal Bantuan Keuangan</h2>
+              <h2 className="text-xl font-bold text-white">Download Format Dokumen</h2>
               <p className="text-sm text-white text-opacity-90">Download template dan contoh dokumen</p>
             </div>
           </div>
@@ -3752,38 +3752,7 @@ const ContohProposalModal = ({ show, onClose, contohFiles, onDownload }) => {
             </div>
           )}
 
-          {/* Dokumen Kecamatan (Referensi) */}
-          {contohFiles.kecamatan && contohFiles.kecamatan.length > 0 && (
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <LuFileText className="w-5 h-5 text-green-600" />
-                <h3 className="font-bold text-gray-900 text-lg">Referensi Dokumen Kecamatan</h3>
-                <span className="px-2 py-1 bg-green-100 text-green-700 rounded-lg text-xs font-semibold">
-                  Info
-                </span>
-              </div>
-              <div className="grid grid-cols-1 gap-3">
-                {contohFiles.kecamatan.map((file, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => onDownload(file)}
-                    className="flex items-center gap-3 p-4 bg-gradient-to-r from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 rounded-xl border border-green-200 transition-all group"
-                  >
-                    <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <LuFileText className="w-6 h-6 text-white" />
-                    </div>
-                    <div className="flex-1 text-left">
-                      <p className="font-semibold text-gray-900 text-sm group-hover:text-green-700 transition-colors">
-                        {file.display_name}
-                      </p>
-                      <p className="text-xs text-gray-500">{file.extension.toUpperCase()} • {formatFileSize(file.size)}</p>
-                    </div>
-                    <LuDownload className="w-5 h-5 text-green-600 group-hover:scale-110 transition-transform" />
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+
         </div>
 
         {/* Footer */}

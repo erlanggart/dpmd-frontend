@@ -56,6 +56,7 @@ const KecamatanTimVerifikasiPage = () => {
   const [isGeneratingBA, setIsGeneratingBA] = useState(false);
   const [beritaAcaraGenerated, setBeritaAcaraGenerated] = useState(false);
   const [isGeneratingSP, setIsGeneratingSP] = useState(false); // Surat Pengantar
+  const [showProposalModal, setShowProposalModal] = useState(false); // Modal lihat proposal
 
   useEffect(() => {
     fetchData();
@@ -963,6 +964,19 @@ const KecamatanTimVerifikasiPage = () => {
                     </p>
                   </div>
                 )}
+
+                {/* Button Lihat Proposal - Inside sticky container */}
+                {selectedProposal && (
+                  <div className="mt-4 pt-3 border-t border-violet-100">
+                    <button
+                      onClick={() => setShowProposalModal(true)}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 font-bold text-sm shadow-lg hover:shadow-xl transition-all transform hover:scale-[1.02] active:scale-[0.98]"
+                    >
+                      <LuEye className="w-5 h-5" />
+                      <span>Lihat Proposal</span>
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1362,6 +1376,61 @@ const KecamatanTimVerifikasiPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Modal Lihat Proposal */}
+      {showProposalModal && selectedProposal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl h-[90vh] flex flex-col overflow-hidden">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-700 px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                  <LuFileText className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-white">{selectedProposal.judul_proposal}</h2>
+                  <p className="text-sm text-blue-100">Rp {selectedProposal.anggaran_usulan?.toLocaleString('id-ID')}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <a
+                  href={`${imageBaseUrl}/storage/uploads/bankeu/${selectedProposal.file_proposal}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg font-medium text-sm transition-all"
+                >
+                  <LuDownload className="w-4 h-4" />
+                  <span>Download</span>
+                </a>
+                <button
+                  onClick={() => setShowProposalModal(false)}
+                  className="w-10 h-10 bg-white/20 hover:bg-white/30 rounded-lg flex items-center justify-center transition-all"
+                >
+                  <LuX className="w-5 h-5 text-white" />
+                </button>
+              </div>
+            </div>
+
+            {/* PDF Viewer */}
+            <div className="flex-1 bg-gray-100">
+              {selectedProposal.file_proposal ? (
+                <iframe
+                  src={`${imageBaseUrl}/storage/uploads/bankeu/${selectedProposal.file_proposal}`}
+                  className="w-full h-full border-0"
+                  title="Proposal PDF Viewer"
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center">
+                    <LuFileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600 font-medium">File proposal tidak tersedia</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

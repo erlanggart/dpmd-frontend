@@ -223,6 +223,9 @@ const KecamatanLayout = lazy(() =>
 const DinasLayout = lazy(() =>
 	import("./layouts/DinasLayout")
 );
+const KecamatanBankeuPage = lazy(() =>
+	import("./pages/kecamatan/bankeu/KecamatanBankeuPage")
+);
 const BankeuVerificationPage = lazy(() =>
 	import("./pages/kecamatan/bankeu/BankeuVerificationPage")
 );
@@ -231,6 +234,9 @@ const BankeuVerificationDetailPage = lazy(() =>
 );
 const KecamatanTimVerifikasiPage = lazy(() =>
 	import("./pages/kecamatan/bankeu/KecamatanTimVerifikasiPage")
+);
+const DinasBankeuPage = lazy(() =>
+	import("./pages/dinas/DinasBankeuPage")
 );
 const DinasVerificationPage = lazy(() =>
 	import("./pages/dinas/DinasVerificationPage")
@@ -295,6 +301,9 @@ const BankeuDashboard = lazy(() =>
 );
 const StatistikBankeuDashboard = lazy(() =>
 	import("./pages/kepala-dinas/StatistikBankeuDashboard")
+);
+const StatistikPerjadinDashboard = lazy(() =>
+	import("./pages/kepala-dinas/StatistikPerjadinDashboard")
 );
 const AddDashboard = lazy(() =>
 	import("./pages/bidang/kkd/add/AddDashboard")
@@ -775,7 +784,7 @@ function App() {
 				>
 					<Route index element={<Navigate to="dashboard" replace />} />
 					<Route path="dashboard" element={<KecamatanDashboardPage />} />
-					<Route path="bankeu" element={<BankeuVerificationPage />} />
+					<Route path="bankeu" element={<KecamatanBankeuPage />} />
 					<Route path="bankeu/verifikasi/:desaId" element={<BankeuVerificationDetailPage />} />
 					<Route path="bankeu/tim-verifikasi/:desaId" element={<KecamatanTimVerifikasiPage />} />
 				</Route>
@@ -791,7 +800,7 @@ function App() {
 				>
 				<Route index element={<Navigate to="dashboard" replace />} />
 				<Route path="dashboard" element={<DinasDashboardPage />} />
-				<Route path="bankeu" element={<DinasVerificationPage />} />
+				<Route path="bankeu" element={<DinasBankeuPage />} />
 				<Route path="bankeu/verifikasi/:proposalId" element={<DinasVerificationDetailPage />} />
 				<Route path="konfigurasi" element={<DinasConfigPage />} />
 				<Route path="verifikator" element={<DinasVerifikatorPage />} />
@@ -864,6 +873,7 @@ function App() {
 					<Route path="statistik-bumdes" element={<StatistikBumdes />} />
 					<Route path="statistik-kelembagaan" element={<StatistikKelembagaan />} />
 					<Route path="statistik-bankeu" element={<StatistikBankeuDashboard />} />
+					<Route path="statistik-perjadin" element={<StatistikPerjadinDashboard />} />
 					<Route path="statistik-add" element={<StatistikAddDashboard />} />
 					<Route path="statistik-bhprd" element={<BhprdDashboard />} />
 					{/* BHPRD Submenu Routes */}
