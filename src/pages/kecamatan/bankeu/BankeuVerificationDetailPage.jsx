@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import api from "../../../api";
 import Swal from "sweetalert2";
 import {
@@ -14,6 +14,8 @@ const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
 const BankeuVerificationDetailPage = () => {
   const { desaId } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const tahunAnggaran = parseInt(searchParams.get('tahun')) || 2027;
   const [desa, setDesa] = useState(null);
   const [proposals, setProposals] = useState([]);
   const [surat, setSurat] = useState(null);
@@ -29,7 +31,7 @@ const BankeuVerificationDetailPage = () => {
   useEffect(() => {
     fetchData();
     fetchSubmissionSetting();
-  }, [desaId]);
+  }, [desaId, tahunAnggaran]);
 
   const fetchSubmissionSetting = async () => {
     try {
@@ -69,8 +71,8 @@ const BankeuVerificationDetailPage = () => {
       
       const [desaRes, proposalsRes, suratRes] = await Promise.all([
         api.get(`/desas/${desaId}`),
-        api.get("/kecamatan/bankeu/proposals"),
-        api.get("/kecamatan/bankeu/surat", { params: { tahun: 2026 } }).catch(() => ({ data: { data: [] } }))
+        api.get("/kecamatan/bankeu/proposals", { params: { tahun: tahunAnggaran } }),
+        api.get("/kecamatan/bankeu/surat", { params: { tahun: tahunAnggaran } }).catch(() => ({ data: { data: [] } }))
       ]);
 
       // Set desa
@@ -1728,6 +1730,7 @@ const BankeuVerificationDetailPage = () => {
                 timCompletionStatus={timCompletionStatus}
                 desaId={desaId}
                 navigate={navigate}
+                tahunAnggaran={tahunAnggaran}
               />
             ))}
           </div>
@@ -1777,6 +1780,7 @@ const BankeuVerificationDetailPage = () => {
                 timCompletionStatus={timCompletionStatus}
                 desaId={desaId}
                 navigate={navigate}
+                tahunAnggaran={tahunAnggaran}
               />
             ))}
           </div>
@@ -1797,7 +1801,7 @@ const BankeuVerificationDetailPage = () => {
 };
 
 // Proposal Row Component
-const ProposalRow = ({ kegiatan, proposal, index, onVerify, onViewPdf, onGenerateBeritaAcara, onGenerateSuratPengantar, getStatusBadge, imageBaseUrl, timCompletionStatus, desaId, navigate }) => {
+const ProposalRow = ({ kegiatan, proposal, index, onVerify, onViewPdf, onGenerateBeritaAcara, onGenerateSuratPengantar, getStatusBadge, imageBaseUrl, timCompletionStatus, desaId, navigate, tahunAnggaran }) => {
   // Get completion status untuk proposal ini
   const completionStatus = proposal ? timCompletionStatus[proposal.id] : null;
   const isTimComplete = completionStatus?.all_complete || false;
@@ -1859,7 +1863,7 @@ const ProposalRow = ({ kegiatan, proposal, index, onVerify, onViewPdf, onGenerat
 
               {/* Tim Verifikasi Button */}
               <button
-                onClick={() => navigate(`/kecamatan/bankeu/tim-verifikasi/${desaId}?proposalId=${proposal.id}`)}
+                onClick={() => navigate(`/kecamatan/bankeu/tim-verifikasi/${desaId}?proposalId=${proposal.id}&tahun=${tahunAnggaran}`)}
                 className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-lg transition-all duration-150 shadow-sm text-xs font-semibold"
                 title="Isi Quisioner Tim Verifikasi"
               >

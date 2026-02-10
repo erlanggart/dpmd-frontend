@@ -131,7 +131,7 @@ const angkaTerbilang = (angka) => {
   }
 };
 
-const BankeuProposalPage = () => {
+const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
   const [masterKegiatan, setMasterKegiatan] = useState([]);
   const [proposals, setProposals] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -200,7 +200,7 @@ const BankeuProposalPage = () => {
     }, 10000); // 10 detik
     
     return () => clearInterval(intervalId);
-  }, []);
+  }, [tahun]);
 
   const fetchSubmissionSetting = async () => {
     try {
@@ -332,13 +332,10 @@ const BankeuProposalPage = () => {
     try {
       setLoading(true);
       
-      // Get current year untuk surat
-      const currentYear = new Date().getFullYear();
-      
       const [masterRes, proposalsRes, suratRes] = await Promise.all([
         api.get("/desa/bankeu/master-kegiatan"),
-        api.get("/desa/bankeu/proposals"),
-        api.get("/desa/bankeu/surat", { params: { tahun: currentYear } }).catch(() => ({ data: { data: { surat_pengantar: null, surat_permohonan: null, submitted_to_kecamatan: false } } }))
+        api.get("/desa/bankeu/proposals", { params: { tahun } }),
+        api.get("/desa/bankeu/surat", { params: { tahun } }).catch(() => ({ data: { data: { surat_pengantar: null, surat_permohonan: null, submitted_to_kecamatan: false } } }))
       ]);
 
       // Flatten master kegiatan
@@ -532,6 +529,7 @@ const BankeuProposalPage = () => {
       const formDataUpload = new FormData();
       formDataUpload.append("file", file);
       formDataUpload.append("kegiatan_ids", JSON.stringify(allKegiatanIds)); // Send all selected kegiatan IDs
+      formDataUpload.append("tahun_anggaran", tahun); // Tahun anggaran dari props
       // Gunakan judul_kegiatan jika ada pilihan, kalau tidak pakai nama kegiatan master
       const judulFinal = hasMultipleOptions && formData.judul_kegiatan ? formData.judul_kegiatan : kegiatan.nama_kegiatan;
       formDataUpload.append("judul_proposal", judulFinal);
@@ -1286,6 +1284,7 @@ const BankeuProposalPage = () => {
       const formData = new FormData();
       formData.append("file", file);
       formData.append("jenis", jenis);
+      formData.append("tahun", tahun); // Kirim tahun anggaran
 
       await api.post('/desa/bankeu/surat/upload', formData, {
         headers: { "Content-Type": "multipart/form-data" }
@@ -1360,7 +1359,7 @@ const BankeuProposalPage = () => {
         }
       });
 
-      await api.post('/desa/bankeu/surat/submit-to-kecamatan');
+      await api.post('/desa/bankeu/surat/submit-to-kecamatan', { tahun });
       await fetchData();
 
       await Swal.fire({

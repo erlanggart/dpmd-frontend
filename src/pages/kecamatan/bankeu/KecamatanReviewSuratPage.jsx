@@ -10,7 +10,7 @@ const KecamatanReviewSuratPage = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all'); // all, pending, approved, rejected
   const [expandedRows, setExpandedRows] = useState([]);
-  const [tahun, setTahun] = useState(2025);
+  const [tahun, setTahun] = useState(2026);
   const [stats, setStats] = useState({
     total_surat: 0,
     pending: 0,
@@ -210,6 +210,7 @@ const KecamatanReviewSuratPage = () => {
               <option value={2024}>2024</option>
               <option value={2025}>2025</option>
               <option value={2026}>2026</option>
+              <option value={2027}>2027</option>
             </select>
           </div>
         </div>

@@ -24,6 +24,7 @@ const BankeuVerificationPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [jenisFilter, setJenisFilter] = useState('all');
+  const [tahunAnggaran, setTahunAnggaran] = useState(2027); // Default tahun anggaran
   const [expandedDesa, setExpandedDesa] = useState({});
   const [desaSuratList, setDesaSuratList] = useState([]);
   const [suratStatusFilter, setSuratStatusFilter] = useState('all');
@@ -43,7 +44,7 @@ const BankeuVerificationPage = () => {
     }, 10000); // 10 detik
     
     return () => clearInterval(intervalId);
-  }, []);
+  }, [tahunAnggaran]);
 
   const fetchSubmissionSetting = async () => {
     try {
@@ -95,10 +96,10 @@ const BankeuVerificationPage = () => {
       setLoading(true);
 
       const [proposalsRes, statsRes, desasRes, suratRes] = await Promise.all([
-        api.get("/kecamatan/bankeu/proposals"),
-        api.get("/kecamatan/bankeu/statistics"),
+        api.get("/kecamatan/bankeu/proposals", { params: { tahun: tahunAnggaran } }),
+        api.get("/kecamatan/bankeu/statistics", { params: { tahun: tahunAnggaran } }),
         api.get("/desas"),
-        api.get("/kecamatan/bankeu/surat", { params: { tahun: 2026 } }).catch(() => ({ data: { data: [] } }))
+        api.get("/kecamatan/bankeu/surat", { params: { tahun: tahunAnggaran } }).catch(() => ({ data: { data: [] } }))
       ]);
       
       setProposals(proposalsRes.data.data);
@@ -643,23 +644,33 @@ const BankeuVerificationPage = () => {
                   {kecamatanInfo ? `Kecamatan ${kecamatanInfo.nama}` : 'Kecamatan'}
                 </p>
               </div>
-              <button
-                onClick={() => {
-                  fetchData();
-                  Swal.fire({
-                    icon: 'info',
-                    title: 'Memperbarui Data',
-                    text: 'Data sedang diperbarui...',
-                    timer: 1500,
-                    showConfirmButton: false
-                  });
-                }}
-                disabled={loading}
-                className="flex items-center gap-2 px-3 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors disabled:opacity-50"
-              >
-                <LuRefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                <span className="hidden sm:inline text-sm font-medium">Refresh</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <select
+                  value={tahunAnggaran}
+                  onChange={(e) => setTahunAnggaran(Number(e.target.value))}
+                  className="px-3 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-white text-sm font-medium cursor-pointer border-none outline-none"
+                >
+                  <option value={2026} className="text-gray-800">2026</option>
+                  <option value={2027} className="text-gray-800">2027</option>
+                </select>
+                <button
+                  onClick={() => {
+                    fetchData();
+                    Swal.fire({
+                      icon: 'info',
+                      title: 'Memperbarui Data',
+                      text: 'Data sedang diperbarui...',
+                      timer: 1500,
+                      showConfirmButton: false
+                    });
+                  }}
+                  disabled={loading}
+                  className="flex items-center gap-2 px-3 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  <LuRefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                  <span className="hidden sm:inline text-sm font-medium">Refresh</span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -828,7 +839,7 @@ const BankeuVerificationPage = () => {
                 <div 
                   key={group.desa.id} 
                   className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden cursor-pointer hover:shadow-md hover:border-violet-200 transition-all duration-200 group"
-                  onClick={() => navigate(`/kecamatan/bankeu/verifikasi/${group.desa.id}`)}
+                  onClick={() => navigate(`/kecamatan/bankeu/verifikasi/${group.desa.id}?tahun=${tahunAnggaran}`)}
                 >
                   {/* Desa Header - Clickable to Detail */}
                   <div className="bg-gradient-to-r from-violet-50 to-purple-50 p-4 group-hover:from-violet-100 group-hover:to-purple-100 transition-colors">
@@ -1079,7 +1090,7 @@ const BankeuVerificationPage = () => {
                       <td className="px-4 py-3 text-center">
                         <div className="flex items-center justify-center gap-2">
                           <button
-                            onClick={() => navigate(`/kecamatan/bankeu/verifikasi/${group.desa.id}`)}
+                            onClick={() => navigate(`/kecamatan/bankeu/verifikasi/${group.desa.id}?tahun=${tahunAnggaran}`)}
                             className="px-3 py-1.5 bg-violet-100 hover:bg-violet-200 text-violet-700 rounded-lg text-xs font-medium transition-colors"
                           >
                             Detail
