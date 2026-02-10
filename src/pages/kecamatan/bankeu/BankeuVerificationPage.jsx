@@ -644,23 +644,6 @@ const BankeuVerificationPage = ({ tahun = 2027 }) => {
                   {kecamatanInfo ? `Kecamatan ${kecamatanInfo.nama}` : 'Kecamatan'}
                 </p>
               </div>
-              <button
-                onClick={() => {
-                  fetchData();
-                  Swal.fire({
-                    icon: 'info',
-                    title: 'Memperbarui Data',
-                    text: 'Data sedang diperbarui...',
-                    timer: 1500,
-                    showConfirmButton: false
-                  });
-                }}
-                disabled={loading}
-                className="flex items-center gap-2 px-3 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors disabled:opacity-50"
-              >
-                <LuRefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                <span className="hidden sm:inline text-sm font-medium">Refresh</span>
-              </button>
             </div>
           </div>
 
