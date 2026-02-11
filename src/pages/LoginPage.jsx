@@ -244,14 +244,6 @@ const LoginPage = () => {
 								{showPassword ? <FiEyeOff size={20} /> : <FiEye size={20} />}
 							</button>
 						</div>
-						<div className="text-right">
-							<Link
-								to="/"
-								className="text-sm text-[rgb(var(--color-primary))] hover:underline"
-							>
-								Lupa Password? <strong>Hubungi Admin</strong>
-							</Link>
-						</div>
 						<button
 							type="submit"
 							disabled={loading}

@@ -17,7 +17,9 @@ import {
   LuBuilding2,
   LuSettings,
   LuUsers,
-  LuUser
+  LuUser,
+  LuPanelLeftClose,
+  LuPanelLeft
 } from "react-icons/lu";
 
 // Menu items configuration for Dinas
@@ -163,10 +165,22 @@ const DinasLayout = () => {
 
   return (
     <div className="flex h-screen bg-gray-50">
+      {/* Mobile Header with Hamburger */}
+      <div className="fixed top-0 left-0 right-0 h-16 bg-white border-b border-gray-200 lg:hidden z-30 flex items-center justify-between px-4 shadow-sm">
+        <button
+          onClick={() => setSidebarOpen(true)}
+          className="p-2 text-gray-600 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+        >
+          <FiMenu className="text-2xl" />
+        </button>
+        <img src="/logo-dpmd.png" alt="DPMD Logo" className="h-10" />
+        <div className="w-10"></div>
+      </div>
+
       {/* Sidebar - White - Responsive */}
       <aside
         className={`fixed top-0 left-0 h-full bg-white text-gray-800 transition-all duration-300 z-40 border-r border-gray-200 ${
-          sidebarOpen ? "w-64 sm:w-72" : "-translate-x-full lg:translate-x-0 lg:w-20"
+          sidebarOpen ? "w-64 sm:w-72 translate-x-0" : "-translate-x-full lg:translate-x-0 lg:w-20"
         } overflow-hidden shadow-lg`}
       >
         <div className="flex flex-col h-full">
@@ -184,6 +198,24 @@ const DinasLayout = () => {
               className="lg:hidden text-gray-600 hover:bg-gray-100 p-2 rounded-lg transition-colors"
             >
               <FiX className="text-xl" />
+            </button>
+          </div>
+
+          {/* Toggle Button - Desktop */}
+          <div className="hidden lg:block px-4 py-3">
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-gradient-to-r from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 rounded-xl transition-all duration-300 border border-amber-200 group shadow-sm hover:shadow-md"
+              title={sidebarOpen ? "Tutup Sidebar" : "Buka Sidebar"}
+            >
+              {sidebarOpen ? (
+                <>
+                  <LuPanelLeftClose className="text-xl text-amber-600 group-hover:scale-110 transition-transform" />
+                  <span className="font-semibold text-sm text-amber-700">Tutup Sidebar</span>
+                </>
+              ) : (
+                <LuPanelLeft className="text-xl text-amber-600 group-hover:scale-110 transition-transform" />
+              )}
             </button>
           </div>
 
@@ -251,7 +283,7 @@ const DinasLayout = () => {
       <div
         className={`flex-1 flex flex-col transition-all duration-300 ${
           sidebarOpen ? "lg:ml-72" : "ml-0 lg:ml-20"
-        }`}
+        } mt-16 lg:mt-0`}
       >
         {/* Page Content - Responsive */}
         <main className="flex-1 overflow-y-auto">
