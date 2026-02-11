@@ -267,9 +267,17 @@ const LoginPage = () => {
 										<h3 className="text-sm font-semibold text-red-800 mb-1">
 											Login Gagal
 										</h3>
-										<p className="text-sm text-red-700">
+										<p className="text-sm text-red-700 mb-2">
 											{error}
 										</p>
+										<div className="text-xs text-red-600 space-y-1 pt-2 border-t border-red-200">
+											<p className="font-medium">Pastikan:</p>
+											<ul className="list-disc list-inside space-y-0.5 ml-1">
+												<li>Email yang dimasukkan sudah benar</li>
+												<li>Password yang dimasukkan sudah benar</li>
+												<li>Password default: <strong>password</strong></li>
+											</ul>
+										</div>
 									</div>
 								</div>
 							</div>

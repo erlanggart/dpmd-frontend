@@ -25,6 +25,8 @@ export default defineConfig({
 			includeAssets: ['favicon.ico', 'robots.txt', 'logo-bogor.png', 'dpmd.mp3'],
 			workbox: {
 				globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,jpeg,woff,woff2,mp3}'],
+				// Exclude static file paths from navigateFallback to let nginx/backend handle them
+				navigateFallbackDenylist: [/^\/api\//, /^\/storage\//, /^\/uploads\//, /^\/public\//],
 				// Custom SW will be injected by inject-custom-sw.js script
 				runtimeCaching: [
 					{

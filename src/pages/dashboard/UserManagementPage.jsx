@@ -18,7 +18,10 @@ import {
 	LuBriefcase,
 	LuChevronLeft,
 	LuChevronRight,
+	LuDownload,
+	LuFileSpreadsheet,
 } from "react-icons/lu";
+import * as XLSX from 'xlsx';
 import api from "../../api";
 import AddUserModal from "../../components/AddUserModal";
 import ResetPasswordModal from "../../components/ResetPasswordModal";
@@ -102,7 +105,7 @@ const UserManagementPage = () => {
 	// Fetch dinas list
 	const fetchDinasList = useCallback(async () => {
 		try {
-			const response = await api.get("/api/dinas/list");
+			const response = await api.get("/dinas/list");
 			setDinasList(response.data.data || []);
 		} catch (err) {
 			console.error("Error fetching dinas:", err);
@@ -299,6 +302,123 @@ const UserManagementPage = () => {
 		setCurrentPage(1);
 	}, [searchTerm, activeTab, filterBidang, filterDinas]);
 
+	// Export users to Excel
+	const handleExportUsers = (exportType = 'current') => {
+		let dataToExport = [];
+		let sheetName = '';
+		let fileName = '';
+
+		const activeTabConfig = tabs.find(t => t.id === activeTab);
+		const today = new Date().toISOString().split('T')[0];
+
+		if (exportType === 'current') {
+			// Export tab yang sedang aktif
+			dataToExport = filteredUsers;
+			sheetName = activeTabConfig?.label || 'Users';
+			fileName = `User_${sheetName.replace(/\s+/g, '_')}_${today}.xlsx`;
+		} else if (exportType === 'all') {
+			// Export semua user ke multiple sheets
+			const wb = XLSX.utils.book_new();
+
+			tabs.forEach(tab => {
+				const tabUsers = users.filter(user => {
+					if (tab.role) return user.role === tab.role;
+					if (tab.roles) return tab.roles.includes(user.role);
+					return false;
+				});
+
+				if (tabUsers.length === 0) return;
+
+				const rows = tabUsers.map((user, idx) => ({
+					'No': idx + 1,
+					'Nama': user.name || '',
+					'Email': user.email || '',
+					'Password': 'password',
+					'Role': getRoleInfo(user.role).label,
+					...(tab.id === 'pegawai' ? { 'Bidang': user.bidang?.nama || '-' } : {}),
+					...(tab.id === 'desa' ? {
+						'Desa': user.desa?.nama || '-',
+						'Kecamatan': user.desa?.kecamatan?.nama || user.kecamatan?.nama || '-',
+					} : {}),
+					...(tab.id === 'kecamatan' ? { 'Kecamatan': user.kecamatan?.nama || '-' } : {}),
+					...(tab.id === 'dinas_terkait' ? { 'Dinas': user.dinas?.nama_dinas || '-' } : {}),
+					'Tanggal Dibuat': user.created_at ? new Date(user.created_at).toLocaleDateString('id-ID') : '-',
+				}));
+
+				const ws = XLSX.utils.json_to_sheet(rows);
+
+				// Auto-width columns
+				const colWidths = Object.keys(rows[0] || {}).map(key => ({
+					wch: Math.max(key.length, ...rows.map(r => String(r[key] || '').length)) + 2
+				}));
+				ws['!cols'] = colWidths;
+
+				XLSX.utils.book_append_sheet(wb, ws, tab.label.substring(0, 31));
+			});
+
+			XLSX.writeFile(wb, `Semua_User_DPMD_${today}.xlsx`);
+			Swal.fire({
+				title: 'Berhasil!',
+				text: 'Data semua user berhasil diekspor ke Excel',
+				icon: 'success',
+				timer: 2000,
+				showConfirmButton: false,
+			});
+			return;
+		}
+
+		// Single sheet export
+		const rows = dataToExport.map((user, idx) => {
+			const row = {
+				'No': idx + 1,
+				'Nama': user.name || '',
+				'Email': user.email || '',
+				'Password': 'password',
+				'Role': getRoleInfo(user.role).label,
+			};
+
+			// Kolom tambahan berdasarkan tab
+			if (activeTab === 'pegawai') {
+				row['Bidang'] = user.bidang?.nama || '-';
+			} else if (activeTab === 'desa') {
+				row['Desa'] = user.desa?.nama || '-';
+				row['Kecamatan'] = user.desa?.kecamatan?.nama || user.kecamatan?.nama || '-';
+			} else if (activeTab === 'kecamatan') {
+				row['Kecamatan'] = user.kecamatan?.nama || '-';
+			} else if (activeTab === 'dinas_terkait') {
+				row['Dinas'] = user.dinas?.nama_dinas || '-';
+			}
+
+			row['Tanggal Dibuat'] = user.created_at ? new Date(user.created_at).toLocaleDateString('id-ID') : '-';
+			return row;
+		});
+
+		const ws = XLSX.utils.json_to_sheet(rows);
+
+		// Auto-width columns
+		if (rows.length > 0) {
+			const colWidths = Object.keys(rows[0]).map(key => ({
+				wch: Math.max(key.length, ...rows.map(r => String(r[key] || '').length)) + 2
+			}));
+			ws['!cols'] = colWidths;
+		}
+
+		const wb = XLSX.utils.book_new();
+		XLSX.utils.book_append_sheet(wb, ws, sheetName.substring(0, 31));
+		XLSX.writeFile(wb, fileName);
+
+		Swal.fire({
+			title: 'Berhasil!',
+			text: `Data ${sheetName} berhasil diekspor ke Excel (${dataToExport.length} user)`,
+			icon: 'success',
+			timer: 2000,
+			showConfirmButton: false,
+		});
+	};
+
+	// State for export dropdown
+	const [showExportMenu, setShowExportMenu] = useState(false);
+
 	// Group by role for stats
 	const statsByRole = useMemo(() => {
 		const stats = {};
@@ -462,8 +582,59 @@ const UserManagementPage = () => {
 					)}
 				</div>
 
-				{/* Add User Button */}
-				<div className="mt-4 flex justify-end">
+				{/* Add User & Export Buttons */}
+				<div className="mt-4 flex justify-end gap-3">
+					{/* Export Dropdown */}
+					<div className="relative">
+						<button
+							onClick={() => setShowExportMenu(!showExportMenu)}
+							className="flex items-center justify-center gap-2 px-5 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl hover:from-emerald-700 hover:to-teal-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+						>
+							<LuDownload className="h-5 w-5" />
+							<span className="font-semibold">Ekspor</span>
+							<LuChevronDown className={`h-4 w-4 transition-transform ${showExportMenu ? 'rotate-180' : ''}`} />
+						</button>
+
+						{showExportMenu && (
+							<>
+								<div className="fixed inset-0 z-40" onClick={() => setShowExportMenu(false)} />
+								<div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 overflow-hidden">
+									<div className="p-3 bg-gray-50 border-b border-gray-200">
+										<p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Ekspor Data User</p>
+									</div>
+									<div className="p-2">
+										<button
+											onClick={() => {
+												handleExportUsers('current');
+												setShowExportMenu(false);
+											}}
+											className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 rounded-lg transition-colors"
+										>
+											<LuFileSpreadsheet className="h-5 w-5 text-emerald-600" />
+											<div>
+												<p className="font-medium">Ekspor Tab Aktif</p>
+												<p className="text-xs text-gray-500">{tabs.find(t => t.id === activeTab)?.label} ({filteredUsers.length} user)</p>
+											</div>
+										</button>
+										<button
+											onClick={() => {
+												handleExportUsers('all');
+												setShowExportMenu(false);
+											}}
+											className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 rounded-lg transition-colors"
+										>
+											<LuUsers className="h-5 w-5 text-indigo-600" />
+											<div>
+												<p className="font-medium">Ekspor Semua Kategori</p>
+												<p className="text-xs text-gray-500">Semua user ({users.length} user, multi-sheet)</p>
+											</div>
+										</button>
+									</div>
+								</div>
+							</>
+						)}
+					</div>
+
 					<button
 						onClick={() => setShowAddModal(true)}
 						className="flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl"
