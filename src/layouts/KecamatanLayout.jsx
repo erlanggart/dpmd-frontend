@@ -9,6 +9,7 @@ import {
   FiChevronDown,
   FiSearch,
   FiMapPin,
+  FiMenu,
 } from "react-icons/fi";
 import { 
   LuLayoutDashboard, 
@@ -32,6 +33,12 @@ const menuItems = [
     label: "Verifikasi Bankeu",
     path: "/kecamatan/bankeu",
     icon: LuBanknote,
+  },
+  {
+    id: "settings",
+    label: "Pengaturan",
+    path: "/kecamatan/settings",
+    icon: FiSettings,
   },
 ];
 
@@ -101,10 +108,22 @@ const KecamatanLayout = () => {
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-gray-50 via-slate-50 to-gray-100">
+      {/* Mobile Header with Hamburger */}
+      <div className="fixed top-0 left-0 right-0 h-16 bg-white border-b border-gray-200 lg:hidden z-30 flex items-center justify-between px-4 shadow-sm">
+        <button
+          onClick={() => setSidebarOpen(true)}
+          className="p-2 text-gray-600 hover:text-violet-600 hover:bg-violet-50 rounded-lg transition-colors"
+        >
+          <FiMenu className="text-2xl" />
+        </button>
+        <img src="/logo-dpmd.png" alt="DPMD Logo" className="h-10" />
+        <div className="w-10"></div>
+      </div>
+
       {/* Sidebar */}
       <aside
         className={`fixed top-0 left-0 h-full bg-white border-r border-gray-100 transition-all duration-300 z-40 ${
-          sidebarOpen ? "w-72" : "w-0 lg:w-20"
+          sidebarOpen ? "w-72 translate-x-0" : "-translate-x-full lg:translate-x-0 lg:w-20"
         } overflow-hidden shadow-sm`}
       >
         <div className="flex flex-col h-full">
@@ -196,7 +215,7 @@ const KecamatanLayout = () => {
       <div
         className={`flex-1 flex flex-col transition-all duration-300 ${
           sidebarOpen ? "lg:ml-72" : "lg:ml-20"
-        }`}
+        } mt-16 lg:mt-0`}
       >
         {/* Page Content */}
         <main className="flex-1 overflow-y-auto">

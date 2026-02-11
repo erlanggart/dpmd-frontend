@@ -4,7 +4,7 @@ import Swal from "sweetalert2";
 import {
   LuUpload, LuEye, LuClock, LuCheck, LuX, LuRefreshCw, 
   LuChevronDown, LuChevronRight, LuSend, LuTrash2, LuInfo, LuDownload, LuFileText, LuImage,
-  LuPackage, LuMapPin, LuDollarSign, LuTriangleAlert
+  LuPackage, LuMapPin, LuDollarSign, LuTriangleAlert, LuPencil, LuSave
 } from "react-icons/lu";
 
 const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
@@ -149,6 +149,19 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
   const [contohFiles, setContohFiles] = useState({ cover: [], desa: [], kecamatan: [] });
   const [showPdfModal, setShowPdfModal] = useState(false);
   const [selectedPdf, setSelectedPdf] = useState(null);
+  
+  // State untuk edit proposal
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingProposal, setEditingProposal] = useState(null);
+  const [editFormData, setEditFormData] = useState({
+    judul_proposal: '',
+    nama_kegiatan_spesifik: '',
+    volume: '',
+    lokasi: '',
+    anggaran_usulan: '',
+    file: null
+  });
+  const [isEditSaving, setIsEditSaving] = useState(false);
   
   // NEW: State untuk upload proposal dengan dropdown
   const [showUploadFormInfra, setShowUploadFormInfra] = useState(false);
@@ -1612,6 +1625,78 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
     }
   };
 
+  // Handle open edit modal
+  const handleOpenEdit = (proposal) => {
+    setEditingProposal(proposal);
+    setEditFormData({
+      judul_proposal: proposal.judul_proposal || '',
+      nama_kegiatan_spesifik: proposal.nama_kegiatan_spesifik || '',
+      volume: proposal.volume || '',
+      lokasi: proposal.lokasi || '',
+      anggaran_usulan: proposal.anggaran_usulan ? proposal.anggaran_usulan.toString() : '',
+      file: null
+    });
+    setShowEditModal(true);
+  };
+
+  // Handle save edit
+  const handleSaveEdit = async () => {
+    if (!editingProposal) return;
+
+    setIsEditSaving(true);
+    try {
+      const formData = new FormData();
+      
+      if (editFormData.judul_proposal) {
+        formData.append('judul_proposal', editFormData.judul_proposal);
+      }
+      if (editFormData.nama_kegiatan_spesifik) {
+        formData.append('nama_kegiatan_spesifik', editFormData.nama_kegiatan_spesifik);
+      }
+      if (editFormData.volume) {
+        formData.append('volume', editFormData.volume);
+      }
+      if (editFormData.lokasi) {
+        formData.append('lokasi', editFormData.lokasi);
+      }
+      if (editFormData.anggaran_usulan) {
+        formData.append('anggaran_usulan', editFormData.anggaran_usulan.replace(/\D/g, ''));
+      }
+      if (editFormData.file) {
+        formData.append('file', editFormData.file);
+      }
+
+      await api.put(`/desa/bankeu/proposals/${editingProposal.id}/edit`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      await fetchData();
+      setShowEditModal(false);
+      setEditingProposal(null);
+
+      Swal.fire({
+        icon: "success",
+        title: "Berhasil!",
+        text: "Proposal berhasil diupdate",
+        timer: 2000,
+        showConfirmButton: false
+      });
+    } catch (error) {
+      Swal.fire({
+        icon: "error",
+        title: "Gagal",
+        text: error.response?.data?.message || "Gagal mengupdate proposal"
+      });
+    } finally {
+      setIsEditSaving(false);
+    }
+  };
+
+  // Check if proposal can be edited (not yet submitted)
+  const canEditProposal = (proposal) => {
+    return !proposal.submitted_to_kecamatan && !proposal.submitted_to_dinas_at;
+  };
+
   // Merge kegiatan dengan proposals - dengan useMemo untuk cache
   const mergeKegiatanWithProposals = useMemo(() => {
     return (jenis) => {
@@ -2674,7 +2759,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                               )}
                             </div>
 
-                            {/* Action Buttons */}
+                            {/* Action Buttons - Infrastruktur */}
                             <div className="flex gap-2 mt-3">
                               <button
                                 onClick={(e) => {
@@ -2685,8 +2770,33 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                                 className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center gap-1.5 text-xs font-medium transition-all"
                               >
                                 <LuEye className="w-4 h-4" />
-                                Lihat File PDF
+                                Lihat PDF
                               </button>
+                              {/* Tombol Edit - hanya jika belum dikirim */}
+                              {canEditProposal(proposal) && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenEdit(proposal);
+                                  }}
+                                  className="flex-1 px-3 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 flex items-center justify-center gap-1.5 text-xs font-medium transition-all"
+                                >
+                                  <LuPencil className="w-4 h-4" />
+                                  Edit
+                                </button>
+                              )}
+                              {/* Tombol Hapus - hanya jika belum dikirim */}
+                              {canEditProposal(proposal) && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDelete(proposal.id);
+                                  }}
+                                  className="px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 flex items-center justify-center gap-1.5 text-xs font-medium transition-all"
+                                >
+                                  <LuTrash2 className="w-4 h-4" />
+                                </button>
+                              )}
                             </div>
                           </div>
                         )}
@@ -3127,7 +3237,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                               )}
                             </div>
 
-                            {/* Action Buttons */}
+                            {/* Action Buttons - Non-Infrastruktur */}
                             <div className="flex gap-2 mt-3">
                               <button
                                 onClick={(e) => {
@@ -3138,8 +3248,33 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                                 className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center gap-1.5 text-xs font-medium transition-all"
                               >
                                 <LuEye className="w-4 h-4" />
-                                Lihat File PDF
+                                Lihat PDF
                               </button>
+                              {/* Tombol Edit - hanya jika belum dikirim */}
+                              {canEditProposal(proposal) && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenEdit(proposal);
+                                  }}
+                                  className="flex-1 px-3 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 flex items-center justify-center gap-1.5 text-xs font-medium transition-all"
+                                >
+                                  <LuPencil className="w-4 h-4" />
+                                  Edit
+                                </button>
+                              )}
+                              {/* Tombol Hapus - hanya jika belum dikirim */}
+                              {canEditProposal(proposal) && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDelete(proposal.id);
+                                  }}
+                                  className="px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 flex items-center justify-center gap-1.5 text-xs font-medium transition-all"
+                                >
+                                  <LuTrash2 className="w-4 h-4" />
+                                </button>
+                              )}
                             </div>
                           </div>
                         )}
@@ -3445,6 +3580,171 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
         onClose={handleClosePdfModal}
         pdfData={selectedPdf}
       />
+
+      {/* Modal Edit Proposal */}
+      {showEditModal && editingProposal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-amber-500 to-orange-600 px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-white bg-opacity-30 rounded-lg flex items-center justify-center shadow-sm">
+                  <LuPencil className="w-5 h-5 text-gray-800" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-white">Edit Proposal</h2>
+                  <p className="text-sm text-white text-opacity-90">Ubah data proposal sebelum dikirim</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowEditModal(false);
+                  setEditingProposal(null);
+                }}
+                className="w-8 h-8 bg-white bg-opacity-30 hover:bg-opacity-40 rounded-lg flex items-center justify-center transition-all shadow-sm"
+              >
+                <LuX className="w-5 h-5 text-gray-800 font-bold" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              {/* Judul Proposal */}
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-800">Judul Proposal</label>
+                <input
+                  type="text"
+                  value={editFormData.judul_proposal}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, judul_proposal: e.target.value }))}
+                  placeholder="Judul proposal"
+                  className="w-full px-4 py-3 text-sm font-medium border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-amber-200 focus:border-amber-500 bg-white hover:border-amber-400 transition-all duration-200 shadow-sm"
+                />
+              </div>
+
+              {/* Nama Kegiatan */}
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-800">Nama Kegiatan Spesifik</label>
+                <input
+                  type="text"
+                  value={editFormData.nama_kegiatan_spesifik}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, nama_kegiatan_spesifik: e.target.value }))}
+                  placeholder="Nama kegiatan spesifik"
+                  className="w-full px-4 py-3 text-sm font-medium border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-amber-200 focus:border-amber-500 bg-white hover:border-amber-400 transition-all duration-200 shadow-sm"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                {/* Volume */}
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-gray-800">Volume</label>
+                  <input
+                    type="text"
+                    value={editFormData.volume}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, volume: e.target.value }))}
+                    placeholder="Contoh: 500 m"
+                    className="w-full px-4 py-3 text-sm font-medium border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-amber-200 focus:border-amber-500 bg-white hover:border-amber-400 transition-all duration-200 shadow-sm"
+                  />
+                </div>
+
+                {/* Lokasi */}
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-gray-800">Lokasi</label>
+                  <input
+                    type="text"
+                    value={editFormData.lokasi}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, lokasi: e.target.value }))}
+                    placeholder="Contoh: Kampung Baru"
+                    className="w-full px-4 py-3 text-sm font-medium border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-amber-200 focus:border-amber-500 bg-white hover:border-amber-400 transition-all duration-200 shadow-sm"
+                  />
+                </div>
+              </div>
+
+              {/* Anggaran */}
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-800">Anggaran Usulan</label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-semibold">Rp</span>
+                  <input
+                    type="text"
+                    value={formatRupiah(editFormData.anggaran_usulan)}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, anggaran_usulan: e.target.value.replace(/\D/g, '') }))}
+                    placeholder="0"
+                    className="w-full pl-12 pr-4 py-3 text-sm font-medium border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-amber-200 focus:border-amber-500 bg-white hover:border-amber-400 transition-all duration-200 shadow-sm"
+                  />
+                </div>
+              </div>
+
+              {/* File Upload (opsional) */}
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-800">Ganti File Proposal (opsional)</label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="file"
+                    accept=".pdf"
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        setEditFormData(prev => ({ ...prev, file }));
+                      }
+                    }}
+                    className="hidden"
+                    id="edit-proposal-file"
+                  />
+                  <label
+                    htmlFor="edit-proposal-file"
+                    className="flex-1 px-4 py-3 bg-gray-100 border-2 border-dashed border-gray-300 rounded-xl text-center cursor-pointer hover:bg-gray-50 hover:border-amber-400 transition-all"
+                  >
+                    {editFormData.file ? (
+                      <span className="text-sm font-medium text-amber-600">{editFormData.file.name}</span>
+                    ) : (
+                      <span className="text-sm text-gray-500">Klik untuk pilih file PDF baru</span>
+                    )}
+                  </label>
+                  {editFormData.file && (
+                    <button
+                      onClick={() => setEditFormData(prev => ({ ...prev, file: null }))}
+                      className="px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-all"
+                    >
+                      <LuX className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500">Kosongkan jika tidak ingin mengganti file</p>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex items-center justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowEditModal(false);
+                  setEditingProposal(null);
+                }}
+                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-semibold text-sm transition-all"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleSaveEdit}
+                disabled={isEditSaving}
+                className="px-6 py-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white rounded-lg font-semibold text-sm transition-all flex items-center gap-2 disabled:opacity-50"
+              >
+                {isEditSaving ? (
+                  <>
+                    <LuRefreshCw className="w-4 h-4 animate-spin" />
+                    Menyimpan...
+                  </>
+                ) : (
+                  <>
+                    <LuSave className="w-4 h-4" />
+                    Simpan Perubahan
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };
