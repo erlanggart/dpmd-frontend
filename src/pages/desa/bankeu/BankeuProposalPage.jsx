@@ -1697,6 +1697,23 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
     return !proposal.submitted_to_kecamatan && !proposal.submitted_to_dinas_at;
   };
 
+  // Check if proposal can be deleted (not submitted OR rejected by kec/dinas)
+  const canDeleteProposal = (proposal) => {
+    // Can delete if not submitted yet
+    if (!proposal.submitted_to_kecamatan && !proposal.submitted_to_dinas_at) {
+      return true;
+    }
+    // Can delete if rejected by kecamatan
+    if (proposal.status === 'rejected') {
+      return true;
+    }
+    // Can delete if rejected by dinas
+    if (proposal.dinas_status === 'rejected') {
+      return true;
+    }
+    return false;
+  };
+
   // Merge kegiatan dengan proposals - dengan useMemo untuk cache
   const mergeKegiatanWithProposals = useMemo(() => {
     return (jenis) => {
@@ -2785,8 +2802,8 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                                   Edit
                                 </button>
                               )}
-                              {/* Tombol Hapus - hanya jika belum dikirim */}
-                              {canEditProposal(proposal) && (
+                              {/* Tombol Hapus - jika belum dikirim ATAU sudah ditolak */}
+                              {canDeleteProposal(proposal) && (
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -3263,8 +3280,8 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                                   Edit
                                 </button>
                               )}
-                              {/* Tombol Hapus - hanya jika belum dikirim */}
-                              {canEditProposal(proposal) && (
+                              {/* Tombol Hapus - jika belum dikirim ATAU sudah ditolak */}
+                              {canDeleteProposal(proposal) && (
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
