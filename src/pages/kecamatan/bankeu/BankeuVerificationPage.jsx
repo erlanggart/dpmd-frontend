@@ -102,6 +102,28 @@ const BankeuVerificationPage = ({ tahun = 2027 }) => {
         api.get("/kecamatan/bankeu/surat", { params: { tahun: tahunAnggaran } }).catch(() => ({ data: { data: [] } }))
       ]);
       
+      // DEBUG: Log proposals response
+      console.log('✅ Proposals API Response:', proposalsRes.data);
+      console.log('📋 Proposals List:', proposalsRes.data.data);
+      console.log('📊 Total Proposals:', proposalsRes.data.data?.length || 0);
+      
+      // Debug: Log setiap proposal
+      if (proposalsRes.data.data && proposalsRes.data.data.length > 0) {
+        proposalsRes.data.data.forEach((p, index) => {
+          console.log(`📌 Proposal #${index + 1}:`, {
+            id: p.id,
+            desa_id: p.desa_id,
+            nama_desa: p.nama_desa,
+            judul_proposal: p.judul_proposal,
+            dinas_status: p.dinas_status,
+            kecamatan_status: p.kecamatan_status,
+            submitted_to_kecamatan: p.submitted_to_kecamatan
+          });
+        });
+      } else {
+        console.log('⚠️ Tidak ada proposal ditemukan atau array kosong');
+      }
+      
       setProposals(proposalsRes.data.data);
       setStatistics(statsRes.data.data);
       
