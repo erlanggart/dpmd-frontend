@@ -6,6 +6,7 @@ import {
 	FiBarChart2, FiFileText, FiImage, FiBell, FiUser,
 	FiActivity, FiLayers, FiBriefcase, FiX, FiChevronRight
 } from "react-icons/fi";
+import { performFullLogout } from "../../utils/sessionPersistence";
 import { useConfirm } from "../../hooks/useConfirm.jsx";
 import { toast } from 'react-hot-toast';
 import api from "../../api";
@@ -58,7 +59,7 @@ const SuperadminLayout = () => {
 	}, []);
 
 	if (!token || user.role !== "superadmin") {
-		return <Navigate to="/login" replace />;
+		return <Navigate to="/" replace />;
 	}
 
 	const handleLogout = async () => {
@@ -68,10 +69,9 @@ const SuperadminLayout = () => {
 		);
 
 		if (confirmed) {
-			localStorage.removeItem("expressToken");
-			localStorage.removeItem("user");
+			await performFullLogout();
 			toast.success("Berhasil logout");
-			navigate("/login");
+			window.location.href = "/";
 		}
 	};
 
@@ -147,23 +147,17 @@ const SuperadminLayout = () => {
 			{confirmDialog}
 
 			{/* Modern Collapsible Sidebar - Desktop */}
-			<aside className={`hidden lg:flex fixed left-0 top-0 h-screen bg-white border-r border-gray-200 shadow-xl flex-col z-40 transition-all duration-300 ease-in-out ${
+			<aside className={`hidden lg:flex fixed left-0 top-0 h-screen bg-white border-r border-gray-100 shadow-sm flex-col z-40 transition-all duration-300 ease-in-out ${
 				sidebarOpen ? 'w-72' : 'w-20'
 			}`}>
 				{/* Logo & Brand */}
-				<div className="p-4 border-b border-gray-100">
-					<div className="flex items-center gap-3 overflow-hidden">
-						<div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
-							<FiLayers className="w-6 h-6 text-white" />
-						</div>
-						{sidebarOpen && (
-							<div className="animate-in fade-in slide-in-from-left duration-200">
-								<h1 className="text-lg font-bold text-gray-800">
-									Super Admin
-								</h1>
-								<p className="text-xs text-gray-500">DPMD Kab. Bogor</p>
-							</div>
-						)}
+				<div className="p-4 border-b border-gray-100 bg-gradient-to-r from-slate-50 to-gray-100">
+					<div className="flex items-center justify-center overflow-hidden">
+						<img 
+							src="/logo-dpmd.png" 
+							alt="DPMD Logo" 
+							className={`transition-all duration-300 ${sidebarOpen ? "h-20" : "h-14"}`}
+						/>
 					</div>
 				</div>
 

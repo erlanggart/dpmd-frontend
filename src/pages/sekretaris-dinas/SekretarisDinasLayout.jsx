@@ -2,6 +2,7 @@
 import React from "react";
 import { Outlet, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { FiHome, FiMail, FiBarChart2, FiMenu, FiLogOut, FiUser, FiBell, FiCalendar } from "react-icons/fi";
+import { performFullLogout } from "../../utils/sessionPersistence";
 import { useConfirm } from "../../hooks/useConfirm.jsx";
 import { subscribeToPushNotifications } from "../../utils/pushNotifications";
 import { toast } from 'react-hot-toast';
@@ -159,7 +160,7 @@ const SekretarisDinasLayout = () => {
 	}, []);
 
 	if (!token || !user.role || user.role !== "sekretaris_dinas") {
-		return <Navigate to="/login" replace />;
+		return <Navigate to="/" replace />;
 	}
 
 	const handleLogout = async () => {
@@ -171,9 +172,8 @@ const SekretarisDinasLayout = () => {
 			cancelText: 'Batal'
 		});
 		if (confirmed) {
-			localStorage.removeItem("user");
-			localStorage.removeItem("expressToken");
-			window.location.href = "/login";
+			await performFullLogout();
+			window.location.href = "/";
 		}
 	};
 

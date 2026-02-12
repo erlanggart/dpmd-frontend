@@ -1,4 +1,5 @@
 // src/pages/bidang/sekretariat/JadwalKegiatanPage.jsx
+// Updated: Simplified date filter to single date
 import React, { useState, useEffect, useCallback } from 'react';
 import {
 	LuCalendar,
@@ -17,6 +18,8 @@ import {
 	LuChevronRight,
 	LuLayoutGrid,
 	LuCalendarDays,
+	LuList,
+	LuEye,
 } from 'react-icons/lu';
 import api from '../../../api';
 import Swal from 'sweetalert2';
@@ -34,16 +37,33 @@ const JadwalKegiatanPage = () => {
 	const [loading, setLoading] = useState(true);
 	const [showAddModal, setShowAddModal] = useState(false);
 	const [showEditModal, setShowEditModal] = useState(false);
+	const [showDetailModal, setShowDetailModal] = useState(false);
 	const [selectedJadwal, setSelectedJadwal] = useState(null);
 	const [searchTerm, setSearchTerm] = useState('');
 	const [filterStatus, setFilterStatus] = useState('all');
 	const [filterPrioritas, setFilterPrioritas] = useState('all');
-	const [filterTanggalMulai, setFilterTanggalMulai] = useState('');
-	const [filterTanggalSelesai, setFilterTanggalSelesai] = useState('');
+	
+	// Get today's date in YYYY-MM-DD format for default filter
+	const getTodayDate = () => {
+		const today = new Date();
+		return today.toISOString().split('T')[0];
+	};
+	
+	const [filterTanggal, setFilterTanggal] = useState(getTodayDate());
 	const [currentPage, setCurrentPage] = useState(1);
 	const [totalPages, setTotalPages] = useState(1);
-	const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'calendar'
-	const itemsPerPage = 12;
+	const [totalData, setTotalData] = useState(0);
+	
+	// Responsive default view: 'table' for desktop/tablet, 'grid' for mobile
+	const getDefaultViewMode = () => {
+		if (typeof window !== 'undefined') {
+			return window.innerWidth >= 768 ? 'table' : 'grid';
+		}
+		return 'table';
+	};
+	
+	const [viewMode, setViewMode] = useState(getDefaultViewMode()); // 'table', 'grid', or 'calendar'
+	const itemsPerPage = 5;
 
 	// Form state
 	const [formData, setFormData] = useState({
@@ -56,7 +76,35 @@ const JadwalKegiatanPage = () => {
 		asal_kegiatan: '',
 		prioritas: 'sedang',
 		kategori: 'lainnya',
+		pic_name: '',
+		pic_contact: ''
 	});
+
+	// Handle form change
+	const handleFormChange = (e) => {
+		const { name, value } = e.target;
+		setFormData(prev => ({
+			...prev,
+			[name]: value
+		}));
+	};
+
+	// Reset form data
+	const resetFormData = () => {
+		setFormData({
+			judul: '',
+			deskripsi: '-',
+			bidang_id: '',
+			tanggal_mulai: '',
+			tanggal_selesai: '',
+			lokasi: '',
+			asal_kegiatan: '',
+			prioritas: 'sedang',
+			kategori: 'lainnya',
+			pic_name: '',
+			pic_contact: ''
+		});
+	};
 
 	const [bidangList, setBidangList] = useState([]);
 
@@ -80,21 +128,21 @@ const JadwalKegiatanPage = () => {
 				search: searchTerm || undefined,
 				status: filterStatus !== 'all' ? filterStatus : undefined,
 				prioritas: filterPrioritas !== 'all' ? filterPrioritas : undefined,
-				start_date: filterTanggalMulai || undefined,
-				end_date: filterTanggalSelesai || undefined,
+				tanggal: filterTanggal || undefined,
 			};
 
 			const response = await api.get('/jadwal-kegiatan', { params });
 			
 			setJadwals(response.data.data || []);
 			setTotalPages(response.data.pagination?.totalPages || 1);
+			setTotalData(response.data.pagination?.total || 0);
 		} catch (error) {
 			console.error('Error fetching jadwal:', error);
 			Swal.fire('Error', 'Gagal mengambil data jadwal kegiatan', 'error');
 		} finally {
 			setLoading(false);
 		}
-	}, [currentPage, searchTerm, filterStatus, filterPrioritas, filterTanggalMulai, filterTanggalSelesai]);
+	}, [currentPage, searchTerm, filterStatus, filterPrioritas, filterTanggal]);
 
 	useEffect(() => {
 		fetchJadwal();
@@ -105,11 +153,13 @@ const JadwalKegiatanPage = () => {
 	}, [fetchBidangList]);
 
 	// Handle create
-	const handleCreate = async (data) => {
+	const handleCreate = async (e) => {
+		e.preventDefault();
 		try {
-			await api.post('/jadwal-kegiatan', data);
+			await api.post('/jadwal-kegiatan', formData);
 			Swal.fire('Berhasil', 'Jadwal kegiatan berhasil ditambahkan', 'success');
 			setShowAddModal(false);
+			resetFormData();
 			fetchJadwal();
 		} catch (error) {
 			console.error('Error creating jadwal:', error);
@@ -118,12 +168,16 @@ const JadwalKegiatanPage = () => {
 	};
 
 	// Handle update
-	const handleUpdate = async (id, data) => {
+	const handleUpdate = async (e) => {
+		e.preventDefault();
+		if (!selectedJadwal) return;
+		
 		try {
-			await api.put(`/jadwal-kegiatan/${id}`, data);
+			await api.put(`/jadwal-kegiatan/${selectedJadwal.id}`, formData);
 			Swal.fire('Berhasil', 'Jadwal kegiatan berhasil diperbarui', 'success');
 			setShowEditModal(false);
 			setSelectedJadwal(null);
+			resetFormData();
 			fetchJadwal();
 		} catch (error) {
 			console.error('Error updating jadwal:', error);
@@ -159,7 +213,38 @@ const JadwalKegiatanPage = () => {
 	// Handle edit
 	const handleEdit = (jadwal) => {
 		setSelectedJadwal(jadwal);
+		// Populate form with jadwal data
+		const formatDateTime = (dateString) => {
+			if (!dateString) return '';
+			const date = new Date(dateString);
+			const year = date.getFullYear();
+			const month = String(date.getMonth() + 1).padStart(2, '0');
+			const day = String(date.getDate()).padStart(2, '0');
+			const hours = String(date.getHours()).padStart(2, '0');
+			const minutes = String(date.getMinutes()).padStart(2, '0');
+			return `${year}-${month}-${day}T${hours}:${minutes}`;
+		};
+		
+		setFormData({
+			judul: jadwal.judul || '',
+			deskripsi: jadwal.deskripsi || '-',
+			bidang_id: jadwal.bidang_id || '',
+			tanggal_mulai: formatDateTime(jadwal.tanggal_mulai),
+			tanggal_selesai: formatDateTime(jadwal.tanggal_selesai),
+			lokasi: jadwal.lokasi || '',
+			asal_kegiatan: jadwal.asal_kegiatan || '',
+			prioritas: jadwal.prioritas || 'sedang',
+			kategori: jadwal.kategori || 'lainnya',
+			pic_name: jadwal.pic_name || '',
+			pic_contact: jadwal.pic_contact || ''
+		});
 		setShowEditModal(true);
+	};
+
+	// Handle view detail
+	const handleViewDetail = (jadwal) => {
+		setSelectedJadwal(jadwal);
+		setShowDetailModal(true);
 	};
 
 	// Handle search
@@ -174,32 +259,8 @@ const JadwalKegiatanPage = () => {
 		setSearchTerm('');
 		setFilterStatus('all');
 		setFilterPrioritas('all');
-		setFilterTanggalMulai('');
-		setFilterTanggalSelesai('');
+		setFilterTanggal(getTodayDate());
 		setCurrentPage(1);
-	};
-
-	// Get status badge
-	const getStatusBadge = (status) => {
-		const badges = {
-			draft: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Draft' },
-			scheduled: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Terjadwal' },
-			ongoing: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Berlangsung' },
-			completed: { bg: 'bg-green-100', text: 'text-green-700', label: 'Selesai' },
-			cancelled: { bg: 'bg-red-100', text: 'text-red-700', label: 'Dibatalkan' }
-		};
-		return badges[status] || badges.draft;
-	};
-
-	// Get prioritas badge
-	const getPrioritasBadge = (prioritas) => {
-		const badges = {
-			rendah: { bg: 'bg-green-100', text: 'text-green-700', label: 'Rendah' },
-			sedang: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Sedang' },
-			tinggi: { bg: 'bg-orange-100', text: 'text-orange-700', label: 'Tinggi' },
-			urgent: { bg: 'bg-red-100', text: 'text-red-700', label: 'Urgent' }
-		};
-		return badges[prioritas] || badges.sedang;
 	};
 
 	// Format date
@@ -301,28 +362,18 @@ const JadwalKegiatanPage = () => {
 							</div>
 
 							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-2">Tanggal Mulai</label>
-								<input
-									type="date"
-									value={filterTanggalMulai}
-									onChange={(e) => setFilterTanggalMulai(e.target.value)}
-									className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-								/>
-							</div>
+						<label className="block text-sm font-medium text-gray-700 mb-2">Tanggal</label>
+						<input
+							type="date"
+							value={filterTanggal}
+							onChange={(e) => setFilterTanggal(e.target.value)}
+							className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+						/>
+					</div>
+				</div>
 
-							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-2">Tanggal Selesai</label>
-								<input
-									type="date"
-									value={filterTanggalSelesai}
-									onChange={(e) => setFilterTanggalSelesai(e.target.value)}
-									className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-								/>
-							</div>
-						</div>
-
-						{/* Action Buttons */}
-						<div className="flex flex-wrap gap-3">
+				{/* Action Buttons */}
+				<div className="flex flex-wrap gap-3">
 							<button
 								type="submit"
 								className="flex items-center gap-2 px-6 py-2 bg-teal-600 text-white rounded-xl hover:bg-teal-700 transition-colors"
@@ -343,12 +394,25 @@ const JadwalKegiatanPage = () => {
 							<div className="ml-auto flex gap-2">
 								<button
 									type="button"
+									onClick={() => setViewMode('table')}
+									className={`p-2 rounded-lg transition-colors ${
+										viewMode === 'table'
+											? 'bg-teal-100 text-teal-700'
+											: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+									}`}
+									title="Tampilan Tabel"
+								>
+									<LuList className="w-5 h-5" />
+								</button>
+								<button
+									type="button"
 									onClick={() => setViewMode('grid')}
 									className={`p-2 rounded-lg transition-colors ${
 										viewMode === 'grid'
 											? 'bg-teal-100 text-teal-700'
 											: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
 									}`}
+									title="Tampilan Grid"
 								>
 									<LuLayoutGrid className="w-5 h-5" />
 								</button>
@@ -360,6 +424,7 @@ const JadwalKegiatanPage = () => {
 											? 'bg-teal-100 text-teal-700'
 											: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
 									}`}
+									title="Tampilan Kalender"
 								>
 									<LuCalendarDays className="w-5 h-5" />
 								</button>
@@ -374,6 +439,98 @@ const JadwalKegiatanPage = () => {
 						jadwals={jadwals}
 						onEventClick={canManageJadwal ? handleEdit : undefined}
 					/>
+				) : viewMode === 'table' ? (
+					<>
+						{/* Table View */}
+						{jadwals.length === 0 ? (
+							<div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center">
+								<LuCalendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+								<p className="text-gray-600">Tidak ada jadwal kegiatan</p>
+							</div>
+						) : (
+							<div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-6">
+								<div className="overflow-x-auto">
+									<table className="w-full">
+										<thead className="bg-gradient-to-r from-teal-50 to-cyan-50">
+											<tr>
+												<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Judul Kegiatan</th>
+												<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Tanggal</th>
+												<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Lokasi</th>
+												<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Bidang</th>
+
+											<th className="px-6 py-4 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">Aksi</th>
+											</tr>
+										</thead>
+										<tbody className="divide-y divide-gray-200">
+											{jadwals.map((jadwal) => {
+
+												return (
+													<tr key={jadwal.id} className="hover:bg-gray-50 transition-colors">
+														<td className="px-6 py-4">
+															<div className="font-medium text-gray-900">{jadwal.judul}</div>
+															{jadwal.deskripsi && jadwal.deskripsi !== '-' && (
+																<div className="text-sm text-gray-500 mt-1 line-clamp-1">{jadwal.deskripsi}</div>
+															)}
+														</td>
+														<td className="px-6 py-4 whitespace-nowrap">
+															<div className="flex items-center gap-2 text-sm text-gray-600">
+																<LuClock className="w-4 h-4 text-teal-500 flex-shrink-0" />
+																<div>
+																	<div>{formatDate(jadwal.tanggal_mulai)}</div>
+																	<div className="text-xs text-gray-400">s/d {formatDate(jadwal.tanggal_selesai)}</div>
+																</div>
+															</div>
+														</td>
+														<td className="px-6 py-4">
+															<div className="flex items-center gap-2 text-sm text-gray-600">
+																<LuMapPin className="w-4 h-4 text-red-500 flex-shrink-0" />
+																<span className="line-clamp-1">{jadwal.lokasi || '-'}</span>
+															</div>
+														</td>
+														<td className="px-6 py-4">
+															<div className="flex items-center gap-2 text-sm text-gray-600">
+																<LuUser className="w-4 h-4 text-purple-500 flex-shrink-0" />
+																<span className="line-clamp-1">{jadwal.bidang_nama || '-'}</span>
+															</div>
+														</td>
+														<td className="px-6 py-4">
+															<div className="flex items-center justify-center gap-2">
+																<button
+																	onClick={() => handleViewDetail(jadwal)}
+																	className="p-2 text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
+																	title="Lihat Detail"
+																>
+																	<LuEye className="w-4 h-4" />
+																</button>
+																{canManageJadwal && (
+																	<>
+																		<button
+																			onClick={() => handleEdit(jadwal)}
+																			className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+																			title="Edit"
+																		>
+																			<LuPencil className="w-4 h-4" />
+																		</button>
+																		<button
+																			onClick={() => handleDelete(jadwal.id)}
+																			className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+																			title="Hapus"
+																		>
+																			<LuTrash2 className="w-4 h-4" />
+																		</button>
+																	</>
+																)}
+															</div>
+														</td>
+													</tr>
+												);
+											})}
+										</tbody>
+									</table>
+								</div>
+							</div>
+						)}
+					</>
 				) : (
 					<>
 						{/* Grid View */}
@@ -385,30 +542,17 @@ const JadwalKegiatanPage = () => {
 						) : (
 							<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
 								{jadwals.map((jadwal) => {
-									const statusBadge = getStatusBadge(jadwal.status);
-									const prioritasBadge = getPrioritasBadge(jadwal.prioritas);
-
-									return (
-										<div
-											key={jadwal.id}
-											className="bg-white rounded-2xl shadow-sm border border-gray-200 hover:shadow-lg transition-all overflow-hidden"
-										>
-											<div className="p-6">
-												{/* Header */}
-												<div className="flex items-start justify-between mb-4">
-													<div className="flex-1">
-														<h3 className="font-bold text-lg text-gray-900 mb-2 line-clamp-2">
+										return (
+											<div
+												key={jadwal.id}
+												className="bg-white rounded-2xl shadow-sm border border-gray-200 hover:shadow-lg transition-all overflow-hidden"
+											>
+												<div className="p-6">
+													{/* Header */}
+													<div className="mb-4">
+														<h3 className="font-bold text-lg text-gray-900 line-clamp-2">
 															{jadwal.judul}
 														</h3>
-														<div className="flex flex-wrap gap-2">
-															<span className={`px-3 py-1 rounded-full text-xs font-medium ${statusBadge.bg} ${statusBadge.text}`}>
-																{statusBadge.label}
-															</span>
-															<span className={`px-3 py-1 rounded-full text-xs font-medium ${prioritasBadge.bg} ${prioritasBadge.text}`}>
-																{prioritasBadge.label}
-															</span>
-														</div>
-													</div>
 												</div>
 
 												{/* Details */}
@@ -435,83 +579,292 @@ const JadwalKegiatanPage = () => {
 													)}
 												</div>
 
-												{/* Actions - Only show for Sekretariat and Superadmin */}
-												{canManageJadwal && (
-													<div className="flex gap-2 pt-4 border-t">
-														<button
-															onClick={() => handleEdit(jadwal)}
-															className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-all"
-														>
-															<LuPencil className="w-4 h-4" />
-															Edit
-														</button>
-														<button
-															onClick={() => handleDelete(jadwal.id)}
-															className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-all"
-														>
-															<LuTrash2 className="w-4 h-4" />
-															Hapus
-														</button>
-													</div>
-												)}
+												{/* Actions - All users can view detail; Only Sekretariat can Edit/Delete */}
+												<div className="flex gap-2 pt-4 border-t">
+													<button
+														onClick={() => handleViewDetail(jadwal)}
+														className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-teal-50 text-teal-600 rounded-xl hover:bg-teal-100 transition-all"
+													>
+														<LuEye className="w-4 h-4" />
+														Detail
+													</button>
+													{canManageJadwal && (
+														<>
+															<button
+																onClick={() => handleEdit(jadwal)}
+																className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-all"
+															>
+																<LuPencil className="w-4 h-4" />
+																Edit
+															</button>
+															<button
+																onClick={() => handleDelete(jadwal.id)}
+																className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-all"
+															>
+																<LuTrash2 className="w-4 h-4" />
+																Hapus
+															</button>
+														</>
+													)}
+												</div>
 											</div>
 										</div>
 									);
 								})}
 							</div>
 						)}
+					</>
+				)}
 
-						{/* Pagination */}
-						{totalPages > 1 && (
-							<div className="flex items-center justify-center gap-2">
+				{/* Pagination */}
+				{viewMode !== 'calendar' && totalPages > 1 && (
+					<div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 mt-6">
+						{/* Data Info */}
+						<div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+							<div className="text-sm text-gray-600">
+								Menampilkan <span className="font-semibold text-gray-900">{(currentPage - 1) * itemsPerPage + 1}</span> - <span className="font-semibold text-gray-900">{Math.min(currentPage * itemsPerPage, totalData)}</span> dari <span className="font-semibold text-gray-900">{totalData}</span> data
+							</div>
+
+							{/* Pagination Controls */}
+							<div className="flex items-center gap-2">
+								{/* Previous Button */}
+								<button
+									onClick={() => setCurrentPage(1)}
+									disabled={currentPage === 1}
+									className="px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+									title="Halaman Pertama"
+								>
+									First
+								</button>
 								<button
 									onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
 									disabled={currentPage === 1}
-									className="p-2 rounded-lg bg-white border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+									className="p-2 rounded-lg bg-white border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+									title="Halaman Sebelumnya"
 								>
-									<LuChevronLeft className="w-5 h-5" />
+									<LuChevronLeft className="w-5 h-5 text-gray-700" />
 								</button>
 
-								<span className="px-4 py-2 text-sm text-gray-700">
-									Halaman {currentPage} dari {totalPages}
-								</span>
+								{/* Page Numbers */}
+								<div className="flex items-center gap-1">
+									{(() => {
+										const pageNumbers = [];
+										const maxVisible = 5;
+										let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+										let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+										
+										if (endPage - startPage + 1 < maxVisible) {
+											startPage = Math.max(1, endPage - maxVisible + 1);
+										}
 
+										for (let i = startPage; i <= endPage; i++) {
+											pageNumbers.push(
+												<button
+													key={i}
+													onClick={() => setCurrentPage(i)}
+													className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+														i === currentPage
+															? 'bg-gradient-to-r from-teal-600 to-cyan-600 text-white shadow-md'
+															: 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+													}`}
+												>
+													{i}
+												</button>
+											);
+										}
+										return pageNumbers;
+									})()}
+								</div>
+
+								{/* Next Button */}
 								<button
 									onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
 									disabled={currentPage === totalPages}
-									className="p-2 rounded-lg bg-white border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+									className="p-2 rounded-lg bg-white border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+									title="Halaman Selanjutnya"
 								>
-									<LuChevronRight className="w-5 h-5" />
+									<LuChevronRight className="w-5 h-5 text-gray-700" />
+								</button>
+								<button
+									onClick={() => setCurrentPage(totalPages)}
+									disabled={currentPage === totalPages}
+									className="px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+									title="Halaman Terakhir"
+								>
+									Last
 								</button>
 							</div>
-						)}
-					</>
+						</div>
+					</div>
 				)}
 			</div>
 
 			{/* Add Modal */}
 			{showAddModal && (
 				<JadwalKegiatanModal
-					show={showAddModal}
-					onClose={() => setShowAddModal(false)}
+					isOpen={showAddModal}
+					onClose={() => {
+						setShowAddModal(false);
+						resetFormData();
+					}}
 					onSubmit={handleCreate}
+					formData={formData}
+					onChange={handleFormChange}
 					bidangList={bidangList}
+					isEdit={false}
 				/>
 			)}
 
 			{/* Edit Modal */}
 			{showEditModal && selectedJadwal && (
 				<JadwalKegiatanModal
-					show={showEditModal}
+					isOpen={showEditModal}
 					onClose={() => {
 						setShowEditModal(false);
 						setSelectedJadwal(null);
+						resetFormData();
 					}}
-					onSubmit={(data) => handleUpdate(selectedJadwal.id, data)}
-					initialData={selectedJadwal}
+					onSubmit={handleUpdate}
+					formData={formData}
+					onChange={handleFormChange}
 					bidangList={bidangList}
-					isEdit
+					isEdit={true}
 				/>
+			)}
+
+			{/* Detail Modal */}
+			{showDetailModal && selectedJadwal && (
+				<div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+					<div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+						{/* Header */}
+						<div className="bg-gradient-to-r from-teal-600 to-cyan-600 p-6 rounded-t-2xl">
+							<div className="flex items-start justify-between">
+								<div className="flex-1">
+									<h2 className="text-2xl font-bold text-white mb-2">Detail Jadwal Kegiatan</h2>
+									<p className="text-teal-100 text-sm">Informasi lengkap jadwal kegiatan</p>
+								</div>
+								<button
+									onClick={() => {
+										setShowDetailModal(false);
+										setSelectedJadwal(null);
+									}}
+									className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+								>
+									<LuX className="w-6 h-6 text-white" />
+								</button>
+							</div>
+						</div>
+
+						{/* Content */}
+						<div className="p-6 space-y-6">
+							{/* Title Section */}
+							<div>
+								<h3 className="text-xl font-bold text-gray-900">{selectedJadwal.judul}</h3>
+							</div>
+
+							{/* Details Grid */}
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+								{/* Tanggal Mulai */}
+								<div className="bg-teal-50 p-4 rounded-xl">
+									<div className="flex items-center gap-3">
+										<div className="p-2 bg-teal-100 rounded-lg">
+											<LuCalendar className="w-5 h-5 text-teal-600" />
+										</div>
+										<div>
+											<p className="text-xs text-gray-600 font-medium">Tanggal Mulai</p>
+											<p className="text-sm font-bold text-gray-900">{formatDate(selectedJadwal.tanggal_mulai)}</p>
+										</div>
+									</div>
+								</div>
+
+								{/* Tanggal Selesai */}
+								<div className="bg-cyan-50 p-4 rounded-xl">
+									<div className="flex items-center gap-3">
+										<div className="p-2 bg-cyan-100 rounded-lg">
+											<LuCalendar className="w-5 h-5 text-cyan-600" />
+										</div>
+										<div>
+											<p className="text-xs text-gray-600 font-medium">Tanggal Selesai</p>
+											<p className="text-sm font-bold text-gray-900">{formatDate(selectedJadwal.tanggal_selesai)}</p>
+										</div>
+									</div>
+								</div>
+
+								{/* Lokasi */}
+								<div className="bg-red-50 p-4 rounded-xl">
+									<div className="flex items-center gap-3">
+										<div className="p-2 bg-red-100 rounded-lg">
+											<LuMapPin className="w-5 h-5 text-red-600" />
+										</div>
+										<div>
+											<p className="text-xs text-gray-600 font-medium">Lokasi</p>
+											<p className="text-sm font-bold text-gray-900">{selectedJadwal.lokasi || '-'}</p>
+										</div>
+									</div>
+								</div>
+
+								{/* Bidang */}
+								<div className="bg-purple-50 p-4 rounded-xl">
+									<div className="flex items-center gap-3">
+										<div className="p-2 bg-purple-100 rounded-lg">
+											<LuUser className="w-5 h-5 text-purple-600" />
+										</div>
+										<div>
+											<p className="text-xs text-gray-600 font-medium">Bidang</p>
+											<p className="text-sm font-bold text-gray-900">{selectedJadwal.bidang_nama || '-'}</p>
+										</div>
+									</div>
+								</div>
+							</div>
+
+							{/* Asal Kegiatan */}
+							{selectedJadwal.asal_kegiatan && selectedJadwal.asal_kegiatan !== '-' && (
+								<div className="bg-gray-50 p-4 rounded-xl">
+									<p className="text-xs text-gray-600 font-medium mb-2">Asal Kegiatan</p>
+									<p className="text-sm text-gray-900">{selectedJadwal.asal_kegiatan}</p>
+								</div>
+							)}
+
+							{/* Deskripsi */}
+							{selectedJadwal.deskripsi && selectedJadwal.deskripsi !== '-' && (
+								<div className="bg-gray-50 p-4 rounded-xl">
+									<p className="text-xs text-gray-600 font-medium mb-2">Deskripsi</p>
+									<p className="text-sm text-gray-900 whitespace-pre-wrap">{selectedJadwal.deskripsi}</p>
+								</div>
+							)}
+
+							{/* Kategori */}
+							<div className="bg-blue-50 p-4 rounded-xl">
+								<p className="text-xs text-gray-600 font-medium mb-2">Kategori</p>
+								<p className="text-sm font-semibold text-blue-900 capitalize">{selectedJadwal.kategori || 'lainnya'}</p>
+							</div>
+						</div>
+
+						{/* Footer */}
+						<div className="bg-gray-50 p-6 rounded-b-2xl flex gap-3 justify-end">
+							<button
+								onClick={() => {
+									setShowDetailModal(false);
+									setSelectedJadwal(null);
+								}}
+								className="px-6 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium"
+							>
+								Tutup
+							</button>
+							{canManageJadwal && (
+								<button
+									onClick={() => {
+										setShowDetailModal(false);
+										handleEdit(selectedJadwal);
+									}}
+									className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all font-medium shadow-md"
+								>
+									Edit Jadwal
+								</button>
+							)}
+						</div>
+					</div>
+				</div>
 			)}
 		</div>
 	);

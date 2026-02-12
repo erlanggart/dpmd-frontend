@@ -1,10 +1,28 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FaBell, FaPaperPlane, FaHistory, FaUsers, FaClock, FaCheckCircle, FaExclamationTriangle, FaPlay } from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom';
 import api from '../../../api';
 import { toast } from 'react-hot-toast';
 
 const KelolaNotifikasiPage = () => {
+	const navigate = useNavigate();
+	
+	// Get user from localStorage
+	const user = JSON.parse(localStorage.getItem('user') || '{}');
+	const SEKRETARIAT_BIDANG_ID = 2;
+	
+	// Check if user has permission (superadmin or sekretariat pegawai)
+	const hasPermission = user?.role === 'superadmin' || user?.bidang_id === SEKRETARIAT_BIDANG_ID;
+	
+	// Redirect if no permission
+	useEffect(() => {
+		if (!hasPermission) {
+			toast.error('Akses ditolak: Hanya Superadmin dan Pegawai Sekretariat yang dapat mengelola notifikasi');
+			navigate('/');
+		}
+	}, [hasPermission, navigate]);
+	
 	const [activeTab, setActiveTab] = useState('send'); // send, history, settings
 	const [loading, setLoading] = useState(false);
 	const [statistics, setStatistics] = useState({

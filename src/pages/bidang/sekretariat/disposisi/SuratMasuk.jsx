@@ -98,7 +98,26 @@ const SuratMasuk = () => {
       }
     } catch (error) {
       console.error('Error submitting surat masuk:', error);
-      Swal.fire('Error', 'Gagal mengirim surat masuk. Silakan coba lagi.', 'error');
+      
+      // Tampilkan pesan error dari server jika ada
+      const serverMessage = error.response?.data?.message;
+      
+      if (serverMessage && serverMessage.toLowerCase().includes('nomor surat')) {
+        // Error spesifik: nomor surat sudah ada
+        Swal.fire({
+          icon: 'warning',
+          title: 'Nomor Surat Sudah Ada',
+          text: serverMessage,
+          confirmButtonText: 'OK'
+        });
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'Gagal',
+          text: serverMessage || 'Gagal mengirim surat masuk. Silakan coba lagi.',
+          confirmButtonText: 'OK'
+        });
+      }
     } finally {
       setLoading(false);
     }

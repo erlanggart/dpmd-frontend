@@ -32,7 +32,7 @@ const DisposisiRouter = () => {
       console.log('[DisposisiRouter] User data:', { role, bidangId, name: userData.name });
       
       if (!role) {
-        navigate('/login');
+        navigate('/');
         return;
       }
 
@@ -40,7 +40,7 @@ const DisposisiRouter = () => {
       setLoading(false);
     } catch (error) {
       console.error('Error checking user role:', error);
-      navigate('/login');
+      navigate('/');
     }
   };
 

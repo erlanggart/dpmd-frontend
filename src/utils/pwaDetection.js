@@ -150,8 +150,9 @@ if (typeof window !== 'undefined') {
     // Prevent Chrome 67 and earlier from automatically showing the prompt
     e.preventDefault();
     
-    // Stash the event so it can be triggered later
+    // Stash the event so it can be triggered later (both keys for compat)
     window.deferredPrompt = e;
+    window.__pwaInstallPrompt = e;
     
     console.log('💾 PWA install prompt available');
     

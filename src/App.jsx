@@ -20,7 +20,7 @@ import {
 	setupPeriodicBackup,
 	syncSessionAcrossTabs 
 } from "./utils/sessionPersistence";
-import { setupPeriodicVersionCheck, forceUpdate } from "./utils/versionCheck";
+import { setupPeriodicVersionCheck, forceUpdate, dismissUpdate } from "./utils/versionCheck";
 import UpdateNotificationModal from "./components/UpdateNotificationModal";
 
 // Halaman utama di-import langsung untuk performa awal yang lebih cepat
@@ -34,9 +34,21 @@ import Spinner from "./components/ui/Spinner";
 
 // HomeRedirect component - smart redirect based on user state and navigation context
 function HomeRedirect() {
-	const { user } = useAuth();
+	const { user, isCheckingSession } = useAuth();
 	const location = useLocation();
 	const token = localStorage.getItem('expressToken');
+	
+	// Wait for session restore before deciding
+	if (isCheckingSession) {
+		return (
+			<div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800">
+				<div className="text-center">
+					<div className="animate-spin rounded-full h-12 w-12 border-4 border-white/30 border-t-white mx-auto mb-4"></div>
+					<p className="text-white/80 text-sm font-medium">Memuat...</p>
+				</div>
+			</div>
+		);
+	}
 	
 	// Not logged in, always show landing page
 	if (!token || !user) {
@@ -62,7 +74,9 @@ function HomeRedirect() {
 			'ketua_tim': '/ketua-tim/dashboard',
 			'pegawai': '/pegawai/dashboard',
 			'desa': '/desa/dashboard',
-			'kecamatan': '/kecamatan/dashboard'
+			'kecamatan': '/kecamatan/dashboard',
+			'dinas_terkait': '/dinas/dashboard',
+			'verifikator_dinas': '/dinas/dashboard'
 		};
 		
 		const dashboardPath = roleDashboardMap[user.role] || '/dashboard';
@@ -101,10 +115,11 @@ const MusdesusMonitoringPage = lazy(() =>
 // Bidang apps
 const BumdesApp = lazy(() => import("./pages/bidang/spked/bumdes"));
 const Kelembagaan = lazy(() => import("./pages/bidang/pmd/Kelembagaan"));
-const PerjalananDinas = lazy(() => import("./pages/bidang/sekretariat/perjadin"));
 const DisposisiRouter = lazy(() => import("./pages/bidang/sekretariat/disposisi/DisposisiRouter"));
 const JadwalKegiatanPage = lazy(() => import("./pages/bidang/sekretariat/JadwalKegiatanPage"));
 const KelolaNotifikasiPage = lazy(() => import("./pages/bidang/sekretariat/KelolaNotifikasiPage"));
+const PerjadinMain = lazy(() => import("./pages/pegawai/perjadin/PerjadinMain"));
+const PerjadinDetail = lazy(() => import("./pages/pegawai/perjadin/PerjadinDetail"));
 const DesaLayout = lazy(() => import("./layouts/DesaLayout"));
 const DesaDashboard = lazy(() => import("./pages/desa/DesaDashboardPage"));
 const BumdesDesaPage = lazy(() =>
@@ -169,8 +184,8 @@ const ProfilDesaPage = lazy(() =>
 	import("./pages/desa/ProfilDesaPage")
 );
 const DesaSettings = lazy(() => import("./pages/desa/DesaSettings"));
-const BankeuProposalPage = lazy(() =>
-	import("./pages/desa/bankeu/BankeuProposalPage")
+const DesaBankeuPage = lazy(() =>
+	import("./pages/desa/bankeu/DesaBankeuPage")
 );
 const KepalaDinasLayout = lazy(() =>
 	import("./pages/kepala-dinas/KepalaDinasLayout")
@@ -205,11 +220,44 @@ const KecamatanDashboardPage = lazy(() =>
 const KecamatanLayout = lazy(() =>
 	import("./layouts/KecamatanLayout")
 );
+const DinasLayout = lazy(() =>
+	import("./layouts/DinasLayout")
+);
+const KecamatanBankeuPage = lazy(() =>
+	import("./pages/kecamatan/bankeu/KecamatanBankeuPage")
+);
 const BankeuVerificationPage = lazy(() =>
 	import("./pages/kecamatan/bankeu/BankeuVerificationPage")
 );
 const BankeuVerificationDetailPage = lazy(() =>
 	import("./pages/kecamatan/bankeu/BankeuVerificationDetailPage")
+);
+const KecamatanTimVerifikasiPage = lazy(() =>
+	import("./pages/kecamatan/bankeu/KecamatanTimVerifikasiPage")
+);
+const KecamatanSettings = lazy(() =>
+	import("./pages/kecamatan/KecamatanSettings")
+);
+const DinasBankeuPage = lazy(() =>
+	import("./pages/dinas/DinasBankeuPage")
+);
+const DinasVerificationPage = lazy(() =>
+	import("./pages/dinas/DinasVerificationPage")
+);
+const DinasVerificationDetailPage = lazy(() =>
+	import("./pages/dinas/DinasVerificationDetailPage")
+);
+const DinasConfigPage = lazy(() =>
+	import("./pages/dinas/DinasConfigPage")
+);
+const DinasVerifikatorPage = lazy(() =>
+	import("./pages/dinas/DinasVerifikatorPage")
+);
+const VerifikatorProfilePage = lazy(() =>
+	import("./pages/dinas/VerifikatorProfilePage")
+);
+const DinasDashboardPage = lazy(() =>
+	import("./pages/dinas/DinasDashboardPage")
 );
 const CoreDashboardLayout = lazy(() =>
 	import("./layouts/CoreDashboardLayout")
@@ -238,9 +286,6 @@ const LaporanDesa = lazy(() =>
 const StatistikBumdes = lazy(() =>
 	import("./pages/kepala-dinas/StatistikBumdes")
 );
-const StatistikPerjadin = lazy(() =>
-	import("./pages/kepala-dinas/StatistikPerjadin")
-);
 const StatistikKelembagaan = lazy(() =>
 	import("./pages/core-dashboard/StatistikKelembagaan")
 );
@@ -259,6 +304,9 @@ const BankeuDashboard = lazy(() =>
 );
 const StatistikBankeuDashboard = lazy(() =>
 	import("./pages/kepala-dinas/StatistikBankeuDashboard")
+);
+const StatistikPerjadinDashboard = lazy(() =>
+	import("./pages/kepala-dinas/StatistikPerjadinDashboard")
 );
 const AddDashboard = lazy(() =>
 	import("./pages/bidang/kkd/add/AddDashboard")
@@ -309,37 +357,49 @@ const ManageRolesPage = lazy(() =>
 
 const ProtectedRoute = ({ children }) => {
 	const token = localStorage.getItem("expressToken");
+	const { isCheckingSession } = useAuth();
 	const location = useLocation();
+
+	// CRITICAL: Wait for session restore (IndexedDB) before deciding to redirect
+	if (isCheckingSession) {
+		return (
+			<div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800">
+				<div className="text-center">
+					<div className="animate-spin rounded-full h-12 w-12 border-4 border-white/30 border-t-white mx-auto mb-4"></div>
+					<p className="text-white/80 text-sm font-medium">Memuat...</p>
+				</div>
+			</div>
+		);
+	}
 
 	if (!token) {
 		// Simpan lokasi yang dituju agar bisa redirect kembali setelah login
-		return <Navigate to="/login" state={{ from: location }} replace />;
-	}
-
-	// Allow VPN access token to bypass normal auth
-	if (token === 'VPN_ACCESS_TOKEN') {
-		return children;
+		return <Navigate to="/" state={{ from: location }} replace />;
 	}
 
 	return children;
 };
 
 const RoleProtectedRoute = ({ children, allowedRoles }) => {
-	const token = localStorage.getItem("expressToken");
 	const { user, isCheckingSession } = useAuth();
 	const location = useLocation();
 
-	if (!token) {
-		return <Navigate to="/login" state={{ from: location }} replace />;
-	}
-
-	// Wait for session check to complete before checking roles
+	// CRITICAL: Wait for session restore (IndexedDB) before deciding to redirect
 	if (isCheckingSession) {
 		return (
-			<div className="flex items-center justify-center min-h-screen">
-				<Spinner size="lg" />
+			<div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800">
+				<div className="text-center">
+					<div className="animate-spin rounded-full h-12 w-12 border-4 border-white/30 border-t-white mx-auto mb-4"></div>
+					<p className="text-white/80 text-sm font-medium">Memuat...</p>
+				</div>
 			</div>
 		);
+	}
+
+	const token = localStorage.getItem("expressToken");
+
+	if (!token) {
+		return <Navigate to="/" state={{ from: location }} replace />;
 	}
 
 	// Check if user role is allowed
@@ -388,56 +448,42 @@ const ThemeColorWrapper = ({ children }) => {
 					if (event.data && event.data.type === 'PUSH_NOTIFICATION_RECEIVED') {
 						const notifData = event.data.payload;
 						
-						// Play notification sound - ALWAYS play regardless of message flag
-						try {
-						const audio = new Audio('/dpmd.mp3');
-							audio.volume = 1.0; // Full volume
-							const playPromise = audio.play();
-							if (playPromise !== undefined) {
-								playPromise
-									.then(() => {
-										console.log('🔊 Notification sound played successfully');
-									})
-									.catch(err => {
-										console.warn('⚠️ Could not play notification sound:', err.message);
-									});
-							}
-						} catch (err) {
-							console.error('❌ Error creating audio:', err);
-						}
-						
-					// Show toast ONLY if app is visible (foreground)
-					// Browser notification already shown by service worker for background
-					if (document.visibilityState === 'visible') {
-						toast.success(
-							<div className="flex flex-col gap-1">
-								<div className="font-bold">{notifData.title || 'Notifikasi Baru'}</div>
-								<div className="text-sm">{notifData.body || 'Anda memiliki notifikasi baru'}</div>
-							</div>,
-							{
-								duration: 6000,
-								icon: '🔔',
-								style: {
-									background: '#1e40af',
-									color: '#fff',
-									maxWidth: '450px',
-									padding: '16px'
-								}
-							}
-						);
-					}
+						// Sound and toast notifications disabled - browser notification already shown by service worker
 					
-					// Auto-reload current page setelah 2 detik (beri waktu user lihat toast)
-					setTimeout(() => {
-						window.location.reload();
-					}, 2000);
+					// Trigger notification event for layouts to refresh notification count
+					window.dispatchEvent(new CustomEvent('newNotification', { detail: notifData }));
 				}
 					
 					// Handle notification click navigation
 					if (event.data && event.data.type === 'NOTIFICATION_CLICK_NAVIGATE') {
-						const { url } = event.data;
+						const { url, notificationData } = event.data;
+						const notifType = notificationData?.type || '';
 						
-						if (url) {
+						// Smart routing based on notification type and user role
+						if (notifType.includes('disposisi') || notifType === 'new_disposisi' || notifType === 'disposisi_update') {
+							// Get user role from localStorage to determine correct disposisi route
+							const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+							const userRole = storedUser.role || '';
+							
+							const roleRouteMap = {
+								'kepala_dinas': '/kepala-dinas/disposisi',
+								'sekretaris_dinas': '/sekretaris-dinas/disposisi',
+								'kepala_bidang': '/kepala-bidang/disposisi',
+								'ketua_tim': '/ketua-tim/disposisi',
+								'pegawai': '/pegawai/disposisi',
+								'superadmin': '/kepala-dinas/disposisi',
+							};
+							
+							let targetUrl = roleRouteMap[userRole] || '/pegawai/disposisi';
+							
+							// If notification has a specific disposisi ID, navigate to detail
+							if (notificationData?.disposisi_id) {
+								targetUrl = `${targetUrl}/${notificationData.disposisi_id}`;
+							}
+							
+							console.log(`[App] Navigating to disposisi: ${targetUrl} (role: ${userRole})`);
+							window.location.href = targetUrl;
+						} else if (url && url !== '/') {
 							window.location.href = url;
 						}
 					}
@@ -547,8 +593,9 @@ function App() {
 	};
 
 	const handleDismissUpdate = () => {
-		// User dismissed update
+		// User dismissed update - don't re-show for 24 hours
 		setShowUpdateModal(false);
+		dismissUpdate();
 	};
 
 	return (
@@ -593,7 +640,7 @@ function App() {
 						<Route path="aparatur-desa/:id/edit" element={<AparaturDesaEditPage />} />
 						<Route path="produk-hukum" element={<ProdukHukum />} />
 						<Route path="produk-hukum/:id" element={<ProdukHukumDetail />} />
-						<Route path="bankeu" element={<BankeuProposalPage />} />
+						<Route path="bankeu" element={<DesaBankeuPage />} />
 						<Route path="settings" element={<DesaSettings />} />
 					</Route>
 
@@ -610,6 +657,8 @@ function App() {
 						<Route path="dashboard" element={<PegawaiDashboard />} />				<Route path="profile" element={<ProfilePage />} />						<Route path="disposisi" element={<DisposisiSurat />} />
 						<Route path="disposisi/:id" element={<DisposisiDetail />} />
 						<Route path="jadwal-kegiatan" element={<JadwalKegiatanPage />} />
+						<Route path="perjadin" element={<PerjadinMain />} />
+							<Route path="perjadin/detail/:id" element={<PerjadinDetail />} />
 					</Route>
 
 					{/* Rute Bidang - Accessible by pegawai/kepala_bidang/ketua_tim (their own bidang) & kepala_dinas/superadmin (all) */}
@@ -679,11 +728,12 @@ function App() {
 							</RoleProtectedRoute>
 						}
 					>
-						<Route path="perjadin" element={<PerjalananDinas />} />
 						<Route path="disposisi" element={<DisposisiRouter />} />
 						<Route path="disposisi/:id" element={<DisposisiDetail />} />
 						<Route path="pegawai" element={<UserManagementPage />} />
 						<Route path="jadwal-kegiatan" element={<JadwalKegiatanPage />} />
+						<Route path="perjadin" element={<PerjadinMain />} />
+							<Route path="perjadin/detail/:id" element={<PerjadinDetail />} />
 						<Route path="notifikasi" element={<KelolaNotifikasiPage />} />
 					</Route>
 
@@ -737,25 +787,47 @@ function App() {
 				>
 					<Route index element={<Navigate to="dashboard" replace />} />
 					<Route path="dashboard" element={<KecamatanDashboardPage />} />
-					<Route path="bankeu" element={<BankeuVerificationPage />} />
+					<Route path="bankeu" element={<KecamatanBankeuPage />} />
 					<Route path="bankeu/verifikasi/:desaId" element={<BankeuVerificationDetailPage />} />
+					<Route path="bankeu/tim-verifikasi/:desaId" element={<KecamatanTimVerifikasiPage />} />
+					<Route path="settings" element={<KecamatanSettings />} />
 				</Route>
 
-					{/* Rute Kepala Dinas - Exclusive untuk Kepala Dinas */}
-					<Route
-						path="/kepala-dinas"
-						element={
-							<RoleProtectedRoute allowedRoles={['superadmin', 'kepala_dinas']}>
-								<KepalaDinasLayout />
-							</RoleProtectedRoute>
-						}
-					>
-						<Route index element={<Navigate to="dashboard" replace />} />
-						<Route path="dashboard" element={<KepalaDinasDashboard />} />				<Route path="profile" element={<ProfilePage />} />						<Route path="disposisi" element={<DisposisiSurat />} />
-						<Route path="disposisi/:id" element={<DisposisiDetail />} />
-						<Route path="jadwal-kegiatan" element={<JadwalKegiatanPage />} />
-					</Route>
+				{/* Rute Dinas Terkait - Untuk verifikasi teknis */}
+				<Route
+					path="/dinas"
+					element={
+						<RoleProtectedRoute allowedRoles={['dinas_terkait', 'verifikator_dinas']}>
+							<DinasLayout />
+						</RoleProtectedRoute>
+					}
+				>
+				<Route index element={<Navigate to="dashboard" replace />} />
+				<Route path="dashboard" element={<DinasDashboardPage />} />
+				<Route path="bankeu" element={<DinasBankeuPage />} />
+				<Route path="bankeu/verifikasi/:proposalId" element={<DinasVerificationDetailPage />} />
+				<Route path="konfigurasi" element={<DinasConfigPage />} />
+				<Route path="verifikator" element={<DinasVerifikatorPage />} />
+				<Route path="profil" element={<VerifikatorProfilePage />} />
+			</Route>
 
+				{/* Rute Kepala Dinas - Exclusive untuk Kepala Dinas */}
+				<Route
+					path="/kepala-dinas"
+					element={
+						<RoleProtectedRoute allowedRoles={['superadmin', 'kepala_dinas']}>						<KepalaDinasLayout />
+					</RoleProtectedRoute>
+				}
+			>
+				<Route index element={<Navigate to="dashboard" replace />} />
+				<Route path="dashboard" element={<KepalaDinasDashboard />} />
+				<Route path="profile" element={<ProfilePage />} />
+				<Route path="disposisi" element={<DisposisiSurat />} />
+				<Route path="disposisi/:id" element={<DisposisiDetail />} />
+				<Route path="jadwal-kegiatan" element={<JadwalKegiatanPage />} />
+				<Route path="perjadin" element={<PerjadinMain />} />
+				<Route path="perjadin/detail/:id" element={<PerjadinDetail />} />
+			</Route>
 					{/* Rute Kepala Bidang - Exclusive untuk Kepala Bidang */}
 					<Route
 						path="/kepala-bidang"
@@ -784,6 +856,8 @@ function App() {
 						<Route path="dashboard" element={<SekretarisDinasDashboard />} />				<Route path="profile" element={<ProfilePage />} />						<Route path="disposisi" element={<DisposisiSurat />} />
 						<Route path="disposisi/:id" element={<DisposisiDetail />} />
 						<Route path="jadwal-kegiatan" element={<JadwalKegiatanPage />} />
+						<Route path="perjadin" element={<PerjadinMain />} />
+							<Route path="perjadin/detail/:id" element={<PerjadinDetail />} />
 					</Route>
 
 					{/* Rute Core Dashboard - DPMD Internal Only */}
@@ -801,9 +875,9 @@ function App() {
 					<Route path="dashboard" element={<WelcomeDashboard />} />
 					<Route path="laporan-desa" element={<LaporanDesa />} />
 					<Route path="statistik-bumdes" element={<StatistikBumdes />} />
-					<Route path="statistik-perjadin" element={<StatistikPerjadin />} />
 					<Route path="statistik-kelembagaan" element={<StatistikKelembagaan />} />
 					<Route path="statistik-bankeu" element={<StatistikBankeuDashboard />} />
+					<Route path="statistik-perjadin" element={<StatistikPerjadinDashboard />} />
 					<Route path="statistik-add" element={<StatistikAddDashboard />} />
 					<Route path="statistik-bhprd" element={<BhprdDashboard />} />
 					{/* BHPRD Submenu Routes */}

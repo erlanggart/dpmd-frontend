@@ -45,11 +45,11 @@ const CoreDashboardLayout = () => {
     };
   }, []);
 
-  const handleLogout = useCallback(() => {
-    localStorage.removeItem('expressToken');
-    localStorage.removeItem('user');
-    navigate('/login');
-  }, [navigate]);
+  const handleLogout = useCallback(async () => {
+    const { performFullLogout } = await import('../utils/sessionPersistence');
+    await performFullLogout();
+    window.location.href = '/';
+  }, []);
 
   const toggleSidebar = useCallback(() => {
     setSidebarOpen(prev => !prev);
@@ -167,17 +167,13 @@ const CoreDashboardLayout = () => {
 
         {/* Sidebar Header */}
         <div className="relative p-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0 bg-gradient-to-r from-blue-50 to-purple-50">
-          {sidebarOpen && (
-            <div className="flex items-center gap-3 overflow-hidden">
-              <div className="p-2.5 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl flex-shrink-0 shadow-lg">
-                <LayoutDashboard className="w-5 h-5 text-white" />
-              </div>
-              <div className="min-w-0">
-                <h2 className="font-bold text-gray-800 truncate text-sm">Core Dashboard</h2>
-                <p className="text-xs text-blue-600 truncate font-medium">DPMD Analytics</p>
-              </div>
-            </div>
-          )}
+          <div className="flex items-center justify-center flex-1">
+            <img 
+              src="/logo-dpmd.png" 
+              alt="DPMD Logo" 
+              className={`transition-all duration-300 ${sidebarOpen ? "h-20" : "h-14"}`}
+            />
+          </div>
           <button
             onClick={toggleSidebar}
             className="p-2 bg-blue-100 hover:bg-blue-200 rounded-lg transition-all duration-200 flex-shrink-0 group"

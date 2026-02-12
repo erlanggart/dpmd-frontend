@@ -23,6 +23,8 @@ import { Landmark } from "lucide-react";
 import SearchPalette from "../components/SearchPalatte";
 import InstallPWA from "../components/InstallPWA";
 
+import { performFullLogout } from "../utils/sessionPersistence";
+
 const MainLayout = () => {
 	const [user, setUser] = useState(null);
 	const navigate = useNavigate();
@@ -66,10 +68,9 @@ const MainLayout = () => {
 		}
 	}, []);
 
-	const handleLogout = () => {
-		localStorage.removeItem("expressToken");
-		localStorage.removeItem("user");
-		navigate("/login");
+	const handleLogout = async () => {
+		await performFullLogout();
+		window.location.href = "/";
 	};
 
 	// Definisikan menu berdasarkan role user menggunakan useMemo
@@ -145,21 +146,15 @@ const MainLayout = () => {
 					isSidebarOpen ? "translate-x-0" : "-translate-x-full"
 				} ${isSidebarMinimized ? "w-24" : "w-72"}`}
 			>
-				<div className="flex h-16 flex-shrink-0 items-center justify-between border-b border-slate-200 transition-all duration-300">
+				<div className="flex h-16 flex-shrink-0 items-center justify-between border-b border-slate-200 transition-all duration-300 bg-gradient-to-r from-blue-50 to-purple-50">
 					<div className="flex items-center overflow-hidden px-4">
 						<img
-							src="/logo-bogor.png"
-							alt="Logo"
-							className="h-10 flex-shrink-0"
-						/>
-						<div
-							className={`transition-all duration-300 whitespace-nowrap ${
-								isSidebarMinimized ? "w-0 opacity-0" : "w-full opacity-100 ml-3"
+							src="/logo-dpmd.png"
+							alt="DPMD Logo"
+							className={`transition-all duration-300 flex-shrink-0 ${
+								isSidebarMinimized ? "h-14" : "h-20"
 							}`}
-						>
-							<p className="text-sm font-bold text-primary">DPMD</p>
-							<p className="text-xs text-gray-500">Kabupaten Bogor</p>
-						</div>
+						/>
 					</div>
 					
 					{/* Toggle Sidebar Button - Desktop only */}

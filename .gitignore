@@ -17,8 +17,7 @@ dist-ssr
 .env.local
 .env.development
 .env.test
-# Keep .env.production for production deployment
-!.env.production
+.env.production
 # Keep these for reference
 !.env.example
 
@@ -42,5 +41,13 @@ dist-ssr
 *_SUMMARY.md
 *_FIX.md
 *_UPDATE.md
+*_IMPLEMENTATION.md
+*_ANALYSIS.md
+*_TROUBLESHOOTING.md
 DISPOSISI_REDESIGN.md
 REFACTORING_SUMMARY.md
+SETUP_*.md
+
+# Deployment scripts
+deploy-*.ps1
+deploy-*.sh

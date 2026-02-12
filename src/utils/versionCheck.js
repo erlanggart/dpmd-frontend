@@ -3,7 +3,9 @@
 
 const VERSION_KEY = 'app_version';
 const LAST_UPDATE_KEY = 'app_last_update';
+const DISMISS_KEY = 'app_update_dismissed';
 const VERSION_CHECK_INTERVAL = 60 * 60 * 1000; // Check every 60 minutes (reduced from 30)
+const DISMISS_DURATION = 24 * 60 * 60 * 1000; // Don't re-show for 24 hours after dismiss
 
 /**
  * Get current app version from package.json (injected at build time)
@@ -113,11 +115,31 @@ export const forceUpdate = async () => {
 };
 
 /**
- * Check for updates from server
- * Fetches version.json from server to compare
+ * Dismiss the update notification for DISMISS_DURATION
  */
+export const dismissUpdate = () => {
+  localStorage.setItem(DISMISS_KEY, Date.now().toString());
+  console.log('[Version] Update dismissed for 24 hours');
+};
+
+/**
+ * Check if update was recently dismissed
+ */
+const isDismissed = () => {
+  const dismissedAt = localStorage.getItem(DISMISS_KEY);
+  if (!dismissedAt) return false;
+  const elapsed = Date.now() - parseInt(dismissedAt, 10);
+  return elapsed < DISMISS_DURATION;
+};
+
 export const checkForServerUpdate = async () => {
   try {
+    // Don't check if recently dismissed
+    if (isDismissed()) {
+      console.log('[Version] Update was dismissed, skipping check');
+      return false;
+    }
+
     // Don't check if just updated
     const lastUpdateTime = getLastUpdateTime();
     if (lastUpdateTime) {
@@ -126,6 +148,14 @@ export const checkForServerUpdate = async () => {
         console.log('[Version] Just updated, skipping server check');
         return false;
       }
+    }
+
+    // Initialize storedVersion if never set (prevents null mismatch)
+    const currentVersion = getCurrentVersion();
+    if (!getStoredVersion()) {
+      storeVersion(currentVersion);
+      console.log('[Version] Initialized stored version on first visit');
+      return false;
     }
     
     // Fetch version.json with cache-busting
@@ -157,7 +187,6 @@ export const checkForServerUpdate = async () => {
       return false;
     }
     
-    const currentVersion = getCurrentVersion();
     const storedVersion = getStoredVersion();
     
     console.log('[Version] Server version:', serverVersion);

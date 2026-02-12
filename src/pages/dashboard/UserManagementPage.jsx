@@ -18,7 +18,10 @@ import {
 	LuBriefcase,
 	LuChevronLeft,
 	LuChevronRight,
+	LuDownload,
+	LuFileSpreadsheet,
 } from "react-icons/lu";
+import * as XLSX from 'xlsx';
 import api from "../../api";
 import AddUserModal from "../../components/AddUserModal";
 import ResetPasswordModal from "../../components/ResetPasswordModal";
@@ -42,8 +45,10 @@ const UserManagementPage = () => {
 	// Filters
 	const [searchTerm, setSearchTerm] = useState("");
 	const [filterBidang, setFilterBidang] = useState("all"); // Filter bidang untuk tab Pegawai DPMD
+	const [filterDinas, setFilterDinas] = useState("all"); // Filter dinas untuk tab Dinas Terkait
 	const [activeTab, setActiveTab] = useState("superadmin"); // Tab aktif
 	const [bidangList, setBidangList] = useState([]); // List bidang untuk dropdown
+	const [dinasList, setDinasList] = useState([]); // List dinas untuk dropdown
 
 	// Pagination
 	const [currentPage, setCurrentPage] = useState(1);
@@ -66,6 +71,7 @@ const UserManagementPage = () => {
 		},
 		{ id: "desa", label: "Admin Desa", role: "desa", icon: LuHouse, color: "emerald" },
 		{ id: "kecamatan", label: "Admin Kecamatan", role: "kecamatan", icon: LuMapPin, color: "violet" },
+		{ id: "dinas_terkait", label: "Dinas Terkait", role: "dinas_terkait", icon: LuBuilding2, color: "amber" },
 	];
 
 	// Fetch users
@@ -96,10 +102,21 @@ const UserManagementPage = () => {
 		}
 	}, []);
 
+	// Fetch dinas list
+	const fetchDinasList = useCallback(async () => {
+		try {
+			const response = await api.get("/dinas/list");
+			setDinasList(response.data.data || []);
+		} catch (err) {
+			console.error("Error fetching dinas:", err);
+		}
+	}, []);
+
 	useEffect(() => {
 		fetchUsers();
 		fetchBidangList();
-	}, [fetchUsers, fetchBidangList]);
+		fetchDinasList();
+	}, [fetchUsers, fetchBidangList, fetchDinasList]);
 
 	// Handle user added
 	const handleUserAdded = () => {
@@ -221,6 +238,7 @@ const UserManagementPage = () => {
 			pemerintahan_desa: { label: "Pemerintahan Desa", color: "bg-indigo-100 text-indigo-700 border-indigo-200" },
 			desa: { label: "Admin Desa", color: "bg-emerald-100 text-emerald-700 border-emerald-200" },
 			kecamatan: { label: "Admin Kecamatan", color: "bg-violet-100 text-violet-700 border-violet-200" },
+			dinas_terkait: { label: "Dinas Terkait", color: "bg-amber-100 text-amber-700 border-amber-200" },
 		};
 		return roleMap[role] || { label: role, color: "bg-gray-100 text-gray-700 border-gray-200" };
 	};
@@ -263,9 +281,15 @@ const UserManagementPage = () => {
 				filterBidang === "all" ||
 				user.bidang_id === parseInt(filterBidang);
 
-			return matchTab && matchSearch && matchBidang;
+			// Filter berdasarkan dinas (hanya untuk tab Dinas Terkait)
+			const matchDinas = 
+				activeTab !== "dinas_terkait" ||
+				filterDinas === "all" ||
+				user.dinas_id === parseInt(filterDinas);
+
+			return matchTab && matchSearch && matchBidang && matchDinas;
 		});
-	}, [users, searchTerm, activeTab, filterBidang, tabs]);
+	}, [users, searchTerm, activeTab, filterBidang, filterDinas, tabs]);
 
 	// Pagination calculations
 	const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
@@ -276,7 +300,124 @@ const UserManagementPage = () => {
 	// Reset to page 1 when filters change
 	useEffect(() => {
 		setCurrentPage(1);
-	}, [searchTerm, activeTab, filterBidang]);
+	}, [searchTerm, activeTab, filterBidang, filterDinas]);
+
+	// Export users to Excel
+	const handleExportUsers = (exportType = 'current') => {
+		let dataToExport = [];
+		let sheetName = '';
+		let fileName = '';
+
+		const activeTabConfig = tabs.find(t => t.id === activeTab);
+		const today = new Date().toISOString().split('T')[0];
+
+		if (exportType === 'current') {
+			// Export tab yang sedang aktif
+			dataToExport = filteredUsers;
+			sheetName = activeTabConfig?.label || 'Users';
+			fileName = `User_${sheetName.replace(/\s+/g, '_')}_${today}.xlsx`;
+		} else if (exportType === 'all') {
+			// Export semua user ke multiple sheets
+			const wb = XLSX.utils.book_new();
+
+			tabs.forEach(tab => {
+				const tabUsers = users.filter(user => {
+					if (tab.role) return user.role === tab.role;
+					if (tab.roles) return tab.roles.includes(user.role);
+					return false;
+				});
+
+				if (tabUsers.length === 0) return;
+
+				const rows = tabUsers.map((user, idx) => ({
+					'No': idx + 1,
+					'Nama': user.name || '',
+					'Email': user.email || '',
+					'Password': 'password',
+					'Role': getRoleInfo(user.role).label,
+					...(tab.id === 'pegawai' ? { 'Bidang': user.bidang?.nama || '-' } : {}),
+					...(tab.id === 'desa' ? {
+						'Desa': user.desa?.nama || '-',
+						'Kecamatan': user.desa?.kecamatan?.nama || user.kecamatan?.nama || '-',
+					} : {}),
+					...(tab.id === 'kecamatan' ? { 'Kecamatan': user.kecamatan?.nama || '-' } : {}),
+					...(tab.id === 'dinas_terkait' ? { 'Dinas': user.dinas?.nama_dinas || '-' } : {}),
+					'Tanggal Dibuat': user.created_at ? new Date(user.created_at).toLocaleDateString('id-ID') : '-',
+				}));
+
+				const ws = XLSX.utils.json_to_sheet(rows);
+
+				// Auto-width columns
+				const colWidths = Object.keys(rows[0] || {}).map(key => ({
+					wch: Math.max(key.length, ...rows.map(r => String(r[key] || '').length)) + 2
+				}));
+				ws['!cols'] = colWidths;
+
+				XLSX.utils.book_append_sheet(wb, ws, tab.label.substring(0, 31));
+			});
+
+			XLSX.writeFile(wb, `Semua_User_DPMD_${today}.xlsx`);
+			Swal.fire({
+				title: 'Berhasil!',
+				text: 'Data semua user berhasil diekspor ke Excel',
+				icon: 'success',
+				timer: 2000,
+				showConfirmButton: false,
+			});
+			return;
+		}
+
+		// Single sheet export
+		const rows = dataToExport.map((user, idx) => {
+			const row = {
+				'No': idx + 1,
+				'Nama': user.name || '',
+				'Email': user.email || '',
+				'Password': 'password',
+				'Role': getRoleInfo(user.role).label,
+			};
+
+			// Kolom tambahan berdasarkan tab
+			if (activeTab === 'pegawai') {
+				row['Bidang'] = user.bidang?.nama || '-';
+			} else if (activeTab === 'desa') {
+				row['Desa'] = user.desa?.nama || '-';
+				row['Kecamatan'] = user.desa?.kecamatan?.nama || user.kecamatan?.nama || '-';
+			} else if (activeTab === 'kecamatan') {
+				row['Kecamatan'] = user.kecamatan?.nama || '-';
+			} else if (activeTab === 'dinas_terkait') {
+				row['Dinas'] = user.dinas?.nama_dinas || '-';
+			}
+
+			row['Tanggal Dibuat'] = user.created_at ? new Date(user.created_at).toLocaleDateString('id-ID') : '-';
+			return row;
+		});
+
+		const ws = XLSX.utils.json_to_sheet(rows);
+
+		// Auto-width columns
+		if (rows.length > 0) {
+			const colWidths = Object.keys(rows[0]).map(key => ({
+				wch: Math.max(key.length, ...rows.map(r => String(r[key] || '').length)) + 2
+			}));
+			ws['!cols'] = colWidths;
+		}
+
+		const wb = XLSX.utils.book_new();
+		XLSX.utils.book_append_sheet(wb, ws, sheetName.substring(0, 31));
+		XLSX.writeFile(wb, fileName);
+
+		Swal.fire({
+			title: 'Berhasil!',
+			text: `Data ${sheetName} berhasil diekspor ke Excel (${dataToExport.length} user)`,
+			icon: 'success',
+			timer: 2000,
+			showConfirmButton: false,
+		});
+	};
+
+	// State for export dropdown
+	const [showExportMenu, setShowExportMenu] = useState(false);
 
 	// Group by role for stats
 	const statsByRole = useMemo(() => {
@@ -362,6 +503,7 @@ const UserManagementPage = () => {
 									setActiveTab(tab.id);
 									setSearchTerm('');
 									setFilterBidang('all'); // Reset filter bidang
+									setFilterDinas('all'); // Reset filter dinas
 								}}
 								className={`
 									flex items-center gap-2 px-4 py-3 rounded-xl font-medium transition-all
@@ -384,9 +526,9 @@ const UserManagementPage = () => {
 
 			{/* Filters & Actions */}
 			<div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
-				<div className={`grid grid-cols-1 gap-4 ${activeTab === "pegawai" ? "md:grid-cols-3" : "md:grid-cols-1"}`}>
+				<div className={`grid grid-cols-1 gap-4 ${(activeTab === "pegawai" || activeTab === "dinas_terkait") ? "md:grid-cols-3" : "md:grid-cols-1"}`}>
 					{/* Search */}
-					<div className={activeTab === "pegawai" ? "" : "md:col-span-1"}>
+					<div className={(activeTab === "pegawai" || activeTab === "dinas_terkait") ? "" : "md:col-span-1"}>
 						<div className="relative">
 							<LuSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
 							<input
@@ -418,10 +560,81 @@ const UserManagementPage = () => {
 							<LuChevronDown className="absolute right-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
 						</div>
 					)}
+
+					{/* Filter Dinas - Hanya muncul di tab Dinas Terkait */}
+					{activeTab === "dinas_terkait" && (
+						<div className="relative">
+							<LuBuilding2 className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+							<select
+								value={filterDinas}
+								onChange={(e) => setFilterDinas(e.target.value)}
+								className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all appearance-none bg-white"
+							>
+								<option value="all">Semua Dinas</option>
+								{dinasList.map((dinas) => (
+									<option key={dinas.id} value={dinas.id}>
+										{dinas.nama_dinas}
+									</option>
+								))}
+							</select>
+							<LuChevronDown className="absolute right-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+						</div>
+					)}
 				</div>
 
-				{/* Add User Button */}
-				<div className="mt-4 flex justify-end">
+				{/* Add User & Export Buttons */}
+				<div className="mt-4 flex justify-end gap-3">
+					{/* Export Dropdown */}
+					<div className="relative">
+						<button
+							onClick={() => setShowExportMenu(!showExportMenu)}
+							className="flex items-center justify-center gap-2 px-5 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl hover:from-emerald-700 hover:to-teal-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+						>
+							<LuDownload className="h-5 w-5" />
+							<span className="font-semibold">Ekspor</span>
+							<LuChevronDown className={`h-4 w-4 transition-transform ${showExportMenu ? 'rotate-180' : ''}`} />
+						</button>
+
+						{showExportMenu && (
+							<>
+								<div className="fixed inset-0 z-40" onClick={() => setShowExportMenu(false)} />
+								<div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 overflow-hidden">
+									<div className="p-3 bg-gray-50 border-b border-gray-200">
+										<p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Ekspor Data User</p>
+									</div>
+									<div className="p-2">
+										<button
+											onClick={() => {
+												handleExportUsers('current');
+												setShowExportMenu(false);
+											}}
+											className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 rounded-lg transition-colors"
+										>
+											<LuFileSpreadsheet className="h-5 w-5 text-emerald-600" />
+											<div>
+												<p className="font-medium">Ekspor Tab Aktif</p>
+												<p className="text-xs text-gray-500">{tabs.find(t => t.id === activeTab)?.label} ({filteredUsers.length} user)</p>
+											</div>
+										</button>
+										<button
+											onClick={() => {
+												handleExportUsers('all');
+												setShowExportMenu(false);
+											}}
+											className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 rounded-lg transition-colors"
+										>
+											<LuUsers className="h-5 w-5 text-indigo-600" />
+											<div>
+												<p className="font-medium">Ekspor Semua Kategori</p>
+												<p className="text-xs text-gray-500">Semua user ({users.length} user, multi-sheet)</p>
+											</div>
+										</button>
+									</div>
+								</div>
+							</>
+						)}
+					</div>
+
 					<button
 						onClick={() => setShowAddModal(true)}
 						className="flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl"
@@ -449,12 +662,12 @@ const UserManagementPage = () => {
 						</div>
 						<div>
 							<p className="text-gray-700 font-semibold text-lg mb-1">
-								{searchTerm || filterBidang !== "all"
+								{searchTerm || filterBidang !== "all" || filterDinas !== "all"
 									? "Tidak ada user yang sesuai"
 									: "Belum ada user"}
 							</p>
 							<p className="text-sm text-gray-500">
-								{searchTerm || filterBidang !== "all"
+								{searchTerm || filterBidang !== "all" || filterDinas !== "all"
 									? "Coba ubah filter atau kata kunci pencarian"
 									: 'Klik tombol "Tambah User" untuk menambahkan user baru'}
 							</p>
@@ -493,6 +706,7 @@ const UserManagementPage = () => {
 									user.role === "ketua_tim" ? "bg-gradient-to-br from-teal-500 to-cyan-600" :
 									user.role === "desa" ? "bg-gradient-to-br from-emerald-500 to-green-600" :
 									user.role === "kecamatan" ? "bg-gradient-to-br from-violet-500 to-purple-600" :
+									user.role === "dinas_terkait" ? "bg-gradient-to-br from-amber-500 to-orange-600" :
 									"bg-gradient-to-br from-gray-500 to-slate-600"
 								}`}>
 									<div className="flex items-center gap-3">
@@ -547,6 +761,15 @@ const UserManagementPage = () => {
 											</div>
 										)}
 
+										{user.dinas && (
+											<div className="flex items-center gap-3 text-gray-600">
+												<div className="h-9 w-9 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
+													<LuBuilding2 className="h-4 w-4 text-amber-600" />
+												</div>
+												<span className="text-sm truncate flex-1">{user.dinas.nama_dinas}</span>
+											</div>
+										)}
+
 										<div className="flex items-center gap-3 text-gray-600">
 											<div className="h-9 w-9 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
 												<LuCalendar className="h-4 w-4 text-blue-600" />
@@ -563,11 +786,11 @@ const UserManagementPage = () => {
 
 									{/* Actions */}
 									<div className={`grid ${
-										['superadmin', 'desa', 'kecamatan'].includes(user.role) 
+										['superadmin', 'desa', 'kecamatan', 'dinas_terkait'].includes(user.role) 
 											? 'grid-cols-2' 
 											: 'grid-cols-4'
 									} gap-2 pt-3 border-t border-gray-100`}>
-										{!['superadmin', 'desa', 'kecamatan'].includes(user.role) && (
+										{!['superadmin', 'desa', 'kecamatan', 'dinas_terkait'].includes(user.role) && (
 											<>
 												<button
 													onClick={() => handleEditRole(user)}

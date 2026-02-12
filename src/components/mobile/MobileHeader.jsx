@@ -18,6 +18,8 @@ const MobileHeader = ({
 }) => {
   return (
     <div className={`bg-gradient-to-br ${gradient} rounded-b-[32px] shadow-xl`}>
+      {/* Safe area spacer for PWA standalone mode */}
+      <div className="h-[env(safe-area-inset-top,0px)]"></div>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-8">
         {/* Top Bar */}
         <div className="flex items-center justify-between mb-6">

@@ -1,201 +1,170 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  FiMapPin, FiUsers, FiDollarSign,
-  FiChevronDown, FiChevronUp, FiDownload
+  FiMapPin, FiChevronDown, FiChevronUp, FiDownload, FiRefreshCw, FiTrendingUp
 } from 'react-icons/fi';
-import { Activity } from 'lucide-react';
+import { 
+  Building2, Shield, CheckCircle, MapPin, AlertCircle, FileText, 
+  Sparkles, BarChart3, PieChart, Layers, Calendar, ArrowRight
+} from 'lucide-react';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement } from 'chart.js';
-import { Pie, Bar } from 'react-chartjs-2';
+import { Doughnut, Bar } from 'react-chartjs-2';
 import api from '../../api';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
-import { useDataCache } from '../../context/DataCacheContext';
-import { isVpnUser } from '../../utils/vpnHelper';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
 
-const CACHE_KEY = 'statistik-bankeu';
-
 const StatistikBankeuDashboard = () => {
-  const navigate = useNavigate();
-  const { getCachedData, setCachedData, isCached } = useDataCache();
-  const [activeTab, setActiveTab] = useState('tahap1');
-  const [dataTahap1, setDataTahap1] = useState([]);
-  const [dataTahap2, setDataTahap2] = useState([]);
+  const [tahunAnggaran, setTahunAnggaran] = useState(2027);
+  const [proposals, setProposals] = useState([]);
+  const [summary, setSummary] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [expandedKecamatan, setExpandedKecamatan] = useState({});
-  const [selectedStatus, setSelectedStatus] = useState(null); // Filter status dari card
+  const [selectedStatus, setSelectedStatus] = useState(null);
+  const [hoveredCard, setHoveredCard] = useState(null);
 
   useEffect(() => {
-    if (isCached(CACHE_KEY)) {
-      const cachedData = getCachedData(CACHE_KEY);
-      setDataTahap1(cachedData.data.tahap1 || []);
-      setDataTahap2(cachedData.data.tahap2 || []);
-      setLoading(false);
-    } else {
-      fetchData();
-    }
-  }, []);
+    fetchData();
+  }, [tahunAnggaran]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      
-      let t1Data = [];
-      let t2Data = [];
-      
-      // Fetch Tahap 1
-      try {
-        const endpoint1 = isVpnUser() ? '/vpn-core/bankeu-t1/data' : '/bankeu-t1/data';
-        const response1 = await api.get(endpoint1);
-        t1Data = response1.data.data || [];
-        setDataTahap1(t1Data);
-      } catch (err) {
-        console.warn('Error loading tahap1:', err);
-        setDataTahap1([]);
+      const response = await api.get(`/dpmd/bankeu/tracking?tahun_anggaran=${tahunAnggaran}`);
+      if (response.data.success) {
+        setProposals(response.data.data || []);
+        setSummary(response.data.summary || {});
       }
-      
-      // Fetch Tahap 2
-      try {
-        const endpoint2 = isVpnUser() ? '/vpn-core/bankeu-t2/data' : '/bankeu-t2/data';
-        const response2 = await api.get(endpoint2);
-        t2Data = response2.data.data || [];
-        setDataTahap2(t2Data);
-      } catch (err) {
-        console.warn('Error loading tahap2:', err);
-        setDataTahap2([]);
-      }
-      
-      // Save to cache
-      setCachedData(CACHE_KEY, { tahap1: t1Data, tahap2: t2Data });
-      
       setError(null);
     } catch (err) {
       console.error('Error fetching Bantuan Keuangan data:', err);
       setError('Gagal memuat data Bantuan Keuangan');
+      setProposals([]);
     } finally {
       setLoading(false);
     }
   };
 
+  const getProposalStage = (proposal) => {
+    if (proposal.dpmd_status === 'approved') return 'selesai';
+    if (proposal.submitted_to_dpmd) return 'di_dpmd';
+    if (proposal.kecamatan_status === 'approved') return 'di_dpmd';
+    if (proposal.submitted_to_kecamatan && proposal.dinas_status === 'approved') return 'di_kecamatan';
+    if (proposal.dinas_status === 'approved') return 'di_kecamatan';
+    if (proposal.submitted_to_dinas_at) return 'di_dinas';
+    return 'di_desa';
+  };
+
   const handleExportExcel = () => {
-    const activeData = activeTab === 'tahap1' ? dataTahap1 : dataTahap2;
-    const exportData = activeData.map(item => ({
-      'Kecamatan': item.kecamatan,
-      'Desa': item.desa,
-      'Status': item.sts,
-      'Realisasi (Rp)': item.Realisasi
+    const exportData = proposals.map(item => ({
+      'Kecamatan': item.desas?.kecamatans?.nama || '-',
+      'Desa': item.desas?.nama || '-',
+      'Kegiatan': item.bankeu_master_kegiatan?.nama_kegiatan || '-',
+      'Dinas Terkait': item.bankeu_master_kegiatan?.dinas_terkait || '-',
+      'Anggaran Usulan': item.anggaran_usulan || 0,
+      'Status Dinas': item.dinas_status || 'pending',
+      'Status Kecamatan': item.kecamatan_status || 'pending',
+      'Status DPMD': item.dpmd_status || 'pending',
+      'Tahap': getStageName(getProposalStage(item))
     }));
 
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, `Bankeu ${activeTab === 'tahap1' ? 'T1' : 'T2'}`);
-    XLSX.writeFile(wb, `Bantuan_Keuangan_${activeTab === 'tahap1' ? 'Tahap_1' : 'Tahap_2'}_${new Date().toISOString().split('T')[0]}.xlsx`);
+    XLSX.utils.book_append_sheet(wb, ws, `Bankeu ${tahunAnggaran}`);
+    XLSX.writeFile(wb, `Bantuan_Keuangan_${tahunAnggaran}_${new Date().toISOString().split('T')[0]}.xlsx`);
     toast.success('Data berhasil diekspor ke Excel');
   };
 
-  // Get active data based on selected tab
-  const activeData = activeTab === 'tahap1' ? dataTahap1 : dataTahap2;
+  const processedData = useMemo(() => {
+    return proposals.map(item => ({
+      ...item,
+      kecamatan: item.desas?.kecamatans?.nama || 'Tidak Diketahui',
+      desa: item.desas?.nama || 'Tidak Diketahui',
+      kegiatan: item.bankeu_master_kegiatan?.nama_kegiatan || '-',
+      dinas: item.bankeu_master_kegiatan?.dinas_terkait || '-',
+      anggaran: Number(item.anggaran_usulan) || 0,
+      stage: getProposalStage(item)
+    }));
+  }, [proposals]);
 
-  // Handler untuk klik card status
-  const handleStatusClick = (statusName) => {
-    if (selectedStatus === statusName) {
-      setSelectedStatus(null);
-    } else {
-      setSelectedStatus(statusName);
-    }
-  };
-
-  // Process data
-  const processedData = activeData.map(item => ({
-    kecamatan: item.kecamatan,
-    desa: item.desa,
-    status: item.sts,
-    realisasi: parseInt(item.Realisasi?.replace(/,/g, '') || '0')
-  }));
-
-  // Filter data berdasarkan status yang dipilih
   const filteredData = selectedStatus 
-    ? processedData.filter(item => item.status === selectedStatus)
+    ? processedData.filter(item => item.stage === selectedStatus)
     : processedData;
 
-  // Statistics from filtered data
-  const totalDesa = filteredData.length;
-  const totalAlokasi = filteredData.reduce((sum, item) => sum + item.realisasi, 0);
+  const totalDesa = [...new Set(filteredData.map(p => p.desa_id))].length;
+  const totalProposal = filteredData.length;
+  const totalAnggaran = filteredData.reduce((sum, item) => sum + item.anggaran, 0);
 
-  // Status statistics - dari semua data (untuk card)
-  const statusStats = processedData.reduce((acc, item) => {
-    if (!acc[item.status]) {
-      acc[item.status] = { count: 0, total: 0 };
-    }
-    acc[item.status].count += 1;
-    acc[item.status].total += item.realisasi;
-    return acc;
-  }, {});
+  const statusStats = useMemo(() => {
+    const stats = {
+      di_desa: { count: 0, total: 0, label: 'Di Desa', icon: MapPin, color: '#64748b', gradient: 'from-slate-500 to-gray-600' },
+      di_dinas: { count: 0, total: 0, label: 'Di Dinas', icon: Building2, color: '#f97316', gradient: 'from-orange-500 to-amber-500' },
+      di_kecamatan: { count: 0, total: 0, label: 'Di Kecamatan', icon: Building2, color: '#3b82f6', gradient: 'from-blue-500 to-indigo-500' },
+      di_dpmd: { count: 0, total: 0, label: 'Di DPMD', icon: Shield, color: '#8b5cf6', gradient: 'from-purple-500 to-violet-600' },
+      selesai: { count: 0, total: 0, label: 'Selesai', icon: CheckCircle, color: '#22c55e', gradient: 'from-emerald-500 to-green-500' },
+    };
+    
+    processedData.forEach(item => {
+      if (stats[item.stage]) {
+        stats[item.stage].count += 1;
+        stats[item.stage].total += item.anggaran;
+      }
+    });
+    
+    return stats;
+  }, [processedData]);
 
-  // Convert to array and sort by total (descending)
-  const statusArray = Object.entries(statusStats).map(([status, data]) => ({
-    name: status,
-    count: data.count,
-    total: data.total
-  })).sort((a, b) => b.total - a.total);
-
-  // Kecamatan statistics - dari filtered data
-  const kecamatanStats = filteredData.reduce((acc, item) => {
-    if (!acc[item.kecamatan]) {
-      acc[item.kecamatan] = { total: 0, count: 0, desas: [] };
-    }
-    acc[item.kecamatan].total += item.realisasi;
-    acc[item.kecamatan].count += 1;
-    acc[item.kecamatan].desas.push(item);
-    return acc;
-  }, {});
+  const kecamatanStats = useMemo(() => {
+    return filteredData.reduce((acc, item) => {
+      if (!acc[item.kecamatan]) {
+        acc[item.kecamatan] = { total: 0, count: 0, desas: [] };
+      }
+      acc[item.kecamatan].total += item.anggaran;
+      acc[item.kecamatan].count += 1;
+      acc[item.kecamatan].desas.push(item);
+      return acc;
+    }, {});
+  }, [filteredData]);
 
   const totalKecamatan = Object.keys(kecamatanStats).length;
 
-  // All kecamatan sorted by total alokasi
   const allKecamatan = Object.entries(kecamatanStats)
     .map(([name, stats]) => ({ name, total: stats.total }))
     .sort((a, b) => b.total - a.total);
 
-  // Status distribution
-  const statusDistribution = processedData.reduce((acc, item) => {
-    acc[item.status] = (acc[item.status] || 0) + 1;
-    return acc;
-  }, {});
-
-  // Chart data - Kecamatan
   const kecamatanChartData = {
-    labels: allKecamatan.map(k => k.name),
+    labels: allKecamatan.slice(0, 10).map(k => k.name),
     datasets: [{
-      label: 'Total Alokasi (Rp)',
-      data: allKecamatan.map(k => k.total),
-      backgroundColor: 'rgba(6, 182, 212, 0.8)',
-      borderColor: 'rgba(6, 182, 212, 1)',
+      label: 'Total Anggaran (Rp)',
+      data: allKecamatan.slice(0, 10).map(k => k.total),
+      backgroundColor: [
+        'rgba(34, 211, 238, 0.85)',
+        'rgba(59, 130, 246, 0.85)',
+        'rgba(99, 102, 241, 0.85)',
+        'rgba(139, 92, 246, 0.85)',
+        'rgba(168, 85, 247, 0.85)',
+        'rgba(217, 70, 239, 0.85)',
+        'rgba(236, 72, 153, 0.85)',
+        'rgba(244, 63, 94, 0.85)',
+        'rgba(251, 146, 60, 0.85)',
+        'rgba(250, 204, 21, 0.85)',
+      ],
+      borderColor: 'rgba(255, 255, 255, 0.8)',
       borderWidth: 2,
+      borderRadius: 8,
     }]
   };
 
-  // Chart data - Status
   const statusChartData = {
-    labels: Object.keys(statusDistribution),
+    labels: Object.values(statusStats).map(s => s.label),
     datasets: [{
-      data: Object.values(statusDistribution),
-      backgroundColor: [
-        'rgba(34, 197, 94, 0.8)',
-        'rgba(251, 191, 36, 0.8)',
-        'rgba(239, 68, 68, 0.8)',
-        'rgba(168, 85, 247, 0.8)',
-      ],
-      borderColor: [
-        'rgba(34, 197, 94, 1)',
-        'rgba(251, 191, 36, 1)',
-        'rgba(239, 68, 68, 1)',
-        'rgba(168, 85, 247, 1)',
-      ],
-      borderWidth: 2,
+      data: Object.values(statusStats).map(s => s.count),
+      backgroundColor: Object.values(statusStats).map(s => s.color),
+      borderColor: 'rgba(255, 255, 255, 0.9)',
+      borderWidth: 3,
+      hoverOffset: 10,
     }]
   };
 
@@ -207,6 +176,12 @@ const StatistikBankeuDashboard = () => {
     }).format(value);
   };
 
+  const formatShortRupiah = (value) => {
+    if (value >= 1000000000) return `Rp ${(value / 1000000000).toFixed(1)}M`;
+    if (value >= 1000000) return `Rp ${(value / 1000000).toFixed(0)}Jt`;
+    return formatRupiah(value);
+  };
+
   const toggleKecamatan = (kecamatanName) => {
     setExpandedKecamatan(prev => ({
       ...prev,
@@ -214,425 +189,485 @@ const StatistikBankeuDashboard = () => {
     }));
   };
 
-  // Fungsi untuk mendapatkan warna card berdasarkan status (DINAMIS)
-  const getStatusColor = (status, index) => {
-    const colors = [
-      { bg: 'from-green-50 to-green-100', border: 'border-green-300', text: 'text-green-800', textBold: 'text-green-700', textMuted: 'text-green-600', dot: 'bg-green-500', borderTop: 'border-green-300' },
-      { bg: 'from-blue-50 to-blue-100', border: 'border-blue-300', text: 'text-blue-800', textBold: 'text-blue-700', textMuted: 'text-blue-600', dot: 'bg-blue-500', borderTop: 'border-blue-300' },
-      { bg: 'from-yellow-50 to-yellow-100', border: 'border-yellow-300', text: 'text-yellow-800', textBold: 'text-yellow-700', textMuted: 'text-yellow-600', dot: 'bg-yellow-500', borderTop: 'border-yellow-300' },
-      { bg: 'from-purple-50 to-purple-100', border: 'border-purple-300', text: 'text-purple-800', textBold: 'text-purple-700', textMuted: 'text-purple-600', dot: 'bg-purple-500', borderTop: 'border-purple-300' },
-      { bg: 'from-red-50 to-red-100', border: 'border-red-300', text: 'text-red-800', textBold: 'text-red-700', textMuted: 'text-red-600', dot: 'bg-red-500', borderTop: 'border-red-300' },
-      { bg: 'from-indigo-50 to-indigo-100', border: 'border-indigo-300', text: 'text-indigo-800', textBold: 'text-indigo-700', textMuted: 'text-indigo-600', dot: 'bg-indigo-500', borderTop: 'border-indigo-300' },
-      { bg: 'from-pink-50 to-pink-100', border: 'border-pink-300', text: 'text-pink-800', textBold: 'text-pink-700', textMuted: 'text-pink-600', dot: 'bg-pink-500', borderTop: 'border-pink-300' },
-      { bg: 'from-cyan-50 to-cyan-100', border: 'border-cyan-300', text: 'text-cyan-800', textBold: 'text-cyan-700', textMuted: 'text-cyan-600', dot: 'bg-cyan-500', borderTop: 'border-cyan-300' },
-      { bg: 'from-orange-50 to-orange-100', border: 'border-orange-300', text: 'text-orange-800', textBold: 'text-orange-700', textMuted: 'text-orange-600', dot: 'bg-orange-500', borderTop: 'border-orange-300' },
-      { bg: 'from-gray-50 to-gray-100', border: 'border-gray-300', text: 'text-gray-800', textBold: 'text-gray-700', textMuted: 'text-gray-600', dot: 'bg-gray-500', borderTop: 'border-gray-300' },
-    ];
-    
-    return colors[index % colors.length];
+  const getStatusBadge = (stage) => {
+    const config = {
+      'di_desa': 'bg-slate-100 text-slate-700 border-slate-300',
+      'di_dinas': 'bg-orange-100 text-orange-700 border-orange-300',
+      'di_kecamatan': 'bg-blue-100 text-blue-700 border-blue-300',
+      'di_dpmd': 'bg-purple-100 text-purple-700 border-purple-300',
+      'selesai': 'bg-emerald-100 text-emerald-700 border-emerald-300',
+    };
+    return config[stage] || 'bg-gray-100 text-gray-700 border-gray-300';
   };
 
-  const getStatusBadge = (status) => {
-    const statusConfig = {
-      'Sudah Mengajukan': 'bg-green-100 text-green-800 border-green-200',
-      'Belum Mengajukan': 'bg-red-100 text-red-800 border-red-200',
-      'Sedang Diproses': 'bg-yellow-100 text-yellow-800 border-yellow-200',
-      'Ditolak': 'bg-gray-100 text-gray-800 border-gray-200',
+  const getStageName = (stage) => {
+    const names = {
+      'di_desa': 'Di Desa',
+      'di_dinas': 'Di Dinas',
+      'di_kecamatan': 'Di Kecamatan',
+      'di_dpmd': 'Di DPMD',
+      'selesai': 'Selesai',
     };
-    return statusConfig[status] || 'bg-gray-100 text-gray-800 border-gray-200';
+    return names[stage] || stage;
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Memuat data...</p>
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="text-center"
+        >
+          <div className="relative">
+            <div className="w-20 h-20 border-4 border-purple-200 rounded-full animate-spin border-t-purple-600 mx-auto"></div>
+            <Sparkles className="w-8 h-8 text-purple-500 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+          </div>
+          <p className="mt-6 text-gray-600 font-medium">Memuat data...</p>
+        </motion.div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <p className="text-red-600">{error}</p>
-          <button onClick={fetchData} className="mt-4 px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-red-50 to-slate-50 flex items-center justify-center">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center bg-white rounded-3xl p-8 border border-gray-200 shadow-xl"
+        >
+          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <p className="text-red-600 text-lg mb-4">{error}</p>
+          <button 
+            onClick={fetchData} 
+            className="px-6 py-3 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-xl hover:shadow-lg hover:shadow-red-500/30 transition-all"
+          >
             Coba Lagi
           </button>
-        </div>
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-cyan-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Hero Welcome Banner dengan Gradient Modern */}
-        <div className="relative bg-gradient-to-r from-cyan-600 via-blue-600 to-indigo-600 rounded-3xl shadow-2xl p-8 mb-8 overflow-hidden">
-          {/* Animated Background Patterns */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-10 rounded-full -mr-32 -mt-32 animate-pulse"></div>
-          <div className="absolute bottom-0 left-0 w-96 h-96 bg-white opacity-5 rounded-full -ml-48 -mb-48"></div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-4 md:p-6 lg:p-8">
+      {/* Subtle Background Patterns */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-200/30 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-cyan-200/30 rounded-full blur-3xl"></div>
+        <div className="absolute top-1/2 right-1/3 w-64 h-64 bg-pink-200/20 rounded-full blur-3xl"></div>
+      </div>
+
+      <div className="max-w-7xl mx-auto relative z-10">
+        {/* Hero Header */}
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 p-8 mb-8 shadow-2xl shadow-purple-500/20"
+        >
+          {/* Decorative Elements */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/30 rounded-full -mr-32 -mt-32"></div>
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-purple-200/30 rounded-full -ml-24 -mb-24"></div>
+          <div className="absolute top-1/2 right-1/4 w-32 h-32 bg-cyan-300/30 rounded-full blur-2xl"></div>
           
           <div className="relative z-10">
-            <div className="mb-4">
-              <h1 className="text-3xl md:text-4xl font-bold text-white mb-2 drop-shadow-lg">
-                📊 Statistik Bantuan Keuangan Infrastruktur Desa
-              </h1>
-              <p className="text-white text-opacity-90 text-base md:text-lg">
-                Monitoring bantuan keuangan infrastruktur desa tahun 2025
-              </p>
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+              <div>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-2 bg-white/50 rounded-xl backdrop-blur-sm shadow-lg">
+                    <BarChart3 className="w-8 h-8 text-purple-700" />
+                  </div>
+                  <div>
+                    <h1 className="text-3xl md:text-4xl font-bold text-white">
+                      Statistik Bantuan Keuangan
+                    </h1>
+                    <p className="text-white/90 mt-1">Infrastruktur Desa Kabupaten Bogor</p>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Year Selector & Refresh */}
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 bg-white/30 backdrop-blur-sm rounded-2xl p-1.5 shadow-lg">
+                  {[2026, 2027].map(year => (
+                    <button
+                      key={year}
+                      onClick={() => setTahunAnggaran(year)}
+                      className={`px-5 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 ${
+                        tahunAnggaran === year 
+                          ? 'bg-white text-purple-700 shadow-lg' 
+                          : 'text-white hover:bg-white/30'
+                      }`}
+                    >
+                      <Calendar className="w-4 h-4 inline mr-2" />
+                      {year}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={fetchData}
+                  disabled={loading}
+                  className="p-3 bg-white/30 hover:bg-white/50 rounded-xl transition-all border border-white/50 shadow-lg"
+                >
+                  <FiRefreshCw className={`w-5 h-5 text-white ${loading ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
             </div>
             
-            {/* Quick Stats in Hero */}
-            <div className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-3 max-w-3xl">
-              <div className="bg-cyan-700 bg-opacity-70 backdrop-blur-md rounded-xl p-4 border border-cyan-400 border-opacity-40 shadow-lg">
-                <p className="text-white text-opacity-90 text-xs md:text-sm mb-1 font-medium">Total Kecamatan</p>
-                <p className="text-white text-xl md:text-2xl font-bold">{totalKecamatan}</p>
-              </div>
-              <div className="bg-blue-700 bg-opacity-70 backdrop-blur-md rounded-xl p-4 border border-blue-400 border-opacity-40 shadow-lg">
-                <p className="text-white text-opacity-90 text-xs md:text-sm mb-1 font-medium">Total Desa</p>
-                <p className="text-white text-xl md:text-2xl font-bold">{totalDesa}</p>
-              </div>
-              <div className="bg-indigo-700 bg-opacity-70 backdrop-blur-md rounded-xl p-4 border border-indigo-400 border-opacity-40 shadow-lg col-span-2 md:col-span-1">
-                <p className="text-white text-opacity-90 text-xs md:text-sm mb-1 font-medium">Total Alokasi</p>
-                <p className="text-white text-base md:text-xl font-bold truncate">{formatRupiah(totalAlokasi)}</p>
-              </div>
+            {/* Quick Stats */}
+            <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[
+                { label: 'Total Proposal', value: totalProposal, icon: FileText, color: 'from-cyan-400 to-blue-500' },
+                { label: 'Total Desa', value: totalDesa, icon: MapPin, color: 'from-pink-400 to-rose-500' },
+                { label: 'Total Kecamatan', value: totalKecamatan, icon: Building2, color: 'from-amber-400 to-orange-500' },
+                { label: 'Total Anggaran', value: formatShortRupiah(totalAnggaran), icon: FiTrendingUp, color: 'from-emerald-400 to-green-500' },
+              ].map((stat, index) => (
+                <motion.div
+                  key={stat.label}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  className="bg-white/90 backdrop-blur-md rounded-2xl p-4 border border-white/50 hover:shadow-lg transition-all group shadow-lg"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-xl bg-gradient-to-br ${stat.color} shadow-lg`}>
+                      <stat.icon className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-gray-600 text-xs font-medium">{stat.label}</p>
+                      <p className="text-gray-800 text-xl font-bold">{stat.value}</p>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
             </div>
           </div>
-        </div>
-
-        {/* Tab Navigation */}
-        <div className="mb-6 flex gap-2 p-1 bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg w-fit">
-          <button
-            onClick={() => {
-              setActiveTab('tahap1');
-              setSelectedStatus(null); // Reset filter saat ganti tab
-            }}
-            className={`px-8 py-3 rounded-xl font-semibold transition-all duration-300 ${
-              activeTab === 'tahap1'
-                ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg scale-105'
-                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-            }`}
-          >
-            Tahap 1
-          </button>
-          <button
-            onClick={() => {
-              setActiveTab('tahap2');
-              setSelectedStatus(null); // Reset filter saat ganti tab
-            }}
-            className={`px-8 py-3 rounded-xl font-semibold transition-all duration-300 ${
-              activeTab === 'tahap2'
-                ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg scale-105'
-                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-            }`}
-          >
-            Tahap 2
-          </button>
-        </div>
+        </motion.div>
 
         {/* Export Button */}
-        <div className="mb-6">
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+          className="mb-6"
+        >
           <button
             onClick={handleExportExcel}
-            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-xl hover:shadow-lg transition-all duration-300 hover:scale-105"
+            className="group flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-2xl hover:shadow-xl hover:shadow-emerald-500/30 transition-all duration-300 hover:scale-105"
           >
-            <FiDownload className="w-5 h-5" />
-            Export Excel
+            <FiDownload className="w-5 h-5 group-hover:animate-bounce" />
+            <span className="font-semibold">Export Excel</span>
+            <ArrowRight className="w-4 h-4 opacity-0 -ml-2 group-hover:opacity-100 group-hover:ml-0 transition-all" />
           </button>
-        </div>
+        </motion.div>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {/* Total Kecamatan */}
-          <div className="group bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-white bg-opacity-90 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                <FiMapPin className="w-6 h-6 text-cyan-600" />
+        {/* Status Cards */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="bg-white rounded-3xl p-6 mb-8 border border-gray-200 shadow-xl"
+        >
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl">
+                <Layers className="w-5 h-5 text-white" />
               </div>
-              <Activity className="w-8 h-8 text-white opacity-50" />
+              <h3 className="text-xl font-bold text-gray-800">Status Proposal per Tahap</h3>
             </div>
-            <h3 className="text-white text-sm font-medium mb-1 opacity-90">Total Kecamatan</h3>
-            <p className="text-2xl sm:text-3xl font-bold text-white">{totalKecamatan}</p>
-            <p className="text-white text-xs mt-2 opacity-75">Kecamatan terdaftar</p>
-          </div>
-
-          {/* Total Desa */}
-          <div className="group bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-white bg-opacity-90 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                <FiUsers className="w-6 h-6 text-blue-600" />
-              </div>
-              <Activity className="w-8 h-8 text-white opacity-50" />
-            </div>
-            <h3 className="text-white text-sm font-medium mb-1 opacity-90">Total Desa</h3>
-            <p className="text-2xl sm:text-3xl font-bold text-white">{totalDesa}</p>
-            <p className="text-white text-xs mt-2 opacity-75">Desa terdaftar</p>
-          </div>
-
-          {/* Total Alokasi */}
-          <div className="group bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-white bg-opacity-90 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                <FiDollarSign className="w-6 h-6 text-indigo-600" />
-              </div>
-              <Activity className="w-8 h-8 text-white opacity-50" />
-            </div>
-            <h3 className="text-white text-sm font-medium mb-1 opacity-90">Total Alokasi</h3>
-            <p className="text-lg sm:text-xl md:text-2xl font-bold text-white break-words">{formatRupiah(totalAlokasi)}</p>
-            <p className="text-white text-xs mt-2 opacity-75">Total dana infrastruktur</p>
-          </div>
-        </div>
-
-        {/* Nominal per Status Cards - DINAMIS */}
-        <div className="bg-white rounded-2xl p-6 shadow-xl mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-              <FiDollarSign className="w-5 h-5 text-cyan-600" />
-              Nominal Dana per Status ({statusArray.length} Status)
-            </h3>
             {selectedStatus && (
               <button
                 onClick={() => setSelectedStatus(null)}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-sm font-medium transition-colors border border-gray-300"
               >
                 ✕ Reset Filter
               </button>
             )}
           </div>
           
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {statusArray.map((status, index) => {
-              const color = getStatusColor(status.name, index);
-              const isSelected = selectedStatus === status.name;
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            {Object.entries(statusStats).map(([key, stat], index) => {
+              const isSelected = selectedStatus === key;
+              const IconComponent = stat.icon;
+              
               return (
-                <div 
-                  key={status.name}
-                  onClick={() => handleStatusClick(status.name)}
-                  className={`bg-gradient-to-br ${color.bg} border-2 ${
-                    isSelected ? color.border + ' ring-4 ring-offset-2 ring-cyan-400' : color.border
-                  } rounded-xl p-4 hover:shadow-lg transition-all cursor-pointer transform hover:scale-105 ${
-                    isSelected ? 'scale-105 shadow-xl' : ''
+                <motion.div 
+                  key={key}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.1 * index }}
+                  whileHover={{ scale: 1.05, y: -5 }}
+                  onClick={() => setSelectedStatus(isSelected ? null : key)}
+                  onMouseEnter={() => setHoveredCard(key)}
+                  onMouseLeave={() => setHoveredCard(null)}
+                  className={`relative overflow-hidden rounded-2xl p-5 cursor-pointer transition-all duration-300 bg-white border ${
+                    isSelected ? 'ring-4 ring-purple-300 shadow-2xl border-purple-400' : 'border-gray-200 hover:shadow-lg'
                   }`}
-                  title={`Klik untuk filter data ${status.name}`}
                 >
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className={`w-3 h-3 ${color.dot} rounded-full animate-pulse`}></div>
-                    <p className={`text-xs font-semibold ${color.text} line-clamp-2`} title={status.name}>
-                      {status.name}
+                  {/* Glow Effect */}
+                  <div 
+                    className={`absolute inset-0 bg-gradient-to-br ${stat.gradient} opacity-0 transition-opacity duration-300 ${
+                      hoveredCard === key || isSelected ? 'opacity-100' : ''
+                    }`}
+                  ></div>
+                  
+                  <div className="relative z-10">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className={`p-2.5 rounded-xl transition-all duration-300 ${
+                        hoveredCard === key || isSelected ? 'bg-white/30' : 'bg-gray-100'
+                      }`}>
+                        <IconComponent className={`w-5 h-5 transition-colors ${
+                          hoveredCard === key || isSelected ? 'text-white' : 'text-gray-600'
+                        }`} style={{ color: hoveredCard === key || isSelected ? 'white' : stat.color }} />
+                      </div>
+                      <div className={`w-3 h-3 rounded-full animate-pulse`} style={{ backgroundColor: stat.color }}></div>
+                    </div>
+                    <p className={`text-sm font-medium mb-1 transition-colors ${
+                      hoveredCard === key || isSelected ? 'text-white' : 'text-gray-600'
+                    }`}>{stat.label}</p>
+                    <p className={`text-3xl font-bold mb-2 transition-colors ${
+                      hoveredCard === key || isSelected ? 'text-white' : 'text-gray-800'
+                    }`}>{stat.count}</p>
+                    <p className={`text-xs transition-colors ${
+                      hoveredCard === key || isSelected ? 'text-white/80' : 'text-gray-500'
+                    }`}>
+                      {formatShortRupiah(stat.total)}
                     </p>
                   </div>
-                  <p className={`text-xl font-bold ${color.textBold} mb-2`}>
-                    {formatRupiah(status.total)}
-                  </p>
-                  <div className={`flex items-center justify-between pt-2 border-t ${color.borderTop}`}>
-                    <p className={`text-xs ${color.textMuted}`}>Total Desa:</p>
-                    <p className={`text-sm font-bold ${color.textBold}`}>{status.count}</p>
-                  </div>
-                </div>
+                </motion.div>
               );
             })}
           </div>
-          
-          {statusArray.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
-              <p>Tidak ada data status</p>
-            </div>
-          )}
-        </div>
+        </motion.div>
 
         {/* Charts Section */}
-        <div className="space-y-6 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {/* Bar Chart */}
-          <div className="bg-gradient-to-br from-white via-cyan-50 to-blue-50 rounded-3xl shadow-2xl overflow-hidden border border-cyan-100 hover:shadow-3xl transition-all duration-300">
-            <div className="bg-white bg-opacity-80 backdrop-blur-sm px-8 py-6 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-3 h-10 bg-gradient-to-b from-cyan-500 via-blue-500 to-indigo-500 rounded-full shadow-lg"></div>
-                  <h3 className="text-2xl font-bold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">
-                    Alokasi per Kecamatan - Tahap {activeTab === 'tahap1' ? '1' : '2'}
-                  </h3>
-                </div>
-                <span className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-full text-sm font-semibold shadow-lg">
-                  {allKecamatan.length} Kecamatan
-                </span>
+          <motion.div 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.4 }}
+            className="bg-white rounded-3xl p-6 border border-gray-200 shadow-xl"
+          >
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-xl">
+                <BarChart3 className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-800">Top 10 Kecamatan</h3>
+                <p className="text-gray-500 text-sm">Berdasarkan total anggaran</p>
               </div>
             </div>
-            <div className="p-8 bg-white">
-              <div className="h-96 relative">
-                <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-blue-500/5 rounded-2xl"></div>
-                <div className="relative h-full">
-                  <Bar
-                    data={kecamatanChartData}
-                    options={{
-                      responsive: true,
-                      maintainAspectRatio: false,
-                      plugins: {
-                        legend: {
-                          display: true,
-                          position: 'top'
-                        },
-                        tooltip: {
-                          backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                          padding: 12,
-                          titleFont: { size: 14, weight: 'bold' },
-                          bodyFont: { size: 13 },
-                          callbacks: {
-                            label: (context) => `Total: ${formatRupiah(context.parsed.y)}`
-                          }
-                        }
-                      },
-                      scales: {
-                        y: {
-                          beginAtZero: true,
-                          ticks: {
-                            callback: (value) => {
-                              if (value >= 1000000000) return `Rp ${(value / 1000000000).toFixed(1)} M`;
-                              if (value >= 1000000) return `Rp ${(value / 1000000).toFixed(0)} Jt`;
-                              return `Rp ${value.toLocaleString('id-ID')}`;
-                            },
-                            font: { size: 11 }
-                          },
-                          grid: {
-                            color: 'rgba(0, 0, 0, 0.05)'
-                          }
-                        },
-                        x: {
-                          ticks: {
-                            font: { size: 10 },
-                            maxRotation: 45,
-                            minRotation: 45,
-                            autoSkip: false
-                          },
-                          grid: {
-                            display: false
-                          }
-                        }
+            <div className="h-80">
+              <Bar
+                data={kecamatanChartData}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                      titleColor: '#1f2937',
+                      bodyColor: '#4b5563',
+                      padding: 16,
+                      borderColor: 'rgba(0,0,0,0.1)',
+                      borderWidth: 1,
+                      cornerRadius: 12,
+                      callbacks: {
+                        label: (context) => `Total: ${formatRupiah(context.parsed.y)}`
                       }
-                    }}
-                  />
-                </div>
-              </div>
+                    }
+                  },
+                  scales: {
+                    y: {
+                      beginAtZero: true,
+                      grid: { color: 'rgba(0,0,0,0.05)' },
+                      ticks: {
+                        color: 'rgba(100,116,139,0.8)',
+                        callback: (value) => formatShortRupiah(value),
+                        font: { size: 10 }
+                      }
+                    },
+                    x: {
+                      grid: { display: false },
+                      ticks: {
+                        color: 'rgba(100,116,139,0.8)',
+                        font: { size: 9 },
+                        maxRotation: 45,
+                        minRotation: 45
+                      }
+                    }
+                  }
+                }}
+              />
             </div>
-          </div>
+          </motion.div>
 
-          {/* Pie Chart */}
-          <div className="bg-gradient-to-br from-white via-purple-50 to-pink-50 rounded-3xl shadow-2xl overflow-hidden border border-purple-100 hover:shadow-3xl transition-all duration-300">
-            <div className="bg-white bg-opacity-80 backdrop-blur-sm px-8 py-6 border-b border-gray-200">
-              <div className="flex items-center gap-4">
-                <div className="w-3 h-10 bg-gradient-to-b from-purple-500 via-pink-500 to-rose-500 rounded-full shadow-lg"></div>
-                <h3 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                  Distribusi Status
-                </h3>
+          {/* Doughnut Chart */}
+          <motion.div 
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.5 }}
+            className="bg-white rounded-3xl p-6 border border-gray-200 shadow-xl"
+          >
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl">
+                <PieChart className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-800">Distribusi Status</h3>
+                <p className="text-gray-500 text-sm">Jumlah proposal per tahap</p>
               </div>
             </div>
-            <div className="p-8 bg-white flex justify-center">
-              <div className="w-full max-w-2xl h-96 relative">
-                <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-pink-500/5 rounded-2xl"></div>
-                <div className="relative h-full">
-                  <Pie
-                    data={statusChartData}
-                    options={{
-                      responsive: true,
-                      maintainAspectRatio: false,
-                      plugins: {
-                        legend: { 
-                          position: 'right',
-                          labels: {
-                            usePointStyle: true,
-                            pointStyle: 'circle',
-                            padding: 15,
-                            font: { size: 12 }
-                          }
-                        },
-                        tooltip: {
-                          backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                          padding: 12,
-                          cornerRadius: 8
-                        }
+            <div className="h-80 flex items-center justify-center">
+              <Doughnut
+                data={statusChartData}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  cutout: '60%',
+                  plugins: {
+                    legend: { 
+                      position: 'right',
+                      labels: {
+                        color: 'rgba(55,65,81,0.9)',
+                        usePointStyle: true,
+                        pointStyle: 'circle',
+                        padding: 20,
+                        font: { size: 12 }
                       }
-                    }}
-                  />
-                </div>
-              </div>
+                    },
+                    tooltip: {
+                      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                      titleColor: '#1f2937',
+                      bodyColor: '#4b5563',
+                      padding: 16,
+                      borderColor: 'rgba(0,0,0,0.1)',
+                      borderWidth: 1,
+                      cornerRadius: 12,
+                    }
+                  }
+                }}
+              />
             </div>
-          </div>
+          </motion.div>
         </div>
 
         {/* Data Tables */}
-        <div className="bg-white rounded-2xl p-6 shadow-xl">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+          className="bg-white rounded-3xl p-6 border border-gray-200 shadow-xl"
+        >
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-bold text-gray-800">Detail per Kecamatan</h3>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl">
+                <FiMapPin className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-800">Detail per Kecamatan</h3>
+                <p className="text-gray-500 text-sm">Klik untuk melihat detail desa</p>
+              </div>
+            </div>
             {selectedStatus && (
-              <div className="flex items-center gap-2 px-4 py-2 bg-cyan-50 border border-cyan-200 rounded-lg">
-                <span className="text-sm text-cyan-700">Filter aktif:</span>
-                <span className="text-sm font-bold text-cyan-900">{selectedStatus}</span>
-                <span className="text-xs text-cyan-600">({totalDesa} desa)</span>
+              <div className="flex items-center gap-2 px-4 py-2 bg-purple-100 border border-purple-300 rounded-xl">
+                <span className="text-sm text-purple-600">Filter:</span>
+                <span className="text-sm font-bold text-purple-800">{getStageName(selectedStatus)}</span>
               </div>
             )}
           </div>
-          <div className="space-y-4">
-            {Object.entries(kecamatanStats)
-              .sort(([, a], [, b]) => b.total - a.total)
-              .map(([kecamatanName, stats]) => (
-                <div key={kecamatanName} className="border border-gray-200 rounded-xl overflow-hidden">
-                  {/* Kecamatan Header */}
-                  <button
-                    onClick={() => toggleKecamatan(kecamatanName)}
-                    className="w-full px-6 py-4 bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 flex items-center justify-between transition-colors"
-                  >
-                    <div className="flex items-center gap-4">
-                      <FiMapPin className="w-5 h-5 text-cyan-600" />
-                      <div className="text-left">
-                        <h4 className="font-semibold text-gray-800">{kecamatanName}</h4>
-                        <p className="text-sm text-gray-600">{stats.count} Desa</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <span className="text-lg font-bold text-cyan-600">{formatRupiah(stats.total)}</span>
-                      {expandedKecamatan[kecamatanName] ? (
-                        <FiChevronUp className="w-5 h-5 text-gray-600" />
-                      ) : (
-                        <FiChevronDown className="w-5 h-5 text-gray-600" />
-                      )}
-                    </div>
-                  </button>
+          
+          {Object.keys(kecamatanStats).length === 0 ? (
+            <div className="text-center py-16">
+              <FileText className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+              <p className="text-gray-500 text-lg">Tidak ada data proposal untuk tahun {tahunAnggaran}</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <AnimatePresence>
+                {Object.entries(kecamatanStats)
+                  .sort(([, a], [, b]) => b.total - a.total)
+                  .map(([kecamatanName, stats], index) => (
+                    <motion.div 
+                      key={kecamatanName}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="rounded-2xl overflow-hidden border border-gray-200 hover:border-purple-300 transition-all hover:shadow-lg"
+                    >
+                      <button
+                        onClick={() => toggleKecamatan(kecamatanName)}
+                        className="w-full px-6 py-4 bg-gray-50 hover:bg-gray-100 flex items-center justify-between transition-colors"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center">
+                            <FiMapPin className="w-5 h-5 text-white" />
+                          </div>
+                          <div className="text-left">
+                            <h4 className="font-semibold text-gray-800">{kecamatanName}</h4>
+                            <p className="text-sm text-gray-500">{stats.count} Proposal</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <span className="text-lg font-bold text-cyan-600">{formatRupiah(stats.total)}</span>
+                          <motion.div
+                            animate={{ rotate: expandedKecamatan[kecamatanName] ? 180 : 0 }}
+                            transition={{ duration: 0.3 }}
+                          >
+                            <FiChevronDown className="w-5 h-5 text-gray-400" />
+                          </motion.div>
+                        </div>
+                      </button>
 
-                  {/* Desa List */}
-                  {expandedKecamatan[kecamatanName] && (
-                    <div className="border-t border-gray-200">
-                      <table className="w-full">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Desa</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Realisasi</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-200">
-                          {stats.desas.map((desa, idx) => (
-                            <tr key={idx} className="hover:bg-gray-50">
-                              <td className="px-6 py-4 text-sm text-gray-800">{desa.desa}</td>
-                              <td className="px-6 py-4">
-                                <span className={`inline-flex px-3 py-1 text-xs font-medium rounded-full border ${getStatusBadge(desa.status)}`}>
-                                  {desa.status}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 text-sm text-right font-semibold text-gray-800">
-                                {formatRupiah(desa.realisasi)}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-              ))}
-          </div>
-        </div>
+                      <AnimatePresence>
+                        {expandedKecamatan[kecamatanName] && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.3 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="border-t border-gray-200 bg-white">
+                              <table className="w-full">
+                                <thead>
+                                  <tr className="border-b border-gray-200 bg-gray-50">
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Desa</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kegiatan</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Anggaran</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                  {stats.desas.map((item, idx) => (
+                                    <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                                      <td className="px-6 py-4 text-sm text-gray-800">{item.desa}</td>
+                                      <td className="px-6 py-4 text-sm text-gray-600">{item.kegiatan}</td>
+                                      <td className="px-6 py-4">
+                                        <span className={`inline-flex px-3 py-1 text-xs font-medium rounded-full border ${getStatusBadge(item.stage)}`}>
+                                          {getStageName(item.stage)}
+                                        </span>
+                                      </td>
+                                      <td className="px-6 py-4 text-sm text-right font-semibold text-cyan-600">
+                                        {formatRupiah(item.anggaran)}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </motion.div>
+                  ))}
+              </AnimatePresence>
+            </div>
+          )}
+        </motion.div>
       </div>
     </div>
   );

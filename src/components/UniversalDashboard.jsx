@@ -66,11 +66,11 @@ const UniversalDashboard = () => {
                 } else if (regularUser.role === 'dinas') {
                     window.location.href = '/dinas/dashboard';
                 } else {
-                    window.location.href = '/login';
+                    window.location.href = '/';
                 }
             }
         } else {
-            window.location.href = '/login';
+            window.location.href = '/';
         }
     }, []);
 

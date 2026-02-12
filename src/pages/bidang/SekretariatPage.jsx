@@ -296,22 +296,25 @@ const SekretariatPage = () => {
 										</div>
 									</button>
 
-									<button
-										onClick={() => navigate('/sekretariat/notifikasi')}
-										className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border border-gray-100 p-6 hover:border-orange-300 transition-all duration-300 text-left overflow-hidden hover:-translate-y-1"
-									>
-										<div className="absolute inset-0 bg-gradient-to-br from-orange-400/5 to-orange-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-										<div className="relative flex items-center gap-5">
-											<div className="h-16 w-16 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg shadow-orange-500/25">
-												<Bell className="h-8 w-8 text-white" />
+									{/* Kelola Notifikasi - Only for Sekretariat pegawai and superadmin */}
+									{(user?.role === 'superadmin' || user?.bidang_id === 2) && (
+										<button
+											onClick={() => navigate('/sekretariat/notifikasi')}
+											className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border border-gray-100 p-6 hover:border-orange-300 transition-all duration-300 text-left overflow-hidden hover:-translate-y-1"
+										>
+											<div className="absolute inset-0 bg-gradient-to-br from-orange-400/5 to-orange-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+											<div className="relative flex items-center gap-5">
+												<div className="h-16 w-16 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg shadow-orange-500/25">
+													<Bell className="h-8 w-8 text-white" />
+												</div>
+												<div className="flex-1">
+													<h3 className="font-bold text-gray-800 text-lg mb-1">Kelola Notifikasi</h3>
+													<p className="text-sm text-gray-500">Push notification & pengumuman</p>
+												</div>
+												<ChevronRight className="h-6 w-6 text-gray-400 group-hover:text-orange-600 group-hover:translate-x-1 transition-all" />
 											</div>
-											<div className="flex-1">
-												<h3 className="font-bold text-gray-800 text-lg mb-1">Kelola Notifikasi</h3>
-												<p className="text-sm text-gray-500">Push notification & pengumuman</p>
-											</div>
-											<ChevronRight className="h-6 w-6 text-gray-400 group-hover:text-orange-600 group-hover:translate-x-1 transition-all" />
-										</div>
-									</button>
+										</button>
+									)}
 								</div>
 							</div>
 						</div>

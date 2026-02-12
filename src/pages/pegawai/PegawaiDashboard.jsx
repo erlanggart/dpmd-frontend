@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
 	User, Briefcase, Mail, Calendar, Award, 
 	Phone, MapPin, TrendingUp, FileText,
-	Clock, Activity, Users, Building, Bell, Info, X
+	Clock, Activity, Users, Building, Info, Bell, X
 } from "lucide-react";
 import api from "../../api";
 import MobileHeader from '../../components/mobile/MobileHeader';
@@ -44,14 +44,15 @@ const PegawaiDashboard = () => {
 				return;
 			}
 
-			// Cari pegawai berdasarkan email user
-			const allPegawaiResponse = await api.get('/pegawai');
-			const pegawaiList = allPegawaiResponse.data.data;
-			
-			// Find pegawai by matching user email
-			const pegawai = pegawaiList.find(p => 
-				p.users && p.users.length > 0 && p.users[0].email === user.email
-			);
+			// Check if user has pegawai_id
+			if (!user.pegawai_id) {
+				setError("Data pegawai tidak ditemukan untuk user ini");
+				return;
+			}
+
+			// Fetch pegawai data by ID
+			const response = await api.get(`/pegawai/${user.pegawai_id}`);
+			const pegawai = response.data.data;
 
 			if (!pegawai) {
 				setError("Data pegawai tidak ditemukan untuk user ini");
@@ -106,13 +107,13 @@ const PegawaiDashboard = () => {
 			icon: Briefcase,
 			label: 'Perjadin',
 			color: 'green',
-			onClick: () => navigate('/dashboard/perjalanan-dinas')
+			onClick: () => navigate('/pegawai/perjadin')
 		},
 		{
 			icon: Calendar,
 			label: 'Jadwal',
 			color: 'blue',
-			onClick: () => navigate('/dashboard/jadwal')
+			onClick: () => navigate('/pegawai/jadwal-kegiatan')
 		},
 		{
 			icon: Info,

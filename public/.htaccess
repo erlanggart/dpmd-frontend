@@ -25,6 +25,7 @@ Options -Indexes
     AddType font/woff2 .woff2
     AddType font/woff .woff
     AddType font/ttf .ttf
+    AddType audio/mpeg .mp3
 </IfModule>
 
 # Service Worker specific headers
