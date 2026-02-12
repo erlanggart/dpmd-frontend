@@ -373,9 +373,27 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
       
       setDesaSurat(suratData);
       
-      // Check if already submitted to kecamatan OR dinas
-      const submittedProposal = proposalsRes.data.data.find(p => p.submitted_to_kecamatan || p.submitted_to_dinas_at);
-      setIsSubmitted(!!submittedProposal);
+      // Check if already submitted to dinas
+      // PERBAIKAN: isSubmitted hanya true jika ada proposal yang sudah dikirim DAN masih aktif
+      // Flow: Desa → Dinas Terkait → Kecamatan (2 level, DPMD tidak verifikasi)
+      // Jika SEMUA proposal sudah di-reject (oleh level manapun), desa bisa tambah proposal baru
+      const activeSubmittedProposal = proposalsRes.data.data.find(p => {
+        // Jika belum dikirim ke dinas, tidak dihitung sebagai "submitted"
+        if (!p.submitted_to_dinas_at) {
+          return false;
+        }
+        // Jika sudah di-reject oleh Dinas, desa bisa tambah lagi
+        if (p.dinas_status === 'rejected') {
+          return false;
+        }
+        // Jika sudah di-reject oleh Kecamatan, desa bisa tambah lagi
+        if (p.kecamatan_status === 'rejected') {
+          return false;
+        }
+        // Proposal masih aktif (pending/in_review/approved di salah satu level)
+        return true;
+      });
+      setIsSubmitted(!!activeSubmittedProposal);
     } catch (error) {
       console.error("Error fetching data:", error);
       Swal.fire({
