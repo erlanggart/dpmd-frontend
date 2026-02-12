@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { CalendarIcon, UsersIcon, BriefcaseIcon, ClockIcon, MapPin, ChevronLeft, ChevronRight, Play, Pause } from 'lucide-react';
+import { CalendarIcon, UsersIcon, BriefcaseIcon, ClockIcon, MapPin, ChevronLeft, ChevronRight, Play, Pause, Menu } from 'lucide-react';
 import perjadinService from '../../../services/perjadinService';
 import toast from 'react-hot-toast';
 
-function PerjadinDashboard({ onBidangClick }) {
+function PerjadinDashboard({ onBidangClick, onMenuToggle }) {
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState(null);
   const [error, setError] = useState(null);
@@ -141,9 +141,17 @@ function PerjadinDashboard({ onBidangClick }) {
     <div>
       {/* Header with Badge */}
       <div className="bg-[#2C3E50] px-4 md:px-6 py-3 md:py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 md:gap-3">
+          {onMenuToggle && (
+            <button
+              onClick={onMenuToggle}
+              className="md:hidden p-1.5 -ml-1 rounded-lg hover:bg-white/10 transition"
+            >
+              <Menu className="w-5 h-5 text-white" />
+            </button>
+          )}
           <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-          <h2 className="text-xl font-bold text-white">Dashboard</h2>
+          <h2 className="text-lg md:text-xl font-bold text-white">Dashboard</h2>
         </div>
         <span className="px-3 py-1 bg-green-500 text-white text-xs font-semibold rounded">Aktif</span>
       </div>

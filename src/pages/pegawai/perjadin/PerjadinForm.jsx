@@ -20,7 +20,7 @@ const formSchema = z.object({
   })).min(1, 'Minimal 1 bidang harus dipilih')
 });
 
-function PerjadinForm({ editData = null, onSuccess, onCancel }) {
+function PerjadinForm({ editData = null, onSuccess, onCancel, onMenuToggle }) {
   const [bidangOptions, setBidangOptions] = useState([]);
   const [pegawaiByBidang, setPegawaiByBidang] = useState({});
   const [loadingBidang, setLoadingBidang] = useState(true);
@@ -176,9 +176,19 @@ function PerjadinForm({ editData = null, onSuccess, onCancel }) {
     <div>
       {/* Header */}
       <div className="bg-[#2C3E50] px-4 md:px-6 py-3 md:py-4">
-        <h2 className="text-lg md:text-xl font-bold text-white">
-          {isEditMode ? 'Edit Kegiatan' : 'Formulir Kegiatan'}
-        </h2>
+        <div className="flex items-center gap-2 md:gap-3">
+          {onMenuToggle && (
+            <button
+              onClick={onMenuToggle}
+              className="md:hidden p-1.5 -ml-1 rounded-lg hover:bg-white/10 transition"
+            >
+              <Menu className="w-5 h-5 text-white" />
+            </button>
+          )}
+          <h2 className="text-lg md:text-xl font-bold text-white">
+            {isEditMode ? 'Edit Kegiatan' : 'Formulir Kegiatan'}
+          </h2>
+        </div>
         <p className="text-gray-300 text-xs md:text-sm mt-1">
           Lengkapi semua informasi yang diperlukan dengan detail
         </p>

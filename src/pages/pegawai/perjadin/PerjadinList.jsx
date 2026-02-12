@@ -7,7 +7,7 @@ import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import * as XLSX from 'xlsx';
 
-function PerjadinList({ onAddNew, onEdit, initialBidangFilter = '', onBidangFilterChange }) {
+function PerjadinList({ onAddNew, onEdit, initialBidangFilter = '', onBidangFilterChange, onMenuToggle }) {
   const navigate = useNavigate();
   const [kegiatans, setKegiatans] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -210,6 +210,14 @@ function PerjadinList({ onAddNew, onEdit, initialBidangFilter = '', onBidangFilt
         <div className="flex items-center justify-between">
           <div>
             <div className="flex items-center gap-2 md:gap-3">
+              {onMenuToggle && (
+                <button
+                  onClick={onMenuToggle}
+                  className="md:hidden p-1.5 -ml-1 rounded-lg hover:bg-white/10 transition"
+                >
+                  <Menu className="w-5 h-5 text-white" />
+                </button>
+              )}
               <div className="w-8 h-8 md:w-10 md:h-10 bg-white/10 rounded-lg flex items-center justify-center">
                 <FileText className="w-4 h-4 md:w-5 md:h-5 text-white" />
               </div>

@@ -72,24 +72,12 @@ function PerjadinMain() {
     setActiveTab('list');
   }, []);
 
+  const handleMenuToggle = useCallback(() => {
+    setSidebarOpen(true);
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
-      {/* Mobile Header with Hamburger */}
-      <div className="md:hidden sticky top-0 z-40 bg-white border-b border-gray-200 shadow-sm">
-        <div className="flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="p-2 -ml-2 rounded-lg hover:bg-gray-100 transition"
-            >
-              <Menu className="w-6 h-6 text-gray-700" />
-            </button>
-            <h2 className="text-gray-800 text-lg font-bold">Perjadin</h2>
-          </div>
-          <span className="text-xs text-gray-500 capitalize">{tabs.find(t => t.id === activeTab)?.label}</span>
-        </div>
-      </div>
-
       {/* Mobile Sidebar Overlay */}
       <div
         className={`md:hidden fixed inset-0 z-50 transition-opacity duration-300 ${
@@ -204,16 +192,31 @@ function PerjadinMain() {
               <PerjadinDashboard 
                 key={`dashboard-${refreshKey}`} 
                 onBidangClick={handleBidangClick}
+                onMenuToggle={handleMenuToggle}
               />
             )}
             {activeTab === 'statistik' && (
-              <div className="p-6">
-                <div className="bg-white rounded-xl shadow-md p-12 text-center">
-                  <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <TrendingUp className="w-10 h-10 text-gray-400" />
+              <div>
+                <div className="bg-[#2C3E50] px-4 md:px-6 py-3 md:py-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={handleMenuToggle}
+                      className="md:hidden p-1.5 -ml-1 rounded-lg hover:bg-white/10 transition"
+                    >
+                      <Menu className="w-5 h-5 text-white" />
+                    </button>
+                    <TrendingUp className="w-5 h-5 text-white" />
+                    <h2 className="text-lg md:text-xl font-bold text-white">Statistik</h2>
                   </div>
-                  <h3 className="text-xl font-bold text-gray-700 mb-2">Statistik</h3>
-                  <p className="text-gray-500">Fitur statistik akan segera hadir</p>
+                </div>
+                <div className="p-4 md:p-6">
+                  <div className="bg-white rounded-xl shadow-md p-12 text-center">
+                    <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <TrendingUp className="w-10 h-10 text-gray-400" />
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-700 mb-2">Statistik</h3>
+                    <p className="text-gray-500">Fitur statistik akan segera hadir</p>
+                  </div>
                 </div>
               </div>
             )}
@@ -223,6 +226,7 @@ function PerjadinMain() {
                 editData={editingKegiatan}
                 onSuccess={handleFormSuccess}
                 onCancel={handleFormCancel}
+                onMenuToggle={handleMenuToggle}
               />
             )}
             {activeTab === 'list' && (
@@ -232,6 +236,7 @@ function PerjadinMain() {
                 onEdit={handleEdit}
                 initialBidangFilter={selectedBidangId}
                 onBidangFilterChange={setSelectedBidangId}
+                onMenuToggle={handleMenuToggle}
               />
             )}
           </Suspense>
