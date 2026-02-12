@@ -6,7 +6,7 @@ import {
   LuEye, LuCheck, LuX, LuRefreshCw, LuClock, LuFileText,
   LuChevronRight, LuDownload, LuInfo, LuArrowRight, LuSettings,
   LuSearch, LuCircleCheck, LuCircleX, LuTriangleAlert,
-  LuChevronDown, LuChevronUp, LuMapPin, LuPackage, LuDollarSign,
+  LuChevronDown, LuChevronUp, LuMapPin, LuDollarSign,
   LuSend, LuClipboardList, LuShield, LuCircleAlert
 } from "react-icons/lu";
 import KecamatanBankeuConfigTab from "../../../components/kecamatan/KecamatanBankeuConfigTab";
@@ -222,7 +222,11 @@ const BankeuVerificationPage = ({ tahun = 2027 }) => {
     }
 
     if (statusFilter !== 'all') {
-      filtered = filtered.filter(p => p.status === statusFilter);
+      if (statusFilter === 'pending') {
+        filtered = filtered.filter(p => !p.kecamatan_status || p.kecamatan_status === 'pending');
+      } else {
+        filtered = filtered.filter(p => p.kecamatan_status === statusFilter);
+      }
     }
 
     if (jenisFilter !== 'all') {
@@ -694,7 +698,7 @@ const BankeuVerificationPage = ({ tahun = 2027 }) => {
 
           {/* Statistics Cards - Responsive */}
           {statistics && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3 sm:gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
               <div className="bg-white rounded-xl p-3 sm:p-4 border border-gray-100 shadow-sm">
                 <div className="flex items-center gap-2 sm:gap-3">
                   <div className="p-1.5 sm:p-2 bg-blue-100 rounded-lg">
@@ -750,28 +754,7 @@ const BankeuVerificationPage = ({ tahun = 2027 }) => {
                   </div>
                 </div>
               </div>
-              <div className="bg-white rounded-xl p-3 sm:p-4 border border-gray-100 shadow-sm">
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <div className="p-1.5 sm:p-2 bg-indigo-100 rounded-lg">
-                    <LuPackage className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600" />
-                  </div>
-                  <div>
-                    <p className="text-lg sm:text-2xl font-bold text-gray-800">{statistics.infrastruktur || 0}</p>
-                    <p className="text-xs text-gray-500">Infrastruktur</p>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-white rounded-xl p-3 sm:p-4 border border-gray-100 shadow-sm">
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <div className="p-1.5 sm:p-2 bg-purple-100 rounded-lg">
-                    <LuPackage className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
-                  </div>
-                  <div>
-                    <p className="text-lg sm:text-2xl font-bold text-gray-800">{statistics.non_infrastruktur || 0}</p>
-                    <p className="text-xs text-gray-500">Non-Infrastruktur</p>
-                  </div>
-                </div>
-              </div>
+
             </div>
           )}
 
@@ -823,9 +806,9 @@ const BankeuVerificationPage = ({ tahun = 2027 }) => {
                       className="flex-1 px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent"
                     >
                       <option value="all">Semua Status</option>
-                      <option value="pending">Menunggu</option>
-                      <option value="verified">Disetujui</option>
-                      <option value="rejected">Ditolak</option>
+                      <option value="pending">Menunggu Review</option>
+                      <option value="approved">Disetujui Kecamatan</option>
+                      <option value="rejected">Ditolak Kecamatan</option>
                       <option value="revision">Perlu Revisi</option>
                     </select>
 
