@@ -376,18 +376,18 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
       // Check if already submitted to dinas
       // PERBAIKAN: isSubmitted hanya true jika ada proposal yang sudah dikirim DAN masih aktif
       // Flow: Desa → Dinas Terkait → Kecamatan (2 level, DPMD tidak verifikasi)
-      // Jika SEMUA proposal sudah di-reject (oleh level manapun), desa bisa tambah proposal baru
+      // Jika SEMUA proposal sudah di-reject/revision (oleh level manapun), desa bisa tambah proposal baru
       const activeSubmittedProposal = proposalsRes.data.data.find(p => {
         // Jika belum dikirim ke dinas, tidak dihitung sebagai "submitted"
         if (!p.submitted_to_dinas_at) {
           return false;
         }
-        // Jika sudah di-reject oleh Dinas, desa bisa tambah lagi
-        if (p.dinas_status === 'rejected') {
+        // Jika sudah di-reject/revision oleh Dinas, desa bisa tambah lagi
+        if (p.dinas_status === 'rejected' || p.dinas_status === 'revision') {
           return false;
         }
-        // Jika sudah di-reject oleh Kecamatan, desa bisa tambah lagi
-        if (p.kecamatan_status === 'rejected') {
+        // Jika sudah di-reject/revision oleh Kecamatan, desa bisa tambah lagi
+        if (p.kecamatan_status === 'rejected' || p.kecamatan_status === 'revision') {
           return false;
         }
         // Proposal masih aktif (pending/in_review/approved di salah satu level)
