@@ -527,6 +527,7 @@ const DpmdVerificationPage = () => {
         Swal.fire({ title: 'Menghapus...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
         const res = await api.delete(`/dpmd/bankeu/proposals/${proposalId}`);
         await fetchData();
+        if (activeView === 'tracking') await fetchTrackingData();
         Swal.fire({
           icon: 'success',
           title: 'Terhapus!',
@@ -541,11 +542,13 @@ const DpmdVerificationPage = () => {
   };
 
   // Delete all proposals from a desa (DPMD bulk delete)
-  const handleDeleteDesaProposals = async (desaId, desaName, proposalCount) => {
+  // allStages: true = delete proposals at ALL stages (dinas, kecamatan, dpmd)
+  const handleDeleteDesaProposals = async (desaId, desaName, proposalCount, allStages = false) => {
+    const stageText = allStages ? ' di semua tahap (dinas, kecamatan, DPMD)' : ' yang sudah sampai di DPMD';
     const result = await Swal.fire({
       title: 'Hapus Semua Proposal Desa?',
       html: `<div class="text-left">
-        <p class="mb-2">Semua <strong>${proposalCount} proposal</strong> dari <strong>Desa ${desaName}</strong> akan dihapus beserta berkas-berkasnya.</p>
+        <p class="mb-2">Semua <strong>${proposalCount} proposal</strong> dari <strong>Desa ${desaName}</strong>${stageText} akan dihapus beserta berkas-berkasnya.</p>
         <p class="text-sm text-red-600 font-medium">⚠️ Tindakan ini tidak dapat dibatalkan!</p>
       </div>`,
       icon: 'warning',
@@ -559,8 +562,12 @@ const DpmdVerificationPage = () => {
     if (result.isConfirmed) {
       try {
         Swal.fire({ title: 'Menghapus...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-        const res = await api.delete(`/dpmd/bankeu/desa/${desaId}/proposals`);
+        const url = allStages 
+          ? `/dpmd/bankeu/desa/${desaId}/proposals?all=true`
+          : `/dpmd/bankeu/desa/${desaId}/proposals`;
+        const res = await api.delete(url);
         await fetchData();
+        if (activeView === 'tracking') await fetchTrackingData();
         Swal.fire({
           icon: 'success',
           title: 'Terhapus!',
@@ -570,6 +577,40 @@ const DpmdVerificationPage = () => {
         });
       } catch (error) {
         Swal.fire('Gagal', error.response?.data?.message || 'Gagal menghapus proposal desa', 'error');
+      }
+    }
+  };
+
+  // Delete surat (pengantar & permohonan) for a desa
+  const handleDeleteDesaSurat = async (desaId, desaName) => {
+    const result = await Swal.fire({
+      title: 'Hapus Surat Desa?',
+      html: `<div class="text-left">
+        <p class="mb-2">Surat pengantar dan permohonan dari <strong>Desa ${desaName}</strong> akan dihapus.</p>
+        <p class="text-sm text-red-600 font-medium">⚠️ Tindakan ini tidak dapat dibatalkan!</p>
+      </div>`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Ya, Hapus Surat',
+      cancelButtonText: 'Batal'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        Swal.fire({ title: 'Menghapus...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        const res = await api.delete(`/dpmd/bankeu/desa/${desaId}/surat`);
+        if (activeView === 'tracking') await fetchTrackingData();
+        Swal.fire({
+          icon: 'success',
+          title: 'Terhapus!',
+          text: res.data?.message || 'Surat desa berhasil dihapus',
+          timer: 2000,
+          showConfirmButton: false
+        });
+      } catch (error) {
+        Swal.fire('Gagal', error.response?.data?.message || 'Gagal menghapus surat desa', 'error');
       }
     }
   };
@@ -1634,6 +1675,35 @@ const DpmdVerificationPage = () => {
                               transition={{ duration: 0.3 }}
                               className="border-t border-gray-200"
                             >
+                              {/* Desa Action Bar */}
+                              <div className="px-6 py-3 bg-gray-50 border-b border-gray-200 flex flex-wrap items-center gap-2">
+                                <span className="text-xs font-semibold text-gray-500 mr-2">Aksi Desa:</span>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteDesaProposals(data.desaId, data.desaName, totalProposals, true);
+                                  }}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-50 hover:bg-red-600 text-red-700 hover:text-white rounded-lg transition-all text-xs font-medium border border-red-200 hover:border-red-600"
+                                  title="Hapus semua proposal desa ini"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                  Hapus Semua Proposal
+                                </button>
+                                {data.proposals.some(p => p.surat_pengantar_desa || p.surat_permohonan_desa) && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteDesaSurat(data.desaId, data.desaName);
+                                    }}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 hover:bg-orange-600 text-orange-700 hover:text-white rounded-lg transition-all text-xs font-medium border border-orange-200 hover:border-orange-600"
+                                    title="Hapus surat pengantar & permohonan desa ini"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                    Hapus Surat Desa
+                                  </button>
+                                )}
+                              </div>
+
                               <div className="p-6 space-y-6">
                                 {data.proposals.map((proposal, idx) => (
                                   <div key={proposal.id} className={`${idx > 0 ? 'pt-6 border-t border-gray-100' : ''}`}>
@@ -1642,7 +1712,7 @@ const DpmdVerificationPage = () => {
                                       <div className="p-2 bg-blue-100 rounded-lg flex-shrink-0">
                                         <FileText className="h-5 w-5 text-blue-600" />
                                       </div>
-                                      <div>
+                                      <div className="flex-1">
                                         <h4 className="font-semibold text-gray-900">{proposal.judul_proposal}</h4>
                                         {proposal.bankeu_master_kegiatan && (
                                           <span className="inline-block mt-1 px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
@@ -1650,6 +1720,16 @@ const DpmdVerificationPage = () => {
                                           </span>
                                         )}
                                       </div>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleDeleteProposal(proposal.id, proposal.judul_proposal);
+                                        }}
+                                        className="p-2 bg-red-50 hover:bg-red-600 text-red-600 hover:text-white rounded-lg transition-all flex-shrink-0 border border-red-200 hover:border-red-600"
+                                        title="Hapus proposal ini"
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </button>
                                     </div>
 
                                     {/* Compact Timeline */}
