@@ -19,6 +19,11 @@
 		color: #1f2937; /* Tailwind's gray-800 */
 	}
 
+	/* Smooth scrolling for the entire page */
+	html {
+		scroll-behavior: smooth;
+	}
+
 	.bg-primary {
 		background-color: rgb(var(--color-primary)) !important;
 	}
@@ -41,6 +46,26 @@
 	.input-group {
 		@apply bg-slate-100 border border-slate-200 p-2 rounded-md mt-2 shadow-sm;
 	}
+}
+
+/* ===== LANDING PAGE ANIMATIONS ===== */
+
+/* Hero background zoom */
+@keyframes hero-zoom {
+	from { transform: scale(1); }
+	to { transform: scale(1.08); }
+}
+
+/* Floating animation */
+@keyframes float {
+	0%, 100% { transform: translateY(0px); }
+	50% { transform: translateY(-20px); }
+}
+
+/* Gentle pulse glow */
+@keyframes glow-pulse {
+	0%, 100% { opacity: 0.4; }
+	50% { opacity: 0.8; }
 }
 
 /* Animation for error messages */
@@ -269,4 +294,79 @@
 .custom-scrollbar {
 	scrollbar-width: thin;
 	scrollbar-color: #3b82f6 #f1f5f9;
+}
+
+/* ===== Map Section Custom Styles ===== */
+
+/* Map tooltip override */
+.map-tooltip-custom {
+	background: rgba(10, 22, 40, 0.92) !important;
+	backdrop-filter: blur(12px) !important;
+	border: 1px solid rgba(255, 255, 255, 0.1) !important;
+	border-radius: 10px !important;
+	padding: 8px 12px !important;
+	color: white !important;
+	box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.05) !important;
+	font-family: 'Poppins', sans-serif !important;
+}
+
+.map-tooltip-custom::before {
+	border-top-color: rgba(10, 22, 40, 0.92) !important;
+}
+
+/* Region hover tooltip */
+.map-region-tooltip {
+	background: rgba(10, 22, 40, 0.88) !important;
+	backdrop-filter: blur(12px) !important;
+	border: 1px solid rgba(198, 167, 61, 0.2) !important;
+	border-radius: 10px !important;
+	padding: 6px 12px !important;
+	color: white !important;
+	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35) !important;
+	font-family: 'Poppins', sans-serif !important;
+}
+
+.map-region-tooltip::before {
+	display: none !important;
+}
+
+/* Marker pulse animation */
+.map-marker-pulse {
+	animation: marker-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes marker-pulse {
+	0%, 100% { box-shadow: 0 0 4px currentColor; }
+	50% { box-shadow: 0 0 16px currentColor, 0 0 32px currentColor; }
+}
+
+/* Dark scrollbar for map panel */
+.dark-scrollbar::-webkit-scrollbar {
+	width: 4px;
+}
+
+.dark-scrollbar::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+.dark-scrollbar::-webkit-scrollbar-thumb {
+	background: rgba(255, 255, 255, 0.1);
+	border-radius: 10px;
+}
+
+.dark-scrollbar::-webkit-scrollbar-thumb:hover {
+	background: rgba(255, 255, 255, 0.2);
+}
+
+/* Leaflet controls style override for dark map */
+.leaflet-container .leaflet-control-attribution {
+	background: rgba(0, 0, 0, 0.4) !important;
+	color: rgba(255, 255, 255, 0.3) !important;
+	font-size: 9px !important;
+	backdrop-filter: blur(8px);
+	border: none !important;
+}
+
+.leaflet-container .leaflet-control-attribution a {
+	color: rgba(255, 255, 255, 0.4) !important;
 }

@@ -1,7 +1,8 @@
-import React, { useState } from "react";
-import { Link as RouterLink } from "react-router-dom"; // Link untuk navigasi halaman
-import { Link as ScrollLink } from "react-scroll"; // Link BARU untuk scrolling
-import { FiLogIn, FiMenu, FiX } from "react-icons/fi";
+import React, { useState, useEffect } from "react";
+import { Link as RouterLink } from "react-router-dom";
+import { Link as ScrollLink } from "react-scroll";
+import { FiMenu, FiX, FiChevronDown } from "react-icons/fi";
+import { motion, AnimatePresence } from "framer-motion";
 import HeroSection from "../components/HeroSection";
 import { useScrollPosition } from "../hooks/useScrollPosition";
 import FeatureSection from "../components/landingpage/FeatureSection";
@@ -9,132 +10,181 @@ import Footer from "../components/landingpage/Footer";
 import StatsSection from "../components/landingpage/StatsSection";
 import NewsSection from "../components/landingpage/NewsSection";
 import KegiatanSection from "../components/landingpage/KegiatanSection";
-import PWAInstallPrompt from "../components/PWAInstallPrompt";
+import MapSection from "../components/landingpage/MapSection";
 import InstallPWA from "../components/InstallPWA";
 
 const LandingPage = () => {
 	const scrollY = useScrollPosition();
 	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+	const [activeSection, setActiveSection] = useState("home");
 
-	const headerClasses = `
-    fixed top-0 z-50 w-full px-4 py-3 transition-all duration-300
-    ${
-			scrollY > 50
-				? "bg-[rgb(var(--color-primary))] shadow-lg"
-				: "bg-gradient-to-b from-black/70 to-transparent"
-		}
-  `;
+	// Close mobile menu on resize
+	useEffect(() => {
+		const handleResize = () => {
+			if (window.innerWidth >= 1024) setIsMobileMenuOpen(false);
+		};
+		window.addEventListener("resize", handleResize);
+		return () => window.removeEventListener("resize", handleResize);
+	}, []);
 
-	// Daftar link navigasi
+	const isScrolled = scrollY > 50;
+
 	const navLinks = [
 		{ to: "home", label: "Beranda" },
 		{ to: "stats", label: "Statistik" },
-		{ to: "kegiatan", label: "Kegiatan" },
+		{ to: "peta", label: "Peta" },
+		{ to: "kegiatan", label: "Program" },
 		{ to: "berita", label: "Berita" },
-		{ to: "features", label: "Fitur" },
+		{ to: "features", label: "Layanan" },
 		{ to: "contact", label: "Kontak" },
 	];
 
-	// Styling untuk link navigasi
-	const navLinkClasses =
-		"cursor-pointer text-white transition-colors hover:text-secondary block py-2 px-4 lg:p-0";
-
-	const closeMobileMenu = () => {
-		setIsMobileMenuOpen(false);
-	};
+	const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
 	return (
-		<div className="overflow-x-hidden">
-			<header className={headerClasses}>
-				<div className="container max-w-7xl mx-auto flex items-center justify-between">
-					<div className="flex items-center space-x-3">
-						<img
-							src="/logo-bogor.png"
-							alt="Logo Kabupaten Bogor"
-							className="h-8 md:h-10"
-						/>
+		<div className="overflow-x-hidden bg-white">
+			{/* ===== ELEGANT NAVBAR ===== */}
+			<motion.header
+				initial={{ y: -100 }}
+				animate={{ y: 0 }}
+				transition={{ duration: 0.6, ease: "easeOut" }}
+				className={`fixed top-0 z-50 w-full transition-all duration-500 ${
+					isScrolled
+						? "bg-[rgb(var(--color-primary))]/95 backdrop-blur-xl shadow-2xl shadow-black/10 py-2"
+						: "bg-gradient-to-b from-black/60 via-black/30 to-transparent py-4"
+				}`}
+			>
+				<div className="container max-w-7xl mx-auto px-4 lg:px-8 flex items-center justify-between">
+					{/* Logo */}
+					<RouterLink to="/" className="flex items-center space-x-3 group">
+						<div className="relative">
+							<img
+								src="/logo-bogor.png"
+								alt="Logo Kabupaten Bogor"
+								className={`transition-all duration-300 ${isScrolled ? "h-9" : "h-11"}`}
+							/>
+							<div className="absolute -inset-1 bg-white/20 rounded-full blur-md opacity-0 group-hover:opacity-100 transition-opacity" />
+						</div>
+						<div className={`hidden sm:block transition-all duration-300 ${isScrolled ? "opacity-100" : "opacity-90"}`}>
+							<p className="text-white font-bold text-sm leading-tight tracking-wide">DPMD</p>
+							<p className="text-white/70 text-[10px] leading-tight">Kabupaten Bogor</p>
+						</div>
+					</RouterLink>
 
-					</div>
-					
 					{/* Desktop Navigation */}
-					<div className="hidden lg:flex items-center space-x-8">
-						<nav className="flex items-center space-x-8">
-					{navLinks.map((link) => (
-						<ScrollLink
-							key={link.to}
-							to={link.to}
-							spy={true}
-							smooth={true}
-							offset={-70}
-							duration={500}
-							className="cursor-pointer text-white transition-colors hover:text-secondary"
-							activeClass="text-secondary"
-							onClick={closeMobileMenu}
-						>
-							{link.label}
-						</ScrollLink>
-					))}
-				</nav>
-				<InstallPWA compact={true} />
-			</div>				{/* Mobile Menu Button */}
-					<button
-						className="lg:hidden text-white p-2 rounded-md hover:bg-white/10 transition-colors"
-						onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-						aria-label="Toggle menu"
-					>
-						{isMobileMenuOpen ? <FiX className="w-6 h-6" /> : <FiMenu className="w-6 h-6" />}
-					</button>
-				</div>
-
-				{/* Mobile Navigation Menu */}
-				{isMobileMenuOpen && (
-					<div className="lg:hidden bg-slate-800/95 backdrop-blur-sm border-t border-white/20">
-						<nav className="container max-w-7xl mx-auto px-4 py-4 space-y-2">
+					<div className="hidden lg:flex items-center space-x-1">
+						<nav className="flex items-center bg-white/[0.08] backdrop-blur-sm rounded-full px-2 py-1.5 border border-white/[0.08]">
 							{navLinks.map((link) => (
 								<ScrollLink
 									key={link.to}
 									to={link.to}
 									spy={true}
 									smooth={true}
-									offset={-70}
-									duration={500}
-									className={navLinkClasses}
-									activeClass="text-secondary bg-white/10 rounded-md"
-									onClick={closeMobileMenu}
+									offset={-80}
+									duration={600}
+									className="relative cursor-pointer text-white/80 text-sm font-medium px-4 py-2 rounded-full transition-all duration-300 hover:text-white hover:bg-white/10"
+									activeClass="!text-[rgb(var(--color-secondary))] !bg-white/15"
+									onSetActive={() => setActiveSection(link.to)}
 								>
 									{link.label}
 								</ScrollLink>
 							))}
-							
-							{/* Divider */}
-							<div className="border-t border-white/20 my-3"></div>
-							
-							{/* Install PWA Button */}
-							<div className="px-4 pb-2">
-								<InstallPWA />
-							</div>
 						</nav>
+						<div className="ml-4">
+							<InstallPWA compact={true} />
+						</div>
 					</div>
-				)}
-		</header>			{/* Pastikan setiap komponen ini memiliki ID yang sesuai */}
+
+					{/* Mobile Menu Button */}
+					<button
+						className="lg:hidden relative w-10 h-10 flex items-center justify-center text-white rounded-xl bg-white/10 backdrop-blur-sm border border-white/10 hover:bg-white/20 transition-all"
+						onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+						aria-label="Toggle menu"
+					>
+						<AnimatePresence mode="wait">
+							{isMobileMenuOpen ? (
+								<motion.div key="close" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }} transition={{ duration: 0.2 }}>
+									<FiX className="w-5 h-5" />
+								</motion.div>
+							) : (
+								<motion.div key="menu" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }} transition={{ duration: 0.2 }}>
+									<FiMenu className="w-5 h-5" />
+								</motion.div>
+							)}
+						</AnimatePresence>
+					</button>
+				</div>
+
+				{/* Mobile Navigation */}
+				<AnimatePresence>
+					{isMobileMenuOpen && (
+						<motion.div
+							initial={{ opacity: 0, height: 0 }}
+							animate={{ opacity: 1, height: "auto" }}
+							exit={{ opacity: 0, height: 0 }}
+							transition={{ duration: 0.3, ease: "easeInOut" }}
+							className="lg:hidden overflow-hidden"
+						>
+							<div className="bg-[rgb(var(--color-primary))]/98 backdrop-blur-xl border-t border-white/10 mx-4 mt-2 rounded-2xl shadow-2xl">
+								<nav className="p-4 space-y-1">
+									{navLinks.map((link, i) => (
+										<motion.div
+											key={link.to}
+											initial={{ opacity: 0, x: -20 }}
+											animate={{ opacity: 1, x: 0 }}
+											transition={{ delay: i * 0.05 }}
+										>
+											<ScrollLink
+												to={link.to}
+												spy={true}
+												smooth={true}
+												offset={-80}
+												duration={600}
+												className="flex items-center cursor-pointer text-white/80 hover:text-white py-3 px-4 rounded-xl hover:bg-white/10 transition-all font-medium"
+												activeClass="!text-[rgb(var(--color-secondary))] !bg-white/15"
+												onClick={closeMobileMenu}
+											>
+												{link.label}
+											</ScrollLink>
+										</motion.div>
+									))}
+									<div className="border-t border-white/10 my-2" />
+									<div className="px-4 py-2">
+										<InstallPWA />
+									</div>
+								</nav>
+							</div>
+						</motion.div>
+					)}
+				</AnimatePresence>
+			</motion.header>
+
+			{/* ===== PAGE SECTIONS ===== */}
 			<section id="home">
 				<HeroSection />
 			</section>
+
 			<section id="stats">
 				<StatsSection />
 			</section>
+
+			<section id="peta">
+				<MapSection />
+			</section>
+
 			<section id="kegiatan">
 				<KegiatanSection />
 			</section>
+
 			<section id="berita">
 				<NewsSection />
 			</section>
-			<section id="features" className="bg-white py-20">
+
+			<section id="features">
 				<FeatureSection />
 			</section>
+
 			<Footer />
-			{/* PWA disabled temporarily - causing click blocking */}
-			{/* <PWAInstallPrompt showOnLanding={true} /> */}
 		</div>
 	);
 };
