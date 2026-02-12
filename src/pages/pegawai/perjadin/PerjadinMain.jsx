@@ -1,5 +1,5 @@
 import { useState, lazy, Suspense, useCallback } from 'react';
-import { LayoutDashboard, List, TrendingUp, PlusCircle } from 'lucide-react';
+import { LayoutDashboard, List, TrendingUp, PlusCircle, Menu, X } from 'lucide-react';
 
 // Lazy load tab components
 const PerjadinDashboard = lazy(() => import('./PerjadinDashboard'));
@@ -11,6 +11,7 @@ function PerjadinMain() {
   const [editingKegiatan, setEditingKegiatan] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [selectedBidangId, setSelectedBidangId] = useState('');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const tabs = [
     {
@@ -73,6 +74,88 @@ function PerjadinMain() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
+      {/* Mobile Header with Hamburger */}
+      <div className="md:hidden sticky top-0 z-40 bg-white border-b border-gray-200 shadow-sm">
+        <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="p-2 -ml-2 rounded-lg hover:bg-gray-100 transition"
+            >
+              <Menu className="w-6 h-6 text-gray-700" />
+            </button>
+            <h2 className="text-gray-800 text-lg font-bold">Perjadin</h2>
+          </div>
+          <span className="text-xs text-gray-500 capitalize">{tabs.find(t => t.id === activeTab)?.label}</span>
+        </div>
+      </div>
+
+      {/* Mobile Sidebar Overlay */}
+      <div
+        className={`md:hidden fixed inset-0 z-50 transition-opacity duration-300 ${
+          sidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
+      >
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setSidebarOpen(false)}
+          />
+          {/* Sidebar Panel */}
+          <div className={`absolute left-0 top-0 bottom-0 w-72 bg-white shadow-2xl transition-transform duration-300 ${
+            sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}>
+            <div className="p-5">
+              <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
+                <h2 className="text-gray-800 text-lg font-bold flex items-center gap-3">
+                  <div className="w-9 h-9 bg-gradient-to-br from-slate-700 to-slate-900 rounded-lg flex items-center justify-center shadow-lg">
+                    <LayoutDashboard className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <span>Perjadin</span>
+                    <p className="text-xs text-gray-500 font-normal">Perjalanan Dinas</p>
+                  </div>
+                </h2>
+                <button
+                  onClick={() => setSidebarOpen(false)}
+                  className="p-2 rounded-lg hover:bg-gray-100 transition"
+                >
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+              <nav className="space-y-1">
+                {tabs.map((tab) => {
+                  const Icon = tab.icon;
+                  const isActive = activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => {
+                        setActiveTab(tab.id);
+                        setSidebarOpen(false);
+                      }}
+                      className={`
+                        w-full flex items-center gap-3 px-4 py-3.5 font-medium text-sm transition-all rounded-xl
+                        ${isActive
+                          ? 'bg-gradient-to-r from-slate-700 to-slate-900 text-white shadow-lg shadow-slate-500/30'
+                          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                        }
+                      `}
+                    >
+                      <Icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-gray-400'}`} />
+                      <span className="flex-1 text-left">{tab.label}</span>
+                      {isActive && (
+                        <div className="w-2 h-2 bg-white rounded-full"></div>
+                      )}
+                    </button>
+                  );
+                })}
+              </nav>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Sidebar Navigation - Desktop Only */}
       <div className="hidden md:block w-64 bg-white shadow-2xl min-h-screen sticky top-0 border-r border-gray-200 flex-shrink-0">
         <div className="p-6">
@@ -114,32 +197,8 @@ function PerjadinMain() {
         </div>
       </div>
 
-      {/* Bottom Navigation - Mobile Only */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-4px_12px_rgba(0,0,0,0.08)] z-50 safe-area-pb">
-        <nav className="flex items-center justify-around px-1 py-1.5">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl min-w-[60px] transition-all ${
-                  isActive
-                    ? 'text-slate-800 bg-slate-100'
-                    : 'text-gray-400 hover:text-gray-600'
-                }`}
-              >
-                <Icon className={`w-5 h-5 ${isActive ? 'text-slate-800' : ''}`} />
-                <span className="text-[10px] font-medium leading-tight">{tab.label}</span>
-              </button>
-            );
-          })}
-        </nav>
-      </div>
-
       {/* Main Content Area */}
-      <div className="flex-1 overflow-auto pb-20 md:pb-0">
+      <div className="flex-1 overflow-auto">
         <div className="max-w-7xl mx-auto">
           <Suspense fallback={<LoadingSpinner />}>
             {activeTab === 'dashboard' && (
