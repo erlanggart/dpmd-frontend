@@ -154,7 +154,6 @@ function PerjadinMain() {
             </div>
           </div>
         </div>
-      </div>
 
       {/* Sidebar Navigation - Desktop Only */}
       <div className="hidden md:block w-64 bg-white shadow-2xl min-h-screen sticky top-0 border-r border-gray-200 flex-shrink-0">
