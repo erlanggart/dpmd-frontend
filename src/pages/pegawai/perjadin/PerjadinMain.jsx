@@ -72,9 +72,9 @@ function PerjadinMain() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      {/* Sidebar Navigation - Modern White */}
-      <div className="w-64 bg-white shadow-2xl min-h-screen sticky top-0 border-r border-gray-200">
+    <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
+      {/* Sidebar Navigation - Desktop Only */}
+      <div className="hidden md:block w-64 bg-white shadow-2xl min-h-screen sticky top-0 border-r border-gray-200 flex-shrink-0">
         <div className="p-6">
           <div className="mb-8 pb-6 border-b border-gray-200">
             <h2 className="text-gray-800 text-xl font-bold flex items-center gap-3">
@@ -114,8 +114,32 @@ function PerjadinMain() {
         </div>
       </div>
 
+      {/* Bottom Navigation - Mobile Only */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-4px_12px_rgba(0,0,0,0.08)] z-50 safe-area-pb">
+        <nav className="flex items-center justify-around px-1 py-1.5">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl min-w-[60px] transition-all ${
+                  isActive
+                    ? 'text-slate-800 bg-slate-100'
+                    : 'text-gray-400 hover:text-gray-600'
+                }`}
+              >
+                <Icon className={`w-5 h-5 ${isActive ? 'text-slate-800' : ''}`} />
+                <span className="text-[10px] font-medium leading-tight">{tab.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+      </div>
+
       {/* Main Content Area */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto pb-20 md:pb-0">
         <div className="max-w-7xl mx-auto">
           <Suspense fallback={<LoadingSpinner />}>
             {activeTab === 'dashboard' && (

@@ -127,98 +127,98 @@ function PerjadinDetail() {
     <div className="min-h-screen bg-gray-50">
       {/* Header with Dark Navy Theme */}
       <div className="bg-[#2C3E50]">
-        <div className="max-w-6xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+        <div className="max-w-6xl mx-auto px-3 md:px-6 py-3 md:py-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2 md:gap-4 min-w-0">
               <Link
                 to="/pegawai/perjadin"
-                className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition"
+                className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition flex-shrink-0"
               >
                 <ArrowLeft className="w-5 h-5" />
               </Link>
-              <div>
-                <h1 className="text-xl font-bold text-white">{kegiatan.nama_kegiatan}</h1>
-                <p className="text-gray-300 text-sm font-mono">{kegiatan.nomor_sp}</p>
+              <div className="min-w-0">
+                <h1 className="text-base md:text-xl font-bold text-white truncate">{kegiatan.nama_kegiatan}</h1>
+                <p className="text-gray-300 text-xs md:text-sm font-mono">{kegiatan.nomor_sp}</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <span className="px-3 py-1 bg-green-500 text-white text-xs font-semibold rounded-full flex items-center gap-1">
+            <div className="flex items-center gap-2 ml-9 sm:ml-0">
+              <span className="px-2.5 py-1 bg-green-500 text-white text-xs font-semibold rounded-full flex items-center gap-1">
                 <CheckCircle className="w-3 h-3" />
                 Aktif
               </span>
               <button
                 onClick={handleEdit}
-                className="flex items-center gap-2 px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition"
+                className="flex items-center gap-1.5 px-3 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition text-sm"
               >
                 <Edit className="w-4 h-4" />
-                <span>Edit</span>
+                <span className="hidden sm:inline">Edit</span>
               </button>
               <button
                 onClick={handleDelete}
-                className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
+                className="flex items-center gap-1.5 px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition text-sm"
               >
                 <Trash2 className="w-4 h-4" />
-                <span>Hapus</span>
+                <span className="hidden sm:inline">Hapus</span>
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-6 py-6">
+      <div className="max-w-6xl mx-auto px-3 md:px-6 py-4 md:py-6">
         {/* Summary Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-xl shadow-md p-4 border-l-4 border-blue-500">
-            <div className="flex items-center gap-3">
-              <div className="bg-blue-100 p-2 rounded-lg">
-                <Building2 className="w-5 h-5 text-blue-600" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
+          <div className="bg-white rounded-xl shadow-md p-3 md:p-4 border-l-4 border-blue-500">
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="bg-blue-100 p-1.5 md:p-2 rounded-lg">
+                <Building2 className="w-4 h-4 md:w-5 md:h-5 text-blue-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-600">Total Bidang</p>
-                <p className="text-2xl font-bold text-gray-800">
+                <p className="text-xs md:text-sm text-gray-600">Total Bidang</p>
+                <p className="text-xl md:text-2xl font-bold text-gray-800">
                   {kegiatan.bidang?.length || 0}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-md p-4 border-l-4 border-green-500">
-            <div className="flex items-center gap-3">
-              <div className="bg-green-100 p-2 rounded-lg">
-                <Users className="w-5 h-5 text-green-600" />
+          <div className="bg-white rounded-xl shadow-md p-3 md:p-4 border-l-4 border-green-500">
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="bg-green-100 p-1.5 md:p-2 rounded-lg">
+                <Users className="w-4 h-4 md:w-5 md:h-5 text-green-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-600">Total Pegawai</p>
-                <p className="text-2xl font-bold text-gray-800">
+                <p className="text-xs md:text-sm text-gray-600">Total Pegawai</p>
+                <p className="text-xl md:text-2xl font-bold text-gray-800">
                   {kegiatan.bidang?.reduce((sum, b) => sum + (b.pegawai?.length || 0), 0) || 0}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-md p-4 border-l-4 border-purple-500">
-            <div className="flex items-center gap-3">
-              <div className="bg-purple-100 p-2 rounded-lg">
-                <Clock className="w-5 h-5 text-purple-600" />
+          <div className="bg-white rounded-xl shadow-md p-3 md:p-4 border-l-4 border-purple-500">
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="bg-purple-100 p-1.5 md:p-2 rounded-lg">
+                <Clock className="w-4 h-4 md:w-5 md:h-5 text-purple-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-600">Durasi</p>
-                <p className="text-2xl font-bold text-gray-800">
+                <p className="text-xs md:text-sm text-gray-600">Durasi</p>
+                <p className="text-xl md:text-2xl font-bold text-gray-800">
                   {Math.ceil((new Date(kegiatan.tanggal_selesai) - new Date(kegiatan.tanggal_mulai)) / (1000 * 60 * 60 * 24)) + 1} hari
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-md p-4 border-l-4 border-amber-500">
-            <div className="flex items-center gap-3">
-              <div className="bg-amber-100 p-2 rounded-lg">
-                <MapPin className="w-5 h-5 text-amber-600" />
+          <div className="bg-white rounded-xl shadow-md p-3 md:p-4 border-l-4 border-amber-500">
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="bg-amber-100 p-1.5 md:p-2 rounded-lg">
+                <MapPin className="w-4 h-4 md:w-5 md:h-5 text-amber-600" />
               </div>
-              <div>
-                <p className="text-sm text-gray-600">Lokasi</p>
-                <p className="text-lg font-bold text-gray-800 truncate">
+              <div className="min-w-0">
+                <p className="text-xs md:text-sm text-gray-600">Lokasi</p>
+                <p className="text-sm md:text-lg font-bold text-gray-800 truncate">
                   {kegiatan.lokasi}
                 </p>
               </div>
@@ -229,8 +229,8 @@ function PerjadinDetail() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Info Card */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-xl shadow-md p-6">
-              <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+            <div className="bg-white rounded-xl shadow-md p-4 md:p-6">
+              <h2 className="text-base md:text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
                 <FileText className="w-5 h-5 text-[#2C3E50]" />
                 Informasi Kegiatan
               </h2>
@@ -281,8 +281,8 @@ function PerjadinDetail() {
 
           {/* Bidang Terkait */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-xl shadow-md p-6">
-              <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+            <div className="bg-white rounded-xl shadow-md p-4 md:p-6">
+              <h2 className="text-base md:text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
                 <Building2 className="w-5 h-5 text-[#2C3E50]" />
                 Bidang & Pegawai Terlibat
                 <span className="ml-auto px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">

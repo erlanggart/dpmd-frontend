@@ -140,7 +140,7 @@ function PerjadinDashboard({ onBidangClick }) {
   return (
     <div>
       {/* Header with Badge */}
-      <div className="bg-[#2C3E50] px-6 py-4 flex items-center justify-between">
+      <div className="bg-[#2C3E50] px-4 md:px-6 py-3 md:py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
           <h2 className="text-xl font-bold text-white">Dashboard</h2>
@@ -148,77 +148,77 @@ function PerjadinDashboard({ onBidangClick }) {
         <span className="px-3 py-1 bg-green-500 text-white text-xs font-semibold rounded">Aktif</span>
       </div>
 
-      <div className="p-6">
+      <div className="p-3 md:p-6">
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6">
           {/* Total Kegiatan - Dark Blue */}
-          <div className="bg-[#3D4E5F] rounded-lg shadow-md p-6">
+          <div className="bg-[#3D4E5F] rounded-lg shadow-md p-3 md:p-6">
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
-                  <div className="bg-[#2C3E50] p-2 rounded">
-                    <BriefcaseIcon className="w-5 h-5 text-white" />
+                  <div className="bg-[#2C3E50] p-1.5 md:p-2 rounded">
+                    <BriefcaseIcon className="w-4 h-4 md:w-5 md:h-5 text-white" />
                   </div>
-                  <span className="text-white text-4xl font-bold">
+                  <span className="text-white text-2xl md:text-4xl font-bold">
                     {dashboardData?.total || 0}
                   </span>
                 </div>
-                <p className="text-gray-300 text-sm font-medium">Total Kegiatan</p>
-                <p className="text-gray-400 text-xs mt-1">● Semua periode</p>
+                <p className="text-gray-300 text-xs md:text-sm font-medium">Total Kegiatan</p>
+                <p className="text-gray-400 text-[10px] md:text-xs mt-1">● Semua periode</p>
               </div>
             </div>
           </div>
 
           {/* Kegiatan Minggu Ini - Dark Blue */}
-          <div className="bg-[#3D4E5F] rounded-lg shadow-md p-6">
+          <div className="bg-[#3D4E5F] rounded-lg shadow-md p-3 md:p-6">
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
-                  <div className="bg-[#2C3E50] p-2 rounded">
-                    <CalendarIcon className="w-5 h-5 text-white" />
+                  <div className="bg-[#2C3E50] p-1.5 md:p-2 rounded">
+                    <CalendarIcon className="w-4 h-4 md:w-5 md:h-5 text-white" />
                   </div>
-                  <span className="text-white text-4xl font-bold">
+                  <span className="text-white text-2xl md:text-4xl font-bold">
                     {dashboardData?.minggu_ini || 0}
                   </span>
                 </div>
-                <p className="text-gray-300 text-sm font-medium">Kegiatan Minggu</p>
-                <p className="text-gray-400 text-xs mt-1">● 7 hari terakhir</p>
+                <p className="text-gray-300 text-xs md:text-sm font-medium">Kegiatan Minggu</p>
+                <p className="text-gray-400 text-[10px] md:text-xs mt-1">● 7 hari terakhir</p>
               </div>
             </div>
           </div>
 
           {/* Kegiatan Bulan Ini - Dark Blue */}
-          <div className="bg-[#3D4E5F] rounded-lg shadow-md p-6">
+          <div className="bg-[#3D4E5F] rounded-lg shadow-md p-3 md:p-6">
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
-                  <div className="bg-[#2C3E50] p-2 rounded">
-                    <ClockIcon className="w-5 h-5 text-white" />
+                  <div className="bg-[#2C3E50] p-1.5 md:p-2 rounded">
+                    <ClockIcon className="w-4 h-4 md:w-5 md:h-5 text-white" />
                   </div>
-                  <span className="text-white text-4xl font-bold">
+                  <span className="text-white text-2xl md:text-4xl font-bold">
                     {dashboardData?.bulan_ini || 0}
                   </span>
                 </div>
-                <p className="text-gray-300 text-sm font-medium">Kegiatan Bulanan</p>
-                <p className="text-gray-400 text-xs mt-1">● 30 hari terakhir</p>
+                <p className="text-gray-300 text-xs md:text-sm font-medium">Kegiatan Bulanan</p>
+                <p className="text-gray-400 text-[10px] md:text-xs mt-1">● 30 hari terakhir</p>
               </div>
             </div>
           </div>
 
           {/* Total Pegawai - Green */}
-          <div className="bg-[#27AE60] rounded-lg shadow-md p-6">
+          <div className="bg-[#27AE60] rounded-lg shadow-md p-3 md:p-6">
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
-                  <div className="bg-[#229954] p-2 rounded">
-                    <UsersIcon className="w-5 h-5 text-white" />
+                  <div className="bg-[#229954] p-1.5 md:p-2 rounded">
+                    <UsersIcon className="w-4 h-4 md:w-5 md:h-5 text-white" />
                   </div>
-                  <span className="text-white text-4xl font-bold">
+                  <span className="text-white text-2xl md:text-4xl font-bold">
                     {dashboardData?.total_pegawai || 0}
                   </span>
                 </div>
-                <p className="text-white text-sm font-medium">Total Pegawai</p>
-                <p className="text-green-100 text-xs mt-1">● Yang terlibat</p>
+                <p className="text-white text-xs md:text-sm font-medium">Total Pegawai</p>
+                <p className="text-green-100 text-[10px] md:text-xs mt-1">● Yang terlibat</p>
               </div>
             </div>
           </div>
@@ -226,15 +226,15 @@ function PerjadinDashboard({ onBidangClick }) {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Kegiatan Per Bidang */}
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <div className="flex items-center gap-2 mb-6">
-              <div className="w-8 h-8 bg-gray-100 rounded flex items-center justify-center">
+          <div className="bg-white rounded-xl shadow-md p-4 md:p-6">
+            <div className="flex items-center gap-2 mb-4 md:mb-6">
+              <div className="w-8 h-8 bg-gray-100 rounded flex items-center justify-center flex-shrink-0">
                 <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                 </svg>
               </div>
-              <h2 className="text-lg font-bold text-gray-800">Kegiatan Per Bidang</h2>
-              <span className="ml-auto text-sm text-gray-500">{dashboardData?.breakdown_per_bidang?.length || 0} Bidang Terlibat</span>
+              <h2 className="text-base md:text-lg font-bold text-gray-800">Kegiatan Per Bidang</h2>
+              <span className="ml-auto text-xs md:text-sm text-gray-500 hidden sm:block">{dashboardData?.breakdown_per_bidang?.length || 0} Bidang Terlibat</span>
             </div>
 
             <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
@@ -281,12 +281,12 @@ function PerjadinDashboard({ onBidangClick }) {
           </div>
 
           {/* Kalender Mingguan with Auto-Transition */}
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <div className="flex items-center gap-2 mb-6">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded flex items-center justify-center">
+          <div className="bg-white rounded-xl shadow-md p-4 md:p-6">
+            <div className="flex items-center gap-2 mb-4 md:mb-6">
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded flex items-center justify-center flex-shrink-0">
                 <CalendarIcon className="w-5 h-5 text-white" />
               </div>
-              <h2 className="text-lg font-bold text-gray-800">Kalender Mingguan</h2>
+              <h2 className="text-base md:text-lg font-bold text-gray-800">Kalender Mingguan</h2>
               <div className="ml-auto flex items-center gap-2">
                 <button
                   onClick={() => setIsAutoTransition(!isAutoTransition)}
@@ -303,7 +303,7 @@ function PerjadinDashboard({ onBidangClick }) {
             </div>
 
             {/* Week Days Grid with Selection */}
-            <div className="grid grid-cols-7 gap-2 mb-4">
+            <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-4">
               {weekDays.map((day, index) => {
                 const formatted = formatDate(day);
                 const kegiatanList = getKegiatanForDate(day);
@@ -314,7 +314,7 @@ function PerjadinDashboard({ onBidangClick }) {
                   <button
                     key={index}
                     onClick={() => handleDayClick(index)}
-                    className={`relative text-center p-3 rounded-lg transition-all duration-300 transform ${
+                    className={`relative text-center p-1.5 sm:p-3 rounded-lg transition-all duration-300 transform ${
                       isSelected
                         ? 'bg-[#2C3E50] text-white scale-105 shadow-lg'
                         : isToday
@@ -322,17 +322,17 @@ function PerjadinDashboard({ onBidangClick }) {
                         : 'bg-gray-50 border border-gray-200 hover:bg-gray-100 hover:scale-102'
                     }`}
                   >
-                    <p className={`text-xs font-medium ${
+                    <p className={`text-[10px] sm:text-xs font-medium ${
                       isSelected ? 'text-gray-300' : isToday ? 'text-green-700' : 'text-gray-600'
                     }`}>
                       {formatted.day}
                     </p>
-                    <p className={`text-lg font-bold mt-1 ${
+                    <p className={`text-sm sm:text-lg font-bold mt-0.5 sm:mt-1 ${
                       isSelected ? 'text-white' : isToday ? 'text-green-700' : 'text-gray-800'
                     }`}>
                       {formatted.date}
                     </p>
-                    <p className={`text-xs ${
+                    <p className={`text-[10px] sm:text-xs ${
                       isSelected ? 'text-gray-400' : isToday ? 'text-green-600' : 'text-gray-500'
                     }`}>
                       {formatted.monthName}
@@ -409,7 +409,7 @@ function PerjadinDashboard({ onBidangClick }) {
                           <h4 className="font-semibold text-gray-800 text-sm truncate">
                             {kegiatan.nama_kegiatan}
                           </h4>
-                          <div className="flex items-center gap-3 mt-1">
+                          <div className="flex flex-wrap items-center gap-1.5 sm:gap-3 mt-1">
                             <div className="flex items-center gap-1 text-xs text-gray-500">
                               <MapPin className="w-3 h-3" />
                               <span className="truncate">{kegiatan.lokasi || 'Lokasi TBD'}</span>

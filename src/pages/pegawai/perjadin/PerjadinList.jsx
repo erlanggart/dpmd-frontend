@@ -206,16 +206,16 @@ function PerjadinList({ onAddNew, onEdit, initialBidangFilter = '', onBidangFilt
   return (
     <div>
       {/* Header with Dark Navy Theme */}
-      <div className="bg-[#2C3E50] px-6 py-4">
+      <div className="bg-[#2C3E50] px-4 md:px-6 py-3 md:py-4">
         <div className="flex items-center justify-between">
           <div>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center">
-                <FileText className="w-5 h-5 text-white" />
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="w-8 h-8 md:w-10 md:h-10 bg-white/10 rounded-lg flex items-center justify-center">
+                <FileText className="w-4 h-4 md:w-5 md:h-5 text-white" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-white">Daftar Kegiatan</h2>
-                <p className="text-gray-300 text-sm">
+                <h2 className="text-lg md:text-xl font-bold text-white">Daftar Kegiatan</h2>
+                <p className="text-gray-300 text-xs md:text-sm">
                   Total {pagination.total} kegiatan terdaftar
                 </p>
               </div>
@@ -224,7 +224,7 @@ function PerjadinList({ onAddNew, onEdit, initialBidangFilter = '', onBidangFilt
         </div>
       </div>
 
-      <div className="p-6">
+      <div className="p-3 md:p-6">
         {/* Filters */}
         <div className="bg-white rounded-xl shadow-md mb-6">
           {/* Filter Header - Always Visible */}
@@ -245,7 +245,7 @@ function PerjadinList({ onAddNew, onEdit, initialBidangFilter = '', onBidangFilt
             </div>
             <div className="flex items-center gap-3">
               {!isFilterOpen && (
-                <div className="text-sm text-gray-600 bg-blue-50 px-3 py-1 rounded-full">
+                <div className="text-sm text-gray-600 bg-blue-50 px-3 py-1 rounded-full hidden sm:block">
                   Menampilkan kegiatan hari ini
                 </div>
               )}
@@ -399,8 +399,9 @@ function PerjadinList({ onAddNew, onEdit, initialBidangFilter = '', onBidangFilt
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto">
-                <table className="w-full">
+              {/* Desktop Table */}
+              <div className="overflow-x-auto hidden md:block">
+                <table className="w-full min-w-[800px]">
                   <thead className="bg-[#2C3E50] text-white">
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">No</th>
@@ -493,11 +494,47 @@ function PerjadinList({ onAddNew, onEdit, initialBidangFilter = '', onBidangFilt
                 </table>
               </div>
 
+              {/* Mobile Card View */}
+              <div className="md:hidden divide-y divide-gray-100">
+                {kegiatans.map((kegiatan, index) => (
+                  <div key={kegiatan.id_kegiatan} className="p-3 hover:bg-gray-50 transition">
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-gray-800 line-clamp-2">{kegiatan.nama_kegiatan}</p>
+                        <p className="text-xs text-blue-600 font-mono mt-0.5">{kegiatan.nomor_sp}</p>
+                      </div>
+                      <span className="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded flex-shrink-0">
+                        #{(pagination.page - 1) * pagination.limit + index + 1}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 mb-2">
+                      <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{formatDate(kegiatan.tanggal_mulai)}</span>
+                      <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /><span className="truncate max-w-[140px]">{kegiatan.lokasi}</span></span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium bg-blue-50 text-blue-700 rounded-full">
+                          <FileText className="w-2.5 h-2.5" />{kegiatan.jumlah_bidang} Bidang
+                        </span>
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium bg-green-50 text-green-700 rounded-full">
+                          <Users className="w-2.5 h-2.5" />{kegiatan.jumlah_pegawai} Pegawai
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-0.5">
+                        <button onClick={() => navigate(`/pegawai/perjadin/detail/${kegiatan.id_kegiatan}`)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg" title="Detail"><Eye className="w-4 h-4" /></button>
+                        <button onClick={() => handleEditClick(kegiatan.id_kegiatan)} className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg" title="Edit"><Edit className="w-4 h-4" /></button>
+                        <button onClick={() => handleDelete(kegiatan)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg" title="Hapus"><Trash2 className="w-4 h-4" /></button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
               {/* Pagination */}
               {pagination.totalPages > 1 && (
-                <div className="px-6 py-4 border-t border-gray-100 bg-gray-50">
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm text-gray-600">
+                <div className="px-4 md:px-6 py-3 md:py-4 border-t border-gray-100 bg-gray-50">
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <div className="text-xs sm:text-sm text-gray-600 text-center sm:text-left">
                       Menampilkan <span className="font-semibold">{(pagination.page - 1) * pagination.limit + 1}</span> - <span className="font-semibold">{Math.min(pagination.page * pagination.limit, pagination.total)}</span> dari <span className="font-semibold">{pagination.total}</span> data
                     </div>
 
@@ -527,7 +564,7 @@ function PerjadinList({ onAddNew, onEdit, initialBidangFilter = '', onBidangFilt
                             <button
                               key={pageNum}
                               onClick={() => handlePageChange(pageNum)}
-                              className={`w-10 h-10 rounded-lg text-sm font-medium transition ${
+                              className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg text-xs sm:text-sm font-medium transition ${
                                 pagination.page === pageNum
                                   ? 'bg-[#2C3E50] text-white shadow'
                                   : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'

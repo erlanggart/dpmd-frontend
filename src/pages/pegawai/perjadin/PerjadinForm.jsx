@@ -175,21 +175,21 @@ function PerjadinForm({ editData = null, onSuccess, onCancel }) {
   return (
     <div>
       {/* Header */}
-      <div className="bg-[#2C3E50] px-6 py-4">
-        <h2 className="text-xl font-bold text-white">
+      <div className="bg-[#2C3E50] px-4 md:px-6 py-3 md:py-4">
+        <h2 className="text-lg md:text-xl font-bold text-white">
           {isEditMode ? 'Edit Kegiatan' : 'Formulir Kegiatan'}
         </h2>
-        <p className="text-gray-300 text-sm mt-1">
+        <p className="text-gray-300 text-xs md:text-sm mt-1">
           Lengkapi semua informasi yang diperlukan dengan detail
         </p>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="p-6">
-        <div className="bg-white rounded-xl shadow-md p-6 mb-6">
+      <form onSubmit={handleSubmit(onSubmit)} className="p-3 md:p-6">
+        <div className="bg-white rounded-xl shadow-md p-4 md:p-6 mb-4 md:mb-6">
           {/* Section Header */}
-          <div className="border-l-4 border-blue-600 pl-4 mb-6">
-            <h3 className="text-lg font-bold text-gray-800">Informasi Dasar</h3>
-            <p className="text-sm text-gray-600">Data utama kegiatan perjalanan dinas</p>
+          <div className="border-l-4 border-blue-600 pl-3 md:pl-4 mb-4 md:mb-6">
+            <h3 className="text-base md:text-lg font-bold text-gray-800">Informasi Dasar</h3>
+            <p className="text-xs md:text-sm text-gray-600">Data utama kegiatan perjalanan dinas</p>
           </div>
 
           {/* Basic Fields */}
@@ -332,10 +332,10 @@ function PerjadinForm({ editData = null, onSuccess, onCancel }) {
         </div>
 
         {/* Bidang & Pegawai Section */}
-        <div className="bg-white rounded-xl shadow-md p-6 mb-6">
-          <div className="border-l-4 border-green-600 pl-4 mb-6">
-            <h3 className="text-lg font-bold text-gray-800">Bidang & Pegawai</h3>
-            <p className="text-sm text-gray-600">Pilih bidang dan pegawai yang terlibat dalam kegiatan</p>
+        <div className="bg-white rounded-xl shadow-md p-4 md:p-6 mb-4 md:mb-6">
+          <div className="border-l-4 border-green-600 pl-3 md:pl-4 mb-4 md:mb-6">
+            <h3 className="text-base md:text-lg font-bold text-gray-800">Bidang & Pegawai</h3>
+            <p className="text-xs md:text-sm text-gray-600">Pilih bidang dan pegawai yang terlibat dalam kegiatan</p>
           </div>
 
           <div className="space-y-4">
@@ -344,8 +344,8 @@ function PerjadinForm({ editData = null, onSuccess, onCancel }) {
               const currentPegawaiIds = watch(`bidang.${index}.pegawai_ids`) || [];
 
               return (
-                <div key={field.id} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                  <div className="flex items-center justify-between mb-4">
+                <div key={field.id} className="bg-gray-50 p-3 md:p-4 rounded-lg border border-gray-200">
+                  <div className="flex items-center justify-between mb-3 md:mb-4">
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 bg-[#2C3E50] rounded-full flex items-center justify-center">
                         <span className="text-white text-sm font-bold">{index + 1}</span>
@@ -484,7 +484,7 @@ function PerjadinForm({ editData = null, onSuccess, onCancel }) {
           <button
             type="button"
             onClick={() => append({ id_bidang: '', pegawai_ids: [] })}
-            className="mt-4 flex items-center gap-2 px-5 py-2.5 bg-[#2C3E50] text-white rounded-lg hover:bg-[#34495e] transition font-medium"
+            className="mt-4 flex items-center gap-2 px-4 md:px-5 py-2 md:py-2.5 bg-[#2C3E50] text-white rounded-lg hover:bg-[#34495e] transition font-medium text-sm md:text-base w-full sm:w-auto justify-center sm:justify-start"
           >
             <Plus className="w-4 h-4" />
             <span>Tambah Bidang Lain</span>
@@ -492,22 +492,22 @@ function PerjadinForm({ editData = null, onSuccess, onCancel }) {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-gray-500">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <p className="text-xs md:text-sm text-gray-500">
             <span className="text-red-500">*</span> Wajib diisi
           </p>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 w-full sm:w-auto">
             <button
               type="button"
               onClick={onCancel}
-              className="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium"
+              className="px-4 md:px-6 py-2 md:py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium flex-1 sm:flex-initial text-sm md:text-base"
             >
               Batal
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center gap-2"
+              className="px-4 md:px-6 py-2 md:py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2 flex-1 sm:flex-initial text-sm md:text-base"
             >
               {submitting ? (
                 <>
