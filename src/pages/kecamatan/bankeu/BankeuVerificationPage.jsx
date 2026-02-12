@@ -131,8 +131,31 @@ const BankeuVerificationPage = ({ tahun = 2027 }) => {
       const userKecamatanId = parseInt(user?.kecamatan_id);
       setKecamatanInfo({ nama: user?.kecamatan_name || 'Kecamatan' });
       
+      // Build desa list from proposals data (not from /desas endpoint)
+      // This ensures kelurahan are also included if they have proposals
+      const proposalDesas = {};
+      (proposalsRes.data.data || []).forEach(p => {
+        const desaId = String(p.desa_id);
+        if (!proposalDesas[desaId]) {
+          proposalDesas[desaId] = {
+            id: desaId,
+            nama: p.desa_nama || p.nama_desa || `Desa ${desaId}`,
+            kecamatan_id: String(p.kecamatan_id || userKecamatanId),
+            kecamatans: { nama: p.kecamatan_nama || '' }
+          };
+        }
+      });
+
+      // Merge: desas from /desas API (filtered by kecamatan) + desas from proposals
       const filteredDesas = desasRes.data.data.filter(d => {
         return parseInt(d.kecamatan_id) === userKecamatanId;
+      });
+      
+      // Add proposal desas that are not already in the filtered list (e.g., kelurahan)
+      Object.values(proposalDesas).forEach(pd => {
+        if (!filteredDesas.find(d => String(d.id) === String(pd.id))) {
+          filteredDesas.push(pd);
+        }
       });
       
       setDesas(filteredDesas);
