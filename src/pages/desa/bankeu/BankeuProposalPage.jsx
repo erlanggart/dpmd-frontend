@@ -386,20 +386,33 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
         status: p.status
       })));
       
-      // Cek apakah ada minimal 1 proposal yang di-reject/revision dan belum dikirim ulang
-      // FIXED: Ketika Kecamatan return proposal dengan status revision, submitted_to_dinas_at di-reset ke NULL
-      // Jadi cek field `status` dasar, bukan `submitted_to_dinas_at` existence
-      const hasRejectedOrRevisionProposal = proposalsRes.data.data.some(p => {
-        // Proposal dengan status dasar revision/rejected yang belum dikirim ulang ke Dinas
-        // Ini mengikuti logika yang sama seperti revisionProposals di line ~1798
-        return (p.status === 'revision' || p.status === 'rejected') && !p.submitted_to_dinas_at;
-      });
+      // FIXED: Logika isSubmitted yang benar
+      // Tombol tambah MUNCUL (isSubmitted=false) jika:
+      //   1. Tidak ada proposal sama sekali (desa baru)
+      //   2. Ada proposal yang belum dikirim ke dinas (pending, belum submitted_to_dinas_at)
+      //   3. Ada proposal revision/rejected yang perlu diupload ulang
+      // Tombol tambah HILANG (isSubmitted=true) jika:
+      //   Semua proposal sudah dikirim ke dinas DAN tidak ada yang revision/rejected
       
+      const allProposals = proposalsRes.data.data;
+      
+      // Cek apakah SEMUA proposal sudah dikirim ke dinas
+      const allSubmittedToDinas = allProposals.length > 0 && 
+        allProposals.every(p => p.submitted_to_dinas_at);
+      
+      // Cek apakah ada proposal revision/rejected yang belum diupload ulang
+      const hasRejectedOrRevisionProposal = allProposals.some(p => 
+        (p.status === 'revision' || p.status === 'rejected') && !p.submitted_to_dinas_at
+      );
+      
+      console.log('🔍 DEBUG allSubmittedToDinas:', allSubmittedToDinas);
       console.log('🔍 DEBUG hasRejectedOrRevisionProposal:', hasRejectedOrRevisionProposal);
-      console.log('🔍 DEBUG isSubmitted will be:', !hasRejectedOrRevisionProposal);
       
-      // Jika ada proposal yang di-reject/revision, tombol tambah bisa muncul (isSubmitted = false)
-      setIsSubmitted(!hasRejectedOrRevisionProposal);
+      // isSubmitted = true HANYA jika semua sudah dikirim DAN tidak ada yang revision
+      const shouldBeSubmitted = allSubmittedToDinas && !hasRejectedOrRevisionProposal;
+      console.log('🔍 DEBUG isSubmitted will be:', shouldBeSubmitted);
+      
+      setIsSubmitted(shouldBeSubmitted);
     } catch (error) {
       console.error("Error fetching data:", error);
       Swal.fire({
