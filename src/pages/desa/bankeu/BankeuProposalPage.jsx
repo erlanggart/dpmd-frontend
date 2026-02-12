@@ -386,21 +386,13 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
         status: p.status
       })));
       
-      // Cek apakah ada minimal 1 proposal yang di-reject/revision oleh Dinas atau Kecamatan
+      // Cek apakah ada minimal 1 proposal yang di-reject/revision dan belum dikirim ulang
+      // FIXED: Ketika Kecamatan return proposal dengan status revision, submitted_to_dinas_at di-reset ke NULL
+      // Jadi cek field `status` dasar, bukan `submitted_to_dinas_at` existence
       const hasRejectedOrRevisionProposal = proposalsRes.data.data.some(p => {
-        // Harus sudah pernah dikirim ke dinas
-        if (!p.submitted_to_dinas_at) {
-          return false;
-        }
-        // Cek apakah di-reject/revision oleh Dinas
-        if (p.dinas_status === 'rejected' || p.dinas_status === 'revision') {
-          return true;
-        }
-        // Cek apakah di-reject/revision oleh Kecamatan
-        if (p.kecamatan_status === 'rejected' || p.kecamatan_status === 'revision') {
-          return true;
-        }
-        return false;
+        // Proposal dengan status dasar revision/rejected yang belum dikirim ulang ke Dinas
+        // Ini mengikuti logika yang sama seperti revisionProposals di line ~1798
+        return (p.status === 'revision' || p.status === 'rejected') && !p.submitted_to_dinas_at;
       });
       
       console.log('🔍 DEBUG hasRejectedOrRevisionProposal:', hasRejectedOrRevisionProposal);
