@@ -377,6 +377,16 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
       // PERBAIKAN: isSubmitted hanya true jika ada proposal yang sudah dikirim DAN masih aktif
       // Flow: Desa → Dinas Terkait → Kecamatan (2 level, DPMD tidak verifikasi)
       // Jika SEMUA proposal sudah di-reject/revision (oleh level manapun), desa bisa tambah proposal baru
+      
+      // DEBUG: Log semua proposal untuk troubleshooting
+      console.log('🔍 DEBUG isSubmitted CHECK:', proposalsRes.data.data.map(p => ({
+        id: p.id,
+        submitted_to_dinas_at: p.submitted_to_dinas_at,
+        dinas_status: p.dinas_status,
+        kecamatan_status: p.kecamatan_status,
+        status: p.status
+      })));
+      
       const activeSubmittedProposal = proposalsRes.data.data.find(p => {
         // Jika belum dikirim ke dinas, tidak dihitung sebagai "submitted"
         if (!p.submitted_to_dinas_at) {
@@ -393,6 +403,10 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
         // Proposal masih aktif (pending/in_review/approved di salah satu level)
         return true;
       });
+      
+      console.log('🔍 DEBUG activeSubmittedProposal:', activeSubmittedProposal);
+      console.log('🔍 DEBUG isSubmitted will be:', !!activeSubmittedProposal);
+      
       setIsSubmitted(!!activeSubmittedProposal);
     } catch (error) {
       console.error("Error fetching data:", error);
