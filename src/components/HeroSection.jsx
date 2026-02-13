@@ -114,7 +114,7 @@ const HeroSection = () => {
 							initial={{ opacity: 0, y: 40 }}
 							animate={{ opacity: 1, y: 0 }}
 							transition={{ duration: 0.8, delay: 0.4 }}
-							className="text-white leading-[1.1] mb-6"
+							className="text-white leading-tight mb-6"
 						>
 							<span className="block text-2xl md:text-3xl font-medium text-white/80 mb-2">
 								Dinas Pemberdayaan Masyarakat dan Desa
@@ -122,7 +122,7 @@ const HeroSection = () => {
 							<span className="block text-5xl md:text-7xl font-extrabold tracking-tight">
 								Kabupaten
 							</span>
-							<span className="block text-5xl md:text-7xl font-extrabold tracking-tight bg-gradient-to-r from-[rgb(var(--color-secondary))] via-amber-400 to-[rgb(var(--color-secondary))] bg-clip-text text-transparent">
+							<span className="block text-5xl md:text-7xl font-extrabold tracking-tight bg-gradient-to-r from-[rgb(var(--color-secondary))] via-amber-400 to-[rgb(var(--color-secondary))] bg-clip-text text-transparent pb-2">
 								Bogor
 							</span>
 						</motion.h1>
