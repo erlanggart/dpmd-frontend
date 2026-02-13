@@ -146,7 +146,7 @@ const HeroSection = () => {
 						>
 							<Link
 								to="/login"
-								className="group inline-flex items-center justify-center gap-3 bg-gradient-to-r from-[rgb(var(--color-secondary))] to-amber-500 text-white font-bold px-8 py-4 rounded-2xl shadow-lg shadow-amber-500/25 hover:shadow-xl hover:shadow-amber-500/30 transform hover:-translate-y-0.5 transition-all duration-300"
+								className="group inline-flex items-center justify-center gap-2 sm:gap-3 bg-gradient-to-r from-[rgb(var(--color-secondary))] to-amber-500 text-white font-bold px-5 py-2.5 sm:px-8 sm:py-4 text-sm sm:text-base rounded-xl sm:rounded-2xl shadow-lg shadow-amber-500/25 hover:shadow-xl hover:shadow-amber-500/30 transform hover:-translate-y-0.5 transition-all duration-300"
 							>
 								Masuk ke Sistem
 								<FiArrowRight className="group-hover:translate-x-1 transition-transform" />
