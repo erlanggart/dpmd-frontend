@@ -986,87 +986,44 @@ const DpmdVerificationPage = () => {
   const kecamatanList = Object.keys(groupedProposals).sort();
 
   return (
-    <div className="bg-gradient-to-br from-gray-50 via-blue-50/30 to-green-50/30">
+    <div className="bg-gradient-to-br from-slate-50 via-blue-50/20 to-indigo-50/20 min-h-screen">
       {/* Tab Navigation */}
       <div className="container mx-auto px-4 pt-6">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-        <div className="bg-white rounded-xl shadow-sm p-2 inline-flex gap-2 flex-wrap">
-          <button
-            onClick={() => setActiveView('archive')}
-            className={`px-6 py-2.5 rounded-lg font-semibold text-sm transition-all ${
-              activeView === 'archive'
-                ? 'bg-gradient-to-r from-blue-600 to-green-600 text-white shadow-md'
-                : 'text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <Folder className="h-4 w-4" />
-              Arsip Proposal
-            </div>
-          </button>
-          <button
-            onClick={() => setActiveView('tracking')}
-            className={`px-6 py-2.5 rounded-lg font-semibold text-sm transition-all ${
-              activeView === 'tracking'
-                ? 'bg-gradient-to-r from-blue-600 to-green-600 text-white shadow-md'
-                : 'text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <Activity className="h-4 w-4" />
-              Tracking Status
-            </div>
-          </button>
-          <button
-            onClick={() => setActiveView('statistics')}
-            className={`px-6 py-2.5 rounded-lg font-semibold text-sm transition-all ${
-              activeView === 'statistics'
-                ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-md'
-                : 'text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <BarChart3 className="h-4 w-4" />
-              Statistik Dashboard
-            </div>
-          </button>
-          <button
-            onClick={() => setActiveView('control')}
-            className={`px-6 py-2.5 rounded-lg font-semibold text-sm transition-all ${
-              activeView === 'control'
-                ? 'bg-gradient-to-r from-red-600 to-orange-600 text-white shadow-md'
-                : 'text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <Power className="h-4 w-4" />
-              Kontrol Pengajuan
-            </div>
-          </button>
-          <button
-            onClick={() => setActiveView('config')}
-            className={`px-6 py-2.5 rounded-lg font-semibold text-sm transition-all ${
-              activeView === 'config'
-                ? 'bg-gradient-to-r from-blue-600 to-green-600 text-white shadow-md'
-                : 'text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <Settings className="h-4 w-4" />
-              Konfigurasi
-            </div>
-          </button>
+        <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg shadow-gray-200/50 p-1.5 inline-flex gap-1 flex-wrap border border-gray-200/60">
+          {[
+            { key: 'archive', icon: Folder, label: 'Arsip Proposal', gradient: 'from-blue-600 to-indigo-600' },
+            { key: 'tracking', icon: Activity, label: 'Tracking Status', gradient: 'from-violet-600 to-purple-600' },
+            { key: 'statistics', icon: BarChart3, label: 'Statistik Dashboard', gradient: 'from-cyan-600 to-blue-600' },
+            { key: 'control', icon: Power, label: 'Kontrol Pengajuan', gradient: 'from-rose-600 to-orange-600' },
+            { key: 'config', icon: Settings, label: 'Konfigurasi', gradient: 'from-slate-600 to-gray-700' },
+          ].map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveView(tab.key)}
+              className={`px-5 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 ${
+                activeView === tab.key
+                  ? `bg-gradient-to-r ${tab.gradient} text-white shadow-lg scale-[1.02]`
+                  : 'text-gray-500 hover:text-gray-800 hover:bg-gray-100/80'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <tab.icon className="h-4 w-4" />
+                <span className="hidden sm:inline">{tab.label}</span>
+              </div>
+            </button>
+          ))}
         </div>
         
         {/* Refresh Button */}
         <button
           onClick={handleRefresh}
           disabled={refreshing}
-          className={`flex items-center gap-2 px-4 py-2.5 bg-white rounded-xl shadow-sm border border-gray-200 font-semibold text-sm transition-all hover:bg-gray-50 hover:shadow-md ${
+          className={`group flex items-center gap-2 px-5 py-2.5 bg-white/80 backdrop-blur-sm rounded-xl shadow-md border border-gray-200/60 font-semibold text-sm transition-all hover:shadow-lg hover:-translate-y-0.5 ${
             refreshing ? 'opacity-70 cursor-not-allowed' : ''
           }`}
         >
-          <RefreshCw className={`h-4 w-4 text-blue-600 ${refreshing ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`h-4 w-4 text-blue-600 ${refreshing ? 'animate-spin' : 'group-hover:rotate-90 transition-transform duration-500'}`} />
           <span className="text-gray-700">{refreshing ? 'Memuat...' : 'Refresh Data'}</span>
         </button>
         </div>
@@ -1386,133 +1343,126 @@ const DpmdVerificationPage = () => {
         ) : activeView === 'tracking' ? (
           /* Tracking Status View - Per Desa */
           <div className="space-y-6">
-            {/* Year Selector */}
-            <div className="bg-gradient-to-r from-violet-600 to-purple-700 rounded-xl p-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Calendar className="h-6 w-6 text-white" />
-                <div>
-                  <h2 className="text-lg font-bold text-white">Tracking Proposal Tahun {trackingTahunAnggaran}</h2>
-                  <p className="text-violet-200 text-sm">Pantau status proposal di semua tahap verifikasi</p>
-                </div>
+            {/* Year Selector - Premium Hero */}
+            <div className="relative bg-gradient-to-br from-slate-900 via-violet-950 to-indigo-950 rounded-2xl overflow-hidden">
+              {/* Animated glow */}
+              <div className="absolute inset-0">
+                <div className="absolute top-0 left-1/3 w-72 h-72 bg-violet-500/20 rounded-full blur-[100px] animate-pulse"></div>
+                <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-indigo-500/20 rounded-full blur-[80px]" style={{ animation: 'pulse 3s ease-in-out infinite alternate' }}></div>
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setTrackingTahunAnggaran(2026)}
-                  className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
-                    trackingTahunAnggaran === 2026 
-                      ? 'bg-white text-violet-700' 
-                      : 'bg-white/20 text-white hover:bg-white/30'
-                  }`}
-                >
-                  2026
-                </button>
-                <button
-                  onClick={() => setTrackingTahunAnggaran(2027)}
-                  className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
-                    trackingTahunAnggaran === 2027 
-                      ? 'bg-white text-violet-700' 
-                      : 'bg-white/20 text-white hover:bg-white/30'
-                  }`}
-                >
-                  2027
-                </button>
-                <button
-                  onClick={() => fetchTrackingData()}
-                  disabled={loadingTracking}
-                  className="ml-2 p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-all"
-                >
-                  <RefreshCw className={`h-5 w-5 text-white ${loadingTracking ? 'animate-spin' : ''}`} />
-                </button>
+              <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
+              
+              <div className="relative z-10 px-6 py-8 md:px-8 flex flex-col md:flex-row items-center justify-between gap-5">
+                <div className="flex items-center gap-4">
+                  <div className="h-14 w-14 bg-gradient-to-br from-violet-400 to-purple-600 rounded-2xl flex items-center justify-center shadow-xl shadow-violet-500/30 ring-2 ring-white/10">
+                    <Activity className="h-7 w-7 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl md:text-2xl font-extrabold text-white tracking-tight">Tracking Proposal Tahun {trackingTahunAnggaran}</h2>
+                    <p className="text-violet-300/80 text-sm mt-0.5">Pantau status proposal di semua tahap verifikasi</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="bg-white/10 backdrop-blur-sm rounded-xl p-1 flex gap-1 border border-white/10">
+                    <button
+                      onClick={() => setTrackingTahunAnggaran(2026)}
+                      className={`px-5 py-2 rounded-lg font-bold text-sm transition-all duration-300 ${
+                        trackingTahunAnggaran === 2026 
+                          ? 'bg-white text-violet-700 shadow-lg' 
+                          : 'text-white/70 hover:text-white hover:bg-white/10'
+                      }`}
+                    >
+                      2026
+                    </button>
+                    <button
+                      onClick={() => setTrackingTahunAnggaran(2027)}
+                      className={`px-5 py-2 rounded-lg font-bold text-sm transition-all duration-300 ${
+                        trackingTahunAnggaran === 2027 
+                          ? 'bg-white text-violet-700 shadow-lg' 
+                          : 'text-white/70 hover:text-white hover:bg-white/10'
+                      }`}
+                    >
+                      2027
+                    </button>
+                  </div>
+                  <button
+                    onClick={() => fetchTrackingData()}
+                    disabled={loadingTracking}
+                    className="p-2.5 bg-white/10 hover:bg-white/20 rounded-xl transition-all border border-white/10 hover:border-white/20"
+                  >
+                    <RefreshCw className={`h-5 w-5 text-white ${loadingTracking ? 'animate-spin' : ''}`} />
+                  </button>
+                </div>
               </div>
             </div>
 
-            {/* Tracking Summary Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              <div className="bg-gradient-to-br from-gray-500 to-slate-600 rounded-xl p-4 text-white shadow-lg">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-gray-100 text-sm">Di Desa</p>
-                    <p className="text-3xl font-bold mt-1">
-                      {trackingProposals.filter(p => getProposalStage(p) === 'di_desa').length}
-                    </p>
-                    <p className="text-gray-200 text-xs mt-1">belum kirim</p>
-                  </div>
-                  <MapPin className="h-12 w-12 text-white/30" />
+            {/* Tracking Summary Cards - Premium Design */}
+            {(() => {
+              const diDesaCount = trackingProposals.filter(p => getProposalStage(p) === 'di_desa').length;
+              const diDinasCount = trackingProposals.filter(p => getProposalStage(p) === 'di_dinas').length;
+              const diKecamatanCount = trackingProposals.filter(p => getProposalStage(p) === 'di_kecamatan').length;
+              const diDpmdCount = trackingProposals.filter(p => getProposalStage(p) === 'di_dpmd').length;
+              const selesaiCount = trackingProposals.filter(p => p.dpmd_status === 'approved').length;
+              const totalAll = trackingProposals.length || 1;
+              const stageCards = [
+                { label: 'Di Desa', count: diDesaCount, sub: 'belum kirim', icon: MapPin, gradient: 'from-slate-600 to-slate-700', ring: 'ring-slate-400/20', barColor: 'bg-slate-400', percent: Math.round((diDesaCount / totalAll) * 100) },
+                { label: 'Di Dinas', count: diDinasCount, sub: 'menunggu review', icon: Building, gradient: 'from-amber-500 to-orange-600', ring: 'ring-amber-400/20', barColor: 'bg-amber-400', percent: Math.round((diDinasCount / totalAll) * 100) },
+                { label: 'Di Kecamatan', count: diKecamatanCount, sub: 'diproses', icon: Building2, gradient: 'from-blue-500 to-indigo-600', ring: 'ring-blue-400/20', barColor: 'bg-blue-400', percent: Math.round((diKecamatanCount / totalAll) * 100) },
+                { label: 'Di DPMD', count: diDpmdCount, sub: 'masuk review', icon: Shield, gradient: 'from-violet-500 to-purple-600', ring: 'ring-violet-400/20', barColor: 'bg-violet-400', percent: Math.round((diDpmdCount / totalAll) * 100) },
+                { label: 'Selesai', count: selesaiCount, sub: 'disetujui', icon: CheckCircle, gradient: 'from-emerald-500 to-green-600', ring: 'ring-emerald-400/20', barColor: 'bg-emerald-400', percent: Math.round((selesaiCount / totalAll) * 100) },
+              ];
+              return (
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                  {stageCards.map((card, i) => (
+                    <div key={i} className={`group relative bg-gradient-to-br ${card.gradient} rounded-2xl p-5 text-white shadow-xl overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl`}>
+                      {/* Glow */}
+                      <div className="absolute -top-8 -right-8 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-500"></div>
+                      <div className="relative z-10">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className={`h-10 w-10 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center ring-1 ${card.ring}`}>
+                            <card.icon className="h-5 w-5 text-white" />
+                          </div>
+                          <span className="text-xs font-bold bg-white/20 backdrop-blur-sm px-2.5 py-1 rounded-lg">{card.percent}%</span>
+                        </div>
+                        <p className="text-3xl font-extrabold tracking-tight">{card.count}</p>
+                        <p className="text-white/90 text-sm font-semibold mt-0.5">{card.label}</p>
+                        <p className="text-white/60 text-xs mt-0.5">{card.sub}</p>
+                        {/* Mini progress bar */}
+                        <div className="mt-3 h-1.5 bg-white/20 rounded-full overflow-hidden">
+                          <div className={`h-full ${card.barColor} rounded-full transition-all duration-1000`} style={{ width: `${card.percent}%` }}></div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </div>
-              <div className="bg-gradient-to-br from-orange-500 to-amber-500 rounded-xl p-4 text-white shadow-lg">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-orange-100 text-sm">Di Dinas</p>
-                    <p className="text-3xl font-bold mt-1">
-                      {trackingProposals.filter(p => getProposalStage(p) === 'di_dinas').length}
-                    </p>
-                    <p className="text-orange-100 text-xs mt-1">menunggu review</p>
-                  </div>
-                  <Building className="h-12 w-12 text-white/30" />
-                </div>
-              </div>
-              <div className="bg-gradient-to-br from-blue-500 to-indigo-500 rounded-xl p-4 text-white shadow-lg">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-blue-100 text-sm">Di Kecamatan</p>
-                    <p className="text-3xl font-bold mt-1">
-                      {trackingProposals.filter(p => getProposalStage(p) === 'di_kecamatan').length}
-                    </p>
-                    <p className="text-blue-100 text-xs mt-1">diproses</p>
-                  </div>
-                  <Building2 className="h-12 w-12 text-white/30" />
-                </div>
-              </div>
-              <div className="bg-gradient-to-br from-purple-500 to-violet-500 rounded-xl p-4 text-white shadow-lg">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-purple-100 text-sm">Di DPMD</p>
-                    <p className="text-3xl font-bold mt-1">
-                      {trackingProposals.filter(p => getProposalStage(p) === 'di_dpmd').length}
-                    </p>
-                    <p className="text-purple-100 text-xs mt-1">masuk review</p>
-                  </div>
-                  <Shield className="h-12 w-12 text-white/30" />
-                </div>
-              </div>
-              <div className="bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl p-4 text-white shadow-lg">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-green-100 text-sm">Selesai</p>
-                    <p className="text-3xl font-bold mt-1">
-                      {trackingProposals.filter(p => p.dpmd_status === 'approved').length}
-                    </p>
-                    <p className="text-green-100 text-xs mt-1">disetujui</p>
-                  </div>
-                  <CheckCircle className="h-12 w-12 text-white/30" />
-                </div>
-              </div>
-            </div>
+              );
+            })()}
 
             {/* Search and Filter for Tracking */}
-            <div className="bg-white rounded-xl shadow-sm p-4">
-              <div className="flex items-center gap-2 mb-4">
-                <Filter className="h-5 w-5 text-gray-600" />
-                <span className="font-semibold text-gray-900">Filter Tracking</span>
+            <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg shadow-gray-200/40 p-5 border border-gray-200/60">
+              <div className="flex items-center gap-2.5 mb-4">
+                <div className="h-8 w-8 bg-gradient-to-br from-violet-500 to-purple-600 rounded-lg flex items-center justify-center">
+                  <Filter className="h-4 w-4 text-white" />
+                </div>
+                <span className="font-bold text-gray-800">Filter Tracking</span>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <input
                     type="text"
                     placeholder="Cari desa atau kecamatan..."
                     value={trackingSearchTerm}
                     onChange={(e) => setTrackingSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50/80 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 transition-all hover:border-gray-300"
                   />
                 </div>
                 <div className="relative">
-                  <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <select
                     value={trackingSelectedKecamatan}
                     onChange={(e) => setTrackingSelectedKecamatan(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none"
+                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50/80 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 appearance-none transition-all hover:border-gray-300"
                   >
                     <option value="all">Semua Kecamatan</option>
                     {[...new Set(trackingProposals.map(p => p.desas?.kecamatans?.nama))].filter(Boolean).sort().map(kec => (
@@ -1521,14 +1471,14 @@ const DpmdVerificationPage = () => {
                   </select>
                 </div>
                 <div className="relative">
-                  <Layers className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <Layers className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <select
                     value={trackingStatusFilter}
                     onChange={(e) => {
                       setTrackingStatusFilter(e.target.value);
                       if (e.target.value !== 'di_dinas') setTrackingDinasFilter('all');
                     }}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none"
+                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50/80 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 appearance-none transition-all hover:border-gray-300"
                   >
                     <option value="all">Semua Status</option>
                     <option value="di_desa">📍 Di Desa</option>
@@ -1544,7 +1494,7 @@ const DpmdVerificationPage = () => {
                     <select
                       value={trackingDinasFilter}
                       onChange={(e) => setTrackingDinasFilter(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500 appearance-none bg-violet-50"
+                      className="w-full pl-10 pr-4 py-2.5 bg-violet-50/80 border border-violet-200 rounded-xl text-sm focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 appearance-none transition-all hover:border-violet-300"
                     >
                       <option value="all">Semua Dinas</option>
                       {availableDinasList.map(dinasName => (
@@ -1554,9 +1504,9 @@ const DpmdVerificationPage = () => {
                   </div>
                 )}
               </div>
-              <div className="flex flex-wrap items-center gap-4 mt-3">
+              <div className="flex flex-wrap items-center gap-4 mt-4 pt-4 border-t border-gray-100">
                 <p className="text-sm text-gray-500">
-                  Menampilkan <span className="font-semibold text-blue-600">{Object.keys(filteredTrackingDesa).length}</span> desa
+                  Menampilkan <span className="font-bold text-violet-600 bg-violet-50 px-2 py-0.5 rounded-md">{Object.keys(filteredTrackingDesa).length}</span> desa
                   {trackingStatusFilter !== 'all' && (
                     <span className="ml-1">
                       ({Object.values(filteredTrackingDesa).reduce((sum, d) => sum + d.proposals.length, 0)} proposal)
@@ -1604,18 +1554,18 @@ const DpmdVerificationPage = () => {
                         key={key}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+                        className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-md shadow-gray-200/40 border border-gray-200/60 overflow-hidden hover:shadow-lg transition-all duration-300"
                       >
                         {/* Desa Header */}
                         <button
                           onClick={() => setExpandedTrackingDesa(prev => 
                             prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
                           )}
-                          className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                          className="w-full px-6 py-4 flex items-center justify-between hover:bg-gradient-to-r hover:from-transparent hover:to-violet-50/50 transition-all"
                         >
                           <div className="flex items-center gap-4">
-                            <div className="p-3 bg-gradient-to-br from-blue-500 to-green-500 rounded-lg shadow-md">
-                              <MapPin className="h-6 w-6 text-white" />
+                            <div className="p-3 bg-gradient-to-br from-violet-500 to-indigo-600 rounded-xl shadow-lg shadow-violet-500/20">
+                              <MapPin className="h-5 w-5 text-white" />
                             </div>
                             <div className="text-left">
                               <h3 className="font-bold text-lg text-gray-900">{data.desaName}</h3>
