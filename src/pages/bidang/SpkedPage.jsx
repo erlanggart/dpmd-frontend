@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, Activity, TrendingUp, ArrowLeft, Clock, CheckCircle2, XCircle, FileText, BarChart3, Landmark, DollarSign, Zap, Info, ChevronRight, Menu, X } from 'lucide-react';
+import { Building2, Activity, TrendingUp, ArrowLeft, Clock, CheckCircle2, XCircle, FileText, BarChart3, Landmark, DollarSign, Zap, Info, ChevronRight, Menu, X, Wallet, ShieldCheck, CalendarRange, ArrowRight, Sparkles, CircleDollarSign, ClipboardCheck, BadgeCheck } from 'lucide-react';
 import api from '../../api';
 import toast from 'react-hot-toast';
 
@@ -690,72 +690,286 @@ const SpkedPage = () => {
 				)}
 
 				{activeTab === 'bankeu' && (
-					<div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl border border-gray-200/50 overflow-hidden">
+					<div className="relative overflow-hidden">
 						{!bankeuYear ? (
-							/* Year Selection Screen */
-							<div className="flex flex-col items-center justify-center py-20 px-6">
-								<div className="inline-flex h-20 w-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-3xl items-center justify-center mb-6 shadow-2xl shadow-blue-500/30">
-									<DollarSign className="h-10 w-10 text-white" />
-								</div>
-								<h2 className="text-2xl font-bold bg-gradient-to-r from-gray-800 via-blue-700 to-blue-600 bg-clip-text text-transparent mb-2">
-									Bantuan Keuangan Desa
-								</h2>
-								<p className="text-gray-500 mb-10 text-center max-w-md">
-									Pilih tahun anggaran terlebih dahulu untuk melihat data
-								</p>
+							/* ========== PREMIUM YEAR SELECTION SCREEN ========== */
+							<div className="relative">
+								{/* Hero Banner */}
+								<div className="relative bg-gradient-to-br from-slate-900 via-blue-950 to-indigo-950 rounded-3xl overflow-hidden mb-8">
+									{/* Animated Background Elements */}
+									<div className="absolute inset-0">
+										<div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/20 rounded-full blur-[120px] animate-pulse"></div>
+										<div className="absolute bottom-0 right-1/4 w-80 h-80 bg-indigo-500/20 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '1s' }}></div>
+										<div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-cyan-500/10 rounded-full blur-[150px]"></div>
+									</div>
+									{/* Grid Pattern Overlay */}
+									<div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '24px 24px' }}></div>
+									
+									<div className="relative z-10 px-8 py-14 md:px-12 md:py-16 text-center">
+										{/* Badge */}
+										<div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-xl border border-white/20 rounded-full px-5 py-2 mb-6">
+											<Sparkles className="h-4 w-4 text-amber-400" />
+											<span className="text-sm font-semibold text-white/90 tracking-wide">Bidang SPKED</span>
+										</div>
+										
+										{/* Icon */}
+										<div className="flex justify-center mb-6">
+											<div className="relative">
+												<div className="absolute inset-0 bg-gradient-to-br from-cyan-400 to-blue-600 rounded-3xl blur-xl opacity-60 scale-110"></div>
+												<div className="relative h-20 w-20 bg-gradient-to-br from-cyan-400 via-blue-500 to-indigo-600 rounded-3xl flex items-center justify-center shadow-2xl shadow-blue-500/40 ring-4 ring-white/10">
+													<Wallet className="h-10 w-10 text-white" />
+												</div>
+											</div>
+										</div>
 
-								<div className="grid grid-cols-1 sm:grid-cols-3 gap-6 w-full max-w-4xl">
+										{/* Title */}
+										<h2 className="text-3xl md:text-4xl font-extrabold text-white mb-3 tracking-tight">
+											Bantuan Keuangan Desa
+										</h2>
+										<p className="text-blue-200/80 max-w-lg mx-auto text-base leading-relaxed">
+											Kelola data penyaluran, verifikasi proposal, dan monitoring bantuan keuangan infrastruktur desa
+										</p>
+
+										{/* Mini Stats */}
+										<div className="flex items-center justify-center gap-8 mt-8">
+											<div className="text-center">
+												<p className="text-2xl font-bold text-white">{data?.stats?.total_bankeu || 0}</p>
+												<p className="text-xs text-blue-300/70 mt-0.5">Data Bankeu</p>
+											</div>
+											<div className="w-px h-10 bg-white/20"></div>
+											<div className="text-center">
+												<p className="text-2xl font-bold text-white">3</p>
+												<p className="text-xs text-blue-300/70 mt-0.5">Tahun Anggaran</p>
+											</div>
+											<div className="w-px h-10 bg-white/20"></div>
+											<div className="text-center">
+												<p className="text-2xl font-bold text-white">416</p>
+												<p className="text-xs text-blue-300/70 mt-0.5">Desa</p>
+											</div>
+										</div>
+									</div>
+								</div>
+
+								{/* Year Selection Label */}
+								<div className="flex items-center gap-3 mb-6">
+									<div className="h-10 w-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/25">
+										<CalendarRange className="h-5 w-5 text-white" />
+									</div>
+									<div>
+										<h3 className="text-lg font-bold text-gray-800">Pilih Tahun Anggaran</h3>
+										<p className="text-xs text-gray-500">Pilih periode untuk mengelola data bantuan keuangan</p>
+									</div>
+								</div>
+
+								{/* Year Cards Grid */}
+								<div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+									{/* TA 2025 */}
 									<button
 										onClick={() => setBankeuYear(2025)}
-										className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border-2 border-gray-200 hover:border-blue-400 p-8 transition-all duration-300 text-center overflow-hidden hover:-translate-y-1"
+										className="group relative bg-white rounded-2xl border border-gray-200/80 hover:border-cyan-400 p-1 transition-all duration-500 text-left overflow-hidden hover:shadow-2xl hover:shadow-cyan-500/10 hover:-translate-y-1"
 									>
-										<div className="absolute inset-0 bg-gradient-to-br from-blue-400/5 to-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-										<div className="relative">
-											<div className="h-16 w-16 mx-auto bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg shadow-blue-500/25">
-												<span className="text-2xl">📋</span>
+										{/* Top Accent Bar */}
+										<div className="h-1.5 bg-gradient-to-r from-cyan-400 via-blue-500 to-blue-600 rounded-t-xl"></div>
+										<div className="p-6">
+											{/* Year Badge */}
+											<div className="flex items-center justify-between mb-5">
+												<span className="inline-flex items-center gap-1.5 bg-cyan-50 text-cyan-700 border border-cyan-200 rounded-lg px-3 py-1.5 text-xs font-bold">
+													<CircleDollarSign className="h-3.5 w-3.5" />
+													Penyaluran
+												</span>
+												<div className="h-9 w-9 bg-gray-100 group-hover:bg-cyan-50 rounded-lg flex items-center justify-center transition-colors">
+													<ArrowRight className="h-4 w-4 text-gray-400 group-hover:text-cyan-600 group-hover:translate-x-0.5 transition-all" />
+												</div>
 											</div>
-											<h3 className="text-xl font-bold text-gray-800 mb-2">TA 2025</h3>
-											<p className="text-sm text-gray-500 leading-relaxed">Bantuan Keuangan<br/>Tahap 1 & Tahap 2</p>
+											
+											{/* Icon & Title */}
+											<div className="flex items-start gap-4 mb-4">
+												<div className="relative flex-shrink-0">
+													<div className="absolute inset-0 bg-gradient-to-br from-cyan-400 to-blue-600 rounded-2xl blur-lg opacity-0 group-hover:opacity-40 transition-opacity duration-500"></div>
+													<div className="relative h-14 w-14 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-cyan-500/20 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
+														<DollarSign className="h-7 w-7 text-white" />
+													</div>
+												</div>
+												<div>
+													<h3 className="text-2xl font-extrabold text-gray-900 group-hover:text-cyan-700 transition-colors">TA 2025</h3>
+													<p className="text-sm text-gray-500 mt-0.5">Tahun Anggaran 2025</p>
+												</div>
+											</div>
+
+											{/* Description */}
+											<p className="text-sm text-gray-600 leading-relaxed mb-5">
+												Data penyaluran Bantuan Keuangan Tahap 1 & Tahap 2 untuk infrastruktur desa
+											</p>
+
+											{/* Features */}
+											<div className="space-y-2.5">
+												<div className="flex items-center gap-2.5 text-xs text-gray-500">
+													<CheckCircle2 className="h-4 w-4 text-cyan-500 flex-shrink-0" />
+													<span>Upload & kelola data penyaluran</span>
+												</div>
+												<div className="flex items-center gap-2.5 text-xs text-gray-500">
+													<CheckCircle2 className="h-4 w-4 text-cyan-500 flex-shrink-0" />
+													<span>Monitoring tahap 1 & tahap 2</span>
+												</div>
+												<div className="flex items-center gap-2.5 text-xs text-gray-500">
+													<CheckCircle2 className="h-4 w-4 text-cyan-500 flex-shrink-0" />
+													<span>Statistik per kecamatan & desa</span>
+												</div>
+											</div>
 										</div>
 									</button>
 
+									{/* TA 2026 */}
 									<button
 										onClick={() => setBankeuYear(2026)}
-										className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border-2 border-gray-200 hover:border-green-400 p-8 transition-all duration-300 text-center overflow-hidden hover:-translate-y-1"
+										className="group relative bg-white rounded-2xl border border-gray-200/80 hover:border-emerald-400 p-1 transition-all duration-500 text-left overflow-hidden hover:shadow-2xl hover:shadow-emerald-500/10 hover:-translate-y-1"
 									>
-										<div className="absolute inset-0 bg-gradient-to-br from-green-400/5 to-emerald-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-										<div className="relative">
-											<div className="h-16 w-16 mx-auto bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg shadow-green-500/25">
-												<span className="text-2xl">📝</span>
+										{/* Top Accent Bar */}
+										<div className="h-1.5 bg-gradient-to-r from-emerald-400 via-green-500 to-teal-600 rounded-t-xl"></div>
+										<div className="p-6">
+											{/* Year Badge */}
+											<div className="flex items-center justify-between mb-5">
+												<span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg px-3 py-1.5 text-xs font-bold">
+													<ClipboardCheck className="h-3.5 w-3.5" />
+													Verifikasi
+												</span>
+												<div className="h-9 w-9 bg-gray-100 group-hover:bg-emerald-50 rounded-lg flex items-center justify-center transition-colors">
+													<ArrowRight className="h-4 w-4 text-gray-400 group-hover:text-emerald-600 group-hover:translate-x-0.5 transition-all" />
+												</div>
 											</div>
-											<h3 className="text-xl font-bold text-gray-800 mb-2">TA 2026</h3>
-											<p className="text-sm text-gray-500 leading-relaxed">Verifikasi Proposal<br/>Bantuan Keuangan</p>
+											
+											{/* Icon & Title */}
+											<div className="flex items-start gap-4 mb-4">
+												<div className="relative flex-shrink-0">
+													<div className="absolute inset-0 bg-gradient-to-br from-emerald-400 to-green-600 rounded-2xl blur-lg opacity-0 group-hover:opacity-40 transition-opacity duration-500"></div>
+													<div className="relative h-14 w-14 bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/20 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
+														<ShieldCheck className="h-7 w-7 text-white" />
+													</div>
+												</div>
+												<div>
+													<h3 className="text-2xl font-extrabold text-gray-900 group-hover:text-emerald-700 transition-colors">TA 2026</h3>
+													<p className="text-sm text-gray-500 mt-0.5">Tahun Anggaran 2026</p>
+												</div>
+											</div>
+
+											{/* Description */}
+											<p className="text-sm text-gray-600 leading-relaxed mb-5">
+												Verifikasi proposal bantuan keuangan dari desa untuk tahun anggaran 2026
+											</p>
+
+											{/* Features */}
+											<div className="space-y-2.5">
+												<div className="flex items-center gap-2.5 text-xs text-gray-500">
+													<CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+													<span>Review & verifikasi proposal desa</span>
+												</div>
+												<div className="flex items-center gap-2.5 text-xs text-gray-500">
+													<CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+													<span>Konfigurasi tim verifikator</span>
+												</div>
+												<div className="flex items-center gap-2.5 text-xs text-gray-500">
+													<CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+													<span>Berita acara verifikasi</span>
+												</div>
+											</div>
 										</div>
 									</button>
 
+									{/* TA 2027 */}
 									<button
 										onClick={() => setBankeuYear(2027)}
-										className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border-2 border-gray-200 hover:border-purple-400 p-8 transition-all duration-300 text-center overflow-hidden hover:-translate-y-1"
+										className="group relative bg-white rounded-2xl border border-gray-200/80 hover:border-violet-400 p-1 transition-all duration-500 text-left overflow-hidden hover:shadow-2xl hover:shadow-violet-500/10 hover:-translate-y-1"
 									>
-										<div className="absolute inset-0 bg-gradient-to-br from-purple-400/5 to-violet-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-										<div className="relative">
-											<div className="h-16 w-16 mx-auto bg-gradient-to-br from-purple-500 to-violet-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg shadow-purple-500/25">
-												<span className="text-2xl">🚀</span>
+										{/* Top Accent Bar */}
+										<div className="h-1.5 bg-gradient-to-r from-violet-400 via-purple-500 to-indigo-600 rounded-t-xl"></div>
+										<div className="p-6">
+											{/* Year Badge */}
+											<div className="flex items-center justify-between mb-5">
+												<span className="inline-flex items-center gap-1.5 bg-violet-50 text-violet-700 border border-violet-200 rounded-lg px-3 py-1.5 text-xs font-bold">
+													<BadgeCheck className="h-3.5 w-3.5" />
+													Verifikasi
+												</span>
+												<div className="h-9 w-9 bg-gray-100 group-hover:bg-violet-50 rounded-lg flex items-center justify-center transition-colors">
+													<ArrowRight className="h-4 w-4 text-gray-400 group-hover:text-violet-600 group-hover:translate-x-0.5 transition-all" />
+												</div>
 											</div>
-											<h3 className="text-xl font-bold text-gray-800 mb-2">TA 2027</h3>
-											<p className="text-sm text-gray-500 leading-relaxed">Verifikasi Proposal<br/>Bantuan Keuangan</p>
+											
+											{/* Icon & Title */}
+											<div className="flex items-start gap-4 mb-4">
+												<div className="relative flex-shrink-0">
+													<div className="absolute inset-0 bg-gradient-to-br from-violet-400 to-purple-600 rounded-2xl blur-lg opacity-0 group-hover:opacity-40 transition-opacity duration-500"></div>
+													<div className="relative h-14 w-14 bg-gradient-to-br from-violet-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-violet-500/20 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
+														<Sparkles className="h-7 w-7 text-white" />
+													</div>
+												</div>
+												<div>
+													<h3 className="text-2xl font-extrabold text-gray-900 group-hover:text-violet-700 transition-colors">TA 2027</h3>
+													<p className="text-sm text-gray-500 mt-0.5">Tahun Anggaran 2027</p>
+												</div>
+											</div>
+
+											{/* Description */}
+											<p className="text-sm text-gray-600 leading-relaxed mb-5">
+												Verifikasi proposal bantuan keuangan dari desa untuk tahun anggaran 2027
+											</p>
+
+											{/* Features */}
+											<div className="space-y-2.5">
+												<div className="flex items-center gap-2.5 text-xs text-gray-500">
+													<CheckCircle2 className="h-4 w-4 text-violet-500 flex-shrink-0" />
+													<span>Review & verifikasi proposal desa</span>
+												</div>
+												<div className="flex items-center gap-2.5 text-xs text-gray-500">
+													<CheckCircle2 className="h-4 w-4 text-violet-500 flex-shrink-0" />
+													<span>Konfigurasi tim verifikator</span>
+												</div>
+												<div className="flex items-center gap-2.5 text-xs text-gray-500">
+													<CheckCircle2 className="h-4 w-4 text-violet-500 flex-shrink-0" />
+													<span>Berita acara verifikasi</span>
+												</div>
+											</div>
 										</div>
 									</button>
+								</div>
+
+								{/* Info Footer */}
+								<div className="mt-8 bg-gradient-to-r from-slate-50 to-blue-50/50 rounded-2xl border border-slate-200/60 p-5">
+									<div className="flex items-start gap-4">
+										<div className="h-10 w-10 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+											<Info className="h-5 w-5 text-blue-600" />
+										</div>
+										<div>
+											<h4 className="font-semibold text-gray-800 text-sm mb-1">Informasi</h4>
+											<p className="text-xs text-gray-500 leading-relaxed">
+												TA 2025 berisi data penyaluran bankeu tahap 1 & 2. TA 2026 dan TA 2027 berisi fitur verifikasi proposal bantuan keuangan dari desa, 
+												termasuk konfigurasi tim verifikator dan berita acara.
+											</p>
+										</div>
+									</div>
 								</div>
 							</div>
 						) : (
-							<Suspense fallback={<LoadingFallback />}>
-								{bankeuYear === 2025 ? (
-									<BankeuDashboard />
-								) : bankeuYear === 2026 || bankeuYear === 2027 ? (
-									<DpmdVerificationPage />
-								) : null}
-							</Suspense>
+							<div className="relative">
+								{/* Back Navigation */}
+								<div className="mb-5">
+									<button
+										onClick={() => setBankeuYear(null)}
+										className="group inline-flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-blue-600 transition-colors"
+									>
+										<ArrowLeft className="h-4 w-4 group-hover:-translate-x-0.5 transition-transform" />
+										Kembali ke pilihan tahun
+									</button>
+								</div>
+								<div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl border border-gray-200/50 overflow-hidden">
+									<Suspense fallback={<LoadingFallback />}>
+										{bankeuYear === 2025 ? (
+											<BankeuDashboard />
+										) : bankeuYear === 2026 || bankeuYear === 2027 ? (
+											<DpmdVerificationPage />
+										) : null}
+									</Suspense>
+								</div>
+							</div>
 						)}
 					</div>
 				)}
