@@ -298,7 +298,7 @@ const DinasVerificationPage = ({ tahun = 2027 }) => {
                     cancelButtonText: 'Tutup'
                   }).then((result) => {
                     if (result.isConfirmed) {
-                      navigate('/dinas/konfigurasi/dinas');
+                      navigate('/dinas/konfigurasi');
                     }
                   });
                   return;
@@ -322,7 +322,7 @@ const DinasVerificationPage = ({ tahun = 2027 }) => {
                   cancelButtonText: 'Tutup'
                 }).then((result) => {
                   if (result.isConfirmed) {
-                    navigate('/dinas/konfigurasi/dinas');
+                    navigate('/dinas/konfigurasi');
                   }
                 });
                 return;
@@ -347,7 +347,7 @@ const DinasVerificationPage = ({ tahun = 2027 }) => {
                 cancelButtonText: 'Tutup'
               }).then((result) => {
                 if (result.isConfirmed) {
-                  navigate('/dinas/konfigurasi/dinas');
+                  navigate('/dinas/konfigurasi');
                 }
               });
               return;

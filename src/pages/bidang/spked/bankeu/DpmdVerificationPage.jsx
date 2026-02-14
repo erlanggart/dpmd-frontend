@@ -615,6 +615,59 @@ const DpmdVerificationPage = () => {
     }
   };
 
+  // Handle revisi dokumen kecamatan (BA/SP only)
+  const handleRevisiDokumenKecamatan = async (proposalId, proposalTitle) => {
+    const { value: catatan } = await Swal.fire({
+      title: 'Revisi Dokumen Kecamatan',
+      html: `<div class="text-left">
+        <p class="mb-3">Proposal <strong>"${proposalTitle}"</strong> akan dikembalikan ke <strong>Kecamatan</strong> untuk merevisi:</p>
+        <ul class="list-disc ml-5 mb-3 text-sm text-gray-700">
+          <li>Surat Pengantar Kecamatan</li>
+          <li>Berita Acara Verifikasi</li>
+        </ul>
+        <p class="text-sm text-amber-600 font-medium mb-3">📝 Proposal & status verifikasi kecamatan tetap dipertahankan</p>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Catatan untuk Kecamatan:</label>
+      </div>`,
+      input: 'textarea',
+      inputPlaceholder: 'Tuliskan catatan revisi untuk kecamatan...',
+      inputAttributes: { rows: 3 },
+      showCancelButton: true,
+      confirmButtonText: 'Kirim Revisi',
+      cancelButtonText: 'Batal',
+      confirmButtonColor: '#f59e0b',
+      cancelButtonColor: '#6b7280',
+      inputValidator: (value) => {
+        if (!value) return 'Catatan revisi wajib diisi';
+      }
+    });
+
+    if (catatan) {
+      try {
+        await api.patch(`/dpmd/bankeu/proposals/${proposalId}/verify`, {
+          action: 'revisi_dokumen_kecamatan',
+          catatan
+        });
+
+        await fetchData();
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Berhasil',
+          text: 'Proposal dikembalikan ke Kecamatan untuk revisi Surat Pengantar & Berita Acara',
+          timer: 2500,
+          showConfirmButton: false
+        });
+      } catch (error) {
+        console.error('Error revisi dokumen kecamatan:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Gagal',
+          text: error.response?.data?.message || 'Gagal mengirim revisi ke kecamatan'
+        });
+      }
+    }
+  };
+
   // Group proposals by kecamatan
   const groupedProposals = proposals.reduce((acc, proposal) => {
     const kecamatanName = proposal.desas?.kecamatans?.nama || 'Tidak Diketahui';
@@ -1307,6 +1360,21 @@ const DpmdVerificationPage = () => {
                                                     <FileCheck className="h-3.5 w-3.5 flex-shrink-0" />
                                                     <span>Berita Acara</span>
                                                   </a>
+                                                )}
+
+                                                {/* Revisi Dokumen Kecamatan Button */}
+                                                {(proposal.surat_pengantar || proposal.berita_acara_path) && (
+                                                  <button
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      handleRevisiDokumenKecamatan(proposal.id, proposal.judul_proposal);
+                                                    }}
+                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 hover:bg-amber-600 text-amber-700 hover:text-white rounded-lg transition-all text-xs font-medium shadow-sm hover:shadow border border-amber-200 hover:border-amber-600"
+                                                    title="Minta kecamatan revisi Surat Pengantar & Berita Acara"
+                                                  >
+                                                    <RefreshCw className="h-3.5 w-3.5 flex-shrink-0" />
+                                                    <span>Revisi BA/SP</span>
+                                                  </button>
                                                 )}
 
                                                 {/* Delete Button */}

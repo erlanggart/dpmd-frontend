@@ -389,7 +389,16 @@ const BankeuVerificationDetailPage = () => {
       missingSuratPengantar: proposalsMissingSuratPengantar.length,
       // Surat dari Desa
       hasSuratPengantarDesa,
-      hasSuratPermohonanDesa
+      hasSuratPermohonanDesa,
+      // DPMD Revisi Dokumen - proposals returned for BA/SP revision
+      dpmdRevisiDokumen: uploadedProposals.filter(p => 
+        p.dpmd_status === 'revision' && p.kecamatan_status === 'approved' && 
+        (!p.berita_acara_path || !p.surat_pengantar)
+      ),
+      hasDpmdRevisiDokumen: uploadedProposals.some(p => 
+        p.dpmd_status === 'revision' && p.kecamatan_status === 'approved' && 
+        (!p.berita_acara_path || !p.surat_pengantar)
+      )
     };
   }, [proposals, desaId, desa?.nama, surat]);
 
@@ -930,7 +939,7 @@ const BankeuVerificationDetailPage = () => {
   };
 
   // Handler untuk generate berita acara per proposal
-  const handleGenerateBeritaAcaraKegiatan = async (kegiatanId, namaKegiatan, proposalId) => {
+  const handleGenerateBeritaAcaraKegiatan = async (kegiatanId, namaKegiatan, proposalId, jenisKegiatan) => {
     // Validasi konfigurasi kecamatan
     if (!isKecamatanConfigComplete()) {
       const missing = getConfigMissingItems();
@@ -960,6 +969,30 @@ const BankeuVerificationDetailPage = () => {
       return;
     }
 
+    const isInfrastruktur = jenisKegiatan === 'infrastruktur';
+
+    // Untuk infrastruktur, tampilkan dialog dengan pilihan dokumen opsional
+    const optionalItemsConfig = [
+      { key: 'item_5', label: 'Surat Pernyataan Kepala Desa (lokasi tidak sengketa)' },
+      { key: 'item_7', label: 'Dokumen kesediaan peralihan hak hibah' },
+      { key: 'item_8', label: 'Dokumen pernyataan kesanggupan (tidak minta ganti rugi)' },
+      { key: 'item_9', label: 'Persetujuan pemanfaatan barang milik Daerah/Negara' },
+    ];
+
+    const optionalCheckboxes = isInfrastruktur ? `
+      <div class="text-left mt-4 mb-2">
+        <p class="text-sm font-semibold text-gray-700 mb-2">Centang dokumen opsional yang dilampirkan:</p>
+        <div class="bg-gray-50 rounded-lg p-3 space-y-2">
+          ${optionalItemsConfig.map(item => `
+            <label class="flex items-start gap-2 cursor-pointer hover:bg-gray-100 rounded p-1.5 transition-colors">
+              <input type="checkbox" id="opt_${item.key}" class="mt-0.5 w-4 h-4 text-violet-600 border-gray-300 rounded focus:ring-violet-500" />
+              <span class="text-sm text-gray-700">${item.label}</span>
+            </label>
+          `).join('')}
+        </div>
+      </div>
+    ` : '';
+
     const result = await Swal.fire({
       title: '',
       html: `
@@ -978,7 +1011,9 @@ const BankeuVerificationDetailPage = () => {
             <strong>Desa:</strong> ${desa?.nama}<br/>
             <strong>Kegiatan:</strong> ${namaKegiatan}
           </p>
-          <p class="text-gray-500 text-sm">
+          ${isInfrastruktur ? `<span class="inline-block px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium mb-2">Infrastruktur</span>` : `<span class="inline-block px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium mb-2">Non-Infrastruktur</span>`}
+          ${optionalCheckboxes}
+          <p class="text-gray-500 text-sm mt-2">
             Lanjutkan membuat Berita Acara untuk kegiatan ini?
           </p>
         </div>
@@ -1005,6 +1040,18 @@ const BankeuVerificationDetailPage = () => {
       buttonsStyling: false,
       showClass: {
         popup: 'animate__animated animate__zoomIn animate__faster'
+      },
+      preConfirm: () => {
+        if (isInfrastruktur) {
+          // Collect optional item checkbox states
+          const optItems = {};
+          optionalItemsConfig.forEach(item => {
+            const checkbox = document.getElementById(`opt_${item.key}`);
+            optItems[item.key] = checkbox ? checkbox.checked : false;
+          });
+          return { optionalItems: optItems };
+        }
+        return { optionalItems: null };
       }
     });
 
@@ -1012,7 +1059,8 @@ const BankeuVerificationDetailPage = () => {
       try {
         const response = await api.post(`/kecamatan/bankeu/desa/${desaId}/berita-acara`, {
           kegiatanId,
-          proposalId
+          proposalId,
+          optionalItems: result.value?.optionalItems || null
         });
         
         await fetchData();
@@ -1520,7 +1568,34 @@ const BankeuVerificationDetailPage = () => {
 
       <div className="w-full px-4 sm:px-6 lg:px-8 space-y-4">
 
-      {/* Info Box: Cara Membuat Berita Acara dan Surat Pengantar */}
+      {/* DPMD Revisi Dokumen Banner */}
+      {reviewStatus.hasDpmdRevisiDokumen && (
+        <div className="bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 rounded-xl p-4 shadow-md animate-pulse">
+          <div className="flex items-start gap-3">
+            <div className="p-2.5 bg-amber-100 rounded-lg flex-shrink-0">
+              <LuRefreshCw className="w-5 h-5 text-amber-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-bold text-amber-800 mb-1 text-base">⚠️ Revisi Dokumen dari DPMD</h3>
+              <p className="text-sm text-amber-700 mb-2">
+                DPMD meminta revisi <strong>Surat Pengantar</strong> dan <strong>Berita Acara</strong> untuk {reviewStatus.dpmdRevisiDokumen.length} proposal.
+                Silakan regenerate dokumen lalu kirim ulang ke DPMD.
+              </p>
+              {reviewStatus.dpmdRevisiDokumen.map(p => (
+                <div key={p.id} className="flex items-start gap-2 bg-white/80 rounded-lg p-2.5 mb-1.5 border border-amber-200">
+                  <LuFileText className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-800 truncate">{p.judul_proposal}</p>
+                    {p.dpmd_catatan && (
+                      <p className="text-xs text-amber-700 mt-0.5 italic">Catatan: {p.dpmd_catatan}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
       {reviewStatus.allReviewed && !reviewStatus.hasRejected && (!reviewStatus.hasAllBeritaAcara || !reviewStatus.hasAllSuratPengantar) && (
         <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl p-4 shadow-sm">
           <div className="flex items-start gap-3">
@@ -1874,15 +1949,24 @@ const ProposalRow = ({ kegiatan, proposal, index, onVerify, onViewPdf, onGenerat
               {/* Surat Pengantar Button */}
               {proposal.kecamatan_status === 'approved' && (
                 proposal.surat_pengantar ? (
-                  // Surat Pengantar sudah ada - tampilkan tombol download
-                  <button
-                    onClick={() => window.open(`${imageBaseUrl}/storage${proposal.surat_pengantar}`, '_blank')}
-                    className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-lg transition-all duration-150 shadow-sm text-xs font-semibold"
-                    title="Lihat Surat Pengantar"
-                  >
-                    <LuCheck className="w-4 h-4" />
-                    <span>SP ✓</span>
-                  </button>
+                  // Surat Pengantar sudah ada - tampilkan tombol download + regenerate
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => window.open(`${imageBaseUrl}/storage${proposal.surat_pengantar}`, '_blank')}
+                      className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-lg transition-all duration-150 shadow-sm text-xs font-semibold"
+                      title="Lihat Surat Pengantar"
+                    >
+                      <LuCheck className="w-4 h-4" />
+                      <span>SP ✓</span>
+                    </button>
+                    <button
+                      onClick={() => onGenerateSuratPengantar(proposal.id, proposal.judul_proposal || kegiatan.nama_kegiatan)}
+                      className="flex items-center gap-1 px-2 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg transition-all duration-150 shadow-sm text-xs font-semibold"
+                      title="Regenerate Surat Pengantar"
+                    >
+                      <LuRefreshCw className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 ) : (
                   // Surat Pengantar belum ada - tampilkan tombol generate
                   <button
@@ -1922,22 +2006,31 @@ const ProposalRow = ({ kegiatan, proposal, index, onVerify, onViewPdf, onGenerat
               {/* Berita Acara Button */}
               {proposal.kecamatan_status === 'approved' && (
                 proposal.berita_acara_path ? (
-                  // Berita Acara sudah ada - tampilkan tombol download
-                  <button
-                    onClick={() => window.open(`${imageBaseUrl}${proposal.berita_acara_path}`, '_blank')}
-                    className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-lg transition-all duration-150 shadow-sm text-xs font-semibold"
-                    title="Lihat Berita Acara"
-                  >
-                    <LuCheck className="w-4 h-4" />
-                    <span>BA ✓</span>
-                  </button>
+                  // Berita Acara sudah ada - tampilkan tombol download + regenerate
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => window.open(`${imageBaseUrl}${proposal.berita_acara_path}`, '_blank')}
+                      className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-lg transition-all duration-150 shadow-sm text-xs font-semibold"
+                      title="Lihat Berita Acara"
+                    >
+                      <LuCheck className="w-4 h-4" />
+                      <span>BA ✓</span>
+                    </button>
+                    <button
+                      onClick={() => onGenerateBeritaAcara(proposal.kegiatan_id, proposal.judul_proposal || kegiatan.nama_kegiatan, proposal.id, kegiatan.jenis_kegiatan)}
+                      className="flex items-center gap-1 px-2 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg transition-all duration-150 shadow-sm text-xs font-semibold"
+                      title="Regenerate Berita Acara"
+                    >
+                      <LuRefreshCw className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 ) : (
                   // Berita Acara belum ada - tampilkan tombol generate dengan validasi tim
                   <div className="relative group">
                     <button
                       onClick={() => {
                         if (isTimComplete) {
-                          onGenerateBeritaAcara(proposal.kegiatan_id, proposal.judul_proposal || kegiatan.nama_kegiatan, proposal.id);
+                          onGenerateBeritaAcara(proposal.kegiatan_id, proposal.judul_proposal || kegiatan.nama_kegiatan, proposal.id, kegiatan.jenis_kegiatan);
                         }
                       }}
                       disabled={!isTimComplete}

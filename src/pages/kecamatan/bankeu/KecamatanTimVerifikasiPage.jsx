@@ -1349,6 +1349,7 @@ const KecamatanTimVerifikasiPage = () => {
                     proposalId={selectedProposal.id}
                     verifierType="kecamatan_tim"
                     verifierId={`${kecamatanId}_${activeTab}`}
+                    jenisKegiatan={selectedProposal.kegiatan_list?.[0]?.jenis_kegiatan || 'infrastruktur'}
                     onSaveSuccess={async () => {
                       setIsQuestionnaireOpen(false); // Close after save
                       
