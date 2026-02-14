@@ -494,11 +494,11 @@ const KecamatanTimVerifikasiPage = () => {
   };
 
   const handleSaveConfig = async () => {
-    if (!configForm.nama || !configForm.nip || !configForm.jabatan) {
+    if (!configForm.nama || !configForm.jabatan) {
       Swal.fire({
         icon: 'warning',
         title: 'Data Belum Lengkap',
-        text: 'Mohon lengkapi semua field'
+        text: 'Mohon lengkapi nama dan jabatan'
       });
       return;
     }
@@ -691,7 +691,7 @@ const KecamatanTimVerifikasiPage = () => {
 
   // Check completion status untuk setiap member
   const getMemberStatus = (member) => {
-    const hasData = member.nama && member.nip && member.jabatan;
+    const hasData = member.nama && member.jabatan;
     const hasTTD = !!member.ttd_path;
     const hasQuisioner = !!member.has_questionnaire; // from backend
     return { 
@@ -1129,7 +1129,7 @@ const KecamatanTimVerifikasiPage = () => {
                     <h3 className="font-bold text-gray-900">Data Diri</h3>
                     <p className="text-sm text-gray-500">Informasi identitas anggota tim</p>
                   </div>
-                  {activeMember?.nama && activeMember?.nip && activeMember?.jabatan && (
+                  {activeMember?.nama && activeMember?.jabatan && (
                     <div className="flex items-center gap-1.5 text-green-600 bg-green-100 px-3 py-1.5 rounded-full">
                       <LuBadgeCheck className="w-4 h-4" />
                       <span className="text-sm font-medium">Lengkap</span>
@@ -1159,7 +1159,7 @@ const KecamatanTimVerifikasiPage = () => {
 
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      NIP <span className="text-red-500">*</span>
+                      NIP <span className="text-gray-400 text-xs font-normal">(opsional)</span>
                     </label>
                     <input
                       type="text"
