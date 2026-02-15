@@ -1038,7 +1038,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
           }
         });
 
-        const response = await api.post('/desa/bankeu/submit-to-dinas-terkait');
+        const response = await api.post('/desa/bankeu/submit-to-dinas-terkait', { tahun });
         await fetchData();
 
         Swal.fire({
@@ -1124,7 +1124,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
         });
 
         // Kirim dengan parameter destination=dinas
-        const response = await api.post('/desa/bankeu/resubmit', { destination: 'dinas' });
+        const response = await api.post('/desa/bankeu/resubmit', { destination: 'dinas', tahun });
         await fetchData();
 
         Swal.fire({
@@ -1189,7 +1189,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
         });
 
         // Kirim dengan parameter destination=kecamatan
-        const response = await api.post('/desa/bankeu/resubmit', { destination: 'kecamatan' });
+        const response = await api.post('/desa/bankeu/resubmit', { destination: 'kecamatan', tahun });
         await fetchData();
 
         Swal.fire({
@@ -2741,16 +2741,12 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                                 }
                                 <p className="font-bold text-gray-900 text-base leading-tight">{proposal.judul_proposal}</p>
                               </div>
-                              {proposal.kegiatan_list && proposal.kegiatan_list.length > 0 && (
+                              {proposal.kegiatan_list && proposal.kegiatan_list.filter(k => k.jenis_kegiatan === 'infrastruktur').length > 0 && (
                                 <div className="flex flex-wrap gap-1 mt-2 ml-6">
-                                  {proposal.kegiatan_list.map((kegiatan) => (
+                                  {proposal.kegiatan_list.filter(k => k.jenis_kegiatan === 'infrastruktur').map((kegiatan) => (
                                     <span 
                                       key={kegiatan.id}
-                                      className={`px-2 py-1 rounded text-xs font-medium ${
-                                        kegiatan.jenis_kegiatan === 'infrastruktur' 
-                                          ? 'bg-blue-100 text-blue-700' 
-                                          : 'bg-purple-100 text-purple-700'
-                                      }`}
+                                      className="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-700"
                                     >
                                       {kegiatan.nama_kegiatan.substring(0, 30)}...
                                     </span>
@@ -3219,16 +3215,12 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                                 }
                                 <p className="font-bold text-gray-900 text-base leading-tight">{proposal.judul_proposal}</p>
                               </div>
-                              {proposal.kegiatan_list && proposal.kegiatan_list.length > 0 && (
+                              {proposal.kegiatan_list && proposal.kegiatan_list.filter(k => k.jenis_kegiatan === 'non_infrastruktur').length > 0 && (
                                 <div className="flex flex-wrap gap-1 mt-2 ml-6">
-                                  {proposal.kegiatan_list.map((kegiatan) => (
+                                  {proposal.kegiatan_list.filter(k => k.jenis_kegiatan === 'non_infrastruktur').map((kegiatan) => (
                                     <span 
                                       key={kegiatan.id}
-                                      className={`px-2 py-1 rounded text-xs font-medium ${
-                                        kegiatan.jenis_kegiatan === 'infrastruktur' 
-                                          ? 'bg-blue-100 text-blue-700' 
-                                          : 'bg-purple-100 text-purple-700'
-                                      }`}
+                                      className="px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-700"
                                     >
                                       {kegiatan.nama_kegiatan.substring(0, 30)}...
                                     </span>

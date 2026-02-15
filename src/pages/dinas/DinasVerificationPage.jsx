@@ -721,13 +721,15 @@ const DinasVerificationPage = ({ tahun = 2027 }) => {
                                               <p className="font-semibold text-gray-900 text-sm leading-tight">{proposal.judul_proposal}</p>
                                               <div className="flex items-center gap-2 mt-1">
                                                 <span className="text-xs text-gray-400">ID: {proposal.id}</span>
-                                                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                                                  proposal.jenis_kegiatan === 'infrastruktur' 
-                                                    ? 'bg-blue-100 text-blue-700' 
-                                                    : 'bg-purple-100 text-purple-700'
-                                                }`}>
-                                                  {proposal.jenis_kegiatan === 'infrastruktur' ? 'Infrastruktur' : 'Non-Infrastruktur'}
-                                                </span>
+                                                {proposal.kegiatan_list?.map((kegiatan) => (
+                                                  <span key={kegiatan.id} className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                                    kegiatan.jenis_kegiatan === 'infrastruktur' 
+                                                      ? 'bg-blue-100 text-blue-700' 
+                                                      : 'bg-purple-100 text-purple-700'
+                                                  }`}>
+                                                    {kegiatan.jenis_kegiatan === 'infrastruktur' ? 'Infrastruktur' : 'Non-Infrastruktur'}
+                                                  </span>
+                                                ))}
                                               </div>
                                             </div>
                                           </div>
@@ -832,13 +834,15 @@ const DinasVerificationPage = ({ tahun = 2027 }) => {
                                   <p className="font-semibold text-gray-900 text-sm leading-tight">{proposal.judul_proposal}</p>
                                   <div className="flex items-center gap-2 mt-1">
                                     <span className="text-xs text-gray-400">ID: {proposal.id}</span>
-                                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                                      proposal.jenis_kegiatan === 'infrastruktur' 
-                                        ? 'bg-blue-100 text-blue-700' 
-                                        : 'bg-purple-100 text-purple-700'
-                                    }`}>
-                                      {proposal.jenis_kegiatan === 'infrastruktur' ? 'Infrastruktur' : 'Non-Infrastruktur'}
-                                    </span>
+                                    {proposal.kegiatan_list?.map((kegiatan) => (
+                                      <span key={kegiatan.id} className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                        kegiatan.jenis_kegiatan === 'infrastruktur' 
+                                          ? 'bg-blue-100 text-blue-700' 
+                                          : 'bg-purple-100 text-purple-700'
+                                      }`}>
+                                        {kegiatan.jenis_kegiatan === 'infrastruktur' ? 'Infrastruktur' : 'Non-Infrastruktur'}
+                                      </span>
+                                    ))}
                                   </div>
                                 </div>
                               </div>
