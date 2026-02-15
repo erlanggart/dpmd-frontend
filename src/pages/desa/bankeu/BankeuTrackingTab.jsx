@@ -4,7 +4,7 @@ import {
   LuFileText, LuClock, LuCheck, LuX, LuRefreshCw,
   LuBuilding2, LuLandmark, LuShield, LuSend,
   LuChevronDown, LuChevronRight, LuMapPin,
-  LuDollarSign, LuAlertCircle, LuLoader2, LuMailOpen
+  LuDollarSign, LuCircleAlert, LuLoader, LuMailOpen
 } from "react-icons/lu";
 
 // ========== HELPER: Format tanggal ==========
@@ -307,7 +307,7 @@ const SuratTrackingCard = ({ surat, tahun }) => {
               {surat.surat_pengantar ? (
                 <LuCheck className="w-4 h-4 text-emerald-600" />
               ) : (
-                <LuAlertCircle className="w-4 h-4 text-gray-400" />
+                <LuCircleAlert className="w-4 h-4 text-gray-400" />
               )}
               <span className={`text-xs font-semibold ${surat.surat_pengantar ? 'text-emerald-700' : 'text-gray-500'}`}>
                 Surat Pengantar
@@ -324,7 +324,7 @@ const SuratTrackingCard = ({ surat, tahun }) => {
               {surat.surat_permohonan ? (
                 <LuCheck className="w-4 h-4 text-emerald-600" />
               ) : (
-                <LuAlertCircle className="w-4 h-4 text-gray-400" />
+                <LuCircleAlert className="w-4 h-4 text-gray-400" />
               )}
               <span className={`text-xs font-semibold ${surat.surat_permohonan ? 'text-emerald-700' : 'text-gray-500'}`}>
                 Surat Permohonan
@@ -410,7 +410,7 @@ const BankeuTrackingTab = ({ tahun }) => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <LuLoader2 className="w-8 h-8 text-blue-500 animate-spin" />
+        <LuLoader className="w-8 h-8 text-blue-500 animate-spin" />
       </div>
     );
   }
