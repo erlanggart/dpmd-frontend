@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { LuDollarSign } from 'react-icons/lu';
+import { LuDollarSign, LuFileText, LuRadar, LuArrowLeft } from 'react-icons/lu';
 import BankeuProposalPage from './BankeuProposalPage';
+import BankeuTrackingTab from './BankeuTrackingTab';
 
 const DesaBankeuPage = () => {
   const [selectedYear, setSelectedYear] = useState(null);
+  const [activeTab, setActiveTab] = useState('pengajuan');
 
   // Year Selection Screen
   if (!selectedYear) {
@@ -81,11 +83,63 @@ const DesaBankeuPage = () => {
     );
   }
 
-  // Show BankeuProposalPage with selected year
+  // Show tabs after year selection
+  const tabs = [
+    { id: 'pengajuan', label: 'Pengajuan', icon: LuFileText, desc: 'Kelola proposal & surat' },
+    { id: 'tracking', label: 'Tracking', icon: LuRadar, desc: 'Pantau status verifikasi' },
+  ];
+
   return (
     <div className="relative">
-      {/* Main Content */}
-      <BankeuProposalPage tahun={selectedYear} />
+      {/* Tab Header bar */}
+      <div className="sticky top-0 z-20 bg-white/80 backdrop-blur-lg border-b border-gray-200 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex items-center gap-3 h-14">
+            {/* Back button */}
+            <button
+              onClick={() => { setSelectedYear(null); setActiveTab('pengajuan'); }}
+              className="flex items-center gap-1.5 text-gray-500 hover:text-blue-600 transition-colors text-sm font-medium mr-2"
+            >
+              <LuArrowLeft className="w-4 h-4" />
+              <span className="hidden sm:inline">TA {selectedYear}</span>
+            </button>
+
+            <div className="h-6 w-px bg-gray-300" />
+
+            {/* Tabs */}
+            <div className="flex items-center gap-1">
+              {tabs.map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`relative flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                    activeTab === tab.id
+                      ? 'bg-blue-50 text-blue-700 shadow-sm'
+                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  <tab.icon className="w-4 h-4" />
+                  <span>{tab.label}</span>
+                  {activeTab === tab.id && (
+                    <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-blue-600 rounded-full" />
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === 'pengajuan' ? (
+        <BankeuProposalPage tahun={selectedYear} />
+      ) : (
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 p-4 md:p-6">
+          <div className="max-w-4xl mx-auto">
+            <BankeuTrackingTab tahun={selectedYear} />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
