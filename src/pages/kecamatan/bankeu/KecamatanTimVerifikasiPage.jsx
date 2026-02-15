@@ -46,6 +46,10 @@ const KecamatanTimVerifikasiPage = () => {
   const [isQuestionnaireOpen, setIsQuestionnaireOpen] = useState(false); // Collapsed by default
   const [isDinasVerifikatorOpen, setIsDinasVerifikatorOpen] = useState(false);
 
+  // Anggota picker state
+  const [previousAnggota, setPreviousAnggota] = useState([]);
+  const [showAnggotaPicker, setShowAnggotaPicker] = useState(false);
+
   // Tim validation and berita acara state
   const [timValidation, setTimValidation] = useState(null);
 
@@ -74,6 +78,11 @@ const KecamatanTimVerifikasiPage = () => {
       const desaData = desaRes.data.data;
       setDesa(desaData);
       setKecamatanId(desaData.kecamatan_id);
+
+      // Fetch daftar anggota yang pernah ditambahkan
+      if (desaData.kecamatan_id) {
+        fetchPreviousAnggota(desaData.kecamatan_id);
+      }
 
       // Filter proposals untuk desa ini
       const allProposals = proposalsRes.data.data;
@@ -113,6 +122,15 @@ const KecamatanTimVerifikasiPage = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchPreviousAnggota = async (kecId) => {
+    try {
+      const res = await api.get(`/kecamatan/${kecId}/bankeu/tim-config/anggota-list`);
+      setPreviousAnggota(res.data.data || []);
+    } catch (err) {
+      console.error('Error fetching previous anggota:', err);
     }
   };
 
@@ -396,12 +414,21 @@ const KecamatanTimVerifikasiPage = () => {
       return;
     }
 
-    // Count existing anggota untuk proposal ini
+    // Jika ada anggota sebelumnya, tampilkan picker
+    if (previousAnggota.length > 0) {
+      setShowAnggotaPicker(true);
+      return;
+    }
+
+    // Langsung buat anggota kosong jika belum pernah ada
+    addBlankAnggota();
+  };
+
+  const addBlankAnggota = () => {
     const anggotaCount = timMembers.filter(m => m.posisi.startsWith('anggota_')).length;
     const nextNumber = anggotaCount + 1;
     const newPosisi = `anggota_${nextNumber}`;
-    
-    // Add to state dengan proposal_id
+
     const newMember = {
       posisi: newPosisi,
       nama: '',
@@ -410,18 +437,42 @@ const KecamatanTimVerifikasiPage = () => {
       ttd_path: null,
       proposal_id: selectedProposal.id
     };
-    
+
     setTimMembers([...timMembers, newMember]);
     setActiveTab(newPosisi);
     loadMemberConfig(newMember);
-    
+    setIsDataDiriOpen(true);
+    setShowAnggotaPicker(false);
+
     Swal.fire({
-      toast: true,
-      position: 'top-end',
-      icon: 'success',
-      title: `Anggota ${nextNumber} ditambahkan`,
-      showConfirmButton: false,
-      timer: 2000
+      toast: true, position: 'top-end', icon: 'success',
+      title: `Anggota ${nextNumber} ditambahkan`, showConfirmButton: false, timer: 2000
+    });
+  };
+
+  const selectPreviousAnggota = (anggota) => {
+    const anggotaCount = timMembers.filter(m => m.posisi.startsWith('anggota_')).length;
+    const nextNumber = anggotaCount + 1;
+    const newPosisi = `anggota_${nextNumber}`;
+
+    const newMember = {
+      posisi: newPosisi,
+      nama: anggota.nama,
+      nip: anggota.nip || '',
+      jabatan: anggota.jabatan || '',
+      ttd_path: null,
+      proposal_id: selectedProposal.id
+    };
+
+    setTimMembers([...timMembers, newMember]);
+    setActiveTab(newPosisi);
+    setConfigForm({ nama: anggota.nama, nip: anggota.nip || '', jabatan: anggota.jabatan || '' });
+    setIsDataDiriOpen(true);
+    setShowAnggotaPicker(false);
+
+    Swal.fire({
+      toast: true, position: 'top-end', icon: 'success',
+      title: `Anggota ${nextNumber} ditambahkan dari data sebelumnya`, showConfirmButton: false, timer: 2000
     });
   };
 
@@ -541,8 +592,9 @@ const KecamatanTimVerifikasiPage = () => {
         timer: 2000
       });
 
-      // Refresh tim members dengan proposalId
+      // Refresh tim members dan anggota list
       await fetchTimMembers(kecamatanId, selectedProposal?.id);
+      if (kecamatanId) fetchPreviousAnggota(kecamatanId);
     } catch (error) {
       console.error('Error saving config:', error);
       Swal.fire({
@@ -1428,6 +1480,66 @@ const KecamatanTimVerifikasiPage = () => {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Anggota Picker Modal */}
+      {showAnggotaPicker && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-violet-500 to-purple-600 px-6 py-4 text-white flex items-center justify-between flex-shrink-0">
+              <div>
+                <h3 className="font-bold text-lg">Tambah Anggota</h3>
+                <p className="text-violet-200 text-xs mt-0.5">Pilih anggota sebelumnya atau buat baru</p>
+              </div>
+              <button onClick={() => setShowAnggotaPicker(false)} className="p-1.5 hover:bg-white/20 rounded-lg transition-colors">
+                <LuX className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Buat Baru Button */}
+            <div className="px-5 pt-4 pb-2 flex-shrink-0">
+              <button
+                onClick={addBlankAnggota}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-violet-50 text-violet-700 rounded-xl hover:bg-violet-100 transition-colors border-2 border-dashed border-violet-300 font-medium"
+              >
+                <LuPlus className="w-5 h-5" />
+                <span>Input Manual (Anggota Baru)</span>
+              </button>
+            </div>
+
+            {/* Divider */}
+            <div className="px-5 py-2 flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-px bg-gray-200" />
+                <span className="text-xs text-gray-400 font-medium">atau pilih dari data sebelumnya</span>
+                <div className="flex-1 h-px bg-gray-200" />
+              </div>
+            </div>
+
+            {/* Previous Anggota List */}
+            <div className="px-5 pb-5 overflow-y-auto flex-1 space-y-2">
+              {previousAnggota.map((anggota, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => selectPreviousAnggota(anggota)}
+                  className="w-full flex items-center gap-3 p-3 bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-300 rounded-xl transition-all text-left group"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center flex-shrink-0 group-hover:from-blue-200 group-hover:to-indigo-200 transition-colors">
+                    <LuUserCheck className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-800 text-sm truncate">{anggota.nama}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      {anggota.jabatan && <span className="text-xs text-gray-500 truncate">{anggota.jabatan}</span>}
+                      {anggota.nip && <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">NIP: {anggota.nip}</span>}
+                    </div>
+                  </div>
+                  <LuPlus className="w-4 h-4 text-gray-400 group-hover:text-blue-600 flex-shrink-0" />
+                </button>
+              ))}
             </div>
           </div>
         </div>
