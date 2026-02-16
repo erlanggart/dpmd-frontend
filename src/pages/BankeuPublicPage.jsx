@@ -9,7 +9,8 @@ import {
   ArrowLeft, MapPin, Users, DollarSign, BarChart3,
   ChevronDown, ChevronUp, Search, Building2, Shield, CheckCircle2,
   Activity, FileText, Info, Layers, ChevronRight, Landmark, X, Calendar,
-  TrendingUp, AlertCircle, Clock, ArrowUpRight, Globe, Eye
+  TrendingUp, AlertCircle, Clock, ArrowUpRight, Globe, Eye,
+  CheckCircle, XCircle
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
@@ -245,6 +246,169 @@ const DesaParticipationCard = ({ summary }) => {
   );
 };
 
+// ─── DESA PARTISIPASI SECTION ───────────────────────────────────────
+const DesaPartisipasiSection = ({ desaPartisipasi, summary }) => {
+  const [activeTab, setActiveTab] = useState('belum'); // 'sudah' | 'belum'
+  const [searchKec, setSearchKec] = useState('');
+  const [expandedKec, setExpandedKec] = useState({});
+
+  if (!desaPartisipasi || Object.keys(desaPartisipasi).length === 0) return null;
+
+  const kecamatanList = Object.entries(desaPartisipasi)
+    .map(([kecName, data]) => ({
+      name: kecName,
+      sudah: data.sudah || [],
+      belum: data.belum || [],
+    }))
+    .filter(k => {
+      if (!searchKec) return true;
+      const q = searchKec.toLowerCase();
+      return k.name.toLowerCase().includes(q) ||
+        k.sudah.some(d => d.toLowerCase().includes(q)) ||
+        k.belum.some(d => d.toLowerCase().includes(q));
+    })
+    .sort((a, b) => {
+      if (activeTab === 'belum') return b.belum.length - a.belum.length;
+      return b.sudah.length - a.sudah.length;
+    });
+
+  const totalSudah = summary?.desa_mengusulkan || 0;
+  const totalBelum = summary?.desa_belum_mengusulkan || 0;
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+      className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      {/* Header */}
+      <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-slate-50 via-white to-slate-50">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
+              <Users className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-gray-900 text-sm">Partisipasi Desa per Kecamatan</h3>
+              <p className="text-[11px] text-gray-400">Desa yang sudah mengirim proposal ke dinas terkait</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setActiveTab('belum')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
+                activeTab === 'belum'
+                  ? 'bg-red-50 text-red-700 border-red-200 shadow-sm'
+                  : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'
+              }`}>
+              <XCircle className="w-3.5 h-3.5" />
+              Belum Kirim <span className="px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 text-[10px] font-bold ml-0.5">{totalBelum}</span>
+            </button>
+            <button onClick={() => setActiveTab('sudah')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
+                activeTab === 'sudah'
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200 shadow-sm'
+                  : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'
+              }`}>
+              <CheckCircle className="w-3.5 h-3.5" />
+              Sudah Kirim <span className="px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold ml-0.5">{totalSudah}</span>
+            </button>
+          </div>
+        </div>
+        {/* Search */}
+        <div className="relative mt-3">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Cari kecamatan atau desa..."
+            value={searchKec}
+            onChange={(e) => setSearchKec(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400"
+          />
+          {searchKec && (
+            <button onClick={() => setSearchKec('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="divide-y divide-gray-100 max-h-[500px] overflow-y-auto">
+        {kecamatanList.map((kec) => {
+          const items = activeTab === 'sudah' ? kec.sudah : kec.belum;
+          const otherCount = activeTab === 'sudah' ? kec.belum.length : kec.sudah.length;
+          const isExpanded = expandedKec[kec.name];
+          if (items.length === 0 && !searchKec) return null;
+
+          return (
+            <div key={kec.name}>
+              <button
+                onClick={() => setExpandedKec(prev => ({ ...prev, [kec.name]: !prev[kec.name] }))}
+                className="w-full px-6 py-3 flex items-center justify-between hover:bg-gray-50/80 transition-colors group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-white text-[11px] font-bold ${
+                    activeTab === 'belum'
+                      ? items.length > 0 ? 'bg-gradient-to-br from-red-500 to-rose-600' : 'bg-gradient-to-br from-emerald-500 to-green-600'
+                      : items.length > 0 ? 'bg-gradient-to-br from-emerald-500 to-green-600' : 'bg-gradient-to-br from-gray-400 to-gray-500'
+                  }`}>
+                    {items.length}
+                  </div>
+                  <div className="text-left">
+                    <p className="font-semibold text-gray-900 text-sm group-hover:text-violet-700 transition-colors">{kec.name}</p>
+                    <p className="text-[11px] text-gray-400">
+                      {activeTab === 'belum'
+                        ? <><span className="text-red-500 font-medium">{kec.belum.length} belum</span> · <span className="text-emerald-600">{kec.sudah.length} sudah</span></>
+                        : <><span className="text-emerald-600 font-medium">{kec.sudah.length} sudah</span> · <span className="text-red-500">{kec.belum.length} belum</span></>
+                      }
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {items.length > 0 && (
+                    <div className={`w-5 h-5 rounded-md flex items-center justify-center transition-colors ${
+                      isExpanded ? 'bg-violet-100' : 'bg-gray-100 group-hover:bg-gray-200'
+                    }`}>
+                      {isExpanded ? <ChevronUp className="w-3 h-3 text-violet-600" /> : <ChevronDown className="w-3 h-3 text-gray-400" />}
+                    </div>
+                  )}
+                </div>
+              </button>
+
+              <AnimatePresence>
+                {isExpanded && items.length > 0 && (
+                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
+                    <div className="px-6 pb-3">
+                      <div className="flex flex-wrap gap-1.5">
+                        {items.sort().map((desaName, i) => (
+                          <span key={i} className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium border ${
+                            activeTab === 'sudah'
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : 'bg-red-50 text-red-700 border-red-200'
+                          }`}>
+                            {activeTab === 'sudah'
+                              ? <CheckCircle className="w-3 h-3" />
+                              : <XCircle className="w-3 h-3" />
+                            }
+                            {desaName}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          );
+        })}
+        {kecamatanList.filter(k => (activeTab === 'sudah' ? k.sudah.length : k.belum.length) > 0).length === 0 && (
+          <div className="text-center py-10 text-gray-400">
+            <Users className="w-8 h-8 mx-auto mb-2 opacity-30" />
+            <p className="text-sm">{activeTab === 'sudah' ? 'Belum ada desa yang mengirim' : 'Semua desa sudah mengirim'}</p>
+          </div>
+        )}
+      </div>
+    </motion.div>
+  );
+};
+
 // ─── FLOW PIPELINE ──────────────────────────────────────────────────
 const FlowPipeline = ({ stageStats, total }) => (
   <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
@@ -385,6 +549,7 @@ const BankeuPublicPage = () => {
   const [activeYear, setActiveYear] = useState(2026);
   const [proposals, setProposals] = useState([]);
   const [summary, setSummary] = useState(null);
+  const [desaPartisipasi, setDesaPartisipasi] = useState({});
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedKecamatan, setExpandedKecamatan] = useState({});
@@ -405,13 +570,16 @@ const BankeuPublicPage = () => {
         const json = await res.json();
         setProposals(json.proposals || []);
         setSummary(json.summary || null);
+        setDesaPartisipasi(json.desa_partisipasi || {});
       } else {
         setProposals([]);
         setSummary(null);
+        setDesaPartisipasi({});
       }
     } catch {
       setProposals([]);
       setSummary(null);
+      setDesaPartisipasi({});
     } finally {
       setLoading(false);
     }
@@ -539,6 +707,11 @@ const BankeuPublicPage = () => {
             <FlowPipeline stageStats={stageStats} total={totalProposals} />
           </div>
           <DesaParticipationCard summary={summary} />
+        </div>
+
+        {/* Partisipasi Desa per Kecamatan */}
+        <div className="mb-6">
+          <DesaPartisipasiSection desaPartisipasi={desaPartisipasi} summary={summary} />
         </div>
 
         {/* Filters */}

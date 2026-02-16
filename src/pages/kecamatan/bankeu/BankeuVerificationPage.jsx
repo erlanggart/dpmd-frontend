@@ -12,6 +12,7 @@ import {
 import KecamatanBankeuConfigTab from "../../../components/kecamatan/KecamatanBankeuConfigTab";
 
 const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
+const MAX_ANGGARAN_PER_DESA = 1_500_000_000; // 1.5 Miliar per desa
 
 const BankeuVerificationPage = ({ tahun = 2027 }) => {
   const navigate = useNavigate();
@@ -852,8 +853,13 @@ const BankeuVerificationPage = ({ tahun = 2027 }) => {
                         <div>
                           <h3 className="font-bold text-gray-800 group-hover:text-violet-700 transition-colors">Desa {group.desa.nama}</h3>
                           <p className="text-sm text-gray-600">
-                            {group.totalProposals} Proposal • Rp {(group.totalAnggaran || 0).toLocaleString('id-ID')}
+                            {group.totalProposals} Proposal • <span className={(group.totalAnggaran || 0) > MAX_ANGGARAN_PER_DESA ? 'text-red-600 font-semibold' : ''}>Rp {(group.totalAnggaran || 0).toLocaleString('id-ID')}</span>
                           </p>
+                          {(group.totalAnggaran || 0) > MAX_ANGGARAN_PER_DESA && (
+                            <p className="text-xs text-red-600 font-semibold flex items-center gap-1 mt-0.5">
+                              <LuTriangleAlert className="w-3.5 h-3.5" /> Total anggaran melebihi batas Rp 1,5 Miliar
+                            </p>
+                          )}
                         </div>
                       </div>
                       <div className="flex items-center gap-3">

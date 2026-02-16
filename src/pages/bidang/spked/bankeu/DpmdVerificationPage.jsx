@@ -41,6 +41,7 @@ import {
   FileSpreadsheet,
   PieChart,
   AlertCircle,
+  AlertTriangle,
   Filter,
   Power,
   Lock,
@@ -60,6 +61,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import * as XLSX from 'xlsx';
 import api from '../../../../api';
 import Swal from 'sweetalert2';
+
+const MAX_ANGGARAN_PER_DESA = 1_500_000_000; // 1.5 Miliar per desa
 
 const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
   const navigate = useNavigate();
@@ -848,6 +851,7 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
         jumlahDesa: k.jumlahDesa.size
       })).sort((a, b) => b.jumlahProposal - a.jumlahProposal),
       perDesa: Object.values(perDesa).sort((a, b) => b.totalAnggaran - a.totalAnggaran),
+      desaOverLimit: Object.values(perDesa).filter(d => d.totalAnggaran > MAX_ANGGARAN_PER_DESA).sort((a, b) => b.totalAnggaran - a.totalAnggaran),
       statusBreakdown,
       desaTidakMengajukan
     };
@@ -1687,7 +1691,12 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                             </div>
                             <div className="hidden md:block text-right">
                               <p className="text-xs text-gray-500">Total Anggaran</p>
-                              <p className="text-sm font-bold text-gray-800">Rp {totalAnggaran.toLocaleString('id-ID')}</p>
+                              <p className={`text-sm font-bold ${totalAnggaran > MAX_ANGGARAN_PER_DESA ? 'text-red-600' : 'text-gray-800'}`}>Rp {totalAnggaran.toLocaleString('id-ID')}</p>
+                              {totalAnggaran > MAX_ANGGARAN_PER_DESA && (
+                                <p className="text-[10px] text-red-500 font-semibold flex items-center gap-1 justify-end mt-0.5">
+                                  <AlertTriangle className="h-3 w-3" /> Melebihi 1,5 M
+                                </p>
+                              )}
                             </div>
                             {isExpanded ? (
                               <ChevronUp className="h-5 w-5 text-gray-400" />
@@ -2298,8 +2307,10 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                         </tr>
                       </thead>
                       <tbody>
-                        {statsData.perDesa.slice(0, 10).map((d, i) => (
-                          <tr key={d.desaId} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                        {statsData.perDesa.slice(0, 10).map((d, i) => {
+                          const isOverLimit = d.totalAnggaran > MAX_ANGGARAN_PER_DESA;
+                          return (
+                          <tr key={d.desaId} className={`border-b transition-colors ${isOverLimit ? 'bg-red-50/50 border-red-100 hover:bg-red-50' : 'border-slate-100 hover:bg-slate-50'}`}>
                             <td className="px-4 py-3">
                               <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${
                                 i < 3 ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-600'
@@ -2307,22 +2318,92 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                                 {i + 1}
                               </span>
                             </td>
-                            <td className="px-4 py-3 text-sm font-medium text-slate-800">{d.desaName}</td>
+                            <td className="px-4 py-3 text-sm font-medium text-slate-800">
+                              <div className="flex items-center gap-1.5">
+                                {d.desaName}
+                                {isOverLimit && (
+                                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-red-100 text-red-600 text-[10px] font-bold" title="Total anggaran melebihi batas 1,5 Miliar">
+                                    <AlertTriangle className="h-3 w-3" /> OVER
+                                  </span>
+                                )}
+                              </div>
+                            </td>
                             <td className="px-4 py-3 text-sm text-slate-500">{d.kecamatanName}</td>
                             <td className="px-4 py-3 text-sm text-right">
                               <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">
                                 {d.jumlahProposal}
                               </span>
                             </td>
-                            <td className="px-4 py-3 text-sm text-right font-semibold text-slate-800">
+                            <td className={`px-4 py-3 text-sm text-right font-semibold ${isOverLimit ? 'text-red-600' : 'text-slate-800'}`}>
                               Rp {d.totalAnggaran.toLocaleString('id-ID')}
+                              {isOverLimit && (
+                                <p className="text-[10px] text-red-500 font-medium mt-0.5">Maks: Rp 1.500.000.000</p>
+                              )}
                             </td>
                           </tr>
-                        ))}
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
               </motion.div>
+
+              {/* Desa Melebihi Batas Anggaran */}
+              {statsData.desaOverLimit?.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.85 }}
+                  className="bg-white rounded-2xl shadow-sm overflow-hidden border-2 border-red-300"
+                >
+                  <div className="bg-gradient-to-r from-red-600 to-rose-600 px-5 py-4 flex items-center justify-between">
+                    <h3 className="font-bold text-white flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4" />
+                      Desa Melebihi Batas Anggaran (Rp 1,5 Miliar)
+                    </h3>
+                    <span className="px-3 py-1 bg-white/20 text-white rounded-full text-sm font-semibold">
+                      {statsData.desaOverLimit.length} desa
+                    </span>
+                  </div>
+                  <div className="p-4">
+                    <p className="text-sm text-red-700 mb-3 bg-red-50 px-3 py-2 rounded-lg border border-red-200">
+                      ⚠️ Desa-desa berikut memiliki <strong>total anggaran usulan melebihi Rp 1.500.000.000</strong>. Kemungkinan ada kesalahan input anggaran pada salah satu proposal.
+                    </p>
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="bg-red-50 border-b border-red-200">
+                            <th className="px-4 py-2.5 text-left text-xs font-semibold text-red-700 uppercase">No</th>
+                            <th className="px-4 py-2.5 text-left text-xs font-semibold text-red-700 uppercase">Desa</th>
+                            <th className="px-4 py-2.5 text-left text-xs font-semibold text-red-700 uppercase">Kecamatan</th>
+                            <th className="px-4 py-2.5 text-right text-xs font-semibold text-red-700 uppercase">Proposal</th>
+                            <th className="px-4 py-2.5 text-right text-xs font-semibold text-red-700 uppercase">Total Anggaran</th>
+                            <th className="px-4 py-2.5 text-right text-xs font-semibold text-red-700 uppercase">Selisih</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {statsData.desaOverLimit.map((d, i) => (
+                            <tr key={d.desaId} className="border-b border-red-100 hover:bg-red-50/50 transition-colors">
+                              <td className="px-4 py-2.5">
+                                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold bg-red-500 text-white">{i + 1}</span>
+                              </td>
+                              <td className="px-4 py-2.5 text-sm font-semibold text-red-800">{d.desaName}</td>
+                              <td className="px-4 py-2.5 text-sm text-red-600">{d.kecamatanName}</td>
+                              <td className="px-4 py-2.5 text-sm text-right">
+                                <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">{d.jumlahProposal}</span>
+                              </td>
+                              <td className="px-4 py-2.5 text-sm text-right font-bold text-red-700">Rp {d.totalAnggaran.toLocaleString('id-ID')}</td>
+                              <td className="px-4 py-2.5 text-sm text-right font-semibold text-red-600">
+                                +Rp {(d.totalAnggaran - MAX_ANGGARAN_PER_DESA).toLocaleString('id-ID')}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
 
               {/* Desa Belum Mengajukan */}
               <motion.div
