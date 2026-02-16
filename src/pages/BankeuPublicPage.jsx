@@ -22,13 +22,12 @@ const STAGE_CONFIG = {
   di_desa: { label: 'Di Desa', icon: MapPin, color: 'from-slate-500 to-gray-600', bg: 'bg-slate-100', text: 'text-slate-700', hex: '#64748b' },
   di_dinas: { label: 'Di Dinas Terkait', icon: Building2, color: 'from-orange-500 to-amber-500', bg: 'bg-orange-100', text: 'text-orange-700', hex: '#f97316' },
   di_kecamatan: { label: 'Di Kecamatan', icon: Landmark, color: 'from-blue-500 to-indigo-500', bg: 'bg-blue-100', text: 'text-blue-700', hex: '#3b82f6' },
-  di_dpmd: { label: 'Di DPMD', icon: Shield, color: 'from-purple-500 to-violet-600', bg: 'bg-purple-100', text: 'text-purple-700', hex: '#8b5cf6' },
-  selesai: { label: 'Selesai', icon: CheckCircle2, color: 'from-emerald-500 to-green-500', bg: 'bg-emerald-100', text: 'text-emerald-700', hex: '#22c55e' },
+  selesai: { label: 'Di DPMD', icon: CheckCircle2, color: 'from-emerald-500 to-green-500', bg: 'bg-emerald-100', text: 'text-emerald-700', hex: '#22c55e' },
 };
 
-const STAGE_ORDER = ['di_desa', 'di_dinas', 'di_kecamatan', 'di_dpmd', 'selesai'];
+const STAGE_ORDER = ['di_desa', 'di_dinas', 'di_kecamatan', 'selesai'];
 
-const PIE_COLORS = ['#64748b', '#f97316', '#3b82f6', '#8b5cf6', '#22c55e'];
+const PIE_COLORS = ['#64748b', '#f97316', '#3b82f6', '#22c55e'];
 
 // ─── HELPERS ────────────────────────────────────────────────────────
 const formatRupiah = (value) => {
@@ -45,15 +44,7 @@ const formatRupiahShort = (value) => {
   return formatRupiah(value);
 };
 
-const getStage = (p) => {
-  if (p.dpmd_status === 'approved') return 'selesai';
-  if (p.submitted_to_dpmd) return 'di_dpmd';
-  if (p.kecamatan_status === 'approved') return 'di_dpmd';
-  if (p.submitted_to_kecamatan && p.dinas_status === 'approved') return 'di_kecamatan';
-  if (p.dinas_status === 'approved') return 'di_kecamatan';
-  if (p.submitted_to_dinas_at) return 'di_dinas';
-  return 'di_desa';
-};
+// Stage is now calculated server-side, no need for client-side getStage
 
 // ─── FLOW PIPELINE ──────────────────────────────────────────────────
 const FlowPipeline = ({ stageStats, total }) => (
@@ -132,8 +123,7 @@ const ProcessInfoSection = () => {
     { step: '01', title: 'Pengajuan Desa', desc: 'Desa menyusun proposal dan mengupload dokumen persyaratan.', icon: FileText, color: 'from-slate-500 to-gray-600' },
     { step: '02', title: 'Review Dinas', desc: 'Dinas terkait mereview kelayakan teknis proposal.', icon: Building2, color: 'from-orange-500 to-amber-500' },
     { step: '03', title: 'Verifikasi Kecamatan', desc: 'Tim kecamatan memvalidasi kelengkapan dokumen.', icon: Landmark, color: 'from-blue-500 to-indigo-500' },
-    { step: '04', title: 'Persetujuan DPMD', desc: 'DPMD Kab. Bogor melakukan approval akhir.', icon: Shield, color: 'from-purple-500 to-violet-600' },
-    { step: '05', title: 'Pencairan Dana', desc: 'Dana dicairkan ke rekening pemerintah desa.', icon: CheckCircle2, color: 'from-emerald-500 to-green-500' },
+    { step: '04', title: 'Di DPMD', desc: 'DPMD Kab. Bogor melakukan verifikasi dan approval akhir.', icon: CheckCircle2, color: 'from-emerald-500 to-green-500' },
   ];
 
   return (
@@ -149,9 +139,9 @@ const ProcessInfoSection = () => {
             <span className="text-blue-300 text-sm font-medium">Alur Proses</span>
           </div>
           <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">Bagaimana Bantuan Keuangan Diproses?</h2>
-          <p className="text-gray-400 max-w-2xl mx-auto">5 tahapan verifikasi untuk transparansi dan akuntabilitas.</p>
+          <p className="text-gray-400 max-w-2xl mx-auto">4 tahapan verifikasi untuk transparansi dan akuntabilitas.</p>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {steps.map((step, i) => {
             const Icon = step.icon;
             return (
@@ -465,7 +455,7 @@ const BankeuPublicPage = () => {
             </h3>
             <div className="h-72">
               {pieChartData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                   <PieChart>
                     <Pie data={pieChartData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={3} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
                       {pieChartData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
@@ -487,7 +477,7 @@ const BankeuPublicPage = () => {
             </h3>
             <div className="h-72">
               {barChartData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                   <BarChart data={barChartData} layout="vertical" margin={{ left: 10 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                     <XAxis type="number" tickFormatter={(v) => formatRupiahShort(v)} tick={{ fontSize: 10 }} />
