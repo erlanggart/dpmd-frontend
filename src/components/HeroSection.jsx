@@ -151,6 +151,13 @@ const HeroSection = () => {
 								Masuk ke Sistem
 								<FiArrowRight className="group-hover:translate-x-1 transition-transform" />
 							</Link>
+							<Link
+								to="/bantuan-keuangan"
+								className="group inline-flex items-center justify-center gap-2 sm:gap-3 bg-white/10 backdrop-blur-md border border-white/20 text-white font-bold px-5 py-2.5 sm:px-8 sm:py-4 text-sm sm:text-base rounded-xl sm:rounded-2xl hover:bg-white/20 transform hover:-translate-y-0.5 transition-all duration-300"
+							>
+								Lihat Bantuan Keuangan
+								<FiArrowRight className="group-hover:translate-x-1 transition-transform" />
+							</Link>
 						</motion.div>
 					</div>
 				</div>

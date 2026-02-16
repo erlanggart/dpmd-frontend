@@ -33,10 +33,16 @@ const PIE_COLORS = ['#64748b', '#f97316', '#3b82f6', '#8b5cf6', '#22c55e'];
 // ─── HELPERS ────────────────────────────────────────────────────────
 const formatRupiah = (value) => {
   if (!value || value === 0) return 'Rp 0';
+  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(value);
+};
+
+// Short format for chart axis only
+const formatRupiahShort = (value) => {
+  if (!value || value === 0) return 'Rp 0';
   if (value >= 1e12) return `Rp ${(value / 1e12).toFixed(2)} T`;
   if (value >= 1e9) return `Rp ${(value / 1e9).toFixed(2)} M`;
   if (value >= 1e6) return `Rp ${(value / 1e6).toFixed(1)} Jt`;
-  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(value);
+  return formatRupiah(value);
 };
 
 const getStage = (p) => {
@@ -176,6 +182,7 @@ const BankeuPublicPage = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedKecamatan, setExpandedKecamatan] = useState({});
+  const [expandedDesa, setExpandedDesa] = useState({});
   const [selectedStage, setSelectedStage] = useState(null);
 
   // ─── Fetch Data ────────────────────────────────────────────────
@@ -231,16 +238,25 @@ const BankeuPublicPage = () => {
   const totalKecamatan = useMemo(() => new Set(processed.map(d => d.kecamatan)).size, [processed]);
   const totalDesa = useMemo(() => new Set(processed.map(d => d.desa)).size, [processed]);
 
-  // Kecamatan grouped
+  // Kecamatan grouped with nested desa
   const kecamatanGroup = useMemo(() => {
     const map = {};
     processed.forEach(d => {
-      if (!map[d.kecamatan]) map[d.kecamatan] = { total: 0, count: 0, items: [] };
+      if (!map[d.kecamatan]) map[d.kecamatan] = { total: 0, count: 0, desas: {} };
       map[d.kecamatan].total += (d.anggaran || 0);
       map[d.kecamatan].count += 1;
-      map[d.kecamatan].items.push(d);
+      const desaKey = d.desa;
+      if (!map[d.kecamatan].desas[desaKey]) map[d.kecamatan].desas[desaKey] = { total: 0, count: 0, items: [] };
+      map[d.kecamatan].desas[desaKey].total += (d.anggaran || 0);
+      map[d.kecamatan].desas[desaKey].count += 1;
+      map[d.kecamatan].desas[desaKey].items.push(d);
     });
-    return Object.entries(map).map(([name, data]) => ({ name, ...data })).sort((a, b) => b.total - a.total);
+    return Object.entries(map).map(([name, data]) => ({
+      name,
+      total: data.total,
+      count: data.count,
+      desas: Object.entries(data.desas).map(([desaName, desaData]) => ({ name: desaName, ...desaData })).sort((a, b) => b.total - a.total)
+    })).sort((a, b) => b.total - a.total);
   }, [processed]);
 
   // Chart data - bar
@@ -259,10 +275,15 @@ const BankeuPublicPage = () => {
     setExpandedKecamatan(prev => ({ ...prev, [name]: !prev[name] }));
   }, []);
 
+  const toggleDesa = useCallback((key) => {
+    setExpandedDesa(prev => ({ ...prev, [key]: !prev[key] }));
+  }, []);
+
   const resetFilters = () => {
     setSelectedStage(null);
     setSearchQuery('');
     setExpandedKecamatan({});
+    setExpandedDesa({});
   };
 
   // ─── Loading ───────────────────────────────────────────────────
@@ -387,12 +408,11 @@ const BankeuPublicPage = () => {
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-3 gap-4 mb-4">
           {[
             { label: 'Total Proposal', value: processed.length, icon: FileText, gradient: 'from-blue-500 to-indigo-600' },
             { label: 'Kecamatan', value: totalKecamatan, icon: MapPin, gradient: 'from-cyan-500 to-blue-600' },
             { label: 'Desa', value: totalDesa, icon: Users, gradient: 'from-violet-500 to-purple-600' },
-            { label: 'Total Anggaran', isRupiah: true, rupiahValue: totalAnggaran, icon: DollarSign, gradient: 'from-emerald-500 to-green-600' },
           ].map((card, i) => {
             const Icon = card.icon;
             return (
@@ -405,7 +425,7 @@ const BankeuPublicPage = () => {
                   <div className="min-w-0">
                     <p className="text-white/80 text-xs font-medium">{card.label}</p>
                     <p className="text-xl md:text-2xl font-bold text-white truncate">
-                      {card.isRupiah ? formatRupiah(card.rupiahValue) : card.value}
+                      {card.value}
                     </p>
                   </div>
                 </div>
@@ -413,6 +433,27 @@ const BankeuPublicPage = () => {
             );
           })}
         </div>
+
+        {/* Anggaran Card - Full Width */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+          className="bg-gradient-to-r from-emerald-500 via-green-500 to-teal-600 rounded-2xl p-6 shadow-lg mb-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
+                <DollarSign className="w-7 h-7 text-white" />
+              </div>
+              <div>
+                <p className="text-white/80 text-sm font-medium">Total Anggaran Usulan</p>
+                <p className="text-3xl md:text-4xl font-extrabold text-white tracking-tight mt-1">
+                  {formatRupiah(totalAnggaran)}
+                </p>
+              </div>
+            </div>
+            <div className="text-right hidden sm:block">
+              <p className="text-white/60 text-xs">TA {activeYear} · {processed.length} proposal</p>
+            </div>
+          </div>
+        </motion.div>
 
         {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
@@ -449,7 +490,7 @@ const BankeuPublicPage = () => {
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={barChartData} layout="vertical" margin={{ left: 10 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                    <XAxis type="number" tickFormatter={(v) => formatRupiah(v)} tick={{ fontSize: 10 }} />
+                    <XAxis type="number" tickFormatter={(v) => formatRupiahShort(v)} tick={{ fontSize: 10 }} />
                     <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 11 }} />
                     <RechartsTooltip formatter={(value) => [formatRupiah(value), 'Anggaran']} />
                     <Bar dataKey="value" fill="#6366f1" radius={[0, 6, 6, 0]} />
@@ -462,22 +503,25 @@ const BankeuPublicPage = () => {
           </div>
         </div>
 
-        {/* Kecamatan Detail Table */}
+        {/* Kecamatan > Desa Detail */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="px-5 py-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
             <h3 className="font-bold text-gray-800 flex items-center gap-2">
               <MapPin className="w-4 h-4 text-indigo-600" />
-              Detail Proposal per Kecamatan
+              Detail Proposal per Kecamatan &amp; Desa
               <span className="text-xs font-normal text-gray-400 ml-1">
-                {processed.length} proposal · {totalKecamatan} kecamatan
+                {processed.length} proposal · {totalKecamatan} kecamatan · {totalDesa} desa
               </span>
             </h3>
           </div>
           <div className="divide-y divide-gray-100">
             {kecamatanGroup.map((kec, i) => {
-              const isExpanded = expandedKecamatan[kec.name];
+              const isKecExpanded = expandedKecamatan[kec.name];
+              // count stages across all desa items in this kecamatan
+              const allKecItems = kec.desas.flatMap(d => d.items);
               return (
                 <div key={kec.name}>
+                  {/* Kecamatan Row */}
                   <button
                     onClick={() => toggleKecamatan(kec.name)}
                     className="w-full px-5 py-3.5 flex items-center justify-between hover:bg-gray-50/80 transition-colors"
@@ -488,14 +532,13 @@ const BankeuPublicPage = () => {
                       </span>
                       <div className="text-left">
                         <p className="font-semibold text-gray-900 text-sm">{kec.name}</p>
-                        <p className="text-xs text-gray-500">{kec.count} proposal · {formatRupiah(kec.total)}</p>
+                        <p className="text-xs text-gray-500">{kec.desas.length} desa · {kec.count} proposal · {formatRupiah(kec.total)}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      {/* mini stage badges */}
                       <div className="hidden sm:flex gap-1">
                         {STAGE_ORDER.map(s => {
-                          const cnt = kec.items.filter(d => d.stage === s).length;
+                          const cnt = allKecItems.filter(d => d.stage === s).length;
                           if (cnt === 0) return null;
                           return (
                             <span key={s} className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${STAGE_CONFIG[s].bg} ${STAGE_CONFIG[s].text}`}>
@@ -504,46 +547,99 @@ const BankeuPublicPage = () => {
                           );
                         })}
                       </div>
-                      {isExpanded ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                      {isKecExpanded ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
                     </div>
                   </button>
+
+                  {/* Desa List (nested inside kecamatan) */}
                   <AnimatePresence>
-                    {isExpanded && (
+                    {isKecExpanded && (
                       <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
-                        <div className="bg-gray-50/50 border-t border-gray-100">
-                          <div className="overflow-x-auto">
-                            <table className="w-full">
-                              <thead>
-                                <tr className="text-xs text-gray-500 uppercase tracking-wider">
-                                  <th className="px-5 py-2.5 text-left w-12">No</th>
-                                  <th className="px-5 py-2.5 text-left">Desa</th>
-                                  <th className="px-5 py-2.5 text-left">Kegiatan</th>
-                                  <th className="px-5 py-2.5 text-left">Dinas Terkait</th>
-                                  <th className="px-5 py-2.5 text-left">Tahap</th>
-                                  <th className="px-5 py-2.5 text-right">Anggaran</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-gray-100">
-                                {kec.items.map((p, j) => {
-                                  const sc = STAGE_CONFIG[p.stage] || STAGE_CONFIG.di_desa;
-                                  return (
-                                    <tr key={j} className="hover:bg-white transition-colors">
-                                      <td className="px-5 py-2.5 text-xs text-gray-500">{j + 1}</td>
-                                      <td className="px-5 py-2.5 text-sm font-medium text-gray-900">{p.desa}</td>
-                                      <td className="px-5 py-2.5 text-sm text-gray-700 max-w-[200px] truncate" title={p.kegiatan}>{p.kegiatan}</td>
-                                      <td className="px-5 py-2.5 text-xs text-gray-500">{p.dinas_terkait}</td>
-                                      <td className="px-5 py-2.5">
-                                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${sc.bg} ${sc.text}`}>
-                                          {sc.label}
-                                        </span>
-                                      </td>
-                                      <td className="px-5 py-2.5 text-sm font-semibold text-gray-900 text-right">{formatRupiah(p.anggaran)}</td>
-                                    </tr>
-                                  );
-                                })}
-                              </tbody>
-                            </table>
-                          </div>
+                        <div className="bg-gray-50/30 border-t border-gray-100 divide-y divide-gray-100">
+                          {kec.desas.map((desa, di) => {
+                            const desaKey = `${kec.name}__${desa.name}`;
+                            const isDesaExpanded = expandedDesa[desaKey];
+                            return (
+                              <div key={desa.name}>
+                                {/* Desa Row */}
+                                <button
+                                  onClick={() => toggleDesa(desaKey)}
+                                  className="w-full pl-12 pr-5 py-3 flex items-center justify-between hover:bg-blue-50/50 transition-colors"
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <span className="w-6 h-6 bg-blue-100 text-blue-700 rounded-md flex items-center justify-center text-[11px] font-bold flex-shrink-0">
+                                      {di + 1}
+                                    </span>
+                                    <div className="text-left">
+                                      <p className="font-medium text-gray-800 text-sm">{desa.name}</p>
+                                      <p className="text-xs text-gray-500">{desa.count} proposal · {formatRupiah(desa.total)}</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <div className="hidden sm:flex gap-1">
+                                      {STAGE_ORDER.map(s => {
+                                        const cnt = desa.items.filter(d => d.stage === s).length;
+                                        if (cnt === 0) return null;
+                                        return (
+                                          <span key={s} className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${STAGE_CONFIG[s].bg} ${STAGE_CONFIG[s].text}`}>
+                                            {cnt}
+                                          </span>
+                                        );
+                                      })}
+                                    </div>
+                                    {isDesaExpanded ? <ChevronUp className="w-3.5 h-3.5 text-gray-400" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-400" />}
+                                  </div>
+                                </button>
+
+                                {/* Proposal Table (inside desa) */}
+                                <AnimatePresence>
+                                  {isDesaExpanded && (
+                                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.15 }} className="overflow-hidden">
+                                      <div className="bg-white/80 border-t border-gray-100 ml-12 mr-4 mb-2 rounded-xl overflow-hidden shadow-sm border">
+                                        <div className="overflow-x-auto">
+                                          <table className="w-full">
+                                            <thead>
+                                              <tr className="text-xs text-gray-500 uppercase tracking-wider bg-gray-50">
+                                                <th className="px-4 py-2.5 text-left w-10">No</th>
+                                                <th className="px-4 py-2.5 text-left">Kegiatan</th>
+                                                <th className="px-4 py-2.5 text-left">Dinas Terkait</th>
+                                                <th className="px-4 py-2.5 text-left">Tahap</th>
+                                                <th className="px-4 py-2.5 text-right">Anggaran Usulan</th>
+                                              </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-gray-100">
+                                              {desa.items.map((p, j) => {
+                                                const sc = STAGE_CONFIG[p.stage] || STAGE_CONFIG.di_desa;
+                                                return (
+                                                  <tr key={j} className="hover:bg-blue-50/30 transition-colors">
+                                                    <td className="px-4 py-2.5 text-xs text-gray-500">{j + 1}</td>
+                                                    <td className="px-4 py-2.5 text-sm text-gray-700" title={p.kegiatan}>{p.kegiatan}</td>
+                                                    <td className="px-4 py-2.5 text-xs text-gray-500">{p.dinas_terkait}</td>
+                                                    <td className="px-4 py-2.5">
+                                                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${sc.bg} ${sc.text}`}>
+                                                        {sc.label}
+                                                      </span>
+                                                    </td>
+                                                    <td className="px-4 py-2.5 text-xs font-semibold text-gray-900 text-right whitespace-nowrap">{formatRupiah(p.anggaran)}</td>
+                                                  </tr>
+                                                );
+                                              })}
+                                            </tbody>
+                                            <tfoot>
+                                              <tr className="bg-gray-50 font-semibold">
+                                                <td colSpan={4} className="px-4 py-2.5 text-xs text-gray-600 text-right">Total Anggaran Desa</td>
+                                                <td className="px-4 py-2.5 text-xs font-bold text-gray-900 text-right whitespace-nowrap">{formatRupiah(desa.total)}</td>
+                                              </tr>
+                                            </tfoot>
+                                          </table>
+                                        </div>
+                                      </div>
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
+                              </div>
+                            );
+                          })}
                         </div>
                       </motion.div>
                     )}
