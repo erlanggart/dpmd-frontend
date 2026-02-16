@@ -453,7 +453,7 @@ const KecamatanTimVerifikasiPage = () => {
     });
   };
 
-  const selectPreviousAnggota = (anggota) => {
+  const selectPreviousAnggota = async (anggota) => {
     const anggotaCount = timMembers.filter(m => m.posisi.startsWith('anggota_')).length;
     const nextNumber = anggotaCount + 1;
     const newPosisi = `anggota_${nextNumber}`;
@@ -473,24 +473,58 @@ const KecamatanTimVerifikasiPage = () => {
     setIsDataDiriOpen(true);
     setShowAnggotaPicker(false);
 
-    // If previous anggota has TTD, show it immediately and store source for copying
+    // If previous anggota has TTD, show it immediately
     if (anggota.ttd_path) {
       setSignatureData(`${imageBaseUrl}/storage/uploads/${anggota.ttd_path}`);
       setHasSignature(true);
-      setSourceTtdPath(anggota.ttd_path);
+      setIsTTDOpen(true); // Auto open TTD section
     } else {
       setSignatureData(null);
       setHasSignature(false);
       setSourceTtdPath(null);
     }
 
-    Swal.fire({
-      toast: true, position: 'top-end', icon: 'success',
-      title: anggota.ttd_path 
-        ? `Anggota ${nextNumber} ditambahkan (dengan tanda tangan)` 
-        : `Anggota ${nextNumber} ditambahkan dari data sebelumnya`,
-      showConfirmButton: false, timer: 2000
-    });
+    // Auto-save config + TTD langsung ke backend agar tidak perlu klik Simpan manual
+    if (anggota.nama && anggota.jabatan) {
+      try {
+        const requestBody = {
+          nama: anggota.nama,
+          nip: anggota.nip || '',
+          jabatan: anggota.jabatan || '',
+          proposalId: selectedProposal.id,
+          ...(anggota.ttd_path ? { sourceTtdPath: anggota.ttd_path } : {})
+        };
+
+        await api.post(`/kecamatan/${kecamatanId}/bankeu/tim-config/${newPosisi}`, requestBody);
+
+        // Refresh data dari server agar ttd_path tersimpan di timMembers
+        await fetchTimMembers(kecamatanId, selectedProposal?.id);
+        if (kecamatanId) fetchPreviousAnggota(kecamatanId);
+
+        Swal.fire({
+          toast: true, position: 'top-end', icon: 'success',
+          title: anggota.ttd_path 
+            ? `Anggota ${nextNumber} ditambahkan (dengan tanda tangan)` 
+            : `Anggota ${nextNumber} ditambahkan & disimpan`,
+          showConfirmButton: false, timer: 2000
+        });
+      } catch (error) {
+        console.error('Error auto-saving anggota:', error);
+        // Tetap tampilkan, user bisa simpan manual nanti
+        setSourceTtdPath(anggota.ttd_path || null);
+        Swal.fire({
+          toast: true, position: 'top-end', icon: 'info',
+          title: `Anggota ${nextNumber} ditambahkan, silakan simpan manual`,
+          showConfirmButton: false, timer: 2000
+        });
+      }
+    } else {
+      Swal.fire({
+        toast: true, position: 'top-end', icon: 'success',
+        title: `Anggota ${nextNumber} ditambahkan dari data sebelumnya`,
+        showConfirmButton: false, timer: 2000
+      });
+    }
   };
 
   const handleDeleteAnggota = async (posisi) => {
