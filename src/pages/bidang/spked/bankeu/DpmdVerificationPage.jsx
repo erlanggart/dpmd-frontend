@@ -133,8 +133,8 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
         setStatistics(statsRes.data.data || {});
       }
 
-      // Also refresh desas/kecamatan if on tracking/statistics view
-      if (activeView === 'statistics' || activeView === 'tracking') {
+      // Also refresh desas/kecamatan if on tracking/statistics/partisipasi view
+      if (activeView === 'statistics' || activeView === 'tracking' || activeView === 'partisipasi') {
         await fetchAllDesaKecamatan();
       }
 
@@ -169,6 +169,9 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
     if (activeView === 'tracking') {
       fetchAllDesaKecamatan();
       fetchTrackingData();
+    }
+    if (activeView === 'partisipasi') {
+      fetchAllDesaKecamatan();
     }
     if (activeView === 'control') {
       fetchSubmissionSettings();
@@ -1080,6 +1083,7 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
           {[
             { key: 'archive', icon: Folder, label: 'Arsip Proposal', gradient: 'from-blue-600 to-indigo-600' },
             { key: 'tracking', icon: Activity, label: 'Tracking Status', gradient: 'from-violet-600 to-purple-600' },
+            { key: 'partisipasi', icon: Users, label: 'Partisipasi Desa', gradient: 'from-violet-600 to-fuchsia-600' },
             { key: 'statistics', icon: BarChart3, label: 'Statistik Dashboard', gradient: 'from-cyan-600 to-blue-600' },
             { key: 'control', icon: Power, label: 'Kontrol Pengajuan', gradient: 'from-rose-600 to-orange-600' },
             { key: 'config', icon: Settings, label: 'Konfigurasi', gradient: 'from-slate-600 to-gray-700' },
@@ -2420,9 +2424,12 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                 </motion.div>
               )}
 
-              {/* Partisipasi Desa per Kecamatan */}
-              <DesaPartisipasiSpked statsData={statsData} />
             </div>
+          </div>
+        ) : activeView === 'partisipasi' ? (
+          /* Partisipasi Desa View */
+          <div className="space-y-4">
+            <DesaPartisipasiSpked statsData={statsData} />
           </div>
         ) : activeView === 'control' ? (
           /* Kontrol Pengajuan View */
