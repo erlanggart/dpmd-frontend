@@ -838,6 +838,20 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
     const desaIdsWithProposals = desaWithProposals.map(id => String(id));
     const desaTidakMengajukan = allDesa.filter(d => !desaIdsWithProposals.includes(String(d.id)));
 
+    // Build desaPartisipasi grouped by kecamatan (sudah/belum mengajukan)
+    const desaPartisipasi = {};
+    allDesa.forEach(d => {
+      const kecName = d.kecamatans?.nama || 'Tidak Diketahui';
+      if (!desaPartisipasi[kecName]) {
+        desaPartisipasi[kecName] = { sudah: [], belum: [] };
+      }
+      if (desaIdsWithProposals.includes(String(d.id))) {
+        desaPartisipasi[kecName].sudah.push(d.nama);
+      } else {
+        desaPartisipasi[kecName].belum.push(d.nama);
+      }
+    });
+
     return {
       totalProposal: proposals.length,
       totalDesaMengajukan: desaWithProposals.length,
@@ -853,7 +867,8 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
       perDesa: Object.values(perDesa).sort((a, b) => b.totalAnggaran - a.totalAnggaran),
       desaOverLimit: Object.values(perDesa).filter(d => d.totalAnggaran > MAX_ANGGARAN_PER_DESA).sort((a, b) => b.totalAnggaran - a.totalAnggaran),
       statusBreakdown,
-      desaTidakMengajukan
+      desaTidakMengajukan,
+      desaPartisipasi
     };
   }, [proposals, allDesa, allKecamatan]);
 
@@ -2405,53 +2420,8 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                 </motion.div>
               )}
 
-              {/* Desa Belum Mengajukan */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.9 }}
-                className="bg-white rounded-2xl shadow-sm overflow-hidden border border-slate-200"
-              >
-                <div 
-                  className="bg-amber-500 px-5 py-4 flex items-center justify-between cursor-pointer hover:bg-amber-400 transition-colors"
-                  onClick={() => setShowDesaBelumModal(true)}
-                >
-                  <h3 className="font-bold text-white flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4" />
-                    Desa Belum Mengajukan
-                    <span className="text-xs opacity-75">(Klik untuk lihat lengkap)</span>
-                  </h3>
-                  <span className="px-3 py-1 bg-white/20 text-white rounded-full text-sm font-semibold">
-                    {statsData.desaTidakMengajukan.length} desa
-                  </span>
-                </div>
-                {statsData.desaTidakMengajukan.length > 0 ? (
-                  <div className="p-5 max-h-64 overflow-y-auto">
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
-                      {statsData.desaTidakMengajukan.slice(0, 48).map((d) => (
-                        <div 
-                          key={d.id} 
-                          className="px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs hover:bg-amber-100 transition-colors"
-                        >
-                          <p className="font-medium text-slate-800 truncate">{d.nama}</p>
-                          <p className="text-amber-600 truncate text-[10px] mt-0.5">{d.kecamatans?.nama || '-'}</p>
-                        </div>
-                      ))}
-                    </div>
-                    {statsData.desaTidakMengajukan.length > 48 && (
-                      <p className="text-center text-sm text-slate-500 mt-4 py-2 bg-slate-50 rounded-lg">
-                        Dan <span className="font-semibold text-amber-600">{statsData.desaTidakMengajukan.length - 48}</span> desa lainnya... (Export untuk data lengkap)
-                      </p>
-                    )}
-                  </div>
-                ) : (
-                  <div className="p-10 text-center">
-                    <CheckCircle2 className="h-12 w-12 text-emerald-500 mx-auto mb-3" />
-                    <p className="text-lg font-semibold text-slate-700">Luar Biasa!</p>
-                    <p className="text-slate-500">Semua desa sudah mengajukan proposal!</p>
-                  </div>
-                )}
-              </motion.div>
+              {/* Partisipasi Desa per Kecamatan */}
+              <DesaPartisipasiSpked statsData={statsData} />
             </div>
           </div>
         ) : activeView === 'control' ? (
@@ -3249,6 +3219,168 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
         )}
       </AnimatePresence>
     </div>
+  );
+};
+
+// Partisipasi Desa per Kecamatan - accordion section with tabs
+const DesaPartisipasiSpked = ({ statsData }) => {
+  const [activeTab, setActiveTab] = useState('belum'); // 'sudah' | 'belum'
+  const [searchKec, setSearchKec] = useState('');
+  const [expandedKec, setExpandedKec] = useState({});
+
+  const desaPartisipasi = statsData.desaPartisipasi;
+  if (!desaPartisipasi || Object.keys(desaPartisipasi).length === 0) return null;
+
+  const kecamatanList = Object.entries(desaPartisipasi)
+    .map(([kecName, data]) => ({
+      name: kecName,
+      sudah: data.sudah || [],
+      belum: data.belum || [],
+    }))
+    .filter(k => {
+      if (!searchKec) return true;
+      const q = searchKec.toLowerCase();
+      return k.name.toLowerCase().includes(q) ||
+        k.sudah.some(d => d.toLowerCase().includes(q)) ||
+        k.belum.some(d => d.toLowerCase().includes(q));
+    })
+    .sort((a, b) => {
+      if (activeTab === 'belum') return b.belum.length - a.belum.length;
+      return b.sudah.length - a.sudah.length;
+    });
+
+  const totalSudah = statsData.totalDesaMengajukan;
+  const totalBelum = statsData.totalDesaTidakMengajukan;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.9 }}
+      className="bg-white rounded-2xl shadow-sm overflow-hidden border border-slate-200"
+    >
+      {/* Header */}
+      <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-slate-50 via-white to-slate-50">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
+              <Users className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-900 text-sm">Partisipasi Desa per Kecamatan</h3>
+              <p className="text-[11px] text-slate-400">Detail desa yang sudah dan belum mengajukan proposal</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setActiveTab('belum')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
+                activeTab === 'belum'
+                  ? 'bg-red-50 text-red-700 border-red-200 shadow-sm'
+                  : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'
+              }`}>
+              <XCircle className="w-3.5 h-3.5" />
+              Belum Mengajukan <span className="px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 text-[10px] font-bold ml-0.5">{totalBelum}</span>
+            </button>
+            <button onClick={() => setActiveTab('sudah')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
+                activeTab === 'sudah'
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200 shadow-sm'
+                  : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'
+              }`}>
+              <CheckCircle className="w-3.5 h-3.5" />
+              Sudah Mengajukan <span className="px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold ml-0.5">{totalSudah}</span>
+            </button>
+          </div>
+        </div>
+        {/* Search */}
+        <div className="relative mt-3">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Cari kecamatan atau desa..."
+            value={searchKec}
+            onChange={(e) => setSearchKec(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400"
+          />
+          {searchKec && (
+            <button onClick={() => setSearchKec('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+              <XIcon className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="divide-y divide-gray-100 max-h-[500px] overflow-y-auto">
+        {kecamatanList.map((kec) => {
+          const items = activeTab === 'sudah' ? kec.sudah : kec.belum;
+          const isExpanded = expandedKec[kec.name];
+          if (items.length === 0 && !searchKec) return null;
+
+          return (
+            <div key={kec.name}>
+              <button
+                onClick={() => setExpandedKec(prev => ({ ...prev, [kec.name]: !prev[kec.name] }))}
+                className="w-full px-5 py-3 flex items-center justify-between hover:bg-gray-50/80 transition-colors group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-white text-[11px] font-bold ${
+                    activeTab === 'belum'
+                      ? items.length > 0 ? 'bg-gradient-to-br from-red-500 to-rose-600' : 'bg-gradient-to-br from-emerald-500 to-green-600'
+                      : items.length > 0 ? 'bg-gradient-to-br from-emerald-500 to-green-600' : 'bg-gradient-to-br from-gray-400 to-gray-500'
+                  }`}>
+                    {items.length}
+                  </div>
+                  <div className="text-left">
+                    <p className="font-semibold text-gray-900 text-sm group-hover:text-violet-700 transition-colors">{kec.name}</p>
+                    <p className="text-[11px] text-gray-400">
+                      {activeTab === 'belum'
+                        ? <><span className="text-red-500 font-medium">{kec.belum.length} belum</span> · <span className="text-emerald-600">{kec.sudah.length} sudah</span></>
+                        : <><span className="text-emerald-600 font-medium">{kec.sudah.length} sudah</span> · <span className="text-red-500">{kec.belum.length} belum</span></>
+                      }
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {items.length > 0 && (
+                    <div className={`w-5 h-5 rounded-md flex items-center justify-center transition-colors ${
+                      isExpanded ? 'bg-violet-100' : 'bg-gray-100 group-hover:bg-gray-200'
+                    }`}>
+                      {isExpanded ? <ChevronUp className="w-3 h-3 text-violet-600" /> : <ChevronDown className="w-3 h-3 text-gray-400" />}
+                    </div>
+                  )}
+                </div>
+              </button>
+              {isExpanded && items.length > 0 && (
+                <div className="px-5 pb-3">
+                  <div className="flex flex-wrap gap-1.5 pl-10">
+                    {items.sort().map((desaName) => (
+                      <span key={desaName} className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium border ${
+                        activeTab === 'sudah'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : 'bg-red-50 text-red-700 border-red-200'
+                      }`}>
+                        {activeTab === 'sudah'
+                          ? <CheckCircle className="w-3 h-3 text-emerald-500" />
+                          : <XCircle className="w-3 h-3 text-red-400" />
+                        }
+                        {desaName}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+        {kecamatanList.length === 0 && (
+          <div className="p-8 text-center">
+            <Search className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+            <p className="text-sm text-gray-400">Tidak ditemukan kecamatan atau desa yang cocok</p>
+          </div>
+        )}
+      </div>
+    </motion.div>
   );
 };
 
