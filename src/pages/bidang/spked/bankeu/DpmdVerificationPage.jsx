@@ -61,7 +61,7 @@ import * as XLSX from 'xlsx';
 import api from '../../../../api';
 import Swal from 'sweetalert2';
 
-const DpmdVerificationPage = () => {
+const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
   const navigate = useNavigate();
   const [proposals, setProposals] = useState([]);
   const [allDesa, setAllDesa] = useState([]);
@@ -89,7 +89,7 @@ const DpmdVerificationPage = () => {
   const [trackingDinasFilter, setTrackingDinasFilter] = useState('all'); // filter by specific dinas when di_dinas
   const [expandedTrackingDesa, setExpandedTrackingDesa] = useState([]);
   const [trackingProposals, setTrackingProposals] = useState([]); // All proposals for tracking
-  const [trackingTahunAnggaran, setTrackingTahunAnggaran] = useState(2027);
+  const [trackingTahunAnggaran, setTrackingTahunAnggaran] = useState(tahunAnggaran);
   const [trackingSummary, setTrackingSummary] = useState(null);
   const [loadingTracking, setLoadingTracking] = useState(false);
   // Export dropdown state
@@ -118,8 +118,8 @@ const DpmdVerificationPage = () => {
     try {
       setRefreshing(true);
       const [proposalsRes, statsRes] = await Promise.all([
-        api.get('/dpmd/bankeu/proposals'),
-        api.get('/dpmd/bankeu/statistics')
+        api.get(`/dpmd/bankeu/proposals?tahun_anggaran=${tahunAnggaran}`),
+        api.get(`/dpmd/bankeu/statistics?tahun_anggaran=${tahunAnggaran}`)
       ]);
 
       if (proposalsRes.data.success) {
@@ -170,7 +170,7 @@ const DpmdVerificationPage = () => {
     if (activeView === 'control') {
       fetchSubmissionSettings();
     }
-  }, [activeView]);
+  }, [activeView, tahunAnggaran]);
 
   // Fetch tracking data when tahun changes
   useEffect(() => {
@@ -200,8 +200,8 @@ const DpmdVerificationPage = () => {
     try {
       setLoading(true);
       const [proposalsRes, statsRes] = await Promise.all([
-        api.get('/dpmd/bankeu/proposals'),
-        api.get('/dpmd/bankeu/statistics')
+        api.get(`/dpmd/bankeu/proposals?tahun_anggaran=${tahunAnggaran}`),
+        api.get(`/dpmd/bankeu/statistics?tahun_anggaran=${tahunAnggaran}`)
       ]);
 
       if (proposalsRes.data.success) {

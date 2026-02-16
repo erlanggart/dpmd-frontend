@@ -38,9 +38,10 @@ const formatRupiah = (value) => {
 // Short format for chart axis only
 const formatRupiahShort = (value) => {
   if (!value || value === 0) return 'Rp 0';
-  if (value >= 1e12) return `Rp ${(value / 1e12).toFixed(2)} T`;
-  if (value >= 1e9) return `Rp ${(value / 1e9).toFixed(2)} M`;
-  if (value >= 1e6) return `Rp ${(value / 1e6).toFixed(1)} Jt`;
+  if (value >= 1e12) return `Rp ${(value / 1e12).toFixed(2)} Triliun`;
+  if (value >= 1e9) return `Rp ${(value / 1e9).toFixed(2)} Miliar`;
+  if (value >= 1e6) return `Rp ${(value / 1e6).toFixed(0)} Juta`;
+  if (value >= 1e3) return `Rp ${(value / 1e3).toFixed(0)} Ribu`;
   return formatRupiah(value);
 };
 

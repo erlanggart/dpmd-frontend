@@ -769,7 +769,7 @@ const SpkedPage = () => {
 										{bankeuYear === 2025 ? (
 											<BankeuDashboard />
 										) : bankeuYear === 2026 || bankeuYear === 2027 ? (
-											<DpmdVerificationPage />
+											<DpmdVerificationPage tahunAnggaran={bankeuYear} />
 										) : null}
 									</Suspense>
 								</div>
