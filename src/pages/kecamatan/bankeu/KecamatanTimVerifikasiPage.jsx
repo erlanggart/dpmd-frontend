@@ -135,7 +135,7 @@ const KecamatanTimVerifikasiPage = () => {
     }
   };
 
-  const fetchTimMembers = async (kecId, proposalId = null) => {
+  const fetchTimMembers = async (kecId, proposalId = null, targetPosisi = null) => {
     try {
       // Build URL dengan proposalId untuk mendapatkan anggota per proposal
       let url = `/kecamatan/${kecId}/bankeu/tim-config`;
@@ -158,8 +158,9 @@ const KecamatanTimVerifikasiPage = () => {
       
       setTimMembers(allMembers);
       
-      // Load config untuk active tab
-      const activeMember = allMembers.find(m => m.posisi === activeTab);
+      // Load config untuk active tab (gunakan targetPosisi jika ada, fallback ke activeTab)
+      const posisiToLoad = targetPosisi || activeTab;
+      const activeMember = allMembers.find(m => m.posisi === posisiToLoad);
       if (activeMember) {
         loadMemberConfig(activeMember);
       }
@@ -497,8 +498,8 @@ const KecamatanTimVerifikasiPage = () => {
 
         await api.post(`/kecamatan/${kecamatanId}/bankeu/tim-config/${newPosisi}`, requestBody);
 
-        // Refresh data dari server agar ttd_path tersimpan di timMembers
-        await fetchTimMembers(kecamatanId, selectedProposal?.id);
+        // Refresh data dari server, pass newPosisi agar loadMemberConfig pakai tab yang benar
+        await fetchTimMembers(kecamatanId, selectedProposal?.id, newPosisi);
         if (kecamatanId) fetchPreviousAnggota(kecamatanId);
 
         Swal.fire({
