@@ -391,19 +391,33 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
 
   const handleResetPassword = async (dinasId, verifikatorId, nama) => {
     const result = await Swal.fire({
-      title: 'Buat Password Baru?',
-      html: `Password baru akan dibuat untuk <strong>${nama}</strong>.<br/>Password baru akan ditampilkan setelah dibuat.`,
+      title: 'Buat Password Baru',
+      html: `
+        <p class="text-sm text-gray-600 mb-3">Masukkan password baru untuk <strong>${nama}</strong></p>
+        <input id="swal-new-password" type="text" class="swal2-input" placeholder="Masukkan password baru" style="font-size: 14px;">
+        <p class="text-xs text-gray-400 mt-1">Minimal 6 karakter</p>
+      `,
       icon: 'question',
       showCancelButton: true,
       confirmButtonColor: '#f59e0b',
       cancelButtonColor: '#6b7280',
-      confirmButtonText: 'Ya, Buat Password Baru',
-      cancelButtonText: 'Batal'
+      confirmButtonText: 'Simpan Password',
+      cancelButtonText: 'Batal',
+      preConfirm: () => {
+        const password = document.getElementById('swal-new-password').value;
+        if (!password || password.length < 6) {
+          Swal.showValidationMessage('Password minimal 6 karakter');
+          return false;
+        }
+        return password;
+      }
     });
 
-    if (result.isConfirmed) {
+    if (result.isConfirmed && result.value) {
       try {
-        const response = await api.post(`/dinas/${dinasId}/verifikator/${verifikatorId}/reset-password`);
+        const response = await api.post(`/dinas/${dinasId}/verifikator/${verifikatorId}/reset-password`, {
+          new_password: result.value
+        });
         const newPassword = response.data?.data?.newPassword || response.data?.newPassword;
         
         await Swal.fire({
