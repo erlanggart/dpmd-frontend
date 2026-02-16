@@ -172,6 +172,7 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
     }
     if (activeView === 'partisipasi') {
       fetchAllDesaKecamatan();
+      fetchTrackingData();
     }
     if (activeView === 'control') {
       fetchSubmissionSettings();
@@ -841,20 +842,6 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
     const desaIdsWithProposals = desaWithProposals.map(id => String(id));
     const desaTidakMengajukan = allDesa.filter(d => !desaIdsWithProposals.includes(String(d.id)));
 
-    // Build desaPartisipasi grouped by kecamatan (sudah/belum mengajukan)
-    const desaPartisipasi = {};
-    allDesa.forEach(d => {
-      const kecName = d.kecamatans?.nama || 'Tidak Diketahui';
-      if (!desaPartisipasi[kecName]) {
-        desaPartisipasi[kecName] = { sudah: [], belum: [] };
-      }
-      if (desaIdsWithProposals.includes(String(d.id))) {
-        desaPartisipasi[kecName].sudah.push(d.nama);
-      } else {
-        desaPartisipasi[kecName].belum.push(d.nama);
-      }
-    });
-
     return {
       totalProposal: proposals.length,
       totalDesaMengajukan: desaWithProposals.length,
@@ -870,10 +857,41 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
       perDesa: Object.values(perDesa).sort((a, b) => b.totalAnggaran - a.totalAnggaran),
       desaOverLimit: Object.values(perDesa).filter(d => d.totalAnggaran > MAX_ANGGARAN_PER_DESA).sort((a, b) => b.totalAnggaran - a.totalAnggaran),
       statusBreakdown,
-      desaTidakMengajukan,
-      desaPartisipasi
+      desaTidakMengajukan
     };
   }, [proposals, allDesa, allKecamatan]);
+
+  // Partisipasi desa - based on tracking data (submitted_to_dinas_at)
+  const desaPartisipasiData = useMemo(() => {
+    if (!allDesa.length) return { partisipasi: {}, totalSudah: 0, totalBelum: 0 };
+
+    // Desa IDs that have at least one proposal with submitted_to_dinas_at
+    const desaIdsSudahKirim = new Set();
+    trackingProposals.forEach(p => {
+      if (p.submitted_to_dinas_at) {
+        desaIdsSudahKirim.add(String(p.desa_id));
+      }
+    });
+
+    const partisipasi = {};
+    let totalSudah = 0;
+    let totalBelum = 0;
+    allDesa.forEach(d => {
+      const kecName = d.kecamatans?.nama || 'Tidak Diketahui';
+      if (!partisipasi[kecName]) {
+        partisipasi[kecName] = { sudah: [], belum: [] };
+      }
+      if (desaIdsSudahKirim.has(String(d.id))) {
+        partisipasi[kecName].sudah.push(d.nama);
+        totalSudah++;
+      } else {
+        partisipasi[kecName].belum.push(d.nama);
+        totalBelum++;
+      }
+    });
+
+    return { partisipasi, totalSudah, totalBelum };
+  }, [trackingProposals, allDesa]);
 
   // Chart data
   const chartData = useMemo(() => {
@@ -2429,7 +2447,7 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
         ) : activeView === 'partisipasi' ? (
           /* Partisipasi Desa View */
           <div className="space-y-4">
-            <DesaPartisipasiSpked statsData={statsData} />
+            <DesaPartisipasiSpked desaPartisipasiData={desaPartisipasiData} loading={loadingTracking} />
           </div>
         ) : activeView === 'control' ? (
           /* Kontrol Pengajuan View */
@@ -3230,12 +3248,21 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
 };
 
 // Partisipasi Desa per Kecamatan - accordion section with tabs
-const DesaPartisipasiSpked = ({ statsData }) => {
+// Data from tracking (submitted_to_dinas_at), not DPMD-level proposals
+const DesaPartisipasiSpked = ({ desaPartisipasiData, loading }) => {
   const [activeTab, setActiveTab] = useState('belum'); // 'sudah' | 'belum'
   const [searchKec, setSearchKec] = useState('');
   const [expandedKec, setExpandedKec] = useState({});
 
-  const desaPartisipasi = statsData.desaPartisipasi;
+  const { partisipasi: desaPartisipasi, totalSudah, totalBelum } = desaPartisipasiData;
+
+  if (loading) return (
+    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-12 text-center">
+      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-violet-600 mx-auto"></div>
+      <p className="mt-4 text-gray-500 text-sm">Memuat data partisipasi...</p>
+    </div>
+  );
+
   if (!desaPartisipasi || Object.keys(desaPartisipasi).length === 0) return null;
 
   const kecamatanList = Object.entries(desaPartisipasi)
@@ -3255,9 +3282,6 @@ const DesaPartisipasiSpked = ({ statsData }) => {
       if (activeTab === 'belum') return b.belum.length - a.belum.length;
       return b.sudah.length - a.sudah.length;
     });
-
-  const totalSudah = statsData.totalDesaMengajukan;
-  const totalBelum = statsData.totalDesaTidakMengajukan;
 
   return (
     <motion.div
