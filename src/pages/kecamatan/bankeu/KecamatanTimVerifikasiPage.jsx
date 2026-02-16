@@ -135,7 +135,7 @@ const KecamatanTimVerifikasiPage = () => {
     }
   };
 
-  const fetchTimMembers = async (kecId, proposalId = null, targetPosisi = null) => {
+  const fetchTimMembers = async (kecId, proposalId = null, targetPosisi = null, preserveSignature = false) => {
     try {
       // Build URL dengan proposalId untuk mendapatkan anggota per proposal
       let url = `/kecamatan/${kecId}/bankeu/tim-config`;
@@ -162,7 +162,7 @@ const KecamatanTimVerifikasiPage = () => {
       const posisiToLoad = targetPosisi || activeTab;
       const activeMember = allMembers.find(m => m.posisi === posisiToLoad);
       if (activeMember) {
-        loadMemberConfig(activeMember);
+        loadMemberConfig(activeMember, preserveSignature);
       }
       
       // Refresh proposal data to get latest dinas verification info
@@ -373,7 +373,7 @@ const KecamatanTimVerifikasiPage = () => {
     }
   };
 
-  const loadMemberConfig = (member) => {
+  const loadMemberConfig = (member, preserveSignature = false) => {
     if (member) {
       setConfigForm({
         nama: member.nama || '',
@@ -385,7 +385,9 @@ const KecamatanTimVerifikasiPage = () => {
         // ttd_path sudah termasuk folder, contoh: "kecamatan_bankeu_ttd/filename.png"
         setSignatureData(`${imageBaseUrl}/storage/uploads/${member.ttd_path}`);
         setHasSignature(true);
-      } else {
+      } else if (!preserveSignature) {
+        // Hanya clear signature jika tidak diminta preserve
+        // (preserve dipakai saat simpan data diri agar TTD tidak hilang)
         setSignatureData(null);
         setHasSignature(false);
       }
@@ -651,7 +653,8 @@ const KecamatanTimVerifikasiPage = () => {
       });
 
       // Refresh tim members dan anggota list
-      await fetchTimMembers(kecamatanId, selectedProposal?.id);
+      // preserveSignature=true agar TTD tidak hilang saat simpan data diri
+      await fetchTimMembers(kecamatanId, selectedProposal?.id, null, true);
       if (kecamatanId) fetchPreviousAnggota(kecamatanId);
     } catch (error) {
       console.error('Error saving config:', error);
