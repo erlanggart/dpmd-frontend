@@ -179,6 +179,9 @@ export const checkForServerUpdate = async () => {
 
 /**
  * Process version data from server
+ * Compare against STORED hash (localStorage) instead of local meta tag hash.
+ * This ensures the modal shows even after VitePWA autoUpdate reloads the page
+ * on mobile/tablet (where localHash already matches serverHash after reload).
  */
 function processVersionData(data, localHash) {
   const serverHash = data.buildHash;
@@ -194,17 +197,21 @@ function processVersionData(data, localHash) {
   console.log('[Version] Local hash:', localHash);
   console.log('[Version] Stored hash:', storedHash);
   
-  // If server hash matches our local hash, we're up to date
-  if (serverHash === localHash) {
-    // Also update stored hash to match
-    if (storedHash !== localHash) {
-      storeBuildHash(localHash);
-    }
+  // First visit: no stored hash yet → initialize and skip
+  if (!storedHash) {
+    storeBuildHash(localHash || serverHash);
+    console.log('[Version] Initialized stored hash on first visit');
+    return false;
+  }
+  
+  // Primary check: compare server hash with STORED hash (localStorage)
+  // This catches updates even after SW auto-reload where localHash already matches serverHash
+  if (serverHash === storedHash) {
     console.log('[Version] ✅ App is up to date');
     return false;
   }
   
-  // Server has a DIFFERENT hash than our local build → new version deployed!
+  // Server has a DIFFERENT hash from what we stored → new version deployed!
   console.log('[Version] 🆕 New version detected! Server has different build.');
   
   // Store the pending server hash so forceUpdate can save it

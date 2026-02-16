@@ -540,6 +540,14 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
       });
       return;
     }
+    if (isAnggaranOverLimit(formData.anggaran)) {
+      Swal.fire({
+        icon: "error",
+        title: "Anggaran Melebihi Batas",
+        html: `Anggaran usulan tidak boleh lebih dari <b>Rp 1.500.000.000</b> (1,5 Miliar).<br/>Silakan periksa kembali angka yang diinput.`
+      });
+      return;
+    }
     if (!file) {
       console.log("File tidak ada!");
       Swal.fire({
@@ -690,6 +698,16 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
     console.log("Kegiatan:", kegiatan);
     console.log("File:", file);
     console.log("New Anggaran:", newAnggaran);
+
+    // Validasi anggaran
+    if (newAnggaran && isAnggaranOverLimit(newAnggaran)) {
+      Swal.fire({
+        icon: "error",
+        title: "Anggaran Melebihi Batas",
+        html: `Anggaran usulan tidak boleh lebih dari <b>Rp 1.500.000.000</b> (1,5 Miliar).<br/>Silakan periksa kembali angka yang diinput.`
+      });
+      return;
+    }
     
     // Validation
     if (!file) {
@@ -846,6 +864,16 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
       const formDataUpload = new FormData();
       formDataUpload.append("file", file);
       
+      // Validasi anggaran jika diisi
+      if (formData?.anggaran?.trim() && isAnggaranOverLimit(formData.anggaran)) {
+        Swal.fire({
+          icon: "error",
+          title: "Anggaran Melebihi Batas",
+          html: `Anggaran usulan tidak boleh lebih dari <b>Rp 1.500.000.000</b> (1,5 Miliar).<br/>Silakan periksa kembali angka yang diinput.`
+        });
+        return;
+      }
+
       // Semua field opsional - hanya kirim jika diisi
       if (formData?.nama_kegiatan?.trim()) {
         formDataUpload.append("nama_kegiatan_spesifik", formData.nama_kegiatan.trim());
@@ -944,10 +972,18 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
     }));
   };
 
+  const MAX_ANGGARAN = 1_500_000_000; // 1.5 Miliar
+
   const formatRupiah = (value) => {
     if (!value) return "";
     const number = value.replace(/\D/g, "");
     return new Intl.NumberFormat("id-ID").format(number);
+  };
+
+  const isAnggaranOverLimit = (value) => {
+    if (!value) return false;
+    const num = parseInt(String(value).replace(/\D/g, ''), 10);
+    return num > MAX_ANGGARAN;
   };
 
   const handleSubmitToKecamatan = async () => {
@@ -1509,7 +1545,16 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
       formData.append("volume", newProposalData.volume || '');
       formData.append("lokasi", newProposalData.lokasi || '');
       formData.append("deskripsi", newProposalData.deskripsi || '');
-      formData.append("anggaran_usulan", newProposalData.anggaran_usulan.replace(/\D/g, "") || '0');
+      const anggaranRaw = newProposalData.anggaran_usulan.replace(/\D/g, "") || '0';
+      if (isAnggaranOverLimit(anggaranRaw)) {
+        Swal.fire({
+          icon: "error",
+          title: "Anggaran Melebihi Batas",
+          html: `Anggaran usulan tidak boleh lebih dari <b>Rp 1.500.000.000</b> (1,5 Miliar).<br/>Silakan periksa kembali angka yang diinput.`
+        });
+        return;
+      }
+      formData.append("anggaran_usulan", anggaranRaw);
 
       await api.post("/desa/bankeu/proposals", formData, {
         headers: { "Content-Type": "multipart/form-data" }
@@ -1697,6 +1742,15 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
         formData.append('lokasi', editFormData.lokasi);
       }
       if (editFormData.anggaran_usulan) {
+        if (isAnggaranOverLimit(editFormData.anggaran_usulan)) {
+          setIsEditSaving(false);
+          Swal.fire({
+            icon: "error",
+            title: "Anggaran Melebihi Batas",
+            html: `Anggaran usulan tidak boleh lebih dari <b>Rp 1.500.000.000</b> (1,5 Miliar).<br/>Silakan periksa kembali angka yang diinput.`
+          });
+          return;
+        }
         formData.append('anggaran_usulan', editFormData.anggaran_usulan.replace(/\D/g, ''));
       }
       if (editFormData.file) {
@@ -2950,9 +3004,12 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                                       value={formatRupiah(uploadForms[proposal.id]?.anggaran || '')}
                                       onChange={(e) => updateUploadForm(proposal.id, 'anggaran', e.target.value.replace(/\D/g, ''))}
                                       placeholder="Kosongkan jika tidak diubah"
-                                      className="w-full pl-10 pr-3 py-2 text-sm border-2 border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-200 focus:border-orange-500 bg-white"
+                                      className={`w-full pl-10 pr-3 py-2 text-sm border-2 rounded-lg focus:ring-2 ${isAnggaranOverLimit(uploadForms[proposal.id]?.anggaran) ? 'border-red-500 focus:ring-red-200 focus:border-red-500 bg-red-50 text-red-700' : 'border-orange-200 focus:ring-orange-200 focus:border-orange-500 bg-white'}`}
                                     />
                                   </div>
+                                  {isAnggaranOverLimit(uploadForms[proposal.id]?.anggaran) && (
+                                    <p className="text-xs font-semibold text-red-600">⚠️ Melebihi batas maks Rp 1,5 Miliar</p>
+                                  )}
                                 </div>
                               </div>
                               
@@ -3424,9 +3481,12 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                                       value={formatRupiah(uploadForms[proposal.id]?.anggaran || '')}
                                       onChange={(e) => updateUploadForm(proposal.id, 'anggaran', e.target.value.replace(/\D/g, ''))}
                                       placeholder="Kosongkan jika tidak diubah"
-                                      className="w-full pl-10 pr-3 py-2 text-sm border-2 border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-200 focus:border-orange-500 bg-white"
+                                      className={`w-full pl-10 pr-3 py-2 text-sm border-2 rounded-lg focus:ring-2 ${isAnggaranOverLimit(uploadForms[proposal.id]?.anggaran) ? 'border-red-500 focus:ring-red-200 focus:border-red-500 bg-red-50 text-red-700' : 'border-orange-200 focus:ring-orange-200 focus:border-orange-500 bg-white'}`}
                                     />
                                   </div>
+                                  {isAnggaranOverLimit(uploadForms[proposal.id]?.anggaran) && (
+                                    <p className="text-xs font-semibold text-red-600">⚠️ Melebihi batas maks Rp 1,5 Miliar</p>
+                                  )}
                                 </div>
                               </div>
                               
@@ -3715,9 +3775,14 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                     value={formatRupiah(editFormData.anggaran_usulan)}
                     onChange={(e) => setEditFormData(prev => ({ ...prev, anggaran_usulan: e.target.value.replace(/\D/g, '') }))}
                     placeholder="0"
-                    className="w-full pl-12 pr-4 py-3 text-sm font-medium border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-amber-200 focus:border-amber-500 bg-white hover:border-amber-400 transition-all duration-200 shadow-sm"
+                    className={`w-full pl-12 pr-4 py-3 text-sm font-medium border-2 rounded-xl focus:outline-none focus:ring-4 transition-all duration-200 shadow-sm ${isAnggaranOverLimit(editFormData.anggaran_usulan) ? 'border-red-500 focus:ring-red-200 focus:border-red-500 bg-red-50 text-red-700' : 'border-gray-300 focus:ring-amber-200 focus:border-amber-500 bg-white hover:border-amber-400'}`}
                   />
                 </div>
+                {isAnggaranOverLimit(editFormData.anggaran_usulan) && (
+                  <p className="text-xs font-semibold text-red-600 flex items-center gap-1">
+                    ⚠️ Anggaran melebihi batas maksimal Rp 1.500.000.000 (1,5 Miliar). Kemungkinan ada kesalahan input.
+                  </p>
+                )}
               </div>
 
               {/* File Upload (opsional) */}
@@ -3971,9 +4036,14 @@ const KegiatanRow = ({ item, index, onUpload, onRevisionUpload, onReplaceFile, o
                 onChange={(e) => updateUploadForm(kegiatan.id, 'anggaran', e.target.value.replace(/\D/g, ''))}
                 placeholder="0"
                 disabled={isSubmitted}
-                className="w-full pl-12 pr-4 py-3 text-sm font-medium border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-200 focus:border-blue-500 bg-white hover:border-blue-400 transition-all duration-200 shadow-sm placeholder:text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-50"
+                className={`w-full pl-12 pr-4 py-3 text-sm font-medium border-2 rounded-xl focus:outline-none focus:ring-4 transition-all duration-200 shadow-sm placeholder:text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-50 ${isAnggaranOverLimit(formData.anggaran) ? 'border-red-500 focus:ring-red-200 focus:border-red-500 bg-red-50 text-red-700' : 'border-gray-300 focus:ring-blue-200 focus:border-blue-500 bg-white hover:border-blue-400'}`}
               />
             </div>
+            {isAnggaranOverLimit(formData.anggaran) && (
+              <p className="text-xs font-semibold text-red-600 flex items-center gap-1">
+                ⚠️ Anggaran melebihi batas maksimal Rp 1.500.000.000 (1,5 Miliar). Kemungkinan ada kesalahan input.
+              </p>
+            )}
           </div>
         </div>
 
