@@ -2,11 +2,15 @@ import React, { useState, useEffect } from "react";
 import { LuUsers, LuLoader, LuX, LuRefreshCw } from "react-icons/lu";
 import StatistikKelembagaanSummary from "../../components/kelembagaan/StatistikKelembagaanSummary";
 import kelembagaanApi from "../../api/kelembagaan";
+import { useDataCache } from "../../context/DataCacheContext";
+
+const CACHE_KEY = "statistik-kelembagaan";
 
 const StatistikKelembagaan = () => {
 	const [summaryData, setSummaryData] = useState(null);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
+	const { getCachedData, setCachedData, isCached, clearCache } = useDataCache();
 
 	const fetchSummaryData = async () => {
 		try {
@@ -17,6 +21,7 @@ const StatistikKelembagaan = () => {
 
 			if (response.success) {
 				setSummaryData(response.data);
+				setCachedData(CACHE_KEY, response.data);
 			} else {
 				throw new Error(response.message || "Gagal mengambil data summary");
 			}
@@ -31,10 +36,16 @@ const StatistikKelembagaan = () => {
 	};
 
 	useEffect(() => {
-		fetchSummaryData();
+		if (isCached(CACHE_KEY)) {
+			setSummaryData(getCachedData(CACHE_KEY).data);
+			setLoading(false);
+		} else {
+			fetchSummaryData();
+		}
 	}, []);
 
 	const handleRefresh = () => {
+		clearCache(CACHE_KEY);
 		fetchSummaryData();
 	};
 

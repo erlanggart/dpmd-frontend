@@ -8,7 +8,6 @@ import {
   TrendingUp, 
   Menu, 
   X,
-  LogOut,
   ChevronLeft,
   ChevronDown,
   DollarSign,
@@ -17,6 +16,7 @@ import {
   Home
 } from 'lucide-react';
 import AnimatedIcon from '../components/AnimatedIcon';
+import { useAuth } from '../context/AuthContext';
 
 const CoreDashboardLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -25,9 +25,9 @@ const CoreDashboardLayout = () => {
   const [hoveredItem, setHoveredItem] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const { user } = useAuth();
 
-  // Determine base path based on user role
+  // Determine base path based on user role (for Home button)
   const getBasePath = () => {
     const rolePathMap = {
       'kepala_dinas': '/dpmd',
@@ -36,10 +36,27 @@ const CoreDashboardLayout = () => {
       'ketua_tim': '/dpmd',
       'pegawai': '/dpmd'
     };
-    return rolePathMap[user.role] || '/dpmd';
+    return rolePathMap[user?.role] || '/dpmd';
   };
 
   const basePath = getBasePath();
+
+  // Role-based dashboard path mapping (for Kembali ke Beranda button)
+  const dashboardPath = useMemo(() => {
+    const roleMap = {
+      superadmin: '/superadmin/dashboard',
+      admin: '/superadmin/dashboard',
+      kepala_dinas: '/kepala-dinas/dashboard',
+      sekretaris_dinas: '/sekretaris-dinas/dashboard',
+      kepala_bidang: '/kepala-bidang/dashboard',
+      ketua_tim: '/ketua-tim/dashboard',
+      pegawai: '/pegawai/dashboard',
+      sarpras: '/superadmin/dashboard',
+      sekretariat: '/superadmin/dashboard',
+      desa: '/desa/dashboard',
+    };
+    return roleMap[user?.role] || '/pegawai/dashboard';
+  }, [user?.role]);
 
   // Handle resize with debounce
   useEffect(() => {
@@ -60,12 +77,6 @@ const CoreDashboardLayout = () => {
       clearTimeout(timeoutId);
       window.removeEventListener('resize', handleResize);
     };
-  }, []);
-
-  const handleLogout = useCallback(async () => {
-    const { performFullLogout } = await import('../utils/sessionPersistence');
-    await performFullLogout();
-    window.location.href = '/';
   }, []);
 
   const toggleSidebar = useCallback(() => {
@@ -113,37 +124,11 @@ const CoreDashboardLayout = () => {
       color: 'text-emerald-600'
     },
     {
-      path: '/core-dashboard/statistik-add',
+      path: '/core-dashboard/statistik-kkd',
       icon: 'dollar',
-      label: 'Statistik ADD',
-      gradient: 'from-blue-500 to-indigo-600',
+      label: 'Keuangan Desa',
+      gradient: 'from-blue-500 to-violet-600',
       color: 'text-blue-600'
-    },
-    {
-      path: '/core-dashboard/statistik-bhprd',
-      icon: 'dollar',
-      label: 'Statistik BHPRD',
-      gradient: 'from-pink-500 to-rose-600',
-      color: 'text-pink-600',
-      submenu: [
-        { path: '/core-dashboard/statistik-bhprd-tahap1', label: 'BHPRD Tahap 1' },
-        { path: '/core-dashboard/statistik-bhprd-tahap2', label: 'BHPRD Tahap 2' },
-        { path: '/core-dashboard/statistik-bhprd-tahap3', label: 'BHPRD Tahap 3' }
-      ]
-    },
-    {
-      path: '/core-dashboard/statistik-dd',
-      icon: 'dollar',
-      label: 'Statistik DD',
-      gradient: 'from-violet-500 to-purple-600',
-      color: 'text-violet-600',
-      submenu: [
-        { path: '/core-dashboard/statistik-dd-earmarked-tahap1', label: 'DD Earmarked Tahap 1' },
-        { path: '/core-dashboard/statistik-dd-earmarked-tahap2', label: 'DD Earmarked Tahap 2' },
-        { path: '/core-dashboard/statistik-dd-nonearmarked-tahap1', label: 'DD Non-Earmarked Tahap 1' },
-        { path: '/core-dashboard/statistik-dd-nonearmarked-tahap2', label: 'DD Non-Earmarked Tahap 2' },
-        { path: '/core-dashboard/statistik-insentif-dd', label: 'Insentif DD' }
-      ]
     },
     {
       path: '/core-dashboard/trends',
@@ -163,7 +148,7 @@ const CoreDashboardLayout = () => {
   return (
     <div className="flex h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 overflow-hidden">
       {/* Overlay for mobile */}
-      {sidebarOpen && window.innerWidth < 1024 && (
+      {sidebarOpen && (
         <div 
           className="fixed inset-0 bg-black/50 z-40 lg:hidden transition-opacity duration-200"
           onClick={toggleSidebar}
@@ -173,27 +158,28 @@ const CoreDashboardLayout = () => {
       {/* Sidebar */}
       <aside
         className={`fixed lg:relative z-50 h-full bg-white shadow-2xl flex flex-col border-r border-gray-100
-          transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]
+          transition-[transform,width] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
           ${sidebarOpen ? 'w-64' : 'lg:w-20'}
         `}
-        style={{ willChange: 'transform, width' }}
       >
         {/* Gradient Accent Line */}
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500"></div>
 
         {/* Sidebar Header */}
         <div className="relative p-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0 bg-gradient-to-r from-blue-50 to-purple-50">
-          <div className="flex items-center justify-center flex-1">
-            <img 
-              src="/logo-dpmd.png" 
-              alt="DPMD Logo" 
-              className={`transition-all duration-300 ${sidebarOpen ? "h-20" : "h-14"}`}
-            />
-          </div>
+          {sidebarOpen && (
+            <div className="flex items-center justify-center flex-1">
+              <img 
+                src="/logo-dpmd.png" 
+                alt="DPMD Logo" 
+                className="h-20 transition-opacity duration-300"
+              />
+            </div>
+          )}
           <button
             onClick={toggleSidebar}
-            className="p-2 bg-blue-100 hover:bg-blue-200 rounded-lg transition-all duration-200 flex-shrink-0 group"
+            className={`p-2 bg-blue-100 hover:bg-blue-200 rounded-lg transition-colors duration-200 flex-shrink-0 group ${!sidebarOpen ? 'mx-auto' : ''}`}
             aria-label={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
           >
             {sidebarOpen ? (
@@ -244,7 +230,7 @@ const CoreDashboardLayout = () => {
                     onMouseEnter={() => setHoveredItem(item.label)}
                     onMouseLeave={() => setHoveredItem(null)}
                     className={`group relative flex items-center gap-3 px-3 py-2.5 rounded-xl w-full
-                      transition-all duration-200
+                      transition-colors duration-200
                       ${isSubmenuActive
                         ? `bg-gradient-to-r ${item.gradient} text-white shadow-md`
                         : `${item.color} hover:bg-gradient-to-r ${item.gradient} hover:text-white hover:shadow-md`
@@ -262,7 +248,7 @@ const CoreDashboardLayout = () => {
                       <>
                         <span className="relative font-semibold flex-1 text-left truncate text-sm">{item.label}</span>
                         <ChevronDown 
-                          className={`relative w-4 h-4 transition-all duration-200 flex-shrink-0
+                          className={`relative w-4 h-4 transition-transform duration-200 flex-shrink-0
                             ${isExpanded ? 'rotate-180' : ''}
                           `}
                         />
@@ -276,7 +262,7 @@ const CoreDashboardLayout = () => {
                           key={subindex}
                           to={subitem.path}
                           className={({ isActive }) =>
-                            `flex items-center px-3 py-2 rounded-lg text-sm transition-all duration-200 ${
+                            `flex items-center px-3 py-2 rounded-lg text-sm transition-colors duration-200 ${
                               isActive
                                 ? `bg-gradient-to-r ${item.gradient} text-white font-semibold shadow-sm`
                                 : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
@@ -302,7 +288,7 @@ const CoreDashboardLayout = () => {
                 onMouseEnter={() => setHoveredItem(item.label)}
                 onMouseLeave={() => setHoveredItem(null)}
                 className={({ isActive }) =>
-                  `group relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 ${
+                  `group relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors duration-200 ${
                     isActive
                       ? `bg-gradient-to-r ${item.gradient} text-white shadow-md`
                       : `${item.color} hover:bg-gradient-to-r ${item.gradient} hover:text-white hover:shadow-md`
@@ -327,24 +313,24 @@ const CoreDashboardLayout = () => {
         </nav>
 
 
-        {/* Logout Button */}
+        {/* Back to Dashboard */}
         <div className="relative p-3 border-t border-gray-100 flex-shrink-0">
           <button
-            onClick={handleLogout}
-            onMouseEnter={() => setHoveredItem('logout')}
+            onClick={() => navigate(dashboardPath)}
+            onMouseEnter={() => setHoveredItem('beranda')}
             onMouseLeave={() => setHoveredItem(null)}
-            className="group relative flex items-center gap-3 px-3 py-2.5 w-full rounded-xl text-red-600 hover:bg-red-50 transition-all duration-200"
-            title={!sidebarOpen ? 'Logout' : ''}
+            className="group relative flex items-center gap-3 px-3 py-2.5 w-full rounded-xl text-blue-600 hover:bg-blue-50 transition-colors duration-200"
+            title={!sidebarOpen ? 'Kembali ke Beranda' : ''}
           >
             <div className={`relative ${sidebarOpen ? 'flex-shrink-0' : 'mx-auto'}`}>
               <AnimatedIcon 
-                type="logout" 
+                type="back" 
                 isActive={false} 
-                isHovered={hoveredItem === 'logout'}
+                isHovered={hoveredItem === 'beranda'}
                 className="w-5 h-5"
               />
             </div>
-            {sidebarOpen && <span className="relative font-semibold truncate text-sm">Logout</span>}
+            {sidebarOpen && <span className="relative font-semibold truncate text-sm">Kembali ke Beranda</span>}
           </button>
         </div>
       </aside>

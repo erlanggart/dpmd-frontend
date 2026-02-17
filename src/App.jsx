@@ -319,6 +319,10 @@ const StatistikBankeuDashboard = lazy(
 const StatistikPerjadinDashboard = lazy(
   () => import("./pages/kepala-dinas/StatistikPerjadinDashboard"),
 );
+// KKD Unified Dashboard (ADD + BHPRD + DD)
+const StatistikKKDDashboard = lazy(
+  () => import("./pages/core-dashboard/StatistikKKDDashboard"),
+);
 const AddDashboard = lazy(() => import("./pages/bidang/kkd/add/AddDashboard"));
 const BhprdDashboard = lazy(() => import("./pages/bidang/kkd/BhprdDashboard"));
 // DD Sub-categories
@@ -972,6 +976,10 @@ function App() {
                   <Route
                     path="statistik-perjadin"
                     element={<StatistikPerjadinDashboard />}
+                  />
+                  <Route
+                    path="statistik-kkd"
+                    element={<StatistikKKDDashboard />}
                   />
                   <Route
                     path="statistik-add"

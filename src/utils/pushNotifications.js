@@ -224,8 +224,8 @@ export const showLocalNotification = async (title, options = {}) => {
       
       await registration.showNotification(title, {
         body: options.body || 'Notifikasi dari DPMD',
-        icon: options.icon || '/icon-192x192.png',
-        badge: options.badge || '/icon-192x192.png',
+        icon: options.icon || '/logo-192.png',
+        badge: options.badge || '/logo-96.png',
         vibrate: options.vibrate || [200, 100, 200],
         tag: options.tag || 'default-notification',
         requireInteraction: options.requireInteraction || false,

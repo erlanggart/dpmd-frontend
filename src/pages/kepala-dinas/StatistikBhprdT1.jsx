@@ -6,17 +6,26 @@ import { Pie, Bar } from 'react-chartjs-2';
 import api from '../../api';
 import * as XLSX from 'xlsx';
 import { isVpnUser } from '../../utils/vpnHelper';
+import { useDataCache } from '../../context/DataCacheContext';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
+
+const CACHE_KEY = 'statistik-bhprd-t1';
 
 const StatistikBhprdT1 = () => {
   const navigate = useNavigate();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const { getCachedData, setCachedData, isCached } = useDataCache();
 
   useEffect(() => {
-    fetchData();
+    if (isCached(CACHE_KEY)) {
+      setData(getCachedData(CACHE_KEY).data);
+      setLoading(false);
+    } else {
+      fetchData();
+    }
   }, []);
 
   const fetchData = async () => {
@@ -24,7 +33,9 @@ const StatistikBhprdT1 = () => {
       setLoading(true);
       const endpoint = isVpnUser() ? '/vpn-core/bhprd-t1/data' : '/bhprd-t1/data';
       const response = await api.get(endpoint);
-      setData(response.data.data || []);
+      const result = response.data.data || [];
+      setData(result);
+      setCachedData(CACHE_KEY, result);
       setError(null);
     } catch (err) {
       console.error('Error fetching BHPRD T1 data:', err);

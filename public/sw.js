@@ -65,15 +65,9 @@ self.addEventListener('push', async (event) => {
 				// Broadcast message to all clients (untuk popup di app)
 				return self.clients.matchAll({ type: 'window', includeUncontrolled: true });
 			}).then(clients => {
-				console.log(`[SW] Found ${clients.length} clients`);
+				console.log(`[SW] Broadcasting to ${clients.length} clients`);
 				
-				// Cari client yang focused/aktif, jika tidak ada kirim ke semua
-				const focusedClient = clients.find(client => client.focused);
-				const targetClients = focusedClient ? [focusedClient] : clients.slice(0, 1);
-				
-				console.log(`[SW] Sending message to ${targetClients.length} client(s)`);
-				
-				targetClients.forEach(client => {
+				clients.forEach(client => {
 					client.postMessage({
 						type: 'PUSH_NOTIFICATION_RECEIVED',
 						payload: data || notificationData,

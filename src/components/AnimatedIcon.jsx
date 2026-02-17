@@ -1,37 +1,51 @@
 ﻿// src/components/AnimatedIcon.jsx
 import React from 'react';
+import {
+  LayoutDashboard,
+  Users,
+  Briefcase,
+  DollarSign,
+  TrendingUp,
+  Landmark,
+  ArrowLeft,
+  FileText,
+  Wallet,
+  BadgeDollarSign,
+  Coins,
+  HandCoins,
+  PiggyBank,
+  BarChart3,
+} from 'lucide-react';
 import './AnimatedIcon.css';
 
-const AnimatedIcon = ({ type, isActive, isHovered, className = "w-5 h-5" }) => {
-  // Emoji mapping untuk setiap tipe icon
-  const emojiMap = {
-    dashboard: String.fromCodePoint(0x1F4CA),
-    users: String.fromCodePoint(0x1F465),
-    briefcase: String.fromCodePoint(0x1F4BC),
-    dollar: String.fromCodePoint(0x1F4B0),
-    trending: String.fromCodePoint(0x1F4C8),
-    logout: String.fromCodePoint(0x1F6AA),
-    landmark: String.fromCodePoint(0x1F3DB)
-  };
+const ICON_MAP = {
+  dashboard: LayoutDashboard,
+  users: Users,
+  briefcase: Briefcase,
+  dollar: HandCoins,
+  trending: TrendingUp,
+  landmark: Landmark,
+  back: ArrowLeft,
+  file: FileText,
+  wallet: Wallet,
+  badge_dollar: BadgeDollarSign,
+  coins: Coins,
+  piggy: PiggyBank,
+  chart: BarChart3,
+};
 
-  const emoji = emojiMap[type] || String.fromCodePoint(0x2B50);
+const AnimatedIcon = ({ type, isActive, isHovered, className = 'w-5 h-5' }) => {
+  const Icon = ICON_MAP[type] || LayoutDashboard;
+
+  const stateClass = isActive
+    ? 'animated-icon--active'
+    : isHovered
+      ? 'animated-icon--hovered'
+      : '';
 
   return (
-    <div className="inline-flex items-center justify-center">
-      <div 
-        className={`
-          ${className} 
-          flex items-center justify-center
-          text-[1.2em]
-          transition-all duration-300
-          ${(isActive || isHovered) ? 'animate-emoji-bounce' : ''}
-        `}
-        style={{
-          filter: isActive ? 'drop-shadow(0 0 8px currentColor)' : 'none'
-        }}
-      >
-        {emoji}
-      </div>
+    <div className={`animated-icon ${stateClass}`}>
+      <Icon className={className} strokeWidth={isActive ? 2.4 : 2} />
     </div>
   );
 };
