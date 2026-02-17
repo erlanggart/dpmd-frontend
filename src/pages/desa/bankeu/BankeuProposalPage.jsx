@@ -3179,6 +3179,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                                     uploadForms={uploadForms}
                                     updateUploadForm={updateUploadForm}
                                     formatRupiah={formatRupiah}
+                                    isAnggaranOverLimit={isAnggaranOverLimit}
                                   />
                                 </div>
                               );
@@ -3655,6 +3656,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                                     uploadForms={uploadForms}
                                     updateUploadForm={updateUploadForm}
                                     formatRupiah={formatRupiah}
+                                    isAnggaranOverLimit={isAnggaranOverLimit}
                                   />
                                 </div>
                               );
@@ -3861,7 +3863,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
 };
 
 // Kegiatan Row Component
-const KegiatanRow = ({ item, index, onUpload, onRevisionUpload, onReplaceFile, onUploadSurat, onDelete, onViewPdf, getStatusBadge, imageBaseUrl, isSubmitted, uploadForms, updateUploadForm, formatRupiah }) => {
+const KegiatanRow = ({ item, index, onUpload, onRevisionUpload, onReplaceFile, onUploadSurat, onDelete, onViewPdf, getStatusBadge, imageBaseUrl, isSubmitted, uploadForms, updateUploadForm, formatRupiah, isAnggaranOverLimit }) => {
   const { kegiatan, proposal } = item;
   const formData = uploadForms[kegiatan.id] || {};
   const [showReplaceForm, setShowReplaceForm] = React.useState(false);
