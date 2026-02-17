@@ -195,14 +195,30 @@ const Kelembagaan = () => {
       });
     } catch (error) {
       console.error("Error toggling edit mode:", error);
+      
+      // Ambil error message dari backend
+      const errorMessage = error.response?.data?.message || error.message || "Gagal mengubah mode edit. Silakan coba lagi.";
+      const debugInfo = error.response?.data?.debug;
+      
+      // Tampilkan error dengan detail
+      let errorHtml = `<p class="text-gray-700">${errorMessage}</p>`;
+      
+      // Tambahkan debug info jika ada
+      if (debugInfo) {
+        errorHtml += `<div class="mt-3 p-3 bg-gray-100 rounded text-left text-sm">
+          <p class="font-semibold text-gray-800 mb-2">Detail:</p>
+          ${debugInfo.userRole ? `<p><span class="font-medium">Role Anda:</span> ${debugInfo.userRole}</p>` : ''}
+          ${debugInfo.userBidangId ? `<p><span class="font-medium">Bidang ID:</span> ${debugInfo.userBidangId}</p>` : ''}
+          ${debugInfo.required ? `<p><span class="font-medium">Yang Diperlukan:</span> ${debugInfo.required}</p>` : ''}
+        </div>`;
+      }
+      
       Swal.fire({
         icon: "error",
-        title: "Gagal!",
-        text:
-          error.response?.data?.message ||
-          error.message ||
-          "Gagal mengubah mode edit. Silakan coba lagi.",
+        title: "Tidak Dapat Mengubah Mode Edit",
+        html: errorHtml,
         confirmButtonColor: "#3b82f6",
+        confirmButtonText: "Mengerti"
       });
     }
   };
@@ -248,7 +264,7 @@ const Kelembagaan = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-2 sm:p-4 lg:p-6">
       {/* Header */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-4">
