@@ -14,6 +14,7 @@ import {
 	FiFileText,
 	FiDollarSign,
 	FiSettings,
+	FiHome,
 } from "react-icons/fi";
 
 import {
@@ -71,6 +72,19 @@ const MainLayout = () => {
 	const handleLogout = async () => {
 		await performFullLogout();
 		window.location.href = "/";
+	};
+
+	// Determine base path based on user role (like CoreDashboardLayout)
+	const getBasePath = () => {
+		if (!user) return '/dpmd';
+		const rolePathMap = {
+			'kepala_dinas': '/dpmd',
+			'sekretaris_dinas': '/dpmd',
+			'kepala_bidang': '/dpmd',
+			'ketua_tim': '/dpmd',
+			'pegawai': '/dpmd'
+		};
+		return rolePathMap[user.role] || '/dpmd';
 	};
 
 	// Definisikan menu berdasarkan role user menggunakan useMemo
@@ -189,9 +203,9 @@ const MainLayout = () => {
 				>
 	
 
-					{/* Link Core Dashboard Analytics - Available for all roles */}
+					{/* Link Home - Navigate to role-based dashboard */}
 					<NavLink
-						to="/bidang/pmd/core-dashboard"
+						to={`${getBasePath()}/dashboard`}
 						className={({ isActive }) =>
 							`flex items-center p-3 rounded-lg transition-colors relative ${
 								isSidebarMinimized ? "justify-center" : ""
@@ -204,7 +218,7 @@ const MainLayout = () => {
 					>
 						{({ isActive }) => (
 							<>
-								<FiLayout
+								<FiHome
 									className={`h-5 w-5 flex-shrink-0 ${
 										isSidebarMinimized ? "" : "mr-3"
 									}`}
@@ -214,7 +228,7 @@ const MainLayout = () => {
 										isSidebarMinimized ? "w-0 opacity-0" : "w-auto opacity-100"
 									}`}
 								>
-									Core Dashboard
+									Home
 								</span>
 								{isActive && (
 									<div className="absolute right-0 top-0 bottom-0 w-1 bg-purple-700 rounded-l-lg"></div>

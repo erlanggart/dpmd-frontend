@@ -738,14 +738,13 @@ export default function KelembagaanList() {
 									).toLowerCase();
 
 									return (
-										<>
-											<div
-												key={item.id}
-												className="bg-white flex flex-col rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer border border-gray-100 hover:border-blue-200 group overflow-hidden"
-												onClick={() =>
-													navigate(`${basePath}/kelembagaan/${type}/${item.id}`)
-												}
-											>
+									<div
+										key={item.id}
+										className="bg-white flex flex-col rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer border border-gray-100 hover:border-blue-200 group overflow-hidden"
+										onClick={() =>
+											navigate(`${basePath}/kelembagaan/${type}/${item.id}`)
+										}
+									>
 												{/* Gradient Bar */}
 												<div
 													className={`h-1.5 bg-gradient-to-r ${
@@ -826,9 +825,8 @@ export default function KelembagaanList() {
 												</div>
 												{/* End Card Content Wrapper */}
 											</div>
-										</>
-									);
-								})}
+										);
+									})}
 							</div>
 						</div>
 					)}
@@ -837,7 +835,12 @@ export default function KelembagaanList() {
 				{/* Right Column - Activity Log (1/3 width) */}
 				<div className="lg:col-span-1">
 					<div className="sticky top-6">
-						<AktivitasLog lembagaType={type} mode="list" title={title} />
+					<AktivitasLog 
+						lembagaType={type} 
+						mode="list" 
+						title={title}
+						desaId={desaId ? parseInt(desaId) : null}
+					/>
 					</div>
 				</div>
 			</div>

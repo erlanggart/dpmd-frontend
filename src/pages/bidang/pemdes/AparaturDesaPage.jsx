@@ -1,0 +1,723 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { 
+	Users, 
+	Search, 
+	Filter, 
+	RefreshCw, 
+	ArrowLeft, 
+	MapPin, 
+	Briefcase, 
+	Phone, 
+	Mail, 
+	Calendar,
+	ChevronDown,
+	AlertCircle,
+	Loader2,
+	UserCircle,
+	Building,
+	CheckCircle,
+	XCircle,
+	Eye
+} from 'lucide-react';
+import api from '../../../api';
+import toast from 'react-hot-toast';
+
+const AparaturDesaPage = () => {
+	const navigate = useNavigate();
+	const [loading, setLoading] = useState(true);
+	const [data, setData] = useState([]);
+	const [pagination, setPagination] = useState({
+		page: 1,
+		limit: 20,
+		totalPages: 1,
+		totalItems: 0
+	});
+	const [filters, setFilters] = useState({
+		name: '',
+		job_type: '',
+		master_district_id: '',
+		master_village_id: '',
+		gender: '',
+		status_pns: '',
+		min_age: '',
+		max_age: ''
+	});
+	const [kecamatanList, setKecamatanList] = useState([]);
+	const [desaList, setDesaList] = useState([]);
+	const [connectionStatus, setConnectionStatus] = useState(null);
+	const [showFilters, setShowFilters] = useState(false);
+	const [selectedAparatur, setSelectedAparatur] = useState(null);
+	const [showDetail, setShowDetail] = useState(false);
+
+	useEffect(() => {
+		checkConnectionStatus();
+		fetchKecamatanList();
+	}, []);
+
+	useEffect(() => {
+		if (connectionStatus?.connected) {
+			fetchAparaturDesa();
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [connectionStatus, pagination.page, filters]);
+
+	useEffect(() => {
+		if (filters.master_district_id) {
+			fetchDesaByKecamatan(filters.master_district_id);
+		} else {
+			setDesaList([]);
+			setFilters(prev => ({ ...prev, master_village_id: '' }));
+		}
+	}, [filters.master_district_id]);
+
+	const checkConnectionStatus = async () => {
+		try {
+			const response = await api.get('/external/status');
+			setConnectionStatus(response.data.data);
+		} catch (error) {
+			console.error('Connection check failed:', error);
+			setConnectionStatus({ connected: false, error: error.message });
+		}
+	};
+
+	const fetchKecamatanList = async () => {
+		try {
+			const response = await api.get('/external/kecamatan');
+			if (response.data.success) {
+				setKecamatanList(response.data.data || []);
+			}
+		} catch (error) {
+			console.error('Failed to fetch kecamatan:', error);
+		}
+	};
+
+	const fetchDesaByKecamatan = async (districtId) => {
+		try {
+			const response = await api.get(`/external/desa?master_district_id=${districtId}`);
+			if (response.data.success) {
+				setDesaList(response.data.data || []);
+			}
+		} catch (error) {
+			console.error('Failed to fetch desa:', error);
+		}
+	};
+
+	const fetchAparaturDesa = async () => {
+		try {
+			setLoading(true);
+			const params = new URLSearchParams();
+			
+			if (filters.name) params.append('name', filters.name);
+			if (filters.job_type) params.append('job_type', filters.job_type);
+			if (filters.master_district_id) params.append('master_district_id', filters.master_district_id);
+			if (filters.master_village_id) params.append('master_village_id', filters.master_village_id);
+			if (filters.gender) params.append('gender', filters.gender);
+			if (filters.status_pns) params.append('status_pns', filters.status_pns);
+			if (filters.min_age) params.append('min_age', filters.min_age);
+			if (filters.max_age) params.append('max_age', filters.max_age);
+			params.append('page', pagination.page);
+			params.append('limit', pagination.limit);
+
+			const response = await api.get(`/external/aparatur-desa?${params.toString()}`);
+			
+			if (response.data.success) {
+				setData(response.data.data || []);
+				if (response.data.pagination) {
+					setPagination(prev => ({
+						...prev,
+						...response.data.pagination
+					}));
+				}
+			}
+		} catch (error) {
+			console.error('Failed to fetch aparatur desa:', error);
+			toast.error('Gagal memuat data aparatur desa');
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	const handleSearch = (e) => {
+		e.preventDefault();
+		setPagination(prev => ({ ...prev, page: 1 }));
+		fetchAparaturDesa();
+	};
+
+	const handleFilterChange = (key, value) => {
+		setFilters(prev => ({ ...prev, [key]: value }));
+		setPagination(prev => ({ ...prev, page: 1 }));
+	};
+
+	const resetFilters = () => {
+		setFilters({
+			name: '',
+			job_type: '',
+			master_district_id: '',
+			master_village_id: '',
+			gender: '',
+			status_pns: '',
+			min_age: '',
+			max_age: ''
+		});
+		setPagination(prev => ({ ...prev, page: 1 }));
+	};
+
+	const viewDetail = async (id) => {
+		try {
+			const response = await api.get(`/external/aparatur-desa/${id}`);
+			if (response.data.success) {
+				setSelectedAparatur(response.data.data);
+				setShowDetail(true);
+			}
+		} catch {
+			toast.error('Gagal memuat detail aparatur');
+		}
+	};
+
+	// Job type options
+	const jobTypeOptions = [
+		{ value: 'Perangkat Desa', label: 'Perangkat Desa' },
+		{ value: 'BPD', label: 'BPD' }
+	];
+
+	// Gender options
+	const genderOptions = [
+		{ value: 'L', label: 'Laki-laki' },
+		{ value: 'P', label: 'Perempuan' }
+	];
+
+	// Status PNS options
+	const statusPnsOptions = [
+		{ value: 'PNS', label: 'PNS' },
+		{ value: 'NON PNS', label: 'Non PNS' }
+	];
+
+	// Connection Error State
+	if (connectionStatus && !connectionStatus.connected) {
+		return (
+			<div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+				<div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
+					<div className="h-16 w-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+						<AlertCircle className="h-8 w-8 text-red-600" />
+					</div>
+					<h2 className="text-xl font-bold text-gray-800 mb-2">Koneksi Gagal</h2>
+					<p className="text-gray-600 mb-4">
+						Tidak dapat terhubung ke External API DPMD Kabupaten Bogor.
+					</p>
+					{connectionStatus.error && (
+						<p className="text-sm text-red-500 mb-4 bg-red-50 p-3 rounded-lg">
+							{connectionStatus.error}
+						</p>
+					)}
+					<div className="flex gap-3 justify-center">
+						<button
+							onClick={() => navigate(-1)}
+							className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+						>
+							Kembali
+						</button>
+						<button
+							onClick={checkConnectionStatus}
+							className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors flex items-center gap-2"
+						>
+							<RefreshCw className="h-4 w-4" />
+							Coba Lagi
+						</button>
+					</div>
+				</div>
+			</div>
+		);
+	}
+
+	return (
+		<div className="min-h-screen bg-gray-50 pb-6">
+			{/* Header */}
+			<div className="bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 text-white">
+				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+					<button 
+						onClick={() => navigate('/core-dashboard/pemdes')}
+						className="mb-4 flex items-center gap-2 text-blue-100 hover:text-white transition-colors"
+					>
+						<ArrowLeft className="h-5 w-5" />
+						Kembali ke Pemdes
+					</button>
+					<div className="flex items-center gap-4">
+						<div className="h-16 w-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
+							<Users className="h-8 w-8" />
+						</div>
+						<div>
+							<h1 className="text-2xl font-bold">Aparatur Desa</h1>
+							<p className="text-blue-100 mt-1">Data dari DPMD Kabupaten Bogor</p>
+						</div>
+					</div>
+					
+					{/* Connection Status */}
+					<div className="mt-4 flex items-center gap-2 text-sm">
+						{connectionStatus?.connected ? (
+							<>
+								<CheckCircle className="h-4 w-4 text-green-300" />
+								<span className="text-green-200">Terhubung ke External API</span>
+							</>
+						) : (
+							<>
+								<XCircle className="h-4 w-4 text-red-300" />
+								<span className="text-red-200">Tidak terhubung</span>
+							</>
+						)}
+					</div>
+				</div>
+			</div>
+
+			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+				{/* Search & Filter Section */}
+				<div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
+					<form onSubmit={handleSearch} className="flex flex-col lg:flex-row gap-4">
+						{/* Search Input */}
+						<div className="flex-1 relative">
+							<Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+							<input
+								type="text"
+								placeholder="Cari nama aparatur..."
+								value={filters.name}
+								onChange={(e) => setFilters(prev => ({ ...prev, name: e.target.value }))}
+								className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+							/>
+						</div>
+
+						{/* Filter Toggle */}
+						<button
+							type="button"
+							onClick={() => setShowFilters(!showFilters)}
+							className="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2"
+						>
+							<Filter className="h-4 w-4" />
+							Filter
+							<ChevronDown className={`h-4 w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+						</button>
+
+						{/* Search Button */}
+						<button
+							type="submit"
+							className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+						>
+							<Search className="h-4 w-4" />
+							Cari
+						</button>
+
+						{/* Refresh Button */}
+						<button
+							type="button"
+							onClick={fetchAparaturDesa}
+							className="px-4 py-2.5 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors flex items-center gap-2"
+						>
+							<RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+						</button>
+					</form>
+
+					{/* Filter Panel */}
+					{showFilters && (
+						<div className="mt-4 pt-4 border-t border-gray-200">
+							<div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+								{/* Kecamatan Select */}
+								<div>
+									<label className="block text-sm font-medium text-gray-700 mb-1">Kecamatan</label>
+									<select
+										value={filters.master_district_id}
+										onChange={(e) => handleFilterChange('master_district_id', e.target.value)}
+										className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+									>
+										<option value="">Semua Kecamatan</option>
+										{kecamatanList.map(kec => (
+											<option key={kec.id || kec.code} value={kec.code || kec.id}>{kec.name || kec.nama}</option>
+										))}
+									</select>
+								</div>
+
+								{/* Desa Select */}
+								<div>
+									<label className="block text-sm font-medium text-gray-700 mb-1">Desa</label>
+									<select
+										value={filters.master_village_id}
+										onChange={(e) => handleFilterChange('master_village_id', e.target.value)}
+										className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
+										disabled={!filters.master_district_id}
+									>
+										<option value="">Semua Desa</option>
+										{desaList.map(desa => (
+											<option key={desa.id || desa.code} value={desa.code || desa.id}>{desa.name || desa.nama}</option>
+										))}
+									</select>
+								</div>
+
+								{/* Job Type Select */}
+								<div>
+									<label className="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
+									<select
+										value={filters.job_type}
+										onChange={(e) => handleFilterChange('job_type', e.target.value)}
+										className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+									>
+										<option value="">Semua Kategori</option>
+										{jobTypeOptions.map(opt => (
+											<option key={opt.value} value={opt.value}>{opt.label}</option>
+										))}
+									</select>
+								</div>
+
+								{/* Gender Select */}
+								<div>
+									<label className="block text-sm font-medium text-gray-700 mb-1">Jenis Kelamin</label>
+									<select
+										value={filters.gender}
+										onChange={(e) => handleFilterChange('gender', e.target.value)}
+										className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+									>
+										<option value="">Semua</option>
+										{genderOptions.map(opt => (
+											<option key={opt.value} value={opt.value}>{opt.label}</option>
+										))}
+									</select>
+								</div>
+
+								{/* Status PNS Select */}
+								<div>
+									<label className="block text-sm font-medium text-gray-700 mb-1">Status Kepegawaian</label>
+									<select
+										value={filters.status_pns}
+										onChange={(e) => handleFilterChange('status_pns', e.target.value)}
+										className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+									>
+										<option value="">Semua</option>
+										{statusPnsOptions.map(opt => (
+											<option key={opt.value} value={opt.value}>{opt.label}</option>
+										))}
+									</select>
+								</div>
+
+								{/* Min Age */}
+								<div>
+									<label className="block text-sm font-medium text-gray-700 mb-1">Usia Min</label>
+									<input
+										type="number"
+										placeholder="Min"
+										value={filters.min_age}
+										onChange={(e) => handleFilterChange('min_age', e.target.value)}
+										className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+										min="0"
+									/>
+								</div>
+
+								{/* Max Age */}
+								<div>
+									<label className="block text-sm font-medium text-gray-700 mb-1">Usia Max</label>
+									<input
+										type="number"
+										placeholder="Max"
+										value={filters.max_age}
+										onChange={(e) => handleFilterChange('max_age', e.target.value)}
+										className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+										min="0"
+									/>
+								</div>
+							</div>
+							
+							<div className="mt-4 flex justify-end">
+								<button
+									onClick={resetFilters}
+									className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+								>
+									Reset Filter
+								</button>
+							</div>
+						</div>
+					)}
+				</div>
+
+				{/* Data Table */}
+				<div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+					{loading ? (
+						<div className="flex items-center justify-center py-12">
+							<Loader2 className="h-8 w-8 text-blue-600 animate-spin" />
+						</div>
+					) : data.length === 0 ? (
+						<div className="text-center py-12">
+							<Users className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+							<p className="text-gray-500">Tidak ada data aparatur desa</p>
+						</div>
+					) : (
+						<>
+							{/* Desktop Table */}
+							<div className="hidden md:block overflow-x-auto">
+								<table className="min-w-full divide-y divide-gray-200">
+									<thead className="bg-gray-50">
+										<tr>
+											<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+												Nama
+											</th>
+											<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+												Jabatan
+											</th>
+											<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+												Desa
+											</th>
+											<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+												Kecamatan
+											</th>
+											<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+												Kontak
+											</th>
+											<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+												Aksi
+											</th>
+										</tr>
+									</thead>
+									<tbody className="bg-white divide-y divide-gray-200">
+										{data.map((aparatur) => (
+											<tr key={aparatur.id} className="hover:bg-gray-50 transition-colors">
+												<td className="px-6 py-4 whitespace-nowrap">
+													<div className="flex items-center gap-3">
+														<div className="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
+															<UserCircle className="h-6 w-6 text-blue-600" />
+														</div>
+														<div>
+															<p className="font-medium text-gray-900">{aparatur.nama_lengkap || aparatur.nama}</p>
+															{aparatur.nip && (
+																<p className="text-xs text-gray-500">NIP: {aparatur.nip}</p>
+															)}
+														</div>
+													</div>
+												</td>
+												<td className="px-6 py-4 whitespace-nowrap">
+													<span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-teal-100 text-teal-800">
+														<Briefcase className="h-3 w-3" />
+														{aparatur.jabatan}
+													</span>
+												</td>
+												<td className="px-6 py-4 whitespace-nowrap">
+													<span className="text-gray-600">{aparatur.desa?.nama || aparatur.nama_desa || '-'}</span>
+												</td>
+												<td className="px-6 py-4 whitespace-nowrap">
+													<span className="text-gray-600">{aparatur.kecamatan?.nama || aparatur.nama_kecamatan || '-'}</span>
+												</td>
+												<td className="px-6 py-4 whitespace-nowrap">
+													<div className="text-sm">
+														{aparatur.no_hp && (
+															<div className="flex items-center gap-1 text-gray-600">
+																<Phone className="h-3 w-3" />
+																{aparatur.no_hp}
+															</div>
+														)}
+														{aparatur.email && (
+															<div className="flex items-center gap-1 text-gray-600 mt-1">
+																<Mail className="h-3 w-3" />
+																{aparatur.email}
+															</div>
+														)}
+													</div>
+												</td>
+												<td className="px-6 py-4 whitespace-nowrap text-right">
+													<button
+														onClick={() => viewDetail(aparatur.id)}
+														className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+														title="Lihat Detail"
+													>
+														<Eye className="h-4 w-4" />
+													</button>
+												</td>
+											</tr>
+										))}
+									</tbody>
+								</table>
+							</div>
+
+							{/* Mobile Cards */}
+							<div className="md:hidden divide-y divide-gray-200">
+								{data.map((aparatur) => (
+									<div key={aparatur.id} className="p-4">
+										<div className="flex items-start gap-3">
+											<div className="h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+												<UserCircle className="h-7 w-7 text-blue-600" />
+											</div>
+											<div className="flex-1 min-w-0">
+												<h3 className="font-semibold text-gray-900">{aparatur.nama_lengkap || aparatur.nama}</h3>
+												<span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-teal-100 text-teal-800 mt-1">
+													<Briefcase className="h-3 w-3" />
+													{aparatur.jabatan}
+												</span>
+												<div className="mt-2 space-y-1 text-sm text-gray-600">
+													<div className="flex items-center gap-2">
+														<Building className="h-3.5 w-3.5" />
+														<span>{aparatur.desa?.nama || aparatur.nama_desa || '-'}</span>
+													</div>
+													<div className="flex items-center gap-2">
+														<MapPin className="h-3.5 w-3.5" />
+														<span>{aparatur.kecamatan?.nama || aparatur.nama_kecamatan || '-'}</span>
+													</div>
+													{aparatur.no_hp && (
+														<div className="flex items-center gap-2">
+															<Phone className="h-3.5 w-3.5" />
+															<span>{aparatur.no_hp}</span>
+														</div>
+													)}
+												</div>
+											</div>
+											<button
+												onClick={() => viewDetail(aparatur.id)}
+												className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+											>
+												<Eye className="h-5 w-5" />
+											</button>
+										</div>
+									</div>
+								))}
+							</div>
+
+							{/* Pagination */}
+							{pagination.totalPages > 1 && (
+								<div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+									<p className="text-sm text-gray-500">
+										Halaman {pagination.page} dari {pagination.totalPages}
+									</p>
+									<div className="flex gap-2">
+										<button
+											onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
+											disabled={pagination.page <= 1}
+											className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+										>
+											Sebelumnya
+										</button>
+										<button
+											onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
+											disabled={pagination.page >= pagination.totalPages}
+											className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+										>
+											Selanjutnya
+										</button>
+									</div>
+								</div>
+							)}
+						</>
+					)}
+				</div>
+			</div>
+
+			{/* Detail Modal */}
+			{showDetail && selectedAparatur && (
+				<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+					<div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+						<div className="p-6 border-b border-gray-200">
+							<div className="flex items-center justify-between">
+								<h2 className="text-xl font-bold text-gray-900">Detail Aparatur</h2>
+								<button
+									onClick={() => setShowDetail(false)}
+									className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+								>
+									<XCircle className="h-5 w-5 text-gray-500" />
+								</button>
+							</div>
+						</div>
+						<div className="p-6">
+							<div className="flex flex-col items-center mb-6">
+								<div className="h-20 w-20 bg-blue-100 rounded-full flex items-center justify-center mb-3">
+									<UserCircle className="h-12 w-12 text-blue-600" />
+								</div>
+								<h3 className="text-xl font-bold text-gray-900">{selectedAparatur.nama_lengkap || selectedAparatur.nama}</h3>
+								<span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium bg-teal-100 text-teal-800 mt-2">
+									<Briefcase className="h-4 w-4" />
+									{selectedAparatur.jabatan}
+								</span>
+							</div>
+
+							<div className="space-y-4">
+								{selectedAparatur.nip && (
+									<div className="flex items-start gap-3">
+										<div className="h-8 w-8 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+											<Users className="h-4 w-4 text-gray-600" />
+										</div>
+										<div>
+											<p className="text-sm text-gray-500">NIP</p>
+											<p className="font-medium text-gray-900">{selectedAparatur.nip}</p>
+										</div>
+									</div>
+								)}
+
+								<div className="flex items-start gap-3">
+									<div className="h-8 w-8 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+										<Building className="h-4 w-4 text-gray-600" />
+									</div>
+									<div>
+										<p className="text-sm text-gray-500">Desa</p>
+										<p className="font-medium text-gray-900">{selectedAparatur.desa?.nama || selectedAparatur.nama_desa || '-'}</p>
+									</div>
+								</div>
+
+								<div className="flex items-start gap-3">
+									<div className="h-8 w-8 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+										<MapPin className="h-4 w-4 text-gray-600" />
+									</div>
+									<div>
+										<p className="text-sm text-gray-500">Kecamatan</p>
+										<p className="font-medium text-gray-900">{selectedAparatur.kecamatan?.nama || selectedAparatur.nama_kecamatan || '-'}</p>
+									</div>
+								</div>
+
+								{selectedAparatur.no_hp && (
+									<div className="flex items-start gap-3">
+										<div className="h-8 w-8 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+											<Phone className="h-4 w-4 text-gray-600" />
+										</div>
+										<div>
+											<p className="text-sm text-gray-500">No. HP</p>
+											<p className="font-medium text-gray-900">{selectedAparatur.no_hp}</p>
+										</div>
+									</div>
+								)}
+
+								{selectedAparatur.email && (
+									<div className="flex items-start gap-3">
+										<div className="h-8 w-8 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+											<Mail className="h-4 w-4 text-gray-600" />
+										</div>
+										<div>
+											<p className="text-sm text-gray-500">Email</p>
+											<p className="font-medium text-gray-900">{selectedAparatur.email}</p>
+										</div>
+									</div>
+								)}
+
+								{selectedAparatur.tanggal_mulai_menjabat && (
+									<div className="flex items-start gap-3">
+										<div className="h-8 w-8 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+											<Calendar className="h-4 w-4 text-gray-600" />
+										</div>
+										<div>
+											<p className="text-sm text-gray-500">Tanggal Mulai Menjabat</p>
+											<p className="font-medium text-gray-900">
+												{new Date(selectedAparatur.tanggal_mulai_menjabat).toLocaleDateString('id-ID', {
+													day: 'numeric',
+													month: 'long',
+													year: 'numeric'
+												})}
+											</p>
+										</div>
+									</div>
+								)}
+							</div>
+						</div>
+						<div className="p-6 border-t border-gray-200">
+							<button
+								onClick={() => setShowDetail(false)}
+								className="w-full px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+							>
+								Tutup
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
+		</div>
+	);
+};
+
+export default AparaturDesaPage;

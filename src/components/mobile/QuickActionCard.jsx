@@ -32,13 +32,13 @@ const QuickActionCard = ({
   return (
     <div 
       onClick={onClick}
-      className="relative flex flex-col items-center justify-center cursor-pointer group active:scale-95 transition-all duration-200"
+      className="relative flex flex-col items-center cursor-pointer group active:scale-95 transition-all duration-200"
     >
       {/* Icon Container with Modern Rounded Design */}
       <div className={`
-        relative w-16 h-16 sm:w-20 sm:h-20
+        relative w-12 h-12 sm:w-14 sm:h-14 lg:w-20 lg:h-20 flex-shrink-0
         bg-gradient-to-br ${selectedGradient} 
-        rounded-[28px] sm:rounded-[32px]
+        rounded-[20px] sm:rounded-[24px] lg:rounded-[32px]
         shadow-lg shadow-${color}-500/30
         group-hover:shadow-xl group-hover:shadow-${color}-500/40
         transition-all duration-300
@@ -49,20 +49,22 @@ const QuickActionCard = ({
         {/* Subtle Shine Effect */}
         <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/20 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
         
-        {Icon && <Icon className="w-8 h-8 sm:w-10 sm:h-10 text-white relative z-10 drop-shadow-md" />}
+        {Icon && <Icon className="w-5 h-5 sm:w-6 sm:h-6 lg:w-10 lg:h-10 text-white relative z-10 drop-shadow-md" />}
         
         {/* Badge */}
         {badge && (
-          <div className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[22px] h-[22px] flex items-center justify-center px-1.5 shadow-lg ring-2 ring-white">
+          <div className="absolute -top-1 -right-1 lg:-top-2 lg:-right-2 bg-red-500 text-white text-[9px] lg:text-[10px] font-bold rounded-full min-w-[18px] h-[18px] lg:min-w-[22px] lg:h-[22px] flex items-center justify-center px-1 lg:px-1.5 shadow-lg ring-2 ring-white">
             {badge > 99 ? '99+' : badge}
           </div>
         )}
       </div>
       
-      {/* Label with Better Spacing */}
-      <p className="mt-3 text-xs sm:text-sm text-gray-800 font-semibold text-center max-w-[85px] leading-snug">
-        {label}
-      </p>
+      {/* Label - fixed height container for alignment */}
+      <div className="mt-2 lg:mt-3 h-8 flex items-start justify-center">
+        <p className="text-[10px] sm:text-xs lg:text-sm text-slate-700 lg:text-slate-800 font-semibold text-center max-w-[70px] lg:max-w-[85px] leading-tight lg:leading-snug">
+          {label}
+        </p>
+      </div>
     </div>
   );
 };

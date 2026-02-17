@@ -94,18 +94,11 @@ const LoginPage = () => {
 				navigate("/kecamatan/dashboard");
 			} else if (newUser.role === "dinas_terkait" || newUser.role === "verifikator_dinas") {
 				navigate("/dinas/dashboard");
-			} else if (newUser.role === "pegawai") {
-				navigate("/pegawai/dashboard");
-			} else if (newUser.role === "ketua_tim") {
-				navigate("/ketua-tim/dashboard");
-			} else if (newUser.role === "kepala_dinas") {
-				navigate("/kepala-dinas/dashboard");
-			} else if (newUser.role === "kepala_bidang") {
-				navigate("/kepala-bidang/dashboard");
-			} else if (newUser.role === "sekretaris_dinas") {
-				navigate("/sekretaris-dinas/dashboard");
 			} else if (newUser.role === "superadmin") {
 				navigate("/superadmin/dashboard");
+			} else if (["pegawai", "ketua_tim", "kepala_bidang", "kepala_dinas", "sekretaris_dinas"].includes(newUser.role)) {
+				// All DPMD internal staff go to unified /dpmd route
+				navigate("/dpmd/dashboard");
 			} else {
 				navigate("/dashboard");
 			}

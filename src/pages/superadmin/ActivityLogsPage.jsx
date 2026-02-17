@@ -60,79 +60,39 @@ const ActivityLogsPage = () => {
 		try {
 			setLoading(true);
 			
-			// Fetch logs from all bidangs if no specific bidang selected
-			const promises = [];
+			// Use new unified API endpoint for superadmin
+			const params = {
+				limit: filters.limit,
+				module: filters.module || undefined,
+				action: filters.action || undefined,
+				bidang_id: filters.bidang_id || undefined,
+				search: filters.search || undefined
+			};
 			
-			if (filters.bidang_id) {
-				// Fetch from specific bidang
-				promises.push(
-					api.get(`/bidang/${filters.bidang_id}/activity-logs`, {
-						params: {
-							module: filters.module || undefined,
-							action: filters.action || undefined,
-							limit: filters.limit
-						}
-					})
-				);
-			} else {
-				// Fetch from all bidangs
-				const bidangIds = [2, 3, 4, 5, 6]; // Sekretariat, SPKED, KKD, PMD, Pemdes
-				bidangIds.forEach(id => {
-					promises.push(
-						api.get(`/bidang/${id}/activity-logs`, {
-							params: {
-								module: filters.module || undefined,
-								action: filters.action || undefined,
-								limit: 20 // Limit per bidang when fetching all
-							}
-						}).catch(err => {
-							console.warn(`Failed to fetch logs from bidang ${id}:`, err);
-							return { data: { success: true, data: [] } };
-						})
-					);
+			// Remove undefined params
+			Object.keys(params).forEach(key => 
+				params[key] === undefined && delete params[key]
+			);
+			
+			const response = await api.get('/activity-logs', { params });
+			
+			if (response.data.success && response.data.data) {
+				const allLogs = response.data.data;
+				setLogs(allLogs);
+				
+				// Calculate stats
+				const now = new Date();
+				const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+				const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+				const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+				setStats({
+					total: allLogs.length,
+					today: allLogs.filter(log => new Date(log.createdAt) >= today).length,
+					thisWeek: allLogs.filter(log => new Date(log.createdAt) >= weekAgo).length,
+					thisMonth: allLogs.filter(log => new Date(log.createdAt) >= monthStart).length
 				});
 			}
-
-			const responses = await Promise.all(promises);
-			
-			// Combine and sort logs from all bidangs
-			let allLogs = [];
-			responses.forEach(response => {
-				if (response.data.success && response.data.data) {
-					allLogs = [...allLogs, ...response.data.data];
-				}
-			});
-
-			// Sort by date (newest first)
-			allLogs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-			// Apply search filter if exists
-			if (filters.search) {
-				const searchLower = filters.search.toLowerCase();
-				allLogs = allLogs.filter(log => 
-					log.description?.toLowerCase().includes(searchLower) ||
-					log.userName?.toLowerCase().includes(searchLower) ||
-					log.entityName?.toLowerCase().includes(searchLower)
-				);
-			}
-
-			// Limit total results
-			allLogs = allLogs.slice(0, filters.limit);
-
-			setLogs(allLogs);
-			
-			// Calculate stats
-			const now = new Date();
-			const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-			const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-			const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-
-			setStats({
-				total: allLogs.length,
-				today: allLogs.filter(log => new Date(log.createdAt) >= today).length,
-				thisWeek: allLogs.filter(log => new Date(log.createdAt) >= weekAgo).length,
-				thisMonth: allLogs.filter(log => new Date(log.createdAt) >= monthStart).length
-			});
 
 		} catch (error) {
 			console.error('Error fetching logs:', error);
@@ -300,6 +260,7 @@ const ActivityLogsPage = () => {
 								className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
 							>
 								<option value="">Semua Bidang</option>
+								<option value="null">Kelembagaan (Non-Bidang)</option>
 								{bidangList.map(bidang => (
 									<option key={bidang.id} value={bidang.id}>
 										{bidang.nama}
@@ -347,6 +308,8 @@ const ActivityLogsPage = () => {
 								<option value="reject">Reject</option>
 								<option value="upload">Upload</option>
 								<option value="download">Download</option>
+								<option value="toggle_status">Toggle Status</option>
+								<option value="verify">Verify</option>
 							</select>
 						</div>
 

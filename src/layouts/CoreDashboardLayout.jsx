@@ -12,7 +12,9 @@ import {
   ChevronLeft,
   ChevronDown,
   DollarSign,
-  Landmark
+  Landmark,
+  ArrowLeft,
+  Home
 } from 'lucide-react';
 import AnimatedIcon from '../components/AnimatedIcon';
 
@@ -23,6 +25,21 @@ const CoreDashboardLayout = () => {
   const [hoveredItem, setHoveredItem] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+
+  // Determine base path based on user role
+  const getBasePath = () => {
+    const rolePathMap = {
+      'kepala_dinas': '/dpmd',
+      'sekretaris_dinas': '/dpmd',
+      'kepala_bidang': '/dpmd',
+      'ketua_tim': '/dpmd',
+      'pegawai': '/dpmd'
+    };
+    return rolePathMap[user.role] || '/dpmd';
+  };
+
+  const basePath = getBasePath();
 
   // Handle resize with debounce
   useEffect(() => {
@@ -183,6 +200,24 @@ const CoreDashboardLayout = () => {
               <ChevronLeft className="w-5 h-5 text-blue-600 group-hover:scale-110 transition-transform" />
             ) : (
               <Menu className="w-5 h-5 text-blue-600 group-hover:scale-110 transition-transform" />
+            )}
+          </button>
+        </div>
+
+        {/* Back to Dashboard Button */}
+        <div className="p-3 border-b border-gray-100">
+          <button
+            onClick={() => navigate(basePath)}
+            onMouseEnter={() => setHoveredItem('back')}
+            onMouseLeave={() => setHoveredItem(null)}
+            className="group relative flex items-center gap-3 px-3 py-2.5 w-full rounded-xl text-blue-600 hover:bg-gradient-to-r hover:from-blue-500 hover:to-indigo-600 hover:text-white transition-all duration-200 shadow-sm hover:shadow-md"
+            title={!sidebarOpen ? 'Home' : ''}
+          >
+            <div className={`relative ${sidebarOpen ? 'flex-shrink-0' : 'mx-auto'}`}>
+              <Home className="w-5 h-5" />
+            </div>
+            {sidebarOpen && (
+              <span className="relative font-semibold truncate text-sm">Home</span>
             )}
           </button>
         </div>

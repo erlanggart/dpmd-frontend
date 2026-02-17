@@ -14,7 +14,7 @@ import {
 import { getDetailActivityLogs, getListActivityLogs } from "../../services/activityLogs";
 import { useAuth } from "../../context/AuthContext";
 
-const AktivitasLog = forwardRef(({ lembagaType, lembagaId, mode = "detail", title }, ref) => {
+const AktivitasLog = forwardRef(({ lembagaType, lembagaId, mode = "detail", title, desaId }, ref) => {
 	const { user } = useAuth();
 	const [logs, setLogs] = useState([]);
 	const [loading, setLoading] = useState(true);
@@ -26,9 +26,11 @@ const AktivitasLog = forwardRef(({ lembagaType, lembagaId, mode = "detail", titl
 		try {
 			let response;
 			if (mode === "list") {
-				// List mode - tampilkan semua log untuk type ini di desa user
-				if (!user?.desa_id) return;
-				response = await getListActivityLogs(lembagaType, user.desa_id, 50);
+				// List mode - tampilkan semua log untuk type ini di desa
+				// Gunakan desaId dari prop (untuk admin) atau user.desa_id (untuk user desa)
+				const targetDesaId = desaId || user?.desa_id;
+				if (!targetDesaId) return;
+				response = await getListActivityLogs(lembagaType, targetDesaId, 50);
 			} else {
 				// Detail mode - tampilkan log spesifik lembaga
 				if (!lembagaId) return;
@@ -51,7 +53,7 @@ const AktivitasLog = forwardRef(({ lembagaType, lembagaId, mode = "detail", titl
 	useEffect(() => {
 		fetchLogs();
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [lembagaType, lembagaId, mode, user?.desa_id]);
+	}, [lembagaType, lembagaId, mode, desaId, user?.desa_id]);
 
 	const formatDate = (dateString) => {
 		const date = new Date(dateString);

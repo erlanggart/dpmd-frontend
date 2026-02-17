@@ -15,12 +15,12 @@ export const requestNotificationPermission = async () => {
     }
 
     const permission = await Notification.requestPermission();
-    console.log('Notification permission:', permission);
+    // console.log('Notification permission:', permission);
     
     if (permission === 'granted') {
       return true;
     } else if (permission === 'denied') {
-      console.warn('Notifikasi ditolak oleh user');
+      // console.warn('Notifikasi ditolak oleh user');
       return false;
     }
     
@@ -35,7 +35,7 @@ export const requestNotificationPermission = async () => {
 export const registerServiceWorker = async () => {
   try {
     if (!('serviceWorker' in navigator)) {
-      console.warn('Service Worker tidak didukung browser');
+      // console.warn('Service Worker tidak didukung browser');
       return null;
     }
 
@@ -59,25 +59,25 @@ let isSubscribing = false; // Flag to prevent duplicate subscriptions
 
 export const subscribeToPushNotifications = async () => {
   if (isSubscribing) {
-    console.log('[Push] ⏭️ Subscription already in progress, skipping...');
+    // console.log('[Push] ⏭️ Subscription already in progress, skipping...');
     return null;
   }
   
   try {
     isSubscribing = true;
-    console.log('[Push] Starting subscription process...');
+    // console.log('[Push] Starting subscription process...');
     const registration = await navigator.serviceWorker.ready;
-    console.log('[Push] Service Worker ready');
+    // console.log('[Push] Service Worker ready');
 
     // VAPID public key (harus sama dengan backend)
     const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY || 'BCEEJBfb05GAzlnpuzfPJszt054iCSOhqPVkmAMyTcUGZ8VrNluqShCQ2PVmwcMU0WuXJC35P5_XCXJNaQczX-U';
-    console.log('[Push] VAPID Public Key:', vapidPublicKey.substring(0, 30) + '...');
+    // console.log('[Push] VAPID Public Key:', vapidPublicKey.substring(0, 30) + '...');
 
     // Check if already subscribed
     let subscription = await registration.pushManager.getSubscription();
 
     if (subscription) {
-      console.log('[Push] Found existing subscription');
+      // console.log('[Push] Found existing subscription');
       
       // Check if subscription uses the same VAPID key
       const currentKey = subscription.options?.applicationServerKey;
@@ -89,18 +89,18 @@ export const subscribeToPushNotifications = async () => {
         const currentKeyStr = btoa(String.fromCharCode(...new Uint8Array(currentKey)));
         const newKeyStr = btoa(String.fromCharCode(...new Uint8Array(newKey)));
         if (currentKeyStr !== newKeyStr) {
-          console.warn('[Push] ⚠️ VAPID key mismatch detected!');
+          // console.warn('[Push] ⚠️ VAPID key mismatch detected!');
           needsResubscribe = true;
         }
       }
       
       if (needsResubscribe) {
-        console.log('[Push] 🔄 Unsubscribing from old subscription...');
+        // console.log('[Push] 🔄 Unsubscribing from old subscription...');
         await subscription.unsubscribe();
-        console.log('[Push] ✅ Unsubscribed from old subscription');
+        // console.log('[Push] ✅ Unsubscribed from old subscription');
         subscription = null;
       } else {
-        console.log('[Push] ✅ Subscription valid, updating server...');
+        // console.log('[Push] ✅ Subscription valid, updating server...');
         // Still send to server in case it's not in DB
         try {
           await sendSubscriptionToServer(subscription);
@@ -115,17 +115,17 @@ export const subscribeToPushNotifications = async () => {
     const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
 
     // Subscribe
-    console.log('[Push] Requesting push subscription from browser...');
+    // console.log('[Push] Requesting push subscription from browser...');
     subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: convertedVapidKey
     });
 
-    console.log('[Push] ✅ Push subscription created!');
+    // console.log('[Push] ✅ Push subscription created!');
 
     // Send subscription to server
     await sendSubscriptionToServer(subscription);
-    console.log('[Push] ✅ Subscription sent to server successfully!');
+    // console.log('[Push] ✅ Subscription sent to server successfully!');
 
     return subscription;
   } catch (error) {
@@ -144,7 +144,7 @@ export const unsubscribeFromPushNotifications = async () => {
 
     if (subscription) {
       await subscription.unsubscribe();
-      console.log('Unsubscribed from push notifications');
+      // console.log('Unsubscribed from push notifications');
       
       // Remove from server
       await removeSubscriptionFromServer(subscription);
@@ -211,7 +211,7 @@ function urlBase64ToUint8Array(base64String) {
 export const showLocalNotification = async (title, options = {}) => {
   try {
     if (!('Notification' in window)) {
-      console.warn('Browser tidak support notifikasi');
+      // console.warn('Browser tidak support notifikasi');
       return;
     }
 
@@ -236,7 +236,7 @@ export const showLocalNotification = async (title, options = {}) => {
         ]
       });
 
-      console.log('Local notification shown');
+      // console.log('Local notification shown');
     }
   } catch (error) {
     // Error showing local notification
@@ -259,30 +259,30 @@ export const isPushNotificationSupported = () => {
 // Initialize PWA notifications
 export const initializePWANotifications = async () => {
   try {
-    console.log('Initializing PWA notifications...');
+    // console.log('Initializing PWA notifications...');
 
     // Register service worker
     const registration = await registerServiceWorker();
     if (!registration) {
-      console.warn('Service Worker registration failed');
+      // console.warn('Service Worker registration failed');
       return false;
     }
 
     // Request notification permission
     const permissionGranted = await requestNotificationPermission();
     if (!permissionGranted) {
-      console.warn('Notification permission not granted');
+      // console.warn('Notification permission not granted');
       return false;
     }
 
     // Subscribe to push notifications
     const subscription = await subscribeToPushNotifications();
     if (!subscription) {
-      console.warn('Push notification subscription failed');
+      // console.warn('Push notification subscription failed');
       return false;
     }
 
-    console.log('PWA notifications initialized successfully');
+    // console.log('PWA notifications initialized successfully');
     return true;
   } catch (error) {
     // Error initializing PWA notifications
