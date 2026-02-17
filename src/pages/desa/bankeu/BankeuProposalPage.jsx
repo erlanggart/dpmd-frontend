@@ -987,7 +987,8 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
   const getTotalExistingAnggaran = (excludeProposalId = null) => {
     return proposals.reduce((total, p) => {
       if (excludeProposalId && p.id === excludeProposalId) return total;
-      const val = parseInt(String(p.anggaran_usulan || 0).replace(/\D/g, ''), 10) || 0;
+      // Gunakan Number() karena anggaran_usulan dari DB bisa berupa Decimal string "692485000.00"
+      const val = Math.round(Number(p.anggaran_usulan) || 0);
       return total + val;
     }, 0);
   };
