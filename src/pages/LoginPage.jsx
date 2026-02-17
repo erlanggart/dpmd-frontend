@@ -20,9 +20,13 @@ const LoginPage = () => {
 	const { login } = useAuth();
 	const [notificationPermission, setNotificationPermission] = useState('default');
 	const [checkingNotification, setCheckingNotification] = useState(false);
+	const [isPWA, setIsPWA] = useState(false);
 
-	// Auto check notification permission on mount
+	// Detect PWA standalone mode & check notification permission on mount
 	useEffect(() => {
+		const standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+		setIsPWA(standalone);
+
 		if ('Notification' in window) {
 			setNotificationPermission(Notification.permission);
 		}
@@ -71,6 +75,12 @@ const LoginPage = () => {
 		// Update notification permission state
 		if ('Notification' in window) {
 			setNotificationPermission(Notification.permission);
+		}
+
+		// Block login in PWA mode if notifications not granted
+		if (isPWA && Notification.permission !== 'granted') {
+			setError('Anda harus mengizinkan notifikasi terlebih dahulu untuk login melalui aplikasi.');
+			return;
 		}
 
 		setLoading(true);
@@ -137,26 +147,28 @@ const LoginPage = () => {
 					<h2 className="text-3xl font-bold text-gray-800">Selamat Datang!</h2>
 					<p className="mt-2 text-gray-600">Silakan masuk untuk melanjutkan.</p>
 
-					{/* Notification Permission */}
+					{/* Notification Permission - Wajib di PWA, opsional di browser */}
 					{notificationPermission !== 'granted' && (
-						<div className="mt-6 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 p-4">
+						<div className={`mt-6 rounded-xl p-4 border ${isPWA ? 'bg-gradient-to-br from-amber-50 to-orange-50 border-amber-300' : 'bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200'}`}>
 							<div className="flex items-center gap-3">
-								<div className="p-2 bg-blue-100 rounded-lg flex-shrink-0">
-									<FiBell className="w-5 h-5 text-blue-600" />
+								<div className={`p-2 rounded-lg flex-shrink-0 ${isPWA ? 'bg-amber-100' : 'bg-blue-100'}`}>
+									<FiBell className={`w-5 h-5 ${isPWA ? 'text-amber-600' : 'text-blue-600'}`} />
 								</div>
 								<div className="flex-1">
 									<p className="text-sm font-semibold text-gray-800">
-										Aktifkan Notifikasi
+										{isPWA ? '⚠️ Notifikasi Wajib Diizinkan' : 'Aktifkan Notifikasi'}
 									</p>
 									<p className="text-xs text-gray-600">
-										Untuk menerima update disposisi real-time
+										{isPWA
+											? 'Anda harus mengizinkan notifikasi untuk login di aplikasi'
+											: 'Untuk menerima update disposisi real-time'}
 									</p>
 								</div>
 								<button
 									type="button"
 									onClick={handleRequestNotification}
 									disabled={checkingNotification}
-									className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium text-sm hover:bg-blue-700 transition-all disabled:opacity-70 disabled:cursor-not-allowed flex-shrink-0"
+									className={`flex items-center gap-1.5 px-4 py-2 text-white rounded-lg font-medium text-sm transition-all disabled:opacity-70 disabled:cursor-not-allowed flex-shrink-0 ${isPWA ? 'bg-amber-600 hover:bg-amber-700' : 'bg-blue-600 hover:bg-blue-700'}`}
 								>
 									{checkingNotification ? (
 										<FiLoader className="animate-spin w-4 h-4" />
@@ -168,6 +180,12 @@ const LoginPage = () => {
 									)}
 								</button>
 							</div>
+							{isPWA && notificationPermission === 'denied' && (
+								<div className="mt-3 p-3 bg-red-50 rounded-lg border border-red-200">
+									<p className="text-xs text-red-700 font-medium">Notifikasi diblokir oleh browser.</p>
+									<p className="text-xs text-red-600 mt-1">Buka pengaturan browser/aplikasi → Izin situs → Notifikasi → Izinkan, lalu refresh halaman ini.</p>
+								</div>
+							)}
 						</div>
 					)}
 
@@ -239,10 +257,10 @@ const LoginPage = () => {
 						</div>
 						<button
 							type="submit"
-							disabled={loading}
+							disabled={loading || (isPWA && notificationPermission !== 'granted')}
 							className="flex w-full items-center justify-center rounded-lg bg-[rgb(var(--color-primary))] py-3 font-semibold text-white transition-colors hover:bg-[rgb(var(--color-primary))]/90 disabled:cursor-not-allowed disabled:bg-gray-400 disabled:opacity-60 shadow-xl"
 						>
-							{loading ? <FiLoader className="animate-spin" /> : "Sign In"}
+							{loading ? <FiLoader className="animate-spin" /> : (isPWA && notificationPermission !== 'granted') ? "Izinkan Notifikasi Dulu" : "Sign In"}
 						</button>
 						{error && (
 							<div className="rounded-lg bg-red-50 border border-red-200 p-4 animate-shake">
