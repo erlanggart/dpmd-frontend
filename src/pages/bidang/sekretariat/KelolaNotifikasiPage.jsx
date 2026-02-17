@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-	Bell, Send, History, Users, Clock, CheckCircle, AlertTriangle, 
-	Play, Search, X, ChevronDown, ChevronUp, RefreshCw, 
-	UserCheck, Radio, Filter, FileText, Zap, ChevronLeft, ChevronRight
+	Bell, Send, Users, Clock, CheckCircle, AlertTriangle, 
+	Search, X, ChevronDown, ChevronUp, RefreshCw, 
+	UserCheck, Radio, FileText, Zap
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../../api';
@@ -101,12 +101,6 @@ const KelolaNotifikasiPage = () => {
 	const [userListLoading, setUserListLoading] = useState(false);
 	const [showUserPicker, setShowUserPicker] = useState(false);
 
-	// History state
-	const [history, setHistory] = useState([]);
-	const [historyLoading, setHistoryLoading] = useState(false);
-	const [historyPage, setHistoryPage] = useState(1);
-	const [historyPagination, setHistoryPagination] = useState({ total: 0, totalPages: 0 });
-
 	// Template dropdown
 	const [showTemplates, setShowTemplates] = useState(false);
 
@@ -116,11 +110,6 @@ const KelolaNotifikasiPage = () => {
 	useEffect(() => {
 		loadStatistics();
 	}, []);
-
-	// Load history when tab active
-	useEffect(() => {
-		if (activeTab === 'history') loadHistory();
-	}, [activeTab, historyPage]);
 
 	// Load user list when user mode active
 	useEffect(() => {
@@ -133,21 +122,6 @@ const KelolaNotifikasiPage = () => {
 			if (res.data.success) setStatistics(res.data.data);
 		} catch (err) {
 			console.error('Error loading statistics:', err);
-		}
-	};
-
-	const loadHistory = async () => {
-		setHistoryLoading(true);
-		try {
-			const res = await api.get(`/push-notification/history?page=${historyPage}&limit=15`);
-			if (res.data.success) {
-				setHistory(res.data.data);
-				setHistoryPagination(res.data.pagination || { total: 0, totalPages: 0 });
-			}
-		} catch (err) {
-			console.error('Error loading history:', err);
-		} finally {
-			setHistoryLoading(false);
 		}
 	};
 
@@ -316,21 +290,9 @@ const KelolaNotifikasiPage = () => {
 		</motion.div>
 	);
 
-	// Target type badge
-	const TargetBadge = ({ type, value }) => {
-		const config = {
-			broadcast: { label: 'Broadcast', bg: 'bg-purple-100 text-purple-700' },
-			roles: { label: Array.isArray(value) ? value.map(r => ROLE_LABELS[r] || r).join(', ') : 'Roles', bg: 'bg-blue-100 text-blue-700' },
-			users: { label: `${Array.isArray(value) ? value.length : 0} user`, bg: 'bg-green-100 text-green-700' }
-		};
-		const c = config[type] || config.broadcast;
-		return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${c.bg}`}>{c.label}</span>;
-	};
-
 	const tabs = [
 		{ id: 'send', label: 'Kirim Notifikasi', icon: Send },
-		{ id: 'test', label: 'Test Notifikasi', icon: Zap },
-		{ id: 'history', label: 'Riwayat', icon: History }
+		{ id: 'test', label: 'Test Notifikasi', icon: Zap }
 	];
 
 	return (
@@ -348,7 +310,7 @@ const KelolaNotifikasiPage = () => {
 						<p className="text-sm text-gray-500 ml-12">Kelola & kirim notifikasi push ke pengguna DPMD</p>
 					</div>
 					<button
-						onClick={() => { loadStatistics(); if (activeTab === 'history') loadHistory(); }}
+						onClick={() => { loadStatistics(); }}
 						className="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all self-start"
 					>
 						<RefreshCw className="w-4 h-4" />
@@ -357,12 +319,11 @@ const KelolaNotifikasiPage = () => {
 				</div>
 
 				{/* Statistics */}
-				<div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-					<StatCard icon={Send} label="Total Terkirim" value={statistics.totalSent} color="text-blue-600" delay={0} />
-					<StatCard icon={Users} label="Subscriber" value={statistics.totalSubscribers} color="text-green-600" delay={0.05} />
-					<StatCard icon={UserCheck} label="User Aktif" value={statistics.uniqueSubscribedUsers || 0} color="text-teal-600" delay={0.1} />
-					<StatCard icon={Clock} label="Jadwal Hari Ini" value={statistics.todaySchedules} color="text-purple-600" delay={0.15} />
-					<StatCard icon={Clock} label="Jadwal Besok" value={statistics.tomorrowSchedules} color="text-orange-600" delay={0.2} />
+				<div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+					<StatCard icon={Users} label="Subscriber" value={statistics.totalSubscribers} color="text-green-600" delay={0} />
+					<StatCard icon={UserCheck} label="User Aktif" value={statistics.uniqueSubscribedUsers || 0} color="text-teal-600" delay={0.05} />
+					<StatCard icon={Clock} label="Jadwal Hari Ini" value={statistics.todaySchedules} color="text-purple-600" delay={0.1} />
+					<StatCard icon={Clock} label="Jadwal Besok" value={statistics.tomorrowSchedules} color="text-orange-600" delay={0.15} />
 				</div>
 
 				{/* Tabs */}
@@ -753,86 +714,6 @@ const KelolaNotifikasiPage = () => {
 							</div>
 						)}
 
-						{/* ===== TAB: HISTORY ===== */}
-						{activeTab === 'history' && (
-							<div>
-								{historyLoading ? (
-									<div className="text-center py-12">
-										<div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-600 border-t-transparent mx-auto" />
-										<p className="text-gray-500 text-sm mt-3">Memuat riwayat...</p>
-									</div>
-								) : history.length === 0 ? (
-									<div className="text-center py-12">
-										<History className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-										<p className="text-gray-500 text-sm">Belum ada riwayat notifikasi</p>
-										<p className="text-gray-400 text-xs mt-1">Riwayat akan muncul setelah Anda mengirim notifikasi</p>
-									</div>
-								) : (
-									<>
-										<div className="space-y-3">
-											{history.map((item, idx) => (
-												<motion.div
-													key={item.id || idx}
-													initial={{ opacity: 0, y: 10 }}
-													animate={{ opacity: 1, y: 0 }}
-													transition={{ delay: idx * 0.03 }}
-													className="border border-gray-200 rounded-xl p-4 hover:shadow-sm transition-shadow"
-												>
-													<div className="flex items-start justify-between gap-3">
-														<div className="flex-1 min-w-0">
-															<h4 className="text-sm font-semibold text-gray-800 truncate">{item.title}</h4>
-															<p className="text-xs text-gray-500 mt-1 line-clamp-2">{item.body}</p>
-															<div className="flex items-center flex-wrap gap-3 mt-2">
-																<TargetBadge type={item.targetType} value={item.targetValue} />
-																<span className="text-xs text-gray-400 flex items-center gap-1">
-																	<Users className="w-3 h-3" />
-																	{item.sentTo} terkirim{item.failedCount > 0 ? `, ${item.failedCount} gagal` : ''}
-																</span>
-																<span className="text-xs text-gray-400 flex items-center gap-1">
-																	<Clock className="w-3 h-3" />
-																	{new Date(item.createdAt).toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-																</span>
-																<span className="text-xs text-gray-400">oleh {item.sender}</span>
-															</div>
-														</div>
-														<div className={`px-2.5 py-1 rounded-full text-xs font-medium flex-shrink-0 ${
-															item.success ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-														}`}>
-															{item.success ? 'Berhasil' : 'Gagal'}
-														</div>
-													</div>
-												</motion.div>
-											))}
-										</div>
-
-										{/* Pagination */}
-										{historyPagination.totalPages > 1 && (
-											<div className="flex items-center justify-between mt-5 pt-4 border-t border-gray-100">
-												<p className="text-xs text-gray-500">
-													Hal. {historyPagination.page} dari {historyPagination.totalPages} ({historyPagination.total} total)
-												</p>
-												<div className="flex gap-2">
-													<button
-														onClick={() => setHistoryPage(p => Math.max(1, p - 1))}
-														disabled={historyPage === 1}
-														className="p-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 transition-all"
-													>
-														<ChevronLeft className="w-4 h-4" />
-													</button>
-													<button
-														onClick={() => setHistoryPage(p => Math.min(historyPagination.totalPages, p + 1))}
-														disabled={historyPage >= historyPagination.totalPages}
-														className="p-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 transition-all"
-													>
-														<ChevronRight className="w-4 h-4" />
-													</button>
-												</div>
-											</div>
-										)}
-									</>
-								)}
-							</div>
-						)}
 					</div>
 				</div>
 			</div>
