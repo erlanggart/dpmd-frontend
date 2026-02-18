@@ -101,17 +101,9 @@ const LandingPage = () => {
 						onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
 						aria-label="Toggle menu"
 					>
-						<AnimatePresence mode="wait">
-							{isMobileMenuOpen ? (
-								<motion.div key="close" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }} transition={{ duration: 0.2 }}>
-									<FiX className="w-5 h-5" />
-								</motion.div>
-							) : (
-								<motion.div key="menu" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }} transition={{ duration: 0.2 }}>
-									<FiMenu className="w-5 h-5" />
-								</motion.div>
-							)}
-						</AnimatePresence>
+						<span className="transition-transform duration-300" style={{ transform: isMobileMenuOpen ? 'rotate(90deg)' : 'rotate(0deg)' }}>
+							{isMobileMenuOpen ? <FiX className="w-5 h-5" /> : <FiMenu className="w-5 h-5" />}
+						</span>
 					</button>
 				</div>
 

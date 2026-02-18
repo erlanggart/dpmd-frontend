@@ -221,36 +221,22 @@ const DPMDStaffLayout = () => {
 		};
 	}, []);
 
-	// Load notifications from backend with read status from localStorage
-	React.useEffect(() => {
-		const fetchNotifications = async () => {
-			try {
-				const response = await api.get('/push-notification/notifications?limit=10');
-				if (response.data.success) {
-					const notifs = response.data.data || [];
-					
-					// Get read notification IDs from localStorage
-					const readNotifIds = JSON.parse(localStorage.getItem('readNotifications') || '[]');
-					
-					// Mark notifications as read if ID exists in localStorage
-					const notificationsWithReadStatus = notifs.map(notif => ({
-						...notif,
-						read: readNotifIds.includes(notif.id.toString())
-					}));
-					
-					setNotifications(notificationsWithReadStatus);
-					
-					// Count unread
-					const unread = notificationsWithReadStatus.filter(n => !n.read).length;
-					setUnreadCount(unread);
-				}
-			} catch (error) {
-				console.error('Error fetching notifications:', error);
-				setNotifications([]);
-				setUnreadCount(0);
+	// Load notifications from backend
+	const fetchNotifications = React.useCallback(async () => {
+		try {
+			const response = await api.get('/push-notification/notifications?limit=20');
+			if (response.data.success) {
+				setNotifications(response.data.data || []);
+				setUnreadCount(response.data.unreadCount || 0);
 			}
-		};
+		} catch (error) {
+			console.error('Error fetching notifications:', error);
+			setNotifications([]);
+			setUnreadCount(0);
+		}
+	}, []);
 
+	React.useEffect(() => {
 		fetchNotifications();
 		const interval = setInterval(fetchNotifications, 30000);
 		
@@ -261,7 +247,7 @@ const DPMDStaffLayout = () => {
 			clearInterval(interval);
 			window.removeEventListener('newNotification', handleNewNotification);
 		};
-	}, []);
+	}, [fetchNotifications]);
 
 	// Initialize push notifications
 	React.useEffect(() => {
@@ -352,37 +338,38 @@ const DPMDStaffLayout = () => {
 		}
 	};
 
-	const handleNotificationClick = () => {
+	const handleNotificationClick = async () => {
 		setShowNotifications(!showNotifications);
-		if (!showNotifications) {
-			// Mark all current notifications as read
-			const notifIds = notifications.map(n => n.id.toString());
-			const readNotifIds = JSON.parse(localStorage.getItem('readNotifications') || '[]');
-			
-			// Merge with existing read IDs (keep unique)
-			const updatedReadIds = [...new Set([...readNotifIds, ...notifIds])];
-			
-			// Keep only last 100 read notification IDs to avoid localStorage bloat
-			const limitedReadIds = updatedReadIds.slice(-100);
-			localStorage.setItem('readNotifications', JSON.stringify(limitedReadIds));
-			
-			// Update UI
-			setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-			setUnreadCount(0);
+		if (!showNotifications && unreadCount > 0) {
+			// Mark all notifications as read via API
+			try {
+				await api.post('/push-notification/notifications/mark-read', { all: true });
+				setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+				setUnreadCount(0);
+			} catch (error) {
+				console.error('Error marking notifications as read:', error);
+			}
 		}
 	};
 
-	const handleNotificationItemClick = (notification) => {
-		// Mark this notification as read
-		const readNotifIds = JSON.parse(localStorage.getItem('readNotifications') || '[]');
-		if (!readNotifIds.includes(notification.id.toString())) {
-			readNotifIds.push(notification.id.toString());
-			const limitedReadIds = readNotifIds.slice(-100);
-			localStorage.setItem('readNotifications', JSON.stringify(limitedReadIds));
+	const handleNotificationItemClick = async (notification) => {
+		// Mark this notification as read via API
+		if (!notification.read) {
+			try {
+				await api.post('/push-notification/notifications/mark-read', { ids: [notification.id] });
+				setNotifications(prev => prev.map(n => 
+					n.id === notification.id ? { ...n, read: true } : n
+				));
+				setUnreadCount(prev => Math.max(0, prev - 1));
+			} catch (error) {
+				console.error('Error marking notification as read:', error);
+			}
 		}
 		
-		// Navigate based on notification type
-		if (notification.type === 'disposisi') {
+		// Navigate based on notification type/data
+		if (notification.data?.url) {
+			navigate(notification.data.url);
+		} else if (notification.type === 'disposisi') {
 			navigate(`${config.basePath}/disposisi`);
 		} else if (notification.type === 'kegiatan') {
 			navigate('/core-dashboard/kegiatan');

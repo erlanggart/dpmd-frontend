@@ -3,6 +3,9 @@ import React, { createContext, useContext, useState, useCallback } from 'react';
 
 const DataCacheContext = createContext();
 
+// Default TTL: 5 menit (dalam ms)
+const DEFAULT_TTL = 5 * 60 * 1000;
+
 export const useDataCache = () => {
   const context = useContext(DataCacheContext);
   if (!context) {
@@ -12,18 +15,13 @@ export const useDataCache = () => {
 };
 
 export const DataCacheProvider = ({ children }) => {
-  // Cache untuk menyimpan data dari setiap halaman dashboard
   const [cache, setCache] = useState({});
-  
-  // Loading states untuk setiap halaman
   const [loadingStates, setLoadingStates] = useState({});
 
-  // Fungsi untuk mendapatkan data dari cache
   const getCachedData = useCallback((key) => {
     return cache[key];
   }, [cache]);
 
-  // Fungsi untuk menyimpan data ke cache
   const setCachedData = useCallback((key, data) => {
     setCache(prev => ({
       ...prev,
@@ -34,12 +32,22 @@ export const DataCacheProvider = ({ children }) => {
     }));
   }, []);
 
-  // Fungsi untuk mengecek apakah data sudah ada di cache
-  const isCached = useCallback((key) => {
-    return !!cache[key];
+  // Cek cache dengan TTL — data expired otomatis dihapus
+  const isCached = useCallback((key, ttl = DEFAULT_TTL) => {
+    const entry = cache[key];
+    if (!entry) return false;
+    if (Date.now() - entry.timestamp > ttl) {
+      // Expired — hapus dari cache
+      setCache(prev => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+      return false;
+    }
+    return true;
   }, [cache]);
 
-  // Fungsi untuk menghapus data dari cache (jika diperlukan refresh manual)
   const clearCache = useCallback((key) => {
     if (key) {
       setCache(prev => {
@@ -48,12 +56,10 @@ export const DataCacheProvider = ({ children }) => {
         return newCache;
       });
     } else {
-      // Clear all cache
       setCache({});
     }
   }, []);
 
-  // Fungsi untuk set loading state
   const setLoading = useCallback((key, isLoading) => {
     setLoadingStates(prev => ({
       ...prev,
@@ -61,7 +67,6 @@ export const DataCacheProvider = ({ children }) => {
     }));
   }, []);
 
-  // Fungsi untuk get loading state
   const isLoading = useCallback((key) => {
     return loadingStates[key] || false;
   }, [loadingStates]);

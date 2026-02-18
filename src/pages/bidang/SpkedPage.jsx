@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, Activity, TrendingUp, ArrowLeft, Clock, CheckCircle2, XCircle, FileText, BarChart3, Landmark, DollarSign, Zap, Info, ChevronRight, Menu, X } from 'lucide-react';
+import { Building2, Activity, TrendingUp, ArrowLeft, Clock, CheckCircle2, XCircle, FileText, BarChart3, Landmark, DollarSign, Zap, Info, ChevronRight, Menu, X, ShieldCheck, ArrowRight, BadgeCheck } from 'lucide-react';
 import api from '../../api';
 import toast from 'react-hot-toast';
 
@@ -690,72 +690,90 @@ const SpkedPage = () => {
 				)}
 
 				{activeTab === 'bankeu' && (
-					<div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl border border-gray-200/50 overflow-hidden">
+					<div className="relative overflow-hidden">
 						{!bankeuYear ? (
-							/* Year Selection Screen */
-							<div className="flex flex-col items-center justify-center py-20 px-6">
-								<div className="inline-flex h-20 w-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-3xl items-center justify-center mb-6 shadow-2xl shadow-blue-500/30">
-									<DollarSign className="h-10 w-10 text-white" />
-								</div>
-								<h2 className="text-2xl font-bold bg-gradient-to-r from-gray-800 via-blue-700 to-blue-600 bg-clip-text text-transparent mb-2">
-									Bantuan Keuangan Desa
-								</h2>
-								<p className="text-gray-500 mb-10 text-center max-w-md">
-									Pilih tahun anggaran terlebih dahulu untuk melihat data
-								</p>
+							/* ========== YEAR SELECTION SCREEN ========== */
+							<div className="py-16 px-4 flex flex-col items-center justify-center">
+								{/* Title */}
+								<h2 className="text-2xl font-bold text-gray-800 mb-1 tracking-tight">Bantuan Keuangan</h2>
+								<p className="text-sm text-gray-400 mb-10">Pilih tahun anggaran</p>
 
-								<div className="grid grid-cols-1 sm:grid-cols-3 gap-6 w-full max-w-4xl">
+								{/* Year Cards */}
+								<div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-3xl">
+									{/* TA 2025 */}
 									<button
 										onClick={() => setBankeuYear(2025)}
-										className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border-2 border-gray-200 hover:border-blue-400 p-8 transition-all duration-300 text-center overflow-hidden hover:-translate-y-1"
+										className="group relative bg-white rounded-2xl border border-gray-200 hover:border-blue-400 p-6 transition-all duration-300 text-left hover:shadow-xl hover:shadow-blue-500/10 hover:-translate-y-1"
 									>
-										<div className="absolute inset-0 bg-gradient-to-br from-blue-400/5 to-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-										<div className="relative">
-											<div className="h-16 w-16 mx-auto bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg shadow-blue-500/25">
-												<span className="text-2xl">📋</span>
+										<div className="flex items-center gap-4">
+											<div className="h-12 w-12 rounded-xl bg-blue-50 group-hover:bg-blue-100 flex items-center justify-center transition-colors">
+												<DollarSign className="h-6 w-6 text-blue-600" />
 											</div>
-											<h3 className="text-xl font-bold text-gray-800 mb-2">TA 2025</h3>
-											<p className="text-sm text-gray-500 leading-relaxed">Bantuan Keuangan<br/>Tahap 1 & Tahap 2</p>
+											<div className="flex-1 min-w-0">
+												<h3 className="text-xl font-bold text-gray-900">TA 2025</h3>
+												<p className="text-xs text-gray-400 mt-0.5">Penyaluran T1 & T2</p>
+											</div>
+											<ArrowRight className="h-5 w-5 text-gray-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all" />
 										</div>
 									</button>
 
+									{/* TA 2026 */}
 									<button
 										onClick={() => setBankeuYear(2026)}
-										className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border-2 border-gray-200 hover:border-green-400 p-8 transition-all duration-300 text-center overflow-hidden hover:-translate-y-1"
+										className="group relative bg-white rounded-2xl border border-gray-200 hover:border-emerald-400 p-6 transition-all duration-300 text-left hover:shadow-xl hover:shadow-emerald-500/10 hover:-translate-y-1"
 									>
-										<div className="absolute inset-0 bg-gradient-to-br from-green-400/5 to-emerald-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-										<div className="relative">
-											<div className="h-16 w-16 mx-auto bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg shadow-green-500/25">
-												<span className="text-2xl">📝</span>
+										<div className="flex items-center gap-4">
+											<div className="h-12 w-12 rounded-xl bg-emerald-50 group-hover:bg-emerald-100 flex items-center justify-center transition-colors">
+												<ShieldCheck className="h-6 w-6 text-emerald-600" />
 											</div>
-											<h3 className="text-xl font-bold text-gray-800 mb-2">TA 2026</h3>
-											<p className="text-sm text-gray-500 leading-relaxed">Verifikasi Proposal<br/>Bantuan Keuangan</p>
+											<div className="flex-1 min-w-0">
+												<h3 className="text-xl font-bold text-gray-900">TA 2026</h3>
+												<p className="text-xs text-gray-400 mt-0.5">Verifikasi Proposal</p>
+											</div>
+											<ArrowRight className="h-5 w-5 text-gray-300 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all" />
 										</div>
 									</button>
 
+									{/* TA 2027 */}
 									<button
 										onClick={() => setBankeuYear(2027)}
-										className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border-2 border-gray-200 hover:border-purple-400 p-8 transition-all duration-300 text-center overflow-hidden hover:-translate-y-1"
+										className="group relative bg-white rounded-2xl border border-gray-200 hover:border-violet-400 p-6 transition-all duration-300 text-left hover:shadow-xl hover:shadow-violet-500/10 hover:-translate-y-1"
 									>
-										<div className="absolute inset-0 bg-gradient-to-br from-purple-400/5 to-violet-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-										<div className="relative">
-											<div className="h-16 w-16 mx-auto bg-gradient-to-br from-purple-500 to-violet-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg shadow-purple-500/25">
-												<span className="text-2xl">🚀</span>
+										<div className="flex items-center gap-4">
+											<div className="h-12 w-12 rounded-xl bg-violet-50 group-hover:bg-violet-100 flex items-center justify-center transition-colors">
+												<BadgeCheck className="h-6 w-6 text-violet-600" />
 											</div>
-											<h3 className="text-xl font-bold text-gray-800 mb-2">TA 2027</h3>
-											<p className="text-sm text-gray-500 leading-relaxed">Verifikasi Proposal<br/>Bantuan Keuangan</p>
+											<div className="flex-1 min-w-0">
+												<h3 className="text-xl font-bold text-gray-900">TA 2027</h3>
+												<p className="text-xs text-gray-400 mt-0.5">Verifikasi Proposal</p>
+											</div>
+											<ArrowRight className="h-5 w-5 text-gray-300 group-hover:text-violet-500 group-hover:translate-x-1 transition-all" />
 										</div>
 									</button>
 								</div>
 							</div>
 						) : (
-							<Suspense fallback={<LoadingFallback />}>
-								{bankeuYear === 2025 ? (
-									<BankeuDashboard />
-								) : bankeuYear === 2026 || bankeuYear === 2027 ? (
-									<DpmdVerificationPage />
-								) : null}
-							</Suspense>
+							<div className="relative">
+								{/* Back Navigation */}
+								<div className="mb-5">
+									<button
+										onClick={() => setBankeuYear(null)}
+										className="group inline-flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-blue-600 transition-colors"
+									>
+										<ArrowLeft className="h-4 w-4 group-hover:-translate-x-0.5 transition-transform" />
+										Kembali ke pilihan tahun
+									</button>
+								</div>
+								<div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl border border-gray-200/50 overflow-hidden">
+									<Suspense fallback={<LoadingFallback />}>
+										{bankeuYear === 2025 ? (
+											<BankeuDashboard />
+										) : bankeuYear === 2026 || bankeuYear === 2027 ? (
+											<DpmdVerificationPage tahunAnggaran={bankeuYear} />
+										) : null}
+									</Suspense>
+								</div>
+							</div>
 						)}
 					</div>
 				)}

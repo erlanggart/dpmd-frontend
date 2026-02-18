@@ -278,6 +278,9 @@ const VerifikatorProfilePage = lazy(
 const DinasDashboardPage = lazy(
   () => import("./pages/dinas/DinasDashboardPage"),
 );
+const DinasChangePasswordPage = lazy(
+  () => import("./pages/dinas/DinasChangePasswordPage"),
+);
 const CoreDashboardLayout = lazy(() => import("./layouts/CoreDashboardLayout"));
 const WelcomeDashboard = lazy(
   () => import("./pages/core-dashboard/WelcomeDashboard"),
@@ -324,6 +327,10 @@ const StatistikBankeuDashboard = lazy(
 );
 const StatistikPerjadinDashboard = lazy(
   () => import("./pages/kepala-dinas/StatistikPerjadinDashboard"),
+);
+// KKD Unified Dashboard (ADD + BHPRD + DD)
+const StatistikKKDDashboard = lazy(
+  () => import("./pages/core-dashboard/StatistikKKDDashboard"),
 );
 const AddDashboard = lazy(() => import("./pages/bidang/kkd/add/AddDashboard"));
 const BhprdDashboard = lazy(() => import("./pages/bidang/kkd/BhprdDashboard"));
@@ -958,6 +965,7 @@ function App() {
                     element={<DinasVerifikatorPage />}
                   />
                   <Route path="profil" element={<VerifikatorProfilePage />} />
+                  <Route path="ganti-password" element={<DinasChangePasswordPage />} />
                 </Route>
 
                 {/* Rute Core Dashboard - DPMD Internal Only */}
@@ -1002,6 +1010,10 @@ function App() {
                   <Route
                     path="statistik-perjadin"
                     element={<StatistikPerjadinDashboard />}
+                  />
+                  <Route
+                    path="statistik-kkd"
+                    element={<StatistikKKDDashboard />}
                   />
                   <Route
                     path="statistik-add"

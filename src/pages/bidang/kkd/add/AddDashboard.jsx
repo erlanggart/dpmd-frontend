@@ -8,10 +8,14 @@ import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 import api from "../../../../api";
 import { isVpnUser } from "../../../../utils/vpnHelper";
+import { useDataCache } from '../../../../context/DataCacheContext';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
 
+const CACHE_KEY = 'add-dashboard';
+
 const AddDashboard = () => {
+  const { getCachedData, setCachedData, isCached } = useDataCache();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState([]);
   const [expandedKecamatan, setExpandedKecamatan] = useState({});
@@ -25,7 +29,13 @@ const AddDashboard = () => {
   const [activeTabView, setActiveTabView] = useState('statistic'); // 'statistic' or 'table'
 
   useEffect(() => {
-    fetchData();
+    if (isCached(CACHE_KEY)) {
+      const cachedData = getCachedData(CACHE_KEY);
+      setData(cachedData.data);
+      setLoading(false);
+    } else {
+      fetchData();
+    }
   }, []);
 
   const fetchData = async () => {
@@ -34,7 +44,9 @@ const AddDashboard = () => {
       // VPN users use /vpn-core/add/data, normal users use /add/data
       const endpoint = isVpnUser() ? '/vpn-core/add/data' : '/add/data';
       const response = await api.get(endpoint);
-      setData(response.data.data || []);
+      const fetchedData = response.data.data || [];
+      setData(fetchedData);
+      setCachedData(CACHE_KEY, fetchedData);
     } catch (err) {
       console.warn('Error loading ADD:', err);
       setData([]);

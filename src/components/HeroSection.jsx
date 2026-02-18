@@ -114,7 +114,7 @@ const HeroSection = () => {
 							initial={{ opacity: 0, y: 40 }}
 							animate={{ opacity: 1, y: 0 }}
 							transition={{ duration: 0.8, delay: 0.4 }}
-							className="text-white leading-[1.1] mb-6"
+							className="text-white leading-tight mb-6"
 						>
 							<span className="block text-2xl md:text-3xl font-medium text-white/80 mb-2">
 								Dinas Pemberdayaan Masyarakat dan Desa
@@ -122,7 +122,7 @@ const HeroSection = () => {
 							<span className="block text-5xl md:text-7xl font-extrabold tracking-tight">
 								Kabupaten
 							</span>
-							<span className="block text-5xl md:text-7xl font-extrabold tracking-tight bg-gradient-to-r from-[rgb(var(--color-secondary))] via-amber-400 to-[rgb(var(--color-secondary))] bg-clip-text text-transparent">
+							<span className="block text-5xl md:text-7xl font-extrabold tracking-tight bg-gradient-to-r from-[rgb(var(--color-secondary))] via-amber-400 to-[rgb(var(--color-secondary))] bg-clip-text text-transparent pb-2">
 								Bogor
 							</span>
 						</motion.h1>
@@ -146,16 +146,17 @@ const HeroSection = () => {
 						>
 							<Link
 								to="/login"
-								className="group inline-flex items-center justify-center gap-3 bg-gradient-to-r from-[rgb(var(--color-secondary))] to-amber-500 text-white font-bold px-8 py-4 rounded-2xl shadow-lg shadow-amber-500/25 hover:shadow-xl hover:shadow-amber-500/30 transform hover:-translate-y-0.5 transition-all duration-300"
+								className="group inline-flex items-center justify-center gap-2 sm:gap-3 bg-gradient-to-r from-[rgb(var(--color-secondary))] to-amber-500 text-white font-bold px-5 py-2.5 sm:px-8 sm:py-4 text-sm sm:text-base rounded-xl sm:rounded-2xl shadow-lg shadow-amber-500/25 hover:shadow-xl hover:shadow-amber-500/30 transform hover:-translate-y-0.5 transition-all duration-300"
 							>
 								Masuk ke Sistem
 								<FiArrowRight className="group-hover:translate-x-1 transition-transform" />
 							</Link>
 							<Link
 								to="/bantuan-keuangan"
-								className="group inline-flex items-center justify-center gap-3 bg-white/10 backdrop-blur-md border border-white/20 text-white font-semibold px-8 py-4 rounded-2xl hover:bg-white/20 transition-all duration-300"
+								className="group inline-flex items-center justify-center gap-2 sm:gap-3 bg-white/10 backdrop-blur-md border border-white/20 text-white font-bold px-5 py-2.5 sm:px-8 sm:py-4 text-sm sm:text-base rounded-xl sm:rounded-2xl hover:bg-white/20 transform hover:-translate-y-0.5 transition-all duration-300"
 							>
 								Lihat Bantuan Keuangan
+								<FiArrowRight className="group-hover:translate-x-1 transition-transform" />
 							</Link>
 						</motion.div>
 					</div>

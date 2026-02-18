@@ -41,6 +41,7 @@ import {
   FileSpreadsheet,
   PieChart,
   AlertCircle,
+  AlertTriangle,
   Filter,
   Power,
   Lock,
@@ -60,8 +61,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import * as XLSX from 'xlsx';
 import api from '../../../../api';
 import Swal from 'sweetalert2';
+import BankeuFormatSuratTab from './BankeuFormatSuratTab';
 
-const DpmdVerificationPage = () => {
+const MAX_ANGGARAN_PER_DESA = 1_500_000_000; // 1.5 Miliar per desa
+
+const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
   const navigate = useNavigate();
   const [proposals, setProposals] = useState([]);
   const [allDesa, setAllDesa] = useState([]);
@@ -89,7 +93,7 @@ const DpmdVerificationPage = () => {
   const [trackingDinasFilter, setTrackingDinasFilter] = useState('all'); // filter by specific dinas when di_dinas
   const [expandedTrackingDesa, setExpandedTrackingDesa] = useState([]);
   const [trackingProposals, setTrackingProposals] = useState([]); // All proposals for tracking
-  const [trackingTahunAnggaran, setTrackingTahunAnggaran] = useState(2027);
+  const [trackingTahunAnggaran, setTrackingTahunAnggaran] = useState(tahunAnggaran);
   const [trackingSummary, setTrackingSummary] = useState(null);
   const [loadingTracking, setLoadingTracking] = useState(false);
   // Export dropdown state
@@ -103,7 +107,7 @@ const DpmdVerificationPage = () => {
     bankeu_submission_kecamatan: true
   });
   // Config tab states
-  const [configSubTab, setConfigSubTab] = useState('kegiatan'); // 'kegiatan', 'dinas'
+  const [configSubTab, setConfigSubTab] = useState('kegiatan'); // 'kegiatan', 'dinas', 'format-surat'
   const [expandedDinasId, setExpandedDinasId] = useState(null);
   const [dinasVerifikators, setDinasVerifikators] = useState({});
   const [showVerifikatorForm, setShowVerifikatorForm] = useState(false);
@@ -118,8 +122,8 @@ const DpmdVerificationPage = () => {
     try {
       setRefreshing(true);
       const [proposalsRes, statsRes] = await Promise.all([
-        api.get('/dpmd/bankeu/proposals'),
-        api.get('/dpmd/bankeu/statistics')
+        api.get(`/dpmd/bankeu/proposals?tahun_anggaran=${tahunAnggaran}`),
+        api.get(`/dpmd/bankeu/statistics?tahun_anggaran=${tahunAnggaran}`)
       ]);
 
       if (proposalsRes.data.success) {
@@ -130,8 +134,8 @@ const DpmdVerificationPage = () => {
         setStatistics(statsRes.data.data || {});
       }
 
-      // Also refresh desas/kecamatan if on tracking/statistics view
-      if (activeView === 'statistics' || activeView === 'tracking') {
+      // Also refresh desas/kecamatan if on tracking/statistics/partisipasi view
+      if (activeView === 'statistics' || activeView === 'tracking' || activeView === 'partisipasi') {
         await fetchAllDesaKecamatan();
       }
 
@@ -167,10 +171,14 @@ const DpmdVerificationPage = () => {
       fetchAllDesaKecamatan();
       fetchTrackingData();
     }
+    if (activeView === 'partisipasi') {
+      fetchAllDesaKecamatan();
+      fetchTrackingData();
+    }
     if (activeView === 'control') {
       fetchSubmissionSettings();
     }
-  }, [activeView]);
+  }, [activeView, tahunAnggaran]);
 
   // Fetch tracking data when tahun changes
   useEffect(() => {
@@ -200,8 +208,8 @@ const DpmdVerificationPage = () => {
     try {
       setLoading(true);
       const [proposalsRes, statsRes] = await Promise.all([
-        api.get('/dpmd/bankeu/proposals'),
-        api.get('/dpmd/bankeu/statistics')
+        api.get(`/dpmd/bankeu/proposals?tahun_anggaran=${tahunAnggaran}`),
+        api.get(`/dpmd/bankeu/statistics?tahun_anggaran=${tahunAnggaran}`)
       ]);
 
       if (proposalsRes.data.success) {
@@ -391,19 +399,33 @@ const DpmdVerificationPage = () => {
 
   const handleResetPassword = async (dinasId, verifikatorId, nama) => {
     const result = await Swal.fire({
-      title: 'Buat Password Baru?',
-      html: `Password baru akan dibuat untuk <strong>${nama}</strong>.<br/>Password baru akan ditampilkan setelah dibuat.`,
+      title: 'Buat Password Baru',
+      html: `
+        <p class="text-sm text-gray-600 mb-3">Masukkan password baru untuk <strong>${nama}</strong></p>
+        <input id="swal-new-password" type="text" class="swal2-input" placeholder="Masukkan password baru" style="font-size: 14px;">
+        <p class="text-xs text-gray-400 mt-1">Minimal 6 karakter</p>
+      `,
       icon: 'question',
       showCancelButton: true,
       confirmButtonColor: '#f59e0b',
       cancelButtonColor: '#6b7280',
-      confirmButtonText: 'Ya, Buat Password Baru',
-      cancelButtonText: 'Batal'
+      confirmButtonText: 'Simpan Password',
+      cancelButtonText: 'Batal',
+      preConfirm: () => {
+        const password = document.getElementById('swal-new-password').value;
+        if (!password || password.length < 6) {
+          Swal.showValidationMessage('Password minimal 6 karakter');
+          return false;
+        }
+        return password;
+      }
     });
 
-    if (result.isConfirmed) {
+    if (result.isConfirmed && result.value) {
       try {
-        const response = await api.post(`/dinas/${dinasId}/verifikator/${verifikatorId}/reset-password`);
+        const response = await api.post(`/dinas/${dinasId}/verifikator/${verifikatorId}/reset-password`, {
+          new_password: result.value
+        });
         const newPassword = response.data?.data?.newPassword || response.data?.newPassword;
         
         await Swal.fire({
@@ -615,6 +637,59 @@ const DpmdVerificationPage = () => {
     }
   };
 
+  // Handle revisi dokumen kecamatan (BA/SP only)
+  const handleRevisiDokumenKecamatan = async (proposalId, proposalTitle) => {
+    const { value: catatan } = await Swal.fire({
+      title: 'Revisi Dokumen Kecamatan',
+      html: `<div class="text-left">
+        <p class="mb-3">Proposal <strong>"${proposalTitle}"</strong> akan dikembalikan ke <strong>Kecamatan</strong> untuk merevisi:</p>
+        <ul class="list-disc ml-5 mb-3 text-sm text-gray-700">
+          <li>Surat Pengantar Kecamatan</li>
+          <li>Berita Acara Verifikasi</li>
+        </ul>
+        <p class="text-sm text-amber-600 font-medium mb-3">📝 Proposal & status verifikasi kecamatan tetap dipertahankan</p>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Catatan untuk Kecamatan:</label>
+      </div>`,
+      input: 'textarea',
+      inputPlaceholder: 'Tuliskan catatan revisi untuk kecamatan...',
+      inputAttributes: { rows: 3 },
+      showCancelButton: true,
+      confirmButtonText: 'Kirim Revisi',
+      cancelButtonText: 'Batal',
+      confirmButtonColor: '#f59e0b',
+      cancelButtonColor: '#6b7280',
+      inputValidator: (value) => {
+        if (!value) return 'Catatan revisi wajib diisi';
+      }
+    });
+
+    if (catatan) {
+      try {
+        await api.patch(`/dpmd/bankeu/proposals/${proposalId}/verify`, {
+          action: 'revisi_dokumen_kecamatan',
+          catatan
+        });
+
+        await fetchData();
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Berhasil',
+          text: 'Proposal dikembalikan ke Kecamatan untuk revisi Surat Pengantar & Berita Acara',
+          timer: 2500,
+          showConfirmButton: false
+        });
+      } catch (error) {
+        console.error('Error revisi dokumen kecamatan:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Gagal',
+          text: error.response?.data?.message || 'Gagal mengirim revisi ke kecamatan'
+        });
+      }
+    }
+  };
+
   // Group proposals by kecamatan
   const groupedProposals = proposals.reduce((acc, proposal) => {
     const kecamatanName = proposal.desas?.kecamatans?.nama || 'Tidak Diketahui';
@@ -781,10 +856,43 @@ const DpmdVerificationPage = () => {
         jumlahDesa: k.jumlahDesa.size
       })).sort((a, b) => b.jumlahProposal - a.jumlahProposal),
       perDesa: Object.values(perDesa).sort((a, b) => b.totalAnggaran - a.totalAnggaran),
+      desaOverLimit: Object.values(perDesa).filter(d => d.totalAnggaran > MAX_ANGGARAN_PER_DESA).sort((a, b) => b.totalAnggaran - a.totalAnggaran),
       statusBreakdown,
       desaTidakMengajukan
     };
   }, [proposals, allDesa, allKecamatan]);
+
+  // Partisipasi desa - based on tracking data (submitted_to_dinas_at)
+  const desaPartisipasiData = useMemo(() => {
+    if (!allDesa.length) return { partisipasi: {}, totalSudah: 0, totalBelum: 0 };
+
+    // Desa IDs that have at least one proposal with submitted_to_dinas_at
+    const desaIdsSudahKirim = new Set();
+    trackingProposals.forEach(p => {
+      if (p.submitted_to_dinas_at) {
+        desaIdsSudahKirim.add(String(p.desa_id));
+      }
+    });
+
+    const partisipasi = {};
+    let totalSudah = 0;
+    let totalBelum = 0;
+    allDesa.forEach(d => {
+      const kecName = d.kecamatans?.nama || 'Tidak Diketahui';
+      if (!partisipasi[kecName]) {
+        partisipasi[kecName] = { sudah: [], belum: [] };
+      }
+      if (desaIdsSudahKirim.has(String(d.id))) {
+        partisipasi[kecName].sudah.push(d.nama);
+        totalSudah++;
+      } else {
+        partisipasi[kecName].belum.push(d.nama);
+        totalBelum++;
+      }
+    });
+
+    return { partisipasi, totalSudah, totalBelum };
+  }, [trackingProposals, allDesa]);
 
   // Chart data
   const chartData = useMemo(() => {
@@ -986,87 +1094,45 @@ const DpmdVerificationPage = () => {
   const kecamatanList = Object.keys(groupedProposals).sort();
 
   return (
-    <div className="bg-gradient-to-br from-gray-50 via-blue-50/30 to-green-50/30">
+    <div className="bg-gradient-to-br from-slate-50 via-blue-50/20 to-indigo-50/20 min-h-screen">
       {/* Tab Navigation */}
       <div className="container mx-auto px-4 pt-6">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-        <div className="bg-white rounded-xl shadow-sm p-2 inline-flex gap-2 flex-wrap">
-          <button
-            onClick={() => setActiveView('archive')}
-            className={`px-6 py-2.5 rounded-lg font-semibold text-sm transition-all ${
-              activeView === 'archive'
-                ? 'bg-gradient-to-r from-blue-600 to-green-600 text-white shadow-md'
-                : 'text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <Folder className="h-4 w-4" />
-              Arsip Proposal
-            </div>
-          </button>
-          <button
-            onClick={() => setActiveView('tracking')}
-            className={`px-6 py-2.5 rounded-lg font-semibold text-sm transition-all ${
-              activeView === 'tracking'
-                ? 'bg-gradient-to-r from-blue-600 to-green-600 text-white shadow-md'
-                : 'text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <Activity className="h-4 w-4" />
-              Tracking Status
-            </div>
-          </button>
-          <button
-            onClick={() => setActiveView('statistics')}
-            className={`px-6 py-2.5 rounded-lg font-semibold text-sm transition-all ${
-              activeView === 'statistics'
-                ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-md'
-                : 'text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <BarChart3 className="h-4 w-4" />
-              Statistik Dashboard
-            </div>
-          </button>
-          <button
-            onClick={() => setActiveView('control')}
-            className={`px-6 py-2.5 rounded-lg font-semibold text-sm transition-all ${
-              activeView === 'control'
-                ? 'bg-gradient-to-r from-red-600 to-orange-600 text-white shadow-md'
-                : 'text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <Power className="h-4 w-4" />
-              Kontrol Pengajuan
-            </div>
-          </button>
-          <button
-            onClick={() => setActiveView('config')}
-            className={`px-6 py-2.5 rounded-lg font-semibold text-sm transition-all ${
-              activeView === 'config'
-                ? 'bg-gradient-to-r from-blue-600 to-green-600 text-white shadow-md'
-                : 'text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <Settings className="h-4 w-4" />
-              Konfigurasi
-            </div>
-          </button>
+        <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg shadow-gray-200/50 p-1.5 inline-flex gap-1 flex-wrap border border-gray-200/60">
+          {[
+            { key: 'archive', icon: Folder, label: 'Arsip Proposal', gradient: 'from-blue-600 to-indigo-600' },
+            { key: 'tracking', icon: Activity, label: 'Tracking Status', gradient: 'from-violet-600 to-purple-600' },
+            { key: 'partisipasi', icon: Users, label: 'Partisipasi Desa', gradient: 'from-violet-600 to-fuchsia-600' },
+            { key: 'statistics', icon: BarChart3, label: 'Statistik Dashboard', gradient: 'from-cyan-600 to-blue-600' },
+            { key: 'control', icon: Power, label: 'Kontrol Pengajuan', gradient: 'from-rose-600 to-orange-600' },
+            { key: 'config', icon: Settings, label: 'Konfigurasi', gradient: 'from-slate-600 to-gray-700' },
+          ].map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveView(tab.key)}
+              className={`px-5 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 ${
+                activeView === tab.key
+                  ? `bg-gradient-to-r ${tab.gradient} text-white shadow-lg scale-[1.02]`
+                  : 'text-gray-500 hover:text-gray-800 hover:bg-gray-100/80'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <tab.icon className="h-4 w-4" />
+                <span className="hidden sm:inline">{tab.label}</span>
+              </div>
+            </button>
+          ))}
         </div>
         
         {/* Refresh Button */}
         <button
           onClick={handleRefresh}
           disabled={refreshing}
-          className={`flex items-center gap-2 px-4 py-2.5 bg-white rounded-xl shadow-sm border border-gray-200 font-semibold text-sm transition-all hover:bg-gray-50 hover:shadow-md ${
+          className={`group flex items-center gap-2 px-5 py-2.5 bg-white/80 backdrop-blur-sm rounded-xl shadow-md border border-gray-200/60 font-semibold text-sm transition-all hover:shadow-lg hover:-translate-y-0.5 ${
             refreshing ? 'opacity-70 cursor-not-allowed' : ''
           }`}
         >
-          <RefreshCw className={`h-4 w-4 text-blue-600 ${refreshing ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`h-4 w-4 text-blue-600 ${refreshing ? 'animate-spin' : 'group-hover:rotate-90 transition-transform duration-500'}`} />
           <span className="text-gray-700">{refreshing ? 'Memuat...' : 'Refresh Data'}</span>
         </button>
         </div>
@@ -1352,6 +1418,21 @@ const DpmdVerificationPage = () => {
                                                   </a>
                                                 )}
 
+                                                {/* Revisi Dokumen Kecamatan Button */}
+                                                {(proposal.surat_pengantar || proposal.berita_acara_path) && (
+                                                  <button
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      handleRevisiDokumenKecamatan(proposal.id, proposal.judul_proposal);
+                                                    }}
+                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 hover:bg-amber-600 text-amber-700 hover:text-white rounded-lg transition-all text-xs font-medium shadow-sm hover:shadow border border-amber-200 hover:border-amber-600"
+                                                    title="Minta kecamatan revisi Surat Pengantar & Berita Acara"
+                                                  >
+                                                    <RefreshCw className="h-3.5 w-3.5 flex-shrink-0" />
+                                                    <span>Revisi BA/SP</span>
+                                                  </button>
+                                                )}
+
                                                 {/* Delete Button */}
                                                 <button
                                                   onClick={(e) => {
@@ -1386,133 +1467,126 @@ const DpmdVerificationPage = () => {
         ) : activeView === 'tracking' ? (
           /* Tracking Status View - Per Desa */
           <div className="space-y-6">
-            {/* Year Selector */}
-            <div className="bg-gradient-to-r from-violet-600 to-purple-700 rounded-xl p-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Calendar className="h-6 w-6 text-white" />
-                <div>
-                  <h2 className="text-lg font-bold text-white">Tracking Proposal Tahun {trackingTahunAnggaran}</h2>
-                  <p className="text-violet-200 text-sm">Pantau status proposal di semua tahap verifikasi</p>
-                </div>
+            {/* Year Selector - Premium Hero */}
+            <div className="relative bg-gradient-to-br from-slate-900 via-violet-950 to-indigo-950 rounded-2xl overflow-hidden">
+              {/* Animated glow */}
+              <div className="absolute inset-0">
+                <div className="absolute top-0 left-1/3 w-72 h-72 bg-violet-500/20 rounded-full blur-[100px] animate-pulse"></div>
+                <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-indigo-500/20 rounded-full blur-[80px]" style={{ animation: 'pulse 3s ease-in-out infinite alternate' }}></div>
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setTrackingTahunAnggaran(2026)}
-                  className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
-                    trackingTahunAnggaran === 2026 
-                      ? 'bg-white text-violet-700' 
-                      : 'bg-white/20 text-white hover:bg-white/30'
-                  }`}
-                >
-                  2026
-                </button>
-                <button
-                  onClick={() => setTrackingTahunAnggaran(2027)}
-                  className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
-                    trackingTahunAnggaran === 2027 
-                      ? 'bg-white text-violet-700' 
-                      : 'bg-white/20 text-white hover:bg-white/30'
-                  }`}
-                >
-                  2027
-                </button>
-                <button
-                  onClick={() => fetchTrackingData()}
-                  disabled={loadingTracking}
-                  className="ml-2 p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-all"
-                >
-                  <RefreshCw className={`h-5 w-5 text-white ${loadingTracking ? 'animate-spin' : ''}`} />
-                </button>
+              <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
+              
+              <div className="relative z-10 px-6 py-8 md:px-8 flex flex-col md:flex-row items-center justify-between gap-5">
+                <div className="flex items-center gap-4">
+                  <div className="h-14 w-14 bg-gradient-to-br from-violet-400 to-purple-600 rounded-2xl flex items-center justify-center shadow-xl shadow-violet-500/30 ring-2 ring-white/10">
+                    <Activity className="h-7 w-7 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl md:text-2xl font-extrabold text-white tracking-tight">Tracking Proposal Tahun {trackingTahunAnggaran}</h2>
+                    <p className="text-violet-300/80 text-sm mt-0.5">Pantau status proposal di semua tahap verifikasi</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="bg-white/10 backdrop-blur-sm rounded-xl p-1 flex gap-1 border border-white/10">
+                    <button
+                      onClick={() => setTrackingTahunAnggaran(2026)}
+                      className={`px-5 py-2 rounded-lg font-bold text-sm transition-all duration-300 ${
+                        trackingTahunAnggaran === 2026 
+                          ? 'bg-white text-violet-700 shadow-lg' 
+                          : 'text-white/70 hover:text-white hover:bg-white/10'
+                      }`}
+                    >
+                      2026
+                    </button>
+                    <button
+                      onClick={() => setTrackingTahunAnggaran(2027)}
+                      className={`px-5 py-2 rounded-lg font-bold text-sm transition-all duration-300 ${
+                        trackingTahunAnggaran === 2027 
+                          ? 'bg-white text-violet-700 shadow-lg' 
+                          : 'text-white/70 hover:text-white hover:bg-white/10'
+                      }`}
+                    >
+                      2027
+                    </button>
+                  </div>
+                  <button
+                    onClick={() => fetchTrackingData()}
+                    disabled={loadingTracking}
+                    className="p-2.5 bg-white/10 hover:bg-white/20 rounded-xl transition-all border border-white/10 hover:border-white/20"
+                  >
+                    <RefreshCw className={`h-5 w-5 text-white ${loadingTracking ? 'animate-spin' : ''}`} />
+                  </button>
+                </div>
               </div>
             </div>
 
-            {/* Tracking Summary Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              <div className="bg-gradient-to-br from-gray-500 to-slate-600 rounded-xl p-4 text-white shadow-lg">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-gray-100 text-sm">Di Desa</p>
-                    <p className="text-3xl font-bold mt-1">
-                      {trackingProposals.filter(p => getProposalStage(p) === 'di_desa').length}
-                    </p>
-                    <p className="text-gray-200 text-xs mt-1">belum kirim</p>
-                  </div>
-                  <MapPin className="h-12 w-12 text-white/30" />
+            {/* Tracking Summary Cards - Premium Design */}
+            {(() => {
+              const diDesaCount = trackingProposals.filter(p => getProposalStage(p) === 'di_desa').length;
+              const diDinasCount = trackingProposals.filter(p => getProposalStage(p) === 'di_dinas').length;
+              const diKecamatanCount = trackingProposals.filter(p => getProposalStage(p) === 'di_kecamatan').length;
+              const diDpmdCount = trackingProposals.filter(p => getProposalStage(p) === 'di_dpmd').length;
+              const selesaiCount = trackingProposals.filter(p => p.dpmd_status === 'approved').length;
+              const totalAll = trackingProposals.length || 1;
+              const stageCards = [
+                { label: 'Di Desa', count: diDesaCount, sub: 'belum kirim', icon: MapPin, gradient: 'from-slate-600 to-slate-700', ring: 'ring-slate-400/20', barColor: 'bg-slate-400', percent: Math.round((diDesaCount / totalAll) * 100) },
+                { label: 'Di Dinas', count: diDinasCount, sub: 'menunggu review', icon: Building, gradient: 'from-amber-500 to-orange-600', ring: 'ring-amber-400/20', barColor: 'bg-amber-400', percent: Math.round((diDinasCount / totalAll) * 100) },
+                { label: 'Di Kecamatan', count: diKecamatanCount, sub: 'diproses', icon: Building2, gradient: 'from-blue-500 to-indigo-600', ring: 'ring-blue-400/20', barColor: 'bg-blue-400', percent: Math.round((diKecamatanCount / totalAll) * 100) },
+                { label: 'Di DPMD', count: diDpmdCount, sub: 'masuk review', icon: Shield, gradient: 'from-violet-500 to-purple-600', ring: 'ring-violet-400/20', barColor: 'bg-violet-400', percent: Math.round((diDpmdCount / totalAll) * 100) },
+                { label: 'Selesai', count: selesaiCount, sub: 'disetujui', icon: CheckCircle, gradient: 'from-emerald-500 to-green-600', ring: 'ring-emerald-400/20', barColor: 'bg-emerald-400', percent: Math.round((selesaiCount / totalAll) * 100) },
+              ];
+              return (
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                  {stageCards.map((card, i) => (
+                    <div key={i} className={`group relative bg-gradient-to-br ${card.gradient} rounded-2xl p-5 text-white shadow-xl overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl`}>
+                      {/* Glow */}
+                      <div className="absolute -top-8 -right-8 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-500"></div>
+                      <div className="relative z-10">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className={`h-10 w-10 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center ring-1 ${card.ring}`}>
+                            <card.icon className="h-5 w-5 text-white" />
+                          </div>
+                          <span className="text-xs font-bold bg-white/20 backdrop-blur-sm px-2.5 py-1 rounded-lg">{card.percent}%</span>
+                        </div>
+                        <p className="text-3xl font-extrabold tracking-tight">{card.count}</p>
+                        <p className="text-white/90 text-sm font-semibold mt-0.5">{card.label}</p>
+                        <p className="text-white/60 text-xs mt-0.5">{card.sub}</p>
+                        {/* Mini progress bar */}
+                        <div className="mt-3 h-1.5 bg-white/20 rounded-full overflow-hidden">
+                          <div className={`h-full ${card.barColor} rounded-full transition-all duration-1000`} style={{ width: `${card.percent}%` }}></div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </div>
-              <div className="bg-gradient-to-br from-orange-500 to-amber-500 rounded-xl p-4 text-white shadow-lg">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-orange-100 text-sm">Di Dinas</p>
-                    <p className="text-3xl font-bold mt-1">
-                      {trackingProposals.filter(p => getProposalStage(p) === 'di_dinas').length}
-                    </p>
-                    <p className="text-orange-100 text-xs mt-1">menunggu review</p>
-                  </div>
-                  <Building className="h-12 w-12 text-white/30" />
-                </div>
-              </div>
-              <div className="bg-gradient-to-br from-blue-500 to-indigo-500 rounded-xl p-4 text-white shadow-lg">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-blue-100 text-sm">Di Kecamatan</p>
-                    <p className="text-3xl font-bold mt-1">
-                      {trackingProposals.filter(p => getProposalStage(p) === 'di_kecamatan').length}
-                    </p>
-                    <p className="text-blue-100 text-xs mt-1">diproses</p>
-                  </div>
-                  <Building2 className="h-12 w-12 text-white/30" />
-                </div>
-              </div>
-              <div className="bg-gradient-to-br from-purple-500 to-violet-500 rounded-xl p-4 text-white shadow-lg">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-purple-100 text-sm">Di DPMD</p>
-                    <p className="text-3xl font-bold mt-1">
-                      {trackingProposals.filter(p => getProposalStage(p) === 'di_dpmd').length}
-                    </p>
-                    <p className="text-purple-100 text-xs mt-1">masuk review</p>
-                  </div>
-                  <Shield className="h-12 w-12 text-white/30" />
-                </div>
-              </div>
-              <div className="bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl p-4 text-white shadow-lg">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-green-100 text-sm">Selesai</p>
-                    <p className="text-3xl font-bold mt-1">
-                      {trackingProposals.filter(p => p.dpmd_status === 'approved').length}
-                    </p>
-                    <p className="text-green-100 text-xs mt-1">disetujui</p>
-                  </div>
-                  <CheckCircle className="h-12 w-12 text-white/30" />
-                </div>
-              </div>
-            </div>
+              );
+            })()}
 
             {/* Search and Filter for Tracking */}
-            <div className="bg-white rounded-xl shadow-sm p-4">
-              <div className="flex items-center gap-2 mb-4">
-                <Filter className="h-5 w-5 text-gray-600" />
-                <span className="font-semibold text-gray-900">Filter Tracking</span>
+            <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg shadow-gray-200/40 p-5 border border-gray-200/60">
+              <div className="flex items-center gap-2.5 mb-4">
+                <div className="h-8 w-8 bg-gradient-to-br from-violet-500 to-purple-600 rounded-lg flex items-center justify-center">
+                  <Filter className="h-4 w-4 text-white" />
+                </div>
+                <span className="font-bold text-gray-800">Filter Tracking</span>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <input
                     type="text"
                     placeholder="Cari desa atau kecamatan..."
                     value={trackingSearchTerm}
                     onChange={(e) => setTrackingSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50/80 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 transition-all hover:border-gray-300"
                   />
                 </div>
                 <div className="relative">
-                  <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <select
                     value={trackingSelectedKecamatan}
                     onChange={(e) => setTrackingSelectedKecamatan(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none"
+                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50/80 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 appearance-none transition-all hover:border-gray-300"
                   >
                     <option value="all">Semua Kecamatan</option>
                     {[...new Set(trackingProposals.map(p => p.desas?.kecamatans?.nama))].filter(Boolean).sort().map(kec => (
@@ -1521,14 +1595,14 @@ const DpmdVerificationPage = () => {
                   </select>
                 </div>
                 <div className="relative">
-                  <Layers className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <Layers className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <select
                     value={trackingStatusFilter}
                     onChange={(e) => {
                       setTrackingStatusFilter(e.target.value);
                       if (e.target.value !== 'di_dinas') setTrackingDinasFilter('all');
                     }}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none"
+                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50/80 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 appearance-none transition-all hover:border-gray-300"
                   >
                     <option value="all">Semua Status</option>
                     <option value="di_desa">📍 Di Desa</option>
@@ -1544,7 +1618,7 @@ const DpmdVerificationPage = () => {
                     <select
                       value={trackingDinasFilter}
                       onChange={(e) => setTrackingDinasFilter(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500 appearance-none bg-violet-50"
+                      className="w-full pl-10 pr-4 py-2.5 bg-violet-50/80 border border-violet-200 rounded-xl text-sm focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 appearance-none transition-all hover:border-violet-300"
                     >
                       <option value="all">Semua Dinas</option>
                       {availableDinasList.map(dinasName => (
@@ -1554,9 +1628,9 @@ const DpmdVerificationPage = () => {
                   </div>
                 )}
               </div>
-              <div className="flex flex-wrap items-center gap-4 mt-3">
+              <div className="flex flex-wrap items-center gap-4 mt-4 pt-4 border-t border-gray-100">
                 <p className="text-sm text-gray-500">
-                  Menampilkan <span className="font-semibold text-blue-600">{Object.keys(filteredTrackingDesa).length}</span> desa
+                  Menampilkan <span className="font-bold text-violet-600 bg-violet-50 px-2 py-0.5 rounded-md">{Object.keys(filteredTrackingDesa).length}</span> desa
                   {trackingStatusFilter !== 'all' && (
                     <span className="ml-1">
                       ({Object.values(filteredTrackingDesa).reduce((sum, d) => sum + d.proposals.length, 0)} proposal)
@@ -1604,18 +1678,18 @@ const DpmdVerificationPage = () => {
                         key={key}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+                        className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-md shadow-gray-200/40 border border-gray-200/60 overflow-hidden hover:shadow-lg transition-all duration-300"
                       >
                         {/* Desa Header */}
                         <button
                           onClick={() => setExpandedTrackingDesa(prev => 
                             prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
                           )}
-                          className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                          className="w-full px-6 py-4 flex items-center justify-between hover:bg-gradient-to-r hover:from-transparent hover:to-violet-50/50 transition-all"
                         >
                           <div className="flex items-center gap-4">
-                            <div className="p-3 bg-gradient-to-br from-blue-500 to-green-500 rounded-lg shadow-md">
-                              <MapPin className="h-6 w-6 text-white" />
+                            <div className="p-3 bg-gradient-to-br from-violet-500 to-indigo-600 rounded-xl shadow-lg shadow-violet-500/20">
+                              <MapPin className="h-5 w-5 text-white" />
                             </div>
                             <div className="text-left">
                               <h3 className="font-bold text-lg text-gray-900">{data.desaName}</h3>
@@ -1655,7 +1729,12 @@ const DpmdVerificationPage = () => {
                             </div>
                             <div className="hidden md:block text-right">
                               <p className="text-xs text-gray-500">Total Anggaran</p>
-                              <p className="text-sm font-bold text-gray-800">Rp {totalAnggaran.toLocaleString('id-ID')}</p>
+                              <p className={`text-sm font-bold ${totalAnggaran > MAX_ANGGARAN_PER_DESA ? 'text-red-600' : 'text-gray-800'}`}>Rp {totalAnggaran.toLocaleString('id-ID')}</p>
+                              {totalAnggaran > MAX_ANGGARAN_PER_DESA && (
+                                <p className="text-[10px] text-red-500 font-semibold flex items-center gap-1 justify-end mt-0.5">
+                                  <AlertTriangle className="h-3 w-3" /> Melebihi 1,5 M
+                                </p>
+                              )}
                             </div>
                             {isExpanded ? (
                               <ChevronUp className="h-5 w-5 text-gray-400" />
@@ -2266,8 +2345,10 @@ const DpmdVerificationPage = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {statsData.perDesa.slice(0, 10).map((d, i) => (
-                          <tr key={d.desaId} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                        {statsData.perDesa.slice(0, 10).map((d, i) => {
+                          const isOverLimit = d.totalAnggaran > MAX_ANGGARAN_PER_DESA;
+                          return (
+                          <tr key={d.desaId} className={`border-b transition-colors ${isOverLimit ? 'bg-red-50/50 border-red-100 hover:bg-red-50' : 'border-slate-100 hover:bg-slate-50'}`}>
                             <td className="px-4 py-3">
                               <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${
                                 i < 3 ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-600'
@@ -2275,71 +2356,99 @@ const DpmdVerificationPage = () => {
                                 {i + 1}
                               </span>
                             </td>
-                            <td className="px-4 py-3 text-sm font-medium text-slate-800">{d.desaName}</td>
+                            <td className="px-4 py-3 text-sm font-medium text-slate-800">
+                              <div className="flex items-center gap-1.5">
+                                {d.desaName}
+                                {isOverLimit && (
+                                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-red-100 text-red-600 text-[10px] font-bold" title="Total anggaran melebihi batas 1,5 Miliar">
+                                    <AlertTriangle className="h-3 w-3" /> OVER
+                                  </span>
+                                )}
+                              </div>
+                            </td>
                             <td className="px-4 py-3 text-sm text-slate-500">{d.kecamatanName}</td>
                             <td className="px-4 py-3 text-sm text-right">
                               <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">
                                 {d.jumlahProposal}
                               </span>
                             </td>
-                            <td className="px-4 py-3 text-sm text-right font-semibold text-slate-800">
+                            <td className={`px-4 py-3 text-sm text-right font-semibold ${isOverLimit ? 'text-red-600' : 'text-slate-800'}`}>
                               Rp {d.totalAnggaran.toLocaleString('id-ID')}
+                              {isOverLimit && (
+                                <p className="text-[10px] text-red-500 font-medium mt-0.5">Maks: Rp 1.500.000.000</p>
+                              )}
                             </td>
                           </tr>
-                        ))}
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
               </motion.div>
 
-              {/* Desa Belum Mengajukan */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.9 }}
-                className="bg-white rounded-2xl shadow-sm overflow-hidden border border-slate-200"
-              >
-                <div 
-                  className="bg-amber-500 px-5 py-4 flex items-center justify-between cursor-pointer hover:bg-amber-400 transition-colors"
-                  onClick={() => setShowDesaBelumModal(true)}
+              {/* Desa Melebihi Batas Anggaran */}
+              {statsData.desaOverLimit?.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.85 }}
+                  className="bg-white rounded-2xl shadow-sm overflow-hidden border-2 border-red-300"
                 >
-                  <h3 className="font-bold text-white flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4" />
-                    Desa Belum Mengajukan
-                    <span className="text-xs opacity-75">(Klik untuk lihat lengkap)</span>
-                  </h3>
-                  <span className="px-3 py-1 bg-white/20 text-white rounded-full text-sm font-semibold">
-                    {statsData.desaTidakMengajukan.length} desa
-                  </span>
-                </div>
-                {statsData.desaTidakMengajukan.length > 0 ? (
-                  <div className="p-5 max-h-64 overflow-y-auto">
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
-                      {statsData.desaTidakMengajukan.slice(0, 48).map((d) => (
-                        <div 
-                          key={d.id} 
-                          className="px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs hover:bg-amber-100 transition-colors"
-                        >
-                          <p className="font-medium text-slate-800 truncate">{d.nama}</p>
-                          <p className="text-amber-600 truncate text-[10px] mt-0.5">{d.kecamatans?.nama || '-'}</p>
-                        </div>
-                      ))}
+                  <div className="bg-gradient-to-r from-red-600 to-rose-600 px-5 py-4 flex items-center justify-between">
+                    <h3 className="font-bold text-white flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4" />
+                      Desa Melebihi Batas Anggaran (Rp 1,5 Miliar)
+                    </h3>
+                    <span className="px-3 py-1 bg-white/20 text-white rounded-full text-sm font-semibold">
+                      {statsData.desaOverLimit.length} desa
+                    </span>
+                  </div>
+                  <div className="p-4">
+                    <p className="text-sm text-red-700 mb-3 bg-red-50 px-3 py-2 rounded-lg border border-red-200">
+                      ⚠️ Desa-desa berikut memiliki <strong>total anggaran usulan melebihi Rp 1.500.000.000</strong>. Kemungkinan ada kesalahan input anggaran pada salah satu proposal.
+                    </p>
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="bg-red-50 border-b border-red-200">
+                            <th className="px-4 py-2.5 text-left text-xs font-semibold text-red-700 uppercase">No</th>
+                            <th className="px-4 py-2.5 text-left text-xs font-semibold text-red-700 uppercase">Desa</th>
+                            <th className="px-4 py-2.5 text-left text-xs font-semibold text-red-700 uppercase">Kecamatan</th>
+                            <th className="px-4 py-2.5 text-right text-xs font-semibold text-red-700 uppercase">Proposal</th>
+                            <th className="px-4 py-2.5 text-right text-xs font-semibold text-red-700 uppercase">Total Anggaran</th>
+                            <th className="px-4 py-2.5 text-right text-xs font-semibold text-red-700 uppercase">Selisih</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {statsData.desaOverLimit.map((d, i) => (
+                            <tr key={d.desaId} className="border-b border-red-100 hover:bg-red-50/50 transition-colors">
+                              <td className="px-4 py-2.5">
+                                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold bg-red-500 text-white">{i + 1}</span>
+                              </td>
+                              <td className="px-4 py-2.5 text-sm font-semibold text-red-800">{d.desaName}</td>
+                              <td className="px-4 py-2.5 text-sm text-red-600">{d.kecamatanName}</td>
+                              <td className="px-4 py-2.5 text-sm text-right">
+                                <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">{d.jumlahProposal}</span>
+                              </td>
+                              <td className="px-4 py-2.5 text-sm text-right font-bold text-red-700">Rp {d.totalAnggaran.toLocaleString('id-ID')}</td>
+                              <td className="px-4 py-2.5 text-sm text-right font-semibold text-red-600">
+                                +Rp {(d.totalAnggaran - MAX_ANGGARAN_PER_DESA).toLocaleString('id-ID')}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
-                    {statsData.desaTidakMengajukan.length > 48 && (
-                      <p className="text-center text-sm text-slate-500 mt-4 py-2 bg-slate-50 rounded-lg">
-                        Dan <span className="font-semibold text-amber-600">{statsData.desaTidakMengajukan.length - 48}</span> desa lainnya... (Export untuk data lengkap)
-                      </p>
-                    )}
                   </div>
-                ) : (
-                  <div className="p-10 text-center">
-                    <CheckCircle2 className="h-12 w-12 text-emerald-500 mx-auto mb-3" />
-                    <p className="text-lg font-semibold text-slate-700">Luar Biasa!</p>
-                    <p className="text-slate-500">Semua desa sudah mengajukan proposal!</p>
-                  </div>
-                )}
-              </motion.div>
+                </motion.div>
+              )}
+
             </div>
+          </div>
+        ) : activeView === 'partisipasi' ? (
+          /* Partisipasi Desa View */
+          <div className="space-y-4">
+            <DesaPartisipasiSpked desaPartisipasiData={desaPartisipasiData} loading={loadingTracking} />
           </div>
         ) : activeView === 'control' ? (
           /* Kontrol Pengajuan View */
@@ -2538,6 +2647,17 @@ const DpmdVerificationPage = () => {
                     configSubTab === 'dinas' ? 'bg-purple-100 text-purple-700' : 'bg-white/20'
                   }`}>{dinas.length}</span>
                 </button>
+                <button
+                  onClick={() => setConfigSubTab('format-surat')}
+                  className={`flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm transition-all ${
+                    configSubTab === 'format-surat'
+                      ? 'bg-white text-amber-600 shadow-lg'
+                      : 'bg-white/20 text-white hover:bg-white/30'
+                  }`}
+                >
+                  <FileText className="h-5 w-5" />
+                  Format Surat
+                </button>
               </div>
             </motion.div>
 
@@ -2668,6 +2788,17 @@ const DpmdVerificationPage = () => {
                       ))}
                     </div>
                   )}
+                </motion.div>
+              )}
+
+              {configSubTab === 'format-surat' && (
+                <motion.div
+                  key="format-surat"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                >
+                  <BankeuFormatSuratTab />
                 </motion.div>
               )}
 
@@ -3136,6 +3267,174 @@ const DpmdVerificationPage = () => {
         )}
       </AnimatePresence>
     </div>
+  );
+};
+
+// Partisipasi Desa per Kecamatan - accordion section with tabs
+// Data from tracking (submitted_to_dinas_at), not DPMD-level proposals
+const DesaPartisipasiSpked = ({ desaPartisipasiData, loading }) => {
+  const [activeTab, setActiveTab] = useState('belum'); // 'sudah' | 'belum'
+  const [searchKec, setSearchKec] = useState('');
+  const [expandedKec, setExpandedKec] = useState({});
+
+  const { partisipasi: desaPartisipasi, totalSudah, totalBelum } = desaPartisipasiData;
+
+  if (loading) return (
+    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-12 text-center">
+      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-violet-600 mx-auto"></div>
+      <p className="mt-4 text-gray-500 text-sm">Memuat data partisipasi...</p>
+    </div>
+  );
+
+  if (!desaPartisipasi || Object.keys(desaPartisipasi).length === 0) return null;
+
+  const kecamatanList = Object.entries(desaPartisipasi)
+    .map(([kecName, data]) => ({
+      name: kecName,
+      sudah: data.sudah || [],
+      belum: data.belum || [],
+    }))
+    .filter(k => {
+      if (!searchKec) return true;
+      const q = searchKec.toLowerCase();
+      return k.name.toLowerCase().includes(q) ||
+        k.sudah.some(d => d.toLowerCase().includes(q)) ||
+        k.belum.some(d => d.toLowerCase().includes(q));
+    })
+    .sort((a, b) => {
+      if (activeTab === 'belum') return b.belum.length - a.belum.length;
+      return b.sudah.length - a.sudah.length;
+    });
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.9 }}
+      className="bg-white rounded-2xl shadow-sm overflow-hidden border border-slate-200"
+    >
+      {/* Header */}
+      <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-slate-50 via-white to-slate-50">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
+              <Users className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-900 text-sm">Partisipasi Desa per Kecamatan</h3>
+              <p className="text-[11px] text-slate-400">Detail desa yang sudah dan belum mengajukan proposal</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setActiveTab('belum')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
+                activeTab === 'belum'
+                  ? 'bg-red-50 text-red-700 border-red-200 shadow-sm'
+                  : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'
+              }`}>
+              <XCircle className="w-3.5 h-3.5" />
+              Belum Mengajukan <span className="px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 text-[10px] font-bold ml-0.5">{totalBelum}</span>
+            </button>
+            <button onClick={() => setActiveTab('sudah')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
+                activeTab === 'sudah'
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200 shadow-sm'
+                  : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'
+              }`}>
+              <CheckCircle className="w-3.5 h-3.5" />
+              Sudah Mengajukan <span className="px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold ml-0.5">{totalSudah}</span>
+            </button>
+          </div>
+        </div>
+        {/* Search */}
+        <div className="relative mt-3">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Cari kecamatan atau desa..."
+            value={searchKec}
+            onChange={(e) => setSearchKec(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400"
+          />
+          {searchKec && (
+            <button onClick={() => setSearchKec('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+              <XIcon className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="divide-y divide-gray-100 max-h-[500px] overflow-y-auto">
+        {kecamatanList.map((kec) => {
+          const items = activeTab === 'sudah' ? kec.sudah : kec.belum;
+          const isExpanded = expandedKec[kec.name];
+          if (items.length === 0 && !searchKec) return null;
+
+          return (
+            <div key={kec.name}>
+              <button
+                onClick={() => setExpandedKec(prev => ({ ...prev, [kec.name]: !prev[kec.name] }))}
+                className="w-full px-5 py-3 flex items-center justify-between hover:bg-gray-50/80 transition-colors group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-white text-[11px] font-bold ${
+                    activeTab === 'belum'
+                      ? items.length > 0 ? 'bg-gradient-to-br from-red-500 to-rose-600' : 'bg-gradient-to-br from-emerald-500 to-green-600'
+                      : items.length > 0 ? 'bg-gradient-to-br from-emerald-500 to-green-600' : 'bg-gradient-to-br from-gray-400 to-gray-500'
+                  }`}>
+                    {items.length}
+                  </div>
+                  <div className="text-left">
+                    <p className="font-semibold text-gray-900 text-sm group-hover:text-violet-700 transition-colors">{kec.name}</p>
+                    <p className="text-[11px] text-gray-400">
+                      {activeTab === 'belum'
+                        ? <><span className="text-red-500 font-medium">{kec.belum.length} belum</span> · <span className="text-emerald-600">{kec.sudah.length} sudah</span></>
+                        : <><span className="text-emerald-600 font-medium">{kec.sudah.length} sudah</span> · <span className="text-red-500">{kec.belum.length} belum</span></>
+                      }
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {items.length > 0 && (
+                    <div className={`w-5 h-5 rounded-md flex items-center justify-center transition-colors ${
+                      isExpanded ? 'bg-violet-100' : 'bg-gray-100 group-hover:bg-gray-200'
+                    }`}>
+                      {isExpanded ? <ChevronUp className="w-3 h-3 text-violet-600" /> : <ChevronDown className="w-3 h-3 text-gray-400" />}
+                    </div>
+                  )}
+                </div>
+              </button>
+              {isExpanded && items.length > 0 && (
+                <div className="px-5 pb-3">
+                  <div className="flex flex-wrap gap-1.5 pl-10">
+                    {items.sort().map((desaName) => (
+                      <span key={desaName} className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium border ${
+                        activeTab === 'sudah'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : 'bg-red-50 text-red-700 border-red-200'
+                      }`}>
+                        {activeTab === 'sudah'
+                          ? <CheckCircle className="w-3 h-3 text-emerald-500" />
+                          : <XCircle className="w-3 h-3 text-red-400" />
+                        }
+                        {desaName}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+        {kecamatanList.length === 0 && (
+          <div className="p-8 text-center">
+            <Search className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+            <p className="text-sm text-gray-400">Tidak ditemukan kecamatan atau desa yang cocok</p>
+          </div>
+        )}
+      </div>
+    </motion.div>
   );
 };
 

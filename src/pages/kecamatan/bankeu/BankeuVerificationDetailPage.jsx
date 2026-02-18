@@ -6,7 +6,7 @@ import {
   LuEye, LuCheck, LuX, LuRefreshCw, LuClock, LuArrowLeft,
   LuChevronDown, LuChevronRight, LuDownload, LuClipboardList,
   LuMapPin, LuPackage, LuDollarSign, LuInfo,
-  LuShield, LuFileText, LuTriangleAlert
+  LuShield, LuFileText, LuTriangleAlert, LuMessageCircle, LuHistory
 } from "react-icons/lu";
 
 const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
@@ -27,6 +27,9 @@ const BankeuVerificationDetailPage = () => {
   const [timCompletionStatus, setTimCompletionStatus] = useState({});
   const [submissionOpen, setSubmissionOpen] = useState(true);
   const [kecamatanConfig, setKecamatanConfig] = useState(null);
+  const [catatanModal, setCatatanModal] = useState({ show: false, proposal: null });
+  const [verificationHistory, setVerificationHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -202,8 +205,21 @@ const BankeuVerificationDetailPage = () => {
   const handleVerify = async (proposalId, status) => {
     const isApprove = status === "verified";
     
-    // Jika approve, langsung proses tanpa popup
+    // Jika approve, tampilkan konfirmasi terlebih dahulu
     if (isApprove) {
+      const confirmResult = await Swal.fire({
+        title: 'Setujui Proposal?',
+        text: 'Proposal ini akan disetujui dan tidak dapat diubah kembali.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#10b981',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: 'Ya, Setujui',
+        cancelButtonText: 'Batal'
+      });
+
+      if (!confirmResult.isConfirmed) return;
+
       try {
         const response = await api.patch(`/kecamatan/bankeu/proposals/${proposalId}/verify`, {
           action: 'approved',
@@ -389,7 +405,16 @@ const BankeuVerificationDetailPage = () => {
       missingSuratPengantar: proposalsMissingSuratPengantar.length,
       // Surat dari Desa
       hasSuratPengantarDesa,
-      hasSuratPermohonanDesa
+      hasSuratPermohonanDesa,
+      // DPMD Revisi Dokumen - proposals returned for BA/SP revision
+      dpmdRevisiDokumen: uploadedProposals.filter(p => 
+        p.dpmd_status === 'revision' && p.kecamatan_status === 'approved' && 
+        (!p.berita_acara_path || !p.surat_pengantar)
+      ),
+      hasDpmdRevisiDokumen: uploadedProposals.some(p => 
+        p.dpmd_status === 'revision' && p.kecamatan_status === 'approved' && 
+        (!p.berita_acara_path || !p.surat_pengantar)
+      )
     };
   }, [proposals, desaId, desa?.nama, surat]);
 
@@ -930,7 +955,7 @@ const BankeuVerificationDetailPage = () => {
   };
 
   // Handler untuk generate berita acara per proposal
-  const handleGenerateBeritaAcaraKegiatan = async (kegiatanId, namaKegiatan, proposalId) => {
+  const handleGenerateBeritaAcaraKegiatan = async (kegiatanId, namaKegiatan, proposalId, jenisKegiatan) => {
     // Validasi konfigurasi kecamatan
     if (!isKecamatanConfigComplete()) {
       const missing = getConfigMissingItems();
@@ -960,6 +985,30 @@ const BankeuVerificationDetailPage = () => {
       return;
     }
 
+    const isInfrastruktur = jenisKegiatan === 'infrastruktur';
+
+    // Untuk infrastruktur, tampilkan dialog dengan pilihan dokumen opsional
+    const optionalItemsConfig = [
+      { key: 'item_5', label: 'Surat Pernyataan Kepala Desa (lokasi tidak sengketa)' },
+      { key: 'item_7', label: 'Dokumen kesediaan peralihan hak hibah' },
+      { key: 'item_8', label: 'Dokumen pernyataan kesanggupan (tidak minta ganti rugi)' },
+      { key: 'item_9', label: 'Persetujuan pemanfaatan barang milik Daerah/Negara' },
+    ];
+
+    const optionalCheckboxes = isInfrastruktur ? `
+      <div class="text-left mt-4 mb-2">
+        <p class="text-sm font-semibold text-gray-700 mb-2">Centang dokumen opsional yang dilampirkan:</p>
+        <div class="bg-gray-50 rounded-lg p-3 space-y-2">
+          ${optionalItemsConfig.map(item => `
+            <label class="flex items-start gap-2 cursor-pointer hover:bg-gray-100 rounded p-1.5 transition-colors">
+              <input type="checkbox" id="opt_${item.key}" class="mt-0.5 w-4 h-4 text-violet-600 border-gray-300 rounded focus:ring-violet-500" />
+              <span class="text-sm text-gray-700">${item.label}</span>
+            </label>
+          `).join('')}
+        </div>
+      </div>
+    ` : '';
+
     const result = await Swal.fire({
       title: '',
       html: `
@@ -978,7 +1027,9 @@ const BankeuVerificationDetailPage = () => {
             <strong>Desa:</strong> ${desa?.nama}<br/>
             <strong>Kegiatan:</strong> ${namaKegiatan}
           </p>
-          <p class="text-gray-500 text-sm">
+          ${isInfrastruktur ? `<span class="inline-block px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium mb-2">Infrastruktur</span>` : `<span class="inline-block px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium mb-2">Non-Infrastruktur</span>`}
+          ${optionalCheckboxes}
+          <p class="text-gray-500 text-sm mt-2">
             Lanjutkan membuat Berita Acara untuk kegiatan ini?
           </p>
         </div>
@@ -1005,6 +1056,18 @@ const BankeuVerificationDetailPage = () => {
       buttonsStyling: false,
       showClass: {
         popup: 'animate__animated animate__zoomIn animate__faster'
+      },
+      preConfirm: () => {
+        if (isInfrastruktur) {
+          // Collect optional item checkbox states
+          const optItems = {};
+          optionalItemsConfig.forEach(item => {
+            const checkbox = document.getElementById(`opt_${item.key}`);
+            optItems[item.key] = checkbox ? checkbox.checked : false;
+          });
+          return { optionalItems: optItems };
+        }
+        return { optionalItems: null };
       }
     });
 
@@ -1012,7 +1075,8 @@ const BankeuVerificationDetailPage = () => {
       try {
         const response = await api.post(`/kecamatan/bankeu/desa/${desaId}/berita-acara`, {
           kegiatanId,
-          proposalId
+          proposalId,
+          optionalItems: result.value?.optionalItems || null
         });
         
         await fetchData();
@@ -1341,8 +1405,8 @@ const BankeuVerificationDetailPage = () => {
     const badges = {
       pending: { icon: LuClock, text: "Menunggu", color: "bg-yellow-100 text-yellow-700" },
       verified: { icon: LuCheck, text: "Disetujui", color: "bg-green-100 text-green-700" },
-      rejected: { icon: LuX, text: "Ditolak", color: "bg-red-100 text-red-700" },
-      revision: { icon: LuRefreshCw, text: "Perlu Revisi", color: "bg-orange-100 text-orange-700" }
+      rejected: { icon: LuRefreshCw, text: "Revisi", color: "bg-orange-100 text-orange-700" },
+      revision: { icon: LuRefreshCw, text: "Revisi", color: "bg-orange-100 text-orange-700" }
     };
 
     const badge = badges[status] || badges.pending;
@@ -1354,6 +1418,30 @@ const BankeuVerificationDetailPage = () => {
         {badge.text}
       </span>
     );
+  };
+
+  // Open catatan modal and fetch verification history
+  const openCatatanModal = async (proposal) => {
+    setCatatanModal({ show: true, proposal });
+    setHistoryLoading(true);
+    try {
+      const res = await api.get(`/kecamatan/bankeu/proposals/${proposal.id}/history`);
+      if (res.data.success) {
+        setVerificationHistory(res.data.data);
+      }
+    } catch (err) {
+      console.error('Error fetching history:', err);
+      setVerificationHistory([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  // Determine individual proposal row color
+  const getProposalRowColor = (status) => {
+    if (status === 'approved') return 'bg-green-50/60';
+    if (status === 'rejected' || status === 'revision') return 'bg-red-50/60';
+    return 'bg-yellow-50/40'; // pending
   };
 
   // Group kegiatan by type - HANYA TAMPILKAN YANG SUDAH DIUPLOAD
@@ -1379,9 +1467,7 @@ const BankeuVerificationDetailPage = () => {
     <div className="min-h-screen bg-gray-50 space-y-6 pb-8">
       {/* Submission Closed Warning Banner */}
       {!submissionOpen && (
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
+        <div
           className="bg-gradient-to-r from-red-50 via-rose-50 to-red-50 border-b-2 border-red-200"
         >
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -1399,7 +1485,7 @@ const BankeuVerificationDetailPage = () => {
               </div>
             </div>
           </div>
-        </motion.div>
+        </div>
       )}
 
       {/* Header */}
@@ -1520,7 +1606,34 @@ const BankeuVerificationDetailPage = () => {
 
       <div className="w-full px-4 sm:px-6 lg:px-8 space-y-4">
 
-      {/* Info Box: Cara Membuat Berita Acara dan Surat Pengantar */}
+      {/* DPMD Revisi Dokumen Banner */}
+      {reviewStatus.hasDpmdRevisiDokumen && (
+        <div className="bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 rounded-xl p-4 shadow-md animate-pulse">
+          <div className="flex items-start gap-3">
+            <div className="p-2.5 bg-amber-100 rounded-lg flex-shrink-0">
+              <LuRefreshCw className="w-5 h-5 text-amber-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-bold text-amber-800 mb-1 text-base">⚠️ Revisi Dokumen dari DPMD</h3>
+              <p className="text-sm text-amber-700 mb-2">
+                DPMD meminta revisi <strong>Surat Pengantar</strong> dan <strong>Berita Acara</strong> untuk {reviewStatus.dpmdRevisiDokumen.length} proposal.
+                Silakan regenerate dokumen lalu kirim ulang ke DPMD.
+              </p>
+              {reviewStatus.dpmdRevisiDokumen.map(p => (
+                <div key={p.id} className="flex items-start gap-2 bg-white/80 rounded-lg p-2.5 mb-1.5 border border-amber-200">
+                  <LuFileText className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-800 truncate">{p.judul_proposal}</p>
+                    {p.dpmd_catatan && (
+                      <p className="text-xs text-amber-700 mt-0.5 italic">Catatan: {p.dpmd_catatan}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
       {reviewStatus.allReviewed && !reviewStatus.hasRejected && (!reviewStatus.hasAllBeritaAcara || !reviewStatus.hasAllSuratPengantar) && (
         <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl p-4 shadow-sm">
           <div className="flex items-start gap-3">
@@ -1725,7 +1838,9 @@ const BankeuVerificationDetailPage = () => {
                 onViewPdf={handleViewPdf}
                 onGenerateBeritaAcara={handleGenerateBeritaAcaraKegiatan}
                 onGenerateSuratPengantar={handleGenerateSuratPengantar}
+                onOpenCatatanModal={openCatatanModal}
                 getStatusBadge={getStatusBadge}
+                getProposalRowColor={getProposalRowColor}
                 imageBaseUrl={imageBaseUrl}
                 timCompletionStatus={timCompletionStatus}
                 desaId={desaId}
@@ -1775,7 +1890,9 @@ const BankeuVerificationDetailPage = () => {
                 onViewPdf={handleViewPdf}
                 onGenerateBeritaAcara={handleGenerateBeritaAcaraKegiatan}
                 onGenerateSuratPengantar={handleGenerateSuratPengantar}
+                onOpenCatatanModal={openCatatanModal}
                 getStatusBadge={getStatusBadge}
+                getProposalRowColor={getProposalRowColor}
                 imageBaseUrl={imageBaseUrl}
                 timCompletionStatus={timCompletionStatus}
                 desaId={desaId}
@@ -1787,6 +1904,166 @@ const BankeuVerificationDetailPage = () => {
         )}
       </div>
       </div>
+
+      {/* Catatan & History Modal */}
+      {catatanModal.show && catatanModal.proposal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setCatatanModal({ show: false, proposal: null })}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="relative px-5 sm:px-6 py-4 sm:py-5 bg-gradient-to-r from-orange-500 to-amber-500">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm">
+                    <LuMessageCircle className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white">Catatan & Riwayat</h3>
+                    <p className="text-orange-100 text-xs mt-0.5">Riwayat verifikasi proposal</p>
+                  </div>
+                </div>
+                <button onClick={() => setCatatanModal({ show: false, proposal: null })} className="p-1.5 hover:bg-white/20 rounded-lg transition-colors">
+                  <LuX className="w-5 h-5 text-white" />
+                </button>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="px-5 sm:px-6 py-4 sm:py-5 space-y-4 overflow-y-auto max-h-[calc(90vh-180px)]">
+              {/* Proposal Info */}
+              <div className="flex items-start gap-3 p-3.5 bg-gradient-to-r from-gray-50 to-slate-50 rounded-xl border border-gray-100">
+                <div className="p-2 bg-amber-100 rounded-lg flex-shrink-0">
+                  <LuFileText className="w-4 h-4 text-amber-600" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-gray-800 line-clamp-2 leading-snug">
+                    {catatanModal.proposal.judul_proposal}
+                  </p>
+                  <div className="flex items-center gap-2 mt-1.5">
+                    <span className="inline-flex items-center gap-1 text-xs text-gray-500">
+                      <LuMapPin className="w-3 h-3" />
+                      {desa?.nama}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => handleViewPdf(catatanModal.proposal, catatanModal.proposal.kegiatan_list?.[0]?.nama_kegiatan || '')}
+                    className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 hover:border-blue-300 rounded-lg transition-all"
+                  >
+                    <LuEye className="w-3.5 h-3.5" />
+                    Lihat File Proposal
+                  </button>
+                </div>
+              </div>
+
+              {/* Catatan Terakhir (Kecamatan) */}
+              {catatanModal.proposal.kecamatan_catatan && (catatanModal.proposal.kecamatan_status === 'rejected' || catatanModal.proposal.kecamatan_status === 'revision') && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse" />
+                    <p className="text-sm font-semibold text-gray-700">Catatan Revisi Terakhir (Kecamatan)</p>
+                  </div>
+                  <div className="p-4 bg-orange-50/80 border border-orange-200 rounded-xl">
+                    <p className="text-sm text-orange-800 leading-relaxed whitespace-pre-wrap">{catatanModal.proposal.kecamatan_catatan}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Catatan Dinas */}
+              {catatanModal.proposal.dinas_catatan && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                    <p className="text-sm font-semibold text-gray-700">Catatan dari Dinas</p>
+                  </div>
+                  <div className="p-4 bg-blue-50/80 border border-blue-200 rounded-xl">
+                    <p className="text-sm text-blue-800 leading-relaxed whitespace-pre-wrap">{catatanModal.proposal.dinas_catatan}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Catatan Verifikasi */}
+              {catatanModal.proposal.catatan_verifikasi && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-amber-500 rounded-full" />
+                    <p className="text-sm font-semibold text-gray-700">Catatan Verifikasi</p>
+                  </div>
+                  <div className="p-4 bg-amber-50/80 border border-amber-200 rounded-xl">
+                    <p className="text-sm text-amber-800 leading-relaxed whitespace-pre-wrap">{catatanModal.proposal.catatan_verifikasi}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* History Timeline */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <LuHistory className="w-4 h-4 text-gray-500" />
+                  <p className="text-sm font-semibold text-gray-700">Riwayat Verifikasi</p>
+                </div>
+                
+                {historyLoading ? (
+                  <div className="flex items-center justify-center py-6">
+                    <div className="w-5 h-5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+                    <span className="ml-2 text-sm text-gray-500">Memuat riwayat...</span>
+                  </div>
+                ) : verificationHistory.length === 0 ? (
+                  <div className="py-4 text-center">
+                    <p className="text-sm text-gray-400">Belum ada riwayat verifikasi</p>
+                  </div>
+                ) : (
+                  <div className="relative pl-6 space-y-0">
+                    {/* Timeline line */}
+                    <div className="absolute left-[9px] top-2 bottom-2 w-0.5 bg-gray-200" />
+                    
+                    {verificationHistory.map((item, idx) => {
+                      const isApprove = item.action === 'approve';
+                      const isReject = item.action === 'reject';
+                      const dotColor = isApprove ? 'bg-green-500' : isReject ? 'bg-red-500' : 'bg-orange-500';
+                      const bgColor = isApprove ? 'bg-green-50 border-green-200' : isReject ? 'bg-red-50 border-red-200' : 'bg-orange-50 border-orange-200';
+                      const actionLabel = isApprove ? 'Disetujui' : 'Revisi';
+                      const actionTextColor = isApprove ? 'text-green-700' : isReject ? 'text-red-700' : 'text-orange-700';
+                      
+                      return (
+                        <div key={item.id} className="relative pb-4">
+                          {/* Dot */}
+                          <div className={`absolute -left-6 top-1.5 w-[14px] h-[14px] rounded-full border-2 border-white ${dotColor} shadow-sm z-10`} />
+                          
+                          <div className={`p-3 rounded-xl border ${bgColor}`}>
+                            <div className="flex items-center justify-between mb-1">
+                              <span className={`text-xs font-bold ${actionTextColor} uppercase tracking-wide`}>{actionLabel}</span>
+                              <span className="text-[10px] text-gray-400">
+                                {new Date(item.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
+                            <p className="text-xs text-gray-600 mb-1">
+                              oleh <span className="font-semibold">{item.user_name}</span>
+                              <span className="text-gray-400"> ({item.user_role})</span>
+                            </p>
+                            {item.new_value?.catatan_umum && (
+                              <div className="mt-2 p-2.5 bg-white/70 rounded-lg border border-gray-100">
+                                <p className="text-xs text-gray-700 leading-relaxed whitespace-pre-wrap">{item.new_value.catatan_umum}</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-5 sm:px-6 py-4 bg-gray-50/80 border-t border-gray-100">
+              <button
+                onClick={() => setCatatanModal({ show: false, proposal: null })}
+                className="w-full px-4 py-2.5 text-sm font-semibold text-gray-700 bg-white hover:bg-gray-100 border-2 border-gray-200 hover:border-gray-300 rounded-xl transition-all"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal PDF Viewer */}
       {showPdfModal && selectedPdf && (
@@ -1801,13 +2078,13 @@ const BankeuVerificationDetailPage = () => {
 };
 
 // Proposal Row Component
-const ProposalRow = ({ kegiatan, proposal, index, onVerify, onViewPdf, onGenerateBeritaAcara, onGenerateSuratPengantar, getStatusBadge, imageBaseUrl, timCompletionStatus, desaId, navigate, tahunAnggaran }) => {
+const ProposalRow = ({ kegiatan, proposal, index, onVerify, onViewPdf, onGenerateBeritaAcara, onGenerateSuratPengantar, onOpenCatatanModal, getStatusBadge, getProposalRowColor, imageBaseUrl, timCompletionStatus, desaId, navigate, tahunAnggaran }) => {
   // Get completion status untuk proposal ini
   const completionStatus = proposal ? timCompletionStatus[proposal.id] : null;
   const isTimComplete = completionStatus?.all_complete || false;
   
   return (
-    <div className={`p-4 md:p-5 border-b border-gray-100 hover:bg-gradient-to-r hover:from-gray-50 hover:to-white transition-all duration-200 ${index === 0 ? '' : ''}`}>
+    <div className={`p-4 md:p-5 border-b border-gray-100 transition-all duration-200 ${proposal ? getProposalRowColor(proposal.kecamatan_status || proposal.status) : ''}`}>
       {/* Header: Nama Kegiatan */}
       <div className="text-sm font-bold text-gray-900 mb-3">
         {kegiatan.nama_kegiatan}
@@ -1874,15 +2151,24 @@ const ProposalRow = ({ kegiatan, proposal, index, onVerify, onViewPdf, onGenerat
               {/* Surat Pengantar Button */}
               {proposal.kecamatan_status === 'approved' && (
                 proposal.surat_pengantar ? (
-                  // Surat Pengantar sudah ada - tampilkan tombol download
-                  <button
-                    onClick={() => window.open(`${imageBaseUrl}/storage${proposal.surat_pengantar}`, '_blank')}
-                    className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-lg transition-all duration-150 shadow-sm text-xs font-semibold"
-                    title="Lihat Surat Pengantar"
-                  >
-                    <LuCheck className="w-4 h-4" />
-                    <span>SP ✓</span>
-                  </button>
+                  // Surat Pengantar sudah ada - tampilkan tombol download + regenerate
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => window.open(`${imageBaseUrl}/storage${proposal.surat_pengantar}`, '_blank')}
+                      className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-lg transition-all duration-150 shadow-sm text-xs font-semibold"
+                      title="Lihat Surat Pengantar"
+                    >
+                      <LuCheck className="w-4 h-4" />
+                      <span>SP ✓</span>
+                    </button>
+                    <button
+                      onClick={() => onGenerateSuratPengantar(proposal.id, proposal.judul_proposal || kegiatan.nama_kegiatan)}
+                      className="flex items-center gap-1 px-2 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg transition-all duration-150 shadow-sm text-xs font-semibold"
+                      title="Regenerate Surat Pengantar"
+                    >
+                      <LuRefreshCw className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 ) : (
                   // Surat Pengantar belum ada - tampilkan tombol generate
                   <button
@@ -1922,22 +2208,31 @@ const ProposalRow = ({ kegiatan, proposal, index, onVerify, onViewPdf, onGenerat
               {/* Berita Acara Button */}
               {proposal.kecamatan_status === 'approved' && (
                 proposal.berita_acara_path ? (
-                  // Berita Acara sudah ada - tampilkan tombol download
-                  <button
-                    onClick={() => window.open(`${imageBaseUrl}${proposal.berita_acara_path}`, '_blank')}
-                    className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-lg transition-all duration-150 shadow-sm text-xs font-semibold"
-                    title="Lihat Berita Acara"
-                  >
-                    <LuCheck className="w-4 h-4" />
-                    <span>BA ✓</span>
-                  </button>
+                  // Berita Acara sudah ada - tampilkan tombol download + regenerate
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => window.open(`${imageBaseUrl}${proposal.berita_acara_path}`, '_blank')}
+                      className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-lg transition-all duration-150 shadow-sm text-xs font-semibold"
+                      title="Lihat Berita Acara"
+                    >
+                      <LuCheck className="w-4 h-4" />
+                      <span>BA ✓</span>
+                    </button>
+                    <button
+                      onClick={() => onGenerateBeritaAcara(proposal.kegiatan_id, proposal.judul_proposal || kegiatan.nama_kegiatan, proposal.id, kegiatan.jenis_kegiatan)}
+                      className="flex items-center gap-1 px-2 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg transition-all duration-150 shadow-sm text-xs font-semibold"
+                      title="Regenerate Berita Acara"
+                    >
+                      <LuRefreshCw className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 ) : (
                   // Berita Acara belum ada - tampilkan tombol generate dengan validasi tim
                   <div className="relative group">
                     <button
                       onClick={() => {
                         if (isTimComplete) {
-                          onGenerateBeritaAcara(proposal.kegiatan_id, proposal.judul_proposal || kegiatan.nama_kegiatan, proposal.id);
+                          onGenerateBeritaAcara(proposal.kegiatan_id, proposal.judul_proposal || kegiatan.nama_kegiatan, proposal.id, kegiatan.jenis_kegiatan);
                         }
                       }}
                       disabled={!isTimComplete}
@@ -2055,48 +2350,26 @@ const ProposalRow = ({ kegiatan, proposal, index, onVerify, onViewPdf, onGenerat
               </div>
             </div>
             
-            {/* Catatan Section */}
+            {/* Catatan Buttons */}
             {(proposal.dinas_catatan || proposal.kecamatan_catatan || proposal.catatan_verifikasi) && (
-              <div className="space-y-2 pt-2">
-                {proposal.dinas_catatan && (
-                  <div className={`p-3 rounded-lg border ${
-                    proposal.dinas_reviewed_file 
-                      ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-300' 
-                      : 'bg-blue-50 border-blue-200'
-                  }`}>
-                    <div className="flex items-start gap-2">
-                      <LuInfo className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                      <div className="flex-1">
-                        <p className="font-semibold text-blue-800 text-xs mb-1">
-                          💬 Catatan dari Dinas Terkait
-                          {proposal.dinas_status === 'approved' && ' (Disetujui)'}
-                          {proposal.dinas_status === 'revision' && ' (Perlu Revisi)'}
-                          {proposal.dinas_status === 'rejected' && ' (Ditolak)'}
-                        </p>
-                        <p className="text-blue-700 text-sm leading-relaxed">{proposal.dinas_catatan}</p>
-                        {proposal.dinas_reviewed_file && (
-                          <p className="text-blue-600 text-xs mt-2 flex items-center gap-1">
-                            <LuShield className="w-3 h-3" />
-                            File referensi tersimpan untuk perbandingan
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+              <div className="flex flex-wrap gap-2 pt-2">
+                {(proposal.kecamatan_catatan || proposal.dinas_catatan) && (
+                  <button
+                    onClick={() => onOpenCatatanModal(proposal)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-orange-700 bg-orange-50 hover:bg-orange-100 border border-orange-200 hover:border-orange-300 rounded-lg transition-all"
+                  >
+                    <LuMessageCircle className="w-3.5 h-3.5" />
+                    Lihat Catatan
+                  </button>
                 )}
-                
-                {proposal.kecamatan_catatan && (
-                  <div className="p-3 bg-purple-50 border-l-4 border-purple-400 rounded-r-lg">
-                    <p className="font-semibold text-purple-800 text-xs mb-1">Catatan Kecamatan</p>
-                    <p className="text-purple-700 text-sm">{proposal.kecamatan_catatan}</p>
-                  </div>
-                )}
-                
-                {proposal.catatan_verifikasi && (
-                  <div className="p-3 bg-amber-50 border-l-4 border-amber-400 rounded-r-lg">
-                    <p className="font-semibold text-amber-800 text-xs mb-1">Catatan Verifikasi</p>
-                    <p className="text-amber-700 text-sm">{proposal.catatan_verifikasi}</p>
-                  </div>
+                {proposal.catatan_verifikasi && !proposal.kecamatan_catatan && !proposal.dinas_catatan && (
+                  <button
+                    onClick={() => onOpenCatatanModal(proposal)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 hover:border-amber-300 rounded-lg transition-all"
+                  >
+                    <LuMessageCircle className="w-3.5 h-3.5" />
+                    Catatan Verifikasi
+                  </button>
                 )}
               </div>
             )}

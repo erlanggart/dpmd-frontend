@@ -6,8 +6,11 @@ import { Pie, Bar } from 'react-chartjs-2';
 import api from '../../api';
 import * as XLSX from 'xlsx';
 import { isVpnUser } from '../../utils/vpnHelper';
+import { useDataCache } from '../../context/DataCacheContext';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
+
+const CACHE_KEY = 'statistik-insentif-dd';
 
 const StatistikInsentifDd = () => {
   const navigate = useNavigate();
@@ -15,9 +18,15 @@ const StatistikInsentifDd = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [expandedKecamatan, setExpandedKecamatan] = useState({});
+  const { getCachedData, setCachedData, isCached } = useDataCache();
 
   useEffect(() => {
-    fetchData();
+    if (isCached(CACHE_KEY)) {
+      setData(getCachedData(CACHE_KEY).data);
+      setLoading(false);
+    } else {
+      fetchData();
+    }
   }, []);
 
   const fetchData = async () => {
@@ -25,7 +34,9 @@ const StatistikInsentifDd = () => {
       setLoading(true);
       const endpoint = isVpnUser() ? '/vpn-core/insentif-dd/data' : '/insentif-dd/data';
       const response = await api.get(endpoint);
-      setData(response.data.data || []);
+      const result = response.data.data || [];
+      setData(result);
+      setCachedData(CACHE_KEY, result);
       setError(null);
     } catch (err) {
       console.error('Error fetching Insentif DD data:', err);

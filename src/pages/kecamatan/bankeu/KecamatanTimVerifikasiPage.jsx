@@ -46,6 +46,11 @@ const KecamatanTimVerifikasiPage = () => {
   const [isQuestionnaireOpen, setIsQuestionnaireOpen] = useState(false); // Collapsed by default
   const [isDinasVerifikatorOpen, setIsDinasVerifikatorOpen] = useState(false);
 
+  // Anggota picker state
+  const [previousAnggota, setPreviousAnggota] = useState([]);
+  const [showAnggotaPicker, setShowAnggotaPicker] = useState(false);
+  const [sourceTtdPath, setSourceTtdPath] = useState(null); // TTD path from previous anggota to copy
+
   // Tim validation and berita acara state
   const [timValidation, setTimValidation] = useState(null);
 
@@ -74,6 +79,11 @@ const KecamatanTimVerifikasiPage = () => {
       const desaData = desaRes.data.data;
       setDesa(desaData);
       setKecamatanId(desaData.kecamatan_id);
+
+      // Fetch daftar anggota yang pernah ditambahkan
+      if (desaData.kecamatan_id) {
+        fetchPreviousAnggota(desaData.kecamatan_id);
+      }
 
       // Filter proposals untuk desa ini
       const allProposals = proposalsRes.data.data;
@@ -116,7 +126,16 @@ const KecamatanTimVerifikasiPage = () => {
     }
   };
 
-  const fetchTimMembers = async (kecId, proposalId = null) => {
+  const fetchPreviousAnggota = async (kecId) => {
+    try {
+      const res = await api.get(`/kecamatan/${kecId}/bankeu/tim-config/anggota-list`);
+      setPreviousAnggota(res.data.data || []);
+    } catch (err) {
+      console.error('Error fetching previous anggota:', err);
+    }
+  };
+
+  const fetchTimMembers = async (kecId, proposalId = null, targetPosisi = null, preserveSignature = false) => {
     try {
       // Build URL dengan proposalId untuk mendapatkan anggota per proposal
       let url = `/kecamatan/${kecId}/bankeu/tim-config`;
@@ -139,10 +158,11 @@ const KecamatanTimVerifikasiPage = () => {
       
       setTimMembers(allMembers);
       
-      // Load config untuk active tab
-      const activeMember = allMembers.find(m => m.posisi === activeTab);
+      // Load config untuk active tab (gunakan targetPosisi jika ada, fallback ke activeTab)
+      const posisiToLoad = targetPosisi || activeTab;
+      const activeMember = allMembers.find(m => m.posisi === posisiToLoad);
       if (activeMember) {
-        loadMemberConfig(activeMember);
+        loadMemberConfig(activeMember, preserveSignature);
       }
       
       // Refresh proposal data to get latest dinas verification info
@@ -353,7 +373,7 @@ const KecamatanTimVerifikasiPage = () => {
     }
   };
 
-  const loadMemberConfig = (member) => {
+  const loadMemberConfig = (member, preserveSignature = false) => {
     if (member) {
       setConfigForm({
         nama: member.nama || '',
@@ -365,7 +385,9 @@ const KecamatanTimVerifikasiPage = () => {
         // ttd_path sudah termasuk folder, contoh: "kecamatan_bankeu_ttd/filename.png"
         setSignatureData(`${imageBaseUrl}/storage/uploads/${member.ttd_path}`);
         setHasSignature(true);
-      } else {
+      } else if (!preserveSignature) {
+        // Hanya clear signature jika tidak diminta preserve
+        // (preserve dipakai saat simpan data diri agar TTD tidak hilang)
         setSignatureData(null);
         setHasSignature(false);
       }
@@ -374,6 +396,7 @@ const KecamatanTimVerifikasiPage = () => {
 
   const handleTabChange = async (posisi) => {
     setActiveTab(posisi);
+    setSourceTtdPath(null); // Clear source TTD when switching tabs
     const member = timMembers.find(m => m.posisi === posisi);
     if (member) {
       loadMemberConfig(member);
@@ -396,12 +419,21 @@ const KecamatanTimVerifikasiPage = () => {
       return;
     }
 
-    // Count existing anggota untuk proposal ini
+    // Jika ada anggota sebelumnya, tampilkan picker
+    if (previousAnggota.length > 0) {
+      setShowAnggotaPicker(true);
+      return;
+    }
+
+    // Langsung buat anggota kosong jika belum pernah ada
+    addBlankAnggota();
+  };
+
+  const addBlankAnggota = () => {
     const anggotaCount = timMembers.filter(m => m.posisi.startsWith('anggota_')).length;
     const nextNumber = anggotaCount + 1;
     const newPosisi = `anggota_${nextNumber}`;
-    
-    // Add to state dengan proposal_id
+
     const newMember = {
       posisi: newPosisi,
       nama: '',
@@ -410,19 +442,92 @@ const KecamatanTimVerifikasiPage = () => {
       ttd_path: null,
       proposal_id: selectedProposal.id
     };
-    
+
     setTimMembers([...timMembers, newMember]);
     setActiveTab(newPosisi);
     loadMemberConfig(newMember);
-    
+    setIsDataDiriOpen(true);
+    setShowAnggotaPicker(false);
+    setSourceTtdPath(null); // Clear any stale source TTD
+
     Swal.fire({
-      toast: true,
-      position: 'top-end',
-      icon: 'success',
-      title: `Anggota ${nextNumber} ditambahkan`,
-      showConfirmButton: false,
-      timer: 2000
+      toast: true, position: 'top-end', icon: 'success',
+      title: `Anggota ${nextNumber} ditambahkan`, showConfirmButton: false, timer: 2000
     });
+  };
+
+  const selectPreviousAnggota = async (anggota) => {
+    const anggotaCount = timMembers.filter(m => m.posisi.startsWith('anggota_')).length;
+    const nextNumber = anggotaCount + 1;
+    const newPosisi = `anggota_${nextNumber}`;
+
+    const newMember = {
+      posisi: newPosisi,
+      nama: anggota.nama,
+      nip: anggota.nip || '',
+      jabatan: anggota.jabatan || '',
+      ttd_path: anggota.ttd_path || null,
+      proposal_id: selectedProposal.id
+    };
+
+    setTimMembers([...timMembers, newMember]);
+    setActiveTab(newPosisi);
+    setConfigForm({ nama: anggota.nama, nip: anggota.nip || '', jabatan: anggota.jabatan || '' });
+    setIsDataDiriOpen(true);
+    setShowAnggotaPicker(false);
+
+    // If previous anggota has TTD, show it immediately
+    if (anggota.ttd_path) {
+      setSignatureData(`${imageBaseUrl}/storage/uploads/${anggota.ttd_path}`);
+      setHasSignature(true);
+      setIsTTDOpen(true); // Auto open TTD section
+    } else {
+      setSignatureData(null);
+      setHasSignature(false);
+      setSourceTtdPath(null);
+    }
+
+    // Auto-save config + TTD langsung ke backend agar tidak perlu klik Simpan manual
+    if (anggota.nama && anggota.jabatan) {
+      try {
+        const requestBody = {
+          nama: anggota.nama,
+          nip: anggota.nip || '',
+          jabatan: anggota.jabatan || '',
+          proposalId: selectedProposal.id,
+          ...(anggota.ttd_path ? { sourceTtdPath: anggota.ttd_path } : {})
+        };
+
+        await api.post(`/kecamatan/${kecamatanId}/bankeu/tim-config/${newPosisi}`, requestBody);
+
+        // Refresh data dari server, pass newPosisi agar loadMemberConfig pakai tab yang benar
+        await fetchTimMembers(kecamatanId, selectedProposal?.id, newPosisi);
+        if (kecamatanId) fetchPreviousAnggota(kecamatanId);
+
+        Swal.fire({
+          toast: true, position: 'top-end', icon: 'success',
+          title: anggota.ttd_path 
+            ? `Anggota ${nextNumber} ditambahkan (dengan tanda tangan)` 
+            : `Anggota ${nextNumber} ditambahkan & disimpan`,
+          showConfirmButton: false, timer: 2000
+        });
+      } catch (error) {
+        console.error('Error auto-saving anggota:', error);
+        // Tetap tampilkan, user bisa simpan manual nanti
+        setSourceTtdPath(anggota.ttd_path || null);
+        Swal.fire({
+          toast: true, position: 'top-end', icon: 'info',
+          title: `Anggota ${nextNumber} ditambahkan, silakan simpan manual`,
+          showConfirmButton: false, timer: 2000
+        });
+      }
+    } else {
+      Swal.fire({
+        toast: true, position: 'top-end', icon: 'success',
+        title: `Anggota ${nextNumber} ditambahkan dari data sebelumnya`,
+        showConfirmButton: false, timer: 2000
+      });
+    }
   };
 
   const handleDeleteAnggota = async (posisi) => {
@@ -494,11 +599,11 @@ const KecamatanTimVerifikasiPage = () => {
   };
 
   const handleSaveConfig = async () => {
-    if (!configForm.nama || !configForm.nip || !configForm.jabatan) {
+    if (!configForm.nama || !configForm.jabatan) {
       Swal.fire({
         icon: 'warning',
         title: 'Data Belum Lengkap',
-        text: 'Mohon lengkapi semua field'
+        text: 'Mohon lengkapi nama dan jabatan'
       });
       return;
     }
@@ -527,10 +632,16 @@ const KecamatanTimVerifikasiPage = () => {
       // Build request body dengan proposalId untuk anggota
       const requestBody = {
         ...configForm,
-        ...(isAnggota && selectedProposal ? { proposalId: selectedProposal.id } : {})
+        ...(isAnggota && selectedProposal ? { proposalId: selectedProposal.id } : {}),
+        ...(isAnggota && sourceTtdPath ? { sourceTtdPath } : {})
       };
 
       await api.post(`/kecamatan/${kecamatanId}/bankeu/tim-config/${activeTab}`, requestBody);
+      
+      // Clear sourceTtdPath after saving (TTD has been copied on backend)
+      if (sourceTtdPath) {
+        setSourceTtdPath(null);
+      }
       
       Swal.fire({
         toast: true,
@@ -541,8 +652,10 @@ const KecamatanTimVerifikasiPage = () => {
         timer: 2000
       });
 
-      // Refresh tim members dengan proposalId
-      await fetchTimMembers(kecamatanId, selectedProposal?.id);
+      // Refresh tim members dan anggota list
+      // preserveSignature=true agar TTD tidak hilang saat simpan data diri
+      await fetchTimMembers(kecamatanId, selectedProposal?.id, null, true);
+      if (kecamatanId) fetchPreviousAnggota(kecamatanId);
     } catch (error) {
       console.error('Error saving config:', error);
       Swal.fire({
@@ -691,7 +804,7 @@ const KecamatanTimVerifikasiPage = () => {
 
   // Check completion status untuk setiap member
   const getMemberStatus = (member) => {
-    const hasData = member.nama && member.nip && member.jabatan;
+    const hasData = member.nama && member.jabatan;
     const hasTTD = !!member.ttd_path;
     const hasQuisioner = !!member.has_questionnaire; // from backend
     return { 
@@ -1129,7 +1242,7 @@ const KecamatanTimVerifikasiPage = () => {
                     <h3 className="font-bold text-gray-900">Data Diri</h3>
                     <p className="text-sm text-gray-500">Informasi identitas anggota tim</p>
                   </div>
-                  {activeMember?.nama && activeMember?.nip && activeMember?.jabatan && (
+                  {activeMember?.nama && activeMember?.jabatan && (
                     <div className="flex items-center gap-1.5 text-green-600 bg-green-100 px-3 py-1.5 rounded-full">
                       <LuBadgeCheck className="w-4 h-4" />
                       <span className="text-sm font-medium">Lengkap</span>
@@ -1159,7 +1272,7 @@ const KecamatanTimVerifikasiPage = () => {
 
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      NIP <span className="text-red-500">*</span>
+                      NIP <span className="text-gray-400 text-xs font-normal">(opsional)</span>
                     </label>
                     <input
                       type="text"
@@ -1349,6 +1462,7 @@ const KecamatanTimVerifikasiPage = () => {
                     proposalId={selectedProposal.id}
                     verifierType="kecamatan_tim"
                     verifierId={`${kecamatanId}_${activeTab}`}
+                    jenisKegiatan={selectedProposal.kegiatan_list?.[0]?.jenis_kegiatan || 'infrastruktur'}
                     onSaveSuccess={async () => {
                       setIsQuestionnaireOpen(false); // Close after save
                       
@@ -1427,6 +1541,73 @@ const KecamatanTimVerifikasiPage = () => {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Anggota Picker Modal */}
+      {showAnggotaPicker && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-violet-500 to-purple-600 px-6 py-4 text-white flex items-center justify-between flex-shrink-0">
+              <div>
+                <h3 className="font-bold text-lg">Tambah Anggota</h3>
+                <p className="text-violet-200 text-xs mt-0.5">Pilih anggota sebelumnya atau buat baru</p>
+              </div>
+              <button onClick={() => setShowAnggotaPicker(false)} className="p-1.5 hover:bg-white/20 rounded-lg transition-colors">
+                <LuX className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Buat Baru Button */}
+            <div className="px-5 pt-4 pb-2 flex-shrink-0">
+              <button
+                onClick={addBlankAnggota}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-violet-50 text-violet-700 rounded-xl hover:bg-violet-100 transition-colors border-2 border-dashed border-violet-300 font-medium"
+              >
+                <LuPlus className="w-5 h-5" />
+                <span>Input Manual (Anggota Baru)</span>
+              </button>
+            </div>
+
+            {/* Divider */}
+            <div className="px-5 py-2 flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-px bg-gray-200" />
+                <span className="text-xs text-gray-400 font-medium">atau pilih dari data sebelumnya</span>
+                <div className="flex-1 h-px bg-gray-200" />
+              </div>
+            </div>
+
+            {/* Previous Anggota List */}
+            <div className="px-5 pb-5 overflow-y-auto flex-1 space-y-2">
+              {previousAnggota.map((anggota, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => selectPreviousAnggota(anggota)}
+                  className="w-full flex items-center gap-3 p-3 bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-300 rounded-xl transition-all text-left group"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center flex-shrink-0 group-hover:from-blue-200 group-hover:to-indigo-200 transition-colors">
+                    <LuUserCheck className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-800 text-sm truncate">{anggota.nama}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      {anggota.jabatan && <span className="text-xs text-gray-500 truncate">{anggota.jabatan}</span>}
+                      {anggota.nip && <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">NIP: {anggota.nip}</span>}
+                    </div>
+                  </div>
+                  {anggota.ttd_path ? (
+                    <span className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 text-[10px] font-semibold rounded-lg flex-shrink-0">
+                      <LuPenTool className="w-3 h-3" />
+                      TTD
+                    </span>
+                  ) : (
+                    <LuPlus className="w-4 h-4 text-gray-400 group-hover:text-blue-600 flex-shrink-0" />
+                  )}
+                </button>
+              ))}
             </div>
           </div>
         </div>

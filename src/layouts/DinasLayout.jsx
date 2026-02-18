@@ -18,6 +18,7 @@ import {
   LuSettings,
   LuUsers,
   LuUser,
+  LuKeyRound,
   LuPanelLeftClose,
   LuPanelLeft
 } from "react-icons/lu";
@@ -55,6 +56,12 @@ const menuItems = [
     label: "Konfigurasi",
     path: "/dinas/konfigurasi",
     icon: LuSettings,
+  },
+  {
+    id: "ganti-password",
+    label: "Ganti Password",
+    path: "/dinas/ganti-password",
+    icon: LuKeyRound,
   },
 ];
 

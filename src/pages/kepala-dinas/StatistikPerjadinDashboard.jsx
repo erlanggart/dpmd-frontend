@@ -24,6 +24,7 @@ import {
 import * as XLSX from 'xlsx';
 import perjadinService from '../../services/perjadinService';
 import toast from 'react-hot-toast';
+import { useDataCache } from '../../context/DataCacheContext';
 
 // Register ChartJS modules
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, Filler);
@@ -48,9 +49,17 @@ const StatistikPerjadinDashboard = () => {
   const [isAutoTransition, setIsAutoTransition] = useState(true);
   const [animating, setAnimating] = useState(false);
   const autoTransitionRef = useRef(null);
+  const { getCachedData, setCachedData, isCached, clearCache } = useDataCache();
 
   useEffect(() => {
-    fetchData();
+    if (isCached('statistik-perjadin')) {
+      const cached = getCachedData('statistik-perjadin').data;
+      setDashboardData(cached.dashboardData);
+      setAllKegiatan(cached.allKegiatan);
+      setLoading(false);
+    } else {
+      fetchData();
+    }
   }, []);
 
   const fetchData = async () => {
@@ -60,19 +69,21 @@ const StatistikPerjadinDashboard = () => {
 
       // Fetch dashboard statistics
       const dashboardRes = await perjadinService.getDashboard();
-      console.log('Dashboard Response:', dashboardRes.data);
+      let dashData = null;
+      let kegiatanData = [];
       if (dashboardRes.data.success) {
-        setDashboardData(dashboardRes.data.data);
-        console.log('Dashboard Data Set:', dashboardRes.data.data);
+        dashData = dashboardRes.data.data;
+        setDashboardData(dashData);
       }
 
       // Fetch all kegiatan for detailed statistics
       const kegiatanRes = await perjadinService.getAllKegiatan({ limit: 1000 });
-      console.log('Kegiatan Response:', kegiatanRes.data);
       if (kegiatanRes.data.success) {
-        setAllKegiatan(kegiatanRes.data.data.kegiatan || []);
-        console.log('All Kegiatan Set:', kegiatanRes.data.data.kegiatan?.length || 0, 'items');
+        kegiatanData = kegiatanRes.data.data.kegiatan || [];
+        setAllKegiatan(kegiatanData);
       }
+
+      setCachedData('statistik-perjadin', { dashboardData: dashData, allKegiatan: kegiatanData });
     } catch (err) {
       console.error('Error fetching perjadin data:', err);
       setError(err.message || 'Gagal memuat data perjalanan dinas');
@@ -375,7 +386,7 @@ const StatistikPerjadinDashboard = () => {
           <h3 className="text-xl font-bold text-gray-800 mb-2">Gagal Memuat Data</h3>
           <p className="text-gray-500 mb-6">{error}</p>
           <button
-            onClick={fetchData}
+            onClick={() => { clearCache('statistik-perjadin'); fetchData(); }}
             className="px-6 py-3 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-xl hover:shadow-lg hover:shadow-red-500/30 transition-all"
           >
             Coba Lagi
@@ -428,7 +439,7 @@ const StatistikPerjadinDashboard = () => {
                   <span>Export</span>
                 </button>
                 <button
-                  onClick={fetchData}
+                  onClick={() => { clearCache('statistik-perjadin'); fetchData(); }}
                   disabled={loading}
                   className="p-3 bg-white/30 hover:bg-white/50 rounded-xl transition-all border border-white/50 shadow-lg"
                 >

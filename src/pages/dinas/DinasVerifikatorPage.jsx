@@ -2,7 +2,7 @@
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import Swal from 'sweetalert2';
-import { LuUsers, LuPlus, LuPencil, LuTrash2, LuKey, LuToggleLeft, LuToggleRight, LuMail, LuUser, LuIdCard, LuBriefcase, LuLock, LuMapPin, LuCheck, LuSquare, LuSearch } from 'react-icons/lu';
+import { LuUsers, LuPlus, LuPencil, LuTrash2, LuKey, LuToggleLeft, LuToggleRight, LuMail, LuUser, LuIdCard, LuBriefcase, LuLock, LuMapPin, LuCheck, LuSquare, LuSearch, LuX, LuEye, LuEyeOff, LuShield, LuUserPlus } from 'react-icons/lu';
 
 const DinasVerifikatorPage = () => {
   const navigate = useNavigate();
@@ -26,6 +26,7 @@ const DinasVerifikatorPage = () => {
   const [selectedKecamatan, setSelectedKecamatan] = useState('');
   const [showKecamatanDropdown, setShowKecamatanDropdown] = useState(false);
   const [kecamatanSearch, setKecamatanSearch] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     nama: '',
     nip: '',
@@ -186,19 +187,33 @@ const DinasVerifikatorPage = () => {
 
   const handleResetPassword = async (verifikator) => {
     const result = await Swal.fire({
-      title: 'Buat Password Baru?',
-      html: `Password baru akan dibuat untuk <strong>${verifikator.nama}</strong>.<br/>Password baru akan ditampilkan setelah dibuat.`,
+      title: 'Buat Password Baru',
+      html: `
+        <p class="text-sm text-gray-600 mb-3">Masukkan password baru untuk <strong>${verifikator.nama}</strong></p>
+        <input id="swal-new-password" type="text" class="swal2-input" placeholder="Masukkan password baru" style="font-size: 14px;">
+        <p class="text-xs text-gray-400 mt-1">Minimal 6 karakter</p>
+      `,
       icon: 'question',
       showCancelButton: true,
       confirmButtonColor: '#f59e0b',
       cancelButtonColor: '#6b7280',
-      confirmButtonText: 'Ya, Buat Password Baru',
-      cancelButtonText: 'Batal'
+      confirmButtonText: 'Simpan Password',
+      cancelButtonText: 'Batal',
+      preConfirm: () => {
+        const password = document.getElementById('swal-new-password').value;
+        if (!password || password.length < 6) {
+          Swal.showValidationMessage('Password minimal 6 karakter');
+          return false;
+        }
+        return password;
+      }
     });
 
-    if (result.isConfirmed) {
+    if (result.isConfirmed && result.value) {
       try {
-        const response = await api.post(`/dinas/${dinasId}/verifikator/${verifikator.id}/reset-password`);
+        const response = await api.post(`/dinas/${dinasId}/verifikator/${verifikator.id}/reset-password`, {
+          new_password: result.value
+        });
         const newPassword = response.data?.data?.newPassword || response.data?.newPassword;
         
         await Swal.fire({
@@ -220,7 +235,7 @@ const DinasVerifikatorPage = () => {
         Swal.fire({
           icon: 'error',
           title: 'Gagal',
-          text: 'Gagal membuat password baru'
+          text: error.response?.data?.message || 'Gagal membuat password baru'
         });
       }
     }
@@ -595,108 +610,145 @@ const DinasVerifikatorPage = () => {
 
         {/* Add Modal */}
         {showAddModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-              <div className="p-6">
-                <h2 className="text-xl font-bold text-gray-900 mb-4">Tambah Verifikator Baru</h2>
-                <form onSubmit={handleAddVerifikator}>
-                  <div className="space-y-4">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col">
+              {/* Header */}
+              <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 px-6 py-5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-white/20 backdrop-blur-sm p-2.5 rounded-xl">
+                      <LuUserPlus className="w-5 h-5 text-white" />
+                    </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        <LuUser className="w-4 h-4 inline mr-1" />
+                      <h2 className="text-lg font-bold text-white">Tambah Verifikator</h2>
+                      <p className="text-blue-100 text-xs mt-0.5">Buat akun verifikator baru</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => { setShowAddModal(false); resetForm(); setShowPassword(false); }}
+                    className="p-2 hover:bg-white/20 rounded-xl transition-colors"
+                  >
+                    <LuX className="w-5 h-5 text-white" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Body */}
+              <div className="overflow-y-auto flex-1 p-6">
+                <form id="addVerifikatorForm" onSubmit={handleAddVerifikator}>
+                  <div className="space-y-5">
+                    {/* Nama */}
+                    <div>
+                      <label className="flex items-center gap-1.5 text-sm font-semibold text-gray-700 mb-2">
+                        <LuUser className="w-4 h-4 text-blue-500" />
                         Nama Lengkap <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="text"
                         value={formData.nama}
                         onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="Nama lengkap verifikator"
+                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all placeholder:text-gray-400"
+                        placeholder="Masukkan nama lengkap"
                       />
                     </div>
 
+                    {/* NIP */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        <LuIdCard className="w-4 h-4 inline mr-1" />
-                        NIP (Opsional)
+                      <label className="flex items-center gap-1.5 text-sm font-semibold text-gray-700 mb-2">
+                        <LuIdCard className="w-4 h-4 text-blue-500" />
+                        NIP <span className="text-xs font-normal text-gray-400">(Opsional)</span>
                       </label>
                       <input
                         type="text"
                         value={formData.nip}
                         onChange={(e) => setFormData({ ...formData, nip: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="NIP verifikator"
+                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all placeholder:text-gray-400"
+                        placeholder="Masukkan NIP"
                       />
                     </div>
 
+                    {/* Jabatan */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        <LuBriefcase className="w-4 h-4 inline mr-1" />
+                      <label className="flex items-center gap-1.5 text-sm font-semibold text-gray-700 mb-2">
+                        <LuBriefcase className="w-4 h-4 text-blue-500" />
                         Jabatan <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="text"
                         value={formData.jabatan}
                         onChange={(e) => setFormData({ ...formData, jabatan: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="Jabatan verifikator"
+                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all placeholder:text-gray-400"
+                        placeholder="Masukkan jabatan"
                       />
                     </div>
 
+                    {/* Email */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        <LuMail className="w-4 h-4 inline mr-1" />
-                        Email (untuk Login) <span className="text-red-500">*</span>
+                      <label className="flex items-center gap-1.5 text-sm font-semibold text-gray-700 mb-2">
+                        <LuMail className="w-4 h-4 text-blue-500" />
+                        Email <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="email"
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all placeholder:text-gray-400"
                         placeholder="email@example.com"
                       />
-                      <p className="text-xs text-gray-500 mt-1">Email ini akan digunakan untuk login</p>
+                      <p className="text-xs text-gray-400 mt-1.5 flex items-center gap-1">
+                        <LuShield className="w-3 h-3" />
+                        Email ini akan digunakan sebagai kredensial login
+                      </p>
                     </div>
 
-                    <div className="border-t pt-4 mt-4">
-                      <h3 className="font-semibold text-gray-900 mb-3">Password</h3>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          <LuLock className="w-4 h-4 inline mr-1" />
-                          Password <span className="text-red-500">*</span>
-                        </label>
+                    {/* Password */}
+                    <div className="bg-gradient-to-br from-gray-50 to-blue-50/50 rounded-xl p-4 border border-gray-100">
+                      <label className="flex items-center gap-1.5 text-sm font-semibold text-gray-700 mb-2">
+                        <LuLock className="w-4 h-4 text-blue-500" />
+                        Password <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
                         <input
-                          type="password"
+                          type={showPassword ? 'text' : 'password'}
                           value={formData.password}
                           onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="w-full px-4 py-3 pr-12 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all placeholder:text-gray-400"
                           placeholder="Minimal 6 karakter"
                         />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-gray-600 transition-colors"
+                        >
+                          {showPassword ? <LuEyeOff className="w-4 h-4" /> : <LuEye className="w-4 h-4" />}
+                        </button>
                       </div>
                     </div>
                   </div>
-
-                  <div className="flex gap-3 mt-6">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowAddModal(false);
-                        resetForm();
-                      }}
-                      className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                    >
-                      Batal
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-                    >
-                      {loading ? 'Menyimpan...' : 'Simpan'}
-                    </button>
-                  </div>
                 </form>
+              </div>
+
+              {/* Footer */}
+              <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => { setShowAddModal(false); resetForm(); setShowPassword(false); }}
+                  className="flex-1 px-4 py-3 border border-gray-200 text-gray-600 rounded-xl hover:bg-gray-100 font-medium transition-all"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  form="addVerifikatorForm"
+                  disabled={loading}
+                  className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 font-medium transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25"
+                >
+                  {loading ? (
+                    <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Menyimpan...</>
+                  ) : (
+                    <><LuCheck className="w-4 h-4" /> Simpan</>
+                  )}
+                </button>
               </div>
             </div>
           </div>
@@ -704,93 +756,123 @@ const DinasVerifikatorPage = () => {
 
         {/* Edit Modal */}
         {showEditModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-              <div className="p-6">
-                <h2 className="text-xl font-bold text-gray-900 mb-4">Edit Verifikator</h2>
-                <form onSubmit={handleEditVerifikator}>
-                  <div className="space-y-4">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col">
+              {/* Header */}
+              <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-orange-600 px-6 py-5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-white/20 backdrop-blur-sm p-2.5 rounded-xl">
+                      <LuPencil className="w-5 h-5 text-white" />
+                    </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        <LuUser className="w-4 h-4 inline mr-1" />
+                      <h2 className="text-lg font-bold text-white">Edit Verifikator</h2>
+                      <p className="text-orange-100 text-xs mt-0.5">{selectedVerifikator?.nama}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => { setShowEditModal(false); setSelectedVerifikator(null); resetForm(); }}
+                    className="p-2 hover:bg-white/20 rounded-xl transition-colors"
+                  >
+                    <LuX className="w-5 h-5 text-white" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Body */}
+              <div className="overflow-y-auto flex-1 p-6">
+                <form id="editVerifikatorForm" onSubmit={handleEditVerifikator}>
+                  <div className="space-y-5">
+                    {/* Nama */}
+                    <div>
+                      <label className="flex items-center gap-1.5 text-sm font-semibold text-gray-700 mb-2">
+                        <LuUser className="w-4 h-4 text-orange-500" />
                         Nama Lengkap
                       </label>
                       <input
                         type="text"
                         value={formData.nama}
                         onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:bg-white transition-all placeholder:text-gray-400"
                       />
                     </div>
 
+                    {/* NIP */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        <LuIdCard className="w-4 h-4 inline mr-1" />
+                      <label className="flex items-center gap-1.5 text-sm font-semibold text-gray-700 mb-2">
+                        <LuIdCard className="w-4 h-4 text-orange-500" />
                         NIP
                       </label>
                       <input
                         type="text"
                         value={formData.nip}
                         onChange={(e) => setFormData({ ...formData, nip: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:bg-white transition-all placeholder:text-gray-400"
                       />
                     </div>
 
+                    {/* Jabatan */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        <LuBriefcase className="w-4 h-4 inline mr-1" />
+                      <label className="flex items-center gap-1.5 text-sm font-semibold text-gray-700 mb-2">
+                        <LuBriefcase className="w-4 h-4 text-orange-500" />
                         Jabatan
                       </label>
                       <input
                         type="text"
                         value={formData.jabatan}
                         onChange={(e) => setFormData({ ...formData, jabatan: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:bg-white transition-all placeholder:text-gray-400"
                       />
                     </div>
 
+                    {/* Email */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        <LuMail className="w-4 h-4 inline mr-1" />
+                      <label className="flex items-center gap-1.5 text-sm font-semibold text-gray-700 mb-2">
+                        <LuMail className="w-4 h-4 text-orange-500" />
                         Email
                       </label>
                       <input
                         type="email"
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:bg-white transition-all placeholder:text-gray-400"
                       />
                     </div>
 
-                    <div className="bg-gray-50 p-3 rounded-lg">
-                      <p className="text-xs text-gray-600">
-                        <LuLock className="w-3 h-3 inline mr-1" />
-                        Untuk membuat password baru, gunakan tombol kunci di daftar verifikator.
+                    {/* Password Info */}
+                    <div className="bg-gradient-to-br from-gray-50 to-orange-50/50 rounded-xl p-4 border border-gray-100 flex items-start gap-3">
+                      <div className="p-2 bg-orange-100 rounded-lg flex-shrink-0">
+                        <LuLock className="w-4 h-4 text-orange-600" />
+                      </div>
+                      <p className="text-sm text-gray-600">
+                        Untuk membuat password baru, gunakan tombol <span className="font-semibold text-gray-700">kunci</span> di daftar verifikator.
                       </p>
                     </div>
                   </div>
-
-                  <div className="flex gap-3 mt-6">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowEditModal(false);
-                        setSelectedVerifikator(null);
-                        resetForm();
-                      }}
-                      className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                    >
-                      Batal
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-                    >
-                      {loading ? 'Menyimpan...' : 'Simpan'}
-                    </button>
-                  </div>
                 </form>
+              </div>
+
+              {/* Footer */}
+              <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => { setShowEditModal(false); setSelectedVerifikator(null); resetForm(); }}
+                  className="flex-1 px-4 py-3 border border-gray-200 text-gray-600 rounded-xl hover:bg-gray-100 font-medium transition-all"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  form="editVerifikatorForm"
+                  disabled={loading}
+                  className="flex-1 px-4 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl hover:from-amber-600 hover:to-orange-600 font-medium transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-orange-500/25"
+                >
+                  {loading ? (
+                    <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Menyimpan...</>
+                  ) : (
+                    <><LuCheck className="w-4 h-4" /> Simpan Perubahan</>
+                  )}
+                </button>
               </div>
             </div>
           </div>

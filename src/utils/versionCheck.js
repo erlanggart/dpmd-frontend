@@ -1,88 +1,65 @@
 // Version Check Utility for PWA
 // Detects when new version is available and prompts user to update
+//
+// How it works:
+// 1. Each build generates a unique buildHash in version.json + <meta name="build-hash"> in index.html
+// 2. The app reads its own build hash from the <meta> tag (baked at build time)
+// 3. Periodically fetches /version.json (with cache-busting) from the server
+// 4. If server's buildHash differs from the local one → new deployment detected → show modal
 
-const VERSION_KEY = 'app_version';
+const BUILD_HASH_KEY = 'app_build_hash';
 const LAST_UPDATE_KEY = 'app_last_update';
 const DISMISS_KEY = 'app_update_dismissed';
-const VERSION_CHECK_INTERVAL = 60 * 60 * 1000; // Check every 60 minutes (reduced from 30)
-const DISMISS_DURATION = 24 * 60 * 60 * 1000; // Don't re-show for 24 hours after dismiss
+const VERSION_CHECK_INTERVAL = 5 * 60 * 1000; // Check every 5 minutes
+const DISMISS_DURATION = 4 * 60 * 60 * 1000;  // Don't re-show for 4 hours after dismiss
+
+/**
+ * Get the build hash that was injected into index.html at build time
+ */
+export const getLocalBuildHash = () => {
+  const meta = document.querySelector('meta[name="build-hash"]');
+  return meta?.getAttribute('content') || null;
+};
+
+/**
+ * Get stored build hash from localStorage
+ */
+export const getStoredBuildHash = () => {
+  return localStorage.getItem(BUILD_HASH_KEY);
+};
+
+/**
+ * Store build hash to localStorage with timestamp
+ */
+export const storeBuildHash = (hash) => {
+  localStorage.setItem(BUILD_HASH_KEY, hash);
+  localStorage.setItem(LAST_UPDATE_KEY, Date.now().toString());
+  console.log(`[Version] Stored build hash: ${hash}`);
+};
 
 /**
  * Get current app version from package.json (injected at build time)
  */
 export const getCurrentVersion = () => {
-  // Version will be injected by Vite during build
   return import.meta.env.VITE_APP_VERSION || '1.0.0';
 };
 
 /**
- * Get stored version from localStorage
- */
-export const getStoredVersion = () => {
-  return localStorage.getItem(VERSION_KEY);
-};
-
-/**
- * Get last update timestamp
- */
-export const getLastUpdateTime = () => {
-  const timestamp = localStorage.getItem(LAST_UPDATE_KEY);
-  return timestamp ? parseInt(timestamp, 10) : null;
-};
-
-/**
- * Store current version to localStorage with timestamp
- */
-export const storeVersion = (version) => {
-  localStorage.setItem(VERSION_KEY, version);
-  localStorage.setItem(LAST_UPDATE_KEY, Date.now().toString());
-  console.log(`[Version] Stored version: ${version} at ${new Date().toISOString()}`);
-};
-
-/**
- * Check if app needs update
- * Returns true if stored version is different from current version
- */
-export const needsUpdate = () => {
-  const currentVersion = getCurrentVersion();
-  const storedVersion = getStoredVersion();
-  const lastUpdateTime = getLastUpdateTime();
-  
-  // First time user
-  if (!storedVersion) {
-    storeVersion(currentVersion);
-    return false;
-  }
-  
-  // If user just updated (within last 10 seconds), don't show update prompt
-  if (lastUpdateTime) {
-    const timeSinceUpdate = Date.now() - lastUpdateTime;
-    if (timeSinceUpdate < 10000) {
-      console.log('[Version] Just updated, skipping version check');
-      return false;
-    }
-  }
-  
-  // Compare versions
-  const isOutdated = currentVersion !== storedVersion;
-  
-  if (isOutdated) {
-    console.log(`[Version] Update available: ${storedVersion} → ${currentVersion}`);
-  }
-  
-  return isOutdated;
-};
-
-/**
  * Force hard refresh and update service worker
- * This clears all caches and reloads the app
  */
 export const forceUpdate = async () => {
   try {
     console.log('[Version] Forcing app update...');
     
-    // Update stored version
-    storeVersion(getCurrentVersion());
+    // Store server's build hash so after reload we won't re-trigger
+    const serverHash = sessionStorage.getItem('_pending_server_hash');
+    if (serverHash) {
+      storeBuildHash(serverHash);
+      sessionStorage.removeItem('_pending_server_hash');
+    }
+    
+    // Clear dismiss flag
+    localStorage.removeItem(DISMISS_KEY);
     
     // Unregister all service workers
     if ('serviceWorker' in navigator) {
@@ -109,7 +86,6 @@ export const forceUpdate = async () => {
     window.location.reload(true);
   } catch (error) {
     console.error('[Version] Error during force update:', error);
-    // Fallback: just reload
     window.location.reload(true);
   }
 };
@@ -119,7 +95,7 @@ export const forceUpdate = async () => {
  */
 export const dismissUpdate = () => {
   localStorage.setItem(DISMISS_KEY, Date.now().toString());
-  console.log('[Version] Update dismissed for 24 hours');
+  console.log('[Version] Update dismissed for 4 hours');
 };
 
 /**
@@ -132,99 +108,123 @@ const isDismissed = () => {
   return elapsed < DISMISS_DURATION;
 };
 
+/**
+ * Compare local build hash with server's version.json
+ * Returns true if server has a different (newer) build
+ */
 export const checkForServerUpdate = async () => {
   try {
     // Don't check if recently dismissed
     if (isDismissed()) {
-      console.log('[Version] Update was dismissed, skipping check');
       return false;
     }
 
-    // Don't check if just updated
-    const lastUpdateTime = getLastUpdateTime();
-    if (lastUpdateTime) {
-      const timeSinceUpdate = Date.now() - lastUpdateTime;
-      if (timeSinceUpdate < 30000) { // 30 seconds grace period
-        console.log('[Version] Just updated, skipping server check');
+    // Don't check if just updated (within 30s grace period)
+    const lastUpdate = localStorage.getItem(LAST_UPDATE_KEY);
+    if (lastUpdate) {
+      const elapsed = Date.now() - parseInt(lastUpdate, 10);
+      if (elapsed < 30000) {
         return false;
       }
     }
 
-    // Initialize storedVersion if never set (prevents null mismatch)
-    const currentVersion = getCurrentVersion();
-    if (!getStoredVersion()) {
-      storeVersion(currentVersion);
-      console.log('[Version] Initialized stored version on first visit');
+    // Get our local build hash from <meta> tag
+    const localHash = getLocalBuildHash();
+    
+    // Initialize stored hash on first visit
+    if (!getStoredBuildHash() && localHash) {
+      storeBuildHash(localHash);
+      console.log('[Version] Initialized build hash on first visit');
       return false;
     }
-    
-    // Fetch version.json with cache-busting
-    const response = await fetch(`/version.json?t=${Date.now()}`, {
+
+    // Fetch version.json with aggressive cache-busting
+    const response = await fetch(`/version.json?_=${Date.now()}`, {
       cache: 'no-store',
       headers: {
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache'
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
       }
     });
     
     if (!response.ok) {
-      // Silently skip if version.json not found (common in dev)
       return false;
     }
     
-    // Check if response is JSON
     const contentType = response.headers.get('content-type');
     if (!contentType || !contentType.includes('application/json')) {
-      // Not a JSON response, skip silently
-      return false;
+      // Might get HTML (e.g. SPA fallback) - not a valid version.json
+      const text = await response.text();
+      if (text.trim().startsWith('<')) {
+        return false;
+      }
+      try {
+        const data = JSON.parse(text);
+        return processVersionData(data, localHash);
+      } catch {
+        return false;
+      }
     }
     
     const data = await response.json();
-    const serverVersion = data.version;
-    
-    if (!serverVersion) {
-      // No version in response, skip
-      return false;
-    }
-    
-    const storedVersion = getStoredVersion();
-    
-    console.log('[Version] Server version:', serverVersion);
-    console.log('[Version] Current version:', currentVersion);
-    console.log('[Version] Stored version:', storedVersion);
-    
-    // If stored version matches current version, we're up to date
-    if (storedVersion === currentVersion) {
-      console.log('[Version] ✅ App is up to date');
-      return false;
-    }
-    
-    // Check if server has newer version than what's stored
-    if (serverVersion !== storedVersion && serverVersion === currentVersion) {
-      // Server version matches current version, but stored is old
-      // This means user needs to update stored version
-      console.log('[Version] 🆕 New version available from server!');
-      return true;
-    }
-    
-    return false;
+    return processVersionData(data, localHash);
   } catch (error) {
-    // Silently handle errors (common in development)
-    if (error.name === 'SyntaxError') {
-      // JSON parse error, ignore
-      return false;
+    if (error.name !== 'SyntaxError') {
+      console.warn('[Version] Could not check for updates:', error.message);
     }
-    console.warn('[Version] Could not check for updates:', error.message);
     return false;
   }
 };
 
 /**
+ * Process version data from server
+ * Compare against STORED hash (localStorage) instead of local meta tag hash.
+ * This ensures the modal shows even after VitePWA autoUpdate reloads the page
+ * on mobile/tablet (where localHash already matches serverHash after reload).
+ */
+function processVersionData(data, localHash) {
+  const serverHash = data.buildHash;
+  
+  if (!serverHash) {
+    // Old format version.json without buildHash - skip
+    return false;
+  }
+  
+  const storedHash = getStoredBuildHash();
+  
+  console.log('[Version] Server hash:', serverHash);
+  console.log('[Version] Local hash:', localHash);
+  console.log('[Version] Stored hash:', storedHash);
+  
+  // First visit: no stored hash yet → initialize and skip
+  if (!storedHash) {
+    storeBuildHash(localHash || serverHash);
+    console.log('[Version] Initialized stored hash on first visit');
+    return false;
+  }
+  
+  // Primary check: compare server hash with STORED hash (localStorage)
+  // This catches updates even after SW auto-reload where localHash already matches serverHash
+  if (serverHash === storedHash) {
+    console.log('[Version] ✅ App is up to date');
+    return false;
+  }
+  
+  // Server has a DIFFERENT hash from what we stored → new version deployed!
+  console.log('[Version] 🆕 New version detected! Server has different build.');
+  
+  // Store the pending server hash so forceUpdate can save it
+  sessionStorage.setItem('_pending_server_hash', serverHash);
+  
+  return true;
+}
+
+/**
  * Setup periodic version check
- * Checks for updates every 30 minutes
  */
 export const setupPeriodicVersionCheck = (onUpdateAvailable) => {
-  // Check on visibility change (when user returns to app)
+  // Check on visibility change (when user returns to app / switches tab)
   const handleVisibilityChange = async () => {
     if (document.visibilityState === 'visible') {
       const updateAvailable = await checkForServerUpdate();
@@ -244,38 +244,30 @@ export const setupPeriodicVersionCheck = (onUpdateAvailable) => {
     }
   }, VERSION_CHECK_INTERVAL);
   
-  // Initial check
-  setTimeout(async () => {
+  // Initial check after 3 seconds
+  const initialTimeout = setTimeout(async () => {
     const updateAvailable = await checkForServerUpdate();
     if (updateAvailable && onUpdateAvailable) {
       onUpdateAvailable();
     }
-  }, 5000); // Check 5 seconds after app loads
+  }, 3000);
+  
+  // Also check on focus (better for tablet/mobile)
+  const handleFocus = async () => {
+    const updateAvailable = await checkForServerUpdate();
+    if (updateAvailable && onUpdateAvailable) {
+      onUpdateAvailable();
+    }
+  };
+  window.addEventListener('focus', handleFocus);
   
   // Cleanup function
   return () => {
     document.removeEventListener('visibilitychange', handleVisibilityChange);
+    window.removeEventListener('focus', handleFocus);
     clearInterval(intervalId);
+    clearTimeout(initialTimeout);
   };
-};
-
-/**
- * Compare version strings
- * Returns: 1 if v1 > v2, -1 if v1 < v2, 0 if equal
- */
-export const compareVersions = (v1, v2) => {
-  const parts1 = v1.split('.').map(Number);
-  const parts2 = v2.split('.').map(Number);
-  
-  for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
-    const part1 = parts1[i] || 0;
-    const part2 = parts2[i] || 0;
-    
-    if (part1 > part2) return 1;
-    if (part1 < part2) return -1;
-  }
-  
-  return 0;
 };
 
 /**
@@ -283,13 +275,12 @@ export const compareVersions = (v1, v2) => {
  */
 export const getVersionInfo = () => {
   const currentVersion = getCurrentVersion();
-  const storedVersion = getStoredVersion();
+  const buildHash = getLocalBuildHash();
   const buildDate = import.meta.env.VITE_BUILD_DATE || 'Unknown';
   
   return {
     current: currentVersion,
-    stored: storedVersion,
-    buildDate,
-    needsUpdate: needsUpdate()
+    buildHash,
+    buildDate
   };
 };

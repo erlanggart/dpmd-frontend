@@ -4,17 +4,23 @@ import api from '../api';
 import Swal from 'sweetalert2';
 
 /**
- * Component untuk Form Quisioner Verifikasi 13 Item (Berita Acara)
+ * Component untuk Form Quisioner Verifikasi Berita Acara
  * Digunakan oleh Dinas dan Tim Verifikasi Kecamatan
  * 
- * Logika baru:
- * - Semua item harus dicentang (tersedia) untuk bisa simpan
- * - Jika ada item yang tidak tersedia, proposal harus dikembalikan ke desa
+ * Checklist berbeda berdasarkan jenis kegiatan:
+ * - Infrastruktur: 12 item (item 5,7,8,9 opsional)
+ * - Non-Infrastruktur: 5 item
+ * 
+ * Logika:
+ * - Semua item wajib harus dicentang (tersedia) untuk bisa simpan
+ * - Item opsional boleh tidak dicentang
+ * - Jika ada item wajib yang tidak tersedia, proposal harus dikembalikan ke desa
  */
 const BankeuQuestionnaireForm = ({ 
   proposalId, 
   verifierType, 
   verifierId,
+  jenisKegiatan = 'infrastruktur',
   readOnly = false,
   onSaveSuccess,
   onLoad
@@ -34,26 +40,36 @@ const BankeuQuestionnaireForm = ({
     item_10: false,
     item_11: false,
     item_12: false,
-    item_13: false,
     catatan: ''
   });
 
-  // 13 Item Checklist sesuai Berita Acara
-  const checklistItems = [
+  const isInfrastruktur = jenisKegiatan === 'infrastruktur';
+
+  // Checklist items berbeda berdasarkan jenis kegiatan
+  const checklistItems = isInfrastruktur ? [
+    { key: 'item_1', label: 'Surat Pengantar dari Kepala Desa' },
+    { key: 'item_2', label: 'Surat Permohonan Bantuan Keuangan' },
+    { key: 'item_3', label: 'Proposal (Latar Belakang, Maksud dan Tujuan, Bentuk Kegiatan, Jadwal Pelaksanaan)' },
+    { key: 'item_4', label: 'RPA dan RAB' },
+    { key: 'item_5', label: 'Surat Pernyataan Kepala Desa (lokasi tidak dalam sengketa)', optional: true },
+    { key: 'item_6', label: 'Bukti kepemilikan Aset Desa (untuk Rehab Kantor Desa)' },
+    { key: 'item_7', label: 'Dokumen kesediaan peralihan hak hibah atas tanah', optional: true },
+    { key: 'item_8', label: 'Dokumen pernyataan kesanggupan (tidak minta ganti rugi)', optional: true },
+    { key: 'item_9', label: 'Persetujuan pemanfaatan barang milik Daerah/Negara', optional: true },
+    { key: 'item_10', label: 'Foto lokasi rencana pelaksanaan kegiatan' },
+    { key: 'item_11', label: 'Peta lokasi rencana kegiatan' },
+    { key: 'item_12', label: 'Berita Acara Musyawarah Desa' },
+  ] : [
     { key: 'item_1', label: 'Surat Pengantar dari Kepala Desa' },
     { key: 'item_2', label: 'Surat Permohonan Bantuan Keuangan Khusus Akselerasi Pembangunan Perdesaan' },
-    { key: 'item_3', label: 'Proposal Bantuan Keuangan (Latar Belakang, Maksud dan Tujuan, Bentuk Kegiatan, Rencana Pelaksanaan)' },
-    { key: 'item_4', label: 'Rencana Penggunaan Bantuan Keuangan dan RAB' },
-    { key: 'item_5', label: 'Foto lokasi rencana pelaksanaan kegiatan (0%)', ket: 'Infrastruktur' },
-    { key: 'item_6', label: 'Peta dan titik lokasi rencana kegiatan', ket: 'Infrastruktur' },
-    { key: 'item_7', label: 'Berita Acara Hasil Musyawarah Desa' },
-    { key: 'item_8', label: 'SK Kepala Desa tentang Penetapan Tim Pelaksana Kegiatan (TPK)' },
-    { key: 'item_9', label: 'Ketersediaan lahan dan kepastian status lahan', ket: 'Infrastruktur' },
-    { key: 'item_10', label: 'Tidak Duplikasi Anggaran' },
-    { key: 'item_11', label: 'Kesesuaian antara lokasi dan usulan' },
-    { key: 'item_12', label: 'Kesesuaian RAB dengan standar harga yang telah ditetapkan di desa' },
-    { key: 'item_13', label: 'Kesesuaian dengan standar teknis konstruksi', ket: 'Infrastruktur' }
+    { key: 'item_3', label: 'Proposal Bantuan Keuangan (Latar Belakang, Maksud dan Tujuan, Bentuk Kegiatan, Jadwal Pelaksanaan)' },
+    { key: 'item_4', label: 'Rencana Anggaran Biaya' },
+    { key: 'item_5', label: 'Tidak Duplikasi Anggaran' },
   ];
+
+  // Items yang wajib (non-optional)
+  const requiredItems = checklistItems.filter(item => !item.optional);
+  const optionalItemKeys = checklistItems.filter(item => item.optional).map(item => item.key);
 
   useEffect(() => {
     fetchQuestionnaire();
@@ -70,23 +86,13 @@ const BankeuQuestionnaireForm = ({
       
       if (response.data.success && response.data.data) {
         const data = response.data.data;
-        // Map qX (boolean/tinyint) to item_X (boolean)
-        setFormData({
-          item_1: data.q1 === true || data.q1 === 1,
-          item_2: data.q2 === true || data.q2 === 1,
-          item_3: data.q3 === true || data.q3 === 1,
-          item_4: data.q4 === true || data.q4 === 1,
-          item_5: data.q5 === true || data.q5 === 1,
-          item_6: data.q6 === true || data.q6 === 1,
-          item_7: data.q7 === true || data.q7 === 1,
-          item_8: data.q8 === true || data.q8 === 1,
-          item_9: data.q9 === true || data.q9 === 1,
-          item_10: data.q10 === true || data.q10 === 1,
-          item_11: data.q11 === true || data.q11 === 1,
-          item_12: data.q12 === true || data.q12 === 1,
-          item_13: data.q13 === true || data.q13 === 1,
-          catatan: data.overall_notes || ''
+        // Map qX (boolean/tinyint) to item_X (boolean) - hanya untuk items yang ada di checklist
+        const newFormData = { catatan: data.overall_notes || '' };
+        checklistItems.forEach((item, idx) => {
+          const qKey = `q${idx + 1}`;
+          newFormData[item.key] = data[qKey] === true || data[qKey] === 1;
         });
+        setFormData(prev => ({ ...prev, ...newFormData }));
         if (onLoad) onLoad(!!data.id);
       } else {
         if (onLoad) onLoad(false);
@@ -103,18 +109,18 @@ const BankeuQuestionnaireForm = ({
     setFormData(prev => ({ ...prev, [itemKey]: !prev[itemKey] }));
   };
 
-  // Check if all items are checked
+  // Check if all required (non-optional) items are checked
   const allItemsChecked = () => {
-    return checklistItems.every(item => formData[item.key] === true);
+    return requiredItems.every(item => formData[item.key] === true);
   };
 
-  // Get unchecked items
+  // Get unchecked required items
   const getUncheckedItems = () => {
-    return checklistItems.filter(item => formData[item.key] !== true);
+    return requiredItems.filter(item => formData[item.key] !== true);
   };
 
   const handleSave = async () => {
-    // Validate all items must be checked
+    // Validate all required items must be checked
     if (!allItemsChecked()) {
       const unchecked = getUncheckedItems();
       Swal.fire({
@@ -122,8 +128,8 @@ const BankeuQuestionnaireForm = ({
         title: 'Tidak Dapat Menyimpan',
         html: `
           <div class="text-left">
-            <p class="mb-3">Semua item harus dicentang (tersedia) untuk menyimpan quisioner.</p>
-            <p class="font-bold mb-2">Item yang belum dicentang:</p>
+            <p class="mb-3">Semua item wajib harus dicentang (tersedia) untuk menyimpan quisioner.</p>
+            <p class="font-bold mb-2">Item wajib yang belum dicentang:</p>
             <ul class="list-disc pl-5 text-sm text-gray-600">
               ${unchecked.map(item => `<li>${item.label}</li>`).join('')}
             </ul>
@@ -141,25 +147,16 @@ const BankeuQuestionnaireForm = ({
     try {
       setSaving(true);
 
-      // All items are true (checked)
+      // Build payload - map item_X back to qX
       const payload = {
         verifier_type: verifierType,
         verifier_id: verifierId,
-        q1: true,
-        q2: true,
-        q3: true,
-        q4: true,
-        q5: true,
-        q6: true,
-        q7: true,
-        q8: true,
-        q9: true,
-        q10: true,
-        q11: true,
-        q12: true,
-        q13: true,
         overall_notes: formData.catatan
       };
+      
+      checklistItems.forEach((item, idx) => {
+        payload[`q${idx + 1}`] = formData[item.key] || false;
+      });
 
       const response = await api.post(`/bankeu/questionnaire/${proposalId}`, payload);
 
@@ -167,7 +164,7 @@ const BankeuQuestionnaireForm = ({
         Swal.fire({
           icon: 'success',
           title: 'Berhasil',
-          text: 'Quisioner berhasil disimpan. Semua dokumen terverifikasi lengkap.',
+          text: 'Quisioner berhasil disimpan. Semua dokumen wajib terverifikasi lengkap.',
           timer: 2000,
           showConfirmButton: false
         });
@@ -186,10 +183,12 @@ const BankeuQuestionnaireForm = ({
     }
   };
 
-  // Count checked items
+  // Count checked required items
+  const checkedRequiredCount = requiredItems.filter(item => formData[item.key] === true).length;
+  const totalRequiredItems = requiredItems.length;
   const checkedCount = checklistItems.filter(item => formData[item.key] === true).length;
   const totalItems = checklistItems.length;
-  const isComplete = checkedCount === totalItems;
+  const isComplete = checkedRequiredCount === totalRequiredItems;
 
   if (loading) {
     return (
@@ -212,7 +211,9 @@ const BankeuQuestionnaireForm = ({
               Quisioner Verifikasi Kelengkapan Dokumen
             </h3>
             <p className="text-sm text-gray-600 mt-1">
-              Checklist 13 item untuk Berita Acara Verifikasi
+              Checklist {totalItems} item untuk Berita Acara Verifikasi
+              {isInfrastruktur && <span className="ml-2 inline-block px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">Infrastruktur</span>}
+              {!isInfrastruktur && <span className="ml-2 inline-block px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">Non-Infrastruktur</span>}
             </p>
           </div>
           
@@ -253,9 +254,9 @@ const BankeuQuestionnaireForm = ({
                     }`}>
                       {item.label}
                     </p>
-                    {item.ket && (
-                      <span className="inline-block px-2 py-1 bg-amber-100 text-amber-700 text-xs rounded-md">
-                        {item.ket}
+                    {item.optional && (
+                      <span className="inline-block px-2 py-1 bg-blue-50 text-blue-600 text-xs rounded-md font-medium">
+                        Opsional
                       </span>
                     )}
                   </div>
@@ -321,10 +322,10 @@ const BankeuQuestionnaireForm = ({
           <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
             <LuTriangleAlert className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
             <div className="text-sm text-amber-800">
-              <p className="font-bold mb-1">Dokumen Belum Lengkap</p>
+              <p className="font-bold mb-1">Dokumen Wajib Belum Lengkap</p>
               <p>
-                Masih ada {totalItems - checkedCount} item yang belum dicentang. 
-                Semua dokumen harus tersedia untuk menyimpan quisioner. 
+                Masih ada {totalRequiredItems - checkedRequiredCount} item wajib yang belum dicentang. 
+                Semua dokumen wajib harus tersedia untuk menyimpan quisioner. 
                 Jika dokumen tidak tersedia, kembalikan proposal ke desa untuk dilengkapi.
               </p>
             </div>
@@ -336,9 +337,9 @@ const BankeuQuestionnaireForm = ({
           <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-4 flex items-start gap-3">
             <LuCircleCheck className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
             <div className="text-sm text-green-800">
-              <p className="font-bold mb-1">Semua Dokumen Terverifikasi</p>
+              <p className="font-bold mb-1">Semua Dokumen Wajib Terverifikasi</p>
               <p>
-                Semua 13 item sudah dicentang. Anda dapat menyimpan quisioner ini.
+                Semua {totalRequiredItems} item wajib sudah dicentang. Anda dapat menyimpan quisioner ini.
               </p>
             </div>
           </div>
