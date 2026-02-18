@@ -190,6 +190,22 @@ const DinasVerificationPage = ({ tahun = 2027 }) => {
     return Object.values(grouped).sort((a, b) => a.nama.localeCompare(b.nama));
   };
 
+  // Determine desa row color based on overall proposal status
+  const getDesaColor = (stats) => {
+    if (stats.total === 0) return { bg: 'bg-gradient-to-r from-gray-50 to-gray-100', hover: 'hover:from-gray-100 hover:to-gray-200', border: 'border-gray-200', icon: 'bg-gray-100', iconText: 'text-gray-500' };
+    if (stats.revision > 0) return { bg: 'bg-gradient-to-r from-red-50 to-orange-50', hover: 'hover:from-red-100 hover:to-orange-100', border: 'border-red-200', icon: 'bg-red-100', iconText: 'text-red-600' };
+    if (stats.approved === stats.total) return { bg: 'bg-gradient-to-r from-green-50 to-emerald-50', hover: 'hover:from-green-100 hover:to-emerald-100', border: 'border-green-200', icon: 'bg-green-100', iconText: 'text-green-600' };
+    return { bg: 'bg-gradient-to-r from-yellow-50 to-amber-50', hover: 'hover:from-yellow-100 hover:to-amber-100', border: 'border-yellow-200', icon: 'bg-amber-100', iconText: 'text-amber-600' };
+  };
+
+  // Determine individual proposal row color
+  const getProposalRowColor = (status) => {
+    if (status === 'approved') return 'bg-green-50/60 hover:bg-green-100/60';
+    if (status === 'rejected' || status === 'revision') return 'bg-red-50/60 hover:bg-red-100/60';
+    if (status === 'in_review') return 'bg-blue-50/40 hover:bg-blue-100/40';
+    return 'bg-yellow-50/40 hover:bg-yellow-100/40'; // pending
+  };
+
   const toggleKecamatan = (kecamatanId) => {
     setExpandedKecamatan(prev => ({
       ...prev,
@@ -648,17 +664,19 @@ const DinasVerificationPage = ({ tahun = 2027 }) => {
               {/* Proposals List by Desa */}
               {expandedKecamatan[kecamatan.id] && (
                 <div className="bg-gray-50 p-4 space-y-3">
-                  {kecamatan.desas.map((desa) => (
-                    <div key={desa.id} className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                      {/* Desa Header */}
+                  {kecamatan.desas.map((desa) => {
+                    const desaColor = getDesaColor(desa.stats);
+                    return (
+                    <div key={desa.id} className={`bg-white rounded-lg border ${desaColor.border} overflow-hidden`}>
+                      {/* Desa Header - Color coded by status */}
                       <div 
-                        className="bg-gradient-to-r from-gray-50 to-gray-100 p-3 cursor-pointer hover:from-gray-100 hover:to-gray-200 transition-colors"
+                        className={`${desaColor.bg} ${desaColor.hover} p-3 cursor-pointer transition-colors`}
                         onClick={() => toggleDesa(desa.id)}
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <div className="p-1.5 bg-amber-100 rounded">
-                              <LuMapPin className="w-4 h-4 text-amber-600" />
+                            <div className={`p-1.5 ${desaColor.icon} rounded`}>
+                              <LuMapPin className={`w-4 h-4 ${desaColor.iconText}`} />
                             </div>
                             <div>
                               <h4 className="font-semibold text-gray-800">Desa {desa.nama}</h4>
@@ -666,6 +684,7 @@ const DinasVerificationPage = ({ tahun = 2027 }) => {
                                 {desa.stats.total} Proposal
                                 {desa.stats.pending > 0 && ` • ${desa.stats.pending} Menunggu`}
                                 {desa.stats.approved > 0 && ` • ${desa.stats.approved} Disetujui`}
+                                {desa.stats.revision > 0 && ` • ${desa.stats.revision} Revisi`}
                               </p>
                             </div>
                           </div>
@@ -685,6 +704,11 @@ const DinasVerificationPage = ({ tahun = 2027 }) => {
                               {desa.stats.approved > 0 && (
                                 <span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-xs font-medium">
                                   {desa.stats.approved}
+                                </span>
+                              )}
+                              {desa.stats.revision > 0 && (
+                                <span className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-xs font-medium">
+                                  {desa.stats.revision}
                                 </span>
                               )}
                             </div>
@@ -712,7 +736,7 @@ const DinasVerificationPage = ({ tahun = 2027 }) => {
                               </thead>
                               <tbody className="divide-y divide-gray-100">
                                 {desa.proposals.map((proposal) => (
-                                  <tr key={proposal.id} className="hover:bg-gray-50/50 transition-colors">
+                                  <tr key={proposal.id} className={`${getProposalRowColor(proposal.dinas_status)} transition-colors`}>
                                     <td className="px-4 py-4">
                                       <div className="space-y-3">
                                         {/* Header - Judul & Badge Jenis */}
@@ -827,8 +851,10 @@ const DinasVerificationPage = ({ tahun = 2027 }) => {
                         
                         {/* Mobile Card View - Visible only on mobile */}
                         <div className="md:hidden space-y-3 p-3">
-                          {desa.proposals.map((proposal) => (
-                            <div key={proposal.id} className="bg-white rounded-xl border border-gray-200 p-4 space-y-3 shadow-sm">
+                          {desa.proposals.map((proposal) => {
+                            const mobileRowColor = proposal.dinas_status === 'approved' ? 'border-green-200 bg-green-50/40' : (proposal.dinas_status === 'rejected' || proposal.dinas_status === 'revision') ? 'border-red-200 bg-red-50/40' : 'border-yellow-200 bg-yellow-50/40';
+                            return (
+                            <div key={proposal.id} className={`rounded-xl ${mobileRowColor} p-4 space-y-3 shadow-sm`}>
                               {/* Header */}
                               <div className="flex items-start gap-3">
                                 <div className="p-2 bg-gradient-to-br from-amber-100 to-amber-50 rounded-lg shadow-sm flex-shrink-0">
@@ -933,12 +959,14 @@ const DinasVerificationPage = ({ tahun = 2027 }) => {
                                 )}
                               </div>
                             </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
                       )}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
