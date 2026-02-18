@@ -115,7 +115,12 @@ const DinasVerificationPage = ({ tahun = 2027 }) => {
     }
 
     if (statusFilter !== 'all') {
-      filtered = filtered.filter(p => p.dinas_status === statusFilter);
+      if (statusFilter === 'revision') {
+        // Revisi includes both 'revision' and 'rejected'
+        filtered = filtered.filter(p => p.dinas_status === 'revision' || p.dinas_status === 'rejected');
+      } else {
+        filtered = filtered.filter(p => p.dinas_status === statusFilter);
+      }
     }
 
     if (jenisFilter !== 'all') {
@@ -141,7 +146,6 @@ const DinasVerificationPage = ({ tahun = 2027 }) => {
             pending: 0,
             in_review: 0,
             approved: 0,
-            rejected: 0,
             revision: 0,
             total: 0
           }
@@ -157,7 +161,6 @@ const DinasVerificationPage = ({ tahun = 2027 }) => {
             pending: 0,
             in_review: 0,
             approved: 0,
-            rejected: 0,
             revision: 0,
             total: 0
           }
@@ -169,11 +172,13 @@ const DinasVerificationPage = ({ tahun = 2027 }) => {
       grouped[kecamatanId].stats.total++;
       
       const status = proposal.dinas_status || 'pending';
-      if (grouped[kecamatanId].desas[desaId].stats[status] !== undefined) {
-        grouped[kecamatanId].desas[desaId].stats[status]++;
+      // Merge rejected into revision
+      const mappedStatus = status === 'rejected' ? 'revision' : status;
+      if (grouped[kecamatanId].desas[desaId].stats[mappedStatus] !== undefined) {
+        grouped[kecamatanId].desas[desaId].stats[mappedStatus]++;
       }
-      if (grouped[kecamatanId].stats[status] !== undefined) {
-        grouped[kecamatanId].stats[status]++;
+      if (grouped[kecamatanId].stats[mappedStatus] !== undefined) {
+        grouped[kecamatanId].stats[mappedStatus]++;
       }
     });
 
@@ -407,7 +412,7 @@ const DinasVerificationPage = ({ tahun = 2027 }) => {
       pending: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Menunggu', icon: LuClock },
       in_review: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Sedang Direview', icon: LuRefreshCw },
       approved: { bg: 'bg-green-100', text: 'text-green-800', label: 'Disetujui', icon: LuCircleCheck },
-      rejected: { bg: 'bg-red-100', text: 'text-red-800', label: 'Ditolak', icon: LuCircleX },
+      rejected: { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Perlu Revisi', icon: LuRefreshCw },
       revision: { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Perlu Revisi', icon: LuRefreshCw }
     };
     
@@ -479,59 +484,59 @@ const DinasVerificationPage = ({ tahun = 2027 }) => {
 
       {/* Statistics Cards - Responsive */}
       {statistics && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-          <div className="bg-white rounded-xl p-3 sm:p-4 border border-gray-100 shadow-sm">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-1.5 sm:p-2 bg-yellow-100 rounded-lg">
-                <LuClock className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-600" />
-              </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          {/* Menunggu */}
+          <div className="relative overflow-hidden bg-gradient-to-br from-amber-50 to-yellow-50 rounded-2xl p-4 sm:p-5 border border-amber-100/60 shadow-sm hover:shadow-md transition-all duration-300 group">
+            <div className="absolute top-0 right-0 w-20 h-20 bg-amber-200/20 rounded-full -translate-y-6 translate-x-6 group-hover:scale-125 transition-transform duration-500" />
+            <div className="relative flex items-center justify-between">
               <div>
-                <p className="text-lg sm:text-2xl font-bold text-gray-800">{statistics.pending || 0}</p>
-                <p className="text-xs text-gray-500">Menunggu</p>
+                <p className="text-xs sm:text-sm font-medium text-amber-600/80 mb-1">Menunggu</p>
+                <p className="text-2xl sm:text-3xl font-extrabold text-amber-700">{statistics.pending || 0}</p>
+              </div>
+              <div className="p-2.5 sm:p-3 bg-amber-100/80 rounded-xl shadow-sm">
+                <LuClock className="w-5 h-5 sm:w-6 sm:h-6 text-amber-600" />
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-xl p-3 sm:p-4 border border-gray-100 shadow-sm">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-1.5 sm:p-2 bg-blue-100 rounded-lg">
-                <LuRefreshCw className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
-              </div>
+
+          {/* Direview */}
+          <div className="relative overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-4 sm:p-5 border border-blue-100/60 shadow-sm hover:shadow-md transition-all duration-300 group">
+            <div className="absolute top-0 right-0 w-20 h-20 bg-blue-200/20 rounded-full -translate-y-6 translate-x-6 group-hover:scale-125 transition-transform duration-500" />
+            <div className="relative flex items-center justify-between">
               <div>
-                <p className="text-lg sm:text-2xl font-bold text-gray-800">{statistics.in_review || 0}</p>
-                <p className="text-xs text-gray-500">Direview</p>
+                <p className="text-xs sm:text-sm font-medium text-blue-600/80 mb-1">Direview</p>
+                <p className="text-2xl sm:text-3xl font-extrabold text-blue-700">{statistics.in_review || 0}</p>
+              </div>
+              <div className="p-2.5 sm:p-3 bg-blue-100/80 rounded-xl shadow-sm">
+                <LuRefreshCw className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-xl p-3 sm:p-4 border border-gray-100 shadow-sm">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-1.5 sm:p-2 bg-green-100 rounded-lg">
-                <LuCircleCheck className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
-              </div>
+
+          {/* Disetujui */}
+          <div className="relative overflow-hidden bg-gradient-to-br from-emerald-50 to-green-50 rounded-2xl p-4 sm:p-5 border border-emerald-100/60 shadow-sm hover:shadow-md transition-all duration-300 group">
+            <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-200/20 rounded-full -translate-y-6 translate-x-6 group-hover:scale-125 transition-transform duration-500" />
+            <div className="relative flex items-center justify-between">
               <div>
-                <p className="text-lg sm:text-2xl font-bold text-gray-800">{statistics.approved || 0}</p>
-                <p className="text-xs text-gray-500">Disetujui</p>
+                <p className="text-xs sm:text-sm font-medium text-emerald-600/80 mb-1">Disetujui</p>
+                <p className="text-2xl sm:text-3xl font-extrabold text-emerald-700">{statistics.approved || 0}</p>
+              </div>
+              <div className="p-2.5 sm:p-3 bg-emerald-100/80 rounded-xl shadow-sm">
+                <LuCircleCheck className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-600" />
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-xl p-3 sm:p-4 border border-gray-100 shadow-sm">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-1.5 sm:p-2 bg-red-100 rounded-lg">
-                <LuCircleX className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
-              </div>
+
+          {/* Revisi */}
+          <div className="relative overflow-hidden bg-gradient-to-br from-orange-50 to-red-50 rounded-2xl p-4 sm:p-5 border border-orange-100/60 shadow-sm hover:shadow-md transition-all duration-300 group">
+            <div className="absolute top-0 right-0 w-20 h-20 bg-orange-200/20 rounded-full -translate-y-6 translate-x-6 group-hover:scale-125 transition-transform duration-500" />
+            <div className="relative flex items-center justify-between">
               <div>
-                <p className="text-lg sm:text-2xl font-bold text-gray-800">{statistics.rejected || 0}</p>
-                <p className="text-xs text-gray-500">Ditolak</p>
+                <p className="text-xs sm:text-sm font-medium text-orange-600/80 mb-1">Revisi</p>
+                <p className="text-2xl sm:text-3xl font-extrabold text-orange-700">{Number(statistics.rejected || 0) + Number(statistics.revision || 0)}</p>
               </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-xl p-3 sm:p-4 border border-gray-100 shadow-sm">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-1.5 sm:p-2 bg-orange-100 rounded-lg">
-                <LuRefreshCw className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600" />
-              </div>
-              <div>
-                <p className="text-lg sm:text-2xl font-bold text-gray-800">{statistics.revision || 0}</p>
-                <p className="text-xs text-gray-500">Revisi</p>
+              <div className="p-2.5 sm:p-3 bg-orange-100/80 rounded-xl shadow-sm">
+                <LuRefreshCw className="w-5 h-5 sm:w-6 sm:h-6 text-orange-600" />
               </div>
             </div>
           </div>
@@ -565,7 +570,6 @@ const DinasVerificationPage = ({ tahun = 2027 }) => {
               <option value="pending">Menunggu</option>
               <option value="in_review">Sedang Direview</option>
               <option value="approved">Disetujui</option>
-              <option value="rejected">Ditolak</option>
               <option value="revision">Perlu Revisi</option>
             </select>
 

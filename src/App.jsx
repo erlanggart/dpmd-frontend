@@ -275,6 +275,9 @@ const VerifikatorProfilePage = lazy(
 const DinasDashboardPage = lazy(
   () => import("./pages/dinas/DinasDashboardPage"),
 );
+const DinasChangePasswordPage = lazy(
+  () => import("./pages/dinas/DinasChangePasswordPage"),
+);
 const CoreDashboardLayout = lazy(() => import("./layouts/CoreDashboardLayout"));
 const WelcomeDashboard = lazy(
   () => import("./pages/core-dashboard/WelcomeDashboard"),
@@ -936,6 +939,7 @@ function App() {
                     element={<DinasVerifikatorPage />}
                   />
                   <Route path="profil" element={<VerifikatorProfilePage />} />
+                  <Route path="ganti-password" element={<DinasChangePasswordPage />} />
                 </Route>
 
                 {/* Rute Core Dashboard - DPMD Internal Only */}
