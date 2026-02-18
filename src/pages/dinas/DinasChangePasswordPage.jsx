@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LuLock, LuEye, LuEyeOff, LuShieldCheck, LuAlertCircle } from 'react-icons/lu';
+import { LuLock, LuEye, LuEyeOff, LuShieldCheck, LuCircleAlert } from 'react-icons/lu';
 import api from '../../services/api';
 import Swal from 'sweetalert2';
 
@@ -108,7 +108,7 @@ const DinasChangePasswordPage = () => {
             </div>
             {errors.currentPassword && (
               <p className="mt-1 text-xs text-red-500 flex items-center gap-1">
-                <LuAlertCircle className="w-3.5 h-3.5" /> {errors.currentPassword}
+                <LuCircleAlert className="w-3.5 h-3.5" /> {errors.currentPassword}
               </p>
             )}
           </div>
@@ -135,7 +135,7 @@ const DinasChangePasswordPage = () => {
             </div>
             {errors.newPassword && (
               <p className="mt-1 text-xs text-red-500 flex items-center gap-1">
-                <LuAlertCircle className="w-3.5 h-3.5" /> {errors.newPassword}
+                <LuCircleAlert className="w-3.5 h-3.5" /> {errors.newPassword}
               </p>
             )}
           </div>
@@ -162,7 +162,7 @@ const DinasChangePasswordPage = () => {
             </div>
             {errors.confirmPassword && (
               <p className="mt-1 text-xs text-red-500 flex items-center gap-1">
-                <LuAlertCircle className="w-3.5 h-3.5" /> {errors.confirmPassword}
+                <LuCircleAlert className="w-3.5 h-3.5" /> {errors.confirmPassword}
               </p>
             )}
           </div>

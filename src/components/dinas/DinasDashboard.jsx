@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from "react";
 import { 
     FiCheckCircle, 
-    FiXCircle, 
     FiClock,
     FiAlertCircle,
     FiRefreshCw,
@@ -73,20 +72,14 @@ const DinasDashboard = () => {
             bgLight: 'bg-green-50'
         },
         { 
-            key: 'rejected', 
-            title: 'Ditolak', 
-            icon: <FiXCircle className="w-6 h-6" />, 
-            color: 'bg-red-500',
-            textColor: 'text-red-600',
-            bgLight: 'bg-red-50'
-        },
-        { 
             key: 'revision', 
             title: 'Perlu Revisi', 
             icon: <FiAlertCircle className="w-6 h-6" />, 
             color: 'bg-orange-500',
             textColor: 'text-orange-600',
-            bgLight: 'bg-orange-50'
+            bgLight: 'bg-orange-50',
+            // Merge rejected + revision counts
+            getValue: (stats) => Number(stats?.rejected || 0) + Number(stats?.revision || 0)
         }
     ];
 
@@ -131,7 +124,7 @@ const DinasDashboard = () => {
                     <p className="text-gray-500 mt-4">Memuat data...</p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     {statsConfig.map((stat) => (
                         <div key={stat.key} className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 hover:shadow-xl transition-shadow">
                             <div className="flex items-center justify-between mb-4">
@@ -140,7 +133,7 @@ const DinasDashboard = () => {
                                 </div>
                             </div>
                             <p className="text-3xl font-bold text-gray-900 mb-1">
-                                {statistics?.[stat.key] || 0}
+                                {stat.getValue ? stat.getValue(statistics) : (statistics?.[stat.key] || 0)}
                             </p>
                             <p className="text-sm text-gray-600">{stat.title}</p>
                         </div>
@@ -199,7 +192,7 @@ const DinasDashboard = () => {
                             <li>• Verifikasi proposal bantuan keuangan sesuai bidang dinas Anda</li>
                             <li>• Isi questionnaire verifikasi untuk setiap proposal</li>
                             <li>• Proposal yang disetujui akan otomatis diteruskan ke Kecamatan</li>
-                            <li>• Proposal yang ditolak akan dikembalikan ke Desa untuk diperbaiki</li>
+                            <li>• Proposal yang perlu direvisi akan dikembalikan ke Desa untuk diperbaiki</li>
                         </ul>
                     </div>
                 </div>
