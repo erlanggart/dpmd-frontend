@@ -308,7 +308,7 @@ const DPMDDashboard = () => {
         icon: Info,
         label: 'Informasi',
         color: 'orange',
-        onClick: () => navigate('/core-dashboard/informasi')
+        onClick: () => navigate('/dpmd/informasi')
       }
     ];
 

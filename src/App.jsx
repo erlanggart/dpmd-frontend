@@ -292,6 +292,9 @@ const WelcomeDashboard = lazy(
 const DPMDDashboard = lazy(
   () => import("./pages/dpmd/DPMDDashboard"),
 );
+const InformasiPage = lazy(
+  () => import("./pages/dpmd/InformasiPage"),
+);
 // Legacy individual dashboards (masih digunakan di beberapa tempat)
 const KepalaDinasDashboard = lazy(
   () => import("./pages/kepala-dinas/KepalaDinasDashboard"),
@@ -740,6 +743,7 @@ function App() {
                   <Route path="jadwal-kegiatan" element={<JadwalKegiatanPage />} />
                   <Route path="perjadin" element={<PerjadinMain />} />
                   <Route path="perjadin/detail/:id" element={<PerjadinDetail />} />
+                  <Route path="informasi" element={<InformasiPage />} />
                 </Route>
                 
                 {/* Rute Bidang - Accessible by pegawai/kepala_bidang/ketua_tim (their own bidang) & kepala_dinas/superadmin (all) */}
