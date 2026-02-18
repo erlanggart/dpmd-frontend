@@ -225,6 +225,8 @@ const BankeuVerificationPage = ({ tahun = 2027 }) => {
     if (statusFilter !== 'all') {
       if (statusFilter === 'pending') {
         filtered = filtered.filter(p => !p.kecamatan_status || p.kecamatan_status === 'pending');
+      } else if (statusFilter === 'revision') {
+        filtered = filtered.filter(p => p.kecamatan_status === 'revision' || p.kecamatan_status === 'rejected');
       } else {
         filtered = filtered.filter(p => p.kecamatan_status === statusFilter);
       }
@@ -539,12 +541,20 @@ const BankeuVerificationPage = ({ tahun = 2027 }) => {
     });
   };
 
+  // Determine desa row color based on overall proposal statuses
+  const getDesaColor = (group) => {
+    if (group.totalProposals === 0) return { bg: 'from-gray-50 to-gray-100', hover: 'group-hover:from-gray-100 group-hover:to-gray-200', border: 'border-gray-200' };
+    if ((group.rejected || 0) + (group.revision || 0) > 0) return { bg: 'from-red-50 to-orange-50', hover: 'group-hover:from-red-100 group-hover:to-orange-100', border: 'border-orange-200' };
+    if (group.verified === group.totalProposals) return { bg: 'from-green-50 to-emerald-50', hover: 'group-hover:from-green-100 group-hover:to-emerald-100', border: 'border-green-200' };
+    return { bg: 'from-yellow-50 to-amber-50', hover: 'group-hover:from-yellow-100 group-hover:to-amber-100', border: 'border-yellow-200' };
+  };
+
   const getStatusBadge = (status) => {
     const statusConfig = {
       pending: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Menunggu', icon: LuClock },
       verified: { bg: 'bg-green-100', text: 'text-green-800', label: 'Disetujui', icon: LuCircleCheck },
-      rejected: { bg: 'bg-red-100', text: 'text-red-800', label: 'Ditolak', icon: LuCircleX },
-      revision: { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Perlu Revisi', icon: LuRefreshCw }
+      rejected: { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Revisi', icon: LuRefreshCw },
+      revision: { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Revisi', icon: LuRefreshCw }
     };
     
     const config = statusConfig[status] || statusConfig.pending;
@@ -699,7 +709,7 @@ const BankeuVerificationPage = ({ tahun = 2027 }) => {
 
           {/* Statistics Cards - Responsive */}
           {statistics && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
               <div className="bg-white rounded-xl p-3 sm:p-4 border border-gray-100 shadow-sm">
                 <div className="flex items-center gap-2 sm:gap-3">
                   <div className="p-1.5 sm:p-2 bg-blue-100 rounded-lg">
@@ -735,22 +745,11 @@ const BankeuVerificationPage = ({ tahun = 2027 }) => {
               </div>
               <div className="bg-white rounded-xl p-3 sm:p-4 border border-gray-100 shadow-sm">
                 <div className="flex items-center gap-2 sm:gap-3">
-                  <div className="p-1.5 sm:p-2 bg-red-100 rounded-lg">
-                    <LuCircleX className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
-                  </div>
-                  <div>
-                    <p className="text-lg sm:text-2xl font-bold text-gray-800">{statistics.rejected || 0}</p>
-                    <p className="text-xs text-gray-500">Ditolak</p>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-white rounded-xl p-3 sm:p-4 border border-gray-100 shadow-sm">
-                <div className="flex items-center gap-2 sm:gap-3">
                   <div className="p-1.5 sm:p-2 bg-orange-100 rounded-lg">
                     <LuRefreshCw className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600" />
                   </div>
                   <div>
-                    <p className="text-lg sm:text-2xl font-bold text-gray-800">{statistics.revision || 0}</p>
+                    <p className="text-lg sm:text-2xl font-bold text-gray-800">{(Number(statistics.rejected) || 0) + (Number(statistics.revision) || 0)}</p>
                     <p className="text-xs text-gray-500">Revisi</p>
                   </div>
                 </div>
@@ -809,8 +808,7 @@ const BankeuVerificationPage = ({ tahun = 2027 }) => {
                       <option value="all">Semua Status</option>
                       <option value="pending">Menunggu Review</option>
                       <option value="approved">Disetujui Kecamatan</option>
-                      <option value="rejected">Ditolak Kecamatan</option>
-                      <option value="revision">Perlu Revisi</option>
+                      <option value="revision">Revisi</option>
                     </select>
 
                     {/* Jenis Filter */}
@@ -837,14 +835,16 @@ const BankeuVerificationPage = ({ tahun = 2027 }) => {
             </div>
           ) : (
             <div className="space-y-3">
-              {desaGroups.map((group) => (
+              {desaGroups.map((group) => {
+                const desaColor = getDesaColor(group);
+                return (
                 <div 
                   key={group.desa.id} 
-                  className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden cursor-pointer hover:shadow-md hover:border-violet-200 transition-all duration-200 group"
+                  className={`rounded-xl border ${desaColor.border} shadow-sm overflow-hidden cursor-pointer hover:shadow-md transition-all duration-200 group`}
                   onClick={() => navigate(`/kecamatan/bankeu/verifikasi/${group.desa.id}?tahun=${tahunAnggaran}`)}
                 >
                   {/* Desa Header - Clickable to Detail */}
-                  <div className="bg-gradient-to-r from-violet-50 to-purple-50 p-4 group-hover:from-violet-100 group-hover:to-purple-100 transition-colors">
+                  <div className={`bg-gradient-to-r ${desaColor.bg} p-4 ${desaColor.hover} transition-colors`}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className="p-2.5 bg-gradient-to-br from-violet-100 to-violet-200 rounded-xl shadow-sm group-hover:shadow transition-shadow">
@@ -893,9 +893,9 @@ const BankeuVerificationPage = ({ tahun = 2027 }) => {
                               {group.verified} Disetujui
                             </span>
                           )}
-                          {group.revision > 0 && (
+                          {((group.rejected || 0) + (group.revision || 0)) > 0 && (
                             <span className="px-3 py-1.5 bg-orange-100 text-orange-700 rounded-lg text-xs font-semibold">
-                              {group.revision} Revisi
+                              {(group.rejected || 0) + (group.revision || 0)} Revisi
                             </span>
                           )}
                         </div>
@@ -905,7 +905,8 @@ const BankeuVerificationPage = ({ tahun = 2027 }) => {
                     </div>
                   </div>
                 </div>
-              ))}
+              );
+              })}
             </div>
           )}
         </div>
