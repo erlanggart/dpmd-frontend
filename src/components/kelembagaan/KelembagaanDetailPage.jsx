@@ -424,9 +424,9 @@ export default function KelembagaanDetailPage({
 		);
 
 	return (
-		<div className="min-h-full">
+		<div className="p-6">
 			{/* Breadcrumb */}
-			<div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-4 px-4 py-3">
+			<div className="sticky top-0 z-10 p-4 bg-white mb-6 rounded-md shadow-md ">
 				<div className="flex items-center justify-between gap-4">
 					{/* Breadcrumb */}
 					<nav className="flex items-center space-x-2 text-sm flex-1 overflow-x-auto">
@@ -435,16 +435,10 @@ export default function KelembagaanDetailPage({
 							className="flex items-center text-gray-500 hover:text-indigo-600 transition-colors"
 						>
 							<FaHome className="mr-1" />
-							Dashboard
+							Dashboard Kelembagaan
 						</Link>
 						<FaChevronRight className="text-gray-400 text-xs" />
-						<Link
-							to={isAdmin ? `/bidang/pmd/kelembagaan` : `/desa/kelembagaan`}
-							className="text-gray-500 hover:text-indigo-600 transition-colors"
-						>
-							Kelembagaan
-						</Link>
-						<FaChevronRight className="text-gray-400 text-xs" />
+						
 
 						{/* Admin: Show Desa name and link */}
 						{isAdmin && detail?.desa_id && (

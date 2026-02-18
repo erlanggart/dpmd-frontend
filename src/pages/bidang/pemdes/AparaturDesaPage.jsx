@@ -239,13 +239,7 @@ const AparaturDesaPage = () => {
 			{/* Header */}
 			<div className="bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 text-white">
 				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-					<button 
-						onClick={() => navigate('/core-dashboard/pemdes')}
-						className="mb-4 flex items-center gap-2 text-blue-100 hover:text-white transition-colors"
-					>
-						<ArrowLeft className="h-5 w-5" />
-						Kembali ke Pemdes
-					</button>
+					
 					<div className="flex items-center gap-4">
 						<div className="h-16 w-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
 							<Users className="h-8 w-8" />
@@ -261,7 +255,7 @@ const AparaturDesaPage = () => {
 						{connectionStatus?.connected ? (
 							<>
 								<CheckCircle className="h-4 w-4 text-green-300" />
-								<span className="text-green-200">Terhubung ke External API</span>
+								<span className="text-green-200">Terhubung ke Dapur Desa</span>
 							</>
 						) : (
 							<>

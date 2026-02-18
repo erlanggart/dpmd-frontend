@@ -573,9 +573,9 @@ export default function KelembagaanList() {
 	const IconComponent = getIcon();
 
 	return (
-		<div className="space-y-4  min-h-screen">
+		<div className="p-6 space-y-4  min-h-screen">
 			{/* Breadcrumb */}
-			<div className="bg-white p-2 rounded-md shadow-sm">
+			<div className="sticky top-0 z-10 p-2 bg-white rounded-md shadow-md">
 				<div className="flex items-center justify-between">
 					<nav className="flex items-center space-x-2 text-sm">
 						<Link
@@ -583,15 +583,9 @@ export default function KelembagaanList() {
 							className="flex items-center text-gray-500 hover:text-indigo-600 transition-colors"
 						>
 							<FaHome className="mr-1" />
-							Dashboard
+							Dashboard Kelembagaan
 						</Link>
-						<FaChevronRight className="text-gray-400 text-xs" />
-						<Link
-							to={`${basePath}/kelembagaan`}
-							className="text-gray-500 hover:text-indigo-600 transition-colors"
-						>
-							Kelembagaan
-						</Link>
+						
 						<FaChevronRight className="text-gray-400 text-xs" />
 
 						{/* Admin: Show Desa name and link */}

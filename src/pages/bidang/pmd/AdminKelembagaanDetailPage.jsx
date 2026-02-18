@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import Swal from "sweetalert2";
 import {
 	LuArrowLeft,
@@ -22,6 +22,7 @@ import {
 import { useAuth } from "../../../context/AuthContext";
 import { useEditMode } from "../../../context/EditModeContext";
 import { getDesaKelembagaanAll } from "../../../api/kelembagaanApi";
+import { FaChevronRight, FaHome } from "react-icons/fa";
 
 /**
  * AdminKelembagaanDetailPage - Admin PMD mengakses detail kelembagaan desa
@@ -68,7 +69,7 @@ const AdminKelembagaanDetailPage = () => {
 			kelembagaanItems.push({
 				type: "rw",
 				id: null,
-				name: "RW (Rukun Warga)",
+				name: "RW / RT",
 				count: rwData.length,
 				totalRT: rwData.reduce((sum, rw) => sum + (rw.rt_count || 0), 0),
 				isCollection: true,
@@ -155,6 +156,23 @@ const AdminKelembagaanDetailPage = () => {
 	useEffect(() => {
 		fetchDesaKelembagaan();
 	}, [fetchDesaKelembagaan]);
+	
+	// Helper function to get base path based on user role
+	const getBasePath = () => {
+		if (user?.role === "desa") {
+			return "/desa";
+		} else if (
+			user?.role === "superadmin" ||
+			user?.role === "kepala_dinas" ||
+			(user?.role === "kepala_bidang" && user?.bidang_id === 5) ||
+			(user?.role === "pegawai" && user?.bidang_id === 5)
+		) {
+			return "/bidang/pmd";
+		}
+		return "/desa"; // Default fallback
+	};
+
+	const basePath = getBasePath();
 
 	const handleToggleEditMode = async () => {
 		try {
@@ -323,118 +341,140 @@ const AdminKelembagaanDetailPage = () => {
 	}
 
 	return (
-		<div className="min-h-screen">
-			<div className="">
-				{/* Header dengan Breadcrumb */}
-				<div className="mb-6">
-<div className="flex items-center justify-between mb-4">
-				<div className="flex items-center space-x-2 text-sm text-gray-600">
-					<button
-						onClick={handleBackToList}
-						className="flex items-center space-x-1 hover:text-blue-600 transition-colors"
-					>
-						<LuArrowLeft className="w-4 h-4" />
-						<span>PMD Kelembagaan</span>
-					</button>
-					<LuChevronRight className="w-4 h-4" />
-					<span className="text-gray-800 font-medium">
-						{desaInfo?.nama_desa || "Detail Desa"}
-					</span>
-				</div>
-				
-				{/* Status Badge */}
-				<div className="flex items-center gap-2">
-					<span className="text-xs text-gray-500">Status:</span>
-					<span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
-						isEditMode 
-							? "bg-green-100 text-green-700 border border-green-300" 
-							: "bg-red-100 text-red-700 border border-red-300"
-					}`}>
-						{isEditMode ? (
-							<>
-								<LuLockOpen className="w-3 h-3" />
-								<span>Aplikasi Dibuka</span>
-							</>
-						) : (
-							<>
-								<LuLock className="w-3 h-3" />
-								<span>Aplikasi Ditutup</span>
-							</>
-						)}
-					</span>
-				</div>
-					</div>
+		<div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+				{/* Breadcrumb */}
+				<div className=" p-2  mb-6">
+					<div className="flex items-center justify-between">
+						<nav className="flex items-center space-x-2 text-sm">
+							<Link
+								to={`${basePath}/kelembagaan`}
+								className="flex items-center text-gray-500 hover:text-indigo-600 transition-colors"
+							>
+								<FaHome className="mr-1" />
+								Dashboard Kelembagaan
+							</Link>
+							
+							<FaChevronRight className="text-gray-400 text-xs" />
+							<span className="text-gray-900 font-medium">
+								{desaInfo?.nama || "Detail Desa"}
+							</span>
+						</nav>
 
-					<div className="bg-white rounded-xl shadow-sm p-6 ">
-						<div className="flex items-center justify-between">
-							<div className="flex items-center space-x-4">
-								<div className="p-3 bg-blue-100 rounded-full">
-									<LuMapPin className="w-8 h-8 text-blue-600" />
+						{/* Status Badge */}
+						<span
+							className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
+								isEditMode
+									? "bg-green-100 text-green-700 border border-green-300"
+									: "bg-red-100 text-red-700 border border-red-300"
+							}`}
+						>
+							{isEditMode ? (
+								<>
+									<LuLockOpen className="w-3 h-3" />
+									<span>Dibuka</span>
+								</>
+							) : (
+								<>
+									<LuLock className="w-3 h-3" />
+									<span>Ditutup</span>
+								</>
+							)}
+						</span>
+					</div>
+				</div>
+
+				{/* Main Header Card */}
+				<div className="mb-8">
+					<div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+						{/* Gradient Top Border */}
+						<div className="h-2 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500"></div>
+						
+						<div className="p-6 lg:p-8">
+							<div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+								<div className="flex items-start space-x-4">
+									<div className="flex-shrink-0">
+										<div className="p-4 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-lg transform hover:scale-105 transition-transform duration-200">
+											<LuMapPin className="w-10 h-10 text-white" />
+										</div>
+									</div>
+									<div className="flex-1">
+										<h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-2">
+											{desaInfo?.status_pemerintahan == 'desa' ? "Desa " : "Kelurahan "}
+											{desaInfo?.nama}
+										</h1>
+										<p className="text-base lg:text-lg text-gray-600 mb-1 flex items-center gap-2">
+											<span className="inline-block w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
+											Kecamatan {desaInfo?.nama_kecamatan}
+										</p>
+										<div className="flex items-center gap-2 mt-2">
+											<span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-blue-100 text-blue-700 capitalize">
+												{desaInfo?.status_pemerintahan}
+											</span>
+										</div>
+									</div>
 								</div>
-								<div>
-									<h1 className="text-3xl font-bold text-gray-800">
-										{desaInfo?.status_pemerintahan == 'desa' ? "Desa " : "Kelurahan"}{desaInfo?.nama}
-									</h1>
-									<p className="text-lg text-gray-600">
-										Kecamatan {desaInfo?.nama_kecamatan}
-									</p>
-									<p className="text-sm text-gray-500 capitalize">
-										Status: {desaInfo?.status_pemerintahan}
-									</p>
-								</div>
+								
+								{/* Toggle Edit Mode Button - Only for superadmin */}
+								{canToggleEdit && (
+									<div className="flex-shrink-0">
+										<button
+											onClick={handleToggleEditMode}
+											className={`flex items-center gap-2.5 px-5 py-3 rounded-xl transition-all duration-200 font-semibold shadow-md hover:shadow-lg transform hover:scale-105 ${
+												isEditMode
+													? "bg-gradient-to-r from-green-500 to-emerald-600 text-white"
+													: "bg-gradient-to-r from-gray-300 to-gray-400 text-gray-700 hover:from-gray-400 hover:to-gray-500"
+											}`}
+											title={isEditMode ? "Mode edit aktif - Klik untuk menonaktifkan" : "Mode edit nonaktif - Klik untuk mengaktifkan"}
+										>
+											{isEditMode ? (
+												<>
+													<LuLockOpen className="h-5 w-5" />
+													<span>Edit Mode: ON</span>
+												</>
+											) : (
+												<>
+													<LuLock className="h-5 w-5" />
+													<span>Edit Mode: OFF</span>
+												</>
+											)}
+										</button>
+									</div>
+								)}
 							</div>
 							
-							{/* Toggle Edit Mode Button - Only for superadmin/pemberdayaan_masyarakat */}
+							{/* Info message about edit mode */}
 							{canToggleEdit && (
-								<button
-									onClick={handleToggleEditMode}
-									className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 font-medium ${
-										isEditMode
-											? "bg-green-600 text-white hover:bg-green-700 shadow-md"
-											: "bg-gray-200 text-gray-700 hover:bg-gray-300"
-									}`}
-									title={isEditMode ? "Mode edit aktif - Klik untuk menonaktifkan" : "Mode edit nonaktif - Klik untuk mengaktifkan"}
-								>
-									{isEditMode ? (
-										<>
-											<LuLockOpen className="h-5 w-5" />
-											<span>Edit: ON</span>
-										</>
-									) : (
-										<>
-											<LuLock className="h-5 w-5" />
-											<span>Edit: OFF</span>
-										</>
-									)}
-								</button>
+								<div className={`mt-6 p-4 rounded-xl border-2 ${
+									isEditMode 
+										? "bg-green-50 border-green-300" 
+										: "bg-amber-50 border-amber-300"
+								}`}>
+									<p className="text-sm font-semibold flex items-start gap-2">
+										{isEditMode ? (
+											<>
+												<span className="text-green-600 text-lg">✓</span>
+												<span className="text-green-800">
+													Mode Edit Aktif - Desa dapat menambah dan mengedit data kelembagaan & pengurus
+												</span>
+											</>
+										) : (
+											<>
+												<span className="text-amber-600 text-lg">⚠</span>
+												<span className="text-amber-800">
+													Mode Edit Nonaktif - Tombol tambah dan edit tidak akan ditampilkan untuk desa
+												</span>
+											</>
+										)}
+									</p>
+								</div>
 							)}
 						</div>
-						
-						{/* Info message about edit mode */}
-						{canToggleEdit && (
-							<div className={`mt-4 p-3 rounded-lg border ${
-								isEditMode 
-									? "bg-green-50 border-green-200" 
-									: "bg-gray-50 border-gray-200"
-							}`}>
-								<p className="text-sm font-medium">
-									{isEditMode ? (
-										<span className="text-green-700">
-											✓ Mode Edit Aktif - Desa dapat menambah dan mengedit data kelembagaan & pengurus
-										</span>
-									) : (
-										<span className="text-gray-700">
-											⚠ Mode Edit Nonaktif - Tombol tambah dan edit tidak akan ditampilkan untuk desa
-										</span>
-									)}
-								</p>
-							</div>
-						)}
 					</div>
 				</div>
 
 				{/* Grid Kelembagaan */}
-				<div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+				<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 lg:gap-6">
 					{kelembagaanList.map((item) => (
 						<KelembagaanCard
 							key={`${item.type}-${item.id || 'empty'}`}
@@ -446,52 +486,57 @@ const AdminKelembagaanDetailPage = () => {
 
 				{/* Empty state jika tidak ada data sama sekali */}
 				{kelembagaanList.every(item => item.isEmpty) && (
-					<div className="text-center py-16">
-						<div className="text-gray-400 mb-4">
-							<LuBuilding2 className="w-16 h-16 mx-auto" />
+					<div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-12 text-center">
+						<div className="inline-flex items-center justify-center w-20 h-20 bg-gray-100 rounded-full mb-6">
+							<LuBuilding2 className="w-10 h-10 text-gray-400" />
 						</div>
-						<h3 className="text-xl font-medium text-gray-600 mb-2">
+						<h3 className="text-xl font-bold text-gray-700 mb-3">
 							Belum Ada Kelembagaan
 						</h3>
-						<p className="text-gray-500">
-							Desa ini belum memiliki data kelembagaan yang terdaftar.
+						<p className="text-gray-500 max-w-md mx-auto">
+							Desa ini belum memiliki data kelembagaan yang terdaftar. Bentuk kelembagaan untuk memulai.
 						</p>
 					</div>
 				)}
 
 				{/* Summary Statistics */}
-				<div className="mt-8 bg-white rounded-xl shadow-sm p-6 border">
-					<h2 className="text-xl font-semibold text-gray-800 mb-4">
-						Ringkasan Kelembagaan
-					</h2>
-					<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-						<div className="text-center">
-							<div className="text-2xl font-bold text-blue-600">
-								{kelembagaanList.find((item) => item.type === "rw")?.count || 0}
+				<div className="mt-8 bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+					<div className="bg-gradient-to-r from-blue-500 to-indigo-600 px-6 py-4">
+						<h2 className="text-xl font-bold text-white flex items-center gap-2">
+							<LuBuilding2 className="w-6 h-6" />
+							Ringkasan Kelembagaan
+						</h2>
+					</div>
+					<div className="p-6">
+						<div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+							<div className="text-center p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
+								<div className="text-3xl font-bold text-blue-600 mb-1">
+									{kelembagaanList.find((item) => item.type === "rw")?.count || 0}
+								</div>
+								<div className="text-sm font-semibold text-gray-700">Total RW</div>
 							</div>
-							<div className="text-sm text-gray-600">Total RW</div>
-						</div>
-						<div className="text-center">
-							<div className="text-2xl font-bold text-blue-400">
-								{kelembagaanList.find((item) => item.type === "rw")?.totalRT || 0}
+							<div className="text-center p-4 bg-gradient-to-br from-cyan-50 to-blue-50 rounded-xl border border-cyan-200">
+								<div className="text-3xl font-bold text-cyan-600 mb-1">
+									{kelembagaanList.find((item) => item.type === "rw")?.totalRT || 0}
+								</div>
+								<div className="text-sm font-semibold text-gray-700">Total RT</div>
 							</div>
-							<div className="text-sm text-gray-600">Total RT</div>
-						</div>
-						<div className="text-center">
-							<div className="text-2xl font-bold text-pink-600">
-								{kelembagaanList.find((item) => item.type === "posyandu")?.count || 0}
+							<div className="text-center p-4 bg-gradient-to-br from-pink-50 to-rose-50 rounded-xl border border-pink-200">
+								<div className="text-3xl font-bold text-pink-600 mb-1">
+									{kelembagaanList.find((item) => item.type === "posyandu")?.count || 0}
+								</div>
+								<div className="text-sm font-semibold text-gray-700">Total Posyandu</div>
 							</div>
-							<div className="text-sm text-gray-600">Total Posyandu</div>
-						</div>
-						<div className="text-center">
-							<div className="text-2xl font-bold text-green-600">
-								{
-									kelembagaanList.filter((item) =>
-										["karang-taruna", "lpm", "satlinmas", "pkk"].includes(item.type) && !item.isEmpty
-									).length
-								}
+							<div className="text-center p-4 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border border-green-200">
+								<div className="text-3xl font-bold text-green-600 mb-1">
+									{
+										kelembagaanList.filter((item) =>
+											["karang-taruna", "lpm", "satlinmas", "pkk"].includes(item.type) && !item.isEmpty
+										).length
+									}
+								</div>
+								<div className="text-sm font-semibold text-gray-700">Lembaga Terbentuk</div>
 							</div>
-							<div className="text-sm text-gray-600">Kelembagaan Lain Terbentuk</div>
 						</div>
 					</div>
 				</div>
@@ -543,37 +588,39 @@ const KelembagaanCard = ({ item, onClick }) => {
 	return (
 		<div
 			onClick={handleCardClick}
-			className={`group bg-white rounded-xl shadow-sm transition-all duration-300 border ${
+			className={`group bg-white rounded-2xl shadow-md transition-all duration-300 border-2 overflow-hidden ${
 				item.isEmpty && !item.isCollection
-					? 'border-gray-300 opacity-75' 
-					: 'cursor-pointer hover:shadow-lg transform hover:-translate-y-1 border-gray-200 hover:border-blue-300'
+					? 'border-gray-200 hover:border-gray-300' 
+					: 'cursor-pointer hover:shadow-xl transform hover:-translate-y-2 border-gray-200 hover:border-blue-400'
 			}`}
 		>
+			{/* Gradient Top Border */}
 			<div
-				className={`h-1.5 bg-gradient-to-r ${item.color} rounded-t-xl ${
-					item.isEmpty && !item.isCollection ? 'opacity-50' : ''
+				className={`h-2 bg-gradient-to-r ${item.color} ${
+					item.isEmpty && !item.isCollection ? 'opacity-40' : ''
 				}`}
 			></div>
 
 			<div className="p-6">
-				<div className="flex items-center justify-between mb-4">
-					<div className="flex items-center space-x-3">
+				{/* Header Section */}
+				<div className="flex items-start justify-between mb-5">
+					<div className="flex items-start space-x-4 flex-1">
 						<div
-							className={`w-12 h-12 bg-gradient-to-r ${item.color} rounded-xl flex items-center justify-center text-white shadow-lg transition-transform duration-300 ${
-								item.isEmpty && !item.isCollection ? 'opacity-50' : 'group-hover:scale-110'
+							className={`flex-shrink-0 w-14 h-14 bg-gradient-to-br ${item.color} rounded-2xl flex items-center justify-center text-white shadow-lg transition-all duration-300 ${
+								item.isEmpty && !item.isCollection ? 'opacity-50' : 'group-hover:scale-110 group-hover:rotate-3'
 							}`}
 						>
-							<Icon className="w-6 h-6" />
+							<Icon className="w-7 h-7" />
 						</div>
-						<div className="flex-1">
-							<h3 className={`text-lg font-semibold transition-colors ${
+						<div className="flex-1 min-w-0">
+							<h3 className={`text-lg font-bold transition-colors mb-1 ${
 								item.isEmpty && !item.isCollection
 									? 'text-gray-600' 
-									: 'text-gray-800 group-hover:text-blue-800'
+									: 'text-gray-800 group-hover:text-blue-700'
 							}`}>
 								{item.name}
 							</h3>
-							<p className="text-sm text-gray-500 capitalize">
+							<p className="text-xs text-gray-500 uppercase tracking-wider font-semibold">
 								{item.type.replace("-", " ")}
 							</p>
 						</div>
@@ -582,27 +629,27 @@ const KelembagaanCard = ({ item, onClick }) => {
 					{/* Action Button */}
 					<button
 						onClick={handleActionClick}
-						className="action-button p-2 rounded-full hover:bg-blue-50 transition-colors group/btn"
+						className="action-button flex-shrink-0 p-2.5 rounded-xl hover:bg-blue-50 transition-all duration-200 group/btn border border-transparent hover:border-blue-200"
 						title={item.isEmpty && !item.isCollection ? "Bentuk Lembaga" : "Lihat Detail"}
 					>
 						{item.isEmpty && !item.isCollection ? (
-							<LuPlus className="w-5 h-5 text-blue-500 group-hover/btn:text-blue-700 transition-colors" />
+							<LuPlus className="w-5 h-5 text-blue-500 group-hover/btn:text-blue-700 group-hover/btn:scale-110 transition-all" />
 						) : (
-							<LuEye className="w-5 h-5 text-gray-400 group-hover/btn:text-blue-500 transition-colors" />
+							<LuEye className="w-5 h-5 text-gray-400 group-hover/btn:text-blue-500 group-hover/btn:scale-110 transition-all" />
 						)}
 					</button>
 				</div>
 
 				{/* Status Badge */}
-				<div className="mb-3">
+				<div className="mb-4">
 					{item.isEmpty && !item.isCollection ? (
-						<span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-600">
-							<span className="w-2 h-2 bg-gray-400 rounded-full mr-2"></span>
+						<span className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-bold bg-gray-100 text-gray-600 border border-gray-200">
+							<span className="w-2 h-2 bg-gray-400 rounded-full mr-2 animate-pulse"></span>
 							Belum Terbentuk
 						</span>
 					) : (
-						<span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-700">
-							<span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+						<span className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-bold bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 border border-green-200">
+							<span className="w-2 h-2 bg-green-500 rounded-full mr-2 shadow-md"></span>
 							{item.isCollection ? 'Tersedia' : 'Sudah Terbentuk'}
 						</span>
 					)}
@@ -610,20 +657,20 @@ const KelembagaanCard = ({ item, onClick }) => {
 
 				{/* Collection Info (for RW, Posyandu) */}
 				{item.isCollection && (
-					<div className="space-y-2">
-						<div className="flex items-center justify-between text-sm">
-							<span className="text-gray-600">Total {item.type.toUpperCase()}:</span>
-							<span className={`font-bold text-lg ${
+					<div className="space-y-3 pt-3 border-t border-gray-100">
+						<div className="flex items-center justify-between">
+							<span className="text-sm font-semibold text-gray-600">Total {item.type.toUpperCase()}:</span>
+							<span className={`font-bold text-2xl ${
 								item.count > 0 ? 'text-blue-600' : 'text-gray-400'
 							}`}>
 								{item.count}
 							</span>
 						</div>
 						{item.type === "rw" && (
-							<div className="flex items-center justify-between text-sm">
-								<span className="text-gray-600">Total RT:</span>
-								<span className={`font-semibold ${
-									item.totalRT > 0 ? 'text-blue-500' : 'text-gray-400'
+							<div className="flex items-center justify-between">
+								<span className="text-sm font-semibold text-gray-600">Total RT:</span>
+								<span className={`font-bold text-xl ${
+									item.totalRT > 0 ? 'text-cyan-600' : 'text-gray-400'
 								}`}>
 									{item.totalRT}
 								</span>
@@ -634,24 +681,28 @@ const KelembagaanCard = ({ item, onClick }) => {
 
 				{/* Single Entity Info */}
 				{!item.isCollection && item.data?.alamat && (
-					<div className="flex items-center space-x-2 text-sm text-gray-500 mt-3">
-						<LuMapPin className="w-4 h-4 flex-shrink-0" />
-						<span className="truncate">{item.data.alamat}</span>
+					<div className="flex items-start space-x-2 text-sm text-gray-600 mt-3 p-3 bg-gray-50 rounded-lg border border-gray-100">
+						<LuMapPin className="w-4 h-4 flex-shrink-0 mt-0.5 text-gray-400" />
+						<span className="line-clamp-2">{item.data.alamat}</span>
 					</div>
 				)}
 
 				{/* Empty State Message */}
 				{item.isEmpty && !item.isCollection && (
-					<p className="text-sm text-gray-500 mt-2 italic">
-						Klik untuk membentuk kelembagaan ini
-					</p>
+					<div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
+						<p className="text-xs text-blue-700 font-medium">
+							💡 Klik untuk membentuk kelembagaan ini
+						</p>
+					</div>
 				)}
 				
 				{/* Empty Collection Message */}
 				{item.isEmpty && item.isCollection && (
-					<p className="text-sm text-gray-500 mt-2 italic">
-						Klik untuk melihat dan menambahkan {item.type}
-					</p>
+					<div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
+						<p className="text-xs text-blue-700 font-medium">
+							💡 Klik untuk melihat dan menambahkan {item.type}
+						</p>
+					</div>
 				)}
 			</div>
 		</div>
@@ -663,41 +714,41 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, icon: Icon, colo
 	if (!isOpen) return null;
 
 	return (
-		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-			<div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
-				{/* Header */}
-				<div className={`bg-gradient-to-r ${color} rounded-t-2xl p-6 text-white relative`}>
+		<div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+			<div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full transform transition-all">
+				{/* Header with Gradient */}
+				<div className={`bg-gradient-to-br ${color} rounded-t-2xl p-6 text-white relative`}>
 					<button
 						onClick={onClose}
 						disabled={loading}
-						className="absolute top-4 right-4 p-1 hover:bg-white/20 rounded-full transition-colors"
+						className="absolute top-4 right-4 p-2 hover:bg-white/20 rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed"
 					>
 						<LuX className="w-5 h-5" />
 					</button>
 					
 					<div className="flex items-center space-x-4">
-						<div className="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-							{Icon && <Icon className="w-8 h-8" />}
+						<div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm shadow-lg">
+							{Icon && <Icon className="w-9 h-9" />}
 						</div>
-						<div>
-							<h3 className="text-xl font-bold">Bentuk Lembaga</h3>
-							<p className="text-white/80 text-sm mt-1">{title}</p>
+						<div className="flex-1">
+							<h3 className="text-2xl font-bold mb-1">Bentuk Lembaga</h3>
+							<p className="text-white/90 text-sm">{title}</p>
 						</div>
 					</div>
 				</div>
 
 				{/* Body */}
 				<div className="p-6">
-					<div className="flex items-start space-x-3 mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-						<LuCircleAlert className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-						<div className="text-sm text-blue-900">
-							<p className="font-semibold mb-1">Konfirmasi Pembentukan</p>
-							<p>
-								Anda akan membentuk <span className="font-bold">{title}</span> untuk{" "}
-								<span className="font-bold">{desaName}</span>.
+					<div className="flex items-start space-x-3 mb-6 p-5 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200">
+						<LuCircleAlert className="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5" />
+						<div className="text-sm text-blue-900 flex-1">
+							<p className="font-bold mb-2 text-base">Konfirmasi Pembentukan</p>
+							<p className="mb-2">
+								Anda akan membentuk <span className="font-bold text-blue-700">{title}</span> untuk{" "}
+								<span className="font-bold text-blue-700">{desaName}</span>.
 							</p>
-							<p className="mt-2 text-blue-700">
-								Setelah dibentuk, data kelembagaan dapat dikelola oleh admin desa.
+							<p className="text-blue-700 bg-blue-100 px-3 py-2 rounded-lg border border-blue-200 mt-3">
+								<strong>ℹ️ Info:</strong> Setelah dibentuk, data kelembagaan dapat dikelola oleh admin desa.
 							</p>
 						</div>
 					</div>
@@ -707,14 +758,14 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, icon: Icon, colo
 						<button
 							onClick={onClose}
 							disabled={loading}
-							className="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+							className="flex-1 px-5 py-3 border-2 border-gray-300 rounded-xl text-gray-700 font-bold hover:bg-gray-50 hover:border-gray-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
 						>
 							Batal
 						</button>
 						<button
 							onClick={onConfirm}
 							disabled={loading}
-							className={`flex-1 px-4 py-3 bg-gradient-to-r ${color} rounded-lg text-white font-medium hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2`}
+							className={`flex-1 px-5 py-3 bg-gradient-to-r ${color} rounded-xl text-white font-bold hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 transform hover:scale-105`}
 						>
 							{loading ? (
 								<>
