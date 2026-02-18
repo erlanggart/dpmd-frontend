@@ -1017,66 +1017,108 @@ const DinasVerificationPage = ({ tahun = 2027 }) => {
         </div>
       )}
 
-      {/* Reject Modal - Responsive */}
+      {/* Reject Modal - Modern Design */}
       {actionModal.show && actionModal.action === 'reject' && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 sm:p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center gap-2 sm:gap-3">
-                <div className="p-1.5 sm:p-2 bg-red-100 rounded-lg flex-shrink-0">
-                  <LuCircleX className="w-5 h-5 sm:w-6 sm:h-6 text-red-600" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => setActionModal({ show: false, proposal: null, action: null })}
+          />
+          
+          {/* Modal */}
+          <div className="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden animate-[fadeIn_0.2s_ease-out]">
+            {/* Gradient Header */}
+            <div className="bg-gradient-to-r from-red-500 to-orange-500 px-5 sm:px-6 py-4 sm:py-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm">
+                    <LuCircleX className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-bold text-white">Revisi Proposal</h3>
+                    <p className="text-xs sm:text-sm text-red-100 mt-0.5">Berikan catatan perbaikan</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-base sm:text-lg font-bold text-gray-800">Tolak Proposal (Revisi)</h3>
-                  <p className="text-xs sm:text-sm text-gray-500 mt-0.5">Konfirmasi penolakan</p>
-                </div>
+                <button
+                  onClick={() => setActionModal({ show: false, proposal: null, action: null })}
+                  className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
+                >
+                  <LuX className="w-5 h-5 text-white" />
+                </button>
               </div>
-              <button
-                onClick={() => setActionModal({ show: false, proposal: null, action: null })}
-                className="text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
-              >
-                <LuX className="w-5 h-5" />
-              </button>
             </div>
 
-            {actionModal.proposal && (
-              <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                <p className="text-sm font-medium text-gray-700 line-clamp-2">
-                  {actionModal.proposal.judul_proposal}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  {actionModal.proposal.nama_desa}, {actionModal.proposal.nama_kecamatan}
+            {/* Body */}
+            <div className="px-5 sm:px-6 py-4 sm:py-5 space-y-4 overflow-y-auto max-h-[calc(90vh-180px)]">
+              {/* Proposal Info Card */}
+              {actionModal.proposal && (
+                <div className="flex items-start gap-3 p-3.5 bg-gradient-to-r from-gray-50 to-slate-50 rounded-xl border border-gray-100">
+                  <div className="p-2 bg-amber-100 rounded-lg flex-shrink-0">
+                    <LuFileText className="w-4 h-4 text-amber-600" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-gray-800 line-clamp-2 leading-snug">
+                      {actionModal.proposal.judul_proposal}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1.5">
+                      <span className="inline-flex items-center gap-1 text-xs text-gray-500">
+                        <LuMapPin className="w-3 h-3" />
+                        {actionModal.proposal.nama_desa}, {actionModal.proposal.nama_kecamatan}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Catatan Input */}
+              <div>
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+                  <LuMessageCircle className="w-4 h-4 text-red-500" />
+                  Catatan Revisi <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={catatan}
+                  onChange={(e) => setCatatan(e.target.value)}
+                  rows="4"
+                  className="w-full px-4 py-3 text-sm border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500/20 focus:border-red-400 resize-none transition-all placeholder:text-gray-400"
+                  placeholder="Jelaskan hal yang perlu diperbaiki oleh desa..."
+                  autoFocus
+                />
+                <p className="text-xs text-gray-400 mt-1.5">
+                  {catatan.trim().length > 0 
+                    ? `${catatan.trim().length} karakter`
+                    : 'Wajib diisi sebelum mengirim revisi'
+                  }
                 </p>
               </div>
-            )}
-
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Catatan Penolakan <span className="text-red-500">*</span>
-              </label>
-              <textarea
-                value={catatan}
-                onChange={(e) => setCatatan(e.target.value)}
-                rows="4"
-                className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
-                placeholder="Jelaskan alasan penolakan dan perbaikan yang diperlukan..."
-              />
             </div>
 
-            <div className="flex gap-2 sm:gap-3">
+            {/* Footer Actions */}
+            <div className="px-5 sm:px-6 py-4 bg-gray-50/80 border-t border-gray-100 flex gap-3">
               <button
                 onClick={() => setActionModal({ show: false, proposal: null, action: null })}
                 disabled={submitting}
-                className="flex-1 px-3 sm:px-4 py-2 text-sm sm:text-base bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium rounded-lg transition-colors disabled:opacity-50"
+                className="flex-1 px-4 py-2.5 text-sm font-semibold text-gray-700 bg-white hover:bg-gray-100 border-2 border-gray-200 hover:border-gray-300 rounded-xl transition-all disabled:opacity-50"
               >
                 Batal
               </button>
               <button
                 onClick={() => handleSubmitAction(actionModal.proposal, 'reject', catatan)}
                 disabled={submitting || !catatan.trim()}
-                className="flex-1 px-3 sm:px-4 py-2 text-sm sm:text-base bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 rounded-xl shadow-lg shadow-red-500/25 hover:shadow-red-500/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
               >
-                {submitting ? 'Memproses...' : 'Tolak'}
+                {submitting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Memproses...
+                  </>
+                ) : (
+                  <>
+                    <LuCircleX className="w-4 h-4" />
+                    Kirim Revisi
+                  </>
+                )}
               </button>
             </div>
           </div>
