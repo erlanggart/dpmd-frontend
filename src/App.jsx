@@ -261,6 +261,9 @@ const KecamatanTimVerifikasiPage = lazy(
 const KecamatanSettings = lazy(
   () => import("./pages/kecamatan/KecamatanSettings"),
 );
+const KecamatanChangePasswordPage = lazy(
+  () => import("./pages/kecamatan/KecamatanChangePasswordPage"),
+);
 const DinasBankeuPage = lazy(() => import("./pages/dinas/DinasBankeuPage"));
 const DinasVerificationPage = lazy(
   () => import("./pages/dinas/DinasVerificationPage"),
@@ -939,6 +942,7 @@ function App() {
                     element={<KecamatanTimVerifikasiPage />}
                   />
                   <Route path="settings" element={<KecamatanSettings />} />
+                  <Route path="change-password" element={<KecamatanChangePasswordPage />} />
                 </Route>
 
                 {/* Rute Dinas Terkait - Untuk verifikasi teknis */}

@@ -17,7 +17,8 @@ import {
   LuBuilding2,
   LuClipboardCheck,
   LuPanelLeftClose,
-  LuPanelLeft
+  LuPanelLeft,
+  LuLock
 } from "react-icons/lu";
 
 // Menu items configuration
@@ -39,6 +40,12 @@ const menuItems = [
     label: "Pengaturan",
     path: "/kecamatan/settings",
     icon: FiSettings,
+  },
+  {
+    id: "change-password",
+    label: "Ganti Password",
+    path: "/kecamatan/change-password",
+    icon: LuLock,
   },
 ];
 
