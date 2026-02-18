@@ -8,9 +8,6 @@ import {
 	ArrowLeft, 
 	MapPin, 
 	Briefcase, 
-	Phone, 
-	Mail, 
-	Calendar,
 	ChevronDown,
 	AlertCircle,
 	Loader2,
@@ -18,13 +15,17 @@ import {
 	Building,
 	CheckCircle,
 	XCircle,
-	Eye
+	Eye,
+	LayoutGrid,
+	List
 } from 'lucide-react';
 import api from '../../../api';
 import toast from 'react-hot-toast';
+import { useAuth } from '../../../context/AuthContext';
 
-const AparaturDesaPage = () => {
+const AparaturDesaExternalPage = () => {
 	const navigate = useNavigate();
+	const { user } = useAuth();
 	const [loading, setLoading] = useState(true);
 	const [data, setData] = useState([]);
 	const [pagination, setPagination] = useState({
@@ -35,41 +36,34 @@ const AparaturDesaPage = () => {
 	});
 	const [filters, setFilters] = useState({
 		name: '',
-		job_type: '',
-		master_district_id: '',
-		master_village_id: '',
 		gender: '',
 		status_pns: '',
 		min_age: '',
 		max_age: ''
 	});
-	const [kecamatanList, setKecamatanList] = useState([]);
-	const [desaList, setDesaList] = useState([]);
 	const [connectionStatus, setConnectionStatus] = useState(null);
 	const [showFilters, setShowFilters] = useState(false);
 	const [selectedAparatur, setSelectedAparatur] = useState(null);
 	const [showDetail, setShowDetail] = useState(false);
+	const [viewMode, setViewMode] = useState('table'); // 'table' or 'grid'
+	const [activeCategory, setActiveCategory] = useState('Perangkat Desa'); // 'Perangkat Desa' or 'BPD'
+
+	// Get user's village code - remove dots for external API
+	const userVillageCode = user?.desa?.kode?.replace(/\./g, '') || '';
+	const userVillageName = user?.desa?.nama || 'Desa Anda';
 
 	useEffect(() => {
-		checkConnectionStatus();
-		fetchKecamatanList();
-	}, []);
+		if (userVillageCode) {
+			checkConnectionStatus();
+		}
+	}, [userVillageCode]);
 
 	useEffect(() => {
-		if (connectionStatus?.connected) {
+		if (connectionStatus?.connected && userVillageCode) {
 			fetchAparaturDesa();
 		}
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [connectionStatus, pagination.page, filters]);
-
-	useEffect(() => {
-		if (filters.master_district_id) {
-			fetchDesaByKecamatan(filters.master_district_id);
-		} else {
-			setDesaList([]);
-			setFilters(prev => ({ ...prev, master_village_id: '' }));
-		}
-	}, [filters.master_district_id]);
+	}, [connectionStatus, pagination.page, filters, userVillageCode, activeCategory]);
 
 	const checkConnectionStatus = async () => {
 		try {
@@ -81,38 +75,21 @@ const AparaturDesaPage = () => {
 		}
 	};
 
-	const fetchKecamatanList = async () => {
-		try {
-			const response = await api.get('/external/kecamatan');
-			if (response.data.success) {
-				setKecamatanList(response.data.data || []);
-			}
-		} catch (error) {
-			console.error('Failed to fetch kecamatan:', error);
-		}
-	};
-
-	const fetchDesaByKecamatan = async (districtId) => {
-		try {
-			const response = await api.get(`/external/desa?master_district_id=${districtId}`);
-			if (response.data.success) {
-				setDesaList(response.data.data || []);
-			}
-		} catch (error) {
-			console.error('Failed to fetch desa:', error);
-		}
-	};
-
 	const fetchAparaturDesa = async () => {
+		if (!userVillageCode) {
+			toast.error('Kode desa tidak ditemukan');
+			return;
+		}
+
 		try {
 			setLoading(true);
 			const params = new URLSearchParams();
 			
 			// Always send all params (even empty) as per API requirement
 			params.append('name', filters.name || '');
-			params.append('job_type', filters.job_type || '');
-			params.append('master_district_id', filters.master_district_id || '');
-			params.append('master_village_id', filters.master_village_id || '');
+			params.append('job_type', activeCategory); // Use active category tab
+			params.append('master_district_id', ''); // Not filtering by district
+			params.append('master_village_id', userVillageCode); // Use user's village code
 			params.append('gender', filters.gender || '');
 			params.append('status_pns', filters.status_pns || '');
 			params.append('min_age', filters.min_age || '');
@@ -157,9 +134,6 @@ const AparaturDesaPage = () => {
 	const resetFilters = () => {
 		setFilters({
 			name: '',
-			job_type: '',
-			master_district_id: '',
-			master_village_id: '',
 			gender: '',
 			status_pns: '',
 			min_age: '',
@@ -169,7 +143,6 @@ const AparaturDesaPage = () => {
 	};
 
 	const viewDetail = (id) => {
-		// Use data from list directly - all fields are already available
 		const aparatur = data.find(a => a.id === id);
 		if (aparatur) {
 			setSelectedAparatur(aparatur);
@@ -178,12 +151,6 @@ const AparaturDesaPage = () => {
 			toast.error('Data aparatur tidak ditemukan');
 		}
 	};
-
-	// Job type options
-	const jobTypeOptions = [
-		{ value: 'Perangkat Desa', label: 'Perangkat Desa' },
-		{ value: 'BPD', label: 'BPD' }
-	];
 
 	// Gender options
 	const genderOptions = [
@@ -196,6 +163,29 @@ const AparaturDesaPage = () => {
 		{ value: 'PNS', label: 'PNS' },
 		{ value: 'NON PNS', label: 'Non PNS' }
 	];
+
+	// No village code
+	if (!userVillageCode) {
+		return (
+			<div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+				<div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
+					<div className="h-16 w-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+						<AlertCircle className="h-8 w-8 text-yellow-600" />
+					</div>
+					<h2 className="text-xl font-bold text-gray-800 mb-2">Kode Desa Tidak Ditemukan</h2>
+					<p className="text-gray-600 mb-4">
+						Akun Anda tidak memiliki kode desa yang valid. Silakan hubungi administrator.
+					</p>
+					<button
+						onClick={() => navigate('/desa/dashboard')}
+						className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+					>
+						Kembali ke Dashboard
+					</button>
+				</div>
+			</div>
+		);
+	}
 
 	// Connection Error State
 	if (connectionStatus && !connectionStatus.connected) {
@@ -216,7 +206,7 @@ const AparaturDesaPage = () => {
 					)}
 					<div className="flex gap-3 justify-center">
 						<button
-							onClick={() => navigate(-1)}
+							onClick={() => navigate('/desa/dashboard')}
 							className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
 						>
 							Kembali
@@ -237,22 +227,15 @@ const AparaturDesaPage = () => {
 	return (
 		<div className="min-h-screen bg-gray-50 pb-6">
 			{/* Header */}
-			<div className="bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 text-white">
-				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-					<button 
-						onClick={() => navigate('/core-dashboard/pemdes')}
-						className="mb-4 flex items-center gap-2 text-blue-100 hover:text-white transition-colors"
-					>
-						<ArrowLeft className="h-5 w-5" />
-						Kembali ke Pemdes
-					</button>
+			<div className="bg-gradient-to-br from-teal-600 via-teal-700 to-teal-800 text-white rounded-md">
+				<div className="px-4 sm:px-6 lg:px-8 py-6">
 					<div className="flex items-center gap-4">
 						<div className="h-16 w-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
 							<Users className="h-8 w-8" />
 						</div>
 						<div>
 							<h1 className="text-2xl font-bold">Aparatur Desa</h1>
-							<p className="text-blue-100 mt-1">Data dari DPMD Kabupaten Bogor</p>
+							<p className="text-teal-100 mt-1">{userVillageName} - Data dari Dapur Desa DPMD Kab. Bogor</p>
 						</div>
 					</div>
 					
@@ -261,19 +244,19 @@ const AparaturDesaPage = () => {
 						{connectionStatus?.connected ? (
 							<>
 								<CheckCircle className="h-4 w-4 text-green-300" />
-								<span className="text-green-200">Terhubung ke External API</span>
+								<span className="text-green-200">Terhubung ke Dapur Desa</span>
 							</>
 						) : (
 							<>
-								<XCircle className="h-4 w-4 text-red-300" />
-								<span className="text-red-200">Tidak terhubung</span>
+								<Loader2 className="h-4 w-4 animate-spin text-teal-200" />
+								<span className="text-teal-200">Memeriksa koneksi...</span>
 							</>
 						)}
 					</div>
 				</div>
 			</div>
 
-			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+			<div className="py-6">
 				{/* Search & Filter Section */}
 				<div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
 					<form onSubmit={handleSearch} className="flex flex-col lg:flex-row gap-4">
@@ -285,7 +268,7 @@ const AparaturDesaPage = () => {
 								placeholder="Cari nama aparatur..."
 								value={filters.name}
 								onChange={(e) => setFilters(prev => ({ ...prev, name: e.target.value }))}
-								className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+								className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
 							/>
 						</div>
 
@@ -303,7 +286,7 @@ const AparaturDesaPage = () => {
 						{/* Search Button */}
 						<button
 							type="submit"
-							className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+							className="px-6 py-2.5 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors flex items-center gap-2"
 						>
 							<Search className="h-4 w-4" />
 							Cari
@@ -313,7 +296,7 @@ const AparaturDesaPage = () => {
 						<button
 							type="button"
 							onClick={fetchAparaturDesa}
-							className="px-4 py-2.5 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors flex items-center gap-2"
+							className="px-4 py-2.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center gap-2"
 						>
 							<RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
 						</button>
@@ -322,60 +305,14 @@ const AparaturDesaPage = () => {
 					{/* Filter Panel */}
 					{showFilters && (
 						<div className="mt-4 pt-4 border-t border-gray-200">
-							<div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-								{/* Kecamatan Select */}
-								<div>
-									<label className="block text-sm font-medium text-gray-700 mb-1">Kecamatan</label>
-									<select
-										value={filters.master_district_id}
-										onChange={(e) => handleFilterChange('master_district_id', e.target.value)}
-										className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-									>
-										<option value="">Semua Kecamatan</option>
-										{kecamatanList.map(kec => (
-											<option key={kec.id || kec.code} value={kec.code || kec.id}>{kec.name || kec.nama}</option>
-										))}
-									</select>
-								</div>
-
-								{/* Desa Select */}
-								<div>
-									<label className="block text-sm font-medium text-gray-700 mb-1">Desa</label>
-									<select
-										value={filters.master_village_id}
-										onChange={(e) => handleFilterChange('master_village_id', e.target.value)}
-										className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
-										disabled={!filters.master_district_id}
-									>
-										<option value="">Semua Desa</option>
-										{desaList.map(desa => (
-											<option key={desa.id || desa.code} value={desa.code || desa.id}>{desa.name || desa.nama}</option>
-										))}
-									</select>
-								</div>
-
-								{/* Job Type Select */}
-								<div>
-									<label className="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
-									<select
-										value={filters.job_type}
-										onChange={(e) => handleFilterChange('job_type', e.target.value)}
-										className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-									>
-										<option value="">Semua Kategori</option>
-										{jobTypeOptions.map(opt => (
-											<option key={opt.value} value={opt.value}>{opt.label}</option>
-										))}
-									</select>
-								</div>
-
+							<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
 								{/* Gender Select */}
 								<div>
 									<label className="block text-sm font-medium text-gray-700 mb-1">Jenis Kelamin</label>
 									<select
 										value={filters.gender}
 										onChange={(e) => handleFilterChange('gender', e.target.value)}
-										className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+										className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
 									>
 										<option value="">Semua</option>
 										{genderOptions.map(opt => (
@@ -390,7 +327,7 @@ const AparaturDesaPage = () => {
 									<select
 										value={filters.status_pns}
 										onChange={(e) => handleFilterChange('status_pns', e.target.value)}
-										className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+										className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
 									>
 										<option value="">Semua</option>
 										{statusPnsOptions.map(opt => (
@@ -407,7 +344,7 @@ const AparaturDesaPage = () => {
 										placeholder="Min"
 										value={filters.min_age}
 										onChange={(e) => handleFilterChange('min_age', e.target.value)}
-										className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+										className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
 										min="0"
 									/>
 								</div>
@@ -420,7 +357,7 @@ const AparaturDesaPage = () => {
 										placeholder="Max"
 										value={filters.max_age}
 										onChange={(e) => handleFilterChange('max_age', e.target.value)}
-										className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+										className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
 										min="0"
 									/>
 								</div>
@@ -438,22 +375,177 @@ const AparaturDesaPage = () => {
 					)}
 				</div>
 
-				{/* Data Table */}
-				<div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-					{loading ? (
-						<div className="flex items-center justify-center py-12">
-							<Loader2 className="h-8 w-8 text-blue-600 animate-spin" />
+				{/* Category Tabs */}
+				<div className="bg-white rounded-xl shadow-sm border border-gray-200 p-1.5 mb-4">
+					<div className="flex">
+						<button
+							onClick={() => { setActiveCategory('Perangkat Desa'); setPagination(prev => ({ ...prev, page: 1 })); }}
+							className={`flex-1 px-4 py-3 rounded-lg font-medium text-sm transition-all flex items-center justify-center gap-2 ${
+								activeCategory === 'Perangkat Desa'
+									? 'bg-teal-600 text-white shadow-sm'
+									: 'text-gray-600 hover:bg-gray-100'
+							}`}
+						>
+							<Users className="h-4 w-4" />
+							Perangkat Desa
+						</button>
+						<button
+							onClick={() => { setActiveCategory('BPD'); setPagination(prev => ({ ...prev, page: 1 })); }}
+							className={`flex-1 px-4 py-3 rounded-lg font-medium text-sm transition-all flex items-center justify-center gap-2 ${
+								activeCategory === 'BPD'
+									? 'bg-teal-600 text-white shadow-sm'
+									: 'text-gray-600 hover:bg-gray-100'
+							}`}
+						>
+							<Building className="h-4 w-4" />
+							BPD
+						</button>
+					</div>
+				</div>
+
+				{/* Summary Card with View Toggle */}
+				<div className="bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl shadow-sm p-4 mb-6 text-white">
+					<div className="flex items-center justify-between">
+						<div className="flex items-center gap-3">
+							<div className="h-12 w-12 bg-white/20 rounded-xl flex items-center justify-center">
+								{activeCategory === 'BPD' ? <Building className="h-6 w-6" /> : <Users className="h-6 w-6" />}
+							</div>
+							<div>
+								<p className="text-teal-100 text-sm">Total {activeCategory}</p>
+								<p className="text-2xl font-bold">{pagination.totalItems}</p>
+							</div>
 						</div>
-					) : data.length === 0 ? (
-						<div className="text-center py-12">
+						<div className="flex items-center gap-4">
+							{/* View Mode Toggle */}
+							<div className="hidden sm:flex items-center bg-white/20 rounded-lg p-1">
+								<button
+									onClick={() => setViewMode('table')}
+									className={`p-2 rounded-md transition-colors ${viewMode === 'table' ? 'bg-white text-teal-600' : 'text-white hover:bg-white/20'}`}
+									title="Tampilan Tabel"
+								>
+									<List className="h-4 w-4" />
+								</button>
+								<button
+									onClick={() => setViewMode('grid')}
+									className={`p-2 rounded-md transition-colors ${viewMode === 'grid' ? 'bg-white text-teal-600' : 'text-white hover:bg-white/20'}`}
+									title="Tampilan Grid"
+								>
+									<LayoutGrid className="h-4 w-4" />
+								</button>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				{/* Data Display */}
+				{loading ? (
+					<div className="bg-white rounded-xl shadow-sm border border-gray-200 flex items-center justify-center py-12">
+						<Loader2 className="h-8 w-8 text-teal-600 animate-spin" />
+					</div>
+				) : data.length === 0 ? (
+					<div className="bg-white rounded-xl shadow-sm border border-gray-200 text-center py-12">
+						{activeCategory === 'BPD' ? (
+							<Building className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+						) : (
 							<Users className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-							<p className="text-gray-500">Tidak ada data aparatur desa</p>
+						)}
+						<p className="text-gray-500">Tidak ada data {activeCategory}</p>
+						<p className="text-sm text-gray-400 mt-1">Kode desa: {userVillageCode}</p>
+					</div>
+				) : viewMode === 'grid' ? (
+					/* Grid Card View */
+					<>
+						<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-4">
+							{data.map((aparatur) => (
+								<div 
+									key={aparatur.id} 
+									className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow cursor-pointer group"
+									onClick={() => viewDetail(aparatur.id)}
+								>
+									{/* Card Header with Photo */}
+									<div className="flex flex-col items-center text-center mb-4">
+										{aparatur.photo ? (
+											<img 
+												src={aparatur.photo} 
+												alt={aparatur.name}
+												className="h-20 w-20 rounded-full object-cover mb-3 border-4 border-teal-100 group-hover:border-teal-200 transition-colors"
+												onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+											/>
+										) : null}
+										<div className={`h-20 w-20 bg-gradient-to-br from-teal-100 to-teal-200 rounded-full flex items-center justify-center mb-3 ${aparatur.photo ? 'hidden' : ''}`}>
+											<UserCircle className="h-10 w-10 text-teal-600" />
+										</div>
+										<h3 className="font-bold text-gray-900 line-clamp-1">{aparatur.name}</h3>
+										<span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-teal-100 text-teal-800 mt-2">
+											<Briefcase className="h-3 w-3" />
+											{aparatur.master_job_level_name || '-'}
+										</span>
+									</div>
+
+									{/* Card Info */}
+									<div className="space-y-2 text-sm border-t border-gray-100 pt-3">
+										<div className="flex items-center justify-between">
+											<span className="text-gray-500">Jenis Kelamin</span>
+											<span className="font-medium text-gray-700">
+												{aparatur.gender === 'L' ? 'Laki-laki' : aparatur.gender === 'P' ? 'Perempuan' : '-'}
+											</span>
+										</div>
+										<div className="flex items-center justify-between">
+											<span className="text-gray-500">Usia</span>
+											<span className="font-medium text-gray-700">{aparatur.usia ? `${aparatur.usia} tahun` : '-'}</span>
+										</div>
+										<div className="flex items-center justify-between">
+											<span className="text-gray-500">Status</span>
+											<span className={`px-2 py-0.5 rounded text-xs font-medium ${aparatur.status_pns === 'PNS' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+												{aparatur.status_pns || '-'}
+											</span>
+										</div>
+									</div>
+
+									{/* View Detail Button */}
+									<div className="mt-4 pt-3 border-t border-gray-100">
+										<button
+											className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-teal-50 text-teal-700 rounded-lg hover:bg-teal-100 transition-colors text-sm font-medium"
+										>
+											<Eye className="h-4 w-4" />
+											Lihat Detail
+										</button>
+									</div>
+								</div>
+							))}
 						</div>
-					) : (
-						<>
-							{/* Desktop Table */}
-							<div className="hidden md:block overflow-x-auto">
-								<table className="min-w-full divide-y divide-gray-200">
+
+						{/* Grid Pagination */}
+						{(pagination.totalPages > 1 || pagination.totalItems > 0) && (
+							<div className="bg-white rounded-xl shadow-sm border border-gray-200 px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+								<p className="text-sm text-gray-500">
+									Menampilkan {data.length} dari {pagination.totalItems} data | Halaman {pagination.page} dari {pagination.totalPages || 1}
+								</p>
+								<div className="flex gap-2">
+									<button
+										onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
+										disabled={pagination.page <= 1}
+										className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+									>
+										Sebelumnya
+									</button>
+									<button
+										onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
+										disabled={pagination.page >= pagination.totalPages}
+										className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+									>
+										Selanjutnya
+									</button>
+								</div>
+							</div>
+						)}
+					</>
+				) : (
+					/* Table List View */
+					<div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+						{/* Desktop Table */}
+						<div className="hidden md:block overflow-x-auto">
+							<table className="min-w-full divide-y divide-gray-200">
 									<thead className="bg-gray-50">
 										<tr>
 											<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -463,12 +555,11 @@ const AparaturDesaPage = () => {
 												Jabatan
 											</th>
 											<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-												Desa
+												Jenis Kelamin
 											</th>
 											<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-												Kecamatan
+												Status
 											</th>
-											
 											<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
 												Aksi
 											</th>
@@ -487,13 +578,13 @@ const AparaturDesaPage = () => {
 																onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
 															/>
 														) : null}
-														<div className={`h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center ${aparatur.photo ? 'hidden' : ''}`}>
-															<UserCircle className="h-6 w-6 text-blue-600" />
+														<div className={`h-10 w-10 bg-teal-100 rounded-full flex items-center justify-center ${aparatur.photo ? 'hidden' : ''}`}>
+															<UserCircle className="h-6 w-6 text-teal-600" />
 														</div>
 														<div>
 															<p className="font-medium text-gray-900">{aparatur.name}</p>
-															{aparatur.no_sk && (
-																<p className="text-xs text-gray-500">SK: {aparatur.no_sk}</p>
+															{aparatur.usia && (
+																<p className="text-xs text-gray-500">{aparatur.usia} tahun</p>
 															)}
 														</div>
 													</div>
@@ -505,16 +596,19 @@ const AparaturDesaPage = () => {
 													</span>
 												</td>
 												<td className="px-6 py-4 whitespace-nowrap">
-													<span className="text-gray-600">{aparatur.master_village_name || '-'}</span>
+													<span className="text-gray-600">
+														{aparatur.gender === 'L' ? 'Laki-laki' : aparatur.gender === 'P' ? 'Perempuan' : '-'}
+													</span>
 												</td>
 												<td className="px-6 py-4 whitespace-nowrap">
-													<span className="text-gray-600">{aparatur.master_district_name || '-'}</span>
+													<span className={`px-2 py-0.5 rounded text-xs ${aparatur.status_pns === 'PNS' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+														{aparatur.status_pns || '-'}
+													</span>
 												</td>
-												
 												<td className="px-6 py-4 whitespace-nowrap text-right">
 													<button
 														onClick={() => viewDetail(aparatur.id)}
-														className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+														className="p-2 text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
 														title="Lihat Detail"
 													>
 														<Eye className="h-4 w-4" />
@@ -524,10 +618,10 @@ const AparaturDesaPage = () => {
 										))}
 									</tbody>
 								</table>
-							</div>
+						</div>
 
-							{/* Mobile Cards */}
-							<div className="md:hidden divide-y divide-gray-200">
+						{/* Mobile Cards */}
+						<div className="md:hidden divide-y divide-gray-200">
 								{data.map((aparatur) => (
 									<div key={aparatur.id} className="p-4">
 										<div className="flex items-start gap-3">
@@ -539,8 +633,8 @@ const AparaturDesaPage = () => {
 													onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
 												/>
 											) : null}
-											<div className={`h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 ${aparatur.photo ? 'hidden' : ''}`}>
-												<UserCircle className="h-7 w-7 text-blue-600" />
+											<div className={`h-12 w-12 bg-teal-100 rounded-full flex items-center justify-center flex-shrink-0 ${aparatur.photo ? 'hidden' : ''}`}>
+												<UserCircle className="h-7 w-7 text-teal-600" />
 											</div>
 											<div className="flex-1 min-w-0">
 												<h3 className="font-semibold text-gray-900">{aparatur.name}</h3>
@@ -548,61 +642,53 @@ const AparaturDesaPage = () => {
 													<Briefcase className="h-3 w-3" />
 													{aparatur.master_job_level_name || '-'}
 												</span>
-												<div className="mt-2 space-y-1 text-sm text-gray-600">
-													<div className="flex items-center gap-2">
-														<Building className="h-3.5 w-3.5" />
-														<span>{aparatur.master_village_name || '-'}</span>
-													</div>
-													<div className="flex items-center gap-2">
-														<MapPin className="h-3.5 w-3.5" />
-														<span>{aparatur.master_district_name || '-'}</span>
-													</div>
-													<div className="flex items-center gap-2">
-														<span className={`px-2 py-0.5 rounded text-xs ${aparatur.status_pns === 'PNS' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-															{aparatur.status_pns || '-'}
-														</span>
-														{aparatur.usia && <span className="text-gray-500">• {aparatur.usia} thn</span>}
-													</div>
+												<div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+													<span className="text-gray-500">
+														{aparatur.gender === 'L' ? 'Laki-laki' : aparatur.gender === 'P' ? 'Perempuan' : '-'}
+													</span>
+													<span className={`px-2 py-0.5 rounded text-xs ${aparatur.status_pns === 'PNS' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+														{aparatur.status_pns || '-'}
+													</span>
+													{aparatur.usia && <span className="text-gray-500">• {aparatur.usia} thn</span>}
 												</div>
 											</div>
 											<button
 												onClick={() => viewDetail(aparatur.id)}
-												className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+												className="p-2 text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
 											>
-												<Eye className="h-5 w-5" />
+											<Eye className="h-5 w-5" />
 											</button>
 										</div>
 									</div>
 								))}
-							</div>
+						</div>
 
-							{/* Pagination */}
-							{(pagination.totalPages > 1 || pagination.totalItems > 0) && (
-								<div className="px-6 py-4 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-2">
-									<p className="text-sm text-gray-500">
-										Menampilkan {data.length} dari {pagination.totalItems} data | Halaman {pagination.page} dari {pagination.totalPages || 1}
-									</p>
-									<div className="flex gap-2">
-										<button
-											onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
-											disabled={pagination.page <= 1}
-											className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-										>
-											Sebelumnya
-										</button>
-										<button
-											onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
-											disabled={pagination.page >= pagination.totalPages}
-											className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-										>
-											Selanjutnya
-										</button>
-									</div>
+						{/* Pagination */}
+						{(pagination.totalPages > 1 || pagination.totalItems > 0) && (
+							<div className="px-6 py-4 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-2">
+								<p className="text-sm text-gray-500">
+									Menampilkan {data.length} dari {pagination.totalItems} data | Halaman {pagination.page} dari {pagination.totalPages || 1}
+								</p>
+								<div className="flex gap-2">
+									<button
+										onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
+										disabled={pagination.page <= 1}
+										className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+									>
+										Sebelumnya
+									</button>
+									<button
+										onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
+										disabled={pagination.page >= pagination.totalPages}
+										className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+									>
+										Selanjutnya
+									</button>
 								</div>
-							)}
-						</>
-					)}
-				</div>
+							</div>
+						)}
+					</div>
+				)}
 			</div>
 
 			{/* Detail Modal */}
@@ -627,12 +713,12 @@ const AparaturDesaPage = () => {
 									<img 
 										src={selectedAparatur.photo} 
 										alt={selectedAparatur.name}
-										className="h-24 w-24 rounded-full object-cover mb-3 border-4 border-blue-100"
+										className="h-24 w-24 rounded-full object-cover mb-3 border-4 border-teal-100"
 										onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
 									/>
 								) : null}
-								<div className={`h-24 w-24 bg-blue-100 rounded-full flex items-center justify-center mb-3 ${selectedAparatur.photo ? 'hidden' : ''}`}>
-									<UserCircle className="h-14 w-14 text-blue-600" />
+								<div className={`h-24 w-24 bg-teal-100 rounded-full flex items-center justify-center mb-3 ${selectedAparatur.photo ? 'hidden' : ''}`}>
+									<UserCircle className="h-14 w-14 text-teal-600" />
 								</div>
 								<h3 className="text-xl font-bold text-gray-900 text-center">{selectedAparatur.name || '-'}</h3>
 								<span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium bg-teal-100 text-teal-800 mt-2">
@@ -790,4 +876,4 @@ const AparaturDesaPage = () => {
 	);
 };
 
-export default AparaturDesaPage;
+export default AparaturDesaExternalPage;

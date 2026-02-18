@@ -110,6 +110,14 @@ const CoreDashboardLayout = () => {
     },
 
     {
+      path: '/core-dashboard/statistik-aparatur-desa',
+      icon: 'users',
+      label: 'Statistik Aparatur',
+      gradient: 'from-teal-500 to-emerald-600',
+      color: 'text-teal-600'
+    },
+
+    {
       path: '/core-dashboard/statistik-perjadin',
       icon: 'briefcase',
       label: 'Perjalanan Dinas',

@@ -199,6 +199,9 @@ const AparaturDesaDetailPage = lazy(
 const AparaturDesaEditPage = lazy(
   () => import("./pages/desa/aparatur-desa/AparaturDesaEditPage"),
 );
+const DesaAparaturExternalPage = lazy(
+  () => import("./pages/desa/aparatur-desa-external/AparaturDesaExternalPage"),
+);
 const ProfilDesaPage = lazy(() => import("./pages/desa/ProfilDesaPage"));
 const DesaSettings = lazy(() => import("./pages/desa/DesaSettings"));
 const DesaBankeuPage = lazy(() => import("./pages/desa/bankeu/DesaBankeuPage"));
@@ -306,6 +309,9 @@ const StatistikBumdes = lazy(
 );
 const StatistikKelembagaan = lazy(
   () => import("./pages/core-dashboard/StatistikKelembagaan"),
+);
+const StatistikAparaturDesa = lazy(
+  () => import("./pages/core-dashboard/StatistikAparaturDesa"),
 );
 const StatistikAdd = lazy(() => import("./pages/kepala-dinas/StatistikAdd"));
 // DD Statistik Sub-categories
@@ -695,6 +701,7 @@ function App() {
                     element={<ProdukHukumDetail />}
                   />
                   <Route path="bankeu" element={<DesaBankeuPage />} />
+                  <Route path="aparatur-desa-external" element={<DesaAparaturExternalPage />} />
                   <Route path="settings" element={<DesaSettings />} />
                 </Route>
                 {/* ============================================ */}
@@ -829,6 +836,25 @@ function App() {
                   <Route path="add" element={<AddDashboard />} />
                   <Route path="bhprd" element={<BhprdDashboard />} />
                   <Route path="dd" element={<DdDashboard />} />
+                </Route>
+                {/* Routes Pemdes - Nested under /pemdes */}
+                <Route
+                  path="/pemdes"
+                  element={
+                    <RoleProtectedRoute
+                      allowedRoles={[
+                        "pegawai",
+                        "kepala_bidang",
+                        "ketua_tim",
+                        "kepala_dinas",
+                        "superadmin",
+                      ]}
+                    >
+                      <PegawaiLayout />
+                    </RoleProtectedRoute>
+                  }
+                >
+                  <Route path="aparatur-desa" element={<AparaturDesaExternalPage />} />
                 </Route>
 
                 {/* Routes Sekretariat - Nested under /sekretariat (moved from /pegawai) */}
@@ -974,6 +1000,10 @@ function App() {
                     element={<StatistikKelembagaan />}
                   />
                   <Route
+                    path="statistik-aparatur-desa"
+                    element={<StatistikAparaturDesa />}
+                  />
+                  <Route
                     path="statistik-bankeu"
                     element={<StatistikBankeuDashboard />}
                   />
@@ -1030,9 +1060,7 @@ function App() {
                   />
                   <Route path="trends" element={<TrendsPage />} />
                   
-                  {/* Pemdes (Pemerintahan Desa) */}
-                  <Route path="pemdes" element={<PemdesPage />} />
-                  <Route path="pemdes/aparatur-desa" element={<AparaturDesaExternalPage />} />
+                  
                 </Route>
 
                 {/* Error Pages */}

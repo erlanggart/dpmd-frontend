@@ -9,7 +9,7 @@ import {
   FiX,
 } from "react-icons/fi";
 
-import { LuStore, LuFileText, LuUsers, LuUserCheck, LuWallpaper, LuLayoutDashboard, LuLandmark, LuBanknote, LuPanelLeftClose, LuPanelLeft } from "react-icons/lu";
+import { LuStore, LuFileText, LuUsers, LuUserCheck, LuWallpaper, LuLayoutDashboard, LuLandmark, LuBanknote, LuPanelLeftClose, LuPanelLeft, LuDatabase } from "react-icons/lu";
 import Footer from "../components/landingpage/Footer";
 import InstallPWA from "../components/InstallPWA";
 
@@ -32,6 +32,12 @@ const menuItems = [
     label: "Aparatur Desa",
     path: "/desa/aparatur-desa",
     icon: LuUserCheck,
+  },
+  {
+    id: "aparatur-desa-external",
+    label: "Aparatur Dapur Desa",
+    path: "/desa/aparatur-desa-external",
+    icon: LuDatabase,
   },
   {
     id: "produk-hukum",

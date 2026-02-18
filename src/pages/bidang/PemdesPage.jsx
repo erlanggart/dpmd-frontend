@@ -237,8 +237,9 @@ const PemdesPage = () => {
 									</button>
 
 									<button
-									onClick={() => navigate('/core-dashboard/pemdes/aparatur-desa')}
-									>
+									onClick={() => navigate('/pemdes/aparatur-desa')}
+									className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border border-gray-100 p-6 hover:border-blue-300 transition-all duration-300 text-left overflow-hidden hover:-translate-y-1"
+								>
 										<div className="absolute inset-0 bg-gradient-to-br from-blue-400/5 to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 										<div className="relative flex items-center gap-5">
 											<div className="h-16 w-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg shadow-blue-500/25">
