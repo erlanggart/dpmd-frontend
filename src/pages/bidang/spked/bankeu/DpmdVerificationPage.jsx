@@ -61,6 +61,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import * as XLSX from 'xlsx';
 import api from '../../../../api';
 import Swal from 'sweetalert2';
+import BankeuFormatSuratTab from './BankeuFormatSuratTab';
 
 const MAX_ANGGARAN_PER_DESA = 1_500_000_000; // 1.5 Miliar per desa
 
@@ -106,7 +107,7 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
     bankeu_submission_kecamatan: true
   });
   // Config tab states
-  const [configSubTab, setConfigSubTab] = useState('kegiatan'); // 'kegiatan', 'dinas'
+  const [configSubTab, setConfigSubTab] = useState('kegiatan'); // 'kegiatan', 'dinas', 'format-surat'
   const [expandedDinasId, setExpandedDinasId] = useState(null);
   const [dinasVerifikators, setDinasVerifikators] = useState({});
   const [showVerifikatorForm, setShowVerifikatorForm] = useState(false);
@@ -2646,6 +2647,17 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                     configSubTab === 'dinas' ? 'bg-purple-100 text-purple-700' : 'bg-white/20'
                   }`}>{dinas.length}</span>
                 </button>
+                <button
+                  onClick={() => setConfigSubTab('format-surat')}
+                  className={`flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm transition-all ${
+                    configSubTab === 'format-surat'
+                      ? 'bg-white text-amber-600 shadow-lg'
+                      : 'bg-white/20 text-white hover:bg-white/30'
+                  }`}
+                >
+                  <FileText className="h-5 w-5" />
+                  Format Surat
+                </button>
               </div>
             </motion.div>
 
@@ -2776,6 +2788,17 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                       ))}
                     </div>
                   )}
+                </motion.div>
+              )}
+
+              {configSubTab === 'format-surat' && (
+                <motion.div
+                  key="format-surat"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                >
+                  <BankeuFormatSuratTab />
                 </motion.div>
               )}
 
