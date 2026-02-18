@@ -27,6 +27,7 @@ const DinasVerificationPage = ({ tahun = 2027 }) => {
   const [catatan, setCatatan] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [catatanModal, setCatatanModal] = useState({ show: false, proposal: null });
 
   // Handle refresh data
   const handleRefresh = async () => {
@@ -818,27 +819,29 @@ const DinasVerificationPage = ({ tahun = 2027 }) => {
                                       </div>
                                     </td>
                                     <td className="px-4 py-4 align-middle">
-                                      {getStatusBadge(proposal.dinas_status)}
-                                      {/* Show catatan revisi from dinas */}
-                                      {proposal.dinas_catatan && (proposal.dinas_status === 'rejected' || proposal.dinas_status === 'revision') && (
-                                        <div className="mt-2 p-2.5 bg-red-50 border border-red-200 rounded-lg">
-                                          <p className="text-xs font-semibold text-red-700 mb-1 flex items-center gap-1">
-                                            <LuMessageCircle className="w-3 h-3" />
-                                            Catatan Revisi:
-                                          </p>
-                                          <p className="text-xs text-red-600 italic">{proposal.dinas_catatan}</p>
-                                        </div>
-                                      )}
-                                      {/* Show alert if returned from Kecamatan */}
-                                      {proposal.verified_at && !proposal.submitted_to_kecamatan && proposal.catatan_verifikasi && (
-                                        <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
-                                          <p className="text-xs font-semibold text-amber-800 mb-1 flex items-center gap-1">
-                                            <LuTriangleAlert className="w-3 h-3" />
-                                            Dikembalikan dari Kecamatan:
-                                          </p>
-                                          <p className="text-xs text-amber-700 italic">{proposal.catatan_verifikasi}</p>
-                                        </div>
-                                      )}
+                                      <div className="flex flex-col items-start gap-2">
+                                        {getStatusBadge(proposal.dinas_status)}
+                                        {/* Button to view catatan revisi */}
+                                        {proposal.dinas_catatan && (proposal.dinas_status === 'rejected' || proposal.dinas_status === 'revision') && (
+                                          <button
+                                            onClick={() => setCatatanModal({ show: true, proposal })}
+                                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-orange-700 bg-orange-50 hover:bg-orange-100 border border-orange-200 hover:border-orange-300 rounded-lg transition-all"
+                                          >
+                                            <LuMessageCircle className="w-3.5 h-3.5" />
+                                            Lihat Catatan
+                                          </button>
+                                        )}
+                                        {/* Alert if returned from Kecamatan */}
+                                        {proposal.verified_at && !proposal.submitted_to_kecamatan && proposal.catatan_verifikasi && (
+                                          <button
+                                            onClick={() => setCatatanModal({ show: true, proposal })}
+                                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 hover:border-amber-300 rounded-lg transition-all"
+                                          >
+                                            <LuTriangleAlert className="w-3.5 h-3.5" />
+                                            Catatan Kecamatan
+                                          </button>
+                                        )}
+                                      </div>
                                     </td>
                                     <td className="px-4 py-3 align-middle">
                                       <div className="flex items-center justify-center gap-2">
@@ -947,27 +950,29 @@ const DinasVerificationPage = ({ tahun = 2027 }) => {
                                 </div>
                               </div>
                               
-                              {/* Catatan revisi from dinas */}
-                              {proposal.dinas_catatan && (proposal.dinas_status === 'rejected' || proposal.dinas_status === 'revision') && (
-                                <div className="p-2.5 bg-red-50 border border-red-200 rounded-lg">
-                                  <p className="text-xs font-semibold text-red-700 mb-1 flex items-center gap-1">
-                                    <LuMessageCircle className="w-3 h-3" />
-                                    Catatan Revisi:
-                                  </p>
-                                  <p className="text-xs text-red-600 italic">{proposal.dinas_catatan}</p>
+                              {/* Buttons for catatan */}
+                              {(proposal.dinas_catatan && (proposal.dinas_status === 'rejected' || proposal.dinas_status === 'revision')) || (proposal.verified_at && !proposal.submitted_to_kecamatan && proposal.catatan_verifikasi) ? (
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  {proposal.dinas_catatan && (proposal.dinas_status === 'rejected' || proposal.dinas_status === 'revision') && (
+                                    <button
+                                      onClick={() => setCatatanModal({ show: true, proposal })}
+                                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-orange-700 bg-orange-50 hover:bg-orange-100 border border-orange-200 hover:border-orange-300 rounded-lg transition-all"
+                                    >
+                                      <LuMessageCircle className="w-3.5 h-3.5" />
+                                      Lihat Catatan
+                                    </button>
+                                  )}
+                                  {proposal.verified_at && !proposal.submitted_to_kecamatan && proposal.catatan_verifikasi && (
+                                    <button
+                                      onClick={() => setCatatanModal({ show: true, proposal })}
+                                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 hover:border-amber-300 rounded-lg transition-all"
+                                    >
+                                      <LuTriangleAlert className="w-3.5 h-3.5" />
+                                      Catatan Kecamatan
+                                    </button>
+                                  )}
                                 </div>
-                              )}
-
-                              {/* Alert if returned */}
-                              {proposal.verified_at && !proposal.submitted_to_kecamatan && proposal.catatan_verifikasi && (
-                                <div className="p-2 bg-amber-50 border border-amber-200 rounded-lg">
-                                  <p className="text-xs font-semibold text-amber-800 mb-1 flex items-center gap-1">
-                                    <LuTriangleAlert className="w-3 h-3" />
-                                    Dikembalikan dari Kecamatan:
-                                  </p>
-                                  <p className="text-xs text-amber-700 italic">{proposal.catatan_verifikasi}</p>
-                                </div>
-                              )}
+                              ) : null}
 
                               {/* Action Buttons */}
                               <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
@@ -1175,6 +1180,97 @@ const DinasVerificationPage = ({ tahun = 2027 }) => {
               <button
                 onClick={() => setProposalModal({ show: false, proposal: null })}
                 className="px-4 sm:px-6 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium rounded-lg transition-colors text-sm sm:text-base"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Catatan Modal */}
+      {catatanModal.show && catatanModal.proposal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => setCatatanModal({ show: false, proposal: null })}
+          />
+          
+          {/* Modal */}
+          <div className="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden animate-[fadeIn_0.2s_ease-out]">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-orange-500 to-amber-500 px-5 sm:px-6 py-4 sm:py-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm">
+                    <LuMessageCircle className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-bold text-white">Catatan Revisi</h3>
+                    <p className="text-xs sm:text-sm text-orange-100 mt-0.5">Riwayat komentar untuk proposal ini</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setCatatanModal({ show: false, proposal: null })}
+                  className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
+                >
+                  <LuX className="w-5 h-5 text-white" />
+                </button>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="px-5 sm:px-6 py-4 sm:py-5 space-y-4 overflow-y-auto max-h-[calc(90vh-160px)]">
+              {/* Proposal Info */}
+              <div className="flex items-start gap-3 p-3.5 bg-gradient-to-r from-gray-50 to-slate-50 rounded-xl border border-gray-100">
+                <div className="p-2 bg-amber-100 rounded-lg flex-shrink-0">
+                  <LuFileText className="w-4 h-4 text-amber-600" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-gray-800 line-clamp-2 leading-snug">
+                    {catatanModal.proposal.judul_proposal}
+                  </p>
+                  <div className="flex items-center gap-2 mt-1.5">
+                    <span className="inline-flex items-center gap-1 text-xs text-gray-500">
+                      <LuMapPin className="w-3 h-3" />
+                      {catatanModal.proposal.nama_desa}, {catatanModal.proposal.nama_kecamatan}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Catatan Dinas */}
+              {catatanModal.proposal.dinas_catatan && (catatanModal.proposal.dinas_status === 'rejected' || catatanModal.proposal.dinas_status === 'revision') && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-red-500 rounded-full" />
+                    <p className="text-sm font-semibold text-gray-700">Catatan dari Verifikator Dinas</p>
+                  </div>
+                  <div className="p-4 bg-red-50/80 border border-red-200 rounded-xl">
+                    <p className="text-sm text-red-800 leading-relaxed whitespace-pre-wrap">{catatanModal.proposal.dinas_catatan}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Catatan Kecamatan */}
+              {catatanModal.proposal.verified_at && !catatanModal.proposal.submitted_to_kecamatan && catatanModal.proposal.catatan_verifikasi && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-amber-500 rounded-full" />
+                    <p className="text-sm font-semibold text-gray-700">Dikembalikan dari Kecamatan</p>
+                  </div>
+                  <div className="p-4 bg-amber-50/80 border border-amber-200 rounded-xl">
+                    <p className="text-sm text-amber-800 leading-relaxed whitespace-pre-wrap">{catatanModal.proposal.catatan_verifikasi}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-5 sm:px-6 py-4 bg-gray-50/80 border-t border-gray-100">
+              <button
+                onClick={() => setCatatanModal({ show: false, proposal: null })}
+                className="w-full px-4 py-2.5 text-sm font-semibold text-gray-700 bg-white hover:bg-gray-100 border-2 border-gray-200 hover:border-gray-300 rounded-xl transition-all"
               >
                 Tutup
               </button>
