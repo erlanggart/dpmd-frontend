@@ -5,6 +5,7 @@ import {
   Sparkles, 
   TrendingUp, 
   Users, 
+  UserCheck,
   MapPin, 
   DollarSign,
   BarChart3,
@@ -103,6 +104,16 @@ const WelcomeDashboard = () => {
       iconBg: "bg-gradient-to-br from-purple-400 to-violet-500",
       path: "/core-dashboard/statistik-bumdes",
       stat: "85 Unit"
+    },
+    {
+      icon: <UserCheck className="w-10 h-10" />,
+      title: "Aparatur Desa",
+      description: "Statistik Kepala Desa, Perangkat & BPD",
+      gradient: "from-teal-400 via-emerald-500 to-green-600",
+      bgGradient: "from-teal-500/20 to-green-600/20",
+      iconBg: "bg-gradient-to-br from-teal-400 to-emerald-500",
+      path: "/core-dashboard/statistik-aparatur-desa",
+      stat: "10.000+ Data"
     },
     {
       icon: <FileText className="w-10 h-10" />,
