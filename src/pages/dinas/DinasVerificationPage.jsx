@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { 
   LuSearch, LuEye, LuCircleCheck, LuCircleX, 
   LuRefreshCw, LuClock, LuFileText, LuTriangleAlert,
-  LuChevronDown, LuChevronUp, LuMapPin, LuX, LuPackage, LuDollarSign
+  LuChevronDown, LuChevronUp, LuMapPin, LuX, LuPackage, LuDollarSign,
+  LuMessageCircle
 } from 'react-icons/lu';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
@@ -222,8 +223,29 @@ const DinasVerificationPage = ({ tahun = 2027 }) => {
 
   const handleAction = (proposal, action) => {
     if (action === 'approve') {
-      // Direct approve without modal
-      handleSubmitAction(proposal, action, '');
+      // Confirmation popup before approve
+      Swal.fire({
+        icon: 'question',
+        title: 'Setujui Proposal?',
+        html: `
+          <p class="text-gray-700 mb-2">Apakah Anda yakin ingin menyetujui proposal ini?</p>
+          <div class="p-3 bg-gray-50 rounded-lg text-left mt-3">
+            <p class="text-sm font-semibold text-gray-800">${proposal.judul_proposal}</p>
+            <p class="text-xs text-gray-500 mt-1">${proposal.nama_desa}, ${proposal.nama_kecamatan}</p>
+          </div>
+          <p class="text-xs text-gray-500 mt-3">Proposal yang disetujui akan diteruskan ke Kecamatan untuk diverifikasi.</p>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Ya, Setujui',
+        cancelButtonText: 'Batal',
+        confirmButtonColor: '#16a34a',
+        cancelButtonColor: '#6b7280',
+        reverseButtons: true
+      }).then((result) => {
+        if (result.isConfirmed) {
+          handleSubmitAction(proposal, action, '');
+        }
+      });
     } else {
       // Show modal for reject (need catatan)
       setActionModal({ show: true, proposal, action });
@@ -797,6 +819,16 @@ const DinasVerificationPage = ({ tahun = 2027 }) => {
                                     </td>
                                     <td className="px-4 py-4 align-middle">
                                       {getStatusBadge(proposal.dinas_status)}
+                                      {/* Show catatan revisi from dinas */}
+                                      {proposal.dinas_catatan && (proposal.dinas_status === 'rejected' || proposal.dinas_status === 'revision') && (
+                                        <div className="mt-2 p-2.5 bg-red-50 border border-red-200 rounded-lg">
+                                          <p className="text-xs font-semibold text-red-700 mb-1 flex items-center gap-1">
+                                            <LuMessageCircle className="w-3 h-3" />
+                                            Catatan Revisi:
+                                          </p>
+                                          <p className="text-xs text-red-600 italic">{proposal.dinas_catatan}</p>
+                                        </div>
+                                      )}
                                       {/* Show alert if returned from Kecamatan */}
                                       {proposal.verified_at && !proposal.submitted_to_kecamatan && proposal.catatan_verifikasi && (
                                         <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
@@ -915,6 +947,17 @@ const DinasVerificationPage = ({ tahun = 2027 }) => {
                                 </div>
                               </div>
                               
+                              {/* Catatan revisi from dinas */}
+                              {proposal.dinas_catatan && (proposal.dinas_status === 'rejected' || proposal.dinas_status === 'revision') && (
+                                <div className="p-2.5 bg-red-50 border border-red-200 rounded-lg">
+                                  <p className="text-xs font-semibold text-red-700 mb-1 flex items-center gap-1">
+                                    <LuMessageCircle className="w-3 h-3" />
+                                    Catatan Revisi:
+                                  </p>
+                                  <p className="text-xs text-red-600 italic">{proposal.dinas_catatan}</p>
+                                </div>
+                              )}
+
                               {/* Alert if returned */}
                               {proposal.verified_at && !proposal.submitted_to_kecamatan && proposal.catatan_verifikasi && (
                                 <div className="p-2 bg-amber-50 border border-amber-200 rounded-lg">
