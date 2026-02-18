@@ -319,28 +319,6 @@ const CoreDashboardLayout = () => {
             );
           })}
         </nav>
-
-
-        {/* Back to Dashboard */}
-        <div className="relative p-3 border-t border-gray-100 flex-shrink-0">
-          <button
-            onClick={() => navigate(dashboardPath)}
-            onMouseEnter={() => setHoveredItem('beranda')}
-            onMouseLeave={() => setHoveredItem(null)}
-            className="group relative flex items-center gap-3 px-3 py-2.5 w-full rounded-xl text-blue-600 hover:bg-blue-50 transition-colors duration-200"
-            title={!sidebarOpen ? 'Kembali ke Beranda' : ''}
-          >
-            <div className={`relative ${sidebarOpen ? 'flex-shrink-0' : 'mx-auto'}`}>
-              <AnimatedIcon 
-                type="back" 
-                isActive={false} 
-                isHovered={hoveredItem === 'beranda'}
-                className="w-5 h-5"
-              />
-            </div>
-            {sidebarOpen && <span className="relative font-semibold truncate text-sm">Kembali ke Beranda</span>}
-          </button>
-        </div>
       </aside>
 
       {/* Main Content */}

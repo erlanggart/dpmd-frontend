@@ -512,25 +512,6 @@ const DPMDStaffLayout = () => {
 								</button>
 							);
 						})}
-
-						{/* Notifications */}
-						<button
-							onClick={handleNotificationClick}
-							className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'} p-3 rounded-xl transition-all duration-200 text-gray-600 ${theme.hoverBg} ${theme.hoverText}`}
-							title={isSidebarCollapsed ? 'Notifikasi' : ''}
-						>
-							<div className="relative">
-								<FiBell className="h-5 w-5" />
-								{unreadCount > 0 && (
-									<span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center font-bold">
-										{unreadCount > 9 ? '9+' : unreadCount}
-									</span>
-								)}
-							</div>
-							{!isSidebarCollapsed && (
-								<span className="text-sm font-medium">Notifikasi</span>
-							)}
-						</button>
 					</nav>
 
 					{/* User Profile & Logout at bottom */}
