@@ -2038,10 +2038,21 @@ const BankeuVerificationDetailPage = () => {
                               oleh <span className="font-semibold">{item.user_name}</span>
                               <span className="text-gray-400"> ({item.user_role})</span>
                             </p>
-                            {item.new_value?.catatan_umum && (
+                            {(item.new_value?.catatan_umum || item.new_value?.catatan) && (
                               <div className="mt-2 p-2.5 bg-white/70 rounded-lg border border-gray-100">
-                                <p className="text-xs text-gray-700 leading-relaxed whitespace-pre-wrap">{item.new_value.catatan_umum}</p>
+                                <p className="text-xs text-gray-700 leading-relaxed whitespace-pre-wrap">{item.new_value?.catatan_umum || item.new_value?.catatan}</p>
                               </div>
+                            )}
+                            {item.new_value?.file_proposal && (
+                              <a
+                                href={`${imageBaseUrl || 'http://127.0.0.1:3001'}/storage/uploads/bankeu/resolve/${item.new_value.file_proposal}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-all"
+                              >
+                                <LuDownload className="w-3 h-3" />
+                                File Proposal Saat Verifikasi
+                              </a>
                             )}
                           </div>
                         </div>
