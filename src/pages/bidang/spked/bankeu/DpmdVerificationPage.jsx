@@ -428,6 +428,14 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
         });
         const newPassword = response.data?.data?.newPassword || response.data?.newPassword;
         
+        // Update plain_password in local state
+        setDinasVerifikators(prev => ({
+          ...prev,
+          [dinasId]: (prev[dinasId] || []).map(v => 
+            v.id === verifikatorId ? { ...v, plain_password: result.value } : v
+          )
+        }));
+
         await Swal.fire({
           title: 'Password Baru Berhasil Dibuat',
           html: `
@@ -436,11 +444,11 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
               <div class="bg-gray-100 p-3 rounded-lg font-mono text-lg text-center select-all">
                 ${newPassword}
               </div>
-              <p class="text-sm text-gray-500 mt-3">⚠️ Simpan password ini! Password hanya ditampilkan sekali.</p>
+              <p class="text-sm text-gray-500 mt-2">Password juga ditampilkan di halaman ini.</p>
             </div>
           `,
           icon: 'success',
-          confirmButtonText: 'Saya Sudah Menyimpan'
+          confirmButtonText: 'OK'
         });
       } catch (error) {
         Swal.fire('Gagal', error.response?.data?.message || 'Gagal membuat password baru', 'error');
@@ -3100,7 +3108,11 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                                                 <div className="flex items-center gap-2">
                                                   <Lock className="h-3.5 w-3.5 text-gray-400" />
                                                   <span className="text-xs text-gray-600">Password:</span>
-                                                  <span className="text-xs text-gray-500 italic">••••••••</span>
+                                                  {verifikator.plain_password ? (
+                                                    <span className="text-xs font-mono text-gray-800 bg-white px-1.5 py-0.5 rounded select-all">{verifikator.plain_password}</span>
+                                                  ) : (
+                                                    <span className="text-xs text-gray-500">••••••••</span>
+                                                  )}
                                                   <button
                                                     onClick={() => handleResetPassword(item.id, verifikator.id, verifikator.nama)}
                                                     className="ml-auto flex items-center gap-1 px-2 py-1 text-xs text-amber-700 bg-amber-100 hover:bg-amber-200 rounded-md transition-colors"
@@ -3718,6 +3730,7 @@ const DinasForm = ({ data, onSave, onCancel }) => {
   const [showCreateAccount, setShowCreateAccount] = useState(false);
   const [showEditEmail, setShowEditEmail] = useState(false);
   const [showResetPassword, setShowResetPassword] = useState(false);
+  const [showDinasPassword, setShowDinasPassword] = useState(false);
   const [editEmailValue, setEditEmailValue] = useState('');
   const [resetPasswordValue, setResetPasswordValue] = useState('');
   const [isResetting, setIsResetting] = useState(false);
@@ -3768,6 +3781,11 @@ const DinasForm = ({ data, onSave, onCancel }) => {
         confirmButtonText: 'OK'
       });
       
+      // Update plain_password in local data
+      if (data.user_account) {
+        data.user_account.plain_password = resetPasswordValue.trim();
+      }
+      setShowDinasPassword(true);
       setShowResetPassword(false);
       setResetPasswordValue('');
     } catch (error) {
@@ -3973,7 +3991,22 @@ const DinasForm = ({ data, onSave, onCancel }) => {
                 <div className="flex items-center gap-2">
                   <Lock className="h-4 w-4 text-gray-400" />
                   <span className="text-sm text-gray-600">Password:</span>
-                  <span className="text-sm text-gray-500 italic">••••••••</span>
+                  {showDinasPassword && data.user_account?.plain_password ? (
+                    <span className="text-sm font-mono text-gray-800 bg-white px-2 py-0.5 rounded border border-gray-200 select-all">{data.user_account.plain_password}</span>
+                  ) : (
+                    <span className="text-sm text-gray-500">••••••••</span>
+                  )}
+                  {data.user_account?.plain_password && (
+                    <button
+                      type="button"
+                      onClick={() => setShowDinasPassword(!showDinasPassword)}
+                      className="flex items-center gap-1 px-2 py-1 text-xs text-blue-700 bg-blue-100 hover:bg-blue-200 rounded transition-colors"
+                      title={showDinasPassword ? 'Sembunyikan Password' : 'Lihat Password'}
+                    >
+                      {showDinasPassword ? <Lock className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                      {showDinasPassword ? 'Sembunyikan' : 'Lihat'}
+                    </button>
+                  )}
                   {!showResetPassword && (
                     <button
                       type="button"

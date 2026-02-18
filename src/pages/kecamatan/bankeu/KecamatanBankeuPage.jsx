@@ -84,25 +84,6 @@ const KecamatanBankeuPage = () => {
   // Show BankeuVerificationPage with selected year
   return (
     <div className="relative">
-      {/* Year Badge & Back Button */}
-      <div className="bg-gradient-to-r from-violet-600 to-purple-600 text-white py-3 px-4 md:px-8 shadow-lg sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setSelectedYear(null)}
-              className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg font-semibold transition-all duration-200 text-sm"
-            >
-              ← Ganti Tahun
-            </button>
-            <div className="h-8 w-px bg-white/30"></div>
-            <div className="flex items-center gap-2">
-              <LuShield className="w-5 h-5" />
-              <span className="font-bold text-lg">Tahun Anggaran {selectedYear}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Main Content */}
       <BankeuVerificationPage tahun={selectedYear} />
     </div>

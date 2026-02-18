@@ -840,25 +840,16 @@ const DinasVerificationPage = ({ tahun = 2027 }) => {
                                     <td className="px-4 py-4 align-middle">
                                       <div className="flex flex-col items-start gap-2">
                                         {getStatusBadge(proposal.dinas_status)}
-                                        {/* Buttons: Catatan + Detail */}
-                                        <div className="flex items-center gap-1.5 flex-wrap">
-                                          {(proposal.dinas_catatan && (proposal.dinas_status === 'rejected' || proposal.dinas_status === 'revision')) || (proposal.verified_at && !proposal.submitted_to_kecamatan && proposal.catatan_verifikasi) ? (
-                                            <button
-                                              onClick={() => openCatatanModal(proposal)}
-                                              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-orange-700 bg-orange-50 hover:bg-orange-100 border border-orange-200 hover:border-orange-300 rounded-lg transition-all"
-                                            >
-                                              <LuMessageCircle className="w-3.5 h-3.5" />
-                                              Catatan
-                                            </button>
-                                          ) : null}
+                                        {/* Button: Catatan */}
+                                        {proposal.dinas_catatan || (proposal.verified_at && !proposal.submitted_to_kecamatan && proposal.catatan_verifikasi) ? (
                                           <button
-                                            onClick={() => handleViewProposal(proposal)}
-                                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 hover:border-blue-300 rounded-lg transition-all"
+                                            onClick={() => openCatatanModal(proposal)}
+                                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-orange-700 bg-orange-50 hover:bg-orange-100 border border-orange-200 hover:border-orange-300 rounded-lg transition-all mt-1"
                                           >
-                                            <LuEye className="w-3.5 h-3.5" />
-                                            Detail
+                                            <LuMessageCircle className="w-3.5 h-3.5" />
+                                            Catatan
                                           </button>
-                                        </div>
+                                        ) : null}
                                       </div>
                                     </td>
                                     <td className="px-4 py-3 align-middle">
@@ -968,25 +959,16 @@ const DinasVerificationPage = ({ tahun = 2027 }) => {
                                 </div>
                               </div>
                               
-                              {/* Buttons for catatan + detail */}
-                              <div className="flex items-center gap-2 flex-wrap">
-                                {(proposal.dinas_catatan && (proposal.dinas_status === 'rejected' || proposal.dinas_status === 'revision')) || (proposal.verified_at && !proposal.submitted_to_kecamatan && proposal.catatan_verifikasi) ? (
-                                  <button
-                                    onClick={() => openCatatanModal(proposal)}
-                                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-orange-700 bg-orange-50 hover:bg-orange-100 border border-orange-200 hover:border-orange-300 rounded-lg transition-all"
-                                  >
-                                    <LuMessageCircle className="w-3.5 h-3.5" />
-                                    Catatan
-                                  </button>
-                                ) : null}
+                              {/* Button: Catatan */}
+                              {proposal.dinas_catatan || (proposal.verified_at && !proposal.submitted_to_kecamatan && proposal.catatan_verifikasi) ? (
                                 <button
-                                  onClick={() => handleViewProposal(proposal)}
-                                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 hover:border-blue-300 rounded-lg transition-all"
+                                  onClick={() => openCatatanModal(proposal)}
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-orange-700 bg-orange-50 hover:bg-orange-100 border border-orange-200 hover:border-orange-300 rounded-lg transition-all"
                                 >
-                                  <LuEye className="w-3.5 h-3.5" />
-                                  Detail
+                                  <LuMessageCircle className="w-3.5 h-3.5" />
+                                  Catatan
                                 </button>
-                              </div>
+                              ) : null}
 
                               {/* Action Buttons */}
                               <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
