@@ -781,30 +781,6 @@ const DPMDStaffLayout = () => {
 									</div>
 								</button>
 
-								{/* Notifications */}
-								<button 
-									onClick={() => {
-										setShowMenu(false);
-										handleNotificationClick();
-									}}
-									className={`w-full flex items-center gap-4 p-4 rounded-xl ${theme.hoverBg} transition-colors text-left`}
-								>
-									<div className={`h-12 w-12 ${theme.badgeBg} rounded-xl flex items-center justify-center relative`}>
-										<FiBell className={`h-6 w-6 ${theme.badgeText}`} />
-										{unreadCount > 0 && (
-											<span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
-												{unreadCount > 99 ? '99+' : unreadCount}
-											</span>
-										)}
-									</div>
-									<div>
-										<h4 className="font-semibold text-gray-800">Notifikasi</h4>
-										<p className="text-sm text-gray-500">
-											{unreadCount > 0 ? `${unreadCount} notifikasi baru` : 'Tidak ada notifikasi baru'}
-										</p>
-									</div>
-								</button>
-
 								{/* Bidang Navigation */}
 								{renderBidangNavItem()}
 

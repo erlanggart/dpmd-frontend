@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
 	User, Briefcase, Mail, Calendar, Award, 
 	Phone, MapPin, TrendingUp, FileText,
-	Clock, Activity, Users, Building, Info, Bell, X
+	Clock, Activity, Users, Building, Info
 } from "lucide-react";
 import api from "../../api";
 import MobileHeader from '../../components/mobile/MobileHeader';
@@ -19,7 +19,6 @@ const PegawaiDashboard = () => {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
 	const [user, setUser] = useState(JSON.parse(localStorage.getItem('user') || '{}'));
-	const [showNotifications, setShowNotifications] = useState(false);
 
 	useEffect(() => {
 		const handleProfileUpdate = () => {
@@ -131,57 +130,8 @@ const PegawaiDashboard = () => {
 				userRole="Pegawai"
 				greeting="Selamat Datang"
 				gradient="from-green-600 via-green-700 to-green-800"
-				notificationCount={0}
-				onNotificationClick={() => setShowNotifications(!showNotifications)}
 				avatar={getUserAvatarUrl(user)}
 			/>
-
-			{/* Notification Popup - Modern Design */}
-			{showNotifications && (
-				<>
-					{/* Backdrop with blur effect */}
-					<div 
-						className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 transition-opacity"
-						onClick={() => setShowNotifications(false)}
-					></div>
-					
-					{/* Notification Panel */}
-					<div className="fixed top-4 right-4 w-96 max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-2xl z-50 overflow-hidden border border-gray-100 animate-slideDown">
-						{/* Header */}
-						<div className="relative bg-gradient-to-r from-green-500 to-emerald-600 px-5 py-4">
-							<div className="flex items-center justify-between">
-								<div className="flex items-center gap-3">
-									<div className="h-10 w-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
-										<Bell className="h-5 w-5 text-white" />
-									</div>
-									<div>
-										<h3 className="font-bold text-white text-base">Notifikasi</h3>
-										<p className="text-xs text-green-50">Tidak ada notifikasi baru</p>
-									</div>
-								</div>
-								<button
-									onClick={() => setShowNotifications(false)}
-									className="h-8 w-8 flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
-								>
-									<X className="h-4 w-4 text-white" />
-								</button>
-							</div>
-						</div>
-
-						{/* Content */}
-						<div className="max-h-[calc(100vh-12rem)] overflow-y-auto">
-							{/* Empty State */}
-							<div className="px-6 py-12 text-center">
-								<div className="mx-auto mb-4 h-20 w-20 bg-gradient-to-br from-green-50 to-emerald-100 rounded-2xl flex items-center justify-center">
-									<Bell className="h-10 w-10 text-green-400" />
-								</div>
-								<h4 className="font-semibold text-gray-700 mb-1">Belum Ada Notifikasi</h4>
-								<p className="text-sm text-gray-500">Notifikasi penting akan muncul di sini</p>
-							</div>
-						</div>
-					</div>
-				</>
-			)}
 
 		{/* Main Content */}
 		<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-4">
