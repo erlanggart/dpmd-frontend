@@ -49,7 +49,9 @@ import {
   Sparkles,
   Layers,
   ToggleLeft,
-  ToggleRight
+  ToggleRight,
+  Wrench,
+  RotateCcw
 } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
@@ -186,6 +188,68 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
       fetchTrackingData();
     }
   }, [trackingTahunAnggaran]);
+
+  // Troubleshoot: Force revision proposal stuck at any stage
+  const handleTroubleshootRevision = async (proposal) => {
+    const stage = getProposalStage(proposal);
+    const stageLabel = stage === 'di_dinas' ? 'Dinas Terkait' : stage === 'di_kecamatan' ? 'Kecamatan' : stage === 'di_dpmd' ? 'DPMD' : 'Desa';
+    const desaName = proposal.desas?.nama || `Desa ID ${proposal.desa_id}`;
+    
+    const result = await Swal.fire({
+      title: '🔧 Troubleshoot Revisi',
+      html: `<div class="text-left space-y-3">
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <p class="text-sm font-semibold text-blue-800">Proposal #${proposal.id}</p>
+          <p class="text-sm text-blue-700">${desaName}</p>
+          <p class="text-sm text-blue-600">Posisi saat ini: <strong>${stageLabel}</strong></p>
+        </div>
+        <div class="bg-amber-50 border border-amber-200 rounded-lg p-3">
+          <p class="text-sm text-amber-800">⚠️ Proposal akan dikembalikan ke <strong>Desa</strong> untuk direvisi. Semua status verifikasi (Dinas, Kecamatan, DPMD) akan di-reset.</p>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Alasan Troubleshoot <span class="text-red-500">*</span></label>
+          <textarea id="swal-troubleshoot-catatan" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" rows="3" placeholder="Contoh: Dinas terkait tidak merespon selama 2 minggu, desa meminta revisi proposal"></textarea>
+        </div>
+      </div>`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#f59e0b',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: '🔧 Ya, Revisi Proposal',
+      cancelButtonText: 'Batal',
+      preConfirm: () => {
+        const catatan = document.getElementById('swal-troubleshoot-catatan').value;
+        if (!catatan || catatan.trim().length === 0) {
+          Swal.showValidationMessage('Alasan troubleshoot wajib diisi');
+          return false;
+        }
+        return catatan.trim();
+      }
+    });
+
+    if (result.isConfirmed && result.value) {
+      try {
+        Swal.fire({ title: 'Memproses...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        const res = await api.patch(`/dpmd/bankeu/proposals/${proposal.id}/troubleshoot-revision`, {
+          catatan: result.value
+        });
+        
+        // Refresh data
+        await fetchTrackingData();
+        await fetchData();
+        
+        Swal.fire({
+          icon: 'success',
+          title: 'Troubleshoot Berhasil',
+          html: `<p class="text-sm">${res.data?.message || 'Proposal berhasil dikembalikan ke Desa'}</p>`,
+          timer: 3000,
+          showConfirmButton: true
+        });
+      } catch (error) {
+        Swal.fire('Gagal', error.response?.data?.message || 'Gagal melakukan troubleshoot revisi', 'error');
+      }
+    }
+  };
 
   // Fetch tracking proposals (ALL proposals regardless of status)
   const fetchTrackingData = async () => {
@@ -1949,6 +2013,35 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                                         </div>
                                       </div>
                                       
+                                      {/* Troubleshoot Button - Only show for non-approved proposals */}
+                                      {proposal.dpmd_status !== 'approved' && proposal.status !== 'verified' && (
+                                        <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                                          <div className="flex items-center gap-2">
+                                            {/* Stage indicator */}
+                                            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium ${
+                                              getProposalStage(proposal) === 'di_dinas' ? 'bg-amber-100 text-amber-700' :
+                                              getProposalStage(proposal) === 'di_kecamatan' ? 'bg-blue-100 text-blue-700' :
+                                              getProposalStage(proposal) === 'di_dpmd' ? 'bg-purple-100 text-purple-700' :
+                                              'bg-gray-100 text-gray-600'
+                                            }`}>
+                                              <Clock className="h-3 w-3" />
+                                              {proposal.submitted_to_dinas_at && !proposal.dinas_verified_at 
+                                                ? `${Math.floor((Date.now() - new Date(proposal.submitted_to_dinas_at).getTime()) / (1000 * 60 * 60 * 24))} hari di ${getProposalStage(proposal) === 'di_dinas' ? 'Dinas' : getProposalStage(proposal) === 'di_kecamatan' ? 'Kecamatan' : 'DPMD'}`
+                                                : 'Belum dikirim'
+                                              }
+                                            </span>
+                                          </div>
+                                          <button
+                                            onClick={(e) => { e.stopPropagation(); handleTroubleshootRevision(proposal); }}
+                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5"
+                                            title="Troubleshoot: Kembalikan proposal ke Desa untuk direvisi"
+                                          >
+                                            <Wrench className="h-3.5 w-3.5" />
+                                            Troubleshoot Revisi
+                                          </button>
+                                        </div>
+                                      )}
+
                                       {/* Show catatan if any */}
                                       {(proposal.dinas_catatan || proposal.kecamatan_catatan || proposal.dpmd_catatan) && (
                                         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
