@@ -4,7 +4,7 @@ import {
   LuFileText, LuClock, LuCheck, LuX, LuRefreshCw,
   LuBuilding2, LuLandmark, LuShield, LuSend,
   LuChevronDown, LuChevronRight, LuMapPin,
-  LuDollarSign, LuCircleAlert, LuLoader, LuMailOpen
+  LuDollarSign, LuCircleAlert, LuLoader, LuMailOpen, LuWrench
 } from "react-icons/lu";
 
 // ========== HELPER: Format tanggal ==========
@@ -26,6 +26,7 @@ const stepConfig = {
   active: { color: 'bg-blue-500', text: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-200', icon: LuClock, label: 'Sedang Diproses' },
   rejected: { color: 'bg-red-500', text: 'text-red-700', bg: 'bg-red-50', border: 'border-red-200', icon: LuX, label: 'Ditolak' },
   revision: { color: 'bg-amber-500', text: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200', icon: LuRefreshCw, label: 'Perlu Revisi' },
+  troubleshoot: { color: 'bg-indigo-500', text: 'text-indigo-700', bg: 'bg-indigo-50', border: 'border-indigo-200', icon: LuWrench, label: 'Troubleshoot' },
   waiting: { color: 'bg-gray-300', text: 'text-gray-500', bg: 'bg-gray-50', border: 'border-gray-200', icon: LuClock, label: 'Menunggu' },
 };
 
@@ -142,6 +143,18 @@ const ProposalTrackingCard = ({ proposal, index }) => {
       catatan: proposal.dpmd_catatan,
     });
 
+    // Troubleshoot step (jika ada)
+    if (proposal.troubleshoot_catatan) {
+      steps.push({
+        label: '🔧 Troubleshoot DPMD',
+        icon: LuWrench,
+        status: 'troubleshoot',
+        date: proposal.troubleshoot_at,
+        verifier: proposal.troubleshoot_by_name,
+        catatan: proposal.troubleshoot_catatan,
+      });
+    }
+
     return steps;
   };
 
@@ -153,6 +166,7 @@ const ProposalTrackingCard = ({ proposal, index }) => {
   // Overall status badge
   const getOverallBadge = () => {
     if (isFinalApproved) return { text: 'Disetujui DPMD', color: 'bg-emerald-100 text-emerald-800 border-emerald-300' };
+    if (proposal.troubleshoot_catatan && proposal.status === 'revision' && !proposal.submitted_to_dinas_at) return { text: 'Troubleshoot DPMD', color: 'bg-indigo-100 text-indigo-800 border-indigo-300' };
     if (proposal.dpmd_status === 'rejected') return { text: 'Ditolak DPMD', color: 'bg-red-100 text-red-800 border-red-300' };
     if (proposal.dpmd_status === 'revision') return { text: 'Revisi DPMD', color: 'bg-amber-100 text-amber-800 border-amber-300' };
     if (proposal.kecamatan_status === 'rejected') return { text: 'Ditolak Kecamatan', color: 'bg-red-100 text-red-800 border-red-300' };

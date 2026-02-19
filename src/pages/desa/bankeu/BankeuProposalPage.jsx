@@ -4,7 +4,7 @@ import Swal from "sweetalert2";
 import {
   LuUpload, LuEye, LuClock, LuCheck, LuX, LuRefreshCw, 
   LuChevronDown, LuChevronRight, LuSend, LuTrash2, LuInfo, LuDownload, LuFileText, LuImage,
-  LuPackage, LuMapPin, LuDollarSign, LuTriangleAlert, LuPencil, LuSave
+  LuPackage, LuMapPin, LuDollarSign, LuTriangleAlert, LuPencil, LuSave, LuWrench
 } from "react-icons/lu";
 
 const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
@@ -291,13 +291,15 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
     const hasRejectedInfra = proposals.some(p => 
       p.kegiatan_list?.some(k => k.jenis_kegiatan === 'infrastruktur') &&
       ((p.dinas_status === 'rejected' || p.dinas_status === 'revision') && !p.submitted_to_dinas_at ||
-       (p.kecamatan_status === 'rejected' || p.kecamatan_status === 'revision') && !p.submitted_to_kecamatan)
+       (p.kecamatan_status === 'rejected' || p.kecamatan_status === 'revision') && !p.submitted_to_kecamatan ||
+       (p.status === 'revision' && p.troubleshoot_catatan && !p.submitted_to_dinas_at))
     );
     
     const hasRejectedNonInfra = proposals.some(p => 
       p.kegiatan_list?.some(k => k.jenis_kegiatan === 'non_infrastruktur') &&
       ((p.dinas_status === 'rejected' || p.dinas_status === 'revision') && !p.submitted_to_dinas_at ||
-       (p.kecamatan_status === 'rejected' || p.kecamatan_status === 'revision') && !p.submitted_to_kecamatan)
+       (p.kecamatan_status === 'rejected' || p.kecamatan_status === 'revision') && !p.submitted_to_kecamatan ||
+       (p.status === 'revision' && p.troubleshoot_catatan && !p.submitted_to_dinas_at))
     );
 
     if (hasRejectedInfra) {
@@ -2003,7 +2005,17 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
     resubmitDestination
   });
 
-  const getStatusBadge = (status) => {
+  const getStatusBadge = (proposal) => {
+    // Check troubleshoot first
+    if (proposal.troubleshoot_catatan && proposal.status === 'revision' && !proposal.submitted_to_dinas_at) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">
+          <LuWrench className="w-3 h-3" />
+          Troubleshoot DPMD
+        </span>
+      );
+    }
+
     const badges = {
       pending: { icon: LuClock, text: "Menunggu Verifikasi", color: "bg-yellow-100 text-yellow-700" },
       verified: { icon: LuCheck, text: "Disetujui", color: "bg-green-100 text-green-700" },
@@ -2011,6 +2023,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
       revision: { icon: LuRefreshCw, text: "Perlu Revisi", color: "bg-orange-100 text-orange-700" }
     };
 
+    const status = proposal.status || proposal;
     const badge = badges[status] || badges.pending;
     const Icon = badge.icon;
 
@@ -2146,6 +2159,39 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                           <span className="text-xs font-medium text-orange-700">{p.judul_proposal}</span>
                           <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${p.kecamatan_status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
                             {p.kecamatan_status === 'rejected' ? 'DITOLAK' : 'REVISI'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Alert Banner for Troubleshoot Revision by DPMD */}
+          {proposals.some(p => p.status === 'revision' && p.troubleshoot_catatan && !p.submitted_to_dinas_at) && (
+            <div className="px-8">
+              <div className="bg-indigo-50 border-l-4 border-indigo-500 rounded-lg p-4 shadow-md">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0">
+                    <LuWrench className="w-6 h-6 text-indigo-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-base font-bold text-indigo-900 mb-1">
+                      🔧 Proposal Di-revisi oleh DPMD (Troubleshoot)
+                    </h3>
+                    <p className="text-sm text-indigo-800 mb-2">
+                      DPMD telah mengembalikan {proposals.filter(p => p.status === 'revision' && p.troubleshoot_catatan && !p.submitted_to_dinas_at).length} proposal untuk direvisi ulang.
+                      Seluruh proses verifikasi direset — silakan perbaiki dan kirim ulang dari awal.
+                    </p>
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {proposals.filter(p => p.status === 'revision' && p.troubleshoot_catatan && !p.submitted_to_dinas_at).map(p => (
+                        <div key={p.id} className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-indigo-200 rounded-lg shadow-sm">
+                          <LuWrench className="w-3 h-3 text-indigo-500" />
+                          <span className="text-xs font-medium text-indigo-700">{p.judul_proposal}</span>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-700">
+                            TROUBLESHOOT
                           </span>
                         </div>
                       ))}
@@ -2958,12 +3004,34 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                             </div>
                           )}
 
+                          {/* Catatan Troubleshoot DPMD - Infrastruktur */}
+                          {proposal.troubleshoot_catatan && proposal.status === 'revision' && !proposal.submitted_to_dinas_at && (
+                            <div className="mt-3 p-3 bg-indigo-50 border-l-3 border-indigo-400 rounded">
+                              <div className="flex items-start gap-2">
+                                <LuWrench className="w-4 h-4 text-indigo-600 mt-0.5 flex-shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs font-semibold text-indigo-800 mb-1">
+                                    🔧 Troubleshoot oleh DPMD
+                                  </p>
+                                  <p className="text-sm text-indigo-700">{proposal.troubleshoot_catatan}</p>
+                                  {proposal.troubleshoot_at && (
+                                    <p className="text-[10px] text-indigo-500 mt-1">
+                                      {new Date(proposal.troubleshoot_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                      {proposal.troubleshoot_by_name && ` — oleh ${proposal.troubleshoot_by_name}`}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
                           {/* Form Upload Ulang - HANYA TAMPIL jika status masih rejected/revision */}
                           {(
                             (proposal.status === 'rejected' || proposal.status === 'revision') &&
                             (
                               ((proposal.dinas_status === "rejected" || proposal.dinas_status === "revision") && !proposal.submitted_to_dinas_at) ||
-                              ((proposal.kecamatan_status === "rejected" || proposal.kecamatan_status === "revision") && !proposal.submitted_to_kecamatan)
+                              ((proposal.kecamatan_status === "rejected" || proposal.kecamatan_status === "revision") && !proposal.submitted_to_kecamatan) ||
+                              (proposal.troubleshoot_catatan && !proposal.submitted_to_dinas_at)
                             )
                           ) && (
                             <div className="mt-3 bg-gradient-to-r from-orange-50 to-red-50 p-4 rounded-lg border-2 border-orange-300">
@@ -2980,6 +3048,12 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                                   <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 border border-blue-300 rounded-lg ml-auto">
                                     <LuInfo className="w-3 h-3 text-blue-700" />
                                     <span className="text-xs font-bold text-blue-800">Dari KECAMATAN</span>
+                                  </div>
+                                )}
+                                {(proposal.troubleshoot_catatan && !proposal.dinas_status && !proposal.kecamatan_status) && (
+                                  <div className="flex items-center gap-1 px-2 py-1 bg-indigo-100 border border-indigo-300 rounded-lg ml-auto">
+                                    <LuWrench className="w-3 h-3 text-indigo-700" />
+                                    <span className="text-xs font-bold text-indigo-800">TROUBLESHOOT DPMD</span>
                                   </div>
                                 )}
                               </div>
@@ -3436,12 +3510,34 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                             </div>
                           )}
 
+                          {/* Catatan Troubleshoot DPMD - Non-Infrastruktur */}
+                          {proposal.troubleshoot_catatan && proposal.status === 'revision' && !proposal.submitted_to_dinas_at && (
+                            <div className="mt-3 p-3 bg-indigo-50 border-l-3 border-indigo-400 rounded">
+                              <div className="flex items-start gap-2">
+                                <LuWrench className="w-4 h-4 text-indigo-600 mt-0.5 flex-shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs font-semibold text-indigo-800 mb-1">
+                                    🔧 Troubleshoot oleh DPMD
+                                  </p>
+                                  <p className="text-sm text-indigo-700">{proposal.troubleshoot_catatan}</p>
+                                  {proposal.troubleshoot_at && (
+                                    <p className="text-[10px] text-indigo-500 mt-1">
+                                      {new Date(proposal.troubleshoot_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                      {proposal.troubleshoot_by_name && ` — oleh ${proposal.troubleshoot_by_name}`}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
                           {/* Form Upload Ulang - HANYA TAMPIL jika status masih rejected/revision */}
                           {(
                             (proposal.status === 'rejected' || proposal.status === 'revision') &&
                             (
                               ((proposal.dinas_status === "rejected" || proposal.dinas_status === "revision") && !proposal.submitted_to_dinas_at) ||
-                              ((proposal.kecamatan_status === "rejected" || proposal.kecamatan_status === "revision") && !proposal.submitted_to_kecamatan)
+                              ((proposal.kecamatan_status === "rejected" || proposal.kecamatan_status === "revision") && !proposal.submitted_to_kecamatan) ||
+                              (proposal.troubleshoot_catatan && !proposal.submitted_to_dinas_at)
                             )
                           ) && (
                             <div className="mt-3 bg-gradient-to-r from-orange-50 to-red-50 p-4 rounded-lg border-2 border-orange-300">
@@ -3458,6 +3554,12 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                                   <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 border border-blue-300 rounded-lg ml-auto">
                                     <LuInfo className="w-3 h-3 text-blue-700" />
                                     <span className="text-xs font-bold text-blue-800">Dari KECAMATAN</span>
+                                  </div>
+                                )}
+                                {(proposal.troubleshoot_catatan && !proposal.dinas_status && !proposal.kecamatan_status) && (
+                                  <div className="flex items-center gap-1 px-2 py-1 bg-indigo-100 border border-indigo-300 rounded-lg ml-auto">
+                                    <LuWrench className="w-3 h-3 text-indigo-700" />
+                                    <span className="text-xs font-bold text-indigo-800">TROUBLESHOOT DPMD</span>
                                   </div>
                                 )}
                               </div>
