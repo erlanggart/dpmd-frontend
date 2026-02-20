@@ -342,7 +342,7 @@ const AdminKelembagaanDetailPage = () => {
 
 	return (
 		<div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+			<div className=" px-4 sm:px-6 lg:px-8 py-6">
 				{/* Breadcrumb */}
 				<div className=" p-2  mb-6">
 					<div className="flex items-center justify-between">
@@ -484,62 +484,9 @@ const AdminKelembagaanDetailPage = () => {
 					))}
 				</div>
 
-				{/* Empty state jika tidak ada data sama sekali */}
-				{kelembagaanList.every(item => item.isEmpty) && (
-					<div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-12 text-center">
-						<div className="inline-flex items-center justify-center w-20 h-20 bg-gray-100 rounded-full mb-6">
-							<LuBuilding2 className="w-10 h-10 text-gray-400" />
-						</div>
-						<h3 className="text-xl font-bold text-gray-700 mb-3">
-							Belum Ada Kelembagaan
-						</h3>
-						<p className="text-gray-500 max-w-md mx-auto">
-							Desa ini belum memiliki data kelembagaan yang terdaftar. Bentuk kelembagaan untuk memulai.
-						</p>
-					</div>
-				)}
+				
 
-				{/* Summary Statistics */}
-				<div className="mt-8 bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-					<div className="bg-gradient-to-r from-blue-500 to-indigo-600 px-6 py-4">
-						<h2 className="text-xl font-bold text-white flex items-center gap-2">
-							<LuBuilding2 className="w-6 h-6" />
-							Ringkasan Kelembagaan
-						</h2>
-					</div>
-					<div className="p-6">
-						<div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-							<div className="text-center p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
-								<div className="text-3xl font-bold text-blue-600 mb-1">
-									{kelembagaanList.find((item) => item.type === "rw")?.count || 0}
-								</div>
-								<div className="text-sm font-semibold text-gray-700">Total RW</div>
-							</div>
-							<div className="text-center p-4 bg-gradient-to-br from-cyan-50 to-blue-50 rounded-xl border border-cyan-200">
-								<div className="text-3xl font-bold text-cyan-600 mb-1">
-									{kelembagaanList.find((item) => item.type === "rw")?.totalRT || 0}
-								</div>
-								<div className="text-sm font-semibold text-gray-700">Total RT</div>
-							</div>
-							<div className="text-center p-4 bg-gradient-to-br from-pink-50 to-rose-50 rounded-xl border border-pink-200">
-								<div className="text-3xl font-bold text-pink-600 mb-1">
-									{kelembagaanList.find((item) => item.type === "posyandu")?.count || 0}
-								</div>
-								<div className="text-sm font-semibold text-gray-700">Total Posyandu</div>
-							</div>
-							<div className="text-center p-4 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border border-green-200">
-								<div className="text-3xl font-bold text-green-600 mb-1">
-									{
-										kelembagaanList.filter((item) =>
-											["karang-taruna", "lpm", "satlinmas", "pkk"].includes(item.type) && !item.isEmpty
-										).length
-									}
-								</div>
-								<div className="text-sm font-semibold text-gray-700">Lembaga Terbentuk</div>
-							</div>
-						</div>
-					</div>
-				</div>
+				
 			</div>
 
 			{/* Confirmation Modal */}
