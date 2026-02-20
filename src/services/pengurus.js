@@ -8,8 +8,8 @@ import {
 // Map slug type to pengurusable_type value (as stored in database)
 export const mapTypeToModel = (type) => {
 	const map = {
-		rw: "rw",
-		rt: "rt",
+		rw: "rws", // Fixed: use plural form to match database
+		rt: "rts", // Fixed: use plural form to match database
 		posyandu: "posyandus",
 		"karang-taruna": "karang_tarunas",
 		lpm: "lpms",

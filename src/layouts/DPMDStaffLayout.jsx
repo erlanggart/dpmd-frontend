@@ -10,7 +10,8 @@ import {
 	FiUsers, FiBriefcase, FiChevronLeft, FiChevronRight,
 	FiSettings, FiX
 } from "react-icons/fi";
-import { Landmark } from "lucide-react";
+import { Landmark, Menu, ChevronLeft } from "lucide-react";
+import AnimatedIcon from '../components/AnimatedIcon';
 import { performFullLogout } from "../utils/sessionPersistence";
 import { useConfirm } from "../hooks/useConfirm.jsx";
 import { subscribeToPushNotifications } from "../utils/pushNotifications";
@@ -22,7 +23,7 @@ import api from "../api";
 // ============================================
 const useResponsive = () => {
 	const [isDesktop, setIsDesktop] = React.useState(window.innerWidth >= 1024);
-	const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(true);
+	const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(false);
 
 	React.useEffect(() => {
 		const handleResize = () => {
@@ -160,11 +161,11 @@ const ROLE_CONFIG = {
 
 // Bidang routes configuration
 const BIDANG_ROUTES = {
-	2: { name: 'Sekretariat', path: '/bidang/sekretariat', icon: FiFileText },
-	3: { name: 'SPKED', path: '/bidang/spked', icon: Landmark },
-	4: { name: 'KKD', path: '/bidang/kkd', icon: FiDollarSign },
-	5: { name: 'PMD', path: '/bidang/pmd', icon: FiUsers },
-	6: { name: 'Pemdes', path: '/bidang/pemdes', icon: FiBriefcase }
+	2: { name: 'Sekretariat', path: '/bidang/sekretariat', icon: 'file', gradient: 'from-gray-500 to-slate-600', color: 'text-gray-600' },
+	3: { name: 'SPKED', path: '/bidang/spked', icon: 'landmark', gradient: 'from-cyan-500 to-teal-600', color: 'text-cyan-600' },
+	4: { name: 'KKD', path: '/bidang/kkd', icon: 'dollar', gradient: 'from-emerald-500 to-teal-600', color: 'text-emerald-600' },
+	5: { name: 'PMD', path: '/bidang/pmd', icon: 'users', gradient: 'from-purple-500 to-indigo-600', color: 'text-purple-600' },
+	6: { name: 'Pemdes', path: '/bidang/pemdes', icon: 'briefcase', gradient: 'from-amber-500 to-orange-600', color: 'text-amber-600' }
 };
 
 // ============================================
@@ -176,6 +177,7 @@ const DPMDStaffLayout = () => {
 	const [showNotifications, setShowNotifications] = React.useState(false);
 	const [notifications, setNotifications] = React.useState([]);
 	const [unreadCount, setUnreadCount] = React.useState(0);
+	const [hoveredItem, setHoveredItem] = React.useState(null);
 	const [user, setUser] = React.useState(JSON.parse(localStorage.getItem("user") || "{}"));
 	
 	// Auto-detect roleType from user's actual role
@@ -379,11 +381,11 @@ const DPMDStaffLayout = () => {
 
 	// Navigation items
 	const navItems = [
-		{ path: "/dpmd/dashboard", label: "Dashboard", icon: FiHome },
-		{ path: "/core-dashboard/dashboard", label: "Statistik", icon: FiBarChart2 },
-		{ path: "/dpmd/jadwal-kegiatan", label: "Kegiatan", icon: FiCalendar },
-		{ path: "/dpmd/perjadin", label: "Perjadin", icon: FiBriefcase },
-		{ path: "/dpmd/disposisi", label: "Disposisi", icon: FiMail },
+		{ path: "/dpmd/dashboard", label: "Dashboard", icon: 'dashboard', gradient: 'from-cyan-500 to-blue-600', color: 'text-cyan-600' },
+		{ path: "/core-dashboard/dashboard", label: "Statistik", icon: 'trending', gradient: 'from-red-500 to-pink-600', color: 'text-red-600' },
+		{ path: "/dpmd/jadwal-kegiatan", label: "Kegiatan", icon: 'calendar', gradient: 'from-amber-500 to-orange-600', color: 'text-amber-600' },
+		{ path: "/dpmd/perjadin", label: "Perjadin", icon: 'briefcase', gradient: 'from-teal-500 to-cyan-600', color: 'text-teal-600' },
+		{ path: "/dpmd/disposisi", label: "Disposisi", icon: 'mail', gradient: 'from-purple-500 to-indigo-600', color: 'text-purple-600' },
 	];
 
 	// Mobile bottom nav includes menu button
@@ -404,6 +406,8 @@ const DPMDStaffLayout = () => {
 					path: bidangNav.path,
 					label: `Bidang ${bidangNav.name}`,
 					icon: bidangNav.icon,
+					gradient: bidangNav.gradient,
+					color: bidangNav.color,
 				});
 			}
 		}
@@ -412,7 +416,9 @@ const DPMDStaffLayout = () => {
 		items.push({
 			path: `${config.basePath}/profile`,
 			label: "Profil Saya",
-			icon: FiUser,
+			icon: 'user',
+			gradient: 'from-blue-500 to-indigo-600',
+			color: 'text-blue-600'
 		});
 		
 		return items;
@@ -449,65 +455,69 @@ const DPMDStaffLayout = () => {
 	const sidebarNavItems = getSidebarNavItems();
 
 	return (
-		<div className="min-h-screen bg-gray-50">
+		<div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
 			{/* Desktop Sidebar */}
 			{isDesktop && (
 				<aside 
-					className={`fixed top-0 left-0 h-full bg-white shadow-lg z-40 transition-all duration-300 ${
+					className={`fixed top-0 left-0 h-full bg-white shadow-2xl z-40 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] border-r border-gray-100 ${
 						isSidebarCollapsed ? 'w-20' : 'w-64'
 					}`}
 				>
+					{/* Gradient Accent Line */}
+					<div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${theme.gradientFrom} ${theme.gradientTo}`}></div>
+
 					{/* Sidebar Header */}
-					<div className={`h-16 flex items-center ${isSidebarCollapsed ? 'justify-center' : 'justify-between px-4'} border-b ${theme.menuBorder}`}>
+					<div className={`relative p-4 h-20 border-b border-gray-100 flex items-center justify-between flex-shrink-0 bg-gradient-to-r from-blue-50 to-purple-50`}>
 						{!isSidebarCollapsed && (
-							<div className="flex items-center gap-2">
+							<div className="flex items-center justify-center flex-1">
 								<img 
 									src="/logo-dpmd.png" 
 									alt="DPMD Logo" 
-									className="h-10 w-10 object-contain"
+									className="h-20 transition-opacity duration-300"
 								/>
-								<span className={`font-bold ${theme.activeText}`}>DPMD</span>
 							</div>
-						)}
-						{isSidebarCollapsed && (
-							<img 
-								src="/logo-dpmd.png" 
-								alt="DPMD Logo" 
-								className="h-8 w-8 object-contain"
-							/>
 						)}
 						<button
 							onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-							className={`p-2 rounded-lg ${theme.hoverBg} transition-colors ${isSidebarCollapsed ? 'absolute top-4 right-2' : ''}`}
+							className={`p-2 bg-${theme.primary}-100 hover:bg-${theme.primary}-200 rounded-lg transition-colors duration-200 flex-shrink-0 group ${!isSidebarCollapsed ? '' : 'mx-auto'}`}
+							aria-label={isSidebarCollapsed ? 'Open sidebar' : 'Close sidebar'}
 						>
-							{isSidebarCollapsed ? (
-								<FiChevronRight className="h-5 w-5 text-gray-600" />
+							{!isSidebarCollapsed ? (
+								<ChevronLeft className={`w-5 h-5 ${theme.activeText} group-hover:scale-110 transition-transform`} />
 							) : (
-								<FiChevronLeft className="h-5 w-5 text-gray-600" />
+								<Menu className={`w-5 h-5 ${theme.activeText} group-hover:scale-110 transition-transform`} />
 							)}
 						</button>
 					</div>
 
 					{/* Navigation Items */}
-					<nav className="p-3 space-y-1">
+					<nav className="relative p-3 space-y-1.5 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent" style={{ height: 'calc(100vh - 320px)' }}>
 						{sidebarNavItems.map((item, index) => {
 							const isActive = location.pathname === item.path;
-							const Icon = item.icon;
 							
 							return (
 								<button
 									key={index}
 									onClick={() => navigate(item.path)}
-									className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'} p-3 rounded-xl transition-all duration-200 ${
+									onMouseEnter={() => setHoveredItem(item.label)}
+									onMouseLeave={() => setHoveredItem(null)}
+									className={`group relative w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 rounded-xl transition-all duration-200 ${
 										isActive 
-											? `${theme.activeText} ${theme.activeBg}` 
-											: `text-gray-600 ${theme.hoverBg} ${theme.hoverText}`
+											? `bg-gradient-to-r ${item.gradient || theme.gradientFrom + ' ' + theme.gradientTo} text-white shadow-md` 
+											: `${item.color || theme.activeText} hover:bg-gradient-to-r ${item.gradient || theme.gradientFrom + ' ' + theme.gradientTo} hover:text-white hover:shadow-md`
 									}`}
 									title={isSidebarCollapsed ? item.label : ''}
 								>
-									<Icon className="h-5 w-5 flex-shrink-0" />
+									<div className={`relative ${isSidebarCollapsed ? 'mx-auto' : 'flex-shrink-0'}`}>
+										<AnimatedIcon 
+											type={item.icon} 
+											isActive={isActive} 
+											isHovered={hoveredItem === item.label}
+											className="w-5 h-5"
+										/>
+									</div>
 									{!isSidebarCollapsed && (
-										<span className="text-sm font-medium">{item.label}</span>
+										<span className="relative font-semibold truncate text-sm">{item.label}</span>
 									)}
 								</button>
 							);
@@ -515,22 +525,22 @@ const DPMDStaffLayout = () => {
 					</nav>
 
 					{/* User Profile & Logout at bottom */}
-					<div className="absolute bottom-0 left-0 right-0 border-t border-gray-200">
+					<div className="absolute bottom-0 left-0 right-0 border-t border-gray-100">
 						{/* User Profile Section */}
-						<div className={`p-3 ${theme.menuBorder}`}>
+						<div className={`p-3 border-b border-gray-100`}>
 							<div className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'}`}>
 								{user.avatar ? (
 									<img 
 										src={`${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://127.0.0.1:3001'}${user.avatar}`}
 										alt={user.name}
-										className={`${isSidebarCollapsed ? 'h-10 w-10' : 'h-10 w-10'} rounded-full object-cover shadow-md`}
+										className={`${isSidebarCollapsed ? 'h-12 w-12' : 'h-10 w-10'} rounded-full object-cover shadow-md border-2 border-${theme.primary}-100`}
 										onError={(e) => {
 											e.target.style.display = 'none';
 											e.target.nextElementSibling.style.display = 'flex';
 										}}
 									/>
 								) : null}
-								<div className={`${isSidebarCollapsed ? 'h-10 w-10' : 'h-10 w-10'} bg-gradient-to-br ${theme.gradientFrom} ${theme.gradientTo} rounded-full flex items-center justify-center shadow-md ${user.avatar ? 'hidden' : ''}`}>
+								<div className={`${isSidebarCollapsed ? 'h-12 w-12' : 'h-10 w-10'} bg-gradient-to-br ${theme.gradientFrom} ${theme.gradientTo} rounded-full flex items-center justify-center shadow-md ${user.avatar ? 'hidden' : ''}`}>
 									<span className="text-white font-bold text-sm">
 										{user.name?.charAt(0) || "U"}
 									</span>
@@ -538,8 +548,8 @@ const DPMDStaffLayout = () => {
 								{!isSidebarCollapsed && (
 									<div className="flex-1 min-w-0">
 										<h3 className="font-semibold text-gray-800 text-sm truncate">{user.name || getDisplayName()}</h3>
-									<span className={`inline-block px-2 py-0.5 ${theme.badgeBg} ${theme.badgeText} rounded-full text-xs font-medium`}>
-										{getShortDisplayName()}
+										<span className={`inline-block px-2 py-0.5 ${theme.badgeBg} ${theme.badgeText} rounded-full text-xs font-medium mt-1`}>
+											{getShortDisplayName()}
 										</span>
 									</div>
 								)}
@@ -547,15 +557,17 @@ const DPMDStaffLayout = () => {
 						</div>
 						
 						{/* Logout Button */}
-						<div className="p-3 pt-0">
+						<div className="p-3">
 							<button
 								onClick={handleLogout}
-								className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'} p-3 rounded-xl transition-colors hover:bg-red-50 text-red-600`}
+								className={`group relative w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 rounded-xl transition-all duration-200 text-red-600 hover:bg-gradient-to-r hover:from-red-500 hover:to-red-600 hover:text-white hover:shadow-md`}
 								title={isSidebarCollapsed ? 'Keluar' : ''}
 							>
-								<FiLogOut className="h-5 w-5 flex-shrink-0" />
+								<div className={`relative ${isSidebarCollapsed ? 'mx-auto' : 'flex-shrink-0'}`}>
+									<FiLogOut className="h-5 w-5" />
+								</div>
 								{!isSidebarCollapsed && (
-									<span className="text-sm font-medium">Keluar</span>
+									<span className="relative font-semibold text-sm">Keluar</span>
 								)}
 							</button>
 						</div>
@@ -688,7 +700,15 @@ const DPMDStaffLayout = () => {
 						<div className="flex items-center justify-around py-3">
 							{bottomNavItems.map((item, index) => {
 								const isActive = location.pathname === item.path;
-								const Icon = item.icon;
+								// Icon mapping for mobile bottom nav
+								const iconMap = {
+									'dashboard': FiHome,
+									'trending': FiBarChart2,
+									'calendar': FiCalendar,
+									'briefcase': FiBriefcase,
+									'mail': FiMail,
+								};
+								const Icon = typeof item.icon === 'string' ? iconMap[item.icon] : item.icon;
 								
 								return (
 									<button
