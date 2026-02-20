@@ -70,21 +70,25 @@ const DinasDashboard = () => {
     const [statsLoading, setStatsLoading] = useState(true);
     const [verifikatorLoading, setVerifikatorLoading] = useState(true);
     const [headerLoading, setHeaderLoading] = useState(true);
+    const [selectedTahun, setSelectedTahun] = useState(2027);
 
     useEffect(() => {
         const storedUser = localStorage.getItem("user");
         if (storedUser) {
             setUserData(JSON.parse(storedUser));
         }
-        // Fire all loads independently (lazy)
         loadHeaderData();
+    }, []);
+
+    // Reload stats when tahun changes
+    useEffect(() => {
         loadStats();
         loadVerifikatorStats();
-    }, []);
+    }, [selectedTahun]);
 
     const loadHeaderData = async () => {
         try {
-            const proposalsRes = await api.get('/dinas/bankeu/proposals');
+            const proposalsRes = await api.get('/dinas/bankeu/proposals', { params: { tahun: selectedTahun } });
             if (proposalsRes.data.success) {
                 setDinasInfo(proposalsRes.data.dinas_info);
             }
@@ -97,13 +101,14 @@ const DinasDashboard = () => {
 
     const loadStats = async () => {
         try {
+            setStatsLoading(true);
             const storedUser = JSON.parse(localStorage.getItem("user") || '{}');
             const dinasId = storedUser.dinas_id;
 
             let statsData = null;
             if (dinasId) {
                 try {
-                    const aggregateRes = await api.get(`/dinas/${dinasId}/verifikator/stats`);
+                    const aggregateRes = await api.get(`/dinas/${dinasId}/verifikator/stats`, { params: { tahun: selectedTahun } });
                     if (aggregateRes.data.success) {
                         statsData = aggregateRes.data.data.aggregate;
                     }
@@ -113,7 +118,7 @@ const DinasDashboard = () => {
             }
 
             if (!statsData) {
-                const response = await api.get('/dinas/bankeu/statistics');
+                const response = await api.get('/dinas/bankeu/statistics', { params: { tahun: selectedTahun } });
                 if (response.data.success) {
                     statsData = response.data.data;
                 }
@@ -128,13 +133,16 @@ const DinasDashboard = () => {
 
     const loadVerifikatorStats = async () => {
         try {
+            setVerifikatorLoading(true);
             const storedUser = JSON.parse(localStorage.getItem("user") || '{}');
             const dinasId = storedUser.dinas_id;
             if (!dinasId) return;
 
-            const res = await api.get(`/dinas/${dinasId}/verifikator/stats`);
+            const res = await api.get(`/dinas/${dinasId}/verifikator/stats`, { params: { tahun: selectedTahun } });
             if (res.data.success && res.data.data.per_verifikator?.length > 0) {
                 setVerifikatorStats(res.data.data);
+            } else {
+                setVerifikatorStats(null);
             }
         } catch (err) {
             // silently fail - section just won't render
@@ -183,13 +191,38 @@ const DinasDashboard = () => {
                             )}
                         </p>
                     </div>
-                    <p className="text-xs text-gray-400">
-                        {new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-                    </p>
+                    <div className="flex items-center gap-2">
+                        <div className="flex items-center bg-gray-100 rounded-lg p-0.5">
+                            {[2026, 2027].map((yr) => (
+                                <button
+                                    key={yr}
+                                    onClick={() => setSelectedTahun(yr)}
+                                    className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-200 ${
+                                        selectedTahun === yr
+                                            ? 'bg-white text-indigo-700 shadow-sm ring-1 ring-gray-200'
+                                            : 'text-gray-500 hover:text-gray-700'
+                                    }`}
+                                >
+                                    TA {yr}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
                 </div>
             </div>
 
             {/* Stats Row */}
+            <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-2">
+                    <h2 className="text-sm font-semibold text-gray-700">Statistik Proposal</h2>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-600 ring-1 ring-indigo-200/50">
+                        TA {selectedTahun}
+                    </span>
+                </div>
+                <p className="text-[11px] text-gray-400">
+                    {new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                </p>
+            </div>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 {statsLoading ? (
                     <><StatCardSkeleton /><StatCardSkeleton /><StatCardSkeleton /><StatCardSkeleton /></>
@@ -216,6 +249,7 @@ const DinasDashboard = () => {
                     verifikatorStats={verifikatorStats} 
                     avatarColors={avatarColors}
                     statsConfig={statsConfig}
+                    selectedTahun={selectedTahun}
                 />
             ) : null}
 
@@ -361,7 +395,7 @@ const StatCard = ({ stat, value, total, delay }) => {
 };
 
 // ── Verifikator Table ──
-const VerifikatorTable = ({ verifikatorStats, avatarColors, statsConfig }) => {
+const VerifikatorTable = ({ verifikatorStats, avatarColors, statsConfig, selectedTahun }) => {
     const [sectionVisible, setSectionVisible] = useState(false);
     const [expandedId, setExpandedId] = useState(null);
     const ref = useRef(null);
@@ -386,6 +420,9 @@ const VerifikatorTable = ({ verifikatorStats, avatarColors, statsConfig }) => {
                     <h2 className="text-sm font-semibold text-gray-700">Verifikator</h2>
                     <span className="text-[10px] text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded-full">
                         {verifikatorStats.per_verifikator.length}
+                    </span>
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-600">
+                        TA {selectedTahun}
                     </span>
                 </div>
                 {/* Column legend - desktop */}
