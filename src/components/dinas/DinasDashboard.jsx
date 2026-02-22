@@ -70,7 +70,7 @@ const DinasDashboard = () => {
     const [statsLoading, setStatsLoading] = useState(true);
     const [verifikatorLoading, setVerifikatorLoading] = useState(true);
     const [headerLoading, setHeaderLoading] = useState(true);
-    const [selectedTahun, setSelectedTahun] = useState(2027);
+    const [selectedTahun, setSelectedTahun] = useState(2026);
 
     useEffect(() => {
         const storedUser = localStorage.getItem("user");
