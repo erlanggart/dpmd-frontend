@@ -16,6 +16,9 @@ export default defineConfig({
 		'import.meta.env.VITE_APP_VERSION': JSON.stringify(appVersion),
 		'import.meta.env.VITE_BUILD_DATE': JSON.stringify(buildDate),
 	},
+	esbuild: {
+		drop: process.env.NODE_ENV === 'production' ? ['console', 'debugger'] : [],
+	},
 	plugins: [
 		react(), 
 		tailwindcss(),

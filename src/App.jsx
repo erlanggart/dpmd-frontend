@@ -29,6 +29,8 @@ import {
   dismissUpdate,
 } from "./utils/versionCheck";
 import UpdateNotificationModal from "./components/UpdateNotificationModal";
+import { NetworkProvider } from "./context/NetworkContext";
+import NetworkStatusIndicator from "./components/ui/NetworkStatusIndicator";
 
 // Halaman utama di-import langsung untuk performa awal yang lebih cepat
 import LoginPage from "./pages/LoginPage";
@@ -644,6 +646,7 @@ function App() {
       <DataCacheProvider>
         <EditModeProvider>
           <ThemeColorWrapper>
+            <NetworkProvider>
             <Suspense
               fallback={
                 <div className="flex h-screen items-center justify-center">
@@ -1107,12 +1110,16 @@ function App() {
               }}
             />
 
+            {/* Network Status Indicator */}
+            <NetworkStatusIndicator />
+
             {/* Update Notification Modal */}
             <UpdateNotificationModal
               isOpen={showUpdateModal}
               onUpdate={handleUpdate}
               onDismiss={handleDismissUpdate}
             />
+            </NetworkProvider>
           </ThemeColorWrapper>
         </EditModeProvider>
       </DataCacheProvider>

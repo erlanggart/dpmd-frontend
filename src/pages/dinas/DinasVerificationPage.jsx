@@ -8,8 +8,9 @@ import {
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import api from '../../api';
+import { useNetwork } from '../../context/NetworkContext';
 
-const DinasVerificationPage = ({ tahun = 2027 }) => {
+const DinasVerificationPage = ({ tahun = 2026 }) => {
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const [proposals, setProposals] = useState([]);
@@ -241,7 +242,24 @@ const DinasVerificationPage = ({ tahun = 2027 }) => {
     }));
   };
 
+  const network = useNetwork();
+  const isNetworkWeak = network.speed === 'slow' || network.speed === 'offline';
+
   const handleAction = (proposal, action) => {
+    // Block actions when network is weak
+    if (isNetworkWeak) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Jaringan Lemah',
+        html: `<div class="text-left">
+          <p class="mb-2 text-red-600 font-semibold">⚠️ Koneksi jaringan Anda saat ini tidak stabil.</p>
+          <p class="text-sm text-gray-700">Verifikasi proposal tidak dapat dilakukan saat jaringan lemah untuk menghindari kegagalan atau data corrupt. Silakan coba lagi saat koneksi membaik.</p>
+          ${network.latency ? `<p class="text-xs text-gray-500 mt-2">Latency: ${network.latency}ms</p>` : ''}
+        </div>`,
+        confirmButtonText: 'OK'
+      });
+      return;
+    }
     if (action === 'approve') {
       // Confirmation popup before approve
       Swal.fire({

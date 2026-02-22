@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo, useRef } from "react";
 import api from "../../../api";
 import Swal from "sweetalert2";
+import { useNetwork } from "../../../context/NetworkContext";
 import {
   LuUpload, LuEye, LuClock, LuCheck, LuX, LuRefreshCw, 
   LuChevronDown, LuChevronRight, LuSend, LuTrash2, LuInfo, LuDownload, LuFileText, LuImage,
@@ -1009,7 +1010,24 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
     return MAX_ANGGARAN - getTotalExistingAnggaran(excludeProposalId);
   };
 
+  const network = useNetwork();
+  const isNetworkWeak = network.speed === 'slow' || network.speed === 'offline';
+
   const handleSubmitToKecamatan = async () => {
+    // Check network condition
+    if (isNetworkWeak) {
+      Swal.fire({
+        icon: "error",
+        title: "Jaringan Lemah",
+        html: `<div class="text-left">
+          <p class="mb-2 text-red-600 font-semibold">⚠️ Koneksi jaringan Anda saat ini tidak stabil.</p>
+          <p class="text-sm text-gray-700">Pengiriman data tidak dapat dilakukan saat jaringan lemah untuk menghindari kegagalan atau data corrupt. Silakan coba lagi saat koneksi membaik.</p>
+          ${network.latency ? `<p class="text-xs text-gray-500 mt-2">Latency: ${network.latency}ms</p>` : ''}
+        </div>`,
+        confirmButtonText: "OK"
+      });
+      return;
+    }
     // Check if submission is open
     if (!submissionOpen) {
       Swal.fire({
@@ -1140,6 +1158,20 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
   };
 
   const handleSubmitToDinas = async () => {
+    // Check network condition
+    if (isNetworkWeak) {
+      Swal.fire({
+        icon: "error",
+        title: "Jaringan Lemah",
+        html: `<div class="text-left">
+          <p class="mb-2 text-red-600 font-semibold">⚠️ Koneksi jaringan Anda saat ini tidak stabil.</p>
+          <p class="text-sm text-gray-700">Pengiriman data tidak dapat dilakukan saat jaringan lemah untuk menghindari kegagalan atau data corrupt. Silakan coba lagi saat koneksi membaik.</p>
+          ${network.latency ? `<p class="text-xs text-gray-500 mt-2">Latency: ${network.latency}ms</p>` : ''}
+        </div>`,
+        confirmButtonText: "OK"
+      });
+      return;
+    }
     // Check if submission is open
     if (!submissionOpen) {
       Swal.fire({
@@ -1205,6 +1237,20 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
   };
 
   const handleSubmitToKecamatanResubmit = async () => {
+    // Check network condition
+    if (isNetworkWeak) {
+      Swal.fire({
+        icon: "error",
+        title: "Jaringan Lemah",
+        html: `<div class="text-left">
+          <p class="mb-2 text-red-600 font-semibold">⚠️ Koneksi jaringan Anda saat ini tidak stabil.</p>
+          <p class="text-sm text-gray-700">Pengiriman data tidak dapat dilakukan saat jaringan lemah untuk menghindari kegagalan atau data corrupt. Silakan coba lagi saat koneksi membaik.</p>
+          ${network.latency ? `<p class="text-xs text-gray-500 mt-2">Latency: ${network.latency}ms</p>` : ''}
+        </div>`,
+        confirmButtonText: "OK"
+      });
+      return;
+    }
     // Check if submission is open
     if (!submissionOpen) {
       Swal.fire({
@@ -1815,16 +1861,10 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
 
   // Check if proposal can be deleted (not submitted OR rejected by kec/dinas)
   const canDeleteProposal = (proposal) => {
-    // Can delete if not submitted yet
+    // Can delete ONLY if not submitted yet (masih draft/belum dikirim)
+    // Proposal yang sudah dikirim dan mendapat revisi/ditolak TIDAK bisa dihapus
+    // Desa hanya bisa upload ulang file-nya
     if (!proposal.submitted_to_kecamatan && !proposal.submitted_to_dinas_at) {
-      return true;
-    }
-    // Can delete if rejected by kecamatan
-    if (proposal.status === 'rejected') {
-      return true;
-    }
-    // Can delete if rejected by dinas
-    if (proposal.dinas_status === 'rejected') {
       return true;
     }
     return false;
