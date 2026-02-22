@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import api from "../api";
-import { FiEye, FiEyeOff, FiLoader, FiAlertCircle, FiBell, FiInfo } from "react-icons/fi";
+import { FiEye, FiEyeOff, FiLoader, FiAlertCircle, FiBell, FiInfo, FiLock, FiClock } from "react-icons/fi";
 import LoginImageSlider from "../components/login/LoginImageSlider";
 import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
@@ -21,6 +21,8 @@ const LoginPage = () => {
 	const [notificationPermission, setNotificationPermission] = useState('default');
 	const [checkingNotification, setCheckingNotification] = useState(false);
 	const [isPWA, setIsPWA] = useState(false);
+	const [lockoutUntil, setLockoutUntil] = useState(null);
+	const [lockoutRemaining, setLockoutRemaining] = useState(0);
 
 	// Detect PWA standalone mode & check notification permission on mount
 	useEffect(() => {
@@ -31,6 +33,29 @@ const LoginPage = () => {
 			setNotificationPermission(Notification.permission);
 		}
 	}, []);
+
+	// Countdown timer for lockout
+	useEffect(() => {
+		if (!lockoutUntil) return;
+
+		const tick = () => {
+			const remaining = Math.max(0, lockoutUntil - Date.now());
+			setLockoutRemaining(remaining);
+			if (remaining <= 0) {
+				setLockoutUntil(null);
+				setLockoutRemaining(0);
+				setError(null);
+			}
+		};
+
+		tick();
+		const interval = setInterval(tick, 1000);
+		return () => clearInterval(interval);
+	}, [lockoutUntil]);
+
+	const isLockedOut = lockoutUntil && lockoutRemaining > 0;
+	const lockoutMinutes = Math.floor(lockoutRemaining / 60000);
+	const lockoutSeconds = Math.floor((lockoutRemaining % 60000) / 1000);
 
 	const handleRequestNotification = async () => {
 		setCheckingNotification(true);
@@ -77,6 +102,12 @@ const LoginPage = () => {
 			setNotificationPermission(Notification.permission);
 		}
 
+		// Block login if currently locked out
+		if (isLockedOut) {
+			setError(`Terlalu banyak percobaan login. Coba lagi dalam ${lockoutMinutes}:${lockoutSeconds.toString().padStart(2, '0')}`);
+			return;
+		}
+
 		// Block login in PWA mode if notifications not granted
 		if (isPWA && Notification.permission !== 'granted') {
 			setError('Anda harus mengizinkan notifikasi terlebih dahulu untuk login melalui aplikasi.');
@@ -93,6 +124,10 @@ const LoginPage = () => {
 			const expressToken = response.data.data.token;
 
 			console.log('✅ Login successful');
+
+			// Reset lockout on successful login
+			setLockoutUntil(null);
+			setLockoutRemaining(0);
 
 			// Save token and user using context
 			login(newUser, null, expressToken);
@@ -114,7 +149,20 @@ const LoginPage = () => {
 			}
 		} catch (error) {
 			console.error("Login gagal:", error.response?.data || error.message);
-			setError(error.response?.data?.message || "Login gagal. Silakan coba lagi.");
+			
+			// Handle rate limit (429) response
+			if (error.response?.status === 429) {
+				const rateLimit = error.response.data?.rate_limit;
+				if (rateLimit?.retry_after_ms) {
+					setLockoutUntil(Date.now() + rateLimit.retry_after_ms);
+				} else {
+					// Fallback: 5 menit
+					setLockoutUntil(Date.now() + 5 * 60 * 1000);
+				}
+				setError(error.response.data?.message || 'Terlalu banyak percobaan login. Silakan coba lagi dalam 5 menit.');
+			} else {
+				setError(error.response?.data?.message || "Login gagal. Silakan coba lagi.");
+			}
 		} finally {
 			setLoading(false);
 		}
@@ -257,12 +305,47 @@ const LoginPage = () => {
 						</div>
 						<button
 							type="submit"
-							disabled={loading || (isPWA && notificationPermission !== 'granted')}
-							className="flex w-full items-center justify-center rounded-lg bg-[rgb(var(--color-primary))] py-3 font-semibold text-white transition-colors hover:bg-[rgb(var(--color-primary))]/90 disabled:cursor-not-allowed disabled:bg-gray-400 disabled:opacity-60 shadow-xl"
+							disabled={loading || isLockedOut || (isPWA && notificationPermission !== 'granted')}
+							className={`flex w-full items-center justify-center rounded-lg py-3 font-semibold text-white transition-colors shadow-xl disabled:cursor-not-allowed disabled:opacity-60 ${
+								isLockedOut ? 'bg-red-400 disabled:bg-red-400' : 'bg-[rgb(var(--color-primary))] hover:bg-[rgb(var(--color-primary))]/90 disabled:bg-gray-400'
+							}`}
 						>
-							{loading ? <FiLoader className="animate-spin" /> : (isPWA && notificationPermission !== 'granted') ? "Izinkan Notifikasi Dulu" : "Sign In"}
+							{loading ? (
+								<FiLoader className="animate-spin" />
+							) : isLockedOut ? (
+								<span className="flex items-center gap-2">
+									<FiLock className="w-4 h-4" />
+									Dikunci {lockoutMinutes}:{lockoutSeconds.toString().padStart(2, '0')}
+								</span>
+							) : (isPWA && notificationPermission !== 'granted') ? (
+								"Izinkan Notifikasi Dulu"
+							) : (
+								"Sign In"
+							)}
 						</button>
-						{error && (
+
+						{/* Lockout Warning Banner */}
+						{isLockedOut && (
+							<div className="rounded-lg bg-gradient-to-r from-red-50 to-orange-50 border border-red-300 p-4">
+								<div className="flex items-center gap-3">
+									<div className="p-2 bg-red-100 rounded-lg flex-shrink-0">
+										<FiLock className="w-5 h-5 text-red-600" />
+									</div>
+									<div className="flex-1">
+										<p className="text-sm font-semibold text-red-800">Akun Dikunci Sementara</p>
+										<p className="text-xs text-red-600 mt-0.5">Terlalu banyak percobaan login gagal (maks 5x)</p>
+									</div>
+									<div className="flex items-center gap-1.5 bg-red-100 px-3 py-1.5 rounded-lg flex-shrink-0">
+										<FiClock className="w-4 h-4 text-red-600" />
+										<span className="text-sm font-bold text-red-700 tabular-nums">
+											{lockoutMinutes}:{lockoutSeconds.toString().padStart(2, '0')}
+										</span>
+									</div>
+								</div>
+							</div>
+						)}
+
+						{error && !isLockedOut && (
 							<div className="rounded-lg bg-red-50 border border-red-200 p-4 animate-shake">
 								<div className="flex items-start gap-3">
 									<FiAlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
