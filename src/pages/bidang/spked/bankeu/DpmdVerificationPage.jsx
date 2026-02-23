@@ -160,6 +160,184 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
     }
   };
 
+  // Export Tracking Status to Excel
+  const handleExportTrackingExcel = () => {
+    const dataToExport = trackingProposals.length > 0 ? trackingProposals : [];
+    if (dataToExport.length === 0) {
+      Swal.fire({ icon: 'warning', title: 'Data Kosong', text: 'Tidak ada data tracking untuk diexport. Pastikan tab Tracking Status sudah dimuat.', timer: 2500, showConfirmButton: true });
+      return;
+    }
+
+    const getStageLabel = (proposal) => {
+      if (proposal.dpmd_status === 'approved') return 'Selesai (Disetujui)';
+      if (!proposal.submitted_to_dinas_at) return 'Di Desa';
+      if (proposal.submitted_to_dinas_at && (!proposal.dinas_status || proposal.dinas_status === 'pending' || proposal.dinas_status === 'revision')) return 'Di Dinas Terkait';
+      if (proposal.dinas_status === 'approved' && !proposal.submitted_to_dpmd) return 'Di Kecamatan';
+      if (proposal.submitted_to_dpmd || proposal.dpmd_status === 'pending') return 'Di DPMD';
+      return 'Di Dinas Terkait';
+    };
+
+    const getStatusLabel = (status) => {
+      if (!status) return '-';
+      const map = { pending: 'Menunggu', approved: 'Disetujui', rejected: 'Ditolak', revision: 'Revisi', in_review: 'Sedang Direview' };
+      return map[status] || status;
+    };
+
+    const formatTanggal = (dateStr) => {
+      if (!dateStr) return '-';
+      return new Date(dateStr).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
+    };
+
+    const rows = dataToExport
+      .sort((a, b) => {
+        const kecA = a.desas?.kecamatans?.nama || '';
+        const kecB = b.desas?.kecamatans?.nama || '';
+        if (kecA !== kecB) return kecA.localeCompare(kecB);
+        const desaA = a.desas?.nama || '';
+        const desaB = b.desas?.nama || '';
+        return desaA.localeCompare(desaB);
+      })
+      .map((p, idx) => ({
+        'No': idx + 1,
+        'Kecamatan': p.desas?.kecamatans?.nama || '-',
+        'Desa': p.desas?.nama || '-',
+        'Judul Proposal': p.judul_proposal || '-',
+        'Jenis Kegiatan': p.bankeu_master_kegiatan?.nama_kegiatan || '-',
+        'Dinas Terkait': p.bankeu_master_kegiatan?.dinas_terkait || '-',
+        'Anggaran Usulan (Rp)': Number(p.anggaran_usulan) || 0,
+        'Posisi Saat Ini': getStageLabel(p),
+        'Status Dinas': getStatusLabel(p.dinas_status),
+        'Verifikator Dinas': p.dinas_verified_by_name || '-',
+        'Tgl Verifikasi Dinas': formatTanggal(p.dinas_verified_at),
+        'Catatan Dinas': p.dinas_catatan || '-',
+        'Status Kecamatan': getStatusLabel(p.kecamatan_status),
+        'Verifikator Kecamatan': p.kecamatan_verified_by_name || '-',
+        'Tgl Verifikasi Kecamatan': formatTanggal(p.kecamatan_verified_at),
+        'Catatan Kecamatan': p.kecamatan_catatan || '-',
+        'Status DPMD': getStatusLabel(p.dpmd_status),
+        'Verifikator DPMD': p.dpmd_verified_by_name || '-',
+        'Tgl Verifikasi DPMD': formatTanggal(p.dpmd_verified_at),
+        'Catatan DPMD': p.dpmd_catatan || '-',
+        'Troubleshoot': p.troubleshoot_catatan || '-',
+        'Tgl Dibuat': formatTanggal(p.created_at),
+        'Tgl Kirim ke Dinas': formatTanggal(p.submitted_to_dinas_at),
+        'Tgl Kirim ke DPMD': formatTanggal(p.submitted_to_dpmd_at),
+      }));
+
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+
+    // Sheet 1: Detail Tracking
+    const ws = XLSX.utils.json_to_sheet(rows);
+
+    // Auto-width columns
+    const colWidths = Object.keys(rows[0] || {}).map(key => {
+      const maxLen = Math.max(key.length, ...rows.map(r => String(r[key] || '').length));
+      return { wch: Math.min(maxLen + 2, 50) };
+    });
+    ws['!cols'] = colWidths;
+
+    XLSX.utils.book_append_sheet(wb, ws, 'Detail Tracking');
+
+    // Sheet 2: Ringkasan Per Desa
+    const desaSummary = {};
+    dataToExport.forEach(p => {
+      const key = `${p.desas?.kecamatans?.nama || '-'}_${p.desas?.nama || '-'}`;
+      if (!desaSummary[key]) {
+        desaSummary[key] = {
+          kecamatan: p.desas?.kecamatans?.nama || '-',
+          desa: p.desas?.nama || '-',
+          totalProposal: 0,
+          totalAnggaran: 0,
+          diDesa: 0, diDinas: 0, diKecamatan: 0, diDpmd: 0, selesai: 0, ditolak: 0,
+        };
+      }
+      const s = desaSummary[key];
+      s.totalProposal++;
+      s.totalAnggaran += Number(p.anggaran_usulan) || 0;
+      const stage = getStageLabel(p);
+      if (stage.includes('Desa') && !stage.includes('Selesai')) s.diDesa++;
+      else if (stage.includes('Dinas')) s.diDinas++;
+      else if (stage.includes('Kecamatan')) s.diKecamatan++;
+      else if (stage.includes('DPMD') && !stage.includes('Selesai')) s.diDpmd++;
+      if (stage.includes('Selesai')) s.selesai++;
+      if (p.dinas_status === 'rejected' || p.kecamatan_status === 'rejected' || p.dpmd_status === 'rejected') s.ditolak++;
+    });
+
+    const summaryRows = Object.values(desaSummary)
+      .sort((a, b) => a.kecamatan.localeCompare(b.kecamatan) || a.desa.localeCompare(b.desa))
+      .map((s, idx) => ({
+        'No': idx + 1,
+        'Kecamatan': s.kecamatan,
+        'Desa': s.desa,
+        'Total Proposal': s.totalProposal,
+        'Total Anggaran (Rp)': s.totalAnggaran,
+        'Di Desa': s.diDesa,
+        'Di Dinas': s.diDinas,
+        'Di Kecamatan': s.diKecamatan,
+        'Di DPMD': s.diDpmd,
+        'Selesai': s.selesai,
+        'Ditolak': s.ditolak,
+      }));
+
+    const ws2 = XLSX.utils.json_to_sheet(summaryRows);
+    const colWidths2 = Object.keys(summaryRows[0] || {}).map(key => {
+      const maxLen = Math.max(key.length, ...summaryRows.map(r => String(r[key] || '').length));
+      return { wch: Math.min(maxLen + 2, 40) };
+    });
+    ws2['!cols'] = colWidths2;
+    XLSX.utils.book_append_sheet(wb, ws2, 'Ringkasan Per Desa');
+
+    // Sheet 3: Ringkasan Per Kecamatan
+    const kecSummary = {};
+    dataToExport.forEach(p => {
+      const kec = p.desas?.kecamatans?.nama || '-';
+      if (!kecSummary[kec]) {
+        kecSummary[kec] = { kecamatan: kec, totalDesa: new Set(), totalProposal: 0, totalAnggaran: 0, selesai: 0, proses: 0, ditolak: 0 };
+      }
+      const s = kecSummary[kec];
+      s.totalDesa.add(p.desa_id);
+      s.totalProposal++;
+      s.totalAnggaran += Number(p.anggaran_usulan) || 0;
+      if (p.dpmd_status === 'approved') s.selesai++;
+      else if (p.dinas_status === 'rejected' || p.kecamatan_status === 'rejected' || p.dpmd_status === 'rejected') s.ditolak++;
+      else s.proses++;
+    });
+
+    const kecRows = Object.values(kecSummary)
+      .sort((a, b) => a.kecamatan.localeCompare(b.kecamatan))
+      .map((s, idx) => ({
+        'No': idx + 1,
+        'Kecamatan': s.kecamatan,
+        'Jumlah Desa': s.totalDesa.size,
+        'Total Proposal': s.totalProposal,
+        'Total Anggaran (Rp)': s.totalAnggaran,
+        'Selesai (Disetujui)': s.selesai,
+        'Dalam Proses': s.proses,
+        'Ditolak': s.ditolak,
+      }));
+
+    const ws3 = XLSX.utils.json_to_sheet(kecRows);
+    const colWidths3 = Object.keys(kecRows[0] || {}).map(key => {
+      const maxLen = Math.max(key.length, ...kecRows.map(r => String(r[key] || '').length));
+      return { wch: Math.min(maxLen + 2, 40) };
+    });
+    ws3['!cols'] = colWidths3;
+    XLSX.utils.book_append_sheet(wb, ws3, 'Ringkasan Per Kecamatan');
+
+    // Download
+    const fileName = `Tracking_Status_Bankeu_TA${trackingTahunAnggaran}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+
+    Swal.fire({
+      icon: 'success',
+      title: 'Export Berhasil',
+      html: `<p class="text-sm">File <b>${fileName}</b> berhasil didownload</p><p class="text-xs text-gray-500 mt-1">3 sheet: Detail Tracking, Ringkasan Per Desa, Ringkasan Per Kecamatan</p>`,
+      timer: 3000,
+      showConfirmButton: true
+    });
+  };
+
   useEffect(() => {
     fetchData();
     if (activeView === 'config') {
@@ -1169,7 +1347,7 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
     <div className="bg-gradient-to-br from-slate-50 via-blue-50/20 to-indigo-50/20 min-h-screen">
       {/* Tab Navigation */}
       <div className="container mx-auto px-4 pt-6">
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+        <div className="flex flex-wrap items-center gap-4 mb-6">
         <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg shadow-gray-200/50 p-1.5 inline-flex gap-1 flex-wrap border border-gray-200/60">
           {[
             { key: 'archive', icon: Folder, label: 'Arsip Proposal', gradient: 'from-blue-600 to-indigo-600' },
@@ -1194,19 +1372,37 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
               </div>
             </button>
           ))}
+
+          {/* Divider */}
+          <div className="w-px h-8 bg-gray-300/60 self-center mx-0.5" />
+
+          {/* Refresh Button - inside tab bar */}
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className={`group px-4 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 text-gray-500 hover:text-blue-700 hover:bg-blue-50/80 ${
+              refreshing ? 'opacity-70 cursor-not-allowed' : ''
+            }`}
+            title="Refresh Data"
+          >
+            <div className="flex items-center gap-2">
+              <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin text-blue-600' : 'group-hover:rotate-90 transition-transform duration-500'}`} />
+              <span className="hidden sm:inline">{refreshing ? 'Memuat...' : 'Refresh'}</span>
+            </div>
+          </button>
+
+          {/* Export Excel Button - inside tab bar */}
+          <button
+            onClick={handleExportTrackingExcel}
+            className="group px-4 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 text-gray-500 hover:text-emerald-700 hover:bg-emerald-50/80"
+            title="Export Tracking ke Excel"
+          >
+            <div className="flex items-center gap-2">
+              <FileSpreadsheet className="h-4 w-4 group-hover:scale-110 transition-transform duration-300" />
+              <span className="hidden sm:inline">Export Excel</span>
+            </div>
+          </button>
         </div>
-        
-        {/* Refresh Button */}
-        <button
-          onClick={handleRefresh}
-          disabled={refreshing}
-          className={`group flex items-center gap-2 px-5 py-2.5 bg-white/80 backdrop-blur-sm rounded-xl shadow-md border border-gray-200/60 font-semibold text-sm transition-all hover:shadow-lg hover:-translate-y-0.5 ${
-            refreshing ? 'opacity-70 cursor-not-allowed' : ''
-          }`}
-        >
-          <RefreshCw className={`h-4 w-4 text-blue-600 ${refreshing ? 'animate-spin' : 'group-hover:rotate-90 transition-transform duration-500'}`} />
-          <span className="text-gray-700">{refreshing ? 'Memuat...' : 'Refresh Data'}</span>
-        </button>
         </div>
       </div>
 
