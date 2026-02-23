@@ -197,13 +197,22 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
         const desaB = b.desas?.nama || '';
         return desaA.localeCompare(desaB);
       })
-      .map((p, idx) => ({
+      .map((p, idx) => {
+        // Resolve kegiatan: pivot table first, then direct FK
+        const kegiatanNames = p.kegiatan_list?.length > 0
+          ? p.kegiatan_list.map(k => k.nama_kegiatan).filter(Boolean).join(', ')
+          : (p.bankeu_master_kegiatan?.nama_kegiatan || '-');
+        const dinasTerkait = p.kegiatan_list?.length > 0
+          ? [...new Set(p.kegiatan_list.map(k => k.dinas_terkait).filter(Boolean))].join(', ')
+          : (p.bankeu_master_kegiatan?.dinas_terkait || '-');
+
+        return {
         'No': idx + 1,
         'Kecamatan': p.desas?.kecamatans?.nama || '-',
         'Desa': p.desas?.nama || '-',
         'Judul Proposal': p.judul_proposal || '-',
-        'Jenis Kegiatan': p.bankeu_master_kegiatan?.nama_kegiatan || '-',
-        'Dinas Terkait': p.bankeu_master_kegiatan?.dinas_terkait || '-',
+        'Jenis Kegiatan': kegiatanNames,
+        'Dinas Terkait': dinasTerkait,
         'Anggaran Usulan (Rp)': Number(p.anggaran_usulan) || 0,
         'Posisi Saat Ini': getStageLabel(p),
         'Status Dinas': getStatusLabel(p.dinas_status),
@@ -222,7 +231,8 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
         'Tgl Dibuat': formatTanggal(p.created_at),
         'Tgl Kirim ke Dinas': formatTanggal(p.submitted_to_dinas_at),
         'Tgl Kirim ke DPMD': formatTanggal(p.submitted_to_dpmd_at),
-      }));
+      };
+      });
 
     // Create workbook
     const wb = XLSX.utils.book_new();
