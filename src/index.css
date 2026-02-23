@@ -24,15 +24,12 @@
 		scroll-behavior: smooth;
 	}
 
-	/* Compact scaling: agar tampilan tidak terlalu besar di laptop/desktop */
-	/* Hanya berlaku di layar >= 1024px, mobile/tablet tetap 100% */
+	/* Compact scaling: tampilan lebih compact di laptop/desktop */
+	/* Mengecilkan root font-size agar semua rem-based sizing (Tailwind) mengecil proporsional */
+	/* 13px / 16px = 0.8125 ≈ tampilan 80% tanpa merusak viewport (100vh tetap full) */
 	@media (min-width: 1024px) {
 		html {
-			zoom: 0.8;
-		}
-		/* Fix bottom cutoff caused by zoom */
-		body {
-			min-height: 125vh; /* 100/0.8 = 125 */
+			font-size: 13px;
 		}
 	}
 
