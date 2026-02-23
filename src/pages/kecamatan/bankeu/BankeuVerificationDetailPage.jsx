@@ -2365,7 +2365,7 @@ const ProposalRow = ({ kegiatan, proposal, index, onVerify, onViewPdf, onGenerat
                           <div className="absolute -top-2 right-6 w-4 h-4 bg-gray-900 transform rotate-45 border-l border-t border-gray-700"></div>
                           <div className="relative z-10">
                             <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-700">
-                              <LuCircleAlert className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                              <LuTriangleAlert className="w-4 h-4 text-amber-400 flex-shrink-0" />
                               <p className="font-bold text-amber-300">Tidak Bisa Generate BA</p>
                             </div>
                             <p className="text-gray-300 mb-3">Semua anggota tim harus lengkap: <span className="text-white font-medium">Data Diri + Quisioner + TTD</span></p>

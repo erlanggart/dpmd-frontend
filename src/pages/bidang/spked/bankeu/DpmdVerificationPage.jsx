@@ -91,8 +91,9 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
   // Tracking view states
   const [trackingSearchTerm, setTrackingSearchTerm] = useState('');
   const [trackingSelectedKecamatan, setTrackingSelectedKecamatan] = useState('all');
+  const [trackingSelectedDesa, setTrackingSelectedDesa] = useState('all');
   const [trackingStatusFilter, setTrackingStatusFilter] = useState('all'); // all, di_dinas, di_kecamatan, di_dpmd
-  const [trackingDinasFilter, setTrackingDinasFilter] = useState('all'); // filter by specific dinas when di_dinas
+  const [trackingDinasFilter, setTrackingDinasFilter] = useState('all'); // filter by dinas terkait (global)
   const [expandedTrackingDesa, setExpandedTrackingDesa] = useState([]);
   const [trackingProposals, setTrackingProposals] = useState([]); // All proposals for tracking
   const [trackingTahunAnggaran, setTrackingTahunAnggaran] = useState(tahunAnggaran);
@@ -160,11 +161,23 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
     }
   };
 
-  // Export Tracking Status to Excel
+  // Helper: resolve kegiatan name from pivot table, fallback to judul_proposal
+  const resolveKegiatanName = (proposal) => {
+    if (proposal.kegiatan_list?.length > 0) {
+      return proposal.kegiatan_list.map(k => k.nama_kegiatan).filter(Boolean).join(', ');
+    }
+    if (proposal.bankeu_master_kegiatan?.nama_kegiatan) {
+      return proposal.bankeu_master_kegiatan.nama_kegiatan;
+    }
+    return proposal.judul_proposal || '-';
+  };
+
+  // Export Tracking Status to Excel (uses active filters)
   const handleExportTrackingExcel = () => {
-    const dataToExport = trackingProposals.length > 0 ? trackingProposals : [];
-    if (dataToExport.length === 0) {
-      Swal.fire({ icon: 'warning', title: 'Data Kosong', text: 'Tidak ada data tracking untuk diexport. Pastikan tab Tracking Status sudah dimuat.', timer: 2500, showConfirmButton: true });
+    // Get filtered proposals from filteredTrackingDesa
+    const filteredProposals = Object.values(filteredTrackingDesa).flatMap(d => d.proposals);
+    if (filteredProposals.length === 0) {
+      Swal.fire({ icon: 'warning', title: 'Data Kosong', text: 'Tidak ada data tracking untuk diexport. Pastikan tab Tracking Status sudah dimuat dan ada data sesuai filter.', timer: 2500, showConfirmButton: true });
       return;
     }
 
@@ -188,7 +201,26 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
       return new Date(dateStr).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
     };
 
-    const rows = dataToExport
+    const resolveDinas = (p) => {
+      if (p.kegiatan_list?.length > 0) {
+        return [...new Set(p.kegiatan_list.map(k => k.dinas_terkait).filter(Boolean))].join(', ');
+      }
+      return p.bankeu_master_kegiatan?.dinas_terkait || '-';
+    };
+
+    // Build active filter description for header
+    const filterParts = [];
+    if (trackingSelectedKecamatan !== 'all') filterParts.push(`Kecamatan: ${trackingSelectedKecamatan}`);
+    if (trackingSelectedDesa !== 'all') filterParts.push(`Desa: ${trackingSelectedDesa}`);
+    if (trackingDinasFilter !== 'all') filterParts.push(`Dinas: ${trackingDinasFilter}`);
+    if (trackingStatusFilter !== 'all') {
+      const statusMap = { di_desa: 'Di Desa', di_dinas: 'Di Dinas', di_kecamatan: 'Di Kecamatan', di_dpmd: 'Di DPMD', selesai: 'Selesai' };
+      filterParts.push(`Status: ${statusMap[trackingStatusFilter] || trackingStatusFilter}`);
+    }
+    if (trackingSearchTerm) filterParts.push(`Pencarian: "${trackingSearchTerm}"`);
+    const filterDesc = filterParts.length > 0 ? `Filter: ${filterParts.join(' | ')}` : 'Filter: Semua Data';
+
+    const rows = filteredProposals
       .sort((a, b) => {
         const kecA = a.desas?.kecamatans?.nama || '';
         const kecB = b.desas?.kecamatans?.nama || '';
@@ -197,23 +229,16 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
         const desaB = b.desas?.nama || '';
         return desaA.localeCompare(desaB);
       })
-      .map((p, idx) => {
-        // Resolve kegiatan: pivot table first, then direct FK
-        const kegiatanNames = p.kegiatan_list?.length > 0
-          ? p.kegiatan_list.map(k => k.nama_kegiatan).filter(Boolean).join(', ')
-          : (p.bankeu_master_kegiatan?.nama_kegiatan || '-');
-        const dinasTerkait = p.kegiatan_list?.length > 0
-          ? [...new Set(p.kegiatan_list.map(k => k.dinas_terkait).filter(Boolean))].join(', ')
-          : (p.bankeu_master_kegiatan?.dinas_terkait || '-');
-
-        return {
+      .map((p, idx) => ({
         'No': idx + 1,
         'Kecamatan': p.desas?.kecamatans?.nama || '-',
         'Desa': p.desas?.nama || '-',
-        'Judul Proposal': p.judul_proposal || '-',
-        'Jenis Kegiatan': kegiatanNames,
-        'Dinas Terkait': dinasTerkait,
+        'Judul Proposal': resolveKegiatanName(p),
+        'Nama Kegiatan Spesifik': p.nama_kegiatan_spesifik || '-',
+        'Dinas Terkait': resolveDinas(p),
         'Anggaran Usulan (Rp)': Number(p.anggaran_usulan) || 0,
+        'Volume': p.volume || '-',
+        'Lokasi': p.lokasi || '-',
         'Posisi Saat Ini': getStageLabel(p),
         'Status Dinas': getStatusLabel(p.dinas_status),
         'Verifikator Dinas': p.dinas_verified_by_name || '-',
@@ -231,14 +256,21 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
         'Tgl Dibuat': formatTanggal(p.created_at),
         'Tgl Kirim ke Dinas': formatTanggal(p.submitted_to_dinas_at),
         'Tgl Kirim ke DPMD': formatTanggal(p.submitted_to_dpmd_at),
-      };
-      });
+      }));
 
     // Create workbook
     const wb = XLSX.utils.book_new();
 
-    // Sheet 1: Detail Tracking
-    const ws = XLSX.utils.json_to_sheet(rows);
+    // Sheet 1: Detail Tracking (with filter info header)
+    const headerRows = [
+      ['TRACKING STATUS BANKEU - DPMD KABUPATEN BOGOR'],
+      [`Tahun Anggaran: ${trackingTahunAnggaran}`],
+      [filterDesc],
+      [`Total: ${rows.length} proposal | Export: ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`],
+      [],
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(headerRows);
+    XLSX.utils.sheet_add_json(ws, rows, { origin: 'A6' });
 
     // Auto-width columns
     const colWidths = Object.keys(rows[0] || {}).map(key => {
@@ -246,12 +278,11 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
       return { wch: Math.min(maxLen + 2, 50) };
     });
     ws['!cols'] = colWidths;
-
     XLSX.utils.book_append_sheet(wb, ws, 'Detail Tracking');
 
     // Sheet 2: Ringkasan Per Desa
     const desaSummary = {};
-    dataToExport.forEach(p => {
+    filteredProposals.forEach(p => {
       const key = `${p.desas?.kecamatans?.nama || '-'}_${p.desas?.nama || '-'}`;
       if (!desaSummary[key]) {
         desaSummary[key] = {
@@ -259,12 +290,19 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
           desa: p.desas?.nama || '-',
           totalProposal: 0,
           totalAnggaran: 0,
+          dinasSet: new Set(),
           diDesa: 0, diDinas: 0, diKecamatan: 0, diDpmd: 0, selesai: 0, ditolak: 0,
         };
       }
       const s = desaSummary[key];
       s.totalProposal++;
       s.totalAnggaran += Number(p.anggaran_usulan) || 0;
+      // Collect dinas names
+      if (p.kegiatan_list?.length > 0) {
+        p.kegiatan_list.forEach(k => { if (k.dinas_terkait) s.dinasSet.add(k.dinas_terkait); });
+      } else if (p.bankeu_master_kegiatan?.dinas_terkait) {
+        s.dinasSet.add(p.bankeu_master_kegiatan.dinas_terkait);
+      }
       const stage = getStageLabel(p);
       if (stage.includes('Desa') && !stage.includes('Selesai')) s.diDesa++;
       else if (stage.includes('Dinas')) s.diDinas++;
@@ -280,6 +318,7 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
         'No': idx + 1,
         'Kecamatan': s.kecamatan,
         'Desa': s.desa,
+        'Dinas Terkait': [...s.dinasSet].sort().join(', ') || '-',
         'Total Proposal': s.totalProposal,
         'Total Anggaran (Rp)': s.totalAnggaran,
         'Di Desa': s.diDesa,
@@ -300,15 +339,20 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
 
     // Sheet 3: Ringkasan Per Kecamatan
     const kecSummary = {};
-    dataToExport.forEach(p => {
+    filteredProposals.forEach(p => {
       const kec = p.desas?.kecamatans?.nama || '-';
       if (!kecSummary[kec]) {
-        kecSummary[kec] = { kecamatan: kec, totalDesa: new Set(), totalProposal: 0, totalAnggaran: 0, selesai: 0, proses: 0, ditolak: 0 };
+        kecSummary[kec] = { kecamatan: kec, totalDesa: new Set(), totalProposal: 0, totalAnggaran: 0, dinasSet: new Set(), selesai: 0, proses: 0, ditolak: 0 };
       }
       const s = kecSummary[kec];
       s.totalDesa.add(p.desa_id);
       s.totalProposal++;
       s.totalAnggaran += Number(p.anggaran_usulan) || 0;
+      if (p.kegiatan_list?.length > 0) {
+        p.kegiatan_list.forEach(k => { if (k.dinas_terkait) s.dinasSet.add(k.dinas_terkait); });
+      } else if (p.bankeu_master_kegiatan?.dinas_terkait) {
+        s.dinasSet.add(p.bankeu_master_kegiatan.dinas_terkait);
+      }
       if (p.dpmd_status === 'approved') s.selesai++;
       else if (p.dinas_status === 'rejected' || p.kecamatan_status === 'rejected' || p.dpmd_status === 'rejected') s.ditolak++;
       else s.proses++;
@@ -320,6 +364,7 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
         'No': idx + 1,
         'Kecamatan': s.kecamatan,
         'Jumlah Desa': s.totalDesa.size,
+        'Dinas Terkait': [...s.dinasSet].sort().join(', ') || '-',
         'Total Proposal': s.totalProposal,
         'Total Anggaran (Rp)': s.totalAnggaran,
         'Selesai (Disetujui)': s.selesai,
@@ -335,6 +380,70 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
     ws3['!cols'] = colWidths3;
     XLSX.utils.book_append_sheet(wb, ws3, 'Ringkasan Per Kecamatan');
 
+    // Sheet 4: Ringkasan Per Dinas Terkait
+    const dinasSummary = {};
+    filteredProposals.forEach(p => {
+      const dinasNames = [];
+      if (p.kegiatan_list?.length > 0) {
+        p.kegiatan_list.forEach(k => { if (k.dinas_terkait) dinasNames.push(k.dinas_terkait); });
+      } else if (p.bankeu_master_kegiatan?.dinas_terkait) {
+        dinasNames.push(p.bankeu_master_kegiatan.dinas_terkait);
+      }
+      const uniqueDinas = [...new Set(dinasNames)];
+      uniqueDinas.forEach(dinasName => {
+        if (!dinasSummary[dinasName]) {
+          dinasSummary[dinasName] = {
+            dinas: dinasName,
+            totalProposal: 0,
+            totalAnggaran: 0,
+            desaSet: new Set(),
+            kecamatanSet: new Set(),
+            diDesa: 0, diDinas: 0, diKecamatan: 0, diDpmd: 0, selesai: 0, ditolak: 0,
+          };
+        }
+        const s = dinasSummary[dinasName];
+        s.totalProposal++;
+        s.totalAnggaran += Number(p.anggaran_usulan) || 0;
+        if (p.desas?.nama) s.desaSet.add(p.desas.nama);
+        if (p.desas?.kecamatans?.nama) s.kecamatanSet.add(p.desas.kecamatans.nama);
+        const stage = getStageLabel(p);
+        if (stage.includes('Desa') && !stage.includes('Selesai')) s.diDesa++;
+        else if (stage.includes('Dinas')) s.diDinas++;
+        else if (stage.includes('Kecamatan')) s.diKecamatan++;
+        else if (stage.includes('DPMD') && !stage.includes('Selesai')) s.diDpmd++;
+        if (stage.includes('Selesai')) s.selesai++;
+        if (p.dinas_status === 'rejected' || p.kecamatan_status === 'rejected' || p.dpmd_status === 'rejected') s.ditolak++;
+      });
+    });
+
+    const dinasRows = Object.values(dinasSummary)
+      .sort((a, b) => b.totalProposal - a.totalProposal)
+      .map((s, idx) => ({
+        'No': idx + 1,
+        'Dinas Terkait': s.dinas,
+        'Jumlah Kecamatan': s.kecamatanSet.size,
+        'Jumlah Desa': s.desaSet.size,
+        'Daftar Desa': [...s.desaSet].sort().join(', '),
+        'Total Proposal': s.totalProposal,
+        'Total Anggaran (Rp)': s.totalAnggaran,
+        'Di Desa': s.diDesa,
+        'Di Dinas': s.diDinas,
+        'Di Kecamatan': s.diKecamatan,
+        'Di DPMD': s.diDpmd,
+        'Selesai': s.selesai,
+        'Ditolak': s.ditolak,
+      }));
+
+    if (dinasRows.length > 0) {
+      const ws4 = XLSX.utils.json_to_sheet(dinasRows);
+      const colWidths4 = Object.keys(dinasRows[0] || {}).map(key => {
+        const maxLen = Math.max(key.length, ...dinasRows.map(r => String(r[key] || '').length));
+        return { wch: Math.min(maxLen + 2, 60) };
+      });
+      ws4['!cols'] = colWidths4;
+      XLSX.utils.book_append_sheet(wb, ws4, 'Ringkasan Per Dinas');
+    }
+
     // Download
     const fileName = `Tracking_Status_Bankeu_TA${trackingTahunAnggaran}_${new Date().toISOString().slice(0, 10)}.xlsx`;
     XLSX.writeFile(wb, fileName);
@@ -342,8 +451,10 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
     Swal.fire({
       icon: 'success',
       title: 'Export Berhasil',
-      html: `<p class="text-sm">File <b>${fileName}</b> berhasil didownload</p><p class="text-xs text-gray-500 mt-1">3 sheet: Detail Tracking, Ringkasan Per Desa, Ringkasan Per Kecamatan</p>`,
-      timer: 3000,
+      html: `<p class="text-sm">File <b>${fileName}</b> berhasil didownload</p>
+        <p class="text-xs text-gray-500 mt-1">4 sheet: Detail Tracking, Ringkasan Per Desa, Per Kecamatan, Per Dinas</p>
+        ${filterParts.length > 0 ? `<p class="text-xs text-blue-500 mt-1">📌 ${filterDesc}</p>` : '<p class="text-xs text-gray-400 mt-1">Semua data (tanpa filter)</p>'}`,
+      timer: 4000,
       showConfirmButton: true
     });
   };
@@ -995,21 +1106,47 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
     return 'di_dinas';
   };
 
-  // Get unique dinas list from tracking proposals
+  // Get unique dinas list from tracking proposals (includes pivot kegiatan_list)
   const availableDinasList = useMemo(() => {
     const dinasSet = new Set();
     trackingProposals.forEach(p => {
-      const dinasName = p.bankeu_master_kegiatan?.dinas_terkait;
-      if (dinasName) dinasSet.add(dinasName);
+      if (p.kegiatan_list?.length > 0) {
+        p.kegiatan_list.forEach(k => { if (k.dinas_terkait) dinasSet.add(k.dinas_terkait); });
+      } else if (p.bankeu_master_kegiatan?.dinas_terkait) {
+        dinasSet.add(p.bankeu_master_kegiatan.dinas_terkait);
+      }
     });
     return [...dinasSet].sort();
   }, [trackingProposals]);
+
+  // Get unique desa list filtered by selected kecamatan
+  const availableDesaList = useMemo(() => {
+    const desaSet = new Set();
+    trackingProposals.forEach(p => {
+      if (trackingSelectedKecamatan !== 'all' && p.desas?.kecamatans?.nama !== trackingSelectedKecamatan) return;
+      if (p.desas?.nama) desaSet.add(p.desas.nama);
+    });
+    return [...desaSet].sort();
+  }, [trackingProposals, trackingSelectedKecamatan]);
+
+  // Helper: check if proposal matches dinas filter
+  const proposalMatchesDinas = (p, dinasFilter) => {
+    if (dinasFilter === 'all') return true;
+    if (p.kegiatan_list?.length > 0) {
+      return p.kegiatan_list.some(k => k.dinas_terkait === dinasFilter);
+    }
+    return p.bankeu_master_kegiatan?.dinas_terkait === dinasFilter;
+  };
 
   // Filter grouped by desa for tracking view
   const filteredTrackingDesa = useMemo(() => {
     return Object.entries(groupedByDesa).reduce((acc, [key, data]) => {
       // Filter by kecamatan
       if (trackingSelectedKecamatan !== 'all' && data.kecamatanName !== trackingSelectedKecamatan) {
+        return acc;
+      }
+      // Filter by desa
+      if (trackingSelectedDesa !== 'all' && data.desaName !== trackingSelectedDesa) {
         return acc;
       }
       // Filter by search
@@ -1020,29 +1157,27 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
           return acc;
         }
       }
-      // Filter by status - filter the proposals within each desa
-      if (trackingStatusFilter !== 'all') {
-        const filteredProposals = data.proposals.filter(p => {
-          // Handle 'selesai' filter
-          if (trackingStatusFilter === 'selesai') {
-            return p.dpmd_status === 'approved';
-          }
-          const stage = getProposalStage(p);
-          if (stage !== trackingStatusFilter) return false;
-          // If filtering by dinas and status is di_dinas, also filter by specific dinas
-          if (trackingStatusFilter === 'di_dinas' && trackingDinasFilter !== 'all') {
-            return p.bankeu_master_kegiatan?.dinas_terkait === trackingDinasFilter;
-          }
-          return true;
-        });
-        if (filteredProposals.length === 0) return acc;
-        acc[key] = { ...data, proposals: filteredProposals };
-        return acc;
+      // Filter proposals within desa by status and dinas
+      let filteredProposals = data.proposals;
+
+      // Global dinas filter
+      if (trackingDinasFilter !== 'all') {
+        filteredProposals = filteredProposals.filter(p => proposalMatchesDinas(p, trackingDinasFilter));
       }
-      acc[key] = data;
+
+      // Status filter
+      if (trackingStatusFilter !== 'all') {
+        filteredProposals = filteredProposals.filter(p => {
+          if (trackingStatusFilter === 'selesai') return p.dpmd_status === 'approved';
+          return getProposalStage(p) === trackingStatusFilter;
+        });
+      }
+
+      if (filteredProposals.length === 0) return acc;
+      acc[key] = { ...data, proposals: filteredProposals };
       return acc;
     }, {});
-  }, [groupedByDesa, trackingSelectedKecamatan, trackingSearchTerm, trackingStatusFilter, trackingDinasFilter]);
+  }, [groupedByDesa, trackingSelectedKecamatan, trackingSelectedDesa, trackingSearchTerm, trackingStatusFilter, trackingDinasFilter]);
 
   // Statistics calculations
   const statsData = useMemo(() => {
@@ -1206,8 +1341,8 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
         i + 1,
         p.desas?.kecamatans?.nama || '-',
         p.desas?.nama || '-',
-        p.bankeu_master_kegiatan?.nama_kegiatan || p.bankeu_master_kegiatan?.dinas_terkait || '-',
-        p.judul_proposal || '-',
+        resolveKegiatanName(p),
+        resolveKegiatanName(p),
         p.nama_kegiatan_spesifik || '-',
         p.lokasi || '-',
         p.volume || '-',
@@ -1264,8 +1399,8 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
         no: i + 1,
         kecamatan: p.desas?.kecamatans?.nama || '-',
         desa: p.desas?.nama || '-',
-        program: p.bankeu_master_kegiatan?.nama_kegiatan || p.bankeu_master_kegiatan?.dinas_terkait || '-',
-        judul_kegiatan: p.judul_proposal || '-',
+        program: resolveKegiatanName(p),
+        judul_kegiatan: resolveKegiatanName(p),
         nama_kegiatan: p.nama_kegiatan_spesifik || '-',
         lokasi: p.lokasi || '-',
         volume: p.volume || '-',
@@ -1305,6 +1440,7 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = kecProposals.filter(p =>
+        resolveKegiatanName(p)?.toLowerCase().includes(term) ||
         p.judul_proposal?.toLowerCase().includes(term) ||
         p.desas?.nama?.toLowerCase().includes(term)
       );
@@ -1590,7 +1726,7 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                   <h4 className="font-semibold text-gray-900 mb-2 leading-snug">
-                                                    {proposal.judul_proposal}
+                                                    {resolveKegiatanName(proposal)}
                                                   </h4>
                                                   <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600 mb-2">
                                                     {proposal.dpmd_submitted_at && (
@@ -1848,7 +1984,7 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                 </div>
                 <span className="font-bold text-gray-800">Filter Tracking</span>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 <div className="relative">
                   <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <input
@@ -1863,7 +1999,10 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                   <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <select
                     value={trackingSelectedKecamatan}
-                    onChange={(e) => setTrackingSelectedKecamatan(e.target.value)}
+                    onChange={(e) => {
+                      setTrackingSelectedKecamatan(e.target.value);
+                      setTrackingSelectedDesa('all'); // Reset desa when kecamatan changes
+                    }}
                     className="w-full pl-10 pr-4 py-2.5 bg-gray-50/80 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 appearance-none transition-all hover:border-gray-300"
                   >
                     <option value="all">Semua Kecamatan</option>
@@ -1873,54 +2012,64 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                   </select>
                 </div>
                 <div className="relative">
+                  <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <select
+                    value={trackingSelectedDesa}
+                    onChange={(e) => setTrackingSelectedDesa(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50/80 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 appearance-none transition-all hover:border-gray-300"
+                  >
+                    <option value="all">Semua Desa ({availableDesaList.length})</option>
+                    {availableDesaList.map(desa => (
+                      <option key={desa} value={desa}>{desa}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="relative">
+                  <Briefcase className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <select
+                    value={trackingDinasFilter}
+                    onChange={(e) => setTrackingDinasFilter(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50/80 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 appearance-none transition-all hover:border-gray-300"
+                  >
+                    <option value="all">Semua Dinas Terkait ({availableDinasList.length})</option>
+                    {availableDinasList.map(dinasName => (
+                      <option key={dinasName} value={dinasName}>{dinasName}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="relative">
                   <Layers className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <select
                     value={trackingStatusFilter}
-                    onChange={(e) => {
-                      setTrackingStatusFilter(e.target.value);
-                      if (e.target.value !== 'di_dinas') setTrackingDinasFilter('all');
-                    }}
+                    onChange={(e) => setTrackingStatusFilter(e.target.value)}
                     className="w-full pl-10 pr-4 py-2.5 bg-gray-50/80 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 appearance-none transition-all hover:border-gray-300"
                   >
                     <option value="all">Semua Status</option>
-                    <option value="di_desa">📍 Di Desa</option>
-                    <option value="di_dinas">🏢 Di Dinas Terkait</option>
-                    <option value="di_kecamatan">🏛️ Di Kecamatan</option>
-                    <option value="di_dpmd">✅ Di DPMD</option>
-                    <option value="selesai">🎉 Selesai (Disetujui)</option>
+                    <option value="di_desa">Di Desa</option>
+                    <option value="di_dinas">Di Dinas Terkait</option>
+                    <option value="di_kecamatan">Di Kecamatan</option>
+                    <option value="di_dpmd">Di DPMD</option>
+                    <option value="selesai">Selesai (Disetujui)</option>
                   </select>
                 </div>
-                {trackingStatusFilter === 'di_dinas' && (
-                  <div className="relative">
-                    <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                    <select
-                      value={trackingDinasFilter}
-                      onChange={(e) => setTrackingDinasFilter(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2.5 bg-violet-50/80 border border-violet-200 rounded-xl text-sm focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 appearance-none transition-all hover:border-violet-300"
-                    >
-                      <option value="all">Semua Dinas</option>
-                      {availableDinasList.map(dinasName => (
-                        <option key={dinasName} value={dinasName}>{dinasName}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
               </div>
               <div className="flex flex-wrap items-center gap-4 mt-4 pt-4 border-t border-gray-100">
                 <p className="text-sm text-gray-500">
                   Menampilkan <span className="font-bold text-violet-600 bg-violet-50 px-2 py-0.5 rounded-md">{Object.keys(filteredTrackingDesa).length}</span> desa
-                  {trackingStatusFilter !== 'all' && (
-                    <span className="ml-1">
-                      ({Object.values(filteredTrackingDesa).reduce((sum, d) => sum + d.proposals.length, 0)} proposal)
-                    </span>
+                  <span className="ml-1">
+                    ({Object.values(filteredTrackingDesa).reduce((sum, d) => sum + d.proposals.length, 0)} proposal)
+                  </span>
+                  {trackingDinasFilter !== 'all' && (
+                    <span className="ml-1.5 px-2 py-0.5 bg-blue-50 text-blue-700 rounded-md text-xs font-medium">{trackingDinasFilter}</span>
                   )}
                 </p>
-                {(trackingStatusFilter !== 'all' || trackingDinasFilter !== 'all' || trackingSelectedKecamatan !== 'all' || trackingSearchTerm) && (
+                {(trackingStatusFilter !== 'all' || trackingDinasFilter !== 'all' || trackingSelectedKecamatan !== 'all' || trackingSelectedDesa !== 'all' || trackingSearchTerm) && (
                   <button
                     onClick={() => {
                       setTrackingStatusFilter('all');
                       setTrackingDinasFilter('all');
                       setTrackingSelectedKecamatan('all');
+                      setTrackingSelectedDesa('all');
                       setTrackingSearchTerm('');
                     }}
                     className="text-sm text-red-600 hover:text-red-700 flex items-center gap-1"
@@ -2070,7 +2219,7 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                                         <FileText className="h-5 w-5 text-blue-600" />
                                       </div>
                                       <div className="flex-1">
-                                        <h4 className="font-semibold text-gray-900">{proposal.judul_proposal}</h4>
+                                        <h4 className="font-semibold text-gray-900">{resolveKegiatanName(proposal)}</h4>
                                         {proposal.bankeu_master_kegiatan && (
                                           <span className="inline-block mt-1 px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
                                             {proposal.bankeu_master_kegiatan.dinas_terkait}
@@ -2199,9 +2348,9 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                                             getProposalStage(proposal) === 'di_kecamatan' ? 'text-blue-700' :
                                             'text-orange-700'
                                           }`}>
-                                            {getProposalStage(proposal) === 'di_dpmd' ? '📋 Di DPMD' :
-                                             getProposalStage(proposal) === 'di_kecamatan' ? '🏛️ Di Kecamatan' :
-                                             '🏢 Di Dinas'}
+                                            {getProposalStage(proposal) === 'di_dpmd' ? 'Di DPMD' :
+                                             getProposalStage(proposal) === 'di_kecamatan' ? 'Di Kecamatan' :
+                                             'Di Dinas'}
                                           </p>
                                         </div>
                                         <div className="bg-gray-50 rounded-lg p-2">
@@ -2211,10 +2360,10 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                                             proposal.dpmd_status === 'rejected' ? 'text-red-700' :
                                             'text-blue-700'
                                           }`}>
-                                            {proposal.dpmd_status === 'approved' ? '✅ Disetujui' :
-                                             proposal.dpmd_status === 'rejected' ? '❌ Ditolak' :
-                                             proposal.dpmd_status === 'revision' ? '🔄 Revisi' :
-                                             '⏳ Proses'}
+                                            {proposal.dpmd_status === 'approved' ? 'Disetujui' :
+                                             proposal.dpmd_status === 'rejected' ? 'Ditolak' :
+                                             proposal.dpmd_status === 'revision' ? 'Revisi' :
+                                             'Proses'}
                                           </p>
                                         </div>
                                       </div>

@@ -30,6 +30,10 @@
 		html {
 			zoom: 0.8;
 		}
+		/* Fix bottom cutoff caused by zoom */
+		body {
+			min-height: 125vh; /* 100/0.8 = 125 */
+		}
 	}
 
 	.bg-primary {
