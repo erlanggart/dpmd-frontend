@@ -752,7 +752,8 @@ const BankeuVerificationDetailPage = () => {
     if (result.isConfirmed) {
       try {
         await api.post(`/kecamatan/bankeu/desa/${desaId}/submit-review`, {
-          action // 'submit' or 'return'
+          action, // 'submit' or 'return'
+          tahun: tahunAnggaran
         });
 
         Swal.fire({
