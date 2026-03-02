@@ -8,7 +8,7 @@ import {
 	FiHome, FiUser, FiLogOut, FiMenu, FiMail, FiBell, 
 	FiCalendar, FiBarChart2, FiFileText, FiDollarSign, 
 	FiUsers, FiBriefcase, FiChevronLeft, FiChevronRight,
-	FiSettings, FiX
+	FiSettings, FiX, FiVideo
 } from "react-icons/fi";
 import { Landmark } from "lucide-react";
 import { performFullLogout } from "../utils/sessionPersistence";
@@ -384,6 +384,7 @@ const DPMDStaffLayout = () => {
 		{ path: "/dpmd/jadwal-kegiatan", label: "Kegiatan", icon: FiCalendar },
 		{ path: "/dpmd/perjadin", label: "Perjadin", icon: FiBriefcase },
 		{ path: "/dpmd/disposisi", label: "Disposisi", icon: FiMail },
+		{ path: "/dpmd/video-meeting", label: "Video Meeting", icon: FiVideo },
 	];
 
 	// Mobile bottom nav - simplified 3 items with Bidang as main center button

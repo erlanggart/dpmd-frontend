@@ -1,0 +1,806 @@
+/**
+ * Video Meeting Page
+ * Main video conferencing room with WebRTC via mediasoup
+ */
+
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import {
+  Mic, MicOff, Video, VideoOff, Monitor, MonitorOff, 
+  MessageSquare, Users, PhoneOff, Send, Copy, X, Loader2
+} from 'lucide-react';
+import toast from 'react-hot-toast';
+import { io } from 'socket.io-client';
+import api from '../../api';
+
+const API_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:3001';
+
+const VideoMeetingPage = () => {
+  const { roomId } = useParams();
+  const navigate = useNavigate();
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  
+  // State
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [meeting, setMeeting] = useState(null);
+  const [connected, setConnected] = useState(false);
+  const [participants, setParticipants] = useState([]);
+  const [myPeerId, setMyPeerId] = useState(null);
+  const [meetingSettings, setMeetingSettings] = useState(null);
+  
+  // Media state
+  const [localStream, setLocalStream] = useState(null);
+  const [isMuted, setIsMuted] = useState(false);
+  const [isVideoOff, setIsVideoOff] = useState(false);
+  const [isScreenSharing, setIsScreenSharing] = useState(false);
+  
+  // UI state
+  const [chatOpen, setChatOpen] = useState(false);
+  const [participantsOpen, setParticipantsOpen] = useState(false);
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
+  const [endingMeeting, setEndingMeeting] = useState(false);
+  
+  // Refs
+  const localVideoRef = useRef(null);
+  const socketRef = useRef(null);
+  const remoteVideosRef = useRef({});
+
+  // Sync video ref with stream - retry until ref is available
+  useEffect(() => {
+    if (localStream) {
+      const setVideoSource = () => {
+        if (localVideoRef.current) {
+          console.log('Setting localVideoRef.srcObject');
+          localVideoRef.current.srcObject = localStream;
+          return true;
+        }
+        return false;
+      };
+      
+      // Try immediately
+      if (!setVideoSource()) {
+        // If ref not ready, retry after render
+        const interval = setInterval(() => {
+          if (setVideoSource()) {
+            clearInterval(interval);
+          }
+        }, 100);
+        
+        // Cleanup
+        return () => clearInterval(interval);
+      }
+    }
+  }, [localStream, connected, loading]);
+
+  // Initialize meeting
+  useEffect(() => {
+    const initMeeting = async () => {
+      try {
+        setLoading(true);
+        
+        // Fetch meeting info
+        const response = await api.get(`/video-meetings/room/${roomId}`);
+        if (!response.data.success) {
+          setError('Meeting tidak ditemukan');
+          return;
+        }
+        
+        setMeeting(response.data.data);
+        
+        // Initialize media
+        await initializeMedia();
+        
+        // Connect to socket
+        connectSocket();
+        
+      } catch (err) {
+        console.error('Error initializing meeting:', err);
+        setError(err.response?.data?.message || err.message || 'Gagal memuat meeting');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initMeeting();
+
+    return () => {
+      cleanup();
+    };
+  }, [roomId]);
+
+  const initializeMedia = async () => {
+    try {
+      console.log('Requesting camera and microphone access...');
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true,
+      });
+      console.log('Got media stream:', stream.getTracks().map(t => t.kind));
+      
+      setLocalStream(stream);
+      
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = stream;
+      }
+    } catch (err) {
+      console.error('Error accessing media devices:', err);
+      toast.error('Gagal mengakses kamera/mikrofon');
+      
+      // Try audio only
+      try {
+        const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        setLocalStream(audioStream);
+        setIsVideoOff(true);
+      } catch (audioErr) {
+        console.error('Error accessing audio:', audioErr);
+      }
+    }
+  };
+
+  const connectSocket = () => {
+    // Get token from authSession or expressToken
+    let token = localStorage.getItem('expressToken');
+    if (!token) {
+      // Fallback: try to get from authSession
+      const authSession = localStorage.getItem('authSession');
+      if (authSession) {
+        try {
+          const session = JSON.parse(authSession);
+          token = session.token;
+        } catch (e) {
+          console.error('Error parsing authSession:', e);
+        }
+      }
+    }
+    
+    console.log('Connecting socket with token:', token ? 'present' : 'missing');
+    console.log('Current user from localStorage:', user);
+    
+    socketRef.current = io(API_URL, {
+      auth: { token },
+      transports: ['websocket'],
+    });
+
+    socketRef.current.on('connect', () => {
+      console.log('Socket connected');
+      
+      // Reset participants before joining
+      setParticipants([]);
+      
+      // Join the room with callback
+      socketRef.current.emit('join-room', {
+        roomId,
+      }, (response) => {
+        console.log('Join room response:', response);
+        
+        if (response.error) {
+          toast.error(response.error);
+          return;
+        }
+        
+        if (response.success) {
+          setConnected(true);
+          
+          // Save our peer ID for filtering
+          if (response.peerId) {
+            setMyPeerId(response.peerId);
+            console.log('My peer ID:', response.peerId);
+          }
+          
+          // Save meeting settings (includes isHost)
+          if (response.meetingSettings) {
+            console.log('Meeting settings received:', response.meetingSettings);
+            console.log('Am I the host?', response.meetingSettings.isHost);
+            setMeetingSettings(response.meetingSettings);
+          }
+          
+          // Set existing peers from the room (excluding self)
+          if (response.existingPeers && response.existingPeers.length > 0) {
+            const myId = response.peerId || String(user.id);
+            const filteredPeers = response.existingPeers.filter(
+              p => p.oduserId !== myId && p.oduserId !== String(user.id)
+            );
+            console.log('Existing peers in room (after filter):', filteredPeers);
+            setParticipants(filteredPeers);
+          }
+          
+          toast.success('Berhasil bergabung ke meeting');
+        }
+      });
+    });
+
+    socketRef.current.on('connect_error', (error) => {
+      console.error('Socket connection error:', error);
+      console.error('Error message:', error.message);
+      
+      // If token invalid/expired, redirect to login
+      if (error.message.includes('Token invalid') || error.message.includes('expired')) {
+        toast.error('Sesi telah berakhir. Silakan login ulang.');
+        localStorage.removeItem('token');
+        navigate('/login');
+        return;
+      }
+      
+      toast.error('Gagal terhubung ke server: ' + error.message);
+    });
+
+    socketRef.current.on('peer-joined', (data) => {
+      console.log('Peer joined:', data);
+      // Ignore if it's ourselves (shouldn't happen, but just in case)
+      if (data.peerId === String(user.id)) return;
+      
+      setParticipants((prev) => {
+        // Avoid duplicates
+        if (prev.some(p => p.oduserId === data.peerId)) return prev;
+        return [...prev, { oduserId: data.peerId, userName: data.name }];
+      });
+      toast.success(`${data.name} bergabung`);
+    });
+
+    socketRef.current.on('peer-left', (data) => {
+      console.log('Peer left:', data);
+      setParticipants((prev) => prev.filter((p) => p.oduserId !== data.peerId));
+      toast(`${data.userName} keluar`, { icon: '👋' });
+      
+      // Remove remote video
+      if (remoteVideosRef.current[data.peerId]) {
+        delete remoteVideosRef.current[data.peerId];
+      }
+    });
+
+    socketRef.current.on('chat-message', (message) => {
+      setMessages((prev) => [...prev, message]);
+      if (!chatOpen) {
+        setUnreadCount((prev) => prev + 1);
+      }
+    });
+
+    socketRef.current.on('error', (error) => {
+      console.error('Socket error:', error);
+      toast.error(error.message || 'Terjadi kesalahan koneksi');
+    });
+
+    socketRef.current.on('disconnect', () => {
+      console.log('Socket disconnected');
+      setConnected(false);
+    });
+
+    // Handle meeting ended by host
+    socketRef.current.on('meeting-ended', (data) => {
+      console.log('Meeting ended:', data);
+      toast(`Meeting telah diakhiri oleh ${data.endedBy}`, { icon: '📢' });
+      cleanup();
+      navigate('/sekretariat/video-meeting');
+    });
+  };
+
+  const cleanup = () => {
+    // Stop local stream
+    if (localStream) {
+      localStream.getTracks().forEach((track) => track.stop());
+    }
+    
+    // Disconnect socket
+    if (socketRef.current) {
+      socketRef.current.emit('leave-room', { roomId });
+      socketRef.current.disconnect();
+    }
+  };
+
+  const toggleMute = () => {
+    if (localStream) {
+      const audioTrack = localStream.getAudioTracks()[0];
+      if (audioTrack) {
+        audioTrack.enabled = !audioTrack.enabled;
+        setIsMuted(!audioTrack.enabled);
+        
+        socketRef.current?.emit('media-state-change', {
+          roomId,
+          isMuted: !audioTrack.enabled,
+          isVideoOff,
+        });
+      }
+    }
+  };
+
+  const toggleVideo = () => {
+    if (localStream) {
+      const videoTrack = localStream.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.enabled = !videoTrack.enabled;
+        setIsVideoOff(!videoTrack.enabled);
+        
+        socketRef.current?.emit('media-state-change', {
+          roomId,
+          isMuted,
+          isVideoOff: !videoTrack.enabled,
+        });
+      }
+    }
+  };
+
+  const toggleScreenShare = async () => {
+    if (isScreenSharing) {
+      // Stop screen share
+      if (localStream) {
+        const videoTrack = localStream.getVideoTracks()[0];
+        if (videoTrack) {
+          videoTrack.stop();
+        }
+      }
+      
+      // Get camera again
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        const newVideoTrack = stream.getVideoTracks()[0];
+        
+        if (localStream) {
+          localStream.removeTrack(localStream.getVideoTracks()[0]);
+          localStream.addTrack(newVideoTrack);
+        }
+        
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = localStream;
+        }
+        
+        setIsScreenSharing(false);
+      } catch (err) {
+        console.error('Error switching back to camera:', err);
+      }
+    } else {
+      // Start screen share
+      try {
+        const screenStream = await navigator.mediaDevices.getDisplayMedia({
+          video: true,
+          audio: true,
+        });
+        
+        const screenTrack = screenStream.getVideoTracks()[0];
+        
+        // Replace video track
+        if (localStream) {
+          const oldVideoTrack = localStream.getVideoTracks()[0];
+          if (oldVideoTrack) {
+            oldVideoTrack.stop();
+            localStream.removeTrack(oldVideoTrack);
+          }
+          localStream.addTrack(screenTrack);
+        }
+        
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = localStream;
+        }
+        
+        // Handle screen share stop from browser
+        screenTrack.onended = () => {
+          toggleScreenShare();
+        };
+        
+        setIsScreenSharing(true);
+        toast.success('Screen sharing aktif');
+      } catch (err) {
+        console.error('Error starting screen share:', err);
+        if (err.name !== 'NotAllowedError') {
+          toast.error('Gagal memulai screen share');
+        }
+      }
+    }
+  };
+
+  const sendMessage = () => {
+    if (!newMessage.trim() || !socketRef.current) return;
+    
+    socketRef.current.emit('chat-message', {
+      roomId,
+      message: newMessage.trim(),
+      userName: user.nama || user.username,
+    });
+    
+    setNewMessage('');
+  };
+
+  const handleLeave = () => {
+    cleanup();
+    navigate('/sekretariat/video-meeting');
+  };
+
+  const handleEndMeeting = () => {
+    if (!socketRef.current) {
+      console.error('Cannot end meeting: socket not connected');
+      toast.error('Tidak dapat mengakhiri meeting: tidak terhubung');
+      return;
+    }
+    
+    console.log('Attempting to end meeting...');
+    console.log('Socket connected:', socketRef.current.connected);
+    console.log('Current roomId:', roomId);
+    
+    setEndingMeeting(true);
+    
+    // Set timeout in case callback never fires
+    const timeoutId = setTimeout(() => {
+      console.error('End meeting timeout - no response received');
+      setEndingMeeting(false);
+      toast.error('Timeout mengakhiri meeting. Coba lagi.');
+    }, 10000);
+    
+    socketRef.current.emit('end-meeting', {}, (response) => {
+      clearTimeout(timeoutId);
+      console.log('End meeting response:', response);
+      setEndingMeeting(false);
+      if (response?.error) {
+        toast.error(response.error);
+        return;
+      }
+      
+      if (response?.success) {
+        toast.success('Meeting berhasil diakhiri');
+        cleanup();
+        navigate('/sekretariat/video-meeting');
+      }
+    });
+  };
+
+  const copyMeetingLink = () => {
+    // Use /join/ for public shareable link (guests can join without login)
+    const link = `${window.location.origin}/join/${roomId}`;
+    navigator.clipboard.writeText(link);
+    toast.success('Link meeting disalin - dapat dibagikan ke siapapun');
+  };
+
+  const openChat = () => {
+    setChatOpen(true);
+    setUnreadCount(0);
+  };
+
+  if (loading) {
+    return (
+      <div className="h-screen bg-gray-900 flex flex-col items-center justify-center gap-4">
+        <Loader2 className="w-10 h-10 animate-spin text-white" />
+        <p className="text-white">Memuat meeting...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="h-screen bg-gray-900 flex flex-col items-center justify-center gap-4">
+        <div className="bg-red-500/20 text-red-400 px-6 py-4 rounded-xl max-w-md text-center">
+          {error}
+        </div>
+        <button 
+          onClick={() => navigate(-1)}
+          className="px-6 py-2 bg-white text-gray-900 rounded-lg hover:bg-gray-100 transition-colors"
+        >
+          Kembali
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-screen bg-gray-900 flex flex-col">
+      {/* Header */}
+      <div className="px-4 py-3 flex items-center justify-between border-b border-white/10">
+        <div className="flex items-center gap-3">
+          <h1 className="text-white font-semibold text-lg">
+            {meeting?.title || 'Video Meeting'}
+          </h1>
+          <span className={`px-2 py-0.5 rounded-full text-xs ${connected ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>
+            {connected ? 'Terhubung' : 'Menghubungkan...'}
+          </span>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <span className="text-white/60 text-sm">Room: {roomId}</span>
+          <button
+            onClick={copyMeetingLink}
+            className="p-2 text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+            title="Salin link"
+          >
+            <Copy className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Video Grid */}
+      <div className="flex-1 p-4 overflow-auto">
+        <div className={`grid gap-4 h-full ${
+          participants.length > 1 
+            ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' 
+            : 'max-w-4xl mx-auto'
+        }`}>
+          {/* Local Video */}
+          <div className="relative bg-gray-800 rounded-xl overflow-hidden aspect-video">
+            <video
+              ref={localVideoRef}
+              autoPlay
+              muted
+              playsInline
+              className={`w-full h-full object-cover scale-x-[-1] ${isVideoOff ? 'hidden' : ''}`}
+            />
+            
+            {isVideoOff && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-20 h-20 bg-gray-700 rounded-full flex items-center justify-center text-white text-2xl font-semibold">
+                  {(user.nama || user.username || 'U')[0].toUpperCase()}
+                </div>
+              </div>
+            )}
+            
+            <div className="absolute bottom-2 left-2 flex items-center gap-2 bg-black/60 px-3 py-1.5 rounded-lg">
+              <span className="text-white text-sm">
+                {user.nama || user.username} (Anda)
+              </span>
+              {isMuted && <MicOff className="w-4 h-4 text-red-500" />}
+              {isScreenSharing && <Monitor className="w-4 h-4 text-green-500" />}
+            </div>
+          </div>
+
+          {/* Remote Videos */}
+          {participants.filter(p => p.oduserId !== myPeerId && p.oduserId !== String(user.id)).map((participant) => (
+            <div
+              key={participant.oduserId}
+              className="relative bg-gray-800 rounded-xl overflow-hidden aspect-video flex items-center justify-center"
+            >
+              <div className="w-20 h-20 bg-gray-700 rounded-full flex items-center justify-center text-white text-2xl font-semibold">
+                {(participant.userName || 'U')[0].toUpperCase()}
+              </div>
+              
+              <div className="absolute bottom-2 left-2 bg-black/60 px-3 py-1.5 rounded-lg">
+                <span className="text-white text-sm">{participant.userName}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Controls */}
+      <div className="px-4 py-4 flex items-center justify-center gap-2 border-t border-white/10">
+        <button
+          onClick={toggleMute}
+          className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
+            isMuted ? 'bg-red-500 hover:bg-red-600' : 'bg-white/10 hover:bg-white/20'
+          } text-white`}
+          title={isMuted ? 'Nyalakan Mikrofon' : 'Matikan Mikrofon'}
+        >
+          {isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+        </button>
+
+        <button
+          onClick={toggleVideo}
+          className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
+            isVideoOff ? 'bg-red-500 hover:bg-red-600' : 'bg-white/10 hover:bg-white/20'
+          } text-white`}
+          title={isVideoOff ? 'Nyalakan Kamera' : 'Matikan Kamera'}
+        >
+          {isVideoOff ? <VideoOff className="w-5 h-5" /> : <Video className="w-5 h-5" />}
+        </button>
+
+        <button
+          onClick={toggleScreenShare}
+          className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
+            isScreenSharing ? 'bg-green-500 hover:bg-green-600' : 'bg-white/10 hover:bg-white/20'
+          } text-white`}
+          title={isScreenSharing ? 'Hentikan Screen Share' : 'Screen Share'}
+        >
+          {isScreenSharing ? <MonitorOff className="w-5 h-5" /> : <Monitor className="w-5 h-5" />}
+        </button>
+
+        <button
+          onClick={openChat}
+          className="w-12 h-12 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 text-white relative transition-colors"
+          title="Chat"
+        >
+          <MessageSquare className="w-5 h-5" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-xs flex items-center justify-center">
+              {unreadCount}
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => setParticipantsOpen(true)}
+          className="w-12 h-12 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 text-white relative transition-colors"
+          title="Peserta"
+        >
+          <Users className="w-5 h-5" />
+          <span className="absolute -top-1 -right-1 w-5 h-5 bg-blue-500 rounded-full text-xs flex items-center justify-center">
+            {participants.filter(p => p.oduserId !== myPeerId && p.oduserId !== String(user.id)).length + 1}
+          </span>
+        </button>
+
+        <button
+          onClick={() => setLeaveDialogOpen(true)}
+          className="w-12 h-12 rounded-full flex items-center justify-center bg-red-500 hover:bg-red-600 text-white ml-4 transition-colors"
+          title="Tinggalkan Meeting"
+        >
+          <PhoneOff className="w-5 h-5" />
+        </button>
+      </div>
+
+      {/* Chat Sidebar */}
+      {chatOpen && (
+        <div className="fixed inset-y-0 right-0 w-80 bg-gray-800 shadow-2xl flex flex-col z-50">
+          <div className="p-4 border-b border-white/10 flex justify-between items-center">
+            <h2 className="text-white font-semibold">Chat</h2>
+            <button
+              onClick={() => setChatOpen(false)}
+              className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+            >
+              <X className="w-5 h-5 text-white" />
+            </button>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {messages.length === 0 ? (
+              <p className="text-white/40 text-center text-sm">Belum ada pesan</p>
+            ) : (
+              messages.map((msg, index) => (
+                <div 
+                  key={index}
+                  className={`flex flex-col ${msg.oduserId === user.id ? 'items-end' : 'items-start'}`}
+                >
+                  <span className="text-white/40 text-xs mb-1">{msg.userName}</span>
+                  <div className={`px-4 py-2 rounded-xl max-w-[80%] ${
+                    msg.oduserId === user.id 
+                      ? 'bg-blue-500 text-white' 
+                      : 'bg-white/10 text-white'
+                  }`}>
+                    <p className="text-sm">{msg.message}</p>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+          
+          <div className="p-4 border-t border-white/10">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                placeholder="Ketik pesan..."
+                className="flex-1 px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:border-blue-500"
+              />
+              <button
+                onClick={sendMessage}
+                className="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+              >
+                <Send className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Participants Sidebar */}
+      {participantsOpen && (
+        <div className="fixed inset-y-0 right-0 w-72 bg-gray-800 shadow-2xl flex flex-col z-50">
+          <div className="p-4 border-b border-white/10 flex justify-between items-center">
+            <h2 className="text-white font-semibold">Peserta ({participants.filter(p => p.oduserId !== myPeerId && p.oduserId !== String(user.id)).length + 1})</h2>
+            <button
+              onClick={() => setParticipantsOpen(false)}
+              className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+            >
+              <X className="w-5 h-5 text-white" />
+            </button>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto">
+            {/* Local user */}
+            <div className="p-4 flex items-center gap-3 border-b border-white/5">
+              <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-semibold">
+                {(user.nama || user.username || 'U')[0].toUpperCase()}
+              </div>
+              <div>
+                <p className="text-white text-sm">{user.nama || user.username} (Anda)</p>
+                <p className="text-white/40 text-xs">{meetingSettings?.isHost ? 'Host' : 'Peserta'}</p>
+              </div>
+            </div>
+            
+            {/* Remote participants */}
+            {participants.filter(p => p.oduserId !== myPeerId && p.oduserId !== String(user.id)).map((participant) => (
+              <div key={participant.oduserId} className="p-4 flex items-center gap-3 border-b border-white/5">
+                <div className="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center text-white font-semibold">
+                  {(participant.userName || 'U')[0].toUpperCase()}
+                </div>
+                <p className="text-white text-sm">{participant.userName}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Leave Confirmation Dialog */}
+      {leaveDialogOpen && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+            {/* If host is alone, show simplified "End Meeting" dialog */}
+            {meetingSettings?.isHost && participants.filter(p => p.oduserId !== myPeerId && p.oduserId !== String(user.id)).length === 0 ? (
+              <>
+                <h2 className="text-xl font-bold text-gray-800 mb-2">Akhiri Meeting?</h2>
+                <p className="text-gray-600 mb-6">
+                  Anda adalah satu-satunya peserta. Meeting akan diakhiri.
+                </p>
+                <div className="flex justify-end gap-3">
+                  <button
+                    onClick={() => setLeaveDialogOpen(false)}
+                    className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    onClick={handleEndMeeting}
+                    disabled={endingMeeting}
+                    className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2 disabled:opacity-50"
+                  >
+                    {endingMeeting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Mengakhiri...
+                      </>
+                    ) : (
+                      'Akhiri Meeting'
+                    )}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h2 className="text-xl font-bold text-gray-800 mb-2">
+                  {meetingSettings?.isHost ? 'Akhiri atau Tinggalkan Meeting?' : 'Tinggalkan Meeting?'}
+                </h2>
+                <p className="text-gray-600 mb-6">
+                  {meetingSettings?.isHost 
+                    ? 'Sebagai host, Anda dapat mengakhiri meeting untuk semua peserta atau hanya meninggalkan meeting.'
+                    : 'Anda yakin ingin meninggalkan meeting ini?'}
+                </p>
+                <div className="flex flex-col gap-3">
+                  {meetingSettings?.isHost && (
+                    <button
+                      onClick={handleEndMeeting}
+                      disabled={endingMeeting}
+                      className="w-full px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {endingMeeting ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Mengakhiri...
+                        </>
+                      ) : (
+                        'Akhiri Meeting untuk Semua'
+                      )}
+                    </button>
+                  )}
+                  <div className="flex justify-end gap-3">
+                    <button
+                      onClick={() => setLeaveDialogOpen(false)}
+                      className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                      Batal
+                    </button>
+                    <button
+                      onClick={handleLeave}
+                      className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                    >
+                      {meetingSettings?.isHost ? 'Tinggalkan Saja' : 'Tinggalkan'}
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default VideoMeetingPage;

@@ -139,6 +139,15 @@ const KelolaNotifikasiPage = lazy(
 const InformasiManagement = lazy(
   () => import("./pages/sekretariat/InformasiManagement"),
 );
+const VideoMeetingListPage = lazy(
+  () => import("./pages/video-meeting/VideoMeetingListPage"),
+);
+const VideoMeetingPage = lazy(
+  () => import("./pages/video-meeting/VideoMeetingPage"),
+);
+const PublicMeetingPage = lazy(
+  () => import("./pages/video-meeting/PublicMeetingPage"),
+);
 const PerjadinMain = lazy(
   () => import("./pages/pegawai/perjadin/PerjadinMain"),
 );
@@ -670,6 +679,9 @@ function App() {
                   element={<CoreDashboardPublic />}
                 />
                 <Route path="/login" element={<LoginPage />} />
+                
+                {/* Public Meeting Join - No auth required */}
+                <Route path="/join/:roomId" element={<PublicMeetingPage />} />
 
 
                 {/* Rute Desa - Exclusive untuk role: desa */}
@@ -750,6 +762,7 @@ function App() {
                   <Route path="perjadin" element={<PerjadinMain />} />
                   <Route path="perjadin/detail/:id" element={<PerjadinDetail />} />
                   <Route path="informasi" element={<InformasiPage />} />
+                  <Route path="video-meeting" element={<VideoMeetingListPage />} />
                 </Route>
                 
                 {/* Rute Bidang - Accessible by pegawai/kepala_bidang/ketua_tim (their own bidang) & kepala_dinas/superadmin (all) */}
@@ -902,7 +915,29 @@ function App() {
                   />
                   <Route path="notifikasi" element={<KelolaNotifikasiPage />} />
                   <Route path="informasi" element={<InformasiManagement />} />
+                  <Route path="video-meeting" element={<VideoMeetingListPage />} />
                 </Route>
+
+                {/* Video Meeting Room - Auth Only */}
+                <Route
+                  path="/meet/:roomId"
+                  element={
+                    <RoleProtectedRoute
+                      allowedRoles={[
+                        "pegawai",
+                        "kepala_bidang",
+                        "ketua_tim",
+                        "kepala_dinas",
+                        "superadmin",
+                        "sekretaris_dinas",
+                        "kecamatan",
+                        "desa",
+                      ]}
+                    >
+                      <VideoMeetingPage />
+                    </RoleProtectedRoute>
+                  }
+                />
 
                 {/* Rute Superadmin - Full System Control */}
                 <Route
