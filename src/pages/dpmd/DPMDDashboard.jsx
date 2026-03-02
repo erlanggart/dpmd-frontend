@@ -124,6 +124,7 @@ const DPMDDashboard = () => {
   const [statistik, setStatistik] = useState(null);
   const [recentDisposisi, setRecentDisposisi] = useState([]);
   const [pegawaiData, setPegawaiData] = useState(null);
+  const [sekretariatData, setSekretariatData] = useState(null);
   const [jadwalStats, setJadwalStats] = useState({
     totalJadwal: 0,
     jadwalHariIni: 0,
@@ -250,6 +251,24 @@ const DPMDDashboard = () => {
         );
       }
 
+      // Fetch sekretariat info for all roles (individual endpoints)
+      promises.push(
+        Promise.all([
+          api.get('/disposisi/statistik').catch(() => ({ data: { data: null } })),
+          api.get('/perjadin/dashboard').catch(() => ({ data: { data: null } })),
+          api.get('/pegawai').catch(() => ({ data: { data: [] } }))
+        ]).then(([disposisiRes, perjadinRes, pegawaiRes]) => ({
+          type: 'sekretariat',
+          data: {
+            stats: {
+              disposisi_pending: disposisiRes.data?.data?.masuk?.pending ?? 0,
+              perjadin_bulan_ini: perjadinRes.data?.data?.bulan_ini ?? 0,
+              total_pegawai: Array.isArray(pegawaiRes.data?.data) ? pegawaiRes.data.data.length : 0
+            }
+          }
+        })).catch(() => ({ type: 'sekretariat', data: null }))
+      );
+
       // Await all promises
       const results = await Promise.all(promises);
 
@@ -265,6 +284,9 @@ const DPMDDashboard = () => {
             break;
           case 'pegawai':
             setPegawaiData(result.data);
+            break;
+          case 'sekretariat':
+            setSekretariatData(result.data);
             break;
           case 'jadwal':
             setJadwalStats(result.data.stats);
@@ -293,6 +315,12 @@ const DPMDDashboard = () => {
     // Common actions for all roles - using unified /dpmd paths
     const commonActions = [
       {
+        icon: BarChart3,
+        label: 'Dashboard',
+        color: 'purple',
+        onClick: () => navigate('/core-dashboard/dashboard')
+      },
+      {
         icon: Briefcase,
         label: 'Perjadin',
         color: config.primaryColor,
@@ -305,24 +333,16 @@ const DPMDDashboard = () => {
         onClick: () => navigate('/dpmd/jadwal-kegiatan')
       },
       {
-        icon: Info,
-        label: 'Informasi',
+        icon: Mail,
+        label: 'Disposisi',
         color: 'orange',
-        onClick: () => navigate('/dpmd/informasi')
+        onClick: () => navigate('/dpmd/disposisi')
       }
     ];
 
     // Role-specific actions
     if (role === 'kepala_dinas') {
-      return [
-        ...commonActions,
-        {
-          icon: BarChart3,
-          label: 'Statistik',
-          color: 'purple',
-          onClick: () => navigate('/core-dashboard/dashboard')
-        }
-      ];
+      return commonActions;
     }
 
     if (role === 'sekretaris_dinas' || role === 'kepala_bidang') {
@@ -826,28 +846,78 @@ const DPMDDashboard = () => {
           </>
         )}
 
-        {/* Activity Summary for all roles */}
+        {/* Informasi Bidang Sekretariat */}
         <div className="mb-5">
           <SectionHeader 
-            title="Aktivitas Terkini" 
-            subtitle="Update terbaru sistem"
-            icon={Activity}
+            title="Informasi Sekretariat" 
+            subtitle="Data terkini bidang sekretariat"
+            icon={Building2}
           />
           <div className="space-y-3">
-            <ActivityCard
-              icon={FileText}
-              title="Dashboard Aktif"
-              subtitle="Semua data loaded dengan sukses"
-              time="Baru saja"
-              status="success"
-            />
-            <ActivityCard
-              icon={Activity}
-              title="Sistem Berjalan Normal"
-              subtitle="Semua layanan aktif"
-              time="Live"
-              status="success"
-            />
+            {/* Disposisi Pending */}
+            <div 
+              onClick={() => navigate('/dpmd/disposisi')}
+              className="bg-white rounded-2xl p-4 border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all duration-200 cursor-pointer active:scale-[0.98]"
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-md">
+                  <Mail className="w-6 h-6 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-sm font-semibold text-gray-900">Disposisi Pending</h4>
+                  <p className="text-xs text-gray-500 mt-0.5">Surat masuk menunggu disposisi</p>
+                </div>
+                <div className="flex-shrink-0 text-right">
+                  <span className="text-2xl font-bold text-blue-600">
+                    {sekretariatData?.stats?.disposisi_pending ?? '-'}
+                  </span>
+                  <p className="text-[10px] text-gray-400">surat</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Perjadin Bulan Ini */}
+            <div 
+              onClick={() => navigate('/dpmd/perjadin')}
+              className="bg-white rounded-2xl p-4 border border-gray-200 hover:border-green-300 hover:shadow-md transition-all duration-200 cursor-pointer active:scale-[0.98]"
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center shadow-md">
+                  <Briefcase className="w-6 h-6 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-sm font-semibold text-gray-900">Perjalanan Dinas</h4>
+                  <p className="text-xs text-gray-500 mt-0.5">Kegiatan perjadin bulan ini</p>
+                </div>
+                <div className="flex-shrink-0 text-right">
+                  <span className="text-2xl font-bold text-green-600">
+                    {sekretariatData?.stats?.perjadin_bulan_ini ?? '-'}
+                  </span>
+                  <p className="text-[10px] text-gray-400">kegiatan</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Total Pegawai */}
+            <div 
+              className="bg-white rounded-2xl p-4 border border-gray-200 transition-all duration-200"
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center shadow-md">
+                  <Users className="w-6 h-6 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-sm font-semibold text-gray-900">Total Pegawai</h4>
+                  <p className="text-xs text-gray-500 mt-0.5">Jumlah pegawai aktif DPMD</p>
+                </div>
+                <div className="flex-shrink-0 text-right">
+                  <span className="text-2xl font-bold text-purple-600">
+                    {sekretariatData?.stats?.total_pegawai ?? '-'}
+                  </span>
+                  <p className="text-[10px] text-gray-400">orang</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 

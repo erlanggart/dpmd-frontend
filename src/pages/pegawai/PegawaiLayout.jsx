@@ -139,10 +139,8 @@ const PegawaiLayout = () => {
 	};
 
 	const bottomNavItems = [
-		{ path: "/pegawai/dashboard", label: "Dashboard", icon: FiHome },
-		{ path: "/core-dashboard/dashboard", label: "Statistik", icon: FiBarChart2 },
-		{ path: "/pegawai/jadwal-kegiatan", label: "Kegiatan", icon: FiCalendar },
-		{ path: "/pegawai/disposisi", label: "Disposisi", icon: FiMail },
+		{ path: "/pegawai/dashboard", label: "Home", icon: FiHome },
+		{ path: "/pegawai/jadwal-kegiatan", label: "Kegiatan", icon: FiCalendar, isMain: true },
 		{ path: "/pegawai/menu", label: "Menu", icon: FiMenu, action: () => setShowMenu(true) },
 	];
 
@@ -155,12 +153,36 @@ const PegawaiLayout = () => {
 
 			{/* Bottom Navigation - Orange Theme */}
 			<nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-orange-200 shadow-lg z-50">
-				<div className="max-w-lg mx-auto px-2">
-					<div className="flex items-center justify-around py-3">
+				<div className="max-w-lg mx-auto px-4">
+					<div className="flex items-end justify-around py-2">
 						{bottomNavItems.map((item, index) => {
-							const isActive = location.pathname === item.path;
+							const isActive = location.pathname === item.path || 
+								(item.path === '/pegawai/jadwal-kegiatan' && location.pathname.startsWith('/pegawai/jadwal'));
 							const Icon = item.icon;
 							
+							// Main button (Jadwal Kegiatan) - larger & elevated
+							if (item.isMain) {
+								return (
+									<button
+										key={index}
+										onClick={() => navigate(item.path)}
+										className="relative flex flex-col items-center -mt-5"
+									>
+										<div className={`flex items-center justify-center h-14 w-14 rounded-full shadow-lg transition-all duration-200 ${
+											isActive
+												? "bg-gradient-to-br from-orange-500 to-orange-700 text-white scale-110"
+												: "bg-gradient-to-br from-orange-400 to-orange-600 text-white hover:scale-105"
+										}`}>
+											<Icon className="h-7 w-7" />
+										</div>
+										<span className={`text-[11px] mt-1 font-semibold ${
+											isActive ? "text-orange-700" : "text-gray-500"
+										}`}>{item.label}</span>
+									</button>
+								);
+							}
+
+							// Regular nav items
 							return (
 								<button
 									key={index}
@@ -171,18 +193,16 @@ const PegawaiLayout = () => {
 											navigate(item.path);
 										}
 									}}
-								className={`relative flex items-center justify-center p-3 rounded-xl transition-all duration-200 ${
-									isActive 
-										? "text-orange-700 bg-orange-50 scale-110" 
-										: "text-gray-400 hover:text-orange-600 hover:bg-orange-50"
-								}`}
-							>
-								<Icon className="h-6 w-6" />
-								{item.badge > 0 && (
-									<span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
-										{item.badge > 99 ? '99+' : item.badge}
-									</span>
-								)}
+									className={`relative flex flex-col items-center justify-center px-4 py-1 rounded-xl transition-all duration-200 ${
+										isActive 
+											? "text-orange-700" 
+											: "text-gray-400 hover:text-orange-600"
+									}`}
+								>
+									<Icon className="h-6 w-6" />
+									<span className={`text-[11px] mt-1 font-medium ${
+										isActive ? "text-orange-700" : "text-gray-400"
+									}`}>{item.label}</span>
 								</button>
 							);
 						})}
