@@ -386,9 +386,16 @@ const DPMDStaffLayout = () => {
 		{ path: "/dpmd/disposisi", label: "Disposisi", icon: FiMail },
 	];
 
-	// Mobile bottom nav includes menu button
+	// Mobile bottom nav - simplified 3 items with Bidang as main center button
+	const userBidang = BIDANG_ROUTES[user.bidang_id];
 	const bottomNavItems = [
-		...navItems,
+		{ path: "/dpmd/dashboard", label: "Home", icon: FiHome },
+		{ 
+			path: userBidang?.path || "/dpmd/jadwal-kegiatan", 
+			label: userBidang?.name || "Bidang", 
+			icon: userBidang?.icon || FiCalendar, 
+			isMain: true 
+		},
 		{ path: `${config.basePath}/menu`, label: "Menu", icon: FiMenu, action: () => setShowMenu(true) },
 	];
 
@@ -684,12 +691,36 @@ const DPMDStaffLayout = () => {
 			{/* Bottom Navigation - Mobile Only */}
 			{!isDesktop && (
 				<nav className={`fixed bottom-0 left-0 right-0 bg-white ${theme.borderColor} border-t shadow-lg z-50`}>
-					<div className="max-w-lg mx-auto px-2">
-						<div className="flex items-center justify-around py-3">
+					<div className="max-w-lg mx-auto px-4">
+						<div className="flex items-end justify-around py-2">
 							{bottomNavItems.map((item, index) => {
-								const isActive = location.pathname === item.path;
+								const isActive = location.pathname === item.path ||
+									(item.isMain && location.pathname.startsWith(item.path));
 								const Icon = item.icon;
 								
+								// Main button (Jadwal Kegiatan) - larger & elevated
+								if (item.isMain) {
+									return (
+										<button
+											key={index}
+											onClick={() => navigate(item.path)}
+											className="relative flex flex-col items-center -mt-5"
+										>
+											<div className={`flex items-center justify-center h-14 w-14 rounded-full shadow-lg transition-all duration-200 ${
+												isActive
+													? `bg-gradient-to-br ${theme.gradientFrom} ${theme.gradientTo} text-white scale-110`
+													: `bg-gradient-to-br ${theme.gradientFrom} ${theme.gradientTo} text-white hover:scale-105`
+											}`}>
+												<Icon className="h-7 w-7" />
+											</div>
+											<span className={`text-[11px] mt-1 font-semibold ${
+												isActive ? theme.activeText : 'text-gray-500'
+											}`}>{item.label}</span>
+										</button>
+									);
+								}
+
+								// Regular nav items
 								return (
 									<button
 										key={index}
@@ -700,18 +731,16 @@ const DPMDStaffLayout = () => {
 												navigate(item.path);
 											}
 										}}
-										className={`relative flex items-center justify-center p-3 rounded-xl transition-all duration-200 ${
+										className={`relative flex flex-col items-center justify-center px-4 py-1 rounded-xl transition-all duration-200 ${
 											isActive 
-												? `${theme.activeText} ${theme.activeBg} scale-110` 
-												: `text-gray-400 ${theme.hoverText} ${theme.hoverBg}`
+												? theme.activeText 
+												: `text-gray-400 ${theme.hoverText}`
 										}`}
 									>
 										<Icon className="h-6 w-6" />
-										{item.badge > 0 && (
-											<span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
-												{item.badge > 99 ? '99+' : item.badge}
-											</span>
-										)}
+										<span className={`text-[11px] mt-1 font-medium ${
+											isActive ? theme.activeText : 'text-gray-400'
+										}`}>{item.label}</span>
 									</button>
 								);
 							})}
