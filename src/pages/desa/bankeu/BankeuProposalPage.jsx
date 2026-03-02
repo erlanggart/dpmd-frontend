@@ -1945,11 +1945,13 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
   
   // Dari Kecamatan: status masih revision/rejected DAN kecamatan_status ada
   // TIDAK exclude jika ada dinas_status, karena bisa reject bersamaan
+  // NOTE: Untuk proposal dari Kecamatan, submitted_to_dinas_at TETAP terisi karena sudah lewat Dinas
+  // Deteksi menggunakan submitted_to_kecamatan = false (sudah dikembalikan ke Desa)
   const fromKecamatanRevision = proposals.filter(p => 
     (p.status === 'revision' || p.status === 'rejected') &&
     (p.kecamatan_status === 'rejected' || p.kecamatan_status === 'revision') &&
     !p.dpmd_status && // HANYA exclude jika dari DPMD (prioritas lebih tinggi)
-    !p.submitted_to_dinas_at
+    !p.submitted_to_kecamatan // Sudah dikembalikan ke Desa (bukan submitted_to_dinas_at!)
   );
   
   // Dari Dinas: status masih revision/rejected DAN dinas_status ada DAN TIDAK ada kecamatan/dpmd rejection
@@ -1962,17 +1964,40 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
   );
   
   // Semua revisi belum upload
-  const fromAnyLevelRevisionNotUploaded = proposals.filter(p => 
-    (p.status === 'revision' || p.status === 'rejected') &&
-    !p.submitted_to_dinas_at
-  );
+  // NOTE: Untuk proposal dari Kecamatan, gunakan submitted_to_kecamatan=false
+  const fromAnyLevelRevisionNotUploaded = proposals.filter(p => {
+    const isRevision = p.status === 'revision' || p.status === 'rejected';
+    const isFromKecamatan = (p.kecamatan_status === 'rejected' || p.kecamatan_status === 'revision') && !p.dpmd_status;
+    const isFromDinasOrDPMD = (p.dinas_status === 'rejected' || p.dinas_status === 'revision') || p.dpmd_status;
+    
+    if (isFromKecamatan && !isFromDinasOrDPMD) {
+      // Dari Kecamatan: cek submitted_to_kecamatan=false
+      return isRevision && !p.submitted_to_kecamatan;
+    } else {
+      // Dari Dinas/DPMD: cek submitted_to_dinas_at=null
+      return isRevision && !p.submitted_to_dinas_at;
+    }
+  });
   
   // Revisi yang SUDAH UPLOAD ULANG: status=pending (siap dikirim ulang)
-  const fromRevisionUploaded = proposals.filter(p => 
-    p.status === 'pending' &&
-    !p.submitted_to_dinas_at &&
-    (p.dinas_status || p.kecamatan_status || p.dpmd_status) // Pernah direview (ini yang bedakan dari proposal baru)
-  );
+  // NOTE: Untuk proposal dari Kecamatan, submitted_to_dinas_at TETAP terisi
+  // Deteksi menggunakan: punya kecamatan_status revision tapi submitted_to_kecamatan=false
+  const fromRevisionUploaded = proposals.filter(p => {
+    const isPending = p.status === 'pending';
+    const hasReviewStatus = p.dinas_status || p.kecamatan_status || p.dpmd_status;
+    
+    // Cek asal revisi untuk tentukan logic yang benar
+    const isFromKecamatan = (p.kecamatan_status === 'rejected' || p.kecamatan_status === 'revision') && !p.dpmd_status;
+    const isFromDinasOrDPMD = (p.dinas_status === 'rejected' || p.dinas_status === 'revision') || p.dpmd_status;
+    
+    if (isFromKecamatan && !isFromDinasOrDPMD) {
+      // Dari Kecamatan: cek submitted_to_kecamatan=false (belum dikirim ulang ke Kec)
+      return isPending && !p.submitted_to_kecamatan && hasReviewStatus;
+    } else {
+      // Dari Dinas/DPMD: cek submitted_to_dinas_at=null (belum dikirim ulang ke Dinas)
+      return isPending && !p.submitted_to_dinas_at && hasReviewStatus;
+    }
+  });
   
   // Count untuk tombol submit
   // FIXED: unsendToKecamatanCount sekarang sudah tidak perlu filter lagi karena unsendProposals sudah filter proposal baru
