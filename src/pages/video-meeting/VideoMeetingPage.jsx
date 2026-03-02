@@ -48,6 +48,7 @@ const VideoMeetingPage = () => {
   const localVideoRef = useRef(null);
   const socketRef = useRef(null);
   const remoteVideosRef = useRef({});
+  const isEndingMeetingRef = useRef(false);
 
   // Sync video ref with stream - retry until ref is available
   useEffect(() => {
@@ -272,6 +273,11 @@ const VideoMeetingPage = () => {
     // Handle meeting ended by host
     socketRef.current.on('meeting-ended', (data) => {
       console.log('Meeting ended:', data);
+      // Skip if we're the one ending the meeting (callback will handle it)
+      if (isEndingMeetingRef.current) {
+        console.log('Ignoring meeting-ended event - we are ending the meeting');
+        return;
+      }
       toast(`Meeting telah diakhiri oleh ${data.endedBy}`, { icon: '📢' });
       cleanup();
       navigate('/sekretariat/video-meeting');
@@ -420,11 +426,13 @@ const VideoMeetingPage = () => {
     console.log('Current roomId:', roomId);
     
     setEndingMeeting(true);
+    isEndingMeetingRef.current = true; // Flag to ignore meeting-ended event
     
     // Set timeout in case callback never fires
     const timeoutId = setTimeout(() => {
       console.error('End meeting timeout - no response received');
       setEndingMeeting(false);
+      isEndingMeetingRef.current = false;
       toast.error('Timeout mengakhiri meeting. Coba lagi.');
     }, 10000);
     
@@ -432,6 +440,7 @@ const VideoMeetingPage = () => {
       clearTimeout(timeoutId);
       console.log('End meeting response:', response);
       setEndingMeeting(false);
+      isEndingMeetingRef.current = false;
       if (response?.error) {
         toast.error(response.error);
         return;
