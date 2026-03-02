@@ -29,7 +29,7 @@ self.addEventListener('push', async (event) => {
 				data: data || {},
 				tag: data?.id || 'notification-' + Date.now(),
 				requireInteraction: true,
-				renotify: true,
+				renotify: false,
 				silent: false,
 				actions: notificationData.actions || []
 			}).then(() => {

@@ -136,6 +136,9 @@ const JadwalKegiatanPage = lazy(
 const KelolaNotifikasiPage = lazy(
   () => import("./pages/bidang/sekretariat/KelolaNotifikasiPage"),
 );
+const InformasiManagement = lazy(
+  () => import("./pages/sekretariat/InformasiManagement"),
+);
 const PerjadinMain = lazy(
   () => import("./pages/pegawai/perjadin/PerjadinMain"),
 );
@@ -898,6 +901,7 @@ function App() {
                     element={<PerjadinDetail />}
                   />
                   <Route path="notifikasi" element={<KelolaNotifikasiPage />} />
+                  <Route path="informasi" element={<InformasiManagement />} />
                 </Route>
 
                 {/* Rute Superadmin - Full System Control */}

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiUser, FiMail, FiShield, FiEdit2, FiSave, FiX, FiCamera, FiArrowLeft } from 'react-icons/fi';
+import { FiUser, FiMail, FiShield, FiEdit2, FiSave, FiX, FiCamera, FiArrowLeft, FiLogOut } from 'react-icons/fi';
 import api from '../../services/api';
 import { toast } from 'react-hot-toast';
 import { getAvatarUrl } from '../../utils/avatarUtils';
@@ -16,6 +16,13 @@ const ProfilePage = () => {
     email: user.email || '',
   });
   const [avatarUrl, setAvatarUrl] = useState(getAvatarUrl(user.avatar));
+
+  const handleLogout = () => {
+    localStorage.removeItem('expressToken');
+    localStorage.removeItem('user');
+    toast.success('Berhasil keluar');
+    navigate('/');
+  };
 
   const roleLabels = {
     kepala_dinas: 'Kepala Dinas',
@@ -387,6 +394,15 @@ const ProfilePage = () => {
             )}
           </div>
         </div>
+
+        {/* Logout Button */}
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center justify-center gap-3 px-4 py-4 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 rounded-2xl font-semibold transition-all mb-6"
+        >
+          <FiLogOut className="h-5 w-5" />
+          Keluar dari Sistem
+        </button>
       </div>
     </div>
   );

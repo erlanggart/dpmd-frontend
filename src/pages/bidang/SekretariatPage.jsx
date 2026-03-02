@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileText, Mail, Plane, Users, Activity, TrendingUp, ArrowLeft, Clock, Info, Zap, ChevronRight, Building, BarChart, Calendar, Bell } from 'lucide-react';
+import { FileText, Mail, Plane, Users, Activity, TrendingUp, ArrowLeft, Clock, Zap, ChevronRight, Building, BarChart, Calendar, Bell, Image } from 'lucide-react';
 import api from '../../api';
 import toast from 'react-hot-toast';
 
@@ -122,105 +122,21 @@ const SekretariatPage = () => {
 						</div>
 						<div>
 							<h1 className="text-2xl font-bold">Bidang Sekretariat</h1>
-							<p className="text-purple-100 mt-1">Dashboard & Aktivitas Terkini</p>
+							<p className="text-purple-100 mt-1">Kelola disposisi surat, perjalanan dinas, dan kepegawaian</p>
 						</div>
-					</div>
-					
-					{/* Tab Navigation */}
-					<div className="flex gap-2 mt-6">
-						<button
-							onClick={() => setActiveTab('overview')}
-							className={`px-6 py-2.5 rounded-xl font-medium transition-all ${
-								activeTab === 'overview'
-									? 'bg-white text-purple-700 shadow-lg'
-									: 'bg-white/10 text-white hover:bg-white/20'
-							}`}
-						>
-							📊 Overview
-						</button>
-						<button
-							onClick={() => setActiveTab('activity')}
-							className={`px-6 py-2.5 rounded-xl font-medium transition-all ${
-								activeTab === 'activity'
-									? 'bg-white text-purple-700 shadow-lg'
-									: 'bg-white/10 text-white hover:bg-white/20'
-							}`}
-						>
-							⚡ Aktivitas
-						</button>
 					</div>
 				</div>
 			</div>
 
 			{/* Content */}
 			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-				{activeTab === 'overview' && (
+			{activeTab === 'overview' && (
 					<div className="relative bg-gradient-to-br from-white via-white to-gray-50/30 rounded-2xl shadow-xl border border-gray-200/50 p-8 overflow-hidden">
 						{/* Decorative Elements */}
 						<div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-gray-400/10 to-slate-500/10 rounded-full blur-3xl -z-0"></div>
 						<div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-tr from-blue-400/10 to-indigo-500/10 rounded-full blur-3xl -z-0"></div>
 
 						<div className="relative z-10">
-							{/* Welcome Section */}
-							<div className="text-center mb-10">
-								<div className="inline-flex h-20 w-20 bg-gradient-to-br from-gray-500 to-slate-600 rounded-3xl items-center justify-center mb-6 shadow-2xl shadow-gray-500/30 animate-pulse">
-									<Building className="h-10 w-10 text-white" />
-								</div>
-								<h2 className="text-3xl font-bold bg-gradient-to-r from-gray-800 via-gray-700 to-slate-600 bg-clip-text text-transparent mb-3">
-									Selamat Datang di Bidang Sekretariat
-								</h2>
-								<p className="text-gray-600 max-w-2xl mx-auto leading-relaxed">
-									<strong>Sekretariat DPMD</strong><br />
-									Kelola disposisi surat, perjalanan dinas, dan kepegawaian dengan mudah dan terstruktur
-								</p>
-							</div>
-
-							{/* Features Info */}
-							<div className="bg-gradient-to-br from-gray-50/50 to-blue-50/50 rounded-3xl p-8 mb-10 border border-gray-100/50 shadow-lg">
-								<h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-3">
-									<Info className="h-6 w-6 text-gray-600" />
-									Apa yang Bisa Dilakukan di Halaman Ini?
-								</h3>
-								<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-									<div className="flex gap-4">
-										<div className="h-14 w-14 bg-blue-100 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-md">
-											<Mail className="h-7 w-7 text-blue-600" />
-										</div>
-										<div>
-											<h4 className="font-bold text-gray-800 mb-2 text-base">Disposisi Surat Masuk</h4>
-											<p className="text-sm text-gray-600 leading-relaxed">Kelola surat masuk dan proses disposisi ke bidang terkait</p>
-										</div>
-									</div>
-									<div className="flex gap-4">
-										<div className="h-14 w-14 bg-green-100 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-md">
-											<Plane className="h-7 w-7 text-green-600" />
-										</div>
-										<div>
-											<h4 className="font-bold text-gray-800 mb-2 text-base">Perjalanan Dinas</h4>
-											<p className="text-sm text-gray-600 leading-relaxed">Kelola data perjalanan dinas dan tugas pegawai</p>
-										</div>
-									</div>
-									<div className="flex gap-4">
-										<div className="h-14 w-14 bg-indigo-100 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-md">
-											<Users className="h-7 w-7 text-indigo-600" />
-										</div>
-										<div>
-											<h4 className="font-bold text-gray-800 mb-2 text-base">Manajemen Pegawai</h4>
-											<p className="text-sm text-gray-600 leading-relaxed">Kelola data pegawai, user, dan kepegawaian DPMD</p>
-										</div>
-									</div>
-									<div className="flex gap-4">
-										<div className="h-14 w-14 bg-purple-100 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-md">
-											<Activity className="h-7 w-7 text-purple-600" />
-										</div>
-										<div>
-											<h4 className="font-bold text-gray-800 mb-2 text-base">Monitor Aktivitas</h4>
-											<p className="text-sm text-gray-600 leading-relaxed">Pantau semua aktivitas administrasi sekretariat secara real-time</p>
-										</div>
-									</div>
-								</div>
-							</div>
-
 							{/* Quick Actions */}
 							<div>
 								<h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
@@ -296,7 +212,6 @@ const SekretariatPage = () => {
 										</div>
 									</button>
 
-									{/* Kelola Notifikasi - Only for Sekretariat pegawai and superadmin */}
 									{(user?.role === 'superadmin' || user?.bidang_id === 2) && (
 										<button
 											onClick={() => navigate('/sekretariat/notifikasi')}
@@ -315,6 +230,44 @@ const SekretariatPage = () => {
 											</div>
 										</button>
 									)}
+
+									{/* Kelola Informasi - Banner untuk dashboard pegawai */}
+									{(user?.role === 'superadmin' || user?.bidang_id === 2) && (
+										<button
+											onClick={() => navigate('/sekretariat/informasi')}
+											className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border border-gray-100 p-6 hover:border-teal-300 transition-all duration-300 text-left overflow-hidden hover:-translate-y-1"
+										>
+											<div className="absolute inset-0 bg-gradient-to-br from-teal-400/5 to-teal-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+											<div className="relative flex items-center gap-5">
+												<div className="h-16 w-16 bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg shadow-teal-500/25">
+													<Image className="h-8 w-8 text-white" />
+												</div>
+												<div className="flex-1">
+													<h3 className="font-bold text-gray-800 text-lg mb-1">Kelola Informasi</h3>
+													<p className="text-sm text-gray-500">Banner informasi di dashboard</p>
+												</div>
+												<ChevronRight className="h-6 w-6 text-gray-400 group-hover:text-teal-600 group-hover:translate-x-1 transition-all" />
+											</div>
+										</button>
+									)}
+
+									{/* Aktivitas Button */}
+									<button
+										onClick={() => setActiveTab('activity')}
+										className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border border-gray-100 p-6 hover:border-amber-300 transition-all duration-300 text-left overflow-hidden hover:-translate-y-1"
+									>
+										<div className="absolute inset-0 bg-gradient-to-br from-amber-400/5 to-amber-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+										<div className="relative flex items-center gap-5">
+											<div className="h-16 w-16 bg-gradient-to-br from-amber-500 to-amber-600 rounded-2xl flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg shadow-amber-500/25">
+												<Activity className="h-8 w-8 text-white" />
+											</div>
+											<div className="flex-1">
+												<h3 className="font-bold text-gray-800 text-lg mb-1">Log Aktivitas</h3>
+												<p className="text-sm text-gray-500">Pantau aktivitas terkini</p>
+											</div>
+											<ChevronRight className="h-6 w-6 text-gray-400 group-hover:text-amber-600 group-hover:translate-x-1 transition-all" />
+										</div>
+									</button>
 								</div>
 							</div>
 						</div>
@@ -324,6 +277,15 @@ const SekretariatPage = () => {
 				{/* Activity Tab */}
 				{activeTab === 'activity' && (
 					<div className="space-y-6">
+						{/* Back Button */}
+						<button
+							onClick={() => setActiveTab('overview')}
+							className="flex items-center gap-2 text-gray-600 hover:text-purple-600 transition-colors mb-4"
+						>
+							<ArrowLeft className="h-5 w-5" />
+							Kembali ke Menu
+						</button>
+
 						{/* Filter */}
 						<div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
 							<div className="flex items-center justify-between flex-wrap gap-4">

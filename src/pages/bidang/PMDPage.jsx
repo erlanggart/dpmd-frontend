@@ -106,32 +106,8 @@ const PMDPage = () => {
 						
 						<div>
 							<h1 className="text-2xl font-bold">Bidang PMD</h1>
-							<p className="text-orange-100 mt-1">Pemberdayaan Masyarakat Desa</p>
+							<p className="text-orange-100 mt-1">Kelola data kelembagaan dan pemberdayaan masyarakat</p>
 						</div>
-					</div>
-					
-					{/* Tab Navigation */}
-					<div className="flex gap-2 mt-6">
-						<button
-							onClick={() => setActiveTab('overview')}
-							className={`px-6 py-2.5 rounded-xl font-medium transition-all ${
-								activeTab === 'overview'
-									? 'bg-white text-orange-700 shadow-lg'
-									: 'bg-white/10 text-white hover:bg-white/20'
-							}`}
-						>
-						Overview
-						</button>
-						<button
-							onClick={() => setActiveTab('activity')}
-							className={`px-6 py-2.5 rounded-xl font-medium transition-all ${
-								activeTab === 'activity'
-									? 'bg-white text-orange-700 shadow-lg'
-									: 'bg-white/10 text-white hover:bg-white/20'
-							}`}
-						>
-						Aktivitas
-						</button>
 					</div>
 				</div>
 			</div>
@@ -141,23 +117,10 @@ const PMDPage = () => {
 					<div className="relative bg-gradient-to-br from-white via-white to-teal-50/30 rounded-2xl shadow-xl border border-gray-200/50 p-8 overflow-hidden">
 						
 						<div className="relative z-10">
-							{/* Welcome Section */}
-							<div className="text-center mb-10">
-							
-								<h2 className="text-3xl font-bold bg-gradient-to-r from-gray-800 via-teal-700 to-emerald-600 bg-clip-text text-transparent mb-3">
-									Selamat Datang di Bidang PMD
-								</h2>
-								<p className="text-gray-600 max-w-2xl mx-auto leading-relaxed">
-									<strong>Pemberdayaan Masyarakat Desa</strong><br />
-									Kelola data kelembagaan desa, Dana Desa, dan pemberdayaan masyarakat dengan mudah dan terstruktur
-								</p>
-							</div>
-
-
 							{/* Quick Actions */}
 							<div>
 								
-								<div className="grid grid-cols-1 gap-4">
+								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 									<button
 										onClick={() => navigate('/bidang/pmd/kelembagaan')}
 										className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border border-gray-100 p-6 hover:border-orange-300 transition-all duration-300 text-left overflow-hidden hover:-translate-y-1"
@@ -172,6 +135,24 @@ const PMDPage = () => {
 											<ChevronRight className="h-6 w-6 text-gray-400 group-hover:text-orange-600 group-hover:translate-x-1 transition-all" />
 										</div>
 									</button>
+
+									{/* Aktivitas Button */}
+									<button
+										onClick={() => setActiveTab('activity')}
+										className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border border-gray-100 p-6 hover:border-amber-300 transition-all duration-300 text-left overflow-hidden hover:-translate-y-1"
+									>
+										<div className="absolute inset-0 bg-gradient-to-br from-amber-400/5 to-amber-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+										<div className="relative flex items-center gap-5">
+											<div className="h-16 w-16 bg-gradient-to-br from-amber-500 to-amber-600 rounded-2xl flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg shadow-amber-500/25">
+												<Activity className="h-8 w-8 text-white" />
+											</div>
+											<div className="flex-1">
+												<h3 className="font-bold text-gray-800 text-lg mb-1">Log Aktivitas</h3>
+												<p className="text-sm text-gray-500">Pantau aktivitas terkini</p>
+											</div>
+											<ChevronRight className="h-6 w-6 text-gray-400 group-hover:text-amber-600 group-hover:translate-x-1 transition-all" />
+										</div>
+									</button>
 								</div>
 							</div>
 						</div>
@@ -181,6 +162,15 @@ const PMDPage = () => {
 				{/* Activity Tab */}
 				{activeTab === 'activity' && (
 					<div className="space-y-6">
+						{/* Back Button */}
+						<button
+							onClick={() => setActiveTab('overview')}
+							className="flex items-center gap-2 text-gray-600 hover:text-orange-600 transition-colors mb-4"
+						>
+							<ArrowLeft className="h-5 w-5" />
+							Kembali ke Menu
+						</button>
+
 						{/* Filter */}
 						<div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
 							<div className="flex items-center justify-between flex-wrap gap-4">

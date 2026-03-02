@@ -22,7 +22,7 @@ import api from "../api";
 // ============================================
 const useResponsive = () => {
 	const [isDesktop, setIsDesktop] = React.useState(window.innerWidth >= 1024);
-	const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(true);
+	const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(false); // default open
 
 	React.useEffect(() => {
 		const handleResize = () => {
@@ -396,7 +396,7 @@ const DPMDStaffLayout = () => {
 			icon: userBidang?.icon || FiCalendar, 
 			isMain: true 
 		},
-		{ path: `${config.basePath}/menu`, label: "Menu", icon: FiMenu, action: () => setShowMenu(true) },
+		{ path: `${config.basePath}/profile`, label: "Profil", icon: FiUser },
 	];
 
 	// Sidebar nav items (includes profile and bidang)

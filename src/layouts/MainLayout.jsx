@@ -32,7 +32,7 @@ const MainLayout = () => {
 	const location = useLocation();
 
 	const [isSearchOpen, setSearchOpen] = useState(false);
-	const [isSidebarOpen, setSidebarOpen] = useState(false);
+	const [isSidebarOpen, setSidebarOpen] = useState(true);
 	// --- STATE BARU untuk sidebar desktop ---
 	const [isSidebarMinimized, setSidebarMinimized] = useState(false);
 	const [dropdownOpen, setDropdownOpen] = useState(false);

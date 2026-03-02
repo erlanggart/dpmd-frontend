@@ -19,7 +19,7 @@ import AnimatedIcon from '../components/AnimatedIcon';
 import { useAuth } from '../context/AuthContext';
 
 const CoreDashboardLayout = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [expandedDd, setExpandedDd] = useState(false);
   const [expandedBhprd, setExpandedBhprd] = useState(false);
   const [hoveredItem, setHoveredItem] = useState(null);
