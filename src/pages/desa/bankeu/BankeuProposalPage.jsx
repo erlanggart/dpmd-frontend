@@ -2081,6 +2081,46 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
       );
     }
 
+    // NEW: Check submission stage for pending proposals
+    if (proposal.status === 'pending') {
+      // Belum dikirim ke Dinas sama sekali
+      if (!proposal.submitted_to_dinas_at && !proposal.dinas_status) {
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+            <LuClock className="w-3 h-3" />
+            Draft - Belum Dikirim
+          </span>
+        );
+      }
+      // Sudah dikirim ke Dinas, menunggu review
+      if (proposal.submitted_to_dinas_at && (!proposal.dinas_status || proposal.dinas_status === 'pending' || proposal.dinas_status === 'in_review')) {
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+            <LuClock className="w-3 h-3" />
+            Di Review Dinas
+          </span>
+        );
+      }
+      // Dinas approved, di Kecamatan
+      if (proposal.dinas_status === 'approved' && (!proposal.kecamatan_status || proposal.kecamatan_status === 'pending' || proposal.kecamatan_status === 'in_review')) {
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
+            <LuClock className="w-3 h-3" />
+            Di Review Kecamatan
+          </span>
+        );
+      }
+      // Kecamatan approved, di DPMD
+      if (proposal.kecamatan_status === 'approved' && (!proposal.dpmd_status || proposal.dpmd_status === 'pending' || proposal.dpmd_status === 'in_review')) {
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
+            <LuClock className="w-3 h-3" />
+            Di Review DPMD
+          </span>
+        );
+      }
+    }
+
     const badges = {
       pending: { icon: LuClock, text: "Menunggu Verifikasi", color: "bg-yellow-100 text-yellow-700" },
       verified: { icon: LuCheck, text: "Disetujui", color: "bg-green-100 text-green-700" },
