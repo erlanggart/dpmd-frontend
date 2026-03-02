@@ -1492,9 +1492,9 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
   return (
     <div className="bg-gradient-to-br from-slate-50 via-blue-50/20 to-indigo-50/20 min-h-screen">
       {/* Tab Navigation */}
-      <div className="container mx-auto px-4 pt-6">
-        <div className="flex flex-wrap items-center gap-4 mb-6">
-        <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg shadow-gray-200/50 p-1.5 inline-flex gap-1 flex-wrap border border-gray-200/60">
+      <div className="container mx-auto px-2 sm:px-4 pt-4 sm:pt-6">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4 mb-4 sm:mb-6">
+        <div className="bg-white/80 backdrop-blur-xl rounded-xl sm:rounded-2xl shadow-lg shadow-gray-200/50 p-1 sm:p-1.5 flex flex-wrap gap-1 border border-gray-200/60 w-full sm:w-auto overflow-x-auto">
           {[
             { key: 'archive', icon: Folder, label: 'Arsip Proposal', gradient: 'from-blue-600 to-indigo-600' },
             { key: 'tracking', icon: Activity, label: 'Tracking Status', gradient: 'from-violet-600 to-purple-600' },
@@ -1506,15 +1506,15 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
             <button
               key={tab.key}
               onClick={() => setActiveView(tab.key)}
-              className={`px-5 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 ${
+              className={`px-2.5 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-semibold text-xs sm:text-sm transition-all duration-300 whitespace-nowrap ${
                 activeView === tab.key
                   ? `bg-gradient-to-r ${tab.gradient} text-white shadow-lg scale-[1.02]`
                   : 'text-gray-500 hover:text-gray-800 hover:bg-gray-100/80'
               }`}
             >
-              <div className="flex items-center gap-2">
-                <tab.icon className="h-4 w-4" />
-                <span className="hidden sm:inline">{tab.label}</span>
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <tab.icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span className="hidden md:inline text-xs sm:text-sm">{tab.label}</span>
               </div>
             </button>
           ))}
@@ -1526,26 +1526,26 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
           <button
             onClick={handleRefresh}
             disabled={refreshing}
-            className={`group px-4 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 text-gray-500 hover:text-blue-700 hover:bg-blue-50/80 ${
+            className={`group px-2.5 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-semibold text-xs sm:text-sm transition-all duration-300 text-gray-500 hover:text-blue-700 hover:bg-blue-50/80 ${
               refreshing ? 'opacity-70 cursor-not-allowed' : ''
             }`}
             title="Refresh Data"
           >
-            <div className="flex items-center gap-2">
-              <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin text-blue-600' : 'group-hover:rotate-90 transition-transform duration-500'}`} />
-              <span className="hidden sm:inline">{refreshing ? 'Memuat...' : 'Refresh'}</span>
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <RefreshCw className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${refreshing ? 'animate-spin text-blue-600' : 'group-hover:rotate-90 transition-transform duration-500'}`} />
+              <span className="hidden md:inline">{refreshing ? 'Memuat...' : 'Refresh'}</span>
             </div>
           </button>
 
           {/* Export Excel Button - inside tab bar */}
           <button
             onClick={handleExportTrackingExcel}
-            className="group px-4 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 text-gray-500 hover:text-emerald-700 hover:bg-emerald-50/80"
+            className="group px-2.5 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-semibold text-xs sm:text-sm transition-all duration-300 text-gray-500 hover:text-emerald-700 hover:bg-emerald-50/80"
             title="Export Tracking ke Excel"
           >
-            <div className="flex items-center gap-2">
-              <FileSpreadsheet className="h-4 w-4 group-hover:scale-110 transition-transform duration-300" />
-              <span className="hidden sm:inline">Export Excel</span>
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <FileSpreadsheet className="h-3.5 w-3.5 sm:h-4 sm:w-4 group-hover:scale-110 transition-transform duration-300" />
+              <span className="hidden md:inline">Export Excel</span>
             </div>
           </button>
         </div>
@@ -1553,7 +1553,7 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
       </div>
 
       {/* Content Area */}
-      <div className="container mx-auto px-4 pb-6">
+      <div className="container mx-auto px-2 sm:px-4 pb-4 sm:pb-6">
         {/* Content based on active view */}
         {activeView === 'archive' ? (
           <>
@@ -1576,26 +1576,26 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                     {/* Kecamatan Header */}
                     <button
                       onClick={() => toggleKecamatan(kecamatanName)}
-                      className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                      className="w-full px-3 sm:px-6 py-3 sm:py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
                     >
-                      <div className="flex items-center gap-4">
-                        <div className="p-3 bg-gradient-to-br from-blue-500 to-green-500 rounded-lg shadow-md">
+                      <div className="flex items-center gap-2 sm:gap-4">
+                        <div className="p-2 sm:p-3 bg-gradient-to-br from-blue-500 to-green-500 rounded-lg shadow-md">
                           {isExpanded ? (
-                            <FolderOpen className="h-6 w-6 text-white" />
+                            <FolderOpen className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                           ) : (
-                            <Folder className="h-6 w-6 text-white" />
+                            <Folder className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                           )}
                         </div>
                         <div className="text-left">
-                          <h3 className="font-bold text-lg text-gray-900">{kecamatanName}</h3>
-                          <p className="text-sm text-gray-600">
+                          <h3 className="font-bold text-sm sm:text-lg text-gray-900">{kecamatanName}</h3>
+                          <p className="text-xs sm:text-sm text-gray-600">
                             {kecProposals.length} proposal dari {[...new Set(kecProposals.map(p => p.desa_id))].length} desa
                           </p>
                         </div>
                       </div>
                       
-                      <div className="flex items-center gap-3">
-                        <span className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg font-semibold text-sm">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <span className="px-2 sm:px-4 py-1 sm:py-2 bg-blue-100 text-blue-700 rounded-lg font-semibold text-xs sm:text-sm">
                           {kecProposals.length} proposal
                         </span>
                         {isExpanded ? (
@@ -1608,7 +1608,7 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
 
                     {/* Desa Badges List */}
                     {isExpanded && (
-                      <div className="border-t border-gray-200 bg-gradient-to-br from-gray-50 to-white p-6">
+                      <div className="border-t border-gray-200 bg-gradient-to-br from-gray-50 to-white p-3 sm:p-6">
                         {(() => {
                           // Group proposals by desa within this kecamatan
                           const desaGroups = kecProposals.reduce((acc, proposal) => {
@@ -1687,13 +1687,13 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                                   return (
                                     <div key={`proposals-${desaKey}`} className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
                                       {/* Desa Header */}
-                                      <div className="bg-gradient-to-r from-blue-500 to-green-500 px-4 py-3">
+                                      <div className="bg-gradient-to-r from-blue-500 to-green-500 px-3 sm:px-4 py-2 sm:py-3">
                                         <div className="flex items-center justify-between text-white">
-                                          <div className="flex items-center gap-2">
-                                            <MapPin className="h-4 w-4" />
-                                            <h4 className="font-semibold">{desaName}</h4>
+                                          <div className="flex items-center gap-1.5 sm:gap-2">
+                                            <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                            <h4 className="font-semibold text-sm sm:text-base">{desaName}</h4>
                                           </div>
-                                          <div className="flex items-center gap-2">
+                                          <div className="flex items-center gap-1.5 sm:gap-2">
                                             <span className="text-xs bg-white/20 px-2 py-1 rounded-full font-medium">
                                               {desaProposals.length} proposal
                                             </span>
@@ -1716,22 +1716,22 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                                         {desaProposals.map((proposal, idx) => (
                                           <div
                                             key={proposal.id.toString()}
-                                            className={`p-6 bg-white ${idx !== desaProposals.length - 1 ? 'border-b border-gray-100' : ''} hover:bg-blue-50/50 transition-colors`}
+                                            className={`p-3 sm:p-6 bg-white ${idx !== desaProposals.length - 1 ? 'border-b border-gray-100' : ''} hover:bg-blue-50/50 transition-colors`}
                                           >
                                             {/* Proposal Info and Documents in One Container */}
                                             <div className="flex-1 min-w-0">
-                                              <div className="flex items-start gap-3 mb-3">
-                                                <div className="p-2 bg-blue-100 rounded-lg flex-shrink-0 mt-1">
-                                                  <FileText className="h-5 w-5 text-blue-600" />
+                                              <div className="flex items-start gap-2 sm:gap-3 mb-3">
+                                                <div className="p-1.5 sm:p-2 bg-blue-100 rounded-lg flex-shrink-0 mt-1">
+                                                  <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
                                                 </div>
                                                 <div className="flex-1 min-w-0">
-                                                  <h4 className="font-semibold text-gray-900 mb-2 leading-snug">
+                                                  <h4 className="font-semibold text-sm sm:text-base text-gray-900 mb-2 leading-snug">
                                                     {resolveKegiatanName(proposal)}
                                                   </h4>
-                                                  <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600 mb-2">
+                                                  <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs sm:text-sm text-gray-600 mb-2">
                                                     {proposal.dpmd_submitted_at && (
                                                       <div className="flex items-center gap-1">
-                                                        <Calendar className="h-4 w-4 flex-shrink-0" />
+                                                        <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
                                                         <span>
                                                           {new Date(proposal.dpmd_submitted_at).toLocaleDateString('id-ID', {
                                                             day: 'numeric',
@@ -1890,13 +1890,13 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
               </div>
               <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
               
-              <div className="relative z-10 px-6 py-8 md:px-8 flex flex-col md:flex-row items-center justify-between gap-5">
+              <div className="relative z-10 px-4 py-6 sm:px-6 sm:py-8 md:px-8 flex flex-col md:flex-row items-center justify-between gap-4 sm:gap-5">
                 <div className="flex items-center gap-4">
                   <div className="h-14 w-14 bg-gradient-to-br from-violet-400 to-purple-600 rounded-2xl flex items-center justify-center shadow-xl shadow-violet-500/30 ring-2 ring-white/10">
                     <Activity className="h-7 w-7 text-white" />
                   </div>
                   <div>
-                    <h2 className="text-xl md:text-2xl font-extrabold text-white tracking-tight">Tracking Proposal Tahun {trackingTahunAnggaran}</h2>
+                    <h2 className="text-lg sm:text-xl md:text-2xl font-extrabold text-white tracking-tight">Tracking Proposal Tahun {trackingTahunAnggaran}</h2>
                     <p className="text-violet-300/80 text-sm mt-0.5">Pantau status proposal di semua tahap verifikasi</p>
                   </div>
                 </div>
@@ -1950,9 +1950,9 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                 { label: 'Selesai', count: selesaiCount, sub: 'disetujui', icon: CheckCircle, gradient: 'from-emerald-500 to-green-600', ring: 'ring-emerald-400/20', barColor: 'bg-emerald-400', percent: Math.round((selesaiCount / totalAll) * 100) },
               ];
               return (
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-4">
                   {stageCards.map((card, i) => (
-                    <div key={i} className={`group relative bg-gradient-to-br ${card.gradient} rounded-2xl p-5 text-white shadow-xl overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl`}>
+                    <div key={i} className={`group relative bg-gradient-to-br ${card.gradient} rounded-xl sm:rounded-2xl p-3 sm:p-5 text-white shadow-xl overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl`}>
                       {/* Glow */}
                       <div className="absolute -top-8 -right-8 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-500"></div>
                       <div className="relative z-10">
@@ -1962,7 +1962,7 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                           </div>
                           <span className="text-xs font-bold bg-white/20 backdrop-blur-sm px-2.5 py-1 rounded-lg">{card.percent}%</span>
                         </div>
-                        <p className="text-3xl font-extrabold tracking-tight">{card.count}</p>
+                        <p className="text-xl sm:text-3xl font-extrabold tracking-tight">{card.count}</p>
                         <p className="text-white/90 text-sm font-semibold mt-0.5">{card.label}</p>
                         <p className="text-white/60 text-xs mt-0.5">{card.sub}</p>
                         {/* Mini progress bar */}
@@ -1977,14 +1977,14 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
             })()}
 
             {/* Search and Filter for Tracking */}
-            <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg shadow-gray-200/40 p-5 border border-gray-200/60">
+            <div className="bg-white/80 backdrop-blur-xl rounded-xl sm:rounded-2xl shadow-lg shadow-gray-200/40 p-3 sm:p-5 border border-gray-200/60">
               <div className="flex items-center gap-2.5 mb-4">
                 <div className="h-8 w-8 bg-gradient-to-br from-violet-500 to-purple-600 rounded-lg flex items-center justify-center">
                   <Filter className="h-4 w-4 text-white" />
                 </div>
                 <span className="font-bold text-gray-800">Filter Tracking</span>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
                 <div className="relative">
                   <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <input
@@ -2210,18 +2210,18 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                                 )}
                               </div>
 
-                              <div className="p-6 space-y-6">
+                              <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
                                 {data.proposals.map((proposal, idx) => (
-                                  <div key={proposal.id} className={`${idx > 0 ? 'pt-6 border-t border-gray-100' : ''}`}>
+                                  <div key={proposal.id} className={`${idx > 0 ? 'pt-4 sm:pt-6 border-t border-gray-100' : ''}`}>
                                     {/* Proposal Title */}
-                                    <div className="flex items-start gap-3 mb-4">
-                                      <div className="p-2 bg-blue-100 rounded-lg flex-shrink-0">
-                                        <FileText className="h-5 w-5 text-blue-600" />
+                                    <div className="flex items-start gap-2 sm:gap-3 mb-3 sm:mb-4">
+                                      <div className="p-1.5 sm:p-2 bg-blue-100 rounded-lg flex-shrink-0">
+                                        <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
                                       </div>
-                                      <div className="flex-1">
-                                        <h4 className="font-semibold text-gray-900">{resolveKegiatanName(proposal)}</h4>
+                                      <div className="flex-1 min-w-0">
+                                        <h4 className="font-semibold text-sm sm:text-base text-gray-900">{resolveKegiatanName(proposal)}</h4>
                                         {proposal.bankeu_master_kegiatan && (
-                                          <span className="inline-block mt-1 px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+                                          <span className="inline-block mt-1 px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-[10px] sm:text-xs font-medium">
                                             {proposal.bankeu_master_kegiatan.dinas_terkait}
                                           </span>
                                         )}
@@ -2231,27 +2231,27 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                                           e.stopPropagation();
                                           handleDeleteProposal(proposal.id, proposal.judul_proposal);
                                         }}
-                                        className="p-2 bg-red-50 hover:bg-red-600 text-red-600 hover:text-white rounded-lg transition-all flex-shrink-0 border border-red-200 hover:border-red-600"
+                                        className="p-1.5 sm:p-2 bg-red-50 hover:bg-red-600 text-red-600 hover:text-white rounded-lg transition-all flex-shrink-0 border border-red-200 hover:border-red-600"
                                         title="Hapus proposal ini"
                                       >
-                                        <Trash2 className="h-4 w-4" />
+                                        <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                       </button>
                                     </div>
 
                                     {/* Compact Timeline */}
-                                    <div className="ml-11 space-y-3">
+                                    <div className="ml-0 sm:ml-11 space-y-3">
                                       {/* Visual Progress Bar */}
-                                      <div className="relative">
-                                        <div className="flex items-center">
+                                      <div className="relative overflow-x-auto">
+                                        <div className="flex items-center min-w-[320px]">
                                           {/* Step 1: Desa Submit */}
                                           <div className="flex flex-col items-center z-10">
-                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                                            <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center ${
                                               true ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-500'
                                             }`}>
-                                              <CheckCircle2 className="h-5 w-5" />
+                                              <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5" />
                                             </div>
-                                            <span className="text-xs mt-1 font-medium text-gray-700">Desa</span>
-                                            <span className="text-[10px] text-gray-500">
+                                            <span className="text-[10px] sm:text-xs mt-1 font-medium text-gray-700">Desa</span>
+                                            <span className="text-[9px] sm:text-[10px] text-gray-500">
                                               {proposal.created_at ? new Date(proposal.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) : '-'}
                                             </span>
                                           </div>
@@ -2261,20 +2261,20 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                                           
                                           {/* Step 2: Dinas */}
                                           <div className="flex flex-col items-center z-10">
-                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                                            <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center ${
                                               proposal.dinas_status === 'approved' ? 'bg-green-500 text-white' :
                                               proposal.dinas_status === 'rejected' ? 'bg-red-500 text-white' :
                                               proposal.dinas_status === 'revision' ? 'bg-orange-500 text-white' :
                                               proposal.submitted_to_dinas_at ? 'bg-blue-500 text-white animate-pulse' :
                                               'bg-gray-200 text-gray-500'
                                             }`}>
-                                              {proposal.dinas_status === 'approved' ? <CheckCircle2 className="h-5 w-5" /> :
-                                               proposal.dinas_status === 'rejected' ? <XCircle className="h-5 w-5" /> :
-                                               proposal.dinas_status === 'revision' ? <RefreshCw className="h-5 w-5" /> :
-                                               <Building className="h-5 w-5" />}
+                                              {proposal.dinas_status === 'approved' ? <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5" /> :
+                                               proposal.dinas_status === 'rejected' ? <XCircle className="h-4 w-4 sm:h-5 sm:w-5" /> :
+                                               proposal.dinas_status === 'revision' ? <RefreshCw className="h-4 w-4 sm:h-5 sm:w-5" /> :
+                                               <Building className="h-4 w-4 sm:h-5 sm:w-5" />}
                                             </div>
-                                            <span className="text-xs mt-1 font-medium text-gray-700">Dinas</span>
-                                            <span className="text-[10px] text-gray-500">
+                                            <span className="text-[10px] sm:text-xs mt-1 font-medium text-gray-700">Dinas</span>
+                                            <span className="text-[9px] sm:text-[10px] text-gray-500">
                                               {proposal.dinas_verified_at ? new Date(proposal.dinas_verified_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) : 
                                                proposal.submitted_to_dinas_at ? 'Menunggu' : '-'}
                                             </span>
@@ -2285,7 +2285,7 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                                           
                                           {/* Step 3: Kecamatan */}
                                           <div className="flex flex-col items-center z-10">
-                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                                            <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center ${
                                               proposal.surat_pengantar ? 'bg-green-500 text-white' :
                                               proposal.kecamatan_status === 'approved' ? 'bg-green-500 text-white' :
                                               proposal.kecamatan_status === 'rejected' ? 'bg-red-500 text-white' :
@@ -2293,13 +2293,13 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                                               proposal.dinas_status === 'approved' ? 'bg-blue-500 text-white animate-pulse' :
                                               'bg-gray-200 text-gray-500'
                                             }`}>
-                                              {proposal.surat_pengantar || proposal.kecamatan_status === 'approved' ? <CheckCircle2 className="h-5 w-5" /> :
-                                               proposal.kecamatan_status === 'rejected' ? <XCircle className="h-5 w-5" /> :
-                                               proposal.kecamatan_status === 'revision' ? <RefreshCw className="h-5 w-5" /> :
-                                               <Building2 className="h-5 w-5" />}
+                                              {proposal.surat_pengantar || proposal.kecamatan_status === 'approved' ? <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5" /> :
+                                               proposal.kecamatan_status === 'rejected' ? <XCircle className="h-4 w-4 sm:h-5 sm:w-5" /> :
+                                               proposal.kecamatan_status === 'revision' ? <RefreshCw className="h-4 w-4 sm:h-5 sm:w-5" /> :
+                                               <Building2 className="h-4 w-4 sm:h-5 sm:w-5" />}
                                             </div>
-                                            <span className="text-xs mt-1 font-medium text-gray-700">Kecamatan</span>
-                                            <span className="text-[10px] text-gray-500">
+                                            <span className="text-[10px] sm:text-xs mt-1 font-medium text-gray-700">Kec.</span>
+                                            <span className="text-[9px] sm:text-[10px] text-gray-500">
                                               {proposal.kecamatan_verified_at ? new Date(proposal.kecamatan_verified_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) : 
                                                proposal.dinas_status === 'approved' ? 'Menunggu' : '-'}
                                             </span>
@@ -2310,20 +2310,20 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                                           
                                           {/* Step 4: DPMD */}
                                           <div className="flex flex-col items-center z-10">
-                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                                            <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center ${
                                               proposal.dpmd_status === 'approved' ? 'bg-green-500 text-white' :
                                               proposal.dpmd_status === 'rejected' ? 'bg-red-500 text-white' :
                                               proposal.dpmd_status === 'revision' ? 'bg-orange-500 text-white' :
                                               proposal.submitted_to_dpmd_at || proposal.dpmd_status === 'pending' ? 'bg-purple-500 text-white animate-pulse' :
                                               'bg-gray-200 text-gray-500'
                                             }`}>
-                                              {proposal.dpmd_status === 'approved' ? <CheckCircle2 className="h-5 w-5" /> :
-                                               proposal.dpmd_status === 'rejected' ? <XCircle className="h-5 w-5" /> :
-                                               proposal.dpmd_status === 'revision' ? <RefreshCw className="h-5 w-5" /> :
-                                               <Shield className="h-5 w-5" />}
+                                              {proposal.dpmd_status === 'approved' ? <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5" /> :
+                                               proposal.dpmd_status === 'rejected' ? <XCircle className="h-4 w-4 sm:h-5 sm:w-5" /> :
+                                               proposal.dpmd_status === 'revision' ? <RefreshCw className="h-4 w-4 sm:h-5 sm:w-5" /> :
+                                               <Shield className="h-4 w-4 sm:h-5 sm:w-5" />}
                                             </div>
-                                            <span className="text-xs mt-1 font-medium text-gray-700">DPMD</span>
-                                            <span className="text-[10px] text-gray-500">
+                                            <span className="text-[10px] sm:text-xs mt-1 font-medium text-gray-700">DPMD</span>
+                                            <span className="text-[9px] sm:text-[10px] text-gray-500">
                                               {proposal.dpmd_verified_at ? new Date(proposal.dpmd_verified_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) : 
                                                proposal.dpmd_status === 'pending' ? 'Menunggu' : '-'}
                                             </span>
@@ -2443,18 +2443,18 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
             </div>
 
             {/* Content */}
-            <div className="relative z-10 space-y-8">
+            <div className="relative z-10 space-y-6 sm:space-y-8">
               {/* Header with Export Button */}
               <motion.div 
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex items-center justify-between"
+                className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
               >
                 <div>
-                  <h2 className="text-2xl font-bold text-slate-800">
+                  <h2 className="text-xl sm:text-2xl font-bold text-slate-800">
                     📊 Statistik Dashboard Bankeu
                   </h2>
-                  <p className="text-slate-500 mt-1">Analisis data proposal secara real-time</p>
+                  <p className="text-sm sm:text-base text-slate-500 mt-1">Analisis data proposal secara real-time</p>
                 </div>
 
                 {/* Export Dropdown Button */}
@@ -2908,16 +2908,16 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
           </div>
         ) : activeView === 'control' ? (
           /* Kontrol Pengajuan View */
-          <div className="max-w-4xl mx-auto">
+          <div className="max-w-4xl mx-auto px-0 sm:px-2">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden"
+              className="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-slate-200 overflow-hidden"
             >
               {/* Header */}
-              <div className="bg-gradient-to-r from-red-600 to-orange-500 px-6 py-5">
-                <h2 className="text-xl font-bold text-white flex items-center gap-3">
-                  <Power className="h-6 w-6" />
+              <div className="bg-gradient-to-r from-red-600 to-orange-500 px-4 sm:px-6 py-4 sm:py-5">
+                <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2 sm:gap-3">
+                  <Power className="h-5 w-5 sm:h-6 sm:w-6" />
                   Kontrol Laju Pengajuan
                 </h2>
                 <p className="text-white/80 text-sm mt-1">
@@ -2926,9 +2926,9 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
               </div>
 
               {/* Content */}
-              <div className="p-6 space-y-6">
+              <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
                 {/* Info Box */}
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                <div className="bg-amber-50 border border-amber-200 rounded-lg sm:rounded-xl p-3 sm:p-4">
                   <div className="flex items-start gap-3">
                     <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
                     <div>
@@ -2944,24 +2944,24 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                 {/* Toggle Controls */}
                 <div className="space-y-4">
                   {/* Desa Control */}
-                  <div className={`p-5 rounded-xl border-2 transition-all ${
+                  <div className={`p-3 sm:p-5 rounded-lg sm:rounded-xl border-2 transition-all ${
                     submissionSettings.bankeu_submission_desa 
                       ? 'bg-emerald-50 border-emerald-300' 
                       : 'bg-red-50 border-red-300'
                   }`}>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className={`p-3 rounded-xl ${
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+                      <div className="flex items-center gap-3 sm:gap-4">
+                        <div className={`p-2 sm:p-3 rounded-lg sm:rounded-xl ${
                           submissionSettings.bankeu_submission_desa ? 'bg-emerald-500' : 'bg-red-500'
                         }`}>
                           {submissionSettings.bankeu_submission_desa ? (
-                            <Unlock className="h-6 w-6 text-white" />
+                            <Unlock className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                           ) : (
-                            <Lock className="h-6 w-6 text-white" />
+                            <Lock className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                           )}
                         </div>
                         <div>
-                          <h3 className="font-bold text-lg text-slate-800">Pengajuan Desa → Dinas Terkait</h3>
+                          <h3 className="font-bold text-base sm:text-lg text-slate-800">Pengajuan Desa → Dinas</h3>
                           <p className="text-sm text-slate-600 mt-0.5">
                             {submissionSettings.bankeu_submission_desa 
                               ? 'Desa dapat mengirim proposal ke Dinas Terkait'
@@ -2993,24 +2993,24 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                   </div>
 
                   {/* Kecamatan Control */}
-                  <div className={`p-5 rounded-xl border-2 transition-all ${
+                  <div className={`p-3 sm:p-5 rounded-lg sm:rounded-xl border-2 transition-all ${
                     submissionSettings.bankeu_submission_kecamatan 
                       ? 'bg-emerald-50 border-emerald-300' 
                       : 'bg-red-50 border-red-300'
                   }`}>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className={`p-3 rounded-xl ${
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+                      <div className="flex items-center gap-3 sm:gap-4">
+                        <div className={`p-2 sm:p-3 rounded-lg sm:rounded-xl ${
                           submissionSettings.bankeu_submission_kecamatan ? 'bg-emerald-500' : 'bg-red-500'
                         }`}>
                           {submissionSettings.bankeu_submission_kecamatan ? (
-                            <Unlock className="h-6 w-6 text-white" />
+                            <Unlock className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                           ) : (
-                            <Lock className="h-6 w-6 text-white" />
+                            <Lock className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                           )}
                         </div>
                         <div>
-                          <h3 className="font-bold text-lg text-slate-800">Pengajuan Kecamatan → DPMD</h3>
+                          <h3 className="font-bold text-base sm:text-lg text-slate-800">Pengajuan Kecamatan → DPMD</h3>
                           <p className="text-sm text-slate-600 mt-0.5">
                             {submissionSettings.bankeu_submission_kecamatan 
                               ? 'Kecamatan dapat meneruskan proposal ke DPMD'
@@ -3061,58 +3061,58 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
             <motion.div 
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 rounded-2xl shadow-xl p-6"
+              className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 rounded-xl sm:rounded-2xl shadow-xl p-4 sm:p-6"
             >
-              <div className="flex items-center gap-4 mb-6">
-                <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
-                  <Settings className="h-8 w-8 text-white" />
+              <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+                <div className="p-2 sm:p-3 bg-white/20 rounded-lg sm:rounded-xl backdrop-blur-sm">
+                  <Settings className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold text-white">Pusat Konfigurasi</h2>
-                  <p className="text-white/80 text-sm">Kelola master data program, dinas, dan verifikator</p>
+                  <h2 className="text-xl sm:text-2xl font-bold text-white">Pusat Konfigurasi</h2>
+                  <p className="text-white/80 text-xs sm:text-sm">Kelola master data program dan dinas</p>
                 </div>
               </div>
 
               {/* Sub-tabs */}
-              <div className="flex gap-3">
+              <div className="flex flex-wrap gap-2 sm:gap-3">
                 <button
                   onClick={() => setConfigSubTab('kegiatan')}
-                  className={`flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm transition-all ${
+                  className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2 sm:py-3 rounded-lg sm:rounded-xl font-semibold text-xs sm:text-sm transition-all ${
                     configSubTab === 'kegiatan'
                       ? 'bg-white text-indigo-600 shadow-lg'
                       : 'bg-white/20 text-white hover:bg-white/30'
                   }`}
                 >
-                  <Layers className="h-5 w-5" />
-                  Master Kegiatan
-                  <span className={`px-2 py-0.5 rounded-full text-xs ${
+                  <Layers className="h-4 w-4 sm:h-5 sm:w-5" />
+                  <span className="hidden sm:inline">Master</span> Kegiatan
+                  <span className={`px-1.5 sm:px-2 py-0.5 rounded-full text-xs ${
                     configSubTab === 'kegiatan' ? 'bg-indigo-100 text-indigo-700' : 'bg-white/20'
                   }`}>{masterKegiatan.length}</span>
                 </button>
                 <button
                   onClick={() => setConfigSubTab('dinas')}
-                  className={`flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm transition-all ${
+                  className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2 sm:py-3 rounded-lg sm:rounded-xl font-semibold text-xs sm:text-sm transition-all ${
                     configSubTab === 'dinas'
                       ? 'bg-white text-purple-600 shadow-lg'
                       : 'bg-white/20 text-white hover:bg-white/30'
                   }`}
                 >
-                  <Building2 className="h-5 w-5" />
-                  Dinas & Verifikator
-                  <span className={`px-2 py-0.5 rounded-full text-xs ${
+                  <Building2 className="h-4 w-4 sm:h-5 sm:w-5" />
+                  Dinas
+                  <span className={`px-1.5 sm:px-2 py-0.5 rounded-full text-xs ${
                     configSubTab === 'dinas' ? 'bg-purple-100 text-purple-700' : 'bg-white/20'
                   }`}>{dinas.length}</span>
                 </button>
                 <button
                   onClick={() => setConfigSubTab('format-surat')}
-                  className={`flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm transition-all ${
+                  className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2 sm:py-3 rounded-lg sm:rounded-xl font-semibold text-xs sm:text-sm transition-all ${
                     configSubTab === 'format-surat'
                       ? 'bg-white text-amber-600 shadow-lg'
                       : 'bg-white/20 text-white hover:bg-white/30'
                   }`}
                 >
-                  <FileText className="h-5 w-5" />
-                  Format Surat
+                  <FileText className="h-4 w-4 sm:h-5 sm:w-5" />
+                  <span className="hidden sm:inline">Format</span> Surat
                 </button>
               </div>
             </motion.div>
@@ -3127,26 +3127,26 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                   className="space-y-4"
                 >
                   {/* Add Program Button */}
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-3">
-                      <div className="h-1 w-8 bg-gradient-to-r from-blue-500 to-green-500 rounded-full"></div>
-                      <h3 className="text-lg font-semibold text-gray-800">Daftar Program Kegiatan</h3>
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <div className="h-1 w-6 sm:w-8 bg-gradient-to-r from-blue-500 to-green-500 rounded-full"></div>
+                      <h3 className="text-base sm:text-lg font-semibold text-gray-800">Daftar Program Kegiatan</h3>
                     </div>
                     <button
                       onClick={() => {
                         setEditingKegiatan(null);
                         setShowKegiatanForm(!showKegiatanForm);
                       }}
-                      className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${
+                      className={`flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-semibold text-xs sm:text-sm transition-all ${
                         showKegiatanForm
                           ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                           : 'bg-gradient-to-r from-blue-600 to-green-600 text-white shadow-lg hover:shadow-xl hover:scale-[1.02]'
                       }`}
                     >
                       {showKegiatanForm ? (
-                        <><XIcon className="h-4 w-4" /> Tutup Form</>
+                        <><XIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> <span className="hidden sm:inline">Tutup</span> Form</>
                       ) : (
-                        <><Plus className="h-4 w-4" /> Tambah Program</>
+                        <><Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> <span className="hidden sm:inline">Tambah</span> Program</>
                       )}
                     </button>
                   </div>
@@ -3158,11 +3158,11 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         exit={{ opacity: 0, height: 0 }}
-                        className="bg-gradient-to-br from-blue-50 to-green-50 rounded-2xl border-2 border-dashed border-blue-200 p-6"
+                        className="bg-gradient-to-br from-blue-50 to-green-50 rounded-xl sm:rounded-2xl border-2 border-dashed border-blue-200 p-4 sm:p-6"
                       >
                         <div className="flex items-center gap-2 mb-4">
-                          <Sparkles className="h-5 w-5 text-blue-600" />
-                          <h4 className="font-semibold text-gray-800">{editingKegiatan ? 'Edit Program' : 'Tambah Program Baru'}</h4>
+                          <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                          <h4 className="font-semibold text-sm sm:text-base text-gray-800">{editingKegiatan ? 'Edit Program' : 'Tambah Program Baru'}</h4>
                         </div>
                         <KegiatanForm 
                           data={editingKegiatan}
@@ -3267,26 +3267,26 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                   className="space-y-4"
                 >
                   {/* Add Dinas Button */}
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-3">
-                      <div className="h-1 w-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"></div>
-                      <h3 className="text-lg font-semibold text-gray-800">Daftar Dinas & Verifikator</h3>
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <div className="h-1 w-6 sm:w-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"></div>
+                      <h3 className="text-base sm:text-lg font-semibold text-gray-800">Daftar Dinas & Verifikator</h3>
                     </div>
                     <button
                       onClick={() => {
                         setEditingDinas(null);
                         setShowDinasForm(!showDinasForm);
                       }}
-                      className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${
+                      className={`flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-semibold text-xs sm:text-sm transition-all ${
                         showDinasForm
                           ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                           : 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg hover:shadow-xl hover:scale-[1.02]'
                       }`}
                     >
                       {showDinasForm ? (
-                        <><XIcon className="h-4 w-4" /> Tutup Form</>
+                        <><XIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> <span className="hidden sm:inline">Tutup</span> Form</>
                       ) : (
-                        <><Plus className="h-4 w-4" /> Tambah Dinas</>
+                        <><Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Tambah Dinas</>
                       )}
                     </button>
                   </div>
