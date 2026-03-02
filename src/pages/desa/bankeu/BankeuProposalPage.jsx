@@ -1965,8 +1965,17 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
   
   // Semua revisi belum upload
   // NOTE: Untuk proposal dari Kecamatan, gunakan submitted_to_kecamatan=false
+  // NOTE: Troubleshoot DPMD adalah kasus khusus - submitted_to_dinas_at sudah terisi tapi perlu upload ulang
   const fromAnyLevelRevisionNotUploaded = proposals.filter(p => {
     const isRevision = p.status === 'revision' || p.status === 'rejected';
+    
+    // TROUBLESHOOT: Kasus khusus dari DPMD - sudah pernah submit tapi dikembalikan langsung oleh DPMD
+    const isTroubleshoot = p.troubleshoot_catatan && p.status === 'revision';
+    if (isTroubleshoot) {
+      // Troubleshoot DPMD: perlu upload ulang terlepas dari submitted_to_dinas_at
+      return true;
+    }
+    
     const isFromKecamatan = (p.kecamatan_status === 'rejected' || p.kecamatan_status === 'revision') && !p.dpmd_status;
     const isFromDinasOrDPMD = (p.dinas_status === 'rejected' || p.dinas_status === 'revision') || p.dpmd_status;
     
@@ -2489,11 +2498,75 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                 })()}
               </div>
             ) : (
-              <div className="flex items-center justify-center h-32 text-gray-400">
-                <div className="text-center">
-                  <LuClock className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">Belum ada data verifikasi</p>
-                </div>
+              <div className="space-y-3">
+                {/* Info proposal troubleshoot dari DPMD */}
+                {(() => {
+                  const troubleshootCount = proposals.filter(p => p.troubleshoot_catatan && p.status === 'revision').length;
+                  const revisionCount = fromAnyLevelRevisionNotUploaded.length - troubleshootCount;
+                  
+                  if (!hasUnresolvedRevisions) return null;
+                  
+                  return (
+                    <>
+                      {troubleshootCount > 0 && (
+                        <div className="px-4 py-3 bg-indigo-50 border border-indigo-200 rounded-lg">
+                          <div className="flex items-center gap-2 mb-2">
+                            <LuWrench className="w-5 h-5 text-indigo-600" />
+                            <span className="text-sm font-bold text-indigo-800">
+                              {troubleshootCount} proposal troubleshoot dari DPMD
+                            </span>
+                          </div>
+                          <p className="text-xs text-indigo-700">
+                            DPMD meminta revisi langsung. Upload ulang file proposal yang diminta.
+                          </p>
+                        </div>
+                      )}
+                      {revisionCount > 0 && (
+                        <div className="px-4 py-3 bg-orange-50 border border-orange-200 rounded-lg">
+                          <div className="flex items-center gap-2 mb-2">
+                            <LuRefreshCw className="w-5 h-5 text-orange-600 animate-spin" />
+                            <span className="text-sm font-bold text-orange-800">
+                              {revisionCount} proposal perlu diupload ulang
+                            </span>
+                          </div>
+                          <p className="text-xs text-orange-700">
+                            Upload ulang semua proposal yang diminta revisi
+                          </p>
+                        </div>
+                      )}
+                      <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg">
+                        <p className="text-xs text-gray-600 text-center">
+                          ⚠️ Tombol "Kirim ke Dinas Terkait" akan muncul setelah semua revisi diupload
+                        </p>
+                      </div>
+                    </>
+                  );
+                })()}
+                
+                {/* Info proposal draft yang belum dikirim */}
+                {unsendToKecamatanCount > 0 && !hasUnresolvedRevisions && (
+                  <div className="px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <LuSend className="w-5 h-5 text-blue-600" />
+                      <span className="text-sm font-bold text-blue-800">
+                        {unsendToKecamatanCount} proposal siap dikirim
+                      </span>
+                    </div>
+                    <p className="text-xs text-blue-700">
+                      Gunakan tombol "Kirim ke Dinas Terkait" di bawah untuk mengirim proposal
+                    </p>
+                  </div>
+                )}
+                
+                {/* Jika tidak ada proposal sama sekali */}
+                {proposals.length === 0 && (
+                  <div className="flex items-center justify-center h-24 text-gray-400">
+                    <div className="text-center">
+                      <LuClock className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">Belum ada proposal diupload</p>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
             
