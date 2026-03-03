@@ -8,7 +8,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   Mic, MicOff, Video, VideoOff, Monitor, MonitorOff, 
   MessageSquare, Users, PhoneOff, Send, Copy, X, Loader2,
-  User, ArrowRight
+  User, ArrowRight, Volume2, VolumeX
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { io } from 'socket.io-client';
@@ -28,7 +28,7 @@ const getOrCreateGuestId = (roomId) => {
 };
 
 // Remote Video Component
-const RemoteVideo = ({ participant, stream }) => {
+const RemoteVideo = ({ participant, stream, isSpeakerMuted }) => {
   const videoRef = useRef(null);
   const audioRef = useRef(null);
   const [hasVideo, setHasVideo] = useState(false);
@@ -45,11 +45,19 @@ const RemoteVideo = ({ participant, stream }) => {
   useEffect(() => {
     if (audioRef.current && stream) {
       audioRef.current.srcObject = stream;
+      audioRef.current.muted = isSpeakerMuted;
       audioRef.current.play().catch(err => {
         console.warn(`[RemoteVideo] Audio autoplay blocked:`, err.message);
       });
     }
-  }, [stream]);
+  }, [stream, isSpeakerMuted]);
+  
+  // Update muted state when isSpeakerMuted changes
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.muted = isSpeakerMuted;
+    }
+  }, [isSpeakerMuted]);
   
   useEffect(() => {
     if (!stream) return;
@@ -126,6 +134,7 @@ const PublicMeetingPage = () => {
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const [isSpeakerMuted, setIsSpeakerMuted] = useState(false);
   
   // UI state
   const [chatOpen, setChatOpen] = useState(false);
@@ -326,6 +335,7 @@ const PublicMeetingPage = () => {
     return new Promise((resolve, reject) => {
       socketRef.current.emit('create-transport', { direction: 'send' }, async (response) => {
         if (response.error) {
+          console.error('[Mediasoup] Create send transport error:', response.error);
           reject(new Error(response.error));
           return;
         }
@@ -333,16 +343,23 @@ const PublicMeetingPage = () => {
         const transport = deviceRef.current.createSendTransport(response.transport);
         
         transport.on('connect', ({ dtlsParameters }, callback, errback) => {
+          console.log('[Mediasoup] Send transport connecting...');
           socketRef.current.emit('connect-transport', {
             transportId: transport.id,
             dtlsParameters
           }, (res) => {
-            if (res.error) errback(new Error(res.error));
-            else callback();
+            if (res.error) {
+              console.error('[Mediasoup] Send transport connect error:', res.error);
+              errback(new Error(res.error));
+            } else {
+              console.log('[Mediasoup] Send transport connected successfully');
+              callback();
+            }
           });
         });
         
         transport.on('produce', ({ kind, rtpParameters, appData }, callback, errback) => {
+          console.log('[Mediasoup] Producing:', kind);
           socketRef.current.emit('produce', {
             transportId: transport.id,
             kind,
@@ -354,7 +371,17 @@ const PublicMeetingPage = () => {
           });
         });
         
+        // Monitor connection state
+        transport.on('connectionstatechange', (state) => {
+          console.log('[Mediasoup] Send transport connection state:', state);
+          if (state === 'failed') {
+            console.error('[Mediasoup] Send transport connection failed!');
+            toast.error('Koneksi upload gagal. Coba refresh halaman.');
+          }
+        });
+        
         sendTransportRef.current = transport;
+        console.log('[Mediasoup] Send transport created');
         resolve(transport);
       });
     });
@@ -364,6 +391,7 @@ const PublicMeetingPage = () => {
     return new Promise((resolve, reject) => {
       socketRef.current.emit('create-transport', { direction: 'recv' }, async (response) => {
         if (response.error) {
+          console.error('[Mediasoup] Create recv transport error:', response.error);
           reject(new Error(response.error));
           return;
         }
@@ -371,16 +399,32 @@ const PublicMeetingPage = () => {
         const transport = deviceRef.current.createRecvTransport(response.transport);
         
         transport.on('connect', ({ dtlsParameters }, callback, errback) => {
+          console.log('[Mediasoup] Recv transport connecting...');
           socketRef.current.emit('connect-transport', {
             transportId: transport.id,
             dtlsParameters
           }, (res) => {
-            if (res.error) errback(new Error(res.error));
-            else callback();
+            if (res.error) {
+              console.error('[Mediasoup] Recv transport connect error:', res.error);
+              errback(new Error(res.error));
+            } else {
+              console.log('[Mediasoup] Recv transport connected successfully');
+              callback();
+            }
           });
         });
         
+        // Monitor connection state
+        transport.on('connectionstatechange', (state) => {
+          console.log('[Mediasoup] Recv transport connection state:', state);
+          if (state === 'failed') {
+            console.error('[Mediasoup] Recv transport connection failed!');
+            toast.error('Koneksi video gagal. Coba refresh halaman.');
+          }
+        });
+        
         recvTransportRef.current = transport;
+        console.log('[Mediasoup] Recv transport created');
         resolve(transport);
       });
     });
@@ -452,10 +496,32 @@ const PublicMeetingPage = () => {
             rtpParameters: response.consumer.rtpParameters
           });
           
-          // Resume consumer
-          socketRef.current.emit('resume-consumer', { consumerId: consumer.id }, () => {
-            console.log('[Mediasoup] Consumer resumed:', consumer.id);
+          // Log consumer track state
+          console.log(`[Mediasoup] Consumer created:`, {
+            consumerId: consumer.id,
+            kind: consumer.kind,
+            trackId: consumer.track.id,
+            trackKind: consumer.track.kind,
+            trackEnabled: consumer.track.enabled,
+            trackReadyState: consumer.track.readyState,
+            trackMuted: consumer.track.muted
           });
+          
+          // Resume consumer
+          socketRef.current.emit('resume-consumer', { consumerId: consumer.id }, (resumeRes) => {
+            console.log('[Mediasoup] Consumer resumed:', consumer.id, 'response:', resumeRes);
+          });
+          
+          // Monitor consumer track state changes
+          consumer.track.onended = () => {
+            console.log(`[Mediasoup] Consumer ${consumer.id} track ended`);
+          };
+          consumer.track.onmute = () => {
+            console.log(`[Mediasoup] Consumer ${consumer.id} track muted`);
+          };
+          consumer.track.onunmute = () => {
+            console.log(`[Mediasoup] Consumer ${consumer.id} track unmuted`);
+          };
           
           // Store consumer
           if (!consumersRef.current.has(peerIdStr)) {
@@ -463,14 +529,24 @@ const PublicMeetingPage = () => {
           }
           consumersRef.current.get(peerIdStr)[kind] = consumer;
           
-          // Add track to remote stream
+          // Add track to remote stream - create NEW MediaStream to ensure React detects change
           setRemoteStreams(prev => {
             const newStreams = { ...prev };
-            if (!newStreams[peerIdStr]) {
-              newStreams[peerIdStr] = new MediaStream();
+            
+            // Create a new MediaStream with all existing tracks plus the new one
+            const existingStream = prev[peerIdStr];
+            const newStream = new MediaStream();
+            
+            // Copy existing tracks
+            if (existingStream) {
+              existingStream.getTracks().forEach(track => newStream.addTrack(track));
             }
-            newStreams[peerIdStr].addTrack(consumer.track);
-            console.log(`[Mediasoup] Added ${kind} track to remoteStreams[${peerIdStr}], total tracks:`, newStreams[peerIdStr].getTracks().length);
+            
+            // Add new consumer track
+            newStream.addTrack(consumer.track);
+            newStreams[peerIdStr] = newStream;
+            
+            console.log(`[Mediasoup] Added ${kind} track to remoteStreams[${peerIdStr}], total tracks:`, newStream.getTracks().length);
             return newStreams;
           });
           
@@ -837,6 +913,14 @@ const PublicMeetingPage = () => {
     }
   };
 
+  const toggleSpeaker = () => {
+    setIsSpeakerMuted(prev => {
+      const newValue = !prev;
+      toast(newValue ? 'Speaker dimatikan' : 'Speaker dinyalakan', { icon: newValue ? '🔇' : '🔊' });
+      return newValue;
+    });
+  };
+
   const sendMessage = () => {
     if (!newMessage.trim() || !socketRef.current) return;
     
@@ -1086,6 +1170,7 @@ const PublicMeetingPage = () => {
               key={participant.oduserId}
               participant={participant}
               stream={remoteStreams[participant.oduserId]}
+              isSpeakerMuted={isSpeakerMuted}
             />
           ))}
         </div>
@@ -1118,6 +1203,16 @@ const PublicMeetingPage = () => {
           } text-white`}
         >
           {isScreenSharing ? <MonitorOff className="w-5 h-5" /> : <Monitor className="w-5 h-5" />}
+        </button>
+
+        <button
+          onClick={toggleSpeaker}
+          className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
+            isSpeakerMuted ? 'bg-red-500 hover:bg-red-600' : 'bg-white/10 hover:bg-white/20'
+          } text-white`}
+          title={isSpeakerMuted ? 'Nyalakan Speaker' : 'Matikan Speaker'}
+        >
+          {isSpeakerMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
         </button>
 
         <button
