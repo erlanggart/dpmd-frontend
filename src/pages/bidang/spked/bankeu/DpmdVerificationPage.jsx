@@ -1008,6 +1008,45 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
     }
   };
 
+  // Reopen submission for a specific desa (allow desa to upload new proposals again)
+  const handleReopenDesaSubmission = async (desaId, desaName, proposalCount) => {
+    const { value: catatan } = await Swal.fire({
+      title: 'Buka Kembali Upload Proposal?',
+      html: `<div class="text-left">
+        <p class="mb-2"><strong>Desa ${desaName}</strong> akan dibuka kembali akses upload proposal baru.</p>
+        <p class="text-sm text-gray-600 mb-3">Saat ini ada <strong>${proposalCount} proposal</strong> yang sudah dikirim ke dinas terkait.</p>
+        <p class="text-sm text-blue-600 font-medium mb-3">ℹ️ Tombol "Tambah Proposal Baru" akan muncul kembali di halaman desa.</p>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Catatan (opsional):</label>
+      </div>`,
+      input: 'textarea',
+      inputPlaceholder: 'Alasan membuka kembali upload...',
+      inputAttributes: { rows: 2 },
+      showCancelButton: true,
+      confirmButtonText: 'Ya, Buka Upload',
+      cancelButtonText: 'Batal',
+      confirmButtonColor: '#10b981',
+      inputValidator: () => null // Optional catatan
+    });
+
+    if (catatan !== undefined) { // User clicked confirm (catatan can be empty string)
+      try {
+        Swal.fire({ title: 'Memproses...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        const res = await api.patch(`/dpmd/bankeu/desa/${desaId}/reopen-submission`, { catatan });
+        await fetchData();
+        if (activeView === 'tracking') await fetchTrackingData();
+        Swal.fire({
+          icon: 'success',
+          title: 'Berhasil!',
+          text: res.data?.message || 'Upload proposal desa berhasil dibuka kembali',
+          timer: 3000,
+          showConfirmButton: false
+        });
+      } catch (error) {
+        Swal.fire('Gagal', error.response?.data?.message || 'Gagal membuka kembali upload proposal', 'error');
+      }
+    }
+  };
+
   // Handle revisi dokumen kecamatan (BA/SP only)
   const handleRevisiDokumenKecamatan = async (proposalId, proposalTitle) => {
     const { value: catatan } = await Swal.fire({
@@ -2206,6 +2245,21 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                                   >
                                     <Trash2 className="h-3.5 w-3.5" />
                                     Hapus Surat Desa
+                                  </button>
+                                )}
+                                {/* Tombol Buka Kembali Upload - Tampil jika ada proposal yang sudah dikirim ke dinas */}
+                                {data.proposals.some(p => p.submitted_to_dinas_at) && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const submittedCount = data.proposals.filter(p => p.submitted_to_dinas_at).length;
+                                      handleReopenDesaSubmission(data.desaId, data.desaName, submittedCount);
+                                    }}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white rounded-lg transition-all text-xs font-medium border border-emerald-200 hover:border-emerald-600"
+                                    title="Buka kembali akses upload proposal baru untuk desa ini"
+                                  >
+                                    <Unlock className="h-3.5 w-3.5" />
+                                    Buka Kembali Upload
                                   </button>
                                 )}
                               </div>
