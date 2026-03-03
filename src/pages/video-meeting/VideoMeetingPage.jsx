@@ -19,6 +19,7 @@ const API_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http:
 // Remote Video Component
 const RemoteVideo = ({ participant, stream }) => {
   const videoRef = useRef(null);
+  const audioRef = useRef(null);
   const [hasVideo, setHasVideo] = useState(false);
   
   // Debug: log stream state on each render
@@ -30,13 +31,25 @@ const RemoteVideo = ({ participant, stream }) => {
     });
   });
   
+  // Set video srcObject
   useEffect(() => {
     if (videoRef.current && stream) {
       videoRef.current.srcObject = stream;
       const videoTracks = stream.getVideoTracks();
       const newHasVideo = videoTracks.length > 0 && videoTracks[0].enabled;
-      console.log(`[RemoteVideo] Setting srcObject for ${participant.userName}, videoTracks:`, videoTracks.length, 'hasVideo:', newHasVideo);
+      console.log(`[RemoteVideo] Setting video srcObject for ${participant.userName}, videoTracks:`, videoTracks.length, 'hasVideo:', newHasVideo);
       setHasVideo(newHasVideo);
+    }
+  }, [stream, participant.userName]);
+  
+  // Separate audio element to ensure audio always plays
+  useEffect(() => {
+    if (audioRef.current && stream) {
+      audioRef.current.srcObject = stream;
+      // Try to play audio (may be blocked by browser autoplay policy)
+      audioRef.current.play().catch(err => {
+        console.warn(`[RemoteVideo] Audio autoplay blocked for ${participant.userName}:`, err.message);
+      });
     }
   }, [stream, participant.userName]);
   
@@ -65,14 +78,20 @@ const RemoteVideo = ({ participant, stream }) => {
   
   return (
     <div className="relative bg-gray-800 rounded-xl overflow-hidden aspect-video flex items-center justify-center">
-      {stream && hasVideo ? (
-        <video
-          ref={videoRef}
-          autoPlay
-          playsInline
-          className="w-full h-full object-cover"
-        />
-      ) : (
+      {/* Always render video element but show/hide based on hasVideo */}
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        muted  // Video element muted - audio handled by separate audio element
+        className={`w-full h-full object-cover ${hasVideo ? 'block' : 'hidden'}`}
+      />
+      
+      {/* Separate audio element for reliable audio playback */}
+      <audio ref={audioRef} autoPlay playsInline />
+      
+      {/* Avatar fallback when no video */}
+      {!hasVideo && (
         <div className="w-20 h-20 bg-gray-700 rounded-full flex items-center justify-center text-white text-2xl font-semibold">
           {(participant.userName || 'U')[0].toUpperCase()}
         </div>
@@ -290,9 +309,16 @@ const VideoMeetingPage = () => {
       
       // Consume existing producers
       if (existingProducers && existingProducers.length > 0) {
-        console.log('[Mediasoup] Consuming existing producers:', existingProducers.length);
+        console.log('[Mediasoup] Consuming existing producers:', existingProducers.length, existingProducers);
         for (const producer of existingProducers) {
-          await consumeProducer(producer.producerId, producer.peerId, producer.kind);
+          const peerIdStr = String(producer.peerId);
+          // Don't consume our own producers
+          if (peerIdStr === String(user.id)) {
+            console.log('[Mediasoup] Skipping own producer:', producer.producerId);
+            continue;
+          }
+          console.log(`[Mediasoup] Consuming producer ${producer.producerId} from peer ${peerIdStr}`);
+          await consumeProducer(producer.producerId, peerIdStr, producer.kind);
         }
       }
     } catch (error) {
@@ -427,10 +453,15 @@ const VideoMeetingPage = () => {
   
   // Consume a remote producer
   const consumeProducer = async (producerId, peerId, kind) => {
+    // Ensure peerId is always a string for consistency
+    const peerIdStr = String(peerId);
+    
     if (!recvTransportRef.current || !deviceRef.current) {
       console.warn('[Mediasoup] Cannot consume - transport not ready');
       return;
     }
+    
+    console.log(`[Mediasoup] consumeProducer called:`, { producerId, peerId: peerIdStr, kind });
     
     return new Promise((resolve, reject) => {
       socketRef.current.emit('consume', {
@@ -458,22 +489,23 @@ const VideoMeetingPage = () => {
           });
           
           // Store consumer
-          if (!consumersRef.current.has(peerId)) {
-            consumersRef.current.set(peerId, {});
+          if (!consumersRef.current.has(peerIdStr)) {
+            consumersRef.current.set(peerIdStr, {});
           }
-          consumersRef.current.get(peerId)[kind] = consumer;
+          consumersRef.current.get(peerIdStr)[kind] = consumer;
           
           // Add track to remote stream
           setRemoteStreams(prev => {
             const newStreams = { ...prev };
-            if (!newStreams[peerId]) {
-              newStreams[peerId] = new MediaStream();
+            if (!newStreams[peerIdStr]) {
+              newStreams[peerIdStr] = new MediaStream();
             }
-            newStreams[peerId].addTrack(consumer.track);
+            newStreams[peerIdStr].addTrack(consumer.track);
+            console.log(`[Mediasoup] Added ${kind} track to remoteStreams[${peerIdStr}], total tracks:`, newStreams[peerIdStr].getTracks().length);
             return newStreams;
           });
           
-          console.log(`[Mediasoup] Consuming ${kind} from peer ${peerId}`);
+          console.log(`[Mediasoup] Consuming ${kind} from peer ${peerIdStr}`);
           resolve(consumer);
         } catch (error) {
           console.error('[Mediasoup] Consumer creation error:', error);
@@ -555,11 +587,14 @@ const VideoMeetingPage = () => {
           
           // Set existing peers from the room (excluding self)
           if (response.existingPeers && response.existingPeers.length > 0) {
-            const myId = response.peerId || String(user.id);
-            const filteredPeers = response.existingPeers.filter(
-              p => p.oduserId !== myId && p.oduserId !== String(user.id)
-            );
-            console.log('Existing peers in room (after filter):', filteredPeers);
+            const myId = String(response.peerId || user.id);
+            const filteredPeers = response.existingPeers
+              .filter(p => String(p.oduserId) !== myId)
+              .map(p => ({
+                oduserId: String(p.oduserId),
+                userName: p.userName || 'User'
+              }));
+            console.log('[existingPeers] Normalized peers:', filteredPeers);
             setParticipants(filteredPeers);
           }
           
@@ -597,51 +632,82 @@ const VideoMeetingPage = () => {
     });
 
     socketRef.current.on('peer-joined', (data) => {
-      console.log('Peer joined:', data);
+      console.log('[peer-joined] Received:', data);
+      const peerIdStr = String(data.peerId);
+      
       // Ignore if it's ourselves (shouldn't happen, but just in case)
-      if (data.peerId === String(user.id)) return;
+      if (peerIdStr === String(user.id)) return;
       
       setParticipants((prev) => {
         // Avoid duplicates
-        if (prev.some(p => p.oduserId === data.peerId)) return prev;
-        return [...prev, { oduserId: data.peerId, userName: data.name }];
+        if (prev.some(p => p.oduserId === peerIdStr)) return prev;
+        console.log('[peer-joined] Adding participant:', { oduserId: peerIdStr, userName: data.name });
+        return [...prev, { oduserId: peerIdStr, userName: data.name }];
       });
       toast.success(`${data.name} bergabung`);
     });
 
     socketRef.current.on('peer-left', (data) => {
-      console.log('Peer left:', data);
-      setParticipants((prev) => prev.filter((p) => p.oduserId !== data.peerId));
+      console.log('[peer-left] Received:', data);
+      const peerIdStr = String(data.peerId);
+      
+      setParticipants((prev) => prev.filter((p) => p.oduserId !== peerIdStr));
       toast(`${data.userName} keluar`, { icon: '👋' });
       
       // Remove remote stream and consumers
       setRemoteStreams(prev => {
         const newStreams = { ...prev };
-        delete newStreams[data.peerId];
+        delete newStreams[peerIdStr];
         return newStreams;
       });
       
       // Close consumers for this peer
-      if (consumersRef.current.has(data.peerId)) {
-        const peerConsumers = consumersRef.current.get(data.peerId);
+      if (consumersRef.current.has(peerIdStr)) {
+        const peerConsumers = consumersRef.current.get(peerIdStr);
         Object.values(peerConsumers).forEach(consumer => consumer?.close());
-        consumersRef.current.delete(data.peerId);
+        consumersRef.current.delete(peerIdStr);
       }
     });
     
     // Handle new producer from other peer
     socketRef.current.on('new-producer', async (data) => {
-      console.log('New producer:', data);
+      console.log('[new-producer] Received:', data);
       const { producerId, peerId, kind, userName } = data;
+      const peerIdStr = String(peerId);
       
       // Don't consume our own producers
-      if (peerId === String(user.id)) return;
+      if (peerIdStr === String(user.id)) {
+        console.log('[new-producer] Ignoring own producer');
+        return;
+      }
+      
+      // Add participant if not already in list
+      setParticipants((prev) => {
+        if (prev.some(p => p.oduserId === peerIdStr)) return prev;
+        console.log('[new-producer] Adding participant:', { oduserId: peerIdStr, userName });
+        return [...prev, { oduserId: peerIdStr, userName: userName || 'User' }];
+      });
+      
+      // Wait for recv transport to be ready (might be race condition on initial load)
+      if (!recvTransportRef.current) {
+        console.log('[new-producer] Waiting for recv transport...');
+        let retries = 0;
+        while (!recvTransportRef.current && retries < 50) {
+          await new Promise(r => setTimeout(r, 100));
+          retries++;
+        }
+        if (!recvTransportRef.current) {
+          console.error('[new-producer] Recv transport not ready after 5s, cannot consume');
+          return;
+        }
+      }
       
       // Consume the new producer
       try {
-        await consumeProducer(producerId, peerId, kind);
+        console.log(`[new-producer] Consuming ${kind} from peer ${peerIdStr}`);
+        await consumeProducer(producerId, peerIdStr, kind);
       } catch (error) {
-        console.error('Error consuming new producer:', error);
+        console.error('[new-producer] Error consuming:', error);
       }
     });
     
@@ -994,19 +1060,34 @@ const VideoMeetingPage = () => {
           </div>
 
           {/* Remote Videos */}
-          {console.log('[VideoMeetingPage] Rendering remote videos:', {
-            participants: participants.map(p => ({ id: p.oduserId, name: p.userName })),
-            remoteStreamsKeys: Object.keys(remoteStreams),
-            myPeerId,
-            userId: user.id
+          {(() => {
+            console.log('[VideoMeetingPage] Rendering remote videos:', {
+              participants: participants.map(p => ({ id: p.oduserId, name: p.userName })),
+              remoteStreamsKeys: Object.keys(remoteStreams),
+              remoteStreamsDetail: Object.entries(remoteStreams).map(([k, v]) => ({ 
+                peerId: k, 
+                tracks: v?.getTracks().map(t => `${t.kind}:${t.enabled}`) 
+              })),
+              myPeerId,
+              userId: user.id
+            });
+            return null;
+          })()}
+          {participants.filter(p => p.oduserId !== myPeerId && p.oduserId !== String(user.id)).map((participant) => {
+            const stream = remoteStreams[participant.oduserId];
+            console.log(`[VideoMeetingPage] Rendering participant ${participant.userName}:`, {
+              oduserId: participant.oduserId,
+              hasStream: !!stream,
+              streamTracks: stream?.getTracks().map(t => `${t.kind}:${t.enabled}`)
+            });
+            return (
+              <RemoteVideo
+                key={participant.oduserId}
+                participant={participant}
+                stream={stream}
+              />
+            );
           })}
-          {participants.filter(p => p.oduserId !== myPeerId && p.oduserId !== String(user.id)).map((participant) => (
-            <RemoteVideo
-              key={participant.oduserId}
-              participant={participant}
-              stream={remoteStreams[participant.oduserId]}
-            />
-          ))}
         </div>
       </div>
 

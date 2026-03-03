@@ -30,6 +30,7 @@ const getOrCreateGuestId = (roomId) => {
 // Remote Video Component
 const RemoteVideo = ({ participant, stream }) => {
   const videoRef = useRef(null);
+  const audioRef = useRef(null);
   const [hasVideo, setHasVideo] = useState(false);
   
   useEffect(() => {
@@ -37,6 +38,16 @@ const RemoteVideo = ({ participant, stream }) => {
       videoRef.current.srcObject = stream;
       const videoTracks = stream.getVideoTracks();
       setHasVideo(videoTracks.length > 0 && videoTracks[0].enabled);
+    }
+  }, [stream]);
+  
+  // Separate audio element for reliable audio playback
+  useEffect(() => {
+    if (audioRef.current && stream) {
+      audioRef.current.srcObject = stream;
+      audioRef.current.play().catch(err => {
+        console.warn(`[RemoteVideo] Audio autoplay blocked:`, err.message);
+      });
     }
   }, [stream]);
   
@@ -50,6 +61,7 @@ const RemoteVideo = ({ participant, stream }) => {
     
     stream.addEventListener('addtrack', handleTrackChange);
     stream.addEventListener('removetrack', handleTrackChange);
+    handleTrackChange();
     
     return () => {
       stream.removeEventListener('addtrack', handleTrackChange);
@@ -59,14 +71,15 @@ const RemoteVideo = ({ participant, stream }) => {
   
   return (
     <div className="relative bg-gray-800 rounded-xl overflow-hidden aspect-video flex items-center justify-center">
-      {stream && hasVideo ? (
-        <video
-          ref={videoRef}
-          autoPlay
-          playsInline
-          className="w-full h-full object-cover"
-        />
-      ) : (
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        muted
+        className={`w-full h-full object-cover ${hasVideo ? 'block' : 'hidden'}`}
+      />
+      <audio ref={audioRef} autoPlay playsInline />
+      {!hasVideo && (
         <div className="w-20 h-20 bg-gray-700 rounded-full flex items-center justify-center text-white text-2xl font-semibold">
           {(participant.userName || 'U')[0].toUpperCase()}
         </div>
@@ -288,10 +301,19 @@ const PublicMeetingPage = () => {
         console.log('[Mediasoup] No local stream yet, will produce when available');
       }
       
+      // Consume existing producers
       if (existingProducers && existingProducers.length > 0) {
-        console.log('[Mediasoup] Consuming existing producers:', existingProducers.length);
+        console.log('[Mediasoup] Consuming existing producers:', existingProducers.length, existingProducers);
+        const selfId = isLoggedIn ? String(storedUser.id) : persistentGuestId;
         for (const producer of existingProducers) {
-          await consumeProducer(producer.producerId, producer.peerId, producer.kind);
+          const peerIdStr = String(producer.peerId);
+          // Don't consume our own producers
+          if (peerIdStr === selfId) {
+            console.log('[Mediasoup] Skipping own producer:', producer.producerId);
+            continue;
+          }
+          console.log(`[Mediasoup] Consuming producer ${producer.producerId} from peer ${peerIdStr}`);
+          await consumeProducer(producer.producerId, peerIdStr, producer.kind);
         }
       }
     } catch (error) {
@@ -400,7 +422,15 @@ const PublicMeetingPage = () => {
   };
   
   const consumeProducer = async (producerId, peerId, kind) => {
-    if (!recvTransportRef.current || !deviceRef.current) return;
+    // Ensure peerId is always a string for consistency
+    const peerIdStr = String(peerId);
+    
+    if (!recvTransportRef.current || !deviceRef.current) {
+      console.warn('[Mediasoup] Cannot consume - transport not ready');
+      return;
+    }
+    
+    console.log(`[Mediasoup] consumeProducer called:`, { producerId, peerId: peerIdStr, kind });
     
     return new Promise((resolve, reject) => {
       socketRef.current.emit('consume', {
@@ -409,6 +439,7 @@ const PublicMeetingPage = () => {
         rtpCapabilities: deviceRef.current.rtpCapabilities
       }, async (response) => {
         if (response.error) {
+          console.error('[Mediasoup] Consume error:', response.error);
           reject(new Error(response.error));
           return;
         }
@@ -421,24 +452,32 @@ const PublicMeetingPage = () => {
             rtpParameters: response.consumer.rtpParameters
           });
           
-          socketRef.current.emit('resume-consumer', { consumerId: consumer.id }, () => {});
+          // Resume consumer
+          socketRef.current.emit('resume-consumer', { consumerId: consumer.id }, () => {
+            console.log('[Mediasoup] Consumer resumed:', consumer.id);
+          });
           
-          if (!consumersRef.current.has(peerId)) {
-            consumersRef.current.set(peerId, {});
+          // Store consumer
+          if (!consumersRef.current.has(peerIdStr)) {
+            consumersRef.current.set(peerIdStr, {});
           }
-          consumersRef.current.get(peerId)[kind] = consumer;
+          consumersRef.current.get(peerIdStr)[kind] = consumer;
           
+          // Add track to remote stream
           setRemoteStreams(prev => {
             const newStreams = { ...prev };
-            if (!newStreams[peerId]) {
-              newStreams[peerId] = new MediaStream();
+            if (!newStreams[peerIdStr]) {
+              newStreams[peerIdStr] = new MediaStream();
             }
-            newStreams[peerId].addTrack(consumer.track);
+            newStreams[peerIdStr].addTrack(consumer.track);
+            console.log(`[Mediasoup] Added ${kind} track to remoteStreams[${peerIdStr}], total tracks:`, newStreams[peerIdStr].getTracks().length);
             return newStreams;
           });
           
+          console.log(`[Mediasoup] Consuming ${kind} from peer ${peerIdStr}`);
           resolve(consumer);
         } catch (error) {
+          console.error('[Mediasoup] Consumer creation error:', error);
           reject(error);
         }
       });
@@ -516,16 +555,19 @@ const PublicMeetingPage = () => {
             
             // Save our peer ID for filtering
             if (response.peerId) {
-              setMyPeerId(response.peerId);
+              setMyPeerId(String(response.peerId));
             }
             
             // Set existing peers from the room (excluding self)
             if (response.existingPeers && response.existingPeers.length > 0) {
-              const myId = response.peerId || (isLoggedIn ? String(storedUser.id) : persistentGuestId);
-              const filteredPeers = response.existingPeers.filter(
-                p => p.oduserId !== myId
-              );
-              console.log('Existing peers in room (after filter):', filteredPeers);
+              const myId = String(response.peerId || (isLoggedIn ? storedUser.id : persistentGuestId));
+              const filteredPeers = response.existingPeers
+                .filter(p => String(p.oduserId) !== myId)
+                .map(p => ({
+                  oduserId: String(p.oduserId),
+                  userName: p.userName || 'User'
+                }));
+              console.log('[existingPeers] Normalized peers:', filteredPeers);
               setParticipants(filteredPeers);
             }
             
@@ -551,47 +593,83 @@ const PublicMeetingPage = () => {
       });
 
       socketRef.current.on('peer-joined', (data) => {
+        console.log('[peer-joined] Received:', data);
+        const peerIdStr = String(data.peerId);
+        
         // Ignore ourselves (shouldn't happen, but just in case)
         const selfId = isLoggedIn ? String(storedUser.id) : persistentGuestId;
-        if (data.peerId === selfId) return;
+        if (peerIdStr === selfId) return;
         
         setParticipants(prev => {
           // Avoid duplicates
-          if (prev.some(p => p.oduserId === data.peerId)) return prev;
-          return [...prev, { oduserId: data.peerId, userName: data.name }];
+          if (prev.some(p => p.oduserId === peerIdStr)) return prev;
+          console.log('[peer-joined] Adding participant:', { oduserId: peerIdStr, userName: data.name });
+          return [...prev, { oduserId: peerIdStr, userName: data.name }];
         });
         toast.success(`${data.name} bergabung`);
       });
 
       socketRef.current.on('peer-left', (data) => {
-        setParticipants(prev => prev.filter(p => p.oduserId !== data.peerId));
+        console.log('[peer-left] Received:', data);
+        const peerIdStr = String(data.peerId);
+        
+        setParticipants(prev => prev.filter(p => p.oduserId !== peerIdStr));
         toast(`${data.userName} keluar`, { icon: '👋' });
         
         // Remove remote stream and consumers
         setRemoteStreams(prev => {
           const newStreams = { ...prev };
-          delete newStreams[data.peerId];
+          delete newStreams[peerIdStr];
           return newStreams;
         });
         
-        if (consumersRef.current.has(data.peerId)) {
-          const peerConsumers = consumersRef.current.get(data.peerId);
+        if (consumersRef.current.has(peerIdStr)) {
+          const peerConsumers = consumersRef.current.get(peerIdStr);
           Object.values(peerConsumers).forEach(consumer => consumer?.close());
-          consumersRef.current.delete(data.peerId);
+          consumersRef.current.delete(peerIdStr);
         }
       });
       
       // Handle new producer from other peer
       socketRef.current.on('new-producer', async (data) => {
-        console.log('New producer:', data);
-        const { producerId, peerId, kind } = data;
+        console.log('[new-producer] Received:', data);
+        const { producerId, peerId, kind, userName } = data;
+        const peerIdStr = String(peerId);
         const selfId = isLoggedIn ? String(storedUser.id) : persistentGuestId;
-        if (peerId === selfId) return;
         
+        // Don't consume our own producers
+        if (peerIdStr === selfId) {
+          console.log('[new-producer] Ignoring own producer');
+          return;
+        }
+        
+        // Add participant if not already in list
+        setParticipants((prev) => {
+          if (prev.some(p => p.oduserId === peerIdStr)) return prev;
+          console.log('[new-producer] Adding participant:', { oduserId: peerIdStr, userName });
+          return [...prev, { oduserId: peerIdStr, userName: userName || 'User' }];
+        });
+        
+        // Wait for recv transport to be ready (might be race condition on initial load)
+        if (!recvTransportRef.current) {
+          console.log('[new-producer] Waiting for recv transport...');
+          let retries = 0;
+          while (!recvTransportRef.current && retries < 50) {
+            await new Promise(r => setTimeout(r, 100));
+            retries++;
+          }
+          if (!recvTransportRef.current) {
+            console.error('[new-producer] Recv transport not ready after 5s, cannot consume');
+            return;
+          }
+        }
+        
+        // Consume the new producer
         try {
-          await consumeProducer(producerId, peerId, kind);
+          console.log(`[new-producer] Consuming ${kind} from peer ${peerIdStr}`);
+          await consumeProducer(producerId, peerIdStr, kind);
         } catch (error) {
-          console.error('Error consuming new producer:', error);
+          console.error('[new-producer] Error consuming:', error);
         }
       });
       
