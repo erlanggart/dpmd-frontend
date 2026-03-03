@@ -345,6 +345,10 @@ const VideoMeetingPage = () => {
       console.log('[Mediasoup] Emitting create-transport for send...');
       socketRef.current.emit('create-transport', { direction: 'send' }, async (response) => {
         console.log('[Mediasoup] create-transport response:', response);
+        // Debug: Log ICE candidates to verify they contain public IP
+        if (response.transport?.iceCandidates) {
+          console.log('[Mediasoup] ICE Candidates from server:', JSON.stringify(response.transport.iceCandidates, null, 2));
+        }
         if (response.error) {
           console.error('[Mediasoup] Create send transport error:', response.error);
           reject(new Error(response.error));
