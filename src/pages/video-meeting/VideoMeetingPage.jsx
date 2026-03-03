@@ -11,9 +11,63 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { io } from 'socket.io-client';
+import { Device } from 'mediasoup-client';
 import api from '../../api';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:3001';
+
+// Remote Video Component
+const RemoteVideo = ({ participant, stream }) => {
+  const videoRef = useRef(null);
+  const [hasVideo, setHasVideo] = useState(false);
+  
+  useEffect(() => {
+    if (videoRef.current && stream) {
+      videoRef.current.srcObject = stream;
+      const videoTracks = stream.getVideoTracks();
+      setHasVideo(videoTracks.length > 0 && videoTracks[0].enabled);
+    }
+  }, [stream]);
+  
+  // Listen for track changes
+  useEffect(() => {
+    if (!stream) return;
+    
+    const handleTrackChange = () => {
+      const videoTracks = stream.getVideoTracks();
+      setHasVideo(videoTracks.length > 0 && videoTracks[0].enabled);
+    };
+    
+    stream.addEventListener('addtrack', handleTrackChange);
+    stream.addEventListener('removetrack', handleTrackChange);
+    
+    return () => {
+      stream.removeEventListener('addtrack', handleTrackChange);
+      stream.removeEventListener('removetrack', handleTrackChange);
+    };
+  }, [stream]);
+  
+  return (
+    <div className="relative bg-gray-800 rounded-xl overflow-hidden aspect-video flex items-center justify-center">
+      {stream && hasVideo ? (
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          className="w-full h-full object-cover"
+        />
+      ) : (
+        <div className="w-20 h-20 bg-gray-700 rounded-full flex items-center justify-center text-white text-2xl font-semibold">
+          {(participant.userName || 'U')[0].toUpperCase()}
+        </div>
+      )}
+      
+      <div className="absolute bottom-2 left-2 bg-black/60 px-3 py-1.5 rounded-lg">
+        <span className="text-white text-sm">{participant.userName}</span>
+      </div>
+    </div>
+  );
+};
 
 const VideoMeetingPage = () => {
   const { roomId } = useParams();
@@ -49,6 +103,17 @@ const VideoMeetingPage = () => {
   const socketRef = useRef(null);
   const remoteVideosRef = useRef({});
   const isEndingMeetingRef = useRef(false);
+  
+  // Mediasoup refs
+  const deviceRef = useRef(null);
+  const sendTransportRef = useRef(null);
+  const recvTransportRef = useRef(null);
+  const producersRef = useRef(new Map()); // producerId -> producer
+  const consumersRef = useRef(new Map()); // peerId -> { audio: consumer, video: consumer }
+  const rtpCapabilitiesRef = useRef(null);
+  
+  // Remote streams state
+  const [remoteStreams, setRemoteStreams] = useState({}); // peerId -> MediaStream
 
   // Sync video ref with stream - retry until ref is available
   useEffect(() => {
@@ -142,6 +207,213 @@ const VideoMeetingPage = () => {
     }
   };
 
+  // Helper: Create and setup mediasoup device
+  const setupMediasoup = async (rtpCapabilities, existingProducers) => {
+    try {
+      console.log('[Mediasoup] Setting up device with RTP capabilities');
+      rtpCapabilitiesRef.current = rtpCapabilities;
+      
+      // Create device
+      const device = new Device();
+      await device.load({ routerRtpCapabilities: rtpCapabilities });
+      deviceRef.current = device;
+      console.log('[Mediasoup] Device loaded successfully');
+      
+      // Create send transport
+      await createSendTransport();
+      
+      // Create recv transport  
+      await createRecvTransport();
+      
+      // Produce local tracks
+      if (localStream) {
+        await produceLocalTracks();
+      }
+      
+      // Consume existing producers
+      if (existingProducers && existingProducers.length > 0) {
+        console.log('[Mediasoup] Consuming existing producers:', existingProducers.length);
+        for (const producer of existingProducers) {
+          await consumeProducer(producer.producerId, producer.peerId, producer.kind);
+        }
+      }
+    } catch (error) {
+      console.error('[Mediasoup] Setup error:', error);
+      toast.error('Gagal setup video conference');
+    }
+  };
+  
+  // Create send transport for producing media
+  const createSendTransport = async () => {
+    return new Promise((resolve, reject) => {
+      socketRef.current.emit('create-transport', { direction: 'send' }, async (response) => {
+        if (response.error) {
+          console.error('[Mediasoup] Create send transport error:', response.error);
+          reject(new Error(response.error));
+          return;
+        }
+        
+        const transport = deviceRef.current.createSendTransport(response.transport);
+        
+        transport.on('connect', ({ dtlsParameters }, callback, errback) => {
+          console.log('[Mediasoup] Send transport connecting...');
+          socketRef.current.emit('connect-transport', {
+            transportId: transport.id,
+            dtlsParameters
+          }, (res) => {
+            if (res.error) {
+              errback(new Error(res.error));
+            } else {
+              callback();
+            }
+          });
+        });
+        
+        transport.on('produce', ({ kind, rtpParameters, appData }, callback, errback) => {
+          console.log('[Mediasoup] Producing:', kind);
+          socketRef.current.emit('produce', {
+            transportId: transport.id,
+            kind,
+            rtpParameters,
+            appData
+          }, (res) => {
+            if (res.error) {
+              errback(new Error(res.error));
+            } else {
+              callback({ id: res.id });
+            }
+          });
+        });
+        
+        sendTransportRef.current = transport;
+        console.log('[Mediasoup] Send transport created');
+        resolve(transport);
+      });
+    });
+  };
+  
+  // Create recv transport for consuming media
+  const createRecvTransport = async () => {
+    return new Promise((resolve, reject) => {
+      socketRef.current.emit('create-transport', { direction: 'recv' }, async (response) => {
+        if (response.error) {
+          console.error('[Mediasoup] Create recv transport error:', response.error);
+          reject(new Error(response.error));
+          return;
+        }
+        
+        const transport = deviceRef.current.createRecvTransport(response.transport);
+        
+        transport.on('connect', ({ dtlsParameters }, callback, errback) => {
+          console.log('[Mediasoup] Recv transport connecting...');
+          socketRef.current.emit('connect-transport', {
+            transportId: transport.id,
+            dtlsParameters
+          }, (res) => {
+            if (res.error) {
+              errback(new Error(res.error));
+            } else {
+              callback();
+            }
+          });
+        });
+        
+        recvTransportRef.current = transport;
+        console.log('[Mediasoup] Recv transport created');
+        resolve(transport);
+      });
+    });
+  };
+  
+  // Produce local audio/video tracks
+  const produceLocalTracks = async () => {
+    if (!sendTransportRef.current || !localStream) return;
+    
+    try {
+      // Produce audio
+      const audioTrack = localStream.getAudioTracks()[0];
+      if (audioTrack) {
+        const audioProducer = await sendTransportRef.current.produce({
+          track: audioTrack,
+          appData: { mediaType: 'audio' }
+        });
+        producersRef.current.set('audio', audioProducer);
+        console.log('[Mediasoup] Audio producer created:', audioProducer.id);
+      }
+      
+      // Produce video
+      const videoTrack = localStream.getVideoTracks()[0];
+      if (videoTrack) {
+        const videoProducer = await sendTransportRef.current.produce({
+          track: videoTrack,
+          appData: { mediaType: 'video' }
+        });
+        producersRef.current.set('video', videoProducer);
+        console.log('[Mediasoup] Video producer created:', videoProducer.id);
+      }
+    } catch (error) {
+      console.error('[Mediasoup] Produce error:', error);
+    }
+  };
+  
+  // Consume a remote producer
+  const consumeProducer = async (producerId, peerId, kind) => {
+    if (!recvTransportRef.current || !deviceRef.current) {
+      console.warn('[Mediasoup] Cannot consume - transport not ready');
+      return;
+    }
+    
+    return new Promise((resolve, reject) => {
+      socketRef.current.emit('consume', {
+        transportId: recvTransportRef.current.id,
+        producerId,
+        rtpCapabilities: deviceRef.current.rtpCapabilities
+      }, async (response) => {
+        if (response.error) {
+          console.error('[Mediasoup] Consume error:', response.error);
+          reject(new Error(response.error));
+          return;
+        }
+        
+        try {
+          const consumer = await recvTransportRef.current.consume({
+            id: response.consumer.id,
+            producerId: response.consumer.producerId,
+            kind: response.consumer.kind,
+            rtpParameters: response.consumer.rtpParameters
+          });
+          
+          // Resume consumer
+          socketRef.current.emit('resume-consumer', { consumerId: consumer.id }, () => {
+            console.log('[Mediasoup] Consumer resumed:', consumer.id);
+          });
+          
+          // Store consumer
+          if (!consumersRef.current.has(peerId)) {
+            consumersRef.current.set(peerId, {});
+          }
+          consumersRef.current.get(peerId)[kind] = consumer;
+          
+          // Add track to remote stream
+          setRemoteStreams(prev => {
+            const newStreams = { ...prev };
+            if (!newStreams[peerId]) {
+              newStreams[peerId] = new MediaStream();
+            }
+            newStreams[peerId].addTrack(consumer.track);
+            return newStreams;
+          });
+          
+          console.log(`[Mediasoup] Consuming ${kind} from peer ${peerId}`);
+          resolve(consumer);
+        } catch (error) {
+          console.error('[Mediasoup] Consumer creation error:', error);
+          reject(error);
+        }
+      });
+    });
+  };
+
   const connectSocket = () => {
     // Get token from authSession or expressToken
     let token = localStorage.getItem('expressToken');
@@ -175,7 +447,7 @@ const VideoMeetingPage = () => {
       // Join the room with callback
       socketRef.current.emit('join-room', {
         roomId,
-      }, (response) => {
+      }, async (response) => {
         console.log('Join room response:', response);
         
         if (response.error) {
@@ -207,6 +479,11 @@ const VideoMeetingPage = () => {
             );
             console.log('Existing peers in room (after filter):', filteredPeers);
             setParticipants(filteredPeers);
+          }
+          
+          // Setup mediasoup with RTP capabilities
+          if (response.rtpCapabilities) {
+            await setupMediasoup(response.rtpCapabilities, response.producers);
           }
           
           toast.success('Berhasil bergabung ke meeting');
@@ -247,9 +524,51 @@ const VideoMeetingPage = () => {
       setParticipants((prev) => prev.filter((p) => p.oduserId !== data.peerId));
       toast(`${data.userName} keluar`, { icon: '👋' });
       
-      // Remove remote video
-      if (remoteVideosRef.current[data.peerId]) {
-        delete remoteVideosRef.current[data.peerId];
+      // Remove remote stream and consumers
+      setRemoteStreams(prev => {
+        const newStreams = { ...prev };
+        delete newStreams[data.peerId];
+        return newStreams;
+      });
+      
+      // Close consumers for this peer
+      if (consumersRef.current.has(data.peerId)) {
+        const peerConsumers = consumersRef.current.get(data.peerId);
+        Object.values(peerConsumers).forEach(consumer => consumer?.close());
+        consumersRef.current.delete(data.peerId);
+      }
+    });
+    
+    // Handle new producer from other peer
+    socketRef.current.on('new-producer', async (data) => {
+      console.log('New producer:', data);
+      const { producerId, peerId, kind, userName } = data;
+      
+      // Don't consume our own producers
+      if (peerId === String(user.id)) return;
+      
+      // Consume the new producer
+      try {
+        await consumeProducer(producerId, peerId, kind);
+      } catch (error) {
+        console.error('Error consuming new producer:', error);
+      }
+    });
+    
+    // Handle producer closed
+    socketRef.current.on('producer-closed', (data) => {
+      console.log('Producer closed:', data);
+      const { producerId, peerId } = data;
+      
+      // Remove track from stream
+      if (consumersRef.current.has(peerId)) {
+        const peerConsumers = consumersRef.current.get(peerId);
+        Object.entries(peerConsumers).forEach(([kind, consumer]) => {
+          if (consumer?.producerId === producerId) {
+            consumer.close();
+            delete peerConsumers[kind];
+          }
+        });
       }
     });
 
@@ -285,10 +604,36 @@ const VideoMeetingPage = () => {
   };
 
   const cleanup = () => {
+    // Close all consumers
+    consumersRef.current.forEach((peerConsumers) => {
+      Object.values(peerConsumers).forEach(consumer => consumer?.close());
+    });
+    consumersRef.current.clear();
+    
+    // Close all producers
+    producersRef.current.forEach(producer => producer?.close());
+    producersRef.current.clear();
+    
+    // Close transports
+    if (sendTransportRef.current) {
+      sendTransportRef.current.close();
+      sendTransportRef.current = null;
+    }
+    if (recvTransportRef.current) {
+      recvTransportRef.current.close();
+      recvTransportRef.current = null;
+    }
+    
+    // Clear device
+    deviceRef.current = null;
+    
     // Stop local stream
     if (localStream) {
       localStream.getTracks().forEach((track) => track.stop());
     }
+    
+    // Clear remote streams
+    setRemoteStreams({});
     
     // Disconnect socket
     if (socketRef.current) {
@@ -552,18 +897,11 @@ const VideoMeetingPage = () => {
 
           {/* Remote Videos */}
           {participants.filter(p => p.oduserId !== myPeerId && p.oduserId !== String(user.id)).map((participant) => (
-            <div
+            <RemoteVideo
               key={participant.oduserId}
-              className="relative bg-gray-800 rounded-xl overflow-hidden aspect-video flex items-center justify-center"
-            >
-              <div className="w-20 h-20 bg-gray-700 rounded-full flex items-center justify-center text-white text-2xl font-semibold">
-                {(participant.userName || 'U')[0].toUpperCase()}
-              </div>
-              
-              <div className="absolute bottom-2 left-2 bg-black/60 px-3 py-1.5 rounded-lg">
-                <span className="text-white text-sm">{participant.userName}</span>
-              </div>
-            </div>
+              participant={participant}
+              stream={remoteStreams[participant.oduserId]}
+            />
           ))}
         </div>
       </div>

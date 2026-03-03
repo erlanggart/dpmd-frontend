@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { io } from 'socket.io-client';
+import { Device } from 'mediasoup-client';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:3001';
 
@@ -24,6 +25,58 @@ const getOrCreateGuestId = (roomId) => {
     sessionStorage.setItem(key, guestId);
   }
   return guestId;
+};
+
+// Remote Video Component
+const RemoteVideo = ({ participant, stream }) => {
+  const videoRef = useRef(null);
+  const [hasVideo, setHasVideo] = useState(false);
+  
+  useEffect(() => {
+    if (videoRef.current && stream) {
+      videoRef.current.srcObject = stream;
+      const videoTracks = stream.getVideoTracks();
+      setHasVideo(videoTracks.length > 0 && videoTracks[0].enabled);
+    }
+  }, [stream]);
+  
+  useEffect(() => {
+    if (!stream) return;
+    
+    const handleTrackChange = () => {
+      const videoTracks = stream.getVideoTracks();
+      setHasVideo(videoTracks.length > 0 && videoTracks[0].enabled);
+    };
+    
+    stream.addEventListener('addtrack', handleTrackChange);
+    stream.addEventListener('removetrack', handleTrackChange);
+    
+    return () => {
+      stream.removeEventListener('addtrack', handleTrackChange);
+      stream.removeEventListener('removetrack', handleTrackChange);
+    };
+  }, [stream]);
+  
+  return (
+    <div className="relative bg-gray-800 rounded-xl overflow-hidden aspect-video flex items-center justify-center">
+      {stream && hasVideo ? (
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          className="w-full h-full object-cover"
+        />
+      ) : (
+        <div className="w-20 h-20 bg-gray-700 rounded-full flex items-center justify-center text-white text-2xl font-semibold">
+          {(participant.userName || 'U')[0].toUpperCase()}
+        </div>
+      )}
+      
+      <div className="absolute bottom-2 left-2 bg-black/60 px-3 py-1.5 rounded-lg">
+        <span className="text-white text-sm">{participant.userName}</span>
+      </div>
+    </div>
+  );
 };
 
 const PublicMeetingPage = () => {
@@ -73,6 +126,17 @@ const PublicMeetingPage = () => {
   const localVideoRef = useRef(null);
   const previewVideoRef = useRef(null);
   const socketRef = useRef(null);
+  
+  // Mediasoup refs
+  const deviceRef = useRef(null);
+  const sendTransportRef = useRef(null);
+  const recvTransportRef = useRef(null);
+  const producersRef = useRef(new Map());
+  const consumersRef = useRef(new Map());
+  const rtpCapabilitiesRef = useRef(null);
+  
+  // Remote streams state
+  const [remoteStreams, setRemoteStreams] = useState({});
 
   // Get user info
   const user = isLoggedIn 
@@ -182,6 +246,172 @@ const PublicMeetingPage = () => {
     }
   };
 
+  // Helper: Create and setup mediasoup device
+  const setupMediasoup = async (rtpCapabilities, existingProducers) => {
+    try {
+      console.log('[Mediasoup] Setting up device with RTP capabilities');
+      rtpCapabilitiesRef.current = rtpCapabilities;
+      
+      const device = new Device();
+      await device.load({ routerRtpCapabilities: rtpCapabilities });
+      deviceRef.current = device;
+      console.log('[Mediasoup] Device loaded successfully');
+      
+      await createSendTransport();
+      await createRecvTransport();
+      
+      if (localStream) {
+        await produceLocalTracks();
+      }
+      
+      if (existingProducers && existingProducers.length > 0) {
+        console.log('[Mediasoup] Consuming existing producers:', existingProducers.length);
+        for (const producer of existingProducers) {
+          await consumeProducer(producer.producerId, producer.peerId, producer.kind);
+        }
+      }
+    } catch (error) {
+      console.error('[Mediasoup] Setup error:', error);
+      toast.error('Gagal setup video conference');
+    }
+  };
+  
+  const createSendTransport = async () => {
+    return new Promise((resolve, reject) => {
+      socketRef.current.emit('create-transport', { direction: 'send' }, async (response) => {
+        if (response.error) {
+          reject(new Error(response.error));
+          return;
+        }
+        
+        const transport = deviceRef.current.createSendTransport(response.transport);
+        
+        transport.on('connect', ({ dtlsParameters }, callback, errback) => {
+          socketRef.current.emit('connect-transport', {
+            transportId: transport.id,
+            dtlsParameters
+          }, (res) => {
+            if (res.error) errback(new Error(res.error));
+            else callback();
+          });
+        });
+        
+        transport.on('produce', ({ kind, rtpParameters, appData }, callback, errback) => {
+          socketRef.current.emit('produce', {
+            transportId: transport.id,
+            kind,
+            rtpParameters,
+            appData
+          }, (res) => {
+            if (res.error) errback(new Error(res.error));
+            else callback({ id: res.id });
+          });
+        });
+        
+        sendTransportRef.current = transport;
+        resolve(transport);
+      });
+    });
+  };
+  
+  const createRecvTransport = async () => {
+    return new Promise((resolve, reject) => {
+      socketRef.current.emit('create-transport', { direction: 'recv' }, async (response) => {
+        if (response.error) {
+          reject(new Error(response.error));
+          return;
+        }
+        
+        const transport = deviceRef.current.createRecvTransport(response.transport);
+        
+        transport.on('connect', ({ dtlsParameters }, callback, errback) => {
+          socketRef.current.emit('connect-transport', {
+            transportId: transport.id,
+            dtlsParameters
+          }, (res) => {
+            if (res.error) errback(new Error(res.error));
+            else callback();
+          });
+        });
+        
+        recvTransportRef.current = transport;
+        resolve(transport);
+      });
+    });
+  };
+  
+  const produceLocalTracks = async () => {
+    if (!sendTransportRef.current || !localStream) return;
+    
+    try {
+      const audioTrack = localStream.getAudioTracks()[0];
+      if (audioTrack) {
+        const audioProducer = await sendTransportRef.current.produce({
+          track: audioTrack,
+          appData: { mediaType: 'audio' }
+        });
+        producersRef.current.set('audio', audioProducer);
+      }
+      
+      const videoTrack = localStream.getVideoTracks()[0];
+      if (videoTrack) {
+        const videoProducer = await sendTransportRef.current.produce({
+          track: videoTrack,
+          appData: { mediaType: 'video' }
+        });
+        producersRef.current.set('video', videoProducer);
+      }
+    } catch (error) {
+      console.error('[Mediasoup] Produce error:', error);
+    }
+  };
+  
+  const consumeProducer = async (producerId, peerId, kind) => {
+    if (!recvTransportRef.current || !deviceRef.current) return;
+    
+    return new Promise((resolve, reject) => {
+      socketRef.current.emit('consume', {
+        transportId: recvTransportRef.current.id,
+        producerId,
+        rtpCapabilities: deviceRef.current.rtpCapabilities
+      }, async (response) => {
+        if (response.error) {
+          reject(new Error(response.error));
+          return;
+        }
+        
+        try {
+          const consumer = await recvTransportRef.current.consume({
+            id: response.consumer.id,
+            producerId: response.consumer.producerId,
+            kind: response.consumer.kind,
+            rtpParameters: response.consumer.rtpParameters
+          });
+          
+          socketRef.current.emit('resume-consumer', { consumerId: consumer.id }, () => {});
+          
+          if (!consumersRef.current.has(peerId)) {
+            consumersRef.current.set(peerId, {});
+          }
+          consumersRef.current.get(peerId)[kind] = consumer;
+          
+          setRemoteStreams(prev => {
+            const newStreams = { ...prev };
+            if (!newStreams[peerId]) {
+              newStreams[peerId] = new MediaStream();
+            }
+            newStreams[peerId].addTrack(consumer.track);
+            return newStreams;
+          });
+          
+          resolve(consumer);
+        } catch (error) {
+          reject(error);
+        }
+      });
+    });
+  };
+
   const handleJoinMeeting = async () => {
     if (!isLoggedIn && !guestName.trim()) {
       toast.error('Silakan masukkan nama Anda');
@@ -227,7 +457,7 @@ const PublicMeetingPage = () => {
           roomId,
           guestName: !isLoggedIn ? guestName : null,
           guestId: persistentGuestId, // Persistent guest ID
-        }, (response) => {
+        }, async (response) => {
           console.log('Join room response:', response);
           
           if (response.error) {
@@ -266,6 +496,11 @@ const PublicMeetingPage = () => {
               setParticipants(filteredPeers);
             }
             
+            // Setup mediasoup with RTP capabilities
+            if (response.rtpCapabilities) {
+              await setupMediasoup(response.rtpCapabilities, response.producers);
+            }
+            
             // Update video ref
             if (localVideoRef.current && localStream) {
               localVideoRef.current.srcObject = localStream;
@@ -298,6 +533,47 @@ const PublicMeetingPage = () => {
       socketRef.current.on('peer-left', (data) => {
         setParticipants(prev => prev.filter(p => p.oduserId !== data.peerId));
         toast(`${data.userName} keluar`, { icon: '👋' });
+        
+        // Remove remote stream and consumers
+        setRemoteStreams(prev => {
+          const newStreams = { ...prev };
+          delete newStreams[data.peerId];
+          return newStreams;
+        });
+        
+        if (consumersRef.current.has(data.peerId)) {
+          const peerConsumers = consumersRef.current.get(data.peerId);
+          Object.values(peerConsumers).forEach(consumer => consumer?.close());
+          consumersRef.current.delete(data.peerId);
+        }
+      });
+      
+      // Handle new producer from other peer
+      socketRef.current.on('new-producer', async (data) => {
+        console.log('New producer:', data);
+        const { producerId, peerId, kind } = data;
+        const selfId = isLoggedIn ? String(storedUser.id) : persistentGuestId;
+        if (peerId === selfId) return;
+        
+        try {
+          await consumeProducer(producerId, peerId, kind);
+        } catch (error) {
+          console.error('Error consuming new producer:', error);
+        }
+      });
+      
+      // Handle producer closed
+      socketRef.current.on('producer-closed', (data) => {
+        const { producerId, peerId } = data;
+        if (consumersRef.current.has(peerId)) {
+          const peerConsumers = consumersRef.current.get(peerId);
+          Object.entries(peerConsumers).forEach(([kind, consumer]) => {
+            if (consumer?.producerId === producerId) {
+              consumer.close();
+              delete peerConsumers[kind];
+            }
+          });
+        }
       });
 
       socketRef.current.on('chat-message', (message) => {
@@ -337,9 +613,34 @@ const PublicMeetingPage = () => {
   };
 
   const cleanup = () => {
+    // Close all consumers
+    consumersRef.current.forEach((peerConsumers) => {
+      Object.values(peerConsumers).forEach(consumer => consumer?.close());
+    });
+    consumersRef.current.clear();
+    
+    // Close all producers
+    producersRef.current.forEach(producer => producer?.close());
+    producersRef.current.clear();
+    
+    // Close transports
+    if (sendTransportRef.current) {
+      sendTransportRef.current.close();
+      sendTransportRef.current = null;
+    }
+    if (recvTransportRef.current) {
+      recvTransportRef.current.close();
+      recvTransportRef.current = null;
+    }
+    
+    deviceRef.current = null;
+    
     if (localStream) {
       localStream.getTracks().forEach(track => track.stop());
     }
+    
+    setRemoteStreams({});
+    
     if (socketRef.current) {
       socketRef.current.emit('leave-room', { roomId });
       socketRef.current.disconnect();
@@ -670,18 +971,11 @@ const PublicMeetingPage = () => {
 
           {/* Remote Videos */}
           {participants.filter(p => p.oduserId !== myPeerId).map((participant) => (
-            <div
+            <RemoteVideo
               key={participant.oduserId}
-              className="relative bg-gray-800 rounded-xl overflow-hidden aspect-video flex items-center justify-center"
-            >
-              <div className="w-20 h-20 bg-gray-700 rounded-full flex items-center justify-center text-white text-2xl font-semibold">
-                {(participant.userName || 'U')[0].toUpperCase()}
-              </div>
-              
-              <div className="absolute bottom-2 left-2 bg-black/60 px-3 py-1.5 rounded-lg">
-                <span className="text-white text-sm">{participant.userName}</span>
-              </div>
-            </div>
+              participant={participant}
+              stream={remoteStreams[participant.oduserId]}
+            />
           ))}
         </div>
       </div>
