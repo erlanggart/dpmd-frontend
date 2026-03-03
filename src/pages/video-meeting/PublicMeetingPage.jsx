@@ -126,6 +126,8 @@ const PublicMeetingPage = () => {
   const localVideoRef = useRef(null);
   const previewVideoRef = useRef(null);
   const socketRef = useRef(null);
+  const localStreamRef = useRef(null); // Mirror of localStream state for use in callbacks
+  const producedRef = useRef(false); // Track if we've already produced
   
   // Mediasoup refs
   const deviceRef = useRef(null);
@@ -142,6 +144,23 @@ const PublicMeetingPage = () => {
   const user = isLoggedIn 
     ? storedUser 
     : { id: `guest_${Date.now()}`, nama: guestName, isGuest: true };
+
+  // Sync localStreamRef with localStream state (for use in socket callbacks)
+  useEffect(() => {
+    localStreamRef.current = localStream;
+  }, [localStream]);
+
+  // Produce local tracks when stream becomes available and transport is ready
+  useEffect(() => {
+    const produceIfReady = async () => {
+      if (localStream && sendTransportRef.current && !producedRef.current) {
+        console.log('[Mediasoup] Stream and transport ready, producing tracks');
+        producedRef.current = true;
+        await produceLocalTracks();
+      }
+    };
+    produceIfReady();
+  }, [localStream, connected]);
 
   // Sync video ref with stream when joined - retry until ref is available
   useEffect(() => {
@@ -260,8 +279,13 @@ const PublicMeetingPage = () => {
       await createSendTransport();
       await createRecvTransport();
       
-      if (localStream) {
+      // Use ref to get current stream (state might be stale in callback)
+      const stream = localStreamRef.current;
+      if (stream) {
+        console.log('[Mediasoup] Local stream available, producing tracks');
         await produceLocalTracks();
+      } else {
+        console.log('[Mediasoup] No local stream yet, will produce when available');
       }
       
       if (existingProducers && existingProducers.length > 0) {
@@ -341,25 +365,34 @@ const PublicMeetingPage = () => {
   };
   
   const produceLocalTracks = async () => {
-    if (!sendTransportRef.current || !localStream) return;
+    const stream = localStreamRef.current;
+    if (!sendTransportRef.current || !stream) {
+      console.log('[Mediasoup] Cannot produce - sendTransport or stream not ready', {
+        sendTransport: !!sendTransportRef.current,
+        stream: !!stream
+      });
+      return;
+    }
     
     try {
-      const audioTrack = localStream.getAudioTracks()[0];
+      const audioTrack = stream.getAudioTracks()[0];
       if (audioTrack) {
         const audioProducer = await sendTransportRef.current.produce({
           track: audioTrack,
           appData: { mediaType: 'audio' }
         });
         producersRef.current.set('audio', audioProducer);
+        console.log('[Mediasoup] Audio producer created:', audioProducer.id);
       }
       
-      const videoTrack = localStream.getVideoTracks()[0];
+      const videoTrack = stream.getVideoTracks()[0];
       if (videoTrack) {
         const videoProducer = await sendTransportRef.current.produce({
           track: videoTrack,
           appData: { mediaType: 'video' }
         });
         producersRef.current.set('video', videoProducer);
+        console.log('[Mediasoup] Video producer created:', videoProducer.id);
       }
     } catch (error) {
       console.error('[Mediasoup] Produce error:', error);

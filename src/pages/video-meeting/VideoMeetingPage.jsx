@@ -21,13 +21,24 @@ const RemoteVideo = ({ participant, stream }) => {
   const videoRef = useRef(null);
   const [hasVideo, setHasVideo] = useState(false);
   
+  // Debug: log stream state on each render
+  useEffect(() => {
+    console.log(`[RemoteVideo] ${participant.userName} (${participant.oduserId}):`, {
+      stream: !!stream,
+      tracks: stream?.getTracks().map(t => `${t.kind}:${t.enabled}`),
+      hasVideo
+    });
+  });
+  
   useEffect(() => {
     if (videoRef.current && stream) {
       videoRef.current.srcObject = stream;
       const videoTracks = stream.getVideoTracks();
-      setHasVideo(videoTracks.length > 0 && videoTracks[0].enabled);
+      const newHasVideo = videoTracks.length > 0 && videoTracks[0].enabled;
+      console.log(`[RemoteVideo] Setting srcObject for ${participant.userName}, videoTracks:`, videoTracks.length, 'hasVideo:', newHasVideo);
+      setHasVideo(newHasVideo);
     }
-  }, [stream]);
+  }, [stream, participant.userName]);
   
   // Listen for track changes
   useEffect(() => {
@@ -35,17 +46,22 @@ const RemoteVideo = ({ participant, stream }) => {
     
     const handleTrackChange = () => {
       const videoTracks = stream.getVideoTracks();
-      setHasVideo(videoTracks.length > 0 && videoTracks[0].enabled);
+      const newHasVideo = videoTracks.length > 0 && videoTracks[0].enabled;
+      console.log(`[RemoteVideo] Track changed for ${participant.userName}, hasVideo:`, newHasVideo);
+      setHasVideo(newHasVideo);
     };
     
     stream.addEventListener('addtrack', handleTrackChange);
     stream.addEventListener('removetrack', handleTrackChange);
     
+    // Also check immediately in case track already exists
+    handleTrackChange();
+    
     return () => {
       stream.removeEventListener('addtrack', handleTrackChange);
       stream.removeEventListener('removetrack', handleTrackChange);
     };
-  }, [stream]);
+  }, [stream, participant.userName]);
   
   return (
     <div className="relative bg-gray-800 rounded-xl overflow-hidden aspect-video flex items-center justify-center">
@@ -103,6 +119,8 @@ const VideoMeetingPage = () => {
   const socketRef = useRef(null);
   const remoteVideosRef = useRef({});
   const isEndingMeetingRef = useRef(false);
+  const localStreamRef = useRef(null); // Mirror of localStream to avoid stale closures
+  const initializedRef = useRef(false); // Prevent double initialization (React StrictMode)
   
   // Mediasoup refs
   const deviceRef = useRef(null);
@@ -114,6 +132,24 @@ const VideoMeetingPage = () => {
   
   // Remote streams state
   const [remoteStreams, setRemoteStreams] = useState({}); // peerId -> MediaStream
+  const producedRef = useRef(false); // Track if we've already produced
+
+  // Sync localStreamRef with localStream state (for use in socket callbacks)
+  useEffect(() => {
+    localStreamRef.current = localStream;
+  }, [localStream]);
+
+  // Produce local tracks when stream becomes available and transport is ready
+  useEffect(() => {
+    const produceIfReady = async () => {
+      if (localStream && sendTransportRef.current && !producedRef.current) {
+        console.log('[Mediasoup] Stream and transport ready, producing tracks');
+        producedRef.current = true;
+        await produceLocalTracks();
+      }
+    };
+    produceIfReady();
+  }, [localStream, connected]);
 
   // Sync video ref with stream - retry until ref is available
   useEffect(() => {
@@ -144,6 +180,14 @@ const VideoMeetingPage = () => {
 
   // Initialize meeting
   useEffect(() => {
+    // Prevent double initialization (React StrictMode calls useEffect twice)
+    // But allow re-init if socket was disconnected  
+    if (initializedRef.current && socketRef.current?.connected) {
+      console.log('[Meeting] Already initialized and connected, skipping duplicate mount');
+      return;
+    }
+    initializedRef.current = true;
+    
     const initMeeting = async () => {
       try {
         setLoading(true);
@@ -174,6 +218,8 @@ const VideoMeetingPage = () => {
     initMeeting();
 
     return () => {
+      // Don't reset initializedRef here - let it stay true to prevent 
+      // React StrictMode double mount from creating duplicate connections
       cleanup();
     };
   }, [roomId]);
@@ -211,23 +257,35 @@ const VideoMeetingPage = () => {
   const setupMediasoup = async (rtpCapabilities, existingProducers) => {
     try {
       console.log('[Mediasoup] Setting up device with RTP capabilities');
+      console.log('[Mediasoup] RTP caps:', JSON.stringify(rtpCapabilities).substring(0, 200));
       rtpCapabilitiesRef.current = rtpCapabilities;
       
       // Create device
+      console.log('[Mediasoup] Creating Device...');
       const device = new Device();
+      console.log('[Mediasoup] Device created, loading router caps...');
       await device.load({ routerRtpCapabilities: rtpCapabilities });
       deviceRef.current = device;
-      console.log('[Mediasoup] Device loaded successfully');
+      console.log('[Mediasoup] Device loaded successfully, canProduce video:', device.canProduce('video'));
       
       // Create send transport
+      console.log('[Mediasoup] Creating send transport...');
       await createSendTransport();
+      console.log('[Mediasoup] Send transport created');
       
       // Create recv transport  
+      console.log('[Mediasoup] Creating recv transport...');
       await createRecvTransport();
+      console.log('[Mediasoup] Recv transport created');
       
-      // Produce local tracks
-      if (localStream) {
+      // Produce local tracks (use ref to get current stream)
+      const stream = localStreamRef.current;
+      console.log('[Mediasoup] localStreamRef.current:', stream ? 'available' : 'null');
+      if (stream) {
+        console.log('[Mediasoup] Local stream available, producing tracks');
         await produceLocalTracks();
+      } else {
+        console.log('[Mediasoup] No local stream yet, will produce when available');
       }
       
       // Consume existing producers
@@ -239,14 +297,18 @@ const VideoMeetingPage = () => {
       }
     } catch (error) {
       console.error('[Mediasoup] Setup error:', error);
-      toast.error('Gagal setup video conference');
+      console.error('[Mediasoup] Setup error stack:', error.stack);
+      toast.error('Gagal setup video conference: ' + error.message);
     }
   };
   
   // Create send transport for producing media
   const createSendTransport = async () => {
+    console.log('[Mediasoup] createSendTransport called, socketRef:', socketRef.current ? 'connected' : 'null');
     return new Promise((resolve, reject) => {
+      console.log('[Mediasoup] Emitting create-transport for send...');
       socketRef.current.emit('create-transport', { direction: 'send' }, async (response) => {
+        console.log('[Mediasoup] create-transport response:', response);
         if (response.error) {
           console.error('[Mediasoup] Create send transport error:', response.error);
           reject(new Error(response.error));
@@ -327,11 +389,18 @@ const VideoMeetingPage = () => {
   
   // Produce local audio/video tracks
   const produceLocalTracks = async () => {
-    if (!sendTransportRef.current || !localStream) return;
+    const stream = localStreamRef.current;
+    if (!sendTransportRef.current || !stream) {
+      console.log('[Mediasoup] Cannot produce - sendTransport or stream not ready', {
+        sendTransport: !!sendTransportRef.current,
+        stream: !!stream
+      });
+      return;
+    }
     
     try {
       // Produce audio
-      const audioTrack = localStream.getAudioTracks()[0];
+      const audioTrack = stream.getAudioTracks()[0];
       if (audioTrack) {
         const audioProducer = await sendTransportRef.current.produce({
           track: audioTrack,
@@ -342,7 +411,7 @@ const VideoMeetingPage = () => {
       }
       
       // Produce video
-      const videoTrack = localStream.getVideoTracks()[0];
+      const videoTrack = stream.getVideoTracks()[0];
       if (videoTrack) {
         const videoProducer = await sendTransportRef.current.produce({
           track: videoTrack,
@@ -415,6 +484,19 @@ const VideoMeetingPage = () => {
   };
 
   const connectSocket = () => {
+    // Prevent duplicate socket connections
+    if (socketRef.current?.connected) {
+      console.log('[Socket] Already connected, skipping duplicate connection');
+      return;
+    }
+    
+    // Cleanup any existing socket before creating new one
+    if (socketRef.current) {
+      console.log('[Socket] Cleaning up existing socket before reconnect');
+      socketRef.current.disconnect();
+      socketRef.current = null;
+    }
+    
     // Get token from authSession or expressToken
     let token = localStorage.getItem('expressToken');
     if (!token) {
@@ -483,7 +565,15 @@ const VideoMeetingPage = () => {
           
           // Setup mediasoup with RTP capabilities
           if (response.rtpCapabilities) {
-            await setupMediasoup(response.rtpCapabilities, response.producers);
+            console.log('[Mediasoup] RTP capabilities received, calling setupMediasoup');
+            try {
+              await setupMediasoup(response.rtpCapabilities, response.producers);
+              console.log('[Mediasoup] setupMediasoup completed successfully');
+            } catch (err) {
+              console.error('[Mediasoup] setupMediasoup error:', err);
+            }
+          } else {
+            console.warn('[Mediasoup] No RTP capabilities in response!');
           }
           
           toast.success('Berhasil bergabung ke meeting');
@@ -604,6 +694,8 @@ const VideoMeetingPage = () => {
   };
 
   const cleanup = () => {
+    console.log('[Cleanup] Starting cleanup...');
+    
     // Close all consumers
     consumersRef.current.forEach((peerConsumers) => {
       Object.values(peerConsumers).forEach(consumer => consumer?.close());
@@ -627,6 +719,9 @@ const VideoMeetingPage = () => {
     // Clear device
     deviceRef.current = null;
     
+    // Reset produced flag
+    producedRef.current = false;
+    
     // Stop local stream
     if (localStream) {
       localStream.getTracks().forEach((track) => track.stop());
@@ -639,7 +734,10 @@ const VideoMeetingPage = () => {
     if (socketRef.current) {
       socketRef.current.emit('leave-room', { roomId });
       socketRef.current.disconnect();
+      socketRef.current = null;
     }
+    
+    console.log('[Cleanup] Cleanup completed');
   };
 
   const toggleMute = () => {
@@ -896,6 +994,12 @@ const VideoMeetingPage = () => {
           </div>
 
           {/* Remote Videos */}
+          {console.log('[VideoMeetingPage] Rendering remote videos:', {
+            participants: participants.map(p => ({ id: p.oduserId, name: p.userName })),
+            remoteStreamsKeys: Object.keys(remoteStreams),
+            myPeerId,
+            userId: user.id
+          })}
           {participants.filter(p => p.oduserId !== myPeerId && p.oduserId !== String(user.id)).map((participant) => (
             <RemoteVideo
               key={participant.oduserId}
