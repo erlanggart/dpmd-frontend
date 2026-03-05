@@ -171,7 +171,7 @@ const BIDANG_ROUTES = {
 // MAIN COMPONENT
 // ============================================
 const DPMDStaffLayout = () => {
-	const { user: authUser } = useAuth();
+	const { user: authUser, isCheckingSession } = useAuth();
 	const [showMenu, setShowMenu] = React.useState(false);
 	const [showNotifications, setShowNotifications] = React.useState(false);
 	const [notifications, setNotifications] = React.useState([]);
@@ -319,8 +319,21 @@ const DPMDStaffLayout = () => {
 		return () => navigator.serviceWorker.removeEventListener('message', handlePushMessage);
 	}, [theme]);
 
-	// Check authorization
-	if (!token || !user.role || !config.allowedRoles.includes(user.role)) {
+	// CRITICAL: Wait for session restore before deciding to redirect
+	if (isCheckingSession) {
+		return (
+			<div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800">
+				<div className="text-center">
+					<div className="animate-spin rounded-full h-12 w-12 border-4 border-white/30 border-t-white mx-auto mb-4"></div>
+					<p className="text-white/80 text-sm font-medium">Memuat...</p>
+				</div>
+			</div>
+		);
+	}
+
+	// Check authorization - use authUser from context (more reliable than localStorage)
+	const effectiveRole = authUser?.role || user?.role;
+	if (!token || !effectiveRole || !config.allowedRoles.includes(effectiveRole)) {
 		return <Navigate to="/" replace />;
 	}
 

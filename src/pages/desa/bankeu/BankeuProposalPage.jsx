@@ -139,7 +139,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
   const [expandedInfra, setExpandedInfra] = useState(true);
   const [expandedNonInfra, setExpandedNonInfra] = useState(true);
   const [expandedSurat, setExpandedSurat] = useState(false);
-  const [expandedStats, setExpandedStats] = useState(false);
+  const [expandedStats, setExpandedStats] = useState(true);
   const [expandedProposalListInfra, setExpandedProposalListInfra] = useState(false);
   const [expandedProposalListNonInfra, setExpandedProposalListNonInfra] = useState(false);
   const [expandedProposalId, setExpandedProposalId] = useState(null);
