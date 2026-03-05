@@ -22,11 +22,11 @@ const formatRupiah = (val) => {
 
 // ========== STEP STATUS CONFIG ==========
 const stepConfig = {
-  completed: { color: 'bg-emerald-500', text: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200', icon: LuCheck, label: 'Disetujui' },
+  completed: { color: 'bg-emerald-500', text: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200', icon: LuCheck, label: 'Selesai' },
   active: { color: 'bg-blue-500', text: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-200', icon: LuClock, label: 'Sedang Diproses' },
   rejected: { color: 'bg-red-500', text: 'text-red-700', bg: 'bg-red-50', border: 'border-red-200', icon: LuX, label: 'Ditolak' },
   revision: { color: 'bg-amber-500', text: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200', icon: LuRefreshCw, label: 'Perlu Revisi' },
-  troubleshoot: { color: 'bg-indigo-500', text: 'text-indigo-700', bg: 'bg-indigo-50', border: 'border-indigo-200', icon: LuWrench, label: 'Troubleshoot' },
+  troubleshoot: { color: 'bg-indigo-500', text: 'text-indigo-700', bg: 'bg-indigo-50', border: 'border-indigo-200', icon: LuWrench, label: 'Catatan' },
   waiting: { color: 'bg-gray-300', text: 'text-gray-500', bg: 'bg-gray-50', border: 'border-gray-200', icon: LuClock, label: 'Menunggu' },
 };
 
@@ -80,73 +80,78 @@ const StepIndicator = ({ step, isLast }) => {
 const ProposalTrackingCard = ({ proposal, index }) => {
   const [expanded, setExpanded] = useState(false);
 
-  // Build steps berdasarkan flow: Desa → Dinas → Kecamatan → DPMD
+  // Build steps berdasarkan flow: Desa → Dinas → Kecamatan → Diterima DPMD (selesai)
   const buildSteps = () => {
     const steps = [];
 
-    // Step 1: Pengajuan Desa
+    // Step 1: Pengajuan Desa - proposal diajukan dan dikirim ke dinas
+    const isSubmitted = !!proposal.submitted_to_dinas_at;
     steps.push({
-      label: 'Diajukan oleh Desa',
+      label: '1. Pengajuan Desa',
       icon: LuSend,
-      status: proposal.submitted_to_dinas_at ? 'completed' : 'active',
-      date: proposal.created_at,
+      status: isSubmitted ? 'completed' : 'active',
+      date: isSubmitted ? proposal.submitted_to_dinas_at : proposal.created_at,
+      catatan: isSubmitted ? 'Proposal berhasil dikirim ke Dinas Terkait' : 'Menunggu dikirim ke Dinas Terkait',
     });
 
-    // Step 2: Dinas Terkait
+    // Step 2: Dinas Terkait - verifikasi teknis
     const dinasStatus = proposal.dinas_status;
     let dinasStepStatus = 'waiting';
     if (dinasStatus === 'approved') dinasStepStatus = 'completed';
     else if (dinasStatus === 'rejected') dinasStepStatus = 'rejected';
     else if (dinasStatus === 'revision') dinasStepStatus = 'revision';
-    else if (dinasStatus === 'pending' || dinasStatus === 'in_review') dinasStepStatus = 'active';
+    else if (isSubmitted && (dinasStatus === 'pending' || dinasStatus === 'in_review' || !dinasStatus)) dinasStepStatus = 'active';
 
     steps.push({
-      label: 'Verifikasi Dinas Terkait',
+      label: '2. Verifikasi Dinas Terkait',
       icon: LuBuilding2,
       status: dinasStepStatus,
       date: proposal.dinas_verified_at,
       verifier: proposal.dinas_verified_by_name,
-      catatan: proposal.dinas_catatan,
+      catatan: proposal.dinas_catatan || (dinasStepStatus === 'active' ? 'Menunggu verifikasi dari Dinas Terkait' : null),
     });
 
-    // Step 3: Kecamatan
+    // Step 3: Kecamatan - verifikasi administrasi
     const kecStatus = proposal.kecamatan_status;
     let kecStepStatus = 'waiting';
     if (kecStatus === 'approved') kecStepStatus = 'completed';
     else if (kecStatus === 'rejected') kecStepStatus = 'rejected';
     else if (kecStatus === 'revision') kecStepStatus = 'revision';
-    else if (kecStatus === 'pending' || kecStatus === 'in_review') kecStepStatus = 'active';
+    else if (dinasStatus === 'approved' && (kecStatus === 'pending' || kecStatus === 'in_review' || !kecStatus)) kecStepStatus = 'active';
 
     steps.push({
-      label: 'Verifikasi Kecamatan',
+      label: '3. Verifikasi Kecamatan',
       icon: LuLandmark,
       status: kecStepStatus,
       date: proposal.kecamatan_verified_at,
       verifier: proposal.kecamatan_verified_by_name,
-      catatan: proposal.kecamatan_catatan,
+      catatan: proposal.kecamatan_catatan || (kecStepStatus === 'active' ? 'Menunggu verifikasi dari Kecamatan' : null),
     });
 
-    // Step 4: DPMD
-    const dpmdStatus = proposal.dpmd_status;
+    // Step 4: DPMD (Penerimaan - bukan verifikasi)
+    // DPMD hanya menerima proposal yang sudah disetujui kecamatan
+    // Alur selesai ketika proposal diterima DPMD
+    const kecamatanApproved = kecStatus === 'approved';
     let dpmdStepStatus = 'waiting';
-    if (dpmdStatus === 'approved') dpmdStepStatus = 'completed';
-    else if (dpmdStatus === 'rejected') dpmdStepStatus = 'rejected';
-    else if (dpmdStatus === 'revision') dpmdStepStatus = 'revision';
-    else if (dpmdStatus === 'pending' || dpmdStatus === 'in_review') dpmdStepStatus = 'active';
+    
+    if (kecamatanApproved) {
+      // Jika kecamatan sudah approve, DPMD otomatis "selesai/diterima"
+      dpmdStepStatus = 'completed';
+    }
 
     steps.push({
-      label: 'Persetujuan DPMD',
+      label: '4. Diterima DPMD (Selesai)',
       icon: LuShield,
       status: dpmdStepStatus,
-      date: proposal.dpmd_verified_at,
-      verifier: proposal.dpmd_verified_by_name,
-      catatan: proposal.dpmd_catatan,
+      date: kecamatanApproved ? (proposal.submitted_to_dpmd_at || proposal.kecamatan_verified_at) : null,
+      verifier: null, // DPMD tidak ada verifier karena hanya menerima
+      catatan: kecamatanApproved ? '✓ Alur proposal selesai - Proposal telah diterima DPMD untuk diproses lebih lanjut' : 'Menunggu persetujuan Kecamatan',
     });
 
-    // Troubleshoot step (jika ada)
+    // Troubleshoot step (jika ada catatan troubleshoot dari DPMD)
     if (proposal.troubleshoot_catatan) {
       steps.push({
-        label: '🔧 Troubleshoot DPMD',
+        label: '⚠️ Catatan DPMD',
         icon: LuWrench,
         status: 'troubleshoot',
         date: proposal.troubleshoot_at,
@@ -160,22 +165,30 @@ const ProposalTrackingCard = ({ proposal, index }) => {
 
   const steps = buildSteps();
   const currentStep = steps.findIndex(s => s.status === 'active' || s.status === 'rejected' || s.status === 'revision');
-  const isFinalApproved = proposal.dpmd_status === 'approved' || proposal.status === 'verified';
+  // Alur selesai ketika kecamatan sudah approve (DPMD hanya menerima)
+  const isFinalApproved = proposal.kecamatan_status === 'approved' || proposal.status === 'verified';
   const isRejected = proposal.status === 'rejected' || proposal.status === 'revision';
 
   // Overall status badge
   const getOverallBadge = () => {
-    if (isFinalApproved) return { text: 'Disetujui DPMD', color: 'bg-emerald-100 text-emerald-800 border-emerald-300' };
+    // Alur selesai: Kecamatan approve = Diterima DPMD
+    if (proposal.kecamatan_status === 'approved') return { text: '✓ Diterima DPMD', color: 'bg-emerald-100 text-emerald-800 border-emerald-300' };
+    
+    // Troubleshoot dari DPMD
     if (proposal.troubleshoot_catatan && proposal.status === 'revision' && !proposal.submitted_to_dinas_at) return { text: 'Troubleshoot DPMD', color: 'bg-indigo-100 text-indigo-800 border-indigo-300' };
-    if (proposal.dpmd_status === 'rejected') return { text: 'Ditolak DPMD', color: 'bg-red-100 text-red-800 border-red-300' };
-    if (proposal.dpmd_status === 'revision') return { text: 'Revisi DPMD', color: 'bg-amber-100 text-amber-800 border-amber-300' };
+    
+    // Status Kecamatan
     if (proposal.kecamatan_status === 'rejected') return { text: 'Ditolak Kecamatan', color: 'bg-red-100 text-red-800 border-red-300' };
     if (proposal.kecamatan_status === 'revision') return { text: 'Revisi Kecamatan', color: 'bg-amber-100 text-amber-800 border-amber-300' };
-    if (proposal.kecamatan_status === 'approved') return { text: 'Di DPMD', color: 'bg-purple-100 text-purple-800 border-purple-300' };
+    if (proposal.kecamatan_status === 'pending' || proposal.kecamatan_status === 'in_review') return { text: 'Di Kecamatan', color: 'bg-purple-100 text-purple-800 border-purple-300' };
+    
+    // Status Dinas
     if (proposal.dinas_status === 'rejected') return { text: 'Ditolak Dinas', color: 'bg-red-100 text-red-800 border-red-300' };
     if (proposal.dinas_status === 'revision') return { text: 'Revisi Dinas', color: 'bg-amber-100 text-amber-800 border-amber-300' };
     if (proposal.dinas_status === 'approved') return { text: 'Di Kecamatan', color: 'bg-blue-100 text-blue-800 border-blue-300' };
-    if (proposal.dinas_status === 'pending') return { text: 'Di Dinas', color: 'bg-sky-100 text-sky-800 border-sky-300' };
+    if (proposal.dinas_status === 'pending' || proposal.dinas_status === 'in_review') return { text: 'Di Dinas', color: 'bg-sky-100 text-sky-800 border-sky-300' };
+    
+    // Belum dikirim
     if (proposal.submitted_to_dinas_at) return { text: 'Dikirim ke Dinas', color: 'bg-sky-100 text-sky-800 border-sky-300' };
     return { text: 'Belum Dikirim', color: 'bg-gray-100 text-gray-700 border-gray-300' };
   };
