@@ -128,24 +128,32 @@ const ProposalTrackingCard = ({ proposal, index }) => {
       catatan: proposal.kecamatan_catatan || (kecStepStatus === 'active' ? 'Menunggu verifikasi dari Kecamatan' : null),
     });
 
-    // Step 4: DPMD (Penerimaan - bukan verifikasi)
-    // DPMD hanya menerima proposal yang sudah disetujui kecamatan
-    // Alur selesai ketika proposal diterima DPMD
+    // Step 4: Dikirim ke DPMD
+    // Alur selesai ketika kecamatan sudah KLIK TOMBOL "Kirim ke DPMD" (submitted_to_dpmd = true)
+    // Bukan hanya approve proposal saja
     const kecamatanApproved = kecStatus === 'approved';
+    const isSubmittedToDpmd = proposal.submitted_to_dpmd === true || proposal.submitted_to_dpmd === 1;
     let dpmdStepStatus = 'waiting';
     
-    if (kecamatanApproved) {
-      // Jika kecamatan sudah approve, DPMD otomatis "selesai/diterima"
+    if (isSubmittedToDpmd) {
+      // Sudah dikirim ke DPMD = selesai
       dpmdStepStatus = 'completed';
+    } else if (kecamatanApproved) {
+      // Kecamatan sudah approve tapi belum kirim ke DPMD = active (menunggu dikirim)
+      dpmdStepStatus = 'active';
     }
 
     steps.push({
-      label: '4. Diterima DPMD (Selesai)',
+      label: '4. Dikirim ke DPMD (Selesai)',
       icon: LuShield,
       status: dpmdStepStatus,
-      date: kecamatanApproved ? (proposal.submitted_to_dpmd_at || proposal.kecamatan_verified_at) : null,
+      date: isSubmittedToDpmd ? proposal.submitted_to_dpmd_at : null,
       verifier: null, // DPMD tidak ada verifier karena hanya menerima
-      catatan: kecamatanApproved ? '✓ Alur proposal selesai - Proposal telah diterima DPMD untuk diproses lebih lanjut' : 'Menunggu persetujuan Kecamatan',
+      catatan: isSubmittedToDpmd 
+        ? '✓ Alur proposal selesai - Proposal telah diterima DPMD untuk diproses lebih lanjut' 
+        : (kecamatanApproved 
+          ? 'Menunggu Kecamatan mengirim ke DPMD' 
+          : 'Menunggu persetujuan Kecamatan'),
     });
 
     // Troubleshoot step (jika ada catatan troubleshoot dari DPMD)
@@ -165,14 +173,18 @@ const ProposalTrackingCard = ({ proposal, index }) => {
 
   const steps = buildSteps();
   const currentStep = steps.findIndex(s => s.status === 'active' || s.status === 'rejected' || s.status === 'revision');
-  // Alur selesai ketika kecamatan sudah approve (DPMD hanya menerima)
-  const isFinalApproved = proposal.kecamatan_status === 'approved' || proposal.status === 'verified';
+  // Alur selesai ketika kecamatan sudah kirim ke DPMD (submitted_to_dpmd = true)
+  const isSubmittedToDpmd = proposal.submitted_to_dpmd === true || proposal.submitted_to_dpmd === 1;
+  const isFinalApproved = isSubmittedToDpmd || proposal.status === 'verified';
   const isRejected = proposal.status === 'rejected' || proposal.status === 'revision';
 
   // Overall status badge
   const getOverallBadge = () => {
-    // Alur selesai: Kecamatan approve = Diterima DPMD
-    if (proposal.kecamatan_status === 'approved') return { text: '✓ Diterima DPMD', color: 'bg-emerald-100 text-emerald-800 border-emerald-300' };
+    // Alur selesai: Kecamatan sudah KIRIM ke DPMD (bukan hanya approve)
+    if (isSubmittedToDpmd) return { text: '✓ Diterima DPMD', color: 'bg-emerald-100 text-emerald-800 border-emerald-300' };
+    
+    // Kecamatan approved tapi belum dikirim ke DPMD
+    if (proposal.kecamatan_status === 'approved') return { text: 'Disetujui Kecamatan', color: 'bg-teal-100 text-teal-800 border-teal-300' };
     
     // Troubleshoot dari DPMD
     if (proposal.troubleshoot_catatan && proposal.status === 'revision' && !proposal.submitted_to_dinas_at) return { text: 'Troubleshoot DPMD', color: 'bg-indigo-100 text-indigo-800 border-indigo-300' };
