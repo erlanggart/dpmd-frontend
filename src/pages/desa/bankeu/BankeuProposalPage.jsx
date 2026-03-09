@@ -289,20 +289,23 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
   useEffect(() => {
     if (proposals.length === 0) return;
 
-    const hasRejectedInfra = proposals.some(p => 
-      p.kegiatan_list?.some(k => k.jenis_kegiatan === 'infrastruktur') &&
+    // Helper function to check if proposal needs revision
+    const needsRevision = (p) => 
       ((p.dinas_status === 'rejected' || p.dinas_status === 'revision') && !p.submitted_to_dinas_at ||
        (p.kecamatan_status === 'rejected' || p.kecamatan_status === 'revision') && !p.submitted_to_kecamatan ||
-       (p.status === 'revision' && p.troubleshoot_catatan && !p.submitted_to_dinas_at))
+       (p.status === 'revision' && p.troubleshoot_catatan && !p.submitted_to_dinas_at));
+
+    const hasRejectedInfra = proposals.some(p => 
+      p.kegiatan_list?.some(k => k.jenis_kegiatan === 'infrastruktur') && needsRevision(p)
     );
     
     const hasRejectedNonInfra = proposals.some(p => 
-      p.kegiatan_list?.some(k => k.jenis_kegiatan === 'non_infrastruktur') &&
-      ((p.dinas_status === 'rejected' || p.dinas_status === 'revision') && !p.submitted_to_dinas_at ||
-       (p.kecamatan_status === 'rejected' || p.kecamatan_status === 'revision') && !p.submitted_to_kecamatan ||
-       (p.status === 'revision' && p.troubleshoot_catatan && !p.submitted_to_dinas_at))
+      p.kegiatan_list?.some(k => k.jenis_kegiatan === 'non_infrastruktur') && needsRevision(p)
     );
 
+    // Find first proposal that needs revision to auto-expand
+    const firstRevisionProposal = proposals.find(p => needsRevision(p));
+    
     if (hasRejectedInfra) {
       setExpandedInfra(true);
       setExpandedProposalListInfra(true);
@@ -311,6 +314,11 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
     if (hasRejectedNonInfra) {
       setExpandedNonInfra(true);
       setExpandedProposalListNonInfra(true);
+    }
+
+    // Auto-expand the first revision proposal so desa can see details and edit
+    if (firstRevisionProposal && !expandedProposalId) {
+      setExpandedProposalId(firstRevisionProposal.id);
     }
   }, [proposals]);
 

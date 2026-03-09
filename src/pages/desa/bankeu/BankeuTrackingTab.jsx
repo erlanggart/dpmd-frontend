@@ -78,7 +78,16 @@ const StepIndicator = ({ step, isLast }) => {
 
 // ========== Komponen: Proposal Tracking Card ==========
 const ProposalTrackingCard = ({ proposal, index }) => {
-  const [expanded, setExpanded] = useState(false);
+  // Auto-expand if proposal needs revision
+  const needsRevision = 
+    proposal.dinas_status === 'revision' || 
+    proposal.dinas_status === 'rejected' ||
+    proposal.kecamatan_status === 'revision' || 
+    proposal.kecamatan_status === 'rejected' ||
+    proposal.status === 'revision' ||
+    proposal.status === 'rejected';
+  
+  const [expanded, setExpanded] = useState(needsRevision);
 
   // Build steps berdasarkan flow: Desa → Dinas → Kecamatan → Diterima DPMD (selesai)
   const buildSteps = () => {
