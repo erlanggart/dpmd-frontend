@@ -152,11 +152,16 @@ const BankeuVerificationDetailPage = () => {
     // Multiple view HANYA muncul jika:
     // 1. Kecamatan pernah reject (ada kecamatan_catatan atau kecamatan_status pernah rejected/revision)
     // 2. Desa sudah upload ulang (proposal.verified_at not null - artinya pernah diverifikasi)
-    // 3. Ada file referensi (dinas_reviewed_file ada) - otomatis tersimpan ketika upload ulang
+    // 3. Ada file referensi (dinas_reviewed_file ada) - di-set saat Dinas approve
+    // FIX: Jika dinas_reviewed_file ADA dan berbeda dari file_proposal, berarti desa sudah upload ulang
+    const hasUploadedNewFile = proposal.dinas_reviewed_file && 
+                                proposal.file_proposal && 
+                                proposal.dinas_reviewed_file !== proposal.file_proposal;
     const kecamatanPrevRejected = proposal.kecamatan_catatan || 
                                    proposal.kecamatan_status === 'rejected' || 
-                                   proposal.kecamatan_status === 'revision';
-    const desaSudahUploadUlang = proposal.verified_at !== null;
+                                   proposal.kecamatan_status === 'revision' ||
+                                   hasUploadedNewFile; // <-- Tambahan: jika file beda, pasti pernah revisi
+    const desaSudahUploadUlang = proposal.verified_at !== null || hasUploadedNewFile;
     
     // DEBUG LOG untuk troubleshooting tombol Bandingkan
     console.log('🔍 DEBUG Tombol Bandingkan - Proposal ID:', proposal.id);
@@ -349,6 +354,50 @@ const BankeuVerificationDetailPage = () => {
           icon: 'error',
           title: 'Gagal!',
           text: error.response?.data?.message || 'Terjadi kesalahan saat memproses verifikasi',
+        });
+      }
+    }
+  };
+
+  // Handler untuk membatalkan persetujuan proposal
+  const handleCancelApproval = async (proposalId) => {
+    const result = await Swal.fire({
+      title: 'Batalkan Persetujuan?',
+      html: `
+        <p class="text-gray-600 mb-4">Anda yakin ingin membatalkan persetujuan proposal ini?</p>
+        <p class="text-sm text-amber-600 bg-amber-50 p-3 rounded-lg">Proposal akan kembali ke status <strong>pending</strong> dan dapat diverifikasi ulang.</p>
+      `,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Ya, Batalkan',
+      cancelButtonText: 'Tidak'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await api.patch(`/kecamatan/bankeu/proposals/${proposalId}/cancel-approval`, {
+          catatan: 'Persetujuan dibatalkan oleh Kecamatan'
+        });
+
+        Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'success',
+          title: 'Persetujuan dibatalkan',
+          showConfirmButton: false,
+          timer: 2000,
+          timerProgressBar: true
+        });
+
+        await fetchData();
+      } catch (error) {
+        console.error('Error canceling approval:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Gagal!',
+          text: error.response?.data?.message || 'Terjadi kesalahan saat membatalkan persetujuan'
         });
       }
     }
@@ -1836,6 +1885,7 @@ const BankeuVerificationDetailPage = () => {
                 proposal={item.proposal}
                 index={index}
                 onVerify={handleVerify}
+                onCancelApproval={handleCancelApproval}
                 onViewPdf={handleViewPdf}
                 onGenerateBeritaAcara={handleGenerateBeritaAcaraKegiatan}
                 onGenerateSuratPengantar={handleGenerateSuratPengantar}
@@ -1888,6 +1938,7 @@ const BankeuVerificationDetailPage = () => {
                 proposal={item.proposal}
                 index={index}
                 onVerify={handleVerify}
+                onCancelApproval={handleCancelApproval}
                 onViewPdf={handleViewPdf}
                 onGenerateBeritaAcara={handleGenerateBeritaAcaraKegiatan}
                 onGenerateSuratPengantar={handleGenerateSuratPengantar}
@@ -2090,7 +2141,7 @@ const BankeuVerificationDetailPage = () => {
 };
 
 // Proposal Row Component
-const ProposalRow = ({ kegiatan, proposal, index, onVerify, onViewPdf, onGenerateBeritaAcara, onGenerateSuratPengantar, onOpenCatatanModal, getStatusBadge, getProposalRowColor, imageBaseUrl, timCompletionStatus, desaId, navigate, tahunAnggaran }) => {
+const ProposalRow = ({ kegiatan, proposal, index, onVerify, onCancelApproval, onViewPdf, onGenerateBeritaAcara, onGenerateSuratPengantar, onOpenCatatanModal, getStatusBadge, getProposalRowColor, imageBaseUrl, timCompletionStatus, desaId, navigate, tahunAnggaran }) => {
   // Get completion status untuk proposal ini
   const completionStatus = proposal ? timCompletionStatus[proposal.id] : null;
   const isTimComplete = completionStatus?.all_complete || false;
@@ -2208,10 +2259,15 @@ const ProposalRow = ({ kegiatan, proposal, index, onVerify, onViewPdf, onGenerat
             <div className="flex items-center gap-2 flex-wrap">
               {/* View PDF Button */}
               {(() => {
+                // FIX 2026-03-09: Align logic with handleViewProposal to check hasUploadedNewFile
+                const hasUploadedNewFile = proposal.dinas_reviewed_file && 
+                                            proposal.file_proposal && 
+                                            proposal.dinas_reviewed_file !== proposal.file_proposal;
                 const kecamatanPrevRejected = proposal.kecamatan_catatan || 
                                                proposal.kecamatan_status === 'rejected' || 
-                                               proposal.kecamatan_status === 'revision';
-                const desaSudahUploadUlang = proposal.verified_at !== null;
+                                               proposal.kecamatan_status === 'revision' ||
+                                               hasUploadedNewFile;
+                const desaSudahUploadUlang = proposal.verified_at !== null || hasUploadedNewFile;
                 const showDualView = kecamatanPrevRejected && desaSudahUploadUlang && proposal.dinas_reviewed_file;
                 
                 return (
@@ -2304,6 +2360,18 @@ const ProposalRow = ({ kegiatan, proposal, index, onVerify, onViewPdf, onGenerat
                     <span className="hidden sm:inline">Revisi</span>
                   </button>
                 </div>
+              )}
+
+              {/* Batalkan Persetujuan Button - hanya tampil jika approved tapi belum dikirim ke DPMD */}
+              {proposal.kecamatan_status === 'approved' && !proposal.submitted_to_dpmd && (
+                <button
+                  onClick={() => onCancelApproval(proposal.id)}
+                  className="flex items-center gap-1 px-3 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors duration-150 shadow-sm text-xs font-semibold"
+                  title="Batalkan persetujuan dan verifikasi ulang"
+                >
+                  <LuX className="w-4 h-4" />
+                  <span className="hidden sm:inline">Batalkan</span>
+                </button>
               )}
               
               {/* Berita Acara Button */}

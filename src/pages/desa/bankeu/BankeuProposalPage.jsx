@@ -1863,6 +1863,8 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
   };
 
   // Check if proposal can be edited (not yet submitted)
+  // Tombol Edit hanya untuk DRAFT (belum pernah dikirim)
+  // Untuk revisi, desa pakai tombol Upload Ulang (handleRevisionUpload)
   const canEditProposal = (proposal) => {
     return !proposal.submitted_to_kecamatan && !proposal.submitted_to_dinas_at;
   };
