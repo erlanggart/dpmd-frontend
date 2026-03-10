@@ -530,6 +530,29 @@ const ThemeColorWrapper = ({ children }) => {
               window.location.href = targetUrl;
             } else if (url && url !== "/") {
               window.location.href = url;
+            } else {
+              // Default fallback: redirect to user's dashboard home based on role
+              const storedUser = JSON.parse(
+                localStorage.getItem("user") || "{}",
+              );
+              const userRole = storedUser.role || "";
+
+              const roleDashboardMap = {
+                superadmin: "/superadmin/dashboard",
+                kepala_dinas: "/dpmd/dashboard",
+                sekretaris_dinas: "/dpmd/dashboard",
+                kepala_bidang: "/dpmd/dashboard",
+                ketua_tim: "/dpmd/dashboard",
+                pegawai: "/dpmd/dashboard",
+                desa: "/desa/dashboard",
+                kecamatan: "/kecamatan/dashboard",
+                dinas_terkait: "/dinas/dashboard",
+                verifikator_dinas: "/dinas/dashboard",
+              };
+
+              const dashboardPath = roleDashboardMap[userRole] || "/dpmd/dashboard";
+              console.log(`[App] Notification click - redirecting to dashboard: ${dashboardPath} (role: ${userRole})`);
+              window.location.href = dashboardPath;
             }
           }
 
