@@ -5,6 +5,7 @@ import {
   Route,
   Navigate,
   useLocation,
+  useParams,
   Outlet,
 } from "react-router-dom";
 import { Suspense, lazy, useEffect, useState } from "react";
@@ -97,6 +98,27 @@ function HomeRedirect() {
 
   // Fallback: show landing page
   return <LandingPage />;
+}
+
+// Redirect component for /dashboard/disposisi/:id to correct role-based route
+function DisposisiRedirect() {
+  const { id } = useParams();
+  const { user } = useAuth();
+  
+  // Role-based disposisi path mapping
+  const roleDisposisiMap = {
+    superadmin: "/dpmd/disposisi",
+    kepala_dinas: "/dpmd/disposisi",
+    sekretaris_dinas: "/dpmd/disposisi",
+    kepala_bidang: "/dpmd/disposisi",
+    ketua_tim: "/dpmd/disposisi",
+    pegawai: "/dpmd/disposisi",
+  };
+  
+  const basePath = roleDisposisiMap[user?.role] || "/dpmd/disposisi";
+  const targetPath = id ? `${basePath}/${id}` : basePath;
+  
+  return <Navigate to={targetPath} replace />;
 }
 
 // Role constants for better maintainability
@@ -702,6 +724,10 @@ function App() {
                   element={<CoreDashboardPublic />}
                 />
                 <Route path="/login" element={<LoginPage />} />
+                
+                {/* Redirect routes for legacy/notification URLs */}
+                <Route path="/dashboard/disposisi" element={<DisposisiRedirect />} />
+                <Route path="/dashboard/disposisi/:id" element={<DisposisiRedirect />} />
                 
                 {/* Public Meeting Join - No auth required */}
                 <Route path="/join/:roomId" element={<PublicMeetingPage />} />
