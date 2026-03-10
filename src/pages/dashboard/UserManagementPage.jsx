@@ -20,6 +20,9 @@ import {
 	LuChevronRight,
 	LuDownload,
 	LuFileSpreadsheet,
+	LuEye,
+	LuEyeOff,
+	LuLock,
 } from "react-icons/lu";
 import * as XLSX from 'xlsx';
 import api from "../../api";
@@ -53,6 +56,9 @@ const UserManagementPage = () => {
 	// Pagination
 	const [currentPage, setCurrentPage] = useState(1);
 	const [itemsPerPage] = useState(12); // 12 items per page untuk grid 3 kolom
+
+	// Password visibility state
+	const [visiblePasswords, setVisiblePasswords] = useState({});
 
 	const { user: currentUser } = useAuth();
 	const canManage =
@@ -194,6 +200,14 @@ const UserManagementPage = () => {
 		fetchUsers();
 	};
 
+	// Handle toggle password visibility
+	const togglePasswordVisibility = (userId) => {
+		setVisiblePasswords(prev => ({
+			...prev,
+			[userId]: !prev[userId]
+		}));
+	};
+
 	// Handle delete user
 	const handleDeleteUser = async (user) => {
 		const result = await Swal.fire({
@@ -333,7 +347,7 @@ const UserManagementPage = () => {
 					'No': idx + 1,
 					'Nama': user.name || '',
 					'Email': user.email || '',
-					'Password': 'password',
+					'Password': user.plain_password || '-',
 					'Role': getRoleInfo(user.role).label,
 					...(tab.id === 'pegawai' ? { 'Bidang': user.bidang?.nama || '-' } : {}),
 					...(tab.id === 'desa' ? {
@@ -373,7 +387,7 @@ const UserManagementPage = () => {
 				'No': idx + 1,
 				'Nama': user.name || '',
 				'Email': user.email || '',
-				'Password': 'password',
+				'Password': user.plain_password || '-',
 				'Role': getRoleInfo(user.role).label,
 			};
 
@@ -782,18 +796,37 @@ const UserManagementPage = () => {
 												})}
 											</span>
 										</div>
-									</div>
 
-									{/* Actions */}
-									<div className={`grid ${
-										['superadmin', 'desa', 'kecamatan', 'dinas_terkait'].includes(user.role) 
-											? 'grid-cols-2' 
-											: 'grid-cols-4'
-									} gap-2 pt-3 border-t border-gray-100`}>
-										{!['superadmin', 'desa', 'kecamatan', 'dinas_terkait'].includes(user.role) && (
-											<>
-												<button
-													onClick={() => handleEditRole(user)}
+									{/* Password Display */}
+									{canManage && (
+										<div className="flex items-center gap-3 text-gray-600">
+											<div className="h-9 w-9 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
+												<LuLock className="h-4 w-4 text-amber-600" />
+											</div>
+											<div className="flex items-center gap-2 flex-1 min-w-0">
+												{user.plain_password ? (
+													<>
+														<span className="text-sm font-mono bg-gray-100 px-2 py-0.5 rounded truncate">
+															{visiblePasswords[user.id] ? user.plain_password : '••••••••'}
+														</span>
+														<button
+															onClick={() => togglePasswordVisibility(user.id)}
+															className="p-1 hover:bg-gray-200 rounded transition-colors flex-shrink-0"
+															title={visiblePasswords[user.id] ? 'Sembunyikan password' : 'Lihat password'}
+														>
+															{visiblePasswords[user.id] ? (
+																<LuEyeOff className="h-4 w-4 text-gray-500" />
+															) : (
+																<LuEye className="h-4 w-4 text-gray-500" />
+															)}
+														</button>
+													</>
+												) : (
+													<span className="text-sm text-gray-400 italic">Tidak tersedia</span>
+												)}
+											</div>
+										</div>
+									)}
 													className="flex flex-col items-center justify-center gap-1 p-3 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-all group/btn"
 													title="Ubah Role"
 												>
