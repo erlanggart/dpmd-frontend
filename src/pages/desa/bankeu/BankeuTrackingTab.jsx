@@ -216,9 +216,11 @@ const ProposalTrackingCard = ({ proposal, index }) => {
 
   const badge = getOverallBadge();
 
-  // Progress percentage
-  const completedSteps = steps.filter(s => s.status === 'completed').length;
-  const progressPct = Math.round((completedSteps / steps.length) * 100);
+  // Progress percentage - exclude troubleshoot step from calculation
+  // Only count the main 4 steps (Pengajuan Desa, Verifikasi Dinas, Verifikasi Kecamatan, Dikirim ke DPMD)
+  const mainSteps = steps.filter(s => s.status !== 'troubleshoot');
+  const completedSteps = mainSteps.filter(s => s.status === 'completed').length;
+  const progressPct = Math.round((completedSteps / mainSteps.length) * 100);
 
   return (
     <div className={`bg-white rounded-2xl border-2 transition-all duration-300 shadow-sm hover:shadow-md ${
