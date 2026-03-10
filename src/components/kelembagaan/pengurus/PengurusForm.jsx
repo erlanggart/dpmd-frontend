@@ -96,6 +96,7 @@ export default function PengurusForm({
 	editData = null,
 	kelembagaanType,
 	kelembagaanId,
+	desaId,
 }) {
 	// Get image base URL from environment
 	const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
@@ -134,19 +135,24 @@ export default function PengurusForm({
 	const [avatarError, setAvatarError] = useState("");
 	const fileInputRef = useRef(null);
 
-	// Load Produk Hukum list
+	// Load Produk Hukum list filtered by desa
 	useEffect(() => {
+		if (!desaId) return;
+		
 		const loadProdukHukum = async () => {
 			try {
-				const response = await getProdukHukumList();
-				setProdukHukumList(response.data.data.data || []);
+				// Filter produk hukum by desa_id to only show relevant documents
+				const response = await getProdukHukumList({ all: 'true', desa_id: desaId });
+				const data = response?.data?.data;
+				// Handle both array response and paginated response
+				setProdukHukumList(Array.isArray(data) ? data : (data?.data || []));
 			} catch (error) {
 				console.error("Error loading produk hukum:", error);
 				setProdukHukumList([]); // Ensure it's always an array
 			}
 		};
 		loadProdukHukum();
-	}, []); // Reset form when editData changes
+	}, [desaId]); // Reset form when editData changes
 	useEffect(() => {
 		if (editData) {
 			reset({

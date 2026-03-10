@@ -175,17 +175,20 @@ export default function KelembagaanDetailPage({
 		}
 	}, [type, id]);
 
-	// Fetch produk hukum list for the dropdown
+	// Fetch produk hukum list for the dropdown (filtered by desa)
 	const fetchProdukHukumList = useCallback(async () => {
+		if (!detail?.desa_id) return;
+		
 		try {
-			const res = await getProdukHukums(1, ""); // Get all produk hukum
+			// Pass desa_id to filter produk hukum for this specific desa
+			const res = await getProdukHukums({ all: 'true', desa_id: detail.desa_id });
 			const allData = res?.data?.data || [];
-			setProdukHukumList(allData.data || []);
+			setProdukHukumList(Array.isArray(allData) ? allData : []);
 		} catch (err) {
 			console.error("Gagal memuat daftar produk hukum:", err);
 			setProdukHukumList([]);
 		}
-	}, []);
+	}, [detail?.desa_id]);
 
 	// Fetch pengurus count
 	const fetchPengurusCount = useCallback(async () => {
@@ -210,8 +213,14 @@ export default function KelembagaanDetailPage({
 
 	useEffect(() => {
 		loadDetail();
-		fetchProdukHukumList();
-	}, [loadDetail, fetchProdukHukumList]);
+	}, [loadDetail]);
+
+	// Load produk hukum list when detail is available
+	useEffect(() => {
+		if (detail?.desa_id) {
+			fetchProdukHukumList();
+		}
+	}, [detail?.desa_id, fetchProdukHukumList]);
 
 	// Load pengurus count when detail is available
 	useEffect(() => {
