@@ -827,22 +827,30 @@ const UserManagementPage = () => {
 											</div>
 										</div>
 									)}
-													className="flex flex-col items-center justify-center gap-1 p-3 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-all group/btn"
-													title="Ubah Role"
-												>
-													<LuShield className="h-5 w-5 group-hover/btn:scale-110 transition-transform" />
-													<span className="text-xs font-medium">Role</span>
-												</button>
-												<button
-													onClick={() => handleEditBidang(user)}
-													className="flex flex-col items-center justify-center gap-1 p-3 bg-purple-50 text-purple-600 rounded-xl hover:bg-purple-100 transition-all group/btn"
-													title="Ubah Bidang"
-												>
-													<LuBuilding2 className="h-5 w-5 group-hover/btn:scale-110 transition-transform" />
-													<span className="text-xs font-medium">Bidang</span>
-												</button>
-											</>
-										)}
+								</div>
+
+								{/* Action Buttons */}
+								<div className="flex flex-wrap gap-2 pt-4 border-t border-gray-100">
+									{canManage && (
+										<>
+											<button
+												onClick={() => handleEditRole(user)}
+												className="flex flex-col items-center justify-center gap-1 p-3 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-all group/btn"
+												title="Ubah Role"
+											>
+												<LuShield className="h-5 w-5 group-hover/btn:scale-110 transition-transform" />
+												<span className="text-xs font-medium">Role</span>
+											</button>
+											<button
+												onClick={() => handleEditBidang(user)}
+												className="flex flex-col items-center justify-center gap-1 p-3 bg-purple-50 text-purple-600 rounded-xl hover:bg-purple-100 transition-all group/btn"
+												title="Ubah Bidang"
+											>
+												<LuBuilding2 className="h-5 w-5 group-hover/btn:scale-110 transition-transform" />
+												<span className="text-xs font-medium">Bidang</span>
+											</button>
+										</>
+									)}
 										<button
 											onClick={() => handleResetPassword(user)}
 											className="flex flex-col items-center justify-center gap-1 p-3 bg-amber-50 text-amber-600 rounded-xl hover:bg-amber-100 transition-all group/btn"

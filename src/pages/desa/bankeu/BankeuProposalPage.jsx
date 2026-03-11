@@ -422,8 +422,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
         }
       });
       
-      // Get total kegiatan from master data
-      const masterData = masterRes.data.data;
+      // Get total kegiatan from master data (reuse masterData from above)
       const totalMasterKegiatan = (masterData.infrastruktur?.length || 0) + (masterData.non_infrastruktur?.length || 0);
       
       // Cek apakah masih ada kegiatan yang belum ada proposalnya
