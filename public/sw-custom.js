@@ -81,6 +81,10 @@ self.addEventListener('notificationclick', (event) => {
 	if (urlToOpen === '/jadwal-kegiatan') {
 		urlToOpen = '/dpmd/jadwal-kegiatan';
 	}
+	// Tambah tanggal param untuk notifikasi jadwal
+	if (notificationData.targetDate && urlToOpen.includes('jadwal-kegiatan')) {
+		urlToOpen = `/dpmd/jadwal-kegiatan?tanggal=${notificationData.targetDate}`;
+	}
 
 	console.log('[SW-Custom] Opening URL:', urlToOpen, 'Type:', notificationType);
 

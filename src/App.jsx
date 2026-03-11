@@ -557,8 +557,10 @@ const ThemeColorWrapper = ({ children }) => {
               notifType === "new_jadwal" ||
               notifType === "update_jadwal"
             ) {
-              console.log(`[App] Navigating to jadwal-kegiatan (type: ${notifType})`);
-              window.location.href = "/dpmd/jadwal-kegiatan";
+              const targetDate = notificationData?.targetDate || '';
+              const dateParam = targetDate ? `?tanggal=${targetDate}` : '';
+              console.log(`[App] Navigating to jadwal-kegiatan (type: ${notifType}, date: ${targetDate})`);
+              window.location.href = `/dpmd/jadwal-kegiatan${dateParam}`;
             } else if (url && url !== "/") {
               window.location.href = url;
             } else {

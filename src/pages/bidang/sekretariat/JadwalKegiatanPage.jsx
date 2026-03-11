@@ -50,8 +50,15 @@ const JadwalKegiatanPage = () => {
 		const today = new Date();
 		return today.toISOString().split('T')[0];
 	};
+
+	// Cek URL query param ?tanggal= (dari klik notifikasi)
+	const getInitialDate = () => {
+		const params = new URLSearchParams(window.location.search);
+		const tanggal = params.get('tanggal');
+		return tanggal && /^\d{4}-\d{2}-\d{2}$/.test(tanggal) ? tanggal : getTodayDate();
+	};
 	
-	const [filterTanggal, setFilterTanggal] = useState(getTodayDate());
+	const [filterTanggal, setFilterTanggal] = useState(getInitialDate());
 	const [currentPage, setCurrentPage] = useState(1);
 	const [totalPages, setTotalPages] = useState(1);
 	const [totalData, setTotalData] = useState(0);
