@@ -60,17 +60,16 @@ const JadwalKegiatanModal = ({
 							name="bidang_id"
 							value={formData.bidang_id}
 							onChange={onChange}
-							required
 							className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
 						>
-							<option value="">-- Pilih Bidang yang Melaksanakan --</option>
+							<option value="">Semua Pegawai</option>
 							{bidangList.map((bidang) => (
 								<option key={bidang.id} value={bidang.id}>
 									{bidang.nama}
 								</option>
 							))}
 						</select>
-						<p className="mt-1 text-xs text-gray-500">Pilih bidang yang akan melaksanakan kegiatan ini</p>
+						<p className="mt-1 text-xs text-gray-500">Pilih bidang atau biarkan "Semua Pegawai" untuk kegiatan umum</p>
 					</div>
 					<div>
 						<label className="block text-sm font-medium text-gray-700 mb-2">

@@ -63,7 +63,8 @@ const UserManagementPage = () => {
 	const { user: currentUser } = useAuth();
 	const canManage =
 		currentUser?.role === "superadmin" ||
-		currentUser?.role === "sekretaris_dinas";
+		currentUser?.role === "sekretaris_dinas" ||
+		Number(currentUser?.bidang_id) === 2;
 
 	// Tab configuration
 	const tabs = [

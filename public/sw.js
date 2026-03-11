@@ -101,8 +101,12 @@ self.addEventListener('notificationclick', (event) => {
 	// - desa -> /desa/dashboard  
 	// - kecamatan -> /kecamatan/dashboard
 	// - DPMD staff -> /dpmd/dashboard
+	// Fix URLs tanpa prefix yang benar
 	if (urlToOpen === '/disposisi' || urlToOpen === '/admin/disposisi') {
 		urlToOpen = '/'; // App will smart-redirect to user's dashboard
+	}
+	if (urlToOpen === '/jadwal-kegiatan') {
+		urlToOpen = '/dpmd/jadwal-kegiatan';
 	}
 
 	console.log('[SW] Opening URL:', urlToOpen, 'Type:', notificationType);

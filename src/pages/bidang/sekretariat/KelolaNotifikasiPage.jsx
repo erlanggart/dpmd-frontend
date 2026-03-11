@@ -60,7 +60,7 @@ const KelolaNotifikasiPage = () => {
 	const navigate = useNavigate();
 	const user = JSON.parse(localStorage.getItem('user') || '{}');
 	const SEKRETARIAT_BIDANG_ID = 2;
-	const hasPermission = user?.role === 'superadmin' || user?.bidang_id === SEKRETARIAT_BIDANG_ID;
+	const hasPermission = user?.role === 'superadmin' || Number(user?.bidang_id) === SEKRETARIAT_BIDANG_ID;
 
 	useEffect(() => {
 		if (!hasPermission) {

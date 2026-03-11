@@ -212,7 +212,7 @@ const SekretariatPage = () => {
 										</div>
 									</button>
 
-									{(user?.role === 'superadmin' || user?.bidang_id === 2) && (
+								{(user?.role === 'superadmin' || Number(user?.bidang_id) === 2) && (
 										<button
 											onClick={() => navigate('/sekretariat/notifikasi')}
 											className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border border-gray-100 p-6 hover:border-orange-300 transition-all duration-300 text-left overflow-hidden hover:-translate-y-1"
@@ -232,7 +232,7 @@ const SekretariatPage = () => {
 									)}
 
 									{/* Kelola Informasi - Banner untuk dashboard pegawai */}
-									{(user?.role === 'superadmin' || user?.bidang_id === 2) && (
+								{(user?.role === 'superadmin' || Number(user?.bidang_id) === 2) && (
 										<button
 											onClick={() => navigate('/sekretariat/informasi')}
 											className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border border-gray-100 p-6 hover:border-teal-300 transition-all duration-300 text-left overflow-hidden hover:-translate-y-1"
@@ -252,7 +252,7 @@ const SekretariatPage = () => {
 									)}
 
 									{/* Video Meeting */}
-									{(user?.role === 'superadmin' || user?.bidang_id === 2) && (
+								{(user?.role === 'superadmin' || Number(user?.bidang_id) === 2) && (
 										<button
 											onClick={() => navigate('/sekretariat/video-meeting')}
 											className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border border-gray-100 p-6 hover:border-rose-300 transition-all duration-300 text-left overflow-hidden hover:-translate-y-1"

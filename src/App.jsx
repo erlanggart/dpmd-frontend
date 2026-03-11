@@ -550,6 +550,15 @@ const ThemeColorWrapper = ({ children }) => {
                 `[App] Navigating to disposisi: ${targetUrl} (role: ${userRole})`,
               );
               window.location.href = targetUrl;
+            } else if (
+              notifType === "today_schedule" ||
+              notifType === "tomorrow_schedule" ||
+              notifType === "upcoming_jadwal" ||
+              notifType === "new_jadwal" ||
+              notifType === "update_jadwal"
+            ) {
+              console.log(`[App] Navigating to jadwal-kegiatan (type: ${notifType})`);
+              window.location.href = "/dpmd/jadwal-kegiatan";
             } else if (url && url !== "/") {
               window.location.href = url;
             } else {

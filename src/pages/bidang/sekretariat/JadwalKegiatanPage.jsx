@@ -31,7 +31,7 @@ const JadwalKegiatanPage = () => {
 	const user = JSON.parse(localStorage.getItem('user') || '{}');
 	
 	// Check if user can manage jadwal (Sekretariat or Superadmin)
-	const canManageJadwal = user?.bidang_id === 2 || user?.role === 'superadmin';
+	const canManageJadwal = Number(user?.bidang_id) === 2 || user?.role === 'superadmin';
 
 	const [jadwals, setJadwals] = useState([]);
 	const [loading, setLoading] = useState(true);
@@ -51,7 +51,7 @@ const JadwalKegiatanPage = () => {
 		return today.toISOString().split('T')[0];
 	};
 	
-	const [filterTanggal, setFilterTanggal] = useState(getTodayDate());
+	const [filterTanggal, setFilterTanggal] = useState('');
 	const [currentPage, setCurrentPage] = useState(1);
 	const [totalPages, setTotalPages] = useState(1);
 	const [totalData, setTotalData] = useState(0);
@@ -169,7 +169,8 @@ const JadwalKegiatanPage = () => {
 	const handleCreate = async (e) => {
 		e.preventDefault();
 		try {
-			await api.post('/jadwal-kegiatan', formData);
+			const dataToSend = { ...formData, bidang_id: formData.bidang_id || null };
+			await api.post('/jadwal-kegiatan', dataToSend);
 			Swal.fire('Berhasil', 'Jadwal kegiatan berhasil ditambahkan', 'success');
 			setShowAddModal(false);
 			resetFormData();
@@ -186,7 +187,8 @@ const JadwalKegiatanPage = () => {
 		if (!selectedJadwal) return;
 		
 		try {
-			await api.put(`/jadwal-kegiatan/${selectedJadwal.id}`, formData);
+			const dataToSend = { ...formData, bidang_id: formData.bidang_id || null };
+			await api.put(`/jadwal-kegiatan/${selectedJadwal.id}`, dataToSend);
 			Swal.fire('Berhasil', 'Jadwal kegiatan berhasil diperbarui', 'success');
 			setShowEditModal(false);
 			setSelectedJadwal(null);
@@ -273,7 +275,7 @@ const JadwalKegiatanPage = () => {
 		setDebouncedSearchTerm('');
 		setFilterStatus('all');
 		setFilterPrioritas('all');
-		setFilterTanggal(getTodayDate());
+		setFilterTanggal('');
 		setCurrentPage(1);
 	};
 
