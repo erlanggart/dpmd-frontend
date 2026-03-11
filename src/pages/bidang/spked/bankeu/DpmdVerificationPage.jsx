@@ -2360,7 +2360,7 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                                           </div>
                                           
                                           {/* Line 3-4 */}
-                                          <div className={`flex-1 h-1 mx-1 ${proposal.submitted_to_dpmd_at ? 'bg-green-400' : 'bg-gray-200'}`}></div>
+                                          <div className={`flex-1 h-1 mx-1 ${proposal.submitted_to_dpmd || proposal.submitted_to_dpmd_at || proposal.dpmd_status ? 'bg-green-400' : 'bg-gray-200'}`}></div>
                                           
                                           {/* Step 4: DPMD */}
                                           <div className="flex flex-col items-center z-10">
@@ -2368,7 +2368,7 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                                               proposal.dpmd_status === 'approved' ? 'bg-green-500 text-white' :
                                               proposal.dpmd_status === 'rejected' ? 'bg-red-500 text-white' :
                                               proposal.dpmd_status === 'revision' ? 'bg-orange-500 text-white' :
-                                              proposal.submitted_to_dpmd_at || proposal.dpmd_status === 'pending' ? 'bg-purple-500 text-white animate-pulse' :
+                                              proposal.submitted_to_dpmd || proposal.submitted_to_dpmd_at || proposal.dpmd_status === 'pending' ? 'bg-purple-500 text-white animate-pulse' :
                                               'bg-gray-200 text-gray-500'
                                             }`}>
                                               {proposal.dpmd_status === 'approved' ? <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5" /> :
@@ -2379,7 +2379,8 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                                             <span className="text-[10px] sm:text-xs mt-1 font-medium text-gray-700">DPMD</span>
                                             <span className="text-[9px] sm:text-[10px] text-gray-500">
                                               {proposal.dpmd_verified_at ? new Date(proposal.dpmd_verified_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) : 
-                                               proposal.dpmd_status === 'pending' ? 'Menunggu' : '-'}
+                                               proposal.submitted_to_dpmd_at ? new Date(proposal.submitted_to_dpmd_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) :
+                                               (proposal.submitted_to_dpmd || proposal.dpmd_status === 'pending') ? 'Menunggu' : '-'}
                                             </span>
                                           </div>
                                         </div>
