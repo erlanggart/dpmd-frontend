@@ -93,18 +93,24 @@ const ProposalTrackingCard = ({ proposal, index }) => {
   const buildSteps = () => {
     const steps = [];
 
+    // FIX 2026-03-11: Jika proposal sudah final (di DPMD), semua step sebelumnya otomatis completed
+    const isFinal = proposal.submitted_to_dpmd === true || proposal.submitted_to_dpmd === 1 || 
+                    proposal.dpmd_status === 'approved' || proposal.status === 'verified';
+
     // Step 1: Pengajuan Desa - proposal diajukan dan dikirim ke dinas
-    const isSubmitted = !!proposal.submitted_to_dinas_at;
+    // FIX: Jika sudah final, step 1 pasti completed meskipun submitted_to_dinas_at ter-reset
+    const isSubmitted = !!proposal.submitted_to_dinas_at || isFinal;
     steps.push({
       label: '1. Pengajuan Desa',
       icon: LuSend,
       status: isSubmitted ? 'completed' : 'active',
-      date: isSubmitted ? proposal.submitted_to_dinas_at : proposal.created_at,
+      date: isSubmitted ? (proposal.submitted_to_dinas_at || proposal.created_at) : proposal.created_at,
       catatan: isSubmitted ? 'Proposal berhasil dikirim ke Dinas Terkait' : 'Menunggu dikirim ke Dinas Terkait',
     });
 
     // Step 2: Dinas Terkait - verifikasi teknis
-    const dinasStatus = proposal.dinas_status;
+    // FIX: Jika sudah final, dinas sudah pasti approved
+    const dinasStatus = isFinal ? 'approved' : proposal.dinas_status;
     let dinasStepStatus = 'waiting';
     if (dinasStatus === 'approved') dinasStepStatus = 'completed';
     else if (dinasStatus === 'rejected') dinasStepStatus = 'rejected';
@@ -121,7 +127,8 @@ const ProposalTrackingCard = ({ proposal, index }) => {
     });
 
     // Step 3: Kecamatan - verifikasi administrasi
-    const kecStatus = proposal.kecamatan_status;
+    // FIX: Jika sudah final, kecamatan sudah pasti approved
+    const kecStatus = isFinal ? 'approved' : proposal.kecamatan_status;
     let kecStepStatus = 'waiting';
     if (kecStatus === 'approved') kecStepStatus = 'completed';
     else if (kecStatus === 'rejected') kecStepStatus = 'rejected';

@@ -385,8 +385,10 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
       setDesaSurat(suratData);
       
       // Check if already submitted to dinas
-      // PERBAIKAN: isSubmitted = false (tombol tambah muncul) jika ADA MINIMAL 1 proposal yang rejected/revision
-      // Flow: Desa → Dinas Terkait → Kecamatan (2 level, DPMD tidak verifikasi)
+      // FIX 2026-03-11: Logic isSubmitted berdasarkan KEGIATAN YANG TERSEDIA
+      // Bukan hanya berdasarkan proposal existing
+      // Ini agar setelah DPMD "buka kembali upload", desa bisa upload proposal baru
+      // untuk kegiatan yang belum ada proposalnya
       
       // DEBUG: Log semua proposal untuk troubleshooting
       console.log('🔍 DEBUG isSubmitted CHECK:', proposalsRes.data.data.map(p => ({
@@ -394,33 +396,63 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
         submitted_to_dinas_at: p.submitted_to_dinas_at,
         dinas_status: p.dinas_status,
         kecamatan_status: p.kecamatan_status,
-        status: p.status
+        status: p.status,
+        submitted_to_dpmd: p.submitted_to_dpmd,
+        dpmd_status: p.dpmd_status,
+        kegiatan_list: p.kegiatan_list?.map(k => k.id)
       })));
-      
-      // FIXED: Logika isSubmitted yang benar
-      // Tombol tambah MUNCUL (isSubmitted=false) jika:
-      //   1. Tidak ada proposal sama sekali (desa baru)
-      //   2. Ada proposal yang belum dikirim ke dinas (pending, belum submitted_to_dinas_at)
-      //   3. Ada proposal revision/rejected yang perlu diupload ulang
-      // Tombol tambah HILANG (isSubmitted=true) jika:
-      //   Semua proposal sudah dikirim ke dinas DAN tidak ada yang revision/rejected
       
       const allProposals = proposalsRes.data.data;
       
-      // Cek apakah SEMUA proposal sudah dikirim ke dinas
-      const allSubmittedToDinas = allProposals.length > 0 && 
-        allProposals.every(p => p.submitted_to_dinas_at);
+      // IMPORTANT: isSubmitted controls visibility of upload forms
+      // Tombol upload MUNCUL (isSubmitted=false) jika:
+      //   1. Ada kegiatan yang belum ada proposalnya, ATAU
+      //   2. Ada proposal revision/rejected yang perlu diupload ulang
+      // Tombol upload HILANG (isSubmitted=true) jika:
+      //   Semua kegiatan sudah ada proposalnya DAN semua proposal sudah dikirim DAN tidak ada revisi
       
-      // Cek apakah ada proposal revision/rejected yang belum diupload ulang
+      // Get all kegiatan IDs that have proposals
+      const kegiatanWithProposals = new Set();
+      allProposals.forEach(p => {
+        if (p.kegiatan_list) {
+          p.kegiatan_list.forEach(k => kegiatanWithProposals.add(k.id));
+        }
+        if (p.kegiatan_id) {
+          kegiatanWithProposals.add(p.kegiatan_id);
+        }
+      });
+      
+      // Get total kegiatan from master data
+      const masterData = masterRes.data.data;
+      const totalMasterKegiatan = (masterData.infrastruktur?.length || 0) + (masterData.non_infrastruktur?.length || 0);
+      
+      // Cek apakah masih ada kegiatan yang belum ada proposalnya
+      const hasAvailableKegiatan = kegiatanWithProposals.size < totalMasterKegiatan;
+      
+      // Cek apakah ada proposal revision/rejected yang perlu diupload ulang
+      // EXCLUDE proposal final (sudah di DPMD)
       const hasRejectedOrRevisionProposal = allProposals.some(p => 
-        (p.status === 'revision' || p.status === 'rejected') && !p.submitted_to_dinas_at
+        (p.status === 'revision' || p.status === 'rejected') && 
+        !p.submitted_to_dinas_at &&
+        !(p.submitted_to_dpmd === true || p.submitted_to_dpmd === 1 || p.dpmd_status === 'approved' || p.status === 'verified')
       );
       
-      console.log('🔍 DEBUG allSubmittedToDinas:', allSubmittedToDinas);
-      console.log('🔍 DEBUG hasRejectedOrRevisionProposal:', hasRejectedOrRevisionProposal);
+      // Cek apakah ada proposal pending yang belum dikirim (baru upload, belum submit)
+      const hasUnsendNewProposals = allProposals.some(p => 
+        p.status === 'pending' && 
+        !p.submitted_to_dinas_at &&
+        !p.dinas_status && !p.kecamatan_status && !p.dpmd_status
+      );
       
-      // isSubmitted = true HANYA jika semua sudah dikirim DAN tidak ada yang revision
-      const shouldBeSubmitted = allSubmittedToDinas && !hasRejectedOrRevisionProposal;
+      console.log('🔍 DEBUG hasAvailableKegiatan:', hasAvailableKegiatan, `(${kegiatanWithProposals.size}/${totalMasterKegiatan} kegiatan terisi)`);
+      console.log('🔍 DEBUG hasRejectedOrRevisionProposal:', hasRejectedOrRevisionProposal);
+      console.log('🔍 DEBUG hasUnsendNewProposals:', hasUnsendNewProposals);
+      
+      // isSubmitted = false (tombol muncul) jika:
+      // - Ada kegiatan yang belum terisi, ATAU
+      // - Ada revisi yang perlu diupload, ATAU
+      // - Ada proposal baru yang belum dikirim
+      const shouldBeSubmitted = !hasAvailableKegiatan && !hasRejectedOrRevisionProposal && !hasUnsendNewProposals;
       console.log('🔍 DEBUG isSubmitted will be:', shouldBeSubmitted);
       
       setIsSubmitted(shouldBeSubmitted);
@@ -1976,7 +2008,13 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
   // Semua revisi belum upload
   // NOTE: Untuk proposal dari Kecamatan, gunakan submitted_to_kecamatan=false
   // NOTE: Troubleshoot DPMD adalah kasus khusus - submitted_to_dinas_at sudah terisi tapi perlu upload ulang
+  // FIX 2026-03-11: EXCLUDE proposal yang sudah final (di DPMD) - tidak perlu diupload ulang
   const fromAnyLevelRevisionNotUploaded = proposals.filter(p => {
+    // CRITICAL: Skip proposal yang sudah final (diterima DPMD) - tidak perlu revisi
+    const isFinal = p.submitted_to_dpmd === true || p.submitted_to_dpmd === 1 || 
+                    p.dpmd_status === 'approved' || p.status === 'verified';
+    if (isFinal) return false;
+    
     const isRevision = p.status === 'revision' || p.status === 'rejected';
     
     // TROUBLESHOOT: Kasus khusus dari DPMD - sudah pernah submit tapi dikembalikan langsung oleh DPMD
@@ -2001,19 +2039,27 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
   // Revisi yang SUDAH UPLOAD ULANG: status=pending (siap dikirim ulang)
   // NOTE: Untuk proposal dari Kecamatan, submitted_to_dinas_at TETAP terisi
   // Deteksi menggunakan: punya kecamatan_status revision tapi submitted_to_kecamatan=false
+  // FIX 2026-03-11: Tambahkan troubleshoot_catatan untuk mendeteksi proposal yang di-troubleshoot DPMD
+  // FIX 2026-03-11: EXCLUDE proposal yang sudah final (di DPMD) - tidak perlu diupload ulang
   const fromRevisionUploaded = proposals.filter(p => {
+    // CRITICAL: Skip proposal yang sudah final (diterima DPMD) - tidak perlu revisi
+    const isFinal = p.submitted_to_dpmd === true || p.submitted_to_dpmd === 1 || 
+                    p.dpmd_status === 'approved' || p.status === 'verified';
+    if (isFinal) return false;
+    
     const isPending = p.status === 'pending';
-    const hasReviewStatus = p.dinas_status || p.kecamatan_status || p.dpmd_status;
+    // FIX: Include troubleshoot_catatan untuk proposal yang di-troubleshoot DPMD (semua status null tapi troubleshoot_catatan terisi)
+    const hasReviewStatus = p.dinas_status || p.kecamatan_status || p.dpmd_status || p.troubleshoot_catatan;
     
     // Cek asal revisi untuk tentukan logic yang benar
-    const isFromKecamatan = (p.kecamatan_status === 'rejected' || p.kecamatan_status === 'revision') && !p.dpmd_status;
-    const isFromDinasOrDPMD = (p.dinas_status === 'rejected' || p.dinas_status === 'revision') || p.dpmd_status;
+    const isFromKecamatan = (p.kecamatan_status === 'rejected' || p.kecamatan_status === 'revision') && !p.dpmd_status && !p.troubleshoot_catatan;
+    const isFromDinasOrDPMD = (p.dinas_status === 'rejected' || p.dinas_status === 'revision') || p.dpmd_status || p.troubleshoot_catatan;
     
     if (isFromKecamatan && !isFromDinasOrDPMD) {
       // Dari Kecamatan: cek submitted_to_kecamatan=false (belum dikirim ulang ke Kec)
       return isPending && !p.submitted_to_kecamatan && hasReviewStatus;
     } else {
-      // Dari Dinas/DPMD: cek submitted_to_dinas_at=null (belum dikirim ulang ke Dinas)
+      // Dari Dinas/DPMD/Troubleshoot: cek submitted_to_dinas_at=null (belum dikirim ulang ke Dinas)
       return isPending && !p.submitted_to_dinas_at && hasReviewStatus;
     }
   });
@@ -2047,16 +2093,19 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
   
   // Deteksi asal revisi YANG SUDAH DIUPLOAD (untuk tentukan destination)
   // CRITICAL: Jika dari kecamatan, kirim ke Kecamatan
-  // Jika dari Dinas atau DPMD atau keduanya bersamaan, kirim ke Dinas
+  // Jika dari Dinas atau DPMD atau Troubleshoot atau keduanya bersamaan, kirim ke Dinas
+  // FIX 2026-03-11: Exclude troubleshoot dari Kecamatan, include di Dinas
   const fromKecamatanUploaded = fromRevisionUploaded.filter(p => 
     (p.kecamatan_status === 'rejected' || p.kecamatan_status === 'revision') && 
     !(p.dinas_status === 'rejected' || p.dinas_status === 'revision') && // TIDAK ada rejection dari Dinas
-    !p.dpmd_status
+    !p.dpmd_status &&
+    !p.troubleshoot_catatan // TIDAK dari troubleshoot DPMD
   );
   
   const fromDinasOrDPMDUploaded = fromRevisionUploaded.filter(p => 
     (p.dinas_status === 'rejected' || p.dinas_status === 'revision') || // Ada rejection dari Dinas
     p.dpmd_status || // Atau dari DPMD
+    p.troubleshoot_catatan || // FIX: Atau dari troubleshoot DPMD
     ((p.kecamatan_status === 'rejected' || p.kecamatan_status === 'revision') && 
      (p.dinas_status === 'rejected' || p.dinas_status === 'revision')) // Atau KEDUANYA reject
   );
