@@ -2436,10 +2436,29 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                                               'bg-gray-100 text-gray-600'
                                             }`}>
                                               <Clock className="h-3 w-3" />
-                                              {proposal.submitted_to_dinas_at && !proposal.dinas_verified_at 
-                                                ? `${Math.floor((Date.now() - new Date(proposal.submitted_to_dinas_at).getTime()) / (1000 * 60 * 60 * 24))} hari di ${getProposalStage(proposal) === 'di_dinas' ? 'Dinas' : getProposalStage(proposal) === 'di_kecamatan' ? 'Kecamatan' : 'DPMD'}`
-                                                : 'Belum dikirim'
-                                              }
+                                              {(() => {
+                                                const stage = getProposalStage(proposal);
+                                                // If at DPMD, show "Sudah di DPMD"
+                                                if (stage === 'di_dpmd') {
+                                                  const days = proposal.submitted_to_dpmd_at 
+                                                    ? Math.floor((Date.now() - new Date(proposal.submitted_to_dpmd_at).getTime()) / (1000 * 60 * 60 * 24))
+                                                    : 0;
+                                                  return days > 0 ? `${days} hari di DPMD` : 'Sudah di DPMD';
+                                                }
+                                                // If at Kecamatan
+                                                if (stage === 'di_kecamatan') {
+                                                  const days = proposal.dinas_verified_at
+                                                    ? Math.floor((Date.now() - new Date(proposal.dinas_verified_at).getTime()) / (1000 * 60 * 60 * 24))
+                                                    : 0;
+                                                  return days > 0 ? `${days} hari di Kecamatan` : 'Di Kecamatan';
+                                                }
+                                                // If at Dinas
+                                                if (stage === 'di_dinas' && proposal.submitted_to_dinas_at) {
+                                                  const days = Math.floor((Date.now() - new Date(proposal.submitted_to_dinas_at).getTime()) / (1000 * 60 * 60 * 24));
+                                                  return `${days} hari di Dinas`;
+                                                }
+                                                return 'Belum dikirim';
+                                              })()}
                                             </span>
                                           </div>
                                           <button
