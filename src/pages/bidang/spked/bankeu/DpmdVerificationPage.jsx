@@ -183,8 +183,9 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
 
     const getStageLabel = (proposal) => {
       // Check from END to START (same logic as getProposalStage)
-      if (proposal.dpmd_status === 'approved') return 'Selesai (Disetujui)';
-      if (proposal.submitted_to_dpmd || proposal.dpmd_status) return 'Di DPMD';
+      // Di DPMD = Selesai
+      if (proposal.dpmd_status === 'approved') return 'Selesai (Disetujui DPMD)';
+      if (proposal.submitted_to_dpmd || proposal.dpmd_status) return 'Selesai (Di DPMD)';
       if (proposal.kecamatan_status === 'approved' || proposal.dinas_status === 'approved') return 'Di Kecamatan';
       if (proposal.submitted_to_dinas_at || proposal.dinas_status) return 'Di Dinas Terkait';
       return 'Di Desa';
@@ -2363,25 +2364,23 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                                           {/* Line 3-4 */}
                                           <div className={`flex-1 h-1 mx-1 ${proposal.submitted_to_dpmd || proposal.submitted_to_dpmd_at || proposal.dpmd_status ? 'bg-green-400' : 'bg-gray-200'}`}></div>
                                           
-                                          {/* Step 4: DPMD */}
+                                          {/* Step 4: DPMD - Jika submitted_to_dpmd = true → SELESAI (hijau centang) */}
                                           <div className="flex flex-col items-center z-10">
                                             <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center ${
-                                              proposal.dpmd_status === 'approved' ? 'bg-green-500 text-white' :
                                               proposal.dpmd_status === 'rejected' ? 'bg-red-500 text-white' :
                                               proposal.dpmd_status === 'revision' ? 'bg-orange-500 text-white' :
-                                              proposal.submitted_to_dpmd || proposal.submitted_to_dpmd_at || proposal.dpmd_status === 'pending' ? 'bg-purple-500 text-white animate-pulse' :
+                                              (proposal.submitted_to_dpmd || proposal.dpmd_status) ? 'bg-green-500 text-white' :
                                               'bg-gray-200 text-gray-500'
                                             }`}>
-                                              {proposal.dpmd_status === 'approved' ? <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5" /> :
-                                               proposal.dpmd_status === 'rejected' ? <XCircle className="h-4 w-4 sm:h-5 sm:w-5" /> :
+                                              {proposal.dpmd_status === 'rejected' ? <XCircle className="h-4 w-4 sm:h-5 sm:w-5" /> :
                                                proposal.dpmd_status === 'revision' ? <RefreshCw className="h-4 w-4 sm:h-5 sm:w-5" /> :
+                                               (proposal.submitted_to_dpmd || proposal.dpmd_status) ? <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5" /> :
                                                <Shield className="h-4 w-4 sm:h-5 sm:w-5" />}
                                             </div>
                                             <span className="text-[10px] sm:text-xs mt-1 font-medium text-gray-700">DPMD</span>
                                             <span className="text-[9px] sm:text-[10px] text-gray-500">
-                                              {proposal.dpmd_verified_at ? new Date(proposal.dpmd_verified_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) : 
-                                               proposal.submitted_to_dpmd_at ? new Date(proposal.submitted_to_dpmd_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) :
-                                               (proposal.submitted_to_dpmd || proposal.dpmd_status === 'pending') ? 'Menunggu' : '-'}
+                                              {proposal.submitted_to_dpmd_at ? new Date(proposal.submitted_to_dpmd_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) :
+                                               (proposal.submitted_to_dpmd || proposal.dpmd_status) ? 'Selesai' : '-'}
                                             </span>
                                           </div>
                                         </div>
@@ -2400,11 +2399,11 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                                         <div className="bg-gray-50 rounded-lg p-2">
                                           <p className="text-gray-500">Posisi Saat Ini</p>
                                           <p className={`font-semibold ${
-                                            getProposalStage(proposal) === 'di_dpmd' ? 'text-purple-700' :
+                                            getProposalStage(proposal) === 'di_dpmd' ? 'text-green-700' :
                                             getProposalStage(proposal) === 'di_kecamatan' ? 'text-blue-700' :
                                             'text-orange-700'
                                           }`}>
-                                            {getProposalStage(proposal) === 'di_dpmd' ? 'Di DPMD' :
+                                            {getProposalStage(proposal) === 'di_dpmd' ? '✓ Selesai (Di DPMD)' :
                                              getProposalStage(proposal) === 'di_kecamatan' ? 'Di Kecamatan' :
                                              'Di Dinas'}
                                           </p>
@@ -2412,11 +2411,11 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                                         <div className="bg-gray-50 rounded-lg p-2">
                                           <p className="text-gray-500">Status Akhir</p>
                                           <p className={`font-semibold ${
-                                            proposal.dpmd_status === 'approved' ? 'text-green-700' :
+                                            getProposalStage(proposal) === 'di_dpmd' ? 'text-green-700' :
                                             proposal.dpmd_status === 'rejected' ? 'text-red-700' :
                                             'text-blue-700'
                                           }`}>
-                                            {proposal.dpmd_status === 'approved' ? 'Disetujui' :
+                                            {getProposalStage(proposal) === 'di_dpmd' ? '✓ Diterima DPMD' :
                                              proposal.dpmd_status === 'rejected' ? 'Ditolak' :
                                              proposal.dpmd_status === 'revision' ? 'Revisi' :
                                              'Proses'}
@@ -2424,27 +2423,20 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                                         </div>
                                       </div>
                                       
-                                      {/* Troubleshoot Button - Only show for non-approved proposals */}
-                                      {proposal.dpmd_status !== 'approved' && proposal.status !== 'verified' && (
+                                      {/* Troubleshoot Button - Only show for proposals NOT yet at DPMD */}
+                                      {/* Jika sudah di DPMD = selesai, tidak perlu troubleshoot */}
+                                      {getProposalStage(proposal) !== 'di_dpmd' && proposal.dpmd_status !== 'approved' && proposal.status !== 'verified' && (
                                         <div className="flex items-center justify-between pt-2 border-t border-gray-100">
                                           <div className="flex items-center gap-2">
                                             {/* Stage indicator */}
                                             <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium ${
                                               getProposalStage(proposal) === 'di_dinas' ? 'bg-amber-100 text-amber-700' :
                                               getProposalStage(proposal) === 'di_kecamatan' ? 'bg-blue-100 text-blue-700' :
-                                              getProposalStage(proposal) === 'di_dpmd' ? 'bg-purple-100 text-purple-700' :
                                               'bg-gray-100 text-gray-600'
                                             }`}>
                                               <Clock className="h-3 w-3" />
                                               {(() => {
                                                 const stage = getProposalStage(proposal);
-                                                // If at DPMD, show "Sudah di DPMD"
-                                                if (stage === 'di_dpmd') {
-                                                  const days = proposal.submitted_to_dpmd_at 
-                                                    ? Math.floor((Date.now() - new Date(proposal.submitted_to_dpmd_at).getTime()) / (1000 * 60 * 60 * 24))
-                                                    : 0;
-                                                  return days > 0 ? `${days} hari di DPMD` : 'Sudah di DPMD';
-                                                }
                                                 // If at Kecamatan
                                                 if (stage === 'di_kecamatan') {
                                                   const days = proposal.dinas_verified_at
