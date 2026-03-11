@@ -173,8 +173,11 @@ const JadwalKegiatanPage = () => {
 			await api.post('/jadwal-kegiatan', dataToSend);
 			Swal.fire('Berhasil', 'Jadwal kegiatan berhasil ditambahkan', 'success');
 			setShowAddModal(false);
+			// Pindah filter ke tanggal jadwal baru agar langsung terlihat
+			if (formData.tanggal_mulai) {
+				setFilterTanggal(formData.tanggal_mulai.split('T')[0]);
+			}
 			resetFormData();
-			fetchJadwal();
 		} catch (error) {
 			console.error('Error creating jadwal:', error);
 			Swal.fire('Error', error.response?.data?.message || 'Gagal menambahkan jadwal kegiatan', 'error');
@@ -192,8 +195,11 @@ const JadwalKegiatanPage = () => {
 			Swal.fire('Berhasil', 'Jadwal kegiatan berhasil diperbarui', 'success');
 			setShowEditModal(false);
 			setSelectedJadwal(null);
+			// Pindah filter ke tanggal jadwal yang diedit
+			if (formData.tanggal_mulai) {
+				setFilterTanggal(formData.tanggal_mulai.split('T')[0]);
+			}
 			resetFormData();
-			fetchJadwal();
 		} catch (error) {
 			console.error('Error updating jadwal:', error);
 			Swal.fire('Error', error.response?.data?.message || 'Gagal memperbarui jadwal kegiatan', 'error');
