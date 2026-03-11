@@ -51,7 +51,7 @@ const JadwalKegiatanPage = () => {
 		return today.toISOString().split('T')[0];
 	};
 	
-	const [filterTanggal, setFilterTanggal] = useState('');
+	const [filterTanggal, setFilterTanggal] = useState(getTodayDate());
 	const [currentPage, setCurrentPage] = useState(1);
 	const [totalPages, setTotalPages] = useState(1);
 	const [totalData, setTotalData] = useState(0);
@@ -275,7 +275,7 @@ const JadwalKegiatanPage = () => {
 		setDebouncedSearchTerm('');
 		setFilterStatus('all');
 		setFilterPrioritas('all');
-		setFilterTanggal('');
+		setFilterTanggal(getTodayDate());
 		setCurrentPage(1);
 	};
 

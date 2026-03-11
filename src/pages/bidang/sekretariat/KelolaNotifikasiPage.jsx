@@ -27,7 +27,7 @@ const TEMPLATES = [
 		label: 'Reminder Jadwal Hari Ini',
 		title: '📅 Reminder Jadwal Hari Ini',
 		message: 'Jangan lupa cek jadwal kegiatan hari ini. Tap untuk melihat detail.',
-		url: '/jadwal-kegiatan',
+		url: '/dpmd/jadwal-kegiatan',
 		roles: ['kepala_dinas', 'sekretaris_dinas', 'kepala_bidang', 'ketua_tim', 'pegawai']
 	},
 	{
@@ -43,7 +43,7 @@ const TEMPLATES = [
 		label: 'Undangan Rapat',
 		title: '🏛️ Undangan Rapat',
 		message: 'Anda diundang untuk menghadiri rapat. Silakan cek detail waktu dan lokasi.',
-		url: '/jadwal-kegiatan',
+		url: '/dpmd/jadwal-kegiatan',
 		roles: ['kepala_dinas', 'sekretaris_dinas', 'kepala_bidang', 'ketua_tim', 'pegawai']
 	},
 	{
@@ -270,6 +270,28 @@ const KelolaNotifikasiPage = () => {
 		}
 	};
 
+	const handleSendJadwalNotif = async (type) => {
+		const label = type === 'morning' ? 'hari ini' : 'besok';
+		setLoading(true);
+		try {
+			const endpoint = type === 'morning' ? '/cron/test-morning-reminder' : '/cron/test-evening-reminder';
+			const res = await api.get(endpoint);
+			if (res.data.success) {
+				const count = res.data.schedulesCount || 0;
+				if (count === 0) {
+					toast('Tidak ada jadwal kegiatan ' + label, { icon: '📅' });
+				} else {
+					toast.success(`Notifikasi jadwal ${label} terkirim! (${count} kegiatan, ${res.data.sentTo || 0} penerima)`);
+				}
+				loadStatistics();
+			}
+		} catch (err) {
+			toast.error('Gagal mengirim notifikasi jadwal');
+		} finally {
+			setLoading(false);
+		}
+	};
+
 	// Stats card component
 	const StatCard = ({ icon: Icon, label, value, color, delay = 0 }) => (
 		<motion.div
@@ -324,6 +346,55 @@ const KelolaNotifikasiPage = () => {
 					<StatCard icon={UserCheck} label="User Aktif" value={statistics.uniqueSubscribedUsers || 0} color="text-teal-600" delay={0.05} />
 					<StatCard icon={Clock} label="Jadwal Hari Ini" value={statistics.todaySchedules} color="text-purple-600" delay={0.1} />
 					<StatCard icon={Clock} label="Jadwal Besok" value={statistics.tomorrowSchedules} color="text-orange-600" delay={0.15} />
+				</div>
+
+				{/* Quick Action: Kirim Notifikasi Jadwal */}
+				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+					<motion.div
+						initial={{ opacity: 0, y: 20 }}
+						animate={{ opacity: 1, y: 0 }}
+						transition={{ delay: 0.2 }}
+						className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl p-5 text-white shadow-lg"
+					>
+						<div className="flex items-center justify-between">
+							<div>
+								<p className="text-sm font-medium text-purple-100 mb-1">Jadwal Hari Ini</p>
+								<p className="text-2xl font-bold">{statistics.todaySchedules} kegiatan</p>
+								<p className="text-xs text-purple-200 mt-1">Kirim notifikasi ke semua pegawai DPMD</p>
+							</div>
+							<button
+								onClick={() => handleSendJadwalNotif('morning')}
+								disabled={loading || statistics.todaySchedules === 0}
+								className="flex items-center gap-2 px-4 py-2.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+							>
+								<Send className="w-4 h-4" />
+								Kirim
+							</button>
+						</div>
+					</motion.div>
+
+					<motion.div
+						initial={{ opacity: 0, y: 20 }}
+						animate={{ opacity: 1, y: 0 }}
+						transition={{ delay: 0.25 }}
+						className="bg-gradient-to-r from-orange-500 to-amber-500 rounded-xl p-5 text-white shadow-lg"
+					>
+						<div className="flex items-center justify-between">
+							<div>
+								<p className="text-sm font-medium text-orange-100 mb-1">Jadwal Besok</p>
+								<p className="text-2xl font-bold">{statistics.tomorrowSchedules} kegiatan</p>
+								<p className="text-xs text-orange-200 mt-1">Kirim reminder untuk kegiatan besok</p>
+							</div>
+							<button
+								onClick={() => handleSendJadwalNotif('evening')}
+								disabled={loading || statistics.tomorrowSchedules === 0}
+								className="flex items-center gap-2 px-4 py-2.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+							>
+								<Send className="w-4 h-4" />
+								Kirim
+							</button>
+						</div>
+					</motion.div>
 				</div>
 
 				{/* Tabs */}
