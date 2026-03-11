@@ -21,12 +21,14 @@ import {
 	LuList,
 	LuEye,
 } from 'react-icons/lu';
+import { useSearchParams } from 'react-router-dom';
 import api from '../../../api';
 import Swal from 'sweetalert2';
 import JadwalKegiatanModal from '../../../components/JadwalKegiatanModal';
 import JadwalKalenderView from '../../../components/JadwalKalenderView';
 
 const JadwalKegiatanPage = () => {
+	const [searchParams] = useSearchParams();
 	// Get user from localStorage
 	const user = JSON.parse(localStorage.getItem('user') || '{}');
 	
@@ -158,6 +160,14 @@ const JadwalKegiatanPage = () => {
 	useEffect(() => {
 		fetchJadwal();
 	}, [fetchJadwal]);
+
+	// Saat navigasi dari notifikasi (React Router), update filter tanggal dari URL
+	useEffect(() => {
+		const tanggal = searchParams.get('tanggal');
+		if (tanggal && /^\d{4}-\d{2}-\d{2}$/.test(tanggal) && tanggal !== filterTanggal) {
+			setFilterTanggal(tanggal);
+		}
+	}, [searchParams]);
 
 	useEffect(() => {
 		fetchBidangList();

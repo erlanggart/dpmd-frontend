@@ -74,7 +74,12 @@ const KetuaTimLayout = () => {
 	};
 
 	const handleNotificationItemClick = (notification) => {
-		if (notification.type === 'disposisi') {
+		const notifType = notification.data?.type || notification.type || '';
+		if (notifType === 'today_schedule' || notifType === 'tomorrow_schedule') {
+			const targetDate = notification.data?.targetDate || '';
+			const dateParam = targetDate ? `?tanggal=${targetDate}` : '';
+			navigate(`/dpmd/jadwal-kegiatan${dateParam}`);
+		} else if (notification.type === 'disposisi') {
 			navigate('/ketua-tim/disposisi');
 		} else if (notification.type === 'kegiatan') {
 			navigate('/core-dashboard/kegiatan');

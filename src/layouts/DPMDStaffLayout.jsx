@@ -380,7 +380,12 @@ const DPMDStaffLayout = () => {
 		}
 		
 		// Navigate based on notification type/data
-		if (notification.data?.url) {
+		const notifType = notification.data?.type || '';
+		if (notifType === 'today_schedule' || notifType === 'tomorrow_schedule') {
+			const targetDate = notification.data?.targetDate || '';
+			const dateParam = targetDate ? `?tanggal=${targetDate}` : '';
+			navigate(`/dpmd/jadwal-kegiatan${dateParam}`);
+		} else if (notification.data?.url) {
 			navigate(notification.data.url);
 		} else if (notification.type === 'disposisi') {
 			navigate(`${config.basePath}/disposisi`);
