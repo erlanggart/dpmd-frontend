@@ -182,12 +182,12 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
     }
 
     const getStageLabel = (proposal) => {
+      // Check from END to START (same logic as getProposalStage)
       if (proposal.dpmd_status === 'approved') return 'Selesai (Disetujui)';
-      if (!proposal.submitted_to_dinas_at) return 'Di Desa';
-      if (proposal.submitted_to_dinas_at && (!proposal.dinas_status || proposal.dinas_status === 'pending' || proposal.dinas_status === 'revision')) return 'Di Dinas Terkait';
-      if (proposal.dinas_status === 'approved' && !proposal.submitted_to_dpmd) return 'Di Kecamatan';
-      if (proposal.submitted_to_dpmd || proposal.dpmd_status === 'pending') return 'Di DPMD';
-      return 'Di Dinas Terkait';
+      if (proposal.submitted_to_dpmd || proposal.dpmd_status) return 'Di DPMD';
+      if (proposal.kecamatan_status === 'approved' || proposal.dinas_status === 'approved') return 'Di Kecamatan';
+      if (proposal.submitted_to_dinas_at || proposal.dinas_status) return 'Di Dinas Terkait';
+      return 'Di Desa';
     };
 
     const getStatusLabel = (status) => {
@@ -1133,16 +1133,17 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
   }, [trackingProposals]);
 
   // Helper function to determine proposal stage
+  // IMPORTANT: Check stages from END to START (DPMD -> Kecamatan -> Dinas -> Desa)
   const getProposalStage = (proposal) => {
-    // Check if still at desa (not yet submitted to dinas)
-    if (!proposal.submitted_to_dinas_at) return 'di_desa';
-    // Check if at dinas (submitted but not yet approved)
-    if (proposal.submitted_to_dinas_at && (!proposal.dinas_status || proposal.dinas_status === 'pending' || proposal.dinas_status === 'revision')) return 'di_dinas';
-    // Check if at kecamatan (dinas approved but not yet submitted to dpmd)
-    if (proposal.dinas_status === 'approved' && !proposal.submitted_to_dpmd) return 'di_kecamatan';
-    // If submitted to DPMD
-    if (proposal.submitted_to_dpmd || proposal.dpmd_status === 'pending') return 'di_dpmd';
-    return 'di_dinas';
+    // 1. Check if at DPMD (highest priority) - submitted_to_dpmd=true OR has dpmd_status
+    if (proposal.submitted_to_dpmd || proposal.dpmd_status) return 'di_dpmd';
+    // 2. Check if at kecamatan (dinas approved, waiting for kecamatan to send to DPMD)
+    if (proposal.kecamatan_status === 'approved') return 'di_kecamatan';
+    if (proposal.dinas_status === 'approved') return 'di_kecamatan';
+    // 3. Check if at dinas (submitted to dinas but not yet approved)
+    if (proposal.submitted_to_dinas_at || proposal.dinas_status) return 'di_dinas';
+    // 4. Default: still at desa
+    return 'di_desa';
   };
 
   // Get unique dinas list from tracking proposals (includes pivot kegiatan_list)
