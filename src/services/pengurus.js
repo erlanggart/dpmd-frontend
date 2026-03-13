@@ -135,15 +135,14 @@ export const updatePengurus = (id, data, opts = {}) => {
 	const params = getAdminParams("pengurus", "update", baseParams);
 
 	if (isMultipart) {
-		// For multipart, use POST with _method override for Express
+		// For multipart, use proper PUT request with FormData
 		const endpoint = getEndpoint("pengurus", "update");
 		const fd = data instanceof FormData ? data : new FormData();
 		if (!(data instanceof FormData)) {
 			Object.entries(data || {}).forEach(([k, v]) => fd.append(k, v));
 		}
-		fd.append("_method", "PUT");
 
-		return api.post(`${endpoint}/${id}`, fd, {
+		return api.put(`${endpoint}/${id}`, fd, {
 			headers: { "Content-Type": "multipart/form-data" },
 			params,
 		});
