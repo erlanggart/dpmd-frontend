@@ -186,6 +186,12 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
       // Di DPMD = Selesai
       if (proposal.dpmd_status === 'approved') return 'Selesai (Disetujui DPMD)';
       if (proposal.submitted_to_dpmd || proposal.dpmd_status) return 'Selesai (Di DPMD)';
+      // Check if BACK AT DESA (revision/troubleshoot)
+      if (proposal.troubleshoot_catatan && !proposal.submitted_to_dinas_at) return 'Di Desa (Troubleshoot)';
+      if ((proposal.kecamatan_status === 'rejected' || proposal.kecamatan_status === 'revision') && !proposal.submitted_to_kecamatan) return 'Di Desa (Revisi Kecamatan)';
+      if ((proposal.dinas_status === 'rejected' || proposal.dinas_status === 'revision') && !proposal.submitted_to_dinas_at) return 'Di Desa (Revisi Dinas)';
+      if (proposal.status === 'pending' && !proposal.submitted_to_dinas_at && 
+          (proposal.dinas_status || proposal.kecamatan_status || proposal.troubleshoot_catatan)) return 'Di Desa (Siap Kirim Ulang)';
       if (proposal.kecamatan_status === 'approved' || proposal.dinas_status === 'approved') return 'Di Kecamatan';
       if (proposal.submitted_to_dinas_at || proposal.dinas_status) return 'Di Dinas Terkait';
       return 'Di Desa';
@@ -1136,15 +1142,28 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
 
   // Helper function to determine proposal stage
   // IMPORTANT: Check stages from END to START (DPMD -> Kecamatan -> Dinas -> Desa)
+  // UPDATE 2026-03-13: Proposal yang dikembalikan (revisi/troubleshoot) dihitung sebagai 'di_desa'
   const getProposalStage = (proposal) => {
     // 1. Sudah sampai DPMD = selesai (DPMD hanya menerima, bukan verifikator)
     if (proposal.submitted_to_dpmd || proposal.dpmd_status) return 'selesai';
-    // 2. Check if at kecamatan (dinas approved, waiting for kecamatan to send to DPMD)
+    
+    // 2. Check if proposal is BACK AT DESA (revision/troubleshoot/pending re-send)
+    // Troubleshoot dari DPMD yang dikembalikan ke desa
+    if (proposal.troubleshoot_catatan && !proposal.submitted_to_dinas_at) return 'di_desa';
+    // Revisi dari Kecamatan yang dikembalikan ke desa
+    if ((proposal.kecamatan_status === 'rejected' || proposal.kecamatan_status === 'revision') && !proposal.submitted_to_kecamatan) return 'di_desa';
+    // Revisi dari Dinas yang dikembalikan ke desa
+    if ((proposal.dinas_status === 'rejected' || proposal.dinas_status === 'revision') && !proposal.submitted_to_dinas_at) return 'di_desa';
+    // Revision sudah diupload ulang tapi belum dikirim ulang (pending + punya review status + belum dikirim)
+    if (proposal.status === 'pending' && !proposal.submitted_to_dinas_at && 
+        (proposal.dinas_status || proposal.kecamatan_status || proposal.troubleshoot_catatan)) return 'di_desa';
+    
+    // 3. Check if at kecamatan (dinas approved, waiting for kecamatan to send to DPMD)
     if (proposal.kecamatan_status === 'approved') return 'di_kecamatan';
     if (proposal.dinas_status === 'approved') return 'di_kecamatan';
-    // 3. Check if at dinas (submitted to dinas but not yet approved)
+    // 4. Check if at dinas (submitted to dinas but not yet approved)
     if (proposal.submitted_to_dinas_at || proposal.dinas_status) return 'di_dinas';
-    // 4. Default: still at desa
+    // 5. Default: still at desa
     return 'di_desa';
   };
 
@@ -1981,7 +2000,7 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
               const selesaiCount = trackingProposals.filter(p => getProposalStage(p) === 'selesai').length;
               const totalAll = trackingProposals.length || 1;
               const stageCards = [
-                { label: 'Di Desa', count: diDesaCount, sub: 'belum kirim', icon: MapPin, gradient: 'from-slate-600 to-slate-700', ring: 'ring-slate-400/20', barColor: 'bg-slate-400', percent: Math.round((diDesaCount / totalAll) * 100) },
+                { label: 'Di Desa', count: diDesaCount, sub: 'draft/revisi/troubleshoot', icon: MapPin, gradient: 'from-slate-600 to-slate-700', ring: 'ring-slate-400/20', barColor: 'bg-slate-400', percent: Math.round((diDesaCount / totalAll) * 100) },
                 { label: 'Di Dinas', count: diDinasCount, sub: 'menunggu review', icon: Building, gradient: 'from-amber-500 to-orange-600', ring: 'ring-amber-400/20', barColor: 'bg-amber-400', percent: Math.round((diDinasCount / totalAll) * 100) },
                 { label: 'Di Kecamatan', count: diKecamatanCount, sub: 'diproses', icon: Building2, gradient: 'from-blue-500 to-indigo-600', ring: 'ring-blue-400/20', barColor: 'bg-blue-400', percent: Math.round((diKecamatanCount / totalAll) * 100) },
                 { label: 'Selesai', count: selesaiCount, sub: 'diterima DPMD', icon: CheckCircle, gradient: 'from-emerald-500 to-green-600', ring: 'ring-emerald-400/20', barColor: 'bg-emerald-400', percent: Math.round((selesaiCount / totalAll) * 100) },
