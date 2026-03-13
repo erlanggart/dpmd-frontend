@@ -15,6 +15,9 @@ import {
   HandCoins,
   PiggyBank,
   BarChart3,
+  Calendar,
+  Mail,
+  User,
 } from 'lucide-react';
 import './AnimatedIcon.css';
 
@@ -32,6 +35,9 @@ const ICON_MAP = {
   coins: Coins,
   piggy: PiggyBank,
   chart: BarChart3,
+  calendar: Calendar,
+  mail: Mail,
+  user: User,
 };
 
 const AnimatedIcon = ({ type, isActive, isHovered, className = 'w-5 h-5' }) => {

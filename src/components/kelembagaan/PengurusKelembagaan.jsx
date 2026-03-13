@@ -137,6 +137,7 @@ const PengurusKelembagaan = ({
 					editData={editingPengurus}
 					kelembagaanType={kelembagaanType}
 					kelembagaanId={kelembagaanId}
+					desaId={desaId}
 				/>
 			)}
 
