@@ -30,6 +30,7 @@ import AddUserModal from "../../components/AddUserModal";
 import ResetPasswordModal from "../../components/ResetPasswordModal";
 import EditRoleModal from "../../components/EditRoleModal";
 import EditBidangModal from "../../components/EditBidangModal";
+import RoleManagementModal from "../../components/RoleManagementModal";
 import UserStatsCard from "../../components/UserStatsCard";
 import { useAuth } from "../../context/AuthContext";
 import Swal from "sweetalert2";
@@ -42,6 +43,7 @@ const UserManagementPage = () => {
 	const [showResetModal, setShowResetModal] = useState(false);
 	const [showRoleModal, setShowRoleModal] = useState(false);
 	const [showBidangModal, setShowBidangModal] = useState(false);
+	const [showRoleManagement, setShowRoleManagement] = useState(false);
 	const [selectedUser, setSelectedUser] = useState(null);
 	const [isResettingPassword, setIsResettingPassword] = useState(false);
 	
@@ -52,6 +54,7 @@ const UserManagementPage = () => {
 	const [activeTab, setActiveTab] = useState("superadmin"); // Tab aktif
 	const [bidangList, setBidangList] = useState([]); // List bidang untuk dropdown
 	const [dinasList, setDinasList] = useState([]); // List dinas untuk dropdown
+	const [rolesList, setRolesList] = useState([]); // List roles dari API
 
 	// Pagination
 	const [currentPage, setCurrentPage] = useState(1);
@@ -119,11 +122,22 @@ const UserManagementPage = () => {
 		}
 	}, []);
 
+	// Fetch roles list
+	const fetchRoles = useCallback(async () => {
+		try {
+			const response = await api.get("/roles");
+			setRolesList(response.data.data || []);
+		} catch (err) {
+			console.error("Error fetching roles:", err);
+		}
+	}, []);
+
 	useEffect(() => {
 		fetchUsers();
 		fetchBidangList();
 		fetchDinasList();
-	}, [fetchUsers, fetchBidangList, fetchDinasList]);
+		fetchRoles();
+	}, [fetchUsers, fetchBidangList, fetchDinasList, fetchRoles]);
 
 	// Handle user added
 	const handleUserAdded = () => {
@@ -237,25 +251,34 @@ const UserManagementPage = () => {
 		}
 	};
 
-	// Get role info
+	// Get role info - dynamic from API with fallback
 	const getRoleInfo = (role) => {
-		const roleMap = {
-			superadmin: { label: "Super Admin", color: "bg-red-100 text-red-700 border-red-200" },
-			kepala_dinas: { label: "Kepala Dinas", color: "bg-blue-100 text-blue-700 border-blue-200" },
-			sekretaris_dinas: { label: "Sekretaris Dinas", color: "bg-indigo-100 text-indigo-700 border-indigo-200" },
-			kepala_bidang: { label: "Kepala Bidang", color: "bg-green-100 text-green-700 border-green-200" },
-			ketua_tim: { label: "Ketua Tim", color: "bg-teal-100 text-teal-700 border-teal-200" },
-			pegawai: { label: "Pegawai", color: "bg-gray-100 text-gray-700 border-gray-200" },
-			sekretariat: { label: "Sekretariat", color: "bg-purple-100 text-purple-700 border-purple-200" },
-			sarana_prasarana: { label: "Sarana Prasarana", color: "bg-cyan-100 text-cyan-700 border-cyan-200" },
-			kekayaan_keuangan: { label: "Kekayaan Keuangan", color: "bg-pink-100 text-pink-700 border-pink-200" },
-			pemberdayaan_masyarakat: { label: "Pemberdayaan Masyarakat", color: "bg-yellow-100 text-yellow-700 border-yellow-200" },
-			pemerintahan_desa: { label: "Pemerintahan Desa", color: "bg-indigo-100 text-indigo-700 border-indigo-200" },
-			desa: { label: "Admin Desa", color: "bg-emerald-100 text-emerald-700 border-emerald-200" },
-			kecamatan: { label: "Admin Kecamatan", color: "bg-violet-100 text-violet-700 border-violet-200" },
-			dinas_terkait: { label: "Dinas Terkait", color: "bg-amber-100 text-amber-700 border-amber-200" },
-		};
-		return roleMap[role] || { label: role, color: "bg-gray-100 text-gray-700 border-gray-200" };
+		// Try to find from API roles list
+		const apiRole = rolesList.find(r => r.name === role);
+		if (apiRole) {
+			const colorMap = {
+				red: "bg-red-100 text-red-700 border-red-200",
+				blue: "bg-blue-100 text-blue-700 border-blue-200",
+				indigo: "bg-indigo-100 text-indigo-700 border-indigo-200",
+				green: "bg-green-100 text-green-700 border-green-200",
+				teal: "bg-teal-100 text-teal-700 border-teal-200",
+				gray: "bg-gray-100 text-gray-700 border-gray-200",
+				purple: "bg-purple-100 text-purple-700 border-purple-200",
+				cyan: "bg-cyan-100 text-cyan-700 border-cyan-200",
+				pink: "bg-pink-100 text-pink-700 border-pink-200",
+				yellow: "bg-yellow-100 text-yellow-700 border-yellow-200",
+				emerald: "bg-emerald-100 text-emerald-700 border-emerald-200",
+				violet: "bg-violet-100 text-violet-700 border-violet-200",
+				amber: "bg-amber-100 text-amber-700 border-amber-200",
+				orange: "bg-orange-100 text-orange-700 border-orange-200",
+			};
+			return {
+				label: apiRole.label,
+				color: colorMap[apiRole.color] || "bg-gray-100 text-gray-700 border-gray-200"
+			};
+		}
+		// Fallback for unknown roles
+		return { label: role, color: "bg-gray-100 text-gray-700 border-gray-200" };
 	};
 
 	// Get icon for role
@@ -650,6 +673,17 @@ const UserManagementPage = () => {
 						)}
 					</div>
 
+					{/* Kelola Role Button - Superadmin only */}
+					{currentUser?.role === "superadmin" && (
+						<button
+							onClick={() => setShowRoleManagement(true)}
+							className="flex items-center justify-center gap-2 px-5 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+						>
+							<LuShield className="h-5 w-5" />
+							<span className="font-semibold">Kelola Role</span>
+						</button>
+					)}
+
 					<button
 						onClick={() => setShowAddModal(true)}
 						className="flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl"
@@ -992,6 +1026,16 @@ const UserManagementPage = () => {
 					}}
 					onBidangUpdated={handleBidangUpdated}
 					userData={selectedUser}
+				/>
+			)}
+
+			{showRoleManagement && (
+				<RoleManagementModal
+					isOpen={showRoleManagement}
+					onClose={() => {
+						setShowRoleManagement(false);
+						fetchRoles(); // Refresh roles after management
+					}}
 				/>
 			)}
 		</div>

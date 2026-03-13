@@ -52,7 +52,7 @@ const BankeuQuestionnaireForm = ({
     { key: 'item_3', label: 'Proposal (Latar Belakang, Maksud dan Tujuan, Bentuk Kegiatan, Jadwal Pelaksanaan)' },
     { key: 'item_4', label: 'RPA dan RAB' },
     { key: 'item_5', label: 'Surat Pernyataan Kepala Desa (lokasi tidak dalam sengketa)', optional: true },
-    { key: 'item_6', label: 'Bukti kepemilikan Aset Desa (untuk Rehab Kantor Desa)' },
+    { key: 'item_6', label: 'Bukti kepemilikan Aset Desa (untuk Rehab Kantor Desa)', optional: true },
     { key: 'item_7', label: 'Dokumen kesediaan peralihan hak hibah atas tanah', optional: true },
     { key: 'item_8', label: 'Dokumen pernyataan kesanggupan (tidak minta ganti rugi)', optional: true },
     { key: 'item_9', label: 'Persetujuan pemanfaatan barang milik Daerah/Negara', optional: true },

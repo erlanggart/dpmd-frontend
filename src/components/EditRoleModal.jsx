@@ -7,6 +7,32 @@ import Swal from "sweetalert2";
 const EditRoleModal = ({ isOpen, onClose, onRoleUpdated, userData }) => {
 	const [selectedRole, setSelectedRole] = useState("");
 	const [loading, setLoading] = useState(false);
+	const [roleOptions, setRoleOptions] = useState([]);
+	const [loadingRoles, setLoadingRoles] = useState(true);
+
+	// Fetch roles from API
+	useEffect(() => {
+		if (isOpen) {
+			setLoadingRoles(true);
+			api.get("/roles")
+				.then((response) => {
+					const roles = response.data.data || [];
+					setRoleOptions(
+						roles.map((r) => ({
+							value: r.name,
+							label: r.label,
+							color: r.color || "gray",
+						}))
+					);
+				})
+				.catch((error) => {
+					console.error("Error fetching roles:", error);
+				})
+				.finally(() => {
+					setLoadingRoles(false);
+				});
+		}
+	}, [isOpen]);
 
 	useEffect(() => {
 		if (isOpen && userData) {
@@ -57,24 +83,6 @@ const EditRoleModal = ({ isOpen, onClose, onRoleUpdated, userData }) => {
 
 	if (!isOpen) return null;
 
-	// ⚠️ ROLE OPTIONS - SINKRON 100% DENGAN schema.prisma enum users_role
-	// Jangan tambah/kurang role tanpa update schema.prisma!
-	const roleOptions = [
-		{ value: "superadmin", label: "Super Admin", color: "red" },
-		{ value: "kepala_dinas", label: "Kepala Dinas", color: "blue" },
-		{ value: "sekretaris_dinas", label: "Sekretaris Dinas", color: "indigo" },
-		{ value: "kepala_bidang", label: "Kepala Bidang", color: "green" },
-		{ value: "ketua_tim", label: "Ketua Tim", color: "teal" },
-		{ value: "pegawai", label: "Pegawai/Staff", color: "gray" },
-		{ value: "sekretariat", label: "Sekretariat", color: "purple" },
-		{ value: "sarana_prasarana", label: "Sarana Prasarana", color: "cyan" },
-		{ value: "kekayaan_keuangan", label: "Kekayaan Keuangan", color: "pink" },
-		{ value: "pemberdayaan_masyarakat", label: "Pemberdayaan Masyarakat", color: "yellow" },
-		{ value: "pemerintahan_desa", label: "Pemerintahan Desa", color: "indigo" },
-		{ value: "desa", label: "Admin Desa", color: "emerald" },
-		{ value: "kecamatan", label: "Admin Kecamatan", color: "violet" },
-	];
-
 	return (
 		<div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
 			<div className="bg-white rounded-2xl shadow-2xl w-full max-w-md transform transition-all">
@@ -117,10 +125,10 @@ const EditRoleModal = ({ isOpen, onClose, onRoleUpdated, userData }) => {
 							value={selectedRole}
 							onChange={(e) => setSelectedRole(e.target.value)}
 							className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-base font-medium"
-							disabled={loading}
+							disabled={loading || loadingRoles}
 							required
 						>
-							<option value="">-- Pilih Role --</option>
+							<option value="">{loadingRoles ? "Memuat role..." : "-- Pilih Role --"}</option>
 							{roleOptions.map((role) => (
 								<option key={role.value} value={role.value}>
 									{role.label}
