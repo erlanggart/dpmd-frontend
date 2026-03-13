@@ -215,7 +215,7 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
     if (trackingSelectedDesa !== 'all') filterParts.push(`Desa: ${trackingSelectedDesa}`);
     if (trackingDinasFilter !== 'all') filterParts.push(`Dinas: ${trackingDinasFilter}`);
     if (trackingStatusFilter !== 'all') {
-      const statusMap = { di_desa: 'Di Desa', di_dinas: 'Di Dinas', di_kecamatan: 'Di Kecamatan', di_dpmd: 'Di DPMD', selesai: 'Selesai' };
+      const statusMap = { di_desa: 'Di Desa', di_dinas: 'Di Dinas', di_kecamatan: 'Di Kecamatan', selesai: 'Selesai' };
       filterParts.push(`Status: ${statusMap[trackingStatusFilter] || trackingStatusFilter}`);
     }
     if (trackingSearchTerm) filterParts.push(`Pencarian: "${trackingSearchTerm}"`);
@@ -468,6 +468,7 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
     }
     if (activeView === 'statistics') {
       fetchAllDesaKecamatan();
+      fetchTrackingData();
     }
     if (activeView === 'tracking') {
       fetchAllDesaKecamatan();
@@ -484,7 +485,7 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
 
   // Fetch tracking data when tahun changes
   useEffect(() => {
-    if (activeView === 'tracking') {
+    if (activeView === 'tracking' || activeView === 'statistics') {
       fetchTrackingData();
     }
   }, [trackingTahunAnggaran]);
@@ -1136,8 +1137,8 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
   // Helper function to determine proposal stage
   // IMPORTANT: Check stages from END to START (DPMD -> Kecamatan -> Dinas -> Desa)
   const getProposalStage = (proposal) => {
-    // 1. Check if at DPMD (highest priority) - submitted_to_dpmd=true OR has dpmd_status
-    if (proposal.submitted_to_dpmd || proposal.dpmd_status) return 'di_dpmd';
+    // 1. Sudah sampai DPMD = selesai (DPMD hanya menerima, bukan verifikator)
+    if (proposal.submitted_to_dpmd || proposal.dpmd_status) return 'selesai';
     // 2. Check if at kecamatan (dinas approved, waiting for kecamatan to send to DPMD)
     if (proposal.kecamatan_status === 'approved') return 'di_kecamatan';
     if (proposal.dinas_status === 'approved') return 'di_kecamatan';
@@ -1208,10 +1209,7 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
 
       // Status filter
       if (trackingStatusFilter !== 'all') {
-        filteredProposals = filteredProposals.filter(p => {
-          if (trackingStatusFilter === 'selesai') return p.dpmd_status === 'approved';
-          return getProposalStage(p) === trackingStatusFilter;
-        });
+        filteredProposals = filteredProposals.filter(p => getProposalStage(p) === trackingStatusFilter);
       }
 
       if (filteredProposals.length === 0) return acc;
@@ -1980,15 +1978,13 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
               const diDesaCount = trackingProposals.filter(p => getProposalStage(p) === 'di_desa').length;
               const diDinasCount = trackingProposals.filter(p => getProposalStage(p) === 'di_dinas').length;
               const diKecamatanCount = trackingProposals.filter(p => getProposalStage(p) === 'di_kecamatan').length;
-              const diDpmdCount = trackingProposals.filter(p => getProposalStage(p) === 'di_dpmd').length;
-              const selesaiCount = trackingProposals.filter(p => p.dpmd_status === 'approved').length;
+              const selesaiCount = trackingProposals.filter(p => getProposalStage(p) === 'selesai').length;
               const totalAll = trackingProposals.length || 1;
               const stageCards = [
                 { label: 'Di Desa', count: diDesaCount, sub: 'belum kirim', icon: MapPin, gradient: 'from-slate-600 to-slate-700', ring: 'ring-slate-400/20', barColor: 'bg-slate-400', percent: Math.round((diDesaCount / totalAll) * 100) },
                 { label: 'Di Dinas', count: diDinasCount, sub: 'menunggu review', icon: Building, gradient: 'from-amber-500 to-orange-600', ring: 'ring-amber-400/20', barColor: 'bg-amber-400', percent: Math.round((diDinasCount / totalAll) * 100) },
                 { label: 'Di Kecamatan', count: diKecamatanCount, sub: 'diproses', icon: Building2, gradient: 'from-blue-500 to-indigo-600', ring: 'ring-blue-400/20', barColor: 'bg-blue-400', percent: Math.round((diKecamatanCount / totalAll) * 100) },
-                { label: 'Di DPMD', count: diDpmdCount, sub: 'masuk review', icon: Shield, gradient: 'from-violet-500 to-purple-600', ring: 'ring-violet-400/20', barColor: 'bg-violet-400', percent: Math.round((diDpmdCount / totalAll) * 100) },
-                { label: 'Selesai', count: selesaiCount, sub: 'disetujui', icon: CheckCircle, gradient: 'from-emerald-500 to-green-600', ring: 'ring-emerald-400/20', barColor: 'bg-emerald-400', percent: Math.round((selesaiCount / totalAll) * 100) },
+                { label: 'Selesai', count: selesaiCount, sub: 'diterima DPMD', icon: CheckCircle, gradient: 'from-emerald-500 to-green-600', ring: 'ring-emerald-400/20', barColor: 'bg-emerald-400', percent: Math.round((selesaiCount / totalAll) * 100) },
               ];
               return (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-4">
@@ -2089,8 +2085,7 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                     <option value="di_desa">Di Desa</option>
                     <option value="di_dinas">Di Dinas Terkait</option>
                     <option value="di_kecamatan">Di Kecamatan</option>
-                    <option value="di_dpmd">Di DPMD</option>
-                    <option value="selesai">Selesai (Disetujui)</option>
+                    <option value="selesai">Selesai (Diterima DPMD)</option>
                   </select>
                 </div>
               </div>
@@ -2137,8 +2132,7 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                     const totalProposals = data.proposals.length;
                     const diDinasCount = data.proposals.filter(p => getProposalStage(p) === 'di_dinas').length;
                     const diKecamatanCount = data.proposals.filter(p => getProposalStage(p) === 'di_kecamatan').length;
-                    const diDpmdCount = data.proposals.filter(p => getProposalStage(p) === 'di_dpmd').length;
-                    const selesaiCount = data.proposals.filter(p => p.dpmd_status === 'approved').length;
+                    const selesaiCount = data.proposals.filter(p => getProposalStage(p) === 'selesai').length;
                     const totalAnggaran = data.proposals.reduce((sum, p) => sum + (Number(p.anggaran_usulan) || 0), 0);
 
                     return (
@@ -2180,12 +2174,6 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                                 <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold flex items-center gap-1">
                                   <Building2 className="h-3 w-3" />
                                   {diKecamatanCount} Kec
-                                </span>
-                              )}
-                              {diDpmdCount > 0 && (
-                                <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold flex items-center gap-1">
-                                  <Shield className="h-3 w-3" />
-                                  {diDpmdCount} DPMD
                                 </span>
                               )}
                               {selesaiCount > 0 && (
@@ -2411,11 +2399,11 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                                         <div className="bg-gray-50 rounded-lg p-2">
                                           <p className="text-gray-500">Status Akhir</p>
                                           <p className={`font-semibold ${
-                                            getProposalStage(proposal) === 'di_dpmd' ? 'text-green-700' :
+                                            getProposalStage(proposal) === 'selesai' ? 'text-green-700' :
                                             proposal.dpmd_status === 'rejected' ? 'text-red-700' :
                                             'text-blue-700'
                                           }`}>
-                                            {getProposalStage(proposal) === 'di_dpmd' ? '✓ Diterima DPMD' :
+                                            {getProposalStage(proposal) === 'selesai' ? '✓ Diterima DPMD' :
                                              proposal.dpmd_status === 'rejected' ? 'Ditolak' :
                                              proposal.dpmd_status === 'revision' ? 'Revisi' :
                                              'Proses'}
@@ -2423,9 +2411,7 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                                         </div>
                                       </div>
                                       
-                                      {/* Troubleshoot Button - Only show for proposals NOT yet at DPMD */}
-                                      {/* Jika sudah di DPMD = selesai, tidak perlu troubleshoot */}
-                                      {getProposalStage(proposal) !== 'di_dpmd' && proposal.dpmd_status !== 'approved' && proposal.status !== 'verified' && (
+                                      {/* Troubleshoot Button - Selalu tampil untuk semua proposal */}
                                         <div className="flex items-center justify-between pt-2 border-t border-gray-100">
                                           <div className="flex items-center gap-2">
                                             {/* Stage indicator */}
@@ -2462,7 +2448,6 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                                             Troubleshoot Revisi
                                           </button>
                                         </div>
-                                      )}
 
                                       {/* Show catatan if any */}
                                       {(proposal.dinas_catatan || proposal.kecamatan_catatan || proposal.dpmd_catatan) && (
@@ -2776,42 +2761,58 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                       {/* Connecting Line */}
                       <div className="absolute top-8 left-0 right-0 h-1 bg-gradient-to-r from-blue-200 via-purple-200 to-emerald-200 rounded-full hidden md:block" />
                       
-                      {/* Timeline Steps */}
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {[
+                      {/* Timeline Steps - menggunakan trackingProposals (ALL proposals) agar sinkron dengan landing page */}
+                      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                        {(() => {
+                          const tp = trackingProposals.length > 0 ? trackingProposals : [];
+                          const diDesaCount = tp.filter(p => getProposalStage(p) === 'di_desa').length;
+                          const diDinasCount = tp.filter(p => getProposalStage(p) === 'di_dinas').length;
+                          const diKecamatanCount = tp.filter(p => getProposalStage(p) === 'di_kecamatan').length;
+                          const diDpmdCount = tp.filter(p => getProposalStage(p) === 'di_dpmd').length;
+                          const selesaiCount = tp.filter(p => p.dpmd_status === 'approved').length;
+                          return [
                           { 
                             step: 1, 
-                            label: 'Pengajuan', 
-                            desc: 'Desa submit proposal',
-                            count: statsData.totalProposal,
-                            color: 'blue',
+                            label: 'Di Desa', 
+                            desc: 'Belum submit ke dinas',
+                            count: diDesaCount,
+                            color: 'slate',
                             icon: FileText
                           },
                           { 
                             step: 2, 
                             label: 'Dinas Terkait', 
                             desc: 'Review dinas terkait',
-                            count: proposals.filter(p => p.dinas_status === 'approved').length,
-                            color: 'violet',
+                            count: diDinasCount,
+                            color: 'amber',
                             icon: Building
                           },
                           { 
                             step: 3, 
                             label: 'Kecamatan', 
                             desc: 'Review kecamatan',
-                            count: proposals.filter(p => p.kecamatan_status === 'approved').length,
-                            color: 'purple',
+                            count: diKecamatanCount,
+                            color: 'blue',
                             icon: Building2
                           },
                           { 
                             step: 4, 
-                            label: 'DPMD', 
-                            desc: 'Selesai / Diterima',
-                            count: proposals.filter(p => p.submitted_to_dpmd).length,
+                            label: 'Di DPMD', 
+                            desc: 'Review DPMD',
+                            count: diDpmdCount,
+                            color: 'violet',
+                            icon: Shield
+                          },
+                          { 
+                            step: 5, 
+                            label: 'Selesai', 
+                            desc: 'Disetujui DPMD',
+                            count: selesaiCount,
                             color: 'emerald',
                             icon: CheckCircle
                           },
-                        ].map((item, index) => {
+                        ];
+                        })().map((item, index) => {
                           const ItemIcon = item.icon;
                           return (
                             <div key={item.step} className="relative flex flex-col items-center text-center">
