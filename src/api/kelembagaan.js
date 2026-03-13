@@ -1,20 +1,20 @@
 import api from "../api";
 
 // Helper function untuk mendapatkan context admin
-const getAdminContext = () => {
-	const userData = localStorage.getItem("user");
-	if (!userData) return null;
+// const getAdminContext = () => {
+// 	const userData = localStorage.getItem("user");
+// 	if (!userData) return null;
 
-	try {
-		const user = JSON.parse(userData);
-		const isAdmin = ["superadmin", "pemberdayaan_masyarakat", "pmd"].includes(
-			user.role
-		);
-		return isAdmin ? user : null;
-	} catch {
-		return null;
-	}
-};
+// 	try {
+// 		const user = JSON.parse(userData);
+// 		const isAdmin = ["superadmin", "pemberdayaan_masyarakat", "pmd"].includes(
+// 			user.role
+// 		);
+// 		return isAdmin ? user : null;
+// 	} catch {
+// 		return null;
+// 	}
+// };
 
 // Service untuk kelembagaan PMD (admin level)
 export const kelembagaanApi = {

@@ -175,17 +175,20 @@ export default function KelembagaanDetailPage({
 		}
 	}, [type, id]);
 
-	// Fetch produk hukum list for the dropdown
+	// Fetch produk hukum list for the dropdown (filtered by desa)
 	const fetchProdukHukumList = useCallback(async () => {
+		if (!detail?.desa_id) return;
+		
 		try {
-			const res = await getProdukHukums(1, ""); // Get all produk hukum
+			// Pass desa_id to filter produk hukum for this specific desa
+			const res = await getProdukHukums({ all: 'true', desa_id: detail.desa_id });
 			const allData = res?.data?.data || [];
-			setProdukHukumList(allData.data || []);
+			setProdukHukumList(Array.isArray(allData) ? allData : []);
 		} catch (err) {
 			console.error("Gagal memuat daftar produk hukum:", err);
 			setProdukHukumList([]);
 		}
-	}, []);
+	}, [detail?.desa_id]);
 
 	// Fetch pengurus count
 	const fetchPengurusCount = useCallback(async () => {
@@ -210,8 +213,14 @@ export default function KelembagaanDetailPage({
 
 	useEffect(() => {
 		loadDetail();
-		fetchProdukHukumList();
-	}, [loadDetail, fetchProdukHukumList]);
+	}, [loadDetail]);
+
+	// Load produk hukum list when detail is available
+	useEffect(() => {
+		if (detail?.desa_id) {
+			fetchProdukHukumList();
+		}
+	}, [detail?.desa_id, fetchProdukHukumList]);
 
 	// Load pengurus count when detail is available
 	useEffect(() => {
@@ -424,9 +433,9 @@ export default function KelembagaanDetailPage({
 		);
 
 	return (
-		<div className="min-h-full">
+		<div className="p-6">
 			{/* Breadcrumb */}
-			<div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-4 px-4 py-3">
+			<div className="sticky top-0 z-10 p-4 bg-white mb-6 rounded-md shadow-md ">
 				<div className="flex items-center justify-between gap-4">
 					{/* Breadcrumb */}
 					<nav className="flex items-center space-x-2 text-sm flex-1 overflow-x-auto">
@@ -435,16 +444,10 @@ export default function KelembagaanDetailPage({
 							className="flex items-center text-gray-500 hover:text-indigo-600 transition-colors"
 						>
 							<FaHome className="mr-1" />
-							Dashboard
+							Dashboard Kelembagaan
 						</Link>
 						<FaChevronRight className="text-gray-400 text-xs" />
-						<Link
-							to={isAdmin ? `/bidang/pmd/kelembagaan` : `/desa/kelembagaan`}
-							className="text-gray-500 hover:text-indigo-600 transition-colors"
-						>
-							Kelembagaan
-						</Link>
-						<FaChevronRight className="text-gray-400 text-xs" />
+						
 
 						{/* Admin: Show Desa name and link */}
 						{isAdmin && detail?.desa_id && (

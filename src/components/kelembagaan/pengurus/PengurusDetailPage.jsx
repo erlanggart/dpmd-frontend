@@ -644,23 +644,23 @@ const PengurusDetailPage = () => {
 				<div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 					{/* Profile Card */}
 					<div className="lg:col-span-1 space-y-4">
-						<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+						<div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-violet-50 rounded-2xl shadow-lg border-2 border-blue-100 p-6">
 							<div className="text-center">
 								<div className="relative inline-block">
 									{pengurus.avatar ? (
 										<img
 											src={`${imageBaseUrl}/uploads/${pengurus.avatar}`}
 											alt={pengurus.nama_lengkap}
-											className="w-32 h-32 rounded-full object-cover mx-auto border-4 border-white shadow-lg"
+											className="w-40 h-40 rounded-2xl object-cover mx-auto border-4 border-white shadow-2xl ring-4 ring-blue-200"
 										/>
 									) : (
-										<div className="w-32 h-32 rounded-full bg-gray-200 flex items-center justify-center mx-auto border-4 border-white shadow-lg">
-											<FaUser className="text-gray-400 text-4xl" />
+										<div className="w-40 h-40 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center mx-auto border-4 border-white shadow-2xl ring-4 ring-blue-200">
+											<FaUser className="text-gray-400 text-5xl" />
 										</div>
 									)}
 
 									<div
-										className={`absolute bottom-2 right-2 w-6 h-6 rounded-full border-2 border-white ${
+										className={`absolute bottom-2 right-2 w-8 h-8 rounded-full border-4 border-white shadow-lg ${
 											pengurus.status_jabatan === "aktif"
 												? "bg-green-500"
 												: "bg-red-500"
@@ -669,21 +669,24 @@ const PengurusDetailPage = () => {
 									></div>
 								</div>
 
-								<div className="mt-4">
+								<div className="mt-6">
 									<h2 className="text-2xl font-bold text-gray-900">
 										{pengurus.nama_lengkap}
 									</h2>
-									<p className="text-lg text-indigo-600 font-medium mt-1">
+									<p className="text-lg text-indigo-600 font-semibold mt-2">
 										{pengurus.jabatan}
 									</p>
-									<div className="mt-2">
+									<div className="mt-3">
 										<span
-											className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${
+											className={`inline-flex items-center gap-1.5 px-4 py-1.5 text-sm font-bold rounded-full shadow-md ${
 												pengurus.status_jabatan === "aktif"
-													? "bg-green-100 text-green-800"
-													: "bg-red-100 text-red-800"
+													? "bg-green-500 text-white"
+													: "bg-red-500 text-white"
 											}`}
 										>
+											<div className={`w-2 h-2 rounded-full ${
+												pengurus.status_jabatan === "aktif" ? "bg-white" : "bg-white"
+											}`}></div>
 											{pengurus.status_jabatan === "aktif"
 												? "Aktif"
 												: "Selesai"}
@@ -693,28 +696,30 @@ const PengurusDetailPage = () => {
 							</div>
 						</div>
 						{/* Contact Information */}
-						<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-							<h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-								<FaPhone className="mr-2 text-indigo-600" />
-								Informasi Kontak
-							</h3>
+						<div className="bg-gradient-to-br from-cyan-50 via-blue-50 to-indigo-50 rounded-2xl shadow-sm border-2 border-cyan-100 p-6">
+							<div className="flex items-center gap-3 mb-6">
+								<div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+									<FaPhone className="text-white w-5 h-5" />
+								</div>
+								<h3 className="text-lg font-bold text-gray-900">Informasi Kontak</h3>
+							</div>
 
 							<div className="space-y-4">
 								<div>
-									<label className="block text-sm font-medium text-gray-700 mb-1">
+									<label className="block text-sm font-semibold text-gray-800 mb-1.5">
 										No. Telepon
 									</label>
-									<p className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
+									<p className="text-sm text-gray-900 bg-white/70 backdrop-blur-sm border-2 border-cyan-100 p-3 rounded-lg font-medium">
 										{pengurus.no_telepon || "-"}
 									</p>
 								</div>
 
 								<div>
-									<label className="flex items-center text-sm font-medium text-gray-700 mb-1">
-										<FaMapMarkerAlt className="mr-1" />
+									<label className="flex items-center text-sm font-semibold text-gray-800 mb-1.5">
+										<FaMapMarkerAlt className="mr-1.5" />
 										Alamat
 									</label>
-									<p className="text-sm text-gray-900 bg-gray-50 p-3 rounded">
+									<p className="text-sm text-gray-900 bg-white/70 backdrop-blur-sm border-2 border-cyan-100 p-3 rounded-lg leading-relaxed">
 										{pengurus.alamat || "-"}
 									</p>
 								</div>
@@ -725,11 +730,13 @@ const PengurusDetailPage = () => {
 					{/* Details */}
 					<div className="lg:col-span-2 space-y-6">
 						{/* Personal Information */}
-						<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-							<h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-								<FaUser className="mr-2 text-indigo-600" />
-								Informasi Pribadi
-							</h3>
+						<div className="bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 rounded-2xl shadow-sm border-2 border-green-100 p-6">
+							<div className="flex items-center gap-3 mb-6">
+								<div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+									<FaUser className="text-white w-5 h-5" />
+								</div>
+								<h3 className="text-lg font-bold text-gray-900">Informasi Pribadi</h3>
+							</div>
 
 							<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 								<div>
@@ -793,11 +800,13 @@ const PengurusDetailPage = () => {
 						</div>
 
 						{/* Position Information */}
-						<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-							<h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-								<FaCalendarAlt className="mr-2 text-indigo-600" />
-								Informasi Jabatan
-							</h3>
+						<div className="bg-gradient-to-br from-purple-50 via-violet-50 to-indigo-50 rounded-2xl shadow-sm border-2 border-purple-100 p-6">
+							<div className="flex items-center gap-3 mb-6">
+								<div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+									<FaCalendarAlt className="text-white w-5 h-5" />
+								</div>
+								<h3 className="text-lg font-bold text-gray-900">Informasi Jabatan</h3>
+							</div>
 
 							<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 								<div>
@@ -848,21 +857,26 @@ const PengurusDetailPage = () => {
 						</div>
 
 						{/* SK Pengangkatan */}
-						<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-							<h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-								<FaFileAlt className="mr-2 text-indigo-600" />
-								SK Pengangkatan Pengurus
-							</h3>
+						<div className="bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 rounded-2xl shadow-sm border-2 border-amber-100 p-6">
+							<div className="flex items-center gap-3 mb-6">
+								<div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg">
+									<FaFileAlt className="text-white w-5 h-5" />
+								</div>
+								<div>
+									<h3 className="text-lg font-bold text-gray-900">SK Pengangkatan</h3>
+									<p className="text-sm text-gray-600">Produk hukum dasar jabatan</p>
+								</div>
+							</div>
 
 							{pengurus.produk_hukum_id &&
 							produkHukumList.find(
 								(ph) => ph.id === pengurus.produk_hukum_id,
 							) ? (
-								<div className="p-4 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-100 border border-emerald-200 hover:shadow-md transition-shadow duration-300">
+								<div className="p-5 rounded-xl bg-white/70 backdrop-blur-sm border-2 border-green-200 hover:shadow-lg transition-all duration-300">
 									<div className="flex items-start space-x-3">
-										<div className="mt-1">
+										<div className="mt-1 w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center flex-shrink-0 shadow-md">
 											<svg
-												className="w-5 h-5 text-emerald-600"
+												className="w-6 h-6 text-white"
 												fill="none"
 												stroke="currentColor"
 												viewBox="0 0 24 24"
@@ -883,7 +897,8 @@ const PengurusDetailPage = () => {
 												return (
 													<div className="space-y-3">
 														<div>
-															<h4 className="font-semibold text-emerald-800 text-base mb-1">
+															<p className="text-xs font-semibold text-green-700 mb-1">SK Terpilih</p>
+															<h4 className="font-bold text-gray-900 text-base mb-1">
 																Nomor {ph.nomor} Tahun {ph.tahun}
 															</h4>
 															<p className="text-gray-700 leading-relaxed text-sm">
@@ -891,10 +906,10 @@ const PengurusDetailPage = () => {
 															</p>
 														</div>
 
-														<div className="flex items-center justify-between pt-2 border-t border-emerald-200">
-															<div className="text-xs text-emerald-600">
-																<span className="font-medium">Jenis:</span>{" "}
-																{ph.jenis}
+														<div className="flex items-center justify-between pt-3 border-t-2 border-green-100">
+															<div className="text-xs">
+																<span className="font-semibold text-gray-700">Jenis:</span>{" "}
+																<span className="text-green-700 font-medium">{ph.jenis}</span>
 															</div>
 															<button
 																onClick={() =>
@@ -902,7 +917,7 @@ const PengurusDetailPage = () => {
 																		`/desa/produk-hukum/${pengurus.produk_hukum_id}`,
 																	)
 																}
-																className="inline-flex items-center space-x-1 px-3 py-1.5 bg-emerald-600 text-white text-xs font-medium rounded-lg hover:bg-emerald-700 transition-colors duration-200"
+																className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white text-xs font-semibold rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-md hover:shadow-lg"
 															>
 																<FaExternalLinkAlt className="w-3 h-3" />
 																<span>Lihat Detail SK</span>
@@ -915,11 +930,11 @@ const PengurusDetailPage = () => {
 									</div>
 								</div>
 							) : (
-								<div className="p-4 rounded-xl bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-200">
+								<div className="p-5 rounded-xl bg-white/70 backdrop-blur-sm border-2 border-yellow-200">
 									<div className="flex items-start space-x-3">
-										<div className="mt-1">
+										<div className="mt-1 w-10 h-10 bg-gradient-to-br from-yellow-500 to-amber-600 rounded-lg flex items-center justify-center flex-shrink-0 shadow-md">
 											<svg
-												className="w-5 h-5 text-yellow-600"
+												className="w-6 h-6 text-white"
 												fill="none"
 												stroke="currentColor"
 												viewBox="0 0 24 24"
@@ -933,10 +948,10 @@ const PengurusDetailPage = () => {
 											</svg>
 										</div>
 										<div className="flex-1">
-											<h4 className="font-semibold text-yellow-800 text-sm mb-1">
+											<h4 className="font-bold text-yellow-800 text-sm mb-1.5">
 												Belum Terhubung dengan SK Pengangkatan
 											</h4>
-											<p className="text-yellow-700 text-xs">
+											<p className="text-yellow-700 text-xs leading-relaxed">
 												Pengurus ini belum memiliki SK pengangkatan yang
 												terdaftar. Silakan hubungi admin untuk melengkapi
 												dokumen legal.

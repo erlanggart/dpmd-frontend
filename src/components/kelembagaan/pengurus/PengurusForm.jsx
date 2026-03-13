@@ -74,20 +74,24 @@ const pengurusSchema = z.object({
 			const today = new Date();
 			return selectedDate <= today;
 		}, "Tanggal mulai jabatan tidak boleh di masa depan"),
-	tanggal_akhir_jabatan: emptyToUndef(
-		z
-			.string()
-			.refine((date, ctx) => {
-				if (!date) return true;
-				const endDate = new Date(date);
-				const startDate = new Date(ctx.parent.tanggal_mulai_jabatan);
-				return endDate > startDate;
-			}, "Tanggal akhir harus setelah tanggal mulai jabatan")
-			.optional()
-	),
+	tanggal_akhir_jabatan: emptyToUndef(z.string().optional()),
 	status_jabatan: z.enum(["aktif", "selesai"]).default("aktif"),
 	produk_hukum_id: emptyToUndef(z.string().optional()),
-});
+}).refine(
+	(data) => {
+		// Cross-field validation: end date must be after start date
+		if (!data.tanggal_akhir_jabatan || !data.tanggal_mulai_jabatan) {
+			return true; // Skip validation if either date is missing
+		}
+		const endDate = new Date(data.tanggal_akhir_jabatan);
+		const startDate = new Date(data.tanggal_mulai_jabatan);
+		return endDate > startDate;
+	},
+	{
+		message: "Tanggal akhir harus setelah tanggal mulai jabatan",
+		path: ["tanggal_akhir_jabatan"], // This will show the error on the end date field
+	}
+);
 
 export default function PengurusForm({
 	isOpen,
@@ -96,6 +100,7 @@ export default function PengurusForm({
 	editData = null,
 	kelembagaanType,
 	kelembagaanId,
+	desaId,
 }) {
 	// Get image base URL from environment
 	const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
@@ -134,19 +139,24 @@ export default function PengurusForm({
 	const [avatarError, setAvatarError] = useState("");
 	const fileInputRef = useRef(null);
 
-	// Load Produk Hukum list
+	// Load Produk Hukum list filtered by desa
 	useEffect(() => {
+		if (!desaId) return;
+		
 		const loadProdukHukum = async () => {
 			try {
-				const response = await getProdukHukumList();
-				setProdukHukumList(response.data.data.data || []);
+				// Filter produk hukum by desa_id to only show relevant documents
+				const response = await getProdukHukumList({ all: 'true', desa_id: desaId });
+				const data = response?.data?.data;
+				// Handle both array response and paginated response
+				setProdukHukumList(Array.isArray(data) ? data : (data?.data || []));
 			} catch (error) {
 				console.error("Error loading produk hukum:", error);
 				setProdukHukumList([]); // Ensure it's always an array
 			}
 		};
 		loadProdukHukum();
-	}, []); // Reset form when editData changes
+	}, [desaId]); // Reset form when editData changes
 	useEffect(() => {
 		if (editData) {
 			reset({
@@ -282,11 +292,21 @@ export default function PengurusForm({
 
 	// Form submission
 	const onFormSubmit = async (formData) => {
+		console.log("🚀 Form submission started", new Date().toISOString());
+		const startTime = performance.now();
+		
 		try {
 			// Validate all data before submit
+			console.log("🔍 Validating form data...");
+			const validateStartTime = performance.now();
+			
 			if (!validateBeforeSubmit()) {
+				console.log("❌ Validation failed");
 				return; // Stop submission if validation fails
 			}
+			
+			const validateEndTime = performance.now();
+			console.log(`✅ Validation passed in ${(validateEndTime - validateStartTime).toFixed(2)}ms`);
 
 			// Show loading alert
 			Swal.fire({
@@ -298,6 +318,14 @@ export default function PengurusForm({
 				willOpen: () => {
 					Swal.showLoading();
 				},
+			});
+
+			const formDataCreateStartTime = performance.now();
+			console.log("📦 Creating FormData object...");
+			console.log("📝 Form data info:", {
+				hasAvatar: !!avatar,
+				avatarSize: avatar?.size,
+				fieldCount: Object.keys(formData).length
 			});
 
 			const submitData = new FormData();
@@ -348,7 +376,20 @@ export default function PengurusForm({
 			submitData.append("pengurusable_type", backendKelembagaanType);
 			submitData.append("pengurusable_id", kelembagaanId);
 
+			const formDataCreateEndTime = performance.now();
+			console.log(`✅ FormData created in ${(formDataCreateEndTime - formDataCreateStartTime).toFixed(2)}ms`);
+
+			// Submit to API
+			const apiStartTime = performance.now();
+			console.log("🌐 Sending API request...");
+			
 			await onSubmit(submitData);
+			
+			const apiEndTime = performance.now();
+			console.log(`✅ API request completed in ${(apiEndTime - apiStartTime).toFixed(2)}ms`);
+
+			const totalTime = performance.now() - startTime;
+			console.log(`🎉 Total submission time: ${totalTime.toFixed(2)}ms`);
 
 			// Show success alert
 			Swal.fire({
@@ -442,32 +483,21 @@ export default function PengurusForm({
 	if (!isOpen) return null;
 
 	return (
-		<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-			<div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto relative">
-				{/* Loading overlay */}
-				{isSubmitting && (
-					<div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center rounded-lg">
-						<div className="flex flex-col items-center gap-3">
-							<FaSpinner className="w-8 h-8 text-indigo-600 animate-spin" />
-							<p className="text-sm text-gray-600 font-medium">
-								Menyimpan data pengurus...
-							</p>
-						</div>
-					</div>
-				)}
-				<form onSubmit={handleSubmit(onFormSubmit)}>
-					{/* Header */}
-					<div className="flex items-center justify-between p-6 border-b">
-						<div className="flex items-center gap-3">
-							<div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
-								<FaUserCircle className="w-6 h-6 text-indigo-600" />
+		<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+			<div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col"  onClick={(e) => e.stopPropagation()}>
+				{/* Fixed Header */}
+				<div className="flex-shrink-0 bg-gradient-to-r from-indigo-600 to-purple-600 p-6 text-white">
+					<div className="flex items-center justify-between">
+						<div className="flex items-center gap-4">
+							<div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
+								<FaUserCircle className="w-7 h-7 text-white" />
 							</div>
 							<div>
-								<h2 className="text-xl font-semibold text-gray-900">
-									{editData ? "Edit Pengurus" : "Tambah Pengurus"}
+								<h2 className="text-2xl font-bold">
+									{editData ? "Edit Pengurus" : "Tambah Pengurus Baru"}
 								</h2>
-								<p className="text-sm text-gray-500">
-									{kelembagaanType?.toUpperCase()} - Kelola data pengurus
+								<p className="text-indigo-100 text-sm mt-1">
+									{kelembagaanType?.toUpperCase()} - Lengkapi data pengurus dengan benar
 								</p>
 							</div>
 						</div>
@@ -475,181 +505,203 @@ export default function PengurusForm({
 							type="button"
 							onClick={onClose}
 							disabled={isSubmitting}
-							className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+							className="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
 						>
-							<FaTimes className="w-4 h-4 text-gray-500" />
+							<FaTimes className="w-5 h-5 text-white" />
 						</button>
 					</div>
+				</div>
 
-					{/* Content */}
-					<div className="p-6 space-y-6">
-						{/* Avatar Upload Section */}
-						<div className="flex items-start gap-6">
-							<div className="flex flex-col items-center">
-								<div className="relative group">
-									{avatarPreview ? (
-										<>
-											<img
-												src={avatarPreview}
-												alt="Avatar Preview"
-												className="w-28 h-28 rounded-full object-cover border-4 border-gray-200 shadow-md"
-											/>
-											{/* Remove Button Overlay */}
-											<button
-												type="button"
-												onClick={removeAvatar}
-												className="absolute -top-2 -right-2 w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-lg transition-all duration-200 transform hover:scale-110"
-												title="Hapus foto"
-											>
-												<FaTimes className="w-4 h-4" />
-											</button>
-										</>
-									) : (
-										<>
-											<div className="w-28 h-28 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center border-4 border-gray-200 shadow-md cursor-pointer transition-all duration-200 hover:shadow-lg group-hover:border-indigo-300">
-												<FaUserCircle className="w-14 h-14 text-gray-400 group-hover:text-indigo-400 transition-colors duration-200" />
-											</div>
-											{/* Camera Button Overlay */}
-											<button
-												type="button"
-												onClick={() => fileInputRef.current?.click()}
-												className="absolute -bottom-1 -right-1 w-10 h-10 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full flex items-center justify-center shadow-lg transition-all duration-200 transform hover:scale-110"
-												title="Pilih foto"
-											>
-												<svg
-													className="w-5 h-5"
-													fill="none"
-													stroke="currentColor"
-													viewBox="0 0 24 24"
-												>
-													<path
-														strokeLinecap="round"
-														strokeLinejoin="round"
-														strokeWidth={2}
-														d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
-													/>
-													<path
-														strokeLinecap="round"
-														strokeLinejoin="round"
-														strokeWidth={2}
-														d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
-													/>
-												</svg>
-											</button>
-										</>
-									)}
-									{editData?.status_verifikasi === "verified" && (
-										<div className="absolute -top-2 -left-2 w-8 h-8 bg-green-500 rounded-full flex items-center justify-center border-2 border-white shadow-md">
-											<FaCheck className="w-4 h-4 text-white" />
-										</div>
-									)}
+				{/* Scrollable Content */}
+				<div className="flex-1 overflow-y-auto"  style={{ scrollbarWidth: 'thin' }}>
+					{/* Loading overlay */}
+					{isSubmitting && (
+						<div className="absolute inset-0 bg-white/90 backdrop-blur-sm z-20 flex items-center justify-center rounded-xl">
+							<div className="flex flex-col items-center gap-4 bg-white p-8 rounded-2xl shadow-2xl border-2 border-indigo-100">
+								<div className="relative">
+									<div className="w-20 h-20 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+									<FaSpinner className="w-8 h-8 text-indigo-600 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
 								</div>
-								<div className="mt-3 text-center">
-									<p className="text-sm text-gray-600">
-										{avatarPreview ? "Foto Profil" : "Tambah Foto"}
-									</p>
-									<p className="text-xs text-gray-400 mt-1">
-										Format: JPG, PNG, GIF, SVG
-									</p>
-									<p className="text-xs text-gray-500 font-medium">
-										Maksimal 2MB
-									</p>
-									{avatarError && (
-										<p className="text-red-500 text-xs mt-2 flex items-center justify-center gap-1">
-											<FaExclamationCircle className="w-3 h-3" />
-											{avatarError}
-										</p>
-									)}
+								<div className="text-center">
+									<p className="text-lg font-semibold text-gray-900">Menyimpan Data Pengurus</p>
+									<p className="text-sm text-gray-500 mt-1">Mohon tunggu, sedang memproses...</p>
 								</div>
-								<input
-									ref={fileInputRef}
-									type="file"
-									accept="image/*"
-									onChange={handleAvatarChange}
-									className="hidden"
-								/>
 							</div>
-
-							{/* Basic Info */}
-							<div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
-								{/* Nama Lengkap */}
-								<div className="md:col-span-2">
-									<label className="label-style">
-										Nama Lengkap <span className="text-red-500">*</span>
-									</label>
-									<div className="input-group">
-										<input
-											type="text"
-											{...register("nama_lengkap")}
-											className="w-full"
-											placeholder="Nama lengkap pengurus"
-										/>
+						</div>
+					)}
+					
+					<form onSubmit={handleSubmit(onFormSubmit)} className="p-6 space-y-6">
+						{/* Section 1: Foto & Identitas Dasar */}
+						<div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border-2 border-blue-100">
+							<div className="flex items-center gap-2 mb-6">
+								<div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+									<FaUserCircle className="w-5 h-5 text-white" />
+								</div>
+								<h3 className="text-lg font-bold text-gray-900">Foto & Identitas Dasar</h3>
+							</div>
+							
+							<div className="flex flex-col md:flex-row items-start gap-8">
+								{/* Avatar Upload Section */}
+								<div className="flex-shrink-0">
+									<div className="relative group">
+										{avatarPreview ? (
+											<>
+												<img
+													src={avatarPreview}
+													alt="Avatar Preview"
+													className="w-32 h-32 rounded-2xl object-cover border-4 border-white shadow-xl ring-4 ring-blue-200"
+												/>
+												<button
+													type="button"
+													onClick={removeAvatar}
+													className="absolute -top-2 -right-2 w-9 h-9 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-lg transition-all duration-200 transform hover:scale-110 hover:rotate-90"
+													title="Hapus foto"
+												>
+													<FaTimes className="w-5 h-5" />
+												</button>
+											</>
+										) : (
+											<>
+												<div 
+													onClick={() => fileInputRef.current?.click()}
+													className="w-32 h-32 rounded-2xl bg-gradient-to-br from-blue-100 via-indigo-100 to-purple-100 flex items-center justify-center border-4 border-white shadow-xl cursor-pointer transition-all duration-300 hover:shadow-2xl group-hover:scale-105 ring-4 ring-blue-200"
+												>
+													<FaUserCircle className="w-16 h-16 text-blue-400 group-hover:text-indigo-500 transition-colors duration-300" />
+												</div>
+												<button
+													type="button"
+													onClick={() => fileInputRef.current?.click()}
+													className="absolute -bottom-2 -right-2 w-11 h-11 bg-gradient-to-br from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-full flex items-center justify-center shadow-xl transition-all duration-200 transform hover:scale-110"
+													title="Pilih foto"
+												>
+													<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+														<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+														<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+													</svg>
+												</button>
+											</>
+										)}
+										{editData?.status_verifikasi === "verified" && (
+											<div className="absolute -top-2 -left-2 w-9 h-9 bg-green-500 rounded-full flex items-center justify-center border-3 border-white shadow-lg animate-pulse">
+												<FaCheck className="w-5 h-5 text-white" />
+											</div>
+										)}
 									</div>
-									{errors.nama_lengkap && (
-										<p className="text-red-500 text-sm mt-1 flex items-center gap-1">
-											<FaExclamationCircle className="w-3 h-3" />
-											{errors.nama_lengkap.message}
+									<div className="mt-4 text-center">
+										<p className="text-sm font-semibold text-gray-700">
+											{avatarPreview ? "Foto Profil" : "Upload Foto"}
 										</p>
-									)}
+										<p className="text-xs text-gray-500 mt-1">JPG, PNG, GIF, SVG</p>
+										<p className="text-xs text-blue-600 font-medium mt-0.5">Max 2MB</p>
+										{avatarError && (
+											<div className="mt-2 p-2 bg-red-50 rounded-lg border border-red-200">
+												<p className="text-red-600 text-xs font-medium flex items-center justify-center gap-1">
+													<FaExclamationCircle className="w-3 h-3" />
+													{avatarError}
+												</p>
+											</div>
+										)}
+									</div>
+									<input
+										ref={fileInputRef}
+										type="file"
+										accept="image/*"
+										onChange={handleAvatarChange}
+										className="hidden"
+									/>
 								</div>
 
-								{/* NIK */}
-								<div>
-									<label className="label-style">NIK</label>
-									<div className="input-group">
-										<input
-											type="text"
-											{...register("nik")}
-											className="w-full"
-											placeholder="1234567890123456"
-											maxLength="16"
-										/>
+								{/* Basic Identity Fields */}
+								<div className="flex-1 space-y-4">
+									{/* Nama Lengkap */}
+									<div>
+										<label className="block text-sm font-semibold text-gray-800 mb-1.5">
+											Nama Lengkap <span className="text-red-500">*</span>
+										</label>
+										<div className="input-group">
+											<input
+												type="text"
+												{...register("nama_lengkap")}
+												className="w-full bg-white/80 backdrop-blur-sm"
+												placeholder="Nama lengkap pengurus"
+											/>
+										</div>
+										{errors.nama_lengkap && (
+											<p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+												<FaExclamationCircle className="w-3 h-3" />
+												{errors.nama_lengkap.message}
+											</p>
+										)}
 									</div>
-									{errors.nik ? (
-										<p className="text-red-500 text-sm mt-1 flex items-center gap-1">
-											<FaExclamationCircle className="w-3 h-3" />
-											{errors.nik.message}
-										</p>
-									) : (
-										<p className="text-xs text-gray-400 mt-1">16 digit angka</p>
-									)}
-								</div>
 
-								{/* No Telepon */}
-								<div>
-									<label className="label-style">No. Telepon</label>
-									<div className="input-group">
-										<input
-											type="tel"
-											{...register("no_telepon")}
-											className="w-full"
-											placeholder="081234567890"
-										/>
+									{/* NIK */}
+									<div>
+										<label className="block text-sm font-semibold text-gray-800 mb-1.5">NIK</label>
+										<div className="input-group">
+											<input
+												type="text"
+												{...register("nik")}
+												className="w-full bg-white/80 backdrop-blur-sm"
+												placeholder="1234567890123456"
+												maxLength="16"
+											/>
+										</div>
+										{errors.nik ? (
+											<p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+												<FaExclamationCircle className="w-3 h-3" />
+												{errors.nik.message}
+											</p>
+										) : (
+											<p className="text-xs text-blue-700 mt-1 font-medium">16 digit angka</p>
+										)}
 									</div>
-									{errors.no_telepon ? (
-										<p className="text-red-500 text-sm mt-1 flex items-center gap-1">
-											<FaExclamationCircle className="w-3 h-3" />
-											{errors.no_telepon.message}
-										</p>
-									) : (
-										<p className="text-xs text-gray-400 mt-1">
-											Format: 08xxxxxxxxx atau +62xxxxxxxxx
-										</p>
-									)}
+
+									{/* No Telepon */}
+									<div>
+										<label className="block text-sm font-semibold text-gray-800 mb-1.5">No. Telepon</label>
+										<div className="input-group">
+											<input
+												type="tel"
+												{...register("no_telepon")}
+												className="w-full bg-white/80 backdrop-blur-sm"
+												placeholder="081234567890"
+											/>
+										</div>
+										{errors.no_telepon ? (
+											<p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+												<FaExclamationCircle className="w-3 h-3" />
+												{errors.no_telepon.message}
+											</p>
+										) : (
+											<p className="text-xs text-blue-700 mt-1 font-medium">
+												Format: 08xxxxxxxxx atau +62xxxxxxxxx
+											</p>
+										)}
+									</div>
 								</div>
 							</div>
 						</div>
 
-						{/* Personal Information */}
-						<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+						{/* Section 2: Personal Information */}
+						<div className="space-y-5 p-6 bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 rounded-2xl border border-green-200 shadow-sm">
+							<div className="flex items-center gap-3 mb-4">
+								<div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+									<svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+									</svg>
+								</div>
+								<h3 className="text-lg font-bold text-gray-900">Informasi Personal</h3>
+							</div>
+
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-5">
 							{/* Tempat Lahir */}
 							<div>
-								<label className="label-style">Tempat Lahir</label>
+								<label className="block text-sm font-semibold text-gray-800 mb-1.5">Tempat Lahir</label>
 								<div className="input-group">
 									<input
 										type="text"
 										{...register("tempat_lahir")}
-										className="w-full"
+										className="w-full bg-white/80 backdrop-blur-sm"
 										placeholder="Tempat lahir"
 									/>
 								</div>
@@ -663,12 +715,12 @@ export default function PengurusForm({
 
 							{/* Tanggal Lahir */}
 							<div>
-								<label className="label-style">Tanggal Lahir</label>
+								<label className="block text-sm font-semibold text-gray-800 mb-1.5">Tanggal Lahir</label>
 								<div className="input-group">
 									<input
 										type="date"
 										{...register("tanggal_lahir")}
-										className="w-full"
+										className="w-full bg-white/80 backdrop-blur-sm"
 									/>
 								</div>
 								{errors.tanggal_lahir && (
@@ -681,11 +733,11 @@ export default function PengurusForm({
 
 							{/* Jenis Kelamin */}
 							<div>
-								<label className="label-style">Jenis Kelamin</label>
+								<label className="block text-sm font-semibold text-gray-800 mb-1.5">Jenis Kelamin</label>
 								<div className="input-group">
 									<select
 										{...register("jenis_kelamin")}
-										className="w-full bg-transparent text-gray-900 focus:outline-none focus:ring-0"
+										className="w-full bg-white/80 backdrop-blur-sm text-gray-900 focus:outline-none focus:ring-0"
 									>
 										<option value="">Pilih jenis kelamin</option>
 										<option
@@ -712,11 +764,11 @@ export default function PengurusForm({
 
 							{/* Status Perkawinan */}
 							<div>
-								<label className="label-style">Status Perkawinan</label>
+								<label className="block text-sm font-semibold text-gray-800 mb-1.5">Status Perkawinan</label>
 								<div className="input-group">
 									<select
 										{...register("status_perkawinan")}
-										className="w-full bg-transparent text-gray-900 focus:outline-none focus:ring-0"
+										className="w-full bg-white/80 backdrop-blur-sm text-gray-900 focus:outline-none focus:ring-0"
 									>
 										<option value="">Pilih status perkawinan</option>
 										<option
@@ -752,11 +804,11 @@ export default function PengurusForm({
 
 							{/* Pendidikan */}
 							<div className="md:col-span-2">
-								<label className="label-style">Pendidikan</label>
+								<label className="block text-sm font-semibold text-gray-800 mb-1.5">Pendidikan</label>
 								<div className="input-group">
 									<select
 										{...register("pendidikan")}
-										className="w-full bg-transparent text-gray-900 focus:outline-none focus:ring-0"
+										className="w-full bg-white/80 backdrop-blur-sm text-gray-900 focus:outline-none focus:ring-0"
 									>
 										<option value="">Pilih pendidikan</option>
 										<option value="SD" className="text-gray-900 bg-white">
@@ -795,42 +847,49 @@ export default function PengurusForm({
 									</p>
 								)}
 							</div>
-						</div>
 
-						{/* Alamat */}
-						<div>
-							<label className="label-style">Alamat</label>
-							<div className="input-group">
-								<textarea
-									{...register("alamat")}
-									className="w-full"
-									rows="3"
-									placeholder="Alamat lengkap"
-								/>
+							{/* Alamat */}
+							<div className="md:col-span-2">
+								<label className="block text-sm font-semibold text-gray-800 mb-1.5">Alamat</label>
+								<div className="input-group">
+									<textarea
+										{...register("alamat")}
+										className="w-full bg-white/80 backdrop-blur-sm"
+										rows="3"
+										placeholder="Alamat lengkap"
+									/>
+								</div>
+								{errors.alamat && (
+									<p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+										<FaExclamationCircle className="w-3 h-3" />
+										{errors.alamat.message}
+									</p>
+								)}
 							</div>
-							{errors.alamat && (
-								<p className="text-red-500 text-sm mt-1 flex items-center gap-1">
-									<FaExclamationCircle className="w-3 h-3" />
-									{errors.alamat.message}
-								</p>
-							)}
+						</div>
 						</div>
 
-						{/* Jabatan Information */}
-						<div className="border-t pt-6">
-							<h3 className="text-lg font-semibold text-gray-900 mb-4">
-								Informasi Jabatan
-							</h3>
-							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+						{/* Section 3: Informasi Jabatan */}
+						<div className="space-y-5 p-6 bg-gradient-to-br from-purple-50 via-violet-50 to-indigo-50 rounded-2xl border border-purple-200 shadow-sm">
+							<div className="flex items-center gap-3 mb-4">
+								<div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+									<svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+									</svg>
+								</div>
+								<h3 className="text-lg font-bold text-gray-900">Informasi Jabatan</h3>
+							</div>
+
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-5">
 								{/* Jabatan */}
 								<div>
-									<label className="label-style">
+									<label className="block text-sm font-semibold text-gray-800 mb-1.5">
 										Jabatan <span className="text-red-500">*</span>
 									</label>
 									<div className="input-group">
 										<select
 											{...register("jabatan")}
-											className="w-full bg-transparent text-gray-900 focus:outline-none focus:ring-0"
+											className="w-full bg-white/80 backdrop-blur-sm text-gray-900 focus:outline-none focus:ring-0"
 										>
 											<option value="">Pilih Jabatan</option>
 											{getJabatanOptions(kelembagaanType).map((option) => (
@@ -854,11 +913,11 @@ export default function PengurusForm({
 
 								{/* Status Jabatan */}
 								<div>
-									<label className="label-style">Status Jabatan</label>
+									<label className="block text-sm font-semibold text-gray-800 mb-1.5">Status Jabatan</label>
 									<div className="input-group">
 										<select
 											{...register("status_jabatan")}
-											className="w-full bg-transparent text-gray-900 focus:outline-none focus:ring-0"
+											className="w-full bg-white/80 backdrop-blur-sm text-gray-900 focus:outline-none focus:ring-0"
 										>
 											<option value="aktif" className="text-gray-900 bg-white">
 												Aktif
@@ -881,15 +940,14 @@ export default function PengurusForm({
 
 								{/* Tanggal Mulai Jabatan */}
 								<div>
-									<label className="label-style">
-										Tanggal Mulai Jabatan{" "}
-										<span className="text-red-500">*</span>
+									<label className="block text-sm font-semibold text-gray-800 mb-1.5">
+										Tanggal Mulai Jabatan <span className="text-red-500">*</span>
 									</label>
 									<div className="input-group">
 										<input
 											type="date"
 											{...register("tanggal_mulai_jabatan")}
-											className="w-full"
+											className="w-full bg-white/80 backdrop-blur-sm"
 										/>
 									</div>
 									{errors.tanggal_mulai_jabatan && (
@@ -902,12 +960,12 @@ export default function PengurusForm({
 
 								{/* Tanggal Akhir Jabatan */}
 								<div>
-									<label className="label-style">Tanggal Akhir Jabatan</label>
+									<label className="block text-sm font-semibold text-gray-800 mb-1.5">Tanggal Akhir Jabatan</label>
 									<div className="input-group">
 										<input
 											type="date"
 											{...register("tanggal_akhir_jabatan")}
-											className="w-full"
+											className="w-full bg-white/80 backdrop-blur-sm"
 										/>
 									</div>
 									{errors.tanggal_akhir_jabatan && (
@@ -920,11 +978,21 @@ export default function PengurusForm({
 							</div>
 						</div>
 
-						{/* SK Produk Hukum */}
-						<div>
-							<label className="block text-sm font-medium text-gray-700 mb-2">
-								SK Produk Hukum
-								<span className="text-xs text-gray-500 ml-2">
+						{/* Section 4: SK Produk Hukum */}
+						<div className="space-y-4 p-6 bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 rounded-2xl border border-amber-200 shadow-sm">
+							<div className="flex items-center gap-3 mb-4">
+								<div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg">
+									<svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+									</svg>
+								</div>
+								<h3 className="text-lg font-bold text-gray-900">SK Produk Hukum</h3>
+							</div>
+
+							<div>
+								<label className="block text-sm font-semibold text-gray-800 mb-2">
+								Pilih SK Pengangkatan
+								<span className="text-xs text-amber-700 ml-2 font-normal">
 									(Surat Keputusan Pengangkatan)
 								</span>
 							</label>
@@ -948,48 +1016,55 @@ export default function PengurusForm({
 									{errors.produk_hukum_id.message}
 								</p>
 							)}
-							<p className="text-xs text-gray-500 mt-1">
-								Pilih Surat Keputusan (SK) sebagai dasar hukum pengangkatan
-								pengurus ini. SK ini akan menjadi rujukan legal untuk posisi
-								jabatan yang dipegang.
-							</p>
+							<div className="mt-2 p-3 bg-white/60 backdrop-blur-sm rounded-lg border border-amber-200">
+								<p className="text-xs text-gray-700 leading-relaxed">
+									💡 Pilih Surat Keputusan (SK) sebagai dasar hukum pengangkatan
+									pengurus ini. SK ini akan menjadi rujukan legal untuk posisi
+									jabatan yang dipegang.
+								</p>
+							</div>
 						</div>
 					</div>
 
-					{/* Footer */}
-					<div className="flex items-center justify-between p-6 border-t bg-gray-50 rounded-b-lg">
-						<div className="text-sm text-gray-500">
-							<span className="text-red-500">*</span> Field wajib diisi
+					{/* Footer - Action Buttons */}
+					<div className="flex items-center justify-between p-6 border-t bg-gradient-to-r from-gray-50 via-white to-gray-50 rounded-b-2xl">
+						<div className="text-sm text-gray-600 flex items-center gap-1.5">
+							<span className="text-red-500 text-lg">*</span>
+							<span className="font-medium">Field wajib diisi</span>
 						</div>
 						<div className="flex gap-3">
 							<button
 								type="button"
 								onClick={onClose}
 								disabled={isSubmitting}
-								className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+								className="px-5 py-2.5 text-gray-700 bg-white border-2 border-gray-300 rounded-xl hover:bg-gray-50 hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-medium shadow-sm hover:shadow flex items-center gap-2"
 							>
+								<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+								</svg>
 								Batal
 							</button>
 							<button
 								type="submit"
 								disabled={isSubmitting}
-								className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2 min-w-[140px] justify-center"
+								className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 text-white rounded-xl hover:from-indigo-700 hover:via-purple-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2 min-w-[160px] justify-center font-semibold shadow-lg hover:shadow-xl transform hover:scale-105"
 							>
 								{isSubmitting ? (
 									<>
-										<FaSpinner className="w-4 h-4 animate-spin" />
-										Menyimpan...
+										<FaSpinner className="w-5 h-5 animate-spin" />
+										<span>Menyimpan...</span>
 									</>
 								) : (
 									<>
-										<FaSave className="w-4 h-4" />
-										{editData ? "Update Pengurus" : "Simpan Pengurus"}
+										<FaSave className="w-5 h-5" />
+										<span>{editData ? "Update Pengurus" : "Simpan Pengurus"}</span>
 									</>
 								)}
 							</button>
 						</div>
 					</div>
 				</form>
+			</div>
 			</div>
 		</div>
 	);
