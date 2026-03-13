@@ -4,11 +4,12 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   LayoutDashboard, Building2, Briefcase, FileText, TrendingUp, Users,
-  MapPin, Calendar, BarChart3, PieChart, Activity, Bell, Info, X,
+  MapPin, Calendar, BarChart3, PieChart, Activity, Bell, Info, X, ExternalLink,
   Clock, CheckCircle, Send, Mail, Inbox, ChevronRight, User, Phone, Award,
-  FolderOpen, ClipboardList
+  FolderOpen, ClipboardList, Newspaper
 } from 'lucide-react';
 import api from '../../api';
 import axios from 'axios';
@@ -124,6 +125,7 @@ const DPMDDashboard = () => {
   const [statistik, setStatistik] = useState(null);
   const [recentDisposisi, setRecentDisposisi] = useState([]);
   const [pegawaiData, setPegawaiData] = useState(null);
+  const [sekretariatData, setSekretariatData] = useState(null);
   const [jadwalStats, setJadwalStats] = useState({
     totalJadwal: 0,
     jadwalHariIni: 0,
@@ -131,6 +133,10 @@ const DPMDDashboard = () => {
   });
   const [upcomingJadwal, setUpcomingJadwal] = useState([]);
   const [error, setError] = useState(null);
+  const [informasiList, setInformasiList] = useState([]);
+  const [currentInformasiIndex, setCurrentInformasiIndex] = useState(0);
+  const [showInformasiModal, setShowInformasiModal] = useState(false);
+  const [selectedInformasi, setSelectedInformasi] = useState(null);
 
   // Get role config
   const role = user?.role || 'pegawai';
@@ -250,6 +256,34 @@ const DPMDDashboard = () => {
         );
       }
 
+      // Fetch sekretariat info for all roles (individual endpoints)
+      promises.push(
+        Promise.all([
+          api.get('/disposisi/statistik').catch(() => ({ data: { data: null } })),
+          api.get('/perjadin/dashboard').catch(() => ({ data: { data: null } })),
+          api.get('/pegawai').catch(() => ({ data: { data: [] } }))
+        ]).then(([disposisiRes, perjadinRes, pegawaiRes]) => ({
+          type: 'sekretariat',
+          data: {
+            stats: {
+              disposisi_pending: disposisiRes.data?.data?.masuk?.pending ?? 0,
+              perjadin_bulan_ini: perjadinRes.data?.data?.bulan_ini ?? 0,
+              total_pegawai: Array.isArray(pegawaiRes.data?.data) ? pegawaiRes.data.data.length : 0
+            }
+          }
+        })).catch(() => ({ type: 'sekretariat', data: null }))
+      );
+
+      // Fetch informasi banners
+      promises.push(
+        api.get('/informasi/public')
+          .then(res => ({
+            type: 'informasi',
+            data: res.data.success && res.data.data?.length > 0 ? res.data.data : []
+          }))
+          .catch(() => ({ type: 'informasi', data: [] }))
+      );
+
       // Await all promises
       const results = await Promise.all(promises);
 
@@ -266,9 +300,15 @@ const DPMDDashboard = () => {
           case 'pegawai':
             setPegawaiData(result.data);
             break;
+          case 'sekretariat':
+            setSekretariatData(result.data);
+            break;
           case 'jadwal':
             setJadwalStats(result.data.stats);
             setUpcomingJadwal(result.data.upcoming);
+            break;
+          case 'informasi':
+            setInformasiList(result.data);
             break;
         }
       });
@@ -286,12 +326,27 @@ const DPMDDashboard = () => {
     fetchData();
   }, [fetchData]);
 
+  // Rotate informasi every 5 seconds
+  useEffect(() => {
+    if (informasiList.length <= 1) return;
+    const interval = setInterval(() => {
+      setCurrentInformasiIndex(prev => (prev + 1) % informasiList.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [informasiList.length]);
+
   // ==================== QUICK ACTIONS ====================
   const quickActions = useMemo(() => {
     const basePath = getBidangPath();
     
     // Common actions for all roles - using unified /dpmd paths
     const commonActions = [
+      {
+        icon: BarChart3,
+        label: 'Dashboard',
+        color: 'purple',
+        onClick: () => navigate('/core-dashboard/dashboard')
+      },
       {
         icon: Briefcase,
         label: 'Perjadin',
@@ -305,24 +360,16 @@ const DPMDDashboard = () => {
         onClick: () => navigate('/dpmd/jadwal-kegiatan')
       },
       {
-        icon: Info,
-        label: 'Informasi',
+        icon: Mail,
+        label: 'Disposisi',
         color: 'orange',
-        onClick: () => navigate('/dpmd/informasi')
+        onClick: () => navigate('/dpmd/disposisi')
       }
     ];
 
     // Role-specific actions
     if (role === 'kepala_dinas') {
-      return [
-        ...commonActions,
-        {
-          icon: BarChart3,
-          label: 'Statistik',
-          color: 'purple',
-          onClick: () => navigate('/core-dashboard/dashboard')
-        }
-      ];
+      return commonActions;
     }
 
     if (role === 'sekretaris_dinas' || role === 'kepala_bidang') {
@@ -744,18 +791,52 @@ const DPMDDashboard = () => {
                   </div>
                 )}
 
-                {/* Email */}
-                <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl p-4 border border-purple-200">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-purple-600 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <Mail className="h-6 w-6 text-white" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-purple-600 font-medium mb-0.5">Email</p>
-                      <p className="text-sm font-bold text-gray-900 truncate break-all">{pegawaiData?.users?.[0]?.email || user.email || '-'}</p>
-                    </div>
+                {/* Informasi Banner with Smooth Animation */}
+                {informasiList.length > 0 && (
+                  <div className="relative w-full h-44 rounded-2xl overflow-hidden shadow-lg group">
+                    <AnimatePresence mode="wait">
+                      <motion.button
+                        key={currentInformasiIndex}
+                        initial={{ opacity: 0, x: 50 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -50 }}
+                        transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
+                        onClick={() => {
+                          setSelectedInformasi(informasiList[currentInformasiIndex]);
+                          setShowInformasiModal(true);
+                        }}
+                        className="absolute inset-0 w-full h-full cursor-pointer"
+                      >
+                        <img
+                          src={`${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://127.0.0.1:3001'}/${informasiList[currentInformasiIndex].gambar}`}
+                          alt={informasiList[currentInformasiIndex].judul}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"></div>
+                        <div className="absolute inset-0 bg-gradient-to-r from-teal-600/20 to-purple-600/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                        <motion.div 
+                          initial={{ y: 20, opacity: 0 }}
+                          animate={{ y: 0, opacity: 1 }}
+                          transition={{ delay: 0.15, duration: 0.4, ease: "easeOut" }}
+                          className="absolute bottom-0 left-0 right-0 p-3 text-left"
+                        >
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <span className="inline-flex items-center px-2 py-0.5 bg-gradient-to-r from-teal-500 to-teal-600 text-white text-[10px] font-semibold rounded-full shadow-lg">
+                              <Info className="h-2.5 w-2.5 mr-0.5" />
+                              Informasi
+                            </span>
+                            {informasiList.length > 1 && (
+                              <span className="text-white/80 text-[10px] font-medium bg-black/30 px-1.5 py-0.5 rounded-full">
+                                {currentInformasiIndex + 1}/{informasiList.length}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-white font-bold text-sm line-clamp-1 drop-shadow-lg">{informasiList[currentInformasiIndex].judul}</p>
+                        </motion.div>
+                      </motion.button>
+                    </AnimatePresence>
                   </div>
-                </div>
+                )}
 
                 {/* NIP */}
                 {pegawaiData?.nip && (
@@ -826,28 +907,78 @@ const DPMDDashboard = () => {
           </>
         )}
 
-        {/* Activity Summary for all roles */}
+        {/* Informasi Bidang Sekretariat */}
         <div className="mb-5">
           <SectionHeader 
-            title="Aktivitas Terkini" 
-            subtitle="Update terbaru sistem"
-            icon={Activity}
+            title="Informasi Sekretariat" 
+            subtitle="Data terkini bidang sekretariat"
+            icon={Building2}
           />
           <div className="space-y-3">
-            <ActivityCard
-              icon={FileText}
-              title="Dashboard Aktif"
-              subtitle="Semua data loaded dengan sukses"
-              time="Baru saja"
-              status="success"
-            />
-            <ActivityCard
-              icon={Activity}
-              title="Sistem Berjalan Normal"
-              subtitle="Semua layanan aktif"
-              time="Live"
-              status="success"
-            />
+            {/* Disposisi Pending */}
+            <div 
+              onClick={() => navigate('/dpmd/disposisi')}
+              className="bg-white rounded-2xl p-4 border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all duration-200 cursor-pointer active:scale-[0.98]"
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-md">
+                  <Mail className="w-6 h-6 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-sm font-semibold text-gray-900">Disposisi Pending</h4>
+                  <p className="text-xs text-gray-500 mt-0.5">Surat masuk menunggu disposisi</p>
+                </div>
+                <div className="flex-shrink-0 text-right">
+                  <span className="text-2xl font-bold text-blue-600">
+                    {sekretariatData?.stats?.disposisi_pending ?? '-'}
+                  </span>
+                  <p className="text-[10px] text-gray-400">surat</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Perjadin Bulan Ini */}
+            <div 
+              onClick={() => navigate('/dpmd/perjadin')}
+              className="bg-white rounded-2xl p-4 border border-gray-200 hover:border-green-300 hover:shadow-md transition-all duration-200 cursor-pointer active:scale-[0.98]"
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center shadow-md">
+                  <Briefcase className="w-6 h-6 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-sm font-semibold text-gray-900">Perjalanan Dinas</h4>
+                  <p className="text-xs text-gray-500 mt-0.5">Kegiatan perjadin bulan ini</p>
+                </div>
+                <div className="flex-shrink-0 text-right">
+                  <span className="text-2xl font-bold text-green-600">
+                    {sekretariatData?.stats?.perjadin_bulan_ini ?? '-'}
+                  </span>
+                  <p className="text-[10px] text-gray-400">kegiatan</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Total Pegawai */}
+            <div 
+              className="bg-white rounded-2xl p-4 border border-gray-200 transition-all duration-200"
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center shadow-md">
+                  <Users className="w-6 h-6 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-sm font-semibold text-gray-900">Total Pegawai</h4>
+                  <p className="text-xs text-gray-500 mt-0.5">Jumlah pegawai aktif DPMD</p>
+                </div>
+                <div className="flex-shrink-0 text-right">
+                  <span className="text-2xl font-bold text-purple-600">
+                    {sekretariatData?.stats?.total_pegawai ?? '-'}
+                  </span>
+                  <p className="text-[10px] text-gray-400">orang</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -861,6 +992,94 @@ const DPMDDashboard = () => {
           </p>
         </div>
       </div>
+
+      {/* Modal Detail Informasi */}
+      <AnimatePresence>
+        {showInformasiModal && selectedInformasi && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4"
+            onClick={() => setShowInformasiModal(false)}
+          >
+            <motion.div 
+              initial={{ y: 100, opacity: 0, scale: 0.95 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: 100, opacity: 0, scale: 0.95 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="bg-white w-full sm:max-w-lg sm:rounded-2xl rounded-t-3xl shadow-2xl max-h-[90vh] overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Drag Handle for mobile */}
+              <div className="sm:hidden flex justify-center py-3">
+                <div className="w-12 h-1.5 bg-gray-300 rounded-full"></div>
+              </div>
+              
+              {/* Image */}
+              <div className="relative h-52 sm:h-64 overflow-hidden">
+                <img
+                  src={`${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://127.0.0.1:3001'}/${selectedInformasi.gambar}`}
+                  alt={selectedInformasi.judul}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                <button
+                  onClick={() => setShowInformasiModal(false)}
+                  className="absolute top-4 right-4 p-2 bg-black/50 hover:bg-black/70 text-white rounded-full transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+                <div className="absolute bottom-4 left-4 right-4">
+                  <span className="inline-flex items-center px-3 py-1 bg-gradient-to-r from-teal-500 to-teal-600 text-white text-xs font-semibold rounded-full shadow-lg mb-2">
+                    <Info className="h-3 w-3 mr-1" />
+                    Informasi DPMD
+                  </span>
+                </div>
+              </div>
+              
+              {/* Content */}
+              <div className="p-6 max-h-[40vh] overflow-y-auto">
+                <h2 className="text-xl font-bold text-gray-900 mb-4 leading-tight">
+                  {selectedInformasi.judul}
+                </h2>
+                
+                {selectedInformasi.deskripsi ? (
+                  <div className="prose prose-sm max-w-none">
+                    <p className="text-gray-600 whitespace-pre-wrap leading-relaxed">
+                      {selectedInformasi.deskripsi}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-gray-400 italic text-sm">Tidak ada detail informasi tambahan.</p>
+                )}
+                
+                {selectedInformasi.link && (
+                  <a
+                    href={selectedInformasi.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-5 flex items-center justify-center gap-2 w-full py-3 px-4 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white font-semibold rounded-xl transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    Buka Link
+                  </a>
+                )}
+              </div>
+              
+              {/* Footer */}
+              <div className="px-6 py-4 border-t border-gray-100 bg-gray-50">
+                <button
+                  onClick={() => setShowInformasiModal(false)}
+                  className="w-full py-3 px-4 bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium rounded-xl transition-colors"
+                >
+                  Tutup
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

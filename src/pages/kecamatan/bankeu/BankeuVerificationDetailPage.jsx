@@ -152,11 +152,16 @@ const BankeuVerificationDetailPage = () => {
     // Multiple view HANYA muncul jika:
     // 1. Kecamatan pernah reject (ada kecamatan_catatan atau kecamatan_status pernah rejected/revision)
     // 2. Desa sudah upload ulang (proposal.verified_at not null - artinya pernah diverifikasi)
-    // 3. Ada file referensi (dinas_reviewed_file ada) - otomatis tersimpan ketika upload ulang
+    // 3. Ada file referensi (dinas_reviewed_file ada) - di-set saat Dinas approve
+    // FIX: Jika dinas_reviewed_file ADA dan berbeda dari file_proposal, berarti desa sudah upload ulang
+    const hasUploadedNewFile = proposal.dinas_reviewed_file && 
+                                proposal.file_proposal && 
+                                proposal.dinas_reviewed_file !== proposal.file_proposal;
     const kecamatanPrevRejected = proposal.kecamatan_catatan || 
                                    proposal.kecamatan_status === 'rejected' || 
-                                   proposal.kecamatan_status === 'revision';
-    const desaSudahUploadUlang = proposal.verified_at !== null;
+                                   proposal.kecamatan_status === 'revision' ||
+                                   hasUploadedNewFile; // <-- Tambahan: jika file beda, pasti pernah revisi
+    const desaSudahUploadUlang = proposal.verified_at !== null || hasUploadedNewFile;
     
     // DEBUG LOG untuk troubleshooting tombol Bandingkan
     console.log('🔍 DEBUG Tombol Bandingkan - Proposal ID:', proposal.id);
@@ -349,6 +354,50 @@ const BankeuVerificationDetailPage = () => {
           icon: 'error',
           title: 'Gagal!',
           text: error.response?.data?.message || 'Terjadi kesalahan saat memproses verifikasi',
+        });
+      }
+    }
+  };
+
+  // Handler untuk membatalkan persetujuan proposal
+  const handleCancelApproval = async (proposalId) => {
+    const result = await Swal.fire({
+      title: 'Batalkan Persetujuan?',
+      html: `
+        <p class="text-gray-600 mb-4">Anda yakin ingin membatalkan persetujuan proposal ini?</p>
+        <p class="text-sm text-amber-600 bg-amber-50 p-3 rounded-lg">Proposal akan kembali ke status <strong>pending</strong> dan dapat diverifikasi ulang.</p>
+      `,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Ya, Batalkan',
+      cancelButtonText: 'Tidak'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await api.patch(`/kecamatan/bankeu/proposals/${proposalId}/cancel-approval`, {
+          catatan: 'Persetujuan dibatalkan oleh Kecamatan'
+        });
+
+        Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'success',
+          title: 'Persetujuan dibatalkan',
+          showConfirmButton: false,
+          timer: 2000,
+          timerProgressBar: true
+        });
+
+        await fetchData();
+      } catch (error) {
+        console.error('Error canceling approval:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Gagal!',
+          text: error.response?.data?.message || 'Terjadi kesalahan saat membatalkan persetujuan'
         });
       }
     }
@@ -752,7 +801,8 @@ const BankeuVerificationDetailPage = () => {
     if (result.isConfirmed) {
       try {
         await api.post(`/kecamatan/bankeu/desa/${desaId}/submit-review`, {
-          action // 'submit' or 'return'
+          action, // 'submit' or 'return'
+          tahun: tahunAnggaran
         });
 
         Swal.fire({
@@ -1835,6 +1885,7 @@ const BankeuVerificationDetailPage = () => {
                 proposal={item.proposal}
                 index={index}
                 onVerify={handleVerify}
+                onCancelApproval={handleCancelApproval}
                 onViewPdf={handleViewPdf}
                 onGenerateBeritaAcara={handleGenerateBeritaAcaraKegiatan}
                 onGenerateSuratPengantar={handleGenerateSuratPengantar}
@@ -1887,6 +1938,7 @@ const BankeuVerificationDetailPage = () => {
                 proposal={item.proposal}
                 index={index}
                 onVerify={handleVerify}
+                onCancelApproval={handleCancelApproval}
                 onViewPdf={handleViewPdf}
                 onGenerateBeritaAcara={handleGenerateBeritaAcaraKegiatan}
                 onGenerateSuratPengantar={handleGenerateSuratPengantar}
@@ -2038,10 +2090,21 @@ const BankeuVerificationDetailPage = () => {
                               oleh <span className="font-semibold">{item.user_name}</span>
                               <span className="text-gray-400"> ({item.user_role})</span>
                             </p>
-                            {item.new_value?.catatan_umum && (
+                            {(item.new_value?.catatan_umum || item.new_value?.catatan) && (
                               <div className="mt-2 p-2.5 bg-white/70 rounded-lg border border-gray-100">
-                                <p className="text-xs text-gray-700 leading-relaxed whitespace-pre-wrap">{item.new_value.catatan_umum}</p>
+                                <p className="text-xs text-gray-700 leading-relaxed whitespace-pre-wrap">{item.new_value?.catatan_umum || item.new_value?.catatan}</p>
                               </div>
+                            )}
+                            {item.new_value?.file_proposal && (
+                              <a
+                                href={`${imageBaseUrl || 'http://127.0.0.1:3001'}/storage/uploads/bankeu/resolve/${item.new_value.file_proposal}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-all"
+                              >
+                                <LuDownload className="w-3 h-3" />
+                                File Proposal Saat Verifikasi
+                              </a>
                             )}
                           </div>
                         </div>
@@ -2078,10 +2141,99 @@ const BankeuVerificationDetailPage = () => {
 };
 
 // Proposal Row Component
-const ProposalRow = ({ kegiatan, proposal, index, onVerify, onViewPdf, onGenerateBeritaAcara, onGenerateSuratPengantar, onOpenCatatanModal, getStatusBadge, getProposalRowColor, imageBaseUrl, timCompletionStatus, desaId, navigate, tahunAnggaran }) => {
+const ProposalRow = ({ kegiatan, proposal, index, onVerify, onCancelApproval, onViewPdf, onGenerateBeritaAcara, onGenerateSuratPengantar, onOpenCatatanModal, getStatusBadge, getProposalRowColor, imageBaseUrl, timCompletionStatus, desaId, navigate, tahunAnggaran }) => {
   // Get completion status untuk proposal ini
   const completionStatus = proposal ? timCompletionStatus[proposal.id] : null;
   const isTimComplete = completionStatus?.all_complete || false;
+
+  // Show detailed modal when clicking disabled Buat BA button
+  const showBARequirementsModal = () => {
+    if (!completionStatus) {
+      Swal.fire({
+        icon: 'info',
+        title: 'Memuat Status...',
+        text: 'Status tim verifikasi sedang dimuat. Coba refresh halaman.',
+        confirmButtonText: 'OK'
+      });
+      return;
+    }
+
+    const memberRows = (completionStatus.tim_status || []).map(tim => {
+      const statusIcon = tim.is_complete ? '✅' : '❌';
+      const issues = [];
+      if (!tim.has_data) issues.push('<span class="bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs">Data belum diisi</span>');
+      if (tim.has_data && !tim.has_questionnaire) issues.push('<span class="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-xs">Quisioner belum diisi</span>');
+      if (tim.has_data && tim.has_questionnaire && !tim.has_ttd) issues.push('<span class="bg-orange-100 text-orange-700 px-2 py-0.5 rounded text-xs">TTD belum diupload</span>');
+      if (tim.is_complete) issues.push('<span class="bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs">Lengkap</span>');
+      const posisiLabel = (tim.posisi || '').replace(/_/g, ' ');
+      return `<tr class="border-b border-gray-100">
+        <td class="py-2 px-3 text-sm">${statusIcon}</td>
+        <td class="py-2 px-3 text-sm font-medium capitalize">${posisiLabel}</td>
+        <td class="py-2 px-3">${issues.join(' ')}</td>
+      </tr>`;
+    }).join('');
+
+    const hasMembers = (completionStatus.tim_status || []).length > 0;
+
+    Swal.fire({
+      title: '',
+      html: `
+        <div class="text-left">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+              <svg class="w-7 h-7 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+              </svg>
+            </div>
+            <div>
+              <h3 class="text-lg font-bold text-gray-900">Tidak Bisa Generate Berita Acara</h3>
+              <p class="text-sm text-gray-500">Lengkapi persyaratan berikut terlebih dahulu</p>
+            </div>
+          </div>
+          
+          <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+            <p class="text-sm text-blue-800 font-medium">📋 Syarat Generate BA:</p>
+            <ol class="text-sm text-blue-700 mt-1 ml-4 list-decimal space-y-0.5">
+              <li>Semua anggota tim verifikasi sudah <strong>isi data diri</strong></li>
+              <li>Semua anggota tim sudah <strong>isi quisioner</strong> untuk proposal ini</li>
+              <li>Semua anggota tim sudah <strong>upload tanda tangan</strong></li>
+              <li>Konfigurasi Kecamatan lengkap (Nama Camat, TTD, Stempel, Alamat)</li>
+            </ol>
+          </div>
+
+          ${hasMembers ? `
+            <p class="text-sm font-semibold text-gray-700 mb-2">Status Anggota Tim (${completionStatus.complete_members || 0}/${completionStatus.total_members || 0} lengkap):</p>
+            <table class="w-full border border-gray-200 rounded-lg overflow-hidden">
+              <thead>
+                <tr class="bg-gray-50">
+                  <th class="py-2 px-3 text-xs text-gray-500 text-left w-8"></th>
+                  <th class="py-2 px-3 text-xs text-gray-500 text-left">Posisi</th>
+                  <th class="py-2 px-3 text-xs text-gray-500 text-left">Status</th>
+                </tr>
+              </thead>
+              <tbody>${memberRows}</tbody>
+            </table>
+          ` : `
+            <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 text-center">
+              <p class="text-amber-800 font-medium">⚠ Belum ada anggota tim verifikasi yang terdaftar untuk proposal ini</p>
+              <p class="text-amber-600 text-sm mt-1">Klik tombol <strong>Tim Verifikasi</strong> untuk menambahkan anggota</p>
+            </div>
+          `}
+          
+          <div class="mt-4 bg-violet-50 border border-violet-200 rounded-lg p-3">
+            <p class="text-xs text-violet-700">💡 <strong>Tips:</strong> Klik tombol <strong>Tim Verifikasi</strong> di sebelah kiri untuk mengisi data, quisioner, dan upload TTD setiap anggota. Pastikan juga konfigurasi Camat sudah diisi di tab <strong>Konfigurasi</strong>.</p>
+          </div>
+        </div>
+      `,
+      width: 560,
+      customClass: {
+        popup: 'rounded-2xl shadow-2xl',
+        confirmButton: 'bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-semibold py-2.5 px-6 rounded-xl shadow-lg transition-all duration-200 border-0'
+      },
+      buttonsStyling: false,
+      confirmButtonText: 'Mengerti'
+    });
+  };
   
   return (
     <div className={`p-4 md:p-5 border-b border-gray-100 transition-all duration-200 ${proposal ? getProposalRowColor(proposal.kecamatan_status || proposal.status) : ''}`}>
@@ -2107,10 +2259,15 @@ const ProposalRow = ({ kegiatan, proposal, index, onVerify, onViewPdf, onGenerat
             <div className="flex items-center gap-2 flex-wrap">
               {/* View PDF Button */}
               {(() => {
+                // FIX 2026-03-09: Align logic with handleViewProposal to check hasUploadedNewFile
+                const hasUploadedNewFile = proposal.dinas_reviewed_file && 
+                                            proposal.file_proposal && 
+                                            proposal.dinas_reviewed_file !== proposal.file_proposal;
                 const kecamatanPrevRejected = proposal.kecamatan_catatan || 
                                                proposal.kecamatan_status === 'rejected' || 
-                                               proposal.kecamatan_status === 'revision';
-                const desaSudahUploadUlang = proposal.verified_at !== null;
+                                               proposal.kecamatan_status === 'revision' ||
+                                               hasUploadedNewFile;
+                const desaSudahUploadUlang = proposal.verified_at !== null || hasUploadedNewFile;
                 const showDualView = kecamatanPrevRejected && desaSudahUploadUlang && proposal.dinas_reviewed_file;
                 
                 return (
@@ -2204,6 +2361,18 @@ const ProposalRow = ({ kegiatan, proposal, index, onVerify, onViewPdf, onGenerat
                   </button>
                 </div>
               )}
+
+              {/* Batalkan Persetujuan Button - hanya tampil jika approved tapi belum dikirim ke DPMD */}
+              {proposal.kecamatan_status === 'approved' && !proposal.submitted_to_dpmd && (
+                <button
+                  onClick={() => onCancelApproval(proposal.id)}
+                  className="flex items-center gap-1 px-3 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors duration-150 shadow-sm text-xs font-semibold"
+                  title="Batalkan persetujuan dan verifikasi ulang"
+                >
+                  <LuX className="w-4 h-4" />
+                  <span className="hidden sm:inline">Batalkan</span>
+                </button>
+              )}
               
               {/* Berita Acara Button */}
               {proposal.kecamatan_status === 'approved' && (
@@ -2228,14 +2397,15 @@ const ProposalRow = ({ kegiatan, proposal, index, onVerify, onViewPdf, onGenerat
                   </div>
                 ) : (
                   // Berita Acara belum ada - tampilkan tombol generate dengan validasi tim
-                  <div className="relative group">
+                  <div className="relative group/ba">
                     <button
                       onClick={() => {
                         if (isTimComplete) {
                           onGenerateBeritaAcara(proposal.kegiatan_id, proposal.judul_proposal || kegiatan.nama_kegiatan, proposal.id, kegiatan.jenis_kegiatan);
+                        } else {
+                          showBARequirementsModal();
                         }
                       }}
-                      disabled={!isTimComplete}
                       className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg transition-all duration-150 shadow-sm text-xs font-semibold ${
                         isTimComplete
                           ? 'bg-gradient-to-r from-violet-500 to-purple-500 text-white hover:from-violet-600 hover:to-purple-600 cursor-pointer animate-pulse'
@@ -2256,24 +2426,53 @@ const ProposalRow = ({ kegiatan, proposal, index, onVerify, onViewPdf, onGenerat
                       )}
                     </button>
                     
-                    {/* Tooltip */}
+                    {/* Tooltip - positioned below to avoid overlap */}
                     {!isTimComplete && completionStatus && (
-                      <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block z-10 w-72">
-                        <div className="bg-gray-900 text-white text-xs rounded-lg p-3 shadow-xl">
-                          <p className="font-bold mb-2">Tim Verifikasi Belum Lengkap ({completionStatus.complete_members || 0}/{completionStatus.total_members || 0}):</p>
-                          {completionStatus.tim_status?.length > 0 ? (
-                            completionStatus.tim_status.map((tim, idx) => (
-                              <div key={idx} className={`flex items-center gap-2 py-1 ${!tim.is_complete ? 'text-yellow-300' : 'text-green-300'}`}>
-                                {tim.is_complete ? <LuCheck className="w-3 h-3" /> : <LuX className="w-3 h-3" />}
-                                <span className="capitalize">{tim.posisi?.replace(/_/g, ' ')}</span>
-                                {!tim.has_data && <span className="text-xs opacity-75">(belum isi data)</span>}
-                                {tim.has_data && !tim.has_questionnaire && <span className="text-xs opacity-75">(belum isi quisioner)</span>}
-                                {tim.has_data && tim.has_questionnaire && !tim.has_ttd && <span className="text-xs opacity-75">(belum upload TTD)</span>}
+                      <div className="absolute top-full right-0 mt-2 hidden group-hover/ba:block z-50 w-80">
+                        <div className="bg-gray-900 text-white text-xs rounded-xl p-4 shadow-2xl border border-gray-700">
+                          {/* Arrow pointing up */}
+                          <div className="absolute -top-2 right-6 w-4 h-4 bg-gray-900 transform rotate-45 border-l border-t border-gray-700"></div>
+                          <div className="relative z-10">
+                            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-700">
+                              <LuTriangleAlert className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                              <p className="font-bold text-amber-300">Tidak Bisa Generate BA</p>
+                            </div>
+                            <p className="text-gray-300 mb-3">Semua anggota tim harus lengkap: <span className="text-white font-medium">Data Diri + Quisioner + TTD</span></p>
+                            <p className="font-semibold mb-2 text-gray-200">Status Tim ({completionStatus.complete_members || 0}/{completionStatus.total_members || 0} lengkap):</p>
+                            {completionStatus.tim_status?.length > 0 ? (
+                              <div className="space-y-1.5">
+                                {completionStatus.tim_status.map((tim, idx) => (
+                                  <div key={idx} className={`flex items-start gap-2 px-2 py-1.5 rounded-lg ${tim.is_complete ? 'bg-green-900/40' : 'bg-red-900/40'}`}>
+                                    {tim.is_complete ? (
+                                      <LuCheck className="w-3.5 h-3.5 text-green-400 mt-0.5 flex-shrink-0" />
+                                    ) : (
+                                      <LuX className="w-3.5 h-3.5 text-red-400 mt-0.5 flex-shrink-0" />
+                                    )}
+                                    <div>
+                                      <span className={`capitalize font-medium ${tim.is_complete ? 'text-green-300' : 'text-red-300'}`}>
+                                        {tim.posisi?.replace(/_/g, ' ')}
+                                      </span>
+                                      {!tim.is_complete && (
+                                        <div className="text-[10px] text-gray-400 mt-0.5">
+                                          {!tim.has_data && <span className="inline-block bg-red-800/60 text-red-300 px-1.5 py-0.5 rounded mr-1">Data belum diisi</span>}
+                                          {tim.has_data && !tim.has_questionnaire && <span className="inline-block bg-amber-800/60 text-amber-300 px-1.5 py-0.5 rounded mr-1">Quisioner belum diisi</span>}
+                                          {tim.has_data && tim.has_questionnaire && !tim.has_ttd && <span className="inline-block bg-orange-800/60 text-orange-300 px-1.5 py-0.5 rounded mr-1">TTD belum diupload</span>}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
                               </div>
-                            ))
-                          ) : (
-                            <p className="text-yellow-300">Belum ada anggota tim yang terdaftar untuk proposal ini</p>
-                          )}
+                            ) : (
+                              <div className="bg-amber-900/40 rounded-lg px-3 py-2">
+                                <p className="text-amber-300 font-medium">⚠ Belum ada anggota tim yang terdaftar untuk proposal ini</p>
+                                <p className="text-gray-400 text-[10px] mt-1">Tambahkan anggota melalui menu Tim Verifikasi</p>
+                              </div>
+                            )}
+                            <div className="mt-3 pt-2 border-t border-gray-700 text-[10px] text-gray-400">
+                              💡 Pastikan juga Konfigurasi Kecamatan (Nama Camat, TTD Camat, Stempel, Alamat) sudah diisi di menu <span className="text-violet-300 font-medium">Konfigurasi</span>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     )}

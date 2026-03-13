@@ -63,19 +63,32 @@ const DisposisiRouter = () => {
     case 'sekretaris_dinas':
       return <SekretarisDinas />;
     
-    case 'kepala_bidang':
-      return <KepalaBidang />;
+    case 'kepala_bidang': {
+      const kbData = JSON.parse(localStorage.getItem('user') || '{}');
+      if (parseInt(kbData.bidang_id) === 2) {
+        return <KepalaBidang />;
+      }
+      return (
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">Akses Ditolak</h2>
+            <p className="text-gray-600 mb-4">Hanya pegawai sekretariat yang dapat mengakses disposisi</p>
+            <button onClick={() => navigate(-1)} className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">Kembali</button>
+          </div>
+        </div>
+      );
+    }
     
-    case 'pegawai':
-      // Pegawai sekretariat (bidang_id = 2) bisa input surat masuk
+    case 'ketua_tim':
+    case 'pegawai': {
+      // Pegawai & ketua_tim sekretariat (bidang_id = 2) bisa input surat masuk
       const userData = JSON.parse(localStorage.getItem('user') || '{}');
       const bidangId = userData.bidang_id;
       
       if (bidangId && parseInt(bidangId) === 2) {
-        console.log('[DisposisiRouter] Pegawai Sekretariat - showing SuratMasuk');
+        console.log('[DisposisiRouter] Sekretariat staff - showing SuratMasuk');
         return <SuratMasuk />;
       } else {
-        // Pegawai dari bidang lain tidak punya akses
         return (
           <div className="flex items-center justify-center min-h-screen">
             <div className="text-center">
@@ -91,6 +104,7 @@ const DisposisiRouter = () => {
           </div>
         );
       }
+    }
     
     case 'superadmin':
       // Superadmin dapat akses penuh, default ke dashboard sekretaris

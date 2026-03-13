@@ -11,7 +11,7 @@ function PerjadinMain() {
   const [editingKegiatan, setEditingKegiatan] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [selectedBidangId, setSelectedBidangId] = useState('');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const tabs = [
     {

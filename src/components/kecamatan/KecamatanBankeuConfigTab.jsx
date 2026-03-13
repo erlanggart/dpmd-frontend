@@ -19,6 +19,7 @@ const KecamatanBankeuConfigTab = () => {
   const [formData, setFormData] = useState({
     nama_camat: "",
     nip_camat: "",
+    jabatan_penandatangan: "Camat",
     alamat: "",
     telepon: "",
     email: "",
@@ -51,6 +52,7 @@ const KecamatanBankeuConfigTab = () => {
       setFormData({
         nama_camat: configRes.data.data?.nama_camat || "",
         nip_camat: configRes.data.data?.nip_camat || "",
+        jabatan_penandatangan: configRes.data.data?.jabatan_penandatangan || "Camat",
         alamat: configRes.data.data?.alamat || "",
         telepon: configRes.data.data?.telepon || "",
         email: configRes.data.data?.email || "",
@@ -414,6 +416,7 @@ const KecamatanBankeuConfigTab = () => {
                   setFormData({
                     nama_camat: config?.nama_camat || "",
                     nip_camat: config?.nip_camat || "",
+                    jabatan_penandatangan: config?.jabatan_penandatangan || "Camat",
                     alamat: config?.alamat || "",
                     telepon: config?.telepon || "",
                     email: config?.email || "",
@@ -517,30 +520,45 @@ const KecamatanBankeuConfigTab = () => {
 
             {editing ? (
               <form className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Nama Camat
+                      Jabatan Penandatangan
+                    </label>
+                    <select
+                      value={formData.jabatan_penandatangan}
+                      onChange={(e) => setFormData({ ...formData, jabatan_penandatangan: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-600 focus:border-transparent outline-none bg-white"
+                    >
+                      <option value="Camat">Camat</option>
+                      <option value="Plt. Camat">Plt. Camat</option>
+                      <option value="Pj. Camat">Pj. Camat</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Nama {formData.jabatan_penandatangan || 'Camat'}
                     </label>
                     <input
                       type="text"
                       value={formData.nama_camat}
                       onChange={(e) => setFormData({ ...formData, nama_camat: e.target.value })}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-600 focus:border-transparent outline-none"
-                      placeholder="Masukkan nama camat"
+                      placeholder={`Masukkan nama ${formData.jabatan_penandatangan || 'camat'}`}
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      NIP Camat
+                      NIP {formData.jabatan_penandatangan || 'Camat'}
                     </label>
                     <input
                       type="text"
                       value={formData.nip_camat}
                       onChange={(e) => setFormData({ ...formData, nip_camat: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-600 focus:border-transparent outline-none"
-                  placeholder="Masukkan NIP camat"
+                  placeholder={`Masukkan NIP ${formData.jabatan_penandatangan || 'camat'}`}
                 />
               </div>
             </div>
@@ -708,6 +726,7 @@ const KecamatanBankeuConfigTab = () => {
                   setFormData({
                     nama_camat: config?.nama_camat || "",
                     nip_camat: config?.nip_camat || "",
+                    jabatan_penandatangan: config?.jabatan_penandatangan || "Camat",
                     alamat: config?.alamat || "",
                     telepon: config?.telepon || "",
                     email: config?.email || "",
@@ -732,15 +751,21 @@ const KecamatanBankeuConfigTab = () => {
           </form>
         ) : (
           <div className="space-y-3">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="bg-gray-50 p-4 rounded-lg">
-                <label className="text-xs font-semibold text-gray-600 uppercase">Nama Camat</label>
+                <label className="text-xs font-semibold text-gray-600 uppercase">Jabatan</label>
+                <p className="text-lg font-semibold text-gray-900 mt-1">
+                  {config?.jabatan_penandatangan || "Camat"}
+                </p>
+              </div>
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <label className="text-xs font-semibold text-gray-600 uppercase">Nama {config?.jabatan_penandatangan || "Camat"}</label>
                 <p className="text-lg font-semibold text-gray-900 mt-1">
                   {config?.nama_camat || "-"}
                 </p>
               </div>
               <div className="bg-gray-50 p-4 rounded-lg">
-                <label className="text-xs font-semibold text-gray-600 uppercase">NIP Camat</label>
+                <label className="text-xs font-semibold text-gray-600 uppercase">NIP {config?.jabatan_penandatangan || "Camat"}</label>
                 <p className="text-lg font-semibold text-gray-900 mt-1">
                   {config?.nip_camat || "-"}
                 </p>

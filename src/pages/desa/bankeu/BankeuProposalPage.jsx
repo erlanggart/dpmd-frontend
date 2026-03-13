@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useMemo, useRef } from "react";
 import api from "../../../api";
 import Swal from "sweetalert2";
+import { useNetwork } from "../../../context/NetworkContext";
 import {
   LuUpload, LuEye, LuClock, LuCheck, LuX, LuRefreshCw, 
   LuChevronDown, LuChevronRight, LuSend, LuTrash2, LuInfo, LuDownload, LuFileText, LuImage,
-  LuPackage, LuMapPin, LuDollarSign, LuTriangleAlert, LuPencil, LuSave
+  LuPackage, LuMapPin, LuDollarSign, LuTriangleAlert, LuPencil, LuSave, LuWrench
 } from "react-icons/lu";
 
 const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
@@ -138,7 +139,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
   const [expandedInfra, setExpandedInfra] = useState(true);
   const [expandedNonInfra, setExpandedNonInfra] = useState(true);
   const [expandedSurat, setExpandedSurat] = useState(false);
-  const [expandedStats, setExpandedStats] = useState(false);
+  const [expandedStats, setExpandedStats] = useState(true);
   const [expandedProposalListInfra, setExpandedProposalListInfra] = useState(false);
   const [expandedProposalListNonInfra, setExpandedProposalListNonInfra] = useState(false);
   const [expandedProposalId, setExpandedProposalId] = useState(null);
@@ -288,18 +289,23 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
   useEffect(() => {
     if (proposals.length === 0) return;
 
-    const hasRejectedInfra = proposals.some(p => 
-      p.kegiatan_list?.some(k => k.jenis_kegiatan === 'infrastruktur') &&
+    // Helper function to check if proposal needs revision
+    const needsRevision = (p) => 
       ((p.dinas_status === 'rejected' || p.dinas_status === 'revision') && !p.submitted_to_dinas_at ||
-       (p.kecamatan_status === 'rejected' || p.kecamatan_status === 'revision') && !p.submitted_to_kecamatan)
+       (p.kecamatan_status === 'rejected' || p.kecamatan_status === 'revision') && !p.submitted_to_kecamatan ||
+       (p.status === 'revision' && p.troubleshoot_catatan && !p.submitted_to_dinas_at));
+
+    const hasRejectedInfra = proposals.some(p => 
+      p.kegiatan_list?.some(k => k.jenis_kegiatan === 'infrastruktur') && needsRevision(p)
     );
     
     const hasRejectedNonInfra = proposals.some(p => 
-      p.kegiatan_list?.some(k => k.jenis_kegiatan === 'non_infrastruktur') &&
-      ((p.dinas_status === 'rejected' || p.dinas_status === 'revision') && !p.submitted_to_dinas_at ||
-       (p.kecamatan_status === 'rejected' || p.kecamatan_status === 'revision') && !p.submitted_to_kecamatan)
+      p.kegiatan_list?.some(k => k.jenis_kegiatan === 'non_infrastruktur') && needsRevision(p)
     );
 
+    // Find first proposal that needs revision to auto-expand
+    const firstRevisionProposal = proposals.find(p => needsRevision(p));
+    
     if (hasRejectedInfra) {
       setExpandedInfra(true);
       setExpandedProposalListInfra(true);
@@ -308,6 +314,11 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
     if (hasRejectedNonInfra) {
       setExpandedNonInfra(true);
       setExpandedProposalListNonInfra(true);
+    }
+
+    // Auto-expand the first revision proposal so desa can see details and edit
+    if (firstRevisionProposal && !expandedProposalId) {
+      setExpandedProposalId(firstRevisionProposal.id);
     }
   }, [proposals]);
 
@@ -374,8 +385,10 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
       setDesaSurat(suratData);
       
       // Check if already submitted to dinas
-      // PERBAIKAN: isSubmitted = false (tombol tambah muncul) jika ADA MINIMAL 1 proposal yang rejected/revision
-      // Flow: Desa → Dinas Terkait → Kecamatan (2 level, DPMD tidak verifikasi)
+      // FIX 2026-03-11: Logic isSubmitted berdasarkan KEGIATAN YANG TERSEDIA
+      // Bukan hanya berdasarkan proposal existing
+      // Ini agar setelah DPMD "buka kembali upload", desa bisa upload proposal baru
+      // untuk kegiatan yang belum ada proposalnya
       
       // DEBUG: Log semua proposal untuk troubleshooting
       console.log('🔍 DEBUG isSubmitted CHECK:', proposalsRes.data.data.map(p => ({
@@ -383,33 +396,62 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
         submitted_to_dinas_at: p.submitted_to_dinas_at,
         dinas_status: p.dinas_status,
         kecamatan_status: p.kecamatan_status,
-        status: p.status
+        status: p.status,
+        submitted_to_dpmd: p.submitted_to_dpmd,
+        dpmd_status: p.dpmd_status,
+        kegiatan_list: p.kegiatan_list?.map(k => k.id)
       })));
-      
-      // FIXED: Logika isSubmitted yang benar
-      // Tombol tambah MUNCUL (isSubmitted=false) jika:
-      //   1. Tidak ada proposal sama sekali (desa baru)
-      //   2. Ada proposal yang belum dikirim ke dinas (pending, belum submitted_to_dinas_at)
-      //   3. Ada proposal revision/rejected yang perlu diupload ulang
-      // Tombol tambah HILANG (isSubmitted=true) jika:
-      //   Semua proposal sudah dikirim ke dinas DAN tidak ada yang revision/rejected
       
       const allProposals = proposalsRes.data.data;
       
-      // Cek apakah SEMUA proposal sudah dikirim ke dinas
-      const allSubmittedToDinas = allProposals.length > 0 && 
-        allProposals.every(p => p.submitted_to_dinas_at);
+      // IMPORTANT: isSubmitted controls visibility of upload forms
+      // Tombol upload MUNCUL (isSubmitted=false) jika:
+      //   1. Ada kegiatan yang belum ada proposalnya, ATAU
+      //   2. Ada proposal revision/rejected yang perlu diupload ulang
+      // Tombol upload HILANG (isSubmitted=true) jika:
+      //   Semua kegiatan sudah ada proposalnya DAN semua proposal sudah dikirim DAN tidak ada revisi
       
-      // Cek apakah ada proposal revision/rejected yang belum diupload ulang
+      // Get all kegiatan IDs that have proposals
+      const kegiatanWithProposals = new Set();
+      allProposals.forEach(p => {
+        if (p.kegiatan_list) {
+          p.kegiatan_list.forEach(k => kegiatanWithProposals.add(k.id));
+        }
+        if (p.kegiatan_id) {
+          kegiatanWithProposals.add(p.kegiatan_id);
+        }
+      });
+      
+      // Get total kegiatan from master data (reuse masterData from above)
+      const totalMasterKegiatan = (masterData.infrastruktur?.length || 0) + (masterData.non_infrastruktur?.length || 0);
+      
+      // Cek apakah masih ada kegiatan yang belum ada proposalnya
+      const hasAvailableKegiatan = kegiatanWithProposals.size < totalMasterKegiatan;
+      
+      // Cek apakah ada proposal revision/rejected yang perlu diupload ulang
+      // EXCLUDE proposal final (sudah di DPMD)
       const hasRejectedOrRevisionProposal = allProposals.some(p => 
-        (p.status === 'revision' || p.status === 'rejected') && !p.submitted_to_dinas_at
+        (p.status === 'revision' || p.status === 'rejected') && 
+        !p.submitted_to_dinas_at &&
+        !(p.submitted_to_dpmd === true || p.submitted_to_dpmd === 1 || p.dpmd_status === 'approved' || p.status === 'verified')
       );
       
-      console.log('🔍 DEBUG allSubmittedToDinas:', allSubmittedToDinas);
-      console.log('🔍 DEBUG hasRejectedOrRevisionProposal:', hasRejectedOrRevisionProposal);
+      // Cek apakah ada proposal pending yang belum dikirim (baru upload, belum submit)
+      const hasUnsendNewProposals = allProposals.some(p => 
+        p.status === 'pending' && 
+        !p.submitted_to_dinas_at &&
+        !p.dinas_status && !p.kecamatan_status && !p.dpmd_status
+      );
       
-      // isSubmitted = true HANYA jika semua sudah dikirim DAN tidak ada yang revision
-      const shouldBeSubmitted = allSubmittedToDinas && !hasRejectedOrRevisionProposal;
+      console.log('🔍 DEBUG hasAvailableKegiatan:', hasAvailableKegiatan, `(${kegiatanWithProposals.size}/${totalMasterKegiatan} kegiatan terisi)`);
+      console.log('🔍 DEBUG hasRejectedOrRevisionProposal:', hasRejectedOrRevisionProposal);
+      console.log('🔍 DEBUG hasUnsendNewProposals:', hasUnsendNewProposals);
+      
+      // isSubmitted = false (tombol muncul) jika:
+      // - Ada kegiatan yang belum terisi, ATAU
+      // - Ada revisi yang perlu diupload, ATAU
+      // - Ada proposal baru yang belum dikirim
+      const shouldBeSubmitted = !hasAvailableKegiatan && !hasRejectedOrRevisionProposal && !hasUnsendNewProposals;
       console.log('🔍 DEBUG isSubmitted will be:', shouldBeSubmitted);
       
       setIsSubmitted(shouldBeSubmitted);
@@ -1007,7 +1049,24 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
     return MAX_ANGGARAN - getTotalExistingAnggaran(excludeProposalId);
   };
 
+  const network = useNetwork();
+  const isNetworkWeak = network.speed === 'slow' || network.speed === 'offline';
+
   const handleSubmitToKecamatan = async () => {
+    // Check network condition
+    if (isNetworkWeak) {
+      Swal.fire({
+        icon: "error",
+        title: "Jaringan Lemah",
+        html: `<div class="text-left">
+          <p class="mb-2 text-red-600 font-semibold">⚠️ Koneksi jaringan Anda saat ini tidak stabil.</p>
+          <p class="text-sm text-gray-700">Pengiriman data tidak dapat dilakukan saat jaringan lemah untuk menghindari kegagalan atau data corrupt. Silakan coba lagi saat koneksi membaik.</p>
+          ${network.latency ? `<p class="text-xs text-gray-500 mt-2">Latency: ${network.latency}ms</p>` : ''}
+        </div>`,
+        confirmButtonText: "OK"
+      });
+      return;
+    }
     // Check if submission is open
     if (!submissionOpen) {
       Swal.fire({
@@ -1138,6 +1197,20 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
   };
 
   const handleSubmitToDinas = async () => {
+    // Check network condition
+    if (isNetworkWeak) {
+      Swal.fire({
+        icon: "error",
+        title: "Jaringan Lemah",
+        html: `<div class="text-left">
+          <p class="mb-2 text-red-600 font-semibold">⚠️ Koneksi jaringan Anda saat ini tidak stabil.</p>
+          <p class="text-sm text-gray-700">Pengiriman data tidak dapat dilakukan saat jaringan lemah untuk menghindari kegagalan atau data corrupt. Silakan coba lagi saat koneksi membaik.</p>
+          ${network.latency ? `<p class="text-xs text-gray-500 mt-2">Latency: ${network.latency}ms</p>` : ''}
+        </div>`,
+        confirmButtonText: "OK"
+      });
+      return;
+    }
     // Check if submission is open
     if (!submissionOpen) {
       Swal.fire({
@@ -1203,6 +1276,20 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
   };
 
   const handleSubmitToKecamatanResubmit = async () => {
+    // Check network condition
+    if (isNetworkWeak) {
+      Swal.fire({
+        icon: "error",
+        title: "Jaringan Lemah",
+        html: `<div class="text-left">
+          <p class="mb-2 text-red-600 font-semibold">⚠️ Koneksi jaringan Anda saat ini tidak stabil.</p>
+          <p class="text-sm text-gray-700">Pengiriman data tidak dapat dilakukan saat jaringan lemah untuk menghindari kegagalan atau data corrupt. Silakan coba lagi saat koneksi membaik.</p>
+          ${network.latency ? `<p class="text-xs text-gray-500 mt-2">Latency: ${network.latency}ms</p>` : ''}
+        </div>`,
+        confirmButtonText: "OK"
+      });
+      return;
+    }
     // Check if submission is open
     if (!submissionOpen) {
       Swal.fire({
@@ -1807,22 +1894,18 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
   };
 
   // Check if proposal can be edited (not yet submitted)
+  // Tombol Edit hanya untuk DRAFT (belum pernah dikirim)
+  // Untuk revisi, desa pakai tombol Upload Ulang (handleRevisionUpload)
   const canEditProposal = (proposal) => {
     return !proposal.submitted_to_kecamatan && !proposal.submitted_to_dinas_at;
   };
 
   // Check if proposal can be deleted (not submitted OR rejected by kec/dinas)
   const canDeleteProposal = (proposal) => {
-    // Can delete if not submitted yet
+    // Can delete ONLY if not submitted yet (masih draft/belum dikirim)
+    // Proposal yang sudah dikirim dan mendapat revisi/ditolak TIDAK bisa dihapus
+    // Desa hanya bisa upload ulang file-nya
     if (!proposal.submitted_to_kecamatan && !proposal.submitted_to_dinas_at) {
-      return true;
-    }
-    // Can delete if rejected by kecamatan
-    if (proposal.status === 'rejected') {
-      return true;
-    }
-    // Can delete if rejected by dinas
-    if (proposal.dinas_status === 'rejected') {
       return true;
     }
     return false;
@@ -1903,11 +1986,13 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
   
   // Dari Kecamatan: status masih revision/rejected DAN kecamatan_status ada
   // TIDAK exclude jika ada dinas_status, karena bisa reject bersamaan
+  // NOTE: Untuk proposal dari Kecamatan, submitted_to_dinas_at TETAP terisi karena sudah lewat Dinas
+  // Deteksi menggunakan submitted_to_kecamatan = false (sudah dikembalikan ke Desa)
   const fromKecamatanRevision = proposals.filter(p => 
     (p.status === 'revision' || p.status === 'rejected') &&
     (p.kecamatan_status === 'rejected' || p.kecamatan_status === 'revision') &&
     !p.dpmd_status && // HANYA exclude jika dari DPMD (prioritas lebih tinggi)
-    !p.submitted_to_dinas_at
+    !p.submitted_to_kecamatan // Sudah dikembalikan ke Desa (bukan submitted_to_dinas_at!)
   );
   
   // Dari Dinas: status masih revision/rejected DAN dinas_status ada DAN TIDAK ada kecamatan/dpmd rejection
@@ -1920,17 +2005,63 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
   );
   
   // Semua revisi belum upload
-  const fromAnyLevelRevisionNotUploaded = proposals.filter(p => 
-    (p.status === 'revision' || p.status === 'rejected') &&
-    !p.submitted_to_dinas_at
-  );
+  // NOTE: Untuk proposal dari Kecamatan, gunakan submitted_to_kecamatan=false
+  // NOTE: Troubleshoot DPMD adalah kasus khusus - submitted_to_dinas_at sudah terisi tapi perlu upload ulang
+  // FIX 2026-03-11: EXCLUDE proposal yang sudah final (di DPMD) - tidak perlu diupload ulang
+  const fromAnyLevelRevisionNotUploaded = proposals.filter(p => {
+    // CRITICAL: Skip proposal yang sudah final (diterima DPMD) - tidak perlu revisi
+    const isFinal = p.submitted_to_dpmd === true || p.submitted_to_dpmd === 1 || 
+                    p.dpmd_status === 'approved' || p.status === 'verified';
+    if (isFinal) return false;
+    
+    const isRevision = p.status === 'revision' || p.status === 'rejected';
+    
+    // TROUBLESHOOT: Kasus khusus dari DPMD - sudah pernah submit tapi dikembalikan langsung oleh DPMD
+    const isTroubleshoot = p.troubleshoot_catatan && p.status === 'revision';
+    if (isTroubleshoot) {
+      // Troubleshoot DPMD: perlu upload ulang terlepas dari submitted_to_dinas_at
+      return true;
+    }
+    
+    const isFromKecamatan = (p.kecamatan_status === 'rejected' || p.kecamatan_status === 'revision') && !p.dpmd_status;
+    const isFromDinasOrDPMD = (p.dinas_status === 'rejected' || p.dinas_status === 'revision') || p.dpmd_status;
+    
+    if (isFromKecamatan && !isFromDinasOrDPMD) {
+      // Dari Kecamatan: cek submitted_to_kecamatan=false
+      return isRevision && !p.submitted_to_kecamatan;
+    } else {
+      // Dari Dinas/DPMD: cek submitted_to_dinas_at=null
+      return isRevision && !p.submitted_to_dinas_at;
+    }
+  });
   
   // Revisi yang SUDAH UPLOAD ULANG: status=pending (siap dikirim ulang)
-  const fromRevisionUploaded = proposals.filter(p => 
-    p.status === 'pending' &&
-    !p.submitted_to_dinas_at &&
-    (p.dinas_status || p.kecamatan_status || p.dpmd_status) // Pernah direview (ini yang bedakan dari proposal baru)
-  );
+  // NOTE: Untuk proposal dari Kecamatan, submitted_to_dinas_at TETAP terisi
+  // Deteksi menggunakan: punya kecamatan_status revision tapi submitted_to_kecamatan=false
+  // FIX 2026-03-11: Tambahkan troubleshoot_catatan untuk mendeteksi proposal yang di-troubleshoot DPMD
+  // FIX 2026-03-11: EXCLUDE proposal yang sudah final (di DPMD) - tidak perlu diupload ulang
+  const fromRevisionUploaded = proposals.filter(p => {
+    // CRITICAL: Skip proposal yang sudah final (diterima DPMD) - tidak perlu revisi
+    const isFinal = p.submitted_to_dpmd === true || p.submitted_to_dpmd === 1 || 
+                    p.dpmd_status === 'approved' || p.status === 'verified';
+    if (isFinal) return false;
+    
+    const isPending = p.status === 'pending';
+    // FIX: Include troubleshoot_catatan untuk proposal yang di-troubleshoot DPMD (semua status null tapi troubleshoot_catatan terisi)
+    const hasReviewStatus = p.dinas_status || p.kecamatan_status || p.dpmd_status || p.troubleshoot_catatan;
+    
+    // Cek asal revisi untuk tentukan logic yang benar
+    const isFromKecamatan = (p.kecamatan_status === 'rejected' || p.kecamatan_status === 'revision') && !p.dpmd_status && !p.troubleshoot_catatan;
+    const isFromDinasOrDPMD = (p.dinas_status === 'rejected' || p.dinas_status === 'revision') || p.dpmd_status || p.troubleshoot_catatan;
+    
+    if (isFromKecamatan && !isFromDinasOrDPMD) {
+      // Dari Kecamatan: cek submitted_to_kecamatan=false (belum dikirim ulang ke Kec)
+      return isPending && !p.submitted_to_kecamatan && hasReviewStatus;
+    } else {
+      // Dari Dinas/DPMD/Troubleshoot: cek submitted_to_dinas_at=null (belum dikirim ulang ke Dinas)
+      return isPending && !p.submitted_to_dinas_at && hasReviewStatus;
+    }
+  });
   
   // Count untuk tombol submit
   // FIXED: unsendToKecamatanCount sekarang sudah tidak perlu filter lagi karena unsendProposals sudah filter proposal baru
@@ -1961,16 +2092,19 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
   
   // Deteksi asal revisi YANG SUDAH DIUPLOAD (untuk tentukan destination)
   // CRITICAL: Jika dari kecamatan, kirim ke Kecamatan
-  // Jika dari Dinas atau DPMD atau keduanya bersamaan, kirim ke Dinas
+  // Jika dari Dinas atau DPMD atau Troubleshoot atau keduanya bersamaan, kirim ke Dinas
+  // FIX 2026-03-11: Exclude troubleshoot dari Kecamatan, include di Dinas
   const fromKecamatanUploaded = fromRevisionUploaded.filter(p => 
     (p.kecamatan_status === 'rejected' || p.kecamatan_status === 'revision') && 
     !(p.dinas_status === 'rejected' || p.dinas_status === 'revision') && // TIDAK ada rejection dari Dinas
-    !p.dpmd_status
+    !p.dpmd_status &&
+    !p.troubleshoot_catatan // TIDAK dari troubleshoot DPMD
   );
   
   const fromDinasOrDPMDUploaded = fromRevisionUploaded.filter(p => 
     (p.dinas_status === 'rejected' || p.dinas_status === 'revision') || // Ada rejection dari Dinas
     p.dpmd_status || // Atau dari DPMD
+    p.troubleshoot_catatan || // FIX: Atau dari troubleshoot DPMD
     ((p.kecamatan_status === 'rejected' || p.kecamatan_status === 'revision') && 
      (p.dinas_status === 'rejected' || p.dinas_status === 'revision')) // Atau KEDUANYA reject
   );
@@ -2003,7 +2137,57 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
     resubmitDestination
   });
 
-  const getStatusBadge = (status) => {
+  const getStatusBadge = (proposal) => {
+    // Check troubleshoot first
+    if (proposal.troubleshoot_catatan && proposal.status === 'revision' && !proposal.submitted_to_dinas_at) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">
+          <LuWrench className="w-3 h-3" />
+          Troubleshoot DPMD
+        </span>
+      );
+    }
+
+    // NEW: Check submission stage for pending proposals
+    if (proposal.status === 'pending') {
+      // Belum dikirim ke Dinas sama sekali
+      if (!proposal.submitted_to_dinas_at && !proposal.dinas_status) {
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+            <LuClock className="w-3 h-3" />
+            Draft - Belum Dikirim
+          </span>
+        );
+      }
+      // Sudah dikirim ke Dinas, menunggu review
+      if (proposal.submitted_to_dinas_at && (!proposal.dinas_status || proposal.dinas_status === 'pending' || proposal.dinas_status === 'in_review')) {
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+            <LuClock className="w-3 h-3" />
+            Di Review Dinas
+          </span>
+        );
+      }
+      // Dinas approved, di Kecamatan
+      if (proposal.dinas_status === 'approved' && (!proposal.kecamatan_status || proposal.kecamatan_status === 'pending' || proposal.kecamatan_status === 'in_review')) {
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
+            <LuClock className="w-3 h-3" />
+            Di Review Kecamatan
+          </span>
+        );
+      }
+      // Kecamatan approved, di DPMD
+      if (proposal.kecamatan_status === 'approved' && (!proposal.dpmd_status || proposal.dpmd_status === 'pending' || proposal.dpmd_status === 'in_review')) {
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
+            <LuClock className="w-3 h-3" />
+            Di Review DPMD
+          </span>
+        );
+      }
+    }
+
     const badges = {
       pending: { icon: LuClock, text: "Menunggu Verifikasi", color: "bg-yellow-100 text-yellow-700" },
       verified: { icon: LuCheck, text: "Disetujui", color: "bg-green-100 text-green-700" },
@@ -2011,6 +2195,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
       revision: { icon: LuRefreshCw, text: "Perlu Revisi", color: "bg-orange-100 text-orange-700" }
     };
 
+    const status = proposal.status || proposal;
     const badge = badges[status] || badges.pending;
     const Icon = badge.icon;
 
@@ -2146,6 +2331,39 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                           <span className="text-xs font-medium text-orange-700">{p.judul_proposal}</span>
                           <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${p.kecamatan_status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
                             {p.kecamatan_status === 'rejected' ? 'DITOLAK' : 'REVISI'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Alert Banner for Troubleshoot Revision by DPMD */}
+          {proposals.some(p => p.status === 'revision' && p.troubleshoot_catatan && !p.submitted_to_dinas_at) && (
+            <div className="px-8">
+              <div className="bg-indigo-50 border-l-4 border-indigo-500 rounded-lg p-4 shadow-md">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0">
+                    <LuWrench className="w-6 h-6 text-indigo-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-base font-bold text-indigo-900 mb-1">
+                      🔧 Proposal Di-revisi oleh DPMD (Troubleshoot)
+                    </h3>
+                    <p className="text-sm text-indigo-800 mb-2">
+                      DPMD telah mengembalikan {proposals.filter(p => p.status === 'revision' && p.troubleshoot_catatan && !p.submitted_to_dinas_at).length} proposal untuk direvisi ulang.
+                      Seluruh proses verifikasi direset — silakan perbaiki dan kirim ulang dari awal.
+                    </p>
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {proposals.filter(p => p.status === 'revision' && p.troubleshoot_catatan && !p.submitted_to_dinas_at).map(p => (
+                        <div key={p.id} className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-indigo-200 rounded-lg shadow-sm">
+                          <LuWrench className="w-3 h-3 text-indigo-500" />
+                          <span className="text-xs font-medium text-indigo-700">{p.judul_proposal}</span>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-700">
+                            TROUBLESHOOT
                           </span>
                         </div>
                       ))}
@@ -2338,11 +2556,75 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                 })()}
               </div>
             ) : (
-              <div className="flex items-center justify-center h-32 text-gray-400">
-                <div className="text-center">
-                  <LuClock className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">Belum ada data verifikasi</p>
-                </div>
+              <div className="space-y-3">
+                {/* Info proposal troubleshoot dari DPMD */}
+                {(() => {
+                  const troubleshootCount = proposals.filter(p => p.troubleshoot_catatan && p.status === 'revision').length;
+                  const revisionCount = fromAnyLevelRevisionNotUploaded.length - troubleshootCount;
+                  
+                  if (!hasUnresolvedRevisions) return null;
+                  
+                  return (
+                    <>
+                      {troubleshootCount > 0 && (
+                        <div className="px-4 py-3 bg-indigo-50 border border-indigo-200 rounded-lg">
+                          <div className="flex items-center gap-2 mb-2">
+                            <LuWrench className="w-5 h-5 text-indigo-600" />
+                            <span className="text-sm font-bold text-indigo-800">
+                              {troubleshootCount} proposal troubleshoot dari DPMD
+                            </span>
+                          </div>
+                          <p className="text-xs text-indigo-700">
+                            DPMD meminta revisi langsung. Upload ulang file proposal yang diminta.
+                          </p>
+                        </div>
+                      )}
+                      {revisionCount > 0 && (
+                        <div className="px-4 py-3 bg-orange-50 border border-orange-200 rounded-lg">
+                          <div className="flex items-center gap-2 mb-2">
+                            <LuRefreshCw className="w-5 h-5 text-orange-600 animate-spin" />
+                            <span className="text-sm font-bold text-orange-800">
+                              {revisionCount} proposal perlu diupload ulang
+                            </span>
+                          </div>
+                          <p className="text-xs text-orange-700">
+                            Upload ulang semua proposal yang diminta revisi
+                          </p>
+                        </div>
+                      )}
+                      <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg">
+                        <p className="text-xs text-gray-600 text-center">
+                          ⚠️ Tombol "Kirim ke Dinas Terkait" akan muncul setelah semua revisi diupload
+                        </p>
+                      </div>
+                    </>
+                  );
+                })()}
+                
+                {/* Info proposal draft yang belum dikirim */}
+                {unsendToKecamatanCount > 0 && !hasUnresolvedRevisions && (
+                  <div className="px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <LuSend className="w-5 h-5 text-blue-600" />
+                      <span className="text-sm font-bold text-blue-800">
+                        {unsendToKecamatanCount} proposal siap dikirim
+                      </span>
+                    </div>
+                    <p className="text-xs text-blue-700">
+                      Gunakan tombol "Kirim ke Dinas Terkait" di bawah untuk mengirim proposal
+                    </p>
+                  </div>
+                )}
+                
+                {/* Jika tidak ada proposal sama sekali */}
+                {proposals.length === 0 && (
+                  <div className="flex items-center justify-center h-24 text-gray-400">
+                    <div className="text-center">
+                      <LuClock className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">Belum ada proposal diupload</p>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
             
@@ -2958,12 +3240,34 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                             </div>
                           )}
 
+                          {/* Catatan Troubleshoot DPMD - Infrastruktur */}
+                          {proposal.troubleshoot_catatan && proposal.status === 'revision' && !proposal.submitted_to_dinas_at && (
+                            <div className="mt-3 p-3 bg-indigo-50 border-l-3 border-indigo-400 rounded">
+                              <div className="flex items-start gap-2">
+                                <LuWrench className="w-4 h-4 text-indigo-600 mt-0.5 flex-shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs font-semibold text-indigo-800 mb-1">
+                                    🔧 Troubleshoot oleh DPMD
+                                  </p>
+                                  <p className="text-sm text-indigo-700">{proposal.troubleshoot_catatan}</p>
+                                  {proposal.troubleshoot_at && (
+                                    <p className="text-[10px] text-indigo-500 mt-1">
+                                      {new Date(proposal.troubleshoot_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                      {proposal.troubleshoot_by_name && ` — oleh ${proposal.troubleshoot_by_name}`}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
                           {/* Form Upload Ulang - HANYA TAMPIL jika status masih rejected/revision */}
                           {(
                             (proposal.status === 'rejected' || proposal.status === 'revision') &&
                             (
                               ((proposal.dinas_status === "rejected" || proposal.dinas_status === "revision") && !proposal.submitted_to_dinas_at) ||
-                              ((proposal.kecamatan_status === "rejected" || proposal.kecamatan_status === "revision") && !proposal.submitted_to_kecamatan)
+                              ((proposal.kecamatan_status === "rejected" || proposal.kecamatan_status === "revision") && !proposal.submitted_to_kecamatan) ||
+                              (proposal.troubleshoot_catatan && !proposal.submitted_to_dinas_at)
                             )
                           ) && (
                             <div className="mt-3 bg-gradient-to-r from-orange-50 to-red-50 p-4 rounded-lg border-2 border-orange-300">
@@ -2980,6 +3284,12 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                                   <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 border border-blue-300 rounded-lg ml-auto">
                                     <LuInfo className="w-3 h-3 text-blue-700" />
                                     <span className="text-xs font-bold text-blue-800">Dari KECAMATAN</span>
+                                  </div>
+                                )}
+                                {(proposal.troubleshoot_catatan && !proposal.dinas_status && !proposal.kecamatan_status) && (
+                                  <div className="flex items-center gap-1 px-2 py-1 bg-indigo-100 border border-indigo-300 rounded-lg ml-auto">
+                                    <LuWrench className="w-3 h-3 text-indigo-700" />
+                                    <span className="text-xs font-bold text-indigo-800">TROUBLESHOOT DPMD</span>
                                   </div>
                                 )}
                               </div>
@@ -3436,12 +3746,34 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                             </div>
                           )}
 
+                          {/* Catatan Troubleshoot DPMD - Non-Infrastruktur */}
+                          {proposal.troubleshoot_catatan && proposal.status === 'revision' && !proposal.submitted_to_dinas_at && (
+                            <div className="mt-3 p-3 bg-indigo-50 border-l-3 border-indigo-400 rounded">
+                              <div className="flex items-start gap-2">
+                                <LuWrench className="w-4 h-4 text-indigo-600 mt-0.5 flex-shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs font-semibold text-indigo-800 mb-1">
+                                    🔧 Troubleshoot oleh DPMD
+                                  </p>
+                                  <p className="text-sm text-indigo-700">{proposal.troubleshoot_catatan}</p>
+                                  {proposal.troubleshoot_at && (
+                                    <p className="text-[10px] text-indigo-500 mt-1">
+                                      {new Date(proposal.troubleshoot_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                      {proposal.troubleshoot_by_name && ` — oleh ${proposal.troubleshoot_by_name}`}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
                           {/* Form Upload Ulang - HANYA TAMPIL jika status masih rejected/revision */}
                           {(
                             (proposal.status === 'rejected' || proposal.status === 'revision') &&
                             (
                               ((proposal.dinas_status === "rejected" || proposal.dinas_status === "revision") && !proposal.submitted_to_dinas_at) ||
-                              ((proposal.kecamatan_status === "rejected" || proposal.kecamatan_status === "revision") && !proposal.submitted_to_kecamatan)
+                              ((proposal.kecamatan_status === "rejected" || proposal.kecamatan_status === "revision") && !proposal.submitted_to_kecamatan) ||
+                              (proposal.troubleshoot_catatan && !proposal.submitted_to_dinas_at)
                             )
                           ) && (
                             <div className="mt-3 bg-gradient-to-r from-orange-50 to-red-50 p-4 rounded-lg border-2 border-orange-300">
@@ -3458,6 +3790,12 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                                   <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 border border-blue-300 rounded-lg ml-auto">
                                     <LuInfo className="w-3 h-3 text-blue-700" />
                                     <span className="text-xs font-bold text-blue-800">Dari KECAMATAN</span>
+                                  </div>
+                                )}
+                                {(proposal.troubleshoot_catatan && !proposal.dinas_status && !proposal.kecamatan_status) && (
+                                  <div className="flex items-center gap-1 px-2 py-1 bg-indigo-100 border border-indigo-300 rounded-lg ml-auto">
+                                    <LuWrench className="w-3 h-3 text-indigo-700" />
+                                    <span className="text-xs font-bold text-indigo-800">TROUBLESHOOT DPMD</span>
                                   </div>
                                 )}
                               </div>

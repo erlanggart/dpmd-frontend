@@ -56,7 +56,7 @@ self.addEventListener('push', async (event) => {
 				data: data || {},
 				tag: data?.id || 'notification-' + Date.now(),
 				requireInteraction: true,
-				renotify: true,
+				renotify: false,
 				silent: false,
 				actions: notificationData.actions || []
 			}).then(() => {
@@ -92,13 +92,25 @@ self.addEventListener('notificationclick', (event) => {
 	const notificationData = event.notification.data || {};
 	const notificationType = notificationData.type || '';
 	
-	// Determine URL - if notification has a specific url use it, otherwise let the app handle routing
+	// Determine URL - default to '/' so App.jsx will smart-redirect to user's dashboard
 	let urlToOpen = notificationData.url || '/';
 	
-	// For disposisi notifications without a proper role-prefixed URL, 
-	// we'll navigate to root and let the app figure out the right route
+	// For URLs without proper role prefix, use root and let App.jsx handle smart redirect
+	// App.jsx will redirect to appropriate dashboard based on user's role:
+	// - superadmin -> /superadmin/dashboard
+	// - desa -> /desa/dashboard  
+	// - kecamatan -> /kecamatan/dashboard
+	// - DPMD staff -> /dpmd/dashboard
+	// Fix URLs tanpa prefix yang benar
 	if (urlToOpen === '/disposisi' || urlToOpen === '/admin/disposisi') {
-		urlToOpen = '/'; // App will handle smart redirect
+		urlToOpen = '/'; // App will smart-redirect to user's dashboard
+	}
+	if (urlToOpen === '/jadwal-kegiatan') {
+		urlToOpen = '/dpmd/jadwal-kegiatan';
+	}
+	// Tambah tanggal param untuk notifikasi jadwal
+	if (notificationData.targetDate && urlToOpen.includes('jadwal-kegiatan')) {
+		urlToOpen = `/dpmd/jadwal-kegiatan?tanggal=${notificationData.targetDate}`;
 	}
 
 	console.log('[SW] Opening URL:', urlToOpen, 'Type:', notificationType);

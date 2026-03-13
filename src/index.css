@@ -19,9 +19,18 @@
 		color: #1f2937; /* Tailwind's gray-800 */
 	}
 
-	/* Smooth scrolling for the entire page */
+	/* Smooth scrolling + compact scaling for laptop/desktop */
 	html {
 		scroll-behavior: smooth;
+	}
+
+	/* Compact scaling: tampilan lebih compact di laptop/desktop */
+	/* Mengecilkan root font-size agar semua rem-based sizing (Tailwind) mengecil proporsional */
+	/* 13px / 16px = 0.8125 ≈ tampilan 80% tanpa merusak viewport (100vh tetap full) */
+	@media (min-width: 1024px) {
+		html {
+			font-size: 13px;
+		}
 	}
 
 	.bg-primary {

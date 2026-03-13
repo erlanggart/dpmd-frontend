@@ -27,18 +27,19 @@ const menuItems = [
     path: "/desa/profil-desa",
     icon: LuWallpaper,
   },
-  {
-    id: "aparatur-desa",
-    label: "Aparatur Desa",
-    path: "/desa/aparatur-desa",
-    icon: LuUserCheck,
-  },
-  {
-    id: "aparatur-desa-external",
-    label: "Aparatur Dapur Desa",
-    path: "/desa/aparatur-desa-external",
-    icon: LuDatabase,
-  },
+  // NOTE: Fitur Aparatur Desa sedang dalam maintenance, di-comment sementara
+  // {
+  //   id: "aparatur-desa",
+  //   label: "Aparatur Desa",
+  //   path: "/desa/aparatur-desa",
+  //   icon: LuUserCheck,
+  // },
+  // {
+  //   id: "aparatur-desa-external",
+  //   label: "Aparatur Dapur Desa",
+  //   path: "/desa/aparatur-desa-external",
+  //   icon: LuDatabase,
+  // },
   {
     id: "produk-hukum",
     label: "Produk Hukum",

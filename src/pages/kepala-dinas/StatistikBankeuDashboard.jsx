@@ -63,13 +63,12 @@ const CountUp = ({ end, duration = 1.2 }) => {
 };
 
 const getProposalStage = (proposal) => {
+  // Check from END to START for correct stage detection
   if (proposal.dpmd_status === 'approved') return 'selesai';
-  if (proposal.submitted_to_dpmd) return 'selesai';
-  if (proposal.kecamatan_status === 'approved') return 'selesai';
-  if (proposal.submitted_to_kecamatan && proposal.dinas_status === 'approved') return 'di_kecamatan';
+  if (proposal.submitted_to_dpmd || proposal.dpmd_status) return 'selesai';
+  if (proposal.kecamatan_status === 'approved') return 'di_kecamatan';
   if (proposal.dinas_status === 'approved') return 'di_kecamatan';
-  if (proposal.submitted_to_kecamatan) return 'di_kecamatan';
-  if (proposal.submitted_to_dinas_at) return 'di_dinas';
+  if (proposal.submitted_to_dinas_at || proposal.dinas_status) return 'di_dinas';
   return 'di_desa';
 };
 

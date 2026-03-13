@@ -21,17 +21,19 @@ import {
 	LuList,
 	LuEye,
 } from 'react-icons/lu';
+import { useSearchParams } from 'react-router-dom';
 import api from '../../../api';
 import Swal from 'sweetalert2';
 import JadwalKegiatanModal from '../../../components/JadwalKegiatanModal';
 import JadwalKalenderView from '../../../components/JadwalKalenderView';
 
 const JadwalKegiatanPage = () => {
+	const [searchParams] = useSearchParams();
 	// Get user from localStorage
 	const user = JSON.parse(localStorage.getItem('user') || '{}');
 	
 	// Check if user can manage jadwal (Sekretariat or Superadmin)
-	const canManageJadwal = user?.bidang_id === 2 || user?.role === 'superadmin';
+	const canManageJadwal = Number(user?.bidang_id) === 2 || user?.role === 'superadmin';
 
 	const [jadwals, setJadwals] = useState([]);
 	const [loading, setLoading] = useState(true);
@@ -50,8 +52,15 @@ const JadwalKegiatanPage = () => {
 		const today = new Date();
 		return today.toISOString().split('T')[0];
 	};
+
+	// Cek URL query param ?tanggal= (dari klik notifikasi)
+	const getInitialDate = () => {
+		const params = new URLSearchParams(window.location.search);
+		const tanggal = params.get('tanggal');
+		return tanggal && /^\d{4}-\d{2}-\d{2}$/.test(tanggal) ? tanggal : getTodayDate();
+	};
 	
-	const [filterTanggal, setFilterTanggal] = useState(getTodayDate());
+	const [filterTanggal, setFilterTanggal] = useState(getInitialDate());
 	const [currentPage, setCurrentPage] = useState(1);
 	const [totalPages, setTotalPages] = useState(1);
 	const [totalData, setTotalData] = useState(0);
@@ -152,6 +161,14 @@ const JadwalKegiatanPage = () => {
 		fetchJadwal();
 	}, [fetchJadwal]);
 
+	// Saat navigasi dari notifikasi (React Router), update filter tanggal dari URL
+	useEffect(() => {
+		const tanggal = searchParams.get('tanggal');
+		if (tanggal && /^\d{4}-\d{2}-\d{2}$/.test(tanggal) && tanggal !== filterTanggal) {
+			setFilterTanggal(tanggal);
+		}
+	}, [searchParams]);
+
 	useEffect(() => {
 		fetchBidangList();
 	}, [fetchBidangList]);
@@ -169,11 +186,15 @@ const JadwalKegiatanPage = () => {
 	const handleCreate = async (e) => {
 		e.preventDefault();
 		try {
-			await api.post('/jadwal-kegiatan', formData);
+			const dataToSend = { ...formData, bidang_id: formData.bidang_id || null };
+			await api.post('/jadwal-kegiatan', dataToSend);
 			Swal.fire('Berhasil', 'Jadwal kegiatan berhasil ditambahkan', 'success');
 			setShowAddModal(false);
+			// Pindah filter ke tanggal jadwal baru agar langsung terlihat
+			if (formData.tanggal_mulai) {
+				setFilterTanggal(formData.tanggal_mulai.split('T')[0]);
+			}
 			resetFormData();
-			fetchJadwal();
 		} catch (error) {
 			console.error('Error creating jadwal:', error);
 			Swal.fire('Error', error.response?.data?.message || 'Gagal menambahkan jadwal kegiatan', 'error');
@@ -186,12 +207,16 @@ const JadwalKegiatanPage = () => {
 		if (!selectedJadwal) return;
 		
 		try {
-			await api.put(`/jadwal-kegiatan/${selectedJadwal.id}`, formData);
+			const dataToSend = { ...formData, bidang_id: formData.bidang_id || null };
+			await api.put(`/jadwal-kegiatan/${selectedJadwal.id}`, dataToSend);
 			Swal.fire('Berhasil', 'Jadwal kegiatan berhasil diperbarui', 'success');
 			setShowEditModal(false);
 			setSelectedJadwal(null);
+			// Pindah filter ke tanggal jadwal yang diedit
+			if (formData.tanggal_mulai) {
+				setFilterTanggal(formData.tanggal_mulai.split('T')[0]);
+			}
 			resetFormData();
-			fetchJadwal();
 		} catch (error) {
 			console.error('Error updating jadwal:', error);
 			Swal.fire('Error', error.response?.data?.message || 'Gagal memperbarui jadwal kegiatan', 'error');
