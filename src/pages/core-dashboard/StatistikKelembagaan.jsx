@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { LuUsers, LuLoader, LuX, LuRefreshCw } from "react-icons/lu";
 import StatistikTahunan from "../../components/kelembagaan/StatistikTahunan";
+import StatistikLKD from "../../components/kelembagaan/StatistikLKD";
 import kelembagaanApi from "../../api/kelembagaan";
 import { useDataCache } from "../../context/DataCacheContext";
 
@@ -111,6 +112,10 @@ const StatistikKelembagaan = () => {
 					</button>
 				</div>
 			</div>
+			
+
+			{/* Statistik LKD */}
+			<StatistikLKD summaryData={summaryData} loading={loading} />
 
 			{/* Statistik Tahunan */}
 			<StatistikTahunan />

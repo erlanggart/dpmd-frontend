@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Users, Mail, Phone, Shield, RefreshCw, UserCircle } from 'lucide-react';
 import api from '../../api';
 import toast from 'react-hot-toast';
+import { getAvatarUrl } from '../../utils/avatarUtils';
 
 const DaftarPegawaiBidang = ({ bidangId, bidangName }) => {
 	const [loading, setLoading] = useState(true);
@@ -31,7 +32,8 @@ const DaftarPegawaiBidang = ({ bidangId, bidangName }) => {
 			'kepala_bidang': 'bg-purple-100 text-purple-800 border-purple-200',
 			'sekretaris': 'bg-blue-100 text-blue-800 border-blue-200',
 			'staff': 'bg-gray-100 text-gray-800 border-gray-200',
-			'koordinator': 'bg-green-100 text-green-800 border-green-200'
+			'koordinator': 'bg-green-100 text-green-800 border-green-200',
+			'ketua_tim': 'bg-orange-100 text-orange-800 border-orange-200'
 		};
 		return colors[role] || 'bg-gray-100 text-gray-800 border-gray-200';
 	};
@@ -41,7 +43,8 @@ const DaftarPegawaiBidang = ({ bidangId, bidangName }) => {
 			'kepala_bidang': 'Kepala Bidang',
 			'sekretaris': 'Sekretaris',
 			'staff': 'Staff',
-			'koordinator': 'Koordinator'
+			'koordinator': 'Koordinator',
+			'ketua_tim': 'Ketua Tim'
 		};
 		return labels[role] || role;
 	};
@@ -96,7 +99,7 @@ const DaftarPegawaiBidang = ({ bidangId, bidangName }) => {
 								<div className="flex-shrink-0">
 									{p.user?.avatar ? (
 										<img
-											src={p.user.avatar}
+											src={getAvatarUrl(p.user.avatar)}
 											alt={p.user?.fullname}
 											className="h-14 w-14 rounded-xl object-cover border-2 border-white shadow-md"
 										/>
