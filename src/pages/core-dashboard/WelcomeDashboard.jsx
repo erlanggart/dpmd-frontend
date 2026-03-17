@@ -56,6 +56,16 @@ const WelcomeDashboard = () => {
 
   const features = [
     {
+      icon: <MapPin className="w-10 h-10" />,
+      title: "Kelembagaan",
+      description: "Statistik LKD - RW, RT, Posyandu, Karang Taruna, LPM & PKK",
+      gradient: "from-sky-400 via-blue-500 to-cyan-600",
+      bgGradient: "from-sky-500/20 to-cyan-600/20",
+      iconBg: "bg-gradient-to-br from-sky-400 to-blue-500",
+      path: "/core-dashboard/statistik-kelembagaan",
+      stat: "6 Jenis LKD"
+    },
+    {
       icon: <BarChart3 className="w-10 h-10" />,
       title: "Bantuan Keuangan",
       description: "Monitor bantuan keuangan desa tahap 1 & 2",
