@@ -49,7 +49,9 @@ import {
   Sparkles,
   Layers,
   ToggleLeft,
-  ToggleRight
+  ToggleRight,
+  Wrench,
+  RotateCcw
 } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
@@ -89,8 +91,9 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
   // Tracking view states
   const [trackingSearchTerm, setTrackingSearchTerm] = useState('');
   const [trackingSelectedKecamatan, setTrackingSelectedKecamatan] = useState('all');
+  const [trackingSelectedDesa, setTrackingSelectedDesa] = useState('all');
   const [trackingStatusFilter, setTrackingStatusFilter] = useState('all'); // all, di_dinas, di_kecamatan, di_dpmd
-  const [trackingDinasFilter, setTrackingDinasFilter] = useState('all'); // filter by specific dinas when di_dinas
+  const [trackingDinasFilter, setTrackingDinasFilter] = useState('all'); // filter by dinas terkait (global)
   const [expandedTrackingDesa, setExpandedTrackingDesa] = useState([]);
   const [trackingProposals, setTrackingProposals] = useState([]); // All proposals for tracking
   const [trackingTahunAnggaran, setTrackingTahunAnggaran] = useState(tahunAnggaran);
@@ -158,6 +161,305 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
     }
   };
 
+  // Helper: resolve kegiatan name from pivot table, fallback to judul_proposal
+  const resolveKegiatanName = (proposal) => {
+    if (proposal.kegiatan_list?.length > 0) {
+      return proposal.kegiatan_list.map(k => k.nama_kegiatan).filter(Boolean).join(', ');
+    }
+    if (proposal.bankeu_master_kegiatan?.nama_kegiatan) {
+      return proposal.bankeu_master_kegiatan.nama_kegiatan;
+    }
+    return proposal.judul_proposal || '-';
+  };
+
+  // Export Tracking Status to Excel (uses active filters)
+  const handleExportTrackingExcel = () => {
+    // Get filtered proposals from filteredTrackingDesa
+    const filteredProposals = Object.values(filteredTrackingDesa).flatMap(d => d.proposals);
+    if (filteredProposals.length === 0) {
+      Swal.fire({ icon: 'warning', title: 'Data Kosong', text: 'Tidak ada data tracking untuk diexport. Pastikan tab Tracking Status sudah dimuat dan ada data sesuai filter.', timer: 2500, showConfirmButton: true });
+      return;
+    }
+
+    const getStageLabel = (proposal) => {
+      // Check from END to START (same logic as getProposalStage)
+      // Di DPMD = Selesai
+      if (proposal.dpmd_status === 'approved') return 'Selesai (Disetujui DPMD)';
+      if (proposal.submitted_to_dpmd || proposal.dpmd_status) return 'Selesai (Di DPMD)';
+      if (proposal.kecamatan_status === 'approved' || proposal.dinas_status === 'approved') return 'Di Kecamatan';
+      if (proposal.submitted_to_dinas_at || proposal.dinas_status) return 'Di Dinas Terkait';
+      return 'Di Desa';
+    };
+
+    const getStatusLabel = (status) => {
+      if (!status) return '-';
+      const map = { pending: 'Menunggu', approved: 'Disetujui', rejected: 'Ditolak', revision: 'Revisi', in_review: 'Sedang Direview' };
+      return map[status] || status;
+    };
+
+    const formatTanggal = (dateStr) => {
+      if (!dateStr) return '-';
+      return new Date(dateStr).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
+    };
+
+    const resolveDinas = (p) => {
+      if (p.kegiatan_list?.length > 0) {
+        return [...new Set(p.kegiatan_list.map(k => k.dinas_terkait).filter(Boolean))].join(', ');
+      }
+      return p.bankeu_master_kegiatan?.dinas_terkait || '-';
+    };
+
+    // Build active filter description for header
+    const filterParts = [];
+    if (trackingSelectedKecamatan !== 'all') filterParts.push(`Kecamatan: ${trackingSelectedKecamatan}`);
+    if (trackingSelectedDesa !== 'all') filterParts.push(`Desa: ${trackingSelectedDesa}`);
+    if (trackingDinasFilter !== 'all') filterParts.push(`Dinas: ${trackingDinasFilter}`);
+    if (trackingStatusFilter !== 'all') {
+      const statusMap = { di_desa: 'Di Desa', di_dinas: 'Di Dinas', di_kecamatan: 'Di Kecamatan', selesai: 'Selesai' };
+      filterParts.push(`Status: ${statusMap[trackingStatusFilter] || trackingStatusFilter}`);
+    }
+    if (trackingSearchTerm) filterParts.push(`Pencarian: "${trackingSearchTerm}"`);
+    const filterDesc = filterParts.length > 0 ? `Filter: ${filterParts.join(' | ')}` : 'Filter: Semua Data';
+
+    const rows = filteredProposals
+      .sort((a, b) => {
+        const kecA = a.desas?.kecamatans?.nama || '';
+        const kecB = b.desas?.kecamatans?.nama || '';
+        if (kecA !== kecB) return kecA.localeCompare(kecB);
+        const desaA = a.desas?.nama || '';
+        const desaB = b.desas?.nama || '';
+        return desaA.localeCompare(desaB);
+      })
+      .map((p, idx) => ({
+        'No': idx + 1,
+        'Kecamatan': p.desas?.kecamatans?.nama || '-',
+        'Desa': p.desas?.nama || '-',
+        'Judul Proposal': resolveKegiatanName(p),
+        'Nama Kegiatan Spesifik': p.nama_kegiatan_spesifik || '-',
+        'Dinas Terkait': resolveDinas(p),
+        'Anggaran Usulan (Rp)': Number(p.anggaran_usulan) || 0,
+        'Volume': p.volume || '-',
+        'Lokasi': p.lokasi || '-',
+        'Posisi Saat Ini': getStageLabel(p),
+        'Status Dinas': getStatusLabel(p.dinas_status),
+        'Verifikator Dinas': p.dinas_verified_by_name || '-',
+        'Tgl Verifikasi Dinas': formatTanggal(p.dinas_verified_at),
+        'Catatan Dinas': p.dinas_catatan || '-',
+        'Status Kecamatan': getStatusLabel(p.kecamatan_status),
+        'Verifikator Kecamatan': p.kecamatan_verified_by_name || '-',
+        'Tgl Verifikasi Kecamatan': formatTanggal(p.kecamatan_verified_at),
+        'Catatan Kecamatan': p.kecamatan_catatan || '-',
+        'Status DPMD': getStatusLabel(p.dpmd_status),
+        'Verifikator DPMD': p.dpmd_verified_by_name || '-',
+        'Tgl Verifikasi DPMD': formatTanggal(p.dpmd_verified_at),
+        'Catatan DPMD': p.dpmd_catatan || '-',
+        'Troubleshoot': p.troubleshoot_catatan || '-',
+        'Tgl Dibuat': formatTanggal(p.created_at),
+        'Tgl Kirim ke Dinas': formatTanggal(p.submitted_to_dinas_at),
+        'Tgl Kirim ke DPMD': formatTanggal(p.submitted_to_dpmd_at),
+      }));
+
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+
+    // Sheet 1: Detail Tracking (with filter info header)
+    const headerRows = [
+      ['TRACKING STATUS BANKEU - DPMD KABUPATEN BOGOR'],
+      [`Tahun Anggaran: ${trackingTahunAnggaran}`],
+      [filterDesc],
+      [`Total: ${rows.length} proposal | Export: ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`],
+      [],
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(headerRows);
+    XLSX.utils.sheet_add_json(ws, rows, { origin: 'A6' });
+
+    // Auto-width columns
+    const colWidths = Object.keys(rows[0] || {}).map(key => {
+      const maxLen = Math.max(key.length, ...rows.map(r => String(r[key] || '').length));
+      return { wch: Math.min(maxLen + 2, 50) };
+    });
+    ws['!cols'] = colWidths;
+    XLSX.utils.book_append_sheet(wb, ws, 'Detail Tracking');
+
+    // Sheet 2: Ringkasan Per Desa
+    const desaSummary = {};
+    filteredProposals.forEach(p => {
+      const key = `${p.desas?.kecamatans?.nama || '-'}_${p.desas?.nama || '-'}`;
+      if (!desaSummary[key]) {
+        desaSummary[key] = {
+          kecamatan: p.desas?.kecamatans?.nama || '-',
+          desa: p.desas?.nama || '-',
+          totalProposal: 0,
+          totalAnggaran: 0,
+          dinasSet: new Set(),
+          diDesa: 0, diDinas: 0, diKecamatan: 0, diDpmd: 0, selesai: 0, ditolak: 0,
+        };
+      }
+      const s = desaSummary[key];
+      s.totalProposal++;
+      s.totalAnggaran += Number(p.anggaran_usulan) || 0;
+      // Collect dinas names
+      if (p.kegiatan_list?.length > 0) {
+        p.kegiatan_list.forEach(k => { if (k.dinas_terkait) s.dinasSet.add(k.dinas_terkait); });
+      } else if (p.bankeu_master_kegiatan?.dinas_terkait) {
+        s.dinasSet.add(p.bankeu_master_kegiatan.dinas_terkait);
+      }
+      const stage = getStageLabel(p);
+      if (stage.includes('Desa') && !stage.includes('Selesai')) s.diDesa++;
+      else if (stage.includes('Dinas')) s.diDinas++;
+      else if (stage.includes('Kecamatan')) s.diKecamatan++;
+      else if (stage.includes('DPMD') && !stage.includes('Selesai')) s.diDpmd++;
+      if (stage.includes('Selesai')) s.selesai++;
+      if (p.dinas_status === 'rejected' || p.kecamatan_status === 'rejected' || p.dpmd_status === 'rejected') s.ditolak++;
+    });
+
+    const summaryRows = Object.values(desaSummary)
+      .sort((a, b) => a.kecamatan.localeCompare(b.kecamatan) || a.desa.localeCompare(b.desa))
+      .map((s, idx) => ({
+        'No': idx + 1,
+        'Kecamatan': s.kecamatan,
+        'Desa': s.desa,
+        'Dinas Terkait': [...s.dinasSet].sort().join(', ') || '-',
+        'Total Proposal': s.totalProposal,
+        'Total Anggaran (Rp)': s.totalAnggaran,
+        'Di Desa': s.diDesa,
+        'Di Dinas': s.diDinas,
+        'Di Kecamatan': s.diKecamatan,
+        'Di DPMD': s.diDpmd,
+        'Selesai': s.selesai,
+        'Ditolak': s.ditolak,
+      }));
+
+    const ws2 = XLSX.utils.json_to_sheet(summaryRows);
+    const colWidths2 = Object.keys(summaryRows[0] || {}).map(key => {
+      const maxLen = Math.max(key.length, ...summaryRows.map(r => String(r[key] || '').length));
+      return { wch: Math.min(maxLen + 2, 40) };
+    });
+    ws2['!cols'] = colWidths2;
+    XLSX.utils.book_append_sheet(wb, ws2, 'Ringkasan Per Desa');
+
+    // Sheet 3: Ringkasan Per Kecamatan
+    const kecSummary = {};
+    filteredProposals.forEach(p => {
+      const kec = p.desas?.kecamatans?.nama || '-';
+      if (!kecSummary[kec]) {
+        kecSummary[kec] = { kecamatan: kec, totalDesa: new Set(), totalProposal: 0, totalAnggaran: 0, dinasSet: new Set(), selesai: 0, proses: 0, ditolak: 0 };
+      }
+      const s = kecSummary[kec];
+      s.totalDesa.add(p.desa_id);
+      s.totalProposal++;
+      s.totalAnggaran += Number(p.anggaran_usulan) || 0;
+      if (p.kegiatan_list?.length > 0) {
+        p.kegiatan_list.forEach(k => { if (k.dinas_terkait) s.dinasSet.add(k.dinas_terkait); });
+      } else if (p.bankeu_master_kegiatan?.dinas_terkait) {
+        s.dinasSet.add(p.bankeu_master_kegiatan.dinas_terkait);
+      }
+      if (p.dpmd_status === 'approved') s.selesai++;
+      else if (p.dinas_status === 'rejected' || p.kecamatan_status === 'rejected' || p.dpmd_status === 'rejected') s.ditolak++;
+      else s.proses++;
+    });
+
+    const kecRows = Object.values(kecSummary)
+      .sort((a, b) => a.kecamatan.localeCompare(b.kecamatan))
+      .map((s, idx) => ({
+        'No': idx + 1,
+        'Kecamatan': s.kecamatan,
+        'Jumlah Desa': s.totalDesa.size,
+        'Dinas Terkait': [...s.dinasSet].sort().join(', ') || '-',
+        'Total Proposal': s.totalProposal,
+        'Total Anggaran (Rp)': s.totalAnggaran,
+        'Selesai (Disetujui)': s.selesai,
+        'Dalam Proses': s.proses,
+        'Ditolak': s.ditolak,
+      }));
+
+    const ws3 = XLSX.utils.json_to_sheet(kecRows);
+    const colWidths3 = Object.keys(kecRows[0] || {}).map(key => {
+      const maxLen = Math.max(key.length, ...kecRows.map(r => String(r[key] || '').length));
+      return { wch: Math.min(maxLen + 2, 40) };
+    });
+    ws3['!cols'] = colWidths3;
+    XLSX.utils.book_append_sheet(wb, ws3, 'Ringkasan Per Kecamatan');
+
+    // Sheet 4: Ringkasan Per Dinas Terkait
+    const dinasSummary = {};
+    filteredProposals.forEach(p => {
+      const dinasNames = [];
+      if (p.kegiatan_list?.length > 0) {
+        p.kegiatan_list.forEach(k => { if (k.dinas_terkait) dinasNames.push(k.dinas_terkait); });
+      } else if (p.bankeu_master_kegiatan?.dinas_terkait) {
+        dinasNames.push(p.bankeu_master_kegiatan.dinas_terkait);
+      }
+      const uniqueDinas = [...new Set(dinasNames)];
+      uniqueDinas.forEach(dinasName => {
+        if (!dinasSummary[dinasName]) {
+          dinasSummary[dinasName] = {
+            dinas: dinasName,
+            totalProposal: 0,
+            totalAnggaran: 0,
+            desaSet: new Set(),
+            kecamatanSet: new Set(),
+            diDesa: 0, diDinas: 0, diKecamatan: 0, diDpmd: 0, selesai: 0, ditolak: 0,
+          };
+        }
+        const s = dinasSummary[dinasName];
+        s.totalProposal++;
+        s.totalAnggaran += Number(p.anggaran_usulan) || 0;
+        if (p.desas?.nama) s.desaSet.add(p.desas.nama);
+        if (p.desas?.kecamatans?.nama) s.kecamatanSet.add(p.desas.kecamatans.nama);
+        const stage = getStageLabel(p);
+        if (stage.includes('Desa') && !stage.includes('Selesai')) s.diDesa++;
+        else if (stage.includes('Dinas')) s.diDinas++;
+        else if (stage.includes('Kecamatan')) s.diKecamatan++;
+        else if (stage.includes('DPMD') && !stage.includes('Selesai')) s.diDpmd++;
+        if (stage.includes('Selesai')) s.selesai++;
+        if (p.dinas_status === 'rejected' || p.kecamatan_status === 'rejected' || p.dpmd_status === 'rejected') s.ditolak++;
+      });
+    });
+
+    const dinasRows = Object.values(dinasSummary)
+      .sort((a, b) => b.totalProposal - a.totalProposal)
+      .map((s, idx) => ({
+        'No': idx + 1,
+        'Dinas Terkait': s.dinas,
+        'Jumlah Kecamatan': s.kecamatanSet.size,
+        'Jumlah Desa': s.desaSet.size,
+        'Daftar Desa': [...s.desaSet].sort().join(', '),
+        'Total Proposal': s.totalProposal,
+        'Total Anggaran (Rp)': s.totalAnggaran,
+        'Di Desa': s.diDesa,
+        'Di Dinas': s.diDinas,
+        'Di Kecamatan': s.diKecamatan,
+        'Di DPMD': s.diDpmd,
+        'Selesai': s.selesai,
+        'Ditolak': s.ditolak,
+      }));
+
+    if (dinasRows.length > 0) {
+      const ws4 = XLSX.utils.json_to_sheet(dinasRows);
+      const colWidths4 = Object.keys(dinasRows[0] || {}).map(key => {
+        const maxLen = Math.max(key.length, ...dinasRows.map(r => String(r[key] || '').length));
+        return { wch: Math.min(maxLen + 2, 60) };
+      });
+      ws4['!cols'] = colWidths4;
+      XLSX.utils.book_append_sheet(wb, ws4, 'Ringkasan Per Dinas');
+    }
+
+    // Download
+    const fileName = `Tracking_Status_Bankeu_TA${trackingTahunAnggaran}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+
+    Swal.fire({
+      icon: 'success',
+      title: 'Export Berhasil',
+      html: `<p class="text-sm">File <b>${fileName}</b> berhasil didownload</p>
+        <p class="text-xs text-gray-500 mt-1">4 sheet: Detail Tracking, Ringkasan Per Desa, Per Kecamatan, Per Dinas</p>
+        ${filterParts.length > 0 ? `<p class="text-xs text-blue-500 mt-1">📌 ${filterDesc}</p>` : '<p class="text-xs text-gray-400 mt-1">Semua data (tanpa filter)</p>'}`,
+      timer: 4000,
+      showConfirmButton: true
+    });
+  };
+
   useEffect(() => {
     fetchData();
     if (activeView === 'config') {
@@ -166,6 +468,7 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
     }
     if (activeView === 'statistics') {
       fetchAllDesaKecamatan();
+      fetchTrackingData();
     }
     if (activeView === 'tracking') {
       fetchAllDesaKecamatan();
@@ -182,10 +485,72 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
 
   // Fetch tracking data when tahun changes
   useEffect(() => {
-    if (activeView === 'tracking') {
+    if (activeView === 'tracking' || activeView === 'statistics') {
       fetchTrackingData();
     }
   }, [trackingTahunAnggaran]);
+
+  // Troubleshoot: Force revision proposal stuck at any stage
+  const handleTroubleshootRevision = async (proposal) => {
+    const stage = getProposalStage(proposal);
+    const stageLabel = stage === 'di_dinas' ? 'Dinas Terkait' : stage === 'di_kecamatan' ? 'Kecamatan' : stage === 'di_dpmd' ? 'DPMD' : 'Desa';
+    const desaName = proposal.desas?.nama || `Desa ID ${proposal.desa_id}`;
+    
+    const result = await Swal.fire({
+      title: '🔧 Troubleshoot Revisi',
+      html: `<div class="text-left space-y-3">
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <p class="text-sm font-semibold text-blue-800">Proposal #${proposal.id}</p>
+          <p class="text-sm text-blue-700">${desaName}</p>
+          <p class="text-sm text-blue-600">Posisi saat ini: <strong>${stageLabel}</strong></p>
+        </div>
+        <div class="bg-amber-50 border border-amber-200 rounded-lg p-3">
+          <p class="text-sm text-amber-800">⚠️ Proposal akan dikembalikan ke <strong>Desa</strong> untuk direvisi. Semua status verifikasi (Dinas, Kecamatan, DPMD) akan di-reset.</p>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Alasan Troubleshoot <span class="text-red-500">*</span></label>
+          <textarea id="swal-troubleshoot-catatan" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" rows="3" placeholder="Contoh: Dinas terkait tidak merespon selama 2 minggu, desa meminta revisi proposal"></textarea>
+        </div>
+      </div>`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#f59e0b',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: '🔧 Ya, Revisi Proposal',
+      cancelButtonText: 'Batal',
+      preConfirm: () => {
+        const catatan = document.getElementById('swal-troubleshoot-catatan').value;
+        if (!catatan || catatan.trim().length === 0) {
+          Swal.showValidationMessage('Alasan troubleshoot wajib diisi');
+          return false;
+        }
+        return catatan.trim();
+      }
+    });
+
+    if (result.isConfirmed && result.value) {
+      try {
+        Swal.fire({ title: 'Memproses...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        const res = await api.patch(`/dpmd/bankeu/proposals/${proposal.id}/troubleshoot-revision`, {
+          catatan: result.value
+        });
+        
+        // Refresh data
+        await fetchTrackingData();
+        await fetchData();
+        
+        Swal.fire({
+          icon: 'success',
+          title: 'Troubleshoot Berhasil',
+          html: `<p class="text-sm">${res.data?.message || 'Proposal berhasil dikembalikan ke Desa'}</p>`,
+          timer: 3000,
+          showConfirmButton: true
+        });
+      } catch (error) {
+        Swal.fire('Gagal', error.response?.data?.message || 'Gagal melakukan troubleshoot revisi', 'error');
+      }
+    }
+  };
 
   // Fetch tracking proposals (ALL proposals regardless of status)
   const fetchTrackingData = async () => {
@@ -428,6 +793,14 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
         });
         const newPassword = response.data?.data?.newPassword || response.data?.newPassword;
         
+        // Update plain_password in local state
+        setDinasVerifikators(prev => ({
+          ...prev,
+          [dinasId]: (prev[dinasId] || []).map(v => 
+            v.id === verifikatorId ? { ...v, plain_password: result.value } : v
+          )
+        }));
+
         await Swal.fire({
           title: 'Password Baru Berhasil Dibuat',
           html: `
@@ -436,11 +809,11 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
               <div class="bg-gray-100 p-3 rounded-lg font-mono text-lg text-center select-all">
                 ${newPassword}
               </div>
-              <p class="text-sm text-gray-500 mt-3">⚠️ Simpan password ini! Password hanya ditampilkan sekali.</p>
+              <p class="text-sm text-gray-500 mt-2">Password juga ditampilkan di halaman ini.</p>
             </div>
           `,
           icon: 'success',
-          confirmButtonText: 'Saya Sudah Menyimpan'
+          confirmButtonText: 'OK'
         });
       } catch (error) {
         Swal.fire('Gagal', error.response?.data?.message || 'Gagal membuat password baru', 'error');
@@ -637,6 +1010,45 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
     }
   };
 
+  // Reopen submission for a specific desa (allow desa to upload new proposals again)
+  const handleReopenDesaSubmission = async (desaId, desaName, proposalCount) => {
+    const { value: catatan } = await Swal.fire({
+      title: 'Buka Kembali Upload Proposal?',
+      html: `<div class="text-left">
+        <p class="mb-2"><strong>Desa ${desaName}</strong> akan dibuka kembali akses upload proposal baru.</p>
+        <p class="text-sm text-gray-600 mb-3">Saat ini ada <strong>${proposalCount} proposal</strong> yang sudah dikirim ke dinas terkait.</p>
+        <p class="text-sm text-blue-600 font-medium mb-3">ℹ️ Tombol "Tambah Proposal Baru" akan muncul kembali di halaman desa.</p>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Catatan (opsional):</label>
+      </div>`,
+      input: 'textarea',
+      inputPlaceholder: 'Alasan membuka kembali upload...',
+      inputAttributes: { rows: 2 },
+      showCancelButton: true,
+      confirmButtonText: 'Ya, Buka Upload',
+      cancelButtonText: 'Batal',
+      confirmButtonColor: '#10b981',
+      inputValidator: () => null // Optional catatan
+    });
+
+    if (catatan !== undefined) { // User clicked confirm (catatan can be empty string)
+      try {
+        Swal.fire({ title: 'Memproses...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        const res = await api.patch(`/dpmd/bankeu/desa/${desaId}/reopen-submission`, { catatan });
+        await fetchData();
+        if (activeView === 'tracking') await fetchTrackingData();
+        Swal.fire({
+          icon: 'success',
+          title: 'Berhasil!',
+          text: res.data?.message || 'Upload proposal desa berhasil dibuka kembali',
+          timer: 3000,
+          showConfirmButton: false
+        });
+      } catch (error) {
+        Swal.fire('Gagal', error.response?.data?.message || 'Gagal membuka kembali upload proposal', 'error');
+      }
+    }
+  };
+
   // Handle revisi dokumen kecamatan (BA/SP only)
   const handleRevisiDokumenKecamatan = async (proposalId, proposalTitle) => {
     const { value: catatan } = await Swal.fire({
@@ -723,33 +1135,60 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
   }, [trackingProposals]);
 
   // Helper function to determine proposal stage
+  // IMPORTANT: Check stages from END to START (DPMD -> Kecamatan -> Dinas -> Desa)
   const getProposalStage = (proposal) => {
-    // Check if still at desa (not yet submitted to dinas)
-    if (!proposal.submitted_to_dinas_at) return 'di_desa';
-    // Check if at dinas (submitted but not yet approved)
-    if (proposal.submitted_to_dinas_at && (!proposal.dinas_status || proposal.dinas_status === 'pending' || proposal.dinas_status === 'revision')) return 'di_dinas';
-    // Check if at kecamatan (dinas approved but not yet submitted to dpmd)
-    if (proposal.dinas_status === 'approved' && !proposal.submitted_to_dpmd) return 'di_kecamatan';
-    // If submitted to DPMD
-    if (proposal.submitted_to_dpmd || proposal.dpmd_status === 'pending') return 'di_dpmd';
-    return 'di_dinas';
+    // 1. Sudah sampai DPMD = selesai (DPMD hanya menerima, bukan verifikator)
+    if (proposal.submitted_to_dpmd || proposal.dpmd_status) return 'selesai';
+    // 2. Check if at kecamatan (dinas approved, waiting for kecamatan to send to DPMD)
+    if (proposal.kecamatan_status === 'approved') return 'di_kecamatan';
+    if (proposal.dinas_status === 'approved') return 'di_kecamatan';
+    // 3. Check if at dinas (submitted to dinas but not yet approved)
+    if (proposal.submitted_to_dinas_at || proposal.dinas_status) return 'di_dinas';
+    // 4. Default: still at desa
+    return 'di_desa';
   };
 
-  // Get unique dinas list from tracking proposals
+  // Get unique dinas list from tracking proposals (includes pivot kegiatan_list)
   const availableDinasList = useMemo(() => {
     const dinasSet = new Set();
     trackingProposals.forEach(p => {
-      const dinasName = p.bankeu_master_kegiatan?.dinas_terkait;
-      if (dinasName) dinasSet.add(dinasName);
+      if (p.kegiatan_list?.length > 0) {
+        p.kegiatan_list.forEach(k => { if (k.dinas_terkait) dinasSet.add(k.dinas_terkait); });
+      } else if (p.bankeu_master_kegiatan?.dinas_terkait) {
+        dinasSet.add(p.bankeu_master_kegiatan.dinas_terkait);
+      }
     });
     return [...dinasSet].sort();
   }, [trackingProposals]);
+
+  // Get unique desa list filtered by selected kecamatan
+  const availableDesaList = useMemo(() => {
+    const desaSet = new Set();
+    trackingProposals.forEach(p => {
+      if (trackingSelectedKecamatan !== 'all' && p.desas?.kecamatans?.nama !== trackingSelectedKecamatan) return;
+      if (p.desas?.nama) desaSet.add(p.desas.nama);
+    });
+    return [...desaSet].sort();
+  }, [trackingProposals, trackingSelectedKecamatan]);
+
+  // Helper: check if proposal matches dinas filter
+  const proposalMatchesDinas = (p, dinasFilter) => {
+    if (dinasFilter === 'all') return true;
+    if (p.kegiatan_list?.length > 0) {
+      return p.kegiatan_list.some(k => k.dinas_terkait === dinasFilter);
+    }
+    return p.bankeu_master_kegiatan?.dinas_terkait === dinasFilter;
+  };
 
   // Filter grouped by desa for tracking view
   const filteredTrackingDesa = useMemo(() => {
     return Object.entries(groupedByDesa).reduce((acc, [key, data]) => {
       // Filter by kecamatan
       if (trackingSelectedKecamatan !== 'all' && data.kecamatanName !== trackingSelectedKecamatan) {
+        return acc;
+      }
+      // Filter by desa
+      if (trackingSelectedDesa !== 'all' && data.desaName !== trackingSelectedDesa) {
         return acc;
       }
       // Filter by search
@@ -760,29 +1199,24 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
           return acc;
         }
       }
-      // Filter by status - filter the proposals within each desa
-      if (trackingStatusFilter !== 'all') {
-        const filteredProposals = data.proposals.filter(p => {
-          // Handle 'selesai' filter
-          if (trackingStatusFilter === 'selesai') {
-            return p.dpmd_status === 'approved';
-          }
-          const stage = getProposalStage(p);
-          if (stage !== trackingStatusFilter) return false;
-          // If filtering by dinas and status is di_dinas, also filter by specific dinas
-          if (trackingStatusFilter === 'di_dinas' && trackingDinasFilter !== 'all') {
-            return p.bankeu_master_kegiatan?.dinas_terkait === trackingDinasFilter;
-          }
-          return true;
-        });
-        if (filteredProposals.length === 0) return acc;
-        acc[key] = { ...data, proposals: filteredProposals };
-        return acc;
+      // Filter proposals within desa by status and dinas
+      let filteredProposals = data.proposals;
+
+      // Global dinas filter
+      if (trackingDinasFilter !== 'all') {
+        filteredProposals = filteredProposals.filter(p => proposalMatchesDinas(p, trackingDinasFilter));
       }
-      acc[key] = data;
+
+      // Status filter
+      if (trackingStatusFilter !== 'all') {
+        filteredProposals = filteredProposals.filter(p => getProposalStage(p) === trackingStatusFilter);
+      }
+
+      if (filteredProposals.length === 0) return acc;
+      acc[key] = { ...data, proposals: filteredProposals };
       return acc;
     }, {});
-  }, [groupedByDesa, trackingSelectedKecamatan, trackingSearchTerm, trackingStatusFilter, trackingDinasFilter]);
+  }, [groupedByDesa, trackingSelectedKecamatan, trackingSelectedDesa, trackingSearchTerm, trackingStatusFilter, trackingDinasFilter]);
 
   // Statistics calculations
   const statsData = useMemo(() => {
@@ -946,8 +1380,8 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
         i + 1,
         p.desas?.kecamatans?.nama || '-',
         p.desas?.nama || '-',
-        p.bankeu_master_kegiatan?.nama_kegiatan || p.bankeu_master_kegiatan?.dinas_terkait || '-',
-        p.judul_proposal || '-',
+        resolveKegiatanName(p),
+        resolveKegiatanName(p),
         p.nama_kegiatan_spesifik || '-',
         p.lokasi || '-',
         p.volume || '-',
@@ -1004,8 +1438,8 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
         no: i + 1,
         kecamatan: p.desas?.kecamatans?.nama || '-',
         desa: p.desas?.nama || '-',
-        program: p.bankeu_master_kegiatan?.nama_kegiatan || p.bankeu_master_kegiatan?.dinas_terkait || '-',
-        judul_kegiatan: p.judul_proposal || '-',
+        program: resolveKegiatanName(p),
+        judul_kegiatan: resolveKegiatanName(p),
         nama_kegiatan: p.nama_kegiatan_spesifik || '-',
         lokasi: p.lokasi || '-',
         volume: p.volume || '-',
@@ -1045,6 +1479,7 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = kecProposals.filter(p =>
+        resolveKegiatanName(p)?.toLowerCase().includes(term) ||
         p.judul_proposal?.toLowerCase().includes(term) ||
         p.desas?.nama?.toLowerCase().includes(term)
       );
@@ -1096,9 +1531,9 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
   return (
     <div className="bg-gradient-to-br from-slate-50 via-blue-50/20 to-indigo-50/20 min-h-screen">
       {/* Tab Navigation */}
-      <div className="container mx-auto px-4 pt-6">
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-        <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg shadow-gray-200/50 p-1.5 inline-flex gap-1 flex-wrap border border-gray-200/60">
+      <div className="container mx-auto px-2 sm:px-4 pt-4 sm:pt-6">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4 mb-4 sm:mb-6">
+        <div className="bg-white/80 backdrop-blur-xl rounded-xl sm:rounded-2xl shadow-lg shadow-gray-200/50 p-1 sm:p-1.5 flex flex-wrap gap-1 border border-gray-200/60 w-full sm:w-auto overflow-x-auto">
           {[
             { key: 'archive', icon: Folder, label: 'Arsip Proposal', gradient: 'from-blue-600 to-indigo-600' },
             { key: 'tracking', icon: Activity, label: 'Tracking Status', gradient: 'from-violet-600 to-purple-600' },
@@ -1110,36 +1545,54 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
             <button
               key={tab.key}
               onClick={() => setActiveView(tab.key)}
-              className={`px-5 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 ${
+              className={`px-2.5 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-semibold text-xs sm:text-sm transition-all duration-300 whitespace-nowrap ${
                 activeView === tab.key
                   ? `bg-gradient-to-r ${tab.gradient} text-white shadow-lg scale-[1.02]`
                   : 'text-gray-500 hover:text-gray-800 hover:bg-gray-100/80'
               }`}
             >
-              <div className="flex items-center gap-2">
-                <tab.icon className="h-4 w-4" />
-                <span className="hidden sm:inline">{tab.label}</span>
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <tab.icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span className="hidden md:inline text-xs sm:text-sm">{tab.label}</span>
               </div>
             </button>
           ))}
+
+          {/* Divider */}
+          <div className="w-px h-8 bg-gray-300/60 self-center mx-0.5" />
+
+          {/* Refresh Button - inside tab bar */}
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className={`group px-2.5 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-semibold text-xs sm:text-sm transition-all duration-300 text-gray-500 hover:text-blue-700 hover:bg-blue-50/80 ${
+              refreshing ? 'opacity-70 cursor-not-allowed' : ''
+            }`}
+            title="Refresh Data"
+          >
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <RefreshCw className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${refreshing ? 'animate-spin text-blue-600' : 'group-hover:rotate-90 transition-transform duration-500'}`} />
+              <span className="hidden md:inline">{refreshing ? 'Memuat...' : 'Refresh'}</span>
+            </div>
+          </button>
+
+          {/* Export Excel Button - inside tab bar */}
+          <button
+            onClick={handleExportTrackingExcel}
+            className="group px-2.5 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-semibold text-xs sm:text-sm transition-all duration-300 text-gray-500 hover:text-emerald-700 hover:bg-emerald-50/80"
+            title="Export Tracking ke Excel"
+          >
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <FileSpreadsheet className="h-3.5 w-3.5 sm:h-4 sm:w-4 group-hover:scale-110 transition-transform duration-300" />
+              <span className="hidden md:inline">Export Excel</span>
+            </div>
+          </button>
         </div>
-        
-        {/* Refresh Button */}
-        <button
-          onClick={handleRefresh}
-          disabled={refreshing}
-          className={`group flex items-center gap-2 px-5 py-2.5 bg-white/80 backdrop-blur-sm rounded-xl shadow-md border border-gray-200/60 font-semibold text-sm transition-all hover:shadow-lg hover:-translate-y-0.5 ${
-            refreshing ? 'opacity-70 cursor-not-allowed' : ''
-          }`}
-        >
-          <RefreshCw className={`h-4 w-4 text-blue-600 ${refreshing ? 'animate-spin' : 'group-hover:rotate-90 transition-transform duration-500'}`} />
-          <span className="text-gray-700">{refreshing ? 'Memuat...' : 'Refresh Data'}</span>
-        </button>
         </div>
       </div>
 
       {/* Content Area */}
-      <div className="container mx-auto px-4 pb-6">
+      <div className="container mx-auto px-2 sm:px-4 pb-4 sm:pb-6">
         {/* Content based on active view */}
         {activeView === 'archive' ? (
           <>
@@ -1162,26 +1615,26 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                     {/* Kecamatan Header */}
                     <button
                       onClick={() => toggleKecamatan(kecamatanName)}
-                      className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                      className="w-full px-3 sm:px-6 py-3 sm:py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
                     >
-                      <div className="flex items-center gap-4">
-                        <div className="p-3 bg-gradient-to-br from-blue-500 to-green-500 rounded-lg shadow-md">
+                      <div className="flex items-center gap-2 sm:gap-4">
+                        <div className="p-2 sm:p-3 bg-gradient-to-br from-blue-500 to-green-500 rounded-lg shadow-md">
                           {isExpanded ? (
-                            <FolderOpen className="h-6 w-6 text-white" />
+                            <FolderOpen className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                           ) : (
-                            <Folder className="h-6 w-6 text-white" />
+                            <Folder className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                           )}
                         </div>
                         <div className="text-left">
-                          <h3 className="font-bold text-lg text-gray-900">{kecamatanName}</h3>
-                          <p className="text-sm text-gray-600">
+                          <h3 className="font-bold text-sm sm:text-lg text-gray-900">{kecamatanName}</h3>
+                          <p className="text-xs sm:text-sm text-gray-600">
                             {kecProposals.length} proposal dari {[...new Set(kecProposals.map(p => p.desa_id))].length} desa
                           </p>
                         </div>
                       </div>
                       
-                      <div className="flex items-center gap-3">
-                        <span className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg font-semibold text-sm">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <span className="px-2 sm:px-4 py-1 sm:py-2 bg-blue-100 text-blue-700 rounded-lg font-semibold text-xs sm:text-sm">
                           {kecProposals.length} proposal
                         </span>
                         {isExpanded ? (
@@ -1194,7 +1647,7 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
 
                     {/* Desa Badges List */}
                     {isExpanded && (
-                      <div className="border-t border-gray-200 bg-gradient-to-br from-gray-50 to-white p-6">
+                      <div className="border-t border-gray-200 bg-gradient-to-br from-gray-50 to-white p-3 sm:p-6">
                         {(() => {
                           // Group proposals by desa within this kecamatan
                           const desaGroups = kecProposals.reduce((acc, proposal) => {
@@ -1273,13 +1726,13 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                                   return (
                                     <div key={`proposals-${desaKey}`} className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
                                       {/* Desa Header */}
-                                      <div className="bg-gradient-to-r from-blue-500 to-green-500 px-4 py-3">
+                                      <div className="bg-gradient-to-r from-blue-500 to-green-500 px-3 sm:px-4 py-2 sm:py-3">
                                         <div className="flex items-center justify-between text-white">
-                                          <div className="flex items-center gap-2">
-                                            <MapPin className="h-4 w-4" />
-                                            <h4 className="font-semibold">{desaName}</h4>
+                                          <div className="flex items-center gap-1.5 sm:gap-2">
+                                            <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                            <h4 className="font-semibold text-sm sm:text-base">{desaName}</h4>
                                           </div>
-                                          <div className="flex items-center gap-2">
+                                          <div className="flex items-center gap-1.5 sm:gap-2">
                                             <span className="text-xs bg-white/20 px-2 py-1 rounded-full font-medium">
                                               {desaProposals.length} proposal
                                             </span>
@@ -1302,22 +1755,22 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                                         {desaProposals.map((proposal, idx) => (
                                           <div
                                             key={proposal.id.toString()}
-                                            className={`p-6 bg-white ${idx !== desaProposals.length - 1 ? 'border-b border-gray-100' : ''} hover:bg-blue-50/50 transition-colors`}
+                                            className={`p-3 sm:p-6 bg-white ${idx !== desaProposals.length - 1 ? 'border-b border-gray-100' : ''} hover:bg-blue-50/50 transition-colors`}
                                           >
                                             {/* Proposal Info and Documents in One Container */}
                                             <div className="flex-1 min-w-0">
-                                              <div className="flex items-start gap-3 mb-3">
-                                                <div className="p-2 bg-blue-100 rounded-lg flex-shrink-0 mt-1">
-                                                  <FileText className="h-5 w-5 text-blue-600" />
+                                              <div className="flex items-start gap-2 sm:gap-3 mb-3">
+                                                <div className="p-1.5 sm:p-2 bg-blue-100 rounded-lg flex-shrink-0 mt-1">
+                                                  <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
                                                 </div>
                                                 <div className="flex-1 min-w-0">
-                                                  <h4 className="font-semibold text-gray-900 mb-2 leading-snug">
-                                                    {proposal.judul_proposal}
+                                                  <h4 className="font-semibold text-sm sm:text-base text-gray-900 mb-2 leading-snug">
+                                                    {resolveKegiatanName(proposal)}
                                                   </h4>
-                                                  <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600 mb-2">
+                                                  <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs sm:text-sm text-gray-600 mb-2">
                                                     {proposal.dpmd_submitted_at && (
                                                       <div className="flex items-center gap-1">
-                                                        <Calendar className="h-4 w-4 flex-shrink-0" />
+                                                        <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
                                                         <span>
                                                           {new Date(proposal.dpmd_submitted_at).toLocaleDateString('id-ID', {
                                                             day: 'numeric',
@@ -1476,13 +1929,13 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
               </div>
               <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
               
-              <div className="relative z-10 px-6 py-8 md:px-8 flex flex-col md:flex-row items-center justify-between gap-5">
+              <div className="relative z-10 px-4 py-6 sm:px-6 sm:py-8 md:px-8 flex flex-col md:flex-row items-center justify-between gap-4 sm:gap-5">
                 <div className="flex items-center gap-4">
                   <div className="h-14 w-14 bg-gradient-to-br from-violet-400 to-purple-600 rounded-2xl flex items-center justify-center shadow-xl shadow-violet-500/30 ring-2 ring-white/10">
                     <Activity className="h-7 w-7 text-white" />
                   </div>
                   <div>
-                    <h2 className="text-xl md:text-2xl font-extrabold text-white tracking-tight">Tracking Proposal Tahun {trackingTahunAnggaran}</h2>
+                    <h2 className="text-lg sm:text-xl md:text-2xl font-extrabold text-white tracking-tight">Tracking Proposal Tahun {trackingTahunAnggaran}</h2>
                     <p className="text-violet-300/80 text-sm mt-0.5">Pantau status proposal di semua tahap verifikasi</p>
                   </div>
                 </div>
@@ -1525,20 +1978,18 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
               const diDesaCount = trackingProposals.filter(p => getProposalStage(p) === 'di_desa').length;
               const diDinasCount = trackingProposals.filter(p => getProposalStage(p) === 'di_dinas').length;
               const diKecamatanCount = trackingProposals.filter(p => getProposalStage(p) === 'di_kecamatan').length;
-              const diDpmdCount = trackingProposals.filter(p => getProposalStage(p) === 'di_dpmd').length;
-              const selesaiCount = trackingProposals.filter(p => p.dpmd_status === 'approved').length;
+              const selesaiCount = trackingProposals.filter(p => getProposalStage(p) === 'selesai').length;
               const totalAll = trackingProposals.length || 1;
               const stageCards = [
                 { label: 'Di Desa', count: diDesaCount, sub: 'belum kirim', icon: MapPin, gradient: 'from-slate-600 to-slate-700', ring: 'ring-slate-400/20', barColor: 'bg-slate-400', percent: Math.round((diDesaCount / totalAll) * 100) },
                 { label: 'Di Dinas', count: diDinasCount, sub: 'menunggu review', icon: Building, gradient: 'from-amber-500 to-orange-600', ring: 'ring-amber-400/20', barColor: 'bg-amber-400', percent: Math.round((diDinasCount / totalAll) * 100) },
                 { label: 'Di Kecamatan', count: diKecamatanCount, sub: 'diproses', icon: Building2, gradient: 'from-blue-500 to-indigo-600', ring: 'ring-blue-400/20', barColor: 'bg-blue-400', percent: Math.round((diKecamatanCount / totalAll) * 100) },
-                { label: 'Di DPMD', count: diDpmdCount, sub: 'masuk review', icon: Shield, gradient: 'from-violet-500 to-purple-600', ring: 'ring-violet-400/20', barColor: 'bg-violet-400', percent: Math.round((diDpmdCount / totalAll) * 100) },
-                { label: 'Selesai', count: selesaiCount, sub: 'disetujui', icon: CheckCircle, gradient: 'from-emerald-500 to-green-600', ring: 'ring-emerald-400/20', barColor: 'bg-emerald-400', percent: Math.round((selesaiCount / totalAll) * 100) },
+                { label: 'Selesai', count: selesaiCount, sub: 'diterima DPMD', icon: CheckCircle, gradient: 'from-emerald-500 to-green-600', ring: 'ring-emerald-400/20', barColor: 'bg-emerald-400', percent: Math.round((selesaiCount / totalAll) * 100) },
               ];
               return (
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-4">
                   {stageCards.map((card, i) => (
-                    <div key={i} className={`group relative bg-gradient-to-br ${card.gradient} rounded-2xl p-5 text-white shadow-xl overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl`}>
+                    <div key={i} className={`group relative bg-gradient-to-br ${card.gradient} rounded-xl sm:rounded-2xl p-3 sm:p-5 text-white shadow-xl overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl`}>
                       {/* Glow */}
                       <div className="absolute -top-8 -right-8 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-500"></div>
                       <div className="relative z-10">
@@ -1548,7 +1999,7 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                           </div>
                           <span className="text-xs font-bold bg-white/20 backdrop-blur-sm px-2.5 py-1 rounded-lg">{card.percent}%</span>
                         </div>
-                        <p className="text-3xl font-extrabold tracking-tight">{card.count}</p>
+                        <p className="text-xl sm:text-3xl font-extrabold tracking-tight">{card.count}</p>
                         <p className="text-white/90 text-sm font-semibold mt-0.5">{card.label}</p>
                         <p className="text-white/60 text-xs mt-0.5">{card.sub}</p>
                         {/* Mini progress bar */}
@@ -1563,14 +2014,14 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
             })()}
 
             {/* Search and Filter for Tracking */}
-            <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg shadow-gray-200/40 p-5 border border-gray-200/60">
+            <div className="bg-white/80 backdrop-blur-xl rounded-xl sm:rounded-2xl shadow-lg shadow-gray-200/40 p-3 sm:p-5 border border-gray-200/60">
               <div className="flex items-center gap-2.5 mb-4">
                 <div className="h-8 w-8 bg-gradient-to-br from-violet-500 to-purple-600 rounded-lg flex items-center justify-center">
                   <Filter className="h-4 w-4 text-white" />
                 </div>
                 <span className="font-bold text-gray-800">Filter Tracking</span>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
                 <div className="relative">
                   <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <input
@@ -1585,7 +2036,10 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                   <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <select
                     value={trackingSelectedKecamatan}
-                    onChange={(e) => setTrackingSelectedKecamatan(e.target.value)}
+                    onChange={(e) => {
+                      setTrackingSelectedKecamatan(e.target.value);
+                      setTrackingSelectedDesa('all'); // Reset desa when kecamatan changes
+                    }}
                     className="w-full pl-10 pr-4 py-2.5 bg-gray-50/80 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 appearance-none transition-all hover:border-gray-300"
                   >
                     <option value="all">Semua Kecamatan</option>
@@ -1595,54 +2049,63 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                   </select>
                 </div>
                 <div className="relative">
+                  <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <select
+                    value={trackingSelectedDesa}
+                    onChange={(e) => setTrackingSelectedDesa(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50/80 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 appearance-none transition-all hover:border-gray-300"
+                  >
+                    <option value="all">Semua Desa ({availableDesaList.length})</option>
+                    {availableDesaList.map(desa => (
+                      <option key={desa} value={desa}>{desa}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="relative">
+                  <Briefcase className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <select
+                    value={trackingDinasFilter}
+                    onChange={(e) => setTrackingDinasFilter(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50/80 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 appearance-none transition-all hover:border-gray-300"
+                  >
+                    <option value="all">Semua Dinas Terkait ({availableDinasList.length})</option>
+                    {availableDinasList.map(dinasName => (
+                      <option key={dinasName} value={dinasName}>{dinasName}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="relative">
                   <Layers className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <select
                     value={trackingStatusFilter}
-                    onChange={(e) => {
-                      setTrackingStatusFilter(e.target.value);
-                      if (e.target.value !== 'di_dinas') setTrackingDinasFilter('all');
-                    }}
+                    onChange={(e) => setTrackingStatusFilter(e.target.value)}
                     className="w-full pl-10 pr-4 py-2.5 bg-gray-50/80 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 appearance-none transition-all hover:border-gray-300"
                   >
                     <option value="all">Semua Status</option>
-                    <option value="di_desa">📍 Di Desa</option>
-                    <option value="di_dinas">🏢 Di Dinas Terkait</option>
-                    <option value="di_kecamatan">🏛️ Di Kecamatan</option>
-                    <option value="di_dpmd">✅ Di DPMD</option>
-                    <option value="selesai">🎉 Selesai (Disetujui)</option>
+                    <option value="di_desa">Di Desa</option>
+                    <option value="di_dinas">Di Dinas Terkait</option>
+                    <option value="di_kecamatan">Di Kecamatan</option>
+                    <option value="selesai">Selesai (Diterima DPMD)</option>
                   </select>
                 </div>
-                {trackingStatusFilter === 'di_dinas' && (
-                  <div className="relative">
-                    <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                    <select
-                      value={trackingDinasFilter}
-                      onChange={(e) => setTrackingDinasFilter(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2.5 bg-violet-50/80 border border-violet-200 rounded-xl text-sm focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 appearance-none transition-all hover:border-violet-300"
-                    >
-                      <option value="all">Semua Dinas</option>
-                      {availableDinasList.map(dinasName => (
-                        <option key={dinasName} value={dinasName}>{dinasName}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
               </div>
               <div className="flex flex-wrap items-center gap-4 mt-4 pt-4 border-t border-gray-100">
                 <p className="text-sm text-gray-500">
                   Menampilkan <span className="font-bold text-violet-600 bg-violet-50 px-2 py-0.5 rounded-md">{Object.keys(filteredTrackingDesa).length}</span> desa
-                  {trackingStatusFilter !== 'all' && (
-                    <span className="ml-1">
-                      ({Object.values(filteredTrackingDesa).reduce((sum, d) => sum + d.proposals.length, 0)} proposal)
-                    </span>
+                  <span className="ml-1">
+                    ({Object.values(filteredTrackingDesa).reduce((sum, d) => sum + d.proposals.length, 0)} proposal)
+                  </span>
+                  {trackingDinasFilter !== 'all' && (
+                    <span className="ml-1.5 px-2 py-0.5 bg-blue-50 text-blue-700 rounded-md text-xs font-medium">{trackingDinasFilter}</span>
                   )}
                 </p>
-                {(trackingStatusFilter !== 'all' || trackingDinasFilter !== 'all' || trackingSelectedKecamatan !== 'all' || trackingSearchTerm) && (
+                {(trackingStatusFilter !== 'all' || trackingDinasFilter !== 'all' || trackingSelectedKecamatan !== 'all' || trackingSelectedDesa !== 'all' || trackingSearchTerm) && (
                   <button
                     onClick={() => {
                       setTrackingStatusFilter('all');
                       setTrackingDinasFilter('all');
                       setTrackingSelectedKecamatan('all');
+                      setTrackingSelectedDesa('all');
                       setTrackingSearchTerm('');
                     }}
                     className="text-sm text-red-600 hover:text-red-700 flex items-center gap-1"
@@ -1669,8 +2132,7 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                     const totalProposals = data.proposals.length;
                     const diDinasCount = data.proposals.filter(p => getProposalStage(p) === 'di_dinas').length;
                     const diKecamatanCount = data.proposals.filter(p => getProposalStage(p) === 'di_kecamatan').length;
-                    const diDpmdCount = data.proposals.filter(p => getProposalStage(p) === 'di_dpmd').length;
-                    const selesaiCount = data.proposals.filter(p => p.dpmd_status === 'approved').length;
+                    const selesaiCount = data.proposals.filter(p => getProposalStage(p) === 'selesai').length;
                     const totalAnggaran = data.proposals.reduce((sum, p) => sum + (Number(p.anggaran_usulan) || 0), 0);
 
                     return (
@@ -1712,12 +2174,6 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                                 <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold flex items-center gap-1">
                                   <Building2 className="h-3 w-3" />
                                   {diKecamatanCount} Kec
-                                </span>
-                              )}
-                              {diDpmdCount > 0 && (
-                                <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold flex items-center gap-1">
-                                  <Shield className="h-3 w-3" />
-                                  {diDpmdCount} DPMD
                                 </span>
                               )}
                               {selesaiCount > 0 && (
@@ -1781,20 +2237,35 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                                     Hapus Surat Desa
                                   </button>
                                 )}
+                                {/* Tombol Buka Kembali Upload - Tampil jika ada proposal yang sudah dikirim ke dinas */}
+                                {data.proposals.some(p => p.submitted_to_dinas_at) && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const submittedCount = data.proposals.filter(p => p.submitted_to_dinas_at).length;
+                                      handleReopenDesaSubmission(data.desaId, data.desaName, submittedCount);
+                                    }}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white rounded-lg transition-all text-xs font-medium border border-emerald-200 hover:border-emerald-600"
+                                    title="Buka kembali akses upload proposal baru untuk desa ini"
+                                  >
+                                    <Unlock className="h-3.5 w-3.5" />
+                                    Buka Kembali Upload
+                                  </button>
+                                )}
                               </div>
 
-                              <div className="p-6 space-y-6">
+                              <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
                                 {data.proposals.map((proposal, idx) => (
-                                  <div key={proposal.id} className={`${idx > 0 ? 'pt-6 border-t border-gray-100' : ''}`}>
+                                  <div key={proposal.id} className={`${idx > 0 ? 'pt-4 sm:pt-6 border-t border-gray-100' : ''}`}>
                                     {/* Proposal Title */}
-                                    <div className="flex items-start gap-3 mb-4">
-                                      <div className="p-2 bg-blue-100 rounded-lg flex-shrink-0">
-                                        <FileText className="h-5 w-5 text-blue-600" />
+                                    <div className="flex items-start gap-2 sm:gap-3 mb-3 sm:mb-4">
+                                      <div className="p-1.5 sm:p-2 bg-blue-100 rounded-lg flex-shrink-0">
+                                        <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
                                       </div>
-                                      <div className="flex-1">
-                                        <h4 className="font-semibold text-gray-900">{proposal.judul_proposal}</h4>
+                                      <div className="flex-1 min-w-0">
+                                        <h4 className="font-semibold text-sm sm:text-base text-gray-900">{resolveKegiatanName(proposal)}</h4>
                                         {proposal.bankeu_master_kegiatan && (
-                                          <span className="inline-block mt-1 px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+                                          <span className="inline-block mt-1 px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-[10px] sm:text-xs font-medium">
                                             {proposal.bankeu_master_kegiatan.dinas_terkait}
                                           </span>
                                         )}
@@ -1804,27 +2275,27 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                                           e.stopPropagation();
                                           handleDeleteProposal(proposal.id, proposal.judul_proposal);
                                         }}
-                                        className="p-2 bg-red-50 hover:bg-red-600 text-red-600 hover:text-white rounded-lg transition-all flex-shrink-0 border border-red-200 hover:border-red-600"
+                                        className="p-1.5 sm:p-2 bg-red-50 hover:bg-red-600 text-red-600 hover:text-white rounded-lg transition-all flex-shrink-0 border border-red-200 hover:border-red-600"
                                         title="Hapus proposal ini"
                                       >
-                                        <Trash2 className="h-4 w-4" />
+                                        <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                       </button>
                                     </div>
 
                                     {/* Compact Timeline */}
-                                    <div className="ml-11 space-y-3">
+                                    <div className="ml-0 sm:ml-11 space-y-3">
                                       {/* Visual Progress Bar */}
-                                      <div className="relative">
-                                        <div className="flex items-center">
+                                      <div className="relative overflow-x-auto">
+                                        <div className="flex items-center min-w-[320px]">
                                           {/* Step 1: Desa Submit */}
                                           <div className="flex flex-col items-center z-10">
-                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                                            <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center ${
                                               true ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-500'
                                             }`}>
-                                              <CheckCircle2 className="h-5 w-5" />
+                                              <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5" />
                                             </div>
-                                            <span className="text-xs mt-1 font-medium text-gray-700">Desa</span>
-                                            <span className="text-[10px] text-gray-500">
+                                            <span className="text-[10px] sm:text-xs mt-1 font-medium text-gray-700">Desa</span>
+                                            <span className="text-[9px] sm:text-[10px] text-gray-500">
                                               {proposal.created_at ? new Date(proposal.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) : '-'}
                                             </span>
                                           </div>
@@ -1834,20 +2305,20 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                                           
                                           {/* Step 2: Dinas */}
                                           <div className="flex flex-col items-center z-10">
-                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                                            <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center ${
                                               proposal.dinas_status === 'approved' ? 'bg-green-500 text-white' :
                                               proposal.dinas_status === 'rejected' ? 'bg-red-500 text-white' :
                                               proposal.dinas_status === 'revision' ? 'bg-orange-500 text-white' :
                                               proposal.submitted_to_dinas_at ? 'bg-blue-500 text-white animate-pulse' :
                                               'bg-gray-200 text-gray-500'
                                             }`}>
-                                              {proposal.dinas_status === 'approved' ? <CheckCircle2 className="h-5 w-5" /> :
-                                               proposal.dinas_status === 'rejected' ? <XCircle className="h-5 w-5" /> :
-                                               proposal.dinas_status === 'revision' ? <RefreshCw className="h-5 w-5" /> :
-                                               <Building className="h-5 w-5" />}
+                                              {proposal.dinas_status === 'approved' ? <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5" /> :
+                                               proposal.dinas_status === 'rejected' ? <XCircle className="h-4 w-4 sm:h-5 sm:w-5" /> :
+                                               proposal.dinas_status === 'revision' ? <RefreshCw className="h-4 w-4 sm:h-5 sm:w-5" /> :
+                                               <Building className="h-4 w-4 sm:h-5 sm:w-5" />}
                                             </div>
-                                            <span className="text-xs mt-1 font-medium text-gray-700">Dinas</span>
-                                            <span className="text-[10px] text-gray-500">
+                                            <span className="text-[10px] sm:text-xs mt-1 font-medium text-gray-700">Dinas</span>
+                                            <span className="text-[9px] sm:text-[10px] text-gray-500">
                                               {proposal.dinas_verified_at ? new Date(proposal.dinas_verified_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) : 
                                                proposal.submitted_to_dinas_at ? 'Menunggu' : '-'}
                                             </span>
@@ -1858,7 +2329,7 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                                           
                                           {/* Step 3: Kecamatan */}
                                           <div className="flex flex-col items-center z-10">
-                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                                            <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center ${
                                               proposal.surat_pengantar ? 'bg-green-500 text-white' :
                                               proposal.kecamatan_status === 'approved' ? 'bg-green-500 text-white' :
                                               proposal.kecamatan_status === 'rejected' ? 'bg-red-500 text-white' :
@@ -1866,39 +2337,38 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                                               proposal.dinas_status === 'approved' ? 'bg-blue-500 text-white animate-pulse' :
                                               'bg-gray-200 text-gray-500'
                                             }`}>
-                                              {proposal.surat_pengantar || proposal.kecamatan_status === 'approved' ? <CheckCircle2 className="h-5 w-5" /> :
-                                               proposal.kecamatan_status === 'rejected' ? <XCircle className="h-5 w-5" /> :
-                                               proposal.kecamatan_status === 'revision' ? <RefreshCw className="h-5 w-5" /> :
-                                               <Building2 className="h-5 w-5" />}
+                                              {proposal.surat_pengantar || proposal.kecamatan_status === 'approved' ? <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5" /> :
+                                               proposal.kecamatan_status === 'rejected' ? <XCircle className="h-4 w-4 sm:h-5 sm:w-5" /> :
+                                               proposal.kecamatan_status === 'revision' ? <RefreshCw className="h-4 w-4 sm:h-5 sm:w-5" /> :
+                                               <Building2 className="h-4 w-4 sm:h-5 sm:w-5" />}
                                             </div>
-                                            <span className="text-xs mt-1 font-medium text-gray-700">Kecamatan</span>
-                                            <span className="text-[10px] text-gray-500">
+                                            <span className="text-[10px] sm:text-xs mt-1 font-medium text-gray-700">Kec.</span>
+                                            <span className="text-[9px] sm:text-[10px] text-gray-500">
                                               {proposal.kecamatan_verified_at ? new Date(proposal.kecamatan_verified_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) : 
                                                proposal.dinas_status === 'approved' ? 'Menunggu' : '-'}
                                             </span>
                                           </div>
                                           
                                           {/* Line 3-4 */}
-                                          <div className={`flex-1 h-1 mx-1 ${proposal.submitted_to_dpmd_at ? 'bg-green-400' : 'bg-gray-200'}`}></div>
+                                          <div className={`flex-1 h-1 mx-1 ${proposal.submitted_to_dpmd || proposal.submitted_to_dpmd_at || proposal.dpmd_status ? 'bg-green-400' : 'bg-gray-200'}`}></div>
                                           
-                                          {/* Step 4: DPMD */}
+                                          {/* Step 4: DPMD - Jika submitted_to_dpmd = true → SELESAI (hijau centang) */}
                                           <div className="flex flex-col items-center z-10">
-                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                                              proposal.dpmd_status === 'approved' ? 'bg-green-500 text-white' :
+                                            <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center ${
                                               proposal.dpmd_status === 'rejected' ? 'bg-red-500 text-white' :
                                               proposal.dpmd_status === 'revision' ? 'bg-orange-500 text-white' :
-                                              proposal.submitted_to_dpmd_at || proposal.dpmd_status === 'pending' ? 'bg-purple-500 text-white animate-pulse' :
+                                              (proposal.submitted_to_dpmd || proposal.dpmd_status) ? 'bg-green-500 text-white' :
                                               'bg-gray-200 text-gray-500'
                                             }`}>
-                                              {proposal.dpmd_status === 'approved' ? <CheckCircle2 className="h-5 w-5" /> :
-                                               proposal.dpmd_status === 'rejected' ? <XCircle className="h-5 w-5" /> :
-                                               proposal.dpmd_status === 'revision' ? <RefreshCw className="h-5 w-5" /> :
-                                               <Shield className="h-5 w-5" />}
+                                              {proposal.dpmd_status === 'rejected' ? <XCircle className="h-4 w-4 sm:h-5 sm:w-5" /> :
+                                               proposal.dpmd_status === 'revision' ? <RefreshCw className="h-4 w-4 sm:h-5 sm:w-5" /> :
+                                               (proposal.submitted_to_dpmd || proposal.dpmd_status) ? <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5" /> :
+                                               <Shield className="h-4 w-4 sm:h-5 sm:w-5" />}
                                             </div>
-                                            <span className="text-xs mt-1 font-medium text-gray-700">DPMD</span>
-                                            <span className="text-[10px] text-gray-500">
-                                              {proposal.dpmd_verified_at ? new Date(proposal.dpmd_verified_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) : 
-                                               proposal.dpmd_status === 'pending' ? 'Menunggu' : '-'}
+                                            <span className="text-[10px] sm:text-xs mt-1 font-medium text-gray-700">DPMD</span>
+                                            <span className="text-[9px] sm:text-[10px] text-gray-500">
+                                              {proposal.submitted_to_dpmd_at ? new Date(proposal.submitted_to_dpmd_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) :
+                                               (proposal.submitted_to_dpmd || proposal.dpmd_status) ? 'Selesai' : '-'}
                                             </span>
                                           </div>
                                         </div>
@@ -1917,30 +2387,68 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                                         <div className="bg-gray-50 rounded-lg p-2">
                                           <p className="text-gray-500">Posisi Saat Ini</p>
                                           <p className={`font-semibold ${
-                                            getProposalStage(proposal) === 'di_dpmd' ? 'text-purple-700' :
+                                            getProposalStage(proposal) === 'di_dpmd' ? 'text-green-700' :
                                             getProposalStage(proposal) === 'di_kecamatan' ? 'text-blue-700' :
                                             'text-orange-700'
                                           }`}>
-                                            {getProposalStage(proposal) === 'di_dpmd' ? '📋 Di DPMD' :
-                                             getProposalStage(proposal) === 'di_kecamatan' ? '🏛️ Di Kecamatan' :
-                                             '🏢 Di Dinas'}
+                                            {getProposalStage(proposal) === 'di_dpmd' ? '✓ Selesai (Di DPMD)' :
+                                             getProposalStage(proposal) === 'di_kecamatan' ? 'Di Kecamatan' :
+                                             'Di Dinas'}
                                           </p>
                                         </div>
                                         <div className="bg-gray-50 rounded-lg p-2">
                                           <p className="text-gray-500">Status Akhir</p>
                                           <p className={`font-semibold ${
-                                            proposal.dpmd_status === 'approved' ? 'text-green-700' :
+                                            getProposalStage(proposal) === 'selesai' ? 'text-green-700' :
                                             proposal.dpmd_status === 'rejected' ? 'text-red-700' :
                                             'text-blue-700'
                                           }`}>
-                                            {proposal.dpmd_status === 'approved' ? '✅ Disetujui' :
-                                             proposal.dpmd_status === 'rejected' ? '❌ Ditolak' :
-                                             proposal.dpmd_status === 'revision' ? '🔄 Revisi' :
-                                             '⏳ Proses'}
+                                            {getProposalStage(proposal) === 'selesai' ? '✓ Diterima DPMD' :
+                                             proposal.dpmd_status === 'rejected' ? 'Ditolak' :
+                                             proposal.dpmd_status === 'revision' ? 'Revisi' :
+                                             'Proses'}
                                           </p>
                                         </div>
                                       </div>
                                       
+                                      {/* Troubleshoot Button - Selalu tampil untuk semua proposal */}
+                                        <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                                          <div className="flex items-center gap-2">
+                                            {/* Stage indicator */}
+                                            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium ${
+                                              getProposalStage(proposal) === 'di_dinas' ? 'bg-amber-100 text-amber-700' :
+                                              getProposalStage(proposal) === 'di_kecamatan' ? 'bg-blue-100 text-blue-700' :
+                                              'bg-gray-100 text-gray-600'
+                                            }`}>
+                                              <Clock className="h-3 w-3" />
+                                              {(() => {
+                                                const stage = getProposalStage(proposal);
+                                                // If at Kecamatan
+                                                if (stage === 'di_kecamatan') {
+                                                  const days = proposal.dinas_verified_at
+                                                    ? Math.floor((Date.now() - new Date(proposal.dinas_verified_at).getTime()) / (1000 * 60 * 60 * 24))
+                                                    : 0;
+                                                  return days > 0 ? `${days} hari di Kecamatan` : 'Di Kecamatan';
+                                                }
+                                                // If at Dinas
+                                                if (stage === 'di_dinas' && proposal.submitted_to_dinas_at) {
+                                                  const days = Math.floor((Date.now() - new Date(proposal.submitted_to_dinas_at).getTime()) / (1000 * 60 * 60 * 24));
+                                                  return `${days} hari di Dinas`;
+                                                }
+                                                return 'Belum dikirim';
+                                              })()}
+                                            </span>
+                                          </div>
+                                          <button
+                                            onClick={(e) => { e.stopPropagation(); handleTroubleshootRevision(proposal); }}
+                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5"
+                                            title="Troubleshoot: Kembalikan proposal ke Desa untuk direvisi"
+                                          >
+                                            <Wrench className="h-3.5 w-3.5" />
+                                            Troubleshoot Revisi
+                                          </button>
+                                        </div>
+
                                       {/* Show catatan if any */}
                                       {(proposal.dinas_catatan || proposal.kecamatan_catatan || proposal.dpmd_catatan) && (
                                         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
@@ -1987,18 +2495,18 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
             </div>
 
             {/* Content */}
-            <div className="relative z-10 space-y-8">
+            <div className="relative z-10 space-y-6 sm:space-y-8">
               {/* Header with Export Button */}
               <motion.div 
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex items-center justify-between"
+                className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
               >
                 <div>
-                  <h2 className="text-2xl font-bold text-slate-800">
+                  <h2 className="text-xl sm:text-2xl font-bold text-slate-800">
                     📊 Statistik Dashboard Bankeu
                   </h2>
-                  <p className="text-slate-500 mt-1">Analisis data proposal secara real-time</p>
+                  <p className="text-sm sm:text-base text-slate-500 mt-1">Analisis data proposal secara real-time</p>
                 </div>
 
                 {/* Export Dropdown Button */}
@@ -2253,42 +2761,58 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                       {/* Connecting Line */}
                       <div className="absolute top-8 left-0 right-0 h-1 bg-gradient-to-r from-blue-200 via-purple-200 to-emerald-200 rounded-full hidden md:block" />
                       
-                      {/* Timeline Steps */}
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {[
+                      {/* Timeline Steps - menggunakan trackingProposals (ALL proposals) agar sinkron dengan landing page */}
+                      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                        {(() => {
+                          const tp = trackingProposals.length > 0 ? trackingProposals : [];
+                          const diDesaCount = tp.filter(p => getProposalStage(p) === 'di_desa').length;
+                          const diDinasCount = tp.filter(p => getProposalStage(p) === 'di_dinas').length;
+                          const diKecamatanCount = tp.filter(p => getProposalStage(p) === 'di_kecamatan').length;
+                          const diDpmdCount = tp.filter(p => getProposalStage(p) === 'di_dpmd').length;
+                          const selesaiCount = tp.filter(p => p.dpmd_status === 'approved').length;
+                          return [
                           { 
                             step: 1, 
-                            label: 'Pengajuan', 
-                            desc: 'Desa submit proposal',
-                            count: statsData.totalProposal,
-                            color: 'blue',
+                            label: 'Di Desa', 
+                            desc: 'Belum submit ke dinas',
+                            count: diDesaCount,
+                            color: 'slate',
                             icon: FileText
                           },
                           { 
                             step: 2, 
                             label: 'Dinas Terkait', 
                             desc: 'Review dinas terkait',
-                            count: proposals.filter(p => p.dinas_status === 'approved').length,
-                            color: 'violet',
+                            count: diDinasCount,
+                            color: 'amber',
                             icon: Building
                           },
                           { 
                             step: 3, 
                             label: 'Kecamatan', 
                             desc: 'Review kecamatan',
-                            count: proposals.filter(p => p.kecamatan_status === 'approved').length,
-                            color: 'purple',
+                            count: diKecamatanCount,
+                            color: 'blue',
                             icon: Building2
                           },
                           { 
                             step: 4, 
-                            label: 'DPMD', 
-                            desc: 'Selesai / Diterima',
-                            count: proposals.filter(p => p.submitted_to_dpmd).length,
+                            label: 'Di DPMD', 
+                            desc: 'Review DPMD',
+                            count: diDpmdCount,
+                            color: 'violet',
+                            icon: Shield
+                          },
+                          { 
+                            step: 5, 
+                            label: 'Selesai', 
+                            desc: 'Disetujui DPMD',
+                            count: selesaiCount,
                             color: 'emerald',
                             icon: CheckCircle
                           },
-                        ].map((item, index) => {
+                        ];
+                        })().map((item, index) => {
                           const ItemIcon = item.icon;
                           return (
                             <div key={item.step} className="relative flex flex-col items-center text-center">
@@ -2452,16 +2976,16 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
           </div>
         ) : activeView === 'control' ? (
           /* Kontrol Pengajuan View */
-          <div className="max-w-4xl mx-auto">
+          <div className="max-w-4xl mx-auto px-0 sm:px-2">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden"
+              className="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-slate-200 overflow-hidden"
             >
               {/* Header */}
-              <div className="bg-gradient-to-r from-red-600 to-orange-500 px-6 py-5">
-                <h2 className="text-xl font-bold text-white flex items-center gap-3">
-                  <Power className="h-6 w-6" />
+              <div className="bg-gradient-to-r from-red-600 to-orange-500 px-4 sm:px-6 py-4 sm:py-5">
+                <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2 sm:gap-3">
+                  <Power className="h-5 w-5 sm:h-6 sm:w-6" />
                   Kontrol Laju Pengajuan
                 </h2>
                 <p className="text-white/80 text-sm mt-1">
@@ -2470,9 +2994,9 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
               </div>
 
               {/* Content */}
-              <div className="p-6 space-y-6">
+              <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
                 {/* Info Box */}
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                <div className="bg-amber-50 border border-amber-200 rounded-lg sm:rounded-xl p-3 sm:p-4">
                   <div className="flex items-start gap-3">
                     <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
                     <div>
@@ -2488,24 +3012,24 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                 {/* Toggle Controls */}
                 <div className="space-y-4">
                   {/* Desa Control */}
-                  <div className={`p-5 rounded-xl border-2 transition-all ${
+                  <div className={`p-3 sm:p-5 rounded-lg sm:rounded-xl border-2 transition-all ${
                     submissionSettings.bankeu_submission_desa 
                       ? 'bg-emerald-50 border-emerald-300' 
                       : 'bg-red-50 border-red-300'
                   }`}>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className={`p-3 rounded-xl ${
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+                      <div className="flex items-center gap-3 sm:gap-4">
+                        <div className={`p-2 sm:p-3 rounded-lg sm:rounded-xl ${
                           submissionSettings.bankeu_submission_desa ? 'bg-emerald-500' : 'bg-red-500'
                         }`}>
                           {submissionSettings.bankeu_submission_desa ? (
-                            <Unlock className="h-6 w-6 text-white" />
+                            <Unlock className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                           ) : (
-                            <Lock className="h-6 w-6 text-white" />
+                            <Lock className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                           )}
                         </div>
                         <div>
-                          <h3 className="font-bold text-lg text-slate-800">Pengajuan Desa → Dinas Terkait</h3>
+                          <h3 className="font-bold text-base sm:text-lg text-slate-800">Pengajuan Desa → Dinas</h3>
                           <p className="text-sm text-slate-600 mt-0.5">
                             {submissionSettings.bankeu_submission_desa 
                               ? 'Desa dapat mengirim proposal ke Dinas Terkait'
@@ -2537,24 +3061,24 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                   </div>
 
                   {/* Kecamatan Control */}
-                  <div className={`p-5 rounded-xl border-2 transition-all ${
+                  <div className={`p-3 sm:p-5 rounded-lg sm:rounded-xl border-2 transition-all ${
                     submissionSettings.bankeu_submission_kecamatan 
                       ? 'bg-emerald-50 border-emerald-300' 
                       : 'bg-red-50 border-red-300'
                   }`}>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className={`p-3 rounded-xl ${
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+                      <div className="flex items-center gap-3 sm:gap-4">
+                        <div className={`p-2 sm:p-3 rounded-lg sm:rounded-xl ${
                           submissionSettings.bankeu_submission_kecamatan ? 'bg-emerald-500' : 'bg-red-500'
                         }`}>
                           {submissionSettings.bankeu_submission_kecamatan ? (
-                            <Unlock className="h-6 w-6 text-white" />
+                            <Unlock className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                           ) : (
-                            <Lock className="h-6 w-6 text-white" />
+                            <Lock className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                           )}
                         </div>
                         <div>
-                          <h3 className="font-bold text-lg text-slate-800">Pengajuan Kecamatan → DPMD</h3>
+                          <h3 className="font-bold text-base sm:text-lg text-slate-800">Pengajuan Kecamatan → DPMD</h3>
                           <p className="text-sm text-slate-600 mt-0.5">
                             {submissionSettings.bankeu_submission_kecamatan 
                               ? 'Kecamatan dapat meneruskan proposal ke DPMD'
@@ -2605,58 +3129,58 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
             <motion.div 
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 rounded-2xl shadow-xl p-6"
+              className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 rounded-xl sm:rounded-2xl shadow-xl p-4 sm:p-6"
             >
-              <div className="flex items-center gap-4 mb-6">
-                <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
-                  <Settings className="h-8 w-8 text-white" />
+              <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+                <div className="p-2 sm:p-3 bg-white/20 rounded-lg sm:rounded-xl backdrop-blur-sm">
+                  <Settings className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold text-white">Pusat Konfigurasi</h2>
-                  <p className="text-white/80 text-sm">Kelola master data program, dinas, dan verifikator</p>
+                  <h2 className="text-xl sm:text-2xl font-bold text-white">Pusat Konfigurasi</h2>
+                  <p className="text-white/80 text-xs sm:text-sm">Kelola master data program dan dinas</p>
                 </div>
               </div>
 
               {/* Sub-tabs */}
-              <div className="flex gap-3">
+              <div className="flex flex-wrap gap-2 sm:gap-3">
                 <button
                   onClick={() => setConfigSubTab('kegiatan')}
-                  className={`flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm transition-all ${
+                  className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2 sm:py-3 rounded-lg sm:rounded-xl font-semibold text-xs sm:text-sm transition-all ${
                     configSubTab === 'kegiatan'
                       ? 'bg-white text-indigo-600 shadow-lg'
                       : 'bg-white/20 text-white hover:bg-white/30'
                   }`}
                 >
-                  <Layers className="h-5 w-5" />
-                  Master Kegiatan
-                  <span className={`px-2 py-0.5 rounded-full text-xs ${
+                  <Layers className="h-4 w-4 sm:h-5 sm:w-5" />
+                  <span className="hidden sm:inline">Master</span> Kegiatan
+                  <span className={`px-1.5 sm:px-2 py-0.5 rounded-full text-xs ${
                     configSubTab === 'kegiatan' ? 'bg-indigo-100 text-indigo-700' : 'bg-white/20'
                   }`}>{masterKegiatan.length}</span>
                 </button>
                 <button
                   onClick={() => setConfigSubTab('dinas')}
-                  className={`flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm transition-all ${
+                  className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2 sm:py-3 rounded-lg sm:rounded-xl font-semibold text-xs sm:text-sm transition-all ${
                     configSubTab === 'dinas'
                       ? 'bg-white text-purple-600 shadow-lg'
                       : 'bg-white/20 text-white hover:bg-white/30'
                   }`}
                 >
-                  <Building2 className="h-5 w-5" />
-                  Dinas & Verifikator
-                  <span className={`px-2 py-0.5 rounded-full text-xs ${
+                  <Building2 className="h-4 w-4 sm:h-5 sm:w-5" />
+                  Dinas
+                  <span className={`px-1.5 sm:px-2 py-0.5 rounded-full text-xs ${
                     configSubTab === 'dinas' ? 'bg-purple-100 text-purple-700' : 'bg-white/20'
                   }`}>{dinas.length}</span>
                 </button>
                 <button
                   onClick={() => setConfigSubTab('format-surat')}
-                  className={`flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm transition-all ${
+                  className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2 sm:py-3 rounded-lg sm:rounded-xl font-semibold text-xs sm:text-sm transition-all ${
                     configSubTab === 'format-surat'
                       ? 'bg-white text-amber-600 shadow-lg'
                       : 'bg-white/20 text-white hover:bg-white/30'
                   }`}
                 >
-                  <FileText className="h-5 w-5" />
-                  Format Surat
+                  <FileText className="h-4 w-4 sm:h-5 sm:w-5" />
+                  <span className="hidden sm:inline">Format</span> Surat
                 </button>
               </div>
             </motion.div>
@@ -2671,26 +3195,26 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                   className="space-y-4"
                 >
                   {/* Add Program Button */}
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-3">
-                      <div className="h-1 w-8 bg-gradient-to-r from-blue-500 to-green-500 rounded-full"></div>
-                      <h3 className="text-lg font-semibold text-gray-800">Daftar Program Kegiatan</h3>
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <div className="h-1 w-6 sm:w-8 bg-gradient-to-r from-blue-500 to-green-500 rounded-full"></div>
+                      <h3 className="text-base sm:text-lg font-semibold text-gray-800">Daftar Program Kegiatan</h3>
                     </div>
                     <button
                       onClick={() => {
                         setEditingKegiatan(null);
                         setShowKegiatanForm(!showKegiatanForm);
                       }}
-                      className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${
+                      className={`flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-semibold text-xs sm:text-sm transition-all ${
                         showKegiatanForm
                           ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                           : 'bg-gradient-to-r from-blue-600 to-green-600 text-white shadow-lg hover:shadow-xl hover:scale-[1.02]'
                       }`}
                     >
                       {showKegiatanForm ? (
-                        <><XIcon className="h-4 w-4" /> Tutup Form</>
+                        <><XIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> <span className="hidden sm:inline">Tutup</span> Form</>
                       ) : (
-                        <><Plus className="h-4 w-4" /> Tambah Program</>
+                        <><Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> <span className="hidden sm:inline">Tambah</span> Program</>
                       )}
                     </button>
                   </div>
@@ -2702,11 +3226,11 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         exit={{ opacity: 0, height: 0 }}
-                        className="bg-gradient-to-br from-blue-50 to-green-50 rounded-2xl border-2 border-dashed border-blue-200 p-6"
+                        className="bg-gradient-to-br from-blue-50 to-green-50 rounded-xl sm:rounded-2xl border-2 border-dashed border-blue-200 p-4 sm:p-6"
                       >
                         <div className="flex items-center gap-2 mb-4">
-                          <Sparkles className="h-5 w-5 text-blue-600" />
-                          <h4 className="font-semibold text-gray-800">{editingKegiatan ? 'Edit Program' : 'Tambah Program Baru'}</h4>
+                          <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                          <h4 className="font-semibold text-sm sm:text-base text-gray-800">{editingKegiatan ? 'Edit Program' : 'Tambah Program Baru'}</h4>
                         </div>
                         <KegiatanForm 
                           data={editingKegiatan}
@@ -2811,26 +3335,26 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                   className="space-y-4"
                 >
                   {/* Add Dinas Button */}
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-3">
-                      <div className="h-1 w-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"></div>
-                      <h3 className="text-lg font-semibold text-gray-800">Daftar Dinas & Verifikator</h3>
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <div className="h-1 w-6 sm:w-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"></div>
+                      <h3 className="text-base sm:text-lg font-semibold text-gray-800">Daftar Dinas & Verifikator</h3>
                     </div>
                     <button
                       onClick={() => {
                         setEditingDinas(null);
                         setShowDinasForm(!showDinasForm);
                       }}
-                      className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${
+                      className={`flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-semibold text-xs sm:text-sm transition-all ${
                         showDinasForm
                           ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                           : 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg hover:shadow-xl hover:scale-[1.02]'
                       }`}
                     >
                       {showDinasForm ? (
-                        <><XIcon className="h-4 w-4" /> Tutup Form</>
+                        <><XIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> <span className="hidden sm:inline">Tutup</span> Form</>
                       ) : (
-                        <><Plus className="h-4 w-4" /> Tambah Dinas</>
+                        <><Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Tambah Dinas</>
                       )}
                     </button>
                   </div>
@@ -3100,7 +3624,11 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                                                 <div className="flex items-center gap-2">
                                                   <Lock className="h-3.5 w-3.5 text-gray-400" />
                                                   <span className="text-xs text-gray-600">Password:</span>
-                                                  <span className="text-xs text-gray-500 italic">••••••••</span>
+                                                  {verifikator.plain_password ? (
+                                                    <span className="text-xs font-mono text-gray-800 bg-white px-1.5 py-0.5 rounded select-all">{verifikator.plain_password}</span>
+                                                  ) : (
+                                                    <span className="text-xs text-gray-500">••••••••</span>
+                                                  )}
                                                   <button
                                                     onClick={() => handleResetPassword(item.id, verifikator.id, verifikator.nama)}
                                                     className="ml-auto flex items-center gap-1 px-2 py-1 text-xs text-amber-700 bg-amber-100 hover:bg-amber-200 rounded-md transition-colors"
@@ -3718,6 +4246,7 @@ const DinasForm = ({ data, onSave, onCancel }) => {
   const [showCreateAccount, setShowCreateAccount] = useState(false);
   const [showEditEmail, setShowEditEmail] = useState(false);
   const [showResetPassword, setShowResetPassword] = useState(false);
+  const [showDinasPassword, setShowDinasPassword] = useState(false);
   const [editEmailValue, setEditEmailValue] = useState('');
   const [resetPasswordValue, setResetPasswordValue] = useState('');
   const [isResetting, setIsResetting] = useState(false);
@@ -3768,6 +4297,11 @@ const DinasForm = ({ data, onSave, onCancel }) => {
         confirmButtonText: 'OK'
       });
       
+      // Update plain_password in local data
+      if (data.user_account) {
+        data.user_account.plain_password = resetPasswordValue.trim();
+      }
+      setShowDinasPassword(true);
       setShowResetPassword(false);
       setResetPasswordValue('');
     } catch (error) {
@@ -3973,7 +4507,22 @@ const DinasForm = ({ data, onSave, onCancel }) => {
                 <div className="flex items-center gap-2">
                   <Lock className="h-4 w-4 text-gray-400" />
                   <span className="text-sm text-gray-600">Password:</span>
-                  <span className="text-sm text-gray-500 italic">••••••••</span>
+                  {showDinasPassword && data.user_account?.plain_password ? (
+                    <span className="text-sm font-mono text-gray-800 bg-white px-2 py-0.5 rounded border border-gray-200 select-all">{data.user_account.plain_password}</span>
+                  ) : (
+                    <span className="text-sm text-gray-500">••••••••</span>
+                  )}
+                  {data.user_account?.plain_password && (
+                    <button
+                      type="button"
+                      onClick={() => setShowDinasPassword(!showDinasPassword)}
+                      className="flex items-center gap-1 px-2 py-1 text-xs text-blue-700 bg-blue-100 hover:bg-blue-200 rounded transition-colors"
+                      title={showDinasPassword ? 'Sembunyikan Password' : 'Lihat Password'}
+                    >
+                      {showDinasPassword ? <Lock className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                      {showDinasPassword ? 'Sembunyikan' : 'Lihat'}
+                    </button>
+                  )}
                   {!showResetPassword && (
                     <button
                       type="button"

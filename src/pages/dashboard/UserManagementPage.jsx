@@ -20,6 +20,9 @@ import {
 	LuChevronRight,
 	LuDownload,
 	LuFileSpreadsheet,
+	LuEye,
+	LuEyeOff,
+	LuLock,
 } from "react-icons/lu";
 import * as XLSX from 'xlsx';
 import api from "../../api";
@@ -54,10 +57,14 @@ const UserManagementPage = () => {
 	const [currentPage, setCurrentPage] = useState(1);
 	const [itemsPerPage] = useState(12); // 12 items per page untuk grid 3 kolom
 
+	// Password visibility state
+	const [visiblePasswords, setVisiblePasswords] = useState({});
+
 	const { user: currentUser } = useAuth();
 	const canManage =
 		currentUser?.role === "superadmin" ||
-		currentUser?.role === "sekretaris_dinas";
+		currentUser?.role === "sekretaris_dinas" ||
+		Number(currentUser?.bidang_id) === 2;
 
 	// Tab configuration
 	const tabs = [
@@ -192,6 +199,14 @@ const UserManagementPage = () => {
 		setShowBidangModal(false);
 		setSelectedUser(null);
 		fetchUsers();
+	};
+
+	// Handle toggle password visibility
+	const togglePasswordVisibility = (userId) => {
+		setVisiblePasswords(prev => ({
+			...prev,
+			[userId]: !prev[userId]
+		}));
 	};
 
 	// Handle delete user
@@ -333,7 +348,7 @@ const UserManagementPage = () => {
 					'No': idx + 1,
 					'Nama': user.name || '',
 					'Email': user.email || '',
-					'Password': 'password',
+					'Password': user.plain_password || '-',
 					'Role': getRoleInfo(user.role).label,
 					...(tab.id === 'pegawai' ? { 'Bidang': user.bidang?.nama || '-' } : {}),
 					...(tab.id === 'desa' ? {
@@ -373,7 +388,7 @@ const UserManagementPage = () => {
 				'No': idx + 1,
 				'Nama': user.name || '',
 				'Email': user.email || '',
-				'Password': 'password',
+				'Password': user.plain_password || '-',
 				'Role': getRoleInfo(user.role).label,
 			};
 
@@ -782,34 +797,61 @@ const UserManagementPage = () => {
 												})}
 											</span>
 										</div>
-									</div>
 
-									{/* Actions */}
-									<div className={`grid ${
-										['superadmin', 'desa', 'kecamatan', 'dinas_terkait'].includes(user.role) 
-											? 'grid-cols-2' 
-											: 'grid-cols-4'
-									} gap-2 pt-3 border-t border-gray-100`}>
-										{!['superadmin', 'desa', 'kecamatan', 'dinas_terkait'].includes(user.role) && (
-											<>
-												<button
-													onClick={() => handleEditRole(user)}
-													className="flex flex-col items-center justify-center gap-1 p-3 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-all group/btn"
-													title="Ubah Role"
-												>
-													<LuShield className="h-5 w-5 group-hover/btn:scale-110 transition-transform" />
-													<span className="text-xs font-medium">Role</span>
-												</button>
-												<button
-													onClick={() => handleEditBidang(user)}
-													className="flex flex-col items-center justify-center gap-1 p-3 bg-purple-50 text-purple-600 rounded-xl hover:bg-purple-100 transition-all group/btn"
-													title="Ubah Bidang"
-												>
-													<LuBuilding2 className="h-5 w-5 group-hover/btn:scale-110 transition-transform" />
-													<span className="text-xs font-medium">Bidang</span>
-												</button>
-											</>
-										)}
+									{/* Password Display */}
+									{canManage && (
+										<div className="flex items-center gap-3 text-gray-600">
+											<div className="h-9 w-9 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
+												<LuLock className="h-4 w-4 text-amber-600" />
+											</div>
+											<div className="flex items-center gap-2 flex-1 min-w-0">
+												{user.plain_password ? (
+													<>
+														<span className="text-sm font-mono bg-gray-100 px-2 py-0.5 rounded truncate">
+															{visiblePasswords[user.id] ? user.plain_password : '••••••••'}
+														</span>
+														<button
+															onClick={() => togglePasswordVisibility(user.id)}
+															className="p-1 hover:bg-gray-200 rounded transition-colors flex-shrink-0"
+															title={visiblePasswords[user.id] ? 'Sembunyikan password' : 'Lihat password'}
+														>
+															{visiblePasswords[user.id] ? (
+																<LuEyeOff className="h-4 w-4 text-gray-500" />
+															) : (
+																<LuEye className="h-4 w-4 text-gray-500" />
+															)}
+														</button>
+													</>
+												) : (
+													<span className="text-sm text-gray-400 italic">Tidak tersedia</span>
+												)}
+											</div>
+										</div>
+									)}
+								</div>
+
+								{/* Action Buttons */}
+								<div className="flex flex-wrap gap-2 pt-4 border-t border-gray-100">
+									{canManage && (
+										<>
+											<button
+												onClick={() => handleEditRole(user)}
+												className="flex flex-col items-center justify-center gap-1 p-3 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-all group/btn"
+												title="Ubah Role"
+											>
+												<LuShield className="h-5 w-5 group-hover/btn:scale-110 transition-transform" />
+												<span className="text-xs font-medium">Role</span>
+											</button>
+											<button
+												onClick={() => handleEditBidang(user)}
+												className="flex flex-col items-center justify-center gap-1 p-3 bg-purple-50 text-purple-600 rounded-xl hover:bg-purple-100 transition-all group/btn"
+												title="Ubah Bidang"
+											>
+												<LuBuilding2 className="h-5 w-5 group-hover/btn:scale-110 transition-transform" />
+												<span className="text-xs font-medium">Bidang</span>
+											</button>
+										</>
+									)}
 										<button
 											onClick={() => handleResetPassword(user)}
 											className="flex flex-col items-center justify-center gap-1 p-3 bg-amber-50 text-amber-600 rounded-xl hover:bg-amber-100 transition-all group/btn"

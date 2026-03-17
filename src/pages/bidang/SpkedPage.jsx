@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, Activity, TrendingUp, ArrowLeft, Clock, CheckCircle2, XCircle, FileText, BarChart3, Landmark, DollarSign, Zap, Info, ChevronRight, Menu, X, ShieldCheck, ArrowRight, BadgeCheck } from 'lucide-react';
+import { Building2, Activity, TrendingUp, ArrowLeft, Clock, CheckCircle2, XCircle, FileText, BarChart3, DollarSign, Zap, ChevronRight, Menu, X, ShieldCheck, ArrowRight, BadgeCheck } from 'lucide-react';
 import api from '../../api';
 import toast from 'react-hot-toast';
 
@@ -27,7 +27,7 @@ const SpkedPage = () => {
 	const [activeTab, setActiveTab] = useState('overview'); // overview, bumdes, bankeu, activity
 	const [bumdesView, setBumdesView] = useState('dashboard'); // dashboard, form, dokumen
 	const [bankeuYear, setBankeuYear] = useState(null); // null (picker), 2025, or 2026
-	const [sidebarOpen, setSidebarOpen] = useState(false); // Mobile sidebar state
+	const [sidebarOpen, setSidebarOpen] = useState(true); // Mobile sidebar state - default open
 	
 	// Activity logs state
 	const [activityLogs, setActivityLogs] = useState([]);
@@ -477,20 +477,6 @@ const SpkedPage = () => {
 						<div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-tr from-blue-400/10 to-purple-500/10 rounded-full blur-3xl -z-0"></div>
 
 						<div className="relative z-10">
-							{/* Welcome Section */}
-							<div className="text-center mb-10">
-								<div className="inline-flex h-20 w-20 bg-gradient-to-br from-green-500 to-emerald-600 rounded-3xl items-center justify-center mb-6 shadow-2xl shadow-green-500/30 animate-pulse">
-									<Landmark className="h-10 w-10 text-white" />
-								</div>
-								<h2 className="text-3xl font-bold bg-gradient-to-r from-gray-800 via-green-700 to-emerald-600 bg-clip-text text-transparent mb-3">
-									Selamat Datang di Bidang SPKED
-								</h2>
-								<p className="text-gray-600 max-w-2xl mx-auto leading-relaxed">
-									<strong>Sarana Prasarana Kewilayahan dan Ekonomi Desa</strong><br />
-									Kelola data BUMDes dan Bantuan Keuangan Desa dengan mudah dan terstruktur
-								</p>
-							</div>
-
 							{/* Stats Overview */}
 							<div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
 								{stats && stats.total_bumdes !== undefined && (
@@ -547,52 +533,6 @@ const SpkedPage = () => {
 										</div>
 									</>
 								)}
-							</div>
-
-							{/* Features Info */}
-							<div className="bg-gradient-to-br from-blue-50/50 to-green-50/50 rounded-3xl p-8 mb-10 border border-blue-100/50 shadow-lg">
-								<h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-3">
-									<Info className="h-6 w-6 text-blue-600" />
-									Apa yang Bisa Dilakukan di Halaman Ini?
-								</h3>
-								<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-									<div className="flex gap-4">
-										<div className="h-14 w-14 bg-green-100 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-md">
-											<Building2 className="h-7 w-7 text-green-600" />
-										</div>
-										<div>
-											<h4 className="font-bold text-gray-800 mb-2 text-base">Kelola Data BUMDes</h4>
-											<p className="text-sm text-gray-600 leading-relaxed">Tambah, edit, dan pantau data BUMDes beserta unit usahanya di seluruh desa</p>
-										</div>
-									</div>
-									<div className="flex gap-4">
-										<div className="h-14 w-14 bg-blue-100 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-md">
-											<DollarSign className="h-7 w-7 text-blue-600" />
-										</div>
-										<div>
-											<h4 className="font-bold text-gray-800 mb-2 text-base">Bantuan Keuangan Desa</h4>
-											<p className="text-sm text-gray-600 leading-relaxed">Kelola data penyaluran Bantuan Keuangan Tahap 1 dan Tahap 2 untuk setiap desa</p>
-										</div>
-									</div>
-									<div className="flex gap-4">
-										<div className="h-14 w-14 bg-purple-100 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-md">
-											<FileText className="h-7 w-7 text-purple-600" />
-										</div>
-										<div>
-											<h4 className="font-bold text-gray-800 mb-2 text-base">Upload Dokumen</h4>
-											<p className="text-sm text-gray-600 leading-relaxed">Upload dokumen pendukung BUMDes seperti SK, proposal, dan laporan keuangan</p>
-										</div>
-									</div>
-									<div className="flex gap-4">
-										<div className="h-14 w-14 bg-orange-100 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-md">
-											<Activity className="h-7 w-7 text-orange-600" />
-										</div>
-										<div>
-											<h4 className="font-semibold text-gray-800 mb-1">Monitor Aktivitas</h4>
-											<p className="text-sm text-gray-600">Pantau semua aktivitas terkini terkait BUMDes dan Bantuan Keuangan secara real-time</p>
-										</div>
-									</div>
-								</div>
 							</div>
 
 							{/* Quick Actions */}

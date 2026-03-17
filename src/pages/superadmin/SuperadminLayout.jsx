@@ -8,10 +8,12 @@ import {
 } from "react-icons/fi";
 import { performFullLogout } from "../../utils/sessionPersistence";
 import { useConfirm } from "../../hooks/useConfirm.jsx";
+import { useAuth } from "../../context/AuthContext";
 import { toast } from 'react-hot-toast';
 import api from "../../api";
 
 const SuperadminLayout = () => {
+	const { user: authUser, isCheckingSession } = useAuth();
 	const [sidebarOpen, setSidebarOpen] = React.useState(true); // Desktop sidebar toggle
 	const [showMobileMenu, setShowMobileMenu] = React.useState(false); // Mobile menu
 	const [showNotifications, setShowNotifications] = React.useState(false);
@@ -58,7 +60,21 @@ const SuperadminLayout = () => {
 		return () => clearInterval(interval);
 	}, []);
 
-	if (!token || user.role !== "superadmin") {
+	// CRITICAL: Wait for session restore before deciding to redirect
+	if (isCheckingSession) {
+		return (
+			<div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800">
+				<div className="text-center">
+					<div className="animate-spin rounded-full h-12 w-12 border-4 border-white/30 border-t-white mx-auto mb-4"></div>
+					<p className="text-white/80 text-sm font-medium">Memuat...</p>
+				</div>
+			</div>
+		);
+	}
+
+	// Check authorization - use authUser from context (more reliable than localStorage)
+	const effectiveRole = authUser?.role || user?.role;
+	if (!token || effectiveRole !== "superadmin") {
 		return <Navigate to="/" replace />;
 	}
 

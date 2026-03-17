@@ -407,7 +407,8 @@ const BankeuVerificationPage = ({ tahun = 2027 }) => {
         });
 
         await api.post(`/kecamatan/bankeu/submit-review/${desaId}`, {
-          action: 'submit'
+          action: 'submit',
+          tahun: tahunAnggaran
         });
 
         await fetchData();

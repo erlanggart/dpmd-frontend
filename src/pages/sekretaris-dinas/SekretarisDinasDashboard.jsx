@@ -118,7 +118,7 @@ const SekretarisDinasDashboard = () => {
       icon: Info,
       label: 'Informasi',
       color: 'orange',
-      onClick: () => navigate('/dashboard/informasi')
+      onClick: () => navigate('/dpmd/informasi')
     }
   ];
 

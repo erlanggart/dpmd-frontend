@@ -10,7 +10,7 @@
 export const getAvatarBaseUrl = () => {
   // In production, use the API domain without /api suffix
   if (import.meta.env.PROD) {
-    return 'https://api.dpmdbogorkab.id';
+    return 'https://dpmdbogorkab.id';
   }
   
   // In development, use local server

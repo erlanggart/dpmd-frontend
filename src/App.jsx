@@ -5,6 +5,7 @@ import {
   Route,
   Navigate,
   useLocation,
+  useParams,
   Outlet,
 } from "react-router-dom";
 import { Suspense, lazy, useEffect, useState } from "react";
@@ -29,6 +30,8 @@ import {
   dismissUpdate,
 } from "./utils/versionCheck";
 import UpdateNotificationModal from "./components/UpdateNotificationModal";
+import { NetworkProvider } from "./context/NetworkContext";
+import NetworkStatusIndicator from "./components/ui/NetworkStatusIndicator";
 
 // Halaman utama di-import langsung untuk performa awal yang lebih cepat
 import LoginPage from "./pages/LoginPage";
@@ -97,6 +100,27 @@ function HomeRedirect() {
   return <LandingPage />;
 }
 
+// Redirect component for /dashboard/disposisi/:id to correct role-based route
+function DisposisiRedirect() {
+  const { id } = useParams();
+  const { user } = useAuth();
+  
+  // Role-based disposisi path mapping
+  const roleDisposisiMap = {
+    superadmin: "/dpmd/disposisi",
+    kepala_dinas: "/dpmd/disposisi",
+    sekretaris_dinas: "/dpmd/disposisi",
+    kepala_bidang: "/dpmd/disposisi",
+    ketua_tim: "/dpmd/disposisi",
+    pegawai: "/dpmd/disposisi",
+  };
+  
+  const basePath = roleDisposisiMap[user?.role] || "/dpmd/disposisi";
+  const targetPath = id ? `${basePath}/${id}` : basePath;
+  
+  return <Navigate to={targetPath} replace />;
+}
+
 // Role constants for better maintainability
 const ROLES = {
   SUPERADMIN: "superadmin",
@@ -133,6 +157,18 @@ const JadwalKegiatanPage = lazy(
 );
 const KelolaNotifikasiPage = lazy(
   () => import("./pages/bidang/sekretariat/KelolaNotifikasiPage"),
+);
+const InformasiManagement = lazy(
+  () => import("./pages/sekretariat/InformasiManagement"),
+);
+const VideoMeetingListPage = lazy(
+  () => import("./pages/video-meeting/VideoMeetingListPage"),
+);
+const VideoMeetingPage = lazy(
+  () => import("./pages/video-meeting/VideoMeetingPage"),
+);
+const PublicMeetingPage = lazy(
+  () => import("./pages/video-meeting/PublicMeetingPage"),
 );
 const PerjadinMain = lazy(
   () => import("./pages/pegawai/perjadin/PerjadinMain"),
@@ -261,6 +297,9 @@ const KecamatanTimVerifikasiPage = lazy(
 const KecamatanSettings = lazy(
   () => import("./pages/kecamatan/KecamatanSettings"),
 );
+const KecamatanChangePasswordPage = lazy(
+  () => import("./pages/kecamatan/KecamatanChangePasswordPage"),
+);
 const DinasBankeuPage = lazy(() => import("./pages/dinas/DinasBankeuPage"));
 const DinasVerificationPage = lazy(
   () => import("./pages/dinas/DinasVerificationPage"),
@@ -288,6 +327,9 @@ const WelcomeDashboard = lazy(
 // Unified DPMD Dashboard - menggantikan dashboard terpisah per role
 const DPMDDashboard = lazy(
   () => import("./pages/dpmd/DPMDDashboard"),
+);
+const InformasiPage = lazy(
+  () => import("./pages/dpmd/InformasiPage"),
 );
 // Legacy individual dashboards (masih digunakan di beberapa tempat)
 const KepalaDinasDashboard = lazy(
@@ -508,8 +550,42 @@ const ThemeColorWrapper = ({ children }) => {
                 `[App] Navigating to disposisi: ${targetUrl} (role: ${userRole})`,
               );
               window.location.href = targetUrl;
+            } else if (
+              notifType === "today_schedule" ||
+              notifType === "tomorrow_schedule" ||
+              notifType === "upcoming_jadwal" ||
+              notifType === "new_jadwal" ||
+              notifType === "update_jadwal"
+            ) {
+              const targetDate = notificationData?.targetDate || '';
+              const dateParam = targetDate ? `?tanggal=${targetDate}` : '';
+              console.log(`[App] Navigating to jadwal-kegiatan (type: ${notifType}, date: ${targetDate})`);
+              window.location.href = `/dpmd/jadwal-kegiatan${dateParam}`;
             } else if (url && url !== "/") {
               window.location.href = url;
+            } else {
+              // Default fallback: redirect to user's dashboard home based on role
+              const storedUser = JSON.parse(
+                localStorage.getItem("user") || "{}",
+              );
+              const userRole = storedUser.role || "";
+
+              const roleDashboardMap = {
+                superadmin: "/superadmin/dashboard",
+                kepala_dinas: "/dpmd/dashboard",
+                sekretaris_dinas: "/dpmd/dashboard",
+                kepala_bidang: "/dpmd/dashboard",
+                ketua_tim: "/dpmd/dashboard",
+                pegawai: "/dpmd/dashboard",
+                desa: "/desa/dashboard",
+                kecamatan: "/kecamatan/dashboard",
+                dinas_terkait: "/dinas/dashboard",
+                verifikator_dinas: "/dinas/dashboard",
+              };
+
+              const dashboardPath = roleDashboardMap[userRole] || "/dpmd/dashboard";
+              console.log(`[App] Notification click - redirecting to dashboard: ${dashboardPath} (role: ${userRole})`);
+              window.location.href = dashboardPath;
             }
           }
 
@@ -638,6 +714,7 @@ function App() {
       <DataCacheProvider>
         <EditModeProvider>
           <ThemeColorWrapper>
+            <NetworkProvider>
             <Suspense
               fallback={
                 <div className="flex h-screen items-center justify-center">
@@ -658,6 +735,13 @@ function App() {
                   element={<CoreDashboardPublic />}
                 />
                 <Route path="/login" element={<LoginPage />} />
+                
+                {/* Redirect routes for legacy/notification URLs */}
+                <Route path="/dashboard/disposisi" element={<DisposisiRedirect />} />
+                <Route path="/dashboard/disposisi/:id" element={<DisposisiRedirect />} />
+                
+                {/* Public Meeting Join - No auth required */}
+                <Route path="/join/:roomId" element={<PublicMeetingPage />} />
 
 
                 {/* Rute Desa - Exclusive untuk role: desa */}
@@ -737,6 +821,8 @@ function App() {
                   <Route path="jadwal-kegiatan" element={<JadwalKegiatanPage />} />
                   <Route path="perjadin" element={<PerjadinMain />} />
                   <Route path="perjadin/detail/:id" element={<PerjadinDetail />} />
+                  <Route path="informasi" element={<InformasiPage />} />
+                  <Route path="video-meeting" element={<VideoMeetingListPage />} />
                 </Route>
                 
                 {/* Rute Bidang - Accessible by pegawai/kepala_bidang/ketua_tim (their own bidang) & kepala_dinas/superadmin (all) */}
@@ -888,7 +974,30 @@ function App() {
                     element={<PerjadinDetail />}
                   />
                   <Route path="notifikasi" element={<KelolaNotifikasiPage />} />
+                  <Route path="informasi" element={<InformasiManagement />} />
+                  <Route path="video-meeting" element={<VideoMeetingListPage />} />
                 </Route>
+
+                {/* Video Meeting Room - Auth Only */}
+                <Route
+                  path="/meet/:roomId"
+                  element={
+                    <RoleProtectedRoute
+                      allowedRoles={[
+                        "pegawai",
+                        "kepala_bidang",
+                        "ketua_tim",
+                        "kepala_dinas",
+                        "superadmin",
+                        "sekretaris_dinas",
+                        "kecamatan",
+                        "desa",
+                      ]}
+                    >
+                      <VideoMeetingPage />
+                    </RoleProtectedRoute>
+                  }
+                />
 
                 {/* Rute Superadmin - Full System Control */}
                 <Route
@@ -939,6 +1048,7 @@ function App() {
                     element={<KecamatanTimVerifikasiPage />}
                   />
                   <Route path="settings" element={<KecamatanSettings />} />
+                  <Route path="change-password" element={<KecamatanChangePasswordPage />} />
                 </Route>
 
                 {/* Rute Dinas Terkait - Untuk verifikasi teknis */}
@@ -1099,12 +1209,16 @@ function App() {
               }}
             />
 
+            {/* Network Status Indicator */}
+            <NetworkStatusIndicator />
+
             {/* Update Notification Modal */}
             <UpdateNotificationModal
               isOpen={showUpdateModal}
               onUpdate={handleUpdate}
               onDismiss={handleDismissUpdate}
             />
+            </NetworkProvider>
           </ThemeColorWrapper>
         </EditModeProvider>
       </DataCacheProvider>

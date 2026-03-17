@@ -1005,6 +1005,9 @@ const KecamatanTimVerifikasiPage = () => {
                         <div className="flex-1 min-w-0">
                           <p className={`text-sm font-semibold truncate ${isActive ? 'text-white' : 'text-violet-800'}`}>
                             {getPosisiLabel(member.posisi)}
+                            {member.posisi === 'sekretaris' && (
+                              <span className={`text-xs font-normal ml-1 ${isActive ? 'text-violet-200' : 'text-gray-400'}`}>(Opsional)</span>
+                            )}
                           </p>
                           <p className={`text-xs truncate ${isActive ? 'text-violet-100' : 'text-violet-500'}`}>
                             {member.nama || 'Belum diisi'}

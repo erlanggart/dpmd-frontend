@@ -16,6 +16,9 @@ export default defineConfig({
 		'import.meta.env.VITE_APP_VERSION': JSON.stringify(appVersion),
 		'import.meta.env.VITE_BUILD_DATE': JSON.stringify(buildDate),
 	},
+	esbuild: {
+		drop: process.env.NODE_ENV === 'production' ? ['console', 'debugger'] : [],
+	},
 	plugins: [
 		react(), 
 		tailwindcss(),
@@ -30,7 +33,7 @@ export default defineConfig({
 				// Custom SW will be injected by inject-custom-sw.js script
 				runtimeCaching: [
 					{
-						urlPattern: /^https:\/\/api\.dpmdbogorkab\.id\/api\/.*/i,
+						urlPattern: /^https:\/\/dpmdbogorkab\.id\/api\/.*/i,
 						handler: 'NetworkFirst',
 						options: {
 							cacheName: 'api-cache',
@@ -44,7 +47,7 @@ export default defineConfig({
 						}
 					},
 					{
-						urlPattern: /^https:\/\/api\.dpmdbogorkab\.id\/(storage|uploads|public)\/.*/i,
+						urlPattern: /^https:\/\/dpmdbogorkab\.id\/(storage|uploads|public)\/.*/i,
 						handler: 'CacheFirst',
 						options: {
 							cacheName: 'media-cache',

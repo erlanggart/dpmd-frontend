@@ -5,7 +5,7 @@ const isDevelopment = import.meta.env.DEV || window.location.hostname === 'local
 export const API_ENDPOINTS = {
   // Express Backend - use env variable or default based on environment
   EXPRESS_BASE: import.meta.env.VITE_API_BASE_URL || 
-    (isDevelopment ? 'http://localhost:3001/api' : 'https://api.dpmdbogorkab.id/api'),
+    (isDevelopment ? 'http://localhost:3001/api' : 'https://dpmdbogorkab.id/api'),
 };
 
 /**

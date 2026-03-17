@@ -8,7 +8,7 @@ import {
 	FiHome, FiUser, FiLogOut, FiMenu, FiMail, FiBell, 
 	FiCalendar, FiBarChart2, FiFileText, FiDollarSign, 
 	FiUsers, FiBriefcase, FiChevronLeft, FiChevronRight,
-	FiSettings, FiX
+	FiSettings, FiX, FiVideo
 } from "react-icons/fi";
 import { Landmark, Menu, ChevronLeft } from "lucide-react";
 import AnimatedIcon from '../components/AnimatedIcon';
@@ -23,7 +23,7 @@ import api from "../api";
 // ============================================
 const useResponsive = () => {
 	const [isDesktop, setIsDesktop] = React.useState(window.innerWidth >= 1024);
-	const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(false);
+	const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(false); // default open
 
 	React.useEffect(() => {
 		const handleResize = () => {
@@ -172,7 +172,7 @@ const BIDANG_ROUTES = {
 // MAIN COMPONENT
 // ============================================
 const DPMDStaffLayout = () => {
-	const { user: authUser } = useAuth();
+	const { user: authUser, isCheckingSession } = useAuth();
 	const [showMenu, setShowMenu] = React.useState(false);
 	const [showNotifications, setShowNotifications] = React.useState(false);
 	const [notifications, setNotifications] = React.useState([]);
@@ -321,8 +321,21 @@ const DPMDStaffLayout = () => {
 		return () => navigator.serviceWorker.removeEventListener('message', handlePushMessage);
 	}, [theme]);
 
-	// Check authorization
-	if (!token || !user.role || !config.allowedRoles.includes(user.role)) {
+	// CRITICAL: Wait for session restore before deciding to redirect
+	if (isCheckingSession) {
+		return (
+			<div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800">
+				<div className="text-center">
+					<div className="animate-spin rounded-full h-12 w-12 border-4 border-white/30 border-t-white mx-auto mb-4"></div>
+					<p className="text-white/80 text-sm font-medium">Memuat...</p>
+				</div>
+			</div>
+		);
+	}
+
+	// Check authorization - use authUser from context (more reliable than localStorage)
+	const effectiveRole = authUser?.role || user?.role;
+	if (!token || !effectiveRole || !config.allowedRoles.includes(effectiveRole)) {
 		return <Navigate to="/" replace />;
 	}
 
@@ -369,7 +382,12 @@ const DPMDStaffLayout = () => {
 		}
 		
 		// Navigate based on notification type/data
-		if (notification.data?.url) {
+		const notifType = notification.data?.type || '';
+		if (notifType === 'today_schedule' || notifType === 'tomorrow_schedule') {
+			const targetDate = notification.data?.targetDate || '';
+			const dateParam = targetDate ? `?tanggal=${targetDate}` : '';
+			navigate(`/dpmd/jadwal-kegiatan${dateParam}`);
+		} else if (notification.data?.url) {
 			navigate(notification.data.url);
 		} else if (notification.type === 'disposisi') {
 			navigate(`${config.basePath}/disposisi`);
@@ -381,17 +399,25 @@ const DPMDStaffLayout = () => {
 
 	// Navigation items
 	const navItems = [
-		{ path: "/dpmd/dashboard", label: "Dashboard", icon: 'dashboard', gradient: 'from-cyan-500 to-blue-600', color: 'text-cyan-600' },
-		{ path: "/core-dashboard/dashboard", label: "Statistik", icon: 'trending', gradient: 'from-red-500 to-pink-600', color: 'text-red-600' },
-		{ path: "/dpmd/jadwal-kegiatan", label: "Kegiatan", icon: 'calendar', gradient: 'from-amber-500 to-orange-600', color: 'text-amber-600' },
-		{ path: "/dpmd/perjadin", label: "Perjadin", icon: 'briefcase', gradient: 'from-teal-500 to-cyan-600', color: 'text-teal-600' },
-		{ path: "/dpmd/disposisi", label: "Disposisi", icon: 'mail', gradient: 'from-purple-500 to-indigo-600', color: 'text-purple-600' },
+		{ path: "/dpmd/dashboard", label: "Dashboard", icon: FiHome },
+		{ path: "/core-dashboard/dashboard", label: "Statistik", icon: FiBarChart2 },
+		{ path: "/dpmd/jadwal-kegiatan", label: "Kegiatan", icon: FiCalendar },
+		{ path: "/dpmd/perjadin", label: "Perjadin", icon: FiBriefcase },
+		{ path: "/dpmd/disposisi", label: "Disposisi", icon: FiMail },
+		{ path: "/dpmd/video-meeting", label: "Video Meeting", icon: FiVideo },
 	];
 
-	// Mobile bottom nav includes menu button
+	// Mobile bottom nav - simplified 3 items with Bidang as main center button
+	const userBidang = BIDANG_ROUTES[user.bidang_id];
 	const bottomNavItems = [
-		...navItems,
-		{ path: `${config.basePath}/menu`, label: "Menu", icon: FiMenu, action: () => setShowMenu(true) },
+		{ path: "/dpmd/dashboard", label: "Home", icon: FiHome },
+		{ 
+			path: userBidang?.path || "/dpmd/jadwal-kegiatan", 
+			label: userBidang?.name || "Bidang", 
+			icon: userBidang?.icon || FiCalendar, 
+			isMain: true 
+		},
+		{ path: `${config.basePath}/profile`, label: "Profil", icon: FiUser },
 	];
 
 	// Sidebar nav items (includes profile and bidang)
@@ -522,25 +548,6 @@ const DPMDStaffLayout = () => {
 								</button>
 							);
 						})}
-
-						{/* Notifications */}
-						<button
-							onClick={handleNotificationClick}
-							className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'} p-3 rounded-xl transition-all duration-200 text-gray-600 ${theme.hoverBg} ${theme.hoverText}`}
-							title={isSidebarCollapsed ? 'Notifikasi' : ''}
-						>
-							<div className="relative">
-								<FiBell className="h-5 w-5" />
-								{unreadCount > 0 && (
-									<span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center font-bold">
-										{unreadCount > 9 ? '9+' : unreadCount}
-									</span>
-								)}
-							</div>
-							{!isSidebarCollapsed && (
-								<span className="text-sm font-medium">Notifikasi</span>
-							)}
-						</button>
 					</nav>
 
 					{/* User Profile & Logout at bottom */}
@@ -715,20 +722,36 @@ const DPMDStaffLayout = () => {
 			{/* Bottom Navigation - Mobile Only */}
 			{!isDesktop && (
 				<nav className={`fixed bottom-0 left-0 right-0 bg-white ${theme.borderColor} border-t shadow-lg z-50`}>
-					<div className="max-w-lg mx-auto px-2">
-						<div className="flex items-center justify-around py-3">
+					<div className="max-w-lg mx-auto px-4">
+						<div className="flex items-end justify-around py-2">
 							{bottomNavItems.map((item, index) => {
-								const isActive = location.pathname === item.path;
-								// Icon mapping for mobile bottom nav
-								const iconMap = {
-									'dashboard': FiHome,
-									'trending': FiBarChart2,
-									'calendar': FiCalendar,
-									'briefcase': FiBriefcase,
-									'mail': FiMail,
-								};
-								const Icon = typeof item.icon === 'string' ? iconMap[item.icon] : item.icon;
+								const isActive = location.pathname === item.path ||
+									(item.isMain && location.pathname.startsWith(item.path));
+								const Icon = item.icon;
 								
+								// Main button (Jadwal Kegiatan) - larger & elevated
+								if (item.isMain) {
+									return (
+										<button
+											key={index}
+											onClick={() => navigate(item.path)}
+											className="relative flex flex-col items-center -mt-5"
+										>
+											<div className={`flex items-center justify-center h-14 w-14 rounded-full shadow-lg transition-all duration-200 ${
+												isActive
+													? `bg-gradient-to-br ${theme.gradientFrom} ${theme.gradientTo} text-white scale-110`
+													: `bg-gradient-to-br ${theme.gradientFrom} ${theme.gradientTo} text-white hover:scale-105`
+											}`}>
+												<Icon className="h-7 w-7" />
+											</div>
+											<span className={`text-[11px] mt-1 font-semibold ${
+												isActive ? theme.activeText : 'text-gray-500'
+											}`}>{item.label}</span>
+										</button>
+									);
+								}
+
+								// Regular nav items
 								return (
 									<button
 										key={index}
@@ -739,18 +762,16 @@ const DPMDStaffLayout = () => {
 												navigate(item.path);
 											}
 										}}
-										className={`relative flex items-center justify-center p-3 rounded-xl transition-all duration-200 ${
+										className={`relative flex flex-col items-center justify-center px-4 py-1 rounded-xl transition-all duration-200 ${
 											isActive 
-												? `${theme.activeText} ${theme.activeBg} scale-110` 
-												: `text-gray-400 ${theme.hoverText} ${theme.hoverBg}`
+												? theme.activeText 
+												: `text-gray-400 ${theme.hoverText}`
 										}`}
 									>
 										<Icon className="h-6 w-6" />
-										{item.badge > 0 && (
-											<span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
-												{item.badge > 99 ? '99+' : item.badge}
-											</span>
-										)}
+										<span className={`text-[11px] mt-1 font-medium ${
+											isActive ? theme.activeText : 'text-gray-400'
+										}`}>{item.label}</span>
 									</button>
 								);
 							})}
@@ -817,30 +838,6 @@ const DPMDStaffLayout = () => {
 									<div>
 										<h4 className="font-semibold text-gray-800">Profil Saya</h4>
 										<p className="text-sm text-gray-500">Lihat & edit profil</p>
-									</div>
-								</button>
-
-								{/* Notifications */}
-								<button 
-									onClick={() => {
-										setShowMenu(false);
-										handleNotificationClick();
-									}}
-									className={`w-full flex items-center gap-4 p-4 rounded-xl ${theme.hoverBg} transition-colors text-left`}
-								>
-									<div className={`h-12 w-12 ${theme.badgeBg} rounded-xl flex items-center justify-center relative`}>
-										<FiBell className={`h-6 w-6 ${theme.badgeText}`} />
-										{unreadCount > 0 && (
-											<span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
-												{unreadCount > 99 ? '99+' : unreadCount}
-											</span>
-										)}
-									</div>
-									<div>
-										<h4 className="font-semibold text-gray-800">Notifikasi</h4>
-										<p className="text-sm text-gray-500">
-											{unreadCount > 0 ? `${unreadCount} notifikasi baru` : 'Tidak ada notifikasi baru'}
-										</p>
 									</div>
 								</button>
 
