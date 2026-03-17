@@ -11,7 +11,7 @@ import {
 	LuUserPlus,
 	LuUserCheck
 } from "react-icons/lu";
-import { getDetailActivityLogs, getListActivityLogs } from "../../services/activityLogs";
+import { getDetailActivityLogs, getListActivityLogs, getAllActivityLogs } from "../../services/activityLogs";
 import { useAuth } from "../../context/AuthContext";
 
 const AktivitasLog = forwardRef(({ lembagaType, lembagaId, mode = "detail", title, desaId }, ref) => {
@@ -20,12 +20,17 @@ const AktivitasLog = forwardRef(({ lembagaType, lembagaId, mode = "detail", titl
 	const [loading, setLoading] = useState(true);
 
 	const fetchLogs = async () => {
-		if (!lembagaType) return;
+		if (mode !== "all" && !lembagaType) return;
 		
 		setLoading(true);
 		try {
 			let response;
-			if (mode === "list") {
+			if (mode === "all") {
+				// All mode - tampilkan semua log semua kelembagaan di desa
+				const targetDesaId = desaId || user?.desa_id;
+				if (!targetDesaId) return;
+				response = await getAllActivityLogs({ desa_id: targetDesaId, limit: 50 });
+			} else if (mode === "list") {
 				// List mode - tampilkan semua log untuk type ini di desa
 				// Gunakan desaId dari prop (untuk admin) atau user.desa_id (untuk user desa)
 				const targetDesaId = desaId || user?.desa_id;
@@ -110,9 +115,11 @@ const AktivitasLog = forwardRef(({ lembagaType, lembagaId, mode = "detail", titl
 					<div>
 						<h3 className="text-xl font-bold text-gray-800">Log Aktivitas</h3>
 						<p className="text-sm text-gray-500">
-							{mode === "list" 
-								? `Riwayat perubahan ${title || "semua " + lembagaType}`
-								: "Riwayat perubahan dan aktivitas"}
+							{mode === "all"
+								? "Riwayat aktivitas seluruh kelembagaan"
+								: mode === "list" 
+									? `Riwayat perubahan ${title || "semua " + lembagaType}`
+									: "Riwayat perubahan dan aktivitas"}
 						</p>
 					</div>
 				</div>
@@ -154,7 +161,7 @@ const AktivitasLog = forwardRef(({ lembagaType, lembagaId, mode = "detail", titl
 												</p>
 												<div className="flex items-center space-x-2 mt-1">
 													{getEntityBadge(log.entity_type)}
-													{mode === "list" && log.kelembagaan_nama && (
+													{(mode === "list" || mode === "all") && log.kelembagaan_nama && (
 														<span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-semibold rounded truncate">
 															{log.kelembagaan_nama}
 														</span>

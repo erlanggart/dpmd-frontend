@@ -15,17 +15,26 @@ import {
 	LuBuilding,
 	LuHeartHandshake,
 	LuShield,
+	LuShieldCheck,
+	LuShieldOff,
+	LuPower,
+	LuPowerOff,
+	LuTriangleAlert,
+	LuPencil,
 } from "react-icons/lu";
+import Swal from "sweetalert2";
 
 const ProfilCard = ({
 	profil,
 	type,
 	onEdit,
 	rtCount,
+	rtList = [],
 	pengurusCount,
 	onToggleStatus,
 	onToggleVerification,
 	produkHukumList = [],
+	onUpdatePenduduk,
 }) => {
 	const { isSuperAdmin, isAdminBidangPMD, isUserDesa } = useAuth();
 	const { isEditMode } = useEditMode();
@@ -33,9 +42,9 @@ const ProfilCard = ({
 
 	// Determine if edit button should be shown
 	// For admin (superadmin/admin bidang PMD): always show
-	// For desa: only show if edit mode is ON
+	// For desa: only show if edit mode is ON AND kelembagaan is not verified
 	const showEditButton =
-		isSuperAdmin() || isAdminBidangPMD() || (isUserDesa() && isEditMode);
+		isSuperAdmin() || isAdminBidangPMD() || (isUserDesa() && isEditMode && profil?.status_verifikasi !== "verified");
 
 	const title = useMemo(() => {
 		if (type === "rt") return `RT ${profil?.nomor ?? "-"}`;
@@ -121,6 +130,11 @@ const ProfilCard = ({
 			icon: <LuShield className="w-8 h-8" />,
 			color: "from-green-400 to-green-600",
 			bg: "from-green-50 to-green-100",
+		},
+		"lembaga-lainnya": {
+			icon: <LuBuilding className="w-8 h-8" />,
+			color: "from-slate-500 to-slate-700",
+			bg: "from-slate-50 to-slate-100",
 		},
 		default: {
 			icon: "🏢",
@@ -291,6 +305,53 @@ const ProfilCard = ({
 						</div>
 					</div>
 
+					{/* SK Penonaktifan Card - tampil saat kelembagaan nonaktif */}
+					{profil?.status_kelembagaan === "nonaktif" && profil?.produk_hukum_penonaktifan_id &&
+					produkHukumList?.find((ph) => ph.id === profil.produk_hukum_penonaktifan_id) && (
+						<div className="p-4 rounded-xl bg-gradient-to-r from-red-50 to-rose-100 border border-red-200 hover:shadow-md transition-shadow duration-300">
+							<div className="flex items-start space-x-3">
+								<div className="mt-1">
+									<LuPowerOff className="w-5 h-5 text-red-600" />
+								</div>
+								<div className="flex-1">
+									<h4 className="font-semibold text-gray-800 text-sm mb-1">
+										SK Penonaktifan Lembaga
+									</h4>
+									<button
+										onClick={() =>
+											navigate(`/desa/produk-hukum/${profil.produk_hukum_penonaktifan_id}`)
+										}
+										className="w-full text-left hover:bg-red-100 rounded-lg p-2 -m-2 transition-colors duration-200 group"
+									>
+										<div className="text-sm">
+											{(() => {
+												const ph = produkHukumList.find(
+													(ph) => ph.id === profil.produk_hukum_penonaktifan_id,
+												);
+												return (
+													<div className="space-y-1">
+														<div className="flex items-center justify-between">
+															<p className="text-red-700 font-medium group-hover:text-red-800">
+																Nomor {ph.nomor} Tahun {ph.tahun}
+															</p>
+															<LuChevronRight className="w-4 h-4 text-red-600 group-hover:text-red-800 transform group-hover:translate-x-1 transition-all duration-200" />
+														</div>
+														<p className="text-gray-600 leading-relaxed group-hover:text-gray-700">
+															{ph.judul}
+														</p>
+														<p className="text-xs text-red-600 group-hover:text-red-700 font-medium mt-1">
+															Klik untuk melihat detail SK →
+														</p>
+													</div>
+												);
+											})()}
+										</div>
+									</button>
+								</div>
+							</div>
+						</div>
+					)}
+
 					{/* RW Induk Card - khusus untuk RT */}
 					{type === "rt" && profil?.rw && (
 						<div className="p-4 rounded-xl bg-gradient-to-r from-indigo-50 to-blue-100 border border-indigo-200 hover:shadow-md transition-shadow duration-300">
@@ -332,121 +393,192 @@ const ProfilCard = ({
 					)}
 
 					{/* Statistics Grid */}
-					<div className="grid grid-cols-2 gap-4">
+				{(type === "rw" && rtCount > 0) || pengurusCount > 0 ? (
+					<div className="flex gap-3">
 						{type === "rw" && rtCount > 0 && (
-							<div className="group/stat p-4 bg-gradient-to-br from-emerald-50 to-green-100 rounded-xl border border-emerald-200 hover:shadow-lg transition-all duration-300 hover:scale-105">
-								<div className="text-center">
-									<div className="text-3xl font-bold text-emerald-700 mb-1">
-										{rtCount}
-									</div>
-									<div className="text-sm font-medium text-emerald-600">RT</div>
-									<div className="w-8 h-1 bg-emerald-400 rounded-full mx-auto mt-2 transform group-hover/stat:w-12 transition-all duration-300"></div>
+							<div className="flex items-center gap-3 flex-1 bg-emerald-50 rounded-lg px-3 py-2.5 border border-emerald-200 shadow-sm">
+								<div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
+									<LuHouse className="w-4 h-4 text-emerald-600" />
+								</div>
+								<div>
+									<div className="text-base font-bold text-emerald-700 leading-none">{rtCount}</div>
+									<div className="text-xs text-emerald-500 mt-0.5">Jumlah RT</div>
 								</div>
 							</div>
 						)}
-
 						{pengurusCount > 0 && (
-							<div className="group/stat p-4 bg-gradient-to-br from-violet-50 to-purple-100 rounded-xl border border-violet-200 hover:shadow-lg transition-all duration-300 hover:scale-105">
-								<div className="text-center">
-									<div className="text-3xl font-bold text-violet-700 mb-1">
-										{pengurusCount}
-									</div>
-									<div className="text-sm font-medium text-violet-600">
-										Pengurus
-									</div>
-									<div className="w-8 h-1 bg-violet-400 rounded-full mx-auto mt-2 transform group-hover/stat:w-12 transition-all duration-300"></div>
+							<div className="flex items-center gap-3 flex-1 bg-violet-50 rounded-lg px-3 py-2.5 border border-violet-200 shadow-sm">
+								<div className="w-8 h-8 rounded-lg bg-violet-100 flex items-center justify-center flex-shrink-0">
+									<LuUsers className="w-4 h-4 text-violet-600" />
+								</div>
+								<div>
+									<div className="text-base font-bold text-violet-700 leading-none">{pengurusCount}</div>
+									<div className="text-xs text-violet-500 mt-0.5">Pengurus</div>
 								</div>
 							</div>
 						)}
 					</div>
+				) : null}
 				</div>
+
+				{/* Data Penduduk - RT */}
+				{type === "rt" && (
+					<div className="p-4 rounded-xl bg-gradient-to-r from-sky-50 to-blue-50 border border-sky-200">
+						<div className="flex items-center justify-between mb-3">
+							<h4 className="text-xs font-semibold text-sky-700 uppercase tracking-wide flex items-center gap-2">
+								<LuUsers className="w-3.5 h-3.5" /> Data Penduduk
+							</h4>
+							{(isSuperAdmin() || isAdminBidangPMD() || (isUserDesa() && isEditMode)) && onUpdatePenduduk && (
+								<button
+									onClick={onUpdatePenduduk}
+									className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-sky-700 bg-white border border-sky-200 rounded-lg hover:bg-sky-50 transition-colors"
+								>
+									<LuPencil className="w-3 h-3" />
+									Perbarui
+								</button>
+							)}
+						</div>
+						{profil?.jumlah_jiwa != null || profil?.jumlah_kk != null ? (
+							<div className="flex gap-3">
+								<div className="flex items-center gap-3 flex-1 bg-white rounded-lg px-3 py-2.5 border border-sky-100 shadow-sm">
+									<div className="w-8 h-8 rounded-lg bg-sky-100 flex items-center justify-center flex-shrink-0">
+										<LuUsers className="w-4 h-4 text-sky-600" />
+									</div>
+									<div>
+										<div className="text-base font-bold text-sky-700 leading-none">{profil?.jumlah_jiwa != null ? profil.jumlah_jiwa.toLocaleString('id-ID') : '-'}</div>
+										<div className="text-xs text-sky-500 mt-0.5">Jumlah Jiwa</div>
+									</div>
+								</div>
+								<div className="flex items-center gap-3 flex-1 bg-white rounded-lg px-3 py-2.5 border border-amber-100 shadow-sm">
+									<div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+										<LuHouse className="w-4 h-4 text-amber-600" />
+									</div>
+									<div>
+										<div className="text-base font-bold text-amber-700 leading-none">{profil?.jumlah_kk != null ? profil.jumlah_kk.toLocaleString('id-ID') : '-'}</div>
+										<div className="text-xs text-amber-500 mt-0.5">Kepala Keluarga</div>
+									</div>
+								</div>
+							</div>
+						) : (
+							<p className="text-sm text-sky-500 italic">Belum ada data penduduk</p>
+						)}
+					</div>
+				)}
+
+				{/* Data Penduduk Agregat - RW (dari semua RT) */}
+				{type === "rw" && rtList.length > 0 && (() => {
+					const totalJiwa = rtList.reduce((sum, rt) => sum + (rt.jumlah_jiwa || 0), 0);
+					const totalKK = rtList.reduce((sum, rt) => sum + (rt.jumlah_kk || 0), 0);
+					if (totalJiwa === 0 && totalKK === 0) return null;
+					return (
+						<div className="p-4 rounded-xl bg-gradient-to-r from-sky-50 to-blue-50 border border-sky-200">
+							<h4 className="text-xs font-semibold text-sky-700 uppercase tracking-wide mb-3 flex items-center gap-2">
+								<LuUsers className="w-3.5 h-3.5" /> Data Penduduk
+								<span className="font-normal text-sky-500 normal-case">(akumulasi {rtList.length} RT)</span>
+							</h4>
+							<div className="flex gap-3">
+								{totalJiwa > 0 && (
+									<div className="flex items-center gap-3 flex-1 bg-white rounded-lg px-3 py-2.5 border border-sky-100 shadow-sm">
+										<div className="w-8 h-8 rounded-lg bg-sky-100 flex items-center justify-center flex-shrink-0">
+											<LuUsers className="w-4 h-4 text-sky-600" />
+										</div>
+										<div>
+											<div className="text-base font-bold text-sky-700 leading-none">{totalJiwa.toLocaleString('id-ID')}</div>
+											<div className="text-xs text-sky-500 mt-0.5">Jumlah Jiwa</div>
+										</div>
+									</div>
+								)}
+								{totalKK > 0 && (
+									<div className="flex items-center gap-3 flex-1 bg-white rounded-lg px-3 py-2.5 border border-amber-100 shadow-sm">
+										<div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+											<LuHouse className="w-4 h-4 text-amber-600" />
+										</div>
+										<div>
+											<div className="text-base font-bold text-amber-700 leading-none">{totalKK.toLocaleString('id-ID')}</div>
+											<div className="text-xs text-amber-500 mt-0.5">Kepala Keluarga</div>
+										</div>
+									</div>
+								)}
+							</div>
+						</div>
+					);
+				})()}
+
+				{/* Catatan Verifikasi - Feedback dari Admin */}
+				{profil?.catatan_verifikasi && profil?.status_verifikasi !== "verified" && (
+					<div className="p-4 rounded-xl bg-amber-50 border border-amber-200">
+						<div className="flex items-start space-x-3">
+							<div className="mt-0.5">
+								<LuTriangleAlert className="w-5 h-5 text-amber-600" />
+							</div>
+							<div className="flex-1">
+								<h4 className="font-semibold text-amber-800 text-sm mb-1">
+									Catatan Verifikasi
+								</h4>
+								<p className="text-sm text-amber-700 leading-relaxed whitespace-pre-line">
+									{profil.catatan_verifikasi}
+								</p>
+								{profil?.verifikator_nama && (
+									<p className="text-xs text-amber-500 mt-2">
+										Oleh: {profil.verifikator_nama}
+										{profil?.verified_at && ` — ${new Date(profil.verified_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}`}
+									</p>
+								)}
+							</div>
+						</div>
+					</div>
+				)}
 
 				{/* Admin Controls */}
 				{(isUserDesa() || isAdminBidangPMD() || isSuperAdmin()) && (
-					<div className="pt-4 border-t border-gray-200 space-y-4">
-						<h4 className="text-sm font-semibold text-gray-700 flex items-center space-x-2">
-							<LuSettings className="w-5 h-5 text-gray-600" />
-							<span>Kontrol Admin</span>
-						</h4>
+					<div className="pt-4 border-t border-gray-200 space-y-3">
+						<div className="flex flex-wrap gap-2">
+							{/* Status Toggle Button */}
+							<button
+								onClick={() =>
+									onToggleStatus(profil?.id, profil?.status_kelembagaan)
+								}
+								className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+									profil?.status_kelembagaan === "aktif"
+										? "bg-red-50 text-red-700 hover:bg-red-100 border border-red-200"
+										: "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200"
+								}`}
+							>
+								{profil?.status_kelembagaan === "aktif" ? (
+									<>
+										<LuPowerOff className="w-4 h-4" />
+										Nonaktifkan
+									</>
+								) : (
+									<>
+										<LuPower className="w-4 h-4" />
+										Aktifkan
+									</>
+								)}
+							</button>
 
-						<div className="grid gap-3">
-							{/* Status Control */}
-							<div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
-								<div className="flex flex-col space-y-1">
-									<div className="flex items-center space-x-3">
-										<div
-											className={`w-3 h-3 rounded-full ${currentStatus.indicator} animate-pulse`}
-										></div>
-										<span className="font-medium text-gray-700">
-											Status Kelembagaan
-										</span>
-									</div>
-									<p className="text-xs text-gray-500 ml-6">
-										{profil?.status_kelembagaan === "aktif"
-											? "Kelembagaan ini sedang aktif beroperasi"
-											: "Kelembagaan ini tidak aktif"}
-									</p>
-								</div>
+							{/* Verification Toggle Button */}
+							{(isAdminBidangPMD() || isSuperAdmin()) && (
 								<button
-									onClick={() =>
-										onToggleStatus(profil?.id, profil?.status_kelembagaan)
-									}
-									className={`relative inline-flex h-8 w-14 items-center rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 shadow-lg hover:shadow-xl transform hover:scale-105 ${
-										profil?.status_kelembagaan === "aktif"
-											? "bg-emerald-500 focus:ring-emerald-500"
-											: "bg-gray-300 focus:ring-gray-300"
+									onClick={() => onToggleVerification(profil?.id, profil?.status_verifikasi)}
+									className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+										profil?.status_verifikasi === "verified"
+											? "bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200"
+											: "bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200"
 									}`}
 								>
-									<span
-										className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-lg transition-transform duration-300 ${
-											profil?.status_kelembagaan === "aktif"
-												? "translate-x-7"
-												: "translate-x-1"
-										}`}
-									/>
+									{profil?.status_verifikasi === "verified" ? (
+										<>
+											<LuShieldOff className="w-4 h-4" />
+											Batal Verifikasi
+										</>
+									) : (
+										<>
+											<LuShieldCheck className="w-4 h-4" />
+											Verifikasi
+										</>
+									)}
 								</button>
-							</div>
-
-							{/* Verification Control */}
-							{(isAdminBidangPMD() || isSuperAdmin()) && (
-								<div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
-									<div className="flex flex-col space-y-1">
-										<div className="flex items-center space-x-3">
-											<div
-												className={`w-3 h-3 rounded-full ${currentVerification.indicator} animate-pulse`}
-											></div>
-											<span className="font-medium text-gray-700">
-												Status Verifikasi
-											</span>
-										</div>
-										<p className="text-xs text-gray-500 ml-6">
-											{profil?.status_verifikasi === "verified"
-												? "Data kelembagaan sudah diverifikasi"
-												: "Data kelembagaan belum diverifikasi"}
-										</p>
-									</div>
-									<button
-										onClick={() =>
-											onToggleVerification(
-												profil?.id,
-												profil?.status_verifikasi,
-											)
-										}
-										className={`relative inline-flex h-8 w-14 items-center rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 shadow-lg hover:shadow-xl transform hover:scale-105 ${
-											profil?.status_verifikasi === "verified"
-												? "bg-blue-500 focus:ring-blue-500"
-												: "bg-gray-300 focus:ring-gray-300"
-										}`}
-									>
-										<span
-											className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-lg transition-transform duration-300 ${
-												profil?.status_verifikasi === "verified"
-													? "translate-x-7"
-													: "translate-x-1"
-											}`}
-										/>
-									</button>
-								</div>
 							)}
 						</div>
 					</div>

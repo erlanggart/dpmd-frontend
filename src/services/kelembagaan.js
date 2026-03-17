@@ -67,20 +67,34 @@ export const updateSatlinmas = (id, data) =>
 export const deleteSatlinmas = (id) =>
 	makeApiCall(api, "satlinmas", "delete", id);
 
+// Lembaga Lainnya (multiple allowed)
+export const listLembagaLainnya = () => makeApiCall(api, "lembaga-lainnya", "list");
+export const createLembagaLainnya = (data) =>
+	makeApiCall(api, "lembaga-lainnya", "create", null, data);
+export const getLembagaLainnya = (id) => makeApiCall(api, "lembaga-lainnya", "show", id);
+export const updateLembagaLainnya = (id, data) =>
+	makeApiCall(api, "lembaga-lainnya", "update", id, data);
+export const deleteLembagaLainnya = (id) =>
+	makeApiCall(api, "lembaga-lainnya", "delete", id);
+
 // Kelembagaan Summary - Lightweight endpoint for counts only
 export const getKelembagaanSummary = () => api.get("/desa/kelembagaan/summary");
 export const getKelembagaanDetailedSummary = () =>
 	api.get("/desa/kelembagaan/detailed-summary");
 
 // Toggle Status Functions - menggunakan endpoint yang sesuai dengan role
-export const toggleKelembagaanStatus = (type, id, status) => {
+export const toggleKelembagaanStatus = (type, id, status, produk_hukum_penonaktifan_id = null) => {
 	const endpoint = `/kelembagaan/${type}/${id}/toggle-status`;
 	const params = getAdminParams();
-	return api.put(endpoint, { status_kelembagaan: status }, { params });
+	const body = { status_kelembagaan: status };
+	if (produk_hukum_penonaktifan_id) body.produk_hukum_penonaktifan_id = produk_hukum_penonaktifan_id;
+	return api.put(endpoint, body, { params });
 };
 
-export const toggleKelembagaanVerification = (type, id, status) => {
+export const toggleKelembagaanVerification = (type, id, status, catatan_verifikasi = null) => {
 	const endpoint = `/kelembagaan/${type}/${id}/toggle-verification`;
 	const params = getAdminParams();
-	return api.put(endpoint, { status_verifikasi: status }, { params });
+	const body = { status_verifikasi: status };
+	if (catatan_verifikasi) body.catatan_verifikasi = catatan_verifikasi;
+	return api.put(endpoint, body, { params });
 };

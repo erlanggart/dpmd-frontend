@@ -367,6 +367,7 @@ export default function PengurusForm({
 				lpm: "lpms",
 				"karang-taruna": "karang_tarunas",
 				pkk: "pkks",
+				"lembaga-lainnya": "lembaga-lainnya",
 			};
 
 			const backendKelembagaanType =

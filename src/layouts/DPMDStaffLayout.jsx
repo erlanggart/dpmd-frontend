@@ -399,12 +399,12 @@ const DPMDStaffLayout = () => {
 
 	// Navigation items
 	const navItems = [
-		{ path: "/dpmd/dashboard", label: "Dashboard", icon: FiHome },
-		{ path: "/core-dashboard/dashboard", label: "Statistik", icon: FiBarChart2 },
-		{ path: "/dpmd/jadwal-kegiatan", label: "Kegiatan", icon: FiCalendar },
-		{ path: "/dpmd/perjadin", label: "Perjadin", icon: FiBriefcase },
-		{ path: "/dpmd/disposisi", label: "Disposisi", icon: FiMail },
-		{ path: "/dpmd/video-meeting", label: "Video Meeting", icon: FiVideo },
+		{ path: "/dpmd/dashboard", label: "Dashboard", icon: 'dashboard', color: 'text-orange-600', gradient: 'from-orange-500 to-orange-600' },
+		{ path: "/core-dashboard/dashboard", label: "Statistik", icon: 'chart', color: 'text-blue-600', gradient: 'from-blue-500 to-blue-700' },
+		{ path: "/dpmd/jadwal-kegiatan", label: "Kegiatan", icon: 'calendar', color: 'text-emerald-600', gradient: 'from-emerald-500 to-teal-600' },
+		{ path: "/dpmd/perjadin", label: "Perjadin", icon: 'briefcase', color: 'text-amber-600', gradient: 'from-amber-500 to-orange-600' },
+		{ path: "/dpmd/disposisi", label: "Disposisi", icon: 'mail', color: 'text-purple-600', gradient: 'from-purple-500 to-indigo-600' },
+		{ path: "/dpmd/video-meeting", label: "Video Meeting", icon: 'video', color: 'text-cyan-600', gradient: 'from-cyan-500 to-teal-600' },
 	];
 
 	// Mobile bottom nav - simplified 3 items with Bidang as main center button

@@ -25,6 +25,8 @@ import {
 	LuAward,
 	LuUserRoundCog,
 	LuUserRoundCheck,
+	LuShieldCheck,
+	LuShieldAlert,
 } from "react-icons/lu";
 import {
 	getJabatanList,
@@ -175,10 +177,17 @@ const PengurusItem = ({ pengurus, user }) => {
 							<h6 className="font-semibold text-gray-800 group-hover:text-blue-800 transition-colors">
 								{pengurus.nama_lengkap}
 							</h6>
-							<span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 shadow-sm">
-								<LuBadgeCheck className="w-3 h-3 mr-1" />
-								Aktif
-							</span>
+							{pengurus.status_verifikasi === "verified" ? (
+								<span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 shadow-sm">
+									<LuShieldCheck className="w-3 h-3 mr-1" />
+									Terverifikasi
+								</span>
+							) : (
+								<span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-gradient-to-r from-yellow-100 to-amber-100 text-yellow-700 shadow-sm">
+									<LuShieldAlert className="w-3 h-3 mr-1" />
+									Belum Verifikasi
+								</span>
+							)}
 						</div>
 
 						<div className="flex items-center space-x-4 text-xs text-gray-500">
@@ -321,8 +330,9 @@ const PengurusJabatanList = ({
 								Struktur Pengurus
 							</h3>
 							<p className="text-sm text-gray-500 mt-1">
-								Daftar jabatan dan pengurus aktif •{" "}
-								{Object.keys(jabatanMap).length} Jabatan
+								{showHistory
+									? `Riwayat pengurus yang pernah menjabat • ${historyPengurus.length} Orang`
+									: `Daftar jabatan dan pengurus aktif • ${Object.keys(jabatanMap).length} Jabatan`}
 							</p>
 						</div>
 					</div>
@@ -330,19 +340,23 @@ const PengurusJabatanList = ({
 						{historyPengurus.length > 0 && (
 							<button
 								onClick={toggleHistory}
-								className="flex items-center space-x-2 px-4 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200 shadow-sm"
+								className={`flex items-center space-x-2 px-4 py-2.5 rounded-lg transition-colors duration-200 shadow-sm ${
+									showHistory
+										? "bg-indigo-100 text-indigo-700 border border-indigo-300"
+										: "border border-gray-300 hover:bg-gray-50"
+								}`}
 							>
 								{showHistory ? (
-									<LuEyeOff className="w-4 h-4" />
+									<LuUsers className="w-4 h-4" />
 								) : (
-									<LuEye className="w-4 h-4" />
+									<LuHistory className="w-4 h-4" />
 								)}
 								<span className="text-sm font-medium">
-									{showHistory ? "Sembunyikan" : "Lihat"} History
+									{showHistory ? "Pengurus Aktif" : "Riwayat Pengurus"}
 								</span>
 							</button>
 						)}
-						{canManagePengurus && showAddButton && (
+						{canManagePengurus && showAddButton && !showHistory && (
 							<button
 								onClick={() => onAddPengurus?.()}
 								className="flex items-center space-x-2 px-4 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 transform hover:scale-105 transition-all duration-200 shadow-md hover:shadow-lg"
@@ -357,20 +371,22 @@ const PengurusJabatanList = ({
 
 			<div className="p-6">
 				{/* Active Pengurus */}
-				<div className="grid gap-4">
-					{Object.entries(jabatanMap).map(([jabatan, pengurusList]) => (
-						<JabatanCard
-							key={jabatan}
-							jabatan={jabatan}
-							pengurusList={pengurusList}
-							user={user}
-						/>
-					))}
-				</div>
+				{!showHistory && (
+					<div className="grid gap-4">
+						{Object.entries(jabatanMap).map(([jabatan, pengurusList]) => (
+							<JabatanCard
+								key={jabatan}
+								jabatan={jabatan}
+								pengurusList={pengurusList}
+								user={user}
+							/>
+						))}
+					</div>
+				)}
 
-				{/* Summary History Section */}
+				{/* History Section */}
 				{showHistory && historyPengurus.length > 0 && (
-					<div className="mt-8 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
+					<div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
 						<div className="flex items-center space-x-3 mb-4">
 							<div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-indigo-600 rounded-lg flex items-center justify-center text-white">
 								<LuHistory className="w-5 h-5" />
@@ -385,42 +401,12 @@ const PengurusJabatanList = ({
 							</div>
 						</div>
 
-						<div className="grid grid-cols-2 gap-4 mb-6">
-							<div className="p-4 bg-white rounded-lg shadow-sm border border-green-200">
-								<div className="flex items-center space-x-2">
-									<LuBadgeCheck className="w-5 h-5 text-green-600" />
-									<span className="font-semibold text-green-800">
-										Pengurus Aktif
-									</span>
-								</div>
-								<div className="text-2xl font-bold text-green-700 mt-2">
-									{activePengurus.length}
-								</div>
-								<div className="text-sm text-green-600">
-									Orang sedang menjabat
-								</div>
-							</div>
-
-							<div className="p-4 bg-white rounded-lg shadow-sm border border-red-200">
-								<div className="flex items-center space-x-2">
-									<LuHistory className="w-5 h-5 text-red-600" />
-									<span className="font-semibold text-red-800">Riwayat</span>
-								</div>
-								<div className="text-2xl font-bold text-red-700 mt-2">
-									{historyPengurus.length}
-								</div>
-								<div className="text-sm text-red-600">
-									Orang pernah menjabat
-								</div>
-							</div>
-						</div>
-
 						{/* Daftar History Pengurus */}
 						<div className="bg-white rounded-xl border border-gray-200 shadow-sm">
 							<div className="p-4 bg-gray-50 border-b border-gray-200 rounded-t-xl">
 								<h5 className="font-semibold text-gray-800 flex items-center space-x-2">
 									<LuHistory className="w-5 h-5" />
-									<span>Daftar Pengurus Sebelumnya</span>
+									<span>Daftar Pengurus Sebelumnya ({historyPengurus.length} orang)</span>
 								</h5>
 							</div>
 							<div className="divide-y divide-gray-100">

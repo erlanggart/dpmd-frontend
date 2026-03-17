@@ -13,6 +13,7 @@ import { useAuth } from "../../../context/AuthContext";
 import { useEditMode } from "../../../context/EditModeContext";
 import kelembagaanApi from "../../../api/kelembagaan";
 import StatistikLKD from "../../../components/kelembagaan/StatistikLKD";
+import StatistikTahunan from "../../../components/kelembagaan/StatistikTahunan";
 import UnverifiedKelembagaanList from "../../../components/kelembagaan/UnverifiedKelembagaanList";
 import KecamatanAccordion from "../../../components/kelembagaan/KecamatanAccordion";
 import KelembagaanActivityList from "../../../components/kelembagaan/KelembagaanActivityList";
@@ -277,16 +278,12 @@ const Kelembagaan = () => {
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
+      
           <StatistikLKD summaryData={summaryData} loading={loading} />
-        </div>
+      
 
-        <div>
-          <KelembagaanActivityList />
-        </div>
-        
-      </div>
+      {/* Statistik Tahunan */}
+      <StatistikTahunan />
 
 <div className="grid grid-cols-4 gap-6">
   <div className="col-span-3">
@@ -297,7 +294,10 @@ const Kelembagaan = () => {
         onDesaClick={handleDesaClick}
       />
   </div>
-<div>
+<div className="col-span-1 space-y-4 gap-4">
+  
+          <KelembagaanActivityList />
+        
           <UnverifiedKelembagaanList 
             kecamatanData={kecamatanData}
             onDesaClick={handleDesaClick}

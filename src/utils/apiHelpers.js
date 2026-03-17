@@ -93,6 +93,7 @@ export const getEndpoint = (resource, operation = "list") => {
 		"lpm",
 		"satlinmas",
 		"pkk",
+		"lembaga-lainnya",
 	];
 
 	// For admin users, some operations use different patterns
@@ -145,6 +146,7 @@ export const getAdminParams = (resource = null, operation = null, additionalPara
 		"lpm",
 		"satlinmas",
 		"pkk",
+		"lembaga-lainnya",
 	];
 	const baseResource = resource ? resource.split("/")[0] : null;
 

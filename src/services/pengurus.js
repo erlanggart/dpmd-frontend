@@ -15,6 +15,7 @@ export const mapTypeToModel = (type) => {
 		lpm: "lpms",
 		pkk: "pkks",
 		satlinmas: "satlinmas",
+		"lembaga-lainnya": "lembaga-lainnya",
 	};
 	return map[type] || null;
 };
@@ -161,14 +162,16 @@ export const getPengurusById = (id, desaId = null) => {
 };
 
 // Update pengurus verification status (admin only)
-export const updatePengurusVerifikasi = (id, status_verifikasi, desaId = null) => {
+export const updatePengurusVerifikasi = (id, status_verifikasi, desaId = null, catatan_verifikasi = null) => {
 	const baseParams = desaId ? { desa_id: desaId } : {};
 	const params = getAdminParams("pengurus", "update", baseParams);
 	
 	const endpoint = getEndpoint("pengurus", "update");
+	const body = { status_verifikasi };
+	if (catatan_verifikasi) body.catatan_verifikasi = catatan_verifikasi;
 	return api.put(
 		`${endpoint}/${id}/verifikasi`,
-		{ status_verifikasi },
+		body,
 		{ params }
 	);
 };

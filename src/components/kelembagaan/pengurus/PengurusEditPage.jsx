@@ -32,6 +32,7 @@ const getRouteType = (pengurusableType) => {
 		lpms: "lpm",
 		pkks: "pkk",
 		satlinmas: "satlinmas",
+		"lembaga-lainnya": "lembaga-lainnya",
 	};
 	return mapping[pengurusableType] || pengurusableType;
 };
@@ -46,6 +47,7 @@ const getDisplayName = (pengurusableType) => {
 		lpms: "LPM",
 		pkks: "PKK",
 		satlinmas: "Satlinmas",
+		"lembaga-lainnya": "Lembaga Lainnya",
 	};
 	return mapping[pengurusableType] || pengurusableType;
 };

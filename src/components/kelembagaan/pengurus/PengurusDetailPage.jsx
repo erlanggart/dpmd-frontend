@@ -45,6 +45,7 @@ const getRouteType = (pengurusableType) => {
 		lpms: "lpm",
 		pkks: "pkk",
 		satlinmas: "satlinmas",
+		"lembaga-lainnya": "lembaga-lainnya",
 	};
 	return mapping[pengurusableType] || pengurusableType;
 };
@@ -65,6 +66,7 @@ const getDisplayName = (pengurusableType) => {
 		pkks: "PKK",
 		pkk: "PKK",
 		satlinmas: "Satlinmas",
+		"lembaga-lainnya": "Lembaga Lainnya",
 	};
 	return mapping[pengurusableType] || pengurusableType;
 };
@@ -227,93 +229,308 @@ const PengurusDetailPage = () => {
 	}, [pengurusId]); // Only depend on pengurusId to avoid infinite loop
 
 	const handleStatusUpdate = async (newStatus) => {
-		const result = await Swal.fire({
-			title: `${
-				newStatus === "selesai" ? "Nonaktifkan" : "Aktifkan"
-			} Pengurus?`,
-			text: `Apakah Anda yakin ingin ${
-				newStatus === "selesai" ? "menonaktifkan" : "mengaktifkan"
-			} pengurus ini?`,
-			icon: "warning",
+		if (newStatus === "selesai") {
+			// Check if tanggal_akhir_jabatan already exists
+			if (!pengurus.tanggal_akhir_jabatan) {
+				// Need to fill in end date first
+				const { value: endDate } = await Swal.fire({
+					title: "Nonaktifkan Pengurus",
+					html: `
+						<div class="text-left space-y-3">
+							<p class="text-sm text-gray-600">Tanggal akhir jabatan belum diisi. Silakan isi terlebih dahulu untuk menonaktifkan pengurus.</p>
+							<div>
+								<label class="block text-sm font-medium text-gray-700 mb-1">Tanggal Akhir Jabatan</label>
+								<input type="date" id="swal-end-date" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" value="${new Date().toISOString().split('T')[0]}">
+							</div>
+						</div>`,
+					showCancelButton: true,
+					confirmButtonText: "Nonaktifkan",
+					cancelButtonText: "Batal",
+					confirmButtonColor: "#dc2626",
+					focusConfirm: false,
+					preConfirm: () => {
+						const date = document.getElementById('swal-end-date').value;
+						if (!date) {
+							Swal.showValidationMessage('Tanggal akhir jabatan wajib diisi');
+							return false;
+						}
+						return date;
+					},
+				});
+
+				if (!endDate) return;
+
+				setUpdating(true);
+				try {
+					await updatePengurusStatus(pengurusId, newStatus, endDate);
+
+					await Swal.fire({
+						icon: "success",
+						title: "Berhasil",
+						text: "Pengurus berhasil dinonaktifkan",
+						timer: 2000,
+						showConfirmButton: false,
+					});
+
+					loadPengurusDetail();
+				} catch (error) {
+					console.error("Error updating status:", error);
+					Swal.fire({
+						icon: "error",
+						title: "Gagal",
+						text: "Gagal mengubah status pengurus",
+					});
+				} finally {
+					setUpdating(false);
+				}
+			} else {
+				// tanggal_akhir_jabatan already exists, proceed directly
+				const result = await Swal.fire({
+					title: "Nonaktifkan Pengurus?",
+					text: "Apakah Anda yakin ingin menonaktifkan pengurus ini?",
+					icon: "warning",
+					showCancelButton: true,
+					confirmButtonText: "Ya, lanjutkan",
+					cancelButtonText: "Batal",
+					confirmButtonColor: "#dc2626",
+				});
+
+				if (!result.isConfirmed) return;
+
+				setUpdating(true);
+				try {
+					await updatePengurusStatus(pengurusId, newStatus);
+
+					await Swal.fire({
+						icon: "success",
+						title: "Berhasil",
+						text: "Pengurus berhasil dinonaktifkan",
+						timer: 2000,
+						showConfirmButton: false,
+					});
+
+					loadPengurusDetail();
+				} catch (error) {
+					console.error("Error updating status:", error);
+					Swal.fire({
+						icon: "error",
+						title: "Gagal",
+						text: "Gagal mengubah status pengurus",
+					});
+				} finally {
+					setUpdating(false);
+				}
+			}
+		} else {
+			// Activating pengurus
+			const result = await Swal.fire({
+				title: "Aktifkan Pengurus?",
+				text: "Apakah Anda yakin ingin mengaktifkan pengurus ini?",
+				icon: "warning",
+				showCancelButton: true,
+				confirmButtonText: "Ya, lanjutkan",
+				cancelButtonText: "Batal",
+				confirmButtonColor: "#059669",
+			});
+
+			if (!result.isConfirmed) return;
+
+			setUpdating(true);
+			try {
+				await updatePengurusStatus(pengurusId, newStatus);
+
+				await Swal.fire({
+					icon: "success",
+					title: "Berhasil",
+					text: "Pengurus berhasil diaktifkan",
+					timer: 2000,
+					showConfirmButton: false,
+				});
+
+				loadPengurusDetail();
+			} catch (error) {
+				console.error("Error updating status:", error);
+				Swal.fire({
+					icon: "error",
+					title: "Gagal",
+					text: "Gagal mengubah status pengurus",
+				});
+			} finally {
+				setUpdating(false);
+			}
+		}
+	};
+
+	// Helper: show tunda verifikasi feedback modal for pengurus
+	const showTundaVerifikasiPengurusModal = async () => {
+		const { value: formValues } = await Swal.fire({
+			title: "Tunda Verifikasi Pengurus",
+			html: `
+				<div class="text-left space-y-3">
+					<p class="text-sm text-gray-600 mb-3">Berikan catatan/alasan penundaan verifikasi agar desa dapat memperbaiki data.</p>
+					<div>
+						<label class="block text-sm font-medium text-gray-700 mb-1">Pilih alasan:</label>
+						<div class="space-y-2" id="swal-checklist">
+							<label class="flex items-center gap-2 text-sm">
+								<input type="checkbox" value="SK Pengangkatan tidak sesuai" class="swal-check rounded"> SK Pengangkatan tidak sesuai
+							</label>
+							<label class="flex items-center gap-2 text-sm">
+								<input type="checkbox" value="Data pribadi belum lengkap" class="swal-check rounded"> Data pribadi belum lengkap
+							</label>
+							<label class="flex items-center gap-2 text-sm">
+								<input type="checkbox" value="NIK tidak valid" class="swal-check rounded"> NIK tidak valid
+							</label>
+							<label class="flex items-center gap-2 text-sm">
+								<input type="checkbox" value="Data tidak valid" class="swal-check rounded"> Data tidak valid
+							</label>
+						</div>
+					</div>
+					<div>
+						<label class="block text-sm font-medium text-gray-700 mb-1">Keterangan tambahan (opsional):</label>
+						<textarea id="swal-catatan" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" rows="3" placeholder="Tuliskan keterangan tambahan..."></textarea>
+					</div>
+				</div>`,
 			showCancelButton: true,
-			confirmButtonText: "Ya, lanjutkan",
-			cancelButtonText: "Batal",
-			confirmButtonColor: newStatus === "selesai" ? "#dc2626" : "#059669",
+			confirmButtonText: "Kirim & Tunda Verifikasi",
+			cancelButtonText: "Kembali",
+			confirmButtonColor: "#f59e0b",
+			focusConfirm: false,
+			preConfirm: () => {
+				const checks = Array.from(document.querySelectorAll('.swal-check:checked')).map(c => c.value);
+				const catatan = document.getElementById('swal-catatan').value.trim();
+				const allNotes = [...checks];
+				if (catatan) allNotes.push(catatan);
+				if (allNotes.length === 0) {
+					Swal.showValidationMessage('Pilih minimal satu alasan atau isi keterangan');
+					return false;
+				}
+				return allNotes.join('; ');
+			},
 		});
 
-		if (!result.isConfirmed) return;
+		if (!formValues) return;
 
 		setUpdating(true);
 		try {
-			await updatePengurusStatus(pengurusId, newStatus);
+			await updatePengurusVerifikasi(pengurusId, "unverified", pengurus.desa_id, formValues);
+
+			setPengurus((prev) => ({
+				...prev,
+				status_verifikasi: "unverified",
+				catatan_verifikasi: formValues,
+			}));
 
 			await Swal.fire({
 				icon: "success",
 				title: "Berhasil",
-				text: `Status pengurus berhasil ${
-					newStatus === "selesai" ? "dinonaktifkan" : "diaktifkan"
-				}`,
+				text: "Verifikasi ditunda dan catatan telah dikirim ke desa",
 				timer: 2000,
 				showConfirmButton: false,
 			});
-
-			// Reload data
-			loadPengurusDetail();
 		} catch (error) {
-			console.error("Error updating status:", error);
+			console.error("Error updating verification:", error);
 			Swal.fire({
 				icon: "error",
 				title: "Gagal",
-				text: "Gagal mengubah status pengurus",
+				text: error.response?.data?.message || "Gagal menunda verifikasi",
 			});
 		} finally {
 			setUpdating(false);
 		}
 	};
 
-	const handleVerificationUpdate = async (newStatus) => {
-		const result = await Swal.fire({
-			title: `${
-				newStatus === "verified" ? "Verifikasi" : "Batalkan Verifikasi"
-			} Pengurus?`,
-			text: `Apakah Anda yakin ingin ${
-				newStatus === "verified" ? "memverifikasi" : "membatalkan verifikasi"
-			} pengurus ini?`,
-			icon: "warning",
-			showCancelButton: true,
-			confirmButtonText: "Ya, lanjutkan",
-			cancelButtonText: "Batal",
-			confirmButtonColor: newStatus === "verified" ? "#059669" : "#dc2626",
-		});
-
-		if (!result.isConfirmed) return;
-
+	// Helper: execute pengurus verification
+	const executePengurusVerification = async () => {
 		setUpdating(true);
 		try {
-			await updatePengurusVerifikasi(pengurusId, newStatus, pengurus.desa_id);
+			await updatePengurusVerifikasi(pengurusId, "verified", pengurus.desa_id);
+
+			setPengurus((prev) => ({
+				...prev,
+				status_verifikasi: "verified",
+				catatan_verifikasi: null,
+			}));
 
 			await Swal.fire({
 				icon: "success",
 				title: "Berhasil",
-				text: `Status verifikasi berhasil ${
-					newStatus === "verified" ? "diverifikasi" : "dibatalkan"
-				}`,
+				text: "Pengurus berhasil diverifikasi",
 				timer: 2000,
 				showConfirmButton: false,
 			});
-
-			// Reload data
-			loadPengurusDetail();
 		} catch (error) {
 			console.error("Error updating verification:", error);
 			Swal.fire({
 				icon: "error",
 				title: "Gagal",
-				text:
-					error.response?.data?.message || "Gagal mengubah status verifikasi",
+				text: error.response?.data?.message || "Gagal memverifikasi pengurus",
 			});
 		} finally {
 			setUpdating(false);
+		}
+	};
+
+	const handleVerificationUpdate = async () => {
+		if (pengurus.status_verifikasi === "verified") {
+			// Already verified → show tunda/batal modal with feedback
+			await showTundaVerifikasiPengurusModal();
+		} else {
+			// Not yet verified → show choice: Tunda or Verifikasi
+			let selectedAction = null;
+
+			await Swal.fire({
+				title: "Opsi Verifikasi",
+				html: `
+					<div class="text-left space-y-3">
+						<button id="swal-verify-btn" class="w-full text-left p-3 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors cursor-pointer">
+							<p class="font-medium text-blue-800 text-sm">✅ Verifikasi Pengurus</p>
+							<p class="text-xs text-blue-600 mt-1">Data sudah sesuai dan lengkap, setujui verifikasi.</p>
+						</button>
+						<button id="swal-tunda-btn" class="w-full text-left p-3 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 transition-colors cursor-pointer">
+							<p class="font-medium text-amber-800 text-sm">⏳ Tunda Verifikasi</p>
+							<p class="text-xs text-amber-600 mt-1">Data belum sesuai, kirim catatan ke desa untuk diperbaiki.</p>
+						</button>
+					</div>`,
+				showConfirmButton: false,
+				showCancelButton: true,
+				cancelButtonText: "Batal",
+				didOpen: () => {
+					document.getElementById("swal-verify-btn").addEventListener("click", () => {
+						selectedAction = "verify";
+						Swal.close();
+					});
+					document.getElementById("swal-tunda-btn").addEventListener("click", () => {
+						selectedAction = "tunda";
+						Swal.close();
+					});
+				},
+			});
+
+			if (selectedAction === "verify") {
+				// Check completeness before verifying
+				const missing = [];
+				if (!pengurus.nik) missing.push("NIK");
+				if (!pengurus.produk_hukum_id) missing.push("SK Pengangkatan");
+				if (!pengurus.alamat) missing.push("Alamat");
+				if (!pengurus.tanggal_mulai_jabatan) missing.push("Tanggal Mulai Jabatan");
+
+				if (missing.length > 0) {
+					const confirm = await Swal.fire({
+						title: "Data Belum Lengkap",
+						html: `<div class="text-left"><p class="mb-2">Data berikut masih kosong:</p><ul class="list-disc pl-5 space-y-1">${missing.map(m => `<li>${m}</li>`).join("")}</ul><p class="mt-3 text-sm text-gray-500">Apakah tetap ingin memverifikasi?</p></div>`,
+						icon: "warning",
+						showCancelButton: true,
+						confirmButtonText: "Ya, Tetap Verifikasi",
+						cancelButtonText: "Batal",
+						confirmButtonColor: "#3b82f6",
+					});
+					if (!confirm.isConfirmed) return;
+				}
+
+				await executePengurusVerification();
+			} else if (selectedAction === "tunda") {
+				await showTundaVerifikasiPengurusModal();
+			}
 		}
 	};
 
@@ -350,7 +567,7 @@ const PengurusDetailPage = () => {
 	}
 
 	return (
-		<div className="min-h-screen">
+		<div className="min-h-screen p-8">
 			{/* Breadcrumb */}
 			<div className="flex bg-white p-2 mb-4 rounded-md shadow-sm justify-between items-center">
 				<nav className="flex items-center space-x-2 text-sm">
@@ -534,8 +751,10 @@ const PengurusDetailPage = () => {
 				</div>
 
 				<div className="flex gap-3">
-					{canManage && (
-						<div className="flex items-center space-x-3">
+				{canManage && (
+					<div className="flex items-center space-x-3">
+						{/* Hide edit button for desa users when pengurus is verified */}
+						{!(!(isSuperAdmin() || isAdminBidangPMD()) && pengurus.status_verifikasi === "verified") && (
 							<button
 								onClick={handleEdit}
 								disabled={!isEditMode}
@@ -549,6 +768,7 @@ const PengurusDetailPage = () => {
 								<FaEdit className="text-sm" />
 								<span>Edit</span>
 							</button>
+						)}
 
 							<button
 								onClick={() =>
@@ -580,13 +800,7 @@ const PengurusDetailPage = () => {
 					{/* Verification Button - Only for superadmin or admin bidang PMD */}
 					{(isSuperAdmin() || isAdminBidangPMD()) && (
 						<button
-							onClick={() =>
-								handleVerificationUpdate(
-									pengurus.status_verifikasi === "verified"
-										? "unverified"
-										: "verified",
-								)
-							}
+							onClick={() => handleVerificationUpdate()}
 							disabled={updating}
 							className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
 								pengurus.status_verifikasi === "verified"
@@ -853,6 +1067,22 @@ const PengurusDetailPage = () => {
 										</span>
 									</div>
 								</div>
+
+								{/* Catatan Verifikasi */}
+								{pengurus.catatan_verifikasi && pengurus.status_verifikasi !== "verified" && (
+									<div className="md:col-span-2">
+										<div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+											<p className="text-sm font-semibold text-amber-800 mb-1">📝 Catatan Verifikasi</p>
+											<p className="text-sm text-amber-700">{pengurus.catatan_verifikasi}</p>
+											{pengurus.verifikator_nama && (
+												<p className="text-xs text-amber-600 mt-2">
+													— {pengurus.verifikator_nama}
+													{pengurus.verified_at && `, ${new Date(pengurus.verified_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}`}
+												</p>
+											)}
+										</div>
+									</div>
+								)}
 							</div>
 						</div>
 

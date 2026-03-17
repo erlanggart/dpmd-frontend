@@ -218,10 +218,10 @@ const AparaturDesaDetailPage = () => {
 	};
 
 	return (
-		<div className="min-h-screen bg-gray-50 pb-8">
+		<div className="min-h-screen  pb-8">
 			{/* Header Section */}
-			<div className="bg-white shadow-sm">
-				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+			
+				<div className=" px-4 sm:px-6 lg:px-8 py-4">
 					<div className="flex items-center justify-between gap-4">
 						<div className="flex items-center gap-4">
 							<button
@@ -244,9 +244,9 @@ const AparaturDesaDetailPage = () => {
 						</button>
 					</div>
 				</div>
-			</div>
+			
 
-			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 space-y-6">
+			<div className=" px-4 sm:px-6 lg:px-8 mt-6 space-y-6">
 				{/* Profile Card */}
 				<div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
 					<div className="bg-gradient-to-r from-primary/10 to-primary/5 p-6 sm:p-8">
