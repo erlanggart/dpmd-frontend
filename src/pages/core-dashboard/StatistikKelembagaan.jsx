@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { LuUsers, LuLoader, LuX, LuRefreshCw } from "react-icons/lu";
-import StatistikKelembagaanSummary from "../../components/kelembagaan/StatistikKelembagaanSummary";
+import StatistikTahunan from "../../components/kelembagaan/StatistikTahunan";
 import kelembagaanApi from "../../api/kelembagaan";
 import { useDataCache } from "../../context/DataCacheContext";
 
@@ -112,8 +112,8 @@ const StatistikKelembagaan = () => {
 				</div>
 			</div>
 
-			{/* Summary Statistics */}
-			<StatistikKelembagaanSummary summaryData={summaryData} loading={loading} />
+			{/* Statistik Tahunan */}
+			<StatistikTahunan />
 		</div>
 	);
 };

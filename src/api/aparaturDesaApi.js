@@ -28,6 +28,10 @@ export const deleteAparaturDesa = (id) => {
 	return api.delete(`/desa/aparatur-desa/${id}`);
 };
 
+export const importAparaturFromExternal = () => {
+	return api.post("/desa/aparatur-desa/import-external");
+};
+
 export const getProdukHukumList = (params) => {
 	return api.get("/desa/produk-hukum", { params });
 };

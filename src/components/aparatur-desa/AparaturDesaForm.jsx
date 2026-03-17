@@ -9,7 +9,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useDropzone } from "react-dropzone";
 
-import { FaTrash } from "react-icons/fa";
+import {
+	Trash2, User, Briefcase, Shield, FileText, Upload, Heart,
+	AlertCircle, Loader2, Camera, CreditCard, Users, GraduationCap,
+	Calendar, Hash, MapPin, ChevronDown
+} from "lucide-react";
 import SearchableProdukHukumSelect from "../shared/SearchableProdukHukumSelect";
 
 // Build base host to preview existing uploaded files
@@ -60,12 +64,50 @@ const aparaturSchema = z.object({
 	file_ijazah_terakhir: z.any().optional(),
 });
 
+/* ---------- Section wrapper ---------- */
+const Section = ({ icon: Icon, title, color = "teal", children }) => {
+	const colors = {
+		teal: "border-teal-500 bg-teal-50 text-teal-700",
+		blue: "border-blue-500 bg-blue-50 text-blue-700",
+		purple: "border-purple-500 bg-purple-50 text-purple-700",
+		amber: "border-amber-500 bg-amber-50 text-amber-700",
+	};
+	return (
+		<div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+			<div className={`flex items-center gap-2 px-5 py-3 border-l-4 ${colors[color]}`}>
+				<Icon className="w-4.5 h-4.5" />
+				<h3 className="font-semibold text-sm">{title}</h3>
+			</div>
+			<div className="p-5">{children}</div>
+		</div>
+	);
+};
+
+/* ---------- Field wrapper ---------- */
+const Field = ({ label, required, error, children }) => (
+	<div>
+		<label className="block text-sm font-medium text-gray-700 mb-1.5">
+			{label}
+			{required && <span className="text-red-500 ml-0.5">*</span>}
+		</label>
+		{children}
+		{error && (
+			<p className="mt-1 text-xs text-red-500 flex items-center gap-1">
+				<AlertCircle className="w-3 h-3 flex-shrink-0" />
+				{error}
+			</p>
+		)}
+	</div>
+);
+
+/* ---------- File input ---------- */
 const FileInput = ({
 	control,
 	name,
 	label,
 	existingFilename,
 	isImage = false,
+	icon: IconComp = FileText,
 }) => {
 	const { field } = useController({ control, name });
 	const [fileName, setFileName] = useState(field.value?.name || "");
@@ -87,43 +129,54 @@ const FileInput = ({
 
 	return (
 		<div>
-			<label className="block mb-1">{label}</label>
+			<label className="block text-sm font-medium text-gray-700 mb-1.5">{label}</label>
 			{existingFilename && (
-				<div className="flex items-center justify-between mb-2 text-sm">
-					<div className="text-gray-600">File sebelumnya:</div>
-					<div className="flex items-center gap-3">
-						{isImage ? (
-							<img
-								src={fileUrl(existingFilename) || "/user-default.svg"}
-								alt="preview"
-								className="h-12 w-12 object-cover rounded border"
-								onError={(e) => (e.currentTarget.src = "/user-default.svg")}
-							/>
-						) : null}
-						<a
-							href={fileUrl(existingFilename) || "#"}
-							target="_blank"
-							rel="noopener noreferrer"
-							className="text-primary hover:underline"
-						>
-							Lihat
-						</a>
-					</div>
+				<div className="flex items-center gap-3 mb-2 p-2 bg-gray-50 rounded-lg border border-gray-100">
+					{isImage ? (
+						<img
+							src={fileUrl(existingFilename) || "/user-default.svg"}
+							alt="preview"
+							className="h-10 w-10 object-cover rounded-lg border border-gray-200"
+							onError={(e) => (e.currentTarget.src = "/user-default.svg")}
+						/>
+					) : (
+						<div className="h-10 w-10 bg-blue-50 rounded-lg flex items-center justify-center">
+							<IconComp className="w-5 h-5 text-blue-500" />
+						</div>
+					)}
+					<span className="text-xs text-gray-500 flex-1 truncate">{existingFilename}</span>
+					<a
+						href={fileUrl(existingFilename) || "#"}
+						target="_blank"
+						rel="noopener noreferrer"
+						className="text-xs font-medium text-teal-600 hover:text-teal-700 hover:underline"
+					>
+						Lihat
+					</a>
 				</div>
 			)}
 			<div
 				{...getRootProps()}
-				className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer ${
+				className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-all ${
 					isDragActive
-						? "border-primary bg-blue-50"
-						: "border-gray-300 hover:border-primary"
+						? "border-teal-400 bg-teal-50"
+						: fileName
+						? "border-teal-300 bg-teal-50/50"
+						: "border-gray-200 hover:border-teal-300 hover:bg-gray-50"
 				}`}
 			>
 				<input {...getInputProps()} />
-				<p>
-					{fileName ||
-						"Seret & lepas file baru, atau klik untuk memilih (opsional)"}
-				</p>
+				{fileName ? (
+					<div className="flex items-center justify-center gap-2 text-sm text-teal-700">
+						<FileText className="w-4 h-4" />
+						<span className="truncate max-w-[200px]">{fileName}</span>
+					</div>
+				) : (
+					<div className="flex flex-col items-center gap-1">
+						<Upload className="w-5 h-5 text-gray-400" />
+						<span className="text-xs text-gray-400">Seret file atau klik untuk memilih</span>
+					</div>
+				)}
 			</div>
 		</div>
 	);
@@ -244,118 +297,86 @@ const AparaturDesaForm = ({
 		}
 	};
 
+	const inputCls = "w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all";
+	const selectCls = `${inputCls} appearance-none`;
+
 	return (
 		<form
 			onSubmit={handleSubmit(buildAndSubmit)}
-			className="space-y-6 bg-white p-6 rounded-lg shadow-md"
+			className="space-y-5"
 			aria-busy={isSubmitting}
 		>
 			{/* Error summary */}
 			{Object.keys(errors).length > 0 && (
-				<div className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-					<p className="font-medium mb-1">Periksa kembali isian berikut:</p>
-					<ul className="list-disc list-inside">
-						{Object.entries(errors).map(([key, err]) => (
-							<li key={key}>{err?.message || key}</li>
-						))}
-					</ul>
+				<div className="rounded-xl border border-red-200 bg-red-50 p-4 flex items-start gap-3">
+					<AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+					<div className="text-sm text-red-700">
+						<p className="font-semibold mb-1">Periksa kembali isian berikut:</p>
+						<ul className="list-disc list-inside space-y-0.5">
+							{Object.entries(errors).map(([key, err]) => (
+								<li key={key}>{err?.message || key}</li>
+							))}
+						</ul>
+					</div>
 				</div>
 			)}
-			<h3 className="text-xl font-semibold border-b pb-2">
-				Biodata Perangkat Desa
-			</h3>
-			<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-				<div>
-					<label>
-						Nama Lengkap <span className="text-red-500">*</span>
-					</label>
-					<div className="input-group">
-						<input {...register("nama_lengkap")} className="w-full" />
-					</div>
-					{errors.nama_lengkap && (
-						<p className="text-red-500 text-sm">
-							{errors.nama_lengkap.message}
-						</p>
-					)}
-				</div>
-				<div>
-					<label>
-						Jabatan <span className="text-red-500">*</span>
-					</label>
-					<div className="input-group">
-						<select {...register("jabatan")} className="w-full">
+
+			{/* Biodata */}
+			<Section icon={User} title="Biodata Aparatur" color="teal">
+				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+					<Field label="Nama Lengkap" required error={errors.nama_lengkap?.message}>
+						<input {...register("nama_lengkap")} className={inputCls} placeholder="Masukkan nama lengkap" />
+					</Field>
+					<Field label="Jabatan" required error={errors.jabatan?.message}>
+						<select {...register("jabatan")} className={selectCls}>
 							<option value="">Pilih Jabatan</option>
-							<option value="Kepala Desa">Kepala Desa</option>
-							<option value="Sekretaris Desa">Sekretaris Desa</option>
-							<option value="Kaur Umum dan Perencanaan">
-								Kaur Umum dan Perencanaan
-							</option>
-							<option value="Kaur Keuangan">Kaur Keuangan</option>
-							<option value="Kasi Pemerintahan">Kasi Pemerintahan</option>
-							<option value="Kasi Kesejahteraan">Kasi Kesejahteraan</option>
-							<option value="Kasi Pelayanan">Kasi Pelayanan</option>
-							<option value="Kepala Dusun">Kepala Dusun</option>
-							<option value="Staf Desa">Staf Desa</option>
-							<option value="Lainnya">Lainnya</option>
+							<optgroup label="Pemerintah Desa">
+								<option value="Kepala Desa">Kepala Desa</option>
+								<option value="Sekretaris Desa">Sekretaris Desa</option>
+								<option value="Kepala Urusan Tata Usaha dan Umum">Kepala Urusan Tata Usaha dan Umum</option>
+								<option value="Kepala Urusan Keuangan">Kepala Urusan Keuangan</option>
+								<option value="Kepala Urusan Perencanaan">Kepala Urusan Perencanaan</option>
+								<option value="Kepala Seksi Pemerintahan">Kepala Seksi Pemerintahan</option>
+								<option value="Kepala Seksi Kesejahteraan">Kepala Seksi Kesejahteraan</option>
+								<option value="Kepala Seksi Pelayanan">Kepala Seksi Pelayanan</option>
+								<option value="Staf Desa">Staf Desa</option>
+							</optgroup>
+							<optgroup label="Kepala Dusun">
+								<option value="Kadus I">Kadus I</option>
+								<option value="Kadus II">Kadus II</option>
+								<option value="Kadus III">Kadus III</option>
+								<option value="Kadus IV">Kadus IV</option>
+								<option value="Kadus V">Kadus V</option>
+								<option value="Kadus VI">Kadus VI</option>
+								<option value="Kadus VII">Kadus VII</option>
+								<option value="Kadus VIII">Kadus VIII</option>
+								<option value="Kadus IX">Kadus IX</option>
+								<option value="Kadus X">Kadus X</option>
+							</optgroup>
+							<optgroup label="Badan Permusyawaratan Desa (BPD)">
+								<option value="Ketua BPD">Ketua BPD</option>
+								<option value="Wakil Ketua BPD">Wakil Ketua BPD</option>
+								<option value="Sekretaris BPD">Sekretaris BPD</option>
+								<option value="Anggota BPD">Anggota BPD</option>
+							</optgroup>
 						</select>
-					</div>
-					{errors.jabatan && (
-						<p className="text-red-500 text-sm">{errors.jabatan.message}</p>
-					)}
-				</div>
-				<div>
-					<label>
-						Tempat Lahir <span className="text-red-500">*</span>
-					</label>
-					<div className="input-group">
-						<input {...register("tempat_lahir")} className="w-full" />
-					</div>
-					{errors.tempat_lahir && (
-						<p className="text-red-500 text-sm">
-							{errors.tempat_lahir.message}
-						</p>
-					)}
-				</div>
-				<div>
-					<label>
-						Tanggal Lahir <span className="text-red-500">*</span>
-					</label>
-					<div className="input-group">
-						<input
-							type="date"
-							{...register("tanggal_lahir")}
-							className="w-full"
-						/>
-					</div>
-					{errors.tanggal_lahir && (
-						<p className="text-red-500 text-sm">
-							{errors.tanggal_lahir.message}
-						</p>
-					)}
-				</div>
-				<div>
-					<label>
-						Jenis Kelamin <span className="text-red-500">*</span>
-					</label>
-					<div className="input-group">
-						<select {...register("jenis_kelamin")} className="w-full">
+					</Field>
+					<Field label="Tempat Lahir" required error={errors.tempat_lahir?.message}>
+						<input {...register("tempat_lahir")} className={inputCls} placeholder="Masukkan tempat lahir" />
+					</Field>
+					<Field label="Tanggal Lahir" required error={errors.tanggal_lahir?.message}>
+						<input type="date" {...register("tanggal_lahir")} className={inputCls} />
+					</Field>
+					<Field label="Jenis Kelamin" required error={errors.jenis_kelamin?.message}>
+						<select {...register("jenis_kelamin")} className={selectCls}>
 							<option value="Laki-laki">Laki-laki</option>
 							<option value="Perempuan">Perempuan</option>
 						</select>
-					</div>
-					{errors.jenis_kelamin && (
-						<p className="text-red-500 text-sm">
-							{errors.jenis_kelamin.message}
-						</p>
-					)}
-				</div>
-				<div>
-					<label>
-						Pendidikan Terakhir <span className="text-red-500">*</span>
-					</label>
-					<div className="input-group">
-						<select {...register("pendidikan_terakhir")} className="w-full">
-							<option value="">Pilih Pendidikan Terakhir</option>
+					</Field>
+					<Field label="Pendidikan Terakhir" required error={errors.pendidikan_terakhir?.message}>
+						<select {...register("pendidikan_terakhir")} className={selectCls}>
+							<option value="">Pilih Pendidikan</option>
+							<option value="Tidak Sekolah">Tidak Sekolah</option>
 							<option value="SD">SD</option>
 							<option value="SMP">SMP</option>
 							<option value="SMA/SMK">SMA/SMK</option>
@@ -366,19 +387,9 @@ const AparaturDesaForm = ({
 							<option value="S2">S2</option>
 							<option value="S3">S3</option>
 						</select>
-					</div>
-					{errors.pendidikan_terakhir && (
-						<p className="text-red-500 text-sm">
-							{errors.pendidikan_terakhir.message}
-						</p>
-					)}
-				</div>
-				<div>
-					<label>
-						Agama <span className="text-red-500">*</span>
-					</label>
-					<div className="input-group">
-						<select {...register("agama")} className="w-full">
+					</Field>
+					<Field label="Agama" required error={errors.agama?.message}>
+						<select {...register("agama")} className={selectCls}>
 							<option value="">Pilih Agama</option>
 							<option value="Islam">Islam</option>
 							<option value="Kristen Protestan">Kristen Protestan</option>
@@ -388,195 +399,144 @@ const AparaturDesaForm = ({
 							<option value="Konghucu">Konghucu</option>
 							<option value="Kepercayaan">Kepercayaan</option>
 						</select>
-					</div>
-					{errors.agama && (
-						<p className="text-red-500 text-sm">{errors.agama.message}</p>
-					)}
-				</div>
-				<div>
-					<label>
-						Status <span className="text-red-500">*</span>
-					</label>
-					<div className="input-group">
-						<select {...register("status")} className="w-full">
+					</Field>
+					<Field label="Status" required error={errors.status?.message}>
+						<select {...register("status")} className={selectCls}>
 							<option value="Aktif">Aktif</option>
 							<option value="Tidak Aktif">Tidak Aktif</option>
 						</select>
-					</div>
-					{errors.status && (
-						<p className="text-red-500 text-sm">{errors.status.message}</p>
-					)}
+					</Field>
 				</div>
-			</div>
+			</Section>
 
-			<h3 className="text-xl font-semibold border-b pb-2 mt-6">
-				Informasi Kepegawaian
-			</h3>
-			<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-				<div>
-					<label>NIPD</label>
-					<div className="input-group">
-						<input {...register("nipd")} className="w-full" />
-					</div>
-				</div>
-				<div>
-					<label>Pangkat/Golongan</label>
-					<div className="input-group">
-						<input {...register("pangkat_golongan")} className="w-full" />
-					</div>
-				</div>
-				<div>
-					<label>
-						Nomor SK Pengangkatan <span className="text-red-500">*</span>
-					</label>
-					<div className="input-group">
-						<input {...register("nomor_sk_pengangkatan")} className="w-full" />
-					</div>
-					{errors.nomor_sk_pengangkatan && (
-						<p className="text-red-500 text-sm">
-							{errors.nomor_sk_pengangkatan.message}
-						</p>
-					)}
-				</div>
-				<div>
-					<label>
-						Tanggal Pengangkatan <span className="text-red-500">*</span>
-					</label>
-					<div className="input-group">
-						<input
-							type="date"
-							{...register("tanggal_pengangkatan")}
-							className="w-full"
-						/>
-					</div>
-					{errors.tanggal_pengangkatan && (
-						<p className="text-red-500 text-sm">
-							{errors.tanggal_pengangkatan.message}
-						</p>
-					)}
-				</div>
-				<div>
-					<label>SK Pengangkatan (dari Produk Hukum)</label>
-					<Controller
-						control={control}
-						name="produk_hukum_id"
-						render={({ field: { value, onChange } }) => (
-							<SearchableProdukHukumSelect
-								value={value}
-								onChange={onChange}
-								produkHukumList={produkHukumList}
+			{/* Kepegawaian */}
+			<Section icon={Briefcase} title="Informasi Kepegawaian" color="blue">
+				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+					<Field label="NIPD">
+						<input {...register("nipd")} className={inputCls} placeholder="Masukkan NIPD" />
+					</Field>
+					<Field label="Pangkat/Golongan">
+						<input {...register("pangkat_golongan")} className={inputCls} placeholder="Masukkan pangkat/golongan" />
+					</Field>
+					<Field label="Nomor SK Pengangkatan" required error={errors.nomor_sk_pengangkatan?.message}>
+						<input {...register("nomor_sk_pengangkatan")} className={inputCls} placeholder="Masukkan nomor SK" />
+					</Field>
+					<Field label="Tanggal Pengangkatan" required error={errors.tanggal_pengangkatan?.message}>
+						<input type="date" {...register("tanggal_pengangkatan")} className={inputCls} />
+					</Field>
+					<Field label="Nomor SK Pemberhentian">
+						<input {...register("nomor_sk_pemberhentian")} className={inputCls} placeholder="Jika ada" />
+					</Field>
+					<Field label="Tanggal Pemberhentian">
+						<input type="date" {...register("tanggal_pemberhentian")} className={inputCls} />
+					</Field>
+					<div className="md:col-span-2">
+						<Field label="SK Pengangkatan (dari Produk Hukum)">
+							<Controller
+								control={control}
+								name="produk_hukum_id"
+								render={({ field: { value, onChange } }) => (
+									<SearchableProdukHukumSelect
+										value={value}
+										onChange={onChange}
+										produkHukumList={produkHukumList}
+									/>
+								)}
 							/>
-						)}
+						</Field>
+					</div>
+					<div className="md:col-span-2">
+						<Field label="Keterangan">
+							<textarea {...register("keterangan")} className={`${inputCls} min-h-[80px]`} placeholder="Keterangan tambahan (opsional)" rows={3} />
+						</Field>
+					</div>
+				</div>
+			</Section>
+
+			{/* BPJS */}
+			<Section icon={Shield} title="Informasi BPJS" color="purple">
+				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+					<Field label="Nomor BPJS Kesehatan">
+						<input {...register("bpjs_kesehatan_nomor")} className={inputCls} placeholder="Masukkan nomor BPJS Kesehatan" />
+					</Field>
+					<Field label="Nomor BPJS Ketenagakerjaan">
+						<input {...register("bpjs_ketenagakerjaan_nomor")} className={inputCls} placeholder="Masukkan nomor BPJS Ketenagakerjaan" />
+					</Field>
+				</div>
+			</Section>
+
+			{/* Lampiran */}
+			<Section icon={FileText} title="Lampiran Dokumen" color="amber">
+				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+					<FileInput
+						control={control}
+						name="file_pas_foto"
+						label="Pas Foto"
+						existingFilename={initialData?.file_pas_foto}
+						isImage
+						icon={Camera}
+					/>
+					<FileInput
+						control={control}
+						name="file_ktp"
+						label="KTP"
+						existingFilename={initialData?.file_ktp}
+						icon={CreditCard}
+					/>
+					<FileInput
+						control={control}
+						name="file_kk"
+						label="Kartu Keluarga"
+						existingFilename={initialData?.file_kk}
+						icon={Users}
+					/>
+					<FileInput
+						control={control}
+						name="file_akta_kelahiran"
+						label="Akta Kelahiran"
+						existingFilename={initialData?.file_akta_kelahiran}
+						icon={FileText}
+					/>
+					<FileInput
+						control={control}
+						name="file_ijazah_terakhir"
+						label="Ijazah Terakhir"
+						existingFilename={initialData?.file_ijazah_terakhir}
+						icon={GraduationCap}
+					/>
+					<FileInput
+						control={control}
+						name="file_bpjs_kesehatan"
+						label="File BPJS Kesehatan"
+						existingFilename={initialData?.file_bpjs_kesehatan}
+						icon={Shield}
+					/>
+					<FileInput
+						control={control}
+						name="file_bpjs_ketenagakerjaan"
+						label="File BPJS Ketenagakerjaan"
+						existingFilename={initialData?.file_bpjs_ketenagakerjaan}
+						icon={Shield}
 					/>
 				</div>
-			</div>
+			</Section>
 
-			<h3 className="text-xl font-semibold border-b pb-2 mt-6">
-				Informasi BPJS
-			</h3>
-			<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-				<div>
-					<label>Nomor BPJS Kesehatan</label>
-					<div className="input-group">
-						<input {...register("bpjs_kesehatan_nomor")} className="w-full" />
-					</div>
-				</div>
-				<div>
-					<label>Nomor BPJS Ketenagakerjaan</label>
-					<div className="input-group">
-						<input
-							{...register("bpjs_ketenagakerjaan_nomor")}
-							className="w-full"
-						/>
-					</div>
-				</div>
-			</div>
-
-			<h3 className="text-xl font-semibold border-b pb-2 mt-6">
-				Lampiran File
-			</h3>
-			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-				<FileInput
-					control={control}
-					name="file_pas_foto"
-					label="Pas Foto"
-					existingFilename={initialData?.file_pas_foto}
-					isImage
-				/>
-				<FileInput
-					control={control}
-					name="file_ktp"
-					label="KTP"
-					existingFilename={initialData?.file_ktp}
-				/>
-				<FileInput
-					control={control}
-					name="file_kk"
-					label="KK"
-					existingFilename={initialData?.file_kk}
-				/>
-				<FileInput
-					control={control}
-					name="file_akta_kelahiran"
-					label="Akta Kelahiran"
-					existingFilename={initialData?.file_akta_kelahiran}
-				/>
-				<FileInput
-					control={control}
-					name="file_ijazah_terakhir"
-					label="Ijazah Terakhir"
-					existingFilename={initialData?.file_ijazah_terakhir}
-				/>
-				<FileInput
-					control={control}
-					name="file_bpjs_kesehatan"
-					label="File BPJS Kesehatan"
-					existingFilename={initialData?.file_bpjs_kesehatan}
-				/>
-				<FileInput
-					control={control}
-					name="file_bpjs_ketenagakerjaan"
-					label="File BPJS Ketenagakerjaan"
-					existingFilename={initialData?.file_bpjs_ketenagakerjaan}
-				/>
-			</div>
-
-			<div className="flex justify-end space-x-4">
+			{/* Actions */}
+			<div className="flex justify-end gap-3 pt-2">
 				<button
 					type="button"
 					onClick={onCancel}
-					className="bg-gray-500 text-white px-4 py-2 rounded disabled:opacity-60"
+					className="px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-60"
 					disabled={isSubmitting || submitLock}
 				>
 					Batal
 				</button>
 				<button
 					type="submit"
-					className="bg-blue-500 text-white px-4 py-2 rounded disabled:opacity-60 flex items-center gap-2"
+					className="px-6 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-teal-600 to-emerald-600 rounded-lg hover:from-teal-700 hover:to-emerald-700 shadow-sm transition-all disabled:opacity-60 flex items-center gap-2"
 					disabled={isSubmitting || submitLock}
 				>
-					{isSubmitting && (
-						<svg
-							className="animate-spin h-4 w-4 text-white"
-							xmlns="http://www.w3.org/2000/svg"
-							fill="none"
-							viewBox="0 0 24 24"
-						>
-							<circle
-								className="opacity-25"
-								cx="12"
-								cy="12"
-								r="10"
-								stroke="currentColor"
-								strokeWidth="4"
-							></circle>
-							<path
-								className="opacity-75"
-								fill="currentColor"
-								d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-							></path>
-						</svg>
-					)}
+					{isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
 					{isSubmitting ? "Menyimpan..." : "Simpan"}
 				</button>
 			</div>

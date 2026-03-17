@@ -8,8 +8,10 @@ import {
 import {
 	listRw,
 	listPosyandu,
+	listLembagaLainnya,
 	createRw,
 	createPosyandu,
+	createLembagaLainnya,
 } from "../../services/kelembagaan";
 import { useAuth } from "../../context/AuthContext";
 import { useEditMode } from "../../context/EditModeContext";
@@ -36,6 +38,8 @@ import {
 	LuInfo,
 	LuLock,
 	LuLockOpen,
+	LuShieldCheck,
+	LuTriangleAlert,
 } from "react-icons/lu";
 import Swal from "sweetalert2";
 
@@ -73,6 +77,9 @@ export default function KelembagaanList() {
 						break;
 					case "posyandu":
 						res = await listPosyandu();
+						break;
+					case "lembaga-lainnya":
+						res = await listLembagaLainnya();
 						break;
 					default:
 						res = { data: { data: [] } };
@@ -117,13 +124,22 @@ export default function KelembagaanList() {
 					return;
 				}
 				await createPosyandu({ nama: addForm.nama.trim() });
+			} else if (type === "lembaga-lainnya") {
+				if (!addForm.nama.trim()) {
+					alert("Nama Lembaga wajib diisi");
+					return;
+				}
+				await createLembagaLainnya({ nama: addForm.nama.trim() });
 			}
 
 			setShowAddModal(false);
 			setAddForm({ nomor: "", nama: "" });
 
 			// Reload list
-			const res = type === "rw" ? await listRw() : await listPosyandu();
+			let res;
+			if (type === "rw") res = await listRw();
+			else if (type === "posyandu") res = await listPosyandu();
+			else if (type === "lembaga-lainnya") res = await listLembagaLainnya();
 			setItems(res?.data?.data || []);
 		} catch (error) {
 			console.error("Error creating data:", error);
@@ -511,7 +527,7 @@ export default function KelembagaanList() {
 	};
 
 	// Validasi type parameter - RT tidak tersedia di sini, hanya di detail RW
-	const validTypes = ["rw", "posyandu"];
+	const validTypes = ["rw", "posyandu", "lembaga-lainnya"];
 	if (!validTypes.includes(type)) {
 		return (
 			<div className="p-4">
@@ -526,7 +542,7 @@ export default function KelembagaanList() {
 		);
 	}
 
-	const title = type === "rw" ? "RW" : "Posyandu";
+	const title = type === "rw" ? "RW" : type === "posyandu" ? "Posyandu" : "Lembaga Lainnya";
 
 	// RT should only be managed from RW detail page via AnakLembagaCard
 	if (type === "rt") {
@@ -552,6 +568,8 @@ export default function KelembagaanList() {
 				return LuBuilding;
 			case "posyandu":
 				return LuHeart;
+			case "lembaga-lainnya":
+				return LuBuilding;
 			default:
 				return LuBuilding2;
 		}
@@ -565,6 +583,8 @@ export default function KelembagaanList() {
 				return "from-purple-500 to-purple-700";
 			case "pkk":
 				return "from-pink-500 to-rose-500";
+			case "lembaga-lainnya":
+				return "from-slate-500 to-slate-700";
 			default:
 				return "from-gray-500 to-gray-600";
 		}
@@ -644,7 +664,9 @@ export default function KelembagaanList() {
 						<p className="text-gray-600">
 							{type === "rw"
 								? "Kelola Rukun Warga di desa Anda"
-								: "Kelola Pos Pelayanan Terpadu"}
+								: type === "posyandu"
+									? "Kelola Pos Pelayanan Terpadu"
+									: "Kelola Lembaga Kemasyarakatan Lainnya"}
 						</p>
 					</div>
 				</div>
@@ -730,61 +752,79 @@ export default function KelembagaanList() {
 									const status = (
 										item.status_kelembagaan || "aktif"
 									).toLowerCase();
+								const isVerified = item.status_verifikasi === "verified";
 
-									return (
-									<div
-										key={item.id}
-										className="bg-white flex flex-col rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer border border-gray-100 hover:border-blue-200 group overflow-hidden"
-										onClick={() =>
-											navigate(`${basePath}/kelembagaan/${type}/${item.id}`)
-										}
-									>
-												{/* Gradient Bar */}
-												<div
-													className={`h-1.5 bg-gradient-to-r ${
-														type === "rw"
+								return (
+								<div
+									key={item.id}
+									className={`bg-white flex flex-col rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer border group overflow-hidden ${
+										isVerified
+											? "border-gray-100 hover:border-blue-200"
+											: "border-gray-200 hover:border-gray-300"
+									}`}
+									onClick={() =>
+										navigate(`${basePath}/kelembagaan/${type}/${item.id}`)
+									}
+								>
+											{/* Gradient Bar */}
+											<div
+												className={`h-1.5 bg-gradient-to-r ${
+													!isVerified
+														? "from-gray-300 to-gray-400"
+														: type === "rw"
 															? "from-blue-400 to-blue-500"
 															: type === "posyandu"
 																? "from-purple-500 to-purple-700"
 																: type === "pkk"
 																	? "from-pink-500 to-rose-500"
 																	: "from-gray-400 to-gray-500"
-													} rounded-t-2xl`}
-												></div>
+												} rounded-t-2xl`}
+											></div>
 
-												{/* Card Content Wrapper */}
-												<div className="flex justify-between p-6">
-													{/* Card Header */}
+											{/* Card Content Wrapper */}
+											<div className="flex justify-between p-6">
+												{/* Card Header */}
 
-													<div className="flex items-center justify-between ">
-														<div className="flex items-center space-x-3">
-															<div
-																className={`p-3 bg-gradient-to-br ${getGradient()} rounded-xl group-hover:scale-110 transition-transform`}
-															>
-																<IconComponent className="w-6 h-6 text-white" />
-															</div>
-															<div>
-																<h4 className="font-bold text-lg text-gray-800">
-																	{type === "rw"
-																		? `RW ${item.nomor}`
-																		: item.nama}
-																</h4>
-																<div className="flex items-center space-x-2">
-																	<span
-																		className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-																			status === "aktif"
-																				? "bg-green-100 text-green-700"
-																				: "bg-red-100 text-red-700"
-																		}`}
-																	>
-																		{status === "aktif" ? "Aktif" : "Nonaktif"}
+												<div className="flex items-center justify-between ">
+													<div className="flex items-center space-x-3">
+														<div
+															className={`p-3 bg-gradient-to-br ${isVerified ? getGradient() : "from-gray-400 to-gray-500"} rounded-xl group-hover:scale-110 transition-transform`}
+														>
+															<IconComponent className="w-6 h-6 text-white" />
+														</div>
+														<div>
+															<h4 className="font-bold text-lg text-gray-800">
+																{type === "rw"
+																	? `RW ${item.nomor}`
+																	: item.nama}
+															</h4>
+															<div className="flex items-center space-x-2 flex-wrap gap-1">
+																<span
+																	className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+																		status === "aktif"
+																			? "bg-green-100 text-green-700"
+																			: "bg-red-100 text-red-700"
+																	}`}
+																>
+																	{status === "aktif" ? "Aktif" : "Nonaktif"}
+																</span>
+																{isVerified ? (
+																	<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700">
+																		<LuShieldCheck className="w-3 h-3" />
+																		Terverifikasi
 																	</span>
-																</div>
+																) : (
+																	<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-amber-100 text-amber-700">
+																		<LuTriangleAlert className="w-3 h-3" />
+																		Belum Terverifikasi
+																	</span>
+																)}
 															</div>
 														</div>
 													</div>
+												</div>
 
-													{/* Card Content */}
+												{/* Card Content */}
 													<div className="flex flex-col items-end space-y-3 ">
 														{item.ketua_nama || item.nama_ketua ? (
 															<div className="flex items-center space-x-2">
@@ -841,7 +881,7 @@ export default function KelembagaanList() {
 
 			<SimpleModal
 				isOpen={showAddModal}
-				title={type === "rw" ? "Pembentukan RW" : "Pembentukan Posyandu"}
+				title={type === "rw" ? "Pembentukan RW" : type === "posyandu" ? "Pembentukan Posyandu" : "Tambah Lembaga Lainnya"}
 				onClose={() => !submitting && setShowAddModal(false)}
 				onSubmit={handleCreate}
 			>
@@ -867,6 +907,33 @@ export default function KelembagaanList() {
 									setAddForm((f) => ({ ...f, nomor: e.target.value }))
 								}
 								placeholder="Masukkan nomor RW (contoh: 001)"
+								disabled={submitting}
+								autoFocus
+							/>
+						</div>
+					</div>
+				) : type === "lembaga-lainnya" ? (
+					<div>
+						<label
+							htmlFor="modal-lembaga-nama"
+							className="block text-sm font-medium mb-2 text-gray-700"
+						>
+							Nama Lembaga
+						</label>
+						<div className="relative">
+							<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+								<LuBuilding className="w-5 h-5 text-gray-400" />
+							</div>
+							<input
+								className="w-full border border-gray-300 rounded-lg pl-10 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-slate-500 disabled:bg-gray-50"
+								name="nama"
+								id="modal-lembaga-nama"
+								autoComplete="off"
+								value={addForm.nama}
+								onChange={(e) =>
+									setAddForm((f) => ({ ...f, nama: e.target.value }))
+								}
+								placeholder="Contoh: Forum Komunikasi Desa, Kelompok Tani"
 								disabled={submitting}
 								autoFocus
 							/>

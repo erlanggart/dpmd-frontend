@@ -18,6 +18,13 @@ import {
   Calendar,
   Mail,
   User,
+  Video,
+  Store,
+  Image,
+  Banknote,
+  Settings,
+  Home,
+  Menu,
 } from 'lucide-react';
 import './AnimatedIcon.css';
 
@@ -38,6 +45,13 @@ const ICON_MAP = {
   calendar: Calendar,
   mail: Mail,
   user: User,
+  video: Video,
+  store: Store,
+  image: Image,
+  banknote: Banknote,
+  settings: Settings,
+  home: Home,
+  menu: Menu,
 };
 
 const AnimatedIcon = ({ type, isActive, isHovered, className = 'w-5 h-5' }) => {

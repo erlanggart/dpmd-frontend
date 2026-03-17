@@ -7,7 +7,10 @@ import {
 	createLpm,
 	createSatlinmas,
 	createPkk,
+	createLembagaLainnya,
+	listLembagaLainnya,
 } from "../../../services/kelembagaan";
+import AktivitasLog from "../../../components/kelembagaan/AktivitasLog";
 import {
 	LuUsers,
 	LuBuilding,
@@ -26,13 +29,18 @@ import {
 	LuScale,
 	LuFileText,
 	LuDownload,
-	LuExternalLink,
 	LuLock,
 	LuLockOpen,
+	LuTriangleAlert,
+	LuMapPin,
+	LuFileCheck,
+	LuUserCheck,
+	LuClipboardList,
+	LuShieldCheck,
 } from "react-icons/lu";
 
 // Confirmation Modal Component
-const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, description, icon: Icon, gradient, loading }) => {
+const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, description, icon: Icon, gradient, loading, children }) => {
 	if (!isOpen) return null;
 
 	return (
@@ -61,6 +69,7 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, description, ico
 
 				{/* Content */}
 				<div className="p-6">
+					{children}
 					<div className="space-y-4 mb-6">
 						<div className="flex items-start space-x-3">
 							<div className={`p-2 bg-gradient-to-br ${gradient} rounded-lg flex-shrink-0`}>
@@ -132,7 +141,7 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, description, ico
 							) : (
 								<>
 									<LuCheck className="w-5 h-5" />
-									<span>Oke, Bentuk</span>
+									<span>{children ? 'Oke, Buat' : 'Oke, Bentuk'}</span>
 								</>
 							)}
 						</button>
@@ -143,77 +152,7 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, description, ico
 	);
 };
 
-const MainCard = ({
-	title,
-	onClick,
-	icon: Icon,
-	gradient,
-	count,
-	description,
-}) => (
-	<div
-		className={`rounded-2xl p-6 shadow-lg bg-gradient-to-br ${gradient} border border-white/20 hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:scale-105`}
-		onClick={onClick}
-	>
-		<div className="flex items-center justify-between mb-4">
-			<div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
-				{Icon && <Icon className="w-8 h-8 text-white" />}
-			</div>
-			<LuArrowRight className="w-5 h-5 text-white/70" />
-		</div>
-		<div className="text-white">
-			<h3 className="font-bold text-xl mb-1">{title}</h3>
-			<div className="text-3xl font-bold mb-2">{count}</div>
-			<p className="text-white/80 text-sm">{description}</p>
-		</div>
-	</div>
-);
-
-const SmallCard = ({
-	title,
-	subtitle,
-	onClick,
-	cta,
-	onCta,
-	icon,
-	formed,
-	gradient,
-}) => {
-	const IconComponent = icon;
-	return (
-		<div
-			className={`rounded-xl p-4 shadow-md bg-gradient-to-r ${gradient} border border-white/10 hover:shadow-lg transition-all duration-300 ${
-				onClick ? "cursor-pointer hover:scale-105" : ""
-			}`}
-			onClick={onClick}
-		>
-			<div className="flex items-center justify-between mb-3">
-				<div className="flex items-center space-x-3">
-					<div className="p-2 bg-white/20 rounded-lg">
-						{IconComponent && <IconComponent className="w-5 h-5 text-white" />}
-					</div>
-					<h4 className="font-semibold text-white">{title}</h4>
-				</div>
-			{formed && <LuCheck className="w-5 h-5 text-green-300" />}
-		</div>
-
-		<div className="text-white/90 text-sm mb-3">{subtitle}</div>
-
-		{cta && (
-			<button
-				className="w-full px-3 py-2 bg-white/20 hover:bg-white/30 text-white text-sm font-medium rounded-lg transition-all duration-200 flex items-center justify-center space-x-2 backdrop-blur-sm"
-				onClick={(e) => {
-					e.stopPropagation();
-					if (onCta) onCta();
-				}}
-			>
-				<LuPlus className="w-4 h-4" />
-				<span>{cta}</span>
-			</button>
-		)}
-	</div>
-	);
-};export default function KelembagaanDesaPage() {
+export default function KelembagaanDesaPage() {
 	const { isEditMode } = useEditMode();
 	const [summary, setSummary] = useState({
 		rt: 0,
@@ -223,13 +162,15 @@ const SmallCard = ({
 		lpm: 0,
 		pkk: 0,
 		satlinmas: 0,
+		lembaga_lainnya: 0,
 		karang_taruna_formed: false,
 		lpm_formed: false,
 		satlinmas_formed: false,
 		pkk_formed: false,
 		total: 0,
 		desa_nama: null,
-		status_pemerintahan: 'desa', // Add status_pemerintahan
+		status_pemerintahan: 'desa',
+		verifikasi: null,
 	});
 	const [loading, setLoading] = useState(true);
 	const [modalConfig, setModalConfig] = useState({
@@ -241,6 +182,8 @@ const SmallCard = ({
 		gradient: '',
 	});
 	const [creatingLembaga, setCreatingLembaga] = useState(false);
+	const [namaLembagaLainnya, setNamaLembagaLainnya] = useState('');
+	const [lembagaLainnyaItems, setLembagaLainnyaItems] = useState([]);
 	const navigate = useNavigate();
 	
 	// Get desa name and status from summary
@@ -299,7 +242,10 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 		(async () => {
 			try {
 				// Use lightweight summary endpoint - contains all data we need including formation status
-				const summaryRes = await getKelembagaanSummary();
+				const [summaryRes, lembagaRes] = await Promise.all([
+					getKelembagaanSummary(),
+					listLembagaLainnya().catch(() => ({ data: { data: [] } })),
+				]);
 
 				if (!mounted) return;
 
@@ -314,7 +260,7 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 					lpm: data.lpm || 0,
 					pkk: data.pkk || 0,
 					satlinmas: data.satlinmas || 0,
-					// Backend uses has_* format, map to *_formed
+					lembaga_lainnya: data.lembaga_lainnya || 0,
 					karang_taruna_formed: data.has_karang_taruna || false,
 					lpm_formed: data.has_lpm || false,
 					satlinmas_formed: data.has_satlinmas || false,
@@ -322,7 +268,12 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 					total: data.total || 0,
 					desa_nama: data.desa_nama || null,
 					status_pemerintahan: data.status_pemerintahan || 'desa',
+					verifikasi: data.verifikasi || null,
 				});
+
+				// Set lembaga lainnya items
+				const lembagaItems = lembagaRes?.data?.data || [];
+				setLembagaLainnyaItems(Array.isArray(lembagaItems) ? lembagaItems : []);
 			} catch (e) {
 				console.error(e);
 			} finally {
@@ -381,15 +332,23 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 				icon: LuSprout,
 				gradient: 'from-pink-500 to-rose-500',
 			},
+			'lembaga-lainnya': {
+				title: 'Tambah Lembaga Lainnya',
+				icon: LuBuilding,
+				gradient: 'from-slate-500 to-slate-700',
+			},
 		};
 
 		const config = configs[type];
 		if (config) {
+			if (type === 'lembaga-lainnya') {
+				setNamaLembagaLainnya('');
+			}
 			setModalConfig({
 				isOpen: true,
 				type: type,
 				title: config.title,
-				description: lembagaDescriptions[type],
+				description: lembagaDescriptions[type] || '',
 				icon: config.icon,
 				gradient: config.gradient,
 			});
@@ -437,6 +396,10 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 				kelembagaanName = "PKK";
 				fullName = `PKK ${wilayahLabel} ${desaName}`;
 				await createPkk({ nama: fullName });
+			} else if (type === "lembaga-lainnya") {
+				if (!namaLembagaLainnya.trim()) return setCreatingLembaga(false);
+				kelembagaanName = namaLembagaLainnya.trim();
+				await createLembagaLainnya({ nama: namaLembagaLainnya.trim() });
 			}
 
 			// Close modal
@@ -445,8 +408,11 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 			// Show success notification
 			showSuccessAlert(kelembagaanName);
 
-			// Refresh summary data after creating
-			const summaryRes = await getKelembagaanSummary();
+			// Refresh summary data and lembaga lainnya items after creating
+			const [summaryRes, lembagaRes] = await Promise.all([
+				getKelembagaanSummary(),
+				listLembagaLainnya().catch(() => ({ data: { data: [] } })),
+			]);
 			const data = summaryRes.data.data || {};
 			
 			setSummary({
@@ -457,6 +423,7 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 				lpm: data.lpm || 0,
 				pkk: data.pkk || 0,
 				satlinmas: data.satlinmas || 0,
+				lembaga_lainnya: data.lembaga_lainnya || 0,
 				karang_taruna_formed: data.has_karang_taruna || false,
 				lpm_formed: data.has_lpm || false,
 				satlinmas_formed: data.has_satlinmas || false,
@@ -464,7 +431,11 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 				total: data.total || 0,
 				desa_nama: data.desa_nama || null,
 				status_pemerintahan: data.status_pemerintahan || 'desa',
+				verifikasi: data.verifikasi || null,
 			});
+			
+			const lembagaItems = lembagaRes?.data?.data || [];
+			setLembagaLainnyaItems(Array.isArray(lembagaItems) ? lembagaItems : []);
 		} catch (err) {
 			console.error(err);
 			
@@ -501,14 +472,418 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 		);
 	}
 
+	// Helper: verification badge for multi-instance types (RT/RW, Posyandu)
+	const renderMultiVerifBadge = (verifData) => {
+		if (!verifData) return null;
+		const unverified = verifData.unverified || 0;
+		if (unverified === 0) {
+			return (
+				<span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
+					<LuCheck className="w-3 h-3" /> Terverifikasi
+				</span>
+			);
+		}
+		return (
+			<span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+				<LuTriangleAlert className="w-3 h-3" /> {unverified} Belum Terverifikasi
+			</span>
+		);
+	};
+
+	// Helper: verification badge for singleton types (KT, LPM, PKK, Satlinmas)
+	const renderSingletonVerifBadge = (verifData, formed) => {
+		if (!verifData || !formed) return null;
+		if (verifData.status_verifikasi === 'verified') {
+			return (
+				<span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
+					<LuCheck className="w-3 h-3" /> Terverifikasi
+				</span>
+			);
+		}
+		return (
+			<span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+				<LuTriangleAlert className="w-3 h-3" /> Belum Terverifikasi
+			</span>
+		);
+	};
+
 	return (
-		<div className="min-h-screen">
-			
+		<div className="min-h-screen px-6 py-8">
+			{/* Page Title */}
+			<div className="mb-6">
+				<h1 className="text-2xl font-bold text-gray-900">Kelembagaan {wilayahLabel} {desaName}</h1>
+				<p className="text-sm text-gray-500 mt-1">Kelola seluruh data kelembagaan {wilayahLabel.toLowerCase()}</p>
+			</div>
 
 			{/* 2 Column Layout */}
 			<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-				{/* Left Column - Main Content (2/3) */}
+				{/* Left Column (2/3) */}
 				<div className="lg:col-span-2 space-y-6">
+
+			{/* Status Badge */}
+			<div className="bg-white rounded-lg shadow-sm border border-gray-200 px-4 py-3">
+				<div className="flex items-center justify-between gap-4">
+					<span
+						className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
+							isEditMode
+								? "bg-green-100 text-green-700 border border-green-300"
+								: "bg-red-100 text-red-700 border border-red-300"
+						}`}
+					>
+						{isEditMode ? (
+							<>
+								<LuLockOpen className="w-3 h-3" />
+								<span>Aplikasi Dibuka</span>
+							</>
+						) : (
+							<>
+								<LuLock className="w-3 h-3" />
+								<span>Aplikasi Ditutup</span>
+							</>
+						)}
+					</span>
+					<div className="text-sm text-gray-600">
+						{isEditMode ? (
+							<span className="text-green-700">Pengguna dapat menambah dan mengedit data kelembagaan</span>
+						) : (
+							<span className="text-red-700">Fitur penambahan dan pengeditan data sementara ditutup</span>
+						)}
+					</div>
+				</div>
+			</div>
+
+			{/* ═══ Ringkasan Verifikasi ═══ */}
+			{summary.verifikasi && (() => {
+				const v = summary.verifikasi;
+				// Build verification items
+				const items = [];
+
+				// Multi-type: RW
+				if (v.rw) items.push({ label: "RW", verified: v.rw.verified || 0, total: v.rw.total || 0, icon: LuBuilding, color: "blue" });
+				// Multi-type: RT
+				if (v.rt) items.push({ label: "RT", verified: v.rt.verified || 0, total: v.rt.total || 0, icon: LuBuilding, color: "blue" });
+				// Multi-type: Posyandu
+				if (v.posyandu) items.push({ label: "Posyandu", verified: v.posyandu.verified || 0, total: v.posyandu.total || 0, icon: LuHeart, color: "purple" });
+				// Singleton: Karang Taruna
+				if (v.karang_taruna && ktFormed) items.push({ label: "Karang Taruna", verified: v.karang_taruna.status_verifikasi === "verified" ? 1 : 0, total: 1, icon: LuUsers, color: "orange" });
+				// Singleton: LPM
+				if (v.lpm && lpmFormed) items.push({ label: "LPM", verified: v.lpm.status_verifikasi === "verified" ? 1 : 0, total: 1, icon: LuBuilding2, color: "yellow" });
+				// Singleton: PKK
+				if (v.pkk && pkkFormed) items.push({ label: "PKK", verified: v.pkk.status_verifikasi === "verified" ? 1 : 0, total: 1, icon: LuSprout, color: "pink" });
+				// Singleton: Satlinmas
+				if (v.satlinmas && satlinmasFormed) items.push({ label: "Satlinmas", verified: v.satlinmas.status_verifikasi === "verified" ? 1 : 0, total: 1, icon: LuShield, color: "emerald" });
+				// Multi-type: Lembaga Lainnya
+				if (v.lembaga_lainnya) items.push({ label: "Lembaga Lainnya", verified: v.lembaga_lainnya.verified || 0, total: v.lembaga_lainnya.total || 0, icon: LuBuilding, color: "slate" });
+
+				const totalVerified = items.reduce((sum, i) => sum + i.verified, 0);
+				const totalAll = items.reduce((sum, i) => sum + i.total, 0);
+
+				if (totalAll === 0) return null;
+
+				return (
+					<div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+						<div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+							<div className="flex items-center gap-3">
+								<div className="p-2 bg-indigo-100 rounded-lg">
+									<LuShieldCheck className="w-5 h-5 text-indigo-700" />
+								</div>
+								<div>
+									<h3 className="font-bold text-gray-900">Data Terverifikasi Kabupaten</h3>
+									<p className="text-xs text-gray-500">Data lembaga yang sudah masuk dan diverifikasi oleh kabupaten</p>
+								</div>
+							</div>
+							<div className="text-right">
+								<div className="text-2xl font-bold text-indigo-700">{totalVerified}<span className="text-base font-normal text-gray-400">/{totalAll}</span></div>
+								<p className="text-xs text-gray-500">Lembaga Terverifikasi</p>
+							</div>
+						</div>
+						<div className="px-5 py-3">
+							{/* Progress bar */}
+							<div className="w-full bg-gray-100 rounded-full h-2 mb-4">
+								<div
+									className={`h-2 rounded-full transition-all duration-500 ${totalVerified === totalAll ? "bg-green-500" : "bg-indigo-500"}`}
+									style={{ width: `${totalAll > 0 ? (totalVerified / totalAll) * 100 : 0}%` }}
+								/>
+							</div>
+							<div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+								{items.map((item) => {
+									const Icon = item.icon;
+									const isComplete = item.verified === item.total;
+									return (
+										<div key={item.label} className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg border ${isComplete ? "bg-green-50 border-green-200" : "bg-gray-50 border-gray-200"}`}>
+											<Icon className={`w-4 h-4 flex-shrink-0 ${isComplete ? "text-green-600" : "text-gray-400"}`} />
+											<div className="min-w-0">
+												<p className="text-xs text-gray-500 truncate">{item.label}</p>
+												<p className={`text-sm font-bold ${isComplete ? "text-green-700" : "text-gray-700"}`}>
+													{item.verified}/{item.total}
+												</p>
+											</div>
+											{isComplete && <LuCheck className="w-3.5 h-3.5 text-green-600 flex-shrink-0 ml-auto" />}
+										</div>
+									);
+								})}
+							</div>
+						</div>
+					</div>
+				);
+			})()}
+
+			{/* ═══ SECTION 1: Lembaga Kemasyarakatan Desa ═══ */}
+			<div>
+				<div className="flex items-center gap-3 mb-4">
+					<div className="p-2 bg-blue-100 rounded-lg">
+						<LuBuilding2 className="w-5 h-5 text-blue-700" />
+					</div>
+					<div>
+						<h2 className="text-lg font-bold text-gray-800">Lembaga Kemasyarakatan Desa</h2>
+						<p className="text-sm text-gray-500">RT/RW, Posyandu, Karang Taruna, LPM, dan PKK</p>
+					</div>
+				</div>
+
+				<div className="bg-white rounded-xl border border-gray-200 overflow-hidden divide-y divide-gray-100">
+					{/* RT & RW */}
+					<div
+						className="flex items-center justify-between px-5 py-4 hover:bg-gray-50 cursor-pointer transition-colors"
+						onClick={() => navigate("/desa/kelembagaan/rw")}
+					>
+						<div className="flex items-center gap-4">
+							<div className="p-2.5 bg-blue-50 rounded-xl">
+								<LuBuilding className="w-5 h-5 text-blue-600" />
+							</div>
+							<div>
+								<h4 className="font-semibold text-gray-900">RT & RW</h4>
+								<p className="text-sm text-gray-500">{summary.rw} RW • {summary.rt} RT</p>
+							</div>
+						</div>
+						<div className="flex items-center gap-3">
+							{(() => {
+								const v = summary.verifikasi;
+								if (!v?.rw && !v?.rt) return null;
+								const combined = {
+									unverified: (v.rw?.unverified || 0) + (v.rt?.unverified || 0),
+								};
+								return renderMultiVerifBadge(combined);
+							})()}
+							<LuArrowRight className="w-4 h-4 text-gray-400" />
+						</div>
+					</div>
+
+					{/* Posyandu */}
+					<div
+						className="flex items-center justify-between px-5 py-4 hover:bg-gray-50 cursor-pointer transition-colors"
+						onClick={() => navigate("/desa/kelembagaan/posyandu")}
+					>
+						<div className="flex items-center gap-4">
+							<div className="p-2.5 bg-purple-50 rounded-xl">
+								<LuHeart className="w-5 h-5 text-purple-600" />
+							</div>
+							<div>
+								<h4 className="font-semibold text-gray-900">Posyandu</h4>
+								<p className="text-sm text-gray-500">{summary.posyandu} Posyandu</p>
+							</div>
+						</div>
+						<div className="flex items-center gap-3">
+							{renderMultiVerifBadge(summary.verifikasi?.posyandu)}
+							<LuArrowRight className="w-4 h-4 text-gray-400" />
+						</div>
+					</div>
+
+					{/* Karang Taruna */}
+					<div
+						className={`flex items-center justify-between px-5 py-4 transition-colors ${ktFormed ? 'hover:bg-gray-50 cursor-pointer' : ''}`}
+						onClick={ktFormed ? () => navigate("/desa/kelembagaan/karang-taruna/detail") : undefined}
+					>
+						<div className="flex items-center gap-4">
+							<div className="p-2.5 bg-orange-50 rounded-xl">
+								<LuUsers className="w-5 h-5 text-orange-600" />
+							</div>
+							<div>
+								<h4 className="font-semibold text-gray-900">Karang Taruna</h4>
+								<p className={`text-sm ${ktFormed ? 'text-gray-500' : 'text-amber-600'}`}>
+									{ktFormed ? 'Sudah terbentuk' : 'Belum terbentuk'}
+								</p>
+							</div>
+						</div>
+						<div className="flex items-center gap-3">
+							{ktFormed ? (
+								<>
+									{renderSingletonVerifBadge(summary.verifikasi?.karang_taruna, ktFormed)}
+									<LuArrowRight className="w-4 h-4 text-gray-400" />
+								</>
+							) : (
+								isEditMode && (
+									<button
+										onClick={(e) => { e.stopPropagation(); handleOpenModal("karang-taruna"); }}
+										className="px-3 py-1.5 bg-orange-500 text-white text-xs font-medium rounded-lg hover:bg-orange-600 transition-colors flex items-center gap-1"
+									>
+										<LuPlus className="w-3 h-3" /> Bentuk
+									</button>
+								)
+							)}
+						</div>
+					</div>
+
+					{/* LPM */}
+					<div
+						className={`flex items-center justify-between px-5 py-4 transition-colors ${lpmFormed ? 'hover:bg-gray-50 cursor-pointer' : ''}`}
+						onClick={lpmFormed ? () => navigate("/desa/kelembagaan/lpm/detail") : undefined}
+					>
+						<div className="flex items-center gap-4">
+							<div className="p-2.5 bg-yellow-50 rounded-xl">
+								<LuBuilding2 className="w-5 h-5 text-yellow-600" />
+							</div>
+							<div>
+								<h4 className="font-semibold text-gray-900">LPM</h4>
+								<p className={`text-sm ${lpmFormed ? 'text-gray-500' : 'text-amber-600'}`}>
+									{lpmFormed ? 'Sudah terbentuk' : 'Belum terbentuk'}
+								</p>
+							</div>
+						</div>
+						<div className="flex items-center gap-3">
+							{lpmFormed ? (
+								<>
+									{renderSingletonVerifBadge(summary.verifikasi?.lpm, lpmFormed)}
+									<LuArrowRight className="w-4 h-4 text-gray-400" />
+								</>
+							) : (
+								isEditMode && (
+									<button
+										onClick={(e) => { e.stopPropagation(); handleOpenModal("lpm"); }}
+										className="px-3 py-1.5 bg-yellow-500 text-white text-xs font-medium rounded-lg hover:bg-yellow-600 transition-colors flex items-center gap-1"
+									>
+										<LuPlus className="w-3 h-3" /> Bentuk
+									</button>
+								)
+							)}
+						</div>
+					</div>
+
+					{/* PKK */}
+					<div
+						className={`flex items-center justify-between px-5 py-4 transition-colors ${pkkFormed ? 'hover:bg-gray-50 cursor-pointer' : ''}`}
+						onClick={pkkFormed ? () => navigate("/desa/kelembagaan/pkk/detail") : undefined}
+					>
+						<div className="flex items-center gap-4">
+							<div className="p-2.5 bg-pink-50 rounded-xl">
+								<LuSprout className="w-5 h-5 text-pink-600" />
+							</div>
+							<div>
+								<h4 className="font-semibold text-gray-900">PKK</h4>
+								<p className={`text-sm ${pkkFormed ? 'text-gray-500' : 'text-amber-600'}`}>
+									{pkkFormed ? 'Sudah terbentuk' : 'Belum terbentuk'}
+								</p>
+							</div>
+						</div>
+						<div className="flex items-center gap-3">
+							{pkkFormed ? (
+								<>
+									{renderSingletonVerifBadge(summary.verifikasi?.pkk, pkkFormed)}
+									<LuArrowRight className="w-4 h-4 text-gray-400" />
+								</>
+							) : (
+								isEditMode && (
+									<button
+										onClick={(e) => { e.stopPropagation(); handleOpenModal("pkk"); }}
+										className="px-3 py-1.5 bg-pink-500 text-white text-xs font-medium rounded-lg hover:bg-pink-600 transition-colors flex items-center gap-1"
+									>
+										<LuPlus className="w-3 h-3" /> Bentuk
+									</button>
+								)
+							)}
+						</div>
+					</div>
+				</div>
+			</div>
+
+			{/* ═══ SECTION 2: Kelembagaan Lainnya ═══ */}
+			<div>
+				<div className="flex items-center justify-between mb-4">
+					<div className="flex items-center gap-3">
+						<div className="p-2 bg-emerald-100 rounded-lg">
+							<LuShield className="w-5 h-5 text-emerald-700" />
+						</div>
+						<div>
+							<h2 className="text-lg font-bold text-gray-800">Kelembagaan Lainnya</h2>
+							<p className="text-sm text-gray-500">Satlinmas dan kelembagaan tambahan sesuai kebutuhan desa</p>
+						</div>
+					</div>
+					{isEditMode && (
+						<button
+							className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white hover:from-emerald-600 hover:to-teal-700 shadow-md hover:shadow-lg transition-all duration-200 flex items-center space-x-2 text-sm font-medium"
+							onClick={() => handleOpenModal("lembaga-lainnya")}
+						>
+							<LuPlus className="w-4 h-4" />
+							<span>Tambah Lembaga</span>
+						</button>
+					)}
+				</div>
+
+				<div className="bg-white rounded-xl border border-gray-200 overflow-hidden divide-y divide-gray-100">
+					{/* Satlinmas */}
+					<div
+						className={`flex items-center justify-between px-5 py-4 transition-colors ${satlinmasFormed ? 'hover:bg-gray-50 cursor-pointer' : ''}`}
+						onClick={satlinmasFormed ? () => navigate("/desa/kelembagaan/satlinmas/detail") : undefined}
+					>
+						<div className="flex items-center gap-4">
+							<div className="p-2.5 bg-emerald-50 rounded-xl">
+								<LuShield className="w-5 h-5 text-emerald-600" />
+							</div>
+							<div>
+								<h4 className="font-semibold text-gray-900">Satlinmas</h4>
+								<p className={`text-sm ${satlinmasFormed ? 'text-gray-500' : 'text-amber-600'}`}>
+									{satlinmasFormed ? 'Sudah terbentuk' : 'Belum terbentuk'}
+								</p>
+							</div>
+						</div>
+						<div className="flex items-center gap-3">
+							{satlinmasFormed ? (
+								<>
+									{renderSingletonVerifBadge(summary.verifikasi?.satlinmas, satlinmasFormed)}
+									<LuArrowRight className="w-4 h-4 text-gray-400" />
+								</>
+							) : (
+								isEditMode && (
+									<button
+										onClick={(e) => { e.stopPropagation(); handleOpenModal("satlinmas"); }}
+										className="px-3 py-1.5 bg-emerald-500 text-white text-xs font-medium rounded-lg hover:bg-emerald-600 transition-colors flex items-center gap-1"
+									>
+										<LuPlus className="w-3 h-3" /> Bentuk
+									</button>
+								)
+							)}
+						</div>
+					</div>
+
+					{/* Individual Lembaga Lainnya Items */}
+					{lembagaLainnyaItems.map((item) => (
+						<div
+							key={item.id}
+							className="flex items-center justify-between px-5 py-4 hover:bg-gray-50 cursor-pointer transition-colors"
+							onClick={() => navigate(`/desa/kelembagaan/lembaga-lainnya/${item.id}`)}
+						>
+							<div className="flex items-center gap-4">
+								<div className="p-2.5 bg-slate-50 rounded-xl">
+									<LuBuilding className="w-5 h-5 text-slate-600" />
+								</div>
+								<div>
+									<h4 className="font-semibold text-gray-900">{item.nama}</h4>
+									<p className="text-sm text-gray-500">Kelembagaan tambahan</p>
+								</div>
+							</div>
+							<div className="flex items-center gap-3">
+								<LuArrowRight className="w-4 h-4 text-gray-400" />
+							</div>
+						</div>
+					))}
+
+					{/* Empty state when no items in list */}
+					{!satlinmasFormed && lembagaLainnyaItems.length === 0 && (
+						<div className="px-5 py-8 text-center text-gray-400 text-sm">
+							Belum ada kelembagaan lainnya
+						</div>
+					)}
+				</div>
+			</div>
 
 			{/* Info Section - Tentang Lembaga Kemasyarakatan Desa */}
 			<div className="mb-8 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-2xl border border-blue-200 shadow-md overflow-hidden">
@@ -631,138 +1006,52 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 				</div>
 			</div>
 
-			{/* Status Badge */}
-			<div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6 px-4 py-3">
-				<div className="flex items-center justify-between gap-4">
-					<span
-						className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
-							isEditMode
-								? "bg-green-100 text-green-700 border border-green-300"
-								: "bg-red-100 text-red-700 border border-red-300"
-						}`}
-					>
-						{isEditMode ? (
-							<>
-								<LuLockOpen className="w-3 h-3" />
-								<span>Aplikasi Dibuka</span>
-							</>
-						) : (
-							<>
-								<LuLock className="w-3 h-3" />
-								<span>Aplikasi Ditutup</span>
-							</>
-						)}
-					</span>
-					<div className="text-sm text-gray-600">
-						{isEditMode ? (
-							<span className="text-green-700">
-								Pengguna dapat menambah dan mengedit data kelembagaan
-							</span>
-						) : (
-							<span className="text-red-700">
-								Fitur penambahan dan pengeditan data sementara ditutup
-							</span>
-						)}
+			{/* Persyaratan Verifikasi Info Box */}
+			{summary.verifikasi && (
+				<div className="mt-6 bg-gradient-to-r from-amber-50 to-yellow-50 rounded-xl border border-amber-200 p-5 shadow-sm">
+					<div className="flex items-start gap-3 mb-4">
+						<div className="p-2 bg-amber-100 rounded-lg">
+							<LuClipboardList className="w-5 h-5 text-amber-700" />
+						</div>
+						<div>
+							<h3 className="font-bold text-amber-900 text-base">Persyaratan Verifikasi Kelembagaan</h3>
+							<p className="text-sm text-amber-700 mt-1">
+								Agar kelembagaan dapat diverifikasi oleh Admin, pastikan data berikut sudah dilengkapi pada setiap lembaga:
+							</p>
+						</div>
+					</div>
+					<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+						<div className="flex items-start gap-2 bg-white rounded-lg p-3 border border-amber-100">
+							<LuFileCheck className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+							<div>
+								<p className="text-sm font-semibold text-gray-800">Kaitkan SK / Produk Hukum</p>
+								<p className="text-xs text-gray-500">Lampirkan Surat Keputusan pembentukan atau produk hukum terkait</p>
+							</div>
+						</div>
+						<div className="flex items-start gap-2 bg-white rounded-lg p-3 border border-amber-100">
+							<LuMapPin className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+							<div>
+								<p className="text-sm font-semibold text-gray-800">Isi Alamat Sekretariat</p>
+								<p className="text-xs text-gray-500">Berikan alamat lengkap sekretariat lembaga</p>
+							</div>
+						</div>
+						<div className="flex items-start gap-2 bg-white rounded-lg p-3 border border-amber-100">
+							<LuUserCheck className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+							<div>
+								<p className="text-sm font-semibold text-gray-800">Tambah Minimal 1 Pengurus</p>
+								<p className="text-xs text-gray-500">Setiap lembaga wajib memiliki setidaknya satu pengurus yang terdaftar</p>
+							</div>
+						</div>
+						<div className="flex items-start gap-2 bg-white rounded-lg p-3 border border-amber-100">
+							<LuUsers className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+							<div>
+								<p className="text-sm font-semibold text-gray-800">Data Penduduk (RT)</p>
+								<p className="text-xs text-gray-500">Untuk RT, masukkan jumlah jiwa dan jumlah KK di wilayah RT tersebut</p>
+							</div>
+						</div>
 					</div>
 				</div>
-			</div>
-
-			{/* Main Cards Layout - RT/RW dan Posyandu dalam satu kolom */}
-			<div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-				{/* RT/RW Card */}
-				<MainCard
-					title="RT & RW"
-					count={`${summary.rw} RW • ${summary.rt} RT`}
-					description="Kelola Rukun Tetangga dan Rukun Warga"
-					onClick={() => navigate("/desa/kelembagaan/rw")}
-					icon={LuBuilding}
-					gradient="from-blue-500 to-blue-600"
-				/>
-
-				{/* Posyandu Card */}
-				<MainCard
-					title="Posyandu"
-					count={`${summary.posyandu} Posyandu`}
-					description="Pos Pelayanan Terpadu masyarakat"
-					onClick={() => navigate("/desa/kelembagaan/posyandu")}
-					icon={LuHeart}
-					gradient="from-purple-500 to-purple-700"
-				/>
-			</div>
-
-			{/* Kelembagaan Lainnya - Row berjejer lebih kecil */}
-			<div>
-				<h2 className="text-xl font-semibold text-gray-800 mb-4">
-					Kelembagaan Lainnya
-				</h2>
-				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-					<SmallCard
-						title="Satlinmas"
-						subtitle={satlinmasFormed ? "Sudah terbentuk" : "Belum terbentuk"}
-						onClick={
-							satlinmasFormed
-								? () => navigate("/desa/kelembagaan/satlinmas/detail")
-								: undefined
-						}
-						cta={!satlinmasFormed ? "Bentuk Sekarang" : undefined}
-						onCta={
-							!satlinmasFormed
-								? () => handleOpenModal("satlinmas")
-								: undefined
-						}
-						icon={LuShield}
-						formed={satlinmasFormed}
-						gradient="from-emerald-500 to-teal-500"
-					/>
-
-					<SmallCard
-						title="Karang Taruna"
-						subtitle={ktFormed ? "Sudah terbentuk" : "Belum terbentuk"}
-						onClick={
-							ktFormed
-								? () => navigate("/desa/kelembagaan/karang-taruna/detail")
-								: undefined
-						}
-						cta={!ktFormed ? "Bentuk Sekarang" : undefined}
-						onCta={
-							!ktFormed ? () => handleOpenModal("karang-taruna") : undefined
-						}
-						icon={LuUsers}
-						formed={ktFormed}
-						gradient="from-orange-500 to-red-500"
-					/>
-
-					<SmallCard
-						title="LPM"
-						subtitle={lpmFormed ? "Sudah terbentuk" : "Belum terbentuk"}
-						onClick={
-							lpmFormed
-								? () => navigate("/desa/kelembagaan/lpm/detail")
-								: undefined
-						}
-						cta={!lpmFormed ? "Bentuk Sekarang" : undefined}
-						onCta={!lpmFormed ? () => handleOpenModal("lpm") : undefined}
-						icon={LuBuilding2}
-						formed={lpmFormed}
-						gradient="from-yellow-500 to-orange-500"
-					/>
-
-					<SmallCard
-						title="PKK"
-						subtitle={pkkFormed ? "Sudah terbentuk" : "Belum terbentuk"}
-						onClick={
-							pkkFormed
-								? () => navigate("/desa/kelembagaan/pkk/detail")
-								: undefined
-						}
-						cta={!pkkFormed ? "Bentuk Sekarang" : undefined}
-						onCta={!pkkFormed ? () => handleOpenModal("pkk") : undefined}
-						icon={LuSprout}
-						formed={pkkFormed}
-						gradient="from-pink-500 to-rose-500"
-					/>
-				</div>
-			</div>
+			)}
 
 			{/* Ketentuan Hukum Accordion Section */}
 			<div className="mt-12">
@@ -1033,160 +1322,102 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 				</div>
 			</div>
 
+			{/* ═══ Dokumen Peraturan ═══ */}
+			<div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
+				<div className="bg-gradient-to-r from-slate-700 to-slate-900 p-5">
+					<div className="flex items-center space-x-3">
+						<div className="p-2 bg-white/10 rounded-lg backdrop-blur-sm">
+							<LuFileText className="w-5 h-5 text-white" />
+						</div>
+						<div>
+							<h2 className="text-lg font-bold text-white">Dokumen Peraturan</h2>
+							<p className="text-slate-300 text-xs mt-0.5">Regulasi Lembaga Kemasyarakatan</p>
+						</div>
+					</div>
+				</div>
+				<div className="p-4">
+					<div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+						<a href="/peraturan/Permendagri No. 18 Tahun 2018.pdf" target="_blank" rel="noopener noreferrer" className="group flex items-center justify-between p-3 border-l-4 border-emerald-500 bg-emerald-50 hover:bg-emerald-100 rounded-r transition-all">
+							<div className="flex items-center space-x-3 flex-1 min-w-0">
+								<LuFileText className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+								<div className="min-w-0">
+									<p className="font-semibold text-sm text-slate-900 truncate">Permendagri No. 18/2018</p>
+									<p className="text-xs text-slate-500">Lembaga Kemasyarakatan Desa</p>
+								</div>
+							</div>
+							<LuDownload className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 flex-shrink-0 ml-2" />
+						</a>
+						<a href="/peraturan/Permendagri-26-Thn-2020-ttg-Linmas.pdf" target="_blank" rel="noopener noreferrer" className="group flex items-center justify-between p-3 border-l-4 border-amber-500 bg-amber-50 hover:bg-amber-100 rounded-r transition-all">
+							<div className="flex items-center space-x-3 flex-1 min-w-0">
+								<LuFileText className="w-4 h-4 text-amber-600 flex-shrink-0" />
+								<div className="min-w-0">
+									<p className="font-semibold text-sm text-slate-900 truncate">Permendagri No. 26/2020</p>
+									<p className="text-xs text-slate-500">Tibum Tranmas & Linmas</p>
+								</div>
+							</div>
+							<LuDownload className="w-4 h-4 text-slate-400 group-hover:text-amber-600 flex-shrink-0 ml-2" />
+						</a>
+						<a href="/peraturan/PERMENDAGRI_36_TAHUN_2020 (1).pdf" target="_blank" rel="noopener noreferrer" className="group flex items-center justify-between p-3 border-l-4 border-blue-500 bg-blue-50 hover:bg-blue-100 rounded-r transition-all">
+							<div className="flex items-center space-x-3 flex-1 min-w-0">
+								<LuFileText className="w-4 h-4 text-blue-600 flex-shrink-0" />
+								<div className="min-w-0">
+									<p className="font-semibold text-sm text-slate-900 truncate">Permendagri No. 36/2020</p>
+									<p className="text-xs text-slate-500">Gerakan PKK</p>
+								</div>
+							</div>
+							<LuDownload className="w-4 h-4 text-slate-400 group-hover:text-blue-600 flex-shrink-0 ml-2" />
+						</a>
+						<a href="/peraturan/Permendagri Nomor 11 Tahun 2023.pdf" target="_blank" rel="noopener noreferrer" className="group flex items-center justify-between p-3 border-l-4 border-teal-500 bg-teal-50 hover:bg-teal-100 rounded-r transition-all">
+							<div className="flex items-center space-x-3 flex-1 min-w-0">
+								<LuFileText className="w-4 h-4 text-teal-600 flex-shrink-0" />
+								<div className="min-w-0">
+									<p className="font-semibold text-sm text-slate-900 truncate">Permendagri No. 11/2023</p>
+									<p className="text-xs text-slate-500">Sarana Prasarana Linmas</p>
+								</div>
+							</div>
+							<LuDownload className="w-4 h-4 text-slate-400 group-hover:text-teal-600 flex-shrink-0 ml-2" />
+						</a>
+						<a href="/peraturan/Permendagri No 13 Tahun 2024.pdf" target="_blank" rel="noopener noreferrer" className="group flex items-center justify-between p-3 border-l-4 border-purple-500 bg-purple-50 hover:bg-purple-100 rounded-r transition-all">
+							<div className="flex items-center space-x-3 flex-1 min-w-0">
+								<LuFileText className="w-4 h-4 text-purple-600 flex-shrink-0" />
+								<div className="min-w-0">
+									<p className="font-semibold text-sm text-slate-900 truncate">Permendagri No. 13/2024</p>
+									<p className="text-xs text-slate-500">Pos Pelayanan Terpadu (Posyandu)</p>
+								</div>
+							</div>
+							<LuDownload className="w-4 h-4 text-slate-400 group-hover:text-purple-600 flex-shrink-0 ml-2" />
+						</a>
+						<a href="/peraturan/perda no 9 tahun 2011.pdf" target="_blank" rel="noopener noreferrer" className="group flex items-center justify-between p-3 border-l-4 border-rose-500 bg-rose-50 hover:bg-rose-100 rounded-r transition-all">
+							<div className="flex items-center space-x-3 flex-1 min-w-0">
+								<LuFileText className="w-4 h-4 text-rose-600 flex-shrink-0" />
+								<div className="min-w-0">
+									<p className="font-semibold text-sm text-slate-900 truncate">Perda No. 9/2011</p>
+									<p className="text-xs text-slate-500">Lembaga Kemasyarakatan Kab. Bogor</p>
+								</div>
+							</div>
+							<LuDownload className="w-4 h-4 text-slate-400 group-hover:text-rose-600 flex-shrink-0 ml-2" />
+						</a>
+						<a href="/peraturan/Perbup 31 Tahun 2012 - Tata Cara Pembentukan LPM Desa, Kel, RW dan RT.pdf" target="_blank" rel="noopener noreferrer" className="group flex items-center justify-between p-3 border-l-4 border-indigo-500 bg-indigo-50 hover:bg-indigo-100 rounded-r transition-all md:col-span-2">
+							<div className="flex items-center space-x-3 flex-1 min-w-0">
+								<LuFileText className="w-4 h-4 text-indigo-600 flex-shrink-0" />
+								<div className="min-w-0">
+									<p className="font-semibold text-sm text-slate-900 truncate">Perbup No. 31/2012</p>
+									<p className="text-xs text-slate-500">Tata Cara Pembentukan LPM & RT/RW</p>
+								</div>
+							</div>
+							<LuDownload className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 flex-shrink-0 ml-2" />
+						</a>
+					</div>
+				</div>
+			</div>
+
 				</div>
 				{/* End of Left Column */}
 
-				{/* Right Column - Document List (1/3) */}
+				{/* Right Column - Activity Log (1/3) */}
 				<div className="lg:col-span-1">
-					<div className="bg-white rounded-xl shadow-lg border border-slate-200 sticky top-4">
-						<div className="bg-gradient-to-r from-slate-700 to-slate-900 rounded-t-xl p-5">
-							<div className="flex items-center space-x-3">
-								<div className="p-2 bg-white/10 rounded-lg backdrop-blur-sm">
-									<LuFileText className="w-5 h-5 text-white" />
-								</div>
-								<div>
-									<h2 className="text-lg font-bold text-white">Dokumen Peraturan</h2>
-									<p className="text-slate-300 text-xs mt-0.5">Regulasi Lembaga Kemasyarakatan</p>
-								</div>
-							</div>
-						</div>
-
-						<div className="p-4 max-h-[calc(100vh-12rem)] overflow-y-auto">
-							<div className="space-y-2">
-								{/* Permendagri 18/2018 */}
-								<a
-									href="/peraturan/Permendagri No. 18 Tahun 2018.pdf"
-									target="_blank"
-									rel="noopener noreferrer"
-									className="group flex items-start justify-between p-3 border-l-4 border-emerald-500 bg-emerald-50 hover:bg-emerald-100 rounded-r transition-all duration-200"
-								>
-									<div className="flex items-start space-x-3 flex-1">
-										<LuFileText className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-										<div className="flex-1 min-w-0">
-											<p className="font-semibold text-sm text-slate-900 group-hover:text-emerald-700 transition-colors">
-												Permendagri No. 18 Tahun 2018
-											</p>
-											<p className="text-xs text-slate-600 mt-0.5">Lembaga Kemasyarakatan Desa</p>
-										</div>
-									</div>
-									<LuDownload className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 flex-shrink-0 ml-2 transition-colors" />
-								</a>
-
-								{/* Permendagri 26/2020 - Linmas */}
-								<a
-									href="/peraturan/Permendagri-26-Thn-2020-ttg-Linmas.pdf"
-									target="_blank"
-									rel="noopener noreferrer"
-									className="group flex items-start justify-between p-3 border-l-4 border-amber-500 bg-amber-50 hover:bg-amber-100 rounded-r transition-all duration-200"
-								>
-									<div className="flex items-start space-x-3 flex-1">
-										<LuFileText className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-										<div className="flex-1 min-w-0">
-											<p className="font-semibold text-sm text-slate-900 group-hover:text-amber-700 transition-colors">
-												Permendagri No. 26 Tahun 2020
-											</p>
-											<p className="text-xs text-slate-600 mt-0.5">Tibum Tranmas & Linmas</p>
-										</div>
-									</div>
-									<LuDownload className="w-4 h-4 text-slate-400 group-hover:text-amber-600 flex-shrink-0 ml-2 transition-colors" />
-								</a>
-
-								{/* Permendagri 36/2020 */}
-								<a
-									href="/peraturan/PERMENDAGRI_36_TAHUN_2020 (1).pdf"
-									target="_blank"
-									rel="noopener noreferrer"
-									className="group flex items-start justify-between p-3 border-l-4 border-blue-500 bg-blue-50 hover:bg-blue-100 rounded-r transition-all duration-200"
-								>
-									<div className="flex items-start space-x-3 flex-1">
-										<LuFileText className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-										<div className="flex-1 min-w-0">
-											<p className="font-semibold text-sm text-slate-900 group-hover:text-blue-700 transition-colors">
-												Permendagri No. 36 Tahun 2020
-											</p>
-											<p className="text-xs text-slate-600 mt-0.5">Gerakan PKK</p>
-										</div>
-									</div>
-									<LuDownload className="w-4 h-4 text-slate-400 group-hover:text-blue-600 flex-shrink-0 ml-2 transition-colors" />
-								</a>
-
-								{/* Permendagri 11/2023 */}
-								<a
-									href="/peraturan/Permendagri Nomor 11 Tahun 2023.pdf"
-									target="_blank"
-									rel="noopener noreferrer"
-									className="group flex items-start justify-between p-3 border-l-4 border-teal-500 bg-teal-50 hover:bg-teal-100 rounded-r transition-all duration-200"
-								>
-									<div className="flex items-start space-x-3 flex-1">
-										<LuFileText className="w-5 h-5 text-teal-600 flex-shrink-0 mt-0.5" />
-										<div className="flex-1 min-w-0">
-											<p className="font-semibold text-sm text-slate-900 group-hover:text-teal-700 transition-colors">
-												Permendagri No. 11 Tahun 2023
-											</p>
-											<p className="text-xs text-slate-600 mt-0.5">Sarana Prasarana Linmas</p>
-										</div>
-									</div>
-									<LuDownload className="w-4 h-4 text-slate-400 group-hover:text-teal-600 flex-shrink-0 ml-2 transition-colors" />
-								</a>
-
-								{/* Permendagri 13/2024 */}
-								<a
-									href="/peraturan/Permendagri No 13 Tahun 2024.pdf"
-									target="_blank"
-									rel="noopener noreferrer"
-									className="group flex items-start justify-between p-3 border-l-4 border-purple-500 bg-purple-50 hover:bg-purple-100 rounded-r transition-all duration-200"
-								>
-									<div className="flex items-start space-x-3 flex-1">
-										<LuFileText className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
-										<div className="flex-1 min-w-0">
-											<p className="font-semibold text-sm text-slate-900 group-hover:text-purple-700 transition-colors">
-												Permendagri No. 13 Tahun 2024
-											</p>
-											<p className="text-xs text-slate-600 mt-0.5">Pos Pelayanan Terpadu (Posyandu)</p>
-										</div>
-									</div>
-									<LuDownload className="w-4 h-4 text-slate-400 group-hover:text-purple-600 flex-shrink-0 ml-2 transition-colors" />
-								</a>
-
-								{/* Perda 9/2011 */}
-								<a
-									href="/peraturan/perda no 9 tahun 2011.pdf"
-									target="_blank"
-									rel="noopener noreferrer"
-									className="group flex items-start justify-between p-3 border-l-4 border-rose-500 bg-rose-50 hover:bg-rose-100 rounded-r transition-all duration-200"
-								>
-									<div className="flex items-start space-x-3 flex-1">
-										<LuFileText className="w-5 h-5 text-rose-600 flex-shrink-0 mt-0.5" />
-										<div className="flex-1 min-w-0">
-											<p className="font-semibold text-sm text-slate-900 group-hover:text-rose-700 transition-colors">
-												Perda No. 9 Tahun 2011
-											</p>
-											<p className="text-xs text-slate-600 mt-0.5">Lembaga Kemasyarakatan Kab. Bogor</p>
-										</div>
-									</div>
-									<LuDownload className="w-4 h-4 text-slate-400 group-hover:text-rose-600 flex-shrink-0 ml-2 transition-colors" />
-								</a>
-
-								{/* Perbup 31/2012 */}
-								<a
-									href="/peraturan/Perbup 31 Tahun 2012 - Tata Cara Pembentukan LPM Desa, Kel, RW dan RT.pdf"
-									target="_blank"
-									rel="noopener noreferrer"
-									className="group flex items-start justify-between p-3 border-l-4 border-indigo-500 bg-indigo-50 hover:bg-indigo-100 rounded-r transition-all duration-200"
-								>
-									<div className="flex items-start space-x-3 flex-1">
-										<LuFileText className="w-5 h-5 text-indigo-600 flex-shrink-0 mt-0.5" />
-										<div className="flex-1 min-w-0">
-											<p className="font-semibold text-sm text-slate-900 group-hover:text-indigo-700 transition-colors">
-												Perbup No. 31 Tahun 2012
-											</p>
-											<p className="text-xs text-slate-600 mt-0.5">Tata Cara Pembentukan LPM & RT/RW</p>
-										</div>
-									</div>
-									<LuDownload className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 flex-shrink-0 ml-2 transition-colors" />
-								</a>
-							</div>
-						</div>
+					<div className="sticky top-4">
+						<AktivitasLog mode="all" />
 					</div>
 				</div>
 				{/* End of Right Column */}
@@ -1203,92 +1434,23 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 				icon={modalConfig.icon}
 				gradient={modalConfig.gradient}
 				loading={creatingLembaga}
-			/>
-		</div>
-	);
-}
-
-// Peraturan Card Component
-function PeraturanCard({ title, description, fileUrl, color = "blue" }) {
-	const colorClasses = {
-		blue: {
-			bg: 'from-blue-500 to-blue-600',
-			border: 'border-blue-200',
-			hover: 'hover:shadow-blue-200',
-			icon: 'text-blue-600',
-		},
-		indigo: {
-			bg: 'from-indigo-500 to-indigo-600',
-			border: 'border-indigo-200',
-			hover: 'hover:shadow-indigo-200',
-			icon: 'text-indigo-600',
-		},
-		purple: {
-			bg: 'from-purple-500 to-purple-600',
-			border: 'border-purple-200',
-			hover: 'hover:shadow-purple-200',
-			icon: 'text-purple-600',
-		},
-		emerald: {
-			bg: 'from-emerald-500 to-emerald-600',
-			border: 'border-emerald-200',
-			hover: 'hover:shadow-emerald-200',
-			icon: 'text-emerald-600',
-		},
-		teal: {
-			bg: 'from-teal-500 to-teal-600',
-			border: 'border-teal-200',
-			hover: 'hover:shadow-teal-200',
-			icon: 'text-teal-600',
-		},
-		amber: {
-			bg: 'from-amber-500 to-amber-600',
-			border: 'border-amber-200',
-			hover: 'hover:shadow-amber-200',
-			icon: 'text-amber-600',
-		},
-		rose: {
-			bg: 'from-rose-500 to-rose-600',
-			border: 'border-rose-200',
-			hover: 'hover:shadow-rose-200',
-			icon: 'text-rose-600',
-		},
-	};
-
-	const classes = colorClasses[color] || colorClasses.blue;
-
-	return (
-		<div className={`bg-white rounded-xl border-2 ${classes.border} ${classes.hover} hover:shadow-lg transition-all duration-300 overflow-hidden group flex flex-col h-full`}>
-			<div className={`bg-gradient-to-r ${classes.bg} p-4`}>
-				<div className="flex items-center space-x-3">
-					<div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
-						<LuFileText className="w-5 h-5 text-white" />
+			>
+				{modalConfig.type === 'lembaga-lainnya' && (
+					<div className="mb-6">
+						<label className="block text-sm font-medium text-gray-700 mb-2">
+							Nama Lembaga <span className="text-red-500">*</span>
+						</label>
+						<input
+							type="text"
+							value={namaLembagaLainnya}
+							onChange={(e) => setNamaLembagaLainnya(e.target.value)}
+							placeholder="Contoh: Forum Komunikasi Desa, Kelompok Tani, dll"
+							className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-slate-500 focus:ring-2 focus:ring-slate-200 outline-none transition-all text-gray-800"
+							disabled={creatingLembaga}
+						/>
 					</div>
-					<h4 className="font-bold text-white text-sm">{title}</h4>
-				</div>
-			</div>
-			<div className="p-4 flex flex-col flex-grow">
-				<p className="text-sm text-gray-600 mb-4 flex-grow">{description}</p>
-				<div className="flex space-x-2 mt-auto">
-					<a
-						href={fileUrl}
-						target="_blank"
-						rel="noopener noreferrer"
-						className={`flex-1 flex items-center justify-center space-x-2 px-3 py-2 bg-gradient-to-r ${classes.bg} text-white rounded-lg hover:shadow-md transition-all text-sm font-medium`}
-					>
-						<LuExternalLink className="w-4 h-4" />
-						<span>Buka</span>
-					</a>
-					<a
-						href={fileUrl}
-						download
-						className="flex items-center justify-center px-3 py-2 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all"
-						title="Unduh"
-					>
-						<LuDownload className="w-4 h-4" />
-					</a>
-				</div>
-			</div>
+				)}
+			</ConfirmationModal>
 		</div>
 	);
 }

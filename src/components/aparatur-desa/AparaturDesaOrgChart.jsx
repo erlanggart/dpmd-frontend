@@ -1,81 +1,68 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { FaUserTie, FaUsers } from "react-icons/fa";
-// actions are handled on the detail page
+import { UserCircle, Crown, Briefcase, Shield, Users, ChevronRight, Landmark } from "lucide-react";
 
 const getBaseHost = () => {
-	const apiBase =
-		import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api";
-	// remove trailing /api or /api/
+	const apiBase = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api";
 	return apiBase.replace(/\/?api\/?$/, "");
 };
 
 const getPasFotoUrl = (person) => {
 	if (person?.file_pas_foto) {
-		return `${getBaseHost()}/uploads/aparatur_desa_files/${
-			person.file_pas_foto
-		}`;
+		return `${getBaseHost()}/uploads/aparatur_desa_files/${person.file_pas_foto}`;
 	}
-	return "/user-default.svg";
+	return null;
 };
 
-const PersonCard = ({ person, isLeader = false }) => {
+const Avatar = ({ person, size = "md" }) => {
+	const foto = getPasFotoUrl(person);
+	const sizes = {
+		lg: "h-20 w-20",
+		md: "h-14 w-14",
+		sm: "h-11 w-11",
+	};
+	const iconSizes = { lg: "h-10 w-10", md: "h-7 w-7", sm: "h-6 w-6" };
+
+	return foto ? (
+		<img
+			src={foto}
+			alt={person.nama_lengkap}
+			className={`${sizes[size]} rounded-full object-cover ring-2 ring-white shadow-md`}
+			onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'flex'; }}
+		/>
+	) : (
+		<div className={`${sizes[size]} bg-gradient-to-br from-teal-100 to-emerald-200 rounded-full flex items-center justify-center ring-2 ring-white shadow-md ${foto ? 'hidden' : ''}`}>
+			<UserCircle className={`${iconSizes[size]} text-teal-600`} />
+		</div>
+	);
+};
+
+// Leader card — Kepala Desa / Sekretaris
+const LeaderCard = ({ person, accent = "teal" }) => {
 	const nav = useNavigate();
-	
 	if (!person) return null;
-	
-	const statusColor =
-		person.status === "Aktif"
-			? "bg-gradient-to-r from-green-500 to-emerald-500 text-white"
-			: "bg-gradient-to-r from-red-500 to-rose-500 text-white";
-	
+
+	const gradients = {
+		teal: "from-teal-600 to-emerald-600",
+		blue: "from-blue-600 to-indigo-600",
+	};
+
 	return (
 		<div
-			className={`group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 cursor-pointer transform hover:scale-105 overflow-hidden w-64 ${
-				isLeader ? 'border border-primary' : 'border border-gray-200 hover:border-primary/50'
-			}`}
 			onClick={() => nav(`/desa/aparatur-desa/${person.id}`)}
+			className="cursor-pointer group"
 		>
-			{/* Decorative corner accent */}
-			<div className={`absolute top-0 right-0 w-20 h-20 transform translate-x-10 -translate-y-10 rounded-full ${isLeader ? 'bg-gradient-to-br from-primary/30 to-blue-500/30' : 'bg-gradient-to-br from-gray-200/50 to-gray-300/50'} transition-all duration-500 group-hover:scale-150`} />
-			
-			{/* Shine effect on hover */}
-			<div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-			
-			<div className={`relative ${isLeader ? 'bg-gradient-to-br from-[rgb(var(--color-primary))] via-blue-600 to-indigo-600' : 'bg-gradient-to-br from-gray-50 via-gray-100 to-gray-50'} p-5 rounded-t-2xl`}>
-				<div className="flex justify-center mb-3">
-					<div className="relative">
-						{/* Rotating ring effect */}
-						<div className={`absolute inset-0 rounded-full ${isLeader ? 'bg-gradient-to-r from-yellow-400 via-pink-400 to-yellow-400 animate-spin' : 'bg-gradient-to-r from-blue-400 via-purple-400 to-blue-400'} opacity-0 group-hover:opacity-30 blur-sm transition-opacity duration-500`} style={{ animationDuration: '3s' }} />
-						
-						<div className={`relative ${isLeader ? 'ring-2 ring-white/40' : 'ring-1 ring-white/20'} rounded-full p-1 bg-gradient-to-br from-white to-gray-100`}>
-							<img
-								src={getPasFotoUrl(person)}
-								onError={(e) => {
-									e.currentTarget.src = "/user-default.svg";
-								}}
-								alt={person.nama_lengkap || "Foto Aparatur"}
-								className={`w-24 h-24 rounded-full object-cover border-2 border-white shadow-xl transform transition-transform duration-500 group-hover:scale-110`}
-							/>
-						</div>
-						
-						<div className={`absolute -bottom-2 -right-2 ${statusColor} rounded-full p-2 shadow-lg ring-2 ring-white transform transition-all duration-300 group-hover:scale-110 group-hover:rotate-12`}>
-							<FaUserTie className="w-4 h-4" />
+			<div className={`relative bg-gradient-to-br ${gradients[accent]} rounded-2xl p-[2px] shadow-lg group-hover:shadow-xl transition-shadow`}>
+				<div className="bg-white rounded-[14px] p-5 flex flex-col items-center">
+					<div className="relative mb-3">
+						<Avatar person={person} size="lg" />
+						<div className={`absolute -bottom-1 -right-1 bg-gradient-to-br ${gradients[accent]} text-white p-1.5 rounded-full shadow-md`}>
+							<Crown className="w-3.5 h-3.5" />
 						</div>
 					</div>
-				</div>
-			</div>
-			
-			<div className="relative p-5 bg-gradient-to-b from-white to-gray-50">
-				<h3 className={`font-bold text-center mb-2 transition-colors duration-300 ${isLeader ? 'text-xl bg-gradient-to-r from-primary via-blue-600 to-indigo-600 bg-clip-text text-transparent' : 'text-base text-gray-900 group-hover:text-primary'}`}>
-					{person.nama_lengkap || "-"}
-				</h3>
-				<p className="text-sm text-center text-gray-600 mb-3 font-medium">
-					{person.jabatan || "-"}
-				</p>
-				<div className="flex justify-center">
-					<span className={`text-xs px-4 py-1.5 rounded-full font-semibold ${statusColor} shadow-md transform transition-all duration-300 group-hover:scale-105`}>
-						{person.status || "-"}
+					<h3 className="font-bold text-gray-900 text-center text-sm leading-tight">{person.nama_lengkap || "-"}</h3>
+					<span className={`mt-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r ${gradients[accent]} text-white`}>
+						{person.jabatan || "-"}
 					</span>
 				</div>
 			</div>
@@ -83,187 +70,189 @@ const PersonCard = ({ person, isLeader = false }) => {
 	);
 };
 
-// Vertical connector component
-const VerticalConnector = ({ height = "h-8" }) => (
-	<div className="flex justify-center my-6">
-		<div className="relative">
-			<div className={`w-1 ${height} bg-gradient-to-b from-primary via-blue-500 to-primary rounded-full shadow-lg`} />
-			<div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-primary rounded-full shadow-lg animate-pulse" />
-		</div>
-	</div>
-);
+// Staff card — Kaur, Kasi, Kadus, Staf, dll
+const StaffCard = ({ person }) => {
+	const nav = useNavigate();
+	if (!person) return null;
 
-// Section header component
-const SectionHeader = ({ title, icon: Icon }) => (
-	<div className="flex items-center justify-center gap-3 mb-8">
-		<div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/30 to-primary/50" />
-		<div className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-primary/10 via-blue-50 to-primary/10 rounded-full border-2 border-primary/20 shadow-md">
-			{Icon && <Icon className="text-primary w-6 h-6 animate-pulse" />}
-			<h4 className="font-bold text-xl text-transparent bg-clip-text bg-gradient-to-r from-[rgb(var(--color-primary))] via-blue-600 to-indigo-600 uppercase tracking-wider">
-				{title}
-			</h4>
+	return (
+		<div
+			onClick={() => nav(`/desa/aparatur-desa/${person.id}`)}
+			className="group cursor-pointer bg-white rounded-xl border border-gray-200 hover:border-teal-300 hover:shadow-md p-4 flex items-center gap-3 transition-all"
+		>
+			<Avatar person={person} size="sm" />
+			<div className="flex-1 min-w-0">
+				<p className="font-semibold text-gray-900 text-sm truncate group-hover:text-teal-700 transition-colors">{person.nama_lengkap || "-"}</p>
+				<p className="text-xs text-gray-500 truncate">{person.jabatan || "-"}</p>
+			</div>
+			<ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-teal-500 flex-shrink-0 transition-colors" />
 		</div>
-		<div className="h-px flex-1 bg-gradient-to-l from-transparent via-primary/30 to-primary/50" />
+	);
+};
+
+const SectionLabel = ({ icon: Icon, label, count, color = "teal" }) => {
+	const colors = {
+		teal: "bg-teal-50 text-teal-700 border-teal-200",
+		blue: "bg-blue-50 text-blue-700 border-blue-200",
+		purple: "bg-purple-50 text-purple-700 border-purple-200",
+		amber: "bg-amber-50 text-amber-700 border-amber-200",
+		gray: "bg-gray-50 text-gray-700 border-gray-200",
+	};
+	return (
+		<div className="flex items-center gap-2 mb-3">
+			<div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold ${colors[color]}`}>
+				<Icon className="w-3.5 h-3.5" />
+				{label}
+			</div>
+			{count > 0 && <span className="text-xs text-gray-400">{count} orang</span>}
+		</div>
+	);
+};
+
+const Connector = () => (
+	<div className="flex justify-center py-2">
+		<div className="w-px h-6 bg-gradient-to-b from-teal-300 to-transparent" />
 	</div>
 );
 
 const AparaturDesaOrgChart = ({ aparatur = [] }) => {
-	// Show only active personnel in the org chart
 	const activeOnly = (aparatur || []).filter(
 		(p) => (p.status || "").toLowerCase() === "aktif"
 	);
 
 	const byExact = (jab) =>
-		activeOnly.find(
-			(p) => (p.jabatan || "").toLowerCase() === jab.toLowerCase()
-		);
+		activeOnly.find((p) => (p.jabatan || "").toLowerCase() === jab.toLowerCase());
 	const byInclude = (kw) =>
-		activeOnly.filter((p) =>
-			(p.jabatan || "").toLowerCase().includes(kw.toLowerCase())
-		);
+		activeOnly.filter((p) => (p.jabatan || "").toLowerCase().includes(kw.toLowerCase()));
 
 	const kepalaDesa = byExact("Kepala Desa");
 	const sekretaris = byExact("Sekretaris Desa");
-	const kaur = byInclude("Kaur");
-	const kasi = byInclude("Kasi");
-	const kadus = byExact("Kepala Dusun")
-		? activeOnly.filter((p) => p.jabatan === "Kepala Dusun")
-		: byInclude("Kepala Dusun");
+	const kaur = activeOnly.filter((p) => {
+		const j = (p.jabatan || "").toLowerCase();
+		return j.includes("kaur") || j.includes("kepala urusan");
+	});
+	const kasi = activeOnly.filter((p) => {
+		const j = (p.jabatan || "").toLowerCase();
+		return j.includes("kasi") || j.includes("kepala seksi");
+	});
+	const kadus = activeOnly.filter((p) => {
+		const j = (p.jabatan || "").toLowerCase();
+		return j.includes("kadus") || j.includes("kepala dusun");
+	});
 	const staf = byInclude("Staf Desa");
+	const bpd = activeOnly.filter((p) => (p.jabatan || "").toUpperCase().includes("BPD"));
 
-	// Others (not in known categories)
 	const usedIds = new Set(
-		[
-			kepalaDesa?.id,
-			sekretaris?.id,
-			...kaur.map((x) => x.id),
-			...kasi.map((x) => x.id),
-			...kadus.map((x) => x.id),
-			...staf.map((x) => x.id),
-		].filter(Boolean)
+		[kepalaDesa?.id, sekretaris?.id, ...kaur.map((x) => x.id), ...kasi.map((x) => x.id), ...kadus.map((x) => x.id), ...staf.map((x) => x.id), ...bpd.map((x) => x.id)].filter(Boolean)
 	);
 	const others = activeOnly.filter((p) => !usedIds.has(p.id));
 
+	if (activeOnly.length === 0) {
+		return (
+			<div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+				<Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+				<p className="text-gray-500">Tidak ada aparatur aktif</p>
+			</div>
+		);
+	}
+
 	return (
-		<div className="org-chart min-h-screen">
-			<div className="max-w-7xl mx-auto">
-				{/* Decorative background elements */}
-				<div className="absolute top-0 left-0 w-96 h-96 bg-gradient-to-br from-primary/5 to-transparent rounded-full blur-3xl -z-10" />
-				<div className="absolute bottom-0 right-0 w-96 h-96 bg-gradient-to-tl from-blue-500/5 to-transparent rounded-full blur-3xl -z-10" />
-				
-				{/* Baris 1: Kepala Desa - Center Top with special treatment */}
-				{kepalaDesa && (
-					<div className="mb-12 relative">					<SectionHeader title="Kepala Desa" icon={FaUserTie} />						<div className="flex justify-center">
-							<div className="relative">
-								{/* Glow effect behind */}
-								<div className="absolute inset-0 bg-gradient-to-r from-primary/20 via-blue-500/20 to-indigo-500/20 rounded-3xl blur-2xl scale-110 animate-pulse" />
-							<div className="relative w-64 transform transition-all duration-500 hover:scale-105">
-									<PersonCard person={kepalaDesa} isLeader={true} />
-								</div>
-							</div>
+		<div className="space-y-6">
+			{/* Top Leaders */}
+			{(kepalaDesa || sekretaris) && (
+				<div className="flex flex-col items-center gap-2">
+					{kepalaDesa && (
+						<div className="w-full max-w-[240px]">
+							<LeaderCard person={kepalaDesa} accent="teal" />
+						</div>
+					)}
+					{kepalaDesa && sekretaris && <Connector />}
+					{sekretaris && (
+						<div className="w-full max-w-[240px]">
+							<LeaderCard person={sekretaris} accent="blue" />
+						</div>
+					)}
+				</div>
+			)}
+
+			{/* Divider */}
+			{(kepalaDesa || sekretaris) && (kaur.length > 0 || kasi.length > 0 || kadus.length > 0 || staf.length > 0 || others.length > 0) && (
+				<div className="flex items-center gap-3">
+					<div className="flex-1 h-px bg-gradient-to-r from-transparent to-gray-200" />
+					<span className="text-xs text-gray-400 font-medium">Struktur Organisasi</span>
+					<div className="flex-1 h-px bg-gradient-to-l from-transparent to-gray-200" />
+				</div>
+			)}
+
+			{/* Staff Grid */}
+			<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+				{/* Kepala Urusan */}
+				{kaur.length > 0 && (
+					<div>
+						<SectionLabel icon={Briefcase} label="Kepala Urusan" count={kaur.length} color="blue" />
+						<div className="space-y-2">
+							{kaur.map((p) => <StaffCard key={p.id} person={p} />)}
 						</div>
 					</div>
 				)}
 
-				<VerticalConnector height="h-16" />
-
-				{/* Baris 2: Sekretaris */}
-				{sekretaris && (
-					<>
-						<SectionHeader title="Sekretariat" icon={FaUserTie} />
-						<div className="flex justify-center mb-12">
-							<div className="w-64 transform transition-all duration-500 hover:scale-105">
-								<PersonCard person={sekretaris} isLeader={true} />
-							</div>
-						</div>
-						<VerticalConnector height="h-12" />
-					</>
-				)}
-
-				{/* Baris 3: Kepala Urusan (Kaur) - Horizontal scroll if many */}
-				{kaur.length > 0 && (
-					<>
-						<SectionHeader title="Kepala Urusan" icon={FaUsers} />
-						<div className="mb-12 overflow-x-auto pb-4">
-							<div className="flex justify-center gap-6 min-w-max px-4">
-								{kaur.map((p) => (
-									<div key={p.id} className="w-64 flex-shrink-0 transform transition-all duration-500 hover:scale-105">
-										<PersonCard person={p} />
-									</div>
-								))}
-							</div>
-						</div>
-						<VerticalConnector height="h-12" />
-					</>
-				)}
-
-				{/* Baris 4: Kepala Seksi (Kasi) - Horizontal scroll if many */}
+				{/* Kepala Seksi */}
 				{kasi.length > 0 && (
-					<>
-						<SectionHeader title="Kepala Seksi" icon={FaUserTie} />
-						<div className="mb-12 overflow-x-auto pb-4">
-							<div className="flex justify-center gap-6 min-w-max px-4">
-								{kasi.map((p) => (
-									<div key={p.id} className="w-64 flex-shrink-0 transform transition-all duration-500 hover:scale-105">
-										<PersonCard person={p} />
-									</div>
-								))}
-							</div>
+					<div>
+						<SectionLabel icon={Shield} label="Kepala Seksi" count={kasi.length} color="purple" />
+						<div className="space-y-2">
+							{kasi.map((p) => <StaffCard key={p.id} person={p} />)}
 						</div>
-						<VerticalConnector height="h-12" />
-					</>
+					</div>
 				)}
 
-				{/* Baris 5: Kepala Dusun - Grid responsive */}
+				{/* Kepala Dusun */}
 				{kadus.length > 0 && (
-					<>
-						<SectionHeader title="Kepala Dusun" icon={FaUsers} />
-						<div className="mb-12">
-							<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 justify-items-center">
-								{kadus.map((p) => (
-									<div key={p.id} className="w-64 transform transition-all duration-500 hover:scale-105">
-										<PersonCard person={p} />
-									</div>
-								))}
-							</div>
+					<div>
+						<SectionLabel icon={Users} label="Kadus" count={kadus.length} color="amber" />
+						<div className="space-y-2">
+							{kadus.map((p) => <StaffCard key={p.id} person={p} />)}
 						</div>
-						<VerticalConnector height="h-12" />
-					</>
+					</div>
 				)}
 
-				{/* Baris 6: Staf Desa - Grid responsive */}
+				{/* Staf Desa */}
 				{staf.length > 0 && (
-					<>
-						<SectionHeader title="Staf Desa" icon={FaUsers} />
-						<div className="mb-12">
-							<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 justify-items-center">
-								{staf.map((p) => (
-									<div key={p.id} className="w-64 transform transition-all duration-500 hover:scale-105">
-										<PersonCard person={p} />
-									</div>
-								))}
-							</div>
+					<div>
+						<SectionLabel icon={Users} label="Staf Desa" count={staf.length} color="teal" />
+						<div className="space-y-2">
+							{staf.map((p) => <StaffCard key={p.id} person={p} />)}
 						</div>
-						{others.length > 0 && <VerticalConnector height="h-12" />}
-					</>
-				)}
-
-				{/* Baris 7: Aparatur Lainnya - Grid responsive */}
-				{others.length > 0 && (
-					<>
-						<SectionHeader title="Aparatur Lainnya" icon={FaUsers} />
-						<div className="mb-8">
-							<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 justify-items-center">
-								{others.map((p) => (
-									<div key={p.id} className="w-64 transform transition-all duration-500 hover:scale-105">
-										<PersonCard person={p} />
-									</div>
-								))}
-							</div>
-						</div>
-					</>
+					</div>
 				)}
 			</div>
+
+			{/* BPD Section - separate from Pemerintah Desa */}
+			{bpd.length > 0 && (
+				<>
+					<div className="flex items-center gap-3">
+						<div className="flex-1 h-px bg-gradient-to-r from-transparent to-gray-200" />
+						<span className="text-xs text-gray-400 font-medium">Badan Permusyawaratan Desa</span>
+						<div className="flex-1 h-px bg-gradient-to-l from-transparent to-gray-200" />
+					</div>
+					<div>
+						<SectionLabel icon={Landmark} label="BPD" count={bpd.length} color="blue" />
+						<div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+							{bpd.map((p) => <StaffCard key={p.id} person={p} />)}
+						</div>
+					</div>
+				</>
+			)}
+
+			{/* Lainnya */}
+			{others.length > 0 && (
+				<div>
+					<SectionLabel icon={Users} label="Lainnya" count={others.length} color="gray" />
+					<div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+						{others.map((p) => <StaffCard key={p.id} person={p} />)}
+					</div>
+				</div>
+			)}
 		</div>
 	);
 };

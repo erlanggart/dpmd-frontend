@@ -19,6 +19,8 @@ import {
 	updatePkk,
 	listSatlinmas,
 	updateSatlinmas,
+	getLembagaLainnya,
+	updateLembagaLainnya,
 	toggleKelembagaanStatus,
 	toggleKelembagaanVerification,
 } from "../../services/kelembagaan";
@@ -37,6 +39,7 @@ import {
 	showLoadingAlert,
 	showConfirmAlert,
 } from "../../utils/sweetAlert";
+import Swal from "sweetalert2";
 
 // Helper function to get display name for kelembagaan type
 const getDisplayName = (type) => {
@@ -48,6 +51,7 @@ const getDisplayName = (type) => {
 		lpm: "LPM",
 		pkk: "PKK",
 		satlinmas: "Satlinmas",
+		"lembaga-lainnya": "Lembaga Lainnya",
 	};
 	return mapping[type] || type.toUpperCase();
 };
@@ -112,8 +116,6 @@ export default function KelembagaanDetailPage({
 		nomor: "",
 		alamat: "",
 		produk_hukum_id: "",
-		jumlah_jiwa: "",
-		jumlah_kk: "",
 	});
 	const [produkHukumList, setProdukHukumList] = useState([]);
 	const [anak, setAnak] = useState([]);
@@ -167,6 +169,9 @@ export default function KelembagaanDetailPage({
 					(res?.data?.data || []).find((x) => String(x.id) === String(id)) ||
 					(res?.data?.data || [])[0] ||
 					null;
+			} else if (type === "lembaga-lainnya") {
+				const res = await getLembagaLainnya(id);
+				data = res?.data?.data;
 			}
 			setDetail(data);
 		} catch (err) {
@@ -237,8 +242,6 @@ export default function KelembagaanDetailPage({
 			nomor: detail?.nomor || "",
 			alamat: detail?.alamat || "",
 			produk_hukum_id: detail?.produk_hukum_id || "",
-			jumlah_jiwa: detail?.jumlah_jiwa ?? "",
-			jumlah_kk: detail?.jumlah_kk ?? "",
 		});
 		setIsEditOpen(true);
 	};
@@ -255,10 +258,6 @@ export default function KelembagaanDetailPage({
 				payload.nama = editForm.nama || payload.nama;
 			payload.alamat = editForm.alamat;
 			payload.produk_hukum_id = editForm.produk_hukum_id || null;
-			if (type === "rt") {
-				payload.jumlah_jiwa = editForm.jumlah_jiwa !== "" ? parseInt(editForm.jumlah_jiwa) : null;
-				payload.jumlah_kk = editForm.jumlah_kk !== "" ? parseInt(editForm.jumlah_kk) : null;
-			}
 
 			if (type === "rw") await updateRw(detail.id, payload);
 			else if (type === "rt") await updateRt(detail.id, payload);
@@ -268,6 +267,7 @@ export default function KelembagaanDetailPage({
 			else if (type === "lpm") await updateLpm(detail.id, payload);
 			else if (type === "pkk") await updatePkk(detail.id, payload);
 			else if (type === "satlinmas") await updateSatlinmas(detail.id, payload);
+			else if (type === "lembaga-lainnya") await updateLembagaLainnya(detail.id, payload);
 
 			// Update local state with new data
 			setDetail((prevDetail) => ({
@@ -277,10 +277,6 @@ export default function KelembagaanDetailPage({
 				nama_lembaga: editForm.nama || prevDetail.nama_lembaga,
 				alamat: editForm.alamat,
 				produk_hukum_id: editForm.produk_hukum_id || null,
-				...(type === "rt" ? {
-					jumlah_jiwa: editForm.jumlah_jiwa !== "" ? parseInt(editForm.jumlah_jiwa) : null,
-					jumlah_kk: editForm.jumlah_kk !== "" ? parseInt(editForm.jumlah_kk) : null,
-				} : {}),
 			}));
 
 			setIsEditOpen(false);
@@ -298,110 +294,289 @@ export default function KelembagaanDetailPage({
 	const handleToggleStatus = async (kelembagaanId, currentStatus) => {
 		const newStatus = currentStatus === "aktif" ? "nonaktif" : "aktif";
 
-		// Show confirmation alert
-		const result = await showConfirmAlert(
-			"Konfirmasi Perubahan Status",
-			`Apakah Anda yakin ingin mengubah status menjadi ${
-				newStatus === "aktif" ? "Aktif" : "Tidak Aktif"
-			}?`,
-			"warning",
-		);
+		if (newStatus === "nonaktif") {
+			// Deactivating: require Produk Hukum Penonaktifan selection
+			const optionsHtml = produkHukumList
+				.map((ph) => `<option value="${ph.id}">Nomor ${ph.nomor} Tahun ${ph.tahun} - ${ph.judul}</option>`)
+				.join("");
 
-		if (!result.isConfirmed) return;
+			const { value: selectedProdukHukumId } = await Swal.fire({
+				title: "Nonaktifkan Kelembagaan",
+				html: `
+					<div class="text-left space-y-3">
+						<p class="text-sm text-gray-600">Pilih Produk Hukum yang menjadi dasar penonaktifan kelembagaan ini.</p>
+						<div>
+							<label class="block text-sm font-medium text-gray-700 mb-1">SK Penonaktifan Lembaga <span class="text-red-500">*</span></label>
+							<select id="swal-produk-hukum" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500">
+								<option value="">-- Pilih Produk Hukum --</option>
+								${optionsHtml}
+							</select>
+						</div>
+					</div>`,
+				showCancelButton: true,
+				confirmButtonText: "Nonaktifkan",
+				cancelButtonText: "Batal",
+				confirmButtonColor: "#ef4444",
+				focusConfirm: false,
+				preConfirm: () => {
+					const val = document.getElementById("swal-produk-hukum").value;
+					if (!val) {
+						Swal.showValidationMessage("Pilih Produk Hukum terlebih dahulu");
+						return false;
+					}
+					return val;
+				},
+			});
+
+			if (!selectedProdukHukumId) return;
+
+			try {
+				showLoadingAlert("Menonaktifkan Kelembagaan...", "Mohon tunggu sebentar");
+				await toggleKelembagaanStatus(type, kelembagaanId, newStatus, selectedProdukHukumId);
+
+				setDetail((prevDetail) => ({
+					...prevDetail,
+					status_kelembagaan: newStatus,
+					produk_hukum_penonaktifan_id: selectedProdukHukumId,
+				}));
+
+				showSuccessAlert("Berhasil!", "Kelembagaan berhasil dinonaktifkan");
+				setTimeout(() => {
+					if (aktivitasLogRef.current) aktivitasLogRef.current.refresh();
+				}, 500);
+			} catch (err) {
+				const errorMessage = err.response?.data?.message || err.message;
+				showErrorAlert("Gagal!", `Gagal menonaktifkan kelembagaan: ${errorMessage}`);
+			}
+		} else {
+			// Activating: simple confirmation
+			const result = await showConfirmAlert(
+				"Konfirmasi Pengaktifan",
+				"Apakah Anda yakin ingin mengaktifkan kembali kelembagaan ini?",
+				"warning",
+			);
+
+			if (!result.isConfirmed) return;
+
+			try {
+				showLoadingAlert("Mengaktifkan Kelembagaan...", "Mohon tunggu sebentar");
+				await toggleKelembagaanStatus(type, kelembagaanId, newStatus);
+
+				setDetail((prevDetail) => ({
+					...prevDetail,
+					status_kelembagaan: newStatus,
+					produk_hukum_penonaktifan_id: null,
+				}));
+
+				showSuccessAlert("Berhasil!", "Kelembagaan berhasil diaktifkan kembali");
+				setTimeout(() => {
+					if (aktivitasLogRef.current) aktivitasLogRef.current.refresh();
+				}, 500);
+			} catch (err) {
+				const errorMessage = err.response?.data?.message || err.message;
+				showErrorAlert("Gagal!", `Gagal mengaktifkan kelembagaan: ${errorMessage}`);
+			}
+		}
+	};
+
+	// Helper: show tunda verifikasi feedback modal
+	const showTundaVerifikasiModal = async (kelembagaanId) => {
+		const { value: formValues } = await Swal.fire({
+			title: "Tunda Verifikasi",
+			html: `
+				<div class="text-left space-y-3">
+					<p class="text-sm text-gray-600 mb-3">Berikan catatan/alasan penundaan verifikasi agar desa dapat memperbaiki data.</p>
+					<div>
+						<label class="block text-sm font-medium text-gray-700 mb-1">Pilih alasan:</label>
+						<div class="space-y-2" id="swal-checklist">
+							<label class="flex items-center gap-2 text-sm">
+								<input type="checkbox" value="SK Pembentukan tidak sesuai" class="swal-check rounded"> SK Pembentukan tidak sesuai
+							</label>
+							<label class="flex items-center gap-2 text-sm">
+								<input type="checkbox" value="Data pengurus belum lengkap" class="swal-check rounded"> Data pengurus belum lengkap
+							</label>
+							<label class="flex items-center gap-2 text-sm">
+								<input type="checkbox" value="Alamat belum diisi" class="swal-check rounded"> Alamat belum diisi
+							</label>
+							<label class="flex items-center gap-2 text-sm">
+								<input type="checkbox" value="Data tidak valid" class="swal-check rounded"> Data tidak valid
+							</label>
+						</div>
+					</div>
+					<div>
+						<label class="block text-sm font-medium text-gray-700 mb-1">Keterangan tambahan (opsional):</label>
+						<textarea id="swal-catatan" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" rows="3" placeholder="Tuliskan keterangan tambahan..."></textarea>
+					</div>
+				</div>`,
+			showCancelButton: true,
+			confirmButtonText: "Kirim & Tunda Verifikasi",
+			cancelButtonText: "Kembali",
+			confirmButtonColor: "#f59e0b",
+			focusConfirm: false,
+			preConfirm: () => {
+				const checks = Array.from(document.querySelectorAll('.swal-check:checked')).map(c => c.value);
+				const catatan = document.getElementById('swal-catatan').value.trim();
+				const allNotes = [...checks];
+				if (catatan) allNotes.push(catatan);
+				if (allNotes.length === 0) {
+					Swal.showValidationMessage('Pilih minimal satu alasan atau isi keterangan');
+					return false;
+				}
+				return allNotes.join('; ');
+			},
+		});
+
+		if (!formValues) return;
 
 		try {
-			// Show loading alert
-			showLoadingAlert("Mengubah Status...", "Mohon tunggu sebentar");
+			showLoadingAlert("Menunda Verifikasi...", "Mohon tunggu sebentar");
+			await toggleKelembagaanVerification(type, kelembagaanId, "unverified", formValues);
 
-			// Menggunakan function toggle khusus
-			await toggleKelembagaanStatus(type, kelembagaanId, newStatus);
-
-			// Update local state instead of reloading
 			setDetail((prevDetail) => ({
 				...prevDetail,
-				status_kelembagaan: newStatus,
+				status_verifikasi: "unverified",
+				catatan_verifikasi: formValues,
 			}));
 
-			// Show success alert first
-			showSuccessAlert(
-				"Berhasil!",
-				`Status kelembagaan berhasil diubah menjadi ${
-					newStatus === "aktif" ? "Aktif" : "Tidak Aktif"
-				}`,
-			);
-
-			// Refresh activity logs after a short delay to ensure backend has logged
+			showSuccessAlert("Berhasil!", "Verifikasi ditunda dan catatan telah dikirim ke desa");
 			setTimeout(() => {
-				if (aktivitasLogRef.current) {
-					aktivitasLogRef.current.refresh();
-				}
+				if (aktivitasLogRef.current) aktivitasLogRef.current.refresh();
 			}, 500);
 		} catch (err) {
-			const errorMessage =
-				err.response?.data?.message || err.response?.data?.errors
-					? Object.values(err.response.data.errors).flat().join(", ")
-					: err.message;
+			const errorMessage = err.response?.data?.message || err.message;
+			showErrorAlert("Gagal!", `Gagal menunda verifikasi: ${errorMessage}`);
+		}
+	};
 
-			// Show error alert
-			showErrorAlert(
-				"Gagal!",
-				`Gagal mengubah status kelembagaan: ${errorMessage}`,
-			);
+	// Helper: execute verification
+	const executeVerification = async (kelembagaanId) => {
+		try {
+			showLoadingAlert("Memverifikasi...", "Mohon tunggu sebentar");
+			await toggleKelembagaanVerification(type, kelembagaanId, "verified");
+
+			setDetail((prevDetail) => ({
+				...prevDetail,
+				status_verifikasi: "verified",
+				catatan_verifikasi: null,
+			}));
+
+			showSuccessAlert("Berhasil!", "Kelembagaan berhasil diverifikasi");
+			setTimeout(() => {
+				if (aktivitasLogRef.current) aktivitasLogRef.current.refresh();
+			}, 500);
+		} catch (err) {
+			const errorMessage = err.response?.data?.message || err.message;
+			showErrorAlert("Gagal!", `Gagal memverifikasi: ${errorMessage}`);
 		}
 	};
 
 	const handleToggleVerification = async (kelembagaanId, currentStatus) => {
-		const newStatus = currentStatus === "verified" ? "unverified" : "verified";
+		if (currentStatus === "verified") {
+			// Already verified → show tunda/batal modal with feedback
+			await showTundaVerifikasiModal(kelembagaanId);
+		} else {
+			// Not yet verified → show choice: Tunda or Verifikasi
+			let selectedAction = null;
 
-		// Show confirmation alert
-		const result = await showConfirmAlert(
-			"Konfirmasi Verifikasi",
-			`Apakah Anda yakin ingin ${
-				newStatus === "verified" ? "memverifikasi" : "membatalkan verifikasi"
-			} kelembagaan ini?`,
-			"warning",
-		);
+			await Swal.fire({
+				title: "Opsi Verifikasi",
+				html: `
+					<div class="text-left space-y-3">
+						<button id="swal-verify-btn" class="w-full text-left p-3 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors cursor-pointer">
+							<p class="font-medium text-blue-800 text-sm">✅ Verifikasi Lembaga</p>
+							<p class="text-xs text-blue-600 mt-1">Data sudah sesuai dan lengkap, setujui verifikasi.</p>
+						</button>
+						<button id="swal-tunda-btn" class="w-full text-left p-3 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 transition-colors cursor-pointer">
+							<p class="font-medium text-amber-800 text-sm">⏳ Tunda Verifikasi</p>
+							<p class="text-xs text-amber-600 mt-1">Data belum sesuai, kirim catatan ke desa untuk diperbaiki.</p>
+						</button>
+					</div>`,
+				showConfirmButton: false,
+				showCancelButton: true,
+				cancelButtonText: "Batal",
+				didOpen: () => {
+					document.getElementById("swal-verify-btn").addEventListener("click", () => {
+						selectedAction = "verify";
+						Swal.close();
+					});
+					document.getElementById("swal-tunda-btn").addEventListener("click", () => {
+						selectedAction = "tunda";
+						Swal.close();
+					});
+				},
+			});
 
-		if (!result.isConfirmed) return;
+			if (selectedAction === "verify") {
+				// Check completeness before verifying
+				const missing = [];
+				if (!detail?.produk_hukum_id) missing.push("SK Pembentukan");
+				if (!pengurusCount || pengurusCount === 0) missing.push("Data Pengurus");
+				if (!detail?.alamat) missing.push("Alamat");
+
+				if (missing.length > 0) {
+					const confirm = await Swal.fire({
+						title: "Data Belum Lengkap",
+						html: `<div class="text-left"><p class="mb-2">Data berikut masih kosong:</p><ul class="list-disc pl-5 space-y-1">${missing.map(m => `<li>${m}</li>`).join("")}</ul><p class="mt-3 text-sm text-gray-500">Apakah tetap ingin memverifikasi?</p></div>`,
+						icon: "warning",
+						showCancelButton: true,
+						confirmButtonText: "Ya, Tetap Verifikasi",
+						cancelButtonText: "Batal",
+						confirmButtonColor: "#3b82f6",
+					});
+					if (!confirm.isConfirmed) return;
+				}
+
+				await executeVerification(kelembagaanId);
+			} else if (selectedAction === "tunda") {
+				await showTundaVerifikasiModal(kelembagaanId);
+			}
+		}
+	};
+
+	const handleUpdatePenduduk = async () => {
+		const { value: formValues } = await Swal.fire({
+			title: "Data Penduduk RT",
+			html: `
+				<div class="text-left space-y-4">
+					<p class="text-sm text-gray-600">Perbarui data jumlah penduduk RT ini.</p>
+					<div>
+						<label class="block text-sm font-medium text-gray-700 mb-1">Jumlah Jiwa</label>
+						<input type="number" id="swal-jumlah-jiwa" min="0" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500" placeholder="Jumlah penduduk (jiwa)" value="${detail?.jumlah_jiwa ?? ''}">
+					</div>
+					<div>
+						<label class="block text-sm font-medium text-gray-700 mb-1">Jumlah KK</label>
+						<input type="number" id="swal-jumlah-kk" min="0" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500" placeholder="Jumlah Kepala Keluarga" value="${detail?.jumlah_kk ?? ''}">
+					</div>
+				</div>`,
+			showCancelButton: true,
+			confirmButtonText: "Simpan",
+			cancelButtonText: "Batal",
+			confirmButtonColor: "#0ea5e9",
+			focusConfirm: false,
+			preConfirm: () => {
+				const jiwa = document.getElementById("swal-jumlah-jiwa").value;
+				const kk = document.getElementById("swal-jumlah-kk").value;
+				return {
+					jumlah_jiwa: jiwa !== "" ? parseInt(jiwa) : null,
+					jumlah_kk: kk !== "" ? parseInt(kk) : null,
+				};
+			},
+		});
+
+		if (!formValues) return;
 
 		try {
-			// Show loading alert
-			showLoadingAlert("Mengubah Verifikasi...", "Mohon tunggu sebentar");
+			showLoadingAlert("Menyimpan Data Penduduk...", "Mohon tunggu sebentar");
 
-			// Menggunakan function toggle khusus
-			await toggleKelembagaanVerification(type, kelembagaanId, newStatus);
+			const payload = { ...detail, ...formValues };
+			await updateRt(detail.id, payload);
 
-			// Update local state instead of reloading
-			setDetail((prevDetail) => ({
-				...prevDetail,
-				status_verifikasi: newStatus,
-			}));
+			setDetail((prev) => ({ ...prev, ...formValues }));
 
-			// Show success alert first
-			showSuccessAlert(
-				"Berhasil!",
-				`Status verifikasi berhasil diubah menjadi ${
-					newStatus === "verified" ? "Terverifikasi" : "Belum Diverifikasi"
-				}`,
-			);
-
-			// Refresh activity logs after a short delay to ensure backend has logged
-			setTimeout(() => {
-				if (aktivitasLogRef.current) {
-					aktivitasLogRef.current.refresh();
-				}
-			}, 500);
+			showSuccessAlert("Berhasil!", "Data penduduk berhasil diperbarui");
 		} catch (err) {
-			const errorMessage =
-				err.response?.data?.message || err.response?.data?.errors
-					? Object.values(err.response.data.errors).flat().join(", ")
-					: err.message;
-
-			// Show error alert
-			showErrorAlert(
-				"Gagal!",
-				`Gagal mengubah status verifikasi: ${errorMessage}`,
-			);
+			const errorMessage = err.response?.data?.message || err.message;
+			showErrorAlert("Gagal!", `Gagal menyimpan data penduduk: ${errorMessage}`);
 		}
 	};
 
@@ -551,6 +726,7 @@ export default function KelembagaanDetailPage({
 						onToggleStatus={handleToggleStatus}
 						onToggleVerification={handleToggleVerification}
 						produkHukumList={produkHukumList}
+						onUpdatePenduduk={type === "rt" ? handleUpdatePenduduk : undefined}
 					/>
 
 					<PengurusKelembagaan
@@ -625,36 +801,6 @@ export default function KelembagaanDetailPage({
 						placeholder="Alamat"
 					/>
 				</div>
-				{type === "rt" && (
-					<div className="grid grid-cols-2 gap-4">
-						<div>
-							<label className="block text-sm font-medium">Jumlah Jiwa</label>
-							<input
-								type="number"
-								min="0"
-								className="mt-1 w-full border rounded px-3 py-2"
-								value={editForm.jumlah_jiwa}
-								onChange={(e) =>
-									setEditForm((f) => ({ ...f, jumlah_jiwa: e.target.value }))
-								}
-								placeholder="Jumlah penduduk (jiwa)"
-							/>
-						</div>
-						<div>
-							<label className="block text-sm font-medium">Jumlah KK</label>
-							<input
-								type="number"
-								min="0"
-								className="mt-1 w-full border rounded px-3 py-2"
-								value={editForm.jumlah_kk}
-								onChange={(e) =>
-									setEditForm((f) => ({ ...f, jumlah_kk: e.target.value }))
-								}
-								placeholder="Jumlah KK"
-							/>
-						</div>
-					</div>
-				)}
 				<div>
 					<label className="block text-sm font-medium mb-2">
 						SK Pembentukan Lembaga
