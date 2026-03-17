@@ -112,6 +112,8 @@ export default function KelembagaanDetailPage({
 		nomor: "",
 		alamat: "",
 		produk_hukum_id: "",
+		jumlah_jiwa: "",
+		jumlah_kk: "",
 	});
 	const [produkHukumList, setProdukHukumList] = useState([]);
 	const [anak, setAnak] = useState([]);
@@ -235,6 +237,8 @@ export default function KelembagaanDetailPage({
 			nomor: detail?.nomor || "",
 			alamat: detail?.alamat || "",
 			produk_hukum_id: detail?.produk_hukum_id || "",
+			jumlah_jiwa: detail?.jumlah_jiwa ?? "",
+			jumlah_kk: detail?.jumlah_kk ?? "",
 		});
 		setIsEditOpen(true);
 	};
@@ -251,6 +255,10 @@ export default function KelembagaanDetailPage({
 				payload.nama = editForm.nama || payload.nama;
 			payload.alamat = editForm.alamat;
 			payload.produk_hukum_id = editForm.produk_hukum_id || null;
+			if (type === "rt") {
+				payload.jumlah_jiwa = editForm.jumlah_jiwa !== "" ? parseInt(editForm.jumlah_jiwa) : null;
+				payload.jumlah_kk = editForm.jumlah_kk !== "" ? parseInt(editForm.jumlah_kk) : null;
+			}
 
 			if (type === "rw") await updateRw(detail.id, payload);
 			else if (type === "rt") await updateRt(detail.id, payload);
@@ -269,6 +277,10 @@ export default function KelembagaanDetailPage({
 				nama_lembaga: editForm.nama || prevDetail.nama_lembaga,
 				alamat: editForm.alamat,
 				produk_hukum_id: editForm.produk_hukum_id || null,
+				...(type === "rt" ? {
+					jumlah_jiwa: editForm.jumlah_jiwa !== "" ? parseInt(editForm.jumlah_jiwa) : null,
+					jumlah_kk: editForm.jumlah_kk !== "" ? parseInt(editForm.jumlah_kk) : null,
+				} : {}),
 			}));
 
 			setIsEditOpen(false);
@@ -534,6 +546,7 @@ export default function KelembagaanDetailPage({
 						type={type}
 						onEdit={handleOpenEdit}
 						rtCount={type === "rw" ? anak.length : 0}
+						rtList={type === "rw" ? anak : []}
 						pengurusCount={pengurusCount}
 						onToggleStatus={handleToggleStatus}
 						onToggleVerification={handleToggleVerification}
@@ -612,6 +625,36 @@ export default function KelembagaanDetailPage({
 						placeholder="Alamat"
 					/>
 				</div>
+				{type === "rt" && (
+					<div className="grid grid-cols-2 gap-4">
+						<div>
+							<label className="block text-sm font-medium">Jumlah Jiwa</label>
+							<input
+								type="number"
+								min="0"
+								className="mt-1 w-full border rounded px-3 py-2"
+								value={editForm.jumlah_jiwa}
+								onChange={(e) =>
+									setEditForm((f) => ({ ...f, jumlah_jiwa: e.target.value }))
+								}
+								placeholder="Jumlah penduduk (jiwa)"
+							/>
+						</div>
+						<div>
+							<label className="block text-sm font-medium">Jumlah KK</label>
+							<input
+								type="number"
+								min="0"
+								className="mt-1 w-full border rounded px-3 py-2"
+								value={editForm.jumlah_kk}
+								onChange={(e) =>
+									setEditForm((f) => ({ ...f, jumlah_kk: e.target.value }))
+								}
+								placeholder="Jumlah KK"
+							/>
+						</div>
+					</div>
+				)}
 				<div>
 					<label className="block text-sm font-medium mb-2">
 						SK Pembentukan Lembaga

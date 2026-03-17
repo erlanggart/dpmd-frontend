@@ -22,6 +22,7 @@ const ProfilCard = ({
 	type,
 	onEdit,
 	rtCount,
+	rtList = [],
 	pengurusCount,
 	onToggleStatus,
 	onToggleVerification,
@@ -358,6 +359,69 @@ const ProfilCard = ({
 								</div>
 							</div>
 						)}
+
+						{/* Data Penduduk - RT */}
+						{type === "rt" && (profil?.jumlah_jiwa != null || profil?.jumlah_kk != null) && (
+							<>
+								{profil?.jumlah_jiwa != null && (
+									<div className="group/stat p-4 bg-gradient-to-br from-sky-50 to-blue-100 rounded-xl border border-sky-200 hover:shadow-lg transition-all duration-300 hover:scale-105">
+										<div className="text-center">
+											<div className="text-3xl font-bold text-sky-700 mb-1">
+												{profil.jumlah_jiwa.toLocaleString('id-ID')}
+											</div>
+											<div className="text-sm font-medium text-sky-600">Jiwa</div>
+											<div className="w-8 h-1 bg-sky-400 rounded-full mx-auto mt-2 transform group-hover/stat:w-12 transition-all duration-300"></div>
+										</div>
+									</div>
+								)}
+								{profil?.jumlah_kk != null && (
+									<div className="group/stat p-4 bg-gradient-to-br from-amber-50 to-orange-100 rounded-xl border border-amber-200 hover:shadow-lg transition-all duration-300 hover:scale-105">
+										<div className="text-center">
+											<div className="text-3xl font-bold text-amber-700 mb-1">
+												{profil.jumlah_kk.toLocaleString('id-ID')}
+											</div>
+											<div className="text-sm font-medium text-amber-600">KK</div>
+											<div className="w-8 h-1 bg-amber-400 rounded-full mx-auto mt-2 transform group-hover/stat:w-12 transition-all duration-300"></div>
+										</div>
+									</div>
+								)}
+							</>
+						)}
+
+						{/* Data Penduduk Agregat - RW (dari semua RT) */}
+						{type === "rw" && rtList.length > 0 && (() => {
+							const totalJiwa = rtList.reduce((sum, rt) => sum + (rt.jumlah_jiwa || 0), 0);
+							const totalKK = rtList.reduce((sum, rt) => sum + (rt.jumlah_kk || 0), 0);
+							if (totalJiwa === 0 && totalKK === 0) return null;
+							return (
+								<>
+									{totalJiwa > 0 && (
+										<div className="group/stat p-4 bg-gradient-to-br from-sky-50 to-blue-100 rounded-xl border border-sky-200 hover:shadow-lg transition-all duration-300 hover:scale-105">
+											<div className="text-center">
+												<div className="text-3xl font-bold text-sky-700 mb-1">
+													{totalJiwa.toLocaleString('id-ID')}
+												</div>
+												<div className="text-sm font-medium text-sky-600">Jiwa</div>
+												<div className="text-xs text-sky-500 mt-1">dari {rtList.filter(rt => rt.jumlah_jiwa).length} RT</div>
+												<div className="w-8 h-1 bg-sky-400 rounded-full mx-auto mt-2 transform group-hover/stat:w-12 transition-all duration-300"></div>
+											</div>
+										</div>
+									)}
+									{totalKK > 0 && (
+										<div className="group/stat p-4 bg-gradient-to-br from-amber-50 to-orange-100 rounded-xl border border-amber-200 hover:shadow-lg transition-all duration-300 hover:scale-105">
+											<div className="text-center">
+												<div className="text-3xl font-bold text-amber-700 mb-1">
+													{totalKK.toLocaleString('id-ID')}
+												</div>
+												<div className="text-sm font-medium text-amber-600">KK</div>
+												<div className="text-xs text-amber-500 mt-1">dari {rtList.filter(rt => rt.jumlah_kk).length} RT</div>
+												<div className="w-8 h-1 bg-amber-400 rounded-full mx-auto mt-2 transform group-hover/stat:w-12 transition-all duration-300"></div>
+											</div>
+										</div>
+									)}
+								</>
+							);
+						})()}
 					</div>
 				</div>
 

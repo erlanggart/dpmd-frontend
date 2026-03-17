@@ -7,6 +7,7 @@ import {
 	LuCrown,
 	LuMapPin,
 	LuChevronRight,
+	LuUsers,
 } from "react-icons/lu";
 
 const RTItemContent = ({ item }) => {
@@ -79,6 +80,26 @@ const RTItemContent = ({ item }) => {
 								<div className="flex items-center space-x-2 text-sm text-gray-500">
 									<LuMapPin className="w-4 h-4" />
 									<span className="truncate">{item.alamat}</span>
+								</div>
+							)}
+
+							{/* Data Penduduk */}
+							{(item.jumlah_jiwa != null || item.jumlah_kk != null) && (
+								<div className="flex items-center space-x-4 text-sm">
+									{item.jumlah_jiwa != null && (
+										<div className="flex items-center space-x-1.5 text-sky-600">
+											<LuUsers className="w-4 h-4" />
+											<span className="font-medium">{item.jumlah_jiwa.toLocaleString('id-ID')}</span>
+											<span className="text-gray-400">jiwa</span>
+										</div>
+									)}
+									{item.jumlah_kk != null && (
+										<div className="flex items-center space-x-1.5 text-amber-600">
+											<LuHouse className="w-4 h-4" />
+											<span className="font-medium">{item.jumlah_kk.toLocaleString('id-ID')}</span>
+											<span className="text-gray-400">KK</span>
+										</div>
+									)}
 								</div>
 							)}
 						</div>
