@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useBidangPath } from '../../hooks/useBidangPath';
 import { FileText, Mail, Plane, Users, Activity, TrendingUp, ArrowLeft, Clock, Zap, ChevronRight, Building, BarChart, Calendar, Bell, Image, RefreshCw, Video } from 'lucide-react';
 import api from '../../api';
 import toast from 'react-hot-toast';
 
 const SekretariatPage = () => {
 	const navigate = useNavigate();
+	const { getPath } = useBidangPath();
 	const [loading, setLoading] = useState(true);
 	const [data, setData] = useState(null);
 	const [activeTab, setActiveTab] = useState('overview'); // overview, activity
@@ -145,7 +147,7 @@ const SekretariatPage = () => {
 								</h3>
 								<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 									<button
-										onClick={() => navigate('/sekretariat/disposisi')}
+										onClick={() => navigate(getPath('/sekretariat/disposisi'))}
 										className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border border-gray-100 p-6 hover:border-blue-300 transition-all duration-300 text-left overflow-hidden hover:-translate-y-1"
 									>
 										<div className="absolute inset-0 bg-gradient-to-br from-blue-400/5 to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -162,7 +164,7 @@ const SekretariatPage = () => {
 									</button>
 
 									<button
-										onClick={() => navigate('/sekretariat/perjadin')}
+										onClick={() => navigate(getPath('/sekretariat/perjadin'))}
 										className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border border-gray-100 p-6 hover:border-green-300 transition-all duration-300 text-left overflow-hidden hover:-translate-y-1"
 									>
 										<div className="absolute inset-0 bg-gradient-to-br from-green-400/5 to-green-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -179,7 +181,7 @@ const SekretariatPage = () => {
 									</button>
 
 									<button
-										onClick={() => navigate('/sekretariat/pegawai')}
+										onClick={() => navigate(getPath('/sekretariat/pegawai'))}
 										className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border border-gray-100 p-6 hover:border-indigo-300 transition-all duration-300 text-left overflow-hidden hover:-translate-y-1"
 									>
 										<div className="absolute inset-0 bg-gradient-to-br from-indigo-400/5 to-indigo-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -196,7 +198,7 @@ const SekretariatPage = () => {
 									</button>
 
 									<button
-										onClick={() => navigate('/sekretariat/jadwal-kegiatan')}
+										onClick={() => navigate(getPath('/sekretariat/jadwal-kegiatan'))}
 										className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border border-gray-100 p-6 hover:border-purple-300 transition-all duration-300 text-left overflow-hidden hover:-translate-y-1"
 									>
 										<div className="absolute inset-0 bg-gradient-to-br from-purple-400/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -214,7 +216,7 @@ const SekretariatPage = () => {
 
 								{(user?.role === 'superadmin' || Number(user?.bidang_id) === 2) && (
 										<button
-											onClick={() => navigate('/sekretariat/notifikasi')}
+											onClick={() => navigate(getPath('/sekretariat/notifikasi'))}
 											className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border border-gray-100 p-6 hover:border-orange-300 transition-all duration-300 text-left overflow-hidden hover:-translate-y-1"
 										>
 											<div className="absolute inset-0 bg-gradient-to-br from-orange-400/5 to-orange-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -234,7 +236,7 @@ const SekretariatPage = () => {
 									{/* Kelola Informasi - Banner untuk dashboard pegawai */}
 								{(user?.role === 'superadmin' || Number(user?.bidang_id) === 2) && (
 										<button
-											onClick={() => navigate('/sekretariat/informasi')}
+											onClick={() => navigate(getPath('/sekretariat/informasi'))}
 											className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border border-gray-100 p-6 hover:border-teal-300 transition-all duration-300 text-left overflow-hidden hover:-translate-y-1"
 										>
 											<div className="absolute inset-0 bg-gradient-to-br from-teal-400/5 to-teal-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -254,7 +256,7 @@ const SekretariatPage = () => {
 									{/* Video Meeting */}
 								{(user?.role === 'superadmin' || Number(user?.bidang_id) === 2) && (
 										<button
-											onClick={() => navigate('/sekretariat/video-meeting')}
+											onClick={() => navigate(getPath('/sekretariat/video-meeting'))}
 											className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border border-gray-100 p-6 hover:border-rose-300 transition-all duration-300 text-left overflow-hidden hover:-translate-y-1"
 										>
 											<div className="absolute inset-0 bg-gradient-to-br from-rose-400/5 to-rose-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>

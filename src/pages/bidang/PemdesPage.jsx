@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useBidangPath } from '../../hooks/useBidangPath';
 import { Briefcase, FileText, Users as UsersIcon, Activity, ArrowLeft, Clock, CheckCircle, AlertCircle, RefreshCw, Zap, ChevronRight, FileCheck2 } from 'lucide-react';
 import api from '../../api';
 import toast from 'react-hot-toast';
 
 const PemdesPage = () => {
 	const navigate = useNavigate();
+	const { getPath } = useBidangPath();
 	const [loading, setLoading] = useState(true);
 	const [data, setData] = useState(null);
 	const [activeTab, setActiveTab] = useState('overview');
@@ -153,7 +155,7 @@ const PemdesPage = () => {
 									</button>
 
 									<button
-									onClick={() => navigate('/pemdes/aparatur-desa')}
+									onClick={() => navigate(getPath('/pemdes/aparatur-desa'))}
 									className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border border-gray-100 p-6 hover:border-blue-300 transition-all duration-300 text-left overflow-hidden hover:-translate-y-1"
 								>
 										<div className="absolute inset-0 bg-gradient-to-br from-blue-400/5 to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -170,7 +172,7 @@ const PemdesPage = () => {
 									</button>
 
 									<button
-										onClick={() => navigate('/pemdes/produk-hukum')}
+										onClick={() => navigate(getPath('/pemdes/produk-hukum'))}
 										className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border border-gray-100 p-6 hover:border-purple-300 transition-all duration-300 text-left overflow-hidden hover:-translate-y-1"
 									>
 										<div className="absolute inset-0 bg-gradient-to-br from-purple-400/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>

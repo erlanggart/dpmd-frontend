@@ -272,6 +272,9 @@ const SuperadminLayout = lazy(
 const SuperadminDashboard = lazy(
   () => import("./pages/superadmin/SuperadminDashboard"),
 );
+const KepegawaianPage = lazy(
+  () => import("./pages/superadmin/KepegawaianPage"),
+);
 const BidangNavigationPage = lazy(
   () => import("./pages/superadmin/BidangNavigationPage"),
 );
@@ -1013,6 +1016,7 @@ function App() {
                   <Route index element={<Navigate to="dashboard" replace />} />
                   <Route path="dashboard" element={<SuperadminDashboard />} />
                   <Route path="users" element={<UserManagementPage />} />
+                  <Route path="kepegawaian" element={<KepegawaianPage />} />
                   {/* Role Management removed - already in User Management tabs */}
                   <Route path="bidang" element={<BidangNavigationPage />} />
                   <Route path="activity-logs" element={<ActivityLogsPage />} />
@@ -1024,6 +1028,42 @@ function App() {
                   <Route path="musdesus" element={<MusdesusMonitoringPage />} />
                   <Route path="settings" element={<SettingsPage />} />
                   <Route path="profile" element={<ProfilePage />} />
+
+                  {/* Bidang landing pages - tetap di SuperadminLayout */}
+                  <Route path="bidang/sekretariat" element={<SekretariatPage />} />
+                  <Route path="bidang/spked" element={<SpkedPage />} />
+                  <Route path="bidang/kkd" element={<KKDPage />} />
+                  <Route path="bidang/pmd" element={<PMDPage />} />
+                  <Route path="bidang/pemdes" element={<PemdesPage />} />
+
+                  {/* Sekretariat sub-routes */}
+                  <Route path="bidang/sekretariat/disposisi" element={<DisposisiRouter />} />
+                  <Route path="bidang/sekretariat/disposisi/:id" element={<DisposisiDetail />} />
+                  <Route path="bidang/sekretariat/pegawai" element={<UserManagementPage />} />
+                  <Route path="bidang/sekretariat/jadwal-kegiatan" element={<JadwalKegiatanPage />} />
+                  <Route path="bidang/sekretariat/perjadin" element={<PerjadinMain />} />
+                  <Route path="bidang/sekretariat/perjadin/detail/:id" element={<PerjadinDetail />} />
+                  <Route path="bidang/sekretariat/notifikasi" element={<KelolaNotifikasiPage />} />
+                  <Route path="bidang/sekretariat/informasi" element={<InformasiManagement />} />
+                  <Route path="bidang/sekretariat/video-meeting" element={<VideoMeetingListPage />} />
+
+                  {/* KKD sub-routes */}
+                  <Route path="bidang/kkd/add" element={<AddDashboard />} />
+                  <Route path="bidang/kkd/bhprd" element={<BhprdDashboard />} />
+                  <Route path="bidang/kkd/dd" element={<DdDashboard />} />
+
+                  {/* PMD sub-routes */}
+                  <Route path="bidang/pmd/kelembagaan" element={<Kelembagaan />} />
+                  <Route path="bidang/pmd/kelembagaan/admin/:desaId" element={<AdminKelembagaanDetailPage />} />
+                  <Route path="bidang/pmd/kelembagaan/admin/:desaId/:type" element={<KelembagaanList />} />
+                  <Route path="bidang/pmd/kelembagaan/:type" element={<KelembagaanList />} />
+                  <Route path="bidang/pmd/kelembagaan/:type/:id" element={<KelembagaanDetailPage />} />
+                  <Route path="bidang/pmd/pengurus/:id" element={<PengurusDetailPage />} />
+                  <Route path="bidang/pmd/pengurus/:id/edit" element={<PengurusEditPage />} />
+
+                  {/* Pemdes sub-routes */}
+                  <Route path="bidang/pemdes/aparatur-desa" element={<AparaturDesaExternalPage />} />
+                  <Route path="bidang/pemdes/produk-hukum" element={<ProdukHukumPemdesPage />} />
                 </Route>
 
                 {/* Rute Kecamatan - Exclusive untuk Admin Kecamatan */}

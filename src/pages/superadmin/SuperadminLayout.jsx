@@ -113,6 +113,12 @@ const SuperadminLayout = () => {
 			description: "Kelola pengguna"
 		},
 		{
+			path: "/superadmin/kepegawaian",
+			icon: FiBriefcase,
+			label: "Kepegawaian",
+			description: "Data pegawai DPMD"
+		},
+		{
 			path: "/superadmin/bidang",
 			icon: FiLayers,
 			label: "Bidang & Program",

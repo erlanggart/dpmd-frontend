@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useBidangPath } from '../../hooks/useBidangPath';
 import { DollarSign, Activity, ArrowLeft, Clock, FileCheck, RefreshCw, Zap, ChevronRight, Landmark, TrendingUp } from 'lucide-react';
 import api from '../../api';
 import toast from 'react-hot-toast';
 
 const KKDPage = () => {
 	const navigate = useNavigate();
+	const { getPath } = useBidangPath();
 	const [loading, setLoading] = useState(true);
 	const [data, setData] = useState(null);
 	const [activeTab, setActiveTab] = useState('overview');
@@ -136,7 +138,7 @@ const KKDPage = () => {
 								</h3>
 								<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
 									<button
-										onClick={() => navigate('/kkd/add')}
+										onClick={() => navigate(getPath('/kkd/add'))}
 										className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border border-gray-100 p-6 hover:border-green-300 transition-all duration-300 text-left overflow-hidden hover:-translate-y-1"
 									>
 										<div className="absolute inset-0 bg-gradient-to-br from-green-400/5 to-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -153,7 +155,7 @@ const KKDPage = () => {
 									</button>
 
 									<button
-										onClick={() => navigate('/kkd/dd')}
+										onClick={() => navigate(getPath('/kkd/dd'))}
 										className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border border-gray-100 p-6 hover:border-purple-300 transition-all duration-300 text-left overflow-hidden hover:-translate-y-1"
 									>
 										<div className="absolute inset-0 bg-gradient-to-br from-purple-400/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -170,7 +172,7 @@ const KKDPage = () => {
 									</button>
 
 									<button
-										onClick={() => navigate('/kkd/bhprd')}
+										onClick={() => navigate(getPath('/kkd/bhprd'))}
 										className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border border-gray-100 p-6 hover:border-indigo-300 transition-all duration-300 text-left overflow-hidden hover:-translate-y-1"
 									>
 										<div className="absolute inset-0 bg-gradient-to-br from-indigo-400/5 to-indigo-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
