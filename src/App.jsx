@@ -195,6 +195,7 @@ const KKDPage = lazy(() => import("./pages/bidang/KKDPage"));
 const PMDPage = lazy(() => import("./pages/bidang/PMDPage"));
 const PemdesPage = lazy(() => import("./pages/bidang/PemdesPage"));
 const AparaturDesaExternalPage = lazy(() => import("./pages/bidang/pemdes/AparaturDesaPage"));
+const ProdukHukumPemdesPage = lazy(() => import("./pages/bidang/pemdes/ProdukHukumPage"));
 
 const KelembagaanDesaPage = lazy(
   () => import("./pages/desa/kelembagaan/KelembagaanDesaPage"),
@@ -941,6 +942,7 @@ function App() {
                   }
                 >
                   <Route path="aparatur-desa" element={<AparaturDesaExternalPage />} />
+                  <Route path="produk-hukum" element={<ProdukHukumPemdesPage />} />
                 </Route>
 
                 {/* Routes Sekretariat - Nested under /sekretariat (moved from /pegawai) */}

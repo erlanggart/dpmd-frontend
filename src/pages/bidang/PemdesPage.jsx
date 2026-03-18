@@ -170,7 +170,7 @@ const PemdesPage = () => {
 									</button>
 
 									<button
-										onClick={() => navigate('/core-dashboard/produk-hukum')}
+										onClick={() => navigate('/pemdes/produk-hukum')}
 										className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border border-gray-100 p-6 hover:border-purple-300 transition-all duration-300 text-left overflow-hidden hover:-translate-y-1"
 									>
 										<div className="absolute inset-0 bg-gradient-to-br from-purple-400/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
