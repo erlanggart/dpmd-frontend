@@ -571,40 +571,45 @@ const DPMDStaffLayout = () => {
 							
 							return (
 								<div key={index}>
-									<button
-										onClick={() => {
-											if (hasSubmenus && !isSidebarCollapsed) {
-												setBidangSubmenuOpen(!bidangSubmenuOpen);
-											} else {
-												navigate(item.path);
-											}
-										}}
+									<div
 										onMouseEnter={() => setHoveredItem(item.label)}
 										onMouseLeave={() => setHoveredItem(null)}
-										className={`group relative w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 rounded-xl transition-all duration-200 ${
+										className={`group relative w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : ''} rounded-xl transition-all duration-200 ${
 											(hasSubmenus ? isBidangActive : isActive)
 												? `bg-gradient-to-r ${item.gradient || theme.gradientFrom + ' ' + theme.gradientTo} text-white shadow-md` 
 												: `${item.color || theme.activeText} hover:bg-gradient-to-r ${item.gradient || theme.gradientFrom + ' ' + theme.gradientTo} hover:text-white hover:shadow-md`
 										}`}
 										title={isSidebarCollapsed ? item.label : ''}
 									>
-										<div className={`relative ${isSidebarCollapsed ? 'mx-auto' : 'flex-shrink-0'}`}>
-											<AnimatedIcon 
-												type={item.icon} 
-												isActive={hasSubmenus ? isBidangActive : isActive} 
-												isHovered={hoveredItem === item.label}
-												className="w-5 h-5"
-											/>
-										</div>
-										{!isSidebarCollapsed && (
-											<>
-												<span className="relative font-semibold truncate text-sm flex-1">{item.label}</span>
-												{hasSubmenus && (
-													<ChevronDown className={`w-4 h-4 transition-transform duration-200 ${bidangSubmenuOpen ? 'rotate-180' : ''}`} />
-												)}
-											</>
+										<button
+											onClick={() => navigate(item.path)}
+											className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 flex-1 min-w-0`}
+										>
+											<div className={`relative ${isSidebarCollapsed ? 'mx-auto' : 'flex-shrink-0'}`}>
+												<AnimatedIcon 
+													type={item.icon} 
+													isActive={hasSubmenus ? isBidangActive : isActive} 
+													isHovered={hoveredItem === item.label}
+													className="w-5 h-5"
+												/>
+											</div>
+											{!isSidebarCollapsed && (
+												<span className="relative font-semibold truncate text-sm flex-1 text-left">{item.label}</span>
+											)}
+										</button>
+										{hasSubmenus && !isSidebarCollapsed && (
+											<button
+												onClick={(e) => {
+													e.stopPropagation();
+													setBidangSubmenuOpen(!bidangSubmenuOpen);
+												}}
+												className="px-2.5 py-2.5 flex-shrink-0 hover:opacity-70 transition-opacity"
+												title={bidangSubmenuOpen ? 'Tutup submenu' : 'Buka submenu'}
+											>
+												<ChevronDown className={`w-4 h-4 transition-transform duration-200 ${bidangSubmenuOpen ? 'rotate-180' : ''}`} />
+											</button>
 										)}
-									</button>
+									</div>
 
 									{/* Submenu items */}
 									{hasSubmenus && !isSidebarCollapsed && bidangSubmenuOpen && (
