@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiUser, FiMail, FiShield, FiEdit2, FiSave, FiX, FiCamera, FiArrowLeft, FiLogOut } from 'react-icons/fi';
+import { FiUser, FiMail, FiShield, FiEdit2, FiSave, FiX, FiCamera, FiArrowLeft, FiLogOut, FiLock, FiEye, FiEyeOff, FiPhone, FiMapPin, FiCalendar, FiBriefcase, FiBook, FiHash } from 'react-icons/fi';
 import api from '../../services/api';
 import { toast } from 'react-hot-toast';
 import { getAvatarUrl } from '../../utils/avatarUtils';
@@ -16,6 +16,38 @@ const ProfilePage = () => {
     email: user.email || '',
   });
   const [avatarUrl, setAvatarUrl] = useState(getAvatarUrl(user.avatar));
+
+  // Pegawai data
+  const [pegawaiData, setPegawaiData] = useState(null);
+  const [pegawaiLoading, setPegawaiLoading] = useState(false);
+
+  // Password change
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const fetchPegawaiData = async () => {
+    setPegawaiLoading(true);
+    try {
+      const res = await api.get(`/pegawai/${user.pegawai_id}`);
+      if (res.data.success) {
+        setPegawaiData(res.data.data);
+      }
+    } catch (err) {
+      console.error('Error fetching pegawai:', err);
+    } finally {
+      setPegawaiLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user.pegawai_id) {
+      fetchPegawaiData();
+    }
+  }, [user.pegawai_id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleLogout = () => {
     localStorage.removeItem('expressToken');
@@ -107,6 +139,45 @@ const ProfilePage = () => {
       email: user.email || ''
     });
     setIsEditing(false);
+  };
+
+  const handleChangePassword = async () => {
+    if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
+      toast.error('Semua field password harus diisi');
+      return;
+    }
+    if (passwordForm.newPassword.length < 6) {
+      toast.error('Password baru minimal 6 karakter');
+      return;
+    }
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      toast.error('Konfirmasi password tidak cocok');
+      return;
+    }
+
+    setPasswordLoading(true);
+    try {
+      const res = await api.put('/users/change-password', {
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword,
+      });
+      if (res.data.success) {
+        toast.success('Password berhasil diubah!');
+        setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+        setShowPasswordForm(false);
+      } else {
+        toast.error(res.data.message || 'Gagal mengubah password');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Gagal mengubah password');
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
+  const formatDate = (d) => {
+    if (!d) return null;
+    return new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
   };
 
   const handlePhotoUpload = async (e) => {
@@ -393,6 +464,156 @@ const ProfilePage = () => {
               </div>
             )}
           </div>
+        </div>
+
+        {/* Pegawai Data Section */}
+        {user.pegawai_id && (
+          <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
+            <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <FiBriefcase className={`h-5 w-5 text-${color}-600`} />
+              Data Kepegawaian
+            </h3>
+            {pegawaiLoading ? (
+              <div className="flex justify-center py-6">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              </div>
+            ) : pegawaiData ? (
+              <div className="space-y-3 text-sm">
+                {[
+                  { icon: <FiHash />, label: 'NIP', value: pegawaiData.nip },
+                  { icon: <FiBriefcase />, label: 'Jabatan', value: pegawaiData.jabatan },
+                  { icon: <FiShield />, label: 'Golongan', value: pegawaiData.golongan },
+                  { icon: <FiShield />, label: 'Pangkat', value: pegawaiData.pangkat },
+                  { icon: <FiShield />, label: 'Eselon', value: pegawaiData.eselon },
+                  { icon: <FiBriefcase />, label: 'Status Kepegawaian', value: pegawaiData.status_kepegawaian },
+                  { icon: <FiUser />, label: 'Jenis Kelamin', value: pegawaiData.jenis_kelamin === 'L' ? 'Laki-laki' : pegawaiData.jenis_kelamin === 'P' ? 'Perempuan' : null },
+                  { icon: <FiCalendar />, label: 'Tempat, Tanggal Lahir', value: [pegawaiData.tempat_lahir, formatDate(pegawaiData.tanggal_lahir)].filter(Boolean).join(', ') || null },
+                  { icon: <FiBook />, label: 'Pendidikan Terakhir', value: pegawaiData.pendidikan_terakhir },
+                  { icon: <FiBriefcase />, label: 'Unit Kerja', value: pegawaiData.unit_kerja },
+                  { icon: <FiCalendar />, label: 'TMT Jabatan', value: formatDate(pegawaiData.tmt_jabatan) },
+                  { icon: <FiPhone />, label: 'No. HP', value: pegawaiData.no_hp },
+                  { icon: <FiMapPin />, label: 'Alamat', value: pegawaiData.alamat },
+                ].filter(f => f.value).map((field, idx) => (
+                  <div key={idx} className="flex items-start gap-3 py-2 border-b border-gray-100 last:border-0">
+                    <span className={`text-${color}-600 mt-0.5`}>{field.icon}</span>
+                    <div className="flex-1">
+                      <p className="text-xs text-gray-500">{field.label}</p>
+                      <p className="font-semibold text-gray-800">{field.value}</p>
+                    </div>
+                  </div>
+                ))}
+                {/* If no data filled at all */}
+                {!pegawaiData.nip && !pegawaiData.jabatan && !pegawaiData.golongan && !pegawaiData.jenis_kelamin && (
+                  <p className="text-gray-400 text-center py-4 italic">Data kepegawaian belum dilengkapi</p>
+                )}
+              </div>
+            ) : (
+              <p className="text-gray-400 text-center py-4 italic">Tidak dapat memuat data kepegawaian</p>
+            )}
+          </div>
+        )}
+
+        {/* Change Password Section */}
+        <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-bold text-gray-800 flex items-center gap-2">
+              <FiLock className={`h-5 w-5 text-${color}-600`} />
+              Ubah Password
+            </h3>
+            {!showPasswordForm && (
+              <button
+                onClick={() => setShowPasswordForm(true)}
+                className={`text-sm px-4 py-2 bg-${color}-50 text-${color}-600 rounded-xl font-medium hover:bg-${color}-100 transition-all`}
+              >
+                Ubah
+              </button>
+            )}
+          </div>
+
+          {showPasswordForm ? (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Password Saat Ini</label>
+                <div className="relative">
+                  <input
+                    type={showCurrentPassword ? 'text' : 'password'}
+                    value={passwordForm.currentPassword}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                    className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Masukkan password saat ini"
+                  />
+                  <button type="button" onClick={() => setShowCurrentPassword(!showCurrentPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                    {showCurrentPassword ? <FiEyeOff className="h-5 w-5" /> : <FiEye className="h-5 w-5" />}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Password Baru</label>
+                <div className="relative">
+                  <input
+                    type={showNewPassword ? 'text' : 'password'}
+                    value={passwordForm.newPassword}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                    className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Masukkan password baru (min. 6 karakter)"
+                  />
+                  <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                    {showNewPassword ? <FiEyeOff className="h-5 w-5" /> : <FiEye className="h-5 w-5" />}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Konfirmasi Password Baru</label>
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={passwordForm.confirmPassword}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                    className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Ulangi password baru"
+                  />
+                  <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                    {showConfirmPassword ? <FiEyeOff className="h-5 w-5" /> : <FiEye className="h-5 w-5" />}
+                  </button>
+                </div>
+              </div>
+              {passwordForm.newPassword && passwordForm.confirmPassword && passwordForm.newPassword !== passwordForm.confirmPassword && (
+                <p className="text-red-500 text-xs">Password baru dan konfirmasi tidak cocok</p>
+              )}
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => { setShowPasswordForm(false); setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' }); }}
+                  disabled={passwordLoading}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition-all disabled:opacity-50"
+                >
+                  <FiX className="h-5 w-5" />
+                  Batal
+                </button>
+                <button
+                  onClick={handleChangePassword}
+                  disabled={passwordLoading || !passwordForm.currentPassword || !passwordForm.newPassword || passwordForm.newPassword !== passwordForm.confirmPassword}
+                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-${color}-500 to-${color}-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed`}
+                >
+                  {passwordLoading ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Menyimpan...
+                    </>
+                  ) : (
+                    <>
+                      <FiLock className="h-5 w-5" />
+                      Ubah Password
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500">Klik tombol "Ubah" untuk mengganti password akun Anda.</p>
+          )}
         </div>
 
         {/* Logout Button */}

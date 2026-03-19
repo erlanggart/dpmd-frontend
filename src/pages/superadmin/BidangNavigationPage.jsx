@@ -73,7 +73,7 @@ const BidangNavigationPage = () => {
 	];
 
 	const handleNavigate = (slug) => {
-		navigate(`/bidang/${slug}`);
+		navigate(`/superadmin/bidang/${slug}`);
 	};
 
 	return (

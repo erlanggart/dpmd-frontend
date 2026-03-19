@@ -10,7 +10,7 @@ import {
 	FiUsers, FiBriefcase, FiChevronLeft, FiChevronRight,
 	FiSettings, FiX, FiVideo
 } from "react-icons/fi";
-import { Landmark, Menu, ChevronLeft } from "lucide-react";
+import { Landmark, Menu, ChevronLeft, ChevronDown } from "lucide-react";
 import AnimatedIcon from '../components/AnimatedIcon';
 import { performFullLogout } from "../utils/sessionPersistence";
 import { useConfirm } from "../hooks/useConfirm.jsx";
@@ -168,6 +168,38 @@ const BIDANG_ROUTES = {
 	6: { name: 'Pemdes', path: '/bidang/pemdes', icon: 'briefcase', gradient: 'from-amber-500 to-orange-600', color: 'text-amber-600' }
 };
 
+// Bidang submenu configuration
+const BIDANG_SUBMENUS = {
+	2: [
+		{ label: 'Disposisi Surat', path: '/bidang/sekretariat/disposisi', icon: 'mail' },
+		{ label: 'Perjalanan Dinas', path: '/bidang/sekretariat/perjadin', icon: 'briefcase' },
+		{ label: 'Manajemen Pegawai', path: '/bidang/sekretariat/pegawai', icon: 'users' },
+		{ label: 'Jadwal Kegiatan', path: '/bidang/sekretariat/jadwal-kegiatan', icon: 'calendar' },
+		{ label: 'Kelola Notifikasi', path: '/bidang/sekretariat/notifikasi', icon: 'settings' },
+		{ label: 'Kelola Informasi', path: '/bidang/sekretariat/informasi', icon: 'image' },
+		{ label: 'Video Meeting', path: '/bidang/sekretariat/video-meeting', icon: 'video' },
+	],
+	3: [
+		{ label: 'Overview', path: '/bidang/spked', icon: 'chart' },
+		{ label: 'BUMDes', path: '/bidang/spked', icon: 'store', hash: 'bumdes' },
+		{ label: 'Bantuan Keuangan', path: '/bidang/spked', icon: 'dollar', hash: 'bankeu' },
+	],
+	4: [
+		{ label: 'Alokasi Dana Desa', path: '/bidang/kkd/add', icon: 'dollar' },
+		{ label: 'Dana Desa', path: '/bidang/kkd/dd', icon: 'banknote' },
+		{ label: 'BHPRD', path: '/bidang/kkd/bhprd', icon: 'file' },
+	],
+	5: [
+		{ label: 'LKD', path: '/bidang/pmd/kelembagaan', icon: 'users' },
+		{ label: 'Kelembagaan Lainnya', path: '/bidang/pmd/kelembagaan/lainnya', icon: 'file' },
+		{ label: 'Pengurus', path: '/bidang/pmd/pengurus', icon: 'user' },
+	],
+	6: [
+		{ label: 'Aparatur Desa', path: '/bidang/pemdes/aparatur-desa', icon: 'users' },
+		{ label: 'Produk Hukum', path: '/bidang/pemdes/produk-hukum', icon: 'file' },
+	],
+};
+
 // ============================================
 // MAIN COMPONENT
 // ============================================
@@ -178,6 +210,7 @@ const DPMDStaffLayout = () => {
 	const [notifications, setNotifications] = React.useState([]);
 	const [unreadCount, setUnreadCount] = React.useState(0);
 	const [hoveredItem, setHoveredItem] = React.useState(null);
+	const [bidangSubmenuOpen, setBidangSubmenuOpen] = React.useState(false);
 	const [user, setUser] = React.useState(JSON.parse(localStorage.getItem("user") || "{}"));
 	
 	// Auto-detect roleType from user's actual role
@@ -190,6 +223,16 @@ const DPMDStaffLayout = () => {
 	const token = localStorage.getItem("expressToken");
 	const config = ROLE_CONFIG[roleType] || ROLE_CONFIG.pegawai;
 	const theme = config.theme;
+
+	// Auto-open submenu when on a bidang page
+	React.useEffect(() => {
+		if (user.bidang_id) {
+			const bidangNav = BIDANG_ROUTES[user.bidang_id];
+			if (bidangNav && location.pathname.startsWith(bidangNav.path)) {
+				setBidangSubmenuOpen(true);
+			}
+		}
+	}, [location.pathname, user.bidang_id]);
 
 	// Get display name (can be string or function)
 	const getDisplayName = () => {
@@ -428,12 +471,14 @@ const DPMDStaffLayout = () => {
 		if (config.showBidangNav && user.bidang_id) {
 			const bidangNav = BIDANG_ROUTES[user.bidang_id];
 			if (bidangNav) {
+				const submenus = BIDANG_SUBMENUS[user.bidang_id] || [];
 				items.push({
 					path: bidangNav.path,
 					label: `Bidang ${bidangNav.name}`,
 					icon: bidangNav.icon,
 					gradient: bidangNav.gradient,
 					color: bidangNav.color,
+					submenus: submenus.length > 0 ? submenus : undefined,
 				});
 			}
 		}
@@ -520,32 +565,82 @@ const DPMDStaffLayout = () => {
 					<nav className="relative p-3 space-y-1.5 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent" style={{ height: 'calc(100vh - 320px)' }}>
 						{sidebarNavItems.map((item, index) => {
 							const isActive = location.pathname === item.path;
+							const hasSubmenus = item.submenus && item.submenus.length > 0;
+							const isSubmenuActive = hasSubmenus && item.submenus.some(sub => location.pathname.startsWith(sub.path));
+							const isBidangActive = isActive || isSubmenuActive || (hasSubmenus && location.pathname.startsWith(item.path));
 							
 							return (
-								<button
-									key={index}
-									onClick={() => navigate(item.path)}
-									onMouseEnter={() => setHoveredItem(item.label)}
-									onMouseLeave={() => setHoveredItem(null)}
-									className={`group relative w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 rounded-xl transition-all duration-200 ${
-										isActive 
-											? `bg-gradient-to-r ${item.gradient || theme.gradientFrom + ' ' + theme.gradientTo} text-white shadow-md` 
-											: `${item.color || theme.activeText} hover:bg-gradient-to-r ${item.gradient || theme.gradientFrom + ' ' + theme.gradientTo} hover:text-white hover:shadow-md`
-									}`}
-									title={isSidebarCollapsed ? item.label : ''}
-								>
-									<div className={`relative ${isSidebarCollapsed ? 'mx-auto' : 'flex-shrink-0'}`}>
-										<AnimatedIcon 
-											type={item.icon} 
-											isActive={isActive} 
-											isHovered={hoveredItem === item.label}
-											className="w-5 h-5"
-										/>
-									</div>
-									{!isSidebarCollapsed && (
-										<span className="relative font-semibold truncate text-sm">{item.label}</span>
+								<div key={index}>
+									<button
+										onClick={() => {
+											if (hasSubmenus && !isSidebarCollapsed) {
+												setBidangSubmenuOpen(!bidangSubmenuOpen);
+											} else {
+												navigate(item.path);
+											}
+										}}
+										onMouseEnter={() => setHoveredItem(item.label)}
+										onMouseLeave={() => setHoveredItem(null)}
+										className={`group relative w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 rounded-xl transition-all duration-200 ${
+											(hasSubmenus ? isBidangActive : isActive)
+												? `bg-gradient-to-r ${item.gradient || theme.gradientFrom + ' ' + theme.gradientTo} text-white shadow-md` 
+												: `${item.color || theme.activeText} hover:bg-gradient-to-r ${item.gradient || theme.gradientFrom + ' ' + theme.gradientTo} hover:text-white hover:shadow-md`
+										}`}
+										title={isSidebarCollapsed ? item.label : ''}
+									>
+										<div className={`relative ${isSidebarCollapsed ? 'mx-auto' : 'flex-shrink-0'}`}>
+											<AnimatedIcon 
+												type={item.icon} 
+												isActive={hasSubmenus ? isBidangActive : isActive} 
+												isHovered={hoveredItem === item.label}
+												className="w-5 h-5"
+											/>
+										</div>
+										{!isSidebarCollapsed && (
+											<>
+												<span className="relative font-semibold truncate text-sm flex-1">{item.label}</span>
+												{hasSubmenus && (
+													<ChevronDown className={`w-4 h-4 transition-transform duration-200 ${bidangSubmenuOpen ? 'rotate-180' : ''}`} />
+												)}
+											</>
+										)}
+									</button>
+
+									{/* Submenu items */}
+									{hasSubmenus && !isSidebarCollapsed && bidangSubmenuOpen && (
+										<div className="mt-1 ml-3 pl-3 border-l-2 border-gray-200 space-y-0.5">
+											{item.submenus.map((sub, subIndex) => {
+												const exactMatch = location.pathname === sub.path;
+												const prefixMatch = location.pathname.startsWith(sub.path + '/');
+												// Avoid false active when a sibling submenu has a more specific path match
+												const moreSpecific = prefixMatch && item.submenus.some(
+													s => s !== sub && s.path.startsWith(sub.path + '/') &&
+													(location.pathname === s.path || location.pathname.startsWith(s.path + '/'))
+												);
+												const isSubActive = exactMatch || (prefixMatch && !moreSpecific);
+												return (
+													<button
+														key={subIndex}
+														onClick={() => navigate(sub.path)}
+														className={`group w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all duration-200 ${
+															isSubActive
+																? `${item.color || theme.activeText} ${theme.activeBg} font-semibold`
+																: `text-gray-500 hover:text-gray-700 ${theme.hoverBg}`
+														}`}
+													>
+														<AnimatedIcon 
+															type={sub.icon} 
+															isActive={isSubActive} 
+															isHovered={false}
+															className="w-4 h-4"
+														/>
+														<span className="truncate">{sub.label}</span>
+													</button>
+												);
+											})}
+										</div>
 									)}
-								</button>
+								</div>
 							);
 						})}
 					</nav>

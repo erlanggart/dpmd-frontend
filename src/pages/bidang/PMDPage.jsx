@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { useBidangPath } from "../../hooks/useBidangPath";
 import {
   Users,
   Activity,
@@ -17,6 +18,7 @@ import DaftarPegawaiBidang from "../../components/bidang/DaftarPegawaiBidang";
 
 const PMDPage = () => {
   const navigate = useNavigate();
+  const { getPath } = useBidangPath();
   const [loading, setLoading] = useState(true);
   const [_data, setData] = useState(null);
   const [activityLogs, setActivityLogs] = useState([]);
@@ -31,7 +33,7 @@ const PMDPage = () => {
       shortTitle: 'LKD',
       description: 'RW, RT, Posyandu, Karang Taruna, LPM, PKK, Satlinmas',
       icon: Users,
-      route: '/bidang/pmd/kelembagaan',
+      route: getPath('/bidang/pmd/kelembagaan'),
       gradient: 'from-purple-500 to-indigo-600',
       textColor: 'text-purple-100'
     },
@@ -41,7 +43,7 @@ const PMDPage = () => {
       shortTitle: 'Lainnya',
       description: 'Kelembagaan dan organisasi lainnya di desa',
       icon: FileText,
-      route: '/bidang/pmd/kelembagaan/lainnya',
+      route: getPath('/bidang/pmd/kelembagaan/lainnya'),
       gradient: 'from-blue-500 to-cyan-600',
       textColor: 'text-blue-100'
     },
@@ -51,7 +53,7 @@ const PMDPage = () => {
       shortTitle: 'Pengurus',
       description: 'Kelola data pengurus dan anggota kelembagaan',
       icon: UserCheck,
-      route: '/bidang/pmd/pengurus',
+      route: getPath('/bidang/pmd/pengurus'),
       gradient: 'from-emerald-500 to-teal-600',
       textColor: 'text-emerald-100'
     }
