@@ -32,6 +32,7 @@ const KelembagaanLainnyaPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedKecamatan, setExpandedKecamatan] = useState({});
   const [expandedDesa, setExpandedDesa] = useState({});
+  const [expandedGroup, setExpandedGroup] = useState({});
 
   const fetchData = useCallback(async () => {
     try {
@@ -69,6 +70,32 @@ const KelembagaanLainnyaPage = () => {
       desaNameMap[desa.id] = { desaNama: desa.nama, kecNama: kec.nama };
     });
   });
+
+  // Group lembaga lainnya by name across all desa
+  const groupedLembaga = React.useMemo(() => {
+    const groups = {};
+    data.forEach((kec) => {
+      kec.desas.forEach((desa) => {
+        desa.lembaga_lainnya.items.forEach((item) => {
+          const key = item.nama.trim().toLowerCase();
+          if (!groups[key]) {
+            groups[key] = { nama: item.nama, items: [] };
+          }
+          groups[key].items.push({
+            ...item,
+            desa_id: desa.id,
+            desa_nama: desa.nama,
+            kec_nama: kec.nama,
+          });
+        });
+      });
+    });
+    return Object.values(groups).sort((a, b) => b.items.length - a.items.length);
+  }, [data]);
+
+  const toggleGroup = (nama) => {
+    setExpandedGroup((prev) => ({ ...prev, [nama]: !prev[nama] }));
+  };
 
   // Filter kecamatan/desa by search
   const filteredData = data
@@ -300,6 +327,110 @@ const KelembagaanLainnyaPage = () => {
                   {summary.lembaga_lainnya.unverified} belum
                 </span>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Grouped Lembaga Lainnya List */}
+        {groupedLembaga.length > 0 && (
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <LuBuilding2 className="h-5 w-5 text-blue-600" />
+              <h3 className="font-semibold text-gray-800">
+                Daftar Kelembagaan Lainya ({groupedLembaga.length} jenis)
+              </h3>
+            </div>
+            <div className="space-y-2">
+              {groupedLembaga.map((group) => {
+                const verified = group.items.filter(
+                  (i) => i.status_verifikasi === "verified"
+                ).length;
+                const isOpen = expandedGroup[group.nama];
+                return (
+                  <div
+                    key={group.nama}
+                    className="border border-gray-100 rounded-xl overflow-hidden"
+                  >
+                    <button
+                      onClick={() => toggleGroup(group.nama)}
+                      className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                          <LuFileText className="h-4 w-4 text-blue-600" />
+                        </div>
+                        <div className="text-left">
+                          <p className="text-sm font-semibold text-gray-800">
+                            {group.nama}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {group.items.length} desa
+                            <span className="mx-1">·</span>
+                            <span className="text-emerald-600">
+                              {verified} terverifikasi
+                            </span>
+                            {group.items.length - verified > 0 && (
+                              <>
+                                <span className="mx-1">·</span>
+                                <span className="text-amber-600">
+                                  {group.items.length - verified} belum
+                                </span>
+                              </>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700 font-bold">
+                          {group.items.length}
+                        </span>
+                        {isOpen ? (
+                          <LuChevronDown className="h-4 w-4 text-gray-400" />
+                        ) : (
+                          <LuChevronRight className="h-4 w-4 text-gray-400" />
+                        )}
+                      </div>
+                    </button>
+                    {isOpen && (
+                      <div className="border-t border-gray-100 bg-gray-50 p-3 space-y-1.5">
+                        {group.items.map((item) => (
+                          <div
+                            key={item.id}
+                            className="flex items-center justify-between bg-white rounded-lg p-2.5 cursor-pointer hover:shadow-md transition-shadow"
+                            onClick={() =>
+                              navigate(
+                                getPath(
+                                  `/bidang/pmd/kelembagaan/lembaga-lainnya/${item.id}`
+                                )
+                              )
+                            }
+                          >
+                            <div>
+                              <p className="text-sm text-gray-700 font-medium">
+                                {item.desa_nama}
+                              </p>
+                              <p className="text-xs text-gray-400">
+                                {item.kec_nama}
+                              </p>
+                            </div>
+                            <span
+                              className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                item.status_verifikasi === "verified"
+                                  ? "bg-emerald-100 text-emerald-700"
+                                  : "bg-amber-100 text-amber-700"
+                              }`}
+                            >
+                              {item.status_verifikasi === "verified"
+                                ? "✓"
+                                : "Belum"}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
