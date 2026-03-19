@@ -149,6 +149,8 @@ const MusdesusMonitoringPage = lazy(
 // Bidang apps
 const BumdesApp = lazy(() => import("./pages/bidang/spked/bumdes"));
 const Kelembagaan = lazy(() => import("./pages/bidang/pmd/Kelembagaan"));
+const KelembagaanLainnyaPage = lazy(() => import("./pages/bidang/pmd/KelembagaanLainnyaPage"));
+const PengurusDashboardPage = lazy(() => import("./pages/bidang/pmd/PengurusDashboardPage"));
 const DisposisiRouter = lazy(
   () => import("./pages/bidang/sekretariat/disposisi/DisposisiRouter"),
 );
@@ -883,6 +885,7 @@ function App() {
                   <Route index element={<PMDPage />} />
                   <Route path="core-dashboard" element={<WelcomeDashboard />} />
                   <Route path="kelembagaan" element={<Kelembagaan />} />
+                  <Route path="kelembagaan/lainnya" element={<KelembagaanLainnyaPage />} />
                   <Route
                     path="kelembagaan/admin/:desaId"
                     element={<AdminKelembagaanDetailPage />}
@@ -899,6 +902,7 @@ function App() {
                     path="kelembagaan/:type/:id"
                     element={<KelembagaanDetailPage />}
                   />
+                  <Route path="pengurus" element={<PengurusDashboardPage />} />
                   <Route path="pengurus/:id" element={<PengurusDetailPage />} />
                   <Route
                     path="pengurus/:id/edit"
@@ -1054,10 +1058,12 @@ function App() {
 
                   {/* PMD sub-routes */}
                   <Route path="bidang/pmd/kelembagaan" element={<Kelembagaan />} />
+                  <Route path="bidang/pmd/kelembagaan/lainnya" element={<KelembagaanLainnyaPage />} />
                   <Route path="bidang/pmd/kelembagaan/admin/:desaId" element={<AdminKelembagaanDetailPage />} />
                   <Route path="bidang/pmd/kelembagaan/admin/:desaId/:type" element={<KelembagaanList />} />
                   <Route path="bidang/pmd/kelembagaan/:type" element={<KelembagaanList />} />
                   <Route path="bidang/pmd/kelembagaan/:type/:id" element={<KelembagaanDetailPage />} />
+                  <Route path="bidang/pmd/pengurus" element={<PengurusDashboardPage />} />
                   <Route path="bidang/pmd/pengurus/:id" element={<PengurusDetailPage />} />
                   <Route path="bidang/pmd/pengurus/:id/edit" element={<PengurusEditPage />} />
 
