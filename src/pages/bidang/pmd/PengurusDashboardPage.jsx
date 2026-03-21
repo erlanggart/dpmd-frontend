@@ -479,7 +479,7 @@ export default function PengurusDashboardPage() {
                     <td className="px-4 py-3 text-gray-600">{p.desa_nama}</td>
                     <td className="px-4 py-3 text-gray-600">{p.kecamatan_nama}</td>
                     <td className="px-4 py-3 text-gray-600">
-                      {p.jenis_kelamin === "L" ? "L" : p.jenis_kelamin === "P" ? "P" : "-"}
+                      {p.jenis_kelamin === "Laki_laki" ? "L" : p.jenis_kelamin === "Perempuan" ? "P" : "-"}
                     </td>
                     <td className="px-4 py-3 text-gray-600">{p.pendidikan || "-"}</td>
                     <td className="px-4 py-3 text-center">

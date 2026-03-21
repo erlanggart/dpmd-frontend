@@ -13,60 +13,20 @@ import {
   LuUser,
 } from "react-icons/lu";
 
-// Reusable Notched Card Component
-const NotchedCard = ({ icon: Icon, title, value, color }) => {
-  return (
+const SummaryChip = ({ icon: Icon, title, value, color }) => (
+  <div className="flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-gray-100 hover:border-gray-200 transition-colors">
     <div
-      className="relative rounded-2xl p-4 hover:translate-y-[-4px] transition-all duration-300 overflow-hidden"
-      style={{
-        background: `linear-gradient(135deg, ${color}, ${color})`,
-        boxShadow: `0 10px 30px ${color}40, 0 4px 12px ${color}30`,
-        transition: "all 0.3s ease",
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.boxShadow = `0 15px 40px ${color}60, 0 8px 16px ${color}40`;
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.boxShadow = `0 10px 30px ${color}40, 0 4px 12px ${color}30`;
-      }}
+      className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+      style={{ backgroundColor: `${color}12` }}
     >
-      {/* White box that borders with notch */}
-      <div className="absolute left-0 top-0 bottom-0 right-4 bg-white ">
-        {/* Middle Notch - colored with rounded left full */}
-        <div
-          className="absolute right-[0%] top-[30%] h-[40%] w-3 rounded-l-full z-10"
-          style={{ backgroundColor: `${color}` }}
-        ></div>
-      </div>
-
-      {/* Top Notch - white for cutout effect */}
-      <div className="absolute right-0 top-0 h-[30%] w-4 bg-white rounded-br-full z-10"></div>
-
-      {/* Bottom Notch - white for cutout effect */}
-      <div className="absolute right-0 bottom-0 h-[30%] w-4 bg-white rounded-tr-full z-10"></div>
-
-      <div className="flex items-center justify-center relative z-20 mr-5 mb-3">
-        <div
-          className="p-3 rounded-xl shadow-sm"
-          style={{ backgroundColor: `${color}15` }}
-        >
-          <Icon className="h-5 w-5" style={{ color: color }} />
-        </div>
-      </div>
-
-      <div className="text-xs text-gray-500 font-medium mb-2 relative z-20 text-center">
-        {title}
-      </div>
-      
-      {/* Verified Badge */}
-      <div className="flex items-center justify-center gap-1.5 relative z-20 mb-1">
-        <div className="flex items-center gap-1 bg-gray-100 px-2 py-0.5 rounded-md">
-          <span className="text-sm font-semibold text-gray-800">{value || 0}</span>
-        </div>
-      </div>
+      <Icon className="h-4 w-4" style={{ color }} />
     </div>
-  );
-};
+    <div className="min-w-0">
+      <p className="text-xs text-gray-500 leading-none mb-0.5">{title}</p>
+      <p className="text-lg font-bold leading-none" style={{ color }}>{value || 0}</p>
+    </div>
+  </div>
+);
 
 const VerifiedStatusBadge = ({ status, verifiedStatus }) => {
   if (status === "Belum Terbentuk") {
@@ -102,7 +62,19 @@ const KecamatanAccordion = ({ kecamatanData, onDesaClick }) => {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 max-h-[90vh] overflow-y-auto">
+      <div className="flex items-center gap-3">
+        <div className="h-10 w-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-md">
+          <LuBuilding2 className="h-5 w-5 text-white" />
+        </div>
+        <div>
+          <h2 className="text-lg font-bold text-gray-900">Data Kecamatan & Desa</h2>
+          <p className="text-sm text-gray-500">
+            {kecamatanData.length} Kecamatan — Klik untuk melihat detail kelembagaan
+          </p>
+        </div>
+      </div>
+
       {kecamatanData.map((kecamatan) => (
         <div
           key={kecamatan.id}
@@ -126,33 +98,18 @@ const KecamatanAccordion = ({ kecamatanData, onDesaClick }) => {
             </div>
             <div className="flex items-center gap-6">
               {/* Summary Stats - Verified Only */}
-              <div className="hidden md:grid grid-cols-3 items-center gap-4 text-sm">
-                <div className="flex items-center gap-2">
-                  <LuUsers className="h-6 w-6 bg-blue-700 text-white p-1 rounded flex-shrink-0" />
-                  <div className="flex items-center gap-1">
-                    <span className="text-gray-700">RW:</span>
-                    <div className="flex items-center gap-1 bg-gray-100 px-2 py-0.5 rounded-md">
-                      <span className="text-sm font-semibold text-gray-800">{kecamatan.verifiedKelembagaan?.rw || 0}</span>
-                    </div>
-                  </div>
+              <div className="hidden md:flex items-center gap-2 text-sm">
+                <div className="flex items-center gap-1.5 bg-purple-50 text-purple-700 px-2.5 py-1 rounded-lg">
+                  <span className="font-bold">{kecamatan.verifiedKelembagaan?.rw || 0}</span>
+                  <span className="text-purple-500 text-xs">RW</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <LuUser className="h-6 w-6 bg-blue-500 text-white p-1 rounded flex-shrink-0" />
-                  <div className="flex items-center gap-1">
-                    <span className="text-gray-700">RT:</span>
-                    <div className="flex items-center gap-1 bg-gray-100 px-2 py-0.5 rounded-md">
-                      <span className="text-sm font-semibold text-gray-800">{kecamatan.verifiedKelembagaan?.rt || 0}</span>
-                    </div>
-                  </div>
+                <div className="flex items-center gap-1.5 bg-green-50 text-green-700 px-2.5 py-1 rounded-lg">
+                  <span className="font-bold">{kecamatan.verifiedKelembagaan?.rt || 0}</span>
+                  <span className="text-green-500 text-xs">RT</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <LuHeart className="h-6 w-6 bg-purple-600 text-white p-1 rounded flex-shrink-0" />
-                  <div className="flex items-center gap-1">
-                    <span className="text-gray-700">Posyandu:</span>
-                    <div className="flex items-center gap-1 bg-gray-100 px-2 py-0.5 rounded-md">
-                      <span className="text-sm font-semibold text-gray-800">{kecamatan.verifiedKelembagaan?.posyandu || 0}</span>
-                    </div>
-                  </div>
+                <div className="flex items-center gap-1.5 bg-red-50 text-red-700 px-2.5 py-1 rounded-lg">
+                  <span className="font-bold">{kecamatan.verifiedKelembagaan?.posyandu || 0}</span>
+                  <span className="text-red-500 text-xs">Posyandu</span>
                 </div>
               </div>
               {expandedKecamatan[kecamatan.id] ? (
@@ -167,47 +124,17 @@ const KecamatanAccordion = ({ kecamatanData, onDesaClick }) => {
           {expandedKecamatan[kecamatan.id] && (
             <div className="border-t border-gray-200">
               {/* Summary Table for Kecamatan */}
-              <div className="p-6 bg-gray-50">
-                <h4 className="text-md font-semibold text-gray-800 mb-4">
-                  Ringkasan Kelembagaan Terverifikasi
-                </h4>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                  <NotchedCard
-                    icon={LuUsers}
-                    title="RW"
-                    value={kecamatan.verifiedKelembagaan?.rw}
-                    color="#9333ea"
-                  />
-                  <NotchedCard
-                    icon={LuUser}
-                    title="RT"
-                    value={kecamatan.verifiedKelembagaan?.rt}
-                    color="#16a34a"
-                  />
-                  <NotchedCard
-                    icon={LuHeartHandshake}
-                    title="Posyandu"
-                    value={kecamatan.verifiedKelembagaan?.posyandu}
-                    color="#dc2626"
-                  />
-                  <NotchedCard
-                    icon={LuUsers}
-                    title="Karang Taruna"
-                    value={kecamatan.verifiedKelembagaan?.karangTaruna}
-                    color="#2563eb"
-                  />
-                  <NotchedCard
-                    icon={LuBuilding2}
-                    title="LPM"
-                    value={kecamatan.verifiedKelembagaan?.lpm}
-                    color="#4f46e5"
-                  />
-                  <NotchedCard
-                    icon={LuHeart}
-                    title="PKK"
-                    value={kecamatan.verifiedKelembagaan?.pkk}
-                    color="#ec4899"
-                  />
+              <div className="p-5 bg-gray-50/80">
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">
+                  Kelembagaan Terverifikasi
+                </p>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                  <SummaryChip icon={LuUsers} title="RW" value={kecamatan.verifiedKelembagaan?.rw} color="#9333ea" />
+                  <SummaryChip icon={LuUser} title="RT" value={kecamatan.verifiedKelembagaan?.rt} color="#16a34a" />
+                  <SummaryChip icon={LuHeartHandshake} title="Posyandu" value={kecamatan.verifiedKelembagaan?.posyandu} color="#dc2626" />
+                  <SummaryChip icon={LuUsers} title="Karang Taruna" value={kecamatan.verifiedKelembagaan?.karangTaruna} color="#2563eb" />
+                  <SummaryChip icon={LuBuilding2} title="LPM" value={kecamatan.verifiedKelembagaan?.lpm} color="#4f46e5" />
+                  <SummaryChip icon={LuHeart} title="PKK" value={kecamatan.verifiedKelembagaan?.pkk} color="#ec4899" />
                 </div>
               </div>
 
