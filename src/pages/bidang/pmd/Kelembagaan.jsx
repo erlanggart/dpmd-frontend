@@ -13,7 +13,11 @@ import { useAuth } from "../../../context/AuthContext";
 import { useEditMode } from "../../../context/EditModeContext";
 import kelembagaanApi from "../../../api/kelembagaan";
 import StatistikLKD from "../../../components/kelembagaan/StatistikLKD";
-import StatistikTahunan from "../../../components/kelembagaan/StatistikTahunan";
+import ChartVerifikasiTahunan from "../../../components/kelembagaan/ChartVerifikasiTahunan";
+import TabelVerifikasiTahunan from "../../../components/kelembagaan/TabelVerifikasiTahunan";
+import CapaianVerifikasiLembaga from "../../../components/kelembagaan/CapaianVerifikasiLembaga";
+import RingkasanStatusKelembagaan from "../../../components/kelembagaan/RingkasanStatusKelembagaan";
+import useStatistikTahunan from "../../../hooks/useStatistikTahunan";
 import UnverifiedKelembagaanList from "../../../components/kelembagaan/UnverifiedKelembagaanList";
 import KecamatanAccordion from "../../../components/kelembagaan/KecamatanAccordion";
 import KelembagaanActivityList from "../../../components/kelembagaan/KelembagaanActivityList";
@@ -27,6 +31,7 @@ const Kelembagaan = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+  const { data: statistikData, loading: statistikLoading, error: statistikError } = useStatistikTahunan();
 
   // Check if user can toggle edit mode
   const canToggleEdit =
@@ -282,8 +287,27 @@ const Kelembagaan = () => {
           <StatistikLKD summaryData={summaryData} loading={loading} />
       
 
-      {/* Statistik Tahunan */}
-      <StatistikTahunan />
+      {/* Statistik Tahunan - komponen individual */}
+      <ChartVerifikasiTahunan data={statistikData} loading={statistikLoading} error={statistikError} />
+      <TabelVerifikasiTahunan data={statistikData} loading={statistikLoading} error={statistikError} />
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-8 ">
+        <div className="bg-white rounded-xl border border-gray-200 p-6 grid grid-cols-1 md:grid-cols-3 gap-6 col-span-3">
+          <div className="col-span-1 md:col-span-2">
+            <CapaianVerifikasiLembaga data={statistikData} loading={statistikLoading} error={statistikError} />
+          </div>
+          <div className="col-span-1">
+            <RingkasanStatusKelembagaan data={statistikData} loading={statistikLoading} error={statistikError} />
+          </div>
+          <div className="col-span-1">
+          </div>
+        
+        </div>
+<UnverifiedKelembagaanList 
+            kecamatanData={kecamatanData}
+            onDesaClick={handleDesaClick}
+          />
+      </div>
 
 <div className="grid grid-cols-4 gap-6">
   <div className="col-span-3">
@@ -298,10 +322,7 @@ const Kelembagaan = () => {
   
           <KelembagaanActivityList />
         
-          <UnverifiedKelembagaanList 
-            kecamatanData={kecamatanData}
-            onDesaClick={handleDesaClick}
-          />
+          
         </div>
 </div>
     </div>

@@ -967,12 +967,9 @@ const PengurusDetailPage = () => {
 										Jenis Kelamin
 									</label>
 									<p className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
-										{pengurus.jenis_kelamin || "-"}
-									</p>
-								</div>
-
-								<div>
-									<label className="block text-sm font-medium text-gray-700 mb-1">
+												{pengurus.jenis_kelamin
+													? pengurus.jenis_kelamin.replace(/_/g, "-")
+													: "-"}
 										Tempat Lahir
 									</label>
 									<p className="text-sm text-gray-900 bg-gray-50 p-2 rounded">

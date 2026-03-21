@@ -179,8 +179,10 @@ const KelembagaanLainnyaPage = () => {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        {/* Infographic Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 px-4 sm:px-6 py-6 space-y-6 gap-6">
+
+        <div className="space-y-6">
+ {/* Infographic Cards */}
         {summary && (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Total Desa */}
@@ -264,243 +266,7 @@ const KelembagaanLainnyaPage = () => {
           </div>
         )}
 
-        {/* Verification Progress Bars */}
-        {summary && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Satlinmas Progress */}
-            <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-5">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <LuShieldCheck className="h-5 w-5 text-emerald-600" />
-                  <h3 className="font-semibold text-gray-800">
-                    Verifikasi Satlinmas
-                  </h3>
-                </div>
-                <span className="text-sm font-bold text-emerald-600">
-                  {satlinmasPercent}%
-                </span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-3 mb-3">
-                <div
-                  className="bg-gradient-to-r from-emerald-500 to-teal-500 h-3 rounded-full transition-all duration-500"
-                  style={{ width: `${satlinmasPercent}%` }}
-                />
-              </div>
-              <div className="flex justify-between text-xs text-gray-500">
-                <span className="flex items-center gap-1">
-                  <LuCheck className="h-3 w-3 text-emerald-500" />
-                  {summary.satlinmas.verified} terverifikasi
-                </span>
-                <span className="flex items-center gap-1">
-                  <LuX className="h-3 w-3 text-red-400" />
-                  {summary.satlinmas.unverified} belum
-                </span>
-              </div>
-            </div>
-
-            {/* Lembaga Lainnya Progress */}
-            <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-5">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <LuTrendingUp className="h-5 w-5 text-blue-600" />
-                  <h3 className="font-semibold text-gray-800">
-                    Verifikasi Lembaga Lainnya
-                  </h3>
-                </div>
-                <span className="text-sm font-bold text-blue-600">
-                  {lembagaPercent}%
-                </span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-3 mb-3">
-                <div
-                  className="bg-gradient-to-r from-blue-500 to-cyan-500 h-3 rounded-full transition-all duration-500"
-                  style={{ width: `${lembagaPercent}%` }}
-                />
-              </div>
-              <div className="flex justify-between text-xs text-gray-500">
-                <span className="flex items-center gap-1">
-                  <LuCheck className="h-3 w-3 text-blue-500" />
-                  {summary.lembaga_lainnya.verified} terverifikasi
-                </span>
-                <span className="flex items-center gap-1">
-                  <LuX className="h-3 w-3 text-red-400" />
-                  {summary.lembaga_lainnya.unverified} belum
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Grouped Lembaga Lainnya List */}
-        {groupedLembaga.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-5">
-            <div className="flex items-center gap-2 mb-4">
-              <LuBuilding2 className="h-5 w-5 text-blue-600" />
-              <h3 className="font-semibold text-gray-800">
-                Daftar Kelembagaan Lainya ({groupedLembaga.length} jenis)
-              </h3>
-            </div>
-            <div className="space-y-2">
-              {groupedLembaga.map((group) => {
-                const verified = group.items.filter(
-                  (i) => i.status_verifikasi === "verified"
-                ).length;
-                const isOpen = expandedGroup[group.nama];
-                return (
-                  <div
-                    key={group.nama}
-                    className="border border-gray-100 rounded-xl overflow-hidden"
-                  >
-                    <button
-                      onClick={() => toggleGroup(group.nama)}
-                      className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                          <LuFileText className="h-4 w-4 text-blue-600" />
-                        </div>
-                        <div className="text-left">
-                          <p className="text-sm font-semibold text-gray-800">
-                            {group.nama}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {group.items.length} desa
-                            <span className="mx-1">·</span>
-                            <span className="text-emerald-600">
-                              {verified} terverifikasi
-                            </span>
-                            {group.items.length - verified > 0 && (
-                              <>
-                                <span className="mx-1">·</span>
-                                <span className="text-amber-600">
-                                  {group.items.length - verified} belum
-                                </span>
-                              </>
-                            )}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700 font-bold">
-                          {group.items.length}
-                        </span>
-                        {isOpen ? (
-                          <LuChevronDown className="h-4 w-4 text-gray-400" />
-                        ) : (
-                          <LuChevronRight className="h-4 w-4 text-gray-400" />
-                        )}
-                      </div>
-                    </button>
-                    {isOpen && (
-                      <div className="border-t border-gray-100 bg-gray-50 p-3 space-y-1.5">
-                        {group.items.map((item) => (
-                          <div
-                            key={item.id}
-                            className="flex items-center justify-between bg-white rounded-lg p-2.5 cursor-pointer hover:shadow-md transition-shadow"
-                            onClick={() =>
-                              navigate(
-                                getPath(
-                                  `/bidang/pmd/kelembagaan/lembaga-lainnya/${item.id}`
-                                )
-                              )
-                            }
-                          >
-                            <div>
-                              <p className="text-sm text-gray-700 font-medium">
-                                {item.desa_nama}
-                              </p>
-                              <p className="text-xs text-gray-400">
-                                {item.kec_nama}
-                              </p>
-                            </div>
-                            <span
-                              className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                                item.status_verifikasi === "verified"
-                                  ? "bg-emerald-100 text-emerald-700"
-                                  : "bg-amber-100 text-amber-700"
-                              }`}
-                            >
-                              {item.status_verifikasi === "verified"
-                                ? "✓"
-                                : "Belum"}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Unverified Items Quick List */}
-        {unverifiedItems.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-lg border border-amber-100 p-5">
-            <div className="flex items-center gap-2 mb-4">
-              <LuShieldAlert className="h-5 w-5 text-amber-600" />
-              <h3 className="font-semibold text-gray-800">
-                Lembaga Belum Terverifikasi ({unverifiedItems.length})
-              </h3>
-            </div>
-            <div className="max-h-60 overflow-y-auto space-y-2">
-              {unverifiedItems.map((item) => {
-                const desaInfo = desaNameMap[item.desa_id];
-                return (
-                  <div
-                    key={`${item.type}-${item.id}`}
-                    className="flex items-center justify-between p-3 bg-amber-50 rounded-xl hover:bg-amber-100 transition-colors cursor-pointer"
-                    onClick={() =>
-                      navigate(
-                        getPath(
-                          `/bidang/pmd/kelembagaan/${item.type}/${item.id}`
-                        )
-                      )
-                    }
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`h-8 w-8 rounded-lg flex items-center justify-center ${
-                          item.type === "satlinmas"
-                            ? "bg-emerald-100 text-emerald-600"
-                            : "bg-blue-100 text-blue-600"
-                        }`}
-                      >
-                        {item.type === "satlinmas" ? (
-                          <LuShield className="h-4 w-4" />
-                        ) : (
-                          <LuFileText className="h-4 w-4" />
-                        )}
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-800">
-                          {item.nama}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {desaInfo
-                            ? `${desaInfo.desaNama}, ${desaInfo.kecNama}`
-                            : ""}
-                          {" · "}
-                          <span className="capitalize">
-                            {item.type === "lembaga-lainnya"
-                              ? "Lembaga Lainnya"
-                              : "Satlinmas"}
-                          </span>
-                        </p>
-                      </div>
-                    </div>
-                    <span className="text-xs px-2 py-1 rounded-full bg-amber-200 text-amber-800 font-medium">
-                      Belum Verifikasi
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Search */}
+         {/* Search */}
         <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-4">
           <div className="relative">
             <LuSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -778,6 +544,250 @@ const KelembagaanLainnyaPage = () => {
             </div>
           )}
         </div>
+
+        </div>
+       
+       <div className="space-y-6">
+
+       
+
+        {/* Verification Progress Bars */}
+        {summary && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Satlinmas Progress */}
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <LuShieldCheck className="h-5 w-5 text-emerald-600" />
+                  <h3 className="font-semibold text-gray-800">
+                    Verifikasi Satlinmas
+                  </h3>
+                </div>
+                <span className="text-sm font-bold text-emerald-600">
+                  {satlinmasPercent}%
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-3 mb-3">
+                <div
+                  className="bg-gradient-to-r from-emerald-500 to-teal-500 h-3 rounded-full transition-all duration-500"
+                  style={{ width: `${satlinmasPercent}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-xs text-gray-500">
+                <span className="flex items-center gap-1">
+                  <LuCheck className="h-3 w-3 text-emerald-500" />
+                  {summary.satlinmas.verified} terverifikasi
+                </span>
+                <span className="flex items-center gap-1">
+                  <LuX className="h-3 w-3 text-red-400" />
+                  {summary.satlinmas.unverified} belum
+                </span>
+              </div>
+            </div>
+
+            {/* Lembaga Lainnya Progress */}
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <LuTrendingUp className="h-5 w-5 text-blue-600" />
+                  <h3 className="font-semibold text-gray-800">
+                    Verifikasi Lembaga Lainnya
+                  </h3>
+                </div>
+                <span className="text-sm font-bold text-blue-600">
+                  {lembagaPercent}%
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-3 mb-3">
+                <div
+                  className="bg-gradient-to-r from-blue-500 to-cyan-500 h-3 rounded-full transition-all duration-500"
+                  style={{ width: `${lembagaPercent}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-xs text-gray-500">
+                <span className="flex items-center gap-1">
+                  <LuCheck className="h-3 w-3 text-blue-500" />
+                  {summary.lembaga_lainnya.verified} terverifikasi
+                </span>
+                <span className="flex items-center gap-1">
+                  <LuX className="h-3 w-3 text-red-400" />
+                  {summary.lembaga_lainnya.unverified} belum
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Grouped Lembaga Lainnya List */}
+        {groupedLembaga.length > 0 && (
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <LuBuilding2 className="h-5 w-5 text-blue-600" />
+              <h3 className="font-semibold text-gray-800">
+                Daftar Kelembagaan Lainya ({groupedLembaga.length} jenis)
+              </h3>
+            </div>
+            <div className="space-y-2">
+              {groupedLembaga.map((group) => {
+                const verified = group.items.filter(
+                  (i) => i.status_verifikasi === "verified"
+                ).length;
+                const isOpen = expandedGroup[group.nama];
+                return (
+                  <div
+                    key={group.nama}
+                    className="border border-gray-100 rounded-xl overflow-hidden"
+                  >
+                    <button
+                      onClick={() => toggleGroup(group.nama)}
+                      className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                          <LuFileText className="h-4 w-4 text-blue-600" />
+                        </div>
+                        <div className="text-left">
+                          <p className="text-sm font-semibold text-gray-800">
+                            {group.nama}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {group.items.length} desa
+                            <span className="mx-1">·</span>
+                            <span className="text-emerald-600">
+                              {verified} terverifikasi
+                            </span>
+                            {group.items.length - verified > 0 && (
+                              <>
+                                <span className="mx-1">·</span>
+                                <span className="text-amber-600">
+                                  {group.items.length - verified} belum
+                                </span>
+                              </>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700 font-bold">
+                          {group.items.length}
+                        </span>
+                        {isOpen ? (
+                          <LuChevronDown className="h-4 w-4 text-gray-400" />
+                        ) : (
+                          <LuChevronRight className="h-4 w-4 text-gray-400" />
+                        )}
+                      </div>
+                    </button>
+                    {isOpen && (
+                      <div className="border-t border-gray-100 bg-gray-50 p-3 space-y-1.5">
+                        {group.items.map((item) => (
+                          <div
+                            key={item.id}
+                            className="flex items-center justify-between bg-white rounded-lg p-2.5 cursor-pointer hover:shadow-md transition-shadow"
+                            onClick={() =>
+                              navigate(
+                                getPath(
+                                  `/bidang/pmd/kelembagaan/lembaga-lainnya/${item.id}`
+                                )
+                              )
+                            }
+                          >
+                            <div>
+                              <p className="text-sm text-gray-700 font-medium">
+                                {item.desa_nama}
+                              </p>
+                              <p className="text-xs text-gray-400">
+                                {item.kec_nama}
+                              </p>
+                            </div>
+                            <span
+                              className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                item.status_verifikasi === "verified"
+                                  ? "bg-emerald-100 text-emerald-700"
+                                  : "bg-amber-100 text-amber-700"
+                              }`}
+                            >
+                              {item.status_verifikasi === "verified"
+                                ? "✓"
+                                : "Belum"}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Unverified Items Quick List */}
+        {unverifiedItems.length > 0 && (
+          <div className="bg-white rounded-2xl shadow-lg border border-amber-100 p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <LuShieldAlert className="h-5 w-5 text-amber-600" />
+              <h3 className="font-semibold text-gray-800">
+                Lembaga Belum Terverifikasi ({unverifiedItems.length})
+              </h3>
+            </div>
+            <div className=" space-y-2">
+              {unverifiedItems.map((item) => {
+                const desaInfo = desaNameMap[item.desa_id];
+                return (
+                  <div
+                    key={`${item.type}-${item.id}`}
+                    className="flex items-center justify-between p-3 bg-amber-50 rounded-xl hover:bg-amber-100 transition-colors cursor-pointer"
+                    onClick={() =>
+                      navigate(
+                        getPath(
+                          `/bidang/pmd/kelembagaan/${item.type}/${item.id}`
+                        )
+                      )
+                    }
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`h-8 w-8 rounded-lg flex items-center justify-center ${
+                          item.type === "satlinmas"
+                            ? "bg-emerald-100 text-emerald-600"
+                            : "bg-blue-100 text-blue-600"
+                        }`}
+                      >
+                        {item.type === "satlinmas" ? (
+                          <LuShield className="h-4 w-4" />
+                        ) : (
+                          <LuFileText className="h-4 w-4" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-800">
+                          {item.nama}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {desaInfo
+                            ? `${desaInfo.desaNama}, ${desaInfo.kecNama}`
+                            : ""}
+                          {" · "}
+                          <span className="capitalize">
+                            {item.type === "lembaga-lainnya"
+                              ? "Lembaga Lainnya"
+                              : "Satlinmas"}
+                          </span>
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-xs px-2 py-1 rounded-full bg-amber-200 text-amber-800 font-medium">
+                      Belum Verifikasi
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+       </div>
       </div>
     </div>
   );
