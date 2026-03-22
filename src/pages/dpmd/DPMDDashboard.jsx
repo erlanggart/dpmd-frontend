@@ -468,6 +468,7 @@ const DPMDDashboard = () => {
       <MobileHeader
         userName={user.name || pegawaiData?.nama_pegawai?.split(' ')[0] || 'User'}
         userRole={getRoleTitle}
+        bidangName={role === 'pegawai' ? getBidangName() : undefined}
         greeting="Selamat Datang"
         gradient={config.gradient}
         notificationCount={notifCount}

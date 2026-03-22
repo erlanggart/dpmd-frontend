@@ -128,6 +128,7 @@ const SekretarisDinasDashboard = () => {
       <MobileHeader
         userName={user.name || 'Sekretaris Dinas'}
         userRole="Sekretaris Dinas DPMD"
+        bidangName={user.bidang_name}
         greeting="Selamat Datang"
         gradient="from-purple-600 via-purple-700 to-purple-800"
         notificationCount={statistik?.masuk?.pending || 0}

@@ -154,6 +154,7 @@ const PegawaiDashboard = () => {
 			<MobileHeader
 				userName={user.name || firstName}
 				userRole="Pegawai"
+				bidangName={pegawaiData?.bidangs?.nama || user.bidang_name}
 				greeting="Selamat Datang"
 				gradient="from-green-600 via-green-700 to-green-800"
 				avatar={getUserAvatarUrl(user)}
