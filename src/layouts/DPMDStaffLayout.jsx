@@ -17,6 +17,7 @@ import { useConfirm } from "../hooks/useConfirm.jsx";
 import { subscribeToPushNotifications } from "../utils/pushNotifications";
 import toast from 'react-hot-toast';
 import api from "../api";
+import { getAvatarUrl } from '../utils/avatarUtils';
 
 // ============================================
 // RESPONSIVE HOOK
@@ -657,7 +658,7 @@ const DPMDStaffLayout = () => {
 							<div className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'}`}>
 								{user.avatar ? (
 									<img 
-										src={`${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://127.0.0.1:3001'}${user.avatar}`}
+										src={getAvatarUrl(user.avatar)}
 										alt={user.name}
 										className={`${isSidebarCollapsed ? 'h-12 w-12' : 'h-10 w-10'} rounded-full object-cover shadow-md border-2 border-${theme.primary}-100`}
 										onError={(e) => {
@@ -899,7 +900,7 @@ const DPMDStaffLayout = () => {
 								<div className="flex items-center gap-3">
 									{user.avatar ? (
 										<img 
-											src={`${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://127.0.0.1:3001'}${user.avatar}`}
+											src={getAvatarUrl(user.avatar)}
 											alt={user.name}
 											className="h-14 w-14 rounded-full object-cover shadow-md"
 											onError={(e) => {

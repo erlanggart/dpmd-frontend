@@ -9,6 +9,7 @@ import { Bell } from 'lucide-react';
 const MobileHeader = ({ 
   userName = "User", 
   userRole = "Role",
+  bidangName,
   greeting = "Selamat Datang",
   gradient = "from-green-600 via-green-700 to-green-800",
   notificationCount = 0,
@@ -18,6 +19,7 @@ const MobileHeader = ({
 }) => {
   return (
     <div className={`bg-gradient-to-br ${gradient} rounded-b-[32px] shadow-xl`}>
+      {console.log("Rendering MobileHeader with props:", { userName, userRole, bidangName, greeting, notificationCount })}
       {/* Safe area spacer for PWA standalone mode */}
       <div className="h-[env(safe-area-inset-top,0px)]"></div>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-8">
@@ -39,7 +41,9 @@ const MobileHeader = ({
             <div className="flex-1 min-w-0">
               <p className="text-white/80 text-xs font-medium">{greeting}</p>
               <h2 className="text-white text-base sm:text-xl font-bold tracking-wide truncate">{userName}</h2>
-              <p className="text-white/70 text-xs mt-0.5 truncate">{userRole}</p>
+              <p className="text-white/70 text-xs mt-0.5 truncate">
+                {userRole}{bidangName ? ` · ${bidangName}` : ''}
+              </p>
             </div>
           </div>
 
