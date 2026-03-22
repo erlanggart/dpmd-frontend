@@ -144,18 +144,13 @@ const KelembagaanLainnyaPage = () => {
       : 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50 p-6">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-between px-4 sm:px-6 py-4">
+      <header className="flex rounded-xl shadow-sm border border-gray-200 bg-white items-center justify-between p-6">
+        
+          
             <div className="flex items-center gap-3">
-              <button
-                onClick={() => navigate(getPath("/bidang/pmd"))}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <LuArrowLeft className="h-5 w-5 text-gray-600" />
-              </button>
+              
               <div className="h-10 w-10 sm:h-12 sm:w-12 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl flex items-center justify-center shadow-md">
                 <LuBuilding2 className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
               </div>
@@ -170,13 +165,13 @@ const KelembagaanLainnyaPage = () => {
             </div>
             <button
               onClick={fetchData}
-              className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-500 text-white hover:bg-blue-600 rounded-lg transition-colors"
             >
               <LuRefreshCw className="h-4 w-4" />
               <span className="hidden sm:inline">Refresh</span>
             </button>
-          </div>
-        </div>
+          
+        
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 px-4 sm:px-6 py-6 space-y-6 gap-6">

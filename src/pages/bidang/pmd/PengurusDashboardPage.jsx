@@ -19,8 +19,22 @@ import {
   LuBuilding2,
   LuExternalLink,
 } from "react-icons/lu";
+import { FaMars, FaVenus } from "react-icons/fa";
+import {
+  Chart as ChartJS,
+  ArcElement,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+} from "chart.js";
+import { Doughnut, Bar } from "react-chartjs-2";
 import api from "../../../api";
 import toast from "react-hot-toast";
+
+ChartJS.register(ArcElement, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 const TYPE_LABELS = {
   rw: "RW",
@@ -134,29 +148,33 @@ export default function PengurusDashboardPage() {
   return (
     <div className="space-y-6 pb-8 p-8 ">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => navigate(getPath("/bidang/pmd"))}
-            className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-          >
-            <LuArrowLeft className="w-5 h-5 text-gray-600" />
-          </button>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800">Dashboard Pengurus</h1>
-            <p className="text-sm text-gray-500 mt-0.5">
-              Data pengurus aktif seluruh kelembagaan desa
-            </p>
-          </div>
-        </div>
-        <button
-          onClick={fetchData}
-          className="flex items-center gap-2 px-4 py-2 text-sm bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-        >
-          <LuRefreshCw className="w-4 h-4" />
-          Refresh
-        </button>
-      </div>
+      <header className="flex rounded-xl shadow-sm border border-gray-200 bg-white items-center justify-between p-6">
+              
+                
+                  <div className="flex items-center gap-3">
+                    
+                    <div className="h-10 w-10 sm:h-12 sm:w-12 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl flex items-center justify-center shadow-md">
+                      <LuBuilding2 className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                    </div>
+                    <div>
+                      <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">
+                        Dashboard Pengurus
+                      </h1>
+                      <p className="hidden sm:block text-xs sm:text-sm text-gray-500">
+                        Ringkasan data pengurus aktif dan terverifikasi di kabupaten
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={fetchData}
+                    className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-500 text-white hover:bg-blue-600 rounded-lg transition-colors"
+                  >
+                    <LuRefreshCw className="h-4 w-4" />
+                    <span className="hidden sm:inline">Refresh</span>
+                  </button>
+                
+              
+            </header>
 
       {/* Summary Cards */}
       {summary && (
@@ -186,16 +204,20 @@ export default function PengurusDashboardPage() {
           />
           <SummaryCard
             icon={
-              <div className="flex items-center gap-1">
-                <span className="text-lg font-bold text-blue-600">
-                  {summary.genderStats.L}
-                </span>
-                <span className="text-xs text-gray-400">L</span>
-                <span className="text-gray-300 mx-1">|</span>
-                <span className="text-lg font-bold text-pink-600">
-                  {summary.genderStats.P}
-                </span>
-                <span className="text-xs text-gray-400">P</span>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5">
+                  <FaMars className="w-4 h-4 text-blue-500" />
+                  <span className="text-lg font-bold text-blue-600">
+                    {summary.genderStats.L}
+                  </span>
+                </div>
+                <span className="text-gray-300">|</span>
+                <div className="flex items-center gap-1.5">
+                  <FaVenus className="w-4 h-4 text-pink-500" />
+                  <span className="text-lg font-bold text-pink-600">
+                    {summary.genderStats.P}
+                  </span>
+                </div>
               </div>
             }
             label="Jenis Kelamin"
@@ -318,29 +340,14 @@ export default function PengurusDashboardPage() {
         </div>
       )}
 
-      {/* Kelembagaan Type Distribution */}
+      {/* Kelembagaan Type Distribution - Doughnut */}
       {summary && Object.keys(summary.typeStats).length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
-            <LuBuilding2 className="w-4 h-4 text-teal-500" />
-            Distribusi per Kelembagaan
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            {Object.entries(summary.typeStats)
-              .sort((a, b) => b[1] - a[1])
-              .map(([type, count]) => (
-                <div
-                  key={type}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                >
-                  <span className="text-sm font-medium text-gray-700">{type}</span>
-                  <span className="text-sm font-bold text-teal-700 bg-teal-100 px-2 py-0.5 rounded-full">
-                    {count}
-                  </span>
-                </div>
-              ))}
-          </div>
-        </div>
+        <TypeDistributionChart typeStats={summary.typeStats} />
+      )}
+
+      {/* Yearly Pengurus Chart */}
+      {summary && summary.yearlyStats && Object.keys(summary.yearlyStats).length > 0 && (
+        <YearlyPengurusChart yearlyStats={summary.yearlyStats} />
       )}
 
       {/* Search & Filters */}
@@ -584,6 +591,192 @@ function BarRow({ label, value, max, color }) {
         />
       </div>
       <span className="text-xs font-semibold text-gray-700 w-8 text-right">{value}</span>
+    </div>
+  );
+}
+
+const TYPE_DOUGHNUT_COLORS = [
+  "#3b82f6", "#06b6d4", "#9333ea", "#ea580c", "#4f46e5", "#ec4899", "#16a34a", "#eab308",
+];
+
+function TypeDistributionChart({ typeStats }) {
+  const MAIN_TYPES = ["RW", "RT", "Posyandu", "Karang Taruna", "LPM", "PKK", "Satlinmas"];
+  const merged = {};
+  let lainnya = 0;
+  Object.entries(typeStats).forEach(([type, count]) => {
+    if (MAIN_TYPES.includes(type)) {
+      merged[type] = count;
+    } else {
+      lainnya += count;
+    }
+  });
+  if (lainnya > 0) merged["Lainnya"] = lainnya;
+
+  const sorted = Object.entries(merged).sort((a, b) => b[1] - a[1]);
+  const labels = sorted.map(([t]) => t);
+  const values = sorted.map(([, v]) => v);
+  const total = values.reduce((a, b) => a + b, 0);
+
+  const chartData = {
+    labels,
+    datasets: [{
+      data: values,
+      backgroundColor: TYPE_DOUGHNUT_COLORS.slice(0, labels.length),
+      borderColor: "#fff",
+      borderWidth: 2,
+      hoverOffset: 6,
+    }],
+  };
+
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    cutout: "60%",
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: "rgba(0,0,0,0.85)",
+        padding: 12,
+        cornerRadius: 8,
+        callbacks: {
+          label: (ctx) => {
+            const pct = total > 0 ? Math.round((ctx.parsed / total) * 100) : 0;
+            return ` ${ctx.label}: ${ctx.parsed} (${pct}%)`;
+          },
+        },
+      },
+    },
+  };
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-5">
+      <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+        <LuBuilding2 className="w-4 h-4 text-teal-500" />
+        Distribusi per Kelembagaan
+      </h3>
+      <div className="flex flex-col md:flex-row items-center gap-6">
+        <div className="w-56 h-56 flex-shrink-0">
+          <Doughnut data={chartData} options={chartOptions} />
+        </div>
+        <div className="flex-1 grid grid-cols-2 gap-x-6 gap-y-2">
+          {sorted.map(([type, count], i) => (
+            <div key={type} className="flex items-center gap-2 py-1.5">
+              <span
+                className="w-3 h-3 rounded-full flex-shrink-0"
+                style={{ backgroundColor: TYPE_DOUGHNUT_COLORS[i] }}
+              />
+              <span className="text-sm text-gray-700 flex-1">{type}</span>
+              <span className="text-sm font-bold text-gray-900">{count}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const YEARLY_COLORS = {
+  RW: "#3b82f6",
+  RT: "#06b6d4",
+  Posyandu: "#9333ea",
+  "Karang Taruna": "#ea580c",
+  LPM: "#4f46e5",
+  PKK: "#ec4899",
+  Satlinmas: "#16a34a",
+  Lainnya: "#eab308",
+};
+
+function YearlyPengurusChart({ yearlyStats }) {
+  const MAIN_TYPES = ["RW", "RT", "Posyandu", "Karang Taruna", "LPM", "PKK", "Satlinmas"];
+  const years = Object.keys(yearlyStats).sort();
+
+  // Collect all types across years, merge non-main into "Lainnya"
+  const allTypes = new Set();
+  years.forEach((y) => {
+    Object.keys(yearlyStats[y]).forEach((t) => {
+      if (MAIN_TYPES.includes(t)) allTypes.add(t);
+      else allTypes.add("Lainnya");
+    });
+  });
+  const types = [...allTypes].sort((a, b) => {
+    const ia = MAIN_TYPES.indexOf(a);
+    const ib = MAIN_TYPES.indexOf(b);
+    if (ia === -1 && ib === -1) return a.localeCompare(b);
+    if (ia === -1) return 1;
+    if (ib === -1) return -1;
+    return ia - ib;
+  });
+
+  const datasets = types.map((type) => ({
+    label: type,
+    data: years.map((y) => {
+      if (type === "Lainnya") {
+        return Object.entries(yearlyStats[y] || {})
+          .filter(([t]) => !MAIN_TYPES.includes(t))
+          .reduce((sum, [, v]) => sum + v, 0);
+      }
+      return yearlyStats[y]?.[type] || 0;
+    }),
+    backgroundColor: YEARLY_COLORS[type] || "#94a3b8",
+    borderColor: YEARLY_COLORS[type] || "#94a3b8",
+    borderWidth: 1,
+    borderRadius: 4,
+    barPercentage: 0.7,
+    categoryPercentage: 0.8,
+  }));
+
+  const chartData = { labels: years, datasets };
+
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: "index", intersect: false },
+    plugins: {
+      legend: {
+        position: "bottom",
+        labels: {
+          padding: 16,
+          usePointStyle: true,
+          pointStyle: "rectRounded",
+          font: { size: 11, weight: "500" },
+          boxWidth: 10,
+        },
+      },
+      tooltip: {
+        backgroundColor: "rgba(0,0,0,0.85)",
+        padding: 12,
+        cornerRadius: 8,
+        callbacks: {
+          label: (ctx) => ` ${ctx.dataset.label}: ${ctx.parsed.y} pengurus`,
+        },
+      },
+    },
+    scales: {
+      x: {
+        stacked: true,
+        grid: { display: false },
+        ticks: { font: { size: 12, weight: "600" } },
+      },
+      y: {
+        stacked: true,
+        beginAtZero: true,
+        grid: { color: "rgba(0,0,0,0.04)" },
+        ticks: { font: { size: 11 }, precision: 0 },
+        title: { display: true, text: "Jumlah Pengurus", font: { size: 12 } },
+      },
+    },
+  };
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-5">
+      <h3 className="text-sm font-semibold text-gray-700 mb-1 flex items-center gap-2">
+        <LuCalendarDays className="w-4 h-4 text-blue-500" />
+        Jumlah Pengurus per Kelembagaan per Tahun
+      </h3>
+      <p className="text-xs text-gray-400 mb-4">Pengurus aktif & terverifikasi berdasarkan tahun pendaftaran</p>
+      <div className="h-80">
+        <Bar data={chartData} options={chartOptions} />
+      </div>
     </div>
   );
 }
