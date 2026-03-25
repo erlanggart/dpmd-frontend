@@ -63,11 +63,18 @@ const CountUp = ({ end, duration = 1.2 }) => {
 };
 
 const getProposalStage = (proposal) => {
-  // Check from END to START for correct stage detection
-  if (proposal.dpmd_status === 'approved') return 'selesai';
+  // Check from END to START - HARUS sama dengan SPKED DpmdVerificationPage getProposalStage
   if (proposal.submitted_to_dpmd || proposal.dpmd_status) return 'selesai';
+  // Proposal dikembalikan ke desa (revisi/rejected/troubleshoot)
+  if (proposal.troubleshoot_catatan && !proposal.submitted_to_dinas_at) return 'di_desa';
+  if ((proposal.kecamatan_status === 'rejected' || proposal.kecamatan_status === 'revision') && !proposal.submitted_to_kecamatan) return 'di_desa';
+  if ((proposal.dinas_status === 'rejected' || proposal.dinas_status === 'revision') && !proposal.submitted_to_dinas_at) return 'di_desa';
+  if (proposal.status === 'pending' && !proposal.submitted_to_dinas_at &&
+      (proposal.dinas_status || proposal.kecamatan_status || proposal.troubleshoot_catatan)) return 'di_desa';
+  // Di Kecamatan
   if (proposal.kecamatan_status === 'approved') return 'di_kecamatan';
   if (proposal.dinas_status === 'approved') return 'di_kecamatan';
+  // Di Dinas
   if (proposal.submitted_to_dinas_at || proposal.dinas_status) return 'di_dinas';
   return 'di_desa';
 };
