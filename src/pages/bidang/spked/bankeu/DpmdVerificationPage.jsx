@@ -118,6 +118,9 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
   const [loadingVerifikator, setLoadingVerifikator] = useState(false);
   const [loadingSettings, setLoadingSettings] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  // Inline edit tracking detail
+  const [editingProposalId, setEditingProposalId] = useState(null);
+  const [editingProposalData, setEditingProposalData] = useState({});
   const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL || 'http://127.0.0.1:3001';
 
   // Handle refresh data without full loading screen
@@ -158,6 +161,40 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
       });
     } finally {
       setRefreshing(false);
+    }
+  };
+
+  // Inline edit handlers for tracking detail
+  const handleStartEditProposal = (e, proposal) => {
+    e.stopPropagation();
+    setEditingProposalId(Number(proposal.id));
+    setEditingProposalData({
+      anggaran_usulan: proposal.anggaran_usulan || '',
+      volume: proposal.volume || '',
+      lokasi: proposal.lokasi || '',
+      nama_kegiatan_spesifik: proposal.nama_kegiatan_spesifik || ''
+    });
+  };
+
+  const handleCancelEditProposal = (e) => {
+    e.stopPropagation();
+    setEditingProposalId(null);
+    setEditingProposalData({});
+  };
+
+  const handleSaveEditProposal = async (e) => {
+    e.stopPropagation();
+    try {
+      const res = await api.patch(`/dpmd/bankeu/proposals/${editingProposalId}/edit-detail`, editingProposalData);
+      if (res.data.success) {
+        Swal.fire({ icon: 'success', title: 'Berhasil', text: 'Detail proposal diupdate', timer: 1500, showConfirmButton: false });
+        setEditingProposalId(null);
+        setEditingProposalData({});
+        await fetchTrackingData();
+      }
+    } catch (error) {
+      console.error('Error saving proposal detail:', error);
+      Swal.fire({ icon: 'error', title: 'Gagal', text: error.response?.data?.message || 'Gagal menyimpan perubahan' });
     }
   };
 
@@ -2397,11 +2434,63 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                                       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
                                         <div className="bg-gray-50 rounded-lg p-2">
                                           <p className="text-gray-500">Anggaran</p>
-                                          <p className="font-semibold text-gray-800">Rp {(proposal.anggaran_usulan || 0).toLocaleString('id-ID')}</p>
+                                          {editingProposalId === Number(proposal.id) ? (
+                                            <input
+                                              type="number"
+                                              className="w-full border border-blue-300 rounded px-1.5 py-0.5 text-xs font-semibold text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                                              value={editingProposalData.anggaran_usulan}
+                                              onChange={(e) => setEditingProposalData(prev => ({ ...prev, anggaran_usulan: e.target.value }))}
+                                              onClick={(e) => e.stopPropagation()}
+                                            />
+                                          ) : (
+                                            <p className="font-semibold text-gray-800">Rp {(proposal.anggaran_usulan || 0).toLocaleString('id-ID')}</p>
+                                          )}
                                         </div>
                                         <div className="bg-gray-50 rounded-lg p-2">
                                           <p className="text-gray-500">Jenis Kegiatan</p>
                                           <p className="font-semibold text-gray-800 truncate">{proposal.bankeu_master_kegiatan?.nama_kegiatan || '-'}</p>
+                                        </div>
+                                        <div className="bg-gray-50 rounded-lg p-2">
+                                          <p className="text-gray-500">Volume</p>
+                                          {editingProposalId === Number(proposal.id) ? (
+                                            <input
+                                              type="text"
+                                              className="w-full border border-blue-300 rounded px-1.5 py-0.5 text-xs font-semibold text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                                              value={editingProposalData.volume}
+                                              onChange={(e) => setEditingProposalData(prev => ({ ...prev, volume: e.target.value }))}
+                                              onClick={(e) => e.stopPropagation()}
+                                            />
+                                          ) : (
+                                            <p className="font-semibold text-gray-800 truncate">{proposal.volume || '-'}</p>
+                                          )}
+                                        </div>
+                                        <div className="bg-gray-50 rounded-lg p-2">
+                                          <p className="text-gray-500">Lokasi</p>
+                                          {editingProposalId === Number(proposal.id) ? (
+                                            <input
+                                              type="text"
+                                              className="w-full border border-blue-300 rounded px-1.5 py-0.5 text-xs font-semibold text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                                              value={editingProposalData.lokasi}
+                                              onChange={(e) => setEditingProposalData(prev => ({ ...prev, lokasi: e.target.value }))}
+                                              onClick={(e) => e.stopPropagation()}
+                                            />
+                                          ) : (
+                                            <p className="font-semibold text-gray-800 truncate">{proposal.lokasi || '-'}</p>
+                                          )}
+                                        </div>
+                                        <div className="bg-gray-50 rounded-lg p-2">
+                                          <p className="text-gray-500">Kegiatan Spesifik</p>
+                                          {editingProposalId === Number(proposal.id) ? (
+                                            <input
+                                              type="text"
+                                              className="w-full border border-blue-300 rounded px-1.5 py-0.5 text-xs font-semibold text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                                              value={editingProposalData.nama_kegiatan_spesifik}
+                                              onChange={(e) => setEditingProposalData(prev => ({ ...prev, nama_kegiatan_spesifik: e.target.value }))}
+                                              onClick={(e) => e.stopPropagation()}
+                                            />
+                                          ) : (
+                                            <p className="font-semibold text-gray-800 truncate">{proposal.nama_kegiatan_spesifik || '-'}</p>
+                                          )}
                                         </div>
                                         <div className="bg-gray-50 rounded-lg p-2">
                                           <p className="text-gray-500">Posisi Saat Ini</p>
@@ -2430,6 +2519,36 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                                         </div>
                                       </div>
                                       
+                                      {/* Edit Detail Buttons */}
+                                      <div className="flex justify-end gap-1.5 pt-1">
+                                        {editingProposalId === Number(proposal.id) ? (
+                                          <>
+                                            <button
+                                              onClick={handleSaveEditProposal}
+                                              className="inline-flex items-center gap-1 px-2.5 py-1 bg-green-500 hover:bg-green-600 text-white text-[10px] font-medium rounded-md transition-colors"
+                                            >
+                                              <Save className="h-3 w-3" />
+                                              Simpan
+                                            </button>
+                                            <button
+                                              onClick={handleCancelEditProposal}
+                                              className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-400 hover:bg-gray-500 text-white text-[10px] font-medium rounded-md transition-colors"
+                                            >
+                                              <XIcon className="h-3 w-3" />
+                                              Batal
+                                            </button>
+                                          </>
+                                        ) : (
+                                          <button
+                                            onClick={(e) => handleStartEditProposal(e, proposal)}
+                                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-600 text-[10px] font-medium rounded-md border border-blue-200 transition-colors"
+                                          >
+                                            <Edit className="h-3 w-3" />
+                                            Edit Detail
+                                          </button>
+                                        )}
+                                      </div>
+
                                       {/* Troubleshoot Button - Selalu tampil untuk semua proposal */}
                                         <div className="flex items-center justify-between pt-2 border-t border-gray-100">
                                           <div className="flex items-center gap-2">
