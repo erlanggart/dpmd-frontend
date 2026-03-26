@@ -42,6 +42,7 @@ import NotFound from "./pages/NotFound";
 import Forbidden from "./pages/Forbidden";
 import Spinner from "./components/ui/Spinner";
 
+
 // Lazy load DPMDStaffLayout once at module level
 const DPMDStaffLayout = lazy(() => import("./layouts/DPMDStaffLayout"));
 
@@ -132,6 +133,8 @@ const ROLES = {
 
 // Role groups
 const ADMIN_ROLES = [ROLES.SUPERADMIN, ROLES.PMD, ROLES.PMD_ALT];
+
+const CetakBonBensin = lazy(() => import("./pages/CetakBonBensin"));
 
 // Komponen lain di-lazy load untuk code-splitting
 const DashboardPage = lazy(() => import("./pages/DashboardPage"));
@@ -829,6 +832,7 @@ function App() {
                   <Route path="perjadin/detail/:id" element={<PerjadinDetail />} />
                   <Route path="informasi" element={<InformasiPage />} />
                   <Route path="video-meeting" element={<VideoMeetingListPage />} />
+                  <Route path="etanol" element={<CetakBonBensin />} />
                 </Route>
                 
                 {/* Rute Bidang - Accessible by pegawai/kepala_bidang/ketua_tim (their own bidang) & kepala_dinas/superadmin (all) */}
