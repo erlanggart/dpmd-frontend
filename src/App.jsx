@@ -832,7 +832,7 @@ function App() {
                   <Route path="perjadin/detail/:id" element={<PerjadinDetail />} />
                   <Route path="informasi" element={<InformasiPage />} />
                   <Route path="video-meeting" element={<VideoMeetingListPage />} />
-                  <Route path="bahlil" element={<CetakBonBensin />} />
+                  <Route path="etanol" element={<CetakBonBensin />} />
                 </Route>
                 
                 {/* Rute Bidang - Accessible by pegawai/kepala_bidang/ketua_tim (their own bidang) & kepala_dinas/superadmin (all) */}
