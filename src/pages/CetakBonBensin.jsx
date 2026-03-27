@@ -57,13 +57,13 @@ const CetakBonBensin = () => {
 				liter: "", // Reset liter karena calculated field
 				totalHarga: "", // Reset total untuk transaksi baru
 				nomorTransaksi: "", // Reset nomor transaksi
-				waktuDetik: parsed.waktuDetik || "00", // Keep detik atau default 00
+				waktuDetik: parsed.waktuDetik && parsed.waktuDetik !== "00" ? parsed.waktuDetik : (Math.floor(Math.random() * 59) + 1).toString().padStart(2, '0'),
 			};
 		}
 		return {
 			tanggal: new Date().toISOString().split('T')[0],
 			waktu: new Date().toTimeString().slice(0, 5),
-			waktuDetik: "00",
+			waktuDetik: (Math.floor(Math.random() * 59) + 1).toString().padStart(2, '0'),
 			jenisBensin: "Pertalite",
 			liter: "",
 			hargaPerLiter: "10000",
@@ -118,9 +118,9 @@ const CetakBonBensin = () => {
 			}
 		}
 
-		// Add random seconds when waktu changes
+		// Add random seconds when waktu changes (01-59, never 00)
 		if (name === "waktu") {
-			const randomSeconds = Math.floor(Math.random() * 60).toString().padStart(2, '0');
+			const randomSeconds = (Math.floor(Math.random() * 59) + 1).toString().padStart(2, '0');
 			newFormData.waktuDetik = randomSeconds;
 		}
 
@@ -149,15 +149,14 @@ const CetakBonBensin = () => {
 
 	const showPreview = () => {
 		const noTrans = formData.nomorTransaksi || generateNomorTransaksi();
-		const tanggalFormat = new Date(formData.tanggal + 'T' + formData.waktu).toLocaleString('id-ID', {
-			day: '2-digit',
-			month: '2-digit', 
-			year: 'numeric',
-			hour: '2-digit',
-			minute: '2-digit',
-			second: '2-digit',
-			hour12: false
-		}).replace(',', '');
+		const dateObj = new Date(formData.tanggal + 'T' + formData.waktu);
+		const detik = formData.waktuDetik || "01";
+		const day = dateObj.getDate().toString().padStart(2, '0');
+		const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+		const year = dateObj.getFullYear();
+		const hours = dateObj.getHours().toString().padStart(2, '0');
+		const minutes = dateObj.getMinutes().toString().padStart(2, '0');
+		const tanggalFormat = `${day}/${month}/${year} ${hours}.${minutes}.${detik}`;
 
 		const shiftInfo = formData.shift ? `Shift ${formData.shift} ` : '';
 		const nopolInfo = formData.platNomor ? `Nopol:${formData.platNomor} ` : '';
