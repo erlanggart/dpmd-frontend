@@ -118,6 +118,12 @@ const VideoMeetingPage = () => {
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   
+  // Determine back path based on user role
+  const getMeetingListPath = () => {
+    if (user.role === 'superadmin') return '/superadmin/bidang/sekretariat/video-meeting';
+    return '/dpmd/video-meeting';
+  };
+  
   // State
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -823,7 +829,7 @@ const VideoMeetingPage = () => {
       }
       toast(`Meeting telah diakhiri oleh ${data.endedBy}`, { icon: '📢' });
       cleanup();
-      navigate('/sekretariat/video-meeting');
+      navigate(getMeetingListPath());
     });
   };
 
@@ -922,14 +928,23 @@ const VideoMeetingPage = () => {
         const newVideoTrack = stream.getVideoTracks()[0];
         
         if (localStream) {
-          localStream.removeTrack(localStream.getVideoTracks()[0]);
+          const oldTrack = localStream.getVideoTracks()[0];
+          if (oldTrack) localStream.removeTrack(oldTrack);
           localStream.addTrack(newVideoTrack);
+        }
+        
+        // Replace track in mediasoup producer so other participants see camera again
+        const videoProducer = producersRef.current.get('video');
+        if (videoProducer && !videoProducer.closed) {
+          await videoProducer.replaceTrack({ track: newVideoTrack });
+          console.log('[ScreenShare] Replaced producer track back to camera');
         }
         
         if (localVideoRef.current) {
           localVideoRef.current.srcObject = localStream;
         }
         
+        socketRef.current?.emit('screen-share-stopped');
         setIsScreenSharing(false);
       } catch (err) {
         console.error('Error switching back to camera:', err);
@@ -944,7 +959,7 @@ const VideoMeetingPage = () => {
         
         const screenTrack = screenStream.getVideoTracks()[0];
         
-        // Replace video track
+        // Replace video track in local stream
         if (localStream) {
           const oldVideoTrack = localStream.getVideoTracks()[0];
           if (oldVideoTrack) {
@@ -952,6 +967,13 @@ const VideoMeetingPage = () => {
             localStream.removeTrack(oldVideoTrack);
           }
           localStream.addTrack(screenTrack);
+        }
+        
+        // Replace track in mediasoup producer so other participants see screen
+        const videoProducer = producersRef.current.get('video');
+        if (videoProducer && !videoProducer.closed) {
+          await videoProducer.replaceTrack({ track: screenTrack });
+          console.log('[ScreenShare] Replaced producer track to screen');
         }
         
         if (localVideoRef.current) {
@@ -963,6 +985,7 @@ const VideoMeetingPage = () => {
           toggleScreenShare();
         };
         
+        socketRef.current?.emit('screen-share-started');
         setIsScreenSharing(true);
         toast.success('Screen sharing aktif');
       } catch (err) {
@@ -996,7 +1019,7 @@ const VideoMeetingPage = () => {
 
   const handleLeave = () => {
     cleanup();
-    navigate('/sekretariat/video-meeting');
+    navigate(getMeetingListPath());
   };
 
   const handleEndMeeting = () => {
@@ -1034,7 +1057,7 @@ const VideoMeetingPage = () => {
       if (response?.success) {
         toast.success('Meeting berhasil diakhiri');
         cleanup();
-        navigate('/sekretariat/video-meeting');
+        navigate(getMeetingListPath());
       }
     });
   };

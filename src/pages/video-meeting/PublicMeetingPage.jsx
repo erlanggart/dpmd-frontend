@@ -866,14 +866,23 @@ const PublicMeetingPage = () => {
         const newVideoTrack = stream.getVideoTracks()[0];
         
         if (localStream) {
-          localStream.removeTrack(localStream.getVideoTracks()[0]);
+          const oldTrack = localStream.getVideoTracks()[0];
+          if (oldTrack) localStream.removeTrack(oldTrack);
           localStream.addTrack(newVideoTrack);
+        }
+        
+        // Replace track in mediasoup producer so other participants see camera again
+        const videoProducer = producersRef.current.get('video');
+        if (videoProducer && !videoProducer.closed) {
+          await videoProducer.replaceTrack({ track: newVideoTrack });
+          console.log('[ScreenShare] Replaced producer track back to camera');
         }
         
         if (localVideoRef.current) {
           localVideoRef.current.srcObject = localStream;
         }
         
+        socketRef.current?.emit('screen-share-stopped');
         setIsScreenSharing(false);
       } catch (err) {
         console.error('Error switching back to camera:', err);
@@ -896,12 +905,20 @@ const PublicMeetingPage = () => {
           localStream.addTrack(screenTrack);
         }
         
+        // Replace track in mediasoup producer so other participants see screen
+        const videoProducer = producersRef.current.get('video');
+        if (videoProducer && !videoProducer.closed) {
+          await videoProducer.replaceTrack({ track: screenTrack });
+          console.log('[ScreenShare] Replaced producer track to screen');
+        }
+        
         if (localVideoRef.current) {
           localVideoRef.current.srcObject = localStream;
         }
         
         screenTrack.onended = () => toggleScreenShare();
         
+        socketRef.current?.emit('screen-share-started');
         setIsScreenSharing(true);
         toast.success('Screen sharing aktif');
       } catch (err) {
