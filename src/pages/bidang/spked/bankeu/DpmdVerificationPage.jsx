@@ -67,6 +67,197 @@ import BankeuFormatSuratTab from './BankeuFormatSuratTab';
 
 const MAX_ANGGARAN_PER_DESA = 1_500_000_000; // 1.5 Miliar per desa
 
+// Extracted component to avoid hooks-in-map violation
+const SubmissionModeCard = ({ settingKey, label, desc, config, isCurrentlyOpen, loadingSettings, updateSubmissionSetting }) => {
+  const DAY_LABELS = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+  const DAY_FULL = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+
+  const getMode = () => {
+    if (!config.enabled) return 'tutup';
+    if (config.schedule) return 'jadwal';
+    return 'buka24jam';
+  };
+  const currentMode = getMode();
+
+  const [draftDays, setDraftDays] = useState(config.schedule?.days || [1,2,3,4,5]);
+  const [draftStartTime, setDraftStartTime] = useState(config.schedule?.startTime || '08:00');
+  const [draftEndTime, setDraftEndTime] = useState(config.schedule?.endTime || '16:00');
+  const [hasUnsaved, setHasUnsaved] = useState(false);
+
+  useEffect(() => {
+    if (config.schedule) {
+      setDraftDays(config.schedule.days || [1,2,3,4,5]);
+      setDraftStartTime(config.schedule.startTime || '08:00');
+      setDraftEndTime(config.schedule.endTime || '16:00');
+    }
+    setHasUnsaved(false);
+  }, [JSON.stringify(config)]);
+
+  const setMode = (mode) => {
+    if (mode === 'tutup') {
+      updateSubmissionSetting(settingKey, { enabled: false, schedule: null });
+    } else if (mode === 'buka24jam') {
+      updateSubmissionSetting(settingKey, { enabled: true, schedule: null });
+    } else if (mode === 'jadwal') {
+      updateSubmissionSetting(settingKey, { enabled: true, schedule: { days: draftDays, startTime: draftStartTime, endTime: draftEndTime } });
+    }
+  };
+
+  const toggleDraftDay = (day) => {
+    setDraftDays(prev => {
+      const newDays = prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day].sort();
+      return newDays;
+    });
+    setHasUnsaved(true);
+  };
+
+  const saveSchedule = () => {
+    updateSubmissionSetting(settingKey, { enabled: true, schedule: { days: draftDays, startTime: draftStartTime, endTime: draftEndTime } });
+    setHasUnsaved(false);
+  };
+
+  const modeOptions = [
+    { id: 'tutup', icon: <Lock className="h-4 w-4" />, label: 'Tutup', sublabel: 'Ditutup tanpa batas waktu', activeColor: 'bg-red-500 text-white shadow-red-200', inactiveColor: 'bg-white text-slate-600 border border-slate-200 hover:border-red-300 hover:bg-red-50' },
+    { id: 'buka24jam', icon: <Unlock className="h-4 w-4" />, label: 'Buka 24 Jam', sublabel: 'Buka setiap hari tanpa batas', activeColor: 'bg-emerald-500 text-white shadow-emerald-200', inactiveColor: 'bg-white text-slate-600 border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50' },
+    { id: 'jadwal', icon: <Calendar className="h-4 w-4" />, label: 'Jadwal Otomatis', sublabel: 'Atur hari & jam operasional', activeColor: 'bg-blue-500 text-white shadow-blue-200', inactiveColor: 'bg-white text-slate-600 border border-slate-200 hover:border-blue-300 hover:bg-blue-50' }
+  ];
+
+  const statusColors = {
+    tutup: { border: 'border-red-200', header: 'bg-gradient-to-r from-red-50 to-rose-50', badge: 'bg-red-100 text-red-700', dot: 'bg-red-500' },
+    buka24jam: { border: 'border-emerald-200', header: 'bg-gradient-to-r from-emerald-50 to-green-50', badge: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-500' },
+    jadwal: { border: 'border-blue-200', header: 'bg-gradient-to-r from-blue-50 to-indigo-50', badge: 'bg-blue-100 text-blue-700', dot: 'bg-blue-500' }
+  };
+  const sc = statusColors[currentMode];
+  const statusText = { tutup: 'TUTUP', buka24jam: 'BUKA 24 JAM', jadwal: isCurrentlyOpen ? 'BUKA (JADWAL)' : 'TUTUP (DI LUAR JADWAL)' };
+
+  return (
+    <div className={`rounded-2xl border-2 overflow-hidden transition-all ${sc.border}`}>
+      <div className={`px-4 sm:px-6 py-4 ${sc.header}`}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className={`p-2.5 rounded-xl ${currentMode === 'tutup' ? 'bg-red-500' : currentMode === 'buka24jam' ? 'bg-emerald-500' : 'bg-blue-500'}`}>
+              {currentMode === 'tutup' ? <Lock className="h-5 w-5 text-white" /> : currentMode === 'buka24jam' ? <Unlock className="h-5 w-5 text-white" /> : <Calendar className="h-5 w-5 text-white" />}
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-800">{label}</h3>
+              <p className="text-xs text-slate-500 mt-0.5">{desc}</p>
+            </div>
+          </div>
+          <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full ${sc.badge}`}>
+            <span className={`w-2 h-2 rounded-full ${sc.dot} animate-pulse`} />
+            {statusText[currentMode]}
+          </span>
+        </div>
+      </div>
+
+      <div className="px-4 sm:px-6 py-4 border-t border-gray-100">
+        <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 block">Mode Pengajuan</label>
+        <div className="grid grid-cols-3 gap-2">
+          {modeOptions.map(opt => (
+            <button
+              key={opt.id}
+              onClick={() => setMode(opt.id)}
+              disabled={loadingSettings}
+              className={`relative flex flex-col items-center gap-1.5 px-3 py-3 rounded-xl text-center transition-all duration-200 ${
+                currentMode === opt.id ? `${opt.activeColor} shadow-lg` : opt.inactiveColor
+              } ${loadingSettings ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+            >
+              {opt.icon}
+              <span className="text-xs font-bold">{opt.label}</span>
+              <span className={`text-[10px] leading-tight ${currentMode === opt.id ? 'opacity-80' : 'text-slate-400'}`}>{opt.sublabel}</span>
+              {currentMode === opt.id && (
+                <div className="absolute -top-1 -right-1 w-5 h-5 bg-white rounded-full shadow-md flex items-center justify-center">
+                  <CheckCircle className="h-4 w-4 text-emerald-500" />
+                </div>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {currentMode === 'jadwal' && (
+        <div className="px-4 sm:px-6 pb-5 space-y-4">
+          <div className="bg-slate-50 rounded-xl p-4 space-y-4">
+            <div>
+              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 block">Hari Aktif</label>
+              <div className="flex gap-1.5">
+                {DAY_LABELS.map((day, idx) => (
+                  <button key={idx} onClick={() => toggleDraftDay(idx)} disabled={loadingSettings}
+                    className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all duration-200 ${
+                      draftDays.includes(idx)
+                        ? 'bg-blue-500 text-white shadow-md shadow-blue-200 scale-105'
+                        : 'bg-white text-gray-400 hover:bg-gray-100 border border-gray-200'
+                    } ${loadingSettings ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    title={DAY_FULL[idx]}
+                  >
+                    {day}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 block">Jam Operasional</label>
+              <div className="flex items-center gap-3">
+                <div className="flex-1">
+                  <label className="text-xs text-slate-400 mb-1 block">Mulai</label>
+                  <input type="time" value={draftStartTime} onChange={(e) => { setDraftStartTime(e.target.value); setHasUnsaved(true); }} disabled={loadingSettings}
+                    className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-mono focus:ring-2 focus:ring-blue-300 focus:border-blue-400 disabled:opacity-50" />
+                </div>
+                <span className="text-slate-300 font-bold mt-5">—</span>
+                <div className="flex-1">
+                  <label className="text-xs text-slate-400 mb-1 block">Selesai</label>
+                  <input type="time" value={draftEndTime} onChange={(e) => { setDraftEndTime(e.target.value); setHasUnsaved(true); }} disabled={loadingSettings}
+                    className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-mono focus:ring-2 focus:ring-blue-300 focus:border-blue-400 disabled:opacity-50" />
+                </div>
+              </div>
+            </div>
+            <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-700">
+              <div className="flex items-start gap-2">
+                <Clock className="h-4 w-4 mt-0.5 shrink-0" />
+                <div>
+                  <span className="font-semibold">Ringkasan Jadwal:</span><br/>
+                  Buka setiap <span className="font-bold">{draftDays.length > 0 ? draftDays.map(d => DAY_FULL[d]).join(', ') : '(belum dipilih)'}</span>
+                  {' '}pukul <span className="font-bold">{draftStartTime}</span> s/d <span className="font-bold">{draftEndTime}</span> WIB
+                </div>
+              </div>
+            </div>
+            {hasUnsaved && (
+              <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                <div className="flex items-center gap-2 text-amber-700">
+                  <AlertCircle className="h-4 w-4" />
+                  <span className="text-xs font-medium">Ada perubahan belum disimpan</span>
+                </div>
+                <button onClick={saveSchedule} disabled={loadingSettings || draftDays.length === 0}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold rounded-lg shadow-md shadow-blue-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                  <Save className="h-3.5 w-3.5" /> Simpan Jadwal
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {currentMode === 'buka24jam' && (
+        <div className="px-4 sm:px-6 pb-4">
+          <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3 text-xs text-emerald-700 flex items-center gap-2">
+            <Unlock className="h-4 w-4 shrink-0" />
+            <span>Pengajuan dibuka <strong>24 jam setiap hari</strong> tanpa batas waktu.</span>
+          </div>
+        </div>
+      )}
+
+      {currentMode === 'tutup' && (
+        <div className="px-4 sm:px-6 pb-4">
+          <div className="bg-red-50 border border-red-100 rounded-xl p-3 text-xs text-red-700 flex items-center gap-2">
+            <Lock className="h-4 w-4 shrink-0" />
+            <span>Pengajuan ditutup <strong>tanpa batas waktu</strong>. Desa/Kecamatan tidak bisa mengirim proposal baru.</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
   const navigate = useNavigate();
   const [proposals, setProposals] = useState([]);
@@ -3159,235 +3350,20 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                 {/* Schedule Controls */}
                 <div className="space-y-6">
                   {[
-                    { key: 'bankeu_submission_desa', label: 'Pengajuan Desa → Dinas', desc: 'Desa mengirim proposal ke Dinas Terkait', color: 'blue' },
-                    { key: 'bankeu_submission_kecamatan', label: 'Pengajuan Kecamatan → DPMD', desc: 'Kecamatan meneruskan proposal ke DPMD', color: 'purple' }
-                  ].map(({ key, label, desc, color }) => {
-                    const config = submissionConfigs[key] || { enabled: submissionSettings[key], schedule: null };
-                    const isCurrentlyOpen = submissionSettings[key];
-                    const DAY_LABELS = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
-                    const DAY_FULL = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-
-                    // Determine current mode: 'tutup', 'buka24jam', 'jadwal'
-                    const getMode = () => {
-                      if (!config.enabled) return 'tutup';
-                      if (config.schedule) return 'jadwal';
-                      return 'buka24jam';
-                    };
-                    const currentMode = getMode();
-
-                    // Local draft state for schedule (edit without auto-save)
-                    const [draftDays, setDraftDays] = React.useState(config.schedule?.days || [1,2,3,4,5]);
-                    const [draftStartTime, setDraftStartTime] = React.useState(config.schedule?.startTime || '08:00');
-                    const [draftEndTime, setDraftEndTime] = React.useState(config.schedule?.endTime || '16:00');
-                    const [hasUnsaved, setHasUnsaved] = React.useState(false);
-
-                    // Sync draft when config changes from server
-                    React.useEffect(() => {
-                      if (config.schedule) {
-                        setDraftDays(config.schedule.days || [1,2,3,4,5]);
-                        setDraftStartTime(config.schedule.startTime || '08:00');
-                        setDraftEndTime(config.schedule.endTime || '16:00');
-                      }
-                      setHasUnsaved(false);
-                    }, [JSON.stringify(config)]);
-
-                    const setMode = (mode) => {
-                      if (mode === 'tutup') {
-                        updateSubmissionSetting(key, { enabled: false, schedule: null });
-                      } else if (mode === 'buka24jam') {
-                        updateSubmissionSetting(key, { enabled: true, schedule: null });
-                      } else if (mode === 'jadwal') {
-                        // Switch to jadwal mode with defaults, save immediately
-                        updateSubmissionSetting(key, { enabled: true, schedule: { days: draftDays, startTime: draftStartTime, endTime: draftEndTime } });
-                      }
-                    };
-
-                    const toggleDraftDay = (day) => {
-                      setDraftDays(prev => {
-                        const newDays = prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day].sort();
-                        return newDays;
-                      });
-                      setHasUnsaved(true);
-                    };
-
-                    const saveSchedule = () => {
-                      updateSubmissionSetting(key, { enabled: true, schedule: { days: draftDays, startTime: draftStartTime, endTime: draftEndTime } });
-                      setHasUnsaved(false);
-                    };
-
-                    const modeOptions = [
-                      { id: 'tutup', icon: <Lock className="h-4 w-4" />, label: 'Tutup', sublabel: 'Ditutup tanpa batas waktu', activeColor: 'bg-red-500 text-white shadow-red-200', inactiveColor: 'bg-white text-slate-600 border border-slate-200 hover:border-red-300 hover:bg-red-50' },
-                      { id: 'buka24jam', icon: <Unlock className="h-4 w-4" />, label: 'Buka 24 Jam', sublabel: 'Buka setiap hari tanpa batas', activeColor: 'bg-emerald-500 text-white shadow-emerald-200', inactiveColor: 'bg-white text-slate-600 border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50' },
-                      { id: 'jadwal', icon: <Calendar className="h-4 w-4" />, label: 'Jadwal Otomatis', sublabel: 'Atur hari & jam operasional', activeColor: 'bg-blue-500 text-white shadow-blue-200', inactiveColor: 'bg-white text-slate-600 border border-slate-200 hover:border-blue-300 hover:bg-blue-50' }
-                    ];
-
-                    const statusColors = {
-                      tutup: { border: 'border-red-200', header: 'bg-gradient-to-r from-red-50 to-rose-50', badge: 'bg-red-100 text-red-700', dot: 'bg-red-500' },
-                      buka24jam: { border: 'border-emerald-200', header: 'bg-gradient-to-r from-emerald-50 to-green-50', badge: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-500' },
-                      jadwal: { border: 'border-blue-200', header: 'bg-gradient-to-r from-blue-50 to-indigo-50', badge: 'bg-blue-100 text-blue-700', dot: 'bg-blue-500' }
-                    };
-                    const sc = statusColors[currentMode];
-                    const statusText = { tutup: 'TUTUP', buka24jam: 'BUKA 24 JAM', jadwal: isCurrentlyOpen ? 'BUKA (JADWAL)' : 'TUTUP (DI LUAR JADWAL)' };
-
-                    return (
-                      <div key={key} className={`rounded-2xl border-2 overflow-hidden transition-all ${sc.border}`}>
-                        {/* Header */}
-                        <div className={`px-4 sm:px-6 py-4 ${sc.header}`}>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className={`p-2.5 rounded-xl ${currentMode === 'tutup' ? 'bg-red-500' : currentMode === 'buka24jam' ? 'bg-emerald-500' : 'bg-blue-500'}`}>
-                                {currentMode === 'tutup' ? <Lock className="h-5 w-5 text-white" /> : currentMode === 'buka24jam' ? <Unlock className="h-5 w-5 text-white" /> : <Calendar className="h-5 w-5 text-white" />}
-                              </div>
-                              <div>
-                                <h3 className="font-bold text-slate-800">{label}</h3>
-                                <p className="text-xs text-slate-500 mt-0.5">{desc}</p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full ${sc.badge}`}>
-                                <span className={`w-2 h-2 rounded-full ${sc.dot} animate-pulse`} />
-                                {statusText[currentMode]}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Mode Selector */}
-                        <div className="px-4 sm:px-6 py-4 border-t border-gray-100">
-                          <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 block">Mode Pengajuan</label>
-                          <div className="grid grid-cols-3 gap-2">
-                            {modeOptions.map(opt => (
-                              <button
-                                key={opt.id}
-                                onClick={() => setMode(opt.id)}
-                                disabled={loadingSettings}
-                                className={`relative flex flex-col items-center gap-1.5 px-3 py-3 rounded-xl text-center transition-all duration-200 ${
-                                  currentMode === opt.id ? `${opt.activeColor} shadow-lg` : opt.inactiveColor
-                                } ${loadingSettings ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                              >
-                                {opt.icon}
-                                <span className="text-xs font-bold">{opt.label}</span>
-                                <span className={`text-[10px] leading-tight ${currentMode === opt.id ? 'opacity-80' : 'text-slate-400'}`}>{opt.sublabel}</span>
-                                {currentMode === opt.id && (
-                                  <div className="absolute -top-1 -right-1 w-5 h-5 bg-white rounded-full shadow-md flex items-center justify-center">
-                                    <CheckCircle className="h-4 w-4 text-emerald-500" />
-                                  </div>
-                                )}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Schedule Config — only when mode = jadwal */}
-                        {currentMode === 'jadwal' && (
-                          <div className="px-4 sm:px-6 pb-5 space-y-4">
-                            <div className="bg-slate-50 rounded-xl p-4 space-y-4">
-                              {/* Day Picker */}
-                              <div>
-                                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 block">Hari Aktif</label>
-                                <div className="flex gap-1.5">
-                                  {DAY_LABELS.map((day, idx) => {
-                                    const isActive = draftDays.includes(idx);
-                                    return (
-                                      <button key={idx} onClick={() => toggleDraftDay(idx)} disabled={loadingSettings}
-                                        className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all duration-200 ${
-                                          isActive
-                                            ? 'bg-blue-500 text-white shadow-md shadow-blue-200 scale-105'
-                                            : 'bg-white text-gray-400 hover:bg-gray-100 border border-gray-200'
-                                        } ${loadingSettings ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                        title={DAY_FULL[idx]}
-                                      >
-                                        {day}
-                                      </button>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-
-                              {/* Time Range */}
-                              <div>
-                                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 block">Jam Operasional</label>
-                                <div className="flex items-center gap-3">
-                                  <div className="flex-1">
-                                    <label className="text-xs text-slate-400 mb-1 block">Mulai</label>
-                                    <input
-                                      type="time"
-                                      value={draftStartTime}
-                                      onChange={(e) => { setDraftStartTime(e.target.value); setHasUnsaved(true); }}
-                                      disabled={loadingSettings}
-                                      className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-mono focus:ring-2 focus:ring-blue-300 focus:border-blue-400 disabled:opacity-50"
-                                    />
-                                  </div>
-                                  <span className="text-slate-300 font-bold mt-5">—</span>
-                                  <div className="flex-1">
-                                    <label className="text-xs text-slate-400 mb-1 block">Selesai</label>
-                                    <input
-                                      type="time"
-                                      value={draftEndTime}
-                                      onChange={(e) => { setDraftEndTime(e.target.value); setHasUnsaved(true); }}
-                                      disabled={loadingSettings}
-                                      className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-mono focus:ring-2 focus:ring-blue-300 focus:border-blue-400 disabled:opacity-50"
-                                    />
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Schedule Summary */}
-                              <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-700">
-                                <div className="flex items-start gap-2">
-                                  <Clock className="h-4 w-4 mt-0.5 shrink-0" />
-                                  <div>
-                                    <span className="font-semibold">Ringkasan Jadwal:</span><br/>
-                                    Buka setiap <span className="font-bold">{draftDays.length > 0 ? draftDays.map(d => DAY_FULL[d]).join(', ') : '(belum dipilih)'}</span>
-                                    {' '}pukul <span className="font-bold">{draftStartTime}</span>
-                                    {' '}s/d <span className="font-bold">{draftEndTime}</span> WIB
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Save Button */}
-                              {hasUnsaved && (
-                                <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
-                                  <div className="flex items-center gap-2 text-amber-700">
-                                    <AlertCircle className="h-4 w-4" />
-                                    <span className="text-xs font-medium">Ada perubahan belum disimpan</span>
-                                  </div>
-                                  <button
-                                    onClick={saveSchedule}
-                                    disabled={loadingSettings || draftDays.length === 0}
-                                    className="flex items-center gap-1.5 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold rounded-lg shadow-md shadow-blue-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                  >
-                                    <Save className="h-3.5 w-3.5" />
-                                    Simpan Jadwal
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Info for Buka 24 Jam mode */}
-                        {currentMode === 'buka24jam' && (
-                          <div className="px-4 sm:px-6 pb-4">
-                            <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3 text-xs text-emerald-700 flex items-center gap-2">
-                              <Unlock className="h-4 w-4 shrink-0" />
-                              <span>Pengajuan dibuka <strong>24 jam setiap hari</strong> tanpa batas waktu.</span>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Info for Tutup mode */}
-                        {currentMode === 'tutup' && (
-                          <div className="px-4 sm:px-6 pb-4">
-                            <div className="bg-red-50 border border-red-100 rounded-xl p-3 text-xs text-red-700 flex items-center gap-2">
-                              <Lock className="h-4 w-4 shrink-0" />
-                              <span>Pengajuan ditutup <strong>tanpa batas waktu</strong>. Desa/Kecamatan tidak bisa mengirim proposal baru.</span>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                    { key: 'bankeu_submission_desa', label: 'Pengajuan Desa → Dinas', desc: 'Desa mengirim proposal ke Dinas Terkait' },
+                    { key: 'bankeu_submission_kecamatan', label: 'Pengajuan Kecamatan → DPMD', desc: 'Kecamatan meneruskan proposal ke DPMD' }
+                  ].map(({ key, label, desc }) => (
+                    <SubmissionModeCard
+                      key={key}
+                      settingKey={key}
+                      label={label}
+                      desc={desc}
+                      config={submissionConfigs[key] || { enabled: submissionSettings[key], schedule: null }}
+                      isCurrentlyOpen={submissionSettings[key]}
+                      loadingSettings={loadingSettings}
+                      updateSubmissionSetting={updateSubmissionSetting}
+                    />
+                  ))}
                 </div>
 
                 {/* Note */}
