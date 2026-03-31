@@ -109,6 +109,10 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
     bankeu_submission_desa: true,
     bankeu_submission_kecamatan: true
   });
+  const [submissionConfigs, setSubmissionConfigs] = useState({
+    bankeu_submission_desa: { enabled: true, schedule: null },
+    bankeu_submission_kecamatan: { enabled: true, schedule: null }
+  });
   // Config tab states
   const [configSubTab, setConfigSubTab] = useState('kegiatan'); // 'kegiatan', 'dinas', 'format-surat'
   const [expandedDinasId, setExpandedDinasId] = useState(null);
@@ -660,12 +664,16 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
     try {
       setLoadingSettings(true);
       const [desaRes, kecamatanRes] = await Promise.all([
-        api.get('/app-settings/bankeu_submission_desa').catch(() => ({ data: { data: { value: true } } })),
-        api.get('/app-settings/bankeu_submission_kecamatan').catch(() => ({ data: { data: { value: true } } }))
+        api.get('/app-settings/bankeu_submission_desa').catch(() => ({ data: { data: { value: true, config: null } } })),
+        api.get('/app-settings/bankeu_submission_kecamatan').catch(() => ({ data: { data: { value: true, config: null } } }))
       ]);
       setSubmissionSettings({
         bankeu_submission_desa: desaRes.data?.data?.value ?? true,
         bankeu_submission_kecamatan: kecamatanRes.data?.data?.value ?? true
+      });
+      setSubmissionConfigs({
+        bankeu_submission_desa: desaRes.data?.data?.config || { enabled: desaRes.data?.data?.value ?? true, schedule: null },
+        bankeu_submission_kecamatan: kecamatanRes.data?.data?.config || { enabled: kecamatanRes.data?.data?.value ?? true, schedule: null }
       });
     } catch (error) {
       console.error('Error fetching submission settings:', error);
@@ -674,16 +682,17 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
     }
   };
 
-  const updateSubmissionSetting = async (key, value) => {
+  const updateSubmissionSetting = async (key, configValue) => {
     try {
       setLoadingSettings(true);
-      const res = await api.put(`/app-settings/${key}`, { value });
+      const res = await api.put(`/app-settings/${key}`, { value: configValue });
       if (res.data.success) {
-        setSubmissionSettings(prev => ({ ...prev, [key]: value }));
+        setSubmissionSettings(prev => ({ ...prev, [key]: res.data.data.value }));
+        setSubmissionConfigs(prev => ({ ...prev, [key]: res.data.data.config || configValue }));
         Swal.fire({
           icon: 'success',
           title: 'Berhasil',
-          text: `Pengaturan ${key === 'bankeu_submission_desa' ? 'Desa' : 'Kecamatan'} berhasil ${value ? 'dibuka' : 'ditutup'}`,
+          text: `Pengaturan ${key === 'bankeu_submission_desa' ? 'Desa' : 'Kecamatan'} berhasil diperbarui`,
           timer: 2000,
           showConfirmButton: false
         });
@@ -3147,105 +3156,182 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                   </div>
                 </div>
 
-                {/* Toggle Controls */}
-                <div className="space-y-4">
-                  {/* Desa Control */}
-                  <div className={`p-3 sm:p-5 rounded-lg sm:rounded-xl border-2 transition-all ${
-                    submissionSettings.bankeu_submission_desa 
-                      ? 'bg-emerald-50 border-emerald-300' 
-                      : 'bg-red-50 border-red-300'
-                  }`}>
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
-                      <div className="flex items-center gap-3 sm:gap-4">
-                        <div className={`p-2 sm:p-3 rounded-lg sm:rounded-xl ${
-                          submissionSettings.bankeu_submission_desa ? 'bg-emerald-500' : 'bg-red-500'
-                        }`}>
-                          {submissionSettings.bankeu_submission_desa ? (
-                            <Unlock className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-                          ) : (
-                            <Lock className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-                          )}
-                        </div>
-                        <div>
-                          <h3 className="font-bold text-base sm:text-lg text-slate-800">Pengajuan Desa → Dinas</h3>
-                          <p className="text-sm text-slate-600 mt-0.5">
-                            {submissionSettings.bankeu_submission_desa 
-                              ? 'Desa dapat mengirim proposal ke Dinas Terkait'
-                              : 'Desa TIDAK dapat mengirim proposal ke Dinas Terkait'}
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => updateSubmissionSetting('bankeu_submission_desa', !submissionSettings.bankeu_submission_desa)}
-                        disabled={loadingSettings}
-                        className={`relative w-16 h-8 rounded-full transition-colors duration-300 focus:outline-none focus:ring-4 ${
-                          submissionSettings.bankeu_submission_desa 
-                            ? 'bg-emerald-500 focus:ring-emerald-200' 
-                            : 'bg-red-500 focus:ring-red-200'
-                        } ${loadingSettings ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      >
-                        <span className={`absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow-md transform transition-transform duration-300 ${
-                          submissionSettings.bankeu_submission_desa ? 'translate-x-8' : ''
-                        }`} />
-                      </button>
-                    </div>
-                    <div className={`mt-3 px-3 py-2 rounded-lg text-sm font-medium ${
-                      submissionSettings.bankeu_submission_desa 
-                        ? 'bg-emerald-100 text-emerald-800' 
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      Status: {submissionSettings.bankeu_submission_desa ? '✅ DIBUKA' : '🚫 DITUTUP'}
-                    </div>
-                  </div>
+                {/* Schedule Controls */}
+                <div className="space-y-6">
+                  {[
+                    { key: 'bankeu_submission_desa', label: 'Pengajuan Desa → Dinas', desc: 'Desa mengirim proposal ke Dinas Terkait' },
+                    { key: 'bankeu_submission_kecamatan', label: 'Pengajuan Kecamatan → DPMD', desc: 'Kecamatan meneruskan proposal ke DPMD' }
+                  ].map(({ key, label, desc }) => {
+                    const config = submissionConfigs[key] || { enabled: submissionSettings[key], schedule: null };
+                    const isCurrentlyOpen = submissionSettings[key];
+                    const DAY_LABELS = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+                    const DAY_FULL = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 
-                  {/* Kecamatan Control */}
-                  <div className={`p-3 sm:p-5 rounded-lg sm:rounded-xl border-2 transition-all ${
-                    submissionSettings.bankeu_submission_kecamatan 
-                      ? 'bg-emerald-50 border-emerald-300' 
-                      : 'bg-red-50 border-red-300'
-                  }`}>
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
-                      <div className="flex items-center gap-3 sm:gap-4">
-                        <div className={`p-2 sm:p-3 rounded-lg sm:rounded-xl ${
-                          submissionSettings.bankeu_submission_kecamatan ? 'bg-emerald-500' : 'bg-red-500'
+                    const toggleEnabled = () => {
+                      const newConfig = { ...config, enabled: !config.enabled };
+                      updateSubmissionSetting(key, newConfig);
+                    };
+
+                    const toggleDay = (day) => {
+                      const currentDays = config.schedule?.days || [1,2,3,4,5];
+                      const newDays = currentDays.includes(day) 
+                        ? currentDays.filter(d => d !== day) 
+                        : [...currentDays, day].sort();
+                      const newConfig = {
+                        ...config,
+                        schedule: { ...(config.schedule || {}), days: newDays, startTime: config.schedule?.startTime || '08:00', endTime: config.schedule?.endTime || '16:00' }
+                      };
+                      updateSubmissionSetting(key, newConfig);
+                    };
+
+                    const updateTime = (field, val) => {
+                      const newConfig = {
+                        ...config,
+                        schedule: { ...(config.schedule || { days: [1,2,3,4,5] }), [field]: val, startTime: config.schedule?.startTime || '08:00', endTime: config.schedule?.endTime || '16:00', [field]: val }
+                      };
+                      updateSubmissionSetting(key, newConfig);
+                    };
+
+                    const clearSchedule = () => {
+                      const newConfig = { ...config, schedule: null };
+                      updateSubmissionSetting(key, newConfig);
+                    };
+
+                    return (
+                      <div key={key} className={`rounded-2xl border-2 overflow-hidden transition-all ${
+                        isCurrentlyOpen ? 'border-emerald-200 bg-white' : 'border-red-200 bg-white'
+                      }`}>
+                        {/* Header */}
+                        <div className={`px-4 sm:px-6 py-4 flex items-center justify-between ${
+                          isCurrentlyOpen ? 'bg-emerald-50' : 'bg-red-50'
                         }`}>
-                          {submissionSettings.bankeu_submission_kecamatan ? (
-                            <Unlock className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-                          ) : (
-                            <Lock className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-                          )}
+                          <div className="flex items-center gap-3">
+                            <div className={`p-2.5 rounded-xl ${isCurrentlyOpen ? 'bg-emerald-500' : 'bg-red-500'}`}>
+                              {isCurrentlyOpen ? <Unlock className="h-5 w-5 text-white" /> : <Lock className="h-5 w-5 text-white" />}
+                            </div>
+                            <div>
+                              <h3 className="font-bold text-slate-800">{label}</h3>
+                              <p className="text-xs text-slate-500 mt-0.5">{desc}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                              isCurrentlyOpen ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+                            }`}>
+                              {isCurrentlyOpen ? '● BUKA' : '● TUTUP'}
+                            </span>
+                            <button
+                              onClick={toggleEnabled}
+                              disabled={loadingSettings}
+                              className={`relative w-14 h-7 rounded-full transition-colors duration-300 focus:outline-none focus:ring-4 ${
+                                config.enabled ? 'bg-emerald-500 focus:ring-emerald-200' : 'bg-red-400 focus:ring-red-200'
+                              } ${loadingSettings ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            >
+                              <span className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md transform transition-transform duration-300 ${
+                                config.enabled ? 'translate-x-7' : ''
+                              }`} />
+                            </button>
+                          </div>
                         </div>
-                        <div>
-                          <h3 className="font-bold text-base sm:text-lg text-slate-800">Pengajuan Kecamatan → DPMD</h3>
-                          <p className="text-sm text-slate-600 mt-0.5">
-                            {submissionSettings.bankeu_submission_kecamatan 
-                              ? 'Kecamatan dapat meneruskan proposal ke DPMD'
-                              : 'Kecamatan TIDAK dapat meneruskan proposal ke DPMD'}
-                          </p>
-                        </div>
+
+                        {/* Schedule Config */}
+                        {config.enabled && (
+                          <div className="px-4 sm:px-6 py-4 space-y-4 border-t border-gray-100">
+                            {/* Schedule toggle */}
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <Clock className="h-4 w-4 text-slate-400" />
+                                <span className="text-sm font-medium text-slate-700">Jadwal Otomatis</span>
+                              </div>
+                              {config.schedule ? (
+                                <button onClick={clearSchedule} disabled={loadingSettings}
+                                  className="text-xs text-red-500 hover:text-red-700 font-medium px-2 py-1 rounded hover:bg-red-50 transition-colors">
+                                  Hapus Jadwal
+                                </button>
+                              ) : (
+                                <button onClick={() => {
+                                  const newConfig = { ...config, schedule: { days: [1,2,3,4,5], startTime: '08:00', endTime: '16:00' } };
+                                  updateSubmissionSetting(key, newConfig);
+                                }} disabled={loadingSettings}
+                                  className="text-xs text-emerald-600 hover:text-emerald-700 font-medium px-2 py-1 rounded hover:bg-emerald-50 transition-colors">
+                                  + Atur Jadwal
+                                </button>
+                              )}
+                            </div>
+
+                            {config.schedule && (
+                              <>
+                                {/* Day Picker */}
+                                <div>
+                                  <label className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2 block">Hari Aktif</label>
+                                  <div className="flex gap-1.5">
+                                    {DAY_LABELS.map((day, idx) => {
+                                      const isActive = config.schedule.days?.includes(idx);
+                                      return (
+                                        <button key={idx} onClick={() => toggleDay(idx)} disabled={loadingSettings}
+                                          className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${
+                                            isActive
+                                              ? 'bg-emerald-500 text-white shadow-sm shadow-emerald-200'
+                                              : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                                          } ${loadingSettings ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                          title={DAY_FULL[idx]}
+                                        >
+                                          {day}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+
+                                {/* Time Range */}
+                                <div>
+                                  <label className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2 block">Jam Operasional</label>
+                                  <div className="flex items-center gap-3">
+                                    <div className="flex-1">
+                                      <label className="text-xs text-slate-400 mb-1 block">Mulai</label>
+                                      <input
+                                        type="time"
+                                        value={config.schedule.startTime || '08:00'}
+                                        onChange={(e) => updateTime('startTime', e.target.value)}
+                                        disabled={loadingSettings}
+                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-mono focus:ring-2 focus:ring-emerald-300 focus:border-emerald-400 disabled:opacity-50"
+                                      />
+                                    </div>
+                                    <span className="text-slate-300 font-bold mt-5">—</span>
+                                    <div className="flex-1">
+                                      <label className="text-xs text-slate-400 mb-1 block">Selesai</label>
+                                      <input
+                                        type="time"
+                                        value={config.schedule.endTime || '16:00'}
+                                        onChange={(e) => updateTime('endTime', e.target.value)}
+                                        disabled={loadingSettings}
+                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-mono focus:ring-2 focus:ring-emerald-300 focus:border-emerald-400 disabled:opacity-50"
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Schedule Summary */}
+                                <div className="bg-slate-50 rounded-xl p-3 text-xs text-slate-600">
+                                  <span className="font-medium">Ringkasan: </span>
+                                  Buka setiap <span className="font-bold text-slate-800">{config.schedule.days?.map(d => DAY_FULL[d]).join(', ') || '-'}</span>
+                                  {' '}pukul <span className="font-bold text-slate-800">{config.schedule.startTime || '08:00'}</span>
+                                  {' '}s/d <span className="font-bold text-slate-800">{config.schedule.endTime || '16:00'}</span> WIB
+                                </div>
+                              </>
+                            )}
+
+                            {!config.schedule && (
+                              <div className="bg-blue-50 rounded-xl p-3 text-xs text-blue-600">
+                                <span className="font-medium">Info: </span>
+                                Tanpa jadwal, pengajuan dibuka 24 jam setiap hari selama toggle aktif.
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
-                      <button
-                        onClick={() => updateSubmissionSetting('bankeu_submission_kecamatan', !submissionSettings.bankeu_submission_kecamatan)}
-                        disabled={loadingSettings}
-                        className={`relative w-16 h-8 rounded-full transition-colors duration-300 focus:outline-none focus:ring-4 ${
-                          submissionSettings.bankeu_submission_kecamatan 
-                            ? 'bg-emerald-500 focus:ring-emerald-200' 
-                            : 'bg-red-500 focus:ring-red-200'
-                        } ${loadingSettings ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      >
-                        <span className={`absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow-md transform transition-transform duration-300 ${
-                          submissionSettings.bankeu_submission_kecamatan ? 'translate-x-8' : ''
-                        }`} />
-                      </button>
-                    </div>
-                    <div className={`mt-3 px-3 py-2 rounded-lg text-sm font-medium ${
-                      submissionSettings.bankeu_submission_kecamatan 
-                        ? 'bg-emerald-100 text-emerald-800' 
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      Status: {submissionSettings.bankeu_submission_kecamatan ? '✅ DIBUKA' : '🚫 DITUTUP'}
-                    </div>
-                  </div>
+                    );
+                  })}
                 </div>
 
                 {/* Note */}
@@ -3253,8 +3339,9 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                   <p className="font-medium text-slate-800 mb-2">Catatan:</p>
                   <ul className="list-disc list-inside space-y-1">
                     <li>Pengaturan ini <strong>tidak berlaku</strong> untuk Dinas (Dinas tetap dapat memverifikasi)</li>
-                    <li>Perubahan berlaku secara langsung setelah toggle diubah</li>
-                    <li>Desa/Kecamatan akan melihat pesan bahwa pengajuan ditutup oleh DPMD</li>
+                    <li>Jadwal menggunakan zona waktu <strong>WIB (Asia/Jakarta)</strong></li>
+                    <li>Di luar jadwal, desa/kecamatan akan melihat pesan bahwa pengajuan ditutup</li>
+                    <li>Tanpa jadwal, pengajuan akan terbuka 24 jam selama toggle aktif</li>
                   </ul>
                 </div>
               </div>
