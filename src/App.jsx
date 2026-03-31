@@ -420,7 +420,6 @@ const StatistikInsentifDd = lazy(
 const UserManagementPage = lazy(
   () => import("./pages/dashboard/UserManagementPage"),
 );
-const ManageRolesPage = lazy(() => import("./pages/admin/ManageRolesPage"));
 
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem("expressToken");

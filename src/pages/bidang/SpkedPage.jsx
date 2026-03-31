@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, Activity, TrendingUp, ArrowLeft, Clock, CheckCircle2, XCircle, FileText, BarChart3, DollarSign, Zap, ChevronRight, Menu, X, ShieldCheck, ArrowRight, BadgeCheck } from 'lucide-react';
+import { Building2, Activity, TrendingUp, ArrowLeft, Clock, CheckCircle2, XCircle, FileText, BarChart3, DollarSign, Zap, ChevronRight, ShieldCheck, ArrowRight, BadgeCheck } from 'lucide-react';
 import api from '../../api';
 import toast from 'react-hot-toast';
 
@@ -27,7 +27,6 @@ const SpkedPage = () => {
 	const [activeTab, setActiveTab] = useState('overview'); // overview, bumdes, bankeu, activity
 	const [bumdesView, setBumdesView] = useState('dashboard'); // dashboard, form, dokumen
 	const [bankeuYear, setBankeuYear] = useState(null); // null (picker), 2025, or 2026
-	const [sidebarOpen, setSidebarOpen] = useState(true); // Mobile sidebar state - default open
 	
 	// Activity logs state
 	const [activityLogs, setActivityLogs] = useState([]);
@@ -179,296 +178,43 @@ const SpkedPage = () => {
 		});
 	};
 
+	const spkedTabs = [
+		{ id: 'overview', label: 'Overview', icon: BarChart3, color: 'green' },
+		{ id: 'bumdes', label: 'BUMDes', icon: Building2, color: 'green' },
+		{ id: 'bankeu', label: 'Bantuan Keuangan', icon: DollarSign, color: 'blue' },
+		{ id: 'activity', label: 'Aktivitas', icon: Activity, color: 'orange' },
+	];
+
 	return (
 		<div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/20 to-green-50/20">
-			{/* Header */}
-			<div className="bg-gradient-to-r from-green-600 to-green-700 text-white shadow-lg">
-				<div className="container mx-auto px-4 py-4">
-					<button 
-						onClick={() => navigate(-1)}
-						className="flex items-center gap-2 text-white/80 hover:text-white transition-colors mb-3"
-					>
-						<ArrowLeft className="h-4 w-4" />
-						<span className="text-sm">Kembali</span>
-					</button>
-					
-					<div className="flex items-center justify-between">
-						<div className="flex items-center gap-4">
-							<div className="p-4 bg-white/20 rounded-2xl backdrop-blur-sm">
-								<Building2 className="h-8 w-8" />
-							</div>
-							<div>
-								<h1 className="text-2xl font-bold mb-1">Bidang SPKED</h1>
-								<p className="text-white/90 text-sm">Sarana Prasarana Kewilayahan dan Ekonomi Desa</p>
-							</div>
-						</div>
-						
-						{/* Mobile Hamburger Menu */}
-						<button
-							onClick={() => setSidebarOpen(!sidebarOpen)}
-							className="lg:hidden h-10 w-10 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-xl flex items-center justify-center transition-all"
-						>
-							{sidebarOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-						</button>
-					</div>
+			{/* Main Content */}
+			<div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+				{/* Tab Navigation */}
+				<div className="flex items-center gap-2 mb-6 overflow-x-auto pb-1 scrollbar-hide">
+					{spkedTabs.map((tab) => {
+						const Icon = tab.icon;
+						const isActive = activeTab === tab.id;
+						return (
+							<button
+								key={tab.id}
+								onClick={() => {
+									setActiveTab(tab.id);
+									if (tab.id === 'bankeu') setBankeuYear(null);
+								}}
+								className={`
+									flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 whitespace-nowrap
+									${isActive
+										? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg shadow-green-500/25'
+										: 'bg-white text-gray-600 hover:text-gray-800 hover:shadow-md border border-gray-200'
+									}
+								`}
+							>
+								<Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-gray-400'}`} />
+								{tab.label}
+							</button>
+						);
+					})}
 				</div>
-			</div>
-
-			{/* Mobile Sidebar Overlay */}
-			{sidebarOpen && (
-				<div 
-					className="fixed inset-0 bg-black/50 z-40 lg:hidden backdrop-blur-sm transition-opacity"
-					onClick={() => setSidebarOpen(false)}
-				/>
-			)}
-
-			{/* Mobile Sidebar Drawer */}
-			<aside className={`fixed top-0 left-0 h-full w-80 bg-gradient-to-b from-gray-50 to-white z-50 lg:hidden transform transition-transform duration-300 ease-in-out ${
-				sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-			} overflow-y-auto shadow-2xl`}>
-				<div className="p-6 space-y-4">
-					{/* Close Button */}
-					<div className="flex justify-between items-center mb-4">
-						<h2 className="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-							Menu SPKED
-						</h2>
-						<button
-							onClick={() => setSidebarOpen(false)}
-							className="h-10 w-10 bg-gray-100 hover:bg-gray-200 rounded-xl flex items-center justify-center transition-colors"
-						>
-							<X className="h-6 w-6 text-gray-600" />
-						</button>
-					</div>
-
-					{/* Overview */}
-					<button
-						onClick={() => {
-							setActiveTab('overview');
-							setSidebarOpen(false);
-						}}
-						className={`w-full group relative flex items-center gap-4 px-5 py-4 rounded-2xl font-semibold transition-all duration-300 ${
-							activeTab === 'overview'
-								? 'bg-gradient-to-br from-green-600 to-emerald-600 text-white shadow-xl shadow-green-500/40'
-								: 'bg-white text-gray-700 hover:bg-gray-50 hover:shadow-lg border border-gray-200'
-						}`}
-					>
-						<div className={`h-12 w-12 rounded-xl flex items-center justify-center transition-all ${
-							activeTab === 'overview' 
-								? 'bg-white/20 backdrop-blur-sm' 
-								: 'bg-gradient-to-br from-gray-100 to-gray-200'
-						}`}>
-							<BarChart3 className={`h-6 w-6 ${activeTab === 'overview' ? 'text-white' : 'text-gray-600'}`} />
-						</div>
-						<div className="flex-1 text-left">
-							<div className="font-bold">Overview</div>
-							<div className={`text-xs ${activeTab === 'overview' ? 'text-green-100' : 'text-gray-500'}`}>
-								Ringkasan data
-							</div>
-						</div>
-					</button>
-
-					{/* BUMDes */}
-					<button
-						onClick={() => {
-							setActiveTab('bumdes');
-							setSidebarOpen(false);
-						}}
-						className={`w-full group relative flex items-center gap-4 px-5 py-4 rounded-2xl font-semibold transition-all duration-300 ${
-							activeTab === 'bumdes'
-								? 'bg-gradient-to-br from-green-600 to-emerald-600 text-white shadow-xl shadow-green-500/40'
-								: 'bg-white text-gray-700 hover:bg-gray-50 hover:shadow-lg border border-gray-200'
-						}`}
-					>
-						<div className={`h-12 w-12 rounded-xl flex items-center justify-center transition-all ${
-							activeTab === 'bumdes' 
-								? 'bg-white/20 backdrop-blur-sm' 
-								: 'bg-gradient-to-br from-gray-100 to-gray-200'
-						}`}>
-							<Building2 className={`h-6 w-6 ${activeTab === 'bumdes' ? 'text-white' : 'text-gray-600'}`} />
-						</div>
-						<div className="flex-1 text-left">
-							<div className="font-bold">BUMDes</div>
-							<div className={`text-xs ${activeTab === 'bumdes' ? 'text-green-100' : 'text-gray-500'}`}>
-								Data BUMDes desa
-							</div>
-						</div>
-					</button>
-
-					{/* Bantuan Keuangan */}
-					<button
-						onClick={() => {
-							setActiveTab('bankeu');
-							setBankeuYear(null);
-							setSidebarOpen(false);
-						}}
-						className={`w-full group relative flex items-center gap-4 px-5 py-4 rounded-2xl font-semibold transition-all duration-300 ${
-							activeTab === 'bankeu'
-								? 'bg-gradient-to-br from-green-600 to-emerald-600 text-white shadow-xl shadow-green-500/40'
-								: 'bg-white text-gray-700 hover:bg-gray-50 hover:shadow-lg border border-gray-200'
-						}`}
-					>
-						<div className={`h-12 w-12 rounded-xl flex items-center justify-center transition-all ${
-							activeTab === 'bankeu' 
-								? 'bg-white/20 backdrop-blur-sm' 
-								: 'bg-gradient-to-br from-gray-100 to-gray-200'
-						}`}>
-							<DollarSign className={`h-6 w-6 ${activeTab === 'bankeu' ? 'text-white' : 'text-gray-600'}`} />
-						</div>
-						<div className="flex-1 text-left">
-							<div className="font-bold">Bantuan Keuangan</div>
-							<div className={`text-xs ${activeTab === 'bankeu' ? 'text-green-100' : 'text-gray-500'}`}>
-								Bankeu & Verifikasi
-							</div>
-						</div>
-					</button>
-
-					{/* Aktivitas */}
-					<button
-						onClick={() => {
-							setActiveTab('activity');
-							setSidebarOpen(false);
-						}}
-						className={`w-full group relative flex items-center gap-4 px-5 py-4 rounded-2xl font-semibold transition-all duration-300 ${
-							activeTab === 'activity'
-								? 'bg-gradient-to-br from-green-600 to-emerald-600 text-white shadow-xl shadow-green-500/40'
-								: 'bg-white text-gray-700 hover:bg-gray-50 hover:shadow-lg border border-gray-200'
-						}`}
-					>
-						<div className={`h-12 w-12 rounded-xl flex items-center justify-center transition-all ${
-							activeTab === 'activity' 
-								? 'bg-white/20 backdrop-blur-sm' 
-								: 'bg-gradient-to-br from-gray-100 to-gray-200'
-						}`}>
-							<Activity className={`h-6 w-6 ${activeTab === 'activity' ? 'text-white' : 'text-gray-600'}`} />
-						</div>
-						<div className="flex-1 text-left">
-							<div className="font-bold">Aktivitas</div>
-							<div className={`text-xs ${activeTab === 'activity' ? 'text-green-100' : 'text-gray-500'}`}>
-								Log aktivitas
-							</div>
-						</div>
-					</button>
-				</div>
-			</aside>
-
-			{/* Layout with Sidebar */}
-			<div className="container mx-auto max-w-[1920px] px-4 sm:px-6 lg:px-12 py-6 lg:py-8 xl:py-12">
-				<div className="flex gap-6">
-					{/* Desktop Sidebar Navigation */}
-					<aside className="hidden lg:block w-64 flex-shrink-0">
-						<div className="sticky top-8 space-y-3">
-							{/* Overview */}
-							<button
-								onClick={() => setActiveTab('overview')}
-								className={`w-full group relative flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-300 ${
-									activeTab === 'overview'
-										? 'bg-gradient-to-br from-green-600 to-emerald-600 text-white shadow-lg shadow-green-500/30'
-										: 'bg-white text-gray-700 hover:bg-gray-50 hover:shadow-md border border-gray-200'
-								}`}
-							>
-								<div className={`h-10 w-10 rounded-lg flex items-center justify-center transition-all ${
-									activeTab === 'overview' 
-										? 'bg-white/20 backdrop-blur-sm' 
-										: 'bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-green-100 group-hover:to-green-200'
-								}`}>
-									<BarChart3 className={`h-5 w-5 ${activeTab === 'overview' ? 'text-white' : 'text-gray-600 group-hover:text-green-600'}`} />
-								</div>
-								<div className="flex-1 text-left min-w-0">
-									<div className="font-semibold truncate">Overview</div>
-									<div className={`text-xs ${activeTab === 'overview' ? 'text-green-100' : 'text-gray-500'}`}>
-										Ringkasan data
-									</div>
-								</div>
-								{activeTab === 'overview' && (
-									<div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-l-full"></div>
-								)}
-							</button>
-
-							{/* BUMDes */}
-							<button
-								onClick={() => setActiveTab('bumdes')}
-								className={`w-full group relative flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-300 ${
-									activeTab === 'bumdes'
-										? 'bg-gradient-to-br from-green-600 to-emerald-600 text-white shadow-lg shadow-green-500/30'
-										: 'bg-white text-gray-700 hover:bg-gray-50 hover:shadow-md border border-gray-200'
-								}`}
-							>
-								<div className={`h-10 w-10 rounded-lg flex items-center justify-center transition-all ${
-									activeTab === 'bumdes' 
-										? 'bg-white/20 backdrop-blur-sm' 
-										: 'bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-green-100 group-hover:to-green-200'
-								}`}>
-									<Building2 className={`h-5 w-5 ${activeTab === 'bumdes' ? 'text-white' : 'text-gray-600 group-hover:text-green-600'}`} />
-								</div>
-								<div className="flex-1 text-left min-w-0">
-									<div className="font-semibold truncate">BUMDes</div>
-									<div className={`text-xs ${activeTab === 'bumdes' ? 'text-green-100' : 'text-gray-500'}`}>
-										Data BUMDes desa
-									</div>
-								</div>
-								{activeTab === 'bumdes' && (
-									<div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-l-full"></div>
-								)}
-							</button>
-
-							{/* Bantuan Keuangan */}
-							<button
-								onClick={() => { setActiveTab('bankeu'); setBankeuYear(null); }}
-								className={`w-full group relative flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-300 ${
-									activeTab === 'bankeu'
-										? 'bg-gradient-to-br from-green-600 to-emerald-600 text-white shadow-lg shadow-green-500/30'
-										: 'bg-white text-gray-700 hover:bg-gray-50 hover:shadow-md border border-gray-200'
-								}`}
-							>
-								<div className={`h-10 w-10 rounded-lg flex items-center justify-center transition-all ${
-									activeTab === 'bankeu' 
-										? 'bg-white/20 backdrop-blur-sm' 
-										: 'bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-blue-100 group-hover:to-blue-200'
-								}`}>
-									<DollarSign className={`h-5 w-5 ${activeTab === 'bankeu' ? 'text-white' : 'text-gray-600 group-hover:text-blue-600'}`} />
-								</div>
-								<div className="flex-1 text-left min-w-0">
-									<div className="font-semibold truncate">Bantuan Keuangan</div>
-									<div className={`text-xs ${activeTab === 'bankeu' ? 'text-green-100' : 'text-gray-500'}`}>
-										Bankeu & Verifikasi
-									</div>
-								</div>
-								{activeTab === 'bankeu' && (
-									<div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-l-full"></div>
-								)}
-							</button>
-
-							{/* Aktivitas */}
-							<button
-								onClick={() => setActiveTab('activity')}
-								className={`w-full group relative flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-300 ${
-									activeTab === 'activity'
-										? 'bg-gradient-to-br from-green-600 to-emerald-600 text-white shadow-lg shadow-green-500/30'
-										: 'bg-white text-gray-700 hover:bg-gray-50 hover:shadow-md border border-gray-200'
-								}`}
-							>
-								<div className={`h-10 w-10 rounded-lg flex items-center justify-center transition-all ${
-									activeTab === 'activity' 
-										? 'bg-white/20 backdrop-blur-sm' 
-										: 'bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-orange-100 group-hover:to-orange-200'
-								}`}>
-									<Activity className={`h-5 w-5 ${activeTab === 'activity' ? 'text-white' : 'text-gray-600 group-hover:text-orange-600'}`} />
-								</div>
-								<div className="flex-1 text-left min-w-0">
-									<div className="font-semibold truncate">Aktivitas</div>
-									<div className={`text-xs ${activeTab === 'activity' ? 'text-green-100' : 'text-gray-500'}`}>
-										Log aktivitas
-									</div>
-								</div>
-								{activeTab === 'activity' && (
-									<div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-l-full"></div>
-								)}
-							</button>
-						</div>
-					</aside>
-
-					{/* Main Content */}
-					<main className="flex-1 min-w-0 lg:pb-8">
 				{/* Tab Content */}
 				{activeTab === 'overview' && (
 					<div className="relative bg-gradient-to-br from-white via-white to-green-50/30 rounded-2xl shadow-xl border border-gray-200/50 p-8 overflow-hidden">
@@ -807,8 +553,6 @@ const SpkedPage = () => {
 						</div>
 					</div>
 				)}
-					</main>
-				</div>
 			</div>
 		</div>
 	);

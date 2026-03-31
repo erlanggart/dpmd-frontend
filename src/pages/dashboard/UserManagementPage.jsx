@@ -1,5 +1,5 @@
 // src/pages/dashboard/UserManagementPage.jsx
-import React, { useEffect, useState, useCallback, useMemo } from "react";
+import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import {
 	LuUsers,
 	LuUser,
@@ -23,6 +23,11 @@ import {
 	LuEye,
 	LuEyeOff,
 	LuLock,
+	LuPenLine,
+	LuHash,
+	LuEllipsisVertical,
+	LuCake,
+	LuBadgeCheck,
 } from "react-icons/lu";
 import * as XLSX from 'xlsx';
 import api from "../../api";
@@ -30,10 +35,279 @@ import AddUserModal from "../../components/AddUserModal";
 import ResetPasswordModal from "../../components/ResetPasswordModal";
 import EditRoleModal from "../../components/EditRoleModal";
 import EditBidangModal from "../../components/EditBidangModal";
-import RoleManagementModal from "../../components/RoleManagementModal";
+import EditTanggalLahirModal from "../../components/EditTanggalLahirModal";
+import EditJabatanModal from "../../components/EditJabatanModal";
 import UserStatsCard from "../../components/UserStatsCard";
+import { getAvatarUrl } from "../../utils/avatarUtils";
 import { useAuth } from "../../context/AuthContext";
 import Swal from "sweetalert2";
+
+// ─── Role gradient & ring configs ────────────────────────────────
+const ROLE_THEME = {
+	superadmin:       { gradient: "from-rose-500 via-red-500 to-pink-600",   ring: "ring-rose-200",   bg: "bg-rose-500",   glow: "shadow-rose-200/60" },
+	kepala_dinas:     { gradient: "from-blue-500 via-indigo-500 to-blue-700", ring: "ring-blue-200",   bg: "bg-blue-500",   glow: "shadow-blue-200/60" },
+	sekretaris_dinas: { gradient: "from-indigo-500 via-purple-500 to-indigo-700", ring: "ring-indigo-200", bg: "bg-indigo-500", glow: "shadow-indigo-200/60" },
+	kepala_bidang:    { gradient: "from-emerald-500 via-teal-500 to-green-600", ring: "ring-emerald-200", bg: "bg-emerald-500", glow: "shadow-emerald-200/60" },
+	ketua_tim:        { gradient: "from-teal-500 via-cyan-500 to-teal-600", ring: "ring-teal-200",   bg: "bg-teal-500",   glow: "shadow-teal-200/60" },
+	pegawai:          { gradient: "from-slate-500 via-gray-500 to-slate-600", ring: "ring-slate-200",  bg: "bg-slate-500",  glow: "shadow-slate-200/60" },
+	desa:             { gradient: "from-emerald-500 via-green-500 to-lime-600", ring: "ring-green-200",  bg: "bg-green-500",  glow: "shadow-green-200/60" },
+	kecamatan:        { gradient: "from-violet-500 via-purple-500 to-fuchsia-600", ring: "ring-violet-200", bg: "bg-violet-500", glow: "shadow-violet-200/60" },
+	dinas_terkait:    { gradient: "from-amber-500 via-orange-500 to-yellow-600", ring: "ring-amber-200",  bg: "bg-amber-500",  glow: "shadow-amber-200/60" },
+	verifikator_dinas:{ gradient: "from-orange-500 via-rose-500 to-pink-500", ring: "ring-orange-200", bg: "bg-orange-500", glow: "shadow-orange-200/60" },
+};
+const DEFAULT_THEME = { gradient: "from-gray-400 to-gray-600", ring: "ring-gray-200", bg: "bg-gray-500", glow: "shadow-gray-200/60" };
+
+// ─── UserCard ────────────────────────────────────────────────────
+const UserCard = ({
+	user, canManage, visiblePasswords, togglePasswordVisibility,
+	onEditRole, onEditBidang, onEditTanggalLahir, onEditJabatan,
+	onResetPassword, onDeleteUser, getRoleInfo,
+}) => {
+	const [menuOpen, setMenuOpen] = useState(false);
+	const menuRef = useRef(null);
+	const theme = ROLE_THEME[user.role] || DEFAULT_THEME;
+	const roleInfo = getRoleInfo(user.role);
+	const avatarUrl = getAvatarUrl(user.avatar);
+
+	// Close menu on outside click
+	useEffect(() => {
+		const handler = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false); };
+		if (menuOpen) document.addEventListener("mousedown", handler);
+		return () => document.removeEventListener("mousedown", handler);
+	}, [menuOpen]);
+
+	const InfoRow = ({ icon: Icon, children, mono }) => (
+		<div className="flex items-center gap-2 min-w-0">
+			<div className="flex-shrink-0 w-5 h-5 rounded-md bg-gray-50 flex items-center justify-center">
+				<Icon className="h-3 w-3 text-gray-400" />
+			</div>
+			<span className={`text-[13px] text-gray-600 truncate ${mono ? 'font-mono tracking-tight' : ''}`}>
+				{children}
+			</span>
+		</div>
+	);
+
+	return (
+		<div className="group relative bg-white rounded-[20px] border border-gray-100 overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-gray-200/50">
+			{/* Decorative gradient header */}
+			<div className={`relative h-20 bg-gradient-to-br ${theme.gradient} overflow-hidden`}>
+				{/* Mesh pattern overlay */}
+				<div className="absolute inset-0 opacity-20" style={{
+					backgroundImage: 'radial-gradient(circle at 20% 50%, rgba(255,255,255,0.3) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(255,255,255,0.2) 0%, transparent 50%)',
+				}} />
+				{/* Floating circles for depth */}
+				<div className="absolute -top-4 -right-4 w-20 h-20 rounded-full bg-white/10 blur-sm" />
+				<div className="absolute -bottom-6 -left-6 w-24 h-24 rounded-full bg-black/5" />
+
+				{/* Three-dot menu */}
+				{canManage && (
+					<div className="absolute top-2.5 right-2.5" ref={menuRef}>
+						<button
+							onClick={() => setMenuOpen(!menuOpen)}
+							className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center hover:bg-white/40 transition-all"
+						>
+							<LuEllipsisVertical className="h-4 w-4 text-white" />
+						</button>
+
+						{menuOpen && (
+							<div className="absolute right-0 top-10 w-56 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+								<div className="p-1.5">
+									<button onClick={() => { onEditRole(user); setMenuOpen(false); }}
+										className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-xl transition-colors">
+										<div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+											<LuShield className="h-4 w-4 text-blue-600" />
+										</div>
+										<span className="font-medium">Ubah Role</span>
+									</button>
+									<button onClick={() => { onEditBidang(user); setMenuOpen(false); }}
+										className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 rounded-xl transition-colors">
+										<div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
+											<LuBuilding2 className="h-4 w-4 text-purple-600" />
+										</div>
+										<span className="font-medium">Ubah Bidang</span>
+									</button>
+									{user.pegawai_id && (
+										<>
+											<button onClick={() => { onEditTanggalLahir(user); setMenuOpen(false); }}
+												className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-700 rounded-xl transition-colors">
+												<div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
+													<LuCake className="h-4 w-4 text-orange-600" />
+												</div>
+												<span className="font-medium">Tanggal Lahir</span>
+											</button>
+											<button onClick={() => { onEditJabatan(user); setMenuOpen(false); }}
+												className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 hover:bg-teal-50 hover:text-teal-700 rounded-xl transition-colors">
+												<div className="w-8 h-8 rounded-lg bg-teal-100 flex items-center justify-center">
+													<LuPenLine className="h-4 w-4 text-teal-600" />
+												</div>
+												<span className="font-medium">Jabatan & Status</span>
+											</button>
+										</>
+									)}
+									<div className="my-1.5 border-t border-gray-100" />
+									<button onClick={() => { onResetPassword(user); setMenuOpen(false); }}
+										className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 hover:bg-amber-50 hover:text-amber-700 rounded-xl transition-colors">
+										<div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
+											<LuKey className="h-4 w-4 text-amber-600" />
+										</div>
+										<span className="font-medium">Reset Password</span>
+									</button>
+									<button onClick={() => { onDeleteUser(user); setMenuOpen(false); }}
+										className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-red-600 hover:bg-red-50 rounded-xl transition-colors">
+										<div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center">
+											<LuTrash2 className="h-4 w-4 text-red-500" />
+										</div>
+										<span className="font-medium">Hapus User</span>
+									</button>
+								</div>
+							</div>
+						)}
+					</div>
+				)}
+			</div>
+
+			{/* Avatar — floats between header and body */}
+			<div className="relative px-5 -mt-10">
+				<div className={`relative w-[72px] h-[72px] rounded-2xl ring-[3px] ${theme.ring} ring-offset-2 ring-offset-white shadow-lg ${theme.glow} overflow-hidden`}>
+					{avatarUrl ? (
+						<img
+							src={avatarUrl}
+							alt={user.name}
+							className="w-full h-full object-cover"
+							onError={(e) => {
+								e.target.style.display = 'none';
+								e.target.nextElementSibling.style.display = 'flex';
+							}}
+						/>
+					) : null}
+					<div className={`w-full h-full bg-gradient-to-br ${theme.gradient} flex items-center justify-center ${avatarUrl ? 'hidden' : ''}`}>
+						<span className="text-white font-bold text-2xl drop-shadow-sm">
+							{user.name?.charAt(0)?.toUpperCase() || "U"}
+						</span>
+					</div>
+				</div>
+				{/* Active dot */}
+				{user.is_active && (
+					<div className="absolute bottom-0 left-[68px] w-4 h-4 rounded-full bg-emerald-400 border-[2.5px] border-white shadow-sm" />
+				)}
+			</div>
+
+			{/* Body */}
+			<div className="px-5 pt-3 pb-4">
+				{/* Name */}
+				<h4 className="font-bold text-gray-900 text-[15px] leading-tight truncate mb-1.5">
+					{user.name}
+				</h4>
+
+				{/* Badges row */}
+				<div className="flex flex-wrap items-center gap-1.5 mb-3">
+					<span className={`inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded-lg border ${roleInfo.color}`}>
+						<LuBadgeCheck className="w-3 h-3" />
+						{roleInfo.label}
+					</span>
+					{user.status_kepegawaian && (
+						<span className="inline-flex items-center px-2 py-1 text-[11px] font-medium rounded-lg bg-gray-50 text-gray-600 border border-gray-100">
+							{user.status_kepegawaian?.replace(/_/g, ' ')}
+						</span>
+					)}
+				</div>
+
+				{/* Info rows */}
+				<div className="space-y-1.5">
+					<InfoRow icon={LuMail}>{user.email}</InfoRow>
+
+					{user.nip && <InfoRow icon={LuHash} mono>{user.nip}</InfoRow>}
+
+					{user.jabatan && <InfoRow icon={LuBriefcase}>{user.jabatan}</InfoRow>}
+
+					{user.bidang && <InfoRow icon={LuBuilding2}>{user.bidang.nama}</InfoRow>}
+
+					{user.desa && <InfoRow icon={LuHouse}>{user.desa.nama}</InfoRow>}
+
+					{user.kecamatan && <InfoRow icon={LuMapPin}>{user.kecamatan.nama}</InfoRow>}
+
+					{user.dinas && <InfoRow icon={LuBuilding2}>{user.dinas.nama_dinas}</InfoRow>}
+
+					{(user.tempat_lahir || user.tanggal_lahir) && (
+						<InfoRow icon={LuCake}>
+							{[
+								user.tempat_lahir,
+								user.tanggal_lahir ? new Date(user.tanggal_lahir).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : null
+							].filter(Boolean).join(', ')}
+						</InfoRow>
+					)}
+
+					{/* Password */}
+					{canManage && (
+						<div className="flex items-center gap-2 min-w-0">
+							<div className="flex-shrink-0 w-5 h-5 rounded-md bg-gray-50 flex items-center justify-center">
+								<LuLock className="h-3 w-3 text-gray-400" />
+							</div>
+							{user.plain_password ? (
+								<div className="flex items-center gap-1 flex-1 min-w-0">
+									<span className="text-[13px] font-mono text-gray-500 bg-gray-50 px-1.5 py-0.5 rounded-md truncate">
+										{visiblePasswords[user.id] ? user.plain_password : '••••••••'}
+									</span>
+									<button
+										onClick={() => togglePasswordVisibility(user.id)}
+										className="flex-shrink-0 w-5 h-5 rounded-md hover:bg-gray-100 flex items-center justify-center transition-colors"
+									>
+										{visiblePasswords[user.id] ? <LuEyeOff className="h-3 w-3 text-gray-400" /> : <LuEye className="h-3 w-3 text-gray-400" />}
+									</button>
+								</div>
+							) : (
+								<span className="text-[13px] text-gray-400 italic">Tidak tersedia</span>
+							)}
+						</div>
+					)}
+				</div>
+			</div>
+
+			{/* Bottom action bar — visible on hover */}
+			{canManage && (
+				<div className="px-4 pb-3 pt-0 opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 transition-all duration-300">
+					<div className="flex flex-wrap items-center justify-center gap-1.5 bg-gray-50/80 backdrop-blur-sm rounded-xl p-2">
+						<button onClick={() => onEditRole(user)} title="Ubah Role"
+							className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors">
+							<LuShield className="h-3.5 w-3.5" />
+							<span>Role</span>
+						</button>
+						<button onClick={() => onEditBidang(user)} title="Ubah Bidang"
+							className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-purple-600 bg-purple-50 hover:bg-purple-100 transition-colors">
+							<LuBuilding2 className="h-3.5 w-3.5" />
+							<span>Bidang</span>
+						</button>
+						{user.pegawai_id && (
+							<>
+								<button onClick={() => onEditTanggalLahir(user)} title="Tanggal Lahir"
+									className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-orange-600 bg-orange-50 hover:bg-orange-100 transition-colors">
+									<LuCake className="h-3.5 w-3.5" />
+									<span>Tgl Lahir</span>
+								</button>
+								<button onClick={() => onEditJabatan(user)} title="Jabatan & Status"
+									className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-teal-600 bg-teal-50 hover:bg-teal-100 transition-colors">
+									<LuPenLine className="h-3.5 w-3.5" />
+									<span>Jabatan</span>
+								</button>
+							</>
+						)}
+						<div className="w-px h-5 bg-gray-200" />
+						<button onClick={() => onResetPassword(user)} title="Reset Password"
+							className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-amber-600 bg-amber-50 hover:bg-amber-100 transition-colors">
+							<LuKey className="h-3.5 w-3.5" />
+							<span>Reset</span>
+						</button>
+						<button onClick={() => onDeleteUser(user)} title="Hapus"
+							className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-red-600 bg-red-50 hover:bg-red-100 transition-colors">
+							<LuTrash2 className="h-3.5 w-3.5" />
+							<span>Hapus</span>
+						</button>
+					</div>
+				</div>
+			)}
+		</div>
+	);
+};
 
 const UserManagementPage = () => {
 	const [users, setUsers] = useState([]);
@@ -43,7 +317,8 @@ const UserManagementPage = () => {
 	const [showResetModal, setShowResetModal] = useState(false);
 	const [showRoleModal, setShowRoleModal] = useState(false);
 	const [showBidangModal, setShowBidangModal] = useState(false);
-	const [showRoleManagement, setShowRoleManagement] = useState(false);
+	const [showTanggalLahirModal, setShowTanggalLahirModal] = useState(false);
+	const [showJabatanModal, setShowJabatanModal] = useState(false);
 	const [selectedUser, setSelectedUser] = useState(null);
 	const [isResettingPassword, setIsResettingPassword] = useState(false);
 	
@@ -54,7 +329,6 @@ const UserManagementPage = () => {
 	const [activeTab, setActiveTab] = useState("superadmin"); // Tab aktif
 	const [bidangList, setBidangList] = useState([]); // List bidang untuk dropdown
 	const [dinasList, setDinasList] = useState([]); // List dinas untuk dropdown
-	const [rolesList, setRolesList] = useState([]); // List roles dari API
 
 	// Pagination
 	const [currentPage, setCurrentPage] = useState(1);
@@ -115,20 +389,10 @@ const UserManagementPage = () => {
 	// Fetch dinas list
 	const fetchDinasList = useCallback(async () => {
 		try {
-			const response = await api.get("/dinas/list");
+			const response = await api.get("/master/dinas");
 			setDinasList(response.data.data || []);
 		} catch (err) {
 			console.error("Error fetching dinas:", err);
-		}
-	}, []);
-
-	// Fetch roles list
-	const fetchRoles = useCallback(async () => {
-		try {
-			const response = await api.get("/roles");
-			setRolesList(response.data.data || []);
-		} catch (err) {
-			console.error("Error fetching roles:", err);
 		}
 	}, []);
 
@@ -136,8 +400,7 @@ const UserManagementPage = () => {
 		fetchUsers();
 		fetchBidangList();
 		fetchDinasList();
-		fetchRoles();
-	}, [fetchUsers, fetchBidangList, fetchDinasList, fetchRoles]);
+	}, [fetchUsers, fetchBidangList, fetchDinasList]);
 
 	// Handle user added
 	const handleUserAdded = () => {
@@ -209,8 +472,32 @@ const UserManagementPage = () => {
 		setShowBidangModal(true);
 	};
 
+	// Handle edit tanggal lahir
+	const handleEditTanggalLahir = (user) => {
+		setSelectedUser(user);
+		setShowTanggalLahirModal(true);
+	};
+
+	// Handle edit jabatan
+	const handleEditJabatan = (user) => {
+		setSelectedUser(user);
+		setShowJabatanModal(true);
+	};
+
 	const handleBidangUpdated = () => {
 		setShowBidangModal(false);
+		setSelectedUser(null);
+		fetchUsers();
+	};
+
+	const handleTanggalLahirUpdated = () => {
+		setShowTanggalLahirModal(false);
+		setSelectedUser(null);
+		fetchUsers();
+	};
+
+	const handleJabatanUpdated = () => {
+		setShowJabatanModal(false);
 		setSelectedUser(null);
 		fetchUsers();
 	};
@@ -251,34 +538,21 @@ const UserManagementPage = () => {
 		}
 	};
 
-	// Get role info - dynamic from API with fallback
+	// Get role info from schema
 	const getRoleInfo = (role) => {
-		// Try to find from API roles list
-		const apiRole = rolesList.find(r => r.name === role);
-		if (apiRole) {
-			const colorMap = {
-				red: "bg-red-100 text-red-700 border-red-200",
-				blue: "bg-blue-100 text-blue-700 border-blue-200",
-				indigo: "bg-indigo-100 text-indigo-700 border-indigo-200",
-				green: "bg-green-100 text-green-700 border-green-200",
-				teal: "bg-teal-100 text-teal-700 border-teal-200",
-				gray: "bg-gray-100 text-gray-700 border-gray-200",
-				purple: "bg-purple-100 text-purple-700 border-purple-200",
-				cyan: "bg-cyan-100 text-cyan-700 border-cyan-200",
-				pink: "bg-pink-100 text-pink-700 border-pink-200",
-				yellow: "bg-yellow-100 text-yellow-700 border-yellow-200",
-				emerald: "bg-emerald-100 text-emerald-700 border-emerald-200",
-				violet: "bg-violet-100 text-violet-700 border-violet-200",
-				amber: "bg-amber-100 text-amber-700 border-amber-200",
-				orange: "bg-orange-100 text-orange-700 border-orange-200",
-			};
-			return {
-				label: apiRole.label,
-				color: colorMap[apiRole.color] || "bg-gray-100 text-gray-700 border-gray-200"
-			};
-		}
-		// Fallback for unknown roles
-		return { label: role, color: "bg-gray-100 text-gray-700 border-gray-200" };
+		const roleMap = {
+			superadmin: { label: "Super Admin", color: "bg-red-100 text-red-700 border-red-200" },
+			kepala_dinas: { label: "Kepala Dinas", color: "bg-indigo-100 text-indigo-700 border-indigo-200" },
+			sekretaris_dinas: { label: "Sekretaris Dinas", color: "bg-blue-100 text-blue-700 border-blue-200" },
+			kepala_bidang: { label: "Kepala Bidang", color: "bg-teal-100 text-teal-700 border-teal-200" },
+			ketua_tim: { label: "Ketua Tim", color: "bg-cyan-100 text-cyan-700 border-cyan-200" },
+			pegawai: { label: "Pegawai", color: "bg-gray-100 text-gray-700 border-gray-200" },
+			desa: { label: "Admin Desa", color: "bg-emerald-100 text-emerald-700 border-emerald-200" },
+			kecamatan: { label: "Admin Kecamatan", color: "bg-violet-100 text-violet-700 border-violet-200" },
+			dinas_terkait: { label: "Dinas Terkait", color: "bg-amber-100 text-amber-700 border-amber-200" },
+			verifikator_dinas: { label: "Verifikator Dinas", color: "bg-orange-100 text-orange-700 border-orange-200" },
+		};
+		return roleMap[role] || { label: role, color: "bg-gray-100 text-gray-700 border-gray-200" };
 	};
 
 	// Get icon for role
@@ -673,17 +947,6 @@ const UserManagementPage = () => {
 						)}
 					</div>
 
-					{/* Kelola Role Button - Superadmin only */}
-					{currentUser?.role === "superadmin" && (
-						<button
-							onClick={() => setShowRoleManagement(true)}
-							className="flex items-center justify-center gap-2 px-5 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-200 shadow-lg hover:shadow-xl"
-						>
-							<LuShield className="h-5 w-5" />
-							<span className="font-semibold">Kelola Role</span>
-						</button>
-					)}
-
 					<button
 						onClick={() => setShowAddModal(true)}
 						className="flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl"
@@ -737,176 +1000,22 @@ const UserManagementPage = () => {
 
 					{/* Users Grid */}
 					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-						{paginatedUsers.map((user) => {
-						const roleInfo = getRoleInfo(user.role);
-						const RoleIcon = getRoleIcon(user.role);
-
-						return (
-							<div
+						{paginatedUsers.map((user) => (
+							<UserCard
 								key={user.id}
-								className="bg-white rounded-2xl shadow-md hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100 group"
-							>
-								{/* Header with gradient based on role */}
-								<div className={`p-5 ${
-									user.role === "superadmin" ? "bg-gradient-to-br from-red-500 to-pink-600" :
-									user.role === "kepala_dinas" ? "bg-gradient-to-br from-blue-500 to-indigo-600" :
-									user.role === "sekretaris_dinas" ? "bg-gradient-to-br from-indigo-500 to-purple-600" :
-									user.role === "kepala_bidang" ? "bg-gradient-to-br from-green-500 to-teal-600" :
-									user.role === "ketua_tim" ? "bg-gradient-to-br from-teal-500 to-cyan-600" :
-									user.role === "desa" ? "bg-gradient-to-br from-emerald-500 to-green-600" :
-									user.role === "kecamatan" ? "bg-gradient-to-br from-violet-500 to-purple-600" :
-									user.role === "dinas_terkait" ? "bg-gradient-to-br from-amber-500 to-orange-600" :
-									"bg-gradient-to-br from-gray-500 to-slate-600"
-								}`}>
-									<div className="flex items-center gap-3">
-										<div className="h-14 w-14 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-											<RoleIcon className="h-7 w-7 text-white" />
-										</div>
-										<div className="flex-1 min-w-0">
-											<h4 className="font-bold text-white text-lg truncate">
-												{user.name}
-											</h4>
-											<span className={`inline-block px-3 py-1 text-xs bg-white/20 backdrop-blur-sm text-white rounded-full font-medium`}>
-												{roleInfo.label}
-											</span>
-										</div>
-									</div>
-								</div>
-
-								{/* Body */}
-								<div className="p-5 space-y-4">
-									<div className="space-y-3">
-										<div className="flex items-center gap-3 text-gray-600">
-											<div className="h-9 w-9 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
-												<LuMail className="h-4 w-4" />
-											</div>
-											<span className="text-sm truncate flex-1">{user.email}</span>
-										</div>
-
-										{user.bidang && (
-											<div className="flex items-center gap-3 text-gray-600">
-												<div className="h-9 w-9 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
-													<LuBuilding2 className="h-4 w-4 text-purple-600" />
-												</div>
-												<span className="text-sm truncate flex-1">{user.bidang.nama}</span>
-											</div>
-										)}
-
-										{user.desa && (
-											<div className="flex items-center gap-3 text-gray-600">
-												<div className="h-9 w-9 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0">
-													<LuHouse className="h-4 w-4 text-emerald-600" />
-												</div>
-												<span className="text-sm truncate flex-1">{user.desa.nama}</span>
-											</div>
-										)}
-
-										{user.kecamatan && (
-											<div className="flex items-center gap-3 text-gray-600">
-												<div className="h-9 w-9 bg-violet-100 rounded-lg flex items-center justify-center flex-shrink-0">
-													<LuMapPin className="h-4 w-4 text-violet-600" />
-												</div>
-												<span className="text-sm truncate flex-1">{user.kecamatan.nama}</span>
-											</div>
-										)}
-
-										{user.dinas && (
-											<div className="flex items-center gap-3 text-gray-600">
-												<div className="h-9 w-9 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
-													<LuBuilding2 className="h-4 w-4 text-amber-600" />
-												</div>
-												<span className="text-sm truncate flex-1">{user.dinas.nama_dinas}</span>
-											</div>
-										)}
-
-										<div className="flex items-center gap-3 text-gray-600">
-											<div className="h-9 w-9 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-												<LuCalendar className="h-4 w-4 text-blue-600" />
-											</div>
-											<span className="text-sm">
-												{new Date(user.created_at).toLocaleDateString("id-ID", {
-													day: "numeric",
-													month: "short",
-													year: "numeric",
-												})}
-											</span>
-										</div>
-
-									{/* Password Display */}
-									{canManage && (
-										<div className="flex items-center gap-3 text-gray-600">
-											<div className="h-9 w-9 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
-												<LuLock className="h-4 w-4 text-amber-600" />
-											</div>
-											<div className="flex items-center gap-2 flex-1 min-w-0">
-												{user.plain_password ? (
-													<>
-														<span className="text-sm font-mono bg-gray-100 px-2 py-0.5 rounded truncate">
-															{visiblePasswords[user.id] ? user.plain_password : '••••••••'}
-														</span>
-														<button
-															onClick={() => togglePasswordVisibility(user.id)}
-															className="p-1 hover:bg-gray-200 rounded transition-colors flex-shrink-0"
-															title={visiblePasswords[user.id] ? 'Sembunyikan password' : 'Lihat password'}
-														>
-															{visiblePasswords[user.id] ? (
-																<LuEyeOff className="h-4 w-4 text-gray-500" />
-															) : (
-																<LuEye className="h-4 w-4 text-gray-500" />
-															)}
-														</button>
-													</>
-												) : (
-													<span className="text-sm text-gray-400 italic">Tidak tersedia</span>
-												)}
-											</div>
-										</div>
-									)}
-								</div>
-
-								{/* Action Buttons */}
-								<div className="flex flex-wrap gap-2 pt-4 border-t border-gray-100">
-									{canManage && (
-										<>
-											<button
-												onClick={() => handleEditRole(user)}
-												className="flex flex-col items-center justify-center gap-1 p-3 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-all group/btn"
-												title="Ubah Role"
-											>
-												<LuShield className="h-5 w-5 group-hover/btn:scale-110 transition-transform" />
-												<span className="text-xs font-medium">Role</span>
-											</button>
-											<button
-												onClick={() => handleEditBidang(user)}
-												className="flex flex-col items-center justify-center gap-1 p-3 bg-purple-50 text-purple-600 rounded-xl hover:bg-purple-100 transition-all group/btn"
-												title="Ubah Bidang"
-											>
-												<LuBuilding2 className="h-5 w-5 group-hover/btn:scale-110 transition-transform" />
-												<span className="text-xs font-medium">Bidang</span>
-											</button>
-										</>
-									)}
-										<button
-											onClick={() => handleResetPassword(user)}
-											className="flex flex-col items-center justify-center gap-1 p-3 bg-amber-50 text-amber-600 rounded-xl hover:bg-amber-100 transition-all group/btn"
-											title="Reset Password"
-										>
-											<LuKey className="h-5 w-5 group-hover/btn:scale-110 transition-transform" />
-											<span className="text-xs font-medium">Reset</span>
-										</button>
-										<button
-											onClick={() => handleDeleteUser(user)}
-											className="flex flex-col items-center justify-center gap-1 p-3 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-all group/btn"
-											title="Hapus User"
-										>
-											<LuTrash2 className="h-5 w-5 group-hover/btn:scale-110 transition-transform" />
-											<span className="text-xs font-medium">Hapus</span>
-										</button>
-									</div>
-								</div>
-							</div>
-						);
-					})}
+								user={user}
+								canManage={canManage}
+								visiblePasswords={visiblePasswords}
+								togglePasswordVisibility={togglePasswordVisibility}
+								onEditRole={handleEditRole}
+								onEditBidang={handleEditBidang}
+								onEditTanggalLahir={handleEditTanggalLahir}
+								onEditJabatan={handleEditJabatan}
+								onResetPassword={handleResetPassword}
+								onDeleteUser={handleDeleteUser}
+								getRoleInfo={getRoleInfo}
+							/>
+						))}
 				</div>
 
 				{/* Pagination Controls */}
@@ -1029,15 +1138,30 @@ const UserManagementPage = () => {
 				/>
 			)}
 
-			{showRoleManagement && (
-				<RoleManagementModal
-					isOpen={showRoleManagement}
+			{showTanggalLahirModal && selectedUser && (
+				<EditTanggalLahirModal
+					isOpen={showTanggalLahirModal}
 					onClose={() => {
-						setShowRoleManagement(false);
-						fetchRoles(); // Refresh roles after management
+						setShowTanggalLahirModal(false);
+						setSelectedUser(null);
 					}}
+					onUpdated={handleTanggalLahirUpdated}
+					userData={selectedUser}
 				/>
 			)}
+
+			{showJabatanModal && selectedUser && (
+				<EditJabatanModal
+					isOpen={showJabatanModal}
+					onClose={() => {
+						setShowJabatanModal(false);
+						setSelectedUser(null);
+					}}
+					onUpdated={handleJabatanUpdated}
+					userData={selectedUser}
+				/>
+			)}
+
 		</div>
 	);
 };

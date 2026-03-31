@@ -171,20 +171,7 @@ const BIDANG_ROUTES = {
 
 // Bidang submenu configuration
 const BIDANG_SUBMENUS = {
-	2: [
-		{ label: 'Disposisi Surat', path: '/bidang/sekretariat/disposisi', icon: 'mail' },
-		{ label: 'Perjalanan Dinas', path: '/bidang/sekretariat/perjadin', icon: 'briefcase' },
-		{ label: 'Manajemen Pegawai', path: '/bidang/sekretariat/pegawai', icon: 'users' },
-		{ label: 'Jadwal Kegiatan', path: '/bidang/sekretariat/jadwal-kegiatan', icon: 'calendar' },
-		{ label: 'Kelola Notifikasi', path: '/bidang/sekretariat/notifikasi', icon: 'settings' },
-		{ label: 'Kelola Informasi', path: '/bidang/sekretariat/informasi', icon: 'image' },
-		{ label: 'Video Meeting', path: '/bidang/sekretariat/video-meeting', icon: 'video' },
-	],
-	3: [
-		{ label: 'Overview', path: '/bidang/spked', icon: 'chart' },
-		{ label: 'BUMDes', path: '/bidang/spked', icon: 'store', hash: 'bumdes' },
-		{ label: 'Bantuan Keuangan', path: '/bidang/spked', icon: 'dollar', hash: 'bankeu' },
-	],
+	3: [],
 	4: [
 		{ label: 'Alokasi Dana Desa', path: '/bidang/kkd/add', icon: 'dollar' },
 		{ label: 'Dana Desa', path: '/bidang/kkd/dd', icon: 'banknote' },
@@ -675,9 +662,22 @@ const DPMDStaffLayout = () => {
 								{!isSidebarCollapsed && (
 									<div className="flex-1 min-w-0">
 										<h3 className="font-semibold text-gray-800 text-sm truncate">{user.name || getDisplayName()}</h3>
-										<span className={`inline-block px-2 py-0.5 ${theme.badgeBg} ${theme.badgeText} rounded-full text-xs font-medium mt-1`}>
-											{getShortDisplayName()}
-										</span>
+										{user.jabatan && (
+											<p className="text-xs text-gray-500 truncate">{user.jabatan}</p>
+										)}
+										<div className="flex items-center gap-1.5 mt-1 flex-wrap">
+											<span className={`inline-block px-2 py-0.5 ${theme.badgeBg} ${theme.badgeText} rounded-full text-xs font-medium`}>
+												{getShortDisplayName()}
+											</span>
+											{user.status_kepegawaian && (
+												<span className="inline-block px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded-full text-[10px] font-medium">
+													{user.status_kepegawaian}
+												</span>
+											)}
+										</div>
+										{user.nip && (
+											<p className="text-[10px] text-gray-400 font-mono mt-0.5">NIP: {user.nip}</p>
+										)}
 									</div>
 								)}
 							</div>

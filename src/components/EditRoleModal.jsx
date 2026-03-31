@@ -4,35 +4,22 @@ import { LuX, LuShield, LuSave } from "react-icons/lu";
 import api from "../api";
 import Swal from "sweetalert2";
 
+const ROLE_OPTIONS = [
+	{ value: "superadmin", label: "Super Admin" },
+	{ value: "kepala_dinas", label: "Kepala Dinas" },
+	{ value: "sekretaris_dinas", label: "Sekretaris Dinas" },
+	{ value: "kepala_bidang", label: "Kepala Bidang" },
+	{ value: "ketua_tim", label: "Ketua Tim" },
+	{ value: "pegawai", label: "Pegawai" },
+	{ value: "desa", label: "Admin Desa" },
+	{ value: "kecamatan", label: "Admin Kecamatan" },
+	{ value: "dinas_terkait", label: "Dinas Terkait" },
+	{ value: "verifikator_dinas", label: "Verifikator Dinas" },
+];
+
 const EditRoleModal = ({ isOpen, onClose, onRoleUpdated, userData }) => {
 	const [selectedRole, setSelectedRole] = useState("");
 	const [loading, setLoading] = useState(false);
-	const [roleOptions, setRoleOptions] = useState([]);
-	const [loadingRoles, setLoadingRoles] = useState(true);
-
-	// Fetch roles from API
-	useEffect(() => {
-		if (isOpen) {
-			setLoadingRoles(true);
-			api.get("/roles")
-				.then((response) => {
-					const roles = response.data.data || [];
-					setRoleOptions(
-						roles.map((r) => ({
-							value: r.name,
-							label: r.label,
-							color: r.color || "gray",
-						}))
-					);
-				})
-				.catch((error) => {
-					console.error("Error fetching roles:", error);
-				})
-				.finally(() => {
-					setLoadingRoles(false);
-				});
-		}
-	}, [isOpen]);
 
 	useEffect(() => {
 		if (isOpen && userData) {
@@ -125,11 +112,11 @@ const EditRoleModal = ({ isOpen, onClose, onRoleUpdated, userData }) => {
 							value={selectedRole}
 							onChange={(e) => setSelectedRole(e.target.value)}
 							className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-base font-medium"
-							disabled={loading || loadingRoles}
+							disabled={loading}
 							required
 						>
-							<option value="">{loadingRoles ? "Memuat role..." : "-- Pilih Role --"}</option>
-							{roleOptions.map((role) => (
+							<option value="">-- Pilih Role --</option>
+							{ROLE_OPTIONS.map((role) => (
 								<option key={role.value} value={role.value}>
 									{role.label}
 								</option>
