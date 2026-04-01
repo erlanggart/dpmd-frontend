@@ -143,10 +143,14 @@ const PegawaiLayout = () => {
 		}
 	};
 
+	const isOnAbsensi = location.pathname.startsWith('/pegawai/absensi');
 	const bottomNavItems = [
 		{ path: "/pegawai/dashboard", label: "Home", icon: FiHome },
 		{ path: "/pegawai/absensi", label: "Presensi", icon: FiClock, isMain: true },
-		{ path: "/pegawai/menu", label: "Menu", icon: FiMenu, action: () => setShowMenu(true) },
+		...(isOnAbsensi
+			? [{ path: "/pegawai/absensi?tab=riwayat", label: "Riwayat", icon: FiCalendar }]
+			: [{ path: "/pegawai/profile", label: "Profil", icon: FiUser }]
+		),
 	];
 
 	return (
@@ -157,12 +161,16 @@ const PegawaiLayout = () => {
 			</main>
 
 			{/* Bottom Navigation - Orange Theme */}
-			<nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-orange-200 shadow-lg z-50">
+			<nav className="fixed bottom-3 left-3 right-3 bg-white border border-orange-200 shadow-lg z-50 rounded-2xl">
 				<div className="max-w-lg mx-auto px-4">
 					<div className="flex items-end justify-around py-2">
 						{bottomNavItems.map((item, index) => {
-							const isActive = location.pathname === item.path || 
-								(item.path === '/pegawai/absensi' && location.pathname.startsWith('/pegawai/absensi'));
+							const itemPath = item.path.split('?')[0];
+							const itemQuery = item.path.includes('?') ? item.path.split('?')[1] : null;
+							const isActive = itemQuery
+								? location.pathname === itemPath && location.search === `?${itemQuery}`
+								: location.pathname === item.path || 
+									(item.path === '/pegawai/absensi' && location.pathname.startsWith('/pegawai/absensi') && !location.search);
 							const Icon = item.icon;
 							
 							// Main button (Jadwal Kegiatan) - larger & elevated

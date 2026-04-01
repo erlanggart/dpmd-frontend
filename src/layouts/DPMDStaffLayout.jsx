@@ -3,6 +3,7 @@
 // Supports both mobile (bottom nav) and desktop (sidebar) modes
 import React from "react";
 import { Outlet, Navigate, useNavigate, useLocation } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
 import { 
 	FiHome, FiUser, FiLogOut, FiMenu, FiMail, FiBell, 
@@ -12,6 +13,7 @@ import {
 } from "react-icons/fi";
 import { Landmark, Menu, ChevronLeft, ChevronDown } from "lucide-react";
 import AnimatedIcon from '../components/AnimatedIcon';
+import aksiCepatIcon from '../assets/aksi-cepat.png';
 import { performFullLogout } from "../utils/sessionPersistence";
 import { useConfirm } from "../hooks/useConfirm.jsx";
 import { subscribeToPushNotifications } from "../utils/pushNotifications";
@@ -198,6 +200,7 @@ const DPMDStaffLayout = () => {
 	const [notifications, setNotifications] = React.useState([]);
 	const [unreadCount, setUnreadCount] = React.useState(0);
 	const [hoveredItem, setHoveredItem] = React.useState(null);
+	const [showQuickAction, setShowQuickAction] = React.useState(false);
 	const [bidangSubmenuOpen, setBidangSubmenuOpen] = React.useState(false);
 	const [user, setUser] = React.useState(JSON.parse(localStorage.getItem("user") || "{}"));
 	
@@ -260,6 +263,11 @@ const DPMDStaffLayout = () => {
 			setUser(prev => ({ ...prev, status_kepegawaian: authUser.status_kepegawaian }));
 		}
 	}, [authUser]);
+
+	// Close quick action popup on navigation
+	React.useEffect(() => {
+		setShowQuickAction(false);
+	}, [location.pathname]);
 
 	// Load notifications from backend
 	const fetchNotifications = React.useCallback(async () => {
@@ -450,18 +458,26 @@ const DPMDStaffLayout = () => {
 	const ABSENSI_ELIGIBLE_STATUS = ['PPPK Paruh Waktu', 'Tenaga Alih Daya', 'Tenaga Keamanan', 'Tenaga Kebersihan'];
 	const userStatus = user.status_kepegawaian || authUser?.status_kepegawaian;
 	const isAbsensiEligible = ABSENSI_ELIGIBLE_STATUS.includes(userStatus);
-	const bottomNavItems = [
-		{ path: "/dpmd/dashboard", label: "Home", icon: FiHome },
-		isAbsensiEligible
-			? { path: "/dpmd/absensi", label: "Presensi", icon: FiClock, isMain: true }
-			: { 
+	const isOnAbsensi = location.pathname.startsWith('/dpmd/absensi');
+	const bottomNavItems = isAbsensiEligible
+		? [
+			{ path: "/dpmd/dashboard", label: "Home", icon: FiHome },
+			{ label: "Aksi Cepat", isMain: true, isQuickAction: true },
+			...(isOnAbsensi
+				? [{ path: "/dpmd/absensi?tab=riwayat", label: "Riwayat", icon: FiCalendar }]
+				: [{ path: `${config.basePath}/profile`, label: "Profil", icon: FiUser }]
+			),
+		]
+		: [
+			{ path: "/dpmd/dashboard", label: "Home", icon: FiHome },
+			{ 
 				path: userBidang?.path || "/dpmd/jadwal-kegiatan", 
 				label: userBidang?.name || "Bidang", 
 				icon: userBidang?.icon || FiCalendar, 
 				isMain: true 
 			},
-		{ path: `${config.basePath}/profile`, label: "Profil", icon: FiUser },
-	];
+			{ path: `${config.basePath}/profile`, label: "Profil", icon: FiUser },
+		];
 
 	// Sidebar nav items (includes profile and bidang)
 	const getSidebarNavItems = () => {
@@ -834,15 +850,102 @@ const DPMDStaffLayout = () => {
 
 			{/* Bottom Navigation - Mobile Only */}
 			{!isDesktop && (
-				<nav className={`fixed bottom-0 left-0 right-0 bg-white ${theme.borderColor} border-t shadow-lg z-50`}>
+				<nav className={`fixed bottom-3 left-3 right-3 bg-white border ${theme.borderColor} shadow-lg z-50 rounded-2xl`}>
 					<div className="max-w-lg mx-auto px-4">
 						<div className="flex items-end justify-around py-2">
 							{bottomNavItems.map((item, index) => {
-								const isActive = location.pathname === item.path ||
-									(item.isMain && location.pathname.startsWith(item.path));
+								const itemPath = item.path ? item.path.split('?')[0] : '';
+								const itemQuery = item.path && item.path.includes('?') ? item.path.split('?')[1] : null;
+								const isActive = item.path
+									? itemQuery
+										? location.pathname === itemPath && location.search === `?${itemQuery}`
+										: location.pathname === item.path ||
+											(item.isMain && location.pathname.startsWith(item.path))
+									: false;
 								const Icon = item.icon;
 								
-								// Main button (Jadwal Kegiatan) - larger & elevated
+								// Quick Action FAB (for absensi-eligible users)
+								if (item.isQuickAction) {
+									return (
+										<div key={index} className="relative flex flex-col items-center -mt-5">
+											{/* Quick Action Popup */}
+											<AnimatePresence>
+											{showQuickAction && (
+												<>
+													<motion.div 
+														initial={{ opacity: 0 }}
+														animate={{ opacity: 1 }}
+														exit={{ opacity: 0 }}
+														transition={{ duration: 0.2 }}
+														className="fixed inset-0 z-40 bg-black/10 backdrop-blur-[2px]"
+														onClick={() => setShowQuickAction(false)}
+													/>
+													<motion.div
+														initial={{ opacity: 0, y: 20, scale: 0.9 }}
+														animate={{ opacity: 1, y: 0, scale: 1 }}
+														exit={{ opacity: 0, y: 20, scale: 0.9 }}
+														transition={{ type: "spring", stiffness: 400, damping: 25 }}
+														className="absolute bottom-20 z-50 flex items-center gap-3"
+													>
+														{/* Bidang Button */}
+														<motion.button
+															initial={{ opacity: 0, x: -10 }}
+															animate={{ opacity: 1, x: 0 }}
+															exit={{ opacity: 0, x: -10 }}
+															transition={{ delay: 0.05 }}
+															whileTap={{ scale: 0.95 }}
+															onClick={() => {
+																setShowQuickAction(false);
+																navigate(userBidang?.path || "/dpmd/jadwal-kegiatan");
+															}}
+															className="flex items-center gap-2.5 bg-white rounded-2xl shadow-xl border border-slate-100 px-4 py-2.5 hover:scale-105 transition-transform"
+														>
+															<div className={`h-9 w-9 rounded-xl bg-gradient-to-br ${userBidang?.gradient || 'from-blue-500 to-indigo-600'} flex items-center justify-center`}>
+																<AnimatedIcon type={userBidang?.icon || 'briefcase'} isActive={true} className="w-5 h-5 text-white" />
+															</div>
+															<span className="text-sm font-semibold text-slate-700 whitespace-nowrap">{userBidang?.name || 'Bidang'}</span>
+														</motion.button>
+														{/* Absensi Button */}
+														<motion.button
+															initial={{ opacity: 0, x: 10 }}
+															animate={{ opacity: 1, x: 0 }}
+															exit={{ opacity: 0, x: 10 }}
+															transition={{ delay: 0.1 }}
+															whileTap={{ scale: 0.95 }}
+															onClick={() => {
+																setShowQuickAction(false);
+																navigate("/dpmd/absensi");
+															}}
+															className="flex items-center gap-2.5 bg-white rounded-2xl shadow-xl border border-slate-100 px-4 py-2.5 hover:scale-105 transition-transform"
+														>
+															<div className="h-9 w-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+																<FiClock className="w-5 h-5 text-white" />
+															</div>
+															<span className="text-sm font-semibold text-slate-700 whitespace-nowrap">Presensi</span>
+														</motion.button>
+													</motion.div>
+												</>
+											)}
+											</AnimatePresence>
+											{/* Main FAB Button */}
+											<button
+												onClick={() => setShowQuickAction(!showQuickAction)}
+												className={`flex items-center justify-center h-14 w-14 rounded-full shadow-lg transition-all duration-200 ${
+													showQuickAction
+														? 'bg-gradient-to-br from-slate-700 to-slate-900 scale-110 rotate-45'
+														: 'bg-gradient-to-br from-cyan-500 to-blue-600 hover:scale-105'
+												}`}
+											>
+												<img src={aksiCepatIcon} alt="Aksi Cepat" className={`h-7 w-7 brightness-0 invert transition-transform duration-200 ${showQuickAction ? '-rotate-45' : ''}`} />
+											</button>
+											<span className={`text-[11px] mt-1 font-semibold ${showQuickAction ? 'text-slate-700' : 'text-gray-500'}`}>
+												{showQuickAction ? 'Tutup' : item.label}
+											</span>
+										</div>
+									);
+								}
+
+								// Main button (Bidang) - larger & elevated (non-absensi users)
 								if (item.isMain) {
 									return (
 										<button
@@ -855,7 +958,7 @@ const DPMDStaffLayout = () => {
 													? `bg-gradient-to-br ${theme.gradientFrom} ${theme.gradientTo} text-white scale-110`
 													: `bg-gradient-to-br ${theme.gradientFrom} ${theme.gradientTo} text-white hover:scale-105`
 											}`}>
-												<Icon className="h-7 w-7" />
+												<AnimatedIcon type={Icon} isActive={isActive} className="w-7 h-7 text-white" />
 											</div>
 											<span className={`text-[11px] mt-1 font-semibold ${
 												isActive ? theme.activeText : 'text-gray-500'

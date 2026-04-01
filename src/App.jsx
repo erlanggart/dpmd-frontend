@@ -14,6 +14,7 @@ import { useAuth } from "./context/AuthContext";
 import { useThemeColor } from "./hooks/useThemeColor";
 import { DataCacheProvider } from "./context/DataCacheContext";
 import { EditModeProvider } from "./context/EditModeContext.jsx";
+import { AlertProvider } from "./components/AlertPopup";
 import PushNotificationInitializer from "./components/PushNotificationInitializer";
 import {
   registerServiceWorker,
@@ -721,6 +722,7 @@ function App() {
 
   return (
     <Router>
+      <AlertProvider>
       <DataCacheProvider>
         <EditModeProvider>
           <ThemeColorWrapper>
@@ -1277,6 +1279,7 @@ function App() {
           </ThemeColorWrapper>
         </EditModeProvider>
       </DataCacheProvider>
+      </AlertProvider>
     </Router>
   );
 }

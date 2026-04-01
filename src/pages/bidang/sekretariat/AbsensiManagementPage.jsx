@@ -1,13 +1,15 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Navigate } from "react-router-dom";
 import {
   FiSearch, FiFilter, FiChevronLeft, FiChevronRight,
   FiEdit2, FiTrash2, FiSettings, FiCalendar, FiClock,
   FiMapPin, FiCamera, FiUsers, FiX, FiSmartphone,
+  FiImage, FiSave, FiToggleLeft, FiToggleRight, FiUpload,
 } from "react-icons/fi";
 import { LuDownload } from "react-icons/lu";
 import api from "../../../api";
-import Swal from "sweetalert2";
+import API_CONFIG from "../../../config/api";
+import { showAlert } from "../../../components/AlertPopup";
 import { useAuth } from "../../../context/AuthContext";
 
 const STATUS_COLORS = {
@@ -39,6 +41,25 @@ const formatDate = (dateStr) => {
   });
 };
 
+// ─── Popup Type Config ───────────────────────────────────────
+const POPUP_TYPE_LABELS = {
+  masuk: "Absen Masuk", pulang: "Absen Pulang", wfh: "WFH",
+  dinas_luar: "Dinas Luar", wfa: "WFA", izin: "Izin", sakit: "Sakit", cuti: "Cuti",
+};
+
+const POPUP_TYPE_COLORS = {
+  masuk: "from-emerald-500 to-emerald-600", pulang: "from-blue-500 to-blue-600",
+  wfh: "from-teal-500 to-teal-600", dinas_luar: "from-violet-500 to-violet-600",
+  wfa: "from-indigo-500 to-indigo-600", izin: "from-amber-500 to-amber-600",
+  sakit: "from-rose-500 to-rose-600", cuti: "from-sky-500 to-sky-600",
+};
+
+const getStorageUrl = (imagePath) => {
+  if (!imagePath) return null;
+  const base = import.meta.env.VITE_IMAGE_BASE_URL || "http://127.0.0.1:3001";
+  return `${base}/storage/${imagePath}`;
+};
+
 const AbsensiManagementPage = () => {
   const { user } = useAuth();
 
@@ -59,6 +80,16 @@ const AbsensiManagementPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [editingRecord, setEditingRecord] = useState(null);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+
+  // Popup management state
+  const [popupMessages, setPopupMessages] = useState([]);
+  const [popupLoading, setPopupLoading] = useState(false);
+  const [popupEditingType, setPopupEditingType] = useState(null);
+  const [popupEditForm, setPopupEditForm] = useState({ title: "", message: "", is_active: true });
+  const [popupPreviewImage, setPopupPreviewImage] = useState(null);
+  const [popupImageBase64, setPopupImageBase64] = useState(null);
+  const [popupSaving, setPopupSaving] = useState(false);
+  const popupFileInputRef = useRef(null);
 
   const fetchRekap = useCallback(async () => {
     try {
@@ -96,19 +127,31 @@ const AbsensiManagementPage = () => {
     }
   }, []);
 
+  const fetchPopupMessages = useCallback(async () => {
+    try {
+      setPopupLoading(true);
+      const res = await api.get("/absensi/admin/success-messages");
+      setPopupMessages(res.data.data || []);
+    } catch (err) {
+      console.error("Error fetching popup messages:", err);
+    } finally {
+      setPopupLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (activeTab === "rekap") fetchRekap();
     else if (activeTab === "pegawai") fetchPegawai();
     else if (activeTab === "settings") fetchSettings();
-  }, [activeTab, fetchRekap, fetchPegawai, fetchSettings]);
+    else if (activeTab === "popup") fetchPopupMessages();
+  }, [activeTab, fetchRekap, fetchPegawai, fetchSettings, fetchPopupMessages]);
 
   const handleDeleteRecord = async (id) => {
-    const confirm = await Swal.fire({
+    const confirm = await showAlert({
       title: "Hapus Data Absensi?",
       text: "Data yang dihapus tidak dapat dikembalikan",
       icon: "warning",
       showCancelButton: true,
-      confirmButtonColor: "#ef4444",
       cancelButtonText: "Batal",
       confirmButtonText: "Hapus",
     });
@@ -116,32 +159,106 @@ const AbsensiManagementPage = () => {
 
     try {
       await api.delete(`/absensi/admin/${id}`);
-      Swal.fire({ icon: "success", title: "Berhasil", text: "Data absensi berhasil dihapus", timer: 1500, showConfirmButton: false });
+      showAlert({ icon: "success", title: "Berhasil", text: "Data absensi berhasil dihapus", timer: 1500 });
       fetchRekap();
     } catch (err) {
-      Swal.fire({ icon: "error", title: "Gagal", text: err.response?.data?.message || "Gagal menghapus data" });
+      showAlert({ icon: "error", title: "Gagal", text: err.response?.data?.message || "Gagal menghapus data" });
     }
   };
 
   const handleUpdateRecord = async (id, data) => {
     try {
       await api.put(`/absensi/admin/${id}`, data);
-      Swal.fire({ icon: "success", title: "Berhasil", text: "Data absensi berhasil diupdate", timer: 1500, showConfirmButton: false });
+      showAlert({ icon: "success", title: "Berhasil", text: "Data absensi berhasil diupdate", timer: 1500 });
       setEditingRecord(null);
       fetchRekap();
     } catch (err) {
-      Swal.fire({ icon: "error", title: "Gagal", text: err.response?.data?.message || "Gagal update data" });
+      showAlert({ icon: "error", title: "Gagal", text: err.response?.data?.message || "Gagal update data" });
     }
   };
 
   const handleSaveSettings = async (newSettings) => {
     try {
       await api.put("/absensi/admin/settings", newSettings);
-      Swal.fire({ icon: "success", title: "Berhasil", text: "Settings berhasil disimpan", timer: 1500, showConfirmButton: false });
+      showAlert({ icon: "success", title: "Berhasil", text: "Settings berhasil disimpan", timer: 1500 });
       setShowSettingsModal(false);
       fetchSettings();
     } catch (err) {
-      Swal.fire({ icon: "error", title: "Gagal", text: err.response?.data?.message || "Gagal menyimpan settings" });
+      showAlert({ icon: "error", title: "Gagal", text: err.response?.data?.message || "Gagal menyimpan settings" });
+    }
+  };
+
+  // ─── Popup Management Handlers ───────────────────────────
+  const startPopupEdit = (msg) => {
+    setPopupEditingType(msg.type);
+    setPopupEditForm({ title: msg.title || "", message: msg.message || "", is_active: msg.is_active });
+    setPopupPreviewImage(msg.image_path ? getStorageUrl(msg.image_path) : null);
+    setPopupImageBase64(null);
+  };
+
+  const cancelPopupEdit = () => {
+    setPopupEditingType(null);
+    setPopupEditForm({ title: "", message: "", is_active: true });
+    setPopupPreviewImage(null);
+    setPopupImageBase64(null);
+  };
+
+  const handlePopupImageChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      showAlert({ icon: "warning", title: "File Terlalu Besar", text: "Ukuran file melebihi batas maksimal 5MB" });
+      return;
+    }
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPopupImageBase64(reader.result);
+      setPopupPreviewImage(reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handlePopupSave = async () => {
+    if (!popupEditingType) return;
+    setPopupSaving(true);
+    try {
+      const body = { title: popupEditForm.title, message: popupEditForm.message, is_active: popupEditForm.is_active };
+      if (popupImageBase64) body.image_base64 = popupImageBase64;
+      await api.put(`/absensi/admin/success-messages/${popupEditingType}`, body);
+      await fetchPopupMessages();
+      cancelPopupEdit();
+      showAlert({ icon: "success", title: "Berhasil!", text: "Popup berhasil diupdate", timer: 1500 });
+    } catch (err) {
+      showAlert({ icon: "error", title: "Gagal", text: err.response?.data?.message || "Gagal menyimpan" });
+    } finally {
+      setPopupSaving(false);
+    }
+  };
+
+  const handlePopupRemoveImage = async () => {
+    if (!popupEditingType) return;
+    const result = await showAlert({ title: "Hapus Gambar?", text: "Gambar popup akan dihapus", icon: "warning", showCancelButton: true, confirmButtonText: "Ya, Hapus", cancelButtonText: "Batal" });
+    if (!result.isConfirmed) return;
+    setPopupSaving(true);
+    try {
+      await api.put(`/absensi/admin/success-messages/${popupEditingType}`, { remove_image: true });
+      await fetchPopupMessages();
+      setPopupPreviewImage(null);
+      setPopupImageBase64(null);
+      showAlert({ icon: "success", title: "Berhasil!", text: "Gambar berhasil dihapus", timer: 1500 });
+    } catch (err) {
+      showAlert({ icon: "error", title: "Gagal", text: "Gagal menghapus gambar" });
+    } finally {
+      setPopupSaving(false);
+    }
+  };
+
+  const togglePopupActive = async (msg) => {
+    try {
+      await api.put(`/absensi/admin/success-messages/${msg.type}`, { is_active: !msg.is_active });
+      await fetchPopupMessages();
+    } catch (err) {
+      showAlert({ icon: "error", title: "Gagal", text: "Gagal mengubah status" });
     }
   };
 
@@ -149,35 +266,27 @@ const AbsensiManagementPage = () => {
   const handleSetDevice = async (user) => {
     if (user.device_id) {
       // Device already registered — show info with option to reset
-      const result = await Swal.fire({
+      const result = await showAlert({
         title: "Device Absensi",
-        html:
-          `<p class="text-sm text-gray-600 mb-2">Pegawai: <strong>${user.pegawai?.nama_pegawai || user.name}</strong></p>` +
-          `<p class="text-xs text-emerald-600 mb-1">✅ Device terdaftar</p>` +
-          `<p class="text-[10px] text-gray-400 mb-3 break-all"><code>${user.device_id}</code></p>` +
-          `<p class="text-xs text-gray-500">Device otomatis terdaftar saat pegawai login. Hapus jika pegawai ganti HP.</p>`,
+        text: `Pegawai: ${user.pegawai?.nama_pegawai || user.name}\n\n✅ Device terdaftar\n\nDevice otomatis terdaftar saat pegawai login. Hapus jika pegawai ganti HP.`,
+        icon: "info",
         showCancelButton: true,
         cancelButtonText: "Tutup",
         confirmButtonText: "Hapus Device",
-        confirmButtonColor: "#ef4444",
       });
       if (!result.isConfirmed) return;
       try {
         await api.put(`/absensi/admin/set-device/${user.id}`, { device_id: null });
-        Swal.fire({ icon: "success", title: "Berhasil", text: "Device berhasil dihapus. Pegawai perlu login ulang untuk mendaftarkan device baru.", timer: 2000, showConfirmButton: false });
+        showAlert({ icon: "success", title: "Berhasil", text: "Device berhasil dihapus. Pegawai perlu login ulang untuk mendaftarkan device baru.", timer: 2000 });
         fetchPegawai();
       } catch (err) {
-        Swal.fire({ icon: "error", title: "Gagal", text: err.response?.data?.message || "Gagal menghapus device" });
+        showAlert({ icon: "error", title: "Gagal", text: err.response?.data?.message || "Gagal menghapus device" });
       }
     } else {
-      // Not registered — just inform
-      Swal.fire({
+      showAlert({
         icon: "info",
         title: "Device Belum Terdaftar",
-        html:
-          `<p class="text-sm text-gray-600 mb-2">Pegawai: <strong>${user.pegawai?.nama_pegawai || user.name}</strong></p>` +
-          `<p class="text-xs text-gray-500">Device akan otomatis terdaftar saat pegawai <b>login</b> atau membuka halaman <b>Absensi</b> dari HP-nya.</p>`,
-        confirmButtonText: "OK",
+        text: `Pegawai: ${user.pegawai?.nama_pegawai || user.name}\n\nDevice akan otomatis terdaftar saat pegawai login atau membuka halaman Absensi dari HP-nya.`,
       });
     }
   };
@@ -223,6 +332,7 @@ const AbsensiManagementPage = () => {
             {[
               { key: "rekap", label: "Rekap Absensi", icon: FiCalendar },
               { key: "pegawai", label: "Daftar Pegawai", icon: FiUsers },
+              { key: "popup", label: "Popup Absensi", icon: FiImage },
             ].map((tab) => (
               <button
                 key={tab.key}
@@ -465,6 +575,150 @@ const AbsensiManagementPage = () => {
                 </tbody>
               </table>
             </div>
+          </div>
+        )}
+
+        {activeTab === "popup" && (
+          <div>
+            {popupLoading ? (
+              <div className="flex justify-center items-center py-16">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {Object.keys(POPUP_TYPE_LABELS).map((type) => {
+                  const msg = popupMessages.find((m) => m.type === type) || {
+                    type, title: POPUP_TYPE_LABELS[type] + " Berhasil!", message: "", image_path: null, is_active: true,
+                  };
+                  const isEditing = popupEditingType === type;
+                  const colors = POPUP_TYPE_COLORS[type];
+
+                  return (
+                    <div
+                      key={type}
+                      className={`bg-white rounded-2xl shadow-sm border transition-all duration-300 overflow-hidden ${
+                        isEditing ? "border-orange-300 ring-2 ring-orange-100" : "border-gray-200 hover:shadow-md"
+                      }`}
+                    >
+                      {/* Card Header */}
+                      <div className={`bg-gradient-to-r ${colors} px-4 py-3 flex items-center justify-between`}>
+                        <div className="flex items-center gap-2">
+                          <span className="text-white font-bold text-sm">{POPUP_TYPE_LABELS[type]}</span>
+                          {msg.is_active ? (
+                            <span className="bg-white/20 text-white text-[10px] px-2 py-0.5 rounded-full font-medium">Aktif</span>
+                          ) : (
+                            <span className="bg-black/20 text-white/70 text-[10px] px-2 py-0.5 rounded-full font-medium">Nonaktif</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => togglePopupActive(msg)}
+                            className="p-1.5 rounded-lg hover:bg-white/20 transition-colors text-white"
+                            title={msg.is_active ? "Nonaktifkan" : "Aktifkan"}
+                          >
+                            {msg.is_active ? <FiToggleRight className="h-5 w-5" /> : <FiToggleLeft className="h-5 w-5" />}
+                          </button>
+                          {!isEditing && (
+                            <button
+                              onClick={() => startPopupEdit(msg)}
+                              className="p-1.5 rounded-lg hover:bg-white/20 transition-colors text-white"
+                            >
+                              <FiEdit2 className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Card Body */}
+                      <div className="p-4">
+                        {isEditing ? (
+                          <div className="space-y-3">
+                            {/* Image Upload */}
+                            <div>
+                              <label className="text-xs font-semibold text-gray-600 mb-1 block">Gambar Popup</label>
+                              {popupPreviewImage ? (
+                                <div className="relative">
+                                  <img src={popupPreviewImage} alt="Preview" className="w-full h-40 object-contain rounded-xl bg-gray-50 border border-gray-100" />
+                                  <button onClick={handlePopupRemoveImage} className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600 transition-colors">
+                                    <FiTrash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => popupFileInputRef.current?.click()}
+                                  className="w-full h-32 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center gap-2 text-gray-400 hover:border-orange-400 hover:text-orange-500 transition-colors"
+                                >
+                                  <FiUpload className="h-6 w-6" />
+                                  <span className="text-xs font-medium">Upload Gambar (max 5MB)</span>
+                                </button>
+                              )}
+                              <input ref={popupFileInputRef} type="file" accept="image/*" onChange={handlePopupImageChange} className="hidden" />
+                              {popupPreviewImage && (
+                                <button onClick={() => popupFileInputRef.current?.click()} className="mt-2 text-xs text-orange-600 hover:text-orange-700 font-medium">
+                                  Ganti Gambar
+                                </button>
+                              )}
+                            </div>
+
+                            {/* Title */}
+                            <div>
+                              <label className="text-xs font-semibold text-gray-600 mb-1 block">Judul</label>
+                              <input
+                                type="text"
+                                value={popupEditForm.title}
+                                onChange={(e) => setPopupEditForm((f) => ({ ...f, title: e.target.value }))}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                placeholder="Judul popup..."
+                              />
+                            </div>
+
+                            {/* Message */}
+                            <div>
+                              <label className="text-xs font-semibold text-gray-600 mb-1 block">Pesan / Kata-kata</label>
+                              <textarea
+                                value={popupEditForm.message}
+                                onChange={(e) => setPopupEditForm((f) => ({ ...f, message: e.target.value }))}
+                                rows={3}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
+                                placeholder="Pesan yang ditampilkan..."
+                              />
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex gap-2 justify-end pt-1">
+                              <button onClick={cancelPopupEdit} className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                                <FiX className="h-4 w-4 inline mr-1" />Batal
+                              </button>
+                              <button
+                                onClick={handlePopupSave}
+                                disabled={popupSaving}
+                                className="px-4 py-1.5 text-sm bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 flex items-center gap-1"
+                              >
+                                {popupSaving ? <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" /> : <FiSave className="h-4 w-4" />}
+                                Simpan
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div>
+                            {msg.image_path && (
+                              <img src={getStorageUrl(msg.image_path)} alt={msg.title} className="w-full h-32 object-contain rounded-xl bg-gray-50 border border-gray-100 mb-3" />
+                            )}
+                            {!msg.image_path && (
+                              <div className="w-full h-20 rounded-xl bg-gray-50 border border-gray-100 mb-3 flex items-center justify-center">
+                                <FiImage className="h-8 w-8 text-gray-200" />
+                              </div>
+                            )}
+                            <h4 className="font-bold text-gray-800 text-sm mb-1">{msg.title || "-"}</h4>
+                            <p className="text-gray-500 text-xs leading-relaxed">{msg.message || "Belum ada pesan"}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
       </div>
