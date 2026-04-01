@@ -128,24 +128,20 @@ const UserCard = ({
 										</div>
 										<span className="font-medium">Ubah Bidang</span>
 									</button>
-									{user.pegawai_id && (
-										<>
-											<button onClick={() => { onEditTanggalLahir(user); setMenuOpen(false); }}
-												className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-700 rounded-xl transition-colors">
-												<div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
-													<LuCake className="h-4 w-4 text-orange-600" />
-												</div>
-												<span className="font-medium">Tanggal Lahir</span>
-											</button>
-											<button onClick={() => { onEditJabatan(user); setMenuOpen(false); }}
-												className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 hover:bg-teal-50 hover:text-teal-700 rounded-xl transition-colors">
-												<div className="w-8 h-8 rounded-lg bg-teal-100 flex items-center justify-center">
-													<LuPenLine className="h-4 w-4 text-teal-600" />
-												</div>
-												<span className="font-medium">Jabatan & Status</span>
-											</button>
-										</>
-									)}
+									<button onClick={() => { onEditTanggalLahir(user); setMenuOpen(false); }}
+										className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-700 rounded-xl transition-colors">
+										<div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
+											<LuCake className="h-4 w-4 text-orange-600" />
+										</div>
+										<span className="font-medium">Tanggal Lahir</span>
+									</button>
+									<button onClick={() => { onEditJabatan(user); setMenuOpen(false); }}
+										className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 hover:bg-teal-50 hover:text-teal-700 rounded-xl transition-colors">
+										<div className="w-8 h-8 rounded-lg bg-teal-100 flex items-center justify-center">
+											<LuPenLine className="h-4 w-4 text-teal-600" />
+										</div>
+										<span className="font-medium">Jabatan & Status</span>
+									</button>
 									<div className="my-1.5 border-t border-gray-100" />
 									<button onClick={() => { onResetPassword(user); setMenuOpen(false); }}
 										className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 hover:bg-amber-50 hover:text-amber-700 rounded-xl transition-colors">
@@ -284,20 +280,16 @@ const UserCard = ({
 							<LuCamera className="h-3.5 w-3.5" />
 							<span>Foto</span>
 						</button>
-						{user.pegawai_id && (
-							<>
-								<button onClick={() => onEditTanggalLahir(user)} title="Tanggal Lahir"
-									className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-orange-600 bg-orange-50 hover:bg-orange-100 transition-colors">
-									<LuCake className="h-3.5 w-3.5" />
-									<span>Tgl Lahir</span>
-								</button>
-								<button onClick={() => onEditJabatan(user)} title="Jabatan & Status"
-									className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-teal-600 bg-teal-50 hover:bg-teal-100 transition-colors">
-									<LuPenLine className="h-3.5 w-3.5" />
-									<span>Jabatan</span>
-								</button>
-							</>
-						)}
+						<button onClick={() => onEditTanggalLahir(user)} title="Tanggal Lahir"
+							className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-orange-600 bg-orange-50 hover:bg-orange-100 transition-colors">
+							<LuCake className="h-3.5 w-3.5" />
+							<span>Tgl Lahir</span>
+						</button>
+						<button onClick={() => onEditJabatan(user)} title="Jabatan & Status"
+							className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-teal-600 bg-teal-50 hover:bg-teal-100 transition-colors">
+							<LuPenLine className="h-3.5 w-3.5" />
+							<span>Jabatan</span>
+						</button>
 						<div className="w-px h-5 bg-gray-200" />
 						<button onClick={() => onResetPassword(user)} title="Reset Password"
 							className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-amber-600 bg-amber-50 hover:bg-amber-100 transition-colors">
