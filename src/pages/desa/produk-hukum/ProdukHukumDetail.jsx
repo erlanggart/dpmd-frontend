@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import api from "../../../api";
 import Swal from "sweetalert2";
 import {
@@ -34,58 +34,86 @@ const ProdukHukumDetail = () => {
 	const [isUpdating, setIsUpdating] = useState(false);
 	const [pdfBlobUrl, setPdfBlobUrl] = useState(null);
 
-	const fetchProdukHukum = async () => {
-		setLoading(true);
-		try {
-			const response = await api.get(`/produk-hukum/${id}`);
-			if (response.data && response.data.success) {
-				setProdukHukum(response.data.data);
-				if (response.data.data.file) {
-					fetchPdfFile(response.data.data.id);
-				}
-			} else {
-				setError("Gagal mengambil data produk hukum.");
-			}
-		} catch (err) {
-			setError("Gagal memuat data produk hukum.");
-			console.error(err);
-		} finally {
-			setLoading(false);
-		}
-	};
+	useEffect(() => {
+		let isActive = true;
 
-	const fetchPdfFile = async (produkHukumId) => {
-		try {
-			const token = localStorage.getItem("expressToken");
-			const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:3001/api';
-			
-			const response = await fetch(`${apiUrl}/produk-hukum/${produkHukumId}/download`, {
-				method: 'GET',
-				headers: {
-					'Authorization': `Bearer ${token}`
+		const fetchProdukHukum = async () => {
+			setLoading(true);
+			setError(null);
+			setProdukHukum(null);
+			setPdfBlobUrl((currentBlobUrl) => {
+				if (currentBlobUrl) {
+					URL.revokeObjectURL(currentBlobUrl);
 				}
+				return null;
 			});
 
-			if (response.ok) {
-				const blob = await response.blob();
-				const blobUrl = URL.createObjectURL(blob);
-				setPdfBlobUrl(blobUrl);
-			} else {
-				console.error('Failed to fetch PDF:', response.statusText);
+			try {
+				const response = await api.get(`/produk-hukum/${id}`);
+				if (!isActive) return;
+
+				if (response.data && response.data.success) {
+					const detail = response.data.data;
+					setProdukHukum(detail);
+
+					if (detail.file) {
+						try {
+							const token = localStorage.getItem("expressToken");
+							const apiUrl =
+								import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:3001/api";
+
+							const pdfResponse = await fetch(
+								`${apiUrl}/produk-hukum/${detail.id}/download`,
+								{
+									method: "GET",
+									headers: {
+										Authorization: `Bearer ${token}`,
+									},
+								}
+							);
+
+							if (!isActive) return;
+
+							if (pdfResponse.ok) {
+								const blob = await pdfResponse.blob();
+								if (!isActive) return;
+								const blobUrl = URL.createObjectURL(blob);
+								setPdfBlobUrl(blobUrl);
+							} else {
+								console.error("Failed to fetch PDF:", pdfResponse.statusText);
+							}
+						} catch (fetchError) {
+							console.error("Error fetching PDF file:", fetchError);
+						}
+					}
+				} else {
+					setError("Gagal mengambil data produk hukum.");
+				}
+			} catch (err) {
+				if (!isActive) return;
+				setError("Gagal memuat data produk hukum.");
+				console.error(err);
+			} finally {
+				if (isActive) {
+					setLoading(false);
+				}
 			}
-		} catch (error) {
-			console.error('Error fetching PDF file:', error);
-		}
-	};
+		};
+
+		fetchProdukHukum();
+
+		return () => {
+			isActive = false;
+		};
+	}, [id]);
 
 	useEffect(() => {
-		fetchProdukHukum();
 		return () => {
 			if (pdfBlobUrl) {
 				URL.revokeObjectURL(pdfBlobUrl);
 			}
 		};
-	}, [id]);
+	}, [pdfBlobUrl]);
 
 	const handleStatusChange = async () => {
 		const newStatus =
@@ -156,15 +184,21 @@ const ProdukHukumDetail = () => {
 	const jc = JENIS_COLOR[produkHukum.jenis] || { bg: "bg-slate-50", text: "text-slate-700" };
 	const isBerlaku = produkHukum.status_peraturan === "berlaku";
 
-	const InfoRow = ({ icon: Icon, label, children }) => (
-		<div className="flex items-start gap-3 py-2.5">
-			<Icon className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
-			<div className="min-w-0">
-				<p className="text-xs text-slate-500 mb-0.5">{label}</p>
-				<div className="text-sm text-slate-800">{children}</div>
+	const InfoRow = ({ icon, label, children }) => {
+		const IconComponent = icon;
+
+		return (
+			<div className="flex items-start gap-3 py-2.5">
+				{IconComponent ? (
+					<IconComponent className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
+				) : null}
+				<div className="min-w-0">
+					<p className="text-xs text-slate-500 mb-0.5">{label}</p>
+					<div className="text-sm text-slate-800">{children}</div>
+				</div>
 			</div>
-		</div>
-	);
+		);
+	};
 
 	return (
 		<div className="space-y-5">
