@@ -98,3 +98,10 @@ export const toggleKelembagaanVerification = (type, id, status, catatan_verifika
 	if (catatan_verifikasi) body.catatan_verifikasi = catatan_verifikasi;
 	return api.put(endpoint, body, { params });
 };
+
+// Ajukan ulang verifikasi (desa resubmit after ditolak → unverified)
+export const ajukanUlangVerifikasi = (type, id) => {
+	const endpoint = `/desa/${type}/${id}/ajukan-ulang`;
+	const params = getAdminParams();
+	return api.put(endpoint, {}, { params });
+};

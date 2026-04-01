@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
 	Search,
 	Filter,
 	RefreshCw,
-	MapPin,
 	ChevronDown,
 	AlertCircle,
 	Loader2,
@@ -11,8 +11,6 @@ import {
 	FileText,
 	CheckCircle,
 	XCircle,
-	X,
-	Download,
 	ChevronLeft,
 	ChevronRight,
 	Scale,
@@ -51,6 +49,7 @@ const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent
 };
 
 const ProdukHukumPage = () => {
+	const navigate = useNavigate();
 	const [loading, setLoading] = useState(true);
 	const [data, setData] = useState([]);
 	const [stats, setStats] = useState(null);
@@ -66,8 +65,6 @@ const ProdukHukumPage = () => {
 	const [kecamatanList, setKecamatanList] = useState([]);
 	const [desaList, setDesaList] = useState([]);
 	const [showFilters, setShowFilters] = useState(false);
-	const [selectedItem, setSelectedItem] = useState(null);
-	const [showDetail, setShowDetail] = useState(false);
 
 	useEffect(() => {
 		fetchKecamatanList();
@@ -169,13 +166,7 @@ const ProdukHukumPage = () => {
 	};
 
 	const viewDetail = (item) => {
-		setSelectedItem(item);
-		setShowDetail(true);
-	};
-
-	const formatDate = (dateStr) => {
-		if (!dateStr) return '-';
-		return new Date(dateStr).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+		navigate(`/pemdes/produk-hukum/${item.id}`);
 	};
 
 	const getJenisLabel = (singkatan) => {
@@ -545,103 +536,6 @@ const ProdukHukumPage = () => {
 				)}
 			</div>
 
-			{/* Detail Modal */}
-			{showDetail && selectedItem && (
-				<div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-					<div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-						<div className="flex items-center justify-between p-4 border-b border-gray-200">
-							<h2 className="text-lg font-bold text-gray-900">Detail Produk Hukum</h2>
-							<button onClick={() => setShowDetail(false)} className="p-1 hover:bg-gray-100 rounded-lg">
-								<X className="h-5 w-5 text-gray-500" />
-							</button>
-						</div>
-						<div className="p-4 space-y-4">
-							<div className="grid grid-cols-2 gap-4">
-								<div>
-									<p className="text-xs text-gray-500 mb-1">Judul</p>
-									<p className="text-sm font-medium text-gray-900">{selectedItem.judul}</p>
-								</div>
-								<div>
-									<p className="text-xs text-gray-500 mb-1">Nomor</p>
-									<p className="text-sm font-medium text-gray-900">{selectedItem.nomor}</p>
-								</div>
-								<div>
-									<p className="text-xs text-gray-500 mb-1">Jenis</p>
-									<span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getJenisBadgeColor(selectedItem.singkatan_jenis)}`}>
-										{selectedItem.jenis_label || getJenisLabel(selectedItem.singkatan_jenis)}
-									</span>
-								</div>
-								<div>
-									<p className="text-xs text-gray-500 mb-1">Tahun</p>
-									<p className="text-sm font-medium text-gray-900">{selectedItem.tahun}</p>
-								</div>
-								<div>
-									<p className="text-xs text-gray-500 mb-1">Tanggal Penetapan</p>
-									<p className="text-sm font-medium text-gray-900">{formatDate(selectedItem.tanggal_penetapan)}</p>
-								</div>
-								<div>
-									<p className="text-xs text-gray-500 mb-1">Tempat Penetapan</p>
-									<p className="text-sm font-medium text-gray-900">{selectedItem.tempat_penetapan || '-'}</p>
-								</div>
-								<div>
-									<p className="text-xs text-gray-500 mb-1">Status</p>
-									<span
-										className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-											selectedItem.status_peraturan === 'berlaku'
-												? 'bg-green-100 text-green-700'
-												: 'bg-red-100 text-red-700'
-										}`}
-									>
-										{selectedItem.status_peraturan === 'berlaku' ? 'Berlaku' : 'Dicabut'}
-									</span>
-								</div>
-								<div>
-									<p className="text-xs text-gray-500 mb-1">Bidang Hukum</p>
-									<p className="text-sm font-medium text-gray-900">{selectedItem.bidang_hukum || '-'}</p>
-								</div>
-								<div>
-									<p className="text-xs text-gray-500 mb-1">Desa</p>
-									<p className="text-sm font-medium text-gray-900">
-										{selectedItem.desa?.nama || '-'}
-										{selectedItem.desa?.kecamatan?.nama && (
-											<span className="text-gray-500 font-normal"> - Kec. {selectedItem.desa.kecamatan.nama}</span>
-										)}
-									</p>
-								</div>
-								<div>
-									<p className="text-xs text-gray-500 mb-1">Sumber</p>
-									<p className="text-sm font-medium text-gray-900">{selectedItem.sumber || '-'}</p>
-								</div>
-							</div>
-							{selectedItem.subjek && (
-								<div>
-									<p className="text-xs text-gray-500 mb-1">Subjek</p>
-									<p className="text-sm text-gray-900">{selectedItem.subjek}</p>
-								</div>
-							)}
-							{selectedItem.keterangan_status && (
-								<div>
-									<p className="text-xs text-gray-500 mb-1">Keterangan Status</p>
-									<p className="text-sm text-gray-900">{selectedItem.keterangan_status}</p>
-								</div>
-							)}
-							{selectedItem.file && (
-								<div className="pt-2 border-t border-gray-200">
-									<a
-										href={`${import.meta.env.VITE_API_BASE_URL}/produk-hukum/${selectedItem.id}/download`}
-										target="_blank"
-										rel="noopener noreferrer"
-										className="inline-flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg text-sm hover:bg-teal-700 transition"
-									>
-										<Download className="h-4 w-4" />
-										Download Dokumen
-									</a>
-								</div>
-							)}
-						</div>
-					</div>
-				</div>
-			)}
 		</div>
 	);
 };

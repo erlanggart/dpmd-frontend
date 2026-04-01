@@ -56,7 +56,7 @@ const getPengurusRoutePath = (user, pengurusId) => {
 };
 
 // Komponen untuk kartu jabatan individual
-const JabatanCard = ({ jabatan, pengurusList, user }) => {
+const JabatanCard = ({ jabatan, pengurusList, user, onAddPengurus, showAddButton }) => {
 	const [isExpanded, setIsExpanded] = useState(true);
 
 	const getJabatanIcon = (jabatanName) => {
@@ -112,6 +112,18 @@ const JabatanCard = ({ jabatan, pengurusList, user }) => {
 						<span className="px-3 py-1 bg-gradient-to-r from-emerald-100 to-green-100 text-emerald-700 text-xs font-medium rounded-full">
 							{pengurusList.length} Aktif
 						</span>
+					)}
+					{showAddButton && (
+						<button
+							onClick={(e) => {
+								e.stopPropagation();
+								onAddPengurus?.(jabatan);
+							}}
+							className="flex items-center space-x-1.5 px-3 py-1.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 transform hover:scale-105 transition-all duration-200 shadow-sm hover:shadow-md text-xs font-medium"
+						>
+							<LuPlus className="w-3.5 h-3.5" />
+							<span>Tambah</span>
+						</button>
 					)}
 					{isExpanded ? (
 						<LuChevronUp className="w-5 h-5 text-gray-400" />
@@ -356,15 +368,6 @@ const PengurusJabatanList = ({
 								</span>
 							</button>
 						)}
-						{canManagePengurus && showAddButton && !showHistory && (
-							<button
-								onClick={() => onAddPengurus?.()}
-								className="flex items-center space-x-2 px-4 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 transform hover:scale-105 transition-all duration-200 shadow-md hover:shadow-lg"
-							>
-								<LuPlus className="w-4 h-4" />
-								<span className="font-medium">Tambah Pengurus</span>
-							</button>
-						)}
 					</div>
 				</div>
 			</div>
@@ -379,6 +382,8 @@ const PengurusJabatanList = ({
 								jabatan={jabatan}
 								pengurusList={pengurusList}
 								user={user}
+								onAddPengurus={onAddPengurus}
+								showAddButton={canManagePengurus && showAddButton && !showHistory}
 							/>
 						))}
 					</div>

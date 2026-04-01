@@ -11,14 +11,48 @@ import {
 	FaCheck,
 	FaSpinner,
 } from "react-icons/fa";
+import {
+	LuChevronDown,
+	LuSearch,
+	LuCheck,
+	LuLock,
+	LuFileText,
+	LuBookOpen,
+} from "react-icons/lu";
 import Swal from "sweetalert2";
-import SearchableProdukHukumSelect from "../../shared/SearchableProdukHukumSelect";
-import { getProdukHukumList } from "../../../api/aparaturDesaApi";
+import { getProdukHukums } from "../../../services/api";
 import { getJabatanOptions } from "../../../constants/jabatanMapping";
 
 // Helper function for optional fields
 const emptyToUndef = (schema) =>
 	z.preprocess((v) => (v === "" || v === null ? undefined : v), schema);
+
+const toUppercaseString = (value) =>
+	typeof value === "string" ? value.toUpperCase() : value;
+
+const normalizeJenisKelaminValue = (value) => {
+	if (!value) return "";
+	const normalized = String(value).replace(/_/g, "-").toUpperCase();
+	return ["LAKI-LAKI", "PEREMPUAN"].includes(normalized) ? normalized : "";
+};
+
+const normalizePengurusFormValues = (values = {}) => ({
+	...values,
+	nama_lengkap: toUppercaseString(values.nama_lengkap || ""),
+	tempat_lahir: toUppercaseString(values.tempat_lahir || ""),
+	jenis_kelamin: normalizeJenisKelaminValue(values.jenis_kelamin),
+	status_perkawinan: toUppercaseString(values.status_perkawinan || ""),
+	alamat: toUppercaseString(values.alamat || ""),
+	pendidikan: toUppercaseString(values.pendidikan || ""),
+	agama: toUppercaseString(values.agama || ""),
+	golongan_darah: toUppercaseString(values.golongan_darah || ""),
+	jabatan: toUppercaseString(values.jabatan || ""),
+	nomor_buku_nikah: toUppercaseString(values.nomor_buku_nikah || ""),
+});
+
+const forceUppercaseInput = (event) => {
+	event.target.value = event.target.value.toUpperCase();
+};
 
 // Zod validation schema with comprehensive frontend validation
 const pengurusSchema = z.object({
@@ -27,44 +61,40 @@ const pengurusSchema = z.object({
 		.min(1, "Nama lengkap wajib diisi")
 		.min(2, "Nama lengkap minimal 2 karakter")
 		.max(255, "Nama lengkap maksimal 255 karakter"),
-	nik: emptyToUndef(
-		z
-			.string()
-			.length(16, "NIK harus 16 digit")
-			.regex(/^\d+$/, "NIK hanya boleh berisi angka")
-			.optional()
-	),
-	tempat_lahir: emptyToUndef(
-		z.string().max(255, "Tempat lahir maksimal 255 karakter").optional()
-	),
-	tanggal_lahir: emptyToUndef(
-		z
-			.string()
-			.refine((date) => {
-				if (!date) return true;
-				const birthDate = new Date(date);
-				const today = new Date();
-				const age = today.getFullYear() - birthDate.getFullYear();
-				return age >= 17 && age <= 100;
-			}, "Usia harus antara 17-100 tahun")
-			.optional()
-	),
-	jenis_kelamin: emptyToUndef(z.enum(["Laki-laki", "Perempuan"]).optional()),
-	status_perkawinan: emptyToUndef(z.string().optional()),
+	nik: z
+		.string()
+		.min(1, "NIK wajib diisi")
+		.length(16, "NIK harus 16 digit")
+		.regex(/^\d+$/, "NIK hanya boleh berisi angka"),
+	tempat_lahir: z
+		.string()
+		.min(1, "Tempat lahir wajib diisi")
+		.max(255, "Tempat lahir maksimal 255 karakter"),
+	tanggal_lahir: z
+		.string()
+		.min(1, "Tanggal lahir wajib diisi")
+		.refine((date) => {
+			const birthDate = new Date(date);
+			const today = new Date();
+			const age = today.getFullYear() - birthDate.getFullYear();
+			return age >= 17 && age <= 100;
+		}, "Usia harus antara 17-100 tahun"),
+	jenis_kelamin: z.enum(["LAKI-LAKI", "PEREMPUAN"], { required_error: "Jenis kelamin wajib diisi" }),
+	status_perkawinan: z.string().min(1, "Status perkawinan wajib diisi"),
 	alamat: emptyToUndef(
 		z.string().max(1000, "Alamat maksimal 1000 karakter").optional()
 	),
-	no_telepon: emptyToUndef(
-		z
-			.string()
-			.regex(
-				/^(\+62|62|0)[0-9]{8,13}$/,
-				"Format nomor telepon tidak valid (contoh: 081234567890)"
-			)
-			.max(32, "Nomor telepon maksimal 32 karakter")
-			.optional()
-	),
+	no_telepon: z
+		.string()
+		.min(1, "Nomor telepon wajib diisi")
+		.regex(
+			/^(\+62|62|0)[0-9]{8,13}$/,
+			"Format nomor telepon tidak valid (contoh: 081234567890)"
+		)
+		.max(32, "Nomor telepon maksimal 32 karakter"),
 	pendidikan: emptyToUndef(z.string().optional()),
+	agama: z.string().min(1, "Agama wajib diisi"),
+	golongan_darah: z.string().min(1, "Golongan darah wajib diisi"),
 	jabatan: z.string().min(1, "Jabatan wajib diisi"),
 	tanggal_mulai_jabatan: z
 		.string()
@@ -74,22 +104,33 @@ const pengurusSchema = z.object({
 			const today = new Date();
 			return selectedDate <= today;
 		}, "Tanggal mulai jabatan tidak boleh di masa depan"),
-	tanggal_akhir_jabatan: emptyToUndef(z.string().optional()),
-	status_jabatan: z.enum(["aktif", "selesai"]).default("aktif"),
+	tanggal_akhir_jabatan: z.string().min(1, "Tanggal akhir jabatan wajib diisi"),
+	status_jabatan: z.enum(["aktif", "nonaktif"]).default("aktif"),
 	produk_hukum_id: emptyToUndef(z.string().optional()),
+	nomor_buku_nikah: emptyToUndef(z.string().max(100, "Nomor buku nikah maksimal 100 karakter").optional()),
 }).refine(
 	(data) => {
 		// Cross-field validation: end date must be after start date
-		if (!data.tanggal_akhir_jabatan || !data.tanggal_mulai_jabatan) {
-			return true; // Skip validation if either date is missing
-		}
 		const endDate = new Date(data.tanggal_akhir_jabatan);
 		const startDate = new Date(data.tanggal_mulai_jabatan);
 		return endDate > startDate;
 	},
 	{
 		message: "Tanggal akhir harus setelah tanggal mulai jabatan",
-		path: ["tanggal_akhir_jabatan"], // This will show the error on the end date field
+		path: ["tanggal_akhir_jabatan"],
+	}
+).refine(
+	(data) => {
+		// Nomor buku nikah wajib diisi untuk Ketua RT/RW yang menikah
+		const isKetuaRtRw = data.jabatan === "KETUA RT" || data.jabatan === "KETUA RW";
+		if (isKetuaRtRw && data.status_perkawinan === "MENIKAH") {
+			return !!data.nomor_buku_nikah;
+		}
+		return true;
+	},
+	{
+		message: "Nomor buku nikah wajib diisi untuk Ketua RT/RW yang sudah menikah",
+		path: ["nomor_buku_nikah"],
 	}
 );
 
@@ -100,7 +141,8 @@ export default function PengurusForm({
 	editData = null,
 	kelembagaanType,
 	kelembagaanId,
-	desaId,
+	kelembagaanName,
+	defaultJabatan,
 }) {
 	// Get image base URL from environment
 	const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
@@ -110,11 +152,12 @@ export default function PengurusForm({
 		handleSubmit,
 		control,
 		reset,
+		watch,
 		setError,
 		formState: { errors, isSubmitting },
 	} = useForm({
 		resolver: zodResolver(pengurusSchema),
-		defaultValues: {
+		defaultValues: normalizePengurusFormValues({
 			nama_lengkap: "",
 			nik: "",
 			tempat_lahir: "",
@@ -124,42 +167,65 @@ export default function PengurusForm({
 			alamat: "",
 			no_telepon: "",
 			pendidikan: "",
-			jabatan: "",
+			agama: "",
+			golongan_darah: "",
+			jabatan: defaultJabatan || "",
 			tanggal_mulai_jabatan: "",
 			tanggal_akhir_jabatan: "",
 			status_jabatan: "aktif",
 			produk_hukum_id: "",
-		},
+			nomor_buku_nikah: "",
+		}),
 	});
 
 	// State
 	const [produkHukumList, setProdukHukumList] = useState([]);
+	const [loadingPh, setLoadingPh] = useState(false);
+	const [phSearchTerm, setPhSearchTerm] = useState("");
+	const [showPhDropdown, setShowPhDropdown] = useState(false);
 	const [avatar, setAvatar] = useState(null);
 	const [avatarPreview, setAvatarPreview] = useState(null);
 	const [avatarError, setAvatarError] = useState("");
 	const fileInputRef = useRef(null);
 
-	// Load Produk Hukum list filtered by desa
+	// Watch status_perkawinan and jabatan for conditional buku nikah field
+	const watchedStatusPerkawinan = watch("status_perkawinan");
+	const watchedJabatan = watch("jabatan");
+	const isKetuaRtOrRw = ["KETUA RT", "KETUA RW"].includes(
+		(watchedJabatan || "").toUpperCase()
+	);
+	const showBukuNikah =
+		isKetuaRtOrRw && (watchedStatusPerkawinan || "").toUpperCase() === "MENIKAH";
+
+	// Load Produk Hukum list - only SK type with status berlaku
 	useEffect(() => {
-		if (!desaId) return;
-		
+		if (!isOpen) return;
+		let mounted = true;
 		const loadProdukHukum = async () => {
+			setLoadingPh(true);
 			try {
-				// Filter produk hukum by desa_id to only show relevant documents
-				const response = await getProdukHukumList({ all: 'true', desa_id: desaId });
-				const data = response?.data?.data;
-				// Handle both array response and paginated response
-				setProdukHukumList(Array.isArray(data) ? data : (data?.data || []));
+				const response = await getProdukHukums({
+					all: true,
+					jenis: "Keputusan Kepala Desa",
+					status_peraturan: "berlaku",
+				});
+				if (mounted) {
+					const data = response?.data?.data;
+					setProdukHukumList(Array.isArray(data) ? data : []);
+				}
 			} catch (error) {
 				console.error("Error loading produk hukum:", error);
-				setProdukHukumList([]); // Ensure it's always an array
+				if (mounted) setProdukHukumList([]);
+			} finally {
+				if (mounted) setLoadingPh(false);
 			}
 		};
 		loadProdukHukum();
-	}, [desaId]); // Reset form when editData changes
+		return () => { mounted = false; };
+	}, [isOpen]); // Reset form when editData changes
 	useEffect(() => {
 		if (editData) {
-			reset({
+			reset(normalizePengurusFormValues({
 				nama_lengkap: editData.nama_lengkap || "",
 				nik: editData.nik || "",
 				tempat_lahir: editData.tempat_lahir || "",
@@ -169,22 +235,45 @@ export default function PengurusForm({
 				alamat: editData.alamat || "",
 				no_telepon: editData.no_telepon || "",
 				pendidikan: editData.pendidikan || "",
+				agama: editData.agama || "",
+				golongan_darah: editData.golongan_darah || "",
 				jabatan: editData.jabatan || "",
 				tanggal_mulai_jabatan: editData.tanggal_mulai_jabatan || "",
 				tanggal_akhir_jabatan: editData.tanggal_akhir_jabatan || "",
 				status_jabatan: editData.status_jabatan || "aktif",
 				produk_hukum_id: editData.produk_hukum_id || "",
-			});
+				nomor_buku_nikah: editData.nomor_buku_nikah || "",
+			}));
 
 			if (editData.avatar) {
 				setAvatarPreview(`${imageBaseUrl}/uploads/${editData.avatar}`);
 			}
 		} else {
-			reset();
+			reset(normalizePengurusFormValues({
+				nama_lengkap: "",
+				nik: "",
+				tempat_lahir: "",
+				tanggal_lahir: "",
+				jenis_kelamin: "",
+				status_perkawinan: "",
+				alamat: "",
+				no_telepon: "",
+				pendidikan: "",
+				agama: "",
+				golongan_darah: "",
+				jabatan: defaultJabatan || "",
+				tanggal_mulai_jabatan: "",
+				tanggal_akhir_jabatan: "",
+				status_jabatan: "aktif",
+				produk_hukum_id: "",
+				nomor_buku_nikah: "",
+			}));
 			setAvatarPreview(null);
 		}
 		setAvatar(null);
-	}, [editData, reset, imageBaseUrl]);
+		setPhSearchTerm("");
+		setShowPhDropdown(false);
+	}, [editData, reset, imageBaseUrl, defaultJabatan]);
 
 	// Validate avatar file
 	const validateAvatar = (file) => {
@@ -294,6 +383,7 @@ export default function PengurusForm({
 	const onFormSubmit = async (formData) => {
 		console.log("🚀 Form submission started", new Date().toISOString());
 		const startTime = performance.now();
+		const normalizedFormData = normalizePengurusFormValues(formData);
 		
 		try {
 			// Validate all data before submit
@@ -325,7 +415,7 @@ export default function PengurusForm({
 			console.log("📝 Form data info:", {
 				hasAvatar: !!avatar,
 				avatarSize: avatar?.size,
-				fieldCount: Object.keys(formData).length
+				fieldCount: Object.keys(normalizedFormData).length
 			});
 
 			const submitData = new FormData();
@@ -337,19 +427,19 @@ export default function PengurusForm({
 
 			// Add form fields with proper mapping
 			// Skip pengurusable_type and pengurusable_id as they will be added separately with proper mapping
-			Object.keys(formData).forEach((key) => {
+			Object.keys(normalizedFormData).forEach((key) => {
 				// Skip these fields - they will be added separately
 				if (key === 'pengurusable_type' || key === 'pengurusable_id') {
 					return;
 				}
 				
 				if (
-					formData[key] !== "" &&
-					formData[key] !== null &&
-					formData[key] !== undefined
+					normalizedFormData[key] !== "" &&
+					normalizedFormData[key] !== null &&
+					normalizedFormData[key] !== undefined
 				) {
 					const backendFieldName = fieldMapping[key] || key;
-					submitData.append(backendFieldName, formData[key]);
+					submitData.append(backendFieldName, normalizedFormData[key]);
 				}
 			});
 
@@ -498,7 +588,7 @@ export default function PengurusForm({
 									{editData ? "Edit Pengurus" : "Tambah Pengurus Baru"}
 								</h2>
 								<p className="text-indigo-100 text-sm mt-1">
-									{kelembagaanType?.toUpperCase()} - Lengkapi data pengurus dengan benar
+									{kelembagaanName || kelembagaanType?.toUpperCase()} {defaultJabatan && !editData ? `— ${defaultJabatan}` : ""}
 								</p>
 							</div>
 						</div>
@@ -623,7 +713,8 @@ export default function PengurusForm({
 											<input
 												type="text"
 												{...register("nama_lengkap")}
-												className="w-full bg-white/80 backdrop-blur-sm"
+												onInput={forceUppercaseInput}
+												className="w-full bg-white/80 backdrop-blur-sm uppercase"
 												placeholder="Nama lengkap pengurus"
 											/>
 										</div>
@@ -637,7 +728,7 @@ export default function PengurusForm({
 
 									{/* NIK */}
 									<div>
-										<label className="block text-sm font-semibold text-gray-800 mb-1.5">NIK</label>
+										<label className="block text-sm font-semibold text-gray-800 mb-1.5">NIK <span className="text-red-500">*</span></label>
 										<div className="input-group">
 											<input
 												type="text"
@@ -659,7 +750,7 @@ export default function PengurusForm({
 
 									{/* No Telepon */}
 									<div>
-										<label className="block text-sm font-semibold text-gray-800 mb-1.5">No. Telepon</label>
+										<label className="block text-sm font-semibold text-gray-800 mb-1.5">No. Telepon <span className="text-red-500">*</span></label>
 										<div className="input-group">
 											<input
 												type="tel"
@@ -697,12 +788,13 @@ export default function PengurusForm({
 						<div className="grid grid-cols-1 md:grid-cols-2 gap-5">
 							{/* Tempat Lahir */}
 							<div>
-								<label className="block text-sm font-semibold text-gray-800 mb-1.5">Tempat Lahir</label>
+								<label className="block text-sm font-semibold text-gray-800 mb-1.5">Tempat Lahir <span className="text-red-500">*</span></label>
 								<div className="input-group">
 									<input
 										type="text"
 										{...register("tempat_lahir")}
-										className="w-full bg-white/80 backdrop-blur-sm"
+										onInput={forceUppercaseInput}
+										className="w-full bg-white/80 backdrop-blur-sm uppercase"
 										placeholder="Tempat lahir"
 									/>
 								</div>
@@ -716,7 +808,7 @@ export default function PengurusForm({
 
 							{/* Tanggal Lahir */}
 							<div>
-								<label className="block text-sm font-semibold text-gray-800 mb-1.5">Tanggal Lahir</label>
+								<label className="block text-sm font-semibold text-gray-800 mb-1.5">Tanggal Lahir <span className="text-red-500">*</span></label>
 								<div className="input-group">
 									<input
 										type="date"
@@ -734,24 +826,24 @@ export default function PengurusForm({
 
 							{/* Jenis Kelamin */}
 							<div>
-								<label className="block text-sm font-semibold text-gray-800 mb-1.5">Jenis Kelamin</label>
+								<label className="block text-sm font-semibold text-gray-800 mb-1.5">Jenis Kelamin <span className="text-red-500">*</span></label>
 								<div className="input-group">
 									<select
 										{...register("jenis_kelamin")}
-										className="w-full bg-white/80 backdrop-blur-sm text-gray-900 focus:outline-none focus:ring-0"
+										className="w-full bg-white/80 backdrop-blur-sm text-gray-900 focus:outline-none focus:ring-0 uppercase"
 									>
-										<option value="">Pilih jenis kelamin</option>
+										<option value="">PILIH JENIS KELAMIN</option>
 										<option
-											value="Laki-laki"
+											value="LAKI-LAKI"
 											className="text-gray-900 bg-white"
 										>
-											Laki-laki
+											LAKI-LAKI
 										</option>
 										<option
-											value="Perempuan"
+											value="PEREMPUAN"
 											className="text-gray-900 bg-white"
 										>
-											Perempuan
+											PEREMPUAN
 										</option>
 									</select>
 								</div>
@@ -765,33 +857,33 @@ export default function PengurusForm({
 
 							{/* Status Perkawinan */}
 							<div>
-								<label className="block text-sm font-semibold text-gray-800 mb-1.5">Status Perkawinan</label>
+								<label className="block text-sm font-semibold text-gray-800 mb-1.5">Status Perkawinan <span className="text-red-500">*</span></label>
 								<div className="input-group">
 									<select
 										{...register("status_perkawinan")}
-										className="w-full bg-white/80 backdrop-blur-sm text-gray-900 focus:outline-none focus:ring-0"
+										className="w-full bg-white/80 backdrop-blur-sm text-gray-900 focus:outline-none focus:ring-0 uppercase"
 									>
-										<option value="">Pilih status perkawinan</option>
+										<option value="">PILIH STATUS PERKAWINAN</option>
 										<option
-											value="Belum Menikah"
+											value="BELUM MENIKAH"
 											className="text-gray-900 bg-white"
 										>
-											Belum Menikah
+											BELUM MENIKAH
 										</option>
-										<option value="Menikah" className="text-gray-900 bg-white">
-											Menikah
-										</option>
-										<option
-											value="Cerai Hidup"
-											className="text-gray-900 bg-white"
-										>
-											Cerai Hidup
+										<option value="MENIKAH" className="text-gray-900 bg-white">
+											MENIKAH
 										</option>
 										<option
-											value="Cerai Mati"
+											value="CERAI HIDUP"
 											className="text-gray-900 bg-white"
 										>
-											Cerai Mati
+											CERAI HIDUP
+										</option>
+										<option
+											value="CERAI MATI"
+											className="text-gray-900 bg-white"
+										>
+											CERAI MATI
 										</option>
 									</select>
 								</div>
@@ -804,14 +896,14 @@ export default function PengurusForm({
 							</div>
 
 							{/* Pendidikan */}
-							<div className="md:col-span-2">
+							<div>
 								<label className="block text-sm font-semibold text-gray-800 mb-1.5">Pendidikan</label>
 								<div className="input-group">
 									<select
 										{...register("pendidikan")}
-										className="w-full bg-white/80 backdrop-blur-sm text-gray-900 focus:outline-none focus:ring-0"
+										className="w-full bg-white/80 backdrop-blur-sm text-gray-900 focus:outline-none focus:ring-0 uppercase"
 									>
-										<option value="">Pilih pendidikan</option>
+										<option value="">PILIH PENDIDIKAN</option>
 										<option value="SD" className="text-gray-900 bg-white">
 											SD
 										</option>
@@ -849,13 +941,62 @@ export default function PengurusForm({
 								)}
 							</div>
 
+							{/* Agama */}
+							<div>
+								<label className="block text-sm font-semibold text-gray-800 mb-1.5">Agama <span className="text-red-500">*</span></label>
+								<div className="input-group">
+									<select
+										{...register("agama")}
+										className="w-full bg-white/80 backdrop-blur-sm text-gray-900 focus:outline-none focus:ring-0 uppercase"
+									>
+										<option value="">PILIH AGAMA</option>
+										<option value="ISLAM" className="text-gray-900 bg-white">ISLAM</option>
+										<option value="KRISTEN" className="text-gray-900 bg-white">KRISTEN</option>
+										<option value="KATOLIK" className="text-gray-900 bg-white">KATOLIK</option>
+										<option value="HINDU" className="text-gray-900 bg-white">HINDU</option>
+										<option value="BUDDHA" className="text-gray-900 bg-white">BUDDHA</option>
+										<option value="KONGHUCU" className="text-gray-900 bg-white">KONGHUCU</option>
+									</select>
+								</div>
+								{errors.agama && (
+									<p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+										<FaExclamationCircle className="w-3 h-3" />
+										{errors.agama.message}
+									</p>
+								)}
+							</div>
+
+							{/* Golongan Darah */}
+							<div>
+								<label className="block text-sm font-semibold text-gray-800 mb-1.5">Golongan Darah <span className="text-red-500">*</span></label>
+								<div className="input-group">
+									<select
+										{...register("golongan_darah")}
+										className="w-full bg-white/80 backdrop-blur-sm text-gray-900 focus:outline-none focus:ring-0 uppercase"
+									>
+										<option value="">PILIH GOLONGAN DARAH</option>
+										<option value="A" className="text-gray-900 bg-white">A</option>
+										<option value="B" className="text-gray-900 bg-white">B</option>
+										<option value="AB" className="text-gray-900 bg-white">AB</option>
+										<option value="O" className="text-gray-900 bg-white">O</option>
+									</select>
+								</div>
+								{errors.golongan_darah && (
+									<p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+										<FaExclamationCircle className="w-3 h-3" />
+										{errors.golongan_darah.message}
+									</p>
+								)}
+							</div>
+
 							{/* Alamat */}
 							<div className="md:col-span-2">
-								<label className="block text-sm font-semibold text-gray-800 mb-1.5">Alamat</label>
+								<label className="block text-sm font-semibold text-gray-800 mb-1.5">Alamat Rumah</label>
 								<div className="input-group">
 									<textarea
 										{...register("alamat")}
-										className="w-full bg-white/80 backdrop-blur-sm"
+										onInput={forceUppercaseInput}
+										className="w-full bg-white/80 backdrop-blur-sm uppercase"
 										rows="3"
 										placeholder="Alamat lengkap"
 									/>
@@ -887,23 +1028,36 @@ export default function PengurusForm({
 									<label className="block text-sm font-semibold text-gray-800 mb-1.5">
 										Jabatan <span className="text-red-500">*</span>
 									</label>
-									<div className="input-group">
-										<select
-											{...register("jabatan")}
-											className="w-full bg-white/80 backdrop-blur-sm text-gray-900 focus:outline-none focus:ring-0"
-										>
-											<option value="">Pilih Jabatan</option>
-											{getJabatanOptions(kelembagaanType).map((option) => (
-												<option
-													key={option.value}
-													value={option.value}
-													className="text-gray-900 bg-white"
-												>
-													{option.label}
-												</option>
-											))}
-										</select>
-									</div>
+									{defaultJabatan && !editData ? (
+										<>
+											<input
+												type="text"
+												value={toUppercaseString(defaultJabatan)}
+												readOnly
+												className="w-full bg-gray-100 text-gray-700 font-medium px-3 py-2 rounded-lg border border-gray-300 cursor-not-allowed uppercase"
+											/>
+											<input type="hidden" {...register("jabatan")} />
+											<p className="text-xs text-blue-600 mt-1 font-medium">Jabatan otomatis dipilih dari kolom jabatan</p>
+										</>
+									) : (
+										<div className="input-group">
+											<select
+												{...register("jabatan")}
+												className="w-full bg-white/80 backdrop-blur-sm text-gray-900 focus:outline-none focus:ring-0 uppercase"
+											>
+												<option value="">PILIH JABATAN</option>
+												{getJabatanOptions(kelembagaanType).map((option) => (
+													<option
+														key={option.value}
+														value={toUppercaseString(option.value)}
+														className="text-gray-900 bg-white"
+													>
+														{toUppercaseString(option.label)}
+													</option>
+												))}
+											</select>
+										</div>
+									)}
 									{errors.jabatan && (
 										<p className="text-red-500 text-sm mt-1 flex items-center gap-1">
 											<FaExclamationCircle className="w-3 h-3" />
@@ -924,10 +1078,10 @@ export default function PengurusForm({
 												Aktif
 											</option>
 											<option
-												value="selesai"
+												value="nonaktif"
 												className="text-gray-900 bg-white"
 											>
-												Selesai
+												Nonaktif
 											</option>
 										</select>
 									</div>
@@ -961,7 +1115,7 @@ export default function PengurusForm({
 
 								{/* Tanggal Akhir Jabatan */}
 								<div>
-									<label className="block text-sm font-semibold text-gray-800 mb-1.5">Tanggal Akhir Jabatan</label>
+									<label className="block text-sm font-semibold text-gray-800 mb-1.5">Tanggal Akhir Jabatan <span className="text-red-500">*</span></label>
 									<div className="input-group">
 										<input
 											type="date"
@@ -983,49 +1137,147 @@ export default function PengurusForm({
 						<div className="space-y-4 p-6 bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 rounded-2xl border border-amber-200 shadow-sm">
 							<div className="flex items-center gap-3 mb-4">
 								<div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg">
-									<svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-									</svg>
+									<LuFileText className="w-6 h-6 text-white" />
 								</div>
 								<h3 className="text-lg font-bold text-gray-900">SK Produk Hukum</h3>
 							</div>
 
 							<div>
 								<label className="block text-sm font-semibold text-gray-800 mb-2">
-								Pilih SK Pengangkatan
-								<span className="text-xs text-amber-700 ml-2 font-normal">
-									(Surat Keputusan Pengangkatan)
-								</span>
-							</label>
-							<Controller
-								name="produk_hukum_id"
-								control={control}
-								render={({ field }) => (
-									<SearchableProdukHukumSelect
-										value={field.value}
-										onChange={field.onChange}
-										produkHukumList={
-											Array.isArray(produkHukumList) ? produkHukumList : []
-										}
-									/>
-								)}
-							/>
+									Pilih SK Pengangkatan <span className="text-red-500">*</span>
+									<span className="text-xs text-amber-700 ml-2 font-normal">
+										(Keputusan Kepala Desa yang berlaku)
+									</span>
+								</label>
+								<Controller
+									name="produk_hukum_id"
+									control={control}
+									render={({ field }) => (
+										<div className="relative">
+											<button
+												type="button"
+												className={`w-full text-left border rounded-lg px-3 py-2.5 text-sm flex items-center justify-between transition-colors ${field.value ? "border-amber-300 bg-amber-50" : "border-gray-300 bg-white"} ${isSubmitting ? "opacity-50 cursor-not-allowed" : "hover:border-amber-400"}`}
+												onClick={() => !isSubmitting && setShowPhDropdown((v) => !v)}
+												disabled={isSubmitting}
+											>
+												{field.value ? (
+													<div className="flex-1 min-w-0">
+														<p className="font-medium text-amber-700 truncate">{produkHukumList.find((p) => p.id === field.value)?.judul || "—"}</p>
+														<p className="text-xs text-amber-500 mt-0.5">SK — No. {produkHukumList.find((p) => p.id === field.value)?.nomor}</p>
+													</div>
+												) : (
+													<span className="text-gray-400">Pilih SK pengangkatan...</span>
+												)}
+												<LuChevronDown className={`w-4 h-4 text-gray-400 flex-shrink-0 ml-2 transition-transform ${showPhDropdown ? "rotate-180" : ""}`} />
+											</button>
+											{showPhDropdown && (
+												<div className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg">
+													<div className="p-2 border-b border-gray-100">
+														<div className="relative">
+															<LuSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+															<input
+																className="w-full border border-gray-200 rounded-md pl-8 pr-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-amber-500"
+																placeholder="Cari judul atau nomor SK..."
+																value={phSearchTerm}
+																onChange={(e) => setPhSearchTerm(e.target.value)}
+																autoFocus
+															/>
+														</div>
+													</div>
+													<div className="max-h-48 overflow-y-auto">
+														{loadingPh ? (
+															<div className="p-3 text-center text-sm text-gray-500">
+																<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-amber-500 mx-auto mb-1"></div>
+																Memuat...
+															</div>
+														) : produkHukumList.filter((ph) =>
+															!phSearchTerm || (ph.judul || "").toLowerCase().includes(phSearchTerm.toLowerCase()) || (ph.nomor || "").toLowerCase().includes(phSearchTerm.toLowerCase())
+														).length === 0 ? (
+															<div className="p-3 text-center text-sm text-gray-500">
+																{phSearchTerm ? "Tidak ditemukan" : "Belum ada SK Kepala Desa berlaku"}
+															</div>
+														) : (
+															produkHukumList
+																.filter((ph) =>
+																	!phSearchTerm || (ph.judul || "").toLowerCase().includes(phSearchTerm.toLowerCase()) || (ph.nomor || "").toLowerCase().includes(phSearchTerm.toLowerCase())
+																)
+																.map((ph) => (
+																	<button
+																		key={ph.id}
+																		type="button"
+																		className={`w-full text-left px-3 py-2 border-b border-gray-50 last:border-b-0 hover:bg-amber-50 transition-colors ${field.value === ph.id ? "bg-amber-50" : ""}`}
+																		onClick={() => {
+																			field.onChange(ph.id);
+																			setShowPhDropdown(false);
+																			setPhSearchTerm("");
+																		}}
+																	>
+																		<div className="flex items-center justify-between">
+																			<div className="flex-1 min-w-0">
+																				<p className={`text-sm font-medium truncate ${field.value === ph.id ? "text-amber-700" : "text-gray-900"}`}>{ph.judul}</p>
+																				<p className="text-xs text-gray-500">Keputusan Kepala Desa — No. {ph.nomor}</p>
+																			</div>
+																			{field.value === ph.id && <LuCheck className="w-4 h-4 text-amber-600 ml-2 flex-shrink-0" />}
+																		</div>
+																	</button>
+																))
+														)}
+													</div>
+												</div>
+											)}
+										</div>
+									)}
+								/>
 
-							{errors.produk_hukum_id && (
-								<p className="text-red-500 text-sm mt-1 flex items-center gap-1">
-									<FaExclamationCircle className="w-3 h-3" />
-									{errors.produk_hukum_id.message}
-								</p>
-							)}
-							<div className="mt-2 p-3 bg-white/60 backdrop-blur-sm rounded-lg border border-amber-200">
-								<p className="text-xs text-gray-700 leading-relaxed">
-									💡 Pilih Surat Keputusan (SK) sebagai dasar hukum pengangkatan
-									pengurus ini. SK ini akan menjadi rujukan legal untuk posisi
-									jabatan yang dipegang.
-								</p>
+								{errors.produk_hukum_id && (
+									<p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+										<FaExclamationCircle className="w-3 h-3" />
+										{errors.produk_hukum_id.message}
+									</p>
+								)}
+								<div className="mt-2 p-3 bg-white/60 backdrop-blur-sm rounded-lg border border-amber-200">
+									<p className="text-xs text-gray-700 leading-relaxed">
+										Pilih Surat Keputusan (SK) Kepala Desa sebagai dasar hukum pengangkatan
+										pengurus ini. SK ini akan menjadi rujukan legal untuk posisi jabatan yang dipegang.
+									</p>
+								</div>
 							</div>
 						</div>
-					</div>
+
+						{/* Section 5: Nomor Buku Nikah (conditional) */}
+						{showBukuNikah && (
+							<div className="space-y-4 p-6 bg-gradient-to-br from-pink-50 via-rose-50 to-red-50 rounded-2xl border border-pink-200 shadow-sm">
+								<div className="flex items-center gap-3 mb-4">
+									<div className="w-10 h-10 bg-gradient-to-br from-pink-500 to-rose-600 rounded-xl flex items-center justify-center shadow-lg">
+										<LuBookOpen className="w-6 h-6 text-white" />
+									</div>
+									<h3 className="text-lg font-bold text-gray-900">Data Pernikahan</h3>
+								</div>
+								<div>
+									<label className="block text-sm font-semibold text-gray-800 mb-1.5">
+										Nomor Buku Nikah <span className="text-red-500">*</span>
+									</label>
+									<div className="input-group">
+										<input
+											type="text"
+											{...register("nomor_buku_nikah")}
+											onInput={forceUppercaseInput}
+											className="w-full bg-white/80 backdrop-blur-sm uppercase"
+											placeholder="Masukkan nomor buku nikah"
+										/>
+									</div>
+									{errors.nomor_buku_nikah && (
+										<p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+											<FaExclamationCircle className="w-3 h-3" />
+											{errors.nomor_buku_nikah.message}
+										</p>
+									)}
+									<p className="text-xs text-pink-600 mt-1 font-medium">
+										Wajib diisi untuk jabatan Ketua RT/RW dengan status menikah
+									</p>
+								</div>
+							</div>
+						)}
 
 					{/* Footer - Action Buttons */}
 					<div className="flex items-center justify-between p-6 border-t bg-gradient-to-r from-gray-50 via-white to-gray-50 rounded-b-2xl">

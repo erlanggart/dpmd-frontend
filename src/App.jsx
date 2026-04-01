@@ -204,6 +204,7 @@ const PMDPage = lazy(() => import("./pages/bidang/PMDPage"));
 const PemdesPage = lazy(() => import("./pages/bidang/PemdesPage"));
 const AparaturDesaExternalPage = lazy(() => import("./pages/bidang/pemdes/AparaturDesaPage"));
 const ProdukHukumPemdesPage = lazy(() => import("./pages/bidang/pemdes/ProdukHukumPage"));
+const ProdukHukumDetailPemdesPage = lazy(() => import("./pages/bidang/pemdes/ProdukHukumDetailPage"));
 
 const KelembagaanDesaPage = lazy(
   () => import("./pages/desa/kelembagaan/KelembagaanDesaPage"),
@@ -916,6 +917,8 @@ function App() {
                     path="pengurus/:id/edit"
                     element={<PengurusEditPage />}
                   />
+                  <Route path="produk-hukum" element={<ProdukHukumPemdesPage />} />
+                  <Route path="produk-hukum/:id" element={<ProdukHukumDetailPemdesPage />} />
                 </Route>{" "}
 
                 {/* Routes KKD - Nested under /kkd */}
@@ -958,6 +961,7 @@ function App() {
                 >
                   <Route path="aparatur-desa" element={<AparaturDesaExternalPage />} />
                   <Route path="produk-hukum" element={<ProdukHukumPemdesPage />} />
+                  <Route path="produk-hukum/:id" element={<ProdukHukumDetailPemdesPage />} />
                 </Route>
 
                 {/* Routes Sekretariat - Nested under /sekretariat (moved from /pegawai) */}
@@ -1075,6 +1079,8 @@ function App() {
                   <Route path="bidang/pmd/pengurus" element={<PengurusDashboardPage />} />
                   <Route path="bidang/pmd/pengurus/:id" element={<PengurusDetailPage />} />
                   <Route path="bidang/pmd/pengurus/:id/edit" element={<PengurusEditPage />} />
+                  <Route path="bidang/pmd/produk-hukum" element={<ProdukHukumPemdesPage />} />
+                  <Route path="bidang/pmd/produk-hukum/:id" element={<ProdukHukumDetailPemdesPage />} />
 
                   {/* Pemdes sub-routes */}
                   <Route path="bidang/pemdes/aparatur-desa" element={<AparaturDesaExternalPage />} />

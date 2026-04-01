@@ -106,6 +106,7 @@ const MainLayout = () => {
 			{ to: "/dashboard/bhprd", label: "BHPRD", icon: <FiDollarSign />, bidangId: 3 },
 			{ to: "/dashboard/dd", label: "DD", icon: <FiDollarSign />, bidangId: 3 },
 			{ to: "/bidang/pmd/kelembagaan", label: "Kelembagaan", icon: <TbBuildingBank />, bidangId: 5 },
+			{ to: "/bidang/pmd/produk-hukum", label: "Produk Hukum", icon: <FiFileText />, bidangId: 5 },
 			{ to: "/dashboard/user", label: "Manajemen Pegawai", icon: <FiClipboard />, bidangId: 1, superadminOnly: true },
 			{ to: "/dashboard/perjalanan-dinas", label: "Perjalanan Dinas", icon: <FiClipboard />, bidangId: 1 },
 			{ to: "/dashboard/disposisi", label: "Disposisi Surat", icon: <FiClipboard />, bidangId: 1 },

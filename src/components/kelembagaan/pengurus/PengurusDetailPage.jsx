@@ -4,6 +4,7 @@ import {
 	getPengurusById,
 	updatePengurusStatus,
 	updatePengurusVerifikasi,
+	ajukanUlangPengurusVerifikasi,
 } from "../../../services/pengurus";
 import { getProdukHukums, getDesa } from "../../../services/api";
 import {
@@ -364,10 +365,10 @@ const PengurusDetailPage = () => {
 	// Helper: show tunda verifikasi feedback modal for pengurus
 	const showTundaVerifikasiPengurusModal = async () => {
 		const { value: formValues } = await Swal.fire({
-			title: "Tunda Verifikasi Pengurus",
+			title: "Tolak Verifikasi Pengurus",
 			html: `
 				<div class="text-left space-y-3">
-					<p class="text-sm text-gray-600 mb-3">Berikan catatan/alasan penundaan verifikasi agar desa dapat memperbaiki data.</p>
+					<p class="text-sm text-gray-600 mb-3">Berikan catatan/alasan penolakan verifikasi agar desa dapat memperbaiki data.</p>
 					<div>
 						<label class="block text-sm font-medium text-gray-700 mb-1">Pilih alasan:</label>
 						<div class="space-y-2" id="swal-checklist">
@@ -391,9 +392,9 @@ const PengurusDetailPage = () => {
 					</div>
 				</div>`,
 			showCancelButton: true,
-			confirmButtonText: "Kirim & Tunda Verifikasi",
+			confirmButtonText: "Kirim & Tolak Verifikasi",
 			cancelButtonText: "Kembali",
-			confirmButtonColor: "#f59e0b",
+			confirmButtonColor: "#ef4444",
 			focusConfirm: false,
 			preConfirm: () => {
 				const checks = Array.from(document.querySelectorAll('.swal-check:checked')).map(c => c.value);
@@ -412,18 +413,18 @@ const PengurusDetailPage = () => {
 
 		setUpdating(true);
 		try {
-			await updatePengurusVerifikasi(pengurusId, "unverified", pengurus.desa_id, formValues);
+			await updatePengurusVerifikasi(pengurusId, "ditolak", pengurus.desa_id, formValues);
 
 			setPengurus((prev) => ({
 				...prev,
-				status_verifikasi: "unverified",
+				status_verifikasi: "ditolak",
 				catatan_verifikasi: formValues,
 			}));
 
 			await Swal.fire({
 				icon: "success",
 				title: "Berhasil",
-				text: "Verifikasi ditunda dan catatan telah dikirim ke desa",
+				text: "Verifikasi ditolak dan catatan telah dikirim ke desa",
 				timer: 2000,
 				showConfirmButton: false,
 			});
@@ -486,9 +487,9 @@ const PengurusDetailPage = () => {
 							<p class="font-medium text-blue-800 text-sm">✅ Verifikasi Pengurus</p>
 							<p class="text-xs text-blue-600 mt-1">Data sudah sesuai dan lengkap, setujui verifikasi.</p>
 						</button>
-						<button id="swal-tunda-btn" class="w-full text-left p-3 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 transition-colors cursor-pointer">
-							<p class="font-medium text-amber-800 text-sm">⏳ Tunda Verifikasi</p>
-							<p class="text-xs text-amber-600 mt-1">Data belum sesuai, kirim catatan ke desa untuk diperbaiki.</p>
+						<button id="swal-tunda-btn" class="w-full text-left p-3 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors cursor-pointer">
+							<p class="font-medium text-red-800 text-sm">❌ Tolak Verifikasi</p>
+							<p class="text-xs text-red-600 mt-1">Data belum sesuai, kirim catatan ke desa untuk diperbaiki.</p>
 						</button>
 					</div>`,
 				showConfirmButton: false,
@@ -534,6 +535,41 @@ const PengurusDetailPage = () => {
 		}
 	};
 
+	const handleAjukanUlangPengurus = async () => {
+		const confirm = await Swal.fire({
+			title: "Ajukan Ulang Verifikasi?",
+			html: `<div class="text-left"><p class="text-sm text-gray-600">Pastikan Anda sudah memperbaiki data sesuai catatan penolakan sebelumnya.</p><p class="text-sm text-gray-600 mt-2">Status akan berubah menjadi <strong>"Menunggu Verifikasi"</strong> dan akan ditinjau ulang oleh admin.</p></div>`,
+			icon: "question",
+			showCancelButton: true,
+			confirmButtonText: "Ya, Ajukan Ulang",
+			cancelButtonText: "Batal",
+			confirmButtonColor: "#3b82f6",
+		});
+
+		if (!confirm.isConfirmed) return;
+
+		try {
+			setUpdating(true);
+			await ajukanUlangPengurusVerifikasi(pengurusId, pengurus.desa_id);
+			Swal.fire({
+				icon: "success",
+				title: "Berhasil",
+				text: "Verifikasi telah diajukan ulang. Silakan tunggu peninjauan dari admin.",
+				timer: 2500,
+				showConfirmButton: false,
+			});
+			loadPengurusDetail();
+		} catch (error) {
+			console.error("Error ajukan ulang:", error);
+			Swal.fire({
+				icon: "error",
+				title: "Gagal",
+				text: error?.response?.data?.message || "Gagal mengajukan ulang verifikasi",
+			});
+		} finally {
+			setUpdating(false);
+		}
+	};
 	const handleEdit = () => {
 		// Navigate to edit page using role-based routing
 		navigate(getPengurusRoutePath(user, pengurusId, "edit"));
@@ -810,7 +846,9 @@ const PengurusDetailPage = () => {
 							title={
 								pengurus.status_verifikasi === "verified"
 									? "Batalkan verifikasi pengurus"
-									: "Verifikasi pengurus"
+									: pengurus.status_verifikasi === "ditolak"
+										? "Verifikasi ulang pengurus"
+										: "Verifikasi pengurus"
 							}
 						>
 							{pengurus.status_verifikasi === "verified" ? (
@@ -845,7 +883,7 @@ const PengurusDetailPage = () => {
 											d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
 										/>
 									</svg>
-									<span>Verifikasi Pengurus</span>
+									<span>{pengurus.status_verifikasi === "ditolak" ? "Verifikasi Ulang" : "Verifikasi Pengurus"}</span>
 								</>
 							)}
 						</button>
@@ -1012,6 +1050,24 @@ const PengurusDetailPage = () => {
 										{pengurus.pendidikan || "-"}
 									</p>
 								</div>
+
+								<div>
+									<label className="block text-sm font-medium text-gray-700 mb-1">
+										Agama
+									</label>
+									<p className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
+										{pengurus.agama || "-"}
+									</p>
+								</div>
+
+								<div>
+									<label className="block text-sm font-medium text-gray-700 mb-1">
+										Golongan Darah
+									</label>
+									<p className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
+										{pengurus.golongan_darah || "-"}
+									</p>
+								</div>
 							</div>
 						</div>
 
@@ -1060,12 +1116,16 @@ const PengurusDetailPage = () => {
 											className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
 												pengurus.status_verifikasi === "verified"
 													? "bg-green-100 text-green-800"
-													: "bg-yellow-100 text-yellow-800"
+													: pengurus.status_verifikasi === "ditolak"
+														? "bg-red-100 text-red-800"
+														: "bg-yellow-100 text-yellow-800"
 											}`}
 										>
 											{pengurus.status_verifikasi === "verified"
 												? "Terverifikasi"
-												: "Belum Verifikasi"}
+												: pengurus.status_verifikasi === "ditolak"
+													? "Verifikasi Ditolak"
+													: "Belum Verifikasi"}
 										</span>
 									</div>
 								</div>
@@ -1083,6 +1143,23 @@ const PengurusDetailPage = () => {
 												</p>
 											)}
 										</div>
+									</div>
+								)}
+
+								{/* Ajukan Ulang Verifikasi - For desa when ditolak */}
+								{pengurus.status_verifikasi === "ditolak" && !isSuperAdmin() && !isAdminBidangPMD() && (
+									<div className="md:col-span-2">
+										<button
+											onClick={handleAjukanUlangPengurus}
+											disabled={updating}
+											className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+										>
+											<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+											</svg>
+											{updating ? "Memproses..." : "Ajukan Ulang Verifikasi"}
+										</button>
+										<p className="text-xs text-gray-500 mt-1">Klik setelah memperbaiki data sesuai catatan di atas</p>
 									</div>
 								)}
 							</div>

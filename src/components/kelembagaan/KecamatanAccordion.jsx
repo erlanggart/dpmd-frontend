@@ -1,11 +1,11 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   LuChevronDown,
   LuChevronUp,
   LuBuilding2,
   LuHouse,
+  LuSearch,
   LuUsers,
-  LuShield,
   LuHeart,
   LuCheck,
   LuX,
@@ -13,20 +13,29 @@ import {
   LuUser,
 } from "react-icons/lu";
 
-const SummaryChip = ({ icon: Icon, title, value, color }) => (
-  <div className="flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-gray-100 hover:border-gray-200 transition-colors">
-    <div
-      className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
-      style={{ backgroundColor: `${color}12` }}
-    >
-      <Icon className="h-4 w-4" style={{ color }} />
+const SummaryChip = ({ icon: Icon, title, value, color }) => {
+  const iconElement = Icon
+    ? React.createElement(Icon, {
+        className: "h-4 w-4",
+        style: { color },
+      })
+    : null;
+
+  return (
+    <div className="flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-gray-100 hover:border-gray-200 transition-colors">
+      <div
+        className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+        style={{ backgroundColor: `${color}12` }}
+      >
+        {iconElement}
+      </div>
+      <div className="min-w-0">
+        <p className="text-xs text-gray-500 leading-none mb-0.5">{title}</p>
+        <p className="text-lg font-bold leading-none" style={{ color }}>{value || 0}</p>
+      </div>
     </div>
-    <div className="min-w-0">
-      <p className="text-xs text-gray-500 leading-none mb-0.5">{title}</p>
-      <p className="text-lg font-bold leading-none" style={{ color }}>{value || 0}</p>
-    </div>
-  </div>
-);
+  );
+};
 
 const VerifiedStatusBadge = ({ status, verifiedStatus }) => {
   if (status === "Belum Terbentuk") {
@@ -53,6 +62,46 @@ const VerifiedStatusBadge = ({ status, verifiedStatus }) => {
 
 const KecamatanAccordion = ({ kecamatanData, onDesaClick }) => {
   const [expandedKecamatan, setExpandedKecamatan] = useState({});
+  const [searchKecamatan, setSearchKecamatan] = useState("");
+  const [searchDesa, setSearchDesa] = useState("");
+
+  const normalizedSearchKecamatan = searchKecamatan.trim().toLowerCase();
+  const normalizedSearchDesa = searchDesa.trim().toLowerCase();
+  const isSearching = Boolean(normalizedSearchKecamatan || normalizedSearchDesa);
+
+  const filteredKecamatanData = useMemo(() => {
+    return kecamatanData
+      .map((kecamatan) => {
+        const matchesKecamatan =
+          !normalizedSearchKecamatan ||
+          kecamatan.nama?.toLowerCase().includes(normalizedSearchKecamatan);
+
+        if (!matchesKecamatan) {
+          return null;
+        }
+
+        const filteredDesas = !normalizedSearchDesa
+          ? kecamatan.desas
+          : kecamatan.desas.filter((desa) =>
+              desa.nama?.toLowerCase().includes(normalizedSearchDesa)
+            );
+
+        if (normalizedSearchDesa && filteredDesas.length === 0) {
+          return null;
+        }
+
+        return {
+          ...kecamatan,
+          desas: filteredDesas,
+        };
+      })
+      .filter(Boolean);
+  }, [kecamatanData, normalizedSearchDesa, normalizedSearchKecamatan]);
+
+  const visibleDesaCount = useMemo(
+    () => filteredKecamatanData.reduce((total, kecamatan) => total + kecamatan.desas.length, 0),
+    [filteredKecamatanData]
+  );
 
   const toggleKecamatan = (kecamatanId) => {
     setExpandedKecamatan((prev) => ({
@@ -62,7 +111,7 @@ const KecamatanAccordion = ({ kecamatanData, onDesaClick }) => {
   };
 
   return (
-    <div className="space-y-4 max-h-[90vh] overflow-y-auto">
+    <div className="space-y-4">
       <div className="flex items-center gap-3">
         <div className="h-10 w-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-md">
           <LuBuilding2 className="h-5 w-5 text-white" />
@@ -70,12 +119,73 @@ const KecamatanAccordion = ({ kecamatanData, onDesaClick }) => {
         <div>
           <h2 className="text-lg font-bold text-gray-900">Data Kecamatan & Desa</h2>
           <p className="text-sm text-gray-500">
-            {kecamatanData.length} Kecamatan — Klik untuk melihat detail kelembagaan
+            {isSearching
+              ? `${filteredKecamatanData.length} Kecamatan • ${visibleDesaCount} Desa/Kelurahan ditemukan`
+              : `${kecamatanData.length} Kecamatan — Klik untuk melihat detail kelembagaan`}
           </p>
         </div>
       </div>
 
-      {kecamatanData.map((kecamatan) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="relative">
+          <LuSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <input
+            type="text"
+            value={searchKecamatan}
+            onChange={(e) => setSearchKecamatan(e.target.value)}
+            placeholder="Cari nama kecamatan..."
+            className="w-full rounded-xl border border-gray-200 bg-white pl-10 pr-10 py-3 text-sm text-gray-700 shadow-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+          />
+          {searchKecamatan && (
+            <button
+              type="button"
+              onClick={() => setSearchKecamatan("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+              aria-label="Reset pencarian kecamatan"
+            >
+              <LuX className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+
+        <div className="relative">
+          <LuSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <input
+            type="text"
+            value={searchDesa}
+            onChange={(e) => setSearchDesa(e.target.value)}
+            placeholder="Cari nama desa/kelurahan..."
+            className="w-full rounded-xl border border-gray-200 bg-white pl-10 pr-10 py-3 text-sm text-gray-700 shadow-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+          />
+          {searchDesa && (
+            <button
+              type="button"
+              onClick={() => setSearchDesa("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+              aria-label="Reset pencarian desa"
+            >
+              <LuX className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {filteredKecamatanData.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-10 text-center shadow-sm">
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100 text-gray-400">
+            <LuSearch className="h-6 w-6" />
+          </div>
+          <h3 className="text-base font-semibold text-gray-800">Data tidak ditemukan</h3>
+          <p className="mt-1 text-sm text-gray-500">
+            Coba ubah kata kunci pencarian kecamatan atau desa.
+          </p>
+        </div>
+      ) : (
+
+      filteredKecamatanData.map((kecamatan) => {
+        const isExpanded = isSearching || expandedKecamatan[kecamatan.id];
+
+        return (
         <div
           key={kecamatan.id}
           className="bg-white rounded-lg shadow-sm border border-gray-200"
@@ -112,7 +222,7 @@ const KecamatanAccordion = ({ kecamatanData, onDesaClick }) => {
                   <span className="text-red-500 text-xs">Posyandu</span>
                 </div>
               </div>
-              {expandedKecamatan[kecamatan.id] ? (
+              {isExpanded ? (
                 <LuChevronUp className="h-5 w-5 text-gray-500" />
               ) : (
                 <LuChevronDown className="h-5 w-5 text-gray-500" />
@@ -121,7 +231,7 @@ const KecamatanAccordion = ({ kecamatanData, onDesaClick }) => {
           </button>
 
           {/* Kecamatan Content */}
-          {expandedKecamatan[kecamatan.id] && (
+          {isExpanded && (
             <div className="border-t border-gray-200">
               {/* Summary Table for Kecamatan */}
               <div className="p-5 bg-gray-50/80">
@@ -258,7 +368,9 @@ const KecamatanAccordion = ({ kecamatanData, onDesaClick }) => {
             </div>
           )}
         </div>
-      ))}
+      );
+      })
+      )}
     </div>
   );
 };

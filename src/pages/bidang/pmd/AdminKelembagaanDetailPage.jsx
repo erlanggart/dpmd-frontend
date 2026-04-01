@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import Swal from "sweetalert2";
 import {
-	LuArrowLeft,
 	LuBuilding2,
 	LuUsers,
 	LuHeart,
@@ -10,14 +9,17 @@ import {
 	LuSprout,
 	LuMapPin,
 	LuLoader,
-	LuChevronRight,
-	LuEye,
+	LuChevronDown,
 	LuUserCheck,
 	LuPlus,
 	LuCircleAlert,
 	LuX,
 	LuLock,
 	LuLockOpen,
+	LuShieldCheck,
+	LuTriangleAlert,
+	LuCheck,
+	LuBuilding,
 } from "react-icons/lu";
 import { useAuth } from "../../../context/AuthContext";
 import { useEditMode } from "../../../context/EditModeContext";
@@ -64,8 +66,9 @@ const AdminKelembagaanDetailPage = () => {
 			const kelembagaanItems = [];
 			const rwData = response.data.kelembagaan.rw || [];
 			const posyanduData = response.data.kelembagaan.posyandu || [];
+			const lembagaLainnyaData = response.data.kelembagaan.lembaga_lainnya || [];
 
-			// RW - Tampilkan card summary
+			// RW - Collection
 			kelembagaanItems.push({
 				type: "rw",
 				id: null,
@@ -75,11 +78,11 @@ const AdminKelembagaanDetailPage = () => {
 				isCollection: true,
 				isEmpty: rwData.length === 0,
 				icon: LuBuilding2,
-				color: "from-blue-500 to-indigo-600",
+				color: "blue",
 				data: rwData,
 			});
 
-			// Posyandu - Tampilkan card summary
+			// Posyandu - Collection
 			kelembagaanItems.push({
 				type: "posyandu",
 				id: null,
@@ -88,60 +91,73 @@ const AdminKelembagaanDetailPage = () => {
 				isCollection: true,
 				isEmpty: posyanduData.length === 0,
 				icon: LuHeart,
-				color: "from-pink-500 to-red-600",
+				color: "pink",
 				data: posyanduData,
 			});
 
-			// Karang Taruna - Single entity
+			// Karang Taruna
 			const karangTaruna = response.data.kelembagaan.karang_taruna;
 			kelembagaanItems.push({
 				type: "karang-taruna",
 				id: karangTaruna?.id || null,
-				name: karangTaruna?.nama || "Karang Taruna",
+				name: "Karang Taruna",
 				isCollection: false,
 				isEmpty: !karangTaruna,
 				icon: LuUsers,
-				color: "from-purple-500 to-indigo-600",
+				color: "purple",
 				data: karangTaruna,
 			});
 
-			// LPM - Single entity
+			// LPM
 			const lpm = response.data.kelembagaan.lpm;
 			kelembagaanItems.push({
 				type: "lpm",
 				id: lpm?.id || null,
-				name: lpm?.nama || "LPM (Lembaga Pemberdayaan Masyarakat)",
+				name: "LPM",
 				isCollection: false,
 				isEmpty: !lpm,
 				icon: LuUserCheck,
-				color: "from-gray-500 to-gray-700",
+				color: "indigo",
 				data: lpm,
 			});
 
-			// Satlinmas - Single entity
+			// Satlinmas
 			const satlinmas = response.data.kelembagaan.satlinmas;
 			kelembagaanItems.push({
 				type: "satlinmas",
 				id: satlinmas?.id || null,
-				name: satlinmas?.nama || "Satlinmas",
+				name: "Satlinmas",
 				isCollection: false,
 				isEmpty: !satlinmas,
 				icon: LuShield,
-				color: "from-green-500 to-emerald-600",
+				color: "emerald",
 				data: satlinmas,
 			});
 
-			// PKK - Single entity
+			// PKK
 			const pkk = response.data.kelembagaan.pkk;
 			kelembagaanItems.push({
 				type: "pkk",
 				id: pkk?.id || null,
-				name: pkk?.nama || "PKK (Pemberdayaan Kesejahteraan Keluarga)",
+				name: "PKK",
 				isCollection: false,
 				isEmpty: !pkk,
 				icon: LuSprout,
-				color: "from-emerald-500 to-green-600",
+				color: "green",
 				data: pkk,
+			});
+
+			// Lembaga Lainnya - Collection
+			kelembagaanItems.push({
+				type: "lembaga-lainnya",
+				id: null,
+				name: "Lembaga Kemasyarakatan Lainnya",
+				count: lembagaLainnyaData.length,
+				isCollection: true,
+				isEmpty: lembagaLainnyaData.length === 0,
+				icon: LuBuilding,
+				color: "slate",
+				data: lembagaLainnyaData,
 			});
 
 			setKelembagaanList(kelembagaanItems);
@@ -205,26 +221,6 @@ const AdminKelembagaanDetailPage = () => {
 				text: error.response?.data?.message || error.message || 'Gagal mengubah mode edit. Silakan coba lagi.',
 				confirmButtonColor: '#3b82f6'
 			});
-		}
-	};
-
-	const handleKelembagaanClick = (item) => {
-		// Untuk collection (RW, Posyandu), selalu bisa diklik - navigate ke list page
-		if (item.isCollection) {
-			// Navigate ke list page dengan filter desaId
-			navigate(`/bidang/pmd/kelembagaan/admin/${desaId}/${item.type}`);
-			return;
-		}
-
-		// Untuk single entity yang belum terbentuk, buka modal pembentukan
-		if (item.isEmpty && !item.isCollection) {
-			handleOpenModal(item);
-			return;
-		}
-
-		// Untuk single entity yang sudah terbentuk, navigate ke detail page
-		if (!item.isCollection && item.id) {
-			navigate(`/bidang/pmd/kelembagaan/${item.type}/${item.id}`);
 		}
 	};
 
@@ -384,109 +380,76 @@ const AdminKelembagaanDetailPage = () => {
 					</div>
 				</div>
 
-				{/* Main Header Card */}
-				<div className="mb-8">
-					<div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-						{/* Gradient Top Border */}
-						<div className="h-2 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500"></div>
-						
-						<div className="p-6 lg:p-8">
-							<div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-								<div className="flex items-start space-x-4">
-									<div className="flex-shrink-0">
-										<div className="p-4 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-lg transform hover:scale-105 transition-transform duration-200">
-											<LuMapPin className="w-10 h-10 text-white" />
-										</div>
-									</div>
-									<div className="flex-1">
-										<h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-2">
-											{desaInfo?.status_pemerintahan == 'desa' ? "Desa " : "Kelurahan "}
-											{desaInfo?.nama}
-										</h1>
-										<p className="text-base lg:text-lg text-gray-600 mb-1 flex items-center gap-2">
-											<span className="inline-block w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
-											Kecamatan {desaInfo?.nama_kecamatan}
-										</p>
-										<div className="flex items-center gap-2 mt-2">
-											<span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-blue-100 text-blue-700 capitalize">
-												{desaInfo?.status_pemerintahan}
-											</span>
-										</div>
-									</div>
-								</div>
-								
-								{/* Toggle Edit Mode Button - Only for superadmin */}
-								{canToggleEdit && (
-									<div className="flex-shrink-0">
-										<button
-											onClick={handleToggleEditMode}
-											className={`flex items-center gap-2.5 px-5 py-3 rounded-xl transition-all duration-200 font-semibold shadow-md hover:shadow-lg transform hover:scale-105 ${
-												isEditMode
-													? "bg-gradient-to-r from-green-500 to-emerald-600 text-white"
-													: "bg-gradient-to-r from-gray-300 to-gray-400 text-gray-700 hover:from-gray-400 hover:to-gray-500"
-											}`}
-											title={isEditMode ? "Mode edit aktif - Klik untuk menonaktifkan" : "Mode edit nonaktif - Klik untuk mengaktifkan"}
-										>
-											{isEditMode ? (
-												<>
-													<LuLockOpen className="h-5 w-5" />
-													<span>Edit Mode: ON</span>
-												</>
-											) : (
-												<>
-													<LuLock className="h-5 w-5" />
-													<span>Edit Mode: OFF</span>
-												</>
-											)}
-										</button>
-									</div>
-								)}
+				{/* Main Header */}
+				<div className="mb-6 space-y-3">
+					<div className="flex items-center justify-between gap-4">
+						<div className="flex items-center gap-3 min-w-0">
+							<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100">
+								<LuMapPin className="w-5 h-5 text-slate-600" />
 							</div>
-							
-							{/* Info message about edit mode */}
-							{canToggleEdit && (
-								<div className={`mt-6 p-4 rounded-xl border-2 ${
-									isEditMode 
-										? "bg-green-50 border-green-300" 
-										: "bg-amber-50 border-amber-300"
-								}`}>
-									<p className="text-sm font-semibold flex items-start gap-2">
-										{isEditMode ? (
-											<>
-												<span className="text-green-600 text-lg">✓</span>
-												<span className="text-green-800">
-													Mode Edit Aktif - Desa dapat menambah dan mengedit data kelembagaan & pengurus
-												</span>
-											</>
-										) : (
-											<>
-												<span className="text-amber-600 text-lg">⚠</span>
-												<span className="text-amber-800">
-													Mode Edit Nonaktif - Tombol tambah dan edit tidak akan ditampilkan untuk desa
-												</span>
-											</>
-										)}
-									</p>
-								</div>
+							<div className="min-w-0">
+								<h1 className="text-lg font-semibold text-slate-800 truncate">
+									{desaInfo?.status_pemerintahan == 'desa' ? "Desa " : "Kelurahan "}
+									{desaInfo?.nama}
+								</h1>
+								<p className="text-sm text-slate-500 truncate">
+									Kecamatan {desaInfo?.nama_kecamatan}
+								</p>
+							</div>
+						</div>
+
+						{canToggleEdit && (
+							<button
+								onClick={handleToggleEditMode}
+								className={`shrink-0 inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+									isEditMode
+										? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-100"
+										: "bg-slate-100 text-slate-600 ring-1 ring-slate-200 hover:bg-slate-200"
+								}`}
+								title={isEditMode ? "Mode edit aktif" : "Mode edit nonaktif"}
+							>
+								{isEditMode ? <LuLockOpen className="h-4 w-4" /> : <LuLock className="h-4 w-4" />}
+								<span>Edit Mode: {isEditMode ? "ON" : "OFF"}</span>
+							</button>
+						)}
+					</div>
+
+					{canToggleEdit && (
+						<div className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium ${
+							isEditMode
+								? "bg-emerald-50 text-emerald-700"
+								: "bg-amber-50 text-amber-700"
+						}`}>
+							{isEditMode ? (
+								<>
+									<LuCheck className="w-3.5 h-3.5 shrink-0" />
+									<span>Mode Edit Aktif - Desa dapat menambah dan mengedit data kelembagaan & pengurus</span>
+								</>
+							) : (
+								<>
+									<LuTriangleAlert className="w-3.5 h-3.5 shrink-0" />
+									<span>Mode Edit Nonaktif - Tombol tambah dan edit tidak akan ditampilkan untuk desa</span>
+								</>
 							)}
 						</div>
+					)}
+				</div>
+
+				{/* Kelembagaan List */}
+				<div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+					<div className="divide-y divide-gray-100">
+						{kelembagaanList.map((item) => (
+							<KelembagaanRow
+								key={`${item.type}-${item.id || 'empty'}`}
+								item={item}
+								basePath={basePath}
+								desaId={desaId}
+								navigate={navigate}
+								onCreateClick={() => handleOpenModal(item)}
+							/>
+						))}
 					</div>
 				</div>
-
-				{/* Grid Kelembagaan */}
-				<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 lg:gap-6">
-					{kelembagaanList.map((item) => (
-						<KelembagaanCard
-							key={`${item.type}-${item.id || 'empty'}`}
-							item={item}
-							onClick={() => handleKelembagaanClick(item)}
-						/>
-					))}
-				</div>
-
-				
-
-				
 			</div>
 
 			{/* Confirmation Modal */}
@@ -504,154 +467,204 @@ const AdminKelembagaanDetailPage = () => {
 	);
 };
 
-// Komponen card untuk menampilkan kelembagaan
-const KelembagaanCard = ({ item, onClick }) => {
-	const Icon = item.icon;
+// Color map for consistent styling
+const COLOR_MAP = {
+	blue: { bg: "bg-blue-50", text: "text-blue-600", icon: "bg-blue-100 text-blue-600", border: "border-blue-200", gradient: "from-blue-500 to-indigo-600" },
+	pink: { bg: "bg-pink-50", text: "text-pink-600", icon: "bg-pink-100 text-pink-600", border: "border-pink-200", gradient: "from-pink-500 to-red-600" },
+	purple: { bg: "bg-purple-50", text: "text-purple-600", icon: "bg-purple-100 text-purple-600", border: "border-purple-200", gradient: "from-purple-500 to-indigo-600" },
+	indigo: { bg: "bg-indigo-50", text: "text-indigo-600", icon: "bg-indigo-100 text-indigo-600", border: "border-indigo-200", gradient: "from-indigo-500 to-indigo-700" },
+	emerald: { bg: "bg-emerald-50", text: "text-emerald-600", icon: "bg-emerald-100 text-emerald-600", border: "border-emerald-200", gradient: "from-green-500 to-emerald-600" },
+	green: { bg: "bg-green-50", text: "text-green-600", icon: "bg-green-100 text-green-600", border: "border-green-200", gradient: "from-emerald-500 to-green-600" },
+	slate: { bg: "bg-slate-50", text: "text-slate-600", icon: "bg-slate-100 text-slate-600", border: "border-slate-200", gradient: "from-slate-500 to-slate-700" },
+};
 
-	const handleCardClick = (e) => {
-		// Prevent event if clicking on buttons
-		if (e.target.closest(".action-button")) {
-			return;
-		}
-		
-		// Collection (RW, Posyandu) selalu bisa diklik
-		if (item.isCollection) {
-			onClick();
-			return;
-		}
-		
-		// Single entity yang sudah terbentuk bisa diklik
-		if (!item.isEmpty) {
-			onClick();
-		}
-	};
-
-	const handleActionClick = (e) => {
-		e.preventDefault();
-		e.stopPropagation();
-		onClick();
-	};
-
+const VerifBadge = ({ status }) => {
+	if (status === "verified") {
+		return (
+			<span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-emerald-100 text-emerald-700">
+				<LuShieldCheck className="w-2.5 h-2.5" /> Terverifikasi
+			</span>
+		);
+	}
+	if (status === "ditolak") {
+		return (
+			<span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-red-100 text-red-700">
+				<LuX className="w-2.5 h-2.5" /> Ditolak
+			</span>
+		);
+	}
 	return (
-		<div
-			onClick={handleCardClick}
-			className={`group bg-white rounded-2xl shadow-md transition-all duration-300 border-2 overflow-hidden ${
-				item.isEmpty && !item.isCollection
-					? 'border-gray-200 hover:border-gray-300' 
-					: 'cursor-pointer hover:shadow-xl transform hover:-translate-y-2 border-gray-200 hover:border-blue-400'
-			}`}
-		>
-			{/* Gradient Top Border */}
-			<div
-				className={`h-2 bg-gradient-to-r ${item.color} ${
-					item.isEmpty && !item.isCollection ? 'opacity-40' : ''
-				}`}
-			></div>
+		<span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-amber-100 text-amber-700">
+			<LuTriangleAlert className="w-2.5 h-2.5" /> Belum
+		</span>
+	);
+};
 
-			<div className="p-6">
-				{/* Header Section */}
-				<div className="flex items-start justify-between mb-5">
-					<div className="flex items-start space-x-4 flex-1">
-						<div
-							className={`flex-shrink-0 w-14 h-14 bg-gradient-to-br ${item.color} rounded-2xl flex items-center justify-center text-white shadow-lg transition-all duration-300 ${
-								item.isEmpty && !item.isCollection ? 'opacity-50' : 'group-hover:scale-110 group-hover:rotate-3'
-							}`}
-						>
-							<Icon className="w-7 h-7" />
+// Row-based kelembagaan item
+const KelembagaanRow = ({ item, basePath, desaId, navigate, onCreateClick }) => {
+	const Icon = item.icon;
+	const colors = COLOR_MAP[item.color] || COLOR_MAP.slate;
+	const [expanded, setExpanded] = useState(true);
+
+	// For collections (RW, Posyandu, Lembaga Lainnya)
+	if (item.isCollection) {
+		const hasChildren = item.data && item.data.length > 0;
+
+		return (
+			<div>
+				{/* Section Header */}
+				<div
+					className={`flex items-center justify-between px-5 py-3.5 ${colors.bg} cursor-pointer hover:brightness-95 transition-all`}
+					onClick={() => setExpanded(!expanded)}
+				>
+					<div className="flex items-center gap-3">
+						<div className={`w-8 h-8 rounded-lg flex items-center justify-center ${colors.icon}`}>
+							<Icon className="w-4 h-4" />
 						</div>
-						<div className="flex-1 min-w-0">
-							<h3 className={`text-lg font-bold transition-colors mb-1 ${
-								item.isEmpty && !item.isCollection
-									? 'text-gray-600' 
-									: 'text-gray-800 group-hover:text-blue-700'
-							}`}>
-								{item.name}
-							</h3>
-							<p className="text-xs text-gray-500 uppercase tracking-wider font-semibold">
-								{item.type.replace("-", " ")}
-							</p>
-						</div>
-					</div>
-
-					{/* Action Button */}
-					<button
-						onClick={handleActionClick}
-						className="action-button flex-shrink-0 p-2.5 rounded-xl hover:bg-blue-50 transition-all duration-200 group/btn border border-transparent hover:border-blue-200"
-						title={item.isEmpty && !item.isCollection ? "Bentuk Lembaga" : "Lihat Detail"}
-					>
-						{item.isEmpty && !item.isCollection ? (
-							<LuPlus className="w-5 h-5 text-blue-500 group-hover/btn:text-blue-700 group-hover/btn:scale-110 transition-all" />
-						) : (
-							<LuEye className="w-5 h-5 text-gray-400 group-hover/btn:text-blue-500 group-hover/btn:scale-110 transition-all" />
-						)}
-					</button>
-				</div>
-
-				{/* Status Badge */}
-				<div className="mb-4">
-					{item.isEmpty && !item.isCollection ? (
-						<span className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-bold bg-gray-100 text-gray-600 border border-gray-200">
-							<span className="w-2 h-2 bg-gray-400 rounded-full mr-2 animate-pulse"></span>
-							Belum Terbentuk
-						</span>
-					) : (
-						<span className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-bold bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 border border-green-200">
-							<span className="w-2 h-2 bg-green-500 rounded-full mr-2 shadow-md"></span>
-							{item.isCollection ? 'Tersedia' : 'Sudah Terbentuk'}
-						</span>
-					)}
-				</div>
-
-				{/* Collection Info (for RW, Posyandu) */}
-				{item.isCollection && (
-					<div className="space-y-3 pt-3 border-t border-gray-100">
-						<div className="flex items-center justify-between">
-							<span className="text-sm font-semibold text-gray-600">Total {item.type.toUpperCase()}:</span>
-							<span className={`font-bold text-2xl ${
-								item.count > 0 ? 'text-blue-600' : 'text-gray-400'
-							}`}>
-								{item.count}
+						<div>
+							<h3 className="text-sm font-bold text-gray-900">{item.name}</h3>
+							<span className="text-xs text-gray-500">
+								{item.count} {item.type === "rw" ? `RW • ${item.totalRT} RT` : "terdaftar"}
 							</span>
 						</div>
-						{item.type === "rw" && (
-							<div className="flex items-center justify-between">
-								<span className="text-sm font-semibold text-gray-600">Total RT:</span>
-								<span className={`font-bold text-xl ${
-									item.totalRT > 0 ? 'text-cyan-600' : 'text-gray-400'
-								}`}>
-									{item.totalRT}
-								</span>
-							</div>
-						)}
+					</div>
+					<div className="flex items-center gap-2">
+						<button
+							onClick={(e) => {
+								e.stopPropagation();
+								navigate(`/bidang/pmd/kelembagaan/admin/${desaId}/${item.type}`);
+							}}
+							className="text-xs font-medium text-blue-600 hover:text-blue-800 hover:underline px-2 py-1"
+						>
+							Kelola
+						</button>
+						<LuChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`} />
+					</div>
+				</div>
+
+				{/* Children */}
+				{expanded && hasChildren && (
+					<div className="divide-y divide-gray-50">
+						{item.data.map((child) => {
+							if (item.type === "rw") {
+								return <RwRow key={child.id} rw={child} basePath={basePath} navigate={navigate} />;
+							}
+							// Posyandu or Lembaga Lainnya
+							return (
+								<div
+									key={child.id}
+									className="flex items-center justify-between px-5 py-2.5 pl-16 hover:bg-gray-50 cursor-pointer transition-colors"
+									onClick={() => navigate(`${basePath}/kelembagaan/${item.type}/${child.id}`)}
+								>
+									<div className="flex items-center gap-3 min-w-0">
+										<div className={`w-6 h-6 rounded flex items-center justify-center ${colors.icon}`}>
+											<Icon className="w-3 h-3" />
+										</div>
+										<span className="text-sm font-medium text-gray-800 truncate">{child.nama}</span>
+										<VerifBadge status={child.status_verifikasi} />
+									</div>
+									<FaChevronRight className="w-3 h-3 text-gray-300 flex-shrink-0" />
+								</div>
+							);
+						})}
 					</div>
 				)}
 
-				{/* Single Entity Info */}
-				{!item.isCollection && item.data?.alamat && (
-					<div className="flex items-start space-x-2 text-sm text-gray-600 mt-3 p-3 bg-gray-50 rounded-lg border border-gray-100">
-						<LuMapPin className="w-4 h-4 flex-shrink-0 mt-0.5 text-gray-400" />
-						<span className="line-clamp-2">{item.data.alamat}</span>
-					</div>
-				)}
-
-				{/* Empty State Message */}
-				{item.isEmpty && !item.isCollection && (
-					<div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
-						<p className="text-xs text-blue-700 font-medium">
-							💡 Klik untuk membentuk kelembagaan ini
-						</p>
-					</div>
-				)}
-				
-				{/* Empty Collection Message */}
-				{item.isEmpty && item.isCollection && (
-					<div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
-						<p className="text-xs text-blue-700 font-medium">
-							💡 Klik untuk melihat dan menambahkan {item.type}
-						</p>
+				{/* Empty state */}
+				{expanded && !hasChildren && (
+					<div className="px-5 py-4 pl-16 text-xs text-gray-400 italic">
+						Belum ada data. Klik "Kelola" untuk menambahkan.
 					</div>
 				)}
 			</div>
+		);
+	}
+
+	// Single entity (Karang Taruna, LPM, Satlinmas, PKK)
+	if (item.isEmpty) {
+		return (
+			<div
+				className="flex items-center justify-between px-5 py-3.5 hover:bg-gray-50 transition-colors cursor-pointer"
+				onClick={onCreateClick}
+			>
+				<div className="flex items-center gap-3">
+					<div className="w-8 h-8 rounded-lg flex items-center justify-center bg-gray-100 text-gray-400">
+						<Icon className="w-4 h-4" />
+					</div>
+					<div>
+						<span className="text-sm font-medium text-gray-500">{item.name}</span>
+						<span className="ml-2 inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded-full bg-gray-100 text-gray-500">
+							Belum Terbentuk
+						</span>
+					</div>
+				</div>
+				<button className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800 px-2 py-1 rounded hover:bg-blue-50">
+					<LuPlus className="w-3 h-3" />
+					Bentuk
+				</button>
+			</div>
+		);
+	}
+
+	return (
+		<div
+			className="flex items-center justify-between px-5 py-3.5 hover:bg-gray-50 transition-colors cursor-pointer"
+			onClick={() => navigate(`${basePath}/kelembagaan/${item.type}/${item.id}`)}
+		>
+			<div className="flex items-center gap-3">
+				<div className={`w-8 h-8 rounded-lg flex items-center justify-center ${colors.icon}`}>
+					<Icon className="w-4 h-4" />
+				</div>
+				<span className="text-sm font-semibold text-gray-800">{item.name}</span>
+				<VerifBadge status={item.data?.status_verifikasi} />
+			</div>
+			<FaChevronRight className="w-3 h-3 text-gray-300" />
+		</div>
+	);
+};
+
+// RW row with nested RT
+const RwRow = ({ rw, basePath, navigate }) => {
+	const rts = rw.rts || [];
+
+	return (
+		<div>
+			<div
+				className="flex items-center justify-between px-5 py-2.5 pl-10 hover:bg-blue-50/50 cursor-pointer transition-colors"
+				onClick={() => navigate(`${basePath}/kelembagaan/rw/${rw.id}`)}
+			>
+				<div className="flex items-center gap-3 min-w-0">
+					<div className="w-6 h-6 rounded flex items-center justify-center bg-blue-100 text-blue-600">
+						<LuBuilding2 className="w-3 h-3" />
+					</div>
+					<span className="text-sm font-semibold text-gray-800">RW {rw.nomor}</span>
+					<VerifBadge status={rw.status_verifikasi} />
+					{rts.length > 0 && (
+						<span className="text-[10px] font-medium text-gray-400">{rts.length} RT</span>
+					)}
+				</div>
+				<FaChevronRight className="w-3 h-3 text-gray-300 flex-shrink-0" />
+			</div>
+
+			{/* Nested RT */}
+			{rts.length > 0 && (
+				<div className="divide-y divide-gray-50">
+					{rts.map((rt) => (
+						<div
+							key={rt.id}
+							className="flex items-center justify-between px-5 py-2 pl-20 hover:bg-gray-50 cursor-pointer transition-colors"
+							onClick={() => navigate(`${basePath}/kelembagaan/rt/${rt.id}`)}
+						>
+							<div className="flex items-center gap-2.5 min-w-0">
+								<div className="w-1.5 h-1.5 rounded-full bg-gray-300 flex-shrink-0"></div>
+								<span className="text-xs font-medium text-gray-600">RT {rt.nomor}</span>
+								<VerifBadge status={rt.status_verifikasi} />
+							</div>
+							<FaChevronRight className="w-2.5 h-2.5 text-gray-300 flex-shrink-0" />
+						</div>
+					))}
+				</div>
+			)}
 		</div>
 	);
 };
@@ -659,71 +672,63 @@ const KelembagaanCard = ({ item, onClick }) => {
 // Confirmation Modal Component
 const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, icon: Icon, color, loading, desaName }) => {
 	if (!isOpen) return null;
+	const colors = COLOR_MAP[color] || COLOR_MAP.slate;
 
 	return (
-		<div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-			<div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full transform transition-all">
-				{/* Header with Gradient */}
-				<div className={`bg-gradient-to-br ${color} rounded-t-2xl p-6 text-white relative`}>
+		<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+			<div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full">
+				{/* Header */}
+				<div className={`bg-gradient-to-br ${colors.gradient} rounded-t-2xl p-6 text-white relative`}>
 					<button
 						onClick={onClose}
 						disabled={loading}
-						className="absolute top-4 right-4 p-2 hover:bg-white/20 rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+						className="absolute top-4 right-4 p-2 hover:bg-white/20 rounded-full transition-all disabled:opacity-50"
 					>
 						<LuX className="w-5 h-5" />
 					</button>
-					
 					<div className="flex items-center space-x-4">
-						<div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm shadow-lg">
-							{Icon && <Icon className="w-9 h-9" />}
+						<div className="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center">
+							{Icon && <Icon className="w-8 h-8" />}
 						</div>
-						<div className="flex-1">
-							<h3 className="text-2xl font-bold mb-1">Bentuk Lembaga</h3>
-							<p className="text-white/90 text-sm">{title}</p>
+						<div>
+							<h3 className="text-xl font-bold">Bentuk Lembaga</h3>
+							<p className="text-white/80 text-sm">{title}</p>
 						</div>
 					</div>
 				</div>
 
 				{/* Body */}
 				<div className="p-6">
-					<div className="flex items-start space-x-3 mb-6 p-5 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200">
-						<LuCircleAlert className="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5" />
-						<div className="text-sm text-blue-900 flex-1">
-							<p className="font-bold mb-2 text-base">Konfirmasi Pembentukan</p>
-							<p className="mb-2">
-								Anda akan membentuk <span className="font-bold text-blue-700">{title}</span> untuk{" "}
-								<span className="font-bold text-blue-700">{desaName}</span>.
+					<div className="flex items-start gap-3 mb-6 p-4 bg-blue-50 rounded-xl border border-blue-200">
+						<LuCircleAlert className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+						<div className="text-sm text-blue-900">
+							<p className="font-bold mb-1">Konfirmasi Pembentukan</p>
+							<p>
+								Anda akan membentuk <strong>{title}</strong> untuk <strong>{desaName}</strong>.
 							</p>
-							<p className="text-blue-700 bg-blue-100 px-3 py-2 rounded-lg border border-blue-200 mt-3">
-								<strong>ℹ️ Info:</strong> Setelah dibentuk, data kelembagaan dapat dikelola oleh admin desa.
+							<p className="text-xs text-blue-700 mt-2">
+								Setelah dibentuk, data kelembagaan dapat dikelola oleh admin desa.
 							</p>
 						</div>
 					</div>
 
-					{/* Action Buttons */}
-					<div className="flex space-x-3">
+					<div className="flex gap-3">
 						<button
 							onClick={onClose}
 							disabled={loading}
-							className="flex-1 px-5 py-3 border-2 border-gray-300 rounded-xl text-gray-700 font-bold hover:bg-gray-50 hover:border-gray-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+							className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 disabled:opacity-50"
 						>
 							Batal
 						</button>
 						<button
 							onClick={onConfirm}
 							disabled={loading}
-							className={`flex-1 px-5 py-3 bg-gradient-to-r ${color} rounded-xl text-white font-bold hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 transform hover:scale-105`}
+							className={`flex-1 px-4 py-2.5 bg-gradient-to-r ${colors.gradient} rounded-lg text-white font-medium hover:shadow-lg disabled:opacity-50 flex items-center justify-center gap-2`}
 						>
 							{loading ? (
-								<>
-									<LuLoader className="w-5 h-5 animate-spin" />
-									<span>Membentuk...</span>
-								</>
+								<><LuLoader className="w-4 h-4 animate-spin" /><span>Membentuk...</span></>
 							) : (
-								<>
-									<LuPlus className="w-5 h-5" />
-									<span>Bentuk Lembaga</span>
-								</>
+								<><LuPlus className="w-4 h-4" /><span>Bentuk Lembaga</span></>
 							)}
 						</button>
 					</div>

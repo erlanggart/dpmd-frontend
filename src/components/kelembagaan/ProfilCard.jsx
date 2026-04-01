@@ -33,12 +33,16 @@ const ProfilCard = ({
 	pengurusCount,
 	onToggleStatus,
 	onToggleVerification,
+	onAjukanUlang,
 	produkHukumList = [],
 	onUpdatePenduduk,
 }) => {
 	const { isSuperAdmin, isAdminBidangPMD, isUserDesa } = useAuth();
 	const { isEditMode } = useEditMode();
 	const navigate = useNavigate();
+
+	const isAdmin = isSuperAdmin() || isAdminBidangPMD();
+	const getProdukHukumUrl = (id) => isAdmin ? `/pemdes/produk-hukum/${id}` : `/desa/produk-hukum/${id}`;
 
 	// Determine if edit button should be shown
 	// For admin (superadmin/admin bidang PMD): always show
@@ -85,6 +89,12 @@ const ProfilCard = ({
 				"bg-gradient-to-r from-blue-400 to-indigo-500 text-white shadow-lg",
 			indicator: "bg-blue-500",
 			text: "Terverifikasi",
+		},
+		ditolak: {
+			badge:
+				"bg-gradient-to-r from-red-400 to-rose-500 text-white shadow-lg",
+			indicator: "bg-red-500",
+			text: "Verifikasi Ditolak",
 		},
 		pending: {
 			badge:
@@ -268,7 +278,7 @@ const ProfilCard = ({
 								) ? (
 									<button
 										onClick={() =>
-											navigate(`/desa/produk-hukum/${profil.produk_hukum_id}`)
+											navigate(getProdukHukumUrl(profil.produk_hukum_id))
 										}
 										className="w-full text-left hover:bg-emerald-100 rounded-lg p-2 -m-2 transition-colors duration-200 group"
 									>
@@ -319,7 +329,7 @@ const ProfilCard = ({
 									</h4>
 									<button
 										onClick={() =>
-											navigate(`/desa/produk-hukum/${profil.produk_hukum_penonaktifan_id}`)
+											navigate(getProdukHukumUrl(profil.produk_hukum_penonaktifan_id))
 										}
 										className="w-full text-left hover:bg-red-100 rounded-lg p-2 -m-2 transition-colors duration-200 group"
 									>
@@ -572,12 +582,28 @@ const ProfilCard = ({
 											<LuShieldOff className="w-4 h-4" />
 											Batal Verifikasi
 										</>
+									) : profil?.status_verifikasi === "ditolak" ? (
+										<>
+											<LuShieldCheck className="w-4 h-4" />
+											Verifikasi Ulang
+										</>
 									) : (
 										<>
 											<LuShieldCheck className="w-4 h-4" />
 											Verifikasi
 										</>
 									)}
+								</button>
+							)}
+
+							{/* Ajukan Ulang Verifikasi Button - For desa when ditolak */}
+							{isUserDesa() && profil?.status_verifikasi === "ditolak" && onAjukanUlang && (
+								<button
+									onClick={() => onAjukanUlang(profil?.id)}
+									className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200"
+								>
+									<LuShieldCheck className="w-4 h-4" />
+									Ajukan Ulang Verifikasi
 								</button>
 							)}
 						</div>

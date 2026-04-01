@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useImperativeHandle, forwardRef } from "react";
+import React, { useEffect, useState, useImperativeHandle, forwardRef, useRef, useCallback } from "react";
 import { 
 	LuSettings2, 
 	LuUser, 
@@ -15,48 +15,91 @@ import { getDetailActivityLogs, getListActivityLogs, getAllActivityLogs } from "
 import { useAuth } from "../../context/AuthContext";
 
 const AktivitasLog = forwardRef(({ lembagaType, lembagaId, mode = "detail", title, desaId }, ref) => {
+	const PAGE_SIZE = 10;
 	const { user } = useAuth();
 	const [logs, setLogs] = useState([]);
 	const [loading, setLoading] = useState(true);
+	const [loadingMore, setLoadingMore] = useState(false);
+	const [hasMore, setHasMore] = useState(false);
+	const [offset, setOffset] = useState(0);
+	const scrollContainerRef = useRef(null);
 
-	const fetchLogs = async () => {
+	const fetchLogs = useCallback(async ({ reset = false } = {}) => {
 		if (mode !== "all" && !lembagaType) return;
+
+		const targetOffset = reset ? 0 : offset;
 		
-		setLoading(true);
+		if (reset) {
+			setLoading(true);
+		} else {
+			if (loading || loadingMore || !hasMore) return;
+			setLoadingMore(true);
+		}
 		try {
 			let response;
 			if (mode === "all") {
 				// All mode - tampilkan semua log semua kelembagaan di desa
 				const targetDesaId = desaId || user?.desa_id;
 				if (!targetDesaId) return;
-				response = await getAllActivityLogs({ desa_id: targetDesaId, limit: 50 });
+				response = await getAllActivityLogs({ desa_id: targetDesaId, limit: PAGE_SIZE, offset: targetOffset });
 			} else if (mode === "list") {
 				// List mode - tampilkan semua log untuk type ini di desa
 				// Gunakan desaId dari prop (untuk admin) atau user.desa_id (untuk user desa)
 				const targetDesaId = desaId || user?.desa_id;
 				if (!targetDesaId) return;
-				response = await getListActivityLogs(lembagaType, targetDesaId, 50);
+				response = await getListActivityLogs(lembagaType, targetDesaId, PAGE_SIZE, targetOffset);
 			} else {
 				// Detail mode - tampilkan log spesifik lembaga
 				if (!lembagaId) return;
-				response = await getDetailActivityLogs(lembagaType, lembagaId, 50);
+				response = await getDetailActivityLogs(lembagaType, lembagaId, PAGE_SIZE, targetOffset);
 			}
-			setLogs(response?.data?.logs || []);
+
+			const nextLogs = response?.data?.logs || [];
+			const nextHasMore = Boolean(response?.data?.hasMore);
+
+			setLogs((prevLogs) => {
+				if (reset) return nextLogs;
+				const existingIds = new Set(prevLogs.map((log) => log.id));
+				const dedupedLogs = nextLogs.filter((log) => !existingIds.has(log.id));
+				return [...prevLogs, ...dedupedLogs];
+			});
+			setOffset(targetOffset + nextLogs.length);
+			setHasMore(nextHasMore);
 		} catch (error) {
 			console.error('Error fetching activity logs:', error);
-			setLogs([]);
+			if (reset) {
+				setLogs([]);
+				setHasMore(false);
+				setOffset(0);
+			}
 		} finally {
-			setLoading(false);
+			if (reset) {
+				setLoading(false);
+			} else {
+				setLoadingMore(false);
+			}
 		}
-	};
+	}, [desaId, hasMore, lembagaId, lembagaType, loading, loadingMore, mode, offset, user?.desa_id]);
+
+	const handleScroll = useCallback((event) => {
+		const element = event.currentTarget;
+		const distanceToBottom = element.scrollHeight - element.scrollTop - element.clientHeight;
+
+		if (distanceToBottom < 120 && !loading && !loadingMore && hasMore) {
+			fetchLogs({ reset: false });
+		}
+	}, [fetchLogs, hasMore, loading, loadingMore]);
 
 	// Expose refresh function to parent via ref
 	useImperativeHandle(ref, () => ({
-		refresh: fetchLogs
+		refresh: () => fetchLogs({ reset: true })
 	}));
 
 	useEffect(() => {
-		fetchLogs();
+		setLogs([]);
+		setOffset(0);
+		setHasMore(false);
+		fetchLogs({ reset: true });
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [lembagaType, lembagaId, mode, desaId, user?.desa_id]);
 
@@ -143,7 +186,11 @@ const AktivitasLog = forwardRef(({ lembagaType, lembagaId, mode = "detail", titl
 						</p>
 					</div>
 				) : (
-					<div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
+					<div
+						ref={scrollContainerRef}
+						onScroll={handleScroll}
+						className="space-y-3 max-h-[600px] overflow-y-auto pr-2"
+					>
 						{logs.map((log) => (
 							<div
 								key={log.id}
@@ -188,6 +235,17 @@ const AktivitasLog = forwardRef(({ lembagaType, lembagaId, mode = "detail", titl
 								</div>
 							</div>
 					))}
+						{loadingMore && (
+							<div className="flex items-center justify-center py-3 text-sm text-gray-500">
+								<LuRefreshCw className="w-4 h-4 animate-spin mr-2" />
+								Memuat log berikutnya...
+							</div>
+						)}
+						{!hasMore && logs.length > 0 && (
+							<div className="text-center py-2 text-xs text-gray-400">
+								Semua log sudah dimuat
+							</div>
+						)}
 				</div>
 			)}
 		</div>

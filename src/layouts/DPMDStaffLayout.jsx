@@ -183,6 +183,7 @@ const BIDANG_SUBMENUS = {
 		{ label: 'LKD', path: '/bidang/pmd/kelembagaan', icon: 'users' },
 		{ label: 'Kelembagaan Lainnya', path: '/bidang/pmd/kelembagaan/lainnya', icon: 'file' },
 		{ label: 'Pengurus', path: '/bidang/pmd/pengurus', icon: 'user' },
+		{ label: 'Produk Hukum', path: '/bidang/pmd/produk-hukum', icon: 'file' },
 	],
 	6: [
 		{ label: 'Aparatur Desa', path: '/bidang/pemdes/aparatur-desa', icon: 'users' },

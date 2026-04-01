@@ -175,3 +175,10 @@ export const updatePengurusVerifikasi = (id, status_verifikasi, desaId = null, c
 		{ params }
 	);
 };
+
+// Ajukan ulang verifikasi pengurus (desa resubmit after ditolak → unverified)
+export const ajukanUlangPengurusVerifikasi = (id, desaId = null) => {
+	const baseParams = desaId ? { desa_id: desaId } : {};
+	const params = getAdminParams("pengurus", "update", baseParams);
+	return api.put(`/desa/pengurus/${id}/ajukan-ulang`, {}, { params });
+};

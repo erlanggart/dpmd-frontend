@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
 	LuHouse,
 	LuPlus,
@@ -10,8 +10,14 @@ import {
 	LuInfo,
 	LuUsers,
 	LuCheck,
+	LuChevronDown,
+	LuChevronUp,
+	LuSearch,
+	LuLock,
+	LuMapPin,
 } from "react-icons/lu";
 import { showWarningAlert } from "../../utils/sweetAlert";
+import { getProdukHukums } from "../../services/api";
 import RTItemContent from "./RTItemContent";
 import { useAuth } from "../../context/AuthContext";
 import { useEditMode } from "../../context/EditModeContext";
@@ -25,9 +31,39 @@ const AnakLembagaCard = ({
 }) => {
 	const [isAddingRT, setIsAddingRT] = useState(false);
 	const [nomorRT, setNomorRT] = useState("");
+	const [alamatRT, setAlamatRT] = useState("");
+	const [produkHukumId, setProdukHukumId] = useState("");
 	const [isLoading, setIsLoading] = useState(false);
+	const [showKetentuan, setShowKetentuan] = useState(false);
+	const [produkHukumOptions, setProdukHukumOptions] = useState([]);
+	const [loadingPh, setLoadingPh] = useState(false);
+	const [phSearchTerm, setPhSearchTerm] = useState("");
+	const [showPhDropdown, setShowPhDropdown] = useState(false);
 	const { isSuperAdmin, isAdminBidangPMD, isUserDesa } = useAuth();
 	const { isEditMode } = useEditMode();
+
+	// Fetch produk hukum when modal opens
+	useEffect(() => {
+		if (!isAddingRT) return;
+		let mounted = true;
+		const fetchPh = async () => {
+			setLoadingPh(true);
+			try {
+				const res = await getProdukHukums({
+					all: true,
+					jenis: "Peraturan Desa,Peraturan Kepala Desa",
+					status_peraturan: "berlaku",
+				});
+				if (mounted) setProdukHukumOptions(res?.data?.data || []);
+			} catch (err) {
+				console.error("Error fetching produk hukum:", err);
+			} finally {
+				if (mounted) setLoadingPh(false);
+			}
+		};
+		fetchPh();
+		return () => { mounted = false; };
+	}, [isAddingRT]);
 
 	// Determine if add button should show
 	// For admin (superadmin/admin bidang): always show
@@ -36,22 +72,48 @@ const AnakLembagaCard = ({
 		isSuperAdmin() || isAdminBidangPMD() || (isUserDesa() && isEditMode);
 
 	const handleAddRT = async () => {
+		if (!produkHukumId) {
+			showWarningAlert("Perhatian!", "Produk Hukum Lembaga wajib dipilih");
+			return;
+		}
 		if (!nomorRT.trim()) {
 			showWarningAlert("Perhatian!", "Nomor RT harus diisi");
+			return;
+		}
+		if (!/^\d{3}$/.test(nomorRT.trim())) {
+			showWarningAlert("Perhatian!", "Nomor RT harus 3 digit angka (contoh: 001)");
 			return;
 		}
 
 		setIsLoading(true);
 		try {
-			await onAddRT(nomorRT.trim());
+			await onAddRT({
+				nomor: nomorRT.trim(),
+				alamat: alamatRT.trim().toUpperCase(),
+				produk_hukum_id: produkHukumId,
+			});
 			setNomorRT("");
+			setAlamatRT("");
+			setProdukHukumId("");
+			setPhSearchTerm("");
+			setShowPhDropdown(false);
+			setShowKetentuan(false);
 			setIsAddingRT(false);
 		} catch (error) {
 			console.error("Error adding RT:", error);
-			// Error sudah ditangani di handleAddRT parent function
 		} finally {
 			setIsLoading(false);
 		}
+	};
+
+	const resetModal = () => {
+		setIsAddingRT(false);
+		setNomorRT("");
+		setAlamatRT("");
+		setProdukHukumId("");
+		setPhSearchTerm("");
+		setShowPhDropdown(false);
+		setShowKetentuan(false);
 	};
 
 	return (
@@ -114,10 +176,7 @@ const AnakLembagaCard = ({
 										</h3>
 									</div>
 									<button
-										onClick={() => {
-											setIsAddingRT(false);
-											setNomorRT("");
-										}}
+										onClick={resetModal}
 										className="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded-lg transition-colors"
 									>
 										<LuX className="w-6 h-6" />
@@ -125,199 +184,233 @@ const AnakLembagaCard = ({
 								</div>
 							</div>
 
-							{/* Informasi Pembentukan RT */}
-							<div className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 border-b border-blue-100">
-								<div className="flex items-start space-x-3 mb-4">
-									<div className="p-2 bg-blue-500 rounded-lg flex-shrink-0">
-										<LuFileText className="w-5 h-5 text-white" />
-									</div>
-									<div className="flex-1">
-										<h4 className="font-semibold text-blue-900 mb-2">
-											Tata Cara Pembentukan Rukun Tetangga
-										</h4>
-									</div>
-								</div>
-
-								{/* Tata Cara Pembentukan */}
-								<div className="space-y-3 mb-4">
-									<div className="bg-white rounded-lg p-4 shadow-sm border border-blue-100">
-										<div className="flex items-start space-x-3">
-											<div className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
-												1
-											</div>
-											<p className="text-sm text-gray-700 leading-relaxed">
-												Pembentukan RT dapat berasal{" "}
-												<strong>pembentukan RT baru</strong>,{" "}
-												<strong>pemekaran</strong> dari 1 (satu) RT menjadi 2
-												(dua) RT atau lebih dan <strong>penggabungan</strong>{" "}
-												dari beberapa RT atau bagian RT yang bersandingan.
-											</p>
+							{/* Collapsible Ketentuan */}
+							<div className="border-b border-blue-100">
+								<button
+									type="button"
+									className="w-full flex items-center justify-between p-4 bg-gradient-to-br from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 transition-colors"
+									onClick={() => setShowKetentuan((v) => !v)}
+								>
+									<div className="flex items-center space-x-3">
+										<div className="p-1.5 bg-blue-500 rounded-lg flex-shrink-0">
+											<LuFileText className="w-4 h-4 text-white" />
+										</div>
+										<div className="text-left">
+											<h4 className="font-semibold text-blue-900 text-sm">
+												Tata Cara Pembentukan Rukun Tetangga
+											</h4>
+											<p className="text-xs text-blue-600">Perbup Bogor No. 31 Tahun 2012</p>
 										</div>
 									</div>
+									{showKetentuan ? (
+										<LuChevronUp className="w-5 h-5 text-blue-500" />
+									) : (
+										<LuChevronDown className="w-5 h-5 text-blue-500" />
+									)}
+								</button>
 
-									<div className="bg-white rounded-lg p-4 shadow-sm border border-blue-100">
-										<div className="flex items-start space-x-3">
-											<div className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
-												2
-											</div>
-											<p className="text-sm text-gray-700 leading-relaxed">
-												Pembentukan RT dapat berasal dari{" "}
-												<strong>prakarsa masyarakat</strong> setelah mendapatkan
-												pertimbangan dari Kepala Desa/Lurah.
-											</p>
-										</div>
-									</div>
-
-									<div className="bg-white rounded-lg p-4 shadow-sm border border-blue-100">
-										<div className="flex items-start space-x-3">
-											<div className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
-												3
-											</div>
-											<p className="text-sm text-gray-700 leading-relaxed">
-												Setiap RT paling sedikit terdiri dari{" "}
-												<strong>50 KK untuk desa</strong> dan{" "}
-												<strong>75 KK untuk kelurahan</strong>.
-											</p>
-										</div>
-									</div>
-
-									<div className="bg-white rounded-lg p-4 shadow-sm border border-blue-100">
-										<div className="flex items-start space-x-3">
-											<div className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
-												4
-											</div>
-											<p className="text-sm text-gray-700 leading-relaxed">
-												Pembentukan RT dapat dilaksanakan apabila dihadiri oleh
-												paling sedikit <strong>2/3 (dua per tiga)</strong> dari
-												jumlah Kepala Keluarga.
-											</p>
-										</div>
-									</div>
-
-									<div className="bg-white rounded-lg p-4 shadow-sm border border-blue-100">
-										<div className="flex items-start space-x-3">
-											<div className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
-												5
-											</div>
-											<p className="text-sm text-gray-700 leading-relaxed">
-												Pembentukan RT dinyatakan sah apabila disetujui
-												sekurang-kurangnya{" "}
-												<strong>1/2 (satu per dua) ditambah 1 (satu)</strong>{" "}
-												dari jumlah yang hadir dalam musyawarah tersebut.
-											</p>
-										</div>
-									</div>
-								</div>
-
-								{/* Prosedur Pembentukan */}
-								<div className="mt-5 pt-4 border-t border-blue-200">
-									<h5 className="font-semibold text-blue-900 mb-3 flex items-center">
-										<LuUsers className="w-5 h-5 mr-2" />
-										Prosedur Pembentukan
-									</h5>
-									<div className="space-y-3">
-										<div className="bg-white rounded-lg p-4 shadow-sm border border-blue-100">
-											<div className="flex items-start space-x-3">
-												<div className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
-													1
+								{showKetentuan && (
+									<div className="p-4 bg-gradient-to-br from-blue-50/50 to-indigo-50/50 space-y-4">
+										{/* Tata Cara Pembentukan */}
+										<div className="space-y-2">
+											{[
+												<>Pembentukan RT dapat berasal <strong>pembentukan RT baru</strong>, <strong>pemekaran</strong> dari 1 (satu) RT menjadi 2 (dua) RT atau lebih dan <strong>penggabungan</strong> dari beberapa RT atau bagian RT yang bersandingan.</>,
+												<>Pembentukan RT dapat berasal dari <strong>prakarsa masyarakat</strong> setelah mendapatkan pertimbangan dari Kepala Desa/Lurah.</>,
+												<>Setiap RT paling sedikit terdiri dari <strong>50 KK untuk desa</strong> dan <strong>75 KK untuk kelurahan</strong>.</>,
+												<>Pembentukan RT dapat dilaksanakan apabila dihadiri oleh paling sedikit <strong>2/3 (dua per tiga)</strong> dari jumlah Kepala Keluarga.</>,
+												<>Pembentukan RT dinyatakan sah apabila disetujui sekurang-kurangnya <strong>1/2 (satu per dua) ditambah 1 (satu)</strong> dari jumlah yang hadir dalam musyawarah tersebut.</>,
+											].map((text, i) => (
+												<div key={i} className="bg-white rounded-lg p-3 shadow-sm border border-blue-100">
+													<div className="flex items-start space-x-2.5">
+														<div className="flex-shrink-0 w-5 h-5 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">
+															{i + 1}
+														</div>
+														<p className="text-sm text-gray-700 leading-relaxed">{text}</p>
+													</div>
 												</div>
-												<p className="text-sm text-gray-700 leading-relaxed">
-													Pembentukan RT dilakukan melalui{" "}
-													<strong>musyawarah</strong> oleh para Kepala Keluarga
-													atau yang mewakili, pengurus RT dan tokoh masyarakat
-													serta dihadiri oleh <strong>Ketua RW setempat</strong>
-													.
-												</p>
+											))}
+										</div>
+
+										{/* Prosedur Pembentukan */}
+										<div className="pt-3 border-t border-blue-200">
+											<h5 className="font-semibold text-blue-900 mb-2 flex items-center text-sm">
+												<LuUsers className="w-4 h-4 mr-1.5" />
+												Prosedur Pembentukan
+											</h5>
+											<div className="space-y-2">
+												{[
+													<>Pembentukan RT dilakukan melalui <strong>musyawarah</strong> oleh para Kepala Keluarga atau yang mewakili, pengurus RT dan tokoh masyarakat serta dihadiri oleh <strong>Ketua RW setempat</strong>.</>,
+													<>Hasil musyawarah dituangkan dalam <strong>berita acara</strong> dan disampaikan kepada Kepala Desa/Lurah untuk mendapat penetapan.</>,
+													<>Pembentukan RT di Desa ditetapkan dengan <strong>Peraturan Desa</strong>.</>,
+													<>Pembentukan RT di Kelurahan ditetapkan dengan <strong>Keputusan Camat</strong>.</>,
+												].map((text, i) => (
+													<div key={i} className="bg-white rounded-lg p-3 shadow-sm border border-blue-100">
+														<div className="flex items-start space-x-2.5">
+															<div className="flex-shrink-0 w-5 h-5 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">
+																{i + 1}
+															</div>
+															<p className="text-sm text-gray-700 leading-relaxed">{text}</p>
+														</div>
+													</div>
+												))}
 											</div>
 										</div>
 
-										<div className="bg-white rounded-lg p-4 shadow-sm border border-blue-100">
-											<div className="flex items-start space-x-3">
-												<div className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
-													2
-												</div>
-												<p className="text-sm text-gray-700 leading-relaxed">
-													Hasil musyawarah dituangkan dalam{" "}
-													<strong>berita acara</strong> dan disampaikan kepada
-													Kepala Desa/Lurah untuk mendapat penetapan.
-												</p>
-											</div>
-										</div>
-
-										<div className="bg-white rounded-lg p-4 shadow-sm border border-blue-100">
-											<div className="flex items-start space-x-3">
-												<div className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
-													3
-												</div>
-												<p className="text-sm text-gray-700 leading-relaxed">
-													Pembentukan RT di Desa ditetapkan dengan{" "}
-													<strong>Peraturan Desa</strong>.
-												</p>
-											</div>
-										</div>
-										<div className="bg-white rounded-lg p-4 shadow-sm border border-blue-100">
-											<div className="flex items-start space-x-3">
-												<div className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
-													4
-												</div>
-												<p className="text-sm text-gray-700 leading-relaxed">
-													Pembentukan RT di Kelurahan ditetapkan dengan{" "}
-													<strong>Keputusan Camat</strong>.
-												</p>
+										<div className="flex items-start space-x-2 bg-blue-100 rounded-lg p-3">
+											<LuInfo className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+											<div>
+												<p className="text-sm font-semibold text-blue-900">Peraturan Bupati Bogor Nomor 31 Tahun 2012</p>
+												<p className="text-xs text-blue-700">Tentang Tata Cara Pembentukan, Pengangkatan, dan Pemberhentian Pengurus LPMD/LPMK, RW, dan RT</p>
 											</div>
 										</div>
 									</div>
-								</div>
-
-								<div className="mt-4 flex items-start space-x-2 bg-blue-100 rounded-lg p-3">
-									<LuInfo className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-									<div>
-										<p className="text-md font-semibold">
-											Sesuai Dengan Peraturan Bupati Bogor Nomor 31 Tahun 2012
-										</p>
-										<p className="text-xs text-blue-800">
-											Tentang Tata Cara Pembentukan, Pengangkatan, dan
-											Pemberhentian Pengurus Lembaga Pemberdayaan Masyarakat
-											Desa/Kelurahan (LPMD/LPMK), Rukun Warga (RW), dan Rukun
-											Tetangga (RT)
-										</p>
-									</div>
-								</div>
+								)}
 							</div>
 
 							{/* Modal Body */}
-							<div className="p-6 space-y-5">
+							<div className="p-6 space-y-4">
+								{/* Produk Hukum - Paling Atas */}
 								<div>
-									<label className="block text-sm font-semibold text-gray-700 mb-2">
+									<label className="block text-sm font-medium mb-1 text-gray-700">
+										Produk Hukum Lembaga <span className="text-red-500">*</span>
+									</label>
+									<p className="text-xs text-gray-500 mb-2">
+										Pilih Perdes/Perkades yang masih berlaku sebagai dasar hukum pembentukan RT
+									</p>
+									<div className="relative">
+										<button
+											type="button"
+											className={`w-full text-left border rounded-lg px-3 py-2.5 text-sm flex items-center justify-between transition-colors ${produkHukumId ? "border-blue-300 bg-blue-50" : "border-gray-300 bg-white"} ${isLoading ? "opacity-50 cursor-not-allowed" : "hover:border-blue-400"}`}
+											onClick={() => !isLoading && setShowPhDropdown((v) => !v)}
+											disabled={isLoading}
+										>
+											{produkHukumId ? (
+												<div className="flex-1 min-w-0">
+													<p className="font-medium text-blue-700 truncate">{produkHukumOptions.find((p) => p.id === produkHukumId)?.judul || "—"}</p>
+													<p className="text-xs text-blue-500 mt-0.5">{(produkHukumOptions.find((p) => p.id === produkHukumId)?.jenis || "").replace(/_/g, " ")} — No. {produkHukumOptions.find((p) => p.id === produkHukumId)?.nomor}</p>
+												</div>
+											) : (
+												<span className="text-gray-400">Pilih produk hukum...</span>
+											)}
+											<LuChevronDown className={`w-4 h-4 text-gray-400 flex-shrink-0 ml-2 transition-transform ${showPhDropdown ? "rotate-180" : ""}`} />
+										</button>
+										{showPhDropdown && (
+											<div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg">
+												<div className="p-2 border-b border-gray-100">
+													<div className="relative">
+														<LuSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+														<input
+															className="w-full border border-gray-200 rounded-md pl-8 pr-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+															placeholder="Cari judul atau nomor..."
+															value={phSearchTerm}
+															onChange={(e) => setPhSearchTerm(e.target.value)}
+															autoFocus
+														/>
+													</div>
+												</div>
+												<div className="max-h-48 overflow-y-auto">
+													{loadingPh ? (
+														<div className="p-3 text-center text-sm text-gray-500">
+															<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500 mx-auto mb-1"></div>
+															Memuat...
+														</div>
+													) : produkHukumOptions.filter((ph) =>
+														!phSearchTerm || (ph.judul || "").toLowerCase().includes(phSearchTerm.toLowerCase()) || (ph.nomor || "").toLowerCase().includes(phSearchTerm.toLowerCase())
+													).length === 0 ? (
+														<div className="p-3 text-center text-sm text-gray-500">
+															{phSearchTerm ? "Tidak ditemukan" : "Belum ada Perdes/Perkades berlaku"}
+														</div>
+													) : (
+														produkHukumOptions
+															.filter((ph) =>
+																!phSearchTerm || (ph.judul || "").toLowerCase().includes(phSearchTerm.toLowerCase()) || (ph.nomor || "").toLowerCase().includes(phSearchTerm.toLowerCase())
+															)
+															.map((ph) => (
+																<button
+																	key={ph.id}
+																	type="button"
+																	className={`w-full text-left px-3 py-2 border-b border-gray-50 last:border-b-0 hover:bg-blue-50 transition-colors ${produkHukumId === ph.id ? "bg-blue-50" : ""}`}
+																	onClick={() => {
+																		setProdukHukumId(ph.id);
+																		setShowPhDropdown(false);
+																		setPhSearchTerm("");
+																	}}
+																>
+																	<div className="flex items-center justify-between">
+																		<div className="flex-1 min-w-0">
+																			<p className={`text-sm font-medium truncate ${produkHukumId === ph.id ? "text-blue-700" : "text-gray-900"}`}>{ph.judul}</p>
+																			<p className="text-xs text-gray-500">{(ph.jenis || "").replace(/_/g, " ")} — No. {ph.nomor}</p>
+																		</div>
+																		{produkHukumId === ph.id && <LuCheck className="w-4 h-4 text-blue-600 ml-2 flex-shrink-0" />}
+																	</div>
+																</button>
+															))
+													)}
+												</div>
+											</div>
+										)}
+									</div>
+									{!produkHukumId && (
+										<p className="text-xs text-amber-600 mt-1.5 flex items-center gap-1">
+											<LuLock className="w-3.5 h-3.5" />
+											Pilih produk hukum terlebih dahulu untuk mengisi data di bawah
+										</p>
+									)}
+								</div>
+
+								{/* Nomor RT */}
+								<div className={!produkHukumId ? "opacity-50 pointer-events-none" : ""}>
+									<label className="block text-sm font-medium mb-1 text-gray-700">
 										Nomor RT <span className="text-red-500">*</span>
 									</label>
 									<input
 										type="text"
-										placeholder="Contoh: 001, 002, 003"
+										placeholder="Contoh: 001"
+										inputMode="numeric"
+										maxLength={3}
 										value={nomorRT}
-										onChange={(e) => setNomorRT(e.target.value)}
+										onChange={(e) => {
+											const val = e.target.value.replace(/\D/g, "").slice(0, 3);
+											setNomorRT(val);
+										}}
 										onKeyPress={(e) => {
-											if (e.key === "Enter" && nomorRT.trim() && !isLoading) {
+											if (e.key === "Enter" && nomorRT.trim() && !isLoading && produkHukumId) {
 												handleAddRT();
 											}
 										}}
-										className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-800 placeholder-gray-400"
-										disabled={isLoading}
-										autoFocus
+										className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-800 placeholder-gray-400 disabled:bg-gray-50"
+										disabled={isLoading || !produkHukumId}
 									/>
-									<p className="mt-2 text-xs text-gray-500">
-										Masukkan nomor RT dengan format yang konsisten
+									<p className="mt-1 text-xs text-gray-500">
+										Hanya 3 digit angka (contoh: 001, 012, 100)
 									</p>
+								</div>
+
+								{/* Alamat */}
+								<div className={!produkHukumId ? "opacity-50 pointer-events-none" : ""}>
+									<label className="block text-sm font-medium mb-1 text-gray-700">
+										Alamat Kelembagaan
+									</label>
+									<div className="relative">
+										<div className="absolute top-2.5 left-0 pl-3 pointer-events-none">
+											<LuMapPin className="w-5 h-5 text-gray-400" />
+										</div>
+										<textarea
+											className="w-full border border-gray-300 rounded-xl pl-10 pr-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-800 placeholder-gray-400 disabled:bg-gray-50 resize-none uppercase"
+											rows={2}
+											value={alamatRT}
+											onChange={(e) => setAlamatRT(e.target.value.toUpperCase())}
+											placeholder="Masukkan alamat sekretariat / lokasi RT"
+											disabled={isLoading || !produkHukumId}
+										/>
+									</div>
 								</div>
 							</div>
 
 							{/* Modal Footer */}
 							<div className="px-6 pb-6 flex items-center gap-3">
 								<button
-									onClick={() => {
-										setIsAddingRT(false);
-										setNomorRT("");
-									}}
+									onClick={resetModal}
 									className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 font-semibold transition-colors duration-200"
 									disabled={isLoading}
 								>
@@ -325,7 +418,7 @@ const AnakLembagaCard = ({
 								</button>
 								<button
 									onClick={handleAddRT}
-									disabled={isLoading || !nomorRT.trim()}
+									disabled={isLoading || !nomorRT.trim() || !produkHukumId}
 									className="flex-1 flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:from-green-600 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold transition-all duration-200 shadow-lg hover:shadow-xl"
 								>
 									<LuSave className="w-5 h-5" />

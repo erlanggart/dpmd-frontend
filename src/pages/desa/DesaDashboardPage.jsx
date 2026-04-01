@@ -1,77 +1,146 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-	LuBuilding2,
-	LuHouse,
-	LuUsers,
-	LuMapPin,
 	LuActivity,
-	LuShield,
-	LuHeart,
-	LuUsersRound,
-	LuTrendingUp,
-	LuDollarSign,
+	LuBanknote,
+	LuBuilding2,
 	LuCircleAlert,
 	LuCircleCheck,
+	LuDollarSign,
+	LuFileText,
+	LuLayoutDashboard,
 	LuLoader,
-	LuChevronDown,
-	LuChevronUp,
+	LuMapPin,
+	LuStore,
+	LuTrendingUp,
+	LuUsers,
 } from "react-icons/lu";
 import api from "../../api";
+
+const DEFAULT_COMPLETION = {
+	filled: 0,
+	total: 0,
+	percentage: 0,
+};
+
+const formatNumber = (value) => {
+	const safeValue = Number(value || 0);
+
+	return new Intl.NumberFormat("id-ID").format(
+		Number.isFinite(safeValue) ? safeValue : 0,
+	);
+};
+
+const formatCurrency = (value) => {
+	const safeValue = Number(value || 0);
+
+	return new Intl.NumberFormat("id-ID", {
+		style: "currency",
+		currency: "IDR",
+		minimumFractionDigits: 0,
+	}).format(Number.isFinite(safeValue) ? safeValue : 0);
+};
+
+const formatCurrencyShort = (value) => {
+	const safeValue = Number(value || 0);
+
+	if (!safeValue) {
+		return "Rp 0";
+	}
+
+	if (safeValue >= 1000000000) {
+		return `Rp ${(safeValue / 1000000000).toFixed(1).replace(".0", "")} M`;
+	}
+
+	if (safeValue >= 1000000) {
+		return `Rp ${(safeValue / 1000000).toFixed(1).replace(".0", "")} Jt`;
+	}
+
+	if (safeValue >= 1000) {
+		return `Rp ${(safeValue / 1000).toFixed(1).replace(".0", "")} Rb`;
+	}
+
+	return formatCurrency(safeValue);
+};
+
+const formatDate = (value) => {
+	if (!value) {
+		return "Tanpa tanggal";
+	}
+
+	const parsedDate = new Date(value);
+
+	if (Number.isNaN(parsedDate.getTime())) {
+		return "Tanpa tanggal";
+	}
+
+	return new Intl.DateTimeFormat("id-ID", {
+		day: "2-digit",
+		month: "short",
+		year: "numeric",
+	}).format(parsedDate);
+};
+
+const truncateText = (value, length = 130) => {
+	if (!value) {
+		return "Ringkasan belum tersedia.";
+	}
+
+	if (value.length <= length) {
+		return value;
+	}
+
+	return `${value.slice(0, length).trim()}...`;
+};
+
+const humanizeText = (value) => {
+	if (!value) {
+		return null;
+	}
+
+	return String(value)
+		.replace(/_/g, " ")
+		.replace(/\s+/g, " ")
+		.trim()
+		.replace(/\b\w/g, (character) => character.toUpperCase());
+};
+
+const countAvailableStages = (stages = []) => {
+	return stages.filter((stage) => stage?.hasData).length;
+};
 
 const DesaDashboardPage = () => {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
 	const [dashboardData, setDashboardData] = useState(null);
-	const [expandedCards, setExpandedCards] = useState({});
-	const [currentDateTime, setCurrentDateTime] = useState(new Date());
-
-	const toggleCard = (index) => {
-		setExpandedCards(prev => ({
-			...prev,
-			[index]: !prev[index]
-		}));
-	};
 
 	useEffect(() => {
+		const fetchDashboardData = async () => {
+			try {
+				setLoading(true);
+				setError(null);
+
+				const response = await api.get("/desa/dashboard/summary");
+				setDashboardData(response.data.data);
+			} catch (requestError) {
+				setError(
+					requestError.response?.data?.message ||
+						"Gagal memuat data dashboard desa",
+				);
+			} finally {
+				setLoading(false);
+			}
+		};
+
 		fetchDashboardData();
-
-		// Update time every second
-		const timer = setInterval(() => {
-			setCurrentDateTime(new Date());
-		}, 1000);
-
-		return () => clearInterval(timer);
 	}, []);
-
-	const fetchDashboardData = async () => {
-		try {
-			setLoading(true);
-			setError(null);
-			
-			// Debug: Check token
-			const token = localStorage.getItem('expressToken');
-			console.log('🔍 Fetching dashboard data with token:', token ? 'Token exists' : 'No token');
-			
-			const response = await api.get("/desa/dashboard/summary");
-			console.log('✅ Dashboard data received:', response.data);
-			
-			setDashboardData(response.data.data);
-		} catch (err) {
-			console.error("❌ Error fetching dashboard data:", err);
-			console.error("Response:", err.response?.data);
-			setError(err.response?.data?.message || "Gagal memuat data dashboard");
-		} finally {
-			setLoading(false);
-		}
-	};
 
 	if (loading) {
 		return (
-			<div className="flex items-center justify-center h-64">
-				<div className="flex flex-col items-center gap-3">
-					<LuLoader className="w-8 h-8 animate-spin text-blue-600" />
-					<p className="text-gray-600">Memuat data dashboard...</p>
+			<div className="flex h-64 items-center justify-center rounded-3xl border border-slate-200 bg-white shadow-sm">
+				<div className="flex flex-col items-center gap-3 text-slate-500">
+					<LuLoader className="h-8 w-8 animate-spin text-emerald-600" />
+					<p className="text-sm font-medium">Memuat ringkasan dashboard desa...</p>
 				</div>
 			</div>
 		);
@@ -79,490 +148,680 @@ const DesaDashboardPage = () => {
 
 	if (error) {
 		return (
-			<div className="bg-red-50 border border-red-200 rounded-lg p-6">
-				<div className="flex items-center gap-3">
-					<LuCircleAlert className="w-6 h-6 text-red-600" />
+			<div className="rounded-3xl border border-red-200 bg-red-50 p-6 shadow-sm">
+				<div className="flex items-start gap-3 text-red-700">
+					<LuCircleAlert className="mt-0.5 h-5 w-5 flex-shrink-0" />
 					<div>
-						<h3 className="font-semibold text-red-900">Terjadi Kesalahan</h3>
-						<p className="text-red-700">{error}</p>
+						<h2 className="text-base font-semibold text-red-900">Dashboard gagal dimuat</h2>
+						<p className="mt-1 text-sm">{error}</p>
 					</div>
 				</div>
 			</div>
 		);
 	}
 
-	const { desa, kelembagaan, keuangan } = dashboardData || {};
+	const {
+		desa = {},
+		profil = {},
+		aparatur = {},
+		produk_hukum: produkHukum = {},
+		bumdes = {},
+		kelembagaan = {},
+		bankeu = {},
+		keuangan = {},
+		berita = [],
+	} = dashboardData || {};
 
-	// Format date and time
-	const formatDateTime = (date) => {
-		const options = { 
-			weekday: 'long', 
-			year: 'numeric', 
-			month: 'long', 
-			day: 'numeric' 
-		};
-		const dateStr = date.toLocaleDateString('id-ID', options);
-		const timeStr = date.toLocaleTimeString('id-ID', { 
-			hour: '2-digit', 
-			minute: '2-digit',
-			second: '2-digit'
-		});
-		return { date: dateStr, time: timeStr };
-	};
+	const profileCompletion = profil.completion || DEFAULT_COMPLETION;
+	const desaLabel =
+		desa.status_pemerintahan === "kelurahan" ? "Kelurahan" : "Desa";
+	const todayLabel = new Intl.DateTimeFormat("id-ID", {
+		dateStyle: "full",
+	}).format(new Date());
+	const moduleYearsLabel =
+		bankeu.years?.length > 0
+			? bankeu.years.slice(0, 3).join(", ")
+			: null;
 
-	const { date: currentDate, time: currentTime } = formatDateTime(currentDateTime);
+	const bhprdStages = [
+		keuangan?.bhprd?.tahap1,
+		keuangan?.bhprd?.tahap2,
+		keuangan?.bhprd?.tahap3,
+	].filter(Boolean);
 
-	// Card data untuk kelembagaan
-	const kelembagaanCards = [
+	const ddStages = [
+		keuangan?.dd?.earmarked?.tahap1,
+		keuangan?.dd?.earmarked?.tahap2,
+		keuangan?.dd?.nonearmarked?.tahap1,
+		keuangan?.dd?.nonearmarked?.tahap2,
+	].filter(Boolean);
+
+	const bankeuFundingStages = [
+		keuangan?.bankeu?.tahap1,
+		keuangan?.bankeu?.tahap2,
+	].filter(Boolean);
+
+	const featureCards = [
 		{
-			title: "RW",
-			value: kelembagaan?.rw || 0,
-			icon: LuBuilding2,
-			color: "from-blue-400 to-blue-600",
-			bgColor: "bg-blue-50",
-			textColor: "text-blue-700",
-			link: "/desa/kelembagaan?type=rw",
-			showCount: true,
+			id: "profil-desa",
+			title: "Profil Desa",
+			link: "/desa/profil-desa",
+			icon: LuMapPin,
+			value: `${profileCompletion.percentage}%`,
+			description:
+				profileCompletion.percentage === 100
+					? "Data dasar desa sudah lengkap dan siap digunakan lintas modul."
+					: `${profileCompletion.filled}/${profileCompletion.total} data utama sudah terisi.`,
+			highlights: [
+				{
+					label: "Jumlah penduduk",
+					value: profil.jumlah_penduduk
+						? `${formatNumber(profil.jumlah_penduduk)} jiwa`
+						: "Belum diisi",
+				},
+				{
+					label: "Luas wilayah",
+					value: profil.luas_wilayah
+						? `${profil.luas_wilayah} km²`
+						: "Belum diisi",
+				},
+			],
+			badge:
+				profileCompletion.percentage === 100 ? "Lengkap" : "Perlu pembaruan",
+			badgeClass:
+				profileCompletion.percentage === 100
+					? "bg-emerald-100 text-emerald-700"
+					: "bg-amber-100 text-amber-700",
+			gradient: "from-emerald-500 to-teal-500",
+			surface: "from-emerald-50 via-white to-teal-50",
+			ready: profileCompletion.percentage > 0,
+			actionLabel: "Buka profil desa",
 		},
 		{
-			title: "RT",
-			value: kelembagaan?.rt || 0,
-			icon: LuHouse,
-			color: "from-green-400 to-green-600",
-			bgColor: "bg-green-50",
-			textColor: "text-green-700",
-			link: "/desa/kelembagaan",
-			showCount: true,
-		},
-		{
-			title: "Posyandu",
-			value: kelembagaan?.posyandu || 0,
-			icon: LuHeart,
-			color: "from-pink-400 to-pink-600",
-			bgColor: "bg-pink-50",
-			textColor: "text-pink-700",
-			link: "/desa/kelembagaan?type=posyandu",
-			showCount: true,
-		},
-		{
-			title: "Karang Taruna",
-			value: kelembagaan?.karang_taruna || 0,
-			isTerbentuk: (kelembagaan?.karang_taruna || 0) > 0,
+			id: "aparatur-desa",
+			title: "Aparatur Desa",
+			link: "/desa/aparatur-desa",
 			icon: LuUsers,
-			color: "from-purple-400 to-purple-600",
-			bgColor: "bg-purple-50",
-			textColor: "text-purple-700",
-			link: "/desa/kelembagaan?type=karang_taruna",
-			showCount: false,
+			value: `${formatNumber(aparatur.total)} orang`,
+			description:
+				aparatur.total > 0
+					? "Struktur aparatur telah terdata untuk kebutuhan administrasi dan pelayanan."
+					: "Belum ada aparatur yang terinput pada modul aparatur desa.",
+			highlights: [
+				{
+					label: "Status aktif",
+					value: `${formatNumber(aparatur.aktif)} orang`,
+				},
+				{
+					label: "Nonaktif",
+					value: `${formatNumber(aparatur.nonaktif)} orang`,
+				},
+			],
+			badge: aparatur.total > 0 ? "Terdata" : "Kosong",
+			badgeClass:
+				aparatur.total > 0
+					? "bg-sky-100 text-sky-700"
+					: "bg-slate-100 text-slate-600",
+			gradient: "from-sky-500 to-blue-600",
+			surface: "from-sky-50 via-white to-blue-50",
+			ready: aparatur.total > 0,
+			actionLabel: "Kelola aparatur",
 		},
 		{
-			title: "LPM",
-			value: kelembagaan?.lpm || 0,
-			isTerbentuk: (kelembagaan?.lpm || 0) > 0,
-			icon: LuUsersRound,
-			color: "from-indigo-400 to-indigo-600",
-			bgColor: "bg-indigo-50",
-			textColor: "text-indigo-700",
-			link: "/desa/kelembagaan?type=lpm",
-			showCount: false,
+			id: "produk-hukum",
+			title: "Produk Hukum",
+			link: "/desa/produk-hukum",
+			icon: LuFileText,
+			value: `${formatNumber(produkHukum.total)} dokumen`,
+			description:
+				produkHukum.total > 0
+					? "Peraturan desa, perkades, dan keputusan kepala desa sudah terdokumentasi."
+					: "Belum ada produk hukum desa yang diunggah ke sistem.",
+			highlights: [
+				{
+					label: "Berlaku",
+					value: `${formatNumber(produkHukum.berlaku)} dokumen`,
+				},
+				{
+					label: "Dicabut",
+					value: `${formatNumber(produkHukum.dicabut)} dokumen`,
+				},
+			],
+			badge: produkHukum.total > 0 ? "Tersedia" : "Belum ada",
+			badgeClass:
+				produkHukum.total > 0
+					? "bg-amber-100 text-amber-700"
+					: "bg-slate-100 text-slate-600",
+			gradient: "from-amber-500 to-orange-500",
+			surface: "from-amber-50 via-white to-orange-50",
+			ready: produkHukum.total > 0,
+			actionLabel: "Buka arsip hukum",
 		},
 		{
-			title: "PKK",
-			value: kelembagaan?.pkk || 0,
-			isTerbentuk: (kelembagaan?.pkk || 0) > 0,
-			icon: LuActivity,
-			color: "from-orange-400 to-orange-600",
-			bgColor: "bg-orange-50",
-			textColor: "text-orange-700",
-			link: "/desa/kelembagaan?type=pkk",
-			showCount: false,
+			id: "bumdes",
+			title: "BUMDes",
+			link: "/desa/bumdes",
+			icon: LuStore,
+			value: bumdes.exists
+				? humanizeText(bumdes.status) || "Terdata"
+				: "Belum ada",
+			description: bumdes.exists
+				? bumdes.nama || "Data BUMDes sudah terhubung di sistem."
+				: "Lengkapi identitas, legalitas, dan kondisi usaha BUMDes desa.",
+			highlights: [
+				{
+					label: "Badan hukum",
+					value: bumdes.badan_hukum || "Belum diisi",
+				},
+				{
+					label: "Nilai aset",
+					value: bumdes.nilai_aset
+						? formatCurrencyShort(bumdes.nilai_aset)
+						: "Belum diisi",
+				},
+			],
+			badge: bumdes.exists
+				? humanizeText(bumdes.status) || "Terdata"
+				: "Belum ada",
+			badgeClass: bumdes.exists
+				? "bg-fuchsia-100 text-fuchsia-700"
+				: "bg-slate-100 text-slate-600",
+			gradient: "from-fuchsia-500 to-indigo-600",
+			surface: "from-fuchsia-50 via-white to-indigo-50",
+			ready: !!bumdes.exists,
+			actionLabel: "Kelola BUMDes",
 		},
 		{
-			title: "Satlinmas",
-			value: kelembagaan?.satlinmas || 0,
-			isTerbentuk: (kelembagaan?.satlinmas || 0) > 0,
-			icon: LuShield,
-			color: "from-red-400 to-red-600",
-			bgColor: "bg-red-50",
-			textColor: "text-red-700",
-			link: "/desa/kelembagaan?type=satlinmas",
-			showCount: false,
+			id: "kelembagaan",
+			title: "Kelembagaan",
+			link: "/desa/kelembagaan",
+			icon: LuBuilding2,
+			value: `${formatNumber(kelembagaan.total_lembaga)} unit`,
+			description:
+				kelembagaan.total_lembaga > 0
+					? `${formatNumber(kelembagaan.lembaga_strategis)} dari 4 lembaga strategis telah terbentuk.`
+					: "Belum ada data kelembagaan yang terinput untuk desa ini.",
+			highlights: [
+				{
+					label: "RW / RT",
+					value: `${formatNumber(kelembagaan.rw)} / ${formatNumber(kelembagaan.rt)}`,
+				},
+				{
+					label: "Posyandu",
+					value: `${formatNumber(kelembagaan.posyandu)} unit`,
+				},
+			],
+			badge: kelembagaan.total_lembaga > 0 ? "Aktif" : "Belum ada",
+			badgeClass:
+				kelembagaan.total_lembaga > 0
+					? "bg-cyan-100 text-cyan-700"
+					: "bg-slate-100 text-slate-600",
+			gradient: "from-cyan-500 to-teal-500",
+			surface: "from-cyan-50 via-white to-teal-50",
+			ready: kelembagaan.total_lembaga > 0,
+			actionLabel: "Buka kelembagaan",
+		},
+		{
+			id: "bankeu",
+			title: "Bantuan Keuangan",
+			link: "/desa/bankeu",
+			icon: LuBanknote,
+			value: `${formatNumber(bankeu.total_proposals)} proposal`,
+			description:
+				bankeu.total_proposals > 0
+					? `${formatNumber(bankeu.in_progress)} proposal sedang berjalan${moduleYearsLabel ? ` untuk TA ${moduleYearsLabel}` : ""}.`
+					: "Belum ada proposal bantuan keuangan yang diajukan dari desa.",
+			highlights: [
+				{
+					label: "Disetujui",
+					value: `${formatNumber(bankeu.approved)} proposal`,
+				},
+				{
+					label: "Perlu tindakan",
+					value: `${formatNumber(bankeu.needs_action)} proposal`,
+				},
+			],
+			badge:
+				bankeu.needs_action > 0
+					? "Perlu aksi"
+					: bankeu.total_proposals > 0
+						? "Terpantau"
+						: "Siap diajukan",
+			badgeClass:
+				bankeu.needs_action > 0
+					? "bg-rose-100 text-rose-700"
+					: bankeu.total_proposals > 0
+						? "bg-violet-100 text-violet-700"
+						: "bg-slate-100 text-slate-600",
+			gradient: "from-rose-500 to-pink-600",
+			surface: "from-rose-50 via-white to-pink-50",
+			ready: bankeu.total_proposals > 0,
+			actionLabel: "Pantau pengajuan",
 		},
 	];
 
-	// Card data untuk keuangan - dengan detail tahap
-	const keuanganCards = [
+	const financeCards = [
 		{
+			id: "add",
 			title: "ADD 2025",
-			status: keuangan?.add?.status,
-			realisasi: keuangan?.add?.realisasiFormatted || "0",
-			hasData: keuangan?.add?.hasData,
-			color: "from-emerald-400 to-emerald-600",
-			bgColor: "bg-emerald-50",
-			borderColor: "border-emerald-200",
-			isSingleTahap: true,
+			amount: keuangan?.add?.hasData
+				? `Rp ${keuangan.add.realisasiFormatted}`
+				: "Rp 0",
+			status: keuangan?.add?.hasData
+				? humanizeText(keuangan.add.status) || "Data tersedia"
+				: "Belum ada data pencairan",
+			gradient: "from-emerald-500 to-lime-500",
+			surface: "from-emerald-50 via-white to-lime-50",
+			ready: !!keuangan?.add?.hasData,
 		},
 		{
+			id: "bhprd",
 			title: "BHPRD 2025",
-			totalFormatted: keuangan?.bhprd?.totalFormatted || "Rp 0",
-			hasData: keuangan?.bhprd?.tahap1?.hasData || keuangan?.bhprd?.tahap2?.hasData || keuangan?.bhprd?.tahap3?.hasData,
-			color: "from-blue-400 to-blue-600",
-			bgColor: "bg-blue-50",
-			borderColor: "border-blue-200",
-			tahapan: [
-				{
-					label: "Tahap 1",
-					status: keuangan?.bhprd?.tahap1?.status,
-					realisasi: keuangan?.bhprd?.tahap1?.realisasiFormatted || "0",
-					hasData: keuangan?.bhprd?.tahap1?.hasData,
-				},
-				{
-					label: "Tahap 2",
-					status: keuangan?.bhprd?.tahap2?.status,
-					realisasi: keuangan?.bhprd?.tahap2?.realisasiFormatted || "0",
-					hasData: keuangan?.bhprd?.tahap2?.hasData,
-				},
-				{
-					label: "Tahap 3",
-					status: keuangan?.bhprd?.tahap3?.status,
-					realisasi: keuangan?.bhprd?.tahap3?.realisasiFormatted || "0",
-					hasData: keuangan?.bhprd?.tahap3?.hasData,
-				},
-			],
+			amount: countAvailableStages(bhprdStages) > 0
+				? keuangan?.bhprd?.totalFormatted || "Rp 0"
+				: "Rp 0",
+			status:
+				countAvailableStages(bhprdStages) > 0
+					? `${countAvailableStages(bhprdStages)}/${bhprdStages.length} tahap memiliki data pencairan`
+					: "Belum ada data pencairan",
+			gradient: "from-sky-500 to-blue-600",
+			surface: "from-sky-50 via-white to-blue-50",
+			ready: countAvailableStages(bhprdStages) > 0,
 		},
 		{
+			id: "dd",
 			title: "DD 2025",
-			totalFormatted: keuangan?.dd?.totalFormatted || "Rp 0",
-			hasData: keuangan?.dd?.earmarked?.tahap1?.hasData || keuangan?.dd?.earmarked?.tahap2?.hasData || 
-			         keuangan?.dd?.nonearmarked?.tahap1?.hasData || keuangan?.dd?.nonearmarked?.tahap2?.hasData,
-			color: "from-violet-400 to-violet-600",
-			bgColor: "bg-violet-50",
-			borderColor: "border-violet-200",
-			tahapan: [
-				{
-					label: "Earmarked T1",
-					status: keuangan?.dd?.earmarked?.tahap1?.status,
-					realisasi: keuangan?.dd?.earmarked?.tahap1?.realisasiFormatted || "0",
-					hasData: keuangan?.dd?.earmarked?.tahap1?.hasData,
-				},
-				{
-					label: "Earmarked T2",
-					status: keuangan?.dd?.earmarked?.tahap2?.status,
-					realisasi: keuangan?.dd?.earmarked?.tahap2?.realisasiFormatted || "0",
-					hasData: keuangan?.dd?.earmarked?.tahap2?.hasData,
-				},
-				{
-					label: "Non-Earmarked T1",
-					status: keuangan?.dd?.nonearmarked?.tahap1?.status,
-					realisasi: keuangan?.dd?.nonearmarked?.tahap1?.realisasiFormatted || "0",
-					hasData: keuangan?.dd?.nonearmarked?.tahap1?.hasData,
-				},
-				{
-					label: "Non-Earmarked T2",
-					status: keuangan?.dd?.nonearmarked?.tahap2?.status,
-					realisasi: keuangan?.dd?.nonearmarked?.tahap2?.realisasiFormatted || "0",
-					hasData: keuangan?.dd?.nonearmarked?.tahap2?.hasData,
-				},
-			],
+			amount: countAvailableStages(ddStages) > 0
+				? keuangan?.dd?.totalFormatted || "Rp 0"
+				: "Rp 0",
+			status:
+				countAvailableStages(ddStages) > 0
+					? `${countAvailableStages(ddStages)}/${ddStages.length} tahap memiliki data pencairan`
+					: "Belum ada data pencairan",
+			gradient: "from-violet-500 to-indigo-600",
+			surface: "from-violet-50 via-white to-indigo-50",
+			ready: countAvailableStages(ddStages) > 0,
 		},
 		{
+			id: "bankeu-funding",
 			title: "Bankeu 2025",
-			totalFormatted: keuangan?.bankeu?.totalFormatted || "Rp 0",
-			hasData: keuangan?.bankeu?.tahap1?.hasData || keuangan?.bankeu?.tahap2?.hasData,
-			color: "from-amber-400 to-amber-600",
-			bgColor: "bg-amber-50",
-			borderColor: "border-amber-200",
-			tahapan: [
-				{
-					label: "Tahap 1",
-					status: keuangan?.bankeu?.tahap1?.status,
-					realisasi: keuangan?.bankeu?.tahap1?.realisasiFormatted || "0",
-					hasData: keuangan?.bankeu?.tahap1?.hasData,
-				},
-				{
-					label: "Tahap 2",
-					status: keuangan?.bankeu?.tahap2?.status,
-					realisasi: keuangan?.bankeu?.tahap2?.realisasiFormatted || "0",
-					hasData: keuangan?.bankeu?.tahap2?.hasData,
-				},
-			],
+			amount: countAvailableStages(bankeuFundingStages) > 0
+				? keuangan?.bankeu?.totalFormatted || "Rp 0"
+				: "Rp 0",
+			status:
+				countAvailableStages(bankeuFundingStages) > 0
+					? `${countAvailableStages(bankeuFundingStages)}/${bankeuFundingStages.length} tahap memiliki data pencairan`
+					: "Belum ada data pencairan",
+			gradient: "from-amber-500 to-orange-600",
+			surface: "from-amber-50 via-white to-orange-50",
+			ready: countAvailableStages(bankeuFundingStages) > 0,
 		},
 	];
 
-	const getStatusBadge = (status) => {
-		if (status === "Dana Telah Dicairkan") {
-			return (
-				<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-full border border-green-200">
-					<LuCircleCheck className="w-3 h-3" />
-					Dicairkan
-				</span>
-			);
-		}
-		return (
-			<span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-700 bg-gray-100 rounded-full border border-gray-200">
-				<LuCircleAlert className="w-3 h-3" />
-				{status}
-			</span>
-		);
-	};
+	const completedModules = featureCards.filter((card) => card.ready).length;
+	const focusItems = [];
+
+	if (profileCompletion.percentage < 100) {
+		focusItems.push({
+			title: "Lengkapi profil desa",
+			description: `${profileCompletion.total - profileCompletion.filled} data utama masih perlu dilengkapi agar informasi desa lebih utuh.`,
+			link: "/desa/profil-desa",
+			icon: LuMapPin,
+			tone: "bg-emerald-100 text-emerald-700",
+			actionLabel: "Perbarui profil",
+		});
+	}
+
+	if (bankeu.needs_action > 0) {
+		focusItems.push({
+			title: "Tindak lanjuti proposal Bankeu",
+			description: `${formatNumber(bankeu.needs_action)} proposal membutuhkan revisi atau tindak lanjut dari desa.`,
+			link: "/desa/bankeu",
+			icon: LuBanknote,
+			tone: "bg-rose-100 text-rose-700",
+			actionLabel: "Buka modul Bankeu",
+		});
+	}
+
+	if (!bumdes.exists) {
+		focusItems.push({
+			title: "Lengkapi data BUMDes",
+			description: "BUMDes belum tercatat. Isi identitas dan legalitas usaha desa agar profil ekonomi desa lebih kuat.",
+			link: "/desa/bumdes",
+			icon: LuStore,
+			tone: "bg-fuchsia-100 text-fuchsia-700",
+			actionLabel: "Isi data BUMDes",
+		});
+	}
+
+	if (produkHukum.total === 0) {
+		focusItems.push({
+			title: "Unggah produk hukum desa",
+			description: "Belum ada dokumen peraturan yang tersimpan. Arsip hukum penting untuk mendukung modul aparatur dan kelembagaan.",
+			link: "/desa/produk-hukum",
+			icon: LuFileText,
+			tone: "bg-amber-100 text-amber-700",
+			actionLabel: "Buka arsip hukum",
+		});
+	}
+
+	if (aparatur.total === 0) {
+		focusItems.push({
+			title: "Input aparatur desa",
+			description: "Belum ada aparatur yang terdata. Tambahkan aparatur untuk memudahkan administrasi dan pelaporan desa.",
+			link: "/desa/aparatur-desa",
+			icon: LuUsers,
+			tone: "bg-sky-100 text-sky-700",
+			actionLabel: "Kelola aparatur",
+		});
+	}
+
+	if (focusItems.length === 0) {
+		focusItems.push({
+			title: "Data inti desa sudah terisi",
+			description: "Pantau pencairan keuangan, pengajuan bantuan keuangan, dan berita DPMD dari dashboard ini.",
+			link: "/desa/dashboard",
+			icon: LuCircleCheck,
+			tone: "bg-emerald-100 text-emerald-700",
+			actionLabel: "Tetap di dashboard",
+		});
+	}
 
 	return (
-		<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-			{/* Left Column - Larger (2/3 width) */}
-			<div className="lg:col-span-2 space-y-6">
-
-			{/* Header */}
-			<div className="bg-gradient-to-r h-[30vh] from-blue-600 to-blue-800 rounded-lg shadow-lg p-6 text-white flex flex-col justify-between">
-				<div>
-					<div className="flex items-center gap-3 mb-2">
-						<LuMapPin className="w-6 h-6" />
-						<h1 className="text-2xl font-bold">Dashboard {desa?.status_pemerintahan === "kelurahan" ? "Kelurahan" : "Desa"}</h1>
-					</div>
-					<p className="text-blue-100 text-lg">
-						{desa?.status_pemerintahan === "kelurahan" ? "Kelurahan" : "Desa"} {desa?.nama} - Kecamatan {desa?.kecamatan}
-					</p>
-				</div>
-
-				{/* Date and Time */}
-				<div className="border-t border-blue-400/30 pt-4">
-					<div className="flex items-center justify-between">
-						<div>
-							<p className="text-blue-100 text-sm mb-1">Tanggal</p>
-							<p className="text-white font-semibold">{currentDate}</p>
-						</div>
-						<div className="text-right">
-							<p className="text-blue-100 text-sm mb-1">Waktu</p>
-							<p className="text-white font-semibold text-2xl">{currentTime}</p>
-						</div>
-					</div>
-				</div>
-			</div>
-
-			{/* Keuangan Section */}
-			<div>
-				<div className="flex items-center justify-between mb-4">
-					<h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-						<LuDollarSign className="w-5 h-5 text-green-600" />
-						Data Keuangan 2025
-					</h2>
-				</div>
-
-				{/* Total Realisasi */}
-				<div className="mb-6 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl shadow-xl p-6 text-white">
-					<div className="flex items-center justify-between">
-						<div className="flex items-center gap-4">
-							<div className="h-14 w-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
-								<LuDollarSign className="h-7 w-7 text-white" />
+		<div className="space-y-6">
+			<section className="relative overflow-hidden rounded-[28px] bg-slate-950 text-white shadow-xl">
+				<div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.28),_transparent_35%),radial-gradient(circle_at_bottom_right,_rgba(59,130,246,0.24),_transparent_32%)]" />
+				<div className="absolute left-8 top-8 h-40 w-40 rounded-full bg-emerald-400/10 blur-3xl" />
+				<div className="absolute bottom-0 right-0 h-56 w-56 rounded-full bg-blue-400/10 blur-3xl" />
+				<div className="relative p-6 md:p-8 xl:p-10">
+					<div className="flex flex-col gap-8 xl:flex-row xl:items-end xl:justify-between">
+						<div className="max-w-3xl space-y-4">
+							<div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/80 backdrop-blur-sm">
+								<LuLayoutDashboard className="h-4 w-4 text-emerald-300" />
+								Ringkasan fitur dan data utama {desaLabel.toLowerCase()}
 							</div>
 							<div>
-								<p className="text-sm text-green-100 mb-1">Total Realisasi Keuangan 2025</p>
-								<p className="text-3xl font-bold">
-									{keuangan?.total_realisasi_formatted || "Rp 0"}
+								<h1 className="text-3xl font-bold tracking-tight md:text-4xl xl:text-5xl">
+									Dashboard {desaLabel} {desa.nama}
+								</h1>
+								<p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300 md:text-base">
+									Pantau kelengkapan data desa, status modul kerja, realisasi keuangan,
+									serta berita terbaru dari DPMD dalam satu halaman.
+								</p>
+							</div>
+						</div>
+
+						<div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:w-[520px] xl:flex-shrink-0">
+							<div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
+								<p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+									Profil Terisi
+								</p>
+								<p className="mt-2 text-2xl font-semibold text-white">
+									{profileCompletion.percentage}%
+								</p>
+							</div>
+							<div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
+								<p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+									Aparatur
+								</p>
+								<p className="mt-2 text-2xl font-semibold text-white">
+									{formatNumber(aparatur.total)}
+								</p>
+							</div>
+							<div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
+								<p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+									Kelembagaan
+								</p>
+								<p className="mt-2 text-2xl font-semibold text-white">
+									{formatNumber(kelembagaan.total_lembaga)}
+								</p>
+							</div>
+							<div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
+								<p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+									Proposal Bankeu
+								</p>
+								<p className="mt-2 text-2xl font-semibold text-white">
+									{formatNumber(bankeu.total_proposals)}
 								</p>
 							</div>
 						</div>
 					</div>
-				</div>
 
-				{/* Cards Layout - Vertical Stack */}
-				<div className="space-y-4">
-					{keuanganCards.map((card, index) => (
-						<div
-							key={index}
-							className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-200"
-						>
-							{/* Card Header */}
-							<div className={`${card.bgColor} border-b-2 ${card.borderColor} p-5`}>
-								<div className="flex items-center justify-between">
-									<div className="flex items-center gap-4 flex-1">
-										<div className={`h-12 w-12 bg-gradient-to-r ${card.color} rounded-xl flex items-center justify-center shadow-md`}>
-											<LuDollarSign className="h-6 w-6 text-white" />
-										</div>
-										<div className="flex-1">
-											<h3 className="text-lg font-bold text-gray-900 mb-1">
-												{card.title}
-											</h3>
-											{card.isSingleTahap && card.status && (
-												<div className="mt-2">
-													{getStatusBadge(card.status)}
-												</div>
-											)}
-										</div>
-									</div>
-									
-									{/* Total Realisasi */}
-									<div className="text-right">
-										<p className="text-xs text-gray-600 mb-1">Total Realisasi</p>
-										<p className="text-2xl font-bold text-gray-900">
-											{card.isSingleTahap ? (
-												card.hasData ? `Rp ${card.realisasi}` : <span className="text-gray-400 text-base">Tidak ada data</span>
-											) : (
-												card.hasData ? card.totalFormatted : <span className="text-gray-400 text-base">Tidak ada data</span>
-											)}
-										</p>
-									</div>
-								</div>
-							</div>
-
-							{/* Accordion Content - Only for multi-tahap */}
-							{!card.isSingleTahap && card.tahapan && (
-								<>
-									{/* Accordion Toggle Button */}
-									<button
-										onClick={() => toggleCard(index)}
-										className="w-full px-5 py-3 bg-gray-50 hover:bg-gray-100 transition-colors duration-200 flex items-center justify-between text-sm font-medium text-gray-700"
-									>
-										<span className="flex items-center gap-2">
-											<span className="h-1.5 w-1.5 rounded-full bg-gray-400"></span>
-											Detail Pencairan Per Tahap
-										</span>
-										{expandedCards[index] ? (
-											<LuChevronUp className="h-5 w-5" />
-										) : (
-											<LuChevronDown className="h-5 w-5" />
-										)}
-									</button>
-
-									{/* Accordion Panel */}
-									{expandedCards[index] && (
-										<div className="px-5 py-4 bg-gray-50 border-t border-gray-200">
-											<div className="space-y-3">
-												{card.tahapan.map((tahap, idx) => (
-													<div 
-														key={idx} 
-														className="bg-white rounded-lg p-4 border border-gray-200 hover:border-gray-300 transition-colors duration-200"
-													>
-														{/* Tahap Header */}
-														<div className="flex items-center justify-between mb-3">
-															<div className="flex items-center gap-3">
-																<div className={`h-8 w-8 rounded-lg bg-gradient-to-r ${card.color} flex items-center justify-center`}>
-																	<span className="text-white text-xs font-bold">{idx + 1}</span>
-																</div>
-																<h4 className="font-semibold text-gray-900">{tahap.label}</h4>
-															</div>
-															{tahap.hasData && (
-																<span className="px-2.5 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full border border-green-200">
-																	Data Available From Sipanda
-																</span>
-															)}
-														</div>
-
-														{/* Status and Realisasi in one row */}
-														<div className="flex items-center justify-between">
-															{/* Left: Status Badge */}
-															<div className="flex-1">
-																{tahap.status && getStatusBadge(tahap.status)}
-															</div>
-
-															{/* Right: Realisasi Amount */}
-															<div className="bg-gray-50 rounded-lg p-3 min-w-[200px] text-right">
-																<p className="text-xs text-gray-600 mb-1">Realisasi</p>
-																<p className="text-lg font-bold text-gray-900">
-																	{tahap.hasData ? `Rp ${tahap.realisasi}` : <span className="text-gray-400 text-sm">Tidak ada data</span>}
-																</p>
-															</div>
-														</div>
-													</div>
-												))}
-											</div>
-										</div>
-									)}
-								</>
-							)}
+					<div className="mt-8 flex flex-wrap gap-3">
+						<div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/80">
+							<LuMapPin className="h-4 w-4 text-emerald-300" />
+							{desa.kecamatan ? `Kecamatan ${desa.kecamatan}` : "Kecamatan belum tersedia"}
 						</div>
-					))}
+						<div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/80">
+							<LuCircleCheck className="h-4 w-4 text-emerald-300" />
+							{completedModules}/{featureCards.length} modul telah memiliki data inti
+						</div>
+						<div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/80">
+							<LuDollarSign className="h-4 w-4 text-emerald-300" />
+							Realisasi 2025 {keuangan.total_realisasi_formatted || formatCurrency(0)}
+						</div>
+						<div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/80">
+							<LuTrendingUp className="h-4 w-4 text-blue-300" />
+							{todayLabel}
+						</div>
+					</div>
 				</div>
+			</section>
 
-				
-			</div>
-			</div>
+			<div className="grid gap-6 xl:grid-cols-[minmax(0,1.75fr)_minmax(320px,1fr)]">
+				<div className="space-y-6">
+					<section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+						<div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+							<div>
+								<h2 className="text-xl font-semibold text-slate-900">Ringkasan Fitur Desa</h2>
+								<p className="mt-1 text-sm text-slate-500">
+									Semua modul utama untuk user desa diringkas dalam kartu yang bisa langsung dibuka.
+								</p>
+							</div>
+							<div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-600">
+								<LuLayoutDashboard className="h-4 w-4" />
+								{featureCards.length} modul utama
+							</div>
+						</div>
 
-			{/* Right Column - Smaller (1/3 width) */}
-			<div className="space-y-6">
-			{/* Kelembagaan Section */}
-			<div className="bg-white p-4 rounded-lg">
-				<div className="flex items-center justify-between mb-4">
-					<h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-						<LuBuilding2 className="w-5 h-5 text-blue-600" />
-						Data Kelembagaan
-					</h2>
-					<Link
-						to="/desa/kelembagaan"
-						className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
-					>
-						Lihat Semua
-						<LuTrendingUp className="w-4 h-4" />
-					</Link>
-				</div>
+						<div className="mt-6 grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+							{featureCards.map((card) => {
+								const IconComponent = card.icon;
 
-				<div className="grid gap-4 grid-cols-1">
-					{kelembagaanCards.map((card, index) => {
-						const IconComponent = card.icon;
-						const isActive = card.showCount ? true : card.isTerbentuk;
-						
-						return (
-							<Link
-								key={index}
-								to={card.link}
-								className={`${
-									isActive 
-										? card.bgColor 
-										: 'bg-gray-100'
-								} rounded-lg border-2 ${
-									isActive 
-										? card.textColor.replace('text-', 'border-').replace('-700', '-200') 
-										: 'border-gray-300'
-								} p-4 hover:shadow-lg transition-all duration-200 hover:scale-105`}
-							>
-								<div className="flex items-center justify-between">
-									<div className="flex items-center gap-3">
-										<div className={`h-10 w-10 bg-gradient-to-r ${
-											isActive 
-												? card.color 
-												: 'from-gray-400 to-gray-500'
-										} rounded-lg flex items-center justify-center shadow-md`}>
-											<IconComponent className="h-5 w-5 text-white" />
+								return (
+									<Link
+										key={card.id}
+										to={card.link}
+										className={`group relative overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-br ${card.surface} p-5 shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-lg`}
+									>
+										<div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${card.gradient}`} />
+										<div className="flex items-start justify-between gap-4">
+											<div className={`flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ${card.gradient} text-white shadow-lg`}>
+												<IconComponent className="h-5 w-5" />
+											</div>
+											<span className={`rounded-full px-3 py-1 text-xs font-semibold ${card.badgeClass}`}>
+												{card.badge}
+											</span>
 										</div>
-										<h3 className={`text-sm font-semibold ${
-											isActive 
-												? card.textColor 
-												: 'text-gray-600'
-										}`}>
-											{card.title}
-										</h3>
-									</div>
-									<div className={`text-right ${
-										isActive 
-											? card.textColor 
-											: 'text-gray-600'
-									}`}>
-										{card.showCount ? (
-											<div className="text-2xl font-bold">
+
+										<div className="mt-5">
+											<p className="text-sm font-medium text-slate-500">{card.title}</p>
+											<p className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">
 												{card.value}
-											</div>
-										) : (
-											<div className="flex flex-col items-end">
-												<span className={`text-xs font-medium px-2 py-1 rounded-full ${
-													card.isTerbentuk 
-														? 'bg-green-100 text-green-700 border border-green-300' 
-														: 'bg-gray-200 text-gray-600 border border-gray-300'
-												}`}>
-													{card.isTerbentuk ? '✓ Terbentuk' : '✗ Belum'}
-												</span>
-											</div>
-										)}
+											</p>
+											<p className="mt-2 text-sm leading-6 text-slate-600">
+												{card.description}
+											</p>
+										</div>
+
+										<div className="mt-5 space-y-2 rounded-2xl border border-white/70 bg-white/70 p-3 backdrop-blur-sm">
+											{card.highlights.map((highlight) => (
+												<div
+													key={`${card.id}-${highlight.label}`}
+													className="flex items-center justify-between gap-4 text-sm"
+												>
+													<span className="text-slate-500">{highlight.label}</span>
+													<span className="text-right font-semibold text-slate-800">
+														{highlight.value}
+													</span>
+												</div>
+											))}
+										</div>
+
+										<div className="mt-5 flex items-center justify-between text-sm font-semibold text-slate-700">
+											<span>{card.actionLabel}</span>
+											<LuTrendingUp className="h-4 w-4 transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+										</div>
+									</Link>
+								);
+							})}
+						</div>
+					</section>
+
+					<section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+						<div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+							<div>
+								<h2 className="text-xl font-semibold text-slate-900">Realisasi Keuangan 2025</h2>
+								<p className="mt-1 text-sm text-slate-500">
+									Ringkasan realisasi keuangan desa dari data pencairan yang tersedia di sistem.
+								</p>
+							</div>
+							<div className="rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 px-5 py-4 text-white shadow-lg shadow-emerald-500/20">
+								<p className="text-xs font-medium uppercase tracking-wide text-emerald-100">
+									Total realisasi
+								</p>
+								<p className="mt-2 text-2xl font-semibold">
+									{keuangan.total_realisasi_formatted || formatCurrency(0)}
+								</p>
+							</div>
+						</div>
+
+						<div className="mt-6 grid gap-4 md:grid-cols-2 2xl:grid-cols-4">
+							{financeCards.map((card) => (
+								<div
+									key={card.id}
+									className={`rounded-3xl border border-slate-200 bg-gradient-to-br ${card.surface} p-5 shadow-sm`}
+								>
+									<div className="flex items-start justify-between gap-4">
+										<div className={`flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br ${card.gradient} text-white shadow-md`}>
+											<LuDollarSign className="h-5 w-5" />
+										</div>
+										<span
+											className={`rounded-full px-3 py-1 text-xs font-semibold ${
+												card.ready
+													? "bg-emerald-100 text-emerald-700"
+													: "bg-slate-100 text-slate-600"
+											}`}
+										>
+											{card.ready ? "Tersedia" : "Belum ada data"}
+										</span>
 									</div>
+
+									<p className="mt-5 text-sm font-medium text-slate-500">{card.title}</p>
+									<p className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">
+										{card.amount}
+									</p>
+									<p className="mt-3 text-sm leading-6 text-slate-600">
+										{card.status}
+									</p>
 								</div>
-							</Link>
-						);
-					})}
+							))}
+						</div>
+					</section>
 				</div>
 
-				
-			</div>
-			</div>
+				<div className="space-y-6">
+					<section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+						<div className="flex items-center justify-between gap-3">
+							<div>
+								<h2 className="text-xl font-semibold text-slate-900">Berita & Artikel DPMD</h2>
+								<p className="mt-1 text-sm text-slate-500">
+									Pembaruan terbaru yang relevan untuk desa dari kanal berita DPMD.
+								</p>
+							</div>
+							<div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-600">
+								<LuActivity className="h-4 w-4" />
+								{formatNumber(berita.length)} item
+							</div>
+						</div>
 
-			
+						{berita.length > 0 ? (
+							<div className="mt-6 space-y-3">
+								{berita.map((item, index) => (
+									<Link
+										key={item.id_berita || item.slug || index}
+										to={item.slug ? `/berita/${item.slug}` : "/"}
+										className="group block rounded-3xl border border-slate-200 bg-slate-50 p-4 transition hover:border-slate-300 hover:bg-white hover:shadow-sm"
+									>
+										<div className="flex items-start gap-4">
+											<div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-sm font-semibold text-white">
+												{String(index + 1).padStart(2, "0")}
+											</div>
+											<div className="min-w-0 flex-1">
+												<div className="flex flex-wrap items-center gap-2 text-xs font-medium text-slate-500">
+													<span className="rounded-full bg-slate-200 px-2.5 py-1 text-slate-700">
+														{humanizeText(item.kategori) || "Berita DPMD"}
+													</span>
+													<span>{formatDate(item.tanggal_publish || item.created_at)}</span>
+													<span>{formatNumber(item.views)} dibaca</span>
+												</div>
+												<h3 className="mt-3 text-base font-semibold leading-6 text-slate-900 transition group-hover:text-emerald-700">
+													{item.judul}
+												</h3>
+												<p className="mt-2 text-sm leading-6 text-slate-600">
+													{truncateText(item.ringkasan, 145)}
+												</p>
+											</div>
+										</div>
+									</Link>
+								))}
+							</div>
+						) : (
+							<div className="mt-6 rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-5 text-sm text-slate-500">
+								Belum ada berita atau artikel DPMD yang dipublikasikan.
+							</div>
+						)}
+					</section>
+
+					<section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+						<h2 className="text-xl font-semibold text-slate-900">Fokus Berikutnya</h2>
+						<p className="mt-1 text-sm text-slate-500">
+							Rekomendasi tindak lanjut berdasarkan kondisi data desa saat ini.
+						</p>
+
+						<div className="mt-6 space-y-3">
+							{focusItems.slice(0, 3).map((item, index) => {
+								const IconComponent = item.icon;
+
+								return (
+									<Link
+										key={`${item.title}-${index}`}
+										to={item.link}
+										className="group block rounded-3xl border border-slate-200 bg-slate-50 p-4 transition hover:border-slate-300 hover:bg-white hover:shadow-sm"
+									>
+										<div className="flex items-start gap-4">
+											<div className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl ${item.tone}`}>
+												<IconComponent className="h-5 w-5" />
+											</div>
+											<div className="min-w-0 flex-1">
+												<h3 className="text-base font-semibold text-slate-900 transition group-hover:text-slate-700">
+													{item.title}
+												</h3>
+												<p className="mt-2 text-sm leading-6 text-slate-600">
+													{item.description}
+												</p>
+												<p className="mt-3 text-sm font-semibold text-slate-700">
+													{item.actionLabel}
+												</p>
+											</div>
+										</div>
+									</Link>
+								);
+							})}
+						</div>
+					</section>
+				</div>
+			</div>
 		</div>
 	);
 };

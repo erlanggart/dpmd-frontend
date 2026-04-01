@@ -73,6 +73,8 @@ const PengurusEditPage = () => {
 		alamat: "",
 		no_telepon: "",
 		pendidikan: "",
+		agama: "",
+		golongan_darah: "",
 		jabatan: "",
 		tanggal_mulai_jabatan: "",
 		tanggal_akhir_jabatan: "",
@@ -213,6 +215,8 @@ const PengurusEditPage = () => {
 					alamat: data.alamat || "",
 					no_telepon: data.no_telepon || "",
 					pendidikan: data.pendidikan || "",
+					agama: data.agama || "",
+					golongan_darah: data.golongan_darah || "",
 					jabatan: data.jabatan || "",
 					tanggal_mulai_jabatan: formatDateForInput(data.tanggal_mulai_jabatan),
 					tanggal_akhir_jabatan: formatDateForInput(data.tanggal_akhir_jabatan),
@@ -726,6 +730,44 @@ const PengurusEditPage = () => {
 									<option value="S1">S1</option>
 									<option value="S2">S2</option>
 									<option value="S3">S3</option>
+								</select>
+							</div>
+
+							<div>
+								<label className="block text-sm font-semibold text-gray-800 mb-1.5">
+									Agama
+								</label>
+								<select
+									name="agama"
+									value={formData.agama}
+									onChange={handleInputChange}
+									className="w-full border-2 border-gray-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white/80 backdrop-blur-sm transition-all duration-200"
+								>
+									<option value="">Pilih agama</option>
+									<option value="Islam">Islam</option>
+									<option value="Kristen">Kristen</option>
+									<option value="Katolik">Katolik</option>
+									<option value="Hindu">Hindu</option>
+									<option value="Buddha">Buddha</option>
+									<option value="Konghucu">Konghucu</option>
+								</select>
+							</div>
+
+							<div>
+								<label className="block text-sm font-semibold text-gray-800 mb-1.5">
+									Golongan Darah
+								</label>
+								<select
+									name="golongan_darah"
+									value={formData.golongan_darah}
+									onChange={handleInputChange}
+									className="w-full border-2 border-gray-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white/80 backdrop-blur-sm transition-all duration-200"
+								>
+									<option value="">Pilih golongan darah</option>
+									<option value="A">A</option>
+									<option value="B">B</option>
+									<option value="AB">AB</option>
+									<option value="O">O</option>
 								</select>
 							</div>
 
