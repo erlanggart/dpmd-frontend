@@ -12,6 +12,7 @@ import PengurusDetailPage from "./pengurus/PengurusDetailPage";
 const PengurusKelembagaan = ({
 	kelembagaanType,
 	kelembagaanId,
+	kelembagaanName,
 	desaId,
 	onPengurusCountChange,
 }) => {
@@ -21,6 +22,7 @@ const PengurusKelembagaan = ({
 	const [loading, setLoading] = useState(true);
 	const [showForm, setShowForm] = useState(false);
 	const [editingPengurus, setEditingPengurus] = useState(null);
+	const [defaultJabatan, setDefaultJabatan] = useState("");
 	const [showDetailPage, setShowDetailPage] = useState(false);
 	const [selectedPengurusId, setSelectedPengurusId] = useState(null);
 
@@ -53,8 +55,9 @@ const PengurusKelembagaan = ({
 		loadPengurus();
 	}, [loadPengurus]);
 
-	const handleAddPengurus = () => {
+	const handleAddPengurus = (jabatan) => {
 		setEditingPengurus(null);
+		setDefaultJabatan(jabatan || "");
 		setShowForm(true);
 	};
 
@@ -137,6 +140,8 @@ const PengurusKelembagaan = ({
 					editData={editingPengurus}
 					kelembagaanType={kelembagaanType}
 					kelembagaanId={kelembagaanId}
+					kelembagaanName={kelembagaanName}
+					defaultJabatan={defaultJabatan}
 					desaId={desaId}
 				/>
 			)}

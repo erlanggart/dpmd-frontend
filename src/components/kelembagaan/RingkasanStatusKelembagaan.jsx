@@ -33,11 +33,11 @@ const RingkasanStatusKelembagaan = ({ data, loading, error }) => {
   const { grand_totals } = data;
 
   const doughnutData = {
-    labels: ["Terverifikasi", "Belum Terverifikasi"],
+    labels: ["Terverifikasi", "Belum Terverifikasi", "Verifikasi Ditolak"],
     datasets: [{
-      data: [grand_totals.verified, grand_totals.unverified],
-      backgroundColor: ["rgba(34, 197, 94, 0.85)", "rgba(234, 179, 8, 0.85)"],
-      borderColor: ["#22c55e", "#eab308"],
+      data: [grand_totals.verified, grand_totals.unverified, grand_totals.ditolak || 0],
+      backgroundColor: ["rgba(34, 197, 94, 0.85)", "rgba(234, 179, 8, 0.85)", "rgba(239, 68, 68, 0.85)"],
+      borderColor: ["#22c55e", "#eab308", "#ef4444"],
       borderWidth: 2,
       hoverOffset: 6,
     }],

@@ -291,22 +291,20 @@ const Kelembagaan = () => {
       <ChartVerifikasiTahunan data={statistikData} loading={statistikLoading} error={statistikError} />
       <TabelVerifikasiTahunan data={statistikData} loading={statistikLoading} error={statistikError} />
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-8 ">
-        <div className="bg-white rounded-xl border border-gray-200 p-6 grid grid-cols-1 md:grid-cols-3 gap-6 col-span-3">
+      <div className="space-y-8">
+        <div className="bg-white rounded-xl border border-gray-200 p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="col-span-1 md:col-span-2">
             <CapaianVerifikasiLembaga data={statistikData} loading={statistikLoading} error={statistikError} />
           </div>
           <div className="col-span-1">
             <RingkasanStatusKelembagaan data={statistikData} loading={statistikLoading} error={statistikError} />
           </div>
-          <div className="col-span-1">
-          </div>
-        
         </div>
-<UnverifiedKelembagaanList 
-            kecamatanData={kecamatanData}
-            onDesaClick={handleDesaClick}
-          />
+
+        <UnverifiedKelembagaanList 
+          kecamatanData={kecamatanData}
+          onDesaClick={handleDesaClick}
+        />
       </div>
 
 <div className="grid grid-cols-4 gap-6">

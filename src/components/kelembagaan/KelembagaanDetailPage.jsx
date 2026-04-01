@@ -23,16 +23,16 @@ import {
 	updateLembagaLainnya,
 	toggleKelembagaanStatus,
 	toggleKelembagaanVerification,
+	ajukanUlangVerifikasi,
 } from "../../services/kelembagaan";
 import { getProdukHukums } from "../../services/api";
 import { getPengurusByKelembagaan } from "../../services/pengurus";
 import PengurusKelembagaan from "./PengurusKelembagaan";
-import SearchableProdukHukumSelect from "../shared/SearchableProdukHukumSelect";
 import ProfilCard from "./ProfilCard";
 import AnakLembagaCard from "./AnakLembagaCard";
 import AktivitasLog from "./AktivitasLog";
 import { FaArrowLeft, FaHome, FaChevronRight } from "react-icons/fa";
-import { LuLock, LuLockOpen } from "react-icons/lu";
+import { LuLock, LuLockOpen, LuChevronDown, LuSearch, LuCheck, LuFileText, LuMapPin, LuBuilding, LuHeart } from "react-icons/lu";
 import {
 	showSuccessAlert,
 	showErrorAlert,
@@ -56,7 +56,7 @@ const getDisplayName = (type) => {
 	return mapping[type] || type.toUpperCase();
 };
 
-// Simple Modal for editing alamat and name/nomor
+// Simple Modal for editing kelembagaan - matching KelembagaanList pattern
 const EditModal = ({
 	title,
 	isOpen,
@@ -64,30 +64,78 @@ const EditModal = ({
 	children,
 	onSubmit,
 	submitLabel = "Simpan",
+	submitting = false,
+	gradient = "from-indigo-500 to-purple-600",
 }) => {
+	const handleBackdropClick = (e) => {
+		if (e.target === e.currentTarget && !submitting) {
+			onClose();
+		}
+	};
+
+	useEffect(() => {
+		if (!isOpen) return;
+		const handleKeyDown = (e) => {
+			if (e.key === "Escape" && !submitting) {
+				onClose();
+			}
+		};
+		document.addEventListener("keydown", handleKeyDown);
+		return () => document.removeEventListener("keydown", handleKeyDown);
+	}, [isOpen, onClose, submitting]);
+
 	if (!isOpen) return null;
 	return (
-		<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-			<div className="bg-white rounded-lg shadow-lg w-full max-w-lg p-4">
-				<div className="flex items-center justify-between mb-3">
-					<h3 className="text-lg font-semibold">{title}</h3>
+		<div
+			className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+			role="dialog"
+			aria-modal="true"
+			onClick={handleBackdropClick}
+		>
+			<div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 transform transition-all max-h-[90vh] overflow-y-auto">
+				<div className={`flex items-center justify-between p-6 border-b border-gray-100 bg-gradient-to-r ${gradient} rounded-t-2xl`}>
+					<div className="flex items-center space-x-3">
+						<div className="p-2 bg-white/20 rounded-lg">
+							<LuFileText className="w-5 h-5 text-white" />
+						</div>
+						<h3 className="text-lg font-semibold text-white">{title}</h3>
+					</div>
 					<button
+						type="button"
+						className="text-white/80 hover:text-white text-xl w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors"
 						onClick={onClose}
-						className="text-gray-500 hover:text-gray-700"
+						disabled={submitting}
 					>
 						✕
 					</button>
 				</div>
-				<div className="space-y-3">{children}</div>
-				<div className="mt-4 flex justify-end gap-2">
-					<button className="px-3 py-2 bg-gray-100 rounded" onClick={onClose}>
+				<div className="p-6 space-y-4">{children}</div>
+				<div className="flex justify-end gap-3 p-6 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
+					<button
+						type="button"
+						className="px-6 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
+						onClick={onClose}
+						disabled={submitting}
+					>
 						Batal
 					</button>
 					<button
-						className="px-3 py-2 bg-indigo-600 text-white rounded"
+						type="button"
+						className={`px-6 py-2 bg-gradient-to-r ${gradient} text-white rounded-lg hover:shadow-md disabled:opacity-50 transition-all flex items-center space-x-2`}
 						onClick={onSubmit}
+						disabled={submitting}
 					>
-						{submitLabel}
+						{submitting ? (
+							<>
+								<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+								<span>Menyimpan...</span>
+							</>
+						) : (
+							<>
+								<LuCheck className="w-4 h-4" />
+								<span>{submitLabel}</span>
+							</>
+						)}
 					</button>
 				</div>
 			</div>
@@ -120,6 +168,9 @@ export default function KelembagaanDetailPage({
 	const [produkHukumList, setProdukHukumList] = useState([]);
 	const [anak, setAnak] = useState([]);
 	const [pengurusCount, setPengurusCount] = useState(0);
+	const [phSearchTerm, setPhSearchTerm] = useState("");
+	const [showPhDropdown, setShowPhDropdown] = useState(false);
+	const [editSubmitting, setEditSubmitting] = useState(false);
 
 	const loadDetail = useCallback(async () => {
 		setLoading(true);
@@ -182,13 +233,17 @@ export default function KelembagaanDetailPage({
 		}
 	}, [type, id]);
 
-	// Fetch produk hukum list for the dropdown (filtered by desa)
+	// Fetch produk hukum list for the dropdown (filtered by Perdes/Perkades berlaku)
 	const fetchProdukHukumList = useCallback(async () => {
 		if (!detail?.desa_id) return;
 		
 		try {
-			// Pass desa_id to filter produk hukum for this specific desa
-			const res = await getProdukHukums({ all: 'true', desa_id: detail.desa_id });
+			const res = await getProdukHukums({
+				all: 'true',
+				desa_id: detail.desa_id,
+				jenis: 'Peraturan Desa,Peraturan Kepala Desa',
+				status_peraturan: 'berlaku',
+			});
 			const allData = res?.data?.data || [];
 			setProdukHukumList(Array.isArray(allData) ? allData : []);
 		} catch (err) {
@@ -243,10 +298,13 @@ export default function KelembagaanDetailPage({
 			alamat: detail?.alamat || "",
 			produk_hukum_id: detail?.produk_hukum_id || "",
 		});
+		setPhSearchTerm("");
+		setShowPhDropdown(false);
 		setIsEditOpen(true);
 	};
 
 	const handleSaveEdit = async () => {
+		setEditSubmitting(true);
 		try {
 			// Show loading alert
 			showLoadingAlert("Menyimpan Data...", "Mohon tunggu sebentar");
@@ -288,6 +346,8 @@ export default function KelembagaanDetailPage({
 
 			// Show error alert
 			showErrorAlert("Gagal!", `Gagal menyimpan perubahan: ${errorMessage}`);
+		} finally {
+			setEditSubmitting(false);
 		}
 	};
 
@@ -382,10 +442,10 @@ export default function KelembagaanDetailPage({
 	// Helper: show tunda verifikasi feedback modal
 	const showTundaVerifikasiModal = async (kelembagaanId) => {
 		const { value: formValues } = await Swal.fire({
-			title: "Tunda Verifikasi",
+			title: "Tolak Verifikasi",
 			html: `
 				<div class="text-left space-y-3">
-					<p class="text-sm text-gray-600 mb-3">Berikan catatan/alasan penundaan verifikasi agar desa dapat memperbaiki data.</p>
+					<p class="text-sm text-gray-600 mb-3">Berikan catatan/alasan penolakan verifikasi agar desa dapat memperbaiki data.</p>
 					<div>
 						<label class="block text-sm font-medium text-gray-700 mb-1">Pilih alasan:</label>
 						<div class="space-y-2" id="swal-checklist">
@@ -409,9 +469,9 @@ export default function KelembagaanDetailPage({
 					</div>
 				</div>`,
 			showCancelButton: true,
-			confirmButtonText: "Kirim & Tunda Verifikasi",
+			confirmButtonText: "Kirim & Tolak Verifikasi",
 			cancelButtonText: "Kembali",
-			confirmButtonColor: "#f59e0b",
+			confirmButtonColor: "#ef4444",
 			focusConfirm: false,
 			preConfirm: () => {
 				const checks = Array.from(document.querySelectorAll('.swal-check:checked')).map(c => c.value);
@@ -429,16 +489,16 @@ export default function KelembagaanDetailPage({
 		if (!formValues) return;
 
 		try {
-			showLoadingAlert("Menunda Verifikasi...", "Mohon tunggu sebentar");
-			await toggleKelembagaanVerification(type, kelembagaanId, "unverified", formValues);
+			showLoadingAlert("Menolak Verifikasi...", "Mohon tunggu sebentar");
+			await toggleKelembagaanVerification(type, kelembagaanId, "ditolak", formValues);
 
 			setDetail((prevDetail) => ({
 				...prevDetail,
-				status_verifikasi: "unverified",
+				status_verifikasi: "ditolak",
 				catatan_verifikasi: formValues,
 			}));
 
-			showSuccessAlert("Berhasil!", "Verifikasi ditunda dan catatan telah dikirim ke desa");
+			showSuccessAlert("Berhasil!", "Verifikasi ditolak dan catatan telah dikirim ke desa");
 			setTimeout(() => {
 				if (aktivitasLogRef.current) aktivitasLogRef.current.refresh();
 			}, 500);
@@ -486,9 +546,9 @@ export default function KelembagaanDetailPage({
 							<p class="font-medium text-blue-800 text-sm">✅ Verifikasi Lembaga</p>
 							<p class="text-xs text-blue-600 mt-1">Data sudah sesuai dan lengkap, setujui verifikasi.</p>
 						</button>
-						<button id="swal-tunda-btn" class="w-full text-left p-3 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 transition-colors cursor-pointer">
-							<p class="font-medium text-amber-800 text-sm">⏳ Tunda Verifikasi</p>
-							<p class="text-xs text-amber-600 mt-1">Data belum sesuai, kirim catatan ke desa untuk diperbaiki.</p>
+						<button id="swal-tunda-btn" class="w-full text-left p-3 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors cursor-pointer">
+							<p class="font-medium text-red-800 text-sm">❌ Tolak Verifikasi</p>
+							<p class="text-xs text-red-600 mt-1">Data belum sesuai, kirim catatan ke desa untuk diperbaiki.</p>
 						</button>
 					</div>`,
 				showConfirmButton: false,
@@ -530,6 +590,30 @@ export default function KelembagaanDetailPage({
 			} else if (selectedAction === "tunda") {
 				await showTundaVerifikasiModal(kelembagaanId);
 			}
+		}
+	};
+
+	const handleAjukanUlang = async (kelembagaanId) => {
+		const confirm = await Swal.fire({
+			title: "Ajukan Ulang Verifikasi?",
+			html: `<div class="text-left"><p class="text-sm text-gray-600">Pastikan Anda sudah memperbaiki data sesuai catatan penolakan sebelumnya.</p><p class="text-sm text-gray-600 mt-2">Status akan berubah menjadi <strong>"Menunggu Verifikasi"</strong> dan akan ditinjau ulang oleh admin.</p></div>`,
+			icon: "question",
+			showCancelButton: true,
+			confirmButtonText: "Ya, Ajukan Ulang",
+			cancelButtonText: "Batal",
+			confirmButtonColor: "#3b82f6",
+		});
+
+		if (!confirm.isConfirmed) return;
+
+		try {
+			showLoadingAlert("Mengajukan ulang verifikasi...");
+			await ajukanUlangVerifikasi(type, kelembagaanId);
+			showSuccessAlert("Berhasil!", "Verifikasi telah diajukan ulang. Silakan tunggu peninjauan dari admin.");
+			loadDetail();
+		} catch (error) {
+			console.error("Error ajukan ulang:", error);
+			showErrorAlert("Gagal", error?.response?.data?.message || "Gagal mengajukan ulang verifikasi");
 		}
 	};
 
@@ -580,16 +664,19 @@ export default function KelembagaanDetailPage({
 		}
 	};
 
-	const handleAddRT = async (nomorRT) => {
+	const handleAddRT = async (rtData) => {
 		try {
+			const { nomor, alamat, produk_hukum_id } = rtData;
+
 			// Show loading alert
 			showLoadingAlert("Menambah RT...", "Mohon tunggu sebentar");
 
 			const payload = {
-				nomor: nomorRT,
+				nomor,
 				rw_id: detail.id,
 				desa_id: user.desa_id || detail.desa_id,
-				alamat: detail.alamat || "", // Use RW address as default
+				alamat: alamat || detail.alamat || "",
+				produk_hukum_id: produk_hukum_id || null,
 			};
 
 			await createRt(payload);
@@ -602,7 +689,7 @@ export default function KelembagaanDetailPage({
 			setAnak(list);
 
 			// Show success alert
-			showSuccessAlert("Berhasil!", `RT ${nomorRT} berhasil ditambahkan`);
+			showSuccessAlert("Berhasil!", `RT ${nomor} berhasil ditambahkan`);
 		} catch (error) {
 			const errorMessage = error.response?.data?.message || error.message;
 
@@ -725,6 +812,7 @@ export default function KelembagaanDetailPage({
 						pengurusCount={pengurusCount}
 						onToggleStatus={handleToggleStatus}
 						onToggleVerification={handleToggleVerification}
+						onAjukanUlang={handleAjukanUlang}
 						produkHukumList={produkHukumList}
 						onUpdatePenduduk={type === "rt" ? handleUpdatePenduduk : undefined}
 					/>
@@ -732,6 +820,7 @@ export default function KelembagaanDetailPage({
 					<PengurusKelembagaan
 						kelembagaanType={type}
 						kelembagaanId={detail.id}
+						kelembagaanName={detail?.nama || (detail?.nomor ? `${type?.toUpperCase()} ${detail.nomor}` : type?.toUpperCase())}
 						desaId={detail.desa_id}
 						onPengurusCountChange={setPengurusCount}
 					/>
@@ -760,61 +849,196 @@ export default function KelembagaanDetailPage({
 				</div>
 			</div>{" "}
 			<EditModal
-				title="Edit Kelembagaan"
+				title={`Edit ${getDisplayName(type)}${detail?.nomor ? ` ${detail.nomor}` : detail?.nama ? ` — ${detail.nama}` : ""}`}
 				isOpen={isEditOpen}
-				onClose={() => setIsEditOpen(false)}
+				onClose={() => {
+					if (!editSubmitting) {
+						setIsEditOpen(false);
+						setPhSearchTerm("");
+						setShowPhDropdown(false);
+					}
+				}}
 				onSubmit={handleSaveEdit}
+				submitting={editSubmitting}
+				gradient={
+					type === "rw" || type === "rt" ? "from-blue-500 to-indigo-600"
+					: type === "posyandu" ? "from-purple-500 to-purple-700"
+					: type === "pkk" ? "from-pink-500 to-rose-500"
+					: type === "lembaga-lainnya" ? "from-slate-500 to-slate-700"
+					: "from-indigo-500 to-purple-600"
+				}
 			>
-				{type !== "rw" && type !== "rt" ? (
+				<div className="space-y-4">
+					{/* SK Pembentukan Lembaga — Searchable Dropdown */}
 					<div>
-						<label className="block text-sm font-medium">Nama</label>
-						<input
-							className="mt-1 w-full border rounded px-3 py-2"
-							value={editForm.nama}
-							onChange={(e) =>
-								setEditForm((f) => ({ ...f, nama: e.target.value }))
-							}
-							placeholder="Nama lembaga"
-						/>
+						<label className="block text-sm font-medium mb-1 text-gray-700">
+							SK Pembentukan Lembaga
+						</label>
+						<p className="text-xs text-gray-500 mb-2">
+							Pilih Perdes/Perkades yang masih berlaku sebagai dasar hukum pembentukan lembaga
+						</p>
+						<div className="relative">
+							<button
+								type="button"
+								className={`w-full text-left border rounded-lg px-3 py-2.5 text-sm flex items-center justify-between transition-colors ${editForm.produk_hukum_id ? "border-blue-300 bg-blue-50" : "border-gray-300 bg-white"} ${editSubmitting ? "opacity-50 cursor-not-allowed" : "hover:border-blue-400"}`}
+								onClick={() => !editSubmitting && setShowPhDropdown((v) => !v)}
+								disabled={editSubmitting}
+							>
+								{editForm.produk_hukum_id ? (
+									<div className="flex-1 min-w-0">
+										<p className="font-medium text-blue-700 truncate">
+											{produkHukumList.find((p) => p.id === editForm.produk_hukum_id)?.judul || "—"}
+										</p>
+										<p className="text-xs text-blue-500 mt-0.5">
+											{(produkHukumList.find((p) => p.id === editForm.produk_hukum_id)?.jenis || "").replace(/_/g, " ")} — No. {produkHukumList.find((p) => p.id === editForm.produk_hukum_id)?.nomor}
+										</p>
+									</div>
+								) : (
+									<span className="text-gray-400">Pilih produk hukum...</span>
+								)}
+								<LuChevronDown className={`w-4 h-4 text-gray-400 flex-shrink-0 ml-2 transition-transform ${showPhDropdown ? "rotate-180" : ""}`} />
+							</button>
+							{showPhDropdown && (
+								<div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg">
+									<div className="p-2 border-b border-gray-100">
+										<div className="relative">
+											<LuSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+											<input
+												className="w-full border border-gray-200 rounded-md pl-8 pr-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+												placeholder="Cari judul atau nomor..."
+												value={phSearchTerm}
+												onChange={(e) => setPhSearchTerm(e.target.value)}
+												autoFocus
+											/>
+										</div>
+									</div>
+									<div className="max-h-48 overflow-y-auto">
+										{produkHukumList.filter((ph) =>
+											!phSearchTerm || (ph.judul || "").toLowerCase().includes(phSearchTerm.toLowerCase()) || (ph.nomor || "").toLowerCase().includes(phSearchTerm.toLowerCase())
+										).length === 0 ? (
+											<div className="p-3 text-center text-sm text-gray-500">
+												{phSearchTerm ? "Tidak ditemukan" : "Belum ada Perdes/Perkades berlaku"}
+											</div>
+										) : (
+											produkHukumList
+												.filter((ph) =>
+													!phSearchTerm || (ph.judul || "").toLowerCase().includes(phSearchTerm.toLowerCase()) || (ph.nomor || "").toLowerCase().includes(phSearchTerm.toLowerCase())
+												)
+												.map((ph) => (
+													<button
+														key={ph.id}
+														type="button"
+														className={`w-full text-left px-3 py-2 border-b border-gray-50 last:border-b-0 hover:bg-blue-50 transition-colors ${editForm.produk_hukum_id === ph.id ? "bg-blue-50" : ""}`}
+														onClick={() => {
+															setEditForm((f) => ({ ...f, produk_hukum_id: ph.id }));
+															setShowPhDropdown(false);
+															setPhSearchTerm("");
+														}}
+													>
+														<div className="flex items-center justify-between">
+															<div className="flex-1 min-w-0">
+																<p className={`text-sm font-medium truncate ${editForm.produk_hukum_id === ph.id ? "text-blue-700" : "text-gray-900"}`}>{ph.judul}</p>
+																<p className="text-xs text-gray-500">{(ph.jenis || "").replace(/_/g, " ")} — No. {ph.nomor}</p>
+															</div>
+															{editForm.produk_hukum_id === ph.id && <LuCheck className="w-4 h-4 text-blue-600 ml-2 flex-shrink-0" />}
+														</div>
+													</button>
+												))
+										)}
+									</div>
+									{/* Hapus pilihan */}
+									{editForm.produk_hukum_id && (
+										<div className="border-t border-gray-100 p-2">
+											<button
+												type="button"
+												className="w-full text-left px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded transition-colors"
+												onClick={() => {
+													setEditForm((f) => ({ ...f, produk_hukum_id: "" }));
+													setShowPhDropdown(false);
+													setPhSearchTerm("");
+												}}
+											>
+												Hapus pilihan
+											</button>
+										</div>
+									)}
+								</div>
+							)}
+						</div>
 					</div>
-				) : (
+
+					{/* Nomor (RW/RT) or Nama (other types) */}
+					{type === "rw" || type === "rt" ? (
+						<div>
+							<label className="block text-sm font-medium mb-1 text-gray-700">
+								Nomor {getDisplayName(type)} <span className="text-red-500">*</span>
+							</label>
+							<div className="relative">
+								<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+									<LuBuilding className="w-5 h-5 text-gray-400" />
+								</div>
+								<input
+									className="w-full border border-gray-300 rounded-lg pl-10 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50"
+									inputMode="numeric"
+									maxLength={3}
+									value={editForm.nomor}
+									onChange={(e) => {
+										const val = e.target.value.replace(/\D/g, "").slice(0, 3);
+										setEditForm((f) => ({ ...f, nomor: val }));
+									}}
+									placeholder="Contoh: 001"
+									disabled={editSubmitting}
+								/>
+							</div>
+							<p className="text-xs text-gray-500 mt-1">Hanya 3 digit angka (contoh: 001, 012, 100)</p>
+						</div>
+					) : (
+						<div>
+							<label className="block text-sm font-medium mb-1 text-gray-700">
+								Nama Lembaga <span className="text-red-500">*</span>
+							</label>
+							<div className="relative">
+								<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+									{type === "posyandu" ? (
+										<LuHeart className="w-5 h-5 text-gray-400" />
+									) : (
+										<LuBuilding className="w-5 h-5 text-gray-400" />
+									)}
+								</div>
+								<input
+									className="w-full border border-gray-300 rounded-lg pl-10 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 uppercase"
+									value={editForm.nama}
+									onChange={(e) =>
+										setEditForm((f) => ({ ...f, nama: e.target.value.toUpperCase() }))
+									}
+									placeholder="Nama lembaga"
+									disabled={editSubmitting}
+								/>
+							</div>
+						</div>
+					)}
+
+					{/* Alamat */}
 					<div>
-						<label className="block text-sm font-medium">Nomor</label>
-						<input
-							className="mt-1 w-full border rounded px-3 py-2"
-							value={editForm.nomor}
-							onChange={(e) =>
-								setEditForm((f) => ({ ...f, nomor: e.target.value }))
-							}
-							placeholder="Nomor"
-						/>
+						<label className="block text-sm font-medium mb-1 text-gray-700">
+							Alamat Kelembagaan
+						</label>
+						<div className="relative">
+							<div className="absolute top-2.5 left-0 pl-3 pointer-events-none">
+								<LuMapPin className="w-5 h-5 text-gray-400" />
+							</div>
+							<textarea
+								className="w-full border border-gray-300 rounded-lg pl-10 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 resize-none uppercase"
+								rows={2}
+								value={editForm.alamat}
+								onChange={(e) =>
+									setEditForm((f) => ({ ...f, alamat: e.target.value.toUpperCase() }))
+								}
+								placeholder="Masukkan alamat sekretariat / lokasi lembaga"
+								disabled={editSubmitting}
+							/>
+						</div>
 					</div>
-				)}
-				<div>
-					<label className="block text-sm font-medium">Alamat</label>
-					<input
-						className="mt-1 w-full border rounded px-3 py-2"
-						value={editForm.alamat}
-						onChange={(e) =>
-							setEditForm((f) => ({ ...f, alamat: e.target.value }))
-						}
-						placeholder="Alamat"
-					/>
-				</div>
-				<div>
-					<label className="block text-sm font-medium mb-2">
-						SK Pembentukan Lembaga
-					</label>
-					<SearchableProdukHukumSelect
-						value={editForm.produk_hukum_id}
-						onChange={(id) =>
-							setEditForm((f) => ({ ...f, produk_hukum_id: id }))
-						}
-						produkHukumList={produkHukumList}
-					/>
-					<p className="text-xs text-gray-500 mt-1">
-						Pilih produk hukum sebagai dasar pembentukan lembaga ini
-					</p>
 				</div>
 			</EditModal>
 		</div>

@@ -476,7 +476,8 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 	const renderMultiVerifBadge = (verifData) => {
 		if (!verifData) return null;
 		const unverified = verifData.unverified || 0;
-		if (unverified === 0) {
+		const ditolak = verifData.ditolak || 0;
+		if (unverified === 0 && ditolak === 0) {
 			return (
 				<span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
 					<LuCheck className="w-3 h-3" /> Terverifikasi
@@ -484,9 +485,18 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 			);
 		}
 		return (
-			<span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
-				<LuTriangleAlert className="w-3 h-3" /> {unverified} Belum Terverifikasi
-			</span>
+			<div className="flex items-center gap-1.5 flex-wrap">
+				{unverified > 0 && (
+					<span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+						<LuTriangleAlert className="w-3 h-3" /> {unverified} Belum
+					</span>
+				)}
+				{ditolak > 0 && (
+					<span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-200">
+						<LuX className="w-3 h-3" /> {ditolak} Ditolak
+					</span>
+				)}
+			</div>
 		);
 	};
 
@@ -497,6 +507,13 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 			return (
 				<span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
 					<LuCheck className="w-3 h-3" /> Terverifikasi
+				</span>
+			);
+		}
+		if (verifData.status_verifikasi === 'ditolak') {
+			return (
+				<span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-200">
+					<LuX className="w-3 h-3" /> Verifikasi Ditolak
 				</span>
 			);
 		}
@@ -559,23 +576,24 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 				const items = [];
 
 				// Multi-type: RW
-				if (v.rw) items.push({ label: "RW", verified: v.rw.verified || 0, total: v.rw.total || 0, icon: LuBuilding, color: "blue" });
+				if (v.rw) items.push({ label: "RW", verified: v.rw.verified || 0, ditolak: v.rw.ditolak || 0, total: v.rw.total || 0, icon: LuBuilding, color: "blue" });
 				// Multi-type: RT
-				if (v.rt) items.push({ label: "RT", verified: v.rt.verified || 0, total: v.rt.total || 0, icon: LuBuilding, color: "blue" });
+				if (v.rt) items.push({ label: "RT", verified: v.rt.verified || 0, ditolak: v.rt.ditolak || 0, total: v.rt.total || 0, icon: LuBuilding, color: "blue" });
 				// Multi-type: Posyandu
-				if (v.posyandu) items.push({ label: "Posyandu", verified: v.posyandu.verified || 0, total: v.posyandu.total || 0, icon: LuHeart, color: "purple" });
+				if (v.posyandu) items.push({ label: "Posyandu", verified: v.posyandu.verified || 0, ditolak: v.posyandu.ditolak || 0, total: v.posyandu.total || 0, icon: LuHeart, color: "purple" });
 				// Singleton: Karang Taruna
-				if (v.karang_taruna && ktFormed) items.push({ label: "Karang Taruna", verified: v.karang_taruna.status_verifikasi === "verified" ? 1 : 0, total: 1, icon: LuUsers, color: "orange" });
+				if (v.karang_taruna && ktFormed) items.push({ label: "Karang Taruna", verified: v.karang_taruna.status_verifikasi === "verified" ? 1 : 0, ditolak: v.karang_taruna.status_verifikasi === "ditolak" ? 1 : 0, total: 1, icon: LuUsers, color: "orange" });
 				// Singleton: LPM
-				if (v.lpm && lpmFormed) items.push({ label: "LPM", verified: v.lpm.status_verifikasi === "verified" ? 1 : 0, total: 1, icon: LuBuilding2, color: "yellow" });
+				if (v.lpm && lpmFormed) items.push({ label: "LPM", verified: v.lpm.status_verifikasi === "verified" ? 1 : 0, ditolak: v.lpm.status_verifikasi === "ditolak" ? 1 : 0, total: 1, icon: LuBuilding2, color: "yellow" });
 				// Singleton: PKK
-				if (v.pkk && pkkFormed) items.push({ label: "PKK", verified: v.pkk.status_verifikasi === "verified" ? 1 : 0, total: 1, icon: LuSprout, color: "pink" });
+				if (v.pkk && pkkFormed) items.push({ label: "PKK", verified: v.pkk.status_verifikasi === "verified" ? 1 : 0, ditolak: v.pkk.status_verifikasi === "ditolak" ? 1 : 0, total: 1, icon: LuSprout, color: "pink" });
 				// Singleton: Satlinmas
-				if (v.satlinmas && satlinmasFormed) items.push({ label: "Satlinmas", verified: v.satlinmas.status_verifikasi === "verified" ? 1 : 0, total: 1, icon: LuShield, color: "emerald" });
+				if (v.satlinmas && satlinmasFormed) items.push({ label: "Satlinmas", verified: v.satlinmas.status_verifikasi === "verified" ? 1 : 0, ditolak: v.satlinmas.status_verifikasi === "ditolak" ? 1 : 0, total: 1, icon: LuShield, color: "emerald" });
 				// Multi-type: Lembaga Lainnya
-				if (v.lembaga_lainnya) items.push({ label: "Lembaga Lainnya", verified: v.lembaga_lainnya.verified || 0, total: v.lembaga_lainnya.total || 0, icon: LuBuilding, color: "slate" });
+				if (v.lembaga_lainnya) items.push({ label: "Lembaga Lainnya", verified: v.lembaga_lainnya.verified || 0, ditolak: v.lembaga_lainnya.ditolak || 0, total: v.lembaga_lainnya.total || 0, icon: LuBuilding, color: "slate" });
 
 				const totalVerified = items.reduce((sum, i) => sum + i.verified, 0);
+				const totalDitolak = items.reduce((sum, i) => sum + i.ditolak, 0);
 				const totalAll = items.reduce((sum, i) => sum + i.total, 0);
 
 				if (totalAll === 0) return null;
@@ -609,13 +627,15 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 								{items.map((item) => {
 									const Icon = item.icon;
 									const isComplete = item.verified === item.total;
+									const hasDitolak = item.ditolak > 0;
 									return (
-										<div key={item.label} className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg border ${isComplete ? "bg-green-50 border-green-200" : "bg-gray-50 border-gray-200"}`}>
-											<Icon className={`w-4 h-4 flex-shrink-0 ${isComplete ? "text-green-600" : "text-gray-400"}`} />
+										<div key={item.label} className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg border ${isComplete ? "bg-green-50 border-green-200" : hasDitolak ? "bg-red-50 border-red-200" : "bg-gray-50 border-gray-200"}`}>
+											<Icon className={`w-4 h-4 flex-shrink-0 ${isComplete ? "text-green-600" : hasDitolak ? "text-red-500" : "text-gray-400"}`} />
 											<div className="min-w-0">
 												<p className="text-xs text-gray-500 truncate">{item.label}</p>
-												<p className={`text-sm font-bold ${isComplete ? "text-green-700" : "text-gray-700"}`}>
+												<p className={`text-sm font-bold ${isComplete ? "text-green-700" : hasDitolak ? "text-red-700" : "text-gray-700"}`}>
 													{item.verified}/{item.total}
+													{hasDitolak && <span className="text-xs font-normal text-red-500 ml-1">({item.ditolak} ditolak)</span>}
 												</p>
 											</div>
 											{isComplete && <LuCheck className="w-3.5 h-3.5 text-green-600 flex-shrink-0 ml-auto" />}
@@ -627,6 +647,53 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 					</div>
 				);
 			})()}
+
+			{/* Persyaratan Verifikasi Info Box */}
+			{summary.verifikasi && (
+				<div className="mt-6 bg-gradient-to-r from-amber-50 to-yellow-50 rounded-xl border border-amber-200 p-5 shadow-sm">
+					<div className="flex items-start gap-3 mb-4">
+						<div className="p-2 bg-amber-100 rounded-lg">
+							<LuClipboardList className="w-5 h-5 text-amber-700" />
+						</div>
+						<div>
+							<h3 className="font-bold text-amber-900 text-base">Persyaratan Verifikasi Kelembagaan</h3>
+							<p className="text-sm text-amber-700 mt-1">
+								Agar kelembagaan dapat diverifikasi oleh Admin, pastikan data berikut sudah dilengkapi pada setiap lembaga:
+							</p>
+						</div>
+					</div>
+					<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+						<div className="flex items-start gap-2 bg-white rounded-lg p-3 border border-amber-100">
+							<LuFileCheck className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+							<div>
+								<p className="text-sm font-semibold text-gray-800">Kaitkan SK / Produk Hukum</p>
+								<p className="text-xs text-gray-500">Lampirkan Surat Keputusan pembentukan atau produk hukum terkait</p>
+							</div>
+						</div>
+						<div className="flex items-start gap-2 bg-white rounded-lg p-3 border border-amber-100">
+							<LuMapPin className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+							<div>
+								<p className="text-sm font-semibold text-gray-800">Isi Alamat Sekretariat</p>
+								<p className="text-xs text-gray-500">Berikan alamat lengkap sekretariat lembaga</p>
+							</div>
+						</div>
+						<div className="flex items-start gap-2 bg-white rounded-lg p-3 border border-amber-100">
+							<LuUserCheck className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+							<div>
+								<p className="text-sm font-semibold text-gray-800">Tambah Minimal 1 Pengurus</p>
+								<p className="text-xs text-gray-500">Setiap lembaga wajib memiliki setidaknya satu pengurus yang terdaftar</p>
+							</div>
+						</div>
+						<div className="flex items-start gap-2 bg-white rounded-lg p-3 border border-amber-100">
+							<LuUsers className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+							<div>
+								<p className="text-sm font-semibold text-gray-800">Data Penduduk (RT)</p>
+								<p className="text-xs text-gray-500">Untuk RT, masukkan jumlah jiwa dan jumlah KK di wilayah RT tersebut</p>
+							</div>
+						</div>
+					</div>
+				</div>
+			)}
 
 			{/* ═══ SECTION 1: Lembaga Kemasyarakatan Desa ═══ */}
 			<div>
@@ -661,6 +728,7 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 								if (!v?.rw && !v?.rt) return null;
 								const combined = {
 									unverified: (v.rw?.unverified || 0) + (v.rt?.unverified || 0),
+									ditolak: (v.rw?.ditolak || 0) + (v.rt?.ditolak || 0),
 								};
 								return renderMultiVerifBadge(combined);
 							})()}
@@ -1006,52 +1074,7 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 				</div>
 			</div>
 
-			{/* Persyaratan Verifikasi Info Box */}
-			{summary.verifikasi && (
-				<div className="mt-6 bg-gradient-to-r from-amber-50 to-yellow-50 rounded-xl border border-amber-200 p-5 shadow-sm">
-					<div className="flex items-start gap-3 mb-4">
-						<div className="p-2 bg-amber-100 rounded-lg">
-							<LuClipboardList className="w-5 h-5 text-amber-700" />
-						</div>
-						<div>
-							<h3 className="font-bold text-amber-900 text-base">Persyaratan Verifikasi Kelembagaan</h3>
-							<p className="text-sm text-amber-700 mt-1">
-								Agar kelembagaan dapat diverifikasi oleh Admin, pastikan data berikut sudah dilengkapi pada setiap lembaga:
-							</p>
-						</div>
-					</div>
-					<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-						<div className="flex items-start gap-2 bg-white rounded-lg p-3 border border-amber-100">
-							<LuFileCheck className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
-							<div>
-								<p className="text-sm font-semibold text-gray-800">Kaitkan SK / Produk Hukum</p>
-								<p className="text-xs text-gray-500">Lampirkan Surat Keputusan pembentukan atau produk hukum terkait</p>
-							</div>
-						</div>
-						<div className="flex items-start gap-2 bg-white rounded-lg p-3 border border-amber-100">
-							<LuMapPin className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
-							<div>
-								<p className="text-sm font-semibold text-gray-800">Isi Alamat Sekretariat</p>
-								<p className="text-xs text-gray-500">Berikan alamat lengkap sekretariat lembaga</p>
-							</div>
-						</div>
-						<div className="flex items-start gap-2 bg-white rounded-lg p-3 border border-amber-100">
-							<LuUserCheck className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
-							<div>
-								<p className="text-sm font-semibold text-gray-800">Tambah Minimal 1 Pengurus</p>
-								<p className="text-xs text-gray-500">Setiap lembaga wajib memiliki setidaknya satu pengurus yang terdaftar</p>
-							</div>
-						</div>
-						<div className="flex items-start gap-2 bg-white rounded-lg p-3 border border-amber-100">
-							<LuUsers className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
-							<div>
-								<p className="text-sm font-semibold text-gray-800">Data Penduduk (RT)</p>
-								<p className="text-xs text-gray-500">Untuk RT, masukkan jumlah jiwa dan jumlah KK di wilayah RT tersebut</p>
-							</div>
-						</div>
-					</div>
-				</div>
-			)}
+			
 
 			{/* Ketentuan Hukum Accordion Section */}
 			<div className="mt-12">

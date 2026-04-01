@@ -4,13 +4,14 @@ import api from './api';
  * Get activity logs untuk list page (hanya aktivitas lembaga)
  * Khusus untuk RW, RT, Posyandu
  */
-export const getListActivityLogs = async (type, desaId, limit = 20) => {
+export const getListActivityLogs = async (type, desaId, limit = 20, offset = 0) => {
   try {
     const response = await api.get('/kelembagaan/activity-logs/list', {
       params: {
         type,
         desa_id: desaId,
-        limit
+        limit,
+        offset
       }
     });
     return response.data;
@@ -23,10 +24,10 @@ export const getListActivityLogs = async (type, desaId, limit = 20) => {
 /**
  * Get activity logs untuk detail page (semua aktivitas termasuk pengurus)
  */
-export const getDetailActivityLogs = async (type, kelembagaanId, limit = 50) => {
+export const getDetailActivityLogs = async (type, kelembagaanId, limit = 50, offset = 0) => {
   try {
     const response = await api.get(`/kelembagaan/activity-logs/detail/${type}/${kelembagaanId}`, {
-      params: { limit }
+      params: { limit, offset }
     });
     return response.data;
   } catch (error) {
