@@ -1,7 +1,7 @@
 // src/pages/pegawai/PegawaiLayout.jsx
 import React from "react";
 import { Outlet, Navigate, useNavigate, useLocation } from "react-router-dom";
-import { FiHome, FiUser, FiLogOut, FiMenu, FiMail, FiBell, FiCalendar, FiBarChart2, FiFileText, FiDollarSign, FiUsers, FiBriefcase } from "react-icons/fi";
+import { FiHome, FiUser, FiLogOut, FiMenu, FiMail, FiBell, FiCalendar, FiBarChart2, FiFileText, FiDollarSign, FiUsers, FiBriefcase, FiClock } from "react-icons/fi";
 import { Landmark } from "lucide-react";
 import { performFullLogout } from "../../utils/sessionPersistence";
 import { useConfirm } from "../../hooks/useConfirm.jsx";
@@ -145,7 +145,7 @@ const PegawaiLayout = () => {
 
 	const bottomNavItems = [
 		{ path: "/pegawai/dashboard", label: "Home", icon: FiHome },
-		{ path: "/pegawai/jadwal-kegiatan", label: "Kegiatan", icon: FiCalendar, isMain: true },
+		{ path: "/pegawai/absensi", label: "Presensi", icon: FiClock, isMain: true },
 		{ path: "/pegawai/menu", label: "Menu", icon: FiMenu, action: () => setShowMenu(true) },
 	];
 
@@ -162,7 +162,7 @@ const PegawaiLayout = () => {
 					<div className="flex items-end justify-around py-2">
 						{bottomNavItems.map((item, index) => {
 							const isActive = location.pathname === item.path || 
-								(item.path === '/pegawai/jadwal-kegiatan' && location.pathname.startsWith('/pegawai/jadwal'));
+								(item.path === '/pegawai/absensi' && location.pathname.startsWith('/pegawai/absensi'));
 							const Icon = item.icon;
 							
 							// Main button (Jadwal Kegiatan) - larger & elevated

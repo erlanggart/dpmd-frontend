@@ -11,6 +11,8 @@ const STATUS_OPTIONS = [
 	{ value: "THL", label: "THL" },
 	{ value: "Kontrak", label: "Kontrak" },
 	{ value: "Tenaga_Alih_Daya", label: "Tenaga Alih Daya" },
+	{ value: "Tenaga_Keamanan", label: "Tenaga Keamanan" },
+	{ value: "Tenaga_Kebersihan", label: "Tenaga Kebersihan" },
 ];
 
 const EditJabatanModal = ({ isOpen, onClose, onUpdated, userData }) => {

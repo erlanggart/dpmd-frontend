@@ -8,7 +8,7 @@ import {
 	FiHome, FiUser, FiLogOut, FiMenu, FiMail, FiBell, 
 	FiCalendar, FiBarChart2, FiFileText, FiDollarSign, 
 	FiUsers, FiBriefcase, FiChevronLeft, FiChevronRight,
-	FiSettings, FiX, FiVideo
+	FiSettings, FiX, FiVideo, FiClock
 } from "react-icons/fi";
 import { Landmark, Menu, ChevronLeft, ChevronDown } from "lucide-react";
 import AnimatedIcon from '../components/AnimatedIcon';
@@ -254,6 +254,13 @@ const DPMDStaffLayout = () => {
 		};
 	}, []);
 
+	// Sync user state when authUser updates (e.g., after login or token verify)
+	React.useEffect(() => {
+		if (authUser && authUser.status_kepegawaian && !user.status_kepegawaian) {
+			setUser(prev => ({ ...prev, status_kepegawaian: authUser.status_kepegawaian }));
+		}
+	}, [authUser]);
+
 	// Load notifications from backend
 	const fetchNotifications = React.useCallback(async () => {
 		try {
@@ -440,14 +447,19 @@ const DPMDStaffLayout = () => {
 
 	// Mobile bottom nav - simplified 3 items with Bidang as main center button
 	const userBidang = BIDANG_ROUTES[user.bidang_id];
+	const ABSENSI_ELIGIBLE_STATUS = ['PPPK Paruh Waktu', 'Tenaga Alih Daya', 'Tenaga Keamanan', 'Tenaga Kebersihan'];
+	const userStatus = user.status_kepegawaian || authUser?.status_kepegawaian;
+	const isAbsensiEligible = ABSENSI_ELIGIBLE_STATUS.includes(userStatus);
 	const bottomNavItems = [
 		{ path: "/dpmd/dashboard", label: "Home", icon: FiHome },
-		{ 
-			path: userBidang?.path || "/dpmd/jadwal-kegiatan", 
-			label: userBidang?.name || "Bidang", 
-			icon: userBidang?.icon || FiCalendar, 
-			isMain: true 
-		},
+		isAbsensiEligible
+			? { path: "/dpmd/absensi", label: "Presensi", icon: FiClock, isMain: true }
+			: { 
+				path: userBidang?.path || "/dpmd/jadwal-kegiatan", 
+				label: userBidang?.name || "Bidang", 
+				icon: userBidang?.icon || FiCalendar, 
+				isMain: true 
+			},
 		{ path: `${config.basePath}/profile`, label: "Profil", icon: FiUser },
 	];
 

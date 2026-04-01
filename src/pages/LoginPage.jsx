@@ -117,8 +117,19 @@ const LoginPage = () => {
 		setLoading(true);
 		setError(null);
 		try {
+			// Get device ID for auto-registration
+			let deviceId = localStorage.getItem('dpmd_device_id');
+			if (!deviceId) {
+				deviceId = crypto.randomUUID ? crypto.randomUUID() : 
+					'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+						const r = (Math.random() * 16) | 0;
+						return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+					});
+				localStorage.setItem('dpmd_device_id', deviceId);
+			}
+
 			// Login to Express backend
-			const response = await api.post("/auth/login", { email, password });
+			const response = await api.post("/auth/login", { email, password, device_id: deviceId });
 
 			const newUser = response.data.data.user;
 			const expressToken = response.data.data.token;

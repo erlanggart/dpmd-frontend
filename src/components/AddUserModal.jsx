@@ -13,6 +13,43 @@ import {
 } from "react-icons/lu";
 import api from "../api";
 
+const ROLE_GROUPS = [
+	{
+		label: "Pimpinan Dinas",
+		roles: [
+			{ value: "kepala_dinas", label: "Kepala Dinas" },
+			{ value: "sekretaris_dinas", label: "Sekretaris Dinas" },
+		],
+	},
+	{
+		label: "Struktural",
+		roles: [
+			{ value: "kepala_bidang", label: "Kepala Bidang" },
+			{ value: "ketua_tim", label: "Ketua Tim" },
+		],
+	},
+	{
+		label: "Pegawai",
+		roles: [
+			{ value: "pegawai", label: "Pegawai" },
+		],
+	},
+	{
+		label: "Wilayah",
+		roles: [
+			{ value: "kecamatan", label: "Admin Kecamatan", needs_entity: true },
+			{ value: "desa", label: "Admin Desa", needs_entity: true },
+		],
+	},
+	{
+		label: "Lainnya",
+		roles: [
+			{ value: "dinas_terkait", label: "Dinas Terkait" },
+			{ value: "verifikator_dinas", label: "Verifikator Dinas" },
+		],
+	},
+];
+
 const AddUserModal = ({ isOpen, onClose, onUserAdded }) => {
 	const [formData, setFormData] = useState({
 		name: "",
@@ -27,8 +64,6 @@ const AddUserModal = ({ isOpen, onClose, onUserAdded }) => {
 	const [errors, setErrors] = useState({});
 	const [showPassword, setShowPassword] = useState(false);
 	const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-	const [roleGroups, setRoleGroups] = useState([]);
-	const [rolesLoading, setRolesLoading] = useState(true);
 
 	// Reset form when modal opens/closes
 	useEffect(() => {
@@ -48,46 +83,14 @@ const AddUserModal = ({ isOpen, onClose, onUserAdded }) => {
 		}
 	}, [isOpen]);
 
-	// Fetch roles from API and build groups
-	useEffect(() => {
-		if (isOpen) {
-			setRolesLoading(true);
-			api.get("/roles")
-				.then((response) => {
-					const roles = response.data.data || [];
-					// Group roles by category
-					const categoryOrder = ["admin", "pimpinan", "struktural", "bidang", "pegawai", "wilayah", "other"];
-					const categoryLabels = {
-						admin: "Super Administrator",
-						pimpinan: "Pimpinan Dinas",
-						struktural: "Struktural",
-						bidang: "Bidang-Bidang DPMD",
-						pegawai: "Pegawai",
-						wilayah: "Wilayah",
-						other: "Lainnya",
-					};
-					const grouped = {};
-					roles.forEach((r) => {
-						const cat = r.category || "other";
-						if (!grouped[cat]) grouped[cat] = [];
-						grouped[cat].push({ value: r.name, label: r.label, needs_entity: r.needs_entity });
-					});
-					const groups = categoryOrder
-						.filter((cat) => grouped[cat]?.length > 0)
-						.map((cat) => ({
-							label: categoryLabels[cat] || cat,
-							roles: grouped[cat],
-						}));
-					setRoleGroups(groups);
-				})
-				.catch((error) => {
-					console.error("Error fetching roles:", error);
-				})
-				.finally(() => {
-					setRolesLoading(false);
-				});
+	// Determine if role needs entity selection
+	const needsEntity = (role) => {
+		for (const group of ROLE_GROUPS) {
+			const found = group.roles.find((r) => r.value === role);
+			if (found) return found.needs_entity;
 		}
-	}, [isOpen]);
+		return false;
+	};
 
 	// Fetch entities when role changes
 	useEffect(() => {
@@ -98,17 +101,6 @@ const AddUserModal = ({ isOpen, onClose, onUserAdded }) => {
 			setFormData((prev) => ({ ...prev, entity_id: "" }));
 		}
 	}, [formData.role]);
-
-	// Determine if role needs entity selection (dynamic from API)
-	const needsEntity = (role) => {
-		// Check from API roles
-		for (const group of roleGroups) {
-			const found = group.roles.find((r) => r.value === role);
-			if (found) return found.needs_entity;
-		}
-		// Fallback for common roles
-		return ["kecamatan", "desa"].includes(role);
-	};
 
 	// Fetch entities based on role
 	const fetchEntities = async (role) => {
@@ -322,13 +314,12 @@ const AddUserModal = ({ isOpen, onClose, onUserAdded }) => {
 							name="role"
 							value={formData.role}
 							onChange={handleInputChange}
-							disabled={rolesLoading}
 							className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
 								errors.role ? "border-red-500" : "border-gray-300"
 							}`}
 						>
-							<option value="">{rolesLoading ? "Memuat role..." : "-- Pilih Role --"}</option>
-							{roleGroups.map((group) => (
+							<option value="">-- Pilih Role --</option>
+							{ROLE_GROUPS.map((group) => (
 								<optgroup key={group.label} label={group.label}>
 									{group.roles.map((role) => (
 										<option key={role.value} value={role.value}>

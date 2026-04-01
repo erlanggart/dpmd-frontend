@@ -29,6 +29,7 @@ import {
 	LuCake,
 	LuBadgeCheck,
 	LuCamera,
+	LuSmartphone,
 } from "react-icons/lu";
 import * as XLSX from 'xlsx';
 import api from "../../api";
@@ -63,7 +64,7 @@ const DEFAULT_THEME = { gradient: "from-gray-400 to-gray-600", ring: "ring-gray-
 const UserCard = ({
 	user, canManage, visiblePasswords, togglePasswordVisibility,
 	onEditRole, onEditBidang, onEditTanggalLahir, onEditJabatan,
-	onEditAvatar, onResetPassword, onDeleteUser, getRoleInfo,
+	onEditAvatar, onSetDevice, onResetPassword, onDeleteUser, getRoleInfo,
 }) => {
 	const [menuOpen, setMenuOpen] = useState(false);
 	const menuRef = useRef(null);
@@ -143,6 +144,15 @@ const UserCard = ({
 										<span className="font-medium">Jabatan & Status</span>
 									</button>
 									<div className="my-1.5 border-t border-gray-100" />
+									{['PPPK_Paruh_Waktu','Tenaga_Alih_Daya','Tenaga_Keamanan','Tenaga_Kebersihan'].includes(user.status_kepegawaian) && (
+										<button onClick={() => { onSetDevice(user); setMenuOpen(false); }}
+											className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 hover:bg-cyan-50 hover:text-cyan-700 rounded-xl transition-colors">
+											<div className="w-8 h-8 rounded-lg bg-cyan-100 flex items-center justify-center">
+												<LuSmartphone className="h-4 w-4 text-cyan-600" />
+											</div>
+											<span className="font-medium">Device Absensi</span>
+										</button>
+									)}
 									<button onClick={() => { onResetPassword(user); setMenuOpen(false); }}
 										className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 hover:bg-amber-50 hover:text-amber-700 rounded-xl transition-colors">
 										<div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
@@ -290,6 +300,13 @@ const UserCard = ({
 							<LuPenLine className="h-3.5 w-3.5" />
 							<span>Jabatan</span>
 						</button>
+						{['PPPK_Paruh_Waktu','Tenaga_Alih_Daya','Tenaga_Keamanan','Tenaga_Kebersihan'].includes(user.status_kepegawaian) && (
+							<button onClick={() => onSetDevice(user)} title="Device Absensi"
+								className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-cyan-600 bg-cyan-50 hover:bg-cyan-100 transition-colors">
+								<LuSmartphone className="h-3.5 w-3.5" />
+								<span>Device</span>
+							</button>
+						)}
 						<div className="w-px h-5 bg-gray-200" />
 						<button onClick={() => onResetPassword(user)} title="Reset Password"
 							className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-amber-600 bg-amber-50 hover:bg-amber-100 transition-colors">
@@ -506,6 +523,43 @@ const UserManagementPage = () => {
 		setShowAvatarModal(false);
 		setSelectedUser(null);
 		fetchUsers();
+	};
+
+	// Handle device management
+	const handleSetDevice = async (user) => {
+		const result = await Swal.fire({
+			title: 'Device Absensi',
+			html: `<p class="text-sm text-gray-600 mb-2">Pegawai: <strong>${user.name}</strong></p>` +
+				(user.device_id ? `<p class="text-xs text-gray-400 mb-3">Device terdaftar: <code class="bg-gray-100 px-1 rounded">${user.device_id}</code></p>` : '<p class="text-xs text-red-500 mb-3">Belum ada device terdaftar</p>') +
+				'<p class="text-xs text-gray-500">Masukkan Device ID dari HP pegawai. Device ID dapat dilihat di halaman Absensi pegawai.</p>',
+			input: 'text',
+			inputValue: user.device_id || '',
+			inputPlaceholder: 'Paste Device ID dari pegawai...',
+			showCancelButton: true,
+			confirmButtonText: user.device_id ? 'Update Device' : 'Daftarkan Device',
+			cancelButtonText: 'Batal',
+			confirmButtonColor: '#06b6d4',
+			showDenyButton: !!user.device_id,
+			denyButtonText: 'Hapus Device',
+			denyButtonColor: '#ef4444',
+			inputValidator: (value) => {
+				if (!value) return 'Device ID tidak boleh kosong';
+			},
+		});
+
+		if (result.dismiss) return; // cancelled
+
+		const deviceId = result.isDenied ? null : result.value;
+
+		try {
+			await api.put(`/absensi/admin/set-device/${user.id}`, {
+				device_id: deviceId
+			});
+			Swal.fire({ icon: 'success', title: 'Berhasil', text: deviceId ? 'Device berhasil didaftarkan' : 'Device berhasil dihapus', timer: 2000, showConfirmButton: false });
+			fetchUsers();
+		} catch (err) {
+			Swal.fire({ icon: 'error', title: 'Gagal', text: err.response?.data?.message || 'Gagal update device' });
+		}
 	};
 
 	const handleJabatanUpdated = () => {
@@ -1024,6 +1078,7 @@ const UserManagementPage = () => {
 								onEditTanggalLahir={handleEditTanggalLahir}
 								onEditJabatan={handleEditJabatan}
 								onEditAvatar={handleEditAvatar}
+								onSetDevice={handleSetDevice}
 								onResetPassword={handleResetPassword}
 								onDeleteUser={handleDeleteUser}
 								getRoleInfo={getRoleInfo}
