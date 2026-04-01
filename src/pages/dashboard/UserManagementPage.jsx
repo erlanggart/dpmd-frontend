@@ -28,6 +28,7 @@ import {
 	LuEllipsisVertical,
 	LuCake,
 	LuBadgeCheck,
+	LuCamera,
 } from "react-icons/lu";
 import * as XLSX from 'xlsx';
 import api from "../../api";
@@ -37,6 +38,7 @@ import EditRoleModal from "../../components/EditRoleModal";
 import EditBidangModal from "../../components/EditBidangModal";
 import EditTanggalLahirModal from "../../components/EditTanggalLahirModal";
 import EditJabatanModal from "../../components/EditJabatanModal";
+import EditAvatarModal from "../../components/EditAvatarModal";
 import UserStatsCard from "../../components/UserStatsCard";
 import { getAvatarUrl } from "../../utils/avatarUtils";
 import { useAuth } from "../../context/AuthContext";
@@ -61,7 +63,7 @@ const DEFAULT_THEME = { gradient: "from-gray-400 to-gray-600", ring: "ring-gray-
 const UserCard = ({
 	user, canManage, visiblePasswords, togglePasswordVisibility,
 	onEditRole, onEditBidang, onEditTanggalLahir, onEditJabatan,
-	onResetPassword, onDeleteUser, getRoleInfo,
+	onEditAvatar, onResetPassword, onDeleteUser, getRoleInfo,
 }) => {
 	const [menuOpen, setMenuOpen] = useState(false);
 	const menuRef = useRef(null);
@@ -277,6 +279,11 @@ const UserCard = ({
 							<LuBuilding2 className="h-3.5 w-3.5" />
 							<span>Bidang</span>
 						</button>
+						<button onClick={() => onEditAvatar(user)} title="Ubah Foto Profil"
+							className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-pink-600 bg-pink-50 hover:bg-pink-100 transition-colors">
+							<LuCamera className="h-3.5 w-3.5" />
+							<span>Foto</span>
+						</button>
 						{user.pegawai_id && (
 							<>
 								<button onClick={() => onEditTanggalLahir(user)} title="Tanggal Lahir"
@@ -319,6 +326,7 @@ const UserManagementPage = () => {
 	const [showBidangModal, setShowBidangModal] = useState(false);
 	const [showTanggalLahirModal, setShowTanggalLahirModal] = useState(false);
 	const [showJabatanModal, setShowJabatanModal] = useState(false);
+	const [showAvatarModal, setShowAvatarModal] = useState(false);
 	const [selectedUser, setSelectedUser] = useState(null);
 	const [isResettingPassword, setIsResettingPassword] = useState(false);
 	
@@ -484,6 +492,12 @@ const UserManagementPage = () => {
 		setShowJabatanModal(true);
 	};
 
+	// Handle edit avatar
+	const handleEditAvatar = (user) => {
+		setSelectedUser(user);
+		setShowAvatarModal(true);
+	};
+
 	const handleBidangUpdated = () => {
 		setShowBidangModal(false);
 		setSelectedUser(null);
@@ -492,6 +506,12 @@ const UserManagementPage = () => {
 
 	const handleTanggalLahirUpdated = () => {
 		setShowTanggalLahirModal(false);
+		setSelectedUser(null);
+		fetchUsers();
+	};
+
+	const handleAvatarUpdated = () => {
+		setShowAvatarModal(false);
 		setSelectedUser(null);
 		fetchUsers();
 	};
@@ -1011,6 +1031,7 @@ const UserManagementPage = () => {
 								onEditBidang={handleEditBidang}
 								onEditTanggalLahir={handleEditTanggalLahir}
 								onEditJabatan={handleEditJabatan}
+								onEditAvatar={handleEditAvatar}
 								onResetPassword={handleResetPassword}
 								onDeleteUser={handleDeleteUser}
 								getRoleInfo={getRoleInfo}
@@ -1158,6 +1179,18 @@ const UserManagementPage = () => {
 						setSelectedUser(null);
 					}}
 					onUpdated={handleJabatanUpdated}
+					userData={selectedUser}
+				/>
+			)}
+
+			{showAvatarModal && selectedUser && (
+				<EditAvatarModal
+					isOpen={showAvatarModal}
+					onClose={() => {
+						setShowAvatarModal(false);
+						setSelectedUser(null);
+					}}
+					onUpdated={handleAvatarUpdated}
 					userData={selectedUser}
 				/>
 			)}
