@@ -1,9 +1,26 @@
 // Custom Push Notification Handler
 // Loaded via importScripts() by Workbox-generated sw.js
 
-const SW_CUSTOM_VERSION = '1.0.1';
+const SW_CUSTOM_VERSION = '1.0.2';
 console.log(`[SW-Custom] Version ${SW_CUSTOM_VERSION} loaded`);
 console.log('[SW-Custom] Push notification handler initializing...');
+
+// Clear old icon caches on activation to force icon refresh
+self.addEventListener('activate', (event) => {
+	event.waitUntil(
+		caches.keys().then(cacheNames => {
+			return Promise.all(
+				cacheNames.map(cacheName => {
+					// Delete media/asset caches that may hold old icons
+					if (cacheName.includes('media-cache') || cacheName.includes('workbox-precache')) {
+						console.log('[SW-Custom] Clearing cache for icon refresh:', cacheName);
+						return caches.delete(cacheName);
+					}
+				})
+			);
+		})
+	);
+});
 
 // Push event handler
 self.addEventListener('push', async (event) => {

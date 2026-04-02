@@ -1,7 +1,7 @@
 // Service Worker for Development Mode
 // This file is used in development. In production, sw-custom.js is injected into the built sw.js
 
-const SW_VERSION = '1.0.3-dev';
+const SW_VERSION = '1.0.4-dev';
 console.log(`[SW] Version ${SW_VERSION} loaded`);
 
 // Install event

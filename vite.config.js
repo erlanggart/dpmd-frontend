@@ -25,7 +25,7 @@ export default defineConfig({
 		VitePWA({
 			registerType: 'autoUpdate',
 			injectRegister: 'auto',
-			includeAssets: ['favicon.ico', 'robots.txt', 'logo-dpmd.png', 'dpmd.mp3'],
+			includeAssets: ['favicon.ico', 'robots.txt', 'logo-dpmd.png', 'logo-dpmd-96.png', 'logo-dpmd-192.png', 'logo-dpmd-512.png', 'dpmd.mp3'],
 			workbox: {
 				globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,jpeg,woff,woff2,mp3}'],
 				// Exclude static file paths from navigateFallback to let nginx/backend handle them
@@ -74,10 +74,28 @@ export default defineConfig({
 				start_url: '/',
 				icons: [
 					{
-						src: '/logo-dpmd.png',
+						src: '/logo-dpmd.png?v=2',
 						sizes: 'any',
 						type: 'image/png',
 						purpose: 'any maskable'
+					},
+					{
+						src: '/logo-dpmd-192.png?v=2',
+						sizes: '192x192',
+						type: 'image/png',
+						purpose: 'any'
+					},
+					{
+						src: '/logo-dpmd-512.png?v=2',
+						sizes: '512x512',
+						type: 'image/png',
+						purpose: 'any'
+					},
+					{
+						src: '/logo-dpmd-96.png?v=2',
+						sizes: '96x96',
+						type: 'image/png',
+						purpose: 'any'
 					}
 				]
 			},
