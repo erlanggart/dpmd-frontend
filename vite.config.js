@@ -25,7 +25,7 @@ export default defineConfig({
 		VitePWA({
 			registerType: 'autoUpdate',
 			injectRegister: 'auto',
-			includeAssets: ['favicon.ico', 'robots.txt', 'logo-bogor.png', 'dpmd.mp3'],
+			includeAssets: ['favicon.ico', 'robots.txt', 'logo-dpmd.png', 'dpmd.mp3'],
 			workbox: {
 				globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,jpeg,woff,woff2,mp3}'],
 				// Exclude static file paths from navigateFallback to let nginx/backend handle them
@@ -74,7 +74,7 @@ export default defineConfig({
 				start_url: '/',
 				icons: [
 					{
-						src: '/logo-bogor.png',
+						src: '/logo-dpmd.png',
 						sizes: 'any',
 						type: 'image/png',
 						purpose: 'any maskable'

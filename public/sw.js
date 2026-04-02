@@ -51,8 +51,8 @@ self.addEventListener('push', async (event) => {
 		event.waitUntil(
 			self.registration.showNotification(title || 'Notifikasi Baru', {
 				body: body || 'Anda memiliki notifikasi baru',
-				icon: icon || '/logo-bogor.png',
-				badge: badge || '/logo-bogor.png',
+				icon: icon || '/logo-dpmd.png',
+				badge: badge || '/logo-dpmd.png',
 				data: data || {},
 				tag: data?.id || 'notification-' + Date.now(),
 				requireInteraction: true,

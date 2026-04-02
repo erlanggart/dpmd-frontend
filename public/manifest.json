@@ -12,25 +12,25 @@
   "prefer_related_applications": false,
   "icons": [
     {
-      "src": "/logo-bogor.png",
+      "src": "/logo-dpmd.png",
       "sizes": "any",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/logo-192.png",
+      "src": "/logo-dpmd-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/logo-512.png",
+      "src": "/logo-dpmd-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/logo-96.png",
+      "src": "/logo-dpmd-96.png",
       "sizes": "96x96",
       "type": "image/png",
       "purpose": "any"
@@ -43,7 +43,7 @@
       "description": "Lihat dan kelola disposisi surat",
       "url": "/disposisi",
       "icons": [{ 
-        "src": "/logo-96.png", 
+        "src": "/logo-dpmd-96.png", 
         "sizes": "96x96",
         "type": "image/png",
         "purpose": "any"
@@ -55,7 +55,7 @@
       "description": "Lihat surat masuk",
       "url": "/surat-masuk",
       "icons": [{ 
-        "src": "/logo-96.png", 
+        "src": "/logo-dpmd-96.png", 
         "sizes": "96x96",
         "type": "image/png",
         "purpose": "any"

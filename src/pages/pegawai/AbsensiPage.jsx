@@ -1,6 +1,6 @@
 // src/pages/pegawai/AbsensiPage.jsx
 // ═══════════════════════════════════════════════════════════════
-// Clean White Full-Page Attendance — no scroll, modern minimal
+// Simple & Clean Attendance — minimal, UX-friendly, Lottie icons
 // ═══════════════════════════════════════════════════════════════
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -8,11 +8,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
 	FiCheckCircle, FiXCircle, FiCalendar,
 	FiChevronLeft, FiChevronRight, FiAlertCircle, FiMapPin,
-	FiCamera, FiSmartphone, FiHome, FiClock as FiClockIcon,
+	FiCamera, FiSmartphone,
 } from "react-icons/fi";
 import {
 	LuLogIn, LuLogOut, LuClipboardList, LuFileText, LuHeartPulse, LuCalendarOff,
-	LuBuilding2, LuCircleCheckBig, LuClock, LuShieldCheck, LuHistory,
+	LuCircleCheckBig, LuShieldCheck,
 } from "react-icons/lu";
 import Lottie from "lottie-react";
 import manWaitingCarAnim from "../../assets/lottie/man-waiting-car.json";
@@ -21,20 +21,20 @@ import workFromAnywhereAnim from "../../assets/lottie/work-from-anywhere.json";
 import bellAnim from "../../assets/lottie/bell.json";
 import api from "../../api";
 import { getAvatarUrl } from "../../utils/avatarUtils";
-import { pressAnimation, cardPress, chipPress, listItemVariants, fadeUp, scalePop, slideUp } from "../../utils/animations";
+import { pressAnimation, listItemVariants, slideUp } from "../../utils/animations";
 import AbsensiSuccessPopup from "../../components/AbsensiSuccessPopup";
 import { showAlert } from "../../components/AlertPopup";
 
 // ─── Constants ───────────────────────────────────────────────
 const STATUS_COLORS = {
-	hadir:      { bg: "bg-emerald-50",  text: "text-emerald-600", dot: "bg-emerald-500", ring: "ring-emerald-200",  icon: "text-emerald-500", gradient: "from-emerald-500 to-green-500" },
-	izin:       { bg: "bg-amber-50",    text: "text-amber-600",   dot: "bg-amber-500",   ring: "ring-amber-200",    icon: "text-amber-500",   gradient: "from-amber-500 to-yellow-500" },
-	sakit:      { bg: "bg-rose-50",     text: "text-rose-600",    dot: "bg-rose-500",    ring: "ring-rose-200",     icon: "text-rose-500",    gradient: "from-rose-500 to-red-500" },
-	alpha:      { bg: "bg-slate-100",   text: "text-slate-500",   dot: "bg-slate-400",   ring: "ring-slate-200",    icon: "text-slate-400",   gradient: "from-slate-400 to-slate-500" },
-	cuti:       { bg: "bg-sky-50",      text: "text-sky-600",     dot: "bg-sky-500",     ring: "ring-sky-200",      icon: "text-sky-500",     gradient: "from-sky-500 to-blue-500" },
-	dinas_luar: { bg: "bg-violet-50",   text: "text-violet-600",  dot: "bg-violet-500",  ring: "ring-violet-200",   icon: "text-violet-500",  gradient: "from-violet-500 to-purple-500" },
-	wfh:        { bg: "bg-teal-50",     text: "text-teal-600",    dot: "bg-teal-500",    ring: "ring-teal-200",     icon: "text-teal-500",    gradient: "from-teal-500 to-cyan-500" },
-	wfa:        { bg: "bg-indigo-50",   text: "text-indigo-600",  dot: "bg-indigo-500",  ring: "ring-indigo-200",   icon: "text-indigo-500",  gradient: "from-indigo-500 to-blue-500" },
+	hadir:      { bg: "bg-emerald-50", text: "text-emerald-600", dot: "bg-emerald-500" },
+	izin:       { bg: "bg-amber-50",   text: "text-amber-600",   dot: "bg-amber-500" },
+	sakit:      { bg: "bg-rose-50",    text: "text-rose-600",    dot: "bg-rose-500" },
+	alpha:      { bg: "bg-slate-100",  text: "text-slate-500",   dot: "bg-slate-400" },
+	cuti:       { bg: "bg-sky-50",     text: "text-sky-600",     dot: "bg-sky-500" },
+	dinas_luar: { bg: "bg-violet-50",  text: "text-violet-600",  dot: "bg-violet-500" },
+	wfh:        { bg: "bg-teal-50",    text: "text-teal-600",    dot: "bg-teal-500" },
+	wfa:        { bg: "bg-indigo-50",  text: "text-indigo-600",  dot: "bg-indigo-500" },
 };
 
 const STATUS_LABELS = {
@@ -42,30 +42,26 @@ const STATUS_LABELS = {
 	dinas_luar: "Dinas Luar", wfh: "WFH", wfa: "WFA",
 };
 
-const formatTime = (timeStr) => {
-	if (!timeStr) return "--:--";
-	const d = new Date(timeStr);
+const fmt = (t) => {
+	if (!t) return "--:--";
+	const d = new Date(t);
 	return d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
 };
 
 const isPWA = () => window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
 
 const getDeviceId = () => {
-	let deviceId = localStorage.getItem("dpmd_device_id");
-	if (!deviceId) {
-		deviceId = crypto.randomUUID ? crypto.randomUUID() : (
-			"xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
-				const r = (Math.random() * 16) | 0;
-				return (c === "x" ? r : (r & 0x3) | 0x8).toString(16);
-			})
-		);
-		localStorage.setItem("dpmd_device_id", deviceId);
+	let id = localStorage.getItem("dpmd_device_id");
+	if (!id) {
+		id = crypto.randomUUID ? crypto.randomUUID() : "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+			const r = (Math.random() * 16) | 0;
+			return (c === "x" ? r : (r & 0x3) | 0x8).toString(16);
+		});
+		localStorage.setItem("dpmd_device_id", id);
 	}
-	return deviceId;
+	return id;
 };
 
-// ═══════════════════════════════════════════════════════════════
-// ─── Main AbsensiPage Component ──────────────────────────────
 // ═══════════════════════════════════════════════════════════════
 const AbsensiPage = () => {
 	const [searchParams] = useSearchParams();
@@ -92,11 +88,7 @@ const AbsensiPage = () => {
 	const [successMessages, setSuccessMessages] = useState({});
 	const [successPopup, setSuccessPopup] = useState({ show: false, data: null });
 
-	// Live clock
-	useEffect(() => {
-		const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-		return () => clearInterval(timer);
-	}, []);
+	useEffect(() => { const t = setInterval(() => setCurrentTime(new Date()), 1000); return () => clearInterval(t); }, []);
 
 	useEffect(() => {
 		const tab = searchParams.get("tab");
@@ -115,13 +107,9 @@ const AbsensiPage = () => {
 						await api.post("/absensi/register-device", { device_id: deviceId });
 						const res2 = await api.get("/absensi/check-eligible");
 						setEligible(res2.data.data);
-					} catch (err) {
-						console.error("Auto device registration failed:", err);
-					}
+					} catch (err) { console.error("Auto device registration failed:", err); }
 				}
-			} catch {
-				setEligible({ eligible: false });
-			}
+			} catch { setEligible({ eligible: false }); }
 		};
 		check();
 	}, [deviceId]);
@@ -133,48 +121,32 @@ const AbsensiPage = () => {
 			if (res.data.settings) setAbsensiSettings(res.data.settings);
 			setTelatMasukMenit(res.data.telat_masuk_menit || 0);
 			setPulangLebihAwalMenit(res.data.pulang_lebih_awal_menit || 0);
-		} catch (err) {
-			console.error("Error fetching today:", err);
-		}
+		} catch (err) { console.error("Error fetching today:", err); }
 	}, []);
 
 	const fetchHistory = useCallback(async () => {
 		try {
 			const res = await api.get(`/absensi/history?bulan=${selectedMonth}&tahun=${selectedYear}`);
 			setHistory(res.data.data || { records: [], summary: {} });
-		} catch (err) {
-			console.error("Error fetching history:", err);
-		}
+		} catch (err) { console.error("Error fetching history:", err); }
 	}, [selectedMonth, selectedYear]);
 
 	useEffect(() => {
-		const init = async () => {
-			setLoading(true);
-			await Promise.all([fetchToday(), fetchHistory()]);
-			setLoading(false);
-		};
+		const init = async () => { setLoading(true); await Promise.all([fetchToday(), fetchHistory()]); setLoading(false); };
 		init();
 	}, [fetchToday, fetchHistory]);
 
 	useEffect(() => {
 		const fetchSuccessMessages = async () => {
-			try {
-				const res = await api.get("/absensi/success-messages");
-				setSuccessMessages(res.data.data || {});
-			} catch (err) {
-				console.error("Error fetching success messages:", err);
-			}
+			try { const res = await api.get("/absensi/success-messages"); setSuccessMessages(res.data.data || {}); }
+			catch (err) { console.error("Error fetching success messages:", err); }
 		};
 		fetchSuccessMessages();
 	}, []);
 
 	const checkDevice = () => {
 		if (!eligible?.device_registered) {
-			showAlert({
-				icon: "warning",
-				title: "Perangkat Belum Terdaftar",
-				text: "Perangkat ini belum terdaftar di sistem. Silakan hubungi admin untuk mendaftarkan perangkat Anda.",
-			});
+			showAlert({ icon: "warning", title: "Perangkat Belum Terdaftar", text: "Silakan hubungi admin untuk mendaftarkan perangkat Anda." });
 			return false;
 		}
 		return true;
@@ -206,12 +178,7 @@ const AbsensiPage = () => {
 			if (msgData) {
 				setSuccessPopup({ show: true, data: { title: msgData.title, message: msgData.message, image_path: msgData.image_path } });
 			} else {
-				showAlert({
-					icon: "success",
-					title: type === "masuk" ? `Absen ${modeLabels[absensiMode] || "Masuk"} Berhasil!` : "Absen Pulang Berhasil!",
-					text: res.data.message,
-					timer: 2500,
-				});
+				showAlert({ icon: "success", title: type === "masuk" ? `Absen ${modeLabels[absensiMode] || "Masuk"} Berhasil!` : "Absen Pulang Berhasil!", text: res.data.message, timer: 2500 });
 			}
 			setAbsensiMode("hadir");
 			setTujuanDinas("");
@@ -223,654 +190,430 @@ const AbsensiPage = () => {
 				title: isJarak ? "Kejauhan Cuy! 🏃‍♂️💨" : "Absensi Gagal",
 				text: isJarak ? `😅 Kamu masih jauh dari kantor nih!\n\n📍 Maksimal 500 meter dari kantor ya!\n\n🦶 Coba deketin dulu baru absen lagi~ 🫡` : errMsg,
 			});
-		} finally {
-			setClockLoading(false);
-		}
+		} finally { setClockLoading(false); }
 	};
 
 	const handleSubmitIzin = async (status, keterangan) => {
 		try {
 			const today = new Date().toISOString().split("T")[0];
 			await api.post("/absensi/izin", { tanggal: today, status, keterangan });
-			await fetchToday();
-			await fetchHistory();
-			setShowIzinModal(false);
+			await fetchToday(); await fetchHistory(); setShowIzinModal(false);
 			const msgData = successMessages[status];
 			if (msgData) {
 				setSuccessPopup({ show: true, data: { title: msgData.title, message: msgData.message, image_path: msgData.image_path } });
 			} else {
 				showAlert({ icon: "success", title: "Berhasil!", text: `${STATUS_LABELS[status]} berhasil disubmit`, timer: 2000 });
 			}
-		} catch (err) {
-			showAlert({ icon: "error", title: "Gagal", text: err.response?.data?.message || "Gagal submit" });
-		}
+		} catch (err) { showAlert({ icon: "error", title: "Gagal", text: err.response?.data?.message || "Gagal submit" }); }
 	};
 
-	const prevMonth = () => {
-		if (selectedMonth === 1) { setSelectedMonth(12); setSelectedYear(y => y - 1); }
-		else setSelectedMonth(m => m - 1);
-	};
-	const nextMonth = () => {
-		if (selectedMonth === 12) { setSelectedMonth(1); setSelectedYear(y => y + 1); }
-		else setSelectedMonth(m => m + 1);
-	};
-
+	const prevMonth = () => { if (selectedMonth === 1) { setSelectedMonth(12); setSelectedYear(y => y - 1); } else setSelectedMonth(m => m - 1); };
+	const nextMonth = () => { if (selectedMonth === 12) { setSelectedMonth(1); setSelectedYear(y => y + 1); } else setSelectedMonth(m => m + 1); };
 	const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 
-	// ─── Loading State ──────────────────────────────────────
+	// ─── Loading ─────────────────────────────────────────────
 	if (loading) {
 		return (
-			<div className="h-[100dvh] bg-white flex flex-col pb-20">
-				<div className="flex-1 flex flex-col items-center justify-center gap-4 px-6">
-					<div className="relative h-14 w-14">
-						<div className="absolute inset-0 rounded-full border-[3px] border-orange-100" />
-						<div className="absolute inset-0 rounded-full border-[3px] border-orange-500 border-t-transparent animate-spin" />
-					</div>
-					<p className="text-sm text-slate-400 font-medium">Memuat data presensi...</p>
+			<div className="h-[100dvh] bg-white flex items-center justify-center pb-20">
+				<div className="flex flex-col items-center gap-3">
+					<div className="w-10 h-10 border-[3px] border-orange-200 border-t-orange-500 rounded-full animate-spin" />
+					<p className="text-xs text-slate-400">Memuat data...</p>
 				</div>
 			</div>
 		);
 	}
 
-	// ─── PWA-only gate ──────────────────────────────────────
+	// ─── PWA gate ────────────────────────────────────────────
 	if (!isPWA()) {
 		return (
 			<div className="h-[100dvh] bg-white flex items-center justify-center p-6 pb-20">
-				<motion.div {...scalePop} className="max-w-sm w-full text-center">
-					<motion.div
-						animate={{ y: [0, -8, 0] }}
-						transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
-						className="w-20 h-20 mx-auto bg-orange-50 rounded-3xl flex items-center justify-center mb-6 border border-orange-200/60"
-					>
-						<FiSmartphone className="h-10 w-10 text-orange-400" />
-					</motion.div>
-					<h2 className="text-xl font-black text-slate-800 mb-2">Buka di Aplikasi PWA</h2>
-					<p className="text-slate-400 text-sm mb-6 leading-relaxed">
-						Fitur presensi hanya tersedia melalui aplikasi PWA. Buka dari ikon di home screen Anda.
-					</p>
-					<div className="bg-slate-50 rounded-2xl p-5 text-left border border-slate-100">
-						<p className="font-bold text-slate-500 text-xs mb-3 uppercase tracking-wider">Cara Install PWA</p>
-						<ol className="text-slate-500 text-sm space-y-2.5">
-							{["Buka website di Chrome / Safari", "Tap menu (⋮) atau Share", "Pilih \"Add to Home Screen\"", "Buka dari ikon di home screen"].map((s, i) => (
-								<li key={i} className="flex items-center gap-3">
-									<span className="w-6 h-6 rounded-lg bg-orange-100 flex items-center justify-center text-orange-600 font-black text-xs flex-shrink-0">{i + 1}</span>
-									<span>{s}</span>
-								</li>
-							))}
-						</ol>
+				<div className="max-w-xs text-center">
+					<div className="w-16 h-16 mx-auto bg-orange-50 rounded-2xl flex items-center justify-center mb-4">
+						<FiSmartphone className="h-8 w-8 text-orange-400" />
 					</div>
-				</motion.div>
+					<h2 className="text-lg font-bold text-slate-800 mb-1">Buka di Aplikasi PWA</h2>
+					<p className="text-slate-400 text-xs leading-relaxed">
+						Fitur presensi hanya tersedia melalui aplikasi PWA. Buka dari ikon di home screen.
+					</p>
+				</div>
 			</div>
 		);
 	}
 
-	// ─── Not Eligible ───────────────────────────────────────
+	// ─── Not Eligible ────────────────────────────────────────
 	if (eligible && !eligible.eligible) {
 		return (
 			<div className="h-[100dvh] bg-white flex items-center justify-center p-6 pb-20">
-				<motion.div {...scalePop} className="text-center max-w-sm">
-					<motion.div
-						animate={{ y: [0, -8, 0] }}
-						transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
-						className="w-20 h-20 mx-auto bg-slate-50 rounded-3xl flex items-center justify-center mb-6 border border-slate-200"
-					>
-						<FiAlertCircle className="h-10 w-10 text-slate-300" />
-					</motion.div>
-					<h2 className="text-xl font-black text-slate-800 mb-2">Fitur Tidak Tersedia</h2>
-					<p className="text-slate-400 text-sm leading-relaxed">
-						Fitur presensi hanya tersedia untuk PPPK Paruh Waktu, Tenaga Alih Daya, Tenaga Keamanan, atau Tenaga Kebersihan.
+				<div className="text-center max-w-xs">
+					<FiAlertCircle className="h-12 w-12 mx-auto text-slate-200 mb-3" />
+					<h2 className="text-lg font-bold text-slate-800 mb-1">Tidak Tersedia</h2>
+					<p className="text-slate-400 text-xs leading-relaxed">
+						Fitur presensi hanya untuk PPPK Paruh Waktu, Tenaga Alih Daya, Tenaga Keamanan, atau Tenaga Kebersihan.
 					</p>
-				</motion.div>
+				</div>
 			</div>
 		);
 	}
 
-	const hasClockIn = !!todayData?.jam_masuk;
-	const hasClockOut = !!todayData?.jam_keluar;
+	const hasIn = !!todayData?.jam_masuk;
+	const hasOut = !!todayData?.jam_keluar;
 	const todayStatus = todayData?.status || null;
-	const isNonHadir = todayStatus && ["izin", "sakit", "cuti"].includes(todayStatus) && !hasClockIn;
+	const isNonHadir = todayStatus && ["izin", "sakit", "cuti"].includes(todayStatus) && !hasIn;
 	const isDinasMode = todayStatus && ["dinas_luar", "wfh", "wfa"].includes(todayStatus);
-	const step = hasClockOut ? 2 : hasClockIn ? 1 : 0;
+
+	// Can clock out?
+	const canClockOut = (() => {
+		if (!hasIn || hasOut) return false;
+		const jp = absensiSettings?.jam_pulang || "16:00";
+		const jm = absensiSettings?.jam_masuk || "08:00";
+		const [hp, mp] = jp.split(":").map(Number);
+		const [hm, mm] = jm.split(":").map(Number);
+		const now = currentTime.getHours() * 60 + currentTime.getMinutes();
+		const pm = hp * 60 + mp;
+		const masukM = hm * 60 + mm;
+		if (pm <= masukM) return now < masukM && now >= pm;
+		return now >= pm;
+	})();
 
 	return (
 		<div className="h-[100dvh] bg-white flex flex-col overflow-hidden pb-20">
-			{/* ═══ Top Bar — User + Clock ═══════════════════════ */}
-			<div className="flex-shrink-0 px-5 pt-[calc(env(safe-area-inset-top,8px)+8px)] pb-2">
-				<div className="max-w-lg mx-auto">
-					<motion.div {...fadeUp} className="flex items-center gap-3 mb-3">
-						<div className="w-10 h-10 rounded-2xl overflow-hidden bg-orange-50 border border-orange-200/60 shadow-sm">
+
+			{/* ══ Header + Clock ═══════════════════════════════ */}
+			<div className="flex-shrink-0 px-5 pt-[calc(env(safe-area-inset-top,8px)+8px)] pb-4 rounded-b-[28px] shadow-[0_4px_20px_rgba(0,0,0,0.06)]">
+				<div className="max-w-lg mx-auto flex items-center justify-between mb-3">
+					<div className="flex items-center gap-2.5 min-w-0">
+						<div className="w-9 h-9 rounded-xl overflow-hidden bg-orange-50 flex-shrink-0">
 							{avatarUrl ? (
-								<img src={avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+								<img src={avatarUrl} alt="" className="w-full h-full object-cover" />
 							) : (
 								<div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-orange-400 to-orange-500">
-									<span className="text-white font-bold text-sm">{user.name?.charAt(0) || "P"}</span>
+									<span className="text-white font-bold text-xs">{user.name?.charAt(0) || "U"}</span>
 								</div>
 							)}
 						</div>
-						<div className="flex-1 min-w-0">
-							<h1 className="text-slate-800 font-bold text-sm truncate">{eligible?.nama || user.name}</h1>
-							<p className="text-slate-400 text-[11px] truncate">{eligible?.jabatan || eligible?.status_kepegawaian?.replace(/_/g, " ")}</p>
+						<div className="min-w-0">
+							<p className="text-sm font-bold text-slate-800 truncate leading-tight">{eligible?.nama || user.name}</p>
+							<p className="text-[10px] text-slate-400 truncate">{eligible?.jabatan || eligible?.status_kepegawaian?.replace(/_/g, " ")}</p>
 						</div>
-						{eligible?.device_registered ? (
-							<div className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-200/60 rounded-xl">
-								<LuShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
-								<span className="text-[10px] font-bold text-emerald-600 hidden min-[380px]:inline">Terdaftar</span>
-							</div>
-						) : (
-							<motion.div
-								animate={{ scale: [1, 1.1, 1] }}
-								transition={{ repeat: Infinity, duration: 1.5 }}
-								className="flex items-center gap-1.5 px-2.5 py-1 bg-red-50 border border-red-200/60 rounded-xl"
-							>
-								<FiAlertCircle className="h-3.5 w-3.5 text-red-400" />
-								<span className="text-[10px] font-bold text-red-500 hidden min-[380px]:inline">Belum</span>
-							</motion.div>
-						)}
-					</motion.div>
-
-					{/* Date + Clock */}
+					</div>
+					{eligible?.device_registered ? (
+						<span className="flex items-center gap-1 px-2 py-0.5 bg-emerald-50 rounded-lg text-[9px] font-bold text-emerald-600 flex-shrink-0">
+							<LuShieldCheck className="h-3 w-3" />
+						</span>
+					) : (
+						<span className="flex items-center gap-1 px-2 py-0.5 bg-red-50 rounded-lg text-[9px] font-bold text-red-500 flex-shrink-0">
+							<FiAlertCircle className="h-3 w-3" /> Belum
+						</span>
+					)}
+				</div>
+				<div className="text-center">
+				<p className="text-[10px] text-slate-400 font-medium tracking-wide">
+					{currentTime.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+				</p>
+				<div className="flex items-center justify-center gap-1 mt-1">
+					{/* Hours */}
+					<div className="bg-slate-800 rounded-xl px-3 py-1.5 min-w-[52px]">
+						<span className="text-[36px] font-black text-white tabular-nums tracking-tight leading-none font-mono">
+							{String(currentTime.getHours()).padStart(2, "0")}
+						</span>
+					</div>
+					{/* Colon */}
 					<motion.div
-						initial={{ opacity: 0, y: 10 }}
-						animate={{ opacity: 1, y: 0 }}
-						transition={{ delay: 0.05 }}
-						className="text-center mb-2"
+						animate={{ opacity: [1, 0.2, 1] }}
+						transition={{ repeat: Infinity, duration: 1 }}
+						className="flex flex-col gap-1.5 mx-0.5"
 					>
-						<p className="text-slate-400 text-[11px] font-medium tracking-wide mb-0.5">
-							{currentTime.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
-						</p>
-						<div className="flex items-baseline justify-center">
-							<span className="text-4xl font-black text-slate-800 tabular-nums tracking-tight leading-none" style={{ fontFamily: "ui-monospace, 'Cascadia Code', 'Fira Code', monospace" }}>
-								{currentTime.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
-							</span>
-							<motion.span
-								animate={{ opacity: [1, 0.2, 1] }}
-								transition={{ repeat: Infinity, duration: 1, ease: "easeInOut" }}
-								className="text-lg ml-1 text-orange-500 font-bold tabular-nums leading-none"
-								style={{ fontFamily: "ui-monospace, monospace" }}
-							>
-								{currentTime.toLocaleTimeString("id-ID", { second: "2-digit" }).slice(-2)}
-							</motion.span>
-						</div>
+						<div className="w-2 h-2 rounded-full bg-orange-400" />
+						<div className="w-2 h-2 rounded-full bg-orange-400" />
 					</motion.div>
-
-					{/* Step Progress */}
-					<div className="flex items-center justify-center gap-1 mb-1">
-						{[
-							{ label: "Masuk", i: 0, icon: LuLogIn },
-							{ label: "Aktif", i: 1, icon: LuClock },
-							{ label: "Pulang", i: 2, icon: LuLogOut },
-						].map(({ label, i, icon: Icon }, idx) => (
-							<React.Fragment key={label}>
-								{idx > 0 && (
-									<div className={`w-8 h-0.5 rounded-full transition-all duration-700 ${step > idx - 1 ? "bg-orange-400" : "bg-slate-100"}`} />
-								)}
-								<div className="flex items-center gap-1">
-									<div className={`w-5 h-5 rounded-full flex items-center justify-center transition-all duration-500 ${
-										step > i ? "bg-orange-500 text-white" :
-										step === i ? "bg-orange-100 text-orange-500 ring-2 ring-orange-200" :
-										"bg-slate-100 text-slate-300"
-									}`}>
-										{step > i ? <FiCheckCircle className="h-3 w-3" /> : <Icon className="h-2.5 w-2.5" />}
-									</div>
-									<span className={`text-[9px] font-bold transition-colors duration-500 ${
-										step >= i ? "text-orange-600" : "text-slate-300"
-									}`}>{label}</span>
-								</div>
-							</React.Fragment>
-						))}
+					{/* Minutes */}
+					<div className="bg-slate-800 rounded-xl px-3 py-1.5 min-w-[52px]">
+						<span className="text-[36px] font-black text-white tabular-nums tracking-tight leading-none font-mono">
+							{String(currentTime.getMinutes()).padStart(2, "0")}
+						</span>
 					</div>
+					{/* Seconds */}
+					<motion.div
+						animate={{ opacity: [1, 0.3, 1] }}
+						transition={{ repeat: Infinity, duration: 1 }}
+						className="bg-orange-500 rounded-lg px-1.5 py-1 min-w-[32px] self-end mb-0.5"
+					>
+						<span className="text-sm font-black text-white tabular-nums leading-none font-mono">
+							{String(currentTime.getSeconds()).padStart(2, "0")}
+						</span>
+					</motion.div>
+				</div>
+				{absensiSettings?.jam_masuk && (
+					<p className="text-[10px] text-slate-300 mt-1 text-center">
+						{absensiSettings.jam_masuk} — {absensiSettings.jam_pulang}
+					</p>
+				)}
 				</div>
 			</div>
 
-			{/* ═══ Tab Switcher ═══════════════════════════════════ */}
-			<div className="flex-shrink-0 px-5">
-				<div className="max-w-lg mx-auto">
-					<div className="bg-slate-50 rounded-2xl p-1 flex border border-slate-100">
-						{[
-							{ id: "presensi", label: "Presensi", icon: LuClock },
-							{ id: "riwayat", label: "Riwayat", icon: LuHistory },
-						].map((tab) => {
-							const Icon = tab.icon;
-							const isActive = activeTab === tab.id;
-							return (
-								<motion.button
-									key={tab.id}
-									onClick={() => setActiveTab(tab.id)}
-									className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer relative ${
-										isActive ? "text-white" : "text-slate-400 hover:text-slate-500"
-									}`}
-									{...pressAnimation}
-								>
-									{isActive && (
-										<motion.div
-											layoutId="absensiTabBg"
-											className="absolute inset-0 bg-orange-500 rounded-xl shadow-sm"
-											transition={{ type: "spring", stiffness: 500, damping: 30 }}
-										/>
-									)}
-									<span className="relative z-10 flex items-center gap-1.5">
-										<Icon className="h-3.5 w-3.5" />
-										{tab.label}
-									</span>
-								</motion.button>
-							);
-						})}
-					</div>
-				</div>
-			</div>
-
-			{/* ═══ Content Area ═══════════════════════════════════ */}
-			<div className="flex-1 overflow-hidden px-5 pt-3">
+			{/* ══ Content ═════════════════════════════════════ */}
+			<div className="flex-1 overflow-hidden px-5">
 				<div className="max-w-lg mx-auto h-full flex flex-col">
 
-					{/* Device Warning */}
+					{/* ── Device Warning ── */}
 					{eligible && !eligible.device_registered && (
-						<motion.div {...fadeUp} className="bg-amber-50 border border-amber-200/60 rounded-2xl p-3 mb-3 flex items-center gap-2.5 flex-shrink-0">
-							<FiSmartphone className="h-4 w-4 text-amber-500 flex-shrink-0" />
-							<div className="min-w-0">
-								<p className="text-xs font-bold text-amber-700">Device Belum Terdaftar</p>
-								<p className="text-[10px] text-amber-500/80 truncate">Logout lalu login kembali untuk mendaftarkan device</p>
-							</div>
-						</motion.div>
+						<div className="bg-amber-50 rounded-xl p-2.5 mb-2 flex items-center gap-2 flex-shrink-0">
+							<FiSmartphone className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />
+							<p className="text-[10px] text-amber-700 font-medium">Device belum terdaftar — logout lalu login kembali</p>
+						</div>
 					)}
 
-					{/* ═══ PRESENSI TAB ═══════════════════════════ */}
+					{/* ══════════════════════════════════════════ */}
+					{/* ══ PRESENSI ═════════════════════════════ */}
+					{/* ══════════════════════════════════════════ */}
 					{activeTab === "presensi" && (
-						<motion.div
-							initial={{ opacity: 0, y: 12 }}
-							animate={{ opacity: 1, y: 0 }}
-							transition={{ type: "spring", stiffness: 300, damping: 25 }}
-							className="flex-1 flex flex-col"
-						>
-							{/* Main Status Card */}
-							<div className="bg-white rounded-3xl border border-slate-100 shadow-[0_1px_12px_rgba(0,0,0,0.04)] flex-1 flex flex-col p-4">
-								{isNonHadir ? (
-									/* Already submitted Izin/Sakit/Cuti */
-									<div className="flex-1 flex flex-col items-center justify-center">
-										<motion.div
-											initial={{ scale: 0 }}
-											animate={{ scale: 1 }}
-											transition={{ type: "spring", stiffness: 300, damping: 18 }}
-											className="w-20 h-20 rounded-full bg-gradient-to-br from-emerald-50 to-emerald-100 border-2 border-emerald-200/60 flex items-center justify-center mb-3"
-										>
-											<LuCircleCheckBig className="w-10 h-10 text-emerald-500" />
-										</motion.div>
-										<div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full ${STATUS_COLORS[todayStatus]?.bg} ring-1 ${STATUS_COLORS[todayStatus]?.ring} mb-2`}>
-											<span className={`w-1.5 h-1.5 rounded-full ${STATUS_COLORS[todayStatus]?.dot}`} />
-											<span className={`font-bold text-xs ${STATUS_COLORS[todayStatus]?.text}`}>{STATUS_LABELS[todayStatus]}</span>
-										</div>
-										<p className="text-sm font-bold text-slate-700">Presensi sudah tercatat</p>
-										{todayData?.keterangan && <p className="text-[11px] text-slate-400 mt-1 text-center">{todayData.keterangan}</p>}
-										<p className="text-[10px] text-slate-300 mt-2">Hanya bisa 1x presensi per hari</p>
+						<div className="flex-1 flex flex-col">
+							{isNonHadir ? (
+								/* ── Already Izin/Sakit/Cuti ── */
+								<div className="flex-1 flex flex-col items-center justify-center">
+									<div className="w-16 h-16 rounded-full bg-emerald-50 flex items-center justify-center mb-3">
+										<LuCircleCheckBig className="w-8 h-8 text-emerald-500" />
 									</div>
-								) : (
-									<>
-										{/* Schedule Bar */}
-										{absensiSettings?.jam_masuk && (
-											<div className="flex items-center justify-center gap-2.5 mb-3 px-3 py-1.5 bg-slate-50 rounded-xl border border-slate-100/60 flex-shrink-0">
-												<span className="text-[10px] text-slate-400 flex items-center gap-1">
-													<LuClock className="h-2.5 w-2.5" />
-													<span className="font-bold text-slate-600">{absensiSettings.jam_masuk}</span>
-													<span className="text-slate-200 mx-0.5">—</span>
-													<span className="font-bold text-slate-600">{absensiSettings.jam_pulang}</span>
-												</span>
-												<div className="w-px h-2.5 bg-slate-200" />
-												<span className="text-[10px] text-slate-400">
-													Toleransi <span className="font-bold text-slate-600">{absensiSettings.toleransi_terlambat}m</span>
-												</span>
-											</div>
-										)}
-
-										{/* Masuk / Pulang Time Cards */}
-										<div className="grid grid-cols-2 gap-2.5 mb-3 flex-shrink-0">
-											{/* Masuk */}
-											<div className={`relative p-3 rounded-2xl border overflow-hidden ${
-												hasClockIn
-													? "border-emerald-200/60 bg-emerald-50/50"
-													: "border-slate-100 bg-slate-50/30"
-											}`}>
-												<div className="flex items-center gap-1.5 mb-1.5">
-													<div className={`w-6 h-6 rounded-lg flex items-center justify-center ${hasClockIn ? "bg-emerald-100" : "bg-slate-100"}`}>
-														<LuLogIn className={`h-3 w-3 ${hasClockIn ? "text-emerald-600" : "text-slate-300"}`} />
-													</div>
-													<span className={`text-[9px] font-bold uppercase tracking-widest ${hasClockIn ? "text-emerald-500" : "text-slate-300"}`}>Masuk</span>
-												</div>
-												<p className={`text-xl font-black tabular-nums leading-none ${hasClockIn ? "text-emerald-600" : "text-slate-200"}`}>
-													{formatTime(todayData?.jam_masuk)}
-												</p>
-												{hasClockIn && telatMasukMenit > 0 && (
-													<span className="inline-flex items-center gap-0.5 mt-1.5 px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-600 text-[8px] font-bold">⏰ Telat {telatMasukMenit}m</span>
-												)}
-												{hasClockIn && telatMasukMenit === 0 && (
-													<span className="inline-flex items-center gap-0.5 mt-1.5 px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-600 text-[8px] font-bold">✅ Tepat</span>
-												)}
-												{todayData?.jarak_masuk != null && (
-													<p className="text-[9px] text-slate-400 mt-1 flex items-center gap-0.5"><FiMapPin className="h-2.5 w-2.5" />{todayData.jarak_masuk}m</p>
-												)}
-												{todayData?.tujuan_dinas && (
-													<p className="text-[9px] text-violet-500 mt-0.5 truncate flex items-center gap-0.5"><FiMapPin className="h-2.5 w-2.5" />{todayData.tujuan_dinas}</p>
-												)}
-												{isDinasMode && hasClockIn && (
-													<span className={`inline-flex items-center gap-0.5 mt-1.5 px-1.5 py-0.5 rounded-lg text-[8px] font-bold ${STATUS_COLORS[todayStatus]?.bg} ${STATUS_COLORS[todayStatus]?.text}`}>
-														{STATUS_LABELS[todayStatus]}
-													</span>
-												)}
-											</div>
-
-											{/* Pulang */}
-											<div className={`relative p-3 rounded-2xl border overflow-hidden ${
-												hasClockOut
-													? "border-sky-200/60 bg-sky-50/50"
-													: "border-slate-100 bg-slate-50/30"
-											}`}>
-												<div className="flex items-center gap-1.5 mb-1.5">
-													<div className={`w-6 h-6 rounded-lg flex items-center justify-center ${hasClockOut ? "bg-sky-100" : "bg-slate-100"}`}>
-														<LuLogOut className={`h-3 w-3 ${hasClockOut ? "text-sky-600" : "text-slate-300"}`} />
-													</div>
-													<span className={`text-[9px] font-bold uppercase tracking-widest ${hasClockOut ? "text-sky-500" : "text-slate-300"}`}>Pulang</span>
-												</div>
-												<p className={`text-xl font-black tabular-nums leading-none ${hasClockOut ? "text-sky-600" : "text-slate-200"}`}>
-													{formatTime(todayData?.jam_keluar)}
-												</p>
-												{hasClockOut && pulangLebiahAwalMenit > 0 && (
-													<span className="inline-flex items-center gap-0.5 mt-1.5 px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-600 text-[8px] font-bold">⚡ {pulangLebiahAwalMenit}m lebih awal</span>
-												)}
-												{hasClockOut && pulangLebiahAwalMenit === 0 && (
-													<span className="inline-flex items-center gap-0.5 mt-1.5 px-1.5 py-0.5 rounded-full bg-sky-100 text-sky-600 text-[8px] font-bold">✅ Tepat</span>
-												)}
-												{todayData?.jarak_keluar != null && (
-													<p className="text-[9px] text-slate-400 mt-1 flex items-center gap-0.5"><FiMapPin className="h-2.5 w-2.5" />{todayData.jarak_keluar}m</p>
-												)}
-											</div>
+									<span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold mb-1 ${STATUS_COLORS[todayStatus]?.bg} ${STATUS_COLORS[todayStatus]?.text}`}>
+										<span className={`w-1.5 h-1.5 rounded-full ${STATUS_COLORS[todayStatus]?.dot}`} />
+										{STATUS_LABELS[todayStatus]}
+									</span>
+									<p className="text-sm font-bold text-slate-700">Tercatat hari ini</p>
+									{todayData?.keterangan && <p className="text-[10px] text-slate-400 mt-0.5 text-center">{todayData.keterangan}</p>}
+								</div>
+							) : hasOut ? (
+								/* ── Completed (Masuk + Pulang) ── */
+								<div className="flex-1 flex flex-col items-center justify-center">
+									<motion.div
+										initial={{ scale: 0 }}
+										animate={{ scale: 1 }}
+										transition={{ type: "spring", stiffness: 300, damping: 18 }}
+										className="w-20 h-20 rounded-full bg-emerald-50 flex items-center justify-center mb-3"
+									>
+										<LuCircleCheckBig className="w-10 h-10 text-emerald-500" />
+									</motion.div>
+									<p className="text-base font-bold text-slate-800 mb-1">Selesai 🎉</p>
+									{isDinasMode && (
+										<span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold mb-1.5 ${STATUS_COLORS[todayStatus]?.bg} ${STATUS_COLORS[todayStatus]?.text}`}>
+											{STATUS_LABELS[todayStatus]}
+										</span>
+									)}
+									{/* Time pills */}
+									<div className="flex items-center gap-2 mt-1">
+										<div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 rounded-lg">
+											<LuLogIn className="h-3 w-3 text-emerald-500" />
+											<span className="text-xs font-bold text-emerald-600 tabular-nums">{fmt(todayData?.jam_masuk)}</span>
 										</div>
-
-										{/* Action Buttons */}
-										<div className="flex-1 flex flex-col justify-end">
-											{!hasClockIn ? (
-												<div className="space-y-2">
-													{/* Primary: Absen Masuk */}
-													<motion.button
-														{...pressAnimation}
-														onClick={startHadir}
-														disabled={clockLoading}
-														className="w-full relative overflow-hidden group cursor-pointer disabled:opacity-50"
-													>
-														<div className="relative flex items-center gap-3 p-3.5 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 shadow-lg shadow-orange-200/40">
-															<div className="absolute inset-0 bg-gradient-to-r from-orange-400 to-amber-400 opacity-0 group-active:opacity-100 transition-opacity rounded-2xl" />
-															<div className="relative z-10 flex items-center gap-3 w-full">
-																<div className="w-11 h-11 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
-																	{clockLoading && absensiMode === "hadir" ? (
-																		<div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-																	) : (
-																		<Lottie animationData={bellAnim} loop autoplay style={{ height: 32, width: 32 }} />
-																	)}
-																</div>
-																<div className="flex-1 text-left">
-																	<p className="text-white font-black text-base leading-tight">Absen Masuk</p>
-																	<p className="text-white/60 text-[10px] mt-0.5">Selfie & GPS otomatis</p>
-																</div>
-																<FiChevronRight className="h-4 w-4 text-white/50 flex-shrink-0" />
-															</div>
-														</div>
-													</motion.button>
-
-													{/* Secondary row: modes */}
-													<div className="grid grid-cols-3 gap-2">
-														<motion.button {...pressAnimation} onClick={startDinasLuar} disabled={clockLoading}
-															className="flex flex-col items-center gap-0.5 py-2 px-1 bg-white border border-violet-200/60 rounded-xl disabled:opacity-50 cursor-pointer hover:bg-violet-50/50 transition-colors">
-															<div className="w-8 h-8 rounded-lg bg-violet-50 flex items-center justify-center">
-																<Lottie animationData={manWaitingCarAnim} loop autoplay className="h-6 w-6" />
-															</div>
-															<span className="text-[9px] font-bold text-violet-600">Dinas Luar</span>
-														</motion.button>
-														<motion.button {...pressAnimation} onClick={startWFH} disabled={clockLoading}
-															className="flex flex-col items-center gap-0.5 py-2 px-1 bg-white border border-teal-200/60 rounded-xl disabled:opacity-50 cursor-pointer hover:bg-teal-50/50 transition-colors">
-															<div className="w-8 h-8 rounded-lg bg-teal-50 flex items-center justify-center">
-																<Lottie animationData={workFromHomeAnim} loop autoplay className="h-6 w-6" />
-															</div>
-															<span className="text-[9px] font-bold text-teal-600">WFH</span>
-														</motion.button>
-														<motion.button {...pressAnimation} onClick={startWFA} disabled={clockLoading}
-															className="flex flex-col items-center gap-0.5 py-2 px-1 bg-white border border-indigo-200/60 rounded-xl disabled:opacity-50 cursor-pointer hover:bg-indigo-50/50 transition-colors">
-															<div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
-																<Lottie animationData={workFromAnywhereAnim} loop autoplay className="h-6 w-6" />
-															</div>
-															<span className="text-[9px] font-bold text-indigo-600">WFA</span>
-														</motion.button>
-													</div>
-
-													{/* Izin / Sakit / Cuti */}
-													<motion.button
-														{...pressAnimation}
-														onClick={() => setShowIzinModal(true)}
-														className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-slate-50 border border-slate-200/60 text-slate-500 rounded-xl font-bold text-[11px] hover:bg-slate-100 transition-colors cursor-pointer"
-													>
-														<LuClipboardList className="h-3.5 w-3.5" /> Izin / Sakit / Cuti
-													</motion.button>
-												</div>
-											) : !hasClockOut ? (
-												/* Waiting for clock-out */
-												<div className="space-y-3">
-													<motion.div
-														initial={{ scale: 0.8, opacity: 0 }}
-														animate={{ scale: 1, opacity: 1 }}
-														className="flex flex-col items-center"
-													>
-														<motion.div
-															initial={{ scale: 0 }}
-															animate={{ scale: 1 }}
-															transition={{ type: "spring", stiffness: 300, damping: 18 }}
-															className="w-16 h-16 rounded-full bg-emerald-50 border-2 border-emerald-200/60 flex items-center justify-center mb-2"
-														>
-															<LuCircleCheckBig className="w-8 h-8 text-emerald-500" />
-														</motion.div>
-														<span className="text-xs font-bold text-emerald-600">Masuk {formatTime(todayData?.jam_masuk)} ✅</span>
-														{isDinasMode && (
-															<span className={`inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-lg text-[9px] font-bold ${STATUS_COLORS[todayStatus]?.bg} ${STATUS_COLORS[todayStatus]?.text} ring-1 ${STATUS_COLORS[todayStatus]?.ring}`}>
-																{STATUS_LABELS[todayStatus]}
-															</span>
-														)}
-														{telatMasukMenit > 0 && (
-															<span className="inline-flex items-center gap-0.5 mt-1 px-2 py-0.5 rounded-full bg-rose-100 text-rose-600 text-[9px] font-bold">⏰ Telat {telatMasukMenit}m</span>
-														)}
-													</motion.div>
-
-													{/* Pulang button if time */}
-													{(() => {
-														const jamPulangStr = absensiSettings?.jam_pulang || "16:00";
-														const jamMasukStr = absensiSettings?.jam_masuk || "08:00";
-														const [hp, mp] = jamPulangStr.split(":").map(Number);
-														const [hm, mm] = jamMasukStr.split(":").map(Number);
-														const now = currentTime;
-														const nowMinutes = now.getHours() * 60 + now.getMinutes();
-														const pulangMinutes = hp * 60 + mp;
-														const masukMinutes = hm * 60 + mm;
-														const isOvernightShift = pulangMinutes <= masukMinutes;
-														let canPulang;
-														if (isOvernightShift) {
-															canPulang = nowMinutes < masukMinutes && nowMinutes >= pulangMinutes;
-														} else {
-															canPulang = nowMinutes >= pulangMinutes;
-														}
-														if (canPulang) {
-															return (
-																<motion.button
-																	{...pressAnimation}
-																	onClick={startPulang}
-																	disabled={clockLoading}
-																	className="w-full relative overflow-hidden group cursor-pointer disabled:opacity-50"
-																>
-																	<div className="relative flex items-center gap-3 p-3.5 rounded-2xl bg-gradient-to-r from-sky-500 to-blue-500 shadow-lg shadow-sky-200/40">
-																		<div className="absolute inset-0 bg-gradient-to-r from-sky-400 to-blue-400 opacity-0 group-active:opacity-100 transition-opacity rounded-2xl" />
-																		<div className="relative z-10 flex items-center gap-3 w-full">
-																			<div className="w-11 h-11 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
-																				{clockLoading ? (
-																					<div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-																				) : (
-																					<Lottie animationData={bellAnim} loop autoplay style={{ height: 32, width: 32 }} />
-																				)}
-																			</div>
-																			<div className="flex-1 text-left">
-																				<p className="text-white font-black text-base leading-tight">Absen Pulang</p>
-																				<p className="text-white/60 text-[10px] mt-0.5">Selfie & konfirmasi</p>
-																			</div>
-																			<FiChevronRight className="h-4 w-4 text-white/50 flex-shrink-0" />
-																		</div>
-																	</div>
-																</motion.button>
-															);
-														}
-														return null;
-													})()}
-												</div>
+										<span className="text-slate-200">→</span>
+										<div className="flex items-center gap-1.5 px-3 py-1.5 bg-sky-50 rounded-lg">
+											<LuLogOut className="h-3 w-3 text-sky-500" />
+											<span className="text-xs font-bold text-sky-600 tabular-nums">{fmt(todayData?.jam_keluar)}</span>
+										</div>
+									</div>
+									{/* Tags */}
+									<div className="flex flex-wrap justify-center gap-1 mt-2">
+										{telatMasukMenit > 0 && (
+											<span className="px-2 py-0.5 rounded-full bg-rose-50 text-rose-500 text-[9px] font-bold">Telat {telatMasukMenit}m</span>
+										)}
+										{pulangLebiahAwalMenit > 0 && (
+											<span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-500 text-[9px] font-bold">{pulangLebiahAwalMenit}m lebih awal</span>
+										)}
+									</div>
+								</div>
+							) : hasIn ? (
+								/* ── Waiting for Pulang ── */
+								<div className="flex-1 flex flex-col items-center justify-center">
+									<p className="text-xs text-emerald-600 font-bold tabular-nums mb-1">Masuk {fmt(todayData?.jam_masuk)}</p>
+									{isDinasMode && (
+										<span className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[9px] font-bold mb-2 ${STATUS_COLORS[todayStatus]?.bg} ${STATUS_COLORS[todayStatus]?.text}`}>
+											{STATUS_LABELS[todayStatus]}
+										</span>
+									)}
+									{telatMasukMenit > 0 && (
+										<span className="px-2 py-0.5 rounded-full bg-rose-50 text-rose-500 text-[9px] font-bold mb-2">Telat {telatMasukMenit}m</span>
+									)}
+									{canClockOut ? (
+										<motion.button
+											{...pressAnimation}
+											onClick={startPulang}
+											disabled={clockLoading}
+											className="flex flex-col items-center cursor-pointer disabled:opacity-50"
+										>
+											<div className="relative w-40 h-40 flex items-center justify-center">
+												<div className="absolute inset-0 rounded-full bg-gradient-to-br from-sky-100 via-blue-50 to-sky-100 shadow-[0_0_25px_rgba(14,165,233,0.15)]" />
+												<div className="absolute inset-1 rounded-full border-2 border-dashed border-sky-200/60 animate-[spin_20s_linear_infinite]" />
+												{clockLoading ? (
+													<div className="w-12 h-12 border-[3px] border-sky-200 border-t-sky-500 rounded-full animate-spin" />
+												) : (
+													<Lottie animationData={bellAnim} loop autoplay className="relative z-10" style={{ height: 120, width: 120 }} />
+												)}
+											</div>
+											<p className="text-base font-bold text-sky-600 mt-2">Absen Pulang</p>
+										</motion.button>
+									) : (
+										<div className="flex flex-col items-center">
+											<LuCircleCheckBig className="w-14 h-14 text-emerald-400 mb-2" />
+											<p className="text-sm font-bold text-slate-600">Menunggu jam pulang</p>
+										</div>
+									)}
+								</div>
+							) : (
+								/* ── Belum Absen — Action Buttons ── */
+								<div className="flex-1 flex flex-col items-center justify-center gap-3">
+									{/* Main: Absen Masuk — Big Bell */}
+									<div className="w-full flex justify-center bg-white rounded-3xl shadow-[0_2px_16px_rgba(0,0,0,0.07)] p-4">
+									<motion.button
+										{...pressAnimation}
+										onClick={startHadir}
+										disabled={clockLoading}
+										className="flex flex-col items-center cursor-pointer disabled:opacity-50"
+									>
+										<div className="relative w-40 h-40 flex items-center justify-center">
+											<div className="absolute inset-0 rounded-full bg-gradient-to-br from-orange-100 via-amber-50 to-orange-100 shadow-[0_0_25px_rgba(249,115,22,0.15)]" />
+											<div className="absolute inset-1 rounded-full border-2 border-dashed border-orange-200/60 animate-[spin_20s_linear_infinite]" />
+											{clockLoading && absensiMode === "hadir" ? (
+												<div className="w-12 h-12 border-[3px] border-orange-200 border-t-orange-500 rounded-full animate-spin" />
 											) : (
-												/* Completed */
-												<motion.div
-													initial={{ opacity: 0, scale: 0.8 }}
-													animate={{ opacity: 1, scale: 1 }}
-													transition={{ type: "spring", stiffness: 300, damping: 20 }}
-													className="flex-1 flex flex-col items-center justify-center gap-2"
-												>
-													<motion.div
-														initial={{ scale: 0 }}
-														animate={{ scale: 1 }}
-														transition={{ type: "spring", stiffness: 300, damping: 18 }}
-														className="w-24 h-24 rounded-full bg-gradient-to-br from-emerald-50 to-emerald-100 border-2 border-emerald-200/60 flex items-center justify-center"
-													>
-														<LuCircleCheckBig className="w-14 h-14 text-emerald-500" />
-													</motion.div>
-													<div className="text-center">
-														<p className="text-sm font-black text-emerald-600">Presensi Hari Ini Selesai 🎉</p>
-														{isDinasMode && (
-															<span className={`inline-flex items-center gap-1 mt-1 px-3 py-1 rounded-lg text-[10px] font-bold ${STATUS_COLORS[todayStatus]?.bg} ${STATUS_COLORS[todayStatus]?.text} ring-1 ${STATUS_COLORS[todayStatus]?.ring}`}>
-																{STATUS_LABELS[todayStatus]}
-															</span>
-														)}
-														<p className="text-[11px] text-slate-400 mt-1">
-															Masuk {formatTime(todayData?.jam_masuk)} · Pulang {formatTime(todayData?.jam_keluar)}
-														</p>
-														<div className="flex flex-wrap justify-center gap-1 mt-1.5">
-															{telatMasukMenit > 0 && (
-																<span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-rose-100 text-rose-600 text-[8px] font-bold">⏰ Telat {telatMasukMenit}m</span>
-															)}
-															{pulangLebiahAwalMenit > 0 && (
-																<span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-amber-100 text-amber-600 text-[8px] font-bold">⚡ {pulangLebiahAwalMenit}m lebih awal</span>
-															)}
-														</div>
-													</div>
-												</motion.div>
+												<Lottie animationData={bellAnim} loop autoplay className="relative z-10" style={{ height: 120, width: 120 }} />
 											)}
 										</div>
-									</>
-								)}
-							</div>
-						</motion.div>
+										<p className="text-base font-bold text-orange-600 mt-2">Absen Masuk</p>
+									</motion.button>
+									</div>
+
+									{/* Mode buttons */}
+									<div className="w-full bg-white rounded-2xl shadow-[0_2px_16px_rgba(0,0,0,0.07)] p-3">
+									<div className="grid grid-cols-3 gap-2">
+										<motion.button
+											{...pressAnimation}
+											onClick={startDinasLuar}
+											disabled={clockLoading}
+											className="flex flex-col items-center gap-1 py-2.5 bg-violet-50/50 border border-violet-100 rounded-xl disabled:opacity-50 cursor-pointer"
+										>
+											<Lottie animationData={manWaitingCarAnim} loop autoplay className="h-7 w-7" />
+											<span className="text-[9px] font-bold text-violet-600">Dinas Luar</span>
+										</motion.button>
+										<motion.button
+											{...pressAnimation}
+											onClick={startWFH}
+											disabled={clockLoading}
+											className="flex flex-col items-center gap-1 py-2.5 bg-teal-50/50 border border-teal-100 rounded-xl disabled:opacity-50 cursor-pointer"
+										>
+											<Lottie animationData={workFromHomeAnim} loop autoplay className="h-7 w-7" />
+											<span className="text-[9px] font-bold text-teal-600">WFH</span>
+										</motion.button>
+										<motion.button
+											{...pressAnimation}
+											onClick={startWFA}
+											disabled={clockLoading}
+											className="flex flex-col items-center gap-1 py-2.5 bg-indigo-50/50 border border-indigo-100 rounded-xl disabled:opacity-50 cursor-pointer"
+										>
+											<Lottie animationData={workFromAnywhereAnim} loop autoplay className="h-7 w-7" />
+											<span className="text-[9px] font-bold text-indigo-600">WFA</span>
+										</motion.button>
+									</div>
+									</div>
+
+									{/* Izin / Sakit / Cuti */}
+									<div className="w-full bg-white rounded-2xl shadow-[0_2px_16px_rgba(0,0,0,0.07)]">
+									<button
+										onClick={() => setShowIzinModal(true)}
+										className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-slate-50 text-slate-500 rounded-2xl font-bold text-[11px] active:bg-slate-100 cursor-pointer"
+									>
+										<LuClipboardList className="h-3.5 w-3.5" /> Izin / Sakit / Cuti
+									</button>
+									</div>
+								</div>
+							)}
+						</div>
 					)}
 
-					{/* ═══ RIWAYAT TAB ═══════════════════════════ */}
+					{/* ══════════════════════════════════════════ */}
+					{/* ══ RIWAYAT TAB ═════════════════════════= */}
+					{/* ══════════════════════════════════════════ */}
 					{activeTab === "riwayat" && (
 						<motion.div
-							initial={{ opacity: 0, y: 12 }}
-							animate={{ opacity: 1, y: 0 }}
-							transition={{ type: "spring", stiffness: 300, damping: 25 }}
+							key="riwayat"
+							initial={{ opacity: 0, x: 10 }}
+							animate={{ opacity: 1, x: 0 }}
 							className="flex-1 flex flex-col min-h-0"
 						>
-							{/* Summary Row */}
-							<div className="flex-shrink-0 -mx-1 mb-3">
-								<div className="flex gap-1.5 overflow-x-auto px-1 pb-1 scrollbar-none" style={{ scrollSnapType: "x mandatory" }}>
-									{["hadir", "dinas_luar", "wfh", "wfa", "izin", "sakit", "cuti", "alpha"].map((key, i) => (
-										<motion.div
-											key={key}
-											initial={{ opacity: 0, scale: 0.8 }}
-											animate={{ opacity: 1, scale: 1 }}
-											transition={{ delay: i * 0.03, type: "spring", stiffness: 300 }}
-											className={`flex-shrink-0 w-16 ${STATUS_COLORS[key].bg} border border-slate-100/60 rounded-xl p-2 text-center`}
-											style={{ scrollSnapAlign: "start" }}
-										>
-											<p className={`text-lg font-black ${STATUS_COLORS[key].text} leading-none`}>
+							{/* Summary chips */}
+							<div className="flex-shrink-0 mb-2">
+								<div className="flex gap-1 overflow-x-auto pb-1 scrollbar-none">
+									{["hadir", "izin", "sakit", "alpha", "cuti", "dinas_luar", "wfh", "wfa"].map((key) => (
+										<div key={key} className={`flex-shrink-0 flex items-center gap-1 px-2 py-1 rounded-lg ${STATUS_COLORS[key].bg}`}>
+											<span className={`text-sm font-bold ${STATUS_COLORS[key].text} tabular-nums`}>
 												{history.summary?.[key] || 0}
-											</p>
-											<p className="text-[7px] font-bold text-slate-400 uppercase tracking-wider mt-0.5 leading-none">{STATUS_LABELS[key]}</p>
-										</motion.div>
+											</span>
+											<span className="text-[8px] text-slate-400 font-bold uppercase">{STATUS_LABELS[key]}</span>
+										</div>
 									))}
 								</div>
 							</div>
 
-							{/* Month Navigator */}
-							<div className="flex items-center justify-between mb-2 bg-slate-50 rounded-xl p-1.5 border border-slate-100/60 flex-shrink-0">
-								<motion.button {...pressAnimation} onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-white active:bg-white transition-colors cursor-pointer">
+							{/* Month nav */}
+							<div className="flex items-center justify-between mb-2 flex-shrink-0">
+								<button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-slate-50 cursor-pointer">
 									<FiChevronLeft className="h-4 w-4 text-slate-400" />
-								</motion.button>
-								<h3 className="font-bold text-slate-700 text-xs tracking-wide">
-									{monthNames[selectedMonth - 1]} {selectedYear}
-								</h3>
-								<motion.button {...pressAnimation} onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-white active:bg-white transition-colors cursor-pointer">
+								</button>
+								<span className="font-bold text-slate-700 text-xs">{monthNames[selectedMonth - 1]} {selectedYear}</span>
+								<button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-slate-50 cursor-pointer">
 									<FiChevronRight className="h-4 w-4 text-slate-400" />
-								</motion.button>
+								</button>
 							</div>
 
-							{/* History List — scrollable */}
-							<div className="flex-1 overflow-y-auto min-h-0 space-y-1.5 scrollbar-none">
+							{/* List */}
+							<div className="flex-1 overflow-y-auto min-h-0 space-y-1 scrollbar-none">
 								{history.records?.length === 0 ? (
-									<div className="flex flex-col items-center justify-center py-10">
+									<div className="flex flex-col items-center justify-center py-12">
 										<FiCalendar className="h-8 w-8 text-slate-200 mb-2" />
-										<p className="text-slate-400 text-xs font-medium">Belum ada data presensi</p>
-										<p className="text-slate-300 text-[10px] mt-0.5">Data muncul setelah Anda melakukan presensi</p>
+										<p className="text-xs text-slate-400">Belum ada data</p>
 									</div>
 								) : (
-									history.records?.map((record, i) => {
-										const sc = STATUS_COLORS[record.status] || STATUS_COLORS.alpha;
-										const tgl = new Date(record.tanggal);
+									history.records?.map((r, i) => {
+										const sc = STATUS_COLORS[r.status] || STATUS_COLORS.alpha;
+										const tgl = new Date(r.tanggal);
 										return (
 											<motion.div
-												key={record.id}
+												key={r.id}
 												custom={i}
 												initial="hidden"
 												animate="visible"
 												variants={listItemVariants}
-												className="bg-white rounded-xl border border-slate-100/60 overflow-hidden hover:border-orange-200/60 transition-colors"
+												className="flex items-center gap-2.5 p-2.5 rounded-xl bg-white border border-slate-100 hover:border-slate-200 transition-colors"
 											>
-												<div className="flex items-stretch">
-													<div className={`w-1 flex-shrink-0 ${sc.dot}`} />
-													<div className="flex items-center gap-2.5 p-3 flex-1 min-w-0">
-														<div className="w-9 h-9 rounded-lg bg-slate-50 border border-slate-100 flex flex-col items-center justify-center flex-shrink-0">
-															<span className="text-sm font-black text-slate-700 leading-none">{tgl.getDate()}</span>
-															<span className="text-[7px] text-slate-400 uppercase font-bold tracking-wider leading-none mt-0.5">
-																{tgl.toLocaleDateString("id-ID", { weekday: "short" })}
-															</span>
-														</div>
-														<div className="flex-1 min-w-0">
-															<div className="flex items-center gap-1.5 flex-wrap">
-																<span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[9px] font-bold ${sc.bg} ${sc.text}`}>
-																	<span className={`w-1 h-1 rounded-full ${sc.dot}`} />
-																	{STATUS_LABELS[record.status]}
-																</span>
-																{record.jarak_masuk != null && (
-																	<span className="text-[9px] text-slate-300 flex items-center gap-0.5">
-																		<FiMapPin className="h-2 w-2" />{record.jarak_masuk}m
-																	</span>
-																)}
-															</div>
-															{record.tujuan_dinas && (
-																<p className="text-[10px] text-violet-500 truncate flex items-center gap-0.5 mt-0.5">
-																	<FiMapPin className="h-2.5 w-2.5" />{record.tujuan_dinas}
-																</p>
-															)}
-															{record.keterangan && (
-																<p className="text-[10px] text-slate-400 truncate mt-0.5">{record.keterangan}</p>
-															)}
-														</div>
-														<div className="text-right flex-shrink-0">
-															{record.jam_masuk && (
-																<p className="text-xs font-bold text-slate-700 tabular-nums">{formatTime(record.jam_masuk)}</p>
-															)}
-															{record.jam_keluar ? (
-																<p className="text-[10px] text-slate-400 tabular-nums">{formatTime(record.jam_keluar)}</p>
-															) : record.jam_masuk && new Date(record.tanggal).toDateString() !== new Date().toDateString() && !['izin', 'sakit', 'cuti'].includes(record.status) ? (
-																<span className="text-[8px] text-amber-500 font-bold">⚠️ Lupa pulang</span>
-															) : null}
-														</div>
+												{/* Date */}
+												<div className="w-9 h-9 rounded-lg bg-slate-50 flex flex-col items-center justify-center flex-shrink-0">
+													<span className="text-sm font-black text-slate-700 leading-none">{tgl.getDate()}</span>
+													<span className="text-[7px] text-slate-400 uppercase font-bold leading-none">
+														{tgl.toLocaleDateString("id-ID", { weekday: "short" })}
+													</span>
+												</div>
+
+												{/* Info */}
+												<div className="flex-1 min-w-0">
+													<div className="flex items-center gap-1">
+														<span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold ${sc.bg} ${sc.text}`}>
+															<span className={`w-1 h-1 rounded-full ${sc.dot}`} />
+															{STATUS_LABELS[r.status]}
+														</span>
+														{r.jarak_masuk != null && (
+															<span className="text-[8px] text-slate-300"><FiMapPin className="inline h-2 w-2" /> {r.jarak_masuk}m</span>
+														)}
 													</div>
+													{r.tujuan_dinas && <p className="text-[9px] text-violet-500 truncate mt-0.5">{r.tujuan_dinas}</p>}
+													{r.keterangan && <p className="text-[9px] text-slate-400 truncate mt-0.5">{r.keterangan}</p>}
+												</div>
+
+												{/* Times */}
+												<div className="text-right flex-shrink-0">
+													{r.jam_masuk && <p className="text-[11px] font-bold text-slate-700 tabular-nums">{fmt(r.jam_masuk)}</p>}
+													{r.jam_keluar ? (
+														<p className="text-[10px] text-slate-400 tabular-nums">{fmt(r.jam_keluar)}</p>
+													) : r.jam_masuk && new Date(r.tanggal).toDateString() !== new Date().toDateString() && !["izin", "sakit", "cuti"].includes(r.status) ? (
+														<span className="text-[8px] text-amber-500 font-bold">Lupa pulang</span>
+													) : null}
 												</div>
 											</motion.div>
 										);
@@ -882,7 +625,7 @@ const AbsensiPage = () => {
 				</div>
 			</div>
 
-			{/* ═══ Modals ═══════════════════════════════════════ */}
+			{/* ══ Modals ══════════════════════════════════════ */}
 			<AnimatePresence>
 				{showDinasLuarModal && <DinasLuarModal onClose={() => setShowDinasLuarModal(false)} onConfirm={handleDinasLuarConfirm} />}
 			</AnimatePresence>
@@ -893,16 +636,9 @@ const AbsensiPage = () => {
 				{showIzinModal && <IzinModal onClose={() => setShowIzinModal(false)} onSubmit={handleSubmitIzin} />}
 			</AnimatePresence>
 
-			<AbsensiSuccessPopup
-				show={successPopup.show}
-				data={successPopup.data}
-				onClose={() => setSuccessPopup({ show: false, data: null })}
-			/>
+			<AbsensiSuccessPopup show={successPopup.show} data={successPopup.data} onClose={() => setSuccessPopup({ show: false, data: null })} />
 
-			<style>{`
-				.scrollbar-none::-webkit-scrollbar { display: none; }
-				.scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
-			`}</style>
+			<style>{`.scrollbar-none::-webkit-scrollbar{display:none}.scrollbar-none{-ms-overflow-style:none;scrollbar-width:none}`}</style>
 		</div>
 	);
 };
@@ -912,12 +648,8 @@ const AbsensiPage = () => {
 // ═══════════════════════════════════════════════════════════════
 const DinasLuarModal = ({ onClose, onConfirm }) => {
 	const [tujuan, setTujuan] = useState("");
-
-	const handleConfirm = () => {
-		if (!tujuan.trim()) {
-			showAlert({ icon: "warning", title: "Tujuan Wajib Diisi", text: "Silakan isi tujuan dinas luar terlebih dahulu sebelum melanjutkan." });
-			return;
-		}
+	const submit = () => {
+		if (!tujuan.trim()) { showAlert({ icon: "warning", title: "Tujuan Wajib", text: "Isi tujuan dinas luar terlebih dahulu." }); return; }
 		onConfirm(tujuan.trim());
 	};
 
@@ -925,50 +657,28 @@ const DinasLuarModal = ({ onClose, onConfirm }) => {
 		<>
 			<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50" onClick={onClose} />
 			<motion.div {...slideUp} className="fixed bottom-0 left-0 right-0 z-50">
-				<div className="bg-white rounded-t-[2rem] shadow-[0_-4px_30px_rgba(0,0,0,0.08)]">
+				<div className="bg-white rounded-t-3xl shadow-xl">
 					<div className="max-w-lg mx-auto p-5">
-						<div className="flex justify-center mb-5">
-							<div className="w-10 h-1 bg-slate-200 rounded-full" />
-						</div>
-						<div className="flex items-center gap-3 mb-5">
-							<div className="w-12 h-12 bg-violet-50 rounded-2xl flex items-center justify-center border border-violet-100/60 overflow-hidden">
-								<Lottie animationData={manWaitingCarAnim} loop autoplay className="h-14 w-14" />
+						<div className="w-10 h-1 bg-slate-200 rounded-full mx-auto mb-5" />
+						<div className="flex items-center gap-3 mb-4">
+							<div className="w-10 h-10 bg-violet-50 rounded-xl flex items-center justify-center overflow-hidden">
+								<Lottie animationData={manWaitingCarAnim} loop autoplay className="h-12 w-12" />
 							</div>
 							<div>
-								<h3 className="text-base font-black text-slate-800">Dinas Luar</h3>
-								<p className="text-[11px] text-slate-400">Isi tujuan sebelum absen</p>
+								<h3 className="font-bold text-slate-800">Dinas Luar</h3>
+								<p className="text-[10px] text-slate-400">Isi tujuan lalu lanjut ke kamera</p>
 							</div>
 						</div>
-						<div className="mb-5">
-							<label className="block text-xs font-bold text-slate-500 mb-1.5">
-								Tujuan Dinas Luar <span className="text-red-400">*</span>
-							</label>
-							<div className="relative">
-								<input
-									type="text" value={tujuan} onChange={(e) => setTujuan(e.target.value)}
-									onKeyDown={(e) => { if (e.key === 'Enter') handleConfirm(); }}
-									placeholder="Contoh: Rapat di Kecamatan Cibinong"
-									className="w-full px-4 py-3.5 pr-12 bg-slate-50 border border-slate-200 rounded-2xl text-sm text-slate-700 placeholder-slate-300 focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-100 transition-all"
-									autoFocus
-								/>
-								<motion.button
-									whileTap={{ scale: 0.85 }}
-									onClick={handleConfirm}
-									className={`absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
-										tujuan.trim() ? "bg-gradient-to-r from-violet-500 to-purple-500 shadow-sm shadow-violet-200" : "bg-slate-200"
-									}`}
-								>
-									<FiChevronRight className={`h-4 w-4 ${tujuan.trim() ? "text-white" : "text-slate-400"}`} />
-								</motion.button>
-							</div>
-						</div>
-						<div className="flex gap-2.5">
-							<motion.button {...pressAnimation} onClick={onClose} className="flex-1 py-3 bg-slate-50 border border-slate-200 text-slate-500 rounded-2xl font-bold text-sm hover:bg-slate-100 cursor-pointer transition-colors">
-								Batal
-							</motion.button>
-							<motion.button {...pressAnimation} onClick={handleConfirm} className="flex-1 py-3 bg-gradient-to-r from-violet-500 to-purple-500 text-white rounded-2xl font-black text-sm shadow-lg shadow-violet-200/50 cursor-pointer active:shadow-sm transition-shadow">
-								Lanjut ke Kamera
-							</motion.button>
+						<input
+							type="text" value={tujuan} onChange={(e) => setTujuan(e.target.value)}
+							onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
+							placeholder="Contoh: Rapat di Kecamatan Cibinong"
+							className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 placeholder-slate-300 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100 mb-4"
+							autoFocus
+						/>
+						<div className="flex gap-2">
+							<button onClick={onClose} className="flex-1 py-3 bg-slate-50 text-slate-500 rounded-xl font-bold text-sm active:bg-slate-100 cursor-pointer">Batal</button>
+							<button onClick={submit} className="flex-1 py-3 bg-violet-500 text-white rounded-xl font-bold text-sm active:bg-violet-600 cursor-pointer">Lanjut</button>
 						</div>
 					</div>
 				</div>
@@ -984,126 +694,102 @@ const CameraGPSModal = ({ type, onClose, onSubmit }) => {
 	const videoRef = useRef(null);
 	const canvasRef = useRef(null);
 	const streamRef = useRef(null);
-	const [capturedPhoto, setCapturedPhoto] = useState(null);
-	const [gpsCoords, setGpsCoords] = useState(null);
+	const [photo, setPhoto] = useState(null);
+	const [gps, setGps] = useState(null);
 	const [gpsLoading, setGpsLoading] = useState(true);
 	const [gpsError, setGpsError] = useState(null);
-	const [cameraError, setCameraError] = useState(null);
+	const [camError, setCamError] = useState(null);
 	const [submitting, setSubmitting] = useState(false);
 
 	useEffect(() => {
 		let mounted = true;
-		const startCamera = async () => {
+		(async () => {
 			try {
-				const stream = await navigator.mediaDevices.getUserMedia({
-					video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
-					audio: false,
-				});
+				const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
 				if (!mounted) { stream.getTracks().forEach(t => t.stop()); return; }
 				streamRef.current = stream;
 				if (videoRef.current) videoRef.current.srcObject = stream;
-			} catch {
-				if (mounted) setCameraError("Tidak dapat mengakses kamera. Pastikan izin kamera diberikan.");
-			}
-		};
-		startCamera();
+			} catch { if (mounted) setCamError("Kamera tidak dapat diakses"); }
+		})();
 		return () => { mounted = false; streamRef.current?.getTracks().forEach(t => t.stop()); };
 	}, []);
 
 	useEffect(() => {
 		if (!navigator.geolocation) { setGpsError("GPS tidak tersedia"); setGpsLoading(false); return; }
-		const watchId = navigator.geolocation.watchPosition(
-			(pos) => {
-				setGpsCoords({ latitude: pos.coords.latitude, longitude: pos.coords.longitude, accuracy: pos.coords.accuracy });
-				setGpsLoading(false); setGpsError(null);
-			},
-			(err) => {
-				setGpsError(err.code === 1 ? "Izin lokasi ditolak." : err.code === 2 ? "GPS tidak tersedia." : "Timeout GPS.");
-				setGpsLoading(false);
-			},
+		const wid = navigator.geolocation.watchPosition(
+			(pos) => { setGps({ latitude: pos.coords.latitude, longitude: pos.coords.longitude, accuracy: pos.coords.accuracy }); setGpsLoading(false); setGpsError(null); },
+			(err) => { setGpsError(err.code === 1 ? "Izin lokasi ditolak" : "GPS gagal"); setGpsLoading(false); },
 			{ enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
 		);
-		return () => navigator.geolocation.clearWatch(watchId);
+		return () => navigator.geolocation.clearWatch(wid);
 	}, []);
 
-	const capturePhoto = () => {
-		const video = videoRef.current;
-		const canvas = canvasRef.current;
-		if (!video || !canvas) return;
-		canvas.width = video.videoWidth;
-		canvas.height = video.videoHeight;
-		const ctx = canvas.getContext("2d");
-		ctx.translate(canvas.width, 0);
-		ctx.scale(-1, 1);
-		ctx.drawImage(video, 0, 0);
-		setCapturedPhoto(canvas.toDataURL("image/jpeg", 0.7));
+	const capture = () => {
+		const v = videoRef.current, c = canvasRef.current;
+		if (!v || !c) return;
+		c.width = v.videoWidth; c.height = v.videoHeight;
+		const ctx = c.getContext("2d");
+		ctx.translate(c.width, 0); ctx.scale(-1, 1);
+		ctx.drawImage(v, 0, 0);
+		setPhoto(c.toDataURL("image/jpeg", 0.7));
 		streamRef.current?.getTracks().forEach(t => t.stop());
 	};
 
-	const retakePhoto = async () => {
-		setCapturedPhoto(null);
+	const retake = async () => {
+		setPhoto(null);
 		try {
-			const stream = await navigator.mediaDevices.getUserMedia({
-				video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
-				audio: false,
-			});
+			const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
 			streamRef.current = stream;
 			if (videoRef.current) videoRef.current.srcObject = stream;
-		} catch {
-			setCameraError("Tidak dapat mengakses kamera");
-		}
+		} catch { setCamError("Kamera tidak dapat diakses"); }
 	};
 
 	const handleSubmit = async () => {
-		if (!capturedPhoto || !gpsCoords) return;
+		if (!photo || !gps) return;
 		setSubmitting(true);
-		await onSubmit(type, capturedPhoto, gpsCoords);
+		await onSubmit(type, photo, gps);
 		setSubmitting(false);
 	};
 
-	const handleClose = () => {
-		streamRef.current?.getTracks().forEach(t => t.stop());
-		onClose();
-	};
-
+	const close = () => { streamRef.current?.getTracks().forEach(t => t.stop()); onClose(); };
 	const isMasuk = type === "masuk";
 
 	return (
 		<>
-			<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50" onClick={handleClose} />
+			<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50" onClick={close} />
 			<motion.div
-				initial={{ opacity: 0, scale: 0.92, y: 40 }}
-				animate={{ opacity: 1, scale: 1, y: 0 }}
-				exit={{ opacity: 0, scale: 0.92, y: 40 }}
+				initial={{ opacity: 0, y: 40 }}
+				animate={{ opacity: 1, y: 0 }}
+				exit={{ opacity: 0, y: 40 }}
 				transition={{ type: "spring", stiffness: 300, damping: 25 }}
 				className="fixed inset-0 z-50 flex items-center justify-center p-4"
 			>
-				<div className="bg-white rounded-3xl shadow-[0_8px_40px_rgba(0,0,0,0.1)] max-w-md w-full overflow-hidden border border-slate-100" onClick={(e) => e.stopPropagation()}>
+				<div className="bg-white rounded-2xl shadow-xl max-w-sm w-full overflow-hidden" onClick={(e) => e.stopPropagation()}>
 					{/* Header */}
-					<div className={`px-5 py-3.5 ${isMasuk ? "bg-gradient-to-r from-orange-500 to-amber-500" : "bg-gradient-to-r from-sky-500 to-blue-500"}`}>
+					<div className={`px-4 py-3 ${isMasuk ? "bg-gradient-to-r from-orange-500 to-amber-500" : "bg-gradient-to-r from-sky-500 to-blue-500"}`}>
 						<div className="flex items-center justify-between">
 							<div>
-								<h3 className="font-black text-base text-white">{isMasuk ? "Absen Masuk" : "Absen Pulang"}</h3>
-								<p className="text-white/60 text-[11px]">Selfie & pastikan GPS aktif</p>
+								<h3 className="font-bold text-white">{isMasuk ? "Absen Masuk" : "Absen Pulang"}</h3>
+								<p className="text-white/50 text-[10px]">Selfie & GPS</p>
 							</div>
-							<motion.button {...pressAnimation} onClick={handleClose} className="p-1 rounded-full hover:bg-white/20 transition-colors cursor-pointer">
-								<FiXCircle className="h-5 w-5 text-white/70" />
-							</motion.button>
+							<button onClick={close} className="p-1 rounded-full hover:bg-white/20 cursor-pointer">
+								<FiXCircle className="h-5 w-5 text-white/60" />
+							</button>
 						</div>
 					</div>
 
 					<div className="p-4">
 						{/* Camera */}
-						<div className="relative rounded-2xl overflow-hidden bg-slate-900 mb-3 aspect-[4/3]">
-							{cameraError ? (
-								<div className="absolute inset-0 flex items-center justify-center text-white text-center p-6">
-									<div>
-										<FiCamera className="h-10 w-10 mx-auto mb-2 opacity-20" />
-										<p className="text-xs text-white/40">{cameraError}</p>
+						<div className="relative rounded-xl overflow-hidden bg-slate-900 mb-3 aspect-[4/3]">
+							{camError ? (
+								<div className="absolute inset-0 flex items-center justify-center">
+									<div className="text-center">
+										<FiCamera className="h-8 w-8 mx-auto text-white/20 mb-1" />
+										<p className="text-[10px] text-white/40">{camError}</p>
 									</div>
 								</div>
-							) : capturedPhoto ? (
-								<img src={capturedPhoto} alt="Captured" className="w-full h-full object-cover" />
+							) : photo ? (
+								<img src={photo} alt="" className="w-full h-full object-cover" />
 							) : (
 								<video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" style={{ transform: "scaleX(-1)" }} />
 							)}
@@ -1111,57 +797,41 @@ const CameraGPSModal = ({ type, onClose, onSubmit }) => {
 						</div>
 
 						{/* Capture / Retake */}
-						{!cameraError && (
+						{!camError && (
 							<div className="flex justify-center mb-3">
-								{!capturedPhoto ? (
-									<motion.button
-										{...pressAnimation}
-										onClick={capturePhoto}
-										className="w-14 h-14 rounded-full bg-slate-100 border-[3px] border-slate-200 shadow-lg flex items-center justify-center hover:border-slate-300 transition-colors cursor-pointer"
-									>
-										<div className="w-10 h-10 rounded-full bg-red-500 shadow-sm shadow-red-200" />
-									</motion.button>
+								{!photo ? (
+									<button onClick={capture} className="w-14 h-14 rounded-full bg-slate-100 border-[3px] border-slate-200 flex items-center justify-center cursor-pointer">
+										<div className="w-10 h-10 rounded-full bg-red-500" />
+									</button>
 								) : (
-									<motion.button {...pressAnimation} onClick={retakePhoto} className="px-4 py-2 bg-slate-50 border border-slate-200 text-slate-500 rounded-xl text-xs font-bold hover:bg-slate-100 cursor-pointer transition-colors">
-										Ulangi Foto
-									</motion.button>
+									<button onClick={retake} className="px-3 py-1.5 bg-slate-50 border border-slate-200 text-slate-500 rounded-lg text-xs font-bold cursor-pointer">Ulangi Foto</button>
 								)}
 							</div>
 						)}
 
 						{/* GPS */}
-						<div className={`rounded-xl p-3 mb-3 border ${
-							gpsError ? "bg-red-50 border-red-200/60" :
-							gpsCoords ? "bg-emerald-50 border-emerald-200/60" :
-							"bg-slate-50 border-slate-200"
-						}`}>
+						<div className={`rounded-lg p-2.5 mb-3 ${gpsError ? "bg-red-50" : gps ? "bg-emerald-50" : "bg-slate-50"}`}>
 							<div className="flex items-center gap-2">
-								<FiMapPin className={`h-3.5 w-3.5 flex-shrink-0 ${gpsError ? "text-red-400" : gpsCoords ? "text-emerald-500" : "text-slate-300"}`} />
+								<FiMapPin className={`h-3.5 w-3.5 ${gpsError ? "text-red-400" : gps ? "text-emerald-500" : "text-slate-300"}`} />
 								{gpsLoading ? (
 									<div className="flex items-center gap-1.5">
-										<div className="w-3.5 h-3.5 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
-										<span className="text-xs text-slate-400">Mengambil lokasi...</span>
+										<div className="w-3 h-3 border-2 border-slate-300 border-t-transparent rounded-full animate-spin" />
+										<span className="text-[10px] text-slate-400">Mengambil lokasi...</span>
 									</div>
 								) : gpsError ? (
-									<span className="text-xs text-red-500 font-medium">{gpsError}</span>
+									<span className="text-[10px] text-red-500 font-medium">{gpsError}</span>
 								) : (
-									<div className="flex-1 flex items-center gap-1.5">
-										<span className="text-xs text-emerald-600 font-bold">Lokasi terdeteksi</span>
-										<span className="text-[9px] text-slate-300 bg-white px-1 py-0.5 rounded">~{Math.round(gpsCoords.accuracy)}m</span>
-									</div>
+									<span className="text-[10px] text-emerald-600 font-bold">Lokasi terdeteksi (~{Math.round(gps.accuracy)}m)</span>
 								)}
 							</div>
 						</div>
 
 						{/* Submit */}
-						<motion.button
-							{...pressAnimation}
+						<button
 							onClick={handleSubmit}
-							disabled={!capturedPhoto || !gpsCoords || submitting}
-							className={`w-full py-3.5 rounded-2xl font-black text-white text-sm flex items-center justify-center gap-2 shadow-lg disabled:opacity-40 cursor-pointer active:shadow-sm transition-shadow ${
-								isMasuk
-									? "bg-gradient-to-r from-orange-500 to-amber-500 shadow-orange-200/40"
-									: "bg-gradient-to-r from-sky-500 to-blue-500 shadow-sky-200/40"
+							disabled={!photo || !gps || submitting}
+							className={`w-full py-3 rounded-xl font-bold text-white text-sm flex items-center justify-center gap-2 disabled:opacity-40 cursor-pointer ${
+								isMasuk ? "bg-gradient-to-r from-orange-500 to-amber-500" : "bg-gradient-to-r from-sky-500 to-blue-500"
 							}`}
 						>
 							{submitting ? (
@@ -1169,7 +839,7 @@ const CameraGPSModal = ({ type, onClose, onSubmit }) => {
 							) : (
 								<><FiCheckCircle className="h-4 w-4" /> {isMasuk ? "Konfirmasi Masuk" : "Konfirmasi Pulang"}</>
 							)}
-						</motion.button>
+						</button>
 					</div>
 				</div>
 			</motion.div>
@@ -1185,70 +855,53 @@ const IzinModal = ({ onClose, onSubmit }) => {
 	const [keterangan, setKeterangan] = useState("");
 	const [loading, setLoading] = useState(false);
 
-	const options = [
-		{ value: "izin", label: "Izin", icon: LuFileText, color: "amber" },
-		{ value: "sakit", label: "Sakit", icon: LuHeartPulse, color: "rose" },
-		{ value: "cuti", label: "Cuti", icon: LuCalendarOff, color: "sky" },
+	const opts = [
+		{ value: "izin", label: "Izin", icon: LuFileText, active: "bg-amber-50 border-amber-300 text-amber-600", iconActive: "text-amber-500" },
+		{ value: "sakit", label: "Sakit", icon: LuHeartPulse, active: "bg-rose-50 border-rose-300 text-rose-600", iconActive: "text-rose-500" },
+		{ value: "cuti", label: "Cuti", icon: LuCalendarOff, active: "bg-sky-50 border-sky-300 text-sky-600", iconActive: "text-sky-500" },
 	];
 
-	const handleSubmit = async () => {
-		if (!status) return;
-		setLoading(true);
-		await onSubmit(status, keterangan);
-		setLoading(false);
-	};
-
-	const colorMap = {
-		amber: { activeBg: "bg-amber-50", activeBorder: "border-amber-300", activeText: "text-amber-600", activeIcon: "text-amber-500" },
-		rose: { activeBg: "bg-rose-50", activeBorder: "border-rose-300", activeText: "text-rose-600", activeIcon: "text-rose-500" },
-		sky: { activeBg: "bg-sky-50", activeBorder: "border-sky-300", activeText: "text-sky-600", activeIcon: "text-sky-500" },
-	};
+	const submit = async () => { if (!status) return; setLoading(true); await onSubmit(status, keterangan); setLoading(false); };
 
 	return (
 		<>
 			<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50" onClick={onClose} />
 			<motion.div {...slideUp} className="fixed bottom-0 left-0 right-0 z-50">
-				<div className="bg-white rounded-t-[2rem] shadow-[0_-4px_30px_rgba(0,0,0,0.08)]">
+				<div className="bg-white rounded-t-3xl shadow-xl">
 					<div className="max-w-lg mx-auto p-5">
-						<div className="flex justify-center mb-5">
-							<div className="w-10 h-1 bg-slate-200 rounded-full" />
-						</div>
-						<h3 className="text-base font-black text-slate-800 mb-4">Izin / Sakit / Cuti</h3>
-						<div className="grid grid-cols-3 gap-2.5 mb-4">
-							{options.map((opt) => {
-								const Icon = opt.icon;
-								const isSelected = status === opt.value;
-								const cm = colorMap[opt.color];
+						<div className="w-10 h-1 bg-slate-200 rounded-full mx-auto mb-5" />
+						<h3 className="font-bold text-slate-800 mb-3">Izin / Sakit / Cuti</h3>
+						<div className="grid grid-cols-3 gap-2 mb-3">
+							{opts.map((o) => {
+								const Icon = o.icon;
+								const sel = status === o.value;
 								return (
-									<motion.button
-										key={opt.value}
-										{...pressAnimation}
-										onClick={() => setStatus(opt.value)}
-										className={`p-3 rounded-2xl border-2 text-center transition-all cursor-pointer ${
-											isSelected ? `${cm.activeBorder} ${cm.activeBg}` : "border-slate-100 bg-slate-50 hover:bg-slate-100"
+									<button
+										key={o.value}
+										onClick={() => setStatus(o.value)}
+										className={`p-3 rounded-xl border-2 text-center transition-all cursor-pointer ${
+											sel ? o.active : "border-slate-100 bg-slate-50 text-slate-400"
 										}`}
 									>
-										<Icon className={`h-5 w-5 mx-auto mb-1 ${isSelected ? cm.activeIcon : "text-slate-300"}`} />
-										<span className={`text-xs font-bold ${isSelected ? cm.activeText : "text-slate-400"}`}>{opt.label}</span>
-									</motion.button>
+										<Icon className={`h-5 w-5 mx-auto mb-0.5 ${sel ? o.iconActive : "text-slate-300"}`} />
+										<span className="text-xs font-bold">{o.label}</span>
+									</button>
 								);
 							})}
 						</div>
 						<textarea
 							value={keterangan} onChange={(e) => setKeterangan(e.target.value)}
 							placeholder="Keterangan (opsional)..." rows={2}
-							className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm text-slate-700 placeholder-slate-300 focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-100 resize-none transition-all"
+							className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 placeholder-slate-300 focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-100 resize-none mb-4"
 						/>
-						<div className="flex gap-2.5 mt-4">
-							<motion.button {...pressAnimation} onClick={onClose} className="flex-1 py-3 bg-slate-50 border border-slate-200 text-slate-500 rounded-2xl font-bold text-sm hover:bg-slate-100 cursor-pointer transition-colors">
-								Batal
-							</motion.button>
-							<motion.button
-								{...pressAnimation} onClick={handleSubmit} disabled={!status || loading}
-								className="flex-1 py-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-2xl font-black text-sm shadow-lg shadow-orange-200/40 disabled:opacity-40 flex items-center justify-center gap-2 cursor-pointer active:shadow-sm transition-shadow"
+						<div className="flex gap-2">
+							<button onClick={onClose} className="flex-1 py-3 bg-slate-50 text-slate-500 rounded-xl font-bold text-sm active:bg-slate-100 cursor-pointer">Batal</button>
+							<button
+								onClick={submit} disabled={!status || loading}
+								className="flex-1 py-3 bg-orange-500 text-white rounded-xl font-bold text-sm disabled:opacity-40 flex items-center justify-center gap-2 active:bg-orange-600 cursor-pointer"
 							>
 								{loading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : "Submit"}
-							</motion.button>
+							</button>
 						</div>
 					</div>
 				</div>
