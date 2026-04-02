@@ -202,7 +202,7 @@ const AbsensiPage = () => {
 			await fetchToday();
 			await fetchHistory();
 			const modeLabels = { hadir: "Masuk", dinas_luar: "Dinas Luar", wfh: "WFH", wfa: "WFA" };
-			const popupType = type === "masuk" ? absensiMode : "pulang";
+			const popupType = type === "masuk" ? (absensiMode === "hadir" ? "masuk" : absensiMode) : "pulang";
 			const msgData = successMessages[popupType];
 			if (msgData) {
 				setSuccessPopup({ show: true, data: { title: msgData.title, message: msgData.message, image_path: msgData.image_path } });
