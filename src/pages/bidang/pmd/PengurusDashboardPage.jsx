@@ -83,6 +83,30 @@ const getVerificationStatus = (status) => (
   }
 );
 
+const VERIFICATION_SCOPE_OPTIONS = [
+  {
+    id: "verified",
+    label: "Terverifikasi",
+    description: "Hanya data yang lolos verifikasi masuk ke tabel dan statistik.",
+    icon: LuShieldCheck,
+    activeClass: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  },
+  {
+    id: "unverified",
+    label: "Belum Verifikasi",
+    description: "Lihat data aktif yang masih menunggu proses verifikasi.",
+    icon: LuShieldAlert,
+    activeClass: "border-amber-200 bg-amber-50 text-amber-700",
+  },
+  {
+    id: "ditolak",
+    label: "Ditolak",
+    description: "Lihat pengurus aktif yang verifikasinya ditolak seperti pada modul kelembagaan.",
+    icon: LuX,
+    activeClass: "border-rose-200 bg-rose-50 text-rose-700",
+  },
+];
+
 export default function PengurusDashboardPage() {
   const navigate = useNavigate();
   const { getPath } = useBidangPath();
@@ -91,6 +115,7 @@ export default function PengurusDashboardPage() {
   const [data, setData] = useState([]);
   const [summary, setSummary] = useState(null);
   const [unverified, setUnverified] = useState([]);
+  const [rejected, setRejected] = useState([]);
   const [filters, setFilters] = useState({ kecamatans: [], desas: [] });
 
   // Filter state
@@ -98,8 +123,10 @@ export default function PengurusDashboardPage() {
   const [selectedKecamatan, setSelectedKecamatan] = useState("");
   const [selectedDesa, setSelectedDesa] = useState("");
   const [selectedType, setSelectedType] = useState("");
+  const [verificationScope, setVerificationScope] = useState("verified");
   const [showFilters, setShowFilters] = useState(false);
   const [showUnverified, setShowUnverified] = useState(false);
+  const [showRejected, setShowRejected] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -109,6 +136,7 @@ export default function PengurusDashboardPage() {
       if (selectedDesa) params.append("desa_id", selectedDesa);
       if (selectedType) params.append("pengurusable_type", selectedType);
       if (searchQuery.trim()) params.append("search", searchQuery.trim());
+      params.append("verification_scope", verificationScope);
 
       const qs = params.toString();
       const res = await api.get(`/kelembagaan/pengurus-dashboard${qs ? `?${qs}` : ""}`);
@@ -116,6 +144,7 @@ export default function PengurusDashboardPage() {
         setData(res.data.data || []);
         setSummary(res.data.summary || null);
         setUnverified(res.data.unverified || []);
+        setRejected(res.data.ditolak || []);
         setFilters(res.data.filters || { kecamatans: [], desas: [] });
       }
     } catch (error) {
@@ -124,7 +153,7 @@ export default function PengurusDashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [selectedKecamatan, selectedDesa, selectedType, searchQuery]);
+  }, [selectedKecamatan, selectedDesa, selectedType, searchQuery, verificationScope]);
 
   useEffect(() => {
     fetchData();
@@ -143,11 +172,40 @@ export default function PengurusDashboardPage() {
     setSelectedKecamatan("");
     setSelectedDesa("");
     setSelectedType("");
+    setVerificationScope("verified");
+    setShowUnverified(false);
+    setShowRejected(false);
   };
 
-  const hasActiveFilters = searchQuery || selectedKecamatan || selectedDesa || selectedType;
+  const hasActiveFilters = searchQuery || selectedKecamatan || selectedDesa || selectedType || verificationScope !== "verified";
   const hasTypeStats = Boolean(summary && Object.keys(summary.typeStats || {}).length > 0);
   const hasYearlyStats = Boolean(summary && Object.keys(summary.yearlyStats || {}).length > 0);
+  const matchingCounts = summary?.matchingCounts || { all: 0, verified: 0, unverified: 0, ditolak: 0 };
+  const pendingVerificationCount = summary?.pendingVerificationCount ?? matchingCounts.unverified;
+  const rejectedVerificationCount = summary?.rejectedVerificationCount ?? matchingCounts.ditolak;
+  const currentScopeOption = VERIFICATION_SCOPE_OPTIONS.find((option) => option.id === verificationScope) || VERIFICATION_SCOPE_OPTIONS[0];
+  const tableTitle = verificationScope === "verified"
+    ? "Daftar Pengurus Terverifikasi"
+    : verificationScope === "unverified"
+      ? "Daftar Pengurus Belum Verifikasi"
+      : "Daftar Pengurus Ditolak";
+  const emptyTableText = verificationScope === "verified"
+    ? "Tidak ada data pengurus terverifikasi"
+    : verificationScope === "unverified"
+      ? "Tidak ada data pengurus yang belum verifikasi"
+      : "Tidak ada data pengurus yang ditolak";
+
+  useEffect(() => {
+    if (pendingVerificationCount === 0 && showUnverified) {
+      setShowUnverified(false);
+    }
+  }, [pendingVerificationCount, showUnverified]);
+
+  useEffect(() => {
+    if (rejectedVerificationCount === 0 && showRejected) {
+      setShowRejected(false);
+    }
+  }, [rejectedVerificationCount, showRejected]);
 
   // Compute max value for bar charts
   const maxAgeCount = summary ? Math.max(...Object.values(summary.ageRanges), 1) : 1;
@@ -182,7 +240,7 @@ export default function PengurusDashboardPage() {
                         Dashboard Pengurus
                       </h1>
                       <p className="hidden sm:block text-xs sm:text-sm text-gray-500">
-                        Ringkasan data pengurus aktif beserta status verifikasinya di kabupaten
+                        {currentScopeOption.description}
                       </p>
                     </div>
                   </div>
@@ -197,12 +255,59 @@ export default function PengurusDashboardPage() {
               
             </header>
 
+      <section className="bg-white rounded-xl border border-gray-200 p-5">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">
+              Mode Agregat
+            </p>
+            <h2 className="mt-1 text-lg font-semibold text-gray-900">
+              Tentukan status verifikasi yang masuk ke statistik
+            </h2>
+            <p className="mt-2 text-sm text-gray-500 max-w-2xl">
+              Statistik, grafik, dan tabel mengikuti status verifikasi yang dipilih. Default dashboard memakai data terverifikasi agar sesuai proses validasi.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 xl:min-w-[560px]">
+            {VERIFICATION_SCOPE_OPTIONS.map((option) => {
+              const Icon = option.icon;
+              const isActive = verificationScope === option.id;
+              const count = matchingCounts[option.id] ?? 0;
+
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => setVerificationScope(option.id)}
+                  className={`rounded-xl border px-4 py-3 text-left transition-all ${
+                    isActive
+                      ? `${option.activeClass} shadow-sm`
+                      : "border-gray-200 bg-gray-50 text-gray-600 hover:border-gray-300 hover:bg-white"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <Icon className="w-4 h-4" />
+                      <span className="text-sm font-semibold">{option.label}</span>
+                    </div>
+                    <span className="rounded-full bg-white/80 px-2.5 py-1 text-xs font-semibold text-gray-700">
+                      {count}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
       {/* Summary Cards */}
       {summary && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 bg-white rounded-xl border border-gray-200 p-5">
+        <div className="grid grid-cols-2 xl:grid-cols-5 gap-4 bg-white rounded-xl border border-gray-200 p-5">
           <SummaryCard
             icon={<LuUsers className="w-6 h-6 text-blue-600" />}
-            label="Total Pengurus"
+            label="Total Ditampilkan"
             value={summary.total}
             bgColor="bg-blue-50"
             borderColor="border-blue-200"
@@ -210,18 +315,27 @@ export default function PengurusDashboardPage() {
           <SummaryCard
             icon={<LuShieldCheck className="w-6 h-6 text-emerald-600" />}
             label="Terverifikasi"
-            value={summary.verified}
+            value={matchingCounts.verified}
             bgColor="bg-emerald-50"
             borderColor="border-emerald-200"
           />
           <SummaryCard
             icon={<LuShieldAlert className="w-6 h-6 text-amber-600" />}
             label="Belum Verifikasi"
-            value={summary.unverified}
+            value={pendingVerificationCount}
             bgColor="bg-amber-50"
             borderColor="border-amber-200"
             onClick={() => setShowUnverified(!showUnverified)}
-            clickable
+            clickable={verificationScope !== "unverified" && pendingVerificationCount > 0}
+          />
+          <SummaryCard
+            icon={<LuX className="w-6 h-6 text-rose-600" />}
+            label="Ditolak"
+            value={rejectedVerificationCount}
+            bgColor="bg-rose-50"
+            borderColor="border-rose-200"
+            onClick={() => setShowRejected(!showRejected)}
+            clickable={verificationScope !== "ditolak" && rejectedVerificationCount > 0}
           />
           <SummaryCard
             icon={
@@ -263,14 +377,14 @@ export default function PengurusDashboardPage() {
         </div>
       )}
 
-      {/* Unverified Warning Panel */}
-      {showUnverified && unverified.length > 0 && (
+      {/* Status Detail Panels */}
+      {verificationScope !== "unverified" && showUnverified && unverified.length > 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <LuTriangleAlert className="w-5 h-5 text-amber-600" />
               <h3 className="font-semibold text-amber-800">
-                Pengurus Belum Terverifikasi ({unverified.length})
+                Pengurus Belum Terverifikasi ({pendingVerificationCount})
               </h3>
             </div>
             <button
@@ -297,6 +411,45 @@ export default function PengurusDashboardPage() {
                   </p>
                 </div>
                 <LuExternalLink className="w-4 h-4 text-amber-500 flex-shrink-0" />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {verificationScope !== "ditolak" && showRejected && rejected.length > 0 && (
+        <div className="bg-rose-50 border border-rose-200 rounded-xl p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <LuX className="w-5 h-5 text-rose-600" />
+              <h3 className="font-semibold text-rose-800">
+                Pengurus Ditolak ({rejectedVerificationCount})
+              </h3>
+            </div>
+            <button
+              onClick={() => setShowRejected(false)}
+              className="p-1 hover:bg-rose-100 rounded"
+            >
+              <LuX className="w-4 h-4 text-rose-600" />
+            </button>
+          </div>
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            {rejected.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => navigate(getPath(`/bidang/pmd/pengurus/${p.id}`))}
+                className="w-full flex items-center justify-between p-3 bg-white rounded-lg border border-rose-100 hover:border-rose-300 hover:shadow-sm transition-all text-left"
+              >
+                <div>
+                  <p className="font-medium text-gray-800">{p.nama_lengkap}</p>
+                  <p className="text-xs text-gray-500">
+                    {p.jabatan} — {TYPE_LABELS[p.pengurusable_type] || p.pengurusable_type}
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    {p.desa_nama}, {p.kecamatan_nama}
+                  </p>
+                </div>
+                <LuExternalLink className="w-4 h-4 text-rose-500 flex-shrink-0" />
               </button>
             ))}
           </div>
@@ -485,7 +638,7 @@ export default function PengurusDashboardPage() {
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
           <h3 className="font-semibold text-gray-800">
-            Daftar Pengurus
+            {tableTitle}
             <span className="text-sm font-normal text-gray-500 ml-2">
               ({displayedData.length} orang)
             </span>
@@ -494,7 +647,7 @@ export default function PengurusDashboardPage() {
         {displayedData.length === 0 ? (
           <div className="p-8 text-center text-gray-400">
             <LuUsers className="w-10 h-10 mx-auto mb-2 opacity-50" />
-            <p>Tidak ada data pengurus</p>
+            <p>{emptyTableText}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -733,7 +886,7 @@ function TypeDistributionChart({ typeStats, className = "" }) {
         Distribusi per Kelembagaan
       </h3>
       <p className="mb-5 text-xs text-gray-400">
-        Komposisi pengurus berdasarkan jenis kelembagaan pada hasil filter yang sedang aktif.
+        Komposisi pengurus berdasarkan jenis kelembagaan pada hasil filter dan status verifikasi yang sedang aktif.
       </p>
       <div className="grid grid-cols-1 gap-5">
         <div className="mx-auto h-56 w-56 max-w-full">
@@ -857,7 +1010,7 @@ function YearlyPengurusChart({ yearlyStats, className = "" }) {
         <LuCalendarDays className="w-4 h-4 text-blue-500" />
         Jumlah Pengurus per Kelembagaan per Tahun
       </h3>
-      <p className="text-xs text-gray-400 mb-4">Pengurus aktif & terverifikasi berdasarkan tahun pendaftaran</p>
+      <p className="text-xs text-gray-400 mb-4">Pengurus aktif sesuai filter dan status verifikasi yang sedang dipilih</p>
       <div className="h-80">
         <Bar data={chartData} options={chartOptions} />
       </div>
