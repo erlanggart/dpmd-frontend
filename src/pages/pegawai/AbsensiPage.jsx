@@ -1,5 +1,7 @@
 // src/pages/pegawai/AbsensiPage.jsx
-// Clean white redesign — slate palette, smooth spring press effects
+// ═══════════════════════════════════════════════════════════════
+// Neo Attendance — Dark glass header + gradient accents + SVG progress ring
+// ═══════════════════════════════════════════════════════════════
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -61,6 +63,9 @@ const getDeviceId = () => {
 	}
 	return deviceId;
 };
+
+const RING_R = 52;
+const RING_CIRCUMFERENCE = 2 * Math.PI * RING_R;
 
 // ═══════════════════════════════════════════════════════════════
 // ─── Main AbsensiPage Component ──────────────────────────────
@@ -261,14 +266,31 @@ const AbsensiPage = () => {
 	// ─── Loading State ──────────────────────────────────────
 	if (loading) {
 		return (
-			<div className="flex justify-center items-center min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100">
-				<motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center gap-4">
-					<div className="relative w-16 h-16">
-						<div className="absolute inset-0 rounded-full border-[3px] border-slate-200" />
-						<div className="absolute inset-0 rounded-full border-[3px] border-transparent border-t-slate-600 animate-spin" />
+			<div className="flex flex-col min-h-screen bg-slate-900">
+				{/* Skeleton header */}
+				<div className="bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800 px-6 pt-16 pb-12">
+					<div className="max-w-lg mx-auto space-y-4">
+						<div className="flex items-center gap-3">
+							<div className="w-11 h-11 rounded-2xl bg-white/10 animate-pulse" />
+							<div className="flex-1 space-y-2">
+								<div className="h-3 w-28 bg-white/10 rounded-lg animate-pulse" />
+								<div className="h-2 w-20 bg-white/5 rounded-lg animate-pulse" />
+							</div>
+						</div>
+						<div className="flex flex-col items-center gap-3 pt-2">
+							<div className="h-3 w-40 bg-white/5 rounded-lg animate-pulse" />
+							<div className="h-14 w-48 bg-white/10 rounded-2xl animate-pulse" />
+							<div className="w-24 h-24 rounded-full border-4 border-white/5 animate-pulse" />
+						</div>
 					</div>
-					<p className="text-slate-400 text-sm font-medium tracking-wide">Memuat presensi...</p>
-				</motion.div>
+				</div>
+				<div className="flex-1 bg-gradient-to-b from-slate-50 to-white rounded-t-[2rem] -mt-4 p-6">
+					<div className="max-w-lg mx-auto space-y-4">
+						<div className="h-12 bg-slate-100 rounded-2xl animate-pulse" />
+						<div className="h-40 bg-slate-100 rounded-3xl animate-pulse" />
+						<div className="h-32 bg-slate-50 rounded-2xl animate-pulse" />
+					</div>
+				</div>
 			</div>
 		);
 	}
@@ -276,24 +298,38 @@ const AbsensiPage = () => {
 	// ─── PWA-only gate ──────────────────────────────────────
 	if (!isPWA()) {
 		return (
-			<div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100 flex items-center justify-center p-6">
+			<div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-6">
 				<motion.div {...scalePop} className="max-w-sm w-full text-center">
 					<motion.div
-						animate={{ y: [0, -6, 0] }}
-						transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
-						className="w-20 h-20 mx-auto bg-white rounded-3xl flex items-center justify-center mb-6 shadow-lg shadow-slate-200/80 border border-slate-100"
+						animate={{ y: [0, -8, 0] }}
+						transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+						className="w-24 h-24 mx-auto bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl rounded-3xl flex items-center justify-center mb-8 shadow-2xl shadow-emerald-500/10 border border-white/10"
 					>
-						<FiSmartphone className="h-10 w-10 text-slate-600" />
+						<FiSmartphone className="h-12 w-12 text-white/70" />
 					</motion.div>
-					<h2 className="text-xl font-bold text-slate-800 mb-3">Buka di Aplikasi PWA</h2>
-					<p className="text-slate-400 text-sm mb-8 leading-relaxed">Fitur presensi hanya tersedia melalui aplikasi PWA. Buka dari ikon di home screen Anda.</p>
-					<div className="bg-white rounded-2xl p-5 text-left shadow-sm border border-slate-100">
-						<p className="font-semibold text-slate-700 text-sm mb-3">Cara Install PWA:</p>
-						<ol className="text-slate-500 text-sm space-y-2">
-							<li className="flex gap-2"><span className="text-slate-800 font-bold">1.</span> Buka website di Chrome / Safari</li>
-							<li className="flex gap-2"><span className="text-slate-800 font-bold">2.</span> Tap menu (⋮) atau Share</li>
-							<li className="flex gap-2"><span className="text-slate-800 font-bold">3.</span> Pilih &quot;Add to Home Screen&quot;</li>
-							<li className="flex gap-2"><span className="text-slate-800 font-bold">4.</span> Buka dari ikon di home screen</li>
+					<h2 className="text-2xl font-black text-white mb-3">Buka di Aplikasi PWA</h2>
+					<p className="text-white/40 text-sm mb-8 leading-relaxed">
+						Fitur presensi hanya tersedia melalui aplikasi PWA. Buka dari ikon di home screen Anda.
+					</p>
+					<div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 text-left border border-white/10">
+						<p className="font-bold text-white/70 text-sm mb-4">Cara Install PWA:</p>
+						<ol className="text-white/50 text-sm space-y-3">
+							<li className="flex items-start gap-3">
+								<span className="w-6 h-6 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400 font-black text-xs flex-shrink-0">1</span>
+								<span>Buka website di Chrome / Safari</span>
+							</li>
+							<li className="flex items-start gap-3">
+								<span className="w-6 h-6 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400 font-black text-xs flex-shrink-0">2</span>
+								<span>Tap menu (⋮) atau Share</span>
+							</li>
+							<li className="flex items-start gap-3">
+								<span className="w-6 h-6 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400 font-black text-xs flex-shrink-0">3</span>
+								<span>Pilih &quot;Add to Home Screen&quot;</span>
+							</li>
+							<li className="flex items-start gap-3">
+								<span className="w-6 h-6 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400 font-black text-xs flex-shrink-0">4</span>
+								<span>Buka dari ikon di home screen</span>
+							</li>
 						</ol>
 					</div>
 				</motion.div>
@@ -304,17 +340,19 @@ const AbsensiPage = () => {
 	// ─── Not Eligible ───────────────────────────────────────
 	if (eligible && !eligible.eligible) {
 		return (
-			<div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100 flex items-center justify-center p-6">
+			<div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-6">
 				<motion.div {...scalePop} className="text-center max-w-sm">
 					<motion.div
-						animate={{ y: [0, -6, 0] }}
-						transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
-						className="w-20 h-20 mx-auto bg-white rounded-3xl flex items-center justify-center mb-6 shadow-sm border border-slate-100"
+						animate={{ y: [0, -8, 0] }}
+						transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+						className="w-24 h-24 mx-auto bg-white/5 backdrop-blur-xl rounded-3xl flex items-center justify-center mb-8 border border-white/10"
 					>
-						<FiAlertCircle className="h-10 w-10 text-slate-300" />
+						<FiAlertCircle className="h-12 w-12 text-white/30" />
 					</motion.div>
-					<h2 className="text-xl font-bold text-slate-800 mb-3">Fitur Tidak Tersedia</h2>
-					<p className="text-slate-400 text-sm leading-relaxed">Fitur presensi hanya tersedia untuk PPPK Paruh Waktu, Tenaga Alih Daya, Tenaga Keamanan, atau Tenaga Kebersihan.</p>
+					<h2 className="text-2xl font-black text-white mb-3">Fitur Tidak Tersedia</h2>
+					<p className="text-white/40 text-sm leading-relaxed">
+						Fitur presensi hanya tersedia untuk PPPK Paruh Waktu, Tenaga Alih Daya, Tenaga Keamanan, atau Tenaga Kebersihan.
+					</p>
 				</motion.div>
 			</div>
 		);
@@ -328,575 +366,717 @@ const AbsensiPage = () => {
 
 	// Stepper: 0 = belum masuk, 1 = sudah masuk, 2 = selesai
 	const step = hasClockOut ? 2 : hasClockIn ? 1 : 0;
+	const ringProgress = step === 0 ? 0 : step === 1 ? 0.5 : 1;
 
 	return (
-		<div className="h-[100dvh] bg-gradient-to-b from-slate-50 via-white to-slate-100 pb-20 relative overflow-hidden flex flex-col">
-			{/* ─── Decorative Background ─────────────── */}
-			<div className="absolute inset-0 pointer-events-none overflow-hidden">
-				<div className="absolute -top-32 -right-32 w-80 h-80 bg-emerald-100/40 rounded-full blur-3xl" />
-				<div className="absolute top-1/3 -left-24 w-64 h-64 bg-violet-100/30 rounded-full blur-3xl" />
-				<div className="absolute bottom-1/4 right-0 w-56 h-56 bg-sky-100/30 rounded-full blur-3xl" />
-			</div>
+		<div className="h-[100dvh] bg-slate-50 pb-20 flex flex-col overflow-hidden relative">
 
-			{/* ─── White Header with Shadow ─────────────── */}
-			<div className="bg-white/80 backdrop-blur-xl shadow-[0_4px_24px_rgba(15,23,42,0.06)] rounded-b-[2rem] relative z-10">
-				<div className="px-4 pt-[calc(env(safe-area-inset-top,8px)+8px)] pb-4">
-					<div className="max-w-lg mx-auto">
-						{/* Profile Row */}
-						<motion.div {...fadeUp} className="flex items-center gap-3 mb-4">
-							<div className="w-10 h-10 rounded-xl ring-2 ring-slate-100 overflow-hidden bg-slate-100 shadow-sm">
+			{/* ═══════════════════════════════════════════════════ */}
+			{/* ─── Dark Gradient Header ────────────────────────── */}
+			{/* ═══════════════════════════════════════════════════ */}
+			<div className="relative overflow-hidden flex-shrink-0">
+				<div className="bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800 px-4 pt-[calc(env(safe-area-inset-top,8px)+8px)] pb-6">
+					{/* Ambient glow accents */}
+					<div className="absolute top-0 right-0 w-72 h-72 bg-emerald-500/8 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/3 pointer-events-none" />
+					<div className="absolute bottom-0 left-0 w-56 h-56 bg-violet-500/8 rounded-full blur-[60px] translate-y-1/3 -translate-x-1/4 pointer-events-none" />
+
+					<div className="max-w-lg mx-auto relative z-10">
+						{/* ─── Profile Row ───────────────── */}
+						<motion.div {...fadeUp} className="flex items-center gap-3 mb-5">
+							<div className="w-11 h-11 rounded-2xl ring-2 ring-white/10 overflow-hidden bg-white/10 shadow-lg shadow-black/20">
 								{avatarUrl ? (
 									<img src={avatarUrl} alt={user.name} className="w-full h-full object-cover" />
 								) : (
-									<div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-600 to-slate-700">
+									<div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-emerald-400 to-teal-500">
 										<span className="text-white font-bold text-sm">{user.name?.charAt(0) || "P"}</span>
 									</div>
 								)}
 							</div>
 							<div className="flex-1 min-w-0">
-								<h1 className="text-slate-800 font-bold text-xs truncate">{eligible?.nama || user.name}</h1>
-								<p className="text-slate-400 text-[10px] truncate">{eligible?.jabatan || eligible?.status_kepegawaian?.replace(/_/g, " ")}</p>
+								<h1 className="text-white font-bold text-sm truncate">{eligible?.nama || user.name}</h1>
+								<p className="text-white/40 text-xs truncate">{eligible?.jabatan || eligible?.status_kepegawaian?.replace(/_/g, " ")}</p>
 							</div>
-							<div className="flex items-center gap-2">
-								{eligible?.device_registered ? (
-									<motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 2 }}>
-										<LuShieldCheck className="h-5 w-5 text-emerald-500" />
-									</motion.div>
-								) : (
-									<motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1.5 }}>
-										<FiAlertCircle className="h-5 w-5 text-red-400" />
-									</motion.div>
-								)}
-							</div>
+							{eligible?.device_registered ? (
+								<motion.div
+									animate={{ scale: [1, 1.15, 1] }}
+									transition={{ repeat: Infinity, duration: 2 }}
+									className="p-2 rounded-xl bg-emerald-500/15 border border-emerald-500/20"
+								>
+									<LuShieldCheck className="h-4.5 w-4.5 text-emerald-400" />
+								</motion.div>
+							) : (
+								<motion.div
+									animate={{ scale: [1, 1.15, 1] }}
+									transition={{ repeat: Infinity, duration: 1.5 }}
+									className="p-2 rounded-xl bg-red-500/15 border border-red-500/20"
+								>
+									<FiAlertCircle className="h-4.5 w-4.5 text-red-400" />
+								</motion.div>
+							)}
 						</motion.div>
 
-						{/* Live Clock */}
+						{/* ─── Live Clock ─────────────────── */}
 						<motion.div
 							initial={{ opacity: 0, scale: 0.9 }}
 							animate={{ opacity: 1, scale: 1 }}
 							transition={{ type: "spring", stiffness: 200, delay: 0.1 }}
-							className="text-center"
+							className="text-center mb-4"
 						>
-							<p className="text-slate-400 text-xs font-medium tracking-wide mb-1">
+							<p className="text-white/35 text-xs font-medium tracking-wider mb-2">
 								{currentTime.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
 							</p>
-							<div className="text-slate-800 text-4xl font-mono font-black tracking-wider tabular-nums">
-								{currentTime.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
-								<span className="text-2xl text-slate-300 ml-1">
-									{currentTime.toLocaleTimeString("id-ID", { second: "2-digit" }).slice(-2)}
+							<div className="flex items-baseline justify-center">
+								<span className="text-[3.5rem] font-black text-white tabular-nums tracking-tight leading-none" style={{ fontFamily: "ui-monospace, 'Cascadia Code', 'Fira Code', monospace" }}>
+									{currentTime.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
 								</span>
-							</div>
-
-							{/* Progress Stepper */}
-							<div className="flex items-center justify-center gap-2.5 mt-3">
-								{[0, 1, 2].map((s, i) => (
-									<React.Fragment key={s}>
-										{i > 0 && (
-											<motion.div
-												initial={{ scaleX: 0 }}
-												animate={{ scaleX: 1 }}
-												transition={{ delay: 0.3 + i * 0.15, type: "spring", stiffness: 200 }}
-												className={`h-0.5 w-10 rounded-full origin-left transition-colors duration-700 ${step >= s ? "bg-emerald-500" : "bg-slate-200"}`}
-											/>
-										)}
-										<motion.div
-											initial={{ scale: 0 }}
-											animate={{ scale: 1 }}
-											transition={{ delay: 0.2 + i * 0.15, type: "spring", stiffness: 400 }}
-											className={`w-3.5 h-3.5 rounded-full transition-colors duration-700 border-2 ${step >= s ? "bg-emerald-500 border-emerald-500 shadow-md shadow-emerald-200" : "bg-white border-slate-200"}`}
-										/>
-									</React.Fragment>
-								))}
-							</div>
-							<div className="flex justify-between max-w-[210px] mx-auto mt-2">
-								{["Masuk", "Aktif", "Pulang"].map((label, i) => (
-									<span key={label} className={`text-[10px] font-semibold ${step >= i ? "text-emerald-500" : "text-slate-300"}`}>{label}</span>
-								))}
+								<motion.span
+									animate={{ opacity: [1, 0.2, 1] }}
+									transition={{ repeat: Infinity, duration: 1, ease: "easeInOut" }}
+									className="text-xl ml-1.5 text-emerald-400 font-bold tabular-nums leading-none"
+									style={{ fontFamily: "ui-monospace, monospace" }}
+								>
+									{currentTime.toLocaleTimeString("id-ID", { second: "2-digit" }).slice(-2)}
+								</motion.span>
 							</div>
 						</motion.div>
+
+						{/* ─── SVG Progress Ring ──────────── */}
+						<div className="flex flex-col items-center">
+							<div className="relative">
+								<svg width="90" height="90" viewBox="0 0 120 120" className="-rotate-90">
+									<circle cx="60" cy="60" r={RING_R} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="7" />
+									<motion.circle
+										cx="60" cy="60" r={RING_R} fill="none"
+										stroke="url(#ringGrad)"
+										strokeWidth="7"
+										strokeLinecap="round"
+										strokeDasharray={RING_CIRCUMFERENCE}
+										initial={{ strokeDashoffset: RING_CIRCUMFERENCE }}
+										animate={{ strokeDashoffset: RING_CIRCUMFERENCE * (1 - ringProgress) }}
+										transition={{ duration: 1.2, ease: "easeInOut" }}
+									/>
+									<defs>
+										<linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+											<stop offset="0%" stopColor="#34d399" />
+											<stop offset="100%" stopColor="#22d3ee" />
+										</linearGradient>
+									</defs>
+								</svg>
+								{/* Center icon */}
+								<div className="absolute inset-0 flex items-center justify-center rotate-90">
+									{step === 2 ? (
+										<motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 400, damping: 15 }}>
+											<LuCircleCheckBig className="w-7 h-7 text-emerald-400" />
+										</motion.div>
+									) : step === 1 ? (
+										<motion.div animate={{ scale: [1, 1.1, 1] }} transition={{ repeat: Infinity, duration: 2 }}>
+											<LuClock className="w-6 h-6 text-cyan-400" />
+										</motion.div>
+									) : (
+										<LuLogIn className="w-6 h-6 text-white/25" />
+									)}
+								</div>
+							</div>
+
+							{/* Step labels */}
+							<div className="flex items-center gap-4 mt-2.5">
+								{["Masuk", "Aktif", "Pulang"].map((label, i) => (
+									<div key={label} className="flex items-center gap-1.5">
+										<div className={`w-1.5 h-1.5 rounded-full transition-all duration-700 ${
+											step > i ? "bg-emerald-400 shadow-sm shadow-emerald-400/50" :
+											step === i ? "bg-emerald-400 animate-pulse" :
+											"bg-white/15"
+										}`} />
+										<span className={`text-[10px] font-semibold transition-colors duration-500 ${step >= i ? "text-emerald-400" : "text-white/25"}`}>
+											{label}
+										</span>
+									</div>
+								))}
+							</div>
+						</div>
 					</div>
 				</div>
-
-
+				{/* Curved transition to content */}
+				<div className="h-5 bg-slate-50 rounded-t-[1.75rem] -mt-3 relative z-10" />
 			</div>
 
-			{/* ─── Main Content ────────────────────────────── */}
-			<div className="max-w-lg mx-auto px-4 mt-3 relative z-20 flex-1 overflow-y-auto">
+			{/* ═══════════════════════════════════════════════════ */}
+			{/* ─── Content Area ─────────────────────────────────── */}
+			{/* ═══════════════════════════════════════════════════ */}
+			<div className="flex-1 overflow-y-auto relative z-20">
+				<div className="max-w-lg mx-auto px-4 -mt-1">
 
-				{/* Device Warning */}
-				{eligible && !eligible.device_registered && (
-					<motion.div {...fadeUp} className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-4 flex items-start gap-3 shadow-sm">
-						<motion.div animate={{ rotate: [0, 10, -10, 0] }} transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}>
-							<FiSmartphone className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
-						</motion.div>
-						<div>
-							<p className="text-sm font-semibold text-amber-700">Device Belum Terdaftar</p>
-							<p className="text-xs text-amber-500 mt-1">Logout lalu login kembali untuk mendaftarkan device otomatis.</p>
-							<p className="text-[10px] text-amber-400/60 mt-2 font-mono break-all">ID: {deviceId}</p>
-						</div>
-					</motion.div>
-				)}
-
-				{/* ═══ PRESENSI TAB ═══ */}
-				{activeTab === "presensi" && (
-					<>
-						{/* ─── Today Status Card ─────────────────── */}
-				<motion.div
-					initial={{ opacity: 0, y: 30 }}
-					animate={{ opacity: 1, y: 0 }}
-					transition={{ type: "spring", stiffness: 260, damping: 20, delay: 0.15 }}
-					className="bg-white rounded-3xl p-7 mb-4 shadow-[0_2px_16px_rgba(15,23,42,0.06)] border border-slate-100 -mx-1"
-				>
-					{isNonHadir ? (
-						<div className="text-center py-4">
-							<motion.div
-								initial={{ scale: 0 }}
-								animate={{ scale: 1 }}
-								transition={{ type: "spring", stiffness: 300, damping: 18 }}
-								className="mx-auto w-28 h-28 rounded-full bg-gradient-to-br from-emerald-100 to-emerald-50 border-[3px] border-emerald-300 flex items-center justify-center shadow-lg shadow-emerald-100/60 mb-3"
-							>
-								<LuCircleCheckBig className="w-14 h-14 text-emerald-500" />
-							</motion.div>
-							<motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-								<div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full ${STATUS_COLORS[todayStatus]?.bg} ring-1 ${STATUS_COLORS[todayStatus]?.ring} mb-2`}>
-									<span className={`w-2 h-2 rounded-full ${STATUS_COLORS[todayStatus]?.dot}`} />
-									<span className={`font-bold text-sm ${STATUS_COLORS[todayStatus]?.text}`}>{STATUS_LABELS[todayStatus]}</span>
-								</div>
-								<p className="text-sm font-bold text-slate-700 mt-1">Presensi sudah tercatat ✅</p>
-								{todayData?.keterangan && <p className="text-xs text-slate-400 mt-1">{todayData.keterangan}</p>}
-								<p className="text-[10px] text-slate-300 mt-2">Hanya bisa 1x presensi per hari</p>
-							</motion.div>
-						</div>
-					) : (
-						<>
-							{/* Schedule Info */}
-							{absensiSettings?.jam_masuk && (
-								<div className="flex items-center justify-center gap-3 mb-3 px-3 py-1.5 bg-slate-50 rounded-xl border border-slate-100">
-									<span className="text-[10px] text-slate-400 flex items-center gap-1">
-										<LuClock className="h-3 w-3" /> Jam Kerja: <span className="font-bold text-slate-600">{absensiSettings.jam_masuk}</span> — <span className="font-bold text-slate-600">{absensiSettings.jam_pulang}</span>
+					{/* ─── Tab Switcher ────────────────── */}
+					<div className="bg-white rounded-2xl p-1.5 shadow-sm border border-slate-100 flex mb-4">
+						{[
+							{ id: "presensi", label: "Presensi", icon: LuClock },
+							{ id: "riwayat", label: "Riwayat", icon: LuHistory },
+						].map((tab) => {
+							const Icon = tab.icon;
+							const isActive = activeTab === tab.id;
+							return (
+								<motion.button
+									key={tab.id}
+									onClick={() => setActiveTab(tab.id)}
+									className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-colors cursor-pointer relative ${
+										isActive ? "text-white" : "text-slate-400 hover:text-slate-500"
+									}`}
+									{...pressAnimation}
+								>
+									{isActive && (
+										<motion.div
+											layoutId="absensiTabBg"
+											className="absolute inset-0 bg-gradient-to-r from-slate-700 to-slate-800 rounded-xl shadow-md"
+											transition={{ type: "spring", stiffness: 500, damping: 30 }}
+										/>
+									)}
+									<span className="relative z-10 flex items-center gap-2">
+										<Icon className="h-4 w-4" />
+										{tab.label}
 									</span>
-									<span className="text-[10px] text-slate-300">|</span>
-									<span className="text-[10px] text-slate-400">Toleransi: <span className="font-bold text-slate-600">{absensiSettings.toleransi_terlambat}m</span></span>
-								</div>
-							)}
-							{/* Clock In / Out Grid */}
-							<div className="grid grid-cols-2 gap-3 mb-4">
-								{/* Masuk Card */}
-								<motion.div
-									{...cardPress}
-									className={`p-3 rounded-xl border transition-all duration-300 ${hasClockIn ? "border-emerald-200 bg-emerald-50/60" : "border-slate-100 bg-slate-50/50"}`}
-								>
-									<div className="flex items-center gap-2 mb-1.5">
-										<motion.div
-											animate={hasClockIn ? { rotate: [0, -10, 10, 0] } : {}}
-											transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
-											className={`w-7 h-7 rounded-lg flex items-center justify-center ${hasClockIn ? "bg-emerald-100" : "bg-slate-100"}`}
-										>
-											<LuLogIn className={`h-3.5 w-3.5 ${hasClockIn ? "text-emerald-600" : "text-slate-300"}`} />
-										</motion.div>
-										<span className={`text-[11px] font-semibold uppercase tracking-wider ${hasClockIn ? "text-emerald-500" : "text-slate-300"}`}>Masuk</span>
-									</div>
-									<p className={`text-xl font-black tabular-nums ${hasClockIn ? "text-emerald-600" : "text-slate-200"}`}>
-										{formatTime(todayData?.jam_masuk)}
-									</p>
-									{hasClockIn && telatMasukMenit > 0 && (
-										<motion.span
-											initial={{ scale: 0 }}
-											animate={{ scale: 1 }}
-											transition={{ type: "spring", stiffness: 400, damping: 15 }}
-											className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-rose-100 text-rose-600 text-[9px] font-bold ring-1 ring-rose-200"
-										>
-											⏰ Telat {telatMasukMenit} menit
-										</motion.span>
-									)}
-									{hasClockIn && telatMasukMenit === 0 && (
-										<span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-600 text-[9px] font-bold ring-1 ring-emerald-200">
-											✅ Tepat Waktu
-										</span>
-									)}
-									{todayData?.jarak_masuk != null && (
-										<p className="text-[10px] text-slate-400 mt-1 flex items-center gap-1">
-											<FiMapPin className="h-3 w-3" /> {todayData.jarak_masuk}m
-										</p>
-									)}
-									{todayData?.tujuan_dinas && <p className="text-[10px] text-violet-500 mt-1 truncate flex items-center gap-1"><FiMapPin className="h-3 w-3" /> {todayData.tujuan_dinas}</p>}
-									{isDinasMode && hasClockIn && (
-										<span className={`inline-flex items-center gap-1 mt-2 px-2 py-0.5 rounded-lg text-[9px] font-bold ${STATUS_COLORS[todayStatus]?.bg} ${STATUS_COLORS[todayStatus]?.text}`}>
-											{STATUS_LABELS[todayStatus]}
-										</span>
-									)}
-								</motion.div>
+								</motion.button>
+							);
+						})}
+					</div>
 
-								{/* Pulang Card */}
-								<motion.div
-									{...cardPress}
-									className={`p-3 rounded-xl border transition-all duration-300 ${hasClockOut ? "border-sky-200 bg-sky-50/60" : "border-slate-100 bg-slate-50/50"}`}
-								>
-									<div className="flex items-center gap-2 mb-1.5">
-										<motion.div
-											animate={hasClockOut ? { rotate: [0, 10, -10, 0] } : {}}
-											transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
-											className={`w-7 h-7 rounded-lg flex items-center justify-center ${hasClockOut ? "bg-sky-100" : "bg-slate-100"}`}
-										>
-											<LuLogOut className={`h-3.5 w-3.5 ${hasClockOut ? "text-sky-600" : "text-slate-300"}`} />
-										</motion.div>
-										<span className={`text-[11px] font-semibold uppercase tracking-wider ${hasClockOut ? "text-sky-500" : "text-slate-300"}`}>Pulang</span>
-									</div>
-									<p className={`text-xl font-black tabular-nums ${hasClockOut ? "text-sky-600" : "text-slate-200"}`}>
-										{formatTime(todayData?.jam_keluar)}
-									</p>
-									{hasClockOut && pulangLebiahAwalMenit > 0 && (
-										<motion.span
-											initial={{ scale: 0 }}
-											animate={{ scale: 1 }}
-											transition={{ type: "spring", stiffness: 400, damping: 15 }}
-											className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-600 text-[9px] font-bold ring-1 ring-amber-200"
-										>
-											⚡ {pulangLebiahAwalMenit} menit lebih awal
-										</motion.span>
-									)}
-									{hasClockOut && pulangLebiahAwalMenit === 0 && (
-										<span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-sky-100 text-sky-600 text-[9px] font-bold ring-1 ring-sky-200">
-											✅ Tepat Waktu
-										</span>
-									)}
-									{todayData?.jarak_keluar != null && (
-										<p className="text-[10px] text-slate-400 mt-1 flex items-center gap-1">
-											<FiMapPin className="h-3 w-3" /> {todayData.jarak_keluar}m
-										</p>
-									)}
-								</motion.div>
+					{/* ─── Device Warning ─────────────── */}
+					{eligible && !eligible.device_registered && (
+						<motion.div {...fadeUp} className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/60 rounded-2xl p-4 mb-4 flex items-start gap-3 shadow-sm">
+							<motion.div animate={{ rotate: [0, 10, -10, 0] }} transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}>
+								<FiSmartphone className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
+							</motion.div>
+							<div>
+								<p className="text-sm font-bold text-amber-700">Device Belum Terdaftar</p>
+								<p className="text-xs text-amber-500/80 mt-1">Logout lalu login kembali untuk mendaftarkan device otomatis.</p>
+								<p className="text-[10px] text-amber-400/50 mt-2 font-mono break-all">ID: {deviceId}</p>
 							</div>
+						</motion.div>
+					)}
 
-							{/* ─── Action Buttons ───────────────── */}
-							{isNonHadir ? (
-								/* ─── Already submitted Izin/Sakit/Cuti — done icon ─── */
-								<motion.div
-									initial={{ opacity: 0, scale: 0.8 }}
-									animate={{ opacity: 1, scale: 1 }}
-									transition={{ type: "spring", stiffness: 300, damping: 20 }}
-									className="flex flex-col items-center gap-3"
-								>
-									<motion.div
-										initial={{ scale: 0 }}
-										animate={{ scale: 1 }}
-										transition={{ type: "spring", stiffness: 300, damping: 18 }}
-										className="w-36 h-36 rounded-full bg-gradient-to-br from-emerald-100 to-emerald-50 border-[3px] border-emerald-300 flex items-center justify-center shadow-lg shadow-emerald-100/60"
-									>
-										<LuCircleCheckBig className="w-20 h-20 text-emerald-500" />
-									</motion.div>
-									<motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="text-center">
-										<div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full ${STATUS_COLORS[todayStatus]?.bg} ring-1 ${STATUS_COLORS[todayStatus]?.ring} mb-2`}>
-											<span className={`w-2 h-2 rounded-full ${STATUS_COLORS[todayStatus]?.dot}`} />
-											<span className={`font-bold text-sm ${STATUS_COLORS[todayStatus]?.text}`}>{STATUS_LABELS[todayStatus]}</span>
-										</div>
-										<p className="text-sm font-bold text-slate-700">Presensi sudah tercatat ✅</p>
-										{todayData?.keterangan && <p className="text-xs text-slate-400 mt-1">{todayData.keterangan}</p>}
-										<p className="text-[10px] text-slate-300 mt-2">Hanya bisa 1x presensi per hari</p>
-									</motion.div>
-								</motion.div>
-							) : !hasClockIn ? (
-								<motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="space-y-3">
-									{/* Primary: Absen Masuk */}
-									<motion.button
-										{...pressAnimation}
-										onClick={startHadir}
-										disabled={clockLoading}
-										className="mx-auto flex flex-col items-center justify-center bg-transparent text-emerald-600 font-bold text-base disabled:opacity-50 cursor-pointer transition-all"
-									>
-										{clockLoading && absensiMode === "hadir" ? (
-											<div className="w-8 h-8 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-										) : (
-											<>
-										<div className="rounded-full bg-emerald-50 border-2 border-emerald-200 shadow-lg shadow-emerald-100 p-2 flex items-center justify-center" style={{ width: '200px', height: '200px' }}>
-											<Lottie animationData={bellAnim} loop autoplay style={{ height: '180px', width: '180px' }} />
-										</div>
-										<span className="text-xs font-bold tracking-wide text-emerald-600 mt-2">Absen Masuk</span>
-											</>
-										)}
-									</motion.button>
-
-									{/* Secondary: Dinas Luar / WFH / WFA */}
-									<div className="grid grid-cols-3 gap-2">
-										<motion.button
-											{...pressAnimation}
-											onClick={startDinasLuar}
-											disabled={clockLoading}
-											className="flex flex-col items-center gap-0 py-1 px-1 bg-violet-50 border border-violet-200 text-violet-600 rounded-xl font-semibold text-[10px] disabled:opacity-50 cursor-pointer hover:bg-violet-100 active:bg-violet-100 transition-colors"
-										>
-											<Lottie animationData={manWaitingCarAnim} loop autoplay className="h-10 w-10" />
-											<span>Dinas Luar</span>
-										</motion.button>
-										<motion.button
-											{...pressAnimation}
-											onClick={startWFH}
-											disabled={clockLoading}
-											className="flex flex-col items-center gap-0 py-1 px-1 bg-teal-50 border border-teal-200 text-teal-600 rounded-xl font-semibold text-[10px] disabled:opacity-50 cursor-pointer hover:bg-teal-100 active:bg-teal-100 transition-colors"
-										>
-											<Lottie animationData={workFromHomeAnim} loop autoplay className="h-10 w-10" />
-											<span>WFH</span>
-										</motion.button>
-										<motion.button
-											{...pressAnimation}
-											onClick={startWFA}
-											disabled={clockLoading}
-											className="flex flex-col items-center gap-0 py-1 px-1 bg-indigo-50 border border-indigo-200 text-indigo-600 rounded-xl font-semibold text-[10px] disabled:opacity-50 cursor-pointer hover:bg-indigo-100 active:bg-indigo-100 transition-colors"
-										>
-											<Lottie animationData={workFromAnywhereAnim} loop autoplay className="h-10 w-10" />
-											<span>WFA</span>
-										</motion.button>
-									</div>
-
-									{/* Izin / Sakit / Cuti */}
-									<motion.button
-										{...pressAnimation}
-										onClick={() => setShowIzinModal(true)}
-										className="w-full flex items-center justify-center gap-2 py-2.5 bg-amber-50 border border-amber-200 text-amber-600 rounded-xl font-semibold text-xs hover:bg-amber-100 active:bg-amber-100 transition-colors cursor-pointer"
-									>
-										<LuClipboardList className="h-4 w-4" /> Izin / Sakit / Cuti
-									</motion.button>
-								</motion.div>
-							) : !hasClockOut ? (
-								<motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="space-y-4">
-									{/* ✅ Absen Masuk — done checkmark */}
-									<motion.div
-										initial={{ scale: 0.8, opacity: 0 }}
-										animate={{ scale: 1, opacity: 1 }}
-										transition={{ type: "spring", stiffness: 300, damping: 20 }}
-										className="mx-auto flex flex-col items-center"
-									>
+					{/* ═══════════════════════════════════════ */}
+					{/* ═══ PRESENSI TAB ═══════════════════════ */}
+					{/* ═══════════════════════════════════════ */}
+					{activeTab === "presensi" && (
+						<motion.div
+							initial={{ opacity: 0, y: 20 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{ type: "spring", stiffness: 300, damping: 25 }}
+						>
+							{/* ─── Main Status Card ──────────── */}
+							<div className="bg-white rounded-3xl p-5 mb-4 shadow-[0_2px_20px_rgba(15,23,42,0.05)] border border-slate-100/80">
+								{isNonHadir ? (
+									/* ─── Already submitted Izin/Sakit/Cuti ─── */
+									<div className="text-center py-6">
 										<motion.div
 											initial={{ scale: 0 }}
 											animate={{ scale: 1 }}
 											transition={{ type: "spring", stiffness: 300, damping: 18 }}
-											className="w-24 h-24 rounded-full bg-gradient-to-br from-emerald-100 to-emerald-50 border-[3px] border-emerald-300 flex items-center justify-center shadow-md shadow-emerald-100/60"
+											className="mx-auto w-24 h-24 rounded-full bg-gradient-to-br from-emerald-100 to-emerald-50 border-[3px] border-emerald-300/60 flex items-center justify-center shadow-lg shadow-emerald-100/40 mb-4"
 										>
 											<LuCircleCheckBig className="w-12 h-12 text-emerald-500" />
 										</motion.div>
-										<span className="text-[10px] font-bold tracking-wide text-emerald-500 mt-1.5">Masuk {formatTime(todayData?.jam_masuk)} ✅</span>
-										{isDinasMode && (
-											<span className={`inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-lg text-[9px] font-bold ${STATUS_COLORS[todayStatus]?.bg} ${STATUS_COLORS[todayStatus]?.text} ring-1 ${STATUS_COLORS[todayStatus]?.ring}`}>
-												{STATUS_LABELS[todayStatus]}
-											</span>
+										<motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+											<div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full ${STATUS_COLORS[todayStatus]?.bg} ring-1 ${STATUS_COLORS[todayStatus]?.ring} mb-2`}>
+												<span className={`w-2 h-2 rounded-full ${STATUS_COLORS[todayStatus]?.dot}`} />
+												<span className={`font-bold text-sm ${STATUS_COLORS[todayStatus]?.text}`}>{STATUS_LABELS[todayStatus]}</span>
+											</div>
+											<p className="text-sm font-bold text-slate-700 mt-1">Presensi sudah tercatat</p>
+											{todayData?.keterangan && <p className="text-xs text-slate-400 mt-1">{todayData.keterangan}</p>}
+											<p className="text-[10px] text-slate-300 mt-2">Hanya bisa 1x presensi per hari</p>
+										</motion.div>
+									</div>
+								) : (
+									<>
+										{/* Schedule Info Bar */}
+										{absensiSettings?.jam_masuk && (
+											<div className="flex items-center justify-center gap-3 mb-4 px-4 py-2 bg-slate-50/80 rounded-xl border border-slate-100/60">
+												<span className="text-[10px] text-slate-400 flex items-center gap-1">
+													<LuClock className="h-3 w-3" />
+													<span className="font-bold text-slate-600">{absensiSettings.jam_masuk}</span>
+													<span className="text-slate-300 mx-0.5">—</span>
+													<span className="font-bold text-slate-600">{absensiSettings.jam_pulang}</span>
+												</span>
+												<div className="w-px h-3 bg-slate-200" />
+												<span className="text-[10px] text-slate-400">
+													Toleransi <span className="font-bold text-slate-600">{absensiSettings.toleransi_terlambat}m</span>
+												</span>
+											</div>
 										)}
-										{telatMasukMenit > 0 && (
-											<span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-rose-100 text-rose-600 text-[9px] font-bold ring-1 ring-rose-200">
-												⏰ Telat {telatMasukMenit} menit
-											</span>
-										)}
-									</motion.div>
 
-									{/* Absen Pulang button — only show when jam_pulang reached */}
-									{(() => {
-										const jamPulangStr = absensiSettings?.jam_pulang || "16:00";
-										const jamMasukStr = absensiSettings?.jam_masuk || "08:00";
-										const [hp, mp] = jamPulangStr.split(":").map(Number);
-										const [hm, mm] = jamMasukStr.split(":").map(Number);
-										const now = currentTime;
-										const nowMinutes = now.getHours() * 60 + now.getMinutes();
-										const pulangMinutes = hp * 60 + mp;
-										const masukMinutes = hm * 60 + mm;
-										const isOvernightShift = pulangMinutes <= masukMinutes;
+										{/* Clock In / Clock Out Cards */}
+										<div className="grid grid-cols-2 gap-3 mb-5">
+											{/* ── Masuk Card ── */}
+											<motion.div
+												{...cardPress}
+												className={`relative p-4 rounded-2xl border overflow-hidden transition-all duration-300 ${
+													hasClockIn
+														? "border-emerald-200/60 bg-gradient-to-br from-emerald-50 to-green-50/50"
+														: "border-slate-100 bg-slate-50/30"
+												}`}
+											>
+												{hasClockIn && (
+													<div className="absolute top-0 right-0 w-20 h-20 bg-emerald-200/20 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
+												)}
+												<div className="relative z-10">
+													<div className="flex items-center gap-2 mb-2">
+														<motion.div
+															animate={hasClockIn ? { rotate: [0, -10, 10, 0] } : {}}
+															transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+															className={`w-8 h-8 rounded-xl flex items-center justify-center ${hasClockIn ? "bg-emerald-100" : "bg-slate-100"}`}
+														>
+															<LuLogIn className={`h-4 w-4 ${hasClockIn ? "text-emerald-600" : "text-slate-300"}`} />
+														</motion.div>
+														<span className={`text-[10px] font-bold uppercase tracking-widest ${hasClockIn ? "text-emerald-500" : "text-slate-300"}`}>
+															Masuk
+														</span>
+													</div>
+													<p className={`text-2xl font-black tabular-nums leading-none ${hasClockIn ? "text-emerald-600" : "text-slate-200"}`}>
+														{formatTime(todayData?.jam_masuk)}
+													</p>
+													{hasClockIn && telatMasukMenit > 0 && (
+														<motion.span
+															initial={{ scale: 0 }}
+															animate={{ scale: 1 }}
+															transition={{ type: "spring", stiffness: 400, damping: 15 }}
+															className="inline-flex items-center gap-1 mt-2 px-2 py-0.5 rounded-full bg-rose-100 text-rose-600 text-[9px] font-bold ring-1 ring-rose-200/60"
+														>
+															⏰ Telat {telatMasukMenit}m
+														</motion.span>
+													)}
+													{hasClockIn && telatMasukMenit === 0 && (
+														<span className="inline-flex items-center gap-1 mt-2 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-600 text-[9px] font-bold ring-1 ring-emerald-200/60">
+															✅ Tepat Waktu
+														</span>
+													)}
+													{todayData?.jarak_masuk != null && (
+														<p className="text-[10px] text-slate-400 mt-1.5 flex items-center gap-1">
+															<FiMapPin className="h-3 w-3" /> {todayData.jarak_masuk}m
+														</p>
+													)}
+													{todayData?.tujuan_dinas && (
+														<p className="text-[10px] text-violet-500 mt-1 truncate flex items-center gap-1">
+															<FiMapPin className="h-3 w-3" /> {todayData.tujuan_dinas}
+														</p>
+													)}
+													{isDinasMode && hasClockIn && (
+														<span className={`inline-flex items-center gap-1 mt-2 px-2 py-0.5 rounded-lg text-[9px] font-bold ${STATUS_COLORS[todayStatus]?.bg} ${STATUS_COLORS[todayStatus]?.text}`}>
+															{STATUS_LABELS[todayStatus]}
+														</span>
+													)}
+												</div>
+											</motion.div>
 
-										let canPulang;
-										let diffMin;
-										if (isOvernightShift) {
-											// Shift malam (misal 22:00 - 06:00): boleh pulang jika sudah lewat tengah malam DAN >= jam_pulang
-											canPulang = nowMinutes < masukMinutes && nowMinutes >= pulangMinutes;
-											if (!canPulang) {
-												// hitung sisa waktu
-												if (nowMinutes >= masukMinutes) {
-													// masih di "malam ini", hitung ke tengah malam + jam_pulang
-													diffMin = (1440 - nowMinutes) + pulangMinutes;
-												} else {
-													// sudah lewat tengah malam tapi belum jam pulang
-													diffMin = pulangMinutes - nowMinutes;
-												}
-											}
-										} else {
-											// Shift normal (misal 08:00 - 16:00)
-											canPulang = nowMinutes >= pulangMinutes;
-											diffMin = pulangMinutes - nowMinutes;
-										}
+											{/* ── Pulang Card ── */}
+											<motion.div
+												{...cardPress}
+												className={`relative p-4 rounded-2xl border overflow-hidden transition-all duration-300 ${
+													hasClockOut
+														? "border-sky-200/60 bg-gradient-to-br from-sky-50 to-blue-50/50"
+														: "border-slate-100 bg-slate-50/30"
+												}`}
+											>
+												{hasClockOut && (
+													<div className="absolute top-0 right-0 w-20 h-20 bg-sky-200/20 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
+												)}
+												<div className="relative z-10">
+													<div className="flex items-center gap-2 mb-2">
+														<motion.div
+															animate={hasClockOut ? { rotate: [0, 10, -10, 0] } : {}}
+															transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+															className={`w-8 h-8 rounded-xl flex items-center justify-center ${hasClockOut ? "bg-sky-100" : "bg-slate-100"}`}
+														>
+															<LuLogOut className={`h-4 w-4 ${hasClockOut ? "text-sky-600" : "text-slate-300"}`} />
+														</motion.div>
+														<span className={`text-[10px] font-bold uppercase tracking-widest ${hasClockOut ? "text-sky-500" : "text-slate-300"}`}>
+															Pulang
+														</span>
+													</div>
+													<p className={`text-2xl font-black tabular-nums leading-none ${hasClockOut ? "text-sky-600" : "text-slate-200"}`}>
+														{formatTime(todayData?.jam_keluar)}
+													</p>
+													{hasClockOut && pulangLebiahAwalMenit > 0 && (
+														<motion.span
+															initial={{ scale: 0 }}
+															animate={{ scale: 1 }}
+															transition={{ type: "spring", stiffness: 400, damping: 15 }}
+															className="inline-flex items-center gap-1 mt-2 px-2 py-0.5 rounded-full bg-amber-100 text-amber-600 text-[9px] font-bold ring-1 ring-amber-200/60"
+														>
+															⚡ {pulangLebiahAwalMenit}m lebih awal
+														</motion.span>
+													)}
+													{hasClockOut && pulangLebiahAwalMenit === 0 && (
+														<span className="inline-flex items-center gap-1 mt-2 px-2 py-0.5 rounded-full bg-sky-100 text-sky-600 text-[9px] font-bold ring-1 ring-sky-200/60">
+															✅ Tepat Waktu
+														</span>
+													)}
+													{todayData?.jarak_keluar != null && (
+														<p className="text-[10px] text-slate-400 mt-1.5 flex items-center gap-1">
+															<FiMapPin className="h-3 w-3" /> {todayData.jarak_keluar}m
+														</p>
+													)}
+												</div>
+											</motion.div>
+										</div>
 
-										if (canPulang) {
-											return (
+										{/* ─── Action Buttons ─────────────── */}
+										{isNonHadir ? (
+											<motion.div
+												initial={{ opacity: 0, scale: 0.8 }}
+												animate={{ opacity: 1, scale: 1 }}
+												transition={{ type: "spring", stiffness: 300, damping: 20 }}
+												className="flex flex-col items-center gap-3"
+											>
+												<motion.div
+													initial={{ scale: 0 }}
+													animate={{ scale: 1 }}
+													transition={{ type: "spring", stiffness: 300, damping: 18 }}
+													className="w-28 h-28 rounded-full bg-gradient-to-br from-emerald-100 to-emerald-50 border-[3px] border-emerald-300/60 flex items-center justify-center shadow-lg shadow-emerald-100/40"
+												>
+													<LuCircleCheckBig className="w-14 h-14 text-emerald-500" />
+												</motion.div>
+												<motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="text-center">
+													<div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full ${STATUS_COLORS[todayStatus]?.bg} ring-1 ${STATUS_COLORS[todayStatus]?.ring} mb-2`}>
+														<span className={`w-2 h-2 rounded-full ${STATUS_COLORS[todayStatus]?.dot}`} />
+														<span className={`font-bold text-sm ${STATUS_COLORS[todayStatus]?.text}`}>{STATUS_LABELS[todayStatus]}</span>
+													</div>
+													<p className="text-sm font-bold text-slate-700">Presensi sudah tercatat</p>
+													{todayData?.keterangan && <p className="text-xs text-slate-400 mt-1">{todayData.keterangan}</p>}
+													<p className="text-[10px] text-slate-300 mt-2">Hanya bisa 1x presensi per hari</p>
+												</motion.div>
+											</motion.div>
+										) : !hasClockIn ? (
+											<motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="space-y-3">
+												{/* ── Primary: Absen Masuk ── */}
 												<motion.button
 													{...pressAnimation}
-													onClick={startPulang}
+													onClick={startHadir}
 													disabled={clockLoading}
-													className="mx-auto flex flex-col items-center justify-center bg-transparent text-sky-600 font-bold text-base disabled:opacity-50 cursor-pointer transition-all"
+													className="w-full relative overflow-hidden group cursor-pointer disabled:opacity-50"
 												>
-													{clockLoading ? (
-														<div className="w-8 h-8 border-3 border-sky-500 border-t-transparent rounded-full animate-spin" />
-													) : (
-														<>
-															<div className="rounded-full bg-sky-50 border-2 border-sky-200 shadow-lg shadow-sky-100 p-2 flex items-center justify-center" style={{ width: '140px', height: '140px' }}>
-																<Lottie animationData={bellAnim} loop autoplay style={{ height: '120px', width: '120px' }} />
+													<div className="relative flex items-center gap-4 p-4 rounded-2xl bg-gradient-to-r from-emerald-500 via-emerald-500 to-teal-500 shadow-lg shadow-emerald-200/50">
+														{/* Glow effect */}
+														<div className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-teal-400 opacity-0 group-active:opacity-100 transition-opacity rounded-2xl" />
+														<div className="relative z-10 flex items-center gap-4 w-full">
+															<div className="w-14 h-14 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
+																{clockLoading && absensiMode === "hadir" ? (
+																	<div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+																) : (
+																	<Lottie animationData={bellAnim} loop autoplay style={{ height: 40, width: 40 }} />
+																)}
 															</div>
-															<span className="text-xs font-bold tracking-wide text-sky-600 mt-2">Absen Pulang</span>
-														</>
-													)}
+															<div className="flex-1 text-left">
+																<p className="text-white font-black text-lg leading-tight">Absen Masuk</p>
+																<p className="text-white/60 text-xs mt-0.5">Tap untuk mulai selfie & GPS</p>
+															</div>
+															<FiChevronRight className="h-5 w-5 text-white/50 flex-shrink-0" />
+														</div>
+													</div>
 												</motion.button>
-											);
-										}
 
-										// Waiting state — show countdown
-										// Belum jam pulang — cukup tampilkan info masuk saja (tidak ada tombol/countdown)
-										return null;
-									})()}
-								</motion.div>
-							) : (
-								<motion.div
-									initial={{ opacity: 0, scale: 0.8 }}
-									animate={{ opacity: 1, scale: 1 }}
-									transition={{ type: "spring", stiffness: 300, damping: 20 }}
-									className="flex flex-col items-center gap-3"
-								>
-									<motion.div
-										initial={{ scale: 0 }}
-										animate={{ scale: 1 }}
-										transition={{ type: "spring", stiffness: 300, damping: 18 }}
-										className="w-36 h-36 rounded-full bg-gradient-to-br from-emerald-100 to-emerald-50 border-[3px] border-emerald-300 flex items-center justify-center shadow-lg shadow-emerald-100/60"
-									>
-										<LuCircleCheckBig className="w-20 h-20 text-emerald-500" />
-									</motion.div>
-									<div className="text-center">
-										<p className="text-sm font-black text-emerald-600">Presensi Hari Ini Selesai 🎉</p>
-										{isDinasMode && (
-											<span className={`inline-flex items-center gap-1 mt-1 px-3 py-1 rounded-lg text-[10px] font-bold ${STATUS_COLORS[todayStatus]?.bg} ${STATUS_COLORS[todayStatus]?.text} ring-1 ${STATUS_COLORS[todayStatus]?.ring}`}>
-												{STATUS_LABELS[todayStatus]}
-											</span>
-										)}
-										<p className="text-[10px] text-slate-400 mt-0.5">
-											Masuk {formatTime(todayData?.jam_masuk)} · Pulang {formatTime(todayData?.jam_keluar)}
-										</p>
-										<div className="flex flex-wrap justify-center gap-1 mt-1">
-											{telatMasukMenit > 0 && (
-												<span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-100 text-rose-600 text-[9px] font-bold ring-1 ring-rose-200">
-													⏰ Masuk telat {telatMasukMenit}m
-												</span>
-											)}
-											{pulangLebiahAwalMenit > 0 && (
-												<span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-600 text-[9px] font-bold ring-1 ring-amber-200">
-													⚡ Pulang {pulangLebiahAwalMenit}m lebih awal
-												</span>
-											)}
-										</div>
-									</div>
-								</motion.div>
-							)}
-						</>
-					)}
-				</motion.div>
-				</>
-				)}
+												{/* ── Secondary: Mode Buttons ── */}
+												<div className="grid grid-cols-3 gap-2">
+													<motion.button
+														{...pressAnimation}
+														onClick={startDinasLuar}
+														disabled={clockLoading}
+														className="flex flex-col items-center gap-1 py-3 px-2 bg-white border border-violet-200/60 rounded-2xl disabled:opacity-50 cursor-pointer hover:bg-violet-50/50 active:bg-violet-50 transition-colors shadow-sm"
+													>
+														<div className="w-10 h-10 rounded-xl bg-violet-50 flex items-center justify-center">
+															<Lottie animationData={manWaitingCarAnim} loop autoplay className="h-8 w-8" />
+														</div>
+														<span className="text-[10px] font-bold text-violet-600">Dinas Luar</span>
+													</motion.button>
+													<motion.button
+														{...pressAnimation}
+														onClick={startWFH}
+														disabled={clockLoading}
+														className="flex flex-col items-center gap-1 py-3 px-2 bg-white border border-teal-200/60 rounded-2xl disabled:opacity-50 cursor-pointer hover:bg-teal-50/50 active:bg-teal-50 transition-colors shadow-sm"
+													>
+														<div className="w-10 h-10 rounded-xl bg-teal-50 flex items-center justify-center">
+															<Lottie animationData={workFromHomeAnim} loop autoplay className="h-8 w-8" />
+														</div>
+														<span className="text-[10px] font-bold text-teal-600">WFH</span>
+													</motion.button>
+													<motion.button
+														{...pressAnimation}
+														onClick={startWFA}
+														disabled={clockLoading}
+														className="flex flex-col items-center gap-1 py-3 px-2 bg-white border border-indigo-200/60 rounded-2xl disabled:opacity-50 cursor-pointer hover:bg-indigo-50/50 active:bg-indigo-50 transition-colors shadow-sm"
+													>
+														<div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center">
+															<Lottie animationData={workFromAnywhereAnim} loop autoplay className="h-8 w-8" />
+														</div>
+														<span className="text-[10px] font-bold text-indigo-600">WFA</span>
+													</motion.button>
+												</div>
 
-				{/* ═══ RIWAYAT TAB ═══ */}
-				{activeTab === "riwayat" && (
-					<>
-				{/* ─── Summary Stats ────────────────────── */}
-				<motion.div
-					initial={{ opacity: 0, y: 24 }}
-					animate={{ opacity: 1, y: 0 }}
-					transition={{ delay: 0.2, type: "spring", stiffness: 260, damping: 20 }}
-					className="grid grid-cols-4 gap-2 mb-5"
-				>
-					{["hadir", "dinas_luar", "wfh", "wfa", "izin", "sakit", "cuti", "alpha"].map((key, i) => (
-						<motion.div
-							key={key}
-							{...chipPress}
-							custom={i}
-							initial="hidden"
-							animate="visible"
-							variants={listItemVariants}
-							className={`${STATUS_COLORS[key].bg} border border-slate-100 rounded-2xl p-3 text-center cursor-default shadow-sm`}
-						>
-							<p className={`text-2xl font-black ${STATUS_COLORS[key].text}`}>
-								{history.summary?.[key] || 0}
-							</p>
-							<p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">{STATUS_LABELS[key]}</p>
-						</motion.div>
-					))}
-				</motion.div>
-
-				{/* ─── History Section ──────────────────── */}
-				<motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
-					{/* Month Nav */}
-					<div className="flex items-center justify-between mb-4">
-						<motion.button {...pressAnimation} onClick={prevMonth} className="p-2.5 rounded-xl bg-white border border-slate-100 hover:bg-slate-50 active:bg-slate-100 transition-colors cursor-pointer shadow-sm">
-							<FiChevronLeft className="h-5 w-5 text-slate-500" />
-						</motion.button>
-						<h3 className="font-bold text-slate-700 text-sm tracking-wide">
-							{monthNames[selectedMonth - 1]} {selectedYear}
-						</h3>
-						<motion.button {...pressAnimation} onClick={nextMonth} className="p-2.5 rounded-xl bg-white border border-slate-100 hover:bg-slate-50 active:bg-slate-100 transition-colors cursor-pointer shadow-sm">
-							<FiChevronRight className="h-5 w-5 text-slate-500" />
-						</motion.button>
-					</div>
-
-					{/* History List */}
-					<div className="space-y-2.5">
-						{history.records?.length === 0 ? (
-							<div className="bg-white border border-slate-100 rounded-2xl p-10 text-center shadow-sm">
-								<motion.div animate={{ y: [0, -4, 0] }} transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}>
-									<FiCalendar className="h-10 w-10 text-slate-200 mx-auto mb-3" />
-								</motion.div>
-								<p className="text-slate-400 text-sm">Belum ada data presensi bulan ini</p>
-							</div>
-						) : (
-							history.records?.map((record, i) => {
-								const sc = STATUS_COLORS[record.status] || STATUS_COLORS.alpha;
-								const tgl = new Date(record.tanggal);
-								return (
-									<motion.div
-										key={record.id}
-										custom={i}
-										initial="hidden"
-										animate="visible"
-										variants={listItemVariants}
-										className="bg-white border border-slate-100 rounded-2xl p-4 flex items-center gap-4 hover:shadow-md transition-shadow shadow-sm"
-									>
-										<div className="w-12 h-12 rounded-xl bg-slate-50 border border-slate-100 flex flex-col items-center justify-center flex-shrink-0">
-											<span className="text-lg font-black text-slate-700 leading-none">{tgl.getDate()}</span>
-											<span className="text-[9px] text-slate-400 uppercase font-bold tracking-wider">
-												{tgl.toLocaleDateString("id-ID", { weekday: "short" })}
-											</span>
-										</div>
-										<div className="flex-1 min-w-0">
-											<div className="flex items-center gap-2 mb-1 flex-wrap">
-												<span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold ${sc.bg} ${sc.text}`}>
-													<span className={`w-1.5 h-1.5 rounded-full ${sc.dot}`} />
-													{STATUS_LABELS[record.status]}
-												</span>
-												{record.jarak_masuk != null && (
-													<span className="text-[10px] text-slate-300 flex items-center gap-0.5">
-														<FiMapPin className="h-2.5 w-2.5" />{record.jarak_masuk}m
+												{/* ── Izin / Sakit / Cuti ── */}
+												<motion.button
+													{...pressAnimation}
+													onClick={() => setShowIzinModal(true)}
+													className="w-full flex items-center justify-center gap-2 py-3 bg-white border border-amber-200/60 text-amber-600 rounded-2xl font-bold text-xs hover:bg-amber-50/50 active:bg-amber-50 transition-colors cursor-pointer shadow-sm"
+												>
+													<LuClipboardList className="h-4 w-4" /> Izin / Sakit / Cuti
+												</motion.button>
+											</motion.div>
+										) : !hasClockOut ? (
+											/* ── Already clocked in, waiting for clock-out ── */
+											<motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="space-y-4">
+												{/* Masuk confirmed */}
+												<motion.div
+													initial={{ scale: 0.8, opacity: 0 }}
+													animate={{ scale: 1, opacity: 1 }}
+													transition={{ type: "spring", stiffness: 300, damping: 20 }}
+													className="flex flex-col items-center"
+												>
+													<motion.div
+														initial={{ scale: 0 }}
+														animate={{ scale: 1 }}
+														transition={{ type: "spring", stiffness: 300, damping: 18 }}
+														className="w-20 h-20 rounded-full bg-gradient-to-br from-emerald-100 to-emerald-50 border-[3px] border-emerald-300/60 flex items-center justify-center shadow-md shadow-emerald-100/40"
+													>
+														<LuCircleCheckBig className="w-10 h-10 text-emerald-500" />
+													</motion.div>
+													<span className="text-xs font-bold text-emerald-600 mt-2">
+														Masuk {formatTime(todayData?.jam_masuk)} ✅
 													</span>
-												)}
-											</div>
-											{record.tujuan_dinas && <p className="text-xs text-violet-500 truncate flex items-center gap-1"><FiMapPin className="h-3 w-3" /> {record.tujuan_dinas}</p>}
-											{record.keterangan && <p className="text-xs text-slate-400 truncate">{record.keterangan}</p>}
-										</div>
-										<div className="text-right flex-shrink-0">
-											{record.jam_masuk && <p className="text-sm font-bold text-slate-600 tabular-nums">{formatTime(record.jam_masuk)}</p>}
-											{record.jam_keluar ? (
-												<p className="text-xs text-slate-400 tabular-nums">{formatTime(record.jam_keluar)}</p>
-											) : record.jam_masuk && new Date(record.tanggal).toDateString() !== new Date().toDateString() && !['izin', 'sakit', 'cuti'].includes(record.status) ? (
-												<span className="text-[9px] text-amber-500 font-bold">⚠️ Lupa pulang</span>
-											) : null}
-										</div>
-									</motion.div>
-								);
-							})
-						)}
-					</div>
-				</motion.div>
-				</>
-				)}
+													{isDinasMode && (
+														<span className={`inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-lg text-[9px] font-bold ${STATUS_COLORS[todayStatus]?.bg} ${STATUS_COLORS[todayStatus]?.text} ring-1 ${STATUS_COLORS[todayStatus]?.ring}`}>
+															{STATUS_LABELS[todayStatus]}
+														</span>
+													)}
+													{telatMasukMenit > 0 && (
+														<span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-rose-100 text-rose-600 text-[9px] font-bold ring-1 ring-rose-200">
+															⏰ Telat {telatMasukMenit} menit
+														</span>
+													)}
+												</motion.div>
+
+												{/* ── Pulang button / waiting ── */}
+												{(() => {
+													const jamPulangStr = absensiSettings?.jam_pulang || "16:00";
+													const jamMasukStr = absensiSettings?.jam_masuk || "08:00";
+													const [hp, mp] = jamPulangStr.split(":").map(Number);
+													const [hm, mm] = jamMasukStr.split(":").map(Number);
+													const now = currentTime;
+													const nowMinutes = now.getHours() * 60 + now.getMinutes();
+													const pulangMinutes = hp * 60 + mp;
+													const masukMinutes = hm * 60 + mm;
+													const isOvernightShift = pulangMinutes <= masukMinutes;
+
+													let canPulang;
+													if (isOvernightShift) {
+														canPulang = nowMinutes < masukMinutes && nowMinutes >= pulangMinutes;
+													} else {
+														canPulang = nowMinutes >= pulangMinutes;
+													}
+
+													if (canPulang) {
+														return (
+															<motion.button
+																{...pressAnimation}
+																onClick={startPulang}
+																disabled={clockLoading}
+																className="w-full relative overflow-hidden group cursor-pointer disabled:opacity-50"
+															>
+																<div className="relative flex items-center gap-4 p-4 rounded-2xl bg-gradient-to-r from-sky-500 via-sky-500 to-blue-500 shadow-lg shadow-sky-200/50">
+																	<div className="absolute inset-0 bg-gradient-to-r from-sky-400 to-blue-400 opacity-0 group-active:opacity-100 transition-opacity rounded-2xl" />
+																	<div className="relative z-10 flex items-center gap-4 w-full">
+																		<div className="w-14 h-14 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
+																			{clockLoading ? (
+																				<div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+																			) : (
+																				<Lottie animationData={bellAnim} loop autoplay style={{ height: 40, width: 40 }} />
+																			)}
+																		</div>
+																		<div className="flex-1 text-left">
+																			<p className="text-white font-black text-lg leading-tight">Absen Pulang</p>
+																			<p className="text-white/60 text-xs mt-0.5">Tap untuk selfie & konfirmasi</p>
+																		</div>
+																		<FiChevronRight className="h-5 w-5 text-white/50 flex-shrink-0" />
+																	</div>
+																</div>
+															</motion.button>
+														);
+													}
+													return null;
+												})()}
+											</motion.div>
+										) : (
+											/* ── Completed — both masuk & pulang done ── */
+											<motion.div
+												initial={{ opacity: 0, scale: 0.8 }}
+												animate={{ opacity: 1, scale: 1 }}
+												transition={{ type: "spring", stiffness: 300, damping: 20 }}
+												className="flex flex-col items-center gap-3 py-4"
+											>
+												<motion.div
+													initial={{ scale: 0 }}
+													animate={{ scale: 1 }}
+													transition={{ type: "spring", stiffness: 300, damping: 18 }}
+													className="w-28 h-28 rounded-full bg-gradient-to-br from-emerald-100 to-emerald-50 border-[3px] border-emerald-300/60 flex items-center justify-center shadow-lg shadow-emerald-100/40"
+												>
+													<LuCircleCheckBig className="w-16 h-16 text-emerald-500" />
+												</motion.div>
+												<div className="text-center">
+													<p className="text-base font-black text-emerald-600">Presensi Hari Ini Selesai 🎉</p>
+													{isDinasMode && (
+														<span className={`inline-flex items-center gap-1 mt-1 px-3 py-1 rounded-lg text-[10px] font-bold ${STATUS_COLORS[todayStatus]?.bg} ${STATUS_COLORS[todayStatus]?.text} ring-1 ${STATUS_COLORS[todayStatus]?.ring}`}>
+															{STATUS_LABELS[todayStatus]}
+														</span>
+													)}
+													<p className="text-xs text-slate-400 mt-1">
+														Masuk {formatTime(todayData?.jam_masuk)} · Pulang {formatTime(todayData?.jam_keluar)}
+													</p>
+													<div className="flex flex-wrap justify-center gap-1.5 mt-2">
+														{telatMasukMenit > 0 && (
+															<span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-100 text-rose-600 text-[9px] font-bold ring-1 ring-rose-200">
+																⏰ Masuk telat {telatMasukMenit}m
+															</span>
+														)}
+														{pulangLebiahAwalMenit > 0 && (
+															<span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-600 text-[9px] font-bold ring-1 ring-amber-200">
+																⚡ Pulang {pulangLebiahAwalMenit}m lebih awal
+															</span>
+														)}
+													</div>
+												</div>
+											</motion.div>
+										)}
+									</>
+								)}
+							</div>
+						</motion.div>
+					)}
+
+					{/* ═══════════════════════════════════════ */}
+					{/* ═══ RIWAYAT TAB ════════════════════════ */}
+					{/* ═══════════════════════════════════════ */}
+					{activeTab === "riwayat" && (
+						<motion.div
+							initial={{ opacity: 0, y: 20 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{ type: "spring", stiffness: 300, damping: 25 }}
+						>
+							{/* ─── Summary Stats Carousel ─────── */}
+							<div className="mb-5 -mx-1">
+								<div className="flex gap-2 overflow-x-auto px-1 pb-2 scrollbar-none" style={{ scrollSnapType: "x mandatory" }}>
+									{["hadir", "dinas_luar", "wfh", "wfa", "izin", "sakit", "cuti", "alpha"].map((key, i) => (
+										<motion.div
+											key={key}
+											initial={{ opacity: 0, scale: 0.8 }}
+											animate={{ opacity: 1, scale: 1 }}
+											transition={{ delay: i * 0.04, type: "spring", stiffness: 300 }}
+											className={`flex-shrink-0 w-[4.5rem] ${STATUS_COLORS[key].bg} border border-slate-100/60 rounded-2xl p-3 text-center shadow-sm`}
+											style={{ scrollSnapAlign: "start" }}
+										>
+											<p className={`text-2xl font-black ${STATUS_COLORS[key].text} leading-none`}>
+												{history.summary?.[key] || 0}
+											</p>
+											<p className="text-[8px] font-bold text-slate-400 uppercase tracking-wider mt-1 leading-none">{STATUS_LABELS[key]}</p>
+										</motion.div>
+									))}
+								</div>
+							</div>
+
+							{/* ─── Month Navigator ───────────── */}
+							<div className="flex items-center justify-between mb-4 bg-white rounded-2xl p-2 border border-slate-100/60 shadow-sm">
+								<motion.button {...pressAnimation} onClick={prevMonth} className="p-2 rounded-xl hover:bg-slate-50 active:bg-slate-100 transition-colors cursor-pointer">
+									<FiChevronLeft className="h-5 w-5 text-slate-400" />
+								</motion.button>
+								<h3 className="font-bold text-slate-700 text-sm tracking-wide">
+									{monthNames[selectedMonth - 1]} {selectedYear}
+								</h3>
+								<motion.button {...pressAnimation} onClick={nextMonth} className="p-2 rounded-xl hover:bg-slate-50 active:bg-slate-100 transition-colors cursor-pointer">
+									<FiChevronRight className="h-5 w-5 text-slate-400" />
+								</motion.button>
+							</div>
+
+							{/* ─── History List ─────────────── */}
+							<div className="space-y-2">
+								{history.records?.length === 0 ? (
+									<div className="bg-white border border-slate-100 rounded-3xl p-12 text-center shadow-sm">
+										<motion.div animate={{ y: [0, -5, 0] }} transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}>
+											<FiCalendar className="h-10 w-10 text-slate-200 mx-auto mb-3" />
+										</motion.div>
+										<p className="text-slate-400 text-sm font-medium">Belum ada data presensi</p>
+										<p className="text-slate-300 text-xs mt-1">Data akan muncul setelah Anda melakukan presensi</p>
+									</div>
+								) : (
+									history.records?.map((record, i) => {
+										const sc = STATUS_COLORS[record.status] || STATUS_COLORS.alpha;
+										const tgl = new Date(record.tanggal);
+										return (
+											<motion.div
+												key={record.id}
+												custom={i}
+												initial="hidden"
+												animate="visible"
+												variants={listItemVariants}
+												className="bg-white rounded-2xl border border-slate-100/60 overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+											>
+												<div className="flex items-stretch">
+													{/* Left accent bar */}
+													<div className={`w-1 flex-shrink-0 ${sc.dot}`} />
+													<div className="flex items-center gap-3 p-4 flex-1 min-w-0">
+														{/* Date badge */}
+														<div className="w-11 h-11 rounded-xl bg-slate-50 border border-slate-100 flex flex-col items-center justify-center flex-shrink-0">
+															<span className="text-base font-black text-slate-700 leading-none">{tgl.getDate()}</span>
+															<span className="text-[8px] text-slate-400 uppercase font-bold tracking-wider leading-none mt-0.5">
+																{tgl.toLocaleDateString("id-ID", { weekday: "short" })}
+															</span>
+														</div>
+														{/* Details */}
+														<div className="flex-1 min-w-0">
+															<div className="flex items-center gap-2 flex-wrap">
+																<span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold ${sc.bg} ${sc.text}`}>
+																	<span className={`w-1.5 h-1.5 rounded-full ${sc.dot}`} />
+																	{STATUS_LABELS[record.status]}
+																</span>
+																{record.jarak_masuk != null && (
+																	<span className="text-[10px] text-slate-300 flex items-center gap-0.5">
+																		<FiMapPin className="h-2.5 w-2.5" />{record.jarak_masuk}m
+																	</span>
+																)}
+															</div>
+															{record.tujuan_dinas && (
+																<p className="text-xs text-violet-500 truncate flex items-center gap-1 mt-0.5">
+																	<FiMapPin className="h-3 w-3" /> {record.tujuan_dinas}
+																</p>
+															)}
+															{record.keterangan && (
+																<p className="text-xs text-slate-400 truncate mt-0.5">{record.keterangan}</p>
+															)}
+														</div>
+														{/* Time */}
+														<div className="text-right flex-shrink-0">
+															{record.jam_masuk && (
+																<p className="text-sm font-bold text-slate-700 tabular-nums">{formatTime(record.jam_masuk)}</p>
+															)}
+															{record.jam_keluar ? (
+																<p className="text-xs text-slate-400 tabular-nums">{formatTime(record.jam_keluar)}</p>
+															) : record.jam_masuk && new Date(record.tanggal).toDateString() !== new Date().toDateString() && !['izin', 'sakit', 'cuti'].includes(record.status) ? (
+																<span className="text-[9px] text-amber-500 font-bold">⚠️ Lupa pulang</span>
+															) : null}
+														</div>
+													</div>
+												</div>
+											</motion.div>
+										);
+									})
+								)}
+							</div>
+						</motion.div>
+					)}
+				</div>
+
+				{/* Bottom spacer for scroll */}
+				<div className="h-6" />
 			</div>
 
-			{/* ─── Modals ──────────────────────────────────── */}
+			{/* ═══════════════════════════════════════════════════ */}
+			{/* ─── Modals ──────────────────────────────────────── */}
+			{/* ═══════════════════════════════════════════════════ */}
 			<AnimatePresence>
 				{showDinasLuarModal && <DinasLuarModal onClose={() => setShowDinasLuarModal(false)} onConfirm={handleDinasLuarConfirm} />}
 			</AnimatePresence>
@@ -914,9 +1094,11 @@ const AbsensiPage = () => {
 				onClose={() => setSuccessPopup({ show: false, data: null })}
 			/>
 
-			<style>{`@keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }`}</style>
-			{/* z-index for modals */}
-			<div className="relative z-50" />
+			<style>{`
+				@keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+				.scrollbar-none::-webkit-scrollbar { display: none; }
+				.scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+			`}</style>
 		</div>
 	);
 };
@@ -937,24 +1119,31 @@ const DinasLuarModal = ({ onClose, onConfirm }) => {
 
 	return (
 		<>
-			<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50" onClick={onClose} />
+			<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-slate-900/50 backdrop-blur-md z-50" onClick={onClose} />
 			<motion.div {...slideUp} className="fixed bottom-0 left-0 right-0 z-50">
-				<div className="bg-white rounded-t-3xl shadow-[0_-8px_32px_rgba(15,23,42,0.12)]">
+				<div className="bg-white rounded-t-[2rem] shadow-[0_-8px_40px_rgba(15,23,42,0.15)]">
 					<div className="max-w-lg mx-auto p-6">
-						<div className="flex justify-center mb-5">
-							<div className="w-12 h-1.5 bg-slate-200 rounded-full" />
+						{/* Handle bar */}
+						<div className="flex justify-center mb-6">
+							<div className="w-10 h-1 bg-slate-200 rounded-full" />
 						</div>
-						<div className="flex items-center gap-3 mb-6">
-							<div className="w-16 h-16 bg-violet-50 rounded-2xl flex items-center justify-center border border-violet-100 overflow-hidden">
-								<Lottie animationData={manWaitingCarAnim} loop autoplay className="h-20 w-20" />
+
+						{/* Header */}
+						<div className="flex items-center gap-4 mb-6">
+							<div className="w-14 h-14 bg-violet-50 rounded-2xl flex items-center justify-center border border-violet-100/60 overflow-hidden shadow-sm">
+								<Lottie animationData={manWaitingCarAnim} loop autoplay className="h-16 w-16" />
 							</div>
 							<div>
-								<h3 className="text-lg font-bold text-slate-800">Dinas Luar</h3>
-								<p className="text-xs text-slate-400">Isi tujuan sebelum absen</p>
+								<h3 className="text-lg font-black text-slate-800">Dinas Luar</h3>
+								<p className="text-xs text-slate-400 mt-0.5">Isi tujuan sebelum absen</p>
 							</div>
 						</div>
+
+						{/* Input */}
 						<div className="mb-6">
-							<label className="block text-sm font-semibold text-slate-500 mb-2">Tujuan Dinas Luar <span className="text-red-400">*</span></label>
+							<label className="block text-sm font-bold text-slate-500 mb-2">
+								Tujuan Dinas Luar <span className="text-red-400">*</span>
+							</label>
 							<div className="relative">
 								<input
 									type="text"
@@ -962,24 +1151,30 @@ const DinasLuarModal = ({ onClose, onConfirm }) => {
 									onChange={(e) => setTujuan(e.target.value)}
 									onKeyDown={(e) => { if (e.key === 'Enter') handleConfirm(); }}
 									placeholder="Contoh: Rapat di Kecamatan Cibinong"
-									className="w-full px-4 py-3.5 pr-14 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 placeholder-slate-300 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100 transition-all"
+									className="w-full px-4 py-4 pr-14 bg-slate-50 border border-slate-200 rounded-2xl text-sm text-slate-700 placeholder-slate-300 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100 transition-all"
 									autoFocus
 								/>
 								<motion.button
 									whileTap={{ scale: 0.85 }}
 									onClick={handleConfirm}
-									className={`absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-lg flex items-center justify-center transition-all cursor-pointer ${tujuan.trim() ? 'bg-gradient-to-r from-violet-500 to-purple-500 shadow-md shadow-violet-200' : 'bg-slate-200'}`}
+									className={`absolute right-2.5 top-1/2 -translate-y-1/2 w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
+										tujuan.trim()
+											? "bg-gradient-to-r from-violet-500 to-purple-500 shadow-md shadow-violet-200"
+											: "bg-slate-200"
+									}`}
 								>
-									<FiChevronRight className={`h-4 w-4 ${tujuan.trim() ? 'text-white' : 'text-slate-400'}`} />
+									<FiChevronRight className={`h-4 w-4 ${tujuan.trim() ? "text-white" : "text-slate-400"}`} />
 								</motion.button>
 							</div>
 							<p className="text-[10px] text-slate-300 mt-2">GPS otomatis tercatat saat selfie</p>
 						</div>
+
+						{/* Actions */}
 						<div className="flex gap-3">
-							<motion.button {...pressAnimation} onClick={onClose} className="flex-1 py-3.5 bg-slate-50 border border-slate-200 text-slate-500 rounded-xl font-semibold hover:bg-slate-100 active:bg-slate-100 transition-colors cursor-pointer">
+							<motion.button {...pressAnimation} onClick={onClose} className="flex-1 py-3.5 bg-slate-50 border border-slate-200 text-slate-500 rounded-2xl font-bold hover:bg-slate-100 active:bg-slate-100 transition-colors cursor-pointer">
 								Batal
 							</motion.button>
-							<motion.button {...pressAnimation} onClick={handleConfirm} className="flex-1 py-3.5 bg-gradient-to-r from-violet-500 to-purple-500 text-white rounded-xl font-bold shadow-lg shadow-violet-200 cursor-pointer active:shadow-sm transition-shadow">
+							<motion.button {...pressAnimation} onClick={handleConfirm} className="flex-1 py-3.5 bg-gradient-to-r from-violet-500 to-purple-500 text-white rounded-2xl font-black shadow-lg shadow-violet-200 cursor-pointer active:shadow-sm transition-shadow">
 								Lanjut ke Kamera
 							</motion.button>
 						</div>
@@ -1084,33 +1279,36 @@ const CameraGPSModal = ({ type, onClose, onSubmit }) => {
 
 	return (
 		<>
-			<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-50" onClick={handleClose} />
+			<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50" onClick={handleClose} />
 			<motion.div
-				initial={{ opacity: 0, scale: 0.9, y: 40 }}
+				initial={{ opacity: 0, scale: 0.92, y: 40 }}
 				animate={{ opacity: 1, scale: 1, y: 0 }}
-				exit={{ opacity: 0, scale: 0.9, y: 40 }}
+				exit={{ opacity: 0, scale: 0.92, y: 40 }}
 				transition={{ type: "spring", stiffness: 300, damping: 25 }}
 				className="fixed inset-0 z-50 flex items-center justify-center p-4"
 			>
-				<div className="bg-white border border-slate-100 rounded-3xl shadow-[0_8px_40px_rgba(15,23,42,0.12)] max-w-md w-full overflow-hidden" onClick={(e) => e.stopPropagation()}>
+				<div className="bg-white rounded-[2rem] shadow-[0_8px_50px_rgba(15,23,42,0.15)] max-w-md w-full overflow-hidden border border-slate-100" onClick={(e) => e.stopPropagation()}>
 					{/* Header */}
-					<div className={`px-5 py-4 ${isMasuk ? "bg-gradient-to-r from-emerald-500 to-green-500" : "bg-gradient-to-r from-sky-500 to-blue-500"}`}>
+					<div className={`px-5 py-4 ${isMasuk ? "bg-gradient-to-r from-emerald-500 to-teal-500" : "bg-gradient-to-r from-sky-500 to-blue-500"}`}>
 						<div className="flex items-center justify-between">
-							<h3 className="font-bold text-lg text-white">{isMasuk ? "Absen Masuk" : "Absen Pulang"}</h3>
+							<div>
+								<h3 className="font-black text-lg text-white">{isMasuk ? "Absen Masuk" : "Absen Pulang"}</h3>
+								<p className="text-white/60 text-xs">Ambil foto selfie & pastikan GPS aktif</p>
+							</div>
 							<motion.button {...pressAnimation} onClick={handleClose} className="p-1.5 rounded-full hover:bg-white/20 transition-colors cursor-pointer">
-								<FiXCircle className="h-6 w-6 text-white/80" />
+								<FiXCircle className="h-6 w-6 text-white/70" />
 							</motion.button>
 						</div>
 					</div>
 
 					<div className="p-5">
-						{/* Camera */}
-						<div className="relative rounded-2xl overflow-hidden bg-slate-900 mb-4 aspect-[4/3]">
+						{/* Camera Preview */}
+						<div className="relative rounded-2xl overflow-hidden bg-slate-900 mb-4 aspect-[4/3] shadow-inner">
 							{cameraError ? (
-								<div className="absolute inset-0 flex items-center justify-center text-white text-center p-4">
+								<div className="absolute inset-0 flex items-center justify-center text-white text-center p-6">
 									<div>
-										<FiCamera className="h-12 w-12 mx-auto mb-3 opacity-30" />
-										<p className="text-sm text-white/50">{cameraError}</p>
+										<FiCamera className="h-12 w-12 mx-auto mb-3 opacity-20" />
+										<p className="text-sm text-white/40">{cameraError}</p>
 									</div>
 								</div>
 							) : capturedPhoto ? (
@@ -1121,7 +1319,7 @@ const CameraGPSModal = ({ type, onClose, onSubmit }) => {
 							<canvas ref={canvasRef} className="hidden" />
 						</div>
 
-						{/* Capture/Retake */}
+						{/* Capture / Retake */}
 						{!cameraError && (
 							<div className="flex justify-center mb-4">
 								{!capturedPhoto ? (
@@ -1133,28 +1331,32 @@ const CameraGPSModal = ({ type, onClose, onSubmit }) => {
 										<div className="w-11 h-11 rounded-full bg-red-500 shadow-md shadow-red-200" />
 									</motion.button>
 								) : (
-									<motion.button {...pressAnimation} onClick={retakePhoto} className="px-5 py-2.5 bg-slate-50 border border-slate-200 text-slate-500 rounded-xl text-sm font-semibold hover:bg-slate-100 active:bg-slate-100 cursor-pointer transition-colors">
+									<motion.button {...pressAnimation} onClick={retakePhoto} className="px-5 py-2.5 bg-slate-50 border border-slate-200 text-slate-500 rounded-xl text-sm font-bold hover:bg-slate-100 active:bg-slate-100 cursor-pointer transition-colors">
 										Ulangi Foto
 									</motion.button>
 								)}
 							</div>
 						)}
 
-						{/* GPS */}
-						<div className={`rounded-xl p-3 mb-4 border ${gpsError ? "bg-red-50 border-red-200" : gpsCoords ? "bg-emerald-50 border-emerald-200" : "bg-slate-50 border-slate-200"}`}>
-							<div className="flex items-center gap-2">
-								<FiMapPin className={`h-4 w-4 ${gpsError ? "text-red-400" : gpsCoords ? "text-emerald-500" : "text-slate-300"}`} />
+						{/* GPS Status */}
+						<div className={`rounded-2xl p-3.5 mb-4 border ${
+							gpsError ? "bg-red-50 border-red-200/60" :
+							gpsCoords ? "bg-emerald-50 border-emerald-200/60" :
+							"bg-slate-50 border-slate-200"
+						}`}>
+							<div className="flex items-center gap-2.5">
+								<FiMapPin className={`h-4 w-4 flex-shrink-0 ${gpsError ? "text-red-400" : gpsCoords ? "text-emerald-500" : "text-slate-300"}`} />
 								{gpsLoading ? (
 									<div className="flex items-center gap-2">
 										<div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
 										<span className="text-sm text-slate-400">Mengambil lokasi GPS...</span>
 									</div>
 								) : gpsError ? (
-									<span className="text-sm text-red-500">{gpsError}</span>
+									<span className="text-sm text-red-500 font-medium">{gpsError}</span>
 								) : (
-									<div className="flex-1">
-										<span className="text-sm text-emerald-600 font-medium">Lokasi terdeteksi</span>
-										<span className="text-[10px] text-slate-300 ml-2">~{Math.round(gpsCoords.accuracy)}m</span>
+									<div className="flex-1 flex items-center gap-2">
+										<span className="text-sm text-emerald-600 font-bold">Lokasi terdeteksi</span>
+										<span className="text-[10px] text-slate-300 bg-slate-50 px-1.5 py-0.5 rounded-md">~{Math.round(gpsCoords.accuracy)}m</span>
 									</div>
 								)}
 							</div>
@@ -1165,8 +1367,10 @@ const CameraGPSModal = ({ type, onClose, onSubmit }) => {
 							{...pressAnimation}
 							onClick={handleSubmit}
 							disabled={!capturedPhoto || !gpsCoords || submitting}
-							className={`w-full py-4 rounded-2xl font-bold text-white text-base flex items-center justify-center gap-2 shadow-lg disabled:opacity-40 cursor-pointer active:shadow-sm transition-shadow ${
-								isMasuk ? "bg-gradient-to-r from-emerald-500 to-green-500 shadow-emerald-200" : "bg-gradient-to-r from-sky-500 to-blue-500 shadow-sky-200"
+							className={`w-full py-4 rounded-2xl font-black text-white text-base flex items-center justify-center gap-2 shadow-lg disabled:opacity-40 cursor-pointer active:shadow-sm transition-shadow ${
+								isMasuk
+									? "bg-gradient-to-r from-emerald-500 to-teal-500 shadow-emerald-200/50"
+									: "bg-gradient-to-r from-sky-500 to-blue-500 shadow-sky-200/50"
 							}`}
 						>
 							{submitting ? (
@@ -1211,15 +1415,18 @@ const IzinModal = ({ onClose, onSubmit }) => {
 
 	return (
 		<>
-			<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50" onClick={onClose} />
+			<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-slate-900/50 backdrop-blur-md z-50" onClick={onClose} />
 			<motion.div {...slideUp} className="fixed bottom-0 left-0 right-0 z-50">
-				<div className="bg-white rounded-t-3xl shadow-[0_-8px_32px_rgba(15,23,42,0.12)]">
+				<div className="bg-white rounded-t-[2rem] shadow-[0_-8px_40px_rgba(15,23,42,0.15)]">
 					<div className="max-w-lg mx-auto p-6">
-						<div className="flex justify-center mb-5">
-							<div className="w-12 h-1.5 bg-slate-200 rounded-full" />
+						{/* Handle bar */}
+						<div className="flex justify-center mb-6">
+							<div className="w-10 h-1 bg-slate-200 rounded-full" />
 						</div>
-						<h3 className="text-lg font-bold text-slate-800 mb-5">Pengajuan Izin / Sakit / Cuti</h3>
 
+						<h3 className="text-lg font-black text-slate-800 mb-5">Pengajuan Izin / Sakit / Cuti</h3>
+
+						{/* Option cards */}
 						<div className="grid grid-cols-3 gap-3 mb-5">
 							{options.map((opt) => {
 								const Icon = opt.icon;
@@ -1231,7 +1438,9 @@ const IzinModal = ({ onClose, onSubmit }) => {
 										{...pressAnimation}
 										onClick={() => setStatus(opt.value)}
 										className={`p-4 rounded-2xl border-2 text-center transition-all cursor-pointer ${
-											isSelected ? `${cm.activeBorder} ${cm.activeBg} shadow-md` : "border-slate-100 bg-slate-50 hover:bg-slate-100"
+											isSelected
+												? `${cm.activeBorder} ${cm.activeBg} shadow-md`
+												: "border-slate-100 bg-slate-50 hover:bg-slate-100"
 										}`}
 									>
 										<motion.div animate={isSelected ? { scale: [1, 1.15, 1] } : {}} transition={{ repeat: Infinity, duration: 2 }}>
@@ -1243,23 +1452,25 @@ const IzinModal = ({ onClose, onSubmit }) => {
 							})}
 						</div>
 
+						{/* Textarea */}
 						<textarea
 							value={keterangan}
 							onChange={(e) => setKeterangan(e.target.value)}
 							placeholder="Keterangan (opsional)..."
 							rows={3}
-							className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 placeholder-slate-300 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-100 resize-none transition-all"
+							className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm text-slate-700 placeholder-slate-300 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-100 resize-none transition-all"
 						/>
 
+						{/* Actions */}
 						<div className="flex gap-3 mt-5">
-							<motion.button {...pressAnimation} onClick={onClose} className="flex-1 py-3.5 bg-slate-50 border border-slate-200 text-slate-500 rounded-xl font-semibold hover:bg-slate-100 active:bg-slate-100 transition-colors cursor-pointer">
+							<motion.button {...pressAnimation} onClick={onClose} className="flex-1 py-3.5 bg-slate-50 border border-slate-200 text-slate-500 rounded-2xl font-bold hover:bg-slate-100 active:bg-slate-100 transition-colors cursor-pointer">
 								Batal
 							</motion.button>
 							<motion.button
 								{...pressAnimation}
 								onClick={handleSubmit}
 								disabled={!status || loading}
-								className="flex-1 py-3.5 bg-gradient-to-r from-slate-700 to-slate-800 text-white rounded-xl font-bold shadow-lg shadow-slate-300 disabled:opacity-40 flex items-center justify-center gap-2 cursor-pointer active:shadow-sm transition-shadow"
+								className="flex-1 py-3.5 bg-gradient-to-r from-slate-700 to-slate-800 text-white rounded-2xl font-black shadow-lg shadow-slate-300 disabled:opacity-40 flex items-center justify-center gap-2 cursor-pointer active:shadow-sm transition-shadow"
 							>
 								{loading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : "Submit"}
 							</motion.button>
