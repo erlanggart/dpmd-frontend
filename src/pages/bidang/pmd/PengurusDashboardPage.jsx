@@ -61,6 +61,28 @@ const AGE_RANGE_LABELS = {
   unknown: "Tidak Diketahui",
 };
 
+const VERIFICATION_STATUS = {
+  verified: {
+    label: "Terverifikasi",
+    className: "bg-emerald-100 text-emerald-700 border-emerald-200",
+  },
+  unverified: {
+    label: "Belum Verifikasi",
+    className: "bg-amber-100 text-amber-700 border-amber-200",
+  },
+  ditolak: {
+    label: "Ditolak",
+    className: "bg-rose-100 text-rose-700 border-rose-200",
+  },
+};
+
+const getVerificationStatus = (status) => (
+  VERIFICATION_STATUS[status] || {
+    label: status || "Tidak diketahui",
+    className: "bg-slate-100 text-slate-600 border-slate-200",
+  }
+);
+
 export default function PengurusDashboardPage() {
   const navigate = useNavigate();
   const { getPath } = useBidangPath();
@@ -114,10 +136,7 @@ export default function PengurusDashboardPage() {
     return filters.desas.filter((d) => String(d.kecamatan_id) === String(selectedKecamatan));
   }, [filters.desas, selectedKecamatan]);
 
-  // Filtered verified data for table
-  const verifiedData = useMemo(() => {
-    return data.filter((p) => p.status_verifikasi === "verified");
-  }, [data]);
+  const displayedData = useMemo(() => data, [data]);
 
   const resetFilters = () => {
     setSearchQuery("");
@@ -127,6 +146,8 @@ export default function PengurusDashboardPage() {
   };
 
   const hasActiveFilters = searchQuery || selectedKecamatan || selectedDesa || selectedType;
+  const hasTypeStats = Boolean(summary && Object.keys(summary.typeStats || {}).length > 0);
+  const hasYearlyStats = Boolean(summary && Object.keys(summary.yearlyStats || {}).length > 0);
 
   // Compute max value for bar charts
   const maxAgeCount = summary ? Math.max(...Object.values(summary.ageRanges), 1) : 1;
@@ -161,7 +182,7 @@ export default function PengurusDashboardPage() {
                         Dashboard Pengurus
                       </h1>
                       <p className="hidden sm:block text-xs sm:text-sm text-gray-500">
-                        Ringkasan data pengurus aktif dan terverifikasi di kabupaten
+                        Ringkasan data pengurus aktif beserta status verifikasinya di kabupaten
                       </p>
                     </div>
                   </div>
@@ -218,6 +239,19 @@ export default function PengurusDashboardPage() {
                     {summary.genderStats.P}
                   </span>
                 </div>
+                {summary.genderStats.unknown > 0 && (
+                  <>
+                    <span className="text-gray-300">|</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="flex h-4 w-4 items-center justify-center rounded-full bg-slate-200 text-[10px] font-bold text-slate-600">
+                        ?
+                      </span>
+                      <span className="text-lg font-bold text-slate-600">
+                        {summary.genderStats.unknown}
+                      </span>
+                    </div>
+                  </>
+                )}
               </div>
             }
             label="Jenis Kelamin"
@@ -278,7 +312,11 @@ export default function PengurusDashboardPage() {
               <LuUsers className="w-4 h-4 text-purple-500" />
               Jenis Kelamin
             </h3>
-            <GenderChart male={summary.genderStats.L} female={summary.genderStats.P} />
+            <GenderChart
+              male={summary.genderStats.L}
+              female={summary.genderStats.P}
+              unknown={summary.genderStats.unknown}
+            />
           </div>
 
           {/* Age Distribution */}
@@ -340,14 +378,22 @@ export default function PengurusDashboardPage() {
         </div>
       )}
 
-      {/* Kelembagaan Type Distribution - Doughnut */}
-      {summary && Object.keys(summary.typeStats).length > 0 && (
-        <TypeDistributionChart typeStats={summary.typeStats} />
-      )}
-
-      {/* Yearly Pengurus Chart */}
-      {summary && summary.yearlyStats && Object.keys(summary.yearlyStats).length > 0 && (
-        <YearlyPengurusChart yearlyStats={summary.yearlyStats} />
+      {/* Kelembagaan Charts */}
+      {summary && (hasTypeStats || hasYearlyStats) && (
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
+          {hasTypeStats && (
+            <TypeDistributionChart
+              typeStats={summary.typeStats}
+              className={hasYearlyStats ? "xl:col-span-4" : "xl:col-span-12"}
+            />
+          )}
+          {hasYearlyStats && (
+            <YearlyPengurusChart
+              yearlyStats={summary.yearlyStats}
+              className={hasTypeStats ? "xl:col-span-8" : "xl:col-span-12"}
+            />
+          )}
+        </div>
       )}
 
       {/* Search & Filters */}
@@ -435,20 +481,20 @@ export default function PengurusDashboardPage() {
         )}
       </div>
 
-      {/* Verified Pengurus Table */}
+      {/* Pengurus Table */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
           <h3 className="font-semibold text-gray-800">
-            Pengurus Terverifikasi
+            Daftar Pengurus
             <span className="text-sm font-normal text-gray-500 ml-2">
-              ({verifiedData.length} orang)
+              ({displayedData.length} orang)
             </span>
           </h3>
         </div>
-        {verifiedData.length === 0 ? (
+        {displayedData.length === 0 ? (
           <div className="p-8 text-center text-gray-400">
             <LuUsers className="w-10 h-10 mx-auto mb-2 opacity-50" />
-            <p>Tidak ada data pengurus terverifikasi</p>
+            <p>Tidak ada data pengurus</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -461,48 +507,58 @@ export default function PengurusDashboardPage() {
                   <th className="text-left px-4 py-3 font-medium">Kelembagaan</th>
                   <th className="text-left px-4 py-3 font-medium">Desa</th>
                   <th className="text-left px-4 py-3 font-medium">Kecamatan</th>
+                  <th className="text-left px-4 py-3 font-medium">Verifikasi</th>
                   <th className="text-left px-4 py-3 font-medium">JK</th>
                   <th className="text-left px-4 py-3 font-medium">Pendidikan</th>
                   <th className="text-center px-4 py-3 font-medium">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {verifiedData.map((p, idx) => (
-                  <tr
-                    key={p.id}
-                    className="hover:bg-blue-50/50 transition-colors cursor-pointer"
-                    onClick={() => navigate(getPath(`/bidang/pmd/pengurus/${p.id}`))}
-                  >
-                    <td className="px-4 py-3 text-gray-500">{idx + 1}</td>
-                    <td className="px-4 py-3 font-medium text-gray-800">
-                      {p.nama_lengkap}
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">{p.jabatan}</td>
-                    <td className="px-4 py-3">
-                      <span className="inline-block px-2 py-0.5 text-xs font-medium bg-teal-100 text-teal-700 rounded-full">
-                        {TYPE_LABELS[p.pengurusable_type] || p.pengurusable_type}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">{p.desa_nama}</td>
-                    <td className="px-4 py-3 text-gray-600">{p.kecamatan_nama}</td>
-                    <td className="px-4 py-3 text-gray-600">
-                      {p.jenis_kelamin === "Laki_laki" ? "L" : p.jenis_kelamin === "Perempuan" ? "P" : "-"}
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">{p.pendidikan || "-"}</td>
-                    <td className="px-4 py-3 text-center">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(getPath(`/bidang/pmd/pengurus/${p.id}`));
-                        }}
-                        className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
-                        title="Lihat Detail"
-                      >
-                        <LuExternalLink className="w-4 h-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {displayedData.map((p, idx) => {
+                  const verificationStatus = getVerificationStatus(p.status_verifikasi);
+
+                  return (
+                    <tr
+                      key={p.id}
+                      className="hover:bg-blue-50/50 transition-colors cursor-pointer"
+                      onClick={() => navigate(getPath(`/bidang/pmd/pengurus/${p.id}`))}
+                    >
+                      <td className="px-4 py-3 text-gray-500">{idx + 1}</td>
+                      <td className="px-4 py-3 font-medium text-gray-800">
+                        {p.nama_lengkap}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">{p.jabatan}</td>
+                      <td className="px-4 py-3">
+                        <span className="inline-block px-2 py-0.5 text-xs font-medium bg-teal-100 text-teal-700 rounded-full">
+                          {TYPE_LABELS[p.pengurusable_type] || p.pengurusable_type}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">{p.desa_nama}</td>
+                      <td className="px-4 py-3 text-gray-600">{p.kecamatan_nama}</td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${verificationStatus.className}`}>
+                          {verificationStatus.label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">
+                        {p.jenis_kelamin === "Laki_laki" ? "L" : p.jenis_kelamin === "Perempuan" ? "P" : "-"}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">{p.pendidikan || "-"}</td>
+                      <td className="px-4 py-3 text-center">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(getPath(`/bidang/pmd/pengurus/${p.id}`));
+                          }}
+                          className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
+                          title="Lihat Detail"
+                        >
+                          <LuExternalLink className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -537,10 +593,20 @@ function SummaryCard({ icon, label, value, bgColor, borderColor, onClick, clicka
   );
 }
 
-function GenderChart({ male, female }) {
-  const total = male + female || 1;
+function GenderChart({ male, female, unknown = 0 }) {
+  const total = male + female + unknown;
+
+  if (total === 0) {
+    return (
+      <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-4 py-6 text-center text-sm text-gray-400">
+        Belum ada data jenis kelamin yang bisa divisualisasikan.
+      </div>
+    );
+  }
+
   const malePct = Math.round((male / total) * 100);
-  const femalePct = 100 - malePct;
+  const femalePct = Math.round((female / total) * 100);
+  const unknownPct = Math.max(0, 100 - malePct - femalePct);
 
   return (
     <div>
@@ -562,6 +628,14 @@ function GenderChart({ male, female }) {
             {femalePct > 10 ? `${femalePct}%` : ""}
           </div>
         )}
+        {unknownPct > 0 && (
+          <div
+            className="bg-slate-400 flex items-center justify-center text-white text-xs font-medium transition-all duration-500"
+            style={{ width: `${unknownPct}%` }}
+          >
+            {unknownPct > 10 ? `${unknownPct}%` : ""}
+          </div>
+        )}
       </div>
       <div className="flex justify-between text-sm">
         <div className="flex items-center gap-2">
@@ -571,6 +645,10 @@ function GenderChart({ male, female }) {
         <div className="flex items-center gap-2">
           <span className="w-3 h-3 rounded-full bg-pink-500" />
           <span className="text-gray-600">Perempuan ({female})</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="w-3 h-3 rounded-full bg-slate-400" />
+          <span className="text-gray-600">Tidak diketahui ({unknown})</span>
         </div>
       </div>
     </div>
@@ -599,7 +677,7 @@ const TYPE_DOUGHNUT_COLORS = [
   "#3b82f6", "#06b6d4", "#9333ea", "#ea580c", "#4f46e5", "#ec4899", "#16a34a", "#eab308",
 ];
 
-function TypeDistributionChart({ typeStats }) {
+function TypeDistributionChart({ typeStats, className = "" }) {
   const MAIN_TYPES = ["RW", "RT", "Posyandu", "Karang Taruna", "LPM", "PKK", "Satlinmas"];
   const merged = {};
   let lainnya = 0;
@@ -649,20 +727,26 @@ function TypeDistributionChart({ typeStats }) {
   };
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5">
+    <div className={`bg-white rounded-xl border border-gray-200 p-5 ${className}`.trim()}>
       <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
         <LuBuilding2 className="w-4 h-4 text-teal-500" />
         Distribusi per Kelembagaan
       </h3>
-      <div className="flex flex-col md:flex-row items-center gap-6">
-        <div className="w-56 h-56 flex-shrink-0">
+      <p className="mb-5 text-xs text-gray-400">
+        Komposisi pengurus berdasarkan jenis kelembagaan pada hasil filter yang sedang aktif.
+      </p>
+      <div className="grid grid-cols-1 gap-5">
+        <div className="mx-auto h-56 w-56 max-w-full">
           <Doughnut data={chartData} options={chartOptions} />
         </div>
-        <div className="flex-1 grid grid-cols-2 gap-x-6 gap-y-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-1">
           {sorted.map(([type, count], i) => (
-            <div key={type} className="flex items-center gap-2 py-1.5">
+            <div
+              key={type}
+              className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50/70 px-3 py-2"
+            >
               <span
-                className="w-3 h-3 rounded-full flex-shrink-0"
+                className="h-3 w-3 rounded-full flex-shrink-0"
                 style={{ backgroundColor: TYPE_DOUGHNUT_COLORS[i] }}
               />
               <span className="text-sm text-gray-700 flex-1">{type}</span>
@@ -686,7 +770,7 @@ const YEARLY_COLORS = {
   Lainnya: "#eab308",
 };
 
-function YearlyPengurusChart({ yearlyStats }) {
+function YearlyPengurusChart({ yearlyStats, className = "" }) {
   const MAIN_TYPES = ["RW", "RT", "Posyandu", "Karang Taruna", "LPM", "PKK", "Satlinmas"];
   const years = Object.keys(yearlyStats).sort();
 
@@ -768,7 +852,7 @@ function YearlyPengurusChart({ yearlyStats }) {
   };
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5">
+    <div className={`bg-white rounded-xl border border-gray-200 p-5 ${className}`.trim()}>
       <h3 className="text-sm font-semibold text-gray-700 mb-1 flex items-center gap-2">
         <LuCalendarDays className="w-4 h-4 text-blue-500" />
         Jumlah Pengurus per Kelembagaan per Tahun

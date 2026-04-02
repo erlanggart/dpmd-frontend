@@ -202,8 +202,9 @@ const SpkedPage = lazy(() => import("./pages/bidang/SpkedPage"));
 const KKDPage = lazy(() => import("./pages/bidang/KKDPage"));
 const PMDPage = lazy(() => import("./pages/bidang/PMDPage"));
 const PemdesPage = lazy(() => import("./pages/bidang/PemdesPage"));
-const AparaturDesaExternalPage = lazy(() => import("./pages/bidang/pemdes/AparaturDesaPage"));
+const PemdesAparaturDesaPage = lazy(() => import("./pages/bidang/pemdes/AparaturDesaPage"));
 const PemdesProfilDesaPage = lazy(() => import("./pages/bidang/pemdes/ProfilDesaDashboardPage"));
+const PemdesProfilDesaDetailPage = lazy(() => import("./pages/bidang/pemdes/ProfilDesaDetailPage"));
 const ProdukHukumPemdesPage = lazy(() => import("./pages/bidang/pemdes/ProdukHukumPage"));
 const ProdukHukumDetailPemdesPage = lazy(() => import("./pages/bidang/pemdes/ProdukHukumDetailPage"));
 
@@ -365,9 +366,6 @@ const StatistikBumdes = lazy(
 );
 const StatistikKelembagaan = lazy(
   () => import("./pages/core-dashboard/StatistikKelembagaan"),
-);
-const StatistikAparaturDesa = lazy(
-  () => import("./pages/core-dashboard/StatistikAparaturDesa"),
 );
 const StatistikAdd = lazy(() => import("./pages/kepala-dinas/StatistikAdd"));
 // DD Statistik Sub-categories
@@ -870,7 +868,8 @@ function App() {
                   {/* Pemdes (Pemerintahan Desa) */}
                   <Route path="pemdes" element={<PemdesPage />} />
                   <Route path="pemdes/profil-desa" element={<PemdesProfilDesaPage />} />
-                  <Route path="pemdes/aparatur-desa" element={<AparaturDesaExternalPage />} />
+                  <Route path="pemdes/profil-desa/:desaId" element={<PemdesProfilDesaDetailPage />} />
+                  <Route path="pemdes/aparatur-desa" element={<PemdesAparaturDesaPage />} />
                   <Route path="pemdes/produk-hukum" element={<ProdukHukumPemdesPage />} />
                   <Route path="pemdes/produk-hukum/:id" element={<ProdukHukumDetailPemdesPage />} />
 
@@ -965,7 +964,8 @@ function App() {
                   }
                 >
                   <Route path="profil-desa" element={<PemdesProfilDesaPage />} />
-                  <Route path="aparatur-desa" element={<AparaturDesaExternalPage />} />
+                  <Route path="profil-desa/:desaId" element={<PemdesProfilDesaDetailPage />} />
+                  <Route path="aparatur-desa" element={<PemdesAparaturDesaPage />} />
                   <Route path="produk-hukum" element={<ProdukHukumPemdesPage />} />
                   <Route path="produk-hukum/:id" element={<ProdukHukumDetailPemdesPage />} />
                 </Route>
@@ -1090,7 +1090,8 @@ function App() {
 
                   {/* Pemdes sub-routes */}
                   <Route path="bidang/pemdes/profil-desa" element={<PemdesProfilDesaPage />} />
-                  <Route path="bidang/pemdes/aparatur-desa" element={<AparaturDesaExternalPage />} />
+                  <Route path="bidang/pemdes/profil-desa/:desaId" element={<PemdesProfilDesaDetailPage />} />
+                  <Route path="bidang/pemdes/aparatur-desa" element={<PemdesAparaturDesaPage />} />
                   <Route path="bidang/pemdes/produk-hukum" element={<ProdukHukumPemdesPage />} />
                   <Route path="bidang/pemdes/produk-hukum/:id" element={<ProdukHukumDetailPemdesPage />} />
                 </Route>
@@ -1181,8 +1182,48 @@ function App() {
                     element={<StatistikKelembagaan />}
                   />
                   <Route
+                    path="statistik-profil-desa"
+                    element={
+                      <PemdesProfilDesaPage
+                        backPath="/core-dashboard/dashboard"
+                        backLabel="Kembali ke Core Dashboard"
+                        detailBasePath="/core-dashboard/statistik-profil-desa"
+                      />
+                    }
+                  />
+                  <Route
+                    path="statistik-profil-desa/:desaId"
+                    element={
+                      <PemdesProfilDesaDetailPage
+                        listPath="/core-dashboard/statistik-profil-desa"
+                        backLabel="Kembali ke Statistik Profil Desa"
+                      />
+                    }
+                  />
+                  <Route
+                    path="statistik-produk-hukum"
+                    element={
+                      <ProdukHukumPemdesPage
+                        detailBasePath="/core-dashboard/statistik-produk-hukum"
+                      />
+                    }
+                  />
+                  <Route
+                    path="statistik-produk-hukum/:id"
+                    element={
+                      <ProdukHukumDetailPemdesPage
+                        backPath="/core-dashboard/statistik-produk-hukum"
+                      />
+                    }
+                  />
+                  <Route
                     path="statistik-aparatur-desa"
-                    element={<StatistikAparaturDesa />}
+                    element={
+                      <PemdesAparaturDesaPage
+                        mode="core-dashboard"
+                        allowedTabs={["database", "external"]}
+                      />
+                    }
                   />
                   <Route
                     path="statistik-bankeu"

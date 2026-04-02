@@ -1217,59 +1217,234 @@ Tutup
 // ============================================================
 // Main Page Component
 // ============================================================
-const AparaturDesaPage = () => {
-const [activeTab, setActiveTab] = useState('database');
+const PAGE_VARIANTS = {
+	pemdes: {
+		eyebrow: 'Bidang Pemerintahan Desa',
+		title: 'Aparatur Desa',
+		description:
+			'Pantau data aparatur desa lintas sumber, audit data aplikasi, dan bandingkan dengan data Dapur Desa dalam satu halaman kerja.',
+		gradient: 'from-sky-700 via-blue-700 to-cyan-700',
+		badge: 'Internal + External',
+		summaryTitle: 'Mode Monitoring Pemdes',
+		summaryDescription:
+			'Gunakan Database Lokal untuk melihat data yang sudah masuk ke aplikasi, lalu buka Dapur Desa untuk validasi silang dengan sumber external.',
+		highlights: [
+			{ label: 'Cakupan', value: 'Lintas sumber' },
+			{ label: 'Fungsi', value: 'Monitoring & audit' },
+			{ label: 'Detail', value: 'Tabel + modal' },
+		],
+	},
+	'core-dashboard': {
+		eyebrow: 'Core Dashboard DPMD',
+		title: 'Aparatur Desa',
+		description:
+			'Pantau data aparatur desa dari database aplikasi maupun Dapur Desa langsung dari core dashboard, lalu bandingkan sumber yang paling relevan untuk kebutuhan monitoring.',
+		gradient: 'from-emerald-700 via-teal-700 to-cyan-700',
+		badge: 'Internal + External',
+		summaryTitle: 'Mode Monitoring Core Dashboard',
+		summaryDescription:
+			'Core dashboard kini dapat menampilkan dua sumber data aparatur. Gunakan Database Lokal untuk melihat data aplikasi, lalu pindah ke Dapur Desa saat perlu pembanding dari API external.',
+		highlights: [
+			{ label: 'Sumber', value: '2 pilihan data' },
+			{ label: 'Fungsi', value: 'Monitoring wilayah' },
+			{ label: 'Konsistensi', value: 'Internal + external' },
+		],
+	},
+};
 
-const tabs = [
-{ id: 'database', label: 'Database Lokal', icon: Database, desc: 'Data yang diinput desa' },
-{ id: 'external', label: 'Dapur Desa', icon: Globe, desc: 'Data dari API External' },
+const TAB_DEFINITIONS = [
+	{
+		id: 'database',
+		label: 'Database Lokal',
+		icon: Database,
+		desc: 'Data aparatur yang sudah tersimpan di aplikasi DPMD dari input desa.',
+		badge: 'Internal App',
+		accent: 'from-blue-500 to-cyan-500',
+		activeClass: 'border-blue-200 bg-blue-50 text-blue-700',
+	},
+	{
+		id: 'external',
+		label: 'Dapur Desa',
+		icon: Globe,
+		desc: 'Data aparatur yang diambil langsung dari API external Dapur Desa.',
+		badge: 'External API',
+		accent: 'from-emerald-500 to-teal-500',
+		activeClass: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+	},
 ];
 
-return (
-<div className="min-h-screen bg-gray-50 pb-6">
-{/* Header */}
-<div className="bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 text-white">
-<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-<div className="flex items-center gap-4">
-<div className="h-16 w-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
-<Users className="h-8 w-8" />
-</div>
-<div>
-<h1 className="text-2xl font-bold">Aparatur Desa</h1>
-<p className="text-blue-100 mt-1">Bidang Pemerintahan Desa</p>
-</div>
-</div>
-</div>
-</div>
+const AparaturDesaPage = ({
+	mode = 'pemdes',
+	allowedTabs = ['database', 'external'],
+	initialTab,
+}) => {
+	const variant = PAGE_VARIANTS[mode] || PAGE_VARIANTS.pemdes;
+	const filteredTabs = TAB_DEFINITIONS.filter((tab) => allowedTabs.includes(tab.id));
+	const tabs = filteredTabs.length > 0 ? filteredTabs : TAB_DEFINITIONS;
+	const fallbackTab = tabs[0]?.id || 'database';
+	const defaultTab = initialTab && tabs.some((tab) => tab.id === initialTab) ? initialTab : fallbackTab;
+	const [activeTab, setActiveTab] = useState(defaultTab);
+	const hasActiveTab = tabs.some((tab) => tab.id === activeTab);
 
-<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-{/* Tab Switcher */}
-<div className="bg-white rounded-xl shadow-sm border border-gray-200 p-1.5 mb-6 inline-flex gap-1">
-{tabs.map(tab => (
-<button
-key={tab.id}
-onClick={() => setActiveTab(tab.id)}
-className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
-activeTab === tab.id
-? 'bg-blue-600 text-white shadow-sm'
-: 'text-gray-600 hover:bg-gray-100'
-}`}
->
-<tab.icon className="h-4 w-4" />
-<span>{tab.label}</span>
-<span className={`hidden sm:inline text-xs ${activeTab === tab.id ? 'text-blue-200' : 'text-gray-400'}`}>
-- {tab.desc}
-</span>
-</button>
-))}
-</div>
+	useEffect(() => {
+		if (!hasActiveTab) {
+			setActiveTab(fallbackTab);
+		}
+	}, [fallbackTab, hasActiveTab]);
 
-{/* Tab Content */}
-{activeTab === 'database' && <DatabaseTab />}
-{activeTab === 'external' && <ExternalTab />}
-</div>
-</div>
-);
+	const activeSource = tabs.find((tab) => tab.id === activeTab) || tabs[0];
+	const ActiveSourceIcon = activeSource?.icon || Users;
+	const modeLabel = tabs.length > 1 ? 'Internal + external' : activeSource?.badge || '-';
+
+	return (
+		<div className="min-h-screen bg-slate-50 pb-8">
+			<div className={`relative overflow-hidden bg-gradient-to-br ${variant.gradient} text-white rounded-xl`}>
+				<div className="absolute inset-0 opacity-20">
+					<div className="absolute -top-20 right-0 h-56 w-56 rounded-full bg-white blur-3xl" />
+					<div className="absolute bottom-0 left-10 h-48 w-48 rounded-full bg-cyan-300 blur-3xl" />
+				</div>
+
+				<div className="relative px-4 sm:px-6 lg:px-8 py-8 lg:py-10">
+					<div className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(320px,0.85fr)] items-start">
+						<div>
+							<div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-white/90 backdrop-blur-sm">
+								<Shield className="h-3.5 w-3.5" />
+								<span>{variant.badge}</span>
+							</div>
+
+							<div className="mt-5 flex items-start gap-4">
+								<div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-sm shadow-lg">
+									<Users className="h-8 w-8" />
+								</div>
+								<div>
+									<p className="text-sm font-medium text-white/75">{variant.eyebrow}</p>
+									<h1 className="mt-1 text-3xl font-bold tracking-tight sm:text-4xl">{variant.title}</h1>
+									<p className="mt-3 max-w-3xl text-sm leading-6 text-white/80 sm:text-base">
+										{variant.description}
+									</p>
+								</div>
+							</div>
+
+							<div className="mt-6 flex flex-wrap gap-3 text-sm">
+								{variant.highlights.map((item) => (
+									<div key={item.label} className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 backdrop-blur-sm">
+										<p className="text-xs uppercase tracking-[0.18em] text-white/60">{item.label}</p>
+										<p className="mt-1 font-semibold text-white">{item.value}</p>
+									</div>
+								))}
+							</div>
+						</div>
+
+						<div className="rounded-3xl border border-white/15 bg-white/10 p-5 shadow-lg backdrop-blur-sm">
+							<p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/65">Ringkasan Tampilan</p>
+							<h2 className="mt-2 text-xl font-semibold text-white">{variant.summaryTitle}</h2>
+							<p className="mt-2 text-sm leading-6 text-white/75">{variant.summaryDescription}</p>
+
+							<div className="mt-5 space-y-3">
+								<div className="rounded-2xl bg-white/10 px-4 py-3">
+									<p className="text-xs uppercase tracking-[0.18em] text-white/60">Sumber Aktif</p>
+									<div className="mt-2 flex items-center gap-3">
+										<div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/15">
+											<ActiveSourceIcon className="h-5 w-5" />
+										</div>
+										<div>
+											<p className="font-semibold text-white">{activeSource?.label || '-'}</p>
+											<p className="text-xs text-white/65">{activeSource?.badge || '-'}</p>
+										</div>
+									</div>
+								</div>
+
+								<div className="grid grid-cols-2 gap-3">
+									<div className="rounded-2xl bg-white/10 px-4 py-3">
+										<p className="text-xs uppercase tracking-[0.18em] text-white/60">Jumlah Kanal</p>
+										<p className="mt-2 text-2xl font-bold text-white">{tabs.length}</p>
+									</div>
+									<div className="rounded-2xl bg-white/10 px-4 py-3">
+										<p className="text-xs uppercase tracking-[0.18em] text-white/60">Mode Data</p>
+										<p className="mt-2 text-sm font-semibold text-white">
+											{modeLabel}
+										</p>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div className="relative z-10  -mt-6 px-4 sm:px-6 lg:px-8">
+				<div className="grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(280px,0.65fr)] mb-6">
+					<div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-lg lg:p-6">
+						<div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+							<div>
+								<p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Sumber Data</p>
+								<h2 className="mt-1 text-xl font-semibold text-slate-900">Pilih konteks data aparatur</h2>
+							</div>
+							<p className="text-sm text-slate-500">
+								{tabs.length > 1 ? 'Pilih sumber sesuai kebutuhan monitoring.' : 'Halaman ini memakai satu sumber data yang sudah ditetapkan.'}
+							</p>
+						</div>
+
+						<div className={`mt-5 grid gap-3 ${tabs.length > 1 ? 'md:grid-cols-2' : 'md:grid-cols-1'}`}>
+							{tabs.map((tab) => {
+								const TabIcon = tab.icon;
+								const isActive = activeTab === tab.id;
+
+								return (
+									<button
+										key={tab.id}
+										type="button"
+										onClick={() => setActiveTab(tab.id)}
+										className={`group rounded-3xl border p-4 text-left transition-all ${
+											isActive
+												? `${tab.activeClass} shadow-lg`
+												: 'border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 hover:bg-white hover:shadow-sm'
+										} ${tabs.length === 1 ? 'cursor-default' : ''}`}
+									>
+										<div className="flex items-start justify-between gap-3">
+											<div className={`flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ${tab.accent} text-white shadow-md`}>
+												<TabIcon className="h-5 w-5" />
+											</div>
+											<span className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${
+												isActive ? 'bg-white/70 text-slate-700' : 'bg-white text-slate-500'
+											}`}>
+												{tab.badge}
+											</span>
+										</div>
+
+										<div className="mt-4">
+											<h3 className="text-lg font-semibold">{tab.label}</h3>
+											<p className={`mt-2 text-sm leading-6 ${isActive ? 'text-current/80' : 'text-slate-500'}`}>
+												{tab.desc}
+											</p>
+										</div>
+									</button>
+								);
+							})}
+						</div>
+					</div>
+
+					<div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-lg lg:p-6">
+						<p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Arah Penggunaan</p>
+						<h2 className="mt-1 text-xl font-semibold text-slate-900">{activeSource?.label}</h2>
+						<p className="mt-3 text-sm leading-6 text-slate-600">{activeSource?.desc}</p>
+
+						<div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+							<p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Catatan</p>
+							<p className="mt-2 text-sm leading-6 text-slate-600">
+								{mode === 'core-dashboard'
+									? 'Di core dashboard, Anda sekarang bisa berpindah antara data internal aplikasi dan data external Dapur Desa agar analisis aparatur tidak bergantung pada satu sumber saja.'
+									: 'Di halaman Pemdes, Anda bisa berpindah antara data internal aplikasi dan Dapur Desa untuk memudahkan monitoring serta validasi silang.'}
+							</p>
+						</div>
+					</div>
+				</div>
+
+				{activeTab === 'database' && <DatabaseTab />}
+				{activeTab === 'external' && <ExternalTab />}
+			</div>
+		</div>
+	);
 };
 
 export default AparaturDesaPage;

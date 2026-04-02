@@ -30,6 +30,8 @@ const CoreDashboardLayout = () => {
   // Determine base path based on user role (for Home button)
   const getBasePath = () => {
     const rolePathMap = {
+      'superadmin': '/superadmin/dashboard',
+      'admin': '/superadmin/dashboard',
       'kepala_dinas': '/dpmd',
       'sekretaris_dinas': '/dpmd',
       'kepala_bidang': '/dpmd',
@@ -40,23 +42,6 @@ const CoreDashboardLayout = () => {
   };
 
   const basePath = getBasePath();
-
-  // Role-based dashboard path mapping (for Kembali ke Beranda button)
-  const dashboardPath = useMemo(() => {
-    const roleMap = {
-      superadmin: '/superadmin/dashboard',
-      admin: '/superadmin/dashboard',
-      kepala_dinas: '/kepala-dinas/dashboard',
-      sekretaris_dinas: '/sekretaris-dinas/dashboard',
-      kepala_bidang: '/kepala-bidang/dashboard',
-      ketua_tim: '/ketua-tim/dashboard',
-      pegawai: '/pegawai/dashboard',
-      sarpras: '/superadmin/dashboard',
-      sekretariat: '/superadmin/dashboard',
-      desa: '/desa/dashboard',
-    };
-    return roleMap[user?.role] || '/pegawai/dashboard';
-  }, [user?.role]);
 
   // Handle resize with debounce
   useEffect(() => {
@@ -110,9 +95,25 @@ const CoreDashboardLayout = () => {
     },
 
     {
+      path: '/core-dashboard/statistik-profil-desa',
+      icon: 'chart',
+      label: 'Statistik Profil Desa',
+      gradient: 'from-amber-500 to-orange-600',
+      color: 'text-amber-600'
+    },
+
+    {
+      path: '/core-dashboard/statistik-produk-hukum',
+      icon: 'file',
+      label: 'Statistik Produk Hukum',
+      gradient: 'from-violet-500 to-purple-600',
+      color: 'text-violet-600'
+    },
+
+    {
       path: '/core-dashboard/statistik-aparatur-desa',
       icon: 'users',
-      label: 'Statistik Aparatur',
+      label: 'Aparatur Desa',
       gradient: 'from-teal-500 to-emerald-600',
       color: 'text-teal-600'
     },

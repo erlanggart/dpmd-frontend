@@ -48,7 +48,7 @@ const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent
 	);
 };
 
-const ProdukHukumPage = () => {
+const ProdukHukumPage = ({ detailBasePath = '/pemdes/produk-hukum' }) => {
 	const navigate = useNavigate();
 	const [loading, setLoading] = useState(true);
 	const [data, setData] = useState([]);
@@ -166,7 +166,7 @@ const ProdukHukumPage = () => {
 	};
 
 	const viewDetail = (item) => {
-		navigate(`/pemdes/produk-hukum/${item.id}`);
+		navigate(`${detailBasePath}/${item.id}`);
 	};
 
 	const getJenisLabel = (singkatan) => {

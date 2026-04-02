@@ -6,6 +6,7 @@ import {
   TrendingUp, 
   Users, 
   UserCheck,
+  Building2,
   MapPin, 
   DollarSign,
   BarChart3,
@@ -13,6 +14,7 @@ import {
   Zap,
   ArrowRight,
   FileText,
+  Scale,
   Target,
   Star,
   Calendar
@@ -64,6 +66,26 @@ const WelcomeDashboard = () => {
       iconBg: "bg-gradient-to-br from-sky-400 to-blue-500",
       path: "/core-dashboard/statistik-kelembagaan",
       stat: "6 Jenis LKD"
+    },
+    {
+      icon: <Building2 className="w-10 h-10" />,
+      title: "Profil Desa",
+      description: "Pantau kelengkapan profil, status desa, dan kualitas data wilayah",
+      gradient: "from-amber-400 via-orange-500 to-red-500",
+      bgGradient: "from-amber-500/20 to-red-500/20",
+      iconBg: "bg-gradient-to-br from-amber-400 to-orange-500",
+      path: "/core-dashboard/statistik-profil-desa",
+      stat: "Profil Wilayah"
+    },
+    {
+      icon: <Scale className="w-10 h-10" />,
+      title: "Produk Hukum",
+      description: "Lihat rekap peraturan desa, jenis dokumen, dan status keberlakuan",
+      gradient: "from-violet-400 via-purple-500 to-indigo-600",
+      bgGradient: "from-violet-500/20 to-indigo-600/20",
+      iconBg: "bg-gradient-to-br from-violet-400 to-purple-500",
+      path: "/core-dashboard/statistik-produk-hukum",
+      stat: "Perdes & Perkades"
     },
     {
       icon: <BarChart3 className="w-10 h-10" />,
@@ -118,12 +140,12 @@ const WelcomeDashboard = () => {
     {
       icon: <UserCheck className="w-10 h-10" />,
       title: "Aparatur Desa",
-      description: "Statistik Kepala Desa, Perangkat & BPD",
+      description: "Bandingkan data aparatur dari database aplikasi dan Dapur Desa",
       gradient: "from-teal-400 via-emerald-500 to-green-600",
       bgGradient: "from-teal-500/20 to-green-600/20",
       iconBg: "bg-gradient-to-br from-teal-400 to-emerald-500",
       path: "/core-dashboard/statistik-aparatur-desa",
-      stat: "10.000+ Data"
+      stat: "2 Sumber Data"
     },
     {
       icon: <FileText className="w-10 h-10" />,

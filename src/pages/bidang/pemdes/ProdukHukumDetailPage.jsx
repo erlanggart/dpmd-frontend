@@ -16,7 +16,7 @@ import {
 import api from '../../../api';
 import toast from 'react-hot-toast';
 
-const ProdukHukumDetailPage = () => {
+const ProdukHukumDetailPage = ({ backPath }) => {
 	const { id } = useParams();
 	const navigate = useNavigate();
 	const [data, setData] = useState(null);
@@ -24,6 +24,15 @@ const ProdukHukumDetailPage = () => {
 	const [error, setError] = useState(null);
 	const [pdfBlobUrl, setPdfBlobUrl] = useState(null);
 	const [pdfLoading, setPdfLoading] = useState(false);
+
+	const handleBack = () => {
+		if (backPath) {
+			navigate(backPath);
+			return;
+		}
+
+		navigate(-1);
+	};
 
 	useEffect(() => {
 		fetchDetail();
@@ -120,7 +129,7 @@ const ProdukHukumDetailPage = () => {
 					<AlertCircle className="h-16 w-16 text-red-300 mb-4" />
 					<p className="text-gray-600 text-lg mb-4">{error || 'Data tidak ditemukan'}</p>
 					<button
-						onClick={() => navigate(-1)}
+						onClick={handleBack}
 						className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition"
 					>
 						<ArrowLeft className="h-4 w-4" />
@@ -137,7 +146,7 @@ const ProdukHukumDetailPage = () => {
 			<div className="bg-gradient-to-r from-teal-600 to-teal-700 rounded-xl p-6 mb-6 text-white">
 				<div className="flex items-center gap-4 mb-3">
 					<button
-						onClick={() => navigate(-1)}
+						onClick={handleBack}
 						className="flex items-center gap-2 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm transition"
 					>
 						<ArrowLeft className="h-4 w-4" />
