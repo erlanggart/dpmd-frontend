@@ -34,6 +34,7 @@ const BankeuVerificationPage = ({ tahun = 2027 }) => {
   const [submittingDesa, setSubmittingDesa] = useState(null); // Track which desa is being submitted
   const [submissionOpen, setSubmissionOpen] = useState(true); // Track if submission to DPMD is open
   const [refreshing, setRefreshing] = useState(false); // Track refresh state
+  const [expandedTrackingDesa, setExpandedTrackingDesa] = useState({}); // Track expanded desa in tracking tab
 
   useEffect(() => {
     fetchData();
@@ -925,7 +926,7 @@ const BankeuVerificationPage = ({ tahun = 2027 }) => {
           </div>
 
           {/* Summary Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3 sm:gap-4">
             <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-blue-100 rounded-lg">
@@ -992,6 +993,17 @@ const BankeuVerificationPage = ({ tahun = 2027 }) => {
                 </div>
               </div>
             </div>
+            <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-cyan-100 rounded-lg">
+                  <LuCircleCheck className="w-5 h-5 text-cyan-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-gray-800">{trackingStatus.desaSentToDPMD}</p>
+                  <p className="text-xs text-gray-500">Terkirim DPMD</p>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Status Summary */}
@@ -1041,9 +1053,11 @@ const BankeuVerificationPage = ({ tahun = 2027 }) => {
                 </thead>
                 <tbody>
                   {trackingStatus.desaGroups.map((group) => (
-                    <tr key={group.desa.id} className="border-b border-gray-50 hover:bg-gray-50">
+                    <React.Fragment key={group.desa.id}>
+                    <tr className="border-b border-gray-50 hover:bg-gray-50 cursor-pointer" onClick={() => setExpandedTrackingDesa(prev => ({ ...prev, [group.desa.id]: !prev[group.desa.id] }))}>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
+                          {expandedTrackingDesa[group.desa.id] ? <LuChevronDown className="w-4 h-4 text-gray-400" /> : <LuChevronRight className="w-4 h-4 text-gray-400" />}
                           <LuMapPin className="w-4 h-4 text-violet-500" />
                           <span className="font-medium text-gray-800">Desa {group.desa.nama}</span>
                         </div>
@@ -1131,6 +1145,63 @@ const BankeuVerificationPage = ({ tahun = 2027 }) => {
                         </div>
                       </td>
                     </tr>
+                    {/* Expanded per-proposal detail */}
+                    {expandedTrackingDesa[group.desa.id] && (
+                      <tr>
+                        <td colSpan="7" className="px-0 py-0">
+                          <div className="bg-gray-50 border-t border-b border-gray-200">
+                            <table className="w-full">
+                              <thead>
+                                <tr className="bg-gray-100">
+                                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Proposal</th>
+                                  <th className="px-4 py-2 text-center text-xs font-semibold text-gray-600">Kecamatan</th>
+                                  <th className="px-4 py-2 text-center text-xs font-semibold text-gray-600">Dinas</th>
+                                  <th className="px-4 py-2 text-center text-xs font-semibold text-gray-600">DPMD</th>
+                                  <th className="px-4 py-2 text-center text-xs font-semibold text-gray-600">BA</th>
+                                  <th className="px-4 py-2 text-center text-xs font-semibold text-gray-600">SP</th>
+                                  <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600">Anggaran</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {group.proposals.map((p) => {
+                                  const getStatusBadge = (status) => {
+                                    if (!status || status === 'pending') return <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded text-[10px] font-medium"><LuClock className="w-2.5 h-2.5" />Pending</span>;
+                                    if (status === 'approved') return <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-[10px] font-medium"><LuCircleCheck className="w-2.5 h-2.5" />Approved</span>;
+                                    if (status === 'rejected') return <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-[10px] font-medium"><LuCircleX className="w-2.5 h-2.5" />Ditolak</span>;
+                                    if (status === 'revision') return <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded text-[10px] font-medium"><LuTriangleAlert className="w-2.5 h-2.5" />Revisi</span>;
+                                    if (status === 'in_review') return <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-[10px] font-medium"><LuClock className="w-2.5 h-2.5" />Review</span>;
+                                    return <span className="text-[10px] text-gray-400">{status}</span>;
+                                  };
+                                  return (
+                                    <tr key={p.id} className="border-t border-gray-100 hover:bg-white">
+                                      <td className="px-4 py-2">
+                                        <p className="text-xs font-medium text-gray-800 truncate max-w-[200px]" title={p.judul_proposal}>{p.judul_proposal || p.nama_kegiatan_spesifik || '-'}</p>
+                                        {p.kegiatan_list?.[0]?.nama_kegiatan && (
+                                          <p className="text-[10px] text-gray-500 truncate max-w-[200px]">{p.kegiatan_list[0].nama_kegiatan}</p>
+                                        )}
+                                      </td>
+                                      <td className="px-4 py-2 text-center">{getStatusBadge(p.kecamatan_status)}</td>
+                                      <td className="px-4 py-2 text-center">{getStatusBadge(p.dinas_status)}</td>
+                                      <td className="px-4 py-2 text-center">{getStatusBadge(p.dpmd_status)}</td>
+                                      <td className="px-4 py-2 text-center">
+                                        {p.berita_acara_path ? <LuCircleCheck className="w-4 h-4 text-green-500 mx-auto" /> : <LuX className="w-4 h-4 text-gray-300 mx-auto" />}
+                                      </td>
+                                      <td className="px-4 py-2 text-center">
+                                        {p.surat_pengantar ? <LuCircleCheck className="w-4 h-4 text-green-500 mx-auto" /> : <LuX className="w-4 h-4 text-gray-300 mx-auto" />}
+                                      </td>
+                                      <td className="px-4 py-2 text-right">
+                                        <span className="text-xs text-gray-700">{p.anggaran_usulan ? `Rp ${new Intl.NumberFormat('id-ID').format(p.anggaran_usulan)}` : '-'}</span>
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                    </React.Fragment>
                   ))}
                 </tbody>
               </table>

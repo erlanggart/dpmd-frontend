@@ -4216,7 +4216,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                     type="text"
                     value={editFormData.volume}
                     onChange={(e) => setEditFormData(prev => ({ ...prev, volume: e.target.value }))}
-                    placeholder="Contoh: 500 m"
+                    placeholder={editingProposal?.kegiatan_list?.[0]?.jenis_kegiatan === 'infrastruktur' ? 'Contoh: 200 m x 3 m x 0.15 m (P x L x T)' : 'Contoh: 500 m'}
                     className="w-full px-4 py-3 text-sm font-medium border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-amber-200 focus:border-amber-500 bg-white hover:border-amber-400 transition-all duration-200 shadow-sm"
                   />
                 </div>
@@ -4475,7 +4475,7 @@ const KegiatanRow = ({ item, index, onUpload, onRevisionUpload, onReplaceFile, o
               type="text"
               value={formData.volume || ''}
               onChange={(e) => updateUploadForm(kegiatan.id, 'volume', e.target.value)}
-              placeholder="Contoh: 500 m"
+              placeholder={kegiatan.jenis_kegiatan === 'infrastruktur' ? 'Contoh: 200 m x 3 m x 0.15 m (P x L x T)' : 'Contoh: 500 m'}
               disabled={isSubmitted}
               className="w-full px-4 py-3 text-sm font-medium border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-200 focus:border-blue-500 bg-white hover:border-blue-400 transition-all duration-200 shadow-sm placeholder:text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-50"
             />

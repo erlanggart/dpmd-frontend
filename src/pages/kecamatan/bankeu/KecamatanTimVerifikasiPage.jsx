@@ -238,6 +238,10 @@ const KecamatanTimVerifikasiPage = () => {
         <p class="text-gray-600 mb-3">Berita acara verifikasi akan dibuat untuk proposal:</p>
         <p class="font-semibold text-gray-800">${selectedProposal.judul_proposal}</p>
         <p class="text-sm text-gray-500 mt-2">Desa ${desa?.nama}</p>
+        <div class="text-left mt-4">
+          <label class="block text-sm font-semibold text-gray-700 mb-1">Tanggal Berita Acara</label>
+          <input type="date" id="swal-tanggal-ba-tim" value="${new Date().toISOString().split('T')[0]}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm" />
+        </div>
       `,
       icon: 'question',
       showCancelButton: true,
@@ -250,9 +254,11 @@ const KecamatanTimVerifikasiPage = () => {
     if (result.isConfirmed) {
       setIsGeneratingBA(true);
       try {
+        const tanggalBA = document.getElementById('swal-tanggal-ba-tim')?.value;
         const response = await api.post(`/berita-acara/generate/${desaId}`, {
           proposalId: selectedProposal.id,
-          kegiatanId: selectedProposal.kegiatan_id
+          kegiatanId: selectedProposal.kegiatan_id,
+          tanggal: tanggalBA || null
         });
 
         if (response.data.success) {
@@ -318,6 +324,10 @@ const KecamatanTimVerifikasiPage = () => {
         <p class="text-gray-600 mb-3">Surat pengantar akan dibuat untuk proposal:</p>
         <p class="font-semibold text-gray-800">${selectedProposal.judul_proposal}</p>
         <p class="text-sm text-gray-500 mt-2">Desa ${desa?.nama}</p>
+        <div class="text-left mt-4">
+          <label class="block text-sm font-semibold text-gray-700 mb-1">Tanggal Surat Pengantar</label>
+          <input type="date" id="swal-tanggal-sp-tim" value="${new Date().toISOString().split('T')[0]}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm" />
+        </div>
       `,
       icon: 'question',
       showCancelButton: true,
@@ -330,7 +340,10 @@ const KecamatanTimVerifikasiPage = () => {
     if (result.isConfirmed) {
       setIsGeneratingSP(true);
       try {
-        const response = await api.post(`/berita-acara/surat-pengantar/${selectedProposal.id}`);
+        const tanggalSP = document.getElementById('swal-tanggal-sp-tim')?.value;
+        const response = await api.post(`/berita-acara/surat-pengantar/${selectedProposal.id}`, {
+          tanggal: tanggalSP || null
+        });
 
         if (response.data.success) {
           // Update selected proposal with surat pengantar path

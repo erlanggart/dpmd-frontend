@@ -867,6 +867,7 @@ const BankeuVerificationDetailPage = () => {
   };
 
   const handleGenerateBeritaAcara = async () => {
+    const todayStr = new Date().toISOString().split('T')[0];
     const result = await Swal.fire({
       title: '',
       html: `
@@ -881,9 +882,14 @@ const BankeuVerificationDetailPage = () => {
             Buat Berita Acara
           </h3>
           
-          <p class="text-gray-600">
-            Berita Acara akan berisi semua proposal dari desa <strong>${desa?.nama}</strong> yang telah diverifikasi. Lanjutkan?
+          <p class="text-gray-600 mb-4">
+            Berita Acara akan berisi semua proposal dari desa <strong>${desa?.nama}</strong> yang telah diverifikasi.
           </p>
+
+          <div class="text-left mt-4">
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Tanggal Berita Acara</label>
+            <input type="date" id="swal-tanggal-ba" value="${todayStr}" class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-500 text-sm" />
+          </div>
         </div>
       `,
       showCancelButton: true,
@@ -916,7 +922,10 @@ const BankeuVerificationDetailPage = () => {
 
     if (result.isConfirmed) {
       try {
-        const response = await api.post(`/kecamatan/bankeu/desa/${desaId}/berita-acara`);
+        const tanggalBA = document.getElementById('swal-tanggal-ba')?.value;
+        const response = await api.post(`/kecamatan/bankeu/desa/${desaId}/berita-acara`, {
+          tanggal: tanggalBA || null
+        });
         
         await fetchData();
 
@@ -1079,6 +1088,10 @@ const BankeuVerificationDetailPage = () => {
           </p>
           ${isInfrastruktur ? `<span class="inline-block px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium mb-2">Infrastruktur</span>` : `<span class="inline-block px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium mb-2">Non-Infrastruktur</span>`}
           ${optionalCheckboxes}
+          <div class="text-left mt-4">
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Tanggal Berita Acara</label>
+            <input type="date" id="swal-tanggal-ba-kegiatan" value="${new Date().toISOString().split('T')[0]}" class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-300 focus:border-violet-500 text-sm" />
+          </div>
           <p class="text-gray-500 text-sm mt-2">
             Lanjutkan membuat Berita Acara untuk kegiatan ini?
           </p>
@@ -1108,6 +1121,8 @@ const BankeuVerificationDetailPage = () => {
         popup: 'animate__animated animate__zoomIn animate__faster'
       },
       preConfirm: () => {
+        const tanggalInput = document.getElementById('swal-tanggal-ba-kegiatan');
+        const tanggal = tanggalInput ? tanggalInput.value : null;
         if (isInfrastruktur) {
           // Collect optional item checkbox states
           const optItems = {};
@@ -1115,9 +1130,9 @@ const BankeuVerificationDetailPage = () => {
             const checkbox = document.getElementById(`opt_${item.key}`);
             optItems[item.key] = checkbox ? checkbox.checked : false;
           });
-          return { optionalItems: optItems };
+          return { optionalItems: optItems, tanggal };
         }
-        return { optionalItems: null };
+        return { optionalItems: null, tanggal };
       }
     });
 
@@ -1126,7 +1141,8 @@ const BankeuVerificationDetailPage = () => {
         const response = await api.post(`/kecamatan/bankeu/desa/${desaId}/berita-acara`, {
           kegiatanId,
           proposalId,
-          optionalItems: result.value?.optionalItems || null
+          optionalItems: result.value?.optionalItems || null,
+          tanggal: result.value?.tanggal || null
         });
         
         await fetchData();
@@ -1255,6 +1271,16 @@ const BankeuVerificationDetailPage = () => {
               placeholder="Contoh: 005/123/Kec.Ciomas/2026"
             />
           </div>
+
+          <div class="text-left mb-4">
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Tanggal Surat</label>
+            <input 
+              type="date" 
+              id="swal-tanggal-sp" 
+              value="${new Date().toISOString().split('T')[0]}" 
+              class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm"
+            />
+          </div>
         </div>
       `,
       showCancelButton: true,
@@ -1282,18 +1308,19 @@ const BankeuVerificationDetailPage = () => {
       },
       preConfirm: () => {
         const nomorSurat = document.getElementById('nomorSurat').value;
+        const tanggalSP = document.getElementById('swal-tanggal-sp').value;
         if (!nomorSurat || !nomorSurat.trim()) {
           Swal.showValidationMessage('Nomor Surat wajib diisi');
           return false;
         }
-        return nomorSurat.trim();
+        return { nomorSurat: nomorSurat.trim(), tanggal: tanggalSP || null };
       }
     });
 
     if (result.isConfirmed) {
       try {
-        const nomorSurat = result.value;
-        const response = await api.post(`/berita-acara/surat-pengantar/${proposalId}`, { nomor_surat: nomorSurat });
+        const { nomorSurat, tanggal } = result.value;
+        const response = await api.post(`/berita-acara/surat-pengantar/${proposalId}`, { nomor_surat: nomorSurat, tanggal });
         
         await fetchData();
 
