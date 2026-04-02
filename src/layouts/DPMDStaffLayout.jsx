@@ -186,6 +186,7 @@ const BIDANG_SUBMENUS = {
 		{ label: 'Produk Hukum', path: '/bidang/pmd/produk-hukum', icon: 'file' },
 	],
 	6: [
+		{ label: 'Profil Desa', path: '/bidang/pemdes/profil-desa', icon: 'chart' },
 		{ label: 'Aparatur Desa', path: '/bidang/pemdes/aparatur-desa', icon: 'users' },
 		{ label: 'Produk Hukum', path: '/bidang/pemdes/produk-hukum', icon: 'file' },
 	],

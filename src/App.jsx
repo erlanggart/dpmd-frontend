@@ -203,6 +203,7 @@ const KKDPage = lazy(() => import("./pages/bidang/KKDPage"));
 const PMDPage = lazy(() => import("./pages/bidang/PMDPage"));
 const PemdesPage = lazy(() => import("./pages/bidang/PemdesPage"));
 const AparaturDesaExternalPage = lazy(() => import("./pages/bidang/pemdes/AparaturDesaPage"));
+const PemdesProfilDesaPage = lazy(() => import("./pages/bidang/pemdes/ProfilDesaDashboardPage"));
 const ProdukHukumPemdesPage = lazy(() => import("./pages/bidang/pemdes/ProdukHukumPage"));
 const ProdukHukumDetailPemdesPage = lazy(() => import("./pages/bidang/pemdes/ProdukHukumDetailPage"));
 
@@ -868,6 +869,10 @@ function App() {
 
                   {/* Pemdes (Pemerintahan Desa) */}
                   <Route path="pemdes" element={<PemdesPage />} />
+                  <Route path="pemdes/profil-desa" element={<PemdesProfilDesaPage />} />
+                  <Route path="pemdes/aparatur-desa" element={<AparaturDesaExternalPage />} />
+                  <Route path="pemdes/produk-hukum" element={<ProdukHukumPemdesPage />} />
+                  <Route path="pemdes/produk-hukum/:id" element={<ProdukHukumDetailPemdesPage />} />
 
                   {/* Detail Disposisi - Accessible dari semua bidang */}
                   <Route path="disposisi/:id" element={<DisposisiDetail />} />
@@ -959,6 +964,7 @@ function App() {
                     </RoleProtectedRoute>
                   }
                 >
+                  <Route path="profil-desa" element={<PemdesProfilDesaPage />} />
                   <Route path="aparatur-desa" element={<AparaturDesaExternalPage />} />
                   <Route path="produk-hukum" element={<ProdukHukumPemdesPage />} />
                   <Route path="produk-hukum/:id" element={<ProdukHukumDetailPemdesPage />} />
@@ -1083,8 +1089,10 @@ function App() {
                   <Route path="bidang/pmd/produk-hukum/:id" element={<ProdukHukumDetailPemdesPage />} />
 
                   {/* Pemdes sub-routes */}
+                  <Route path="bidang/pemdes/profil-desa" element={<PemdesProfilDesaPage />} />
                   <Route path="bidang/pemdes/aparatur-desa" element={<AparaturDesaExternalPage />} />
                   <Route path="bidang/pemdes/produk-hukum" element={<ProdukHukumPemdesPage />} />
+                  <Route path="bidang/pemdes/produk-hukum/:id" element={<ProdukHukumDetailPemdesPage />} />
                 </Route>
 
                 {/* Rute Kecamatan - Exclusive untuk Admin Kecamatan */}

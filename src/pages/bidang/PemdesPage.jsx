@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useBidangPath } from '../../hooks/useBidangPath';
-import { Briefcase, FileText, Users as UsersIcon, Activity, ArrowLeft, Clock, CheckCircle, AlertCircle, RefreshCw, Zap, ChevronRight, FileCheck2 } from 'lucide-react';
+import { Briefcase, FileText, Users as UsersIcon, Activity, ArrowLeft, Clock, CheckCircle, AlertCircle, RefreshCw, Zap, ChevronRight, FileCheck2, MapPinned } from 'lucide-react';
 import api from '../../api';
 import toast from 'react-hot-toast';
 
@@ -116,7 +116,7 @@ const PemdesPage = () => {
 						</div>
 						<div>
 							<h1 className="text-2xl font-bold">Bidang Pemdes</h1>
-							<p className="text-teal-100 mt-1">Kelola data Musdesus, Aparatur Desa, dan Produk Hukum</p>
+							<p className="text-teal-100 mt-1">Kelola data Musdesus, Profil Desa, Aparatur Desa, dan Produk Hukum</p>
 						</div>
 					</div>
 				</div>
@@ -136,7 +136,7 @@ const PemdesPage = () => {
 									<Zap className="h-5 w-5 text-yellow-500" />
 									Aksi Cepat
 								</h3>
-								<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+								<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
 									<button
 										onClick={() => navigate('/core-dashboard/musdesus')}
 										className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border border-gray-100 p-6 hover:border-teal-300 transition-all duration-300 text-left overflow-hidden hover:-translate-y-1"
@@ -168,6 +168,23 @@ const PemdesPage = () => {
 												<p className="text-sm text-gray-500">Data perangkat desa</p>
 											</div>
 											<ChevronRight className="h-6 w-6 text-gray-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
+										</div>
+									</button>
+
+									<button
+										onClick={() => navigate(getPath('/pemdes/profil-desa'))}
+										className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border border-gray-100 p-6 hover:border-emerald-300 transition-all duration-300 text-left overflow-hidden hover:-translate-y-1"
+									>
+										<div className="absolute inset-0 bg-gradient-to-br from-emerald-400/5 to-teal-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+										<div className="relative flex items-center gap-5">
+											<div className="h-16 w-16 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg shadow-emerald-500/25">
+												<MapPinned className="h-8 w-8 text-white" />
+											</div>
+											<div className="flex-1">
+												<h3 className="font-bold text-gray-800 text-lg mb-1">Profil Desa</h3>
+												<p className="text-sm text-gray-500">Dashboard data seluruh desa</p>
+											</div>
+											<ChevronRight className="h-6 w-6 text-gray-400 group-hover:text-emerald-600 group-hover:translate-x-1 transition-all" />
 										</div>
 									</button>
 
