@@ -50,7 +50,7 @@ const BankeuVerificationPage = ({ tahun = 2027 }) => {
 
   const fetchSubmissionSetting = async () => {
     try {
-      const res = await api.get('/app-settings/bankeu_submission_kecamatan').catch(() => ({ data: { data: { value: true } } }));
+      const res = await api.get(`/app-settings/bankeu_submission_kecamatan_${tahunAnggaran}`).catch(() => ({ data: { data: { value: true } } }));
       const newValue = res.data?.data?.value ?? true;
       
       setSubmissionOpen(prev => {

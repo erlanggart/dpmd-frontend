@@ -295,14 +295,19 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
   // Modal states for statistics detail
   const [showKecamatanModal, setShowKecamatanModal] = useState(false);
   const [showDesaBelumModal, setShowDesaBelumModal] = useState(false);
-  // Submission control states
+  // Submission control states (per-year: 2026 & 2027)
+  const bankeuYears = [2026, 2027];
   const [submissionSettings, setSubmissionSettings] = useState({
-    bankeu_submission_desa: true,
-    bankeu_submission_kecamatan: true
+    bankeu_submission_desa_2026: true,
+    bankeu_submission_desa_2027: true,
+    bankeu_submission_kecamatan_2026: true,
+    bankeu_submission_kecamatan_2027: true
   });
   const [submissionConfigs, setSubmissionConfigs] = useState({
-    bankeu_submission_desa: { enabled: true, schedule: null },
-    bankeu_submission_kecamatan: { enabled: true, schedule: null }
+    bankeu_submission_desa_2026: { enabled: true, schedule: null },
+    bankeu_submission_desa_2027: { enabled: true, schedule: null },
+    bankeu_submission_kecamatan_2026: { enabled: true, schedule: null },
+    bankeu_submission_kecamatan_2027: { enabled: true, schedule: null }
   });
   // Config tab states
   const [configSubTab, setConfigSubTab] = useState('kegiatan'); // 'kegiatan', 'dinas', 'format-surat'
@@ -854,18 +859,24 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
   const fetchSubmissionSettings = async () => {
     try {
       setLoadingSettings(true);
-      const [desaRes, kecamatanRes] = await Promise.all([
-        api.get('/app-settings/bankeu_submission_desa').catch(() => ({ data: { data: { value: true, config: null } } })),
-        api.get('/app-settings/bankeu_submission_kecamatan').catch(() => ({ data: { data: { value: true, config: null } } }))
+      const defaultRes = { data: { data: { value: true, config: null } } };
+      const [desa2026, desa2027, kec2026, kec2027] = await Promise.all([
+        api.get('/app-settings/bankeu_submission_desa_2026').catch(() => defaultRes),
+        api.get('/app-settings/bankeu_submission_desa_2027').catch(() => defaultRes),
+        api.get('/app-settings/bankeu_submission_kecamatan_2026').catch(() => defaultRes),
+        api.get('/app-settings/bankeu_submission_kecamatan_2027').catch(() => defaultRes)
       ]);
-      setSubmissionSettings({
-        bankeu_submission_desa: desaRes.data?.data?.value ?? true,
-        bankeu_submission_kecamatan: kecamatanRes.data?.data?.value ?? true
-      });
-      setSubmissionConfigs({
-        bankeu_submission_desa: desaRes.data?.data?.config || { enabled: desaRes.data?.data?.value ?? true, schedule: null },
-        bankeu_submission_kecamatan: kecamatanRes.data?.data?.config || { enabled: kecamatanRes.data?.data?.value ?? true, schedule: null }
-      });
+      const results = { desa_2026: desa2026, desa_2027: desa2027, kecamatan_2026: kec2026, kecamatan_2027: kec2027 };
+      const newSettings = {};
+      const newConfigs = {};
+      for (const [suffix, res] of Object.entries(results)) {
+        const key = `bankeu_submission_${suffix}`;
+        const val = res.data?.data?.value ?? true;
+        newSettings[key] = val;
+        newConfigs[key] = res.data?.data?.config || { enabled: val, schedule: null };
+      }
+      setSubmissionSettings(newSettings);
+      setSubmissionConfigs(newConfigs);
     } catch (error) {
       console.error('Error fetching submission settings:', error);
     } finally {
@@ -880,10 +891,13 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
       if (res.data.success) {
         setSubmissionSettings(prev => ({ ...prev, [key]: res.data.data.value }));
         setSubmissionConfigs(prev => ({ ...prev, [key]: res.data.data.config || configValue }));
+        const yearMatch = key.match(/(\d{4})$/);
+        const yearLabel = yearMatch ? ` TA ${yearMatch[1]}` : '';
+        const typeLabel = key.includes('_desa_') ? 'Desa' : 'Kecamatan';
         Swal.fire({
           icon: 'success',
           title: 'Berhasil',
-          text: `Pengaturan ${key === 'bankeu_submission_desa' ? 'Desa' : 'Kecamatan'} berhasil diperbarui`,
+          text: `Pengaturan ${typeLabel}${yearLabel} berhasil diperbarui`,
           timer: 2000,
           showConfirmButton: false
         });
@@ -3347,22 +3361,30 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                   </div>
                 </div>
 
-                {/* Schedule Controls */}
+                {/* Schedule Controls - Per Year */}
                 <div className="space-y-6">
-                  {[
-                    { key: 'bankeu_submission_desa', label: 'Pengajuan Desa → Dinas', desc: 'Desa mengirim proposal ke Dinas Terkait' },
-                    { key: 'bankeu_submission_kecamatan', label: 'Pengajuan Kecamatan → DPMD', desc: 'Kecamatan meneruskan proposal ke DPMD' }
-                  ].map(({ key, label, desc }) => (
-                    <SubmissionModeCard
-                      key={key}
-                      settingKey={key}
-                      label={label}
-                      desc={desc}
-                      config={submissionConfigs[key] || { enabled: submissionSettings[key], schedule: null }}
-                      isCurrentlyOpen={submissionSettings[key]}
-                      loadingSettings={loadingSettings}
-                      updateSubmissionSetting={updateSubmissionSetting}
-                    />
+                  {bankeuYears.map((year) => (
+                    <div key={year} className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-5 w-5 text-slate-500" />
+                        <h3 className="text-base font-bold text-slate-800">Tahun Anggaran {year}</h3>
+                      </div>
+                      {[
+                        { key: `bankeu_submission_desa_${year}`, label: `Pengajuan Desa → Dinas (TA ${year})`, desc: 'Desa mengirim proposal ke Dinas Terkait' },
+                        { key: `bankeu_submission_kecamatan_${year}`, label: `Pengajuan Kecamatan → DPMD (TA ${year})`, desc: 'Kecamatan meneruskan proposal ke DPMD' }
+                      ].map(({ key, label, desc }) => (
+                        <SubmissionModeCard
+                          key={key}
+                          settingKey={key}
+                          label={label}
+                          desc={desc}
+                          config={submissionConfigs[key] || { enabled: submissionSettings[key], schedule: null }}
+                          isCurrentlyOpen={submissionSettings[key]}
+                          loadingSettings={loadingSettings}
+                          updateSubmissionSetting={updateSubmissionSetting}
+                        />
+                      ))}
+                    </div>
                   ))}
                 </div>
 

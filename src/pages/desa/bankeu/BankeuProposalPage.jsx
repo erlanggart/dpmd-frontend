@@ -218,7 +218,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
 
   const fetchSubmissionSetting = async () => {
     try {
-      const res = await api.get('/app-settings/bankeu_submission_desa').catch(() => ({ data: { data: { value: true } } }));
+      const res = await api.get(`/app-settings/bankeu_submission_desa_${tahun}`).catch(() => ({ data: { data: { value: true } } }));
       const newValue = res.data?.data?.value ?? true;
       
       // Tampilkan notifikasi jika status berubah

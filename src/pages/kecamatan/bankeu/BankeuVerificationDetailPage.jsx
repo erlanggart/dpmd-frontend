@@ -38,7 +38,7 @@ const BankeuVerificationDetailPage = () => {
 
   const fetchSubmissionSetting = async () => {
     try {
-      const res = await api.get('/app-settings/bankeu_submission_kecamatan').catch(() => ({ data: { data: { value: true } } }));
+      const res = await api.get(`/app-settings/bankeu_submission_kecamatan_${tahunAnggaran}`).catch(() => ({ data: { data: { value: true } } }));
       setSubmissionOpen(res.data?.data?.value ?? true);
     } catch (error) {
       console.error('Error fetching submission setting:', error);
