@@ -53,16 +53,20 @@ function HomeRedirect() {
   const location = useLocation();
   const token = localStorage.getItem("expressToken");
 
+  // Hide splash screen once session check is done
+  useEffect(() => {
+    if (!isCheckingSession) {
+      const splash = document.getElementById('splash-screen');
+      if (splash) {
+        splash.classList.add('hide');
+        setTimeout(() => splash.remove(), 500);
+      }
+    }
+  }, [isCheckingSession]);
+
   // Wait for session restore before deciding
   if (isCheckingSession) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-white/30 border-t-white mx-auto mb-4"></div>
-          <p className="text-white/80 text-sm font-medium">Memuat...</p>
-        </div>
-      </div>
-    );
+    return null; // Splash screen in index.html handles this
   }
 
   // Not logged in, always show landing page
