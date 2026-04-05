@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
   FiUser, FiMail, FiShield, FiEdit2, FiX, FiCamera, FiArrowLeft,
   FiLogOut, FiLock, FiEye, FiEyeOff, FiPhone, FiMapPin, FiCalendar,
@@ -8,6 +9,7 @@ import {
 import api from '../../services/api';
 import { toast } from 'react-hot-toast';
 import { getAvatarUrl } from '../../utils/avatarUtils';
+import AvatarCropModal from '../../components/AvatarCropModal';
 
 const STATUS_OPTIONS = [
   { value: '', label: '— Pilih —' },
@@ -237,15 +239,31 @@ const ProfilePage = () => {
     }
   };
 
-  const handlePhotoUpload = async (e) => {
+  // ─── Photo review & crop states ───
+  const [showPhotoReview, setShowPhotoReview] = useState(false);
+  const [cropImageSrc, setCropImageSrc] = useState(null);
+  const [showCropModal, setShowCropModal] = useState(false);
+
+  const handlePhotoSelect = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) return toast.error('File harus berupa gambar');
-    if (file.size > 2 * 1024 * 1024) return toast.error('Maksimal 2MB');
+    if (file.size > 10 * 1024 * 1024) return toast.error('Maksimal 10MB');
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCropImageSrc(reader.result);
+      setShowCropModal(true);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleCropDone = async (croppedFile) => {
+    setShowCropModal(false);
     setIsUploadingPhoto(true);
     try {
       const fd = new FormData();
-      fd.append('avatar', file);
+      fd.append('avatar', croppedFile);
       const res = await api.post(`/users/${user.id}/avatar`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
       if (res.data.success) {
         setAvatarUrl(getAvatarUrl(res.data.data.avatar));
@@ -316,14 +334,17 @@ const ProfilePage = () => {
           <div className="bg-white rounded-3xl shadow-xl shadow-gray-200/50 p-6 border border-gray-100">
             <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
               <div className="relative flex-shrink-0">
-                <div className="w-24 h-24 rounded-2xl overflow-hidden ring-4 ring-white shadow-lg">
+                <button
+                  onClick={() => avatarUrl && setShowPhotoReview(true)}
+                  className="w-24 h-24 rounded-2xl overflow-hidden ring-4 ring-white shadow-lg cursor-pointer hover:ring-blue-200 transition-all"
+                >
                   {avatarUrl ? (
                     <img src={avatarUrl} alt={user.name} className="w-full h-full object-cover" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }} />
                   ) : null}
                   <div className={`w-full h-full bg-gradient-to-br ${gradient} flex items-center justify-center ${avatarUrl ? 'hidden' : ''}`} style={{ display: avatarUrl ? 'none' : 'flex' }}>
                     <span className="text-white font-bold text-3xl">{user.name?.charAt(0).toUpperCase() || 'U'}</span>
                   </div>
-                </div>
+                </button>
                 <button onClick={() => fileInputRef.current?.click()} disabled={isUploadingPhoto} className="absolute -bottom-1 -right-1 w-8 h-8 bg-white rounded-xl shadow-md border border-gray-100 flex items-center justify-center hover:scale-110 transition-transform disabled:opacity-50">
                   {isUploadingPhoto ? (
                     <svg className="animate-spin h-4 w-4 text-gray-400" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>
@@ -331,7 +352,7 @@ const ProfilePage = () => {
                     <FiCamera className="h-3.5 w-3.5 text-gray-500" />
                   )}
                 </button>
-                <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhotoUpload} disabled={isUploadingPhoto} className="hidden" />
+                <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhotoSelect} disabled={isUploadingPhoto} className="hidden" />
               </div>
 
               <div className="flex-1 text-center sm:text-left min-w-0">
@@ -594,6 +615,65 @@ const ProfilePage = () => {
           </div>
         </div>
       )}
+
+      {/* Photo Review Modal */}
+      <AnimatePresence>
+        {showPhotoReview && avatarUrl && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[90] bg-black/90 flex items-center justify-center p-4"
+            onClick={() => setShowPhotoReview(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative max-w-sm w-full"
+            >
+              <div className="text-center mb-4">
+                <p className="text-white font-semibold">{user.name}</p>
+                <p className="text-white/50 text-xs">Foto Profil</p>
+              </div>
+              <img
+                src={avatarUrl}
+                alt={user.name}
+                className="w-full aspect-square object-cover rounded-3xl shadow-2xl"
+              />
+              <div className="flex justify-center gap-3 mt-4">
+                <button
+                  onClick={() => {
+                    setShowPhotoReview(false);
+                    fileInputRef.current?.click();
+                  }}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-white/15 hover:bg-white/25 text-white text-sm font-medium rounded-full transition backdrop-blur-sm"
+                >
+                  <FiCamera className="w-4 h-4" />
+                  Ganti Foto
+                </button>
+                <button
+                  onClick={() => setShowPhotoReview(false)}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-white/15 hover:bg-white/25 text-white text-sm font-medium rounded-full transition backdrop-blur-sm"
+                >
+                  <FiX className="w-4 h-4" />
+                  Tutup
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Crop Modal */}
+      <AvatarCropModal
+        isOpen={showCropModal}
+        imageSrc={cropImageSrc}
+        onClose={() => setShowCropModal(false)}
+        onCropDone={handleCropDone}
+      />
     </div>
   );
 };

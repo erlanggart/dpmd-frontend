@@ -295,19 +295,14 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
   // Modal states for statistics detail
   const [showKecamatanModal, setShowKecamatanModal] = useState(false);
   const [showDesaBelumModal, setShowDesaBelumModal] = useState(false);
-  // Submission control states (per-year: 2026 & 2027)
-  const bankeuYears = [2026, 2027];
+  // Submission control states
   const [submissionSettings, setSubmissionSettings] = useState({
-    bankeu_submission_desa_2026: true,
-    bankeu_submission_desa_2027: true,
-    bankeu_submission_kecamatan_2026: true,
-    bankeu_submission_kecamatan_2027: true
+    bankeu_submission_desa: true,
+    bankeu_submission_kecamatan: true
   });
   const [submissionConfigs, setSubmissionConfigs] = useState({
-    bankeu_submission_desa_2026: { enabled: true, schedule: null },
-    bankeu_submission_desa_2027: { enabled: true, schedule: null },
-    bankeu_submission_kecamatan_2026: { enabled: true, schedule: null },
-    bankeu_submission_kecamatan_2027: { enabled: true, schedule: null }
+    bankeu_submission_desa: { enabled: true, schedule: null },
+    bankeu_submission_kecamatan: { enabled: true, schedule: null }
   });
   // Config tab states
   const [configSubTab, setConfigSubTab] = useState('kegiatan'); // 'kegiatan', 'dinas', 'format-surat'
@@ -327,6 +322,11 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
   const handleRefresh = async () => {
     try {
       setRefreshing(true);
+
+      // Invalidate all caches so next tab switch re-fetches
+      cacheRef.current.fetchedTabs = {};
+      cacheRef.current.desaKecamatanLoaded = false;
+
       const [proposalsRes, statsRes] = await Promise.all([
         api.get(`/dpmd/bankeu/proposals?tahun_anggaran=${tahunAnggaran}`),
         api.get(`/dpmd/bankeu/statistics?tahun_anggaran=${tahunAnggaran}`)
@@ -343,7 +343,11 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
       // Also refresh desas/kecamatan if on tracking/statistics/partisipasi view
       if (activeView === 'statistics' || activeView === 'tracking' || activeView === 'partisipasi') {
         await fetchAllDesaKecamatan();
+        cacheRef.current.desaKecamatanLoaded = true;
       }
+
+      // Mark current tab as freshly fetched
+      cacheRef.current.fetchedTabs[activeView] = true;
 
       Swal.fire({
         icon: 'success',
@@ -703,30 +707,50 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
     });
   };
 
+  // ─── Data cache refs (prevent redundant fetches) ───
+  const cacheRef = useRef({ fetchedTabs: {}, desaKecamatanLoaded: false });
+
   useEffect(() => {
+    // When tahunAnggaran prop changes, invalidate all caches and re-fetch
+    cacheRef.current.fetchedTabs = {};
+    cacheRef.current.desaKecamatanLoaded = false;
     fetchData();
-    if (activeView === 'config') {
+    cacheRef.current.fetchedTabs.archive = true;
+  }, [tahunAnggaran]);
+
+  useEffect(() => {
+    // Only fetch data that hasn't been loaded yet for the target tab
+    const tab = activeView;
+    
+    if (tab === 'archive' && !cacheRef.current.fetchedTabs.archive) {
+      fetchData();
+      cacheRef.current.fetchedTabs.archive = true;
+    }
+    
+    if ((tab === 'statistics' || tab === 'tracking' || tab === 'partisipasi')) {
+      if (!cacheRef.current.desaKecamatanLoaded) {
+        fetchAllDesaKecamatan();
+        cacheRef.current.desaKecamatanLoaded = true;
+      }
+      if (!cacheRef.current.fetchedTabs.tracking) {
+        fetchTrackingData();
+        cacheRef.current.fetchedTabs.tracking = true;
+      }
+    }
+    
+    if (tab === 'config' && !cacheRef.current.fetchedTabs.config) {
       fetchMasterKegiatan();
       fetchDinas();
+      cacheRef.current.fetchedTabs.config = true;
     }
-    if (activeView === 'statistics') {
-      fetchAllDesaKecamatan();
-      fetchTrackingData();
-    }
-    if (activeView === 'tracking') {
-      fetchAllDesaKecamatan();
-      fetchTrackingData();
-    }
-    if (activeView === 'partisipasi') {
-      fetchAllDesaKecamatan();
-      fetchTrackingData();
-    }
-    if (activeView === 'control') {
+    
+    if (tab === 'control' && !cacheRef.current.fetchedTabs.control) {
       fetchSubmissionSettings();
+      cacheRef.current.fetchedTabs.control = true;
     }
-  }, [activeView, tahunAnggaran]);
+  }, [activeView]);
 
-  // Fetch tracking data when tahun changes
+  // Fetch tracking data when tahun changes (user explicitly changed year filter)
   useEffect(() => {
     if (activeView === 'tracking' || activeView === 'statistics') {
       fetchTrackingData();
@@ -859,24 +883,18 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
   const fetchSubmissionSettings = async () => {
     try {
       setLoadingSettings(true);
-      const defaultRes = { data: { data: { value: true, config: null } } };
-      const [desa2026, desa2027, kec2026, kec2027] = await Promise.all([
-        api.get('/app-settings/bankeu_submission_desa_2026').catch(() => defaultRes),
-        api.get('/app-settings/bankeu_submission_desa_2027').catch(() => defaultRes),
-        api.get('/app-settings/bankeu_submission_kecamatan_2026').catch(() => defaultRes),
-        api.get('/app-settings/bankeu_submission_kecamatan_2027').catch(() => defaultRes)
+      const [desaRes, kecamatanRes] = await Promise.all([
+        api.get('/app-settings/bankeu_submission_desa').catch(() => ({ data: { data: { value: true, config: null } } })),
+        api.get('/app-settings/bankeu_submission_kecamatan').catch(() => ({ data: { data: { value: true, config: null } } }))
       ]);
-      const results = { desa_2026: desa2026, desa_2027: desa2027, kecamatan_2026: kec2026, kecamatan_2027: kec2027 };
-      const newSettings = {};
-      const newConfigs = {};
-      for (const [suffix, res] of Object.entries(results)) {
-        const key = `bankeu_submission_${suffix}`;
-        const val = res.data?.data?.value ?? true;
-        newSettings[key] = val;
-        newConfigs[key] = res.data?.data?.config || { enabled: val, schedule: null };
-      }
-      setSubmissionSettings(newSettings);
-      setSubmissionConfigs(newConfigs);
+      setSubmissionSettings({
+        bankeu_submission_desa: desaRes.data?.data?.value ?? true,
+        bankeu_submission_kecamatan: kecamatanRes.data?.data?.value ?? true
+      });
+      setSubmissionConfigs({
+        bankeu_submission_desa: desaRes.data?.data?.config || { enabled: desaRes.data?.data?.value ?? true, schedule: null },
+        bankeu_submission_kecamatan: kecamatanRes.data?.data?.config || { enabled: kecamatanRes.data?.data?.value ?? true, schedule: null }
+      });
     } catch (error) {
       console.error('Error fetching submission settings:', error);
     } finally {
@@ -891,13 +909,10 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
       if (res.data.success) {
         setSubmissionSettings(prev => ({ ...prev, [key]: res.data.data.value }));
         setSubmissionConfigs(prev => ({ ...prev, [key]: res.data.data.config || configValue }));
-        const yearMatch = key.match(/(\d{4})$/);
-        const yearLabel = yearMatch ? ` TA ${yearMatch[1]}` : '';
-        const typeLabel = key.includes('_desa_') ? 'Desa' : 'Kecamatan';
         Swal.fire({
           icon: 'success',
           title: 'Berhasil',
-          text: `Pengaturan ${typeLabel}${yearLabel} berhasil diperbarui`,
+          text: `Pengaturan ${key === 'bankeu_submission_desa' ? 'Desa' : 'Kecamatan'} berhasil diperbarui`,
           timer: 2000,
           showConfirmButton: false
         });
@@ -3361,30 +3376,22 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                   </div>
                 </div>
 
-                {/* Schedule Controls - Per Year */}
+                {/* Schedule Controls */}
                 <div className="space-y-6">
-                  {bankeuYears.map((year) => (
-                    <div key={year} className="space-y-4">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-5 w-5 text-slate-500" />
-                        <h3 className="text-base font-bold text-slate-800">Tahun Anggaran {year}</h3>
-                      </div>
-                      {[
-                        { key: `bankeu_submission_desa_${year}`, label: `Pengajuan Desa → Dinas (TA ${year})`, desc: 'Desa mengirim proposal ke Dinas Terkait' },
-                        { key: `bankeu_submission_kecamatan_${year}`, label: `Pengajuan Kecamatan → DPMD (TA ${year})`, desc: 'Kecamatan meneruskan proposal ke DPMD' }
-                      ].map(({ key, label, desc }) => (
-                        <SubmissionModeCard
-                          key={key}
-                          settingKey={key}
-                          label={label}
-                          desc={desc}
-                          config={submissionConfigs[key] || { enabled: submissionSettings[key], schedule: null }}
-                          isCurrentlyOpen={submissionSettings[key]}
-                          loadingSettings={loadingSettings}
-                          updateSubmissionSetting={updateSubmissionSetting}
-                        />
-                      ))}
-                    </div>
+                  {[
+                    { key: 'bankeu_submission_desa', label: 'Pengajuan Desa → Dinas', desc: 'Desa mengirim proposal ke Dinas Terkait' },
+                    { key: 'bankeu_submission_kecamatan', label: 'Pengajuan Kecamatan → DPMD', desc: 'Kecamatan meneruskan proposal ke DPMD' }
+                  ].map(({ key, label, desc }) => (
+                    <SubmissionModeCard
+                      key={key}
+                      settingKey={key}
+                      label={label}
+                      desc={desc}
+                      config={submissionConfigs[key] || { enabled: submissionSettings[key], schedule: null }}
+                      isCurrentlyOpen={submissionSettings[key]}
+                      loadingSettings={loadingSettings}
+                      updateSubmissionSetting={updateSubmissionSetting}
+                    />
                   ))}
                 </div>
 

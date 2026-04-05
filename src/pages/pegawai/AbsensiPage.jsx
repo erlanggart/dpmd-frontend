@@ -255,6 +255,188 @@ const AbsensiPage = () => {
 		);
 	}
 
+	// ─── Holiday / Weekend ────────────────────────────────────
+	if (eligible?.is_holiday) {
+		const isWeekend = eligible.holiday_reason === "Hari Minggu" || eligible.holiday_reason === "Hari Sabtu";
+		return (
+			<div className="h-[100dvh] bg-gradient-to-b from-cyan-50 via-white to-teal-50 flex flex-col overflow-hidden pb-20">
+				{/* Floating decorations */}
+				<div className="absolute inset-0 overflow-hidden pointer-events-none">
+					{[...Array(20)].map((_, i) => (
+						<motion.div
+							key={i}
+							className="absolute rounded-full"
+							style={{
+								width: Math.random() * 60 + 20,
+								height: Math.random() * 60 + 20,
+								background: `radial-gradient(circle, ${['rgba(6,182,212,0.1)', 'rgba(20,184,166,0.1)', 'rgba(34,211,238,0.08)', 'rgba(45,212,191,0.08)'][i % 4]} 0%, transparent 70%)`,
+								left: `${Math.random() * 100}%`,
+								top: `${Math.random() * 100}%`,
+							}}
+							animate={{
+								y: [0, -30, 0],
+								x: [0, Math.random() * 20 - 10, 0],
+								scale: [1, 1.1, 1],
+							}}
+							transition={{
+								duration: 5 + Math.random() * 3,
+								repeat: Infinity,
+								delay: Math.random() * 2,
+								ease: "easeInOut",
+							}}
+						/>
+					))}
+				</div>
+
+				<div className="flex-1 flex flex-col items-center justify-center px-6 relative z-10">
+					{/* Main illustration container */}
+					<motion.div
+						initial={{ scale: 0.8, opacity: 0 }}
+						animate={{ scale: 1, opacity: 1 }}
+						transition={{ type: "spring", stiffness: 200, damping: 20 }}
+						className="relative mb-6"
+					>
+						{/* Outer glow ring */}
+						<div className="absolute -inset-4 bg-gradient-to-r from-cyan-400/20 via-teal-400/20 to-emerald-400/20 rounded-full blur-2xl animate-pulse" />
+						
+						{/* Main circle with icon */}
+						<div className="relative w-32 h-32 rounded-full bg-gradient-to-br from-cyan-100 via-teal-50 to-emerald-100 flex items-center justify-center shadow-xl shadow-cyan-200/30">
+							{/* Inner decorative ring */}
+							<div className="absolute inset-2 rounded-full border-2 border-dashed border-cyan-200/50 animate-[spin_20s_linear_infinite]" />
+							
+							{/* Lottie or Icon */}
+							{isWeekend ? (
+								<Lottie 
+									animationData={workFromHomeAnim} 
+									loop 
+									autoplay 
+									style={{ width: 90, height: 90 }} 
+								/>
+							) : (
+								<motion.div
+									animate={{ y: [0, -5, 0] }}
+									transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+								>
+									<LuCalendarOff className="w-14 h-14 text-cyan-500" />
+								</motion.div>
+							)}
+						</div>
+
+						{/* Floating mini icons */}
+						{[
+							{ Icon: FiCalendar, color: "text-teal-400", pos: "-top-2 -right-2", delay: 0 },
+							{ Icon: LuHeartPulse, color: "text-rose-400", pos: "-bottom-1 -left-3", delay: 0.5 },
+							{ Icon: LuCircleCheckBig, color: "text-emerald-400", pos: "top-1/2 -right-4", delay: 1 },
+						].map(({ Icon, color, pos, delay }, idx) => (
+							<motion.div
+								key={idx}
+								className={`absolute ${pos} w-8 h-8 rounded-full bg-white shadow-lg flex items-center justify-center`}
+								initial={{ scale: 0 }}
+								animate={{ scale: 1, y: [0, -4, 0] }}
+								transition={{ 
+									scale: { delay: 0.3 + delay, type: "spring" },
+									y: { duration: 2, repeat: Infinity, delay }
+								}}
+							>
+								<Icon className={`w-4 h-4 ${color}`} />
+							</motion.div>
+						))}
+					</motion.div>
+
+					{/* Text content */}
+					<motion.div
+						initial={{ opacity: 0, y: 20 }}
+						animate={{ opacity: 1, y: 0 }}
+						transition={{ delay: 0.3 }}
+						className="text-center max-w-xs"
+					>
+						{/* Badge */}
+						<motion.div
+							initial={{ scale: 0 }}
+							animate={{ scale: 1 }}
+							transition={{ delay: 0.4, type: "spring" }}
+							className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-cyan-500 to-teal-500 text-white text-xs font-bold mb-4 shadow-lg shadow-cyan-500/30"
+						>
+							<span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+							{isWeekend ? "AKHIR PEKAN" : "HARI LIBUR"}
+						</motion.div>
+
+						{/* Holiday name */}
+						<h1 className="text-2xl font-black text-slate-800 mb-2">
+							{eligible.holiday_reason}
+						</h1>
+
+						{/* Description */}
+						<p className="text-sm text-slate-500 leading-relaxed mb-6">
+							{isWeekend 
+								? "Waktunya istirahat dan menghabiskan waktu bersama keluarga. Sampai jumpa di hari kerja!"
+								: "Selamat menikmati hari libur! Tidak ada jadwal presensi untuk hari ini."
+							}
+						</p>
+
+						{/* Date card */}
+						<motion.div
+							initial={{ opacity: 0, y: 10 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{ delay: 0.5 }}
+							className="inline-flex items-center gap-3 px-5 py-3 rounded-2xl bg-white/80 backdrop-blur-sm border border-cyan-100 shadow-lg"
+						>
+							<div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-400 to-teal-500 flex flex-col items-center justify-center text-white shadow-md shadow-cyan-500/30">
+								<span className="text-[10px] font-bold uppercase leading-none">
+									{currentTime.toLocaleDateString("id-ID", { month: "short" })}
+								</span>
+								<span className="text-lg font-black leading-none">
+									{currentTime.getDate()}
+								</span>
+							</div>
+							<div className="text-left">
+								<p className="text-sm font-bold text-slate-800">
+									{currentTime.toLocaleDateString("id-ID", { weekday: "long" })}
+								</p>
+								<p className="text-xs text-slate-400">
+									{currentTime.toLocaleDateString("id-ID", { year: "numeric", month: "long" })}
+								</p>
+							</div>
+						</motion.div>
+					</motion.div>
+
+					{/* Bottom wave decoration */}
+					<motion.div
+						initial={{ opacity: 0 }}
+						animate={{ opacity: 1 }}
+						transition={{ delay: 0.6 }}
+						className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none"
+					>
+						<svg viewBox="0 0 1440 120" className="absolute bottom-0 w-full h-full" preserveAspectRatio="none">
+							<path
+								fill="url(#waveGradient)"
+								d="M0,60 C360,100 720,20 1080,60 C1260,80 1350,40 1440,60 L1440,120 L0,120 Z"
+							>
+								<animate
+									attributeName="d"
+									dur="10s"
+									repeatCount="indefinite"
+									values="
+										M0,60 C360,100 720,20 1080,60 C1260,80 1350,40 1440,60 L1440,120 L0,120 Z;
+										M0,80 C360,40 720,100 1080,40 C1260,60 1350,80 1440,40 L1440,120 L0,120 Z;
+										M0,60 C360,100 720,20 1080,60 C1260,80 1350,40 1440,60 L1440,120 L0,120 Z
+									"
+								/>
+							</path>
+							<defs>
+								<linearGradient id="waveGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+									<stop offset="0%" stopColor="rgba(6,182,212,0.1)" />
+									<stop offset="50%" stopColor="rgba(20,184,166,0.15)" />
+									<stop offset="100%" stopColor="rgba(52,211,153,0.1)" />
+								</linearGradient>
+							</defs>
+						</svg>
+					</motion.div>
+				</div>
+			</div>
+		);
+	}
+
 	const hasIn = !!todayData?.jam_masuk;
 	const hasOut = !!todayData?.jam_keluar;
 	const todayStatus = todayData?.status || null;
@@ -276,7 +458,7 @@ const AbsensiPage = () => {
 	})();
 
 	return (
-		<div className="h-[100dvh] bg-white flex flex-col overflow-hidden pb-20">
+		<div className="fixed inset-0 bg-white flex flex-col pb-20">
 
 			{/* ══ Header + Clock ═══════════════════════════════ */}
 			<div className="flex-shrink-0 px-5 pt-[calc(env(safe-area-inset-top,8px)+8px)] pb-4 rounded-b-[28px] shadow-[0_4px_20px_rgba(0,0,0,0.06)]">
@@ -382,43 +564,189 @@ const AbsensiPage = () => {
 									{todayData?.keterangan && <p className="text-[10px] text-slate-400 mt-0.5 text-center">{todayData.keterangan}</p>}
 								</div>
 							) : hasOut ? (
-								/* ── Completed (Masuk + Pulang) ── */
-								<div className="flex-1 flex flex-col items-center justify-center">
+								/* ── Completed (Masuk + Pulang) — Premium Design ── */
+								<div className="flex-1 flex flex-col items-center justify-center relative overflow-hidden">
+									{/* Floating particles background */}
+									<div className="absolute inset-0 pointer-events-none">
+										{[...Array(12)].map((_, i) => (
+											<motion.div
+												key={i}
+												className="absolute w-2 h-2 rounded-full"
+												style={{
+													background: ['#10b981', '#06b6d4', '#8b5cf6', '#f59e0b', '#ec4899'][i % 5],
+													left: `${10 + (i * 7) % 80}%`,
+													top: `${15 + (i * 11) % 70}%`,
+												}}
+												animate={{
+													y: [0, -15, 0],
+													x: [0, i % 2 === 0 ? 8 : -8, 0],
+													scale: [0.8, 1.2, 0.8],
+													opacity: [0.3, 0.6, 0.3],
+												}}
+												transition={{
+													duration: 3 + (i % 3),
+													repeat: Infinity,
+													delay: i * 0.2,
+													ease: "easeInOut",
+												}}
+											/>
+										))}
+									</div>
+
+									{/* Success ring with animated gradient */}
 									<motion.div
-										initial={{ scale: 0 }}
-										animate={{ scale: 1 }}
-										transition={{ type: "spring", stiffness: 300, damping: 18 }}
-										className="w-20 h-20 rounded-full bg-emerald-50 flex items-center justify-center mb-3"
+										initial={{ scale: 0, rotate: -180 }}
+										animate={{ scale: 1, rotate: 0 }}
+										transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.1 }}
+										className="relative mb-5"
 									>
-										<LuCircleCheckBig className="w-10 h-10 text-emerald-500" />
+										{/* Outer glow */}
+										<div className="absolute -inset-3 bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 rounded-full blur-xl opacity-30 animate-pulse" />
+										
+										{/* Ring container */}
+										<div className="relative w-24 h-24">
+											{/* Animated rotating ring */}
+											<svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
+												<defs>
+													<linearGradient id="successGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+														<stop offset="0%" stopColor="#10b981" />
+														<stop offset="50%" stopColor="#06b6d4" />
+														<stop offset="100%" stopColor="#8b5cf6" />
+													</linearGradient>
+												</defs>
+												<circle cx="50" cy="50" r="45" fill="none" stroke="#e2e8f0" strokeWidth="6" />
+												<motion.circle
+													cx="50" cy="50" r="45"
+													fill="none"
+													stroke="url(#successGradient)"
+													strokeWidth="6"
+													strokeLinecap="round"
+													strokeDasharray={283}
+													initial={{ strokeDashoffset: 283 }}
+													animate={{ strokeDashoffset: 0 }}
+													transition={{ duration: 1.2, ease: "easeOut", delay: 0.3 }}
+												/>
+											</svg>
+											
+											{/* Center icon */}
+											<motion.div
+												initial={{ scale: 0 }}
+												animate={{ scale: 1 }}
+												transition={{ type: "spring", stiffness: 300, damping: 12, delay: 0.6 }}
+												className="absolute inset-0 flex items-center justify-center"
+											>
+												<div className="w-16 h-16 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/30">
+													<LuCircleCheckBig className="w-8 h-8 text-white" />
+												</div>
+											</motion.div>
+										</div>
 									</motion.div>
-									<p className="text-base font-bold text-slate-800 mb-1">Selesai 🎉</p>
+
+									{/* Success text with gradient */}
+									<motion.div
+										initial={{ opacity: 0, y: 20 }}
+										animate={{ opacity: 1, y: 0 }}
+										transition={{ duration: 0.5, delay: 0.4 }}
+										className="text-center mb-4"
+									>
+										<h2 className="text-xl font-black bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 bg-clip-text text-transparent">
+											Presensi Selesai
+										</h2>
+										<p className="text-xs text-slate-400 mt-0.5">Kerja bagus hari ini!</p>
+									</motion.div>
+
+									{/* Mode badge */}
 									{isDinasMode && (
-										<span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold mb-1.5 ${STATUS_COLORS[todayStatus]?.bg} ${STATUS_COLORS[todayStatus]?.text}`}>
+										<motion.span
+											initial={{ opacity: 0, scale: 0.8 }}
+											animate={{ opacity: 1, scale: 1 }}
+											transition={{ delay: 0.5 }}
+											className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold mb-4 ${STATUS_COLORS[todayStatus]?.bg} ${STATUS_COLORS[todayStatus]?.text} ring-2 ring-offset-2 ring-offset-white ${STATUS_COLORS[todayStatus]?.text.replace('text-', 'ring-')}/20`}
+										>
+											<span className={`w-1.5 h-1.5 rounded-full ${STATUS_COLORS[todayStatus]?.dot} animate-pulse`} />
 											{STATUS_LABELS[todayStatus]}
-										</span>
+										</motion.span>
 									)}
-									{/* Time pills */}
-									<div className="flex items-center gap-2 mt-1">
-										<div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 rounded-lg">
-											<LuLogIn className="h-3 w-3 text-emerald-500" />
-											<span className="text-xs font-bold text-emerald-600 tabular-nums">{fmt(todayData?.jam_masuk)}</span>
+
+									{/* Time card with glassmorphism */}
+									<motion.div
+										initial={{ opacity: 0, y: 20 }}
+										animate={{ opacity: 1, y: 0 }}
+										transition={{ duration: 0.5, delay: 0.6 }}
+										className="relative w-full max-w-xs"
+									>
+										<div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-cyan-500/10 rounded-2xl blur-xl" />
+										<div className="relative bg-white/80 backdrop-blur-xl border border-slate-100 rounded-2xl p-4 shadow-xl shadow-slate-200/50">
+											{/* Timeline visualization */}
+											<div className="flex items-center justify-between mb-4">
+												<motion.div
+													initial={{ x: -20, opacity: 0 }}
+													animate={{ x: 0, opacity: 1 }}
+													transition={{ delay: 0.7 }}
+													className="flex flex-col items-center"
+												>
+													<div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/30 mb-2">
+														<LuLogIn className="w-5 h-5 text-white" />
+													</div>
+													<span className="text-lg font-black text-slate-800 tabular-nums">{fmt(todayData?.jam_masuk)}</span>
+													<span className="text-[10px] text-slate-400 font-medium">Masuk</span>
+												</motion.div>
+
+												{/* Animated connector */}
+												<div className="flex-1 mx-3 relative h-1">
+													<div className="absolute inset-0 bg-slate-100 rounded-full" />
+													<motion.div
+														initial={{ scaleX: 0 }}
+														animate={{ scaleX: 1 }}
+														transition={{ duration: 0.8, delay: 0.8, ease: "easeOut" }}
+														className="absolute inset-0 bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 rounded-full origin-left"
+													/>
+													<motion.div
+														initial={{ opacity: 0 }}
+														animate={{ opacity: 1 }}
+														transition={{ delay: 1.2 }}
+														className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full border-2 border-teal-400 shadow-sm"
+													/>
+												</div>
+
+												<motion.div
+													initial={{ x: 20, opacity: 0 }}
+													animate={{ x: 0, opacity: 1 }}
+													transition={{ delay: 0.9 }}
+													className="flex flex-col items-center"
+												>
+													<div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center shadow-lg shadow-cyan-500/30 mb-2">
+														<LuLogOut className="w-5 h-5 text-white" />
+													</div>
+													<span className="text-lg font-black text-slate-800 tabular-nums">{fmt(todayData?.jam_keluar)}</span>
+													<span className="text-[10px] text-slate-400 font-medium">Pulang</span>
+												</motion.div>
+											</div>
+
+											{/* Status tags */}
+											{(telatMasukMenit > 0 || pulangLebiahAwalMenit > 0) && (
+												<motion.div
+													initial={{ opacity: 0 }}
+													animate={{ opacity: 1 }}
+													transition={{ delay: 1 }}
+													className="flex flex-wrap justify-center gap-2 pt-3 border-t border-slate-100"
+												>
+													{telatMasukMenit > 0 && (
+														<span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-50 text-rose-600 text-[10px] font-bold">
+															<span className="w-1 h-1 rounded-full bg-rose-400" />
+															Telat {telatMasukMenit} menit
+														</span>
+													)}
+													{pulangLebiahAwalMenit > 0 && (
+														<span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-600 text-[10px] font-bold">
+															<span className="w-1 h-1 rounded-full bg-amber-400" />
+															{pulangLebiahAwalMenit} menit lebih awal
+														</span>
+													)}
+												</motion.div>
+											)}
 										</div>
-										<span className="text-slate-200">→</span>
-										<div className="flex items-center gap-1.5 px-3 py-1.5 bg-sky-50 rounded-lg">
-											<LuLogOut className="h-3 w-3 text-sky-500" />
-											<span className="text-xs font-bold text-sky-600 tabular-nums">{fmt(todayData?.jam_keluar)}</span>
-										</div>
-									</div>
-									{/* Tags */}
-									<div className="flex flex-wrap justify-center gap-1 mt-2">
-										{telatMasukMenit > 0 && (
-											<span className="px-2 py-0.5 rounded-full bg-rose-50 text-rose-500 text-[9px] font-bold">Telat {telatMasukMenit}m</span>
-										)}
-										{pulangLebiahAwalMenit > 0 && (
-											<span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-500 text-[9px] font-bold">{pulangLebiahAwalMenit}m lebih awal</span>
-										)}
-									</div>
+									</motion.div>
 								</div>
 							) : hasIn ? (
 								/* ── Waiting for Pulang ── */

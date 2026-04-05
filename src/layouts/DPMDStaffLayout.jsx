@@ -186,7 +186,6 @@ const BIDANG_SUBMENUS = {
 		{ label: 'Produk Hukum', path: '/bidang/pmd/produk-hukum', icon: 'file' },
 	],
 	6: [
-		{ label: 'Profil Desa', path: '/bidang/pemdes/profil-desa', icon: 'chart' },
 		{ label: 'Aparatur Desa', path: '/bidang/pemdes/aparatur-desa', icon: 'users' },
 		{ label: 'Produk Hukum', path: '/bidang/pemdes/produk-hukum', icon: 'file' },
 	],
@@ -850,11 +849,13 @@ const DPMDStaffLayout = () => {
 				<Outlet />
 			</main>
 
-			{/* Bottom Navigation - Mobile Only */}
+			{/* Bottom Navigation - Mobile Only - Premium Floating Pill */}
 			{!isDesktop && (
-				<nav className={`fixed bottom-3 left-3 right-3 bg-white border ${theme.borderColor} shadow-lg z-50 rounded-2xl`}>
-					<div className="max-w-lg mx-auto px-4">
-						<div className="flex items-end justify-around py-2">
+				<nav className="fixed bottom-4 left-5 right-5 z-50">
+					{/* Main navigation container */}
+					<div className="relative bg-white border border-gray-100 shadow-[0_2px_20px_rgba(0,0,0,0.08)] rounded-full">
+						<div className="max-w-lg mx-auto px-1">
+							<div className="flex items-center justify-around h-[56px]">
 							{bottomNavItems.map((item, index) => {
 								const itemPath = item.path ? item.path.split('?')[0] : '';
 								const itemQuery = item.path && item.path.includes('?') ? item.path.split('?')[1] : null;
@@ -869,7 +870,7 @@ const DPMDStaffLayout = () => {
 								// Quick Action FAB (for absensi-eligible users)
 								if (item.isQuickAction) {
 									return (
-										<div key={index} className="relative flex flex-col items-center -mt-5">
+										<div key={index} className="relative flex flex-col items-center">
 											{/* Quick Action Popup */}
 											<AnimatePresence>
 											{showQuickAction && (
@@ -879,91 +880,115 @@ const DPMDStaffLayout = () => {
 														animate={{ opacity: 1 }}
 														exit={{ opacity: 0 }}
 														transition={{ duration: 0.2 }}
-														className="fixed inset-0 z-40 bg-black/10 backdrop-blur-[2px]"
+														className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm"
 														onClick={() => setShowQuickAction(false)}
 													/>
 													<motion.div
-														initial={{ opacity: 0, y: 20, scale: 0.9 }}
+														initial={{ opacity: 0, y: 30, scale: 0.8 }}
 														animate={{ opacity: 1, y: 0, scale: 1 }}
-														exit={{ opacity: 0, y: 20, scale: 0.9 }}
-														transition={{ type: "spring", stiffness: 400, damping: 25 }}
-														className="absolute bottom-20 z-50 flex items-center gap-3"
+														exit={{ opacity: 0, y: 30, scale: 0.8 }}
+														transition={{ type: "spring", stiffness: 400, damping: 22 }}
+														className="absolute bottom-16 z-50"
 													>
-														{/* Bidang Button */}
-														<motion.button
-															initial={{ opacity: 0, x: -10 }}
-															animate={{ opacity: 1, x: 0 }}
-															exit={{ opacity: 0, x: -10 }}
-															transition={{ delay: 0.05 }}
-															whileTap={{ scale: 0.95 }}
-															onClick={() => {
-																setShowQuickAction(false);
-																navigate(userBidang?.path || "/dpmd/jadwal-kegiatan");
-															}}
-															className="flex items-center gap-2.5 bg-white rounded-2xl shadow-xl border border-slate-100 px-4 py-2.5 hover:scale-105 transition-transform"
-														>
-															<div className={`h-9 w-9 rounded-xl bg-gradient-to-br ${userBidang?.gradient || 'from-blue-500 to-indigo-600'} flex items-center justify-center`}>
-																<AnimatedIcon type={userBidang?.icon || 'briefcase'} isActive={true} className="w-5 h-5 text-white" />
-															</div>
-															<span className="text-sm font-semibold text-slate-700 whitespace-nowrap">{userBidang?.name || 'Bidang'}</span>
-														</motion.button>
-														{/* Absensi Button */}
-														<motion.button
-															initial={{ opacity: 0, x: 10 }}
-															animate={{ opacity: 1, x: 0 }}
-															exit={{ opacity: 0, x: 10 }}
-															transition={{ delay: 0.1 }}
-															whileTap={{ scale: 0.95 }}
-															onClick={() => {
-																setShowQuickAction(false);
-																navigate("/dpmd/absensi");
-															}}
-															className="flex items-center gap-2.5 bg-white rounded-2xl shadow-xl border border-slate-100 px-4 py-2.5 hover:scale-105 transition-transform"
-														>
-															<div className="h-9 w-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
-																<FiClock className="w-5 h-5 text-white" />
-															</div>
-															<span className="text-sm font-semibold text-slate-700 whitespace-nowrap">Presensi</span>
-														</motion.button>
+														<div className="relative bg-white/95 backdrop-blur-2xl rounded-3xl shadow-[0_12px_40px_rgba(0,0,0,0.2)] border border-white/60 p-3 min-w-[220px]">
+															{/* Top notch pointer */}
+															<div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-white/95 rotate-45 border-r border-b border-white/60" />
+															
+															{/* Header */}
+															<p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2 mb-2">Aksi Cepat</p>
+															
+															{/* Bidang Button */}
+															<motion.button
+																initial={{ opacity: 0, x: -15 }}
+																animate={{ opacity: 1, x: 0 }}
+																exit={{ opacity: 0, x: -15 }}
+																transition={{ delay: 0.05, type: "spring", stiffness: 300 }}
+																whileTap={{ scale: 0.97 }}
+																onClick={() => {
+																	setShowQuickAction(false);
+																	navigate(userBidang?.path || "/dpmd/jadwal-kegiatan");
+																}}
+																className="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl hover:bg-slate-50 transition-colors group mb-1"
+															>
+																<div className={`relative h-10 w-10 rounded-2xl bg-gradient-to-br ${userBidang?.gradient || 'from-blue-500 to-indigo-600'} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform`}>
+																	<div className="absolute inset-0 rounded-2xl bg-white/20" />
+																	<AnimatedIcon type={userBidang?.icon || 'briefcase'} isActive={true} className="w-5 h-5 text-white relative z-10" />
+																</div>
+																<div className="text-left">
+																	<span className="text-sm font-bold text-slate-800 block">{userBidang?.name || 'Bidang'}</span>
+																	<span className="text-[10px] text-slate-400">Aktivitas bidang</span>
+																</div>
+																<FiChevronRight className="w-4 h-4 text-slate-300 ml-auto group-hover:text-slate-500 group-hover:translate-x-0.5 transition-all" />
+															</motion.button>
+															
+															{/* Divider */}
+															<div className="h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent mx-2" />
+															
+															{/* Presensi Button */}
+															<motion.button
+																initial={{ opacity: 0, x: -15 }}
+																animate={{ opacity: 1, x: 0 }}
+																exit={{ opacity: 0, x: -15 }}
+																transition={{ delay: 0.1, type: "spring", stiffness: 300 }}
+																whileTap={{ scale: 0.97 }}
+																onClick={() => {
+																	setShowQuickAction(false);
+																	navigate("/dpmd/absensi");
+																}}
+																className="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl hover:bg-slate-50 transition-colors group mt-1"
+															>
+																<div className="relative h-10 w-10 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+																	<div className="absolute inset-0 rounded-2xl bg-white/20" />
+																	<FiClock className="w-5 h-5 text-white relative z-10" />
+																</div>
+																<div className="text-left">
+																	<span className="text-sm font-bold text-slate-800 block">Presensi</span>
+																	<span className="text-[10px] text-slate-400">Absen masuk & pulang</span>
+																</div>
+																<FiChevronRight className="w-4 h-4 text-slate-300 ml-auto group-hover:text-slate-500 group-hover:translate-x-0.5 transition-all" />
+															</motion.button>
+														</div>
 													</motion.div>
 												</>
 											)}
 											</AnimatePresence>
-											{/* Main FAB Button */}
-											<button
-												onClick={() => setShowQuickAction(!showQuickAction)}
-												className={`flex items-center justify-center h-14 w-14 rounded-full shadow-lg transition-all duration-200 ${
-													showQuickAction
-														? 'bg-gradient-to-br from-slate-700 to-slate-900 scale-110 rotate-45'
-														: 'bg-gradient-to-br from-cyan-500 to-blue-600 hover:scale-105'
-												}`}
-											>
-												<img src={aksiCepatIcon} alt="Aksi Cepat" className={`h-7 w-7 brightness-0 invert transition-transform duration-200 ${showQuickAction ? '-rotate-45' : ''}`} />
-											</button>
-											<span className={`text-[11px] mt-1 font-semibold ${showQuickAction ? 'text-slate-700' : 'text-gray-500'}`}>
+											{/* Main FAB Button — elevated above the pill */}
+											<div className="relative -mt-8 mb-0.5">
+												<button
+													onClick={() => setShowQuickAction(!showQuickAction)}
+													className={`relative flex items-center justify-center h-[52px] w-[52px] rounded-full shadow-lg ring-[5px] ring-white transition-all duration-300 ${
+														showQuickAction
+															? 'bg-gradient-to-br from-slate-700 to-slate-900 rotate-45 scale-95'
+															: 'bg-gradient-to-br from-cyan-500 to-blue-600 hover:scale-110'
+													}`}
+												>
+													<img src={aksiCepatIcon} alt="Aksi Cepat" className={`h-6 w-6 brightness-0 invert transition-transform duration-300 ${showQuickAction ? '-rotate-45' : ''}`} />
+												</button>
+											</div>
+											<span className={`text-[9px] font-bold tracking-wider uppercase ${showQuickAction ? 'text-slate-700' : 'text-slate-400'}`}>
 												{showQuickAction ? 'Tutup' : item.label}
 											</span>
 										</div>
 									);
 								}
 
-								// Main button (Bidang) - larger & elevated (non-absensi users)
+								// Main button (Bidang) - elevated (non-absensi users)
 								if (item.isMain) {
 									return (
 										<button
 											key={index}
 											onClick={() => navigate(item.path)}
-											className="relative flex flex-col items-center -mt-5"
+											className="relative flex flex-col items-center"
 										>
-											<div className={`flex items-center justify-center h-14 w-14 rounded-full shadow-lg transition-all duration-200 ${
-												isActive
-													? `bg-gradient-to-br ${theme.gradientFrom} ${theme.gradientTo} text-white scale-110`
-													: `bg-gradient-to-br ${theme.gradientFrom} ${theme.gradientTo} text-white hover:scale-105`
-											}`}>
-												<AnimatedIcon type={Icon} isActive={isActive} className="w-7 h-7 text-white" />
+											<div className="relative -mt-8 mb-0.5">
+												<div className={`relative flex items-center justify-center h-[52px] w-[52px] rounded-full shadow-lg ring-[5px] ring-white transition-all duration-300 bg-gradient-to-br ${theme.gradientFrom} ${theme.gradientTo} text-white ${
+													isActive ? 'scale-110' : 'hover:scale-110'
+												}`}>
+													<AnimatedIcon type={Icon} isActive={isActive} className="w-6 h-6 text-white" />
+												</div>
 											</div>
-											<span className={`text-[11px] mt-1 font-semibold ${
-												isActive ? theme.activeText : 'text-gray-500'
+											<span className={`text-[9px] font-bold tracking-wider uppercase ${
+												isActive ? theme.activeText : 'text-slate-400'
 											}`}>{item.label}</span>
 										</button>
 									);
@@ -980,19 +1005,25 @@ const DPMDStaffLayout = () => {
 												navigate(item.path);
 											}
 										}}
-										className={`relative flex flex-col items-center justify-center px-4 py-1 rounded-xl transition-all duration-200 ${
-											isActive 
-												? theme.activeText 
-												: `text-gray-400 ${theme.hoverText}`
-										}`}
+										className="relative flex flex-col items-center justify-center py-1 group"
 									>
-										<Icon className="h-6 w-6" />
-										<span className={`text-[11px] mt-1 font-medium ${
-											isActive ? theme.activeText : 'text-gray-400'
+										{isActive && (
+											<motion.div
+												layoutId="navDot"
+												className={`absolute -top-0.5 w-5 h-1 rounded-full bg-gradient-to-r ${theme.gradientFrom} ${theme.gradientTo}`}
+												transition={{ type: "spring", stiffness: 500, damping: 30 }}
+											/>
+										)}
+										<Icon className={`h-[22px] w-[22px] transition-all duration-200 ${
+											isActive ? `${theme.activeText} scale-110` : 'text-slate-400 group-hover:text-slate-600'
+										}`} />
+										<span className={`text-[9px] mt-1 font-bold tracking-wider uppercase ${
+											isActive ? theme.activeText : 'text-slate-400'
 										}`}>{item.label}</span>
 									</button>
 								);
 							})}
+							</div>
 						</div>
 					</div>
 				</nav>
