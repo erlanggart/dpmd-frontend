@@ -18,10 +18,10 @@
     "chart.js": "^4.5.0",
     "crypto-js": "^4.2.0",
     "d3-delaunay": "^6.0.4",
-    "face-api.js": "^0.22.2",
+    "face-api.js": "^0.20.0",
     "framer-motion": "^12.23.22",
     "html2canvas": "^1.4.1",
-    "jspdf": "^3.0.3",
+    "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.2",
     "leaflet": "^1.9.4",
     "lottie-react": "^2.4.1",
@@ -63,7 +63,7 @@
     "iconv-lite": "^0.7.1",
     "sharp": "^0.34.5",
     "vite": "^7.1.2",
-    "vite-plugin-pwa": "^1.1.0",
+    "vite-plugin-pwa": "^1.2.0",
     "workbox-window": "^7.3.0"
   }
 }
