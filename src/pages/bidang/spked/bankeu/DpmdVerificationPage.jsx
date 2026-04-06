@@ -750,6 +750,15 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
     }
   }, [activeView]);
 
+  // Re-fetch submission settings when tahunAnggaran changes
+  useEffect(() => {
+    if (cacheRef.current.fetchedTabs.control) {
+      cacheRef.current.fetchedTabs.control = false;
+      fetchSubmissionSettings();
+      cacheRef.current.fetchedTabs.control = true;
+    }
+  }, [tahunAnggaran]);
+
   // Fetch tracking data when tahun changes (user explicitly changed year filter)
   useEffect(() => {
     if (activeView === 'tracking' || activeView === 'statistics') {
@@ -883,9 +892,10 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
   const fetchSubmissionSettings = async () => {
     try {
       setLoadingSettings(true);
+      // Use year-specific keys to stay in sync with desa/kecamatan pages
       const [desaRes, kecamatanRes] = await Promise.all([
-        api.get('/app-settings/bankeu_submission_desa').catch(() => ({ data: { data: { value: true, config: null } } })),
-        api.get('/app-settings/bankeu_submission_kecamatan').catch(() => ({ data: { data: { value: true, config: null } } }))
+        api.get(`/app-settings/bankeu_submission_desa_${tahunAnggaran}`).catch(() => ({ data: { data: { value: true, config: null } } })),
+        api.get(`/app-settings/bankeu_submission_kecamatan_${tahunAnggaran}`).catch(() => ({ data: { data: { value: true, config: null } } }))
       ]);
       setSubmissionSettings({
         bankeu_submission_desa: desaRes.data?.data?.value ?? true,
@@ -905,14 +915,18 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
   const updateSubmissionSetting = async (key, configValue) => {
     try {
       setLoadingSettings(true);
-      const res = await api.put(`/app-settings/${key}`, { value: configValue });
+      // Map internal key to year-specific API key for sync with desa/kecamatan
+      const apiKey = key === 'bankeu_submission_desa'
+        ? `bankeu_submission_desa_${tahunAnggaran}`
+        : `bankeu_submission_kecamatan_${tahunAnggaran}`;
+      const res = await api.put(`/app-settings/${apiKey}`, { value: configValue });
       if (res.data.success) {
         setSubmissionSettings(prev => ({ ...prev, [key]: res.data.data.value }));
         setSubmissionConfigs(prev => ({ ...prev, [key]: res.data.data.config || configValue }));
         Swal.fire({
           icon: 'success',
           title: 'Berhasil',
-          text: `Pengaturan ${key === 'bankeu_submission_desa' ? 'Desa' : 'Kecamatan'} berhasil diperbarui`,
+          text: `Pengaturan ${key === 'bankeu_submission_desa' ? 'Desa' : 'Kecamatan'} TA ${tahunAnggaran} berhasil diperbarui`,
           timer: 2000,
           showConfirmButton: false
         });
@@ -3379,8 +3393,8 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                 {/* Schedule Controls */}
                 <div className="space-y-6">
                   {[
-                    { key: 'bankeu_submission_desa', label: 'Pengajuan Desa → Dinas', desc: 'Desa mengirim proposal ke Dinas Terkait' },
-                    { key: 'bankeu_submission_kecamatan', label: 'Pengajuan Kecamatan → DPMD', desc: 'Kecamatan meneruskan proposal ke DPMD' }
+                    { key: 'bankeu_submission_desa', label: `Pengajuan Desa → Dinas (TA ${tahunAnggaran})`, desc: 'Desa mengirim proposal ke Dinas Terkait' },
+                    { key: 'bankeu_submission_kecamatan', label: `Pengajuan Kecamatan → DPMD (TA ${tahunAnggaran})`, desc: 'Kecamatan meneruskan proposal ke DPMD' }
                   ].map(({ key, label, desc }) => (
                     <SubmissionModeCard
                       key={key}
