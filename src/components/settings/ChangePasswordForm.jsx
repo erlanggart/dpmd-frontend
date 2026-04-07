@@ -2,6 +2,35 @@ import { useState } from 'react';
 import { FiLock, FiEye, FiEyeOff, FiCheck, FiAlertCircle } from 'react-icons/fi';
 import api from '../../api';
 
+function PasswordField({ label, name, showPassword, value, onChange, onToggle }) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>
+      <div className="relative">
+        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <FiLock className="text-gray-400" />
+        </div>
+        <input
+          type={showPassword ? 'text' : 'password'}
+          name={name}
+          value={value}
+          onChange={onChange}
+          required
+          className="w-full pl-10 pr-12 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+          placeholder={`Masukkan ${label.toLowerCase()}`}
+        />
+        <button
+          type="button"
+          onClick={onToggle}
+          className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+        >
+          {showPassword ? <FiEyeOff /> : <FiEye />}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function ChangePasswordForm() {
   const [form, setForm] = useState({
     current_password: '',
@@ -17,7 +46,7 @@ export default function ChangePasswordForm() {
   const [message, setMessage] = useState(null);
 
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    setForm((prevForm) => ({ ...prevForm, [e.target.name]: e.target.value }));
     setMessage(null);
   };
 
@@ -54,33 +83,6 @@ export default function ChangePasswordForm() {
     }
   };
 
-  const PasswordField = ({ name, label, showKey }) => (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>
-      <div className="relative">
-        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-          <FiLock className="text-gray-400" />
-        </div>
-        <input
-          type={showPasswords[showKey] ? 'text' : 'password'}
-          name={name}
-          value={form[name]}
-          onChange={handleChange}
-          required
-          className="w-full pl-10 pr-12 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-          placeholder={`Masukkan ${label.toLowerCase()}`}
-        />
-        <button
-          type="button"
-          onClick={() => setShowPasswords(prev => ({ ...prev, [showKey]: !prev[showKey] }))}
-          className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
-        >
-          {showPasswords[showKey] ? <FiEyeOff /> : <FiEye />}
-        </button>
-      </div>
-    </div>
-  );
-
   return (
     <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
       <h2 className="text-xl font-bold text-gray-900 mb-6">Ubah Password</h2>
@@ -97,9 +99,30 @@ export default function ChangePasswordForm() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <PasswordField name="current_password" label="Password Lama" showKey="current" />
-        <PasswordField name="new_password" label="Password Baru" showKey="new" />
-        <PasswordField name="confirm_password" label="Konfirmasi Password Baru" showKey="confirm" />
+        <PasswordField
+          name="current_password"
+          label="Password Lama"
+          showPassword={showPasswords.current}
+          value={form.current_password}
+          onChange={handleChange}
+          onToggle={() => setShowPasswords((prev) => ({ ...prev, current: !prev.current }))}
+        />
+        <PasswordField
+          name="new_password"
+          label="Password Baru"
+          showPassword={showPasswords.new}
+          value={form.new_password}
+          onChange={handleChange}
+          onToggle={() => setShowPasswords((prev) => ({ ...prev, new: !prev.new }))}
+        />
+        <PasswordField
+          name="confirm_password"
+          label="Konfirmasi Password Baru"
+          showPassword={showPasswords.confirm}
+          value={form.confirm_password}
+          onChange={handleChange}
+          onToggle={() => setShowPasswords((prev) => ({ ...prev, confirm: !prev.confirm }))}
+        />
 
         <div className="pt-2">
           <button
