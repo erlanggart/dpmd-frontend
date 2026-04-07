@@ -26,7 +26,8 @@ export default function DisposisiSurat() {
   const [formKirim, setFormKirim] = useState({
     kepala_dinas_user_id: '',
     catatan: '',
-    instruksi: 'biasa'
+    instruksi: 'biasa',
+    instruksi_manual: ''
   });
   const [formData, setFormData] = useState({
     nomor_surat: '',
@@ -151,14 +152,14 @@ export default function DisposisiSurat() {
         });
       }
 
-      toast.success('Surat masuk berhasil ditambahkan');
+      toast.success('Disposisi masuk berhasil ditambahkan');
       setShowInputModal(false);
       resetForm();
       fetchData();
     } catch (error) {
       console.error('❌ Error submitting surat:', error);
       console.error('Error details:', error.response?.data);
-      toast.error(error.response?.data?.message || 'Gagal menambahkan surat masuk');
+      toast.error(error.response?.data?.message || 'Gagal menambahkan disposisi masuk');
     } finally {
       setSubmitting(false);
     }
@@ -200,15 +201,30 @@ export default function DisposisiSurat() {
       return;
     }
 
+    // Resolve instruksi: use manual text when "lainnya" selected
+    const instruksiValue = formKirim.instruksi === 'lainnya'
+      ? formKirim.instruksi_manual
+      : formKirim.instruksi;
+
+    if (!instruksiValue) {
+      toast.error('Instruksi tidak boleh kosong');
+      return;
+    }
+
     setSubmitting(true);
     try {
-      await api.post(`/surat-masuk/${selectedSurat.id}/kirim-kepala-dinas`, formKirim);
+      await api.post(`/surat-masuk/${selectedSurat.id}/kirim-kepala-dinas`, {
+        kepala_dinas_user_id: formKirim.kepala_dinas_user_id,
+        catatan: formKirim.catatan,
+        instruksi: instruksiValue,
+      });
       toast.success('Surat berhasil dikirim ke Kepala Dinas');
       setShowKirimModal(false);
       setFormKirim({
         kepala_dinas_user_id: '',
         catatan: '',
-        instruksi: 'biasa'
+        instruksi: 'biasa',
+        instruksi_manual: ''
       });
       setSelectedSurat(null);
       fetchData(); // Refresh list
@@ -234,6 +250,7 @@ export default function DisposisiSurat() {
   const getInstruksiBadge = (instruksi) => {
     const badges = {
       segera: 'bg-red-100 text-red-800',
+      sangat_segera: 'bg-red-200 text-red-900',
       penting: 'bg-orange-100 text-orange-800',
       biasa: 'bg-gray-100 text-gray-800',
       koordinasi: 'bg-blue-100 text-blue-800',
@@ -378,7 +395,7 @@ export default function DisposisiSurat() {
                 </div>
                 <div>
                   <h1 className="text-xl sm:text-3xl font-bold">Manajemen Disposisi</h1>
-                  <p className="text-blue-100 mt-1 text-xs sm:text-base">Kelola surat masuk dan disposisi secara efisien</p>
+                  <p className="text-blue-100 mt-1 text-xs sm:text-base">Kelola disposisi masuk dan disposisi keluar secara efisien</p>
                 </div>
               </div>
             </div>
@@ -393,7 +410,7 @@ export default function DisposisiSurat() {
               className="flex items-center justify-center gap-2 w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-lg sm:rounded-xl hover:from-blue-700 hover:to-cyan-700 font-medium text-sm sm:text-base shadow-lg hover:shadow-xl transform hover:scale-105 transition-all"
             >
               <FiPlus className="text-lg sm:text-xl" />
-              Input Surat Masuk
+              Input Disposisi Masuk
             </button>
           </div>
         )}  
@@ -455,7 +472,7 @@ export default function DisposisiSurat() {
         <div className="bg-white rounded-2xl shadow-xl border border-gray-100 mb-6 overflow-hidden">
           <div className="border-b-2 border-gray-100">
             <nav className="flex -mb-px">
-              {/* Tab Surat Masuk - hanya untuk sekretariat */}
+              {/* Tab Disposisi Masuk - hanya untuk sekretariat */}
               {isSecretariat && (
                 <button
                   onClick={() => setActiveTab('surat-masuk')}
@@ -467,7 +484,7 @@ export default function DisposisiSurat() {
                 >
                   <div className="flex items-center gap-2">
                     <FiFileText className="text-lg" />
-                    Surat Masuk
+                    Disposisi Masuk
                     <span className="bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow-md">
                       {suratMasuk.length}
                     </span>
@@ -524,11 +541,11 @@ export default function DisposisiSurat() {
               </div>
             ) : (
               <div className="space-y-4">
-                {/* Surat Masuk Tab */}
+                {/* Disposisi Masuk Tab */}
                 {activeTab === 'surat-masuk' && suratMasuk.length === 0 && (
                   <div className="text-center py-12">
                     <FiFileText className="mx-auto text-gray-400 text-5xl mb-4" />
-                    <p className="text-gray-500">Tidak ada surat masuk</p>
+                    <p className="text-gray-500">Tidak ada disposisi masuk</p>
                   </div>
                 )}
 
@@ -927,12 +944,12 @@ export default function DisposisiSurat() {
         </div>
       </div>
 
-      {/* Modal Input Surat Masuk */}
+      {/* Modal Input Disposisi Masuk */}
       {showInputModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-gray-900">Input Surat Masuk</h2>
+              <h2 className="text-xl font-bold text-gray-900">Input Disposisi Masuk</h2>
               <button
                 onClick={() => {
                   setShowInputModal(false);
@@ -1115,7 +1132,8 @@ export default function DisposisiSurat() {
                     setFormKirim({
                       kepala_dinas_user_id: '',
                       catatan: '',
-                      instruksi: 'biasa'
+                      instruksi: 'biasa',
+                      instruksi_manual: ''
                     });
                   }}
                   className="text-white hover:bg-white/20 rounded-lg p-1.5 transition-colors"
@@ -1159,13 +1177,29 @@ export default function DisposisiSurat() {
                 </label>
                 <select
                   value={formKirim.instruksi}
-                  onChange={(e) => setFormKirim({...formKirim, instruksi: e.target.value})}
+                  onChange={(e) => setFormKirim({...formKirim, instruksi: e.target.value, instruksi_manual: e.target.value === 'lainnya' ? formKirim.instruksi_manual : ''})}
                   className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                 >
                   <option value="biasa">Biasa</option>
                   <option value="segera">Segera</option>
                   <option value="sangat_segera">Sangat Segera</option>
+                  <option value="penting">Penting</option>
+                  <option value="koordinasi">Koordinasi</option>
+                  <option value="teliti_lapor">Teliti & Lapor</option>
+                  <option value="edarkan">Edarkan</option>
+                  <option value="simpan">Simpan</option>
+                  <option value="lainnya">Lainnya (Input Manual)</option>
                 </select>
+                {formKirim.instruksi === 'lainnya' && (
+                  <input
+                    type="text"
+                    value={formKirim.instruksi_manual}
+                    onChange={(e) => setFormKirim({...formKirim, instruksi_manual: e.target.value})}
+                    className="w-full mt-2 px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    placeholder="Ketik instruksi manual..."
+                    required
+                  />
+                )}
               </div>
 
               <div>
@@ -1190,7 +1224,8 @@ export default function DisposisiSurat() {
                     setFormKirim({
                       kepala_dinas_user_id: '',
                       catatan: '',
-                      instruksi: 'biasa'
+                      instruksi: 'biasa',
+                      instruksi_manual: ''
                     });
                   }}
                   className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"

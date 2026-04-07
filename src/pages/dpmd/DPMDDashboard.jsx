@@ -20,6 +20,7 @@ import InfoCard from '../../components/mobile/InfoCard';
 import SectionHeader from '../../components/mobile/SectionHeader';
 import ActivityCard from '../../components/mobile/ActivityCard';
 import { getUserAvatarUrl } from '../../utils/avatarUtils';
+import BirthdayPopup from '../../components/BirthdayPopup';
 
 const API_CONFIG = {
   BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:3001/api'
@@ -464,6 +465,9 @@ const DPMDDashboard = () => {
   // ==================== RENDER ====================
   return (
     <div className="min-h-screen bg-gray-50 pb-20 lg:pb-4">
+      {/* Birthday Popup */}
+      <BirthdayPopup />
+
       {/* Mobile Header */}
       <MobileHeader
         userName={user.name || pegawaiData?.nama_pegawai?.split(' ')[0] || 'User'}

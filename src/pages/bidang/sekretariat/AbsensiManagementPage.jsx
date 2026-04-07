@@ -6,7 +6,7 @@ import {
   FiToggleLeft, FiToggleRight, FiUpload, FiSettings,
   FiChevronDown, FiFilter,
 } from "react-icons/fi";
-import { LuDownload, LuRefreshCw, LuShieldCheck, LuWifi, LuWifiOff, LuLayoutGrid, LuList, LuFileSpreadsheet, LuFileText } from "react-icons/lu";
+import { LuDownload, LuRefreshCw, LuShieldCheck, LuWifi, LuWifiOff, LuLayoutGrid, LuList, LuFileSpreadsheet } from "react-icons/lu";
 import api from "../../../api";
 import { showAlert } from "../../../components/AlertPopup";
 import { useAuth } from "../../../context/AuthContext";
@@ -327,67 +327,6 @@ const AbsensiManagementPage = () => {
     }
   };
 
-  const handleExportPDF = async () => {
-    try {
-      const { default: jsPDF } = await import("jspdf");
-      await import("jspdf-autotable");
-      const data = getExportData();
-      const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
-
-      // Header
-      doc.setFontSize(16);
-      doc.setFont("helvetica", "bold");
-      doc.text("DINAS PEMBERDAYAAN MASYARAKAT DAN DESA", 148.5, 15, { align: "center" });
-      doc.setFontSize(12);
-      doc.text("KABUPATEN BOGOR", 148.5, 22, { align: "center" });
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "normal");
-      doc.text(getExportTitle(), 148.5, 30, { align: "center" });
-      doc.setLineWidth(0.5);
-      doc.line(14, 33, 283, 33);
-
-      // Summary
-      doc.setFontSize(9);
-      const summaryText = Object.entries(STATUS_MAP).map(([k, v]) => `${v.label}: ${rekapSummary[k] || 0}`).join("  |  ");
-      doc.text(`Total: ${filteredRecords.length}  |  ${summaryText}`, 14, 39);
-
-      // Table
-      doc.autoTable({
-        startY: 44,
-        head: [["No", "Nama Pegawai", "Jabatan", "Tanggal", "Status", "Masuk", "Keluar", "Jarak", "Keterangan"]],
-        body: data.map(d => [d.no, d.nama, d.jabatan, d.tanggal, d.status, d.jamMasuk, d.jamKeluar, d.jarak, d.keterangan]),
-        styles: { fontSize: 8, cellPadding: 2 },
-        headStyles: { fillColor: [234, 88, 12], textColor: 255, fontStyle: "bold", fontSize: 8 },
-        alternateRowStyles: { fillColor: [255, 247, 237] },
-        columnStyles: {
-          0: { cellWidth: 8, halign: "center" },
-          1: { cellWidth: 40 },
-          2: { cellWidth: 32 },
-          3: { cellWidth: 22 },
-          4: { cellWidth: 18, halign: "center" },
-          5: { cellWidth: 14, halign: "center" },
-          6: { cellWidth: 14, halign: "center" },
-          7: { cellWidth: 12, halign: "center" },
-          8: { cellWidth: 'auto' },
-        },
-        margin: { left: 14, right: 14 },
-        didDrawPage: (data) => {
-          doc.setFontSize(7);
-          doc.setTextColor(150);
-          doc.text(`Dicetak: ${new Date().toLocaleString("id-ID")}`, 14, doc.internal.pageSize.height - 8);
-          doc.text(`Halaman ${doc.internal.getCurrentPageInfo().pageNumber}`, 283, doc.internal.pageSize.height - 8, { align: "right" });
-        },
-      });
-
-      const fileName = `Rekap_Absensi_${filterMode === "harian" ? filterDate : `${MONTHS[filterMonth-1]}_${filterYear}`}.pdf`;
-      doc.save(fileName);
-      showAlert({ icon: "success", title: "Export Berhasil", text: `File ${fileName} berhasil diunduh`, timer: 2000 });
-    } catch (err) {
-      console.error("Export PDF error:", err);
-      showAlert({ icon: "error", title: "Gagal Export", text: "Terjadi kesalahan saat mengexport PDF" });
-    }
-  };
-
   // ─── Render ───────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-orange-50/30">
@@ -517,15 +456,11 @@ const AbsensiManagementPage = () => {
                   </button>
                 </div>
 
-                {/* Export Buttons */}
+                {/* Export Button */}
                 <div className="flex gap-1.5 ml-auto">
                   <button onClick={handleExportExcel} disabled={filteredRecords.length === 0}
                     className="flex items-center gap-1.5 px-3 py-2 bg-emerald-50 text-emerald-700 rounded-xl text-xs font-bold border border-emerald-200 hover:bg-emerald-100 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
                     <LuFileSpreadsheet className="h-4 w-4" /> Excel
-                  </button>
-                  <button onClick={handleExportPDF} disabled={filteredRecords.length === 0}
-                    className="flex items-center gap-1.5 px-3 py-2 bg-red-50 text-red-700 rounded-xl text-xs font-bold border border-red-200 hover:bg-red-100 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
-                    <LuFileText className="h-4 w-4" /> PDF
                   </button>
                 </div>
               </div>

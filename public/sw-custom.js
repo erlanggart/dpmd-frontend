@@ -102,6 +102,10 @@ self.addEventListener('notificationclick', (event) => {
 	if (notificationData.targetDate && urlToOpen.includes('jadwal-kegiatan')) {
 		urlToOpen = `/dpmd/jadwal-kegiatan?tanggal=${notificationData.targetDate}`;
 	}
+	// Birthday notification → go to dashboard to show popup
+	if (notificationType === 'birthday') {
+		urlToOpen = '/dpmd/dashboard';
+	}
 
 	console.log('[SW-Custom] Opening URL:', urlToOpen, 'Type:', notificationType);
 
