@@ -56,6 +56,16 @@ const getStorageUrl = (imagePath) => {
   return `${base}/storage/${imagePath}`;
 };
 
+const formatTelat = (menit) => {
+  if (!menit || menit <= 0) return null;
+  if (menit >= 60) {
+    const jam = Math.floor(menit / 60);
+    const m = menit % 60;
+    return m > 0 ? `${jam}j ${m}m` : `${jam}j`;
+  }
+  return `${menit}m`;
+};
+
 const colorMap = {
   emerald: { bg: "bg-emerald-500/10", text: "text-emerald-600", badge: "bg-emerald-100 text-emerald-700", ring: "ring-emerald-500/20" },
   amber: { bg: "bg-amber-500/10", text: "text-amber-600", badge: "bg-amber-100 text-amber-700", ring: "ring-amber-500/20" },
@@ -538,39 +548,95 @@ const AbsensiManagementPage = () => {
               </div>
             ) : dashboardData ? (
               <>
+                {/* Hero Card - Kehadiran */}
+                {dashboardPeriode === 'hari' && (() => {
+                  const totalAbsen = dashboardData.summary?.total || 0;
+                  const totalBelum = dashboardData.belum_absen?.length || 0;
+                  const totalPegawai = totalAbsen + totalBelum;
+                  const pct = totalPegawai > 0 ? Math.round((totalAbsen / totalPegawai) * 100) : 0;
+                  return (
+                    <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-5 sm:p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Kehadiran Hari Ini</p>
+                          <div className="flex items-baseline gap-1.5 mt-2">
+                            <span className="text-4xl sm:text-5xl font-black text-slate-800 tabular-nums">{totalAbsen}</span>
+                            <span className="text-xl text-slate-300 font-light">/</span>
+                            <span className="text-xl text-slate-400 font-semibold tabular-nums">{totalPegawai}</span>
+                          </div>
+                          <p className="text-xs text-slate-400 mt-1.5">pegawai sudah tercatat</p>
+                        </div>
+                        <div className="relative w-20 h-20 sm:w-24 sm:h-24 shrink-0">
+                          <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                            <circle cx="50" cy="50" r="42" fill="none" stroke="#f1f5f9" strokeWidth="7" />
+                            <circle cx="50" cy="50" r="42" fill="none" stroke="url(#pctGrad)" strokeWidth="7" strokeLinecap="round"
+                              strokeDasharray={`${pct * 2.64} 264`} className="transition-all duration-700" />
+                            <defs><linearGradient id="pctGrad"><stop offset="0%" stopColor="#f97316"/><stop offset="100%" stopColor="#f59e0b"/></linearGradient></defs>
+                          </svg>
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <span className="text-xl font-black text-slate-700">{pct}<span className="text-xs font-bold">%</span></span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 {/* Summary Cards */}
-                <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5">
                   {Object.entries(STATUS_MAP).map(([key, { label, color, icon }]) => {
                     const c = colorMap[color];
                     const count = dashboardData.summary?.[key] || 0;
                     return (
-                      <div key={key} className={`relative overflow-hidden rounded-xl p-3 text-center ${c.bg} ring-1 ${c.ring} transition-all hover:scale-[1.03] cursor-default`}>
-                        <p className="text-lg sm:text-2xl font-extrabold text-slate-800">{count}</p>
-                        <p className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-wider ${c.text} mt-0.5`}>{label}</p>
-                        <span className="absolute -top-1 -right-1 text-lg opacity-30">{icon}</span>
+                      <div key={key} className={`flex items-center gap-2.5 rounded-xl p-3 sm:p-3.5 ${c.bg} ring-1 ${c.ring} transition-all hover:shadow-sm`}>
+                        <span className="text-xl sm:text-2xl leading-none shrink-0">{icon}</span>
+                        <div className="min-w-0">
+                          <p className="text-lg sm:text-xl font-black text-slate-800 leading-none tabular-nums">{count}</p>
+                          <p className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-wider ${c.text} mt-0.5 truncate`}>{label}</p>
+                        </div>
                       </div>
                     );
                   })}
                 </div>
 
+                {/* Telat Alert */}
+                {(dashboardData.summary?.telat || 0) > 0 && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-3.5 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center">
+                        <FiClock className="h-5 w-5 text-amber-600" />
+                      </div>
+                      <div>
+                        <p className="font-bold text-amber-800 text-sm">Pegawai Terlambat</p>
+                        <p className="text-[11px] text-amber-600">Masuk melebihi batas waktu + toleransi</p>
+                      </div>
+                    </div>
+                    <span className="text-2xl font-black text-amber-700 tabular-nums">{dashboardData.summary.telat}</span>
+                  </div>
+                )}
+
                 {/* Belum Absen Section (hanya untuk mode harian) */}
                 {dashboardPeriode === 'hari' && dashboardData.belum_absen?.length > 0 && (
                   <div className="bg-white rounded-2xl shadow-sm border border-red-200/60 overflow-hidden">
-                    <div className="px-5 py-3.5 border-b border-red-100 bg-red-50/50">
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">⚠️</span>
-                        <h3 className="font-bold text-red-700 text-sm">Belum Absen Hari Ini</h3>
-                        <span className="ml-auto px-2.5 py-0.5 bg-red-100 text-red-700 text-[11px] font-bold rounded-full">{dashboardData.belum_absen.length}</span>
+                    <div className="px-5 py-3.5 border-b border-red-100 bg-red-50/30">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+                          <FiUsers className="h-4 w-4 text-red-500" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-bold text-red-700 text-sm">Belum Absen Hari Ini</h3>
+                          <p className="text-[11px] text-red-400">Pegawai yang belum melakukan presensi</p>
+                        </div>
+                        <span className="px-3 py-1 bg-red-100 text-red-700 text-xs font-bold rounded-full tabular-nums">{dashboardData.belum_absen.length}</span>
                       </div>
                     </div>
                     <div className="p-4 flex flex-wrap gap-2">
                       {dashboardData.belum_absen.map((u) => (
-                        <div key={u.id} className="flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded-xl">
-                          <div className="w-7 h-7 bg-red-100 rounded-lg flex items-center justify-center text-xs">❌</div>
-                          <div>
-                            <p className="text-xs font-semibold text-slate-700">{u.pegawai?.nama_pegawai || u.name}</p>
-                            <p className="text-[10px] text-slate-400">{u.pegawai?.jabatan || "-"}</p>
+                        <div key={u.id} className="flex items-center gap-2 pl-1.5 pr-3.5 py-1.5 bg-white border border-red-200 rounded-full hover:shadow-sm transition-all">
+                          <div className="w-7 h-7 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-[10px] font-bold">
+                            {(u.pegawai?.nama_pegawai || u.name || "?")[0].toUpperCase()}
                           </div>
+                          <span className="text-xs font-semibold text-slate-700">{u.pegawai?.nama_pegawai || u.name}</span>
                         </div>
                       ))}
                     </div>
@@ -578,34 +644,42 @@ const AbsensiManagementPage = () => {
                 )}
 
                 {/* Grouped by Status */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  {Object.entries(STATUS_MAP).map(([statusKey, { label, color, icon, gradient }]) => {
-                    const people = dashboardData.grouped?.[statusKey] || [];
-                    if (people.length === 0) return null;
-                    const c = colorMap[color];
+                <div className="space-y-3">
+                  {Object.entries(STATUS_MAP)
+                    .filter(([sk]) => (dashboardData.grouped?.[sk] || []).length > 0)
+                    .sort((a, b) => (dashboardData.grouped?.[b[0]]?.length || 0) - (dashboardData.grouped?.[a[0]]?.length || 0))
+                    .map(([statusKey, { label, color, icon, gradient }]) => {
+                    const people = dashboardData.grouped[statusKey];
                     return (
                       <div key={statusKey} className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden">
-                        <div className={`px-4 py-3 bg-gradient-to-r ${gradient} flex items-center justify-between`}>
-                          <div className="flex items-center gap-2">
-                            <span className="text-lg">{icon}</span>
-                            <span className="text-white font-bold text-sm">{label}</span>
+                        <div className={`px-5 py-3 bg-gradient-to-r ${gradient} flex items-center justify-between`}>
+                          <div className="flex items-center gap-2.5">
+                            <span className="text-xl">{icon}</span>
+                            <span className="text-white font-bold">{label}</span>
                           </div>
-                          <span className="bg-white/25 text-white text-xs px-2.5 py-0.5 rounded-full font-bold">{people.length}</span>
+                          <span className="bg-white/20 text-white text-xs px-3 py-1 rounded-full font-bold tabular-nums">{people.length} orang</span>
                         </div>
-                        <div className="p-3 space-y-1.5 max-h-60 overflow-y-auto">
+                        <div className="divide-y divide-slate-50 max-h-64 overflow-y-auto">
                           {people.map((r) => (
-                            <div key={r.id} className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-slate-50 transition-colors">
-                              <div className={`w-8 h-8 ${c.bg} rounded-lg flex items-center justify-center text-sm shrink-0`}>{icon}</div>
-                              <div className="flex-1 min-w-0">
-                                <p className="font-semibold text-slate-700 text-xs truncate">{r.user?.pegawai?.nama_pegawai || r.user?.name || "-"}</p>
-                                <p className="text-[10px] text-slate-400">{r.user?.pegawai?.jabatan || "-"}</p>
+                            <div key={r.id} className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50/50 transition-colors">
+                              <div className="w-8 h-8 bg-gradient-to-br from-slate-100 to-slate-200 rounded-full flex items-center justify-center text-[11px] font-bold text-slate-500 shrink-0">
+                                {(r.user?.pegawai?.nama_pegawai || r.user?.name || "?")[0].toUpperCase()}
                               </div>
-                              {r.jam_masuk && (
-                                <span className="text-[10px] font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded-lg">{formatTime(r.jam_masuk)}</span>
-                              )}
-                              {r.tujuan_dinas && (
-                                <span className="text-[10px] text-purple-600 truncate max-w-[100px]">📍 {r.tujuan_dinas}</span>
-                              )}
+                              <div className="flex-1 min-w-0">
+                                <p className="font-semibold text-slate-700 text-sm truncate">{r.user?.pegawai?.nama_pegawai || r.user?.name || "-"}</p>
+                                <p className="text-[11px] text-slate-400 truncate">{r.user?.pegawai?.jabatan || "-"}</p>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                {r.telat_masuk_menit > 0 && (
+                                  <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-md">Telat {formatTelat(r.telat_masuk_menit)}</span>
+                                )}
+                                {r.jam_masuk && (
+                                  <span className="text-[11px] font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">{formatTime(r.jam_masuk)}</span>
+                                )}
+                                {r.tujuan_dinas && (
+                                  <span className="text-[11px] text-purple-600 bg-purple-50 px-2 py-0.5 rounded-md truncate max-w-[120px]">📍 {r.tujuan_dinas}</span>
+                                )}
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -707,14 +781,17 @@ const AbsensiManagementPage = () => {
                       <p className="text-[11px] text-slate-400 mt-0.5">{rekapPegawaiData.total_pegawai} pegawai terdaftar</p>
                     </div>
                   </div>
-                  <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
                     {Object.entries(STATUS_MAP).map(([key, { label, color, icon }]) => {
                       const c = colorMap[color];
                       const count = rekapPegawaiData.global_summary?.[key] || 0;
                       return (
-                        <div key={key} className={`relative overflow-hidden rounded-xl p-2.5 text-center ${c.bg} ring-1 ${c.ring}`}>
-                          <p className="text-lg font-extrabold text-slate-800">{count}</p>
-                          <p className={`text-[9px] font-bold uppercase tracking-wider ${c.text}`}>{label}</p>
+                        <div key={key} className={`flex items-center gap-2 rounded-xl p-2.5 ${c.bg} ring-1 ${c.ring}`}>
+                          <span className="text-lg leading-none shrink-0">{icon}</span>
+                          <div className="min-w-0">
+                            <p className="text-lg font-black text-slate-800 leading-none tabular-nums">{count}</p>
+                            <p className={`text-[9px] font-bold uppercase tracking-wider ${c.text} truncate`}>{label}</p>
+                          </div>
                         </div>
                       );
                     })}
@@ -728,14 +805,9 @@ const AbsensiManagementPage = () => {
                       <thead>
                         <tr className="bg-gradient-to-r from-slate-50 to-slate-100/50 border-b border-slate-200">
                           <th className="text-left px-4 py-3.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Pegawai</th>
-                          {Object.entries(STATUS_MAP).map(([key, { label, icon }]) => (
-                            <th key={key} className="text-center px-2 py-3.5 font-bold text-[10px] text-slate-500 uppercase tracking-widest" title={label}>
-                              <span className="block text-base leading-none">{icon}</span>
-                              <span className="hidden sm:block mt-1">{label}</span>
-                            </th>
-                          ))}
-                          <th className="text-center px-3 py-3.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Total</th>
-                          <th className="text-center px-3 py-3.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Aksi</th>
+                          <th className="text-left px-4 py-3.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Rekap Presensi</th>
+                          <th className="text-center px-3 py-3.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest w-16">Total</th>
+                          <th className="text-center px-3 py-3.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest w-20">Aksi</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
@@ -747,38 +819,43 @@ const AbsensiManagementPage = () => {
                           })
                           .map((p) => (
                           <tr key={p.user.id} className="hover:bg-orange-50/30 transition-colors group">
-                            <td className="px-4 py-3">
+                            <td className="px-4 py-3.5">
                               <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-amber-500 rounded-lg flex items-center justify-center text-white text-xs font-bold shrink-0">
+                                <div className="w-9 h-9 bg-gradient-to-br from-orange-400 to-amber-500 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0">
                                   {(p.user?.pegawai?.nama_pegawai || p.user?.name || "?")[0].toUpperCase()}
                                 </div>
                                 <div className="min-w-0">
                                   <p className="font-semibold text-slate-800 text-sm truncate">{p.user?.pegawai?.nama_pegawai || p.user?.name || "-"}</p>
-                                  <p className="text-[10px] text-slate-400 truncate">{p.user?.pegawai?.jabatan || p.user?.pegawai?.status_kepegawaian?.replace(/_/g, " ") || "-"}</p>
+                                  <p className="text-[11px] text-slate-400 truncate">{p.user?.pegawai?.jabatan || p.user?.pegawai?.status_kepegawaian?.replace(/_/g, " ") || "-"}</p>
                                 </div>
                               </div>
                             </td>
-                            {Object.entries(STATUS_MAP).map(([key, { color }]) => {
-                              const count = p.summary?.[key] || 0;
-                              const c = colorMap[color];
-                              return (
-                                <td key={key} className="text-center px-2 py-3">
-                                  {count > 0 ? (
-                                    <span className={`inline-flex items-center justify-center w-8 h-8 rounded-lg text-xs font-bold ${c.badge}`}>
-                                      {count}
+                            <td className="px-4 py-3.5">
+                              <div className="flex flex-wrap gap-1.5">
+                                {Object.entries(STATUS_MAP).map(([key, { label, icon, color }]) => {
+                                  const count = p.summary?.[key] || 0;
+                                  if (count === 0) return null;
+                                  const c = colorMap[color];
+                                  return (
+                                    <span key={key} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold ${c.badge}`} title={label}>
+                                      <span className="text-xs">{icon}</span> {count}
                                     </span>
-                                  ) : (
-                                    <span className="text-slate-300 text-xs">-</span>
-                                  )}
-                                </td>
-                              );
-                            })}
-                            <td className="text-center px-3 py-3">
-                              <span className="inline-flex items-center justify-center w-8 h-8 bg-slate-100 text-slate-700 rounded-lg text-xs font-bold">
+                                  );
+                                })}
+                                {(p.summary?.telat || 0) > 0 && (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-amber-100 text-amber-700" title="Telat">
+                                    <FiClock className="h-3 w-3" /> {p.summary.telat}x telat
+                                  </span>
+                                )}
+                                {p.total_records === 0 && <span className="text-xs text-slate-300 italic">Belum ada data</span>}
+                              </div>
+                            </td>
+                            <td className="text-center px-3 py-3.5">
+                              <span className="inline-flex items-center justify-center min-w-[32px] h-8 bg-slate-100 text-slate-700 rounded-lg text-xs font-bold tabular-nums">
                                 {p.total_records}
                               </span>
                             </td>
-                            <td className="text-center px-3 py-3">
+                            <td className="text-center px-3 py-3.5">
                               <button onClick={() => openUserHistory(p.user)}
                                 className="inline-flex items-center gap-1.5 px-3 py-1.5 text-orange-600 bg-orange-50 hover:bg-orange-100 rounded-lg text-[11px] font-bold border border-orange-200 transition-all">
                                 <FiEye className="h-3.5 w-3.5" /> Detail
@@ -887,15 +964,17 @@ const AbsensiManagementPage = () => {
             </div>
 
             {/* Summary Strip */}
-            <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5">
               {Object.entries(STATUS_MAP).map(([key, { label, color, icon }]) => {
                 const c = colorMap[color];
                 const count = rekapSummary[key] || 0;
                 return (
-                  <div key={key} className={`relative overflow-hidden rounded-xl p-3 text-center ${c.bg} ring-1 ${c.ring} transition-all hover:scale-[1.03]`}>
-                    <p className="text-lg sm:text-xl font-extrabold text-slate-800">{count}</p>
-                    <p className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-wider ${c.text} mt-0.5`}>{label}</p>
-                    <span className="absolute -top-1 -right-1 text-lg opacity-30">{icon}</span>
+                  <div key={key} className={`flex items-center gap-2.5 rounded-xl p-3 ${c.bg} ring-1 ${c.ring} transition-all hover:shadow-sm`}>
+                    <span className="text-xl leading-none shrink-0">{icon}</span>
+                    <div className="min-w-0">
+                      <p className="text-lg sm:text-xl font-black text-slate-800 leading-none tabular-nums">{count}</p>
+                      <p className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-wider ${c.text} mt-0.5 truncate`}>{label}</p>
+                    </div>
                   </div>
                 );
               })}
@@ -960,6 +1039,9 @@ const AbsensiManagementPage = () => {
                             </td>
                             <td className="px-4 py-3.5 text-center">
                               <span className="font-mono text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-1 rounded-lg">{formatTime(record.jam_masuk)}</span>
+                              {record.telat_masuk_menit > 0 && (
+                                <span className="ml-1 text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-md">Telat {formatTelat(record.telat_masuk_menit)}</span>
+                              )}
                             </td>
                             <td className="px-4 py-3.5 text-center">
                               <span className="font-mono text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-1 rounded-lg">{formatTime(record.jam_keluar)}</span>
@@ -1013,6 +1095,9 @@ const AbsensiManagementPage = () => {
                           <div className="flex items-center gap-1.5 text-slate-600">
                             <FiClock className="h-3.5 w-3.5 text-emerald-500" />
                             <span className="font-mono font-semibold">{formatTime(record.jam_masuk)}</span>
+                            {record.telat_masuk_menit > 0 && (
+                              <span className="text-[9px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-md">Telat {formatTelat(record.telat_masuk_menit)}</span>
+                            )}
                           </div>
                           <span className="text-slate-300">→</span>
                           <div className="flex items-center gap-1.5 text-slate-600">
@@ -1476,6 +1561,9 @@ const SettingsModal = ({ settings, onClose, onSave }) => {
 const UserHistoryModal = ({ user, data, loading, periode, onPeriodeChange, filterDate, filterMonth, filterYear, onFilterDateChange, onFilterMonthChange, onFilterYearChange, onClose }) => {
   const nama = user?.pegawai?.nama_pegawai || user?.name || "-";
   const jabatan = user?.pegawai?.jabatan || user?.pegawai?.status_kepegawaian?.replace(/_/g, " ") || "-";
+  const totalAbsen = data?.summary?.total || 0;
+  const totalHadir = data?.summary?.hadir || 0;
+  const pct = totalAbsen > 0 ? Math.round((totalHadir / totalAbsen) * 100) : 0;
 
   return (
     <>
@@ -1483,19 +1571,29 @@ const UserHistoryModal = ({ user, data, loading, periode, onPeriodeChange, filte
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
           {/* Header */}
-          <div className="bg-gradient-to-r from-orange-500 to-amber-500 px-6 py-4 flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center text-white text-lg font-bold">
-                {nama[0]?.toUpperCase()}
+          <div className="bg-gradient-to-r from-orange-500 to-amber-500 px-6 py-5 shrink-0">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center text-white text-xl font-bold border border-white/10">
+                  {nama[0]?.toUpperCase()}
+                </div>
+                <div>
+                  <h3 className="font-bold text-white text-lg">{nama}</h3>
+                  <p className="text-orange-100 text-sm">{jabatan}</p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-bold text-white text-lg">{nama}</h3>
-                <p className="text-orange-100 text-sm">{jabatan}</p>
+              <div className="flex items-center gap-3">
+                {!loading && data && (
+                  <div className="hidden sm:flex items-center gap-2 bg-white/15 backdrop-blur-sm px-4 py-2 rounded-xl border border-white/10">
+                    <span className="text-white/70 text-xs">Kehadiran</span>
+                    <span className="text-white font-black text-lg tabular-nums">{pct}%</span>
+                  </div>
+                )}
+                <button onClick={onClose} className="p-2 hover:bg-white/20 rounded-xl transition-colors text-white">
+                  <FiX className="h-5 w-5" />
+                </button>
               </div>
             </div>
-            <button onClick={onClose} className="p-2 hover:bg-white/20 rounded-xl transition-colors text-white">
-              <FiX className="h-5 w-5" />
-            </button>
           </div>
 
           {/* Period Filter */}
@@ -1542,19 +1640,49 @@ const UserHistoryModal = ({ user, data, loading, periode, onPeriodeChange, filte
             ) : data ? (
               <>
                 {/* Summary Bar */}
-                <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
                   {Object.entries(STATUS_MAP).map(([key, { label, color, icon }]) => {
                     const c = colorMap[color];
                     const count = data.summary?.[key] || 0;
                     return (
-                      <div key={key} className={`relative overflow-hidden rounded-xl p-2.5 text-center ${c.bg} ring-1 ${c.ring}`}>
-                        <p className="text-lg font-extrabold text-slate-800">{count}</p>
-                        <p className={`text-[9px] font-bold uppercase tracking-wider ${c.text}`}>{label}</p>
-                        <span className="absolute -top-1 -right-1 text-sm opacity-20">{icon}</span>
+                      <div key={key} className={`flex items-center gap-2 rounded-xl p-2.5 ${c.bg} ring-1 ${c.ring}`}>
+                        <span className="text-lg leading-none shrink-0">{icon}</span>
+                        <div className="min-w-0">
+                          <p className="text-lg font-black text-slate-800 leading-none tabular-nums">{count}</p>
+                          <p className={`text-[9px] font-bold uppercase tracking-wider ${c.text} truncate`}>{label}</p>
+                        </div>
                       </div>
                     );
                   })}
                 </div>
+
+                {/* Distribution Bar */}
+                {data.summary?.total > 0 && (
+                  <div className="bg-slate-50 rounded-xl p-3">
+                    <div className="flex h-3 rounded-full overflow-hidden bg-slate-200">
+                      {Object.entries(STATUS_MAP).map(([key, { color }]) => {
+                        const count = data.summary?.[key] || 0;
+                        if (count === 0) return null;
+                        const widthPct = (count / data.summary.total) * 100;
+                        const bgColors = { emerald: "bg-emerald-500", amber: "bg-amber-500", red: "bg-red-500", gray: "bg-gray-400", blue: "bg-blue-500", purple: "bg-purple-500", teal: "bg-teal-500", indigo: "bg-indigo-500" };
+                        return <div key={key} className={`${bgColors[color]} transition-all duration-500`} style={{ width: `${widthPct}%` }} />;
+                      })}
+                    </div>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
+                      {Object.entries(STATUS_MAP).map(([key, { label, color }]) => {
+                        const count = data.summary?.[key] || 0;
+                        if (count === 0) return null;
+                        const dotColors = { emerald: "bg-emerald-500", amber: "bg-amber-500", red: "bg-red-500", gray: "bg-gray-400", blue: "bg-blue-500", purple: "bg-purple-500", teal: "bg-teal-500", indigo: "bg-indigo-500" };
+                        return (
+                          <div key={key} className="flex items-center gap-1.5">
+                            <div className={`w-2 h-2 rounded-full ${dotColors[color]}`} />
+                            <span className="text-[10px] text-slate-500">{label} <strong className="text-slate-700">{count}</strong></span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 {/* Records Table */}
                 {data.records?.length > 0 ? (
@@ -1584,6 +1712,9 @@ const UserHistoryModal = ({ user, data, loading, periode, onPeriodeChange, filte
                               </td>
                               <td className="text-center px-3 py-3">
                                 <span className="font-mono text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-1 rounded-lg">{formatTime(r.jam_masuk)}</span>
+                                {r.telat_masuk_menit > 0 && (
+                                  <span className="ml-1 text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-md">Telat {formatTelat(r.telat_masuk_menit)}</span>
+                                )}
                               </td>
                               <td className="text-center px-3 py-3">
                                 <span className="font-mono text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-1 rounded-lg">{formatTime(r.jam_keluar)}</span>
