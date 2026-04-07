@@ -63,7 +63,7 @@ const DEFAULT_THEME = { gradient: "from-gray-400 to-gray-600", ring: "ring-gray-
 
 // ─── UserCard ────────────────────────────────────────────────────
 const UserCard = ({
-	user, canManage, visiblePasswords, togglePasswordVisibility,
+	user, canManage, isSuperadmin, visiblePasswords, togglePasswordVisibility,
 	onEditRole, onEditBidang, onEditTanggalLahir, onEditJabatan,
 	onEditAvatar, onSetDevice, onResetPassword, onDeleteUser, getRoleInfo,
 }) => {
@@ -246,8 +246,8 @@ const UserCard = ({
 						</InfoRow>
 					)}
 
-					{/* Password */}
-					{canManage && (
+					{/* Password - only visible to superadmin, never shown for superadmin users */}
+					{isSuperadmin && user.role !== 'superadmin' && (
 						<div className="flex items-center gap-2 min-w-0">
 							<div className="flex-shrink-0 w-5 h-5 rounded-md bg-gray-50 flex items-center justify-center">
 								<LuLock className="h-3 w-3 text-gray-400" />
@@ -708,11 +708,12 @@ const UserManagementPage = () => {
 
 				if (tabUsers.length === 0) return;
 
+				const isSuperadminUser = currentUser?.role === 'superadmin';
 				const rows = tabUsers.map((user, idx) => ({
 					'No': idx + 1,
 					'Nama': user.name || '',
 					'Email': user.email || '',
-					'Password': user.plain_password || '-',
+					...(isSuperadminUser ? { 'Password': user.role === 'superadmin' ? '-' : (user.plain_password || '-') } : {}),
 					'Role': getRoleInfo(user.role).label,
 					...(tab.id === 'pegawai' ? { 'Bidang': user.bidang?.nama || '-' } : {}),
 					...(tab.id === 'desa' ? {
@@ -747,12 +748,13 @@ const UserManagementPage = () => {
 		}
 
 		// Single sheet export
+		const isSuperadminUser = currentUser?.role === 'superadmin';
 		const rows = dataToExport.map((user, idx) => {
 			const row = {
 				'No': idx + 1,
 				'Nama': user.name || '',
 				'Email': user.email || '',
-				'Password': user.plain_password || '-',
+				...(isSuperadminUser ? { 'Password': user.role === 'superadmin' ? '-' : (user.plain_password || '-') } : {}),
 				'Role': getRoleInfo(user.role).label,
 			};
 
@@ -1075,6 +1077,7 @@ const UserManagementPage = () => {
 								key={user.id}
 								user={user}
 								canManage={canManage}
+								isSuperadmin={currentUser?.role === 'superadmin'}
 								visiblePasswords={visiblePasswords}
 								togglePasswordVisibility={togglePasswordVisibility}
 								onEditRole={handleEditRole}
