@@ -18,8 +18,8 @@ api.interceptors.request.use(
 		config.baseURL = API_ENDPOINTS.EXPRESS_BASE;
 		
 		// Skip token for public auth endpoints and VPN check
-		const publicEndpoints = ['/login', '/auth/login', '/register', '/auth/check-vpn'];
-		const isPublicEndpoint = publicEndpoints.some(pub => config.url?.includes(pub));
+		const publicEndpoints = ['/auth/login', '/auth/register', '/auth/check-vpn'];
+		const isPublicEndpoint = publicEndpoints.some(pub => config.url?.startsWith(pub) || config.url?.endsWith(pub));
 		
 		if (!isPublicEndpoint) {
 			// Use single token (expressToken)

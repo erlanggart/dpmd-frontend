@@ -41,6 +41,7 @@ import EditTanggalLahirModal from "../../components/EditTanggalLahirModal";
 import EditJabatanModal from "../../components/EditJabatanModal";
 import EditAvatarModal from "../../components/EditAvatarModal";
 import UserStatsCard from "../../components/UserStatsCard";
+import OnlineUsersSidebar from "../../components/users/OnlineUsersSidebar";
 import { getAvatarUrl } from "../../utils/avatarUtils";
 import { useAuth } from "../../context/AuthContext";
 import Swal from "sweetalert2";
@@ -825,6 +826,9 @@ const UserManagementPage = () => {
 
 	return (
 		<div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 md:p-6 lg:p-8">
+			<div className="flex gap-6">
+			{/* Main Content */}
+			<div className="flex-1 min-w-0">
 			{/* Header */}
 			<div className="mb-6">
 				<div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-2xl p-6 md:p-8 text-white shadow-2xl relative overflow-hidden">
@@ -1242,6 +1246,16 @@ const UserManagementPage = () => {
 				/>
 			)}
 
+			</div>
+			{/* End Main Content */}
+
+			{/* Online Users Sidebar */}
+			{canManage && (
+				<div className="hidden lg:block">
+					<OnlineUsersSidebar />
+				</div>
+			)}
+			</div>
 		</div>
 	);
 };

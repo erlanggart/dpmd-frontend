@@ -1,10 +1,14 @@
-import { FiUser, FiBell, FiLock, FiSettings } from 'react-icons/fi';
+import { FiUser, FiBell, FiLock, FiSettings, FiDatabase } from 'react-icons/fi';
 import { useState } from 'react';
 import NotificationSettings from '../../components/NotificationSettings';
+import ChangePasswordForm from '../../components/settings/ChangePasswordForm';
+import LoginHistory from '../../components/settings/LoginHistory';
+import DatabaseBackup from '../../components/settings/DatabaseBackup';
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('notifications');
   const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const isSuperadmin = user.role === 'superadmin';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 p-3 sm:p-6">
@@ -67,6 +71,20 @@ export default function SettingsPage() {
                     <FiLock className="text-lg" />
                     <span className="font-medium">Keamanan</span>
                   </button>
+
+                  {isSuperadmin && (
+                    <button
+                      onClick={() => setActiveTab('database')}
+                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
+                        activeTab === 'database'
+                          ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg'
+                          : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      <FiDatabase className="text-lg" />
+                      <span className="font-medium">Backup Database</span>
+                    </button>
+                  )}
                 </nav>
               </div>
             </div>
@@ -120,12 +138,14 @@ export default function SettingsPage() {
             )}
 
             {activeTab === 'security' && (
-              <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
-                <h2 className="text-xl font-bold text-gray-900 mb-6">Keamanan Akun</h2>
-                <p className="text-gray-600">
-                  Fitur keamanan akan segera hadir. Hubungi administrator untuk mengubah password.
-                </p>
+              <div className="space-y-6">
+                <ChangePasswordForm />
+                <LoginHistory />
               </div>
+            )}
+
+            {activeTab === 'database' && isSuperadmin && (
+              <DatabaseBackup />
             )}
           </div>
         </div>
