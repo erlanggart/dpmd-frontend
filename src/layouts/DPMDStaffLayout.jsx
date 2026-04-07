@@ -13,6 +13,7 @@ import {
 } from "react-icons/fi";
 import { Landmark, Menu, ChevronLeft, ChevronDown } from "lucide-react";
 import AnimatedIcon from '../components/AnimatedIcon';
+import ChatBot from '../components/chatbot/ChatBot';
 import aksiCepatIcon from '../assets/aksi-cepat.png';
 import { performFullLogout } from "../utils/sessionPersistence";
 import { useConfirm } from "../hooks/useConfirm.jsx";
@@ -119,7 +120,7 @@ const ROLE_CONFIG = {
 		displayName: 'Kepala Dinas',
 		shortDisplayName: 'Kadis DPMD',
 		allowedRoles: ['kepala_dinas'],
-		showBidangNav: false,
+		showBidangNav: true,
 	},
 	ketua_tim: {
 		theme: {
@@ -158,7 +159,7 @@ const ROLE_CONFIG = {
 		displayName: 'Sekretaris Dinas',
 		shortDisplayName: 'Sekdis DPMD',
 		allowedRoles: ['sekretaris_dinas'],
-		showBidangNav: false,
+		showBidangNav: true,
 	},
 };
 
@@ -1123,6 +1124,9 @@ const DPMDStaffLayout = () => {
 				</>
 			)}
 			{confirmDialog}
+
+			{/* Smart Search ChatBot */}
+			<ChatBot isDesktop={isDesktop} />
 
 			<style>{`
 				@keyframes fadeIn {

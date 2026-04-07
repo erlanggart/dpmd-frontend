@@ -4,9 +4,9 @@ import {
   FiSearch, FiEdit2, FiTrash2, FiCalendar, FiClock,
   FiUsers, FiX, FiSmartphone, FiImage, FiSave,
   FiToggleLeft, FiToggleRight, FiUpload, FiSettings,
-  FiChevronDown,
+  FiChevronDown, FiFilter,
 } from "react-icons/fi";
-import { LuDownload, LuRefreshCw, LuShieldCheck, LuWifi, LuWifiOff, LuLayoutGrid, LuList } from "react-icons/lu";
+import { LuDownload, LuRefreshCw, LuShieldCheck, LuWifi, LuWifiOff, LuLayoutGrid, LuList, LuFileSpreadsheet, LuFileText } from "react-icons/lu";
 import api from "../../../api";
 import { showAlert } from "../../../components/AlertPopup";
 import { useAuth } from "../../../context/AuthContext";
@@ -89,6 +89,7 @@ const AbsensiManagementPage = () => {
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [viewMode, setViewMode] = useState("table"); // table | card
+  const [filterStatus, setFilterStatus] = useState("semua"); // semua or specific status
 
   // Popup management state
   const [popupMessages, setPopupMessages] = useState([]);
@@ -264,10 +265,11 @@ const AbsensiManagementPage = () => {
 
   // ─── Computed ─────────────────────────────────────────────
   const filteredRecords = useMemo(() => records.filter((r) => {
+    if (filterStatus !== "semua" && r.status !== filterStatus) return false;
     if (!searchQuery) return true;
     const name = r.user?.name || r.user?.pegawai?.nama_pegawai || "";
     return name.toLowerCase().includes(searchQuery.toLowerCase());
-  }), [records, searchQuery]);
+  }), [records, searchQuery, filterStatus]);
 
   const rekapSummary = useMemo(() => {
     const s = { total: filteredRecords.length };
@@ -280,6 +282,111 @@ const AbsensiManagementPage = () => {
     { key: "pegawai", label: "Daftar Pegawai", icon: FiUsers, count: pegawai.length },
     { key: "popup", label: "Popup Absensi", icon: FiImage, count: popupMessages.length },
   ];
+
+  // ─── Export Functions ─────────────────────────────────────
+  const getExportTitle = () => {
+    if (filterMode === "harian") return `Rekap Absensi - ${new Date(filterDate).toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}`;
+    return `Rekap Absensi - ${MONTHS[filterMonth - 1]} ${filterYear}`;
+  };
+
+  const getExportData = () => filteredRecords.map((r, i) => ({
+    no: i + 1,
+    nama: r.user?.pegawai?.nama_pegawai || r.user?.name || "-",
+    jabatan: r.user?.pegawai?.jabatan || r.user?.pegawai?.status_kepegawaian?.replace(/_/g, " ") || "-",
+    tanggal: r.tanggal ? new Date(r.tanggal).toLocaleDateString("id-ID", { day: "2-digit", month: "2-digit", year: "numeric" }) : "-",
+    status: STATUS_MAP[r.status]?.label || r.status || "-",
+    jamMasuk: formatTime(r.jam_masuk),
+    jamKeluar: formatTime(r.jam_keluar),
+    jarak: r.jarak_masuk != null ? `${r.jarak_masuk}m` : "-",
+    keterangan: [r.tujuan_dinas, r.keterangan].filter(Boolean).join(" - ") || "-",
+  }));
+
+  const handleExportExcel = async () => {
+    try {
+      const XLSX = await import("xlsx");
+      const data = getExportData();
+      const ws = XLSX.utils.json_to_sheet(data.map(d => ({
+        "No": d.no, "Nama Pegawai": d.nama, "Jabatan": d.jabatan,
+        "Tanggal": d.tanggal, "Status": d.status, "Jam Masuk": d.jamMasuk,
+        "Jam Keluar": d.jamKeluar, "Jarak": d.jarak, "Keterangan": d.keterangan,
+      })));
+      // Auto column width
+      const colWidths = [
+        { wch: 4 }, { wch: 28 }, { wch: 22 }, { wch: 14 },
+        { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 8 }, { wch: 30 },
+      ];
+      ws["!cols"] = colWidths;
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Rekap Absensi");
+      const fileName = `Rekap_Absensi_${filterMode === "harian" ? filterDate : `${MONTHS[filterMonth-1]}_${filterYear}`}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+      showAlert({ icon: "success", title: "Export Berhasil", text: `File ${fileName} berhasil diunduh`, timer: 2000 });
+    } catch (err) {
+      console.error("Export Excel error:", err);
+      showAlert({ icon: "error", title: "Gagal Export", text: "Terjadi kesalahan saat mengexport Excel" });
+    }
+  };
+
+  const handleExportPDF = async () => {
+    try {
+      const { default: jsPDF } = await import("jspdf");
+      await import("jspdf-autotable");
+      const data = getExportData();
+      const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+
+      // Header
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.text("DINAS PEMBERDAYAAN MASYARAKAT DAN DESA", 148.5, 15, { align: "center" });
+      doc.setFontSize(12);
+      doc.text("KABUPATEN BOGOR", 148.5, 22, { align: "center" });
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text(getExportTitle(), 148.5, 30, { align: "center" });
+      doc.setLineWidth(0.5);
+      doc.line(14, 33, 283, 33);
+
+      // Summary
+      doc.setFontSize(9);
+      const summaryText = Object.entries(STATUS_MAP).map(([k, v]) => `${v.label}: ${rekapSummary[k] || 0}`).join("  |  ");
+      doc.text(`Total: ${filteredRecords.length}  |  ${summaryText}`, 14, 39);
+
+      // Table
+      doc.autoTable({
+        startY: 44,
+        head: [["No", "Nama Pegawai", "Jabatan", "Tanggal", "Status", "Masuk", "Keluar", "Jarak", "Keterangan"]],
+        body: data.map(d => [d.no, d.nama, d.jabatan, d.tanggal, d.status, d.jamMasuk, d.jamKeluar, d.jarak, d.keterangan]),
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [234, 88, 12], textColor: 255, fontStyle: "bold", fontSize: 8 },
+        alternateRowStyles: { fillColor: [255, 247, 237] },
+        columnStyles: {
+          0: { cellWidth: 8, halign: "center" },
+          1: { cellWidth: 40 },
+          2: { cellWidth: 32 },
+          3: { cellWidth: 22 },
+          4: { cellWidth: 18, halign: "center" },
+          5: { cellWidth: 14, halign: "center" },
+          6: { cellWidth: 14, halign: "center" },
+          7: { cellWidth: 12, halign: "center" },
+          8: { cellWidth: 'auto' },
+        },
+        margin: { left: 14, right: 14 },
+        didDrawPage: (data) => {
+          doc.setFontSize(7);
+          doc.setTextColor(150);
+          doc.text(`Dicetak: ${new Date().toLocaleString("id-ID")}`, 14, doc.internal.pageSize.height - 8);
+          doc.text(`Halaman ${doc.internal.getCurrentPageInfo().pageNumber}`, 283, doc.internal.pageSize.height - 8, { align: "right" });
+        },
+      });
+
+      const fileName = `Rekap_Absensi_${filterMode === "harian" ? filterDate : `${MONTHS[filterMonth-1]}_${filterYear}`}.pdf`;
+      doc.save(fileName);
+      showAlert({ icon: "success", title: "Export Berhasil", text: `File ${fileName} berhasil diunduh`, timer: 2000 });
+    } catch (err) {
+      console.error("Export PDF error:", err);
+      showAlert({ icon: "error", title: "Gagal Export", text: "Terjadi kesalahan saat mengexport PDF" });
+    }
+  };
 
   // ─── Render ───────────────────────────────────────────────
   return (
@@ -383,6 +490,21 @@ const AbsensiManagementPage = () => {
                   </div>
                 </div>
 
+                {/* Status Filter */}
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Status</label>
+                  <div className="relative">
+                    <FiFilter className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                    <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
+                      className="pl-9 pr-8 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400 appearance-none bg-white transition-all">
+                      <option value="semua">Semua</option>
+                      {Object.entries(STATUS_MAP).map(([key, { label }]) => (
+                        <option key={key} value={key}>{label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
                 {/* View Toggle */}
                 <div className="flex bg-slate-100 rounded-xl p-0.5">
                   <button onClick={() => setViewMode("table")}
@@ -392,6 +514,18 @@ const AbsensiManagementPage = () => {
                   <button onClick={() => setViewMode("card")}
                     className={`p-2 rounded-lg transition-all ${viewMode === 'card' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
                     <LuLayoutGrid className="h-4 w-4" />
+                  </button>
+                </div>
+
+                {/* Export Buttons */}
+                <div className="flex gap-1.5 ml-auto">
+                  <button onClick={handleExportExcel} disabled={filteredRecords.length === 0}
+                    className="flex items-center gap-1.5 px-3 py-2 bg-emerald-50 text-emerald-700 rounded-xl text-xs font-bold border border-emerald-200 hover:bg-emerald-100 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+                    <LuFileSpreadsheet className="h-4 w-4" /> Excel
+                  </button>
+                  <button onClick={handleExportPDF} disabled={filteredRecords.length === 0}
+                    className="flex items-center gap-1.5 px-3 py-2 bg-red-50 text-red-700 rounded-xl text-xs font-bold border border-red-200 hover:bg-red-100 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+                    <LuFileText className="h-4 w-4" /> PDF
                   </button>
                 </div>
               </div>

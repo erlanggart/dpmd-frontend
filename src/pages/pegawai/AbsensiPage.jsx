@@ -734,7 +734,7 @@ const AbsensiPage = () => {
 													{telatMasukMenit > 0 && (
 														<span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-50 text-rose-600 text-[10px] font-bold">
 															<span className="w-1 h-1 rounded-full bg-rose-400" />
-															Telat {telatMasukMenit} menit
+															Telat {telatMasukMenit >= 60 ? `${Math.floor(telatMasukMenit / 60)} jam ${telatMasukMenit % 60} menit` : `${telatMasukMenit} menit`}
 														</span>
 													)}
 													{pulangLebiahAwalMenit > 0 && (
@@ -749,17 +749,75 @@ const AbsensiPage = () => {
 									</motion.div>
 								</div>
 							) : hasIn ? (
-								/* ── Waiting for Pulang ── */
-								<div className="flex-1 flex flex-col items-center justify-center">
-									<p className="text-xs text-emerald-600 font-bold tabular-nums mb-1">Masuk {fmt(todayData?.jam_masuk)}</p>
+								/* ── Waiting for Pulang — Premium Design ── */
+								<div className="flex-1 flex flex-col items-center justify-center relative overflow-hidden">
+									{/* Subtle animated background particles */}
+									<div className="absolute inset-0 pointer-events-none">
+										{[...Array(8)].map((_, i) => (
+											<motion.div
+												key={i}
+												className="absolute rounded-full"
+												style={{
+													width: 6 + (i % 3) * 4,
+													height: 6 + (i % 3) * 4,
+													background: ['#10b981', '#06b6d4', '#8b5cf6', '#f59e0b'][i % 4],
+													left: `${12 + (i * 11) % 76}%`,
+													top: `${18 + (i * 13) % 64}%`,
+												}}
+												animate={{
+													y: [0, -10, 0],
+													opacity: [0.15, 0.35, 0.15],
+													scale: [0.8, 1.1, 0.8],
+												}}
+												transition={{
+													duration: 4 + (i % 3),
+													repeat: Infinity,
+													delay: i * 0.4,
+													ease: "easeInOut",
+												}}
+											/>
+										))}
+									</div>
+
+									{/* Check-in time badge */}
+									<motion.div
+										initial={{ opacity: 0, y: -10 }}
+										animate={{ opacity: 1, y: 0 }}
+										className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-100 shadow-sm mb-4"
+									>
+										<div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center">
+											<LuLogIn className="w-3.5 h-3.5 text-white" />
+										</div>
+										<div>
+											<p className="text-[10px] text-emerald-500 font-semibold leading-none">Masuk</p>
+											<p className="text-sm font-black text-emerald-700 tabular-nums leading-tight">{fmt(todayData?.jam_masuk)}</p>
+										</div>
+									</motion.div>
+
+									{/* Mode badge */}
 									{isDinasMode && (
-										<span className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[9px] font-bold mb-2 ${STATUS_COLORS[todayStatus]?.bg} ${STATUS_COLORS[todayStatus]?.text}`}>
+										<motion.span
+											initial={{ opacity: 0, scale: 0.9 }}
+											animate={{ opacity: 1, scale: 1 }}
+											className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold mb-3 ${STATUS_COLORS[todayStatus]?.bg} ${STATUS_COLORS[todayStatus]?.text} ring-1 ${STATUS_COLORS[todayStatus]?.text.replace('text-', 'ring-')}/20`}
+										>
+											<span className={`w-1.5 h-1.5 rounded-full ${STATUS_COLORS[todayStatus]?.dot} animate-pulse`} />
 											{STATUS_LABELS[todayStatus]}
-										</span>
+										</motion.span>
 									)}
+
+									{/* Late badge */}
 									{telatMasukMenit > 0 && (
-										<span className="px-2 py-0.5 rounded-full bg-rose-50 text-rose-500 text-[9px] font-bold mb-2">Telat {telatMasukMenit}m</span>
+										<motion.span
+											initial={{ opacity: 0, scale: 0.9 }}
+											animate={{ opacity: 1, scale: 1 }}
+											className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-rose-50 text-rose-600 text-[10px] font-bold mb-3 ring-1 ring-rose-200"
+										>
+											<span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse" />
+											Telat {telatMasukMenit >= 60 ? `${Math.floor(telatMasukMenit / 60)} jam ${telatMasukMenit % 60} menit` : `${telatMasukMenit} menit`}
+										</motion.span>
 									)}
+
 									{canClockOut ? (
 										<motion.button
 											{...pressAnimation}
@@ -779,10 +837,89 @@ const AbsensiPage = () => {
 											<p className="text-base font-bold text-sky-600 mt-2">Absen Pulang</p>
 										</motion.button>
 									) : (
-										<div className="flex flex-col items-center">
-											<LuCircleCheckBig className="w-14 h-14 text-emerald-400 mb-2" />
-											<p className="text-sm font-bold text-slate-600">Menunggu jam pulang</p>
-										</div>
+										<motion.div
+											initial={{ scale: 0.9, opacity: 0 }}
+											animate={{ scale: 1, opacity: 1 }}
+											transition={{ type: "spring", stiffness: 200, damping: 15 }}
+											className="flex flex-col items-center"
+										>
+											{/* Animated progress ring */}
+											<div className="relative w-28 h-28 mb-4">
+												{/* Outer glow */}
+												<div className="absolute -inset-2 bg-gradient-to-r from-emerald-400/20 via-teal-400/20 to-cyan-400/20 rounded-full blur-xl animate-pulse" />
+
+												<svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+													<circle cx="50" cy="50" r="42" fill="none" stroke="#e2e8f0" strokeWidth="5" />
+													<motion.circle
+														cx="50" cy="50" r="42"
+														fill="none"
+														stroke="url(#waitGrad)"
+														strokeWidth="5"
+														strokeLinecap="round"
+														strokeDasharray={264}
+														initial={{ strokeDashoffset: 264 }}
+														animate={{ strokeDashoffset: 66 }}
+														transition={{ duration: 1.5, ease: "easeOut" }}
+													/>
+													<defs>
+														<linearGradient id="waitGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+															<stop offset="0%" stopColor="#10b981" />
+															<stop offset="100%" stopColor="#06b6d4" />
+														</linearGradient>
+													</defs>
+												</svg>
+
+												{/* Center icon */}
+												<motion.div
+													className="absolute inset-0 flex items-center justify-center"
+													animate={{ y: [0, -3, 0] }}
+													transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+												>
+													<div className="w-16 h-16 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/25">
+														<LuCircleCheckBig className="w-8 h-8 text-white" />
+													</div>
+												</motion.div>
+											</div>
+
+											<motion.p
+												initial={{ opacity: 0, y: 5 }}
+												animate={{ opacity: 1, y: 0 }}
+												transition={{ delay: 0.3 }}
+												className="text-base font-black bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent"
+											>
+												Sedang Bekerja
+											</motion.p>
+											<motion.p
+												initial={{ opacity: 0, y: 5 }}
+												animate={{ opacity: 1, y: 0 }}
+												transition={{ delay: 0.4 }}
+												className="text-[11px] text-slate-400 mt-1"
+											>
+												Menunggu jam pulang ({absensiSettings?.jam_pulang || "16:00"})
+											</motion.p>
+
+											{/* Time remaining card */}
+											<motion.div
+												initial={{ opacity: 0, y: 10 }}
+												animate={{ opacity: 1, y: 0 }}
+												transition={{ delay: 0.5 }}
+												className="mt-4 px-5 py-3 rounded-2xl bg-white border border-slate-100 shadow-lg shadow-slate-200/50"
+											>
+												<div className="flex items-center gap-3">
+													<div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center">
+														<span className="text-white font-bold text-sm tabular-nums font-mono">
+															{String(currentTime.getHours()).padStart(2, "0")}:{String(currentTime.getMinutes()).padStart(2, "0")}
+														</span>
+													</div>
+													<div>
+														<p className="text-xs font-bold text-slate-700">Waktu saat ini</p>
+														<p className="text-[10px] text-slate-400">
+															Pulang pukul {absensiSettings?.jam_pulang || "16:00"} WIB
+														</p>
+													</div>
+												</div>
+											</motion.div>
+										</motion.div>
 									)}
 								</div>
 							) : (
@@ -1187,9 +1324,21 @@ const IzinModal = ({ onClose, onSubmit }) => {
 		{ value: "izin", label: "Izin", icon: LuFileText, active: "bg-amber-50 border-amber-300 text-amber-600", iconActive: "text-amber-500" },
 		{ value: "sakit", label: "Sakit", icon: LuHeartPulse, active: "bg-rose-50 border-rose-300 text-rose-600", iconActive: "text-rose-500" },
 		{ value: "cuti", label: "Cuti", icon: LuCalendarOff, active: "bg-sky-50 border-sky-300 text-sky-600", iconActive: "text-sky-500" },
+		{ value: "wfh", label: "WFH", icon: LuCircleCheckBig, active: "bg-teal-50 border-teal-300 text-teal-600", iconActive: "text-teal-500" },
+		{ value: "wfa", label: "WFA", icon: LuCircleCheckBig, active: "bg-indigo-50 border-indigo-300 text-indigo-600", iconActive: "text-indigo-500" },
 	];
 
-	const submit = async () => { if (!status) return; setLoading(true); await onSubmit(status, keterangan); setLoading(false); };
+	const submit = async () => {
+		if (!status) return;
+		// WFH/WFA need keterangan
+		if ((status === 'wfh' || status === 'wfa') && !keterangan.trim()) {
+			showAlert({ icon: "warning", title: "Keterangan Wajib", text: `Isi keterangan untuk ${status.toUpperCase()} (misal: lokasi/alasan)` });
+			return;
+		}
+		setLoading(true);
+		await onSubmit(status, keterangan);
+		setLoading(false);
+	};
 
 	return (
 		<>
@@ -1198,8 +1347,8 @@ const IzinModal = ({ onClose, onSubmit }) => {
 				<div className="bg-white rounded-t-3xl shadow-xl">
 					<div className="max-w-lg mx-auto p-5">
 						<div className="w-10 h-1 bg-slate-200 rounded-full mx-auto mb-5" />
-						<h3 className="font-bold text-slate-800 mb-3">Izin / Sakit / Cuti</h3>
-						<div className="grid grid-cols-3 gap-2 mb-3">
+						<h3 className="font-bold text-slate-800 mb-3">Izin / Sakit / Cuti / WFH / WFA</h3>
+						<div className="grid grid-cols-5 gap-1.5 mb-3">
 							{opts.map((o) => {
 								const Icon = o.icon;
 								const sel = status === o.value;
