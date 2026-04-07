@@ -290,6 +290,9 @@ const SuperadminDashboard = lazy(
 const KepegawaianPage = lazy(
   () => import("./pages/superadmin/KepegawaianPage"),
 );
+const PegawaiDetailPage = lazy(
+  () => import("./pages/superadmin/PegawaiDetailPage"),
+);
 const BidangNavigationPage = lazy(
   () => import("./pages/superadmin/BidangNavigationPage"),
 );
@@ -1044,6 +1047,7 @@ function App() {
                   <Route path="dashboard" element={<SuperadminDashboard />} />
                   <Route path="users" element={<UserManagementPage />} />
                   <Route path="kepegawaian" element={<KepegawaianPage />} />
+                  <Route path="kepegawaian/:id" element={<PegawaiDetailPage />} />
                   {/* Role Management removed - already in User Management tabs */}
                   <Route path="bidang" element={<BidangNavigationPage />} />
                   <Route path="activity-logs" element={<ActivityLogsPage />} />

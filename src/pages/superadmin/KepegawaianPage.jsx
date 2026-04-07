@@ -1,5 +1,6 @@
 // src/pages/superadmin/KepegawaianPage.jsx
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import {
 	LuUsers,
 	LuPlus,
@@ -15,105 +16,11 @@ import {
 	LuDownload,
 	LuEye,
 	LuCircleUser,
-	LuPhone,
-	LuMail,
-	LuMapPin,
-	LuCalendar,
-	LuGraduationCap,
-	LuBriefcase,
-	LuShield,
 } from "react-icons/lu";
 import * as XLSX from "xlsx";
 import api from "../../api";
 import Swal from "sweetalert2";
-
-// ===================== Detail Modal =====================
-const PegawaiDetailModal = ({ isOpen, onClose, pegawai }) => {
-	if (!isOpen || !pegawai) return null;
-
-	const formatDate = (d) => {
-		if (!d) return "-";
-		return new Date(d).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
-	};
-
-	const fields = [
-		{ label: "NIP", value: pegawai.nip, icon: <LuShield className="w-4 h-4" /> },
-		{ label: "Bidang", value: pegawai.bidangs?.nama, icon: <LuBuilding2 className="w-4 h-4" /> },
-		{ label: "Jabatan", value: pegawai.jabatan, icon: <LuBriefcase className="w-4 h-4" /> },
-		{ label: "Golongan / Pangkat", value: [pegawai.golongan, pegawai.pangkat].filter(Boolean).join(" - ") || null, icon: <LuShield className="w-4 h-4" /> },
-		{ label: "Eselon", value: pegawai.eselon, icon: <LuShield className="w-4 h-4" /> },
-		{ label: "Status Kepegawaian", value: pegawai.status_kepegawaian, icon: <LuBriefcase className="w-4 h-4" /> },
-		{ label: "Jenis Kelamin", value: pegawai.jenis_kelamin === "L" ? "Laki-laki" : pegawai.jenis_kelamin === "P" ? "Perempuan" : null, icon: <LuCircleUser className="w-4 h-4" /> },
-		{ label: "Tempat, Tanggal Lahir", value: [pegawai.tempat_lahir, formatDate(pegawai.tanggal_lahir)].filter(v => v && v !== "-").join(", ") || null, icon: <LuCalendar className="w-4 h-4" /> },
-		{ label: "Pendidikan Terakhir", value: pegawai.pendidikan_terakhir, icon: <LuGraduationCap className="w-4 h-4" /> },
-		{ label: "Unit Kerja", value: pegawai.unit_kerja, icon: <LuBuilding2 className="w-4 h-4" /> },
-		{ label: "TMT Jabatan", value: formatDate(pegawai.tmt_jabatan) !== "-" ? formatDate(pegawai.tmt_jabatan) : null, icon: <LuCalendar className="w-4 h-4" /> },
-		{ label: "No. HP", value: pegawai.no_hp, icon: <LuPhone className="w-4 h-4" /> },
-		{ label: "Alamat", value: pegawai.alamat, icon: <LuMapPin className="w-4 h-4" /> },
-	];
-
-	return (
-		<div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-			<div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-			<div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden animate-in fade-in zoom-in duration-200">
-				<div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 text-white flex items-center justify-between">
-					<h3 className="text-lg font-bold">Detail Pegawai</h3>
-					<button onClick={onClose} className="p-1 hover:bg-white/20 rounded-lg transition-colors">
-						<LuX className="w-5 h-5" />
-					</button>
-				</div>
-				<div className="p-6 overflow-y-auto max-h-[70vh] space-y-1">
-					<div className="text-center mb-5">
-						<div className="h-16 w-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-3">
-							{pegawai.users?.[0]?.avatar ? (
-								<img src={pegawai.users[0].avatar} alt="" className="h-16 w-16 rounded-full object-cover" />
-							) : (
-								<LuCircleUser className="w-8 h-8 text-indigo-600" />
-							)}
-						</div>
-						<h4 className="text-xl font-bold text-gray-800">{pegawai.nama_pegawai}</h4>
-						{pegawai.users?.[0]?.email && (
-							<p className="text-sm text-gray-500 flex items-center justify-center gap-1 mt-1">
-								<LuMail className="w-3.5 h-3.5" /> {pegawai.users[0].email}
-							</p>
-						)}
-					</div>
-
-					<div className="divide-y divide-gray-100">
-						{fields.map((f, i) => (
-							<div key={i} className="flex items-start gap-3 py-3">
-								<div className="h-8 w-8 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0 text-gray-500 mt-0.5">
-									{f.icon}
-								</div>
-								<div className="flex-1 min-w-0">
-									<p className="text-xs text-gray-400 font-medium">{f.label}</p>
-									<p className="text-sm text-gray-800 font-medium">{f.value || <span className="text-gray-300 italic">Belum diisi</span>}</p>
-								</div>
-							</div>
-						))}
-					</div>
-
-					{pegawai.users?.length > 0 && (
-						<div className="mt-4 pt-4 border-t border-gray-200">
-							<p className="text-xs text-gray-400 font-medium mb-2">Akun Terhubung</p>
-							{pegawai.users.map((u) => (
-								<div key={u.id} className="flex items-center gap-3 bg-blue-50 rounded-xl p-3">
-									<div className="h-8 w-8 bg-blue-100 rounded-lg flex items-center justify-center">
-										<LuCircleUser className="w-4 h-4 text-blue-600" />
-									</div>
-									<div>
-										<p className="text-sm font-medium text-gray-800">{u.name}</p>
-										<p className="text-xs text-gray-500">{u.email} &middot; <span className="capitalize">{u.role}</span></p>
-									</div>
-								</div>
-							))}
-						</div>
-					)}
-				</div>
-			</div>
-		</div>
-	);
-};
+import { getAvatarUrl } from "../../utils/avatarUtils";
 
 // ===================== Add/Edit Modal =====================
 const PegawaiFormModal = ({ isOpen, onClose, onSaved, pegawai, bidangList }) => {
@@ -341,6 +248,7 @@ const PegawaiFormModal = ({ isOpen, onClose, onSaved, pegawai, bidangList }) => 
 
 // ===================== Main Page =====================
 const KepegawaianPage = () => {
+	const navigate = useNavigate();
 	const [pegawaiList, setPegawaiList] = useState([]);
 	const [bidangList, setBidangList] = useState([]);
 	const [loading, setLoading] = useState(true);
@@ -349,7 +257,6 @@ const KepegawaianPage = () => {
 	const [currentPage, setCurrentPage] = useState(1);
 	const [showModal, setShowModal] = useState(false);
 	const [editPegawai, setEditPegawai] = useState(null);
-	const [detailPegawai, setDetailPegawai] = useState(null);
 	const itemsPerPage = 15;
 
 	const fetchPegawai = useCallback(async () => {
@@ -423,6 +330,12 @@ const KepegawaianPage = () => {
 		setEditPegawai(null);
 		fetchPegawai();
 		Swal.fire({ title: "Berhasil!", text: "Data pegawai berhasil disimpan.", icon: "success", timer: 2000, showConfirmButton: false });
+	};
+
+	const handleOpenDetail = (pegawai) => {
+		navigate(`/superadmin/kepegawaian/${pegawai.id_pegawai}`, {
+			state: { pegawai },
+		});
 	};
 
 	const handleExport = () => {
@@ -590,6 +503,7 @@ const KepegawaianPage = () => {
 							<tbody className="divide-y divide-gray-100">
 								{paginated.map((p, idx) => {
 									const user = p.users?.[0];
+									const avatarUrl = getAvatarUrl(user?.avatar);
 									const roleBadge = user ? getRoleBadge(user.role) : null;
 									return (
 										<tr key={p.id_pegawai} className="hover:bg-indigo-50/40 transition-colors">
@@ -597,8 +511,8 @@ const KepegawaianPage = () => {
 											<td className="px-4 py-3.5">
 												<div className="flex items-center gap-3">
 													<div className="h-9 w-9 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0">
-														{user?.avatar ? (
-															<img src={user.avatar} alt="" className="h-9 w-9 rounded-lg object-cover" />
+														{avatarUrl ? (
+															<img src={avatarUrl} alt="" className="h-9 w-9 rounded-lg object-cover" />
 														) : (
 															<LuCircleUser className="w-5 h-5 text-indigo-600" />
 														)}
@@ -634,7 +548,7 @@ const KepegawaianPage = () => {
 											</td>
 											<td className="px-4 py-3.5">
 												<div className="flex items-center justify-center gap-1">
-													<button onClick={() => setDetailPegawai(p)} className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Detail">
+													<button onClick={() => handleOpenDetail(p)} className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Detail">
 														<LuEye className="h-4 w-4" />
 													</button>
 													<button onClick={() => { setEditPegawai(p); setShowModal(true); }} className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Edit">
@@ -699,11 +613,6 @@ const KepegawaianPage = () => {
 				onSaved={handleSaved}
 				pegawai={editPegawai}
 				bidangList={bidangList}
-			/>
-			<PegawaiDetailModal
-				isOpen={!!detailPegawai}
-				onClose={() => setDetailPegawai(null)}
-				pegawai={detailPegawai}
 			/>
 		</div>
 	);
