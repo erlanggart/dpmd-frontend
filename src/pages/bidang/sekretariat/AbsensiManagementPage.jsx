@@ -4,9 +4,9 @@ import {
   FiSearch, FiEdit2, FiTrash2, FiCalendar, FiClock,
   FiUsers, FiX, FiSmartphone, FiImage, FiSave,
   FiToggleLeft, FiToggleRight, FiUpload, FiSettings,
-  FiChevronDown, FiFilter,
+  FiChevronDown, FiFilter, FiArrowLeft, FiEye, FiUser,
 } from "react-icons/fi";
-import { LuDownload, LuRefreshCw, LuShieldCheck, LuWifi, LuWifiOff, LuLayoutGrid, LuList, LuFileSpreadsheet } from "react-icons/lu";
+import { LuDownload, LuRefreshCw, LuShieldCheck, LuWifi, LuWifiOff, LuLayoutGrid, LuList, LuFileSpreadsheet, LuChartColumn, LuLayoutDashboard } from "react-icons/lu";
 import api from "../../../api";
 import { showAlert } from "../../../components/AlertPopup";
 import { useAuth } from "../../../context/AuthContext";
@@ -75,7 +75,7 @@ const AbsensiManagementPage = () => {
     return <Navigate to="/forbidden" replace />;
   }
 
-  const [activeTab, setActiveTab] = useState("rekap");
+  const [activeTab, setActiveTab] = useState("dashboard");
   const [records, setRecords] = useState([]);
   const [pegawai, setPegawai] = useState([]);
   const [settings, setSettings] = useState({ jam_masuk: "08:00", jam_pulang: "16:00", toleransi_terlambat: "15" });
@@ -90,6 +90,23 @@ const AbsensiManagementPage = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [viewMode, setViewMode] = useState("table"); // table | card
   const [filterStatus, setFilterStatus] = useState("semua"); // semua or specific status
+
+  // Dashboard state
+  const [dashboardData, setDashboardData] = useState(null);
+  const [dashboardPeriode, setDashboardPeriode] = useState("hari");
+  const [dashboardLoading, setDashboardLoading] = useState(false);
+
+  // Rekap Pegawai state
+  const [rekapPegawaiData, setRekapPegawaiData] = useState(null);
+  const [rekapPeriode, setRekapPeriode] = useState("bulan");
+  const [rekapLoading, setRekapLoading] = useState(false);
+  const [rekapSearch, setRekapSearch] = useState("");
+
+  // User History Modal state
+  const [historyUser, setHistoryUser] = useState(null);
+  const [historyData, setHistoryData] = useState(null);
+  const [historyPeriode, setHistoryPeriode] = useState("bulan");
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   // Popup management state
   const [popupMessages, setPopupMessages] = useState([]);
@@ -147,16 +164,76 @@ const AbsensiManagementPage = () => {
     }
   }, []);
 
+  // ─── Dashboard Fetcher ────────────────────────────────────
+  const fetchDashboard = useCallback(async () => {
+    try {
+      setDashboardLoading(true);
+      let url = `/absensi/admin/dashboard-hari-ini?periode=${dashboardPeriode}`;
+      if (dashboardPeriode === 'minggu') url += `&tanggal=${filterDate}`;
+      else if (dashboardPeriode === 'bulan') url += `&bulan=${filterMonth}&tahun=${filterYear}`;
+      else if (dashboardPeriode === 'tahun') url += `&tahun=${filterYear}`;
+      else url += `&tanggal=${filterDate}`;
+      const res = await api.get(url);
+      setDashboardData(res.data.data || null);
+    } catch (err) {
+      console.error("Error fetching dashboard:", err);
+    } finally {
+      setDashboardLoading(false);
+    }
+  }, [dashboardPeriode, filterDate, filterMonth, filterYear]);
+
+  // ─── Rekap Pegawai Fetcher ────────────────────────────────
+  const fetchRekapPegawai = useCallback(async () => {
+    try {
+      setRekapLoading(true);
+      let url = `/absensi/admin/rekap-pegawai?periode=${rekapPeriode}`;
+      if (rekapPeriode === 'minggu') url += `&tanggal=${filterDate}`;
+      else if (rekapPeriode === 'tahun') url += `&tahun=${filterYear}`;
+      else url += `&bulan=${filterMonth}&tahun=${filterYear}`;
+      const res = await api.get(url);
+      setRekapPegawaiData(res.data.data || null);
+    } catch (err) {
+      console.error("Error fetching rekap pegawai:", err);
+    } finally {
+      setRekapLoading(false);
+    }
+  }, [rekapPeriode, filterDate, filterMonth, filterYear]);
+
+  // ─── User History Fetcher ─────────────────────────────────
+  const fetchUserHistory = useCallback(async (userId) => {
+    try {
+      setHistoryLoading(true);
+      let url = `/absensi/admin/history/${userId}?periode=${historyPeriode}`;
+      if (historyPeriode === 'minggu') url += `&tanggal=${filterDate}`;
+      else url += `&bulan=${filterMonth}&tahun=${filterYear}`;
+      const res = await api.get(url);
+      setHistoryData(res.data.data || null);
+    } catch (err) {
+      console.error("Error fetching user history:", err);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [historyPeriode, filterDate, filterMonth, filterYear]);
+
   useEffect(() => {
-    if (activeTab === "rekap") fetchRekap();
+    if (activeTab === "dashboard") fetchDashboard();
+    else if (activeTab === "rekap") fetchRekap();
+    else if (activeTab === "rekap-pegawai") fetchRekapPegawai();
     else if (activeTab === "pegawai") fetchPegawai();
     else if (activeTab === "settings") fetchSettings();
     else if (activeTab === "popup") fetchPopupMessages();
-  }, [activeTab, fetchRekap, fetchPegawai, fetchSettings, fetchPopupMessages]);
+  }, [activeTab, fetchDashboard, fetchRekap, fetchRekapPegawai, fetchPegawai, fetchSettings, fetchPopupMessages]);
+
+  // Refetch user history when period changes
+  useEffect(() => {
+    if (historyUser) fetchUserHistory(historyUser.id);
+  }, [historyPeriode, filterMonth, filterYear, filterDate]); // eslint-disable-line
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    if (activeTab === "rekap") await fetchRekap();
+    if (activeTab === "dashboard") await fetchDashboard();
+    else if (activeTab === "rekap") await fetchRekap();
+    else if (activeTab === "rekap-pegawai") await fetchRekapPegawai();
     else if (activeTab === "pegawai") await fetchPegawai();
     else if (activeTab === "popup") await fetchPopupMessages();
     setRefreshing(false);
@@ -277,10 +354,29 @@ const AbsensiManagementPage = () => {
     return s;
   }, [filteredRecords]);
 
+  // ─── Open User History ─────────────────────────────────────
+  const openUserHistory = async (userData) => {
+    setHistoryUser(userData);
+    setHistoryPeriode("bulan");
+    setHistoryData(null);
+    setHistoryLoading(true);
+    try {
+      let url = `/absensi/admin/history/${userData.id}?periode=bulan&bulan=${filterMonth}&tahun=${filterYear}`;
+      const res = await api.get(url);
+      setHistoryData(res.data.data || null);
+    } catch (err) {
+      console.error("Error fetching user history:", err);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
   const tabs = [
-    { key: "rekap", label: "Rekap Absensi", icon: FiCalendar, count: records.length },
+    { key: "dashboard", label: "Dashboard", icon: LuLayoutDashboard },
+    { key: "rekap-pegawai", label: "Rekap Pegawai", icon: LuChartColumn },
+    { key: "rekap", label: "Rekap Harian", icon: FiCalendar, count: records.length },
     { key: "pegawai", label: "Daftar Pegawai", icon: FiUsers, count: pegawai.length },
-    { key: "popup", label: "Popup Absensi", icon: FiImage, count: popupMessages.length },
+    { key: "popup", label: "Popup", icon: FiImage, count: popupMessages.length },
   ];
 
   // ─── Export Functions ─────────────────────────────────────
@@ -379,6 +475,330 @@ const AbsensiManagementPage = () => {
 
       {/* ═══ Main Content ═══════════════════════════════════ */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 -mt-2">
+
+        {/* ─── TAB: DASHBOARD ──────────────────────────────── */}
+        {activeTab === "dashboard" && (
+          <div className="space-y-5">
+            {/* Period Selector */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-4 sm:p-5">
+              <div className="flex flex-wrap items-end gap-3">
+                <div className="flex bg-slate-100 rounded-xl p-0.5">
+                  {[
+                    { key: "hari", label: "Hari Ini" },
+                    { key: "minggu", label: "Minggu Ini" },
+                    { key: "bulan", label: "Bulan Ini" },
+                    { key: "tahun", label: "Tahun Ini" },
+                  ].map(p => (
+                    <button key={p.key} onClick={() => setDashboardPeriode(p.key)}
+                      className={`px-3 sm:px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+                        dashboardPeriode === p.key ? "bg-white text-orange-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                      }`}>{p.label}</button>
+                  ))}
+                </div>
+                {(dashboardPeriode === 'hari' || dashboardPeriode === 'minggu') && (
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Tanggal</label>
+                    <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)}
+                      className="px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400" />
+                  </div>
+                )}
+                {dashboardPeriode === 'bulan' && (
+                  <>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Bulan</label>
+                      <select value={filterMonth} onChange={(e) => setFilterMonth(parseInt(e.target.value))}
+                        className="px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400">
+                        {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Tahun</label>
+                      <input type="number" value={filterYear} onChange={(e) => setFilterYear(parseInt(e.target.value))}
+                        className="px-3 py-2 border border-slate-200 rounded-xl text-sm w-24 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400" />
+                    </div>
+                  </>
+                )}
+                {dashboardPeriode === 'tahun' && (
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Tahun</label>
+                    <input type="number" value={filterYear} onChange={(e) => setFilterYear(parseInt(e.target.value))}
+                      className="px-3 py-2 border border-slate-200 rounded-xl text-sm w-24 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400" />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {dashboardLoading ? (
+              <div className="flex flex-col justify-center items-center py-20 gap-3">
+                <div className="relative h-12 w-12">
+                  <div className="absolute inset-0 rounded-full border-4 border-orange-200" />
+                  <div className="absolute inset-0 rounded-full border-4 border-orange-500 border-t-transparent animate-spin" />
+                </div>
+                <p className="text-sm text-slate-400 font-medium">Memuat dashboard...</p>
+              </div>
+            ) : dashboardData ? (
+              <>
+                {/* Summary Cards */}
+                <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
+                  {Object.entries(STATUS_MAP).map(([key, { label, color, icon }]) => {
+                    const c = colorMap[color];
+                    const count = dashboardData.summary?.[key] || 0;
+                    return (
+                      <div key={key} className={`relative overflow-hidden rounded-xl p-3 text-center ${c.bg} ring-1 ${c.ring} transition-all hover:scale-[1.03] cursor-default`}>
+                        <p className="text-lg sm:text-2xl font-extrabold text-slate-800">{count}</p>
+                        <p className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-wider ${c.text} mt-0.5`}>{label}</p>
+                        <span className="absolute -top-1 -right-1 text-lg opacity-30">{icon}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Belum Absen Section (hanya untuk mode harian) */}
+                {dashboardPeriode === 'hari' && dashboardData.belum_absen?.length > 0 && (
+                  <div className="bg-white rounded-2xl shadow-sm border border-red-200/60 overflow-hidden">
+                    <div className="px-5 py-3.5 border-b border-red-100 bg-red-50/50">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">⚠️</span>
+                        <h3 className="font-bold text-red-700 text-sm">Belum Absen Hari Ini</h3>
+                        <span className="ml-auto px-2.5 py-0.5 bg-red-100 text-red-700 text-[11px] font-bold rounded-full">{dashboardData.belum_absen.length}</span>
+                      </div>
+                    </div>
+                    <div className="p-4 flex flex-wrap gap-2">
+                      {dashboardData.belum_absen.map((u) => (
+                        <div key={u.id} className="flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded-xl">
+                          <div className="w-7 h-7 bg-red-100 rounded-lg flex items-center justify-center text-xs">❌</div>
+                          <div>
+                            <p className="text-xs font-semibold text-slate-700">{u.pegawai?.nama_pegawai || u.name}</p>
+                            <p className="text-[10px] text-slate-400">{u.pegawai?.jabatan || "-"}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Grouped by Status */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {Object.entries(STATUS_MAP).map(([statusKey, { label, color, icon, gradient }]) => {
+                    const people = dashboardData.grouped?.[statusKey] || [];
+                    if (people.length === 0) return null;
+                    const c = colorMap[color];
+                    return (
+                      <div key={statusKey} className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden">
+                        <div className={`px-4 py-3 bg-gradient-to-r ${gradient} flex items-center justify-between`}>
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">{icon}</span>
+                            <span className="text-white font-bold text-sm">{label}</span>
+                          </div>
+                          <span className="bg-white/25 text-white text-xs px-2.5 py-0.5 rounded-full font-bold">{people.length}</span>
+                        </div>
+                        <div className="p-3 space-y-1.5 max-h-60 overflow-y-auto">
+                          {people.map((r) => (
+                            <div key={r.id} className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-slate-50 transition-colors">
+                              <div className={`w-8 h-8 ${c.bg} rounded-lg flex items-center justify-center text-sm shrink-0`}>{icon}</div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-semibold text-slate-700 text-xs truncate">{r.user?.pegawai?.nama_pegawai || r.user?.name || "-"}</p>
+                                <p className="text-[10px] text-slate-400">{r.user?.pegawai?.jabatan || "-"}</p>
+                              </div>
+                              {r.jam_masuk && (
+                                <span className="text-[10px] font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded-lg">{formatTime(r.jam_masuk)}</span>
+                              )}
+                              {r.tujuan_dinas && (
+                                <span className="text-[10px] text-purple-600 truncate max-w-[100px]">📍 {r.tujuan_dinas}</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Empty state if all grouped are empty */}
+                {Object.values(dashboardData.grouped || {}).every(arr => arr.length === 0) && (
+                  <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-12 text-center">
+                    <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <LuLayoutDashboard className="h-7 w-7 text-slate-300" />
+                    </div>
+                    <p className="text-slate-500 font-medium">Belum ada data absensi</p>
+                    <p className="text-slate-400 text-sm mt-1">Periode ini belum ada pegawai yang absen</p>
+                  </div>
+                )}
+              </>
+            ) : null}
+          </div>
+        )}
+
+        {/* ─── TAB: REKAP PEGAWAI ─────────────────────────── */}
+        {activeTab === "rekap-pegawai" && (
+          <div className="space-y-5">
+            {/* Period Selector */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-4 sm:p-5">
+              <div className="flex flex-wrap items-end gap-3">
+                <div className="flex bg-slate-100 rounded-xl p-0.5">
+                  {[
+                    { key: "minggu", label: "Mingguan" },
+                    { key: "bulan", label: "Bulanan" },
+                    { key: "tahun", label: "Tahunan" },
+                  ].map(p => (
+                    <button key={p.key} onClick={() => setRekapPeriode(p.key)}
+                      className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+                        rekapPeriode === p.key ? "bg-white text-orange-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                      }`}>{p.label}</button>
+                  ))}
+                </div>
+                {rekapPeriode === 'minggu' && (
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Tanggal Referensi</label>
+                    <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)}
+                      className="px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400" />
+                  </div>
+                )}
+                {rekapPeriode === 'bulan' && (
+                  <>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Bulan</label>
+                      <select value={filterMonth} onChange={(e) => setFilterMonth(parseInt(e.target.value))}
+                        className="px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400">
+                        {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Tahun</label>
+                      <input type="number" value={filterYear} onChange={(e) => setFilterYear(parseInt(e.target.value))}
+                        className="px-3 py-2 border border-slate-200 rounded-xl text-sm w-24 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400" />
+                    </div>
+                  </>
+                )}
+                {rekapPeriode === 'tahun' && (
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Tahun</label>
+                    <input type="number" value={filterYear} onChange={(e) => setFilterYear(parseInt(e.target.value))}
+                      className="px-3 py-2 border border-slate-200 rounded-xl text-sm w-24 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-[180px]">
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Cari Pegawai</label>
+                  <div className="relative">
+                    <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <input type="text" value={rekapSearch} onChange={(e) => setRekapSearch(e.target.value)}
+                      placeholder="Ketik nama..."
+                      className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {rekapLoading ? (
+              <div className="flex flex-col justify-center items-center py-20 gap-3">
+                <div className="relative h-12 w-12">
+                  <div className="absolute inset-0 rounded-full border-4 border-orange-200" />
+                  <div className="absolute inset-0 rounded-full border-4 border-orange-500 border-t-transparent animate-spin" />
+                </div>
+                <p className="text-sm text-slate-400 font-medium">Memuat rekap pegawai...</p>
+              </div>
+            ) : rekapPegawaiData ? (
+              <>
+                {/* Periode Label + Global Summary */}
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 px-5 py-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <h3 className="font-bold text-slate-800 text-sm">Periode: {rekapPegawaiData.periode_label}</h3>
+                      <p className="text-[11px] text-slate-400 mt-0.5">{rekapPegawaiData.total_pegawai} pegawai terdaftar</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
+                    {Object.entries(STATUS_MAP).map(([key, { label, color, icon }]) => {
+                      const c = colorMap[color];
+                      const count = rekapPegawaiData.global_summary?.[key] || 0;
+                      return (
+                        <div key={key} className={`relative overflow-hidden rounded-xl p-2.5 text-center ${c.bg} ring-1 ${c.ring}`}>
+                          <p className="text-lg font-extrabold text-slate-800">{count}</p>
+                          <p className={`text-[9px] font-bold uppercase tracking-wider ${c.text}`}>{label}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Per User Recap Table */}
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-gradient-to-r from-slate-50 to-slate-100/50 border-b border-slate-200">
+                          <th className="text-left px-4 py-3.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Pegawai</th>
+                          {Object.entries(STATUS_MAP).map(([key, { label, icon }]) => (
+                            <th key={key} className="text-center px-2 py-3.5 font-bold text-[10px] text-slate-500 uppercase tracking-widest" title={label}>
+                              <span className="block text-base leading-none">{icon}</span>
+                              <span className="hidden sm:block mt-1">{label}</span>
+                            </th>
+                          ))}
+                          <th className="text-center px-3 py-3.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Total</th>
+                          <th className="text-center px-3 py-3.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Aksi</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {(rekapPegawaiData.pegawai || [])
+                          .filter(p => {
+                            if (!rekapSearch) return true;
+                            const name = p.user?.pegawai?.nama_pegawai || p.user?.name || "";
+                            return name.toLowerCase().includes(rekapSearch.toLowerCase());
+                          })
+                          .map((p) => (
+                          <tr key={p.user.id} className="hover:bg-orange-50/30 transition-colors group">
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-amber-500 rounded-lg flex items-center justify-center text-white text-xs font-bold shrink-0">
+                                  {(p.user?.pegawai?.nama_pegawai || p.user?.name || "?")[0].toUpperCase()}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="font-semibold text-slate-800 text-sm truncate">{p.user?.pegawai?.nama_pegawai || p.user?.name || "-"}</p>
+                                  <p className="text-[10px] text-slate-400 truncate">{p.user?.pegawai?.jabatan || p.user?.pegawai?.status_kepegawaian?.replace(/_/g, " ") || "-"}</p>
+                                </div>
+                              </div>
+                            </td>
+                            {Object.entries(STATUS_MAP).map(([key, { color }]) => {
+                              const count = p.summary?.[key] || 0;
+                              const c = colorMap[color];
+                              return (
+                                <td key={key} className="text-center px-2 py-3">
+                                  {count > 0 ? (
+                                    <span className={`inline-flex items-center justify-center w-8 h-8 rounded-lg text-xs font-bold ${c.badge}`}>
+                                      {count}
+                                    </span>
+                                  ) : (
+                                    <span className="text-slate-300 text-xs">-</span>
+                                  )}
+                                </td>
+                              );
+                            })}
+                            <td className="text-center px-3 py-3">
+                              <span className="inline-flex items-center justify-center w-8 h-8 bg-slate-100 text-slate-700 rounded-lg text-xs font-bold">
+                                {p.total_records}
+                              </span>
+                            </td>
+                            <td className="text-center px-3 py-3">
+                              <button onClick={() => openUserHistory(p.user)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-orange-600 bg-orange-50 hover:bg-orange-100 rounded-lg text-[11px] font-bold border border-orange-200 transition-all">
+                                <FiEye className="h-3.5 w-3.5" /> Detail
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {rekapPegawaiData.pegawai?.length > 0 && (
+                    <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/50">
+                      <p className="text-xs text-slate-500">Total: <strong className="text-slate-700">{rekapPegawaiData.pegawai.length}</strong> pegawai</p>
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : null}
+          </div>
+        )}
 
         {/* ─── TAB: REKAP ──────────────────────────────────── */}
         {activeTab === "rekap" && (
@@ -836,6 +1256,23 @@ const AbsensiManagementPage = () => {
       {showSettingsModal && (
         <SettingsModal settings={settings} onClose={() => setShowSettingsModal(false)} onSave={handleSaveSettings} />
       )}
+      {/* User History Modal */}
+      {historyUser && (
+        <UserHistoryModal
+          user={historyUser}
+          data={historyData}
+          loading={historyLoading}
+          periode={historyPeriode}
+          onPeriodeChange={setHistoryPeriode}
+          filterDate={filterDate}
+          filterMonth={filterMonth}
+          filterYear={filterYear}
+          onFilterDateChange={setFilterDate}
+          onFilterMonthChange={setFilterMonth}
+          onFilterYearChange={setFilterYear}
+          onClose={() => { setHistoryUser(null); setHistoryData(null); }}
+        />
+      )}
     </div>
   );
 };
@@ -1028,6 +1465,159 @@ const SettingsModal = ({ settings, onClose, onSave }) => {
               className="flex-1 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl font-bold shadow-sm shadow-orange-200 hover:from-orange-600 hover:to-amber-600 disabled:opacity-50 transition-all">
               {saving ? "Menyimpan..." : "Simpan Pengaturan"}
             </button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+};
+
+// ═══ User History Modal ═══════════════════════════════════════
+const UserHistoryModal = ({ user, data, loading, periode, onPeriodeChange, filterDate, filterMonth, filterYear, onFilterDateChange, onFilterMonthChange, onFilterYearChange, onClose }) => {
+  const nama = user?.pegawai?.nama_pegawai || user?.name || "-";
+  const jabatan = user?.pegawai?.jabatan || user?.pegawai?.status_kepegawaian?.replace(/_/g, " ") || "-";
+
+  return (
+    <>
+      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50" onClick={onClose} />
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-orange-500 to-amber-500 px-6 py-4 flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center text-white text-lg font-bold">
+                {nama[0]?.toUpperCase()}
+              </div>
+              <div>
+                <h3 className="font-bold text-white text-lg">{nama}</h3>
+                <p className="text-orange-100 text-sm">{jabatan}</p>
+              </div>
+            </div>
+            <button onClick={onClose} className="p-2 hover:bg-white/20 rounded-xl transition-colors text-white">
+              <FiX className="h-5 w-5" />
+            </button>
+          </div>
+
+          {/* Period Filter */}
+          <div className="px-6 py-3 border-b border-slate-100 bg-slate-50/50 shrink-0">
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="flex bg-slate-100 rounded-xl p-0.5">
+                {[
+                  { key: "minggu", label: "Mingguan" },
+                  { key: "bulan", label: "Bulanan" },
+                ].map(p => (
+                  <button key={p.key} onClick={() => onPeriodeChange(p.key)}
+                    className={`px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+                      periode === p.key ? "bg-white text-orange-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                    }`}>{p.label}</button>
+                ))}
+              </div>
+              {periode === 'minggu' && (
+                <input type="date" value={filterDate} onChange={(e) => onFilterDateChange(e.target.value)}
+                  className="px-3 py-1.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400" />
+              )}
+              {periode === 'bulan' && (
+                <>
+                  <select value={filterMonth} onChange={(e) => onFilterMonthChange(parseInt(e.target.value))}
+                    className="px-3 py-1.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400">
+                    {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+                  </select>
+                  <input type="number" value={filterYear} onChange={(e) => onFilterYearChange(parseInt(e.target.value))}
+                    className="px-3 py-1.5 border border-slate-200 rounded-xl text-sm w-24 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400" />
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-5">
+            {loading ? (
+              <div className="flex flex-col justify-center items-center py-16 gap-3">
+                <div className="relative h-10 w-10">
+                  <div className="absolute inset-0 rounded-full border-4 border-orange-200" />
+                  <div className="absolute inset-0 rounded-full border-4 border-orange-500 border-t-transparent animate-spin" />
+                </div>
+                <p className="text-sm text-slate-400">Memuat riwayat...</p>
+              </div>
+            ) : data ? (
+              <>
+                {/* Summary Bar */}
+                <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
+                  {Object.entries(STATUS_MAP).map(([key, { label, color, icon }]) => {
+                    const c = colorMap[color];
+                    const count = data.summary?.[key] || 0;
+                    return (
+                      <div key={key} className={`relative overflow-hidden rounded-xl p-2.5 text-center ${c.bg} ring-1 ${c.ring}`}>
+                        <p className="text-lg font-extrabold text-slate-800">{count}</p>
+                        <p className={`text-[9px] font-bold uppercase tracking-wider ${c.text}`}>{label}</p>
+                        <span className="absolute -top-1 -right-1 text-sm opacity-20">{icon}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Records Table */}
+                {data.records?.length > 0 ? (
+                  <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-slate-50 border-b border-slate-200">
+                          <th className="text-left px-4 py-3 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Tanggal</th>
+                          <th className="text-center px-3 py-3 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Status</th>
+                          <th className="text-center px-3 py-3 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Masuk</th>
+                          <th className="text-center px-3 py-3 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Keluar</th>
+                          <th className="text-center px-3 py-3 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Jarak</th>
+                          <th className="text-left px-3 py-3 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Keterangan</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {data.records.map((r) => {
+                          const st = STATUS_MAP[r.status] || STATUS_MAP.alpha;
+                          const c = colorMap[st.color];
+                          return (
+                            <tr key={r.id} className="hover:bg-orange-50/30 transition-colors">
+                              <td className="px-4 py-3 text-xs text-slate-600 whitespace-nowrap">{formatDate(r.tanggal)}</td>
+                              <td className="text-center px-3 py-3">
+                                <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold ${c.badge}`}>
+                                  {st.icon} {st.label}
+                                </span>
+                              </td>
+                              <td className="text-center px-3 py-3">
+                                <span className="font-mono text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-1 rounded-lg">{formatTime(r.jam_masuk)}</span>
+                              </td>
+                              <td className="text-center px-3 py-3">
+                                <span className="font-mono text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-1 rounded-lg">{formatTime(r.jam_keluar)}</span>
+                              </td>
+                              <td className="text-center px-3 py-3 text-xs text-slate-500">
+                                {r.jarak_masuk != null ? `${r.jarak_masuk}m` : "-"}
+                              </td>
+                              <td className="px-3 py-3 text-xs text-slate-500 max-w-[200px] truncate">
+                                {r.tujuan_dinas && <span className="text-purple-600 font-medium">📍 {r.tujuan_dinas} </span>}
+                                {r.keterangan || ""}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <div className="w-14 h-14 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <FiCalendar className="h-6 w-6 text-slate-300" />
+                    </div>
+                    <p className="text-slate-500 font-medium text-sm">Tidak ada data pada periode ini</p>
+                  </div>
+                )}
+
+                {/* Total footer */}
+                {data.records?.length > 0 && (
+                  <div className="text-right">
+                    <span className="text-xs text-slate-500">Total: <strong className="text-slate-700">{data.records.length}</strong> hari tercatat</span>
+                  </div>
+                )}
+              </>
+            ) : null}
           </div>
         </div>
       </div>
