@@ -8,10 +8,10 @@ import { useAuth } from "../context/AuthContext";
 import { 
 	FiHome, FiUser, FiLogOut, FiMenu, FiMail, FiBell, 
 	FiCalendar, FiBarChart2, FiFileText, FiDollarSign, 
-	FiUsers, FiBriefcase, FiChevronLeft, FiChevronRight,
+	FiUsers, FiBriefcase, FiChevronRight,
 	FiSettings, FiX, FiVideo, FiClock
 } from "react-icons/fi";
-import { Landmark, Menu, ChevronLeft, ChevronDown } from "lucide-react";
+import { Landmark, ChevronDown, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import AnimatedIcon from '../components/AnimatedIcon';
 import ChatBot from '../components/chatbot/ChatBot';
 import aksiCepatIcon from '../assets/aksi-cepat.png';
@@ -569,12 +569,13 @@ const DPMDStaffLayout = () => {
 						<button
 							onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
 							className={`p-2 bg-${theme.primary}-100 hover:bg-${theme.primary}-200 rounded-lg transition-colors duration-200 flex-shrink-0 group ${!isSidebarCollapsed ? '' : 'mx-auto'}`}
-							aria-label={isSidebarCollapsed ? 'Open sidebar' : 'Close sidebar'}
+							aria-label={isSidebarCollapsed ? 'Buka Sidebar' : 'Tutup Sidebar'}
+							title={isSidebarCollapsed ? 'Buka Sidebar' : 'Tutup Sidebar'}
 						>
 							{!isSidebarCollapsed ? (
-								<ChevronLeft className={`w-5 h-5 ${theme.activeText} group-hover:scale-110 transition-transform`} />
+								<PanelLeftClose className={`w-5 h-5 ${theme.activeText} group-hover:scale-110 transition-transform`} />
 							) : (
-								<Menu className={`w-5 h-5 ${theme.activeText} group-hover:scale-110 transition-transform`} />
+								<PanelLeftOpen className={`w-5 h-5 ${theme.activeText} group-hover:scale-110 transition-transform`} />
 							)}
 						</button>
 					</div>
@@ -669,55 +670,83 @@ const DPMDStaffLayout = () => {
 					</nav>
 
 					{/* User Profile & Logout at bottom */}
-					<div className="absolute bottom-0 left-0 right-0 border-t border-gray-100">
-						{/* User Profile Section */}
-						<div className={`p-3 border-b border-gray-100`}>
-							<div className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'}`}>
-								{user.avatar ? (
-									<img 
-										src={getAvatarUrl(user.avatar)}
-										alt={user.name}
-										className={`${isSidebarCollapsed ? 'h-12 w-12' : 'h-10 w-10'} rounded-full object-cover shadow-md border-2 border-${theme.primary}-100`}
-										onError={(e) => {
-											e.target.style.display = 'none';
-											e.target.nextElementSibling.style.display = 'flex';
-										}}
-									/>
-								) : null}
-								<div className={`${isSidebarCollapsed ? 'h-12 w-12' : 'h-10 w-10'} bg-gradient-to-br ${theme.gradientFrom} ${theme.gradientTo} rounded-full flex items-center justify-center shadow-md ${user.avatar ? 'hidden' : ''}`}>
-									<span className="text-white font-bold text-sm">
-										{user.name?.charAt(0) || "U"}
-									</span>
-								</div>
+					<div className="absolute bottom-0 left-0 right-0">
+						{/* User Profile Card - Premium Design */}
+						<div className={`${isSidebarCollapsed ? 'p-2' : 'p-3'}`}>
+							<div className={`relative overflow-hidden rounded-2xl ${isSidebarCollapsed ? '' : `bg-gradient-to-br ${theme.gradientFrom} ${theme.gradientTo}`}`}>
+								{/* Decorative pattern overlay */}
 								{!isSidebarCollapsed && (
-									<div className="flex-1 min-w-0">
-										<h3 className="font-semibold text-gray-800 text-sm truncate">{user.name || getDisplayName()}</h3>
-										{user.jabatan && (
-											<p className="text-xs text-gray-500 truncate">{user.jabatan}</p>
-										)}
-										<div className="flex items-center gap-1.5 mt-1 flex-wrap">
-											<span className={`inline-block px-2 py-0.5 ${theme.badgeBg} ${theme.badgeText} rounded-full text-xs font-medium`}>
-												{getShortDisplayName()}
-											</span>
-											{user.status_kepegawaian && (
-												<span className="inline-block px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded-full text-[10px] font-medium">
-													{user.status_kepegawaian}
-												</span>
-											)}
-										</div>
-										{user.nip && (
-											<p className="text-[10px] text-gray-400 font-mono mt-0.5">NIP: {user.nip}</p>
-										)}
+									<div className="absolute inset-0 opacity-10">
+										<div className="absolute -right-6 -top-6 w-24 h-24 rounded-full border-[3px] border-white/40" />
+										<div className="absolute -left-4 -bottom-4 w-20 h-20 rounded-full border-[3px] border-white/30" />
+										<div className="absolute right-8 bottom-2 w-8 h-8 rounded-full bg-white/20" />
 									</div>
 								)}
+								
+								<div className={`relative ${isSidebarCollapsed ? 'flex flex-col items-center gap-2 py-2' : 'p-4'}`}>
+									{/* Avatar */}
+									<div className={`relative ${isSidebarCollapsed ? '' : 'flex items-center gap-3 mb-3'}`}>
+										<div className="relative">
+											{user.avatar ? (
+												<img 
+													src={getAvatarUrl(user.avatar)}
+													alt={user.name}
+													className={`${isSidebarCollapsed ? 'h-11 w-11' : 'h-12 w-12'} rounded-xl object-cover shadow-lg ring-2 ring-white/30`}
+													onError={(e) => {
+														e.target.style.display = 'none';
+														e.target.nextElementSibling.style.display = 'flex';
+													}}
+												/>
+											) : null}
+											<div className={`${isSidebarCollapsed ? 'h-11 w-11' : 'h-12 w-12'} bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-lg ring-2 ring-white/30 ${user.avatar ? 'hidden' : ''}`}>
+												<span className="text-white font-bold text-lg">
+													{user.name?.charAt(0) || "U"}
+												</span>
+											</div>
+											{/* Online indicator */}
+											<div className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-400 rounded-full border-2 ${isSidebarCollapsed ? 'border-white' : 'border-white/50'}`} />
+										</div>
+										{!isSidebarCollapsed && (
+											<div className="flex-1 min-w-0">
+												<h3 className="font-bold text-white text-sm truncate leading-tight">{user.name || getDisplayName()}</h3>
+												{user.jabatan && (
+													<p className="text-white/70 text-[11px] truncate mt-0.5">{user.jabatan}</p>
+												)}
+											</div>
+										)}
+									</div>
+									
+									{/* Badges & NIP */}
+									{!isSidebarCollapsed && (
+										<div className="space-y-2">
+											<div className="flex items-center gap-1.5 flex-wrap">
+												<span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white/20 backdrop-blur-sm text-white rounded-lg text-[11px] font-semibold shadow-sm">
+													<span className="w-1.5 h-1.5 rounded-full bg-white/80" />
+													{getShortDisplayName()}
+												</span>
+												{user.status_kepegawaian && (
+													<span className="inline-flex items-center px-2 py-1 bg-white/15 backdrop-blur-sm text-white/90 rounded-lg text-[10px] font-medium">
+														{user.status_kepegawaian}
+													</span>
+												)}
+											</div>
+											{user.nip && (
+												<div className="flex items-center gap-2 px-2.5 py-1.5 bg-black/10 backdrop-blur-sm rounded-lg">
+													<FiUser className="w-3 h-3 text-white/60 flex-shrink-0" />
+													<p className="text-[10px] text-white/80 font-mono tracking-wide truncate">{user.nip}</p>
+												</div>
+											)}
+										</div>
+									)}
+								</div>
 							</div>
 						</div>
 						
 						{/* Logout Button */}
-						<div className="p-3">
+						<div className={`${isSidebarCollapsed ? 'px-2 pb-3' : 'px-3 pb-3'}`}>
 							<button
 								onClick={handleLogout}
-								className={`group relative w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 rounded-xl transition-all duration-200 text-red-600 hover:bg-gradient-to-r hover:from-red-500 hover:to-red-600 hover:text-white hover:shadow-md`}
+								className={`group relative w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 rounded-xl bg-red-50 text-red-600 border border-red-200 active:scale-[0.98]`}
 								title={isSidebarCollapsed ? 'Keluar' : ''}
 							>
 								<div className={`relative ${isSidebarCollapsed ? 'mx-auto' : 'flex-shrink-0'}`}>

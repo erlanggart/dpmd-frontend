@@ -8,7 +8,8 @@ import {
   TrendingUp, 
   Menu, 
   X,
-  ChevronLeft,
+  PanelLeftClose,
+  PanelLeftOpen,
   ChevronDown,
   DollarSign,
   Landmark,
@@ -189,12 +190,13 @@ const CoreDashboardLayout = () => {
           <button
             onClick={toggleSidebar}
             className={`p-2 bg-blue-100 hover:bg-blue-200 rounded-lg transition-colors duration-200 flex-shrink-0 group ${!sidebarOpen ? 'mx-auto' : ''}`}
-            aria-label={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
+            aria-label={sidebarOpen ? 'Tutup Sidebar' : 'Buka Sidebar'}
+            title={sidebarOpen ? 'Tutup Sidebar' : 'Buka Sidebar'}
           >
             {sidebarOpen ? (
-              <ChevronLeft className="w-5 h-5 text-blue-600 group-hover:scale-110 transition-transform" />
+              <PanelLeftClose className="w-5 h-5 text-blue-600 group-hover:scale-110 transition-transform" />
             ) : (
-              <Menu className="w-5 h-5 text-blue-600 group-hover:scale-110 transition-transform" />
+              <PanelLeftOpen className="w-5 h-5 text-blue-600 group-hover:scale-110 transition-transform" />
             )}
           </button>
         </div>

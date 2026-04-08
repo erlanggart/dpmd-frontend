@@ -7,6 +7,8 @@ import {
   FiChevronDown, FiFilter, FiArrowLeft, FiEye, FiUser,
 } from "react-icons/fi";
 import { LuDownload, LuRefreshCw, LuShieldCheck, LuWifi, LuWifiOff, LuLayoutGrid, LuList, LuFileSpreadsheet, LuChartColumn, LuLayoutDashboard } from "react-icons/lu";
+import Lottie from "lottie-react";
+import tableTennisAnimation from "../../../assets/table-tennis.json";
 import api from "../../../api";
 import { showAlert } from "../../../components/AlertPopup";
 import { useAuth } from "../../../context/AuthContext";
@@ -83,6 +85,28 @@ const AbsensiManagementPage = () => {
 
   if (user?.role !== 'superadmin' && Number(user?.bidang_id) !== 2) {
     return <Navigate to="/forbidden" replace />;
+  }
+
+  // Maintenance mode: hanya superadmin yang bisa akses kelola absensi
+  if (user?.role !== 'superadmin') {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-teal-50 px-4">
+        <div className="text-center max-w-lg">
+          <div className="mb-2">
+            <span className="inline-block px-4 py-1.5 rounded-full bg-amber-100 text-amber-700 text-sm font-semibold tracking-wide">
+              🏓 Maintenance Mode
+            </span>
+          </div>
+          <h1 className="text-3xl md:text-4xl font-extrabold text-gray-800 mb-3">
+            Maaf, Kita Sedang Main
+          </h1>
+         
+          <div className="w-72 md:w-96 mx-auto">
+            <Lottie animationData={tableTennisAnimation} loop autoplay />
+          </div>
+        </div>
+      </div>
+    );
   }
 
   const [activeTab, setActiveTab] = useState("dashboard");

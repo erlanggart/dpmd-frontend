@@ -321,8 +321,8 @@ const ProfilePage = () => {
                 <button onClick={() => setShowPasswordModal(true)} className="p-2.5 bg-white/15 hover:bg-white/25 rounded-xl transition-all backdrop-blur-sm" title="Ubah Password">
                   <FiLock className="h-4 w-4 text-white" />
                 </button>
-                <button onClick={handleLogout} className="p-2.5 bg-white/15 hover:bg-red-500/80 rounded-xl transition-all backdrop-blur-sm" title="Keluar">
-                  <FiLogOut className="h-4 w-4 text-white" />
+                <button onClick={handleLogout} className="p-2.5 bg-red-500 rounded-xl backdrop-blur-sm shadow-md" title="Keluar">
+                  <FiLogOut className="h-5 w-5 text-white" />
                 </button>
               </div>
             </div>
@@ -551,10 +551,10 @@ const ProfilePage = () => {
                   </div>
                   <FiChevronRight className="w-4 h-4 text-gray-300" />
                 </button>
-                <button onClick={handleLogout} className="w-full flex items-center justify-between px-6 py-4 hover:bg-red-50 transition-colors">
+                <button onClick={handleLogout} className="w-full flex items-center justify-between px-6 py-4 bg-red-50">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 bg-red-50 rounded-xl flex items-center justify-center">
-                      <FiLogOut className="w-4 h-4 text-red-500" />
+                    <div className="w-9 h-9 bg-red-100 rounded-xl flex items-center justify-center">
+                      <FiLogOut className="w-4 h-4 text-red-600" />
                     </div>
                     <div className="text-left">
                       <p className="text-sm font-semibold text-red-600">Keluar</p>

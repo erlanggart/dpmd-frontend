@@ -1076,6 +1076,7 @@ function App() {
                   <Route path="bidang/sekretariat/perjadin/detail/:id" element={<PerjadinDetail />} />
                   <Route path="bidang/sekretariat/notifikasi" element={<KelolaNotifikasiPage />} />
                   <Route path="bidang/sekretariat/informasi" element={<InformasiManagement />} />
+                  <Route path="bidang/sekretariat/absensi-management" element={<AbsensiManagementPage />} />
                   <Route path="bidang/sekretariat/video-meeting" element={<VideoMeetingListPage />} />
 
                   {/* KKD sub-routes */}

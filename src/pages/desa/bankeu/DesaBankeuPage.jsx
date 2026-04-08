@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { LuDollarSign, LuFileText, LuRadar, LuArrowLeft } from 'react-icons/lu';
+import { LuDollarSign, LuFileText, LuRadar, LuArrowLeft, LuClipboardCheck } from 'react-icons/lu';
 import BankeuProposalPage from './BankeuProposalPage';
 import BankeuTrackingTab from './BankeuTrackingTab';
+import DesaBankeuLpjPage from './DesaBankeuLpjPage';
 
 const DesaBankeuPage = () => {
   const [selectedYear, setSelectedYear] = useState(null);
@@ -26,7 +27,24 @@ const DesaBankeuPage = () => {
           </div>
 
           {/* Year Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-3xl mx-auto">
+            {/* TA 2025 - LPJ */}
+            <button
+              onClick={() => setSelectedYear(2025)}
+              className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border-2 border-gray-200 hover:border-amber-400 p-8 transition-all duration-300 text-center overflow-hidden hover:-translate-y-2"
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-amber-400/5 to-orange-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="relative">
+                <div className="h-16 w-16 mx-auto bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg shadow-amber-500/25">
+                  <span className="text-3xl">📑</span>
+                </div>
+                <h3 className="text-2xl font-bold text-gray-800 mb-2">TA 2025</h3>
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  LPJ Bantuan Keuangan<br/>Tahun Anggaran 2025
+                </p>
+              </div>
+            </button>
+
             {/* TA 2026 */}
             <button
               onClick={() => setSelectedYear(2026)}
@@ -63,7 +81,7 @@ const DesaBankeuPage = () => {
           </div>
 
           {/* Info Box */}
-          <div className="mt-12 max-w-2xl mx-auto">
+          <div className="mt-12 max-w-3xl mx-auto">
             <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg">
               <div className="flex items-start gap-3">
                 <LuDollarSign className="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5" />
@@ -83,7 +101,35 @@ const DesaBankeuPage = () => {
     );
   }
 
-  // Show tabs after year selection
+  // TA 2025: Show LPJ page directly
+  if (selectedYear === 2025) {
+    return (
+      <div className="relative">
+        {/* Back button */}
+        <div className="bg-white border-b border-gray-200">
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="flex items-center gap-3 h-14">
+              <button
+                onClick={() => setSelectedYear(null)}
+                className="flex items-center gap-1.5 text-gray-500 hover:text-blue-600 transition-colors text-sm font-medium"
+              >
+                <LuArrowLeft className="w-4 h-4" />
+                <span>Kembali</span>
+              </button>
+              <div className="h-6 w-px bg-gray-300" />
+              <div className="flex items-center gap-2 text-sm font-semibold text-amber-700">
+                <LuClipboardCheck className="w-4 h-4" />
+                <span>LPJ Bantuan Keuangan TA 2025</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <DesaBankeuLpjPage tahun={2025} />
+      </div>
+    );
+  }
+
+  // Show tabs after year selection (TA 2026, 2027)
   const tabs = [
     { id: 'pengajuan', label: 'Pengajuan', icon: LuFileText, desc: 'Kelola proposal & surat' },
     { id: 'tracking', label: 'Tracking', icon: LuRadar, desc: 'Pantau status verifikasi' },

@@ -12,6 +12,7 @@ const BumdesDokumenManager = lazy(() => import('./spked/bumdes/BumdesDokumenMana
 // Lazy load Bankeu component
 const BankeuDashboard = lazy(() => import('./spked/bankeu/BankeuDashboard'));
 const DpmdVerificationPage = lazy(() => import('./spked/bankeu/DpmdVerificationPage'));
+const BankeuLpjMonitoringPage = lazy(() => import('./spked/bankeu/BankeuLpjMonitoringPage'));
 
 // Loading component
 const LoadingFallback = () => (
@@ -27,6 +28,7 @@ const SpkedPage = () => {
 	const [activeTab, setActiveTab] = useState('overview'); // overview, bumdes, bankeu, activity
 	const [bumdesView, setBumdesView] = useState('dashboard'); // dashboard, form, dokumen
 	const [bankeuYear, setBankeuYear] = useState(null); // null (picker), 2025, or 2026
+	const [bankeu2025View, setBankeu2025View] = useState('penyaluran'); // penyaluran or lpj
 	
 	// Activity logs state
 	const [activityLogs, setActivityLogs] = useState([]);
@@ -199,7 +201,7 @@ const SpkedPage = () => {
 								key={tab.id}
 								onClick={() => {
 									setActiveTab(tab.id);
-									if (tab.id === 'bankeu') setBankeuYear(null);
+									if (tab.id === 'bankeu') { setBankeuYear(null); setBankeu2025View('penyaluran'); }
 								}}
 								className={`
 									flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 whitespace-nowrap
@@ -397,7 +399,7 @@ const SpkedPage = () => {
 											</div>
 											<div className="flex-1 min-w-0">
 												<h3 className="text-xl font-bold text-gray-900">TA 2025</h3>
-												<p className="text-xs text-gray-400 mt-0.5">Penyaluran T1 & T2</p>
+												<p className="text-xs text-gray-400 mt-0.5">Penyaluran T1 & T2 + LPJ</p>
 											</div>
 											<ArrowRight className="h-5 w-5 text-gray-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all" />
 										</div>
@@ -453,7 +455,38 @@ const SpkedPage = () => {
 								<div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl border border-gray-200/50 overflow-hidden">
 									<Suspense fallback={<LoadingFallback />}>
 										{bankeuYear === 2025 ? (
-											<BankeuDashboard />
+											<div>
+												{/* Sub-tabs for TA 2025 */}
+												<div className="border-b border-gray-200 bg-gray-50 p-4">
+													<div className="flex gap-2">
+														<button
+															onClick={() => setBankeu2025View('penyaluran')}
+															className={`px-4 py-2 rounded-lg font-medium transition-all ${
+																bankeu2025View === 'penyaluran'
+																	? 'bg-white text-blue-600 shadow-sm'
+																	: 'text-gray-600 hover:bg-white/50'
+															}`}
+														>
+															💰 Penyaluran T1 & T2
+														</button>
+														<button
+															onClick={() => setBankeu2025View('lpj')}
+															className={`px-4 py-2 rounded-lg font-medium transition-all ${
+																bankeu2025View === 'lpj'
+																	? 'bg-white text-amber-600 shadow-sm'
+																	: 'text-gray-600 hover:bg-white/50'
+															}`}
+														>
+															📑 LPJ Bantuan Keuangan
+														</button>
+													</div>
+												</div>
+												{bankeu2025View === 'penyaluran' ? (
+													<BankeuDashboard />
+												) : (
+													<BankeuLpjMonitoringPage tahun={2025} />
+												)}
+											</div>
 										) : bankeuYear === 2026 || bankeuYear === 2027 ? (
 											<DpmdVerificationPage tahunAnggaran={bankeuYear} />
 										) : null}

@@ -9,13 +9,12 @@ import {
 	FiSearch,
 	FiX,
 	FiMenu,
-	FiChevronsRight,
-	FiChevronsLeft,
 	FiFileText,
 	FiDollarSign,
 	FiSettings,
 	FiHome,
 } from "react-icons/fi";
+import { LuPanelLeftClose, LuPanelLeftOpen } from "react-icons/lu";
 
 import {
 	TbBuildingBank,
@@ -176,12 +175,13 @@ const MainLayout = () => {
 					<button
 						onClick={() => setSidebarMinimized(!isSidebarMinimized)}
 						className="hidden lg:flex bg-purple-700 w-7 h-full items-center justify-center text-white rounded-tr-xl hover:bg-purple-800 transition-colors"
-						aria-label="Toggle Sidebar"
+						aria-label={isSidebarMinimized ? 'Buka Sidebar' : 'Tutup Sidebar'}
+						title={isSidebarMinimized ? 'Buka Sidebar' : 'Tutup Sidebar'}
 					>
 						{isSidebarMinimized ? (
-							<FiChevronsRight size={18} />
+							<LuPanelLeftOpen size={18} />
 						) : (
-							<FiChevronsLeft size={18} />
+							<LuPanelLeftClose size={18} />
 						)}
 					</button>
 					
@@ -399,7 +399,7 @@ const MainLayout = () => {
 										setDropdownOpen(false);
 										handleLogout();
 									}}
-									className="flex items-center w-full px-4 py-3 text-left text-red-600 hover:bg-red-50 transition-colors"
+									className="flex items-center w-full px-4 py-3 text-left bg-red-50 text-red-600"
 								>
 									<FiLogOut className="h-5 w-5 mr-3" />
 									<span className="font-medium">Logout</span>
