@@ -116,6 +116,21 @@ const BhprdDashboard = () => {
     }));
   };
 
+  // Grand total across all tahapan
+  const grandTotal = (() => {
+    const allDatasets = [
+      { label: 'Tahap 1', data: dataTahap1 },
+      { label: 'Tahap 2', data: dataTahap2 },
+      { label: 'Tahap 3', data: dataTahap3 },
+    ];
+    const perTahapan = allDatasets.map(ds => ({
+      label: ds.label,
+      total: processData(ds.data).reduce((sum, d) => sum + (d.realisasi || 0), 0)
+    }));
+    const totalAll = perTahapan.reduce((sum, t) => sum + t.total, 0);
+    return { perTahapan, totalAll };
+  })();
+
   const activeData = getActiveData();
   const processedData = processData(activeData);
 
@@ -362,6 +377,23 @@ const BhprdDashboard = () => {
                 <p className="text-white text-opacity-90 text-xs md:text-sm mb-1 font-medium">Rata-rata/Desa</p>
                 <p className="text-white text-base md:text-lg font-bold truncate">{formatRupiah(avgPerDesa)}</p>
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Total Anggaran Seluruh Tahapan */}
+        <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg p-6 mb-8 border border-gray-100">
+          <h2 className="text-lg font-bold text-gray-800 mb-4">Total Anggaran Seluruh Tahapan</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {grandTotal.perTahapan.map((t) => (
+              <div key={t.label} className="bg-gray-50 rounded-xl p-3 border border-gray-200">
+                <p className="text-gray-500 text-xs font-medium mb-1">{t.label}</p>
+                <p className="text-gray-800 text-xs md:text-sm font-bold break-words leading-tight">{formatRupiah(t.total)}</p>
+              </div>
+            ))}
+            <div className="bg-gradient-to-r from-emerald-500 to-green-600 rounded-xl p-3 text-white">
+              <p className="text-white text-opacity-90 text-xs font-medium mb-1">Grand Total</p>
+              <p className="text-xs md:text-sm font-bold break-words leading-tight">{formatRupiah(grandTotal.totalAll)}</p>
             </div>
           </div>
         </div>

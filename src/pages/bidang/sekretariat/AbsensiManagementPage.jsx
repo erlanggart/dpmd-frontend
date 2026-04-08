@@ -1462,11 +1462,19 @@ const SettingsModal = ({ settings, onClose, onSave }) => {
   const [jamMasuk, setJamMasuk] = useState(settings.jam_masuk || "08:00");
   const [jamPulang, setJamPulang] = useState(settings.jam_pulang || "16:00");
   const [toleransi, setToleransi] = useState(settings.toleransi_terlambat || "15");
+  const [jamBukaAbsen, setJamBukaAbsen] = useState(settings.jam_buka_absen || "06:00");
+  const [jamTutupAbsen, setJamTutupAbsen] = useState(settings.jam_tutup_absen || "17:00");
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
     setSaving(true);
-    await onSave({ jam_masuk: jamMasuk, jam_pulang: jamPulang, toleransi_terlambat: toleransi });
+    await onSave({
+      jam_masuk: jamMasuk,
+      jam_pulang: jamPulang,
+      toleransi_terlambat: toleransi,
+      jam_buka_absen: jamBukaAbsen,
+      jam_tutup_absen: jamTutupAbsen,
+    });
     setSaving(false);
   };
 
@@ -1492,6 +1500,27 @@ const SettingsModal = ({ settings, onClose, onSave }) => {
           </div>
 
           <div className="p-6 space-y-5">
+            {/* Jam Buka & Tutup Absensi */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
+                  <FiClock className="inline h-3 w-3 mr-1" />Jam Buka Absen
+                </label>
+                <input type="time" value={jamBukaAbsen} onChange={(e) => setJamBukaAbsen(e.target.value)}
+                  className="w-full px-3 py-3 border border-slate-200 rounded-xl text-sm font-mono text-center font-bold focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400" />
+                <p className="text-[10px] text-slate-400 mt-1.5 text-center">Absen bisa dimulai</p>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
+                  <FiClock className="inline h-3 w-3 mr-1" />Jam Tutup Absen
+                </label>
+                <input type="time" value={jamTutupAbsen} onChange={(e) => setJamTutupAbsen(e.target.value)}
+                  className="w-full px-3 py-3 border border-slate-200 rounded-xl text-sm font-mono text-center font-bold focus:ring-2 focus:ring-red-500/20 focus:border-red-400" />
+                <p className="text-[10px] text-slate-400 mt-1.5 text-center">Absen ditutup</p>
+              </div>
+            </div>
+
+            {/* Jam Masuk & Pulang */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
@@ -1524,15 +1553,19 @@ const SettingsModal = ({ settings, onClose, onSave }) => {
             <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl p-4 border border-orange-200/50">
               <p className="text-[10px] font-bold text-orange-500 uppercase tracking-widest mb-2">Preview Konfigurasi</p>
               <div className="flex items-center justify-between text-sm">
+                <span className="text-slate-500">Absen Dibuka</span>
+                <span className="font-mono font-bold text-emerald-600">{jamBukaAbsen} WIB</span>
+              </div>
+              <div className="flex items-center justify-between text-sm mt-1">
                 <span className="text-slate-500">Masuk</span>
                 <span className="font-mono font-bold text-slate-800">{jamMasuk} WIB</span>
               </div>
               <div className="flex items-center justify-between text-sm mt-1">
-                <span className="text-slate-500">Batas Telat</span>
+                <span className="text-slate-500">Telat Mulai</span>
                 <span className="font-mono font-bold text-amber-600">
                   {(() => {
                     const [h, m] = jamMasuk.split(":").map(Number);
-                    const total = h * 60 + m + parseInt(toleransi || 0);
+                    const total = h * 60 + m + 1;
                     return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")} WIB`;
                   })()}
                 </span>
@@ -1540,6 +1573,10 @@ const SettingsModal = ({ settings, onClose, onSave }) => {
               <div className="flex items-center justify-between text-sm mt-1">
                 <span className="text-slate-500">Pulang</span>
                 <span className="font-mono font-bold text-slate-800">{jamPulang} WIB</span>
+              </div>
+              <div className="flex items-center justify-between text-sm mt-1">
+                <span className="text-slate-500">Absen Ditutup</span>
+                <span className="font-mono font-bold text-red-600">{jamTutupAbsen} WIB</span>
               </div>
             </div>
           </div>

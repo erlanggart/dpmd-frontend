@@ -151,6 +151,23 @@ const DdDashboard = () => {
     };
   };
 
+  // Grand total across all tahapan
+  const grandTotal = (() => {
+    const allDatasets = [
+      { label: 'Earmarked T1', data: dataEarmarkedT1 },
+      { label: 'Earmarked T2', data: dataEarmarkedT2 },
+      { label: 'Non-Earmarked T1', data: dataNonEarmarkedT1 },
+      { label: 'Non-Earmarked T2', data: dataNonEarmarkedT2 },
+      { label: 'Insentif DD', data: dataInsentif },
+    ];
+    const perTahapan = allDatasets.map(ds => ({
+      label: ds.label,
+      total: processData(ds.data).reduce((sum, d) => sum + (d.realisasi || 0), 0)
+    }));
+    const totalAll = perTahapan.reduce((sum, t) => sum + t.total, 0);
+    return { perTahapan, totalAll };
+  })();
+
   const rawActiveData = processData(getActiveData());
   
   // Apply filters and search
@@ -447,6 +464,23 @@ const DdDashboard = () => {
                 <p className="text-white text-opacity-90 text-xs md:text-sm mb-1 font-medium">Rata-rata/Desa</p>
                 <p className="text-white text-[10px] md:text-xs font-bold break-words leading-tight">{formatCurrency(stats.avgPerDesa)}</p>
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Total Anggaran Seluruh Tahapan */}
+        <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg p-6 mb-8 border border-gray-100">
+          <h2 className="text-lg font-bold text-gray-800 mb-4">Total Anggaran Seluruh Tahapan</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            {grandTotal.perTahapan.map((t) => (
+              <div key={t.label} className="bg-gray-50 rounded-xl p-3 border border-gray-200">
+                <p className="text-gray-500 text-xs font-medium mb-1">{t.label}</p>
+                <p className="text-gray-800 text-xs md:text-sm font-bold break-words leading-tight">{formatCurrency(t.total)}</p>
+              </div>
+            ))}
+            <div className="bg-gradient-to-r from-cyan-500 to-blue-600 rounded-xl p-3 text-white">
+              <p className="text-white text-opacity-90 text-xs font-medium mb-1">Grand Total</p>
+              <p className="text-xs md:text-sm font-bold break-words leading-tight">{formatCurrency(grandTotal.totalAll)}</p>
             </div>
           </div>
         </div>

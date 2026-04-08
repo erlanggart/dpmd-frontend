@@ -152,10 +152,37 @@ const AbsensiPage = () => {
 		return true;
 	};
 
-	const startHadir = () => { if (!checkDevice()) return; setAbsensiMode("hadir"); setTujuanDinas(""); setShowCameraModal("masuk"); };
-	const startWFH = () => { if (!checkDevice()) return; setAbsensiMode("wfh"); setTujuanDinas(""); setShowCameraModal("masuk"); };
-	const startWFA = () => { if (!checkDevice()) return; setAbsensiMode("wfa"); setTujuanDinas(""); setShowCameraModal("masuk"); };
-	const startDinasLuar = () => { if (!checkDevice()) return; setShowDinasLuarModal(true); };
+	const isAbsensiOpen = () => {
+		const jamBuka = absensiSettings?.jam_buka_absen || "06:00";
+		const jamTutup = absensiSettings?.jam_tutup_absen || "17:00";
+		const now = new Date();
+		const currentMinutes = now.getHours() * 60 + now.getMinutes();
+		const [bH, bM] = jamBuka.split(":").map(Number);
+		const [tH, tM] = jamTutup.split(":").map(Number);
+		const bukaMinutes = bH * 60 + bM;
+		const tutupMinutes = tH * 60 + tM;
+		if (currentMinutes < bukaMinutes) {
+			return { open: false, message: `Absensi belum dibuka. Jam buka: ${jamBuka} WIB` };
+		}
+		if (currentMinutes > tutupMinutes) {
+			return { open: false, message: `Absensi sudah ditutup. Jam tutup: ${jamTutup} WIB` };
+		}
+		return { open: true };
+	};
+
+	const checkAbsensiTime = () => {
+		const status = isAbsensiOpen();
+		if (!status.open) {
+			showAlert({ icon: "warning", title: "Absensi Belum Dibuka", text: status.message });
+			return false;
+		}
+		return true;
+	};
+
+	const startHadir = () => { if (!checkDevice() || !checkAbsensiTime()) return; setAbsensiMode("hadir"); setTujuanDinas(""); setShowCameraModal("masuk"); };
+	const startWFH = () => { if (!checkDevice() || !checkAbsensiTime()) return; setAbsensiMode("wfh"); setTujuanDinas(""); setShowCameraModal("masuk"); };
+	const startWFA = () => { if (!checkDevice() || !checkAbsensiTime()) return; setAbsensiMode("wfa"); setTujuanDinas(""); setShowCameraModal("masuk"); };
+	const startDinasLuar = () => { if (!checkDevice() || !checkAbsensiTime()) return; setShowDinasLuarModal(true); };
 	const handleDinasLuarConfirm = (tujuan) => { setAbsensiMode("dinas_luar"); setTujuanDinas(tujuan); setShowDinasLuarModal(false); setShowCameraModal("masuk"); };
 	const startPulang = () => { if (!checkDevice()) return; setShowCameraModal("keluar"); };
 
@@ -925,6 +952,12 @@ const AbsensiPage = () => {
 							) : (
 								/* ── Belum Absen — Action Buttons ── */
 								<div className="flex-1 flex flex-col items-center justify-center gap-3">
+									{/* Info: Absensi belum/sudah dibuka */}
+									{!isAbsensiOpen().open && (
+										<div className="w-full px-4 py-3 rounded-2xl bg-amber-50 border border-amber-200 text-center">
+											<p className="text-xs font-bold text-amber-700">{isAbsensiOpen().message}</p>
+										</div>
+									)}
 									{/* Main: Absen Masuk — Big Bell */}
 									<div className="w-full flex justify-center bg-white rounded-3xl shadow-[0_2px_16px_rgba(0,0,0,0.07)] p-4">
 									<motion.button
