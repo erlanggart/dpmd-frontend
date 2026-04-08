@@ -390,38 +390,24 @@ const LinkRow = ({ icon, label, value }) => {
 	);
 };
 
-const NarrativeCard = ({ icon, label, title, description, value, emptyText, accentClass }) => {
+const NarrativeRow = ({ icon, title, value, emptyText, accentClass }) => {
 	const IconComponent = icon;
 	const hasValue = isFilled(value);
 
 	return (
-		<article className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-[0_24px_50px_-45px_rgba(15,23,42,0.45)]">
-			<div className={`h-1.5 w-full bg-gradient-to-r ${accentClass}`} />
-			<div className="p-6 sm:p-7">
-				<div className="flex items-start gap-4">
-					<div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-slate-900 text-white shadow-lg shadow-slate-300/40">
-						{IconComponent ? <IconComponent className="h-5 w-5" /> : null}
-					</div>
-					<div className="min-w-0 flex-1">
-						<p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-							{label}
-						</p>
-						<h4 className="mt-2 text-2xl font-black tracking-tight text-slate-900">
-							{title}
-						</h4>
-						<p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
-							{description}
-						</p>
-					</div>
+		<div className="rounded-lg border border-slate-100 bg-slate-50/70 p-4">
+			<div className="flex items-center gap-3">
+				<div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br ${accentClass} text-white shadow-sm`}>
+					{IconComponent ? <IconComponent className="h-4 w-4" /> : null}
 				</div>
-
-				<div className="mt-6 rounded-lg border border-slate-100 bg-slate-50/80 p-5 sm:p-6">
-					<p className="whitespace-pre-wrap text-[15px] leading-8 text-slate-600">
-						{hasValue ? value : emptyText}
-					</p>
-				</div>
+				<h4 className="text-sm font-bold text-slate-800">{title}</h4>
 			</div>
-		</article>
+			<div className="mt-3 rounded-lg border border-slate-100 bg-white p-4">
+				<p className={`whitespace-pre-wrap text-sm leading-7 ${hasValue ? "text-slate-600" : "text-slate-400 italic"}`}>
+					{hasValue ? value : emptyText}
+				</p>
+			</div>
+		</div>
 	);
 };
 
@@ -647,7 +633,6 @@ const ProfilDesa = () => {
 
 			<div className="relative z-10 space-y-8">
 				<section className="overflow-hidden rounded-lg bg-gradient-to-br from-emerald-950 via-teal-800 to-cyan-600 p-6 text-white shadow-[0_32px_90px_-40px_rgba(13,148,136,0.9)] sm:p-8">
-					<div className="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_340px] xl:items-stretch">
 						<div className="space-y-6">
 							<div className="flex flex-wrap items-start justify-between gap-4">
 								<div className="max-w-3xl">
@@ -739,40 +724,8 @@ const ProfilDesa = () => {
 							</div>
 						</div>
 
-						<div className="flex h-full flex-col rounded-lg border border-white/15 bg-white/10 p-3 backdrop-blur-sm">
-							<div className="relative overflow-hidden rounded-lg border border-white/10 bg-slate-900/20">
-								{imageUrl ? (
-									<img
-										src={imageUrl}
-										alt={`Kantor ${villageLabel} ${profil.desa?.nama || ""}`}
-										className="h-[320px] w-full object-cover"
-									/>
-								) : (
-									<div className="flex h-[320px] flex-col items-center justify-center bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.18),transparent_45%),linear-gradient(135deg,rgba(15,23,42,0.25),rgba(255,255,255,0.06))] p-8 text-center text-white/80">
-										<div className="flex h-16 w-16 items-center justify-center rounded-lg bg-white/10">
-											<FiImage className="h-8 w-8" />
-										</div>
-										<p className="mt-4 text-lg font-semibold">Belum ada foto kantor desa</p>
-										<p className="mt-2 text-sm leading-6 text-white/65">
-											Tambahkan dokumentasi visual agar profil desa terlihat lebih meyakinkan dan lengkap.
-										</p>
-									</div>
-								)}
-							</div>
-
-							<div className="mt-3 rounded-lg bg-slate-950/15 p-4 text-sm text-white/80">
-								<p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/60">
-									Terakhir diperbarui
-								</p>
-								<p className="mt-2 text-base font-semibold text-white">
-									{formatDateLabel(profil.updated_at)}
-								</p>
-								<p className="mt-2 text-xs leading-5 text-white/65">
-									Pastikan foto, titik lokasi, dan narasi desa selalu mencerminkan kondisi terkini.
-								</p>
-							</div>
-						</div>
-					</div>
+						
+					
 				</section>
 
 				{editMode ? (
@@ -1166,160 +1119,77 @@ const ProfilDesa = () => {
 						</aside>
 					</form>
 				) : (
-					<div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_340px]">
-						<div className="space-y-6">
-							<div className="grid gap-6 lg:grid-cols-3">
-								<div className={`${SECTION_CLASS} lg:col-span-1`}>
-									<p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-600">
-										Status profil
-									</p>
-									<h3 className="mt-2 text-2xl font-black tracking-tight text-slate-900">
-										{completion.percentage}% lengkap
-									</h3>
-									<p className="mt-2 text-sm leading-6 text-slate-500">
-										Profil desa akan terlihat lebih meyakinkan saat narasi, foto, dan titik lokasi sudah lengkap.
-									</p>
-									<div className="mt-5 h-3 overflow-hidden rounded-lg bg-slate-100">
-										<div
-											className={`h-full rounded-lg bg-gradient-to-r ${progressTone.bar}`}
-											style={{ width: `${Math.max(completion.percentage, completion.percentage > 0 ? 6 : 0)}%` }}
-										/>
-									</div>
-									<div className="mt-5 grid gap-3 text-sm text-slate-600">
-										<div className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 px-4 py-3">
-											<span>Jumlah penduduk</span>
-											<span className="font-semibold text-slate-800">
-												{isFilled(profil.jumlah_penduduk)
-													? `${formatNumber(profil.jumlah_penduduk)} jiwa`
-													: "Belum diisi"}
-											</span>
-										</div>
-										<div className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 px-4 py-3">
-											<span>Luas wilayah</span>
-											<span className="font-semibold text-slate-800">
-												{isFilled(profil.luas_wilayah)
-													? `${profil.luas_wilayah} km2`
-													: "Belum diisi"}
-											</span>
-										</div>
-										<div className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 px-4 py-3">
-											<span>Jarak ke kecamatan</span>
-											<span className="font-semibold text-slate-800">
-												{isFilled(profil.radius_ke_kecamatan)
-													? `${profil.radius_ke_kecamatan} km`
-													: "Belum diisi"}
-											</span>
-										</div>
-									</div>
-								</div>
+					<div className="space-y-6">
+						<div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)] xl:items-start">
+							<aside className="space-y-6 xl:sticky xl:top-6">
+								<div className={SECTION_CLASS}>
+									
 
-								<div className="space-y-6 lg:col-span-2">
-									<SectionCard
-										icon={FiLayers}
-										eyebrow="Ringkasan"
-										title="Identitas inti desa"
-										description="Informasi utama yang muncul sebagai wajah resmi profil desa."
-									>
-										<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-											<div className="rounded-lg border border-sky-100 bg-sky-50 px-4 py-4">
-												<p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-600">
-													Klasifikasi desa
-												</p>
-												<p className="mt-2 text-sm font-semibold text-slate-800">
-													{safeText(profil.klasifikasi_desa)}
-												</p>
-											</div>
-											<div className="rounded-lg border border-violet-100 bg-violet-50 px-4 py-4">
-												<p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-violet-600">
-													Status desa / IDM
-												</p>
-												<p className="mt-2 text-sm font-semibold text-slate-800">
-													{safeText(profil.status_desa)}
-												</p>
-											</div>
-											<div className="rounded-lg border border-amber-100 bg-amber-50 px-4 py-4">
-												<p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-amber-600">
-													Tipologi desa
-												</p>
-												<p className="mt-2 text-sm font-semibold text-slate-800">
-													{safeText(profil.tipologi_desa)}
-												</p>
-											</div>
-										</div>
-									</SectionCard>
-
-									<div className="space-y-5">
-										<div className="px-1">
+									<div className="mt-5 space-y-4">
+										<div>
 											<p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-600">
-												Narasi
+												Status profil
 											</p>
-											<h3 className="mt-2 text-2xl font-black tracking-tight text-slate-900">
-												Cerita dan gambaran desa
+											<h3 className="mt-1 text-2xl font-black tracking-tight text-slate-900">
+												{completion.percentage}% lengkap
 											</h3>
-											<p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
-												Sejarah, demografi, dan potensi desa ditampilkan langsung tanpa pembungkus tambahan agar fokus baca lebih nyaman.
-											</p>
 										</div>
-										<div className="space-y-6">
-											{narrativeItems.map((item) => (
-												<NarrativeCard
-													key={item.title}
-													icon={item.icon}
-													label={item.label}
-													title={item.title}
-													description={item.description}
-													value={item.value}
-													emptyText={item.emptyText}
-													accentClass={item.accentClass}
-												/>
-											))}
+										<div className="h-3 overflow-hidden rounded-lg bg-slate-100">
+											<div
+												className={`h-full rounded-lg bg-gradient-to-r ${progressTone.bar}`}
+												style={{ width: `${Math.max(completion.percentage, completion.percentage > 0 ? 6 : 0)}%` }}
+											/>
 										</div>
-									</div>
-
-									<SectionCard
-										icon={FiMap}
-										eyebrow="Lokasi"
-										title="Peta kantor desa"
-										description="Titik lokasi kantor desa membantu memudahkan identifikasi dan validasi lapangan."
-									>
-										<div className="overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
-											<div className="h-[360px] w-full">
-												<MapContainer
-													center={mapPosition}
-													zoom={15}
-													scrollWheelZoom={false}
-													style={{ height: "100%", width: "100%" }}
-												>
-													<TileLayer
-														attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-														url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-													/>
-													{hasCoordinates ? (
-														<Marker position={mapPosition}>
-															<Popup>{profil.desa?.nama || "Kantor Desa"}</Popup>
-														</Marker>
-													) : null}
-												</MapContainer>
+										<div className="grid gap-2 text-sm text-slate-600">
+											<div className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 px-3 py-2.5">
+												<span>Penduduk</span>
+												<span className="font-semibold text-slate-800">
+													{isFilled(profil.jumlah_penduduk)
+														? `${formatNumber(profil.jumlah_penduduk)} jiwa`
+														: "Belum diisi"}
+												</span>
 											</div>
-											<div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-white px-4 py-3 text-xs text-slate-500">
-												<span>{safeText(profil.alamat_kantor, "Alamat kantor belum diisi")}</span>
-												<span>
-													{hasCoordinates
-														? `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`
-														: "Koordinat belum tersedia"}
+											<div className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 px-3 py-2.5">
+												<span>Luas wilayah</span>
+												<span className="font-semibold text-slate-800">
+													{isFilled(profil.luas_wilayah)
+														? `${profil.luas_wilayah} km²`
+														: "Belum diisi"}
+												</span>
+											</div>
+											<div className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 px-3 py-2.5">
+												<span>Jarak ke kecamatan</span>
+												<span className="font-semibold text-slate-800">
+													{isFilled(profil.radius_ke_kecamatan)
+														? `${profil.radius_ke_kecamatan} km`
+														: "Belum diisi"}
 												</span>
 											</div>
 										</div>
-									</SectionCard>
-								</div>
-							</div>
 
-							<aside className="space-y-6">
+										<div className="rounded-lg border border-slate-100 bg-slate-50/80 p-3">
+											<p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+												Terakhir diperbarui
+											</p>
+											<p className="mt-1 text-sm font-semibold text-slate-800">
+												{formatDateLabel(profil.updated_at)}
+											</p>
+										</div>
+
+										<div className="border-t border-slate-100 pt-4">
+											<p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+												Checklist
+											</p>
+											<ProgressChecklist items={summaryChecklist} />
+										</div>
+									</div>
+								</div>
+
 								<SectionCard
 									icon={FiMapPin}
 									eyebrow="Kontak"
-									title="Alamat dan layanan desa"
-									description="Informasi kontak resmi agar masyarakat mudah menghubungi kantor desa."
+									title="Kontak dan media sosial"
+									description="Informasi kontak dan kehadiran digital desa."
 								>
 									<div className="space-y-3">
 										<div className="flex items-start gap-3 rounded-lg border border-slate-100 bg-slate-50/80 px-4 py-3 text-sm text-slate-600">
@@ -1327,79 +1197,176 @@ const ProfilDesa = () => {
 												<FiMapPin className="h-4 w-4" />
 											</div>
 											<div>
-												<p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-													Alamat kantor
-												</p>
-												<p className="mt-1 leading-6 text-slate-600">
-													{safeText(profil.alamat_kantor)}
-												</p>
+												<p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Alamat</p>
+												<p className="mt-1 leading-6 text-slate-600">{safeText(profil.alamat_kantor)}</p>
 											</div>
 										</div>
-
 										<div className="flex items-center gap-3 rounded-lg border border-slate-100 bg-slate-50/80 px-4 py-3 text-sm text-slate-600">
 											<div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-emerald-600 shadow-sm">
 												<FiPhone className="h-4 w-4" />
 											</div>
 											<div>
-												<p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-													Telepon kantor
-												</p>
-												<p className="mt-1 font-medium text-slate-700">
-													{safeText(profil.no_telp)}
-												</p>
+												<p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Telepon</p>
+												<p className="mt-1 font-medium text-slate-700">{safeText(profil.no_telp)}</p>
 											</div>
 										</div>
-
 										<div className="flex items-center gap-3 rounded-lg border border-slate-100 bg-slate-50/80 px-4 py-3 text-sm text-slate-600">
 											<div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-emerald-600 shadow-sm">
 												<FiMail className="h-4 w-4" />
 											</div>
 											<div>
-												<p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-													Email desa
-												</p>
-												<p className="mt-1 break-all font-medium text-slate-700">
-													{safeText(profil.email)}
+												<p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Email</p>
+												<p className="mt-1 break-all font-medium text-slate-700">{safeText(profil.email)}</p>
+											</div>
+										</div>
+									</div>
+									<div className="mt-4 border-t border-slate-100 pt-4">
+										<p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Media sosial</p>
+										<div className="space-y-3">
+											<LinkRow icon={FiInstagram} label="Instagram" value={profil.instagram_url} />
+											<LinkRow icon={FiYoutube} label="YouTube" value={profil.youtube_url} />
+										</div>
+									</div>
+								</SectionCard>
+							</aside>
+
+							<div className="space-y-6">
+								<div className="overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
+										{imageUrl ? (
+											<img
+												src={imageUrl}
+												alt={`Kantor ${villageLabel} ${profil.desa?.nama || ""}`}
+												className="h-56 w-full object-cover"
+											/>
+										) : (
+											<div className="flex h-56 flex-col items-center justify-center px-6 text-center text-slate-400">
+												<FiCamera className="h-10 w-10" />
+												<p className="mt-3 text-sm font-medium">Belum ada foto kantor desa</p>
+												<p className="mt-2 max-w-xs text-xs leading-5 text-slate-400">
+													Tambahkan foto agar profil desa lebih meyakinkan.
 												</p>
 											</div>
+										)}
+									</div>
+								<SectionCard
+									icon={FiLayers}
+									eyebrow="Ringkasan"
+									title="Identitas inti desa"
+									description="Informasi utama yang muncul sebagai wajah resmi profil desa."
+								>
+									<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+										<div className="rounded-lg border border-sky-100 bg-sky-50 px-4 py-4">
+											<p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-600">
+												Klasifikasi desa
+											</p>
+											<p className="mt-2 text-sm font-semibold text-slate-800">
+												{safeText(profil.klasifikasi_desa)}
+											</p>
+										</div>
+										<div className="rounded-lg border border-violet-100 bg-violet-50 px-4 py-4">
+											<p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-violet-600">
+												Status desa / IDM
+											</p>
+											<p className="mt-2 text-sm font-semibold text-slate-800">
+												{safeText(profil.status_desa)}
+											</p>
+										</div>
+										<div className="rounded-lg border border-amber-100 bg-amber-50 px-4 py-4">
+											<p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-amber-600">
+												Tipologi desa
+											</p>
+											<p className="mt-2 text-sm font-semibold text-slate-800">
+												{safeText(profil.tipologi_desa)}
+											</p>
+										</div>
+									</div>
+
+									<div className="mt-5 grid gap-3 sm:grid-cols-2">
+										<div className="rounded-lg border border-slate-100 bg-slate-50 px-4 py-4">
+											<p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Pemerintahan</p>
+											<p className="mt-2 text-sm font-semibold text-slate-800">{villageLabel}</p>
+										</div>
+										<div className="rounded-lg border border-slate-100 bg-slate-50 px-4 py-4">
+											<p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Kecamatan</p>
+											<p className="mt-2 text-sm font-semibold text-slate-800">
+												{profil.desa?.kecamatan?.nama || "Belum terdeteksi"}
+											</p>
+										</div>
+										<div className="rounded-lg border border-slate-100 bg-slate-50 px-4 py-4">
+											<p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Penduduk</p>
+											<p className="mt-2 text-sm font-semibold text-slate-800">
+												{isFilled(profil.jumlah_penduduk)
+													? `${formatNumber(profil.jumlah_penduduk)} jiwa`
+													: "Belum diisi"}
+											</p>
+										</div>
+										<div className="rounded-lg border border-slate-100 bg-slate-50 px-4 py-4">
+											<p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Koordinat</p>
+											<p className="mt-2 text-sm font-semibold text-slate-800">
+												{hasCoordinates
+													? `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
+													: "Belum tersedia"}
+											</p>
 										</div>
 									</div>
 								</SectionCard>
 
 								<SectionCard
-									icon={FiGlobe}
-									eyebrow="Media sosial"
-									title="Kehadiran digital desa"
-									description="Tautan media sosial membantu warga mengikuti aktivitas dan informasi terbaru dari desa."
+									icon={FiHome}
+									eyebrow="Narasi"
+									title="Cerita dan gambaran desa"
+									description="Sejarah, demografi, dan potensi desa ditampilkan per baris agar lebih ringkas."
 								>
-									<div className="space-y-3">
-										<LinkRow icon={FiInstagram} label="Instagram" value={profil.instagram_url} />
-										<LinkRow icon={FiYoutube} label="YouTube" value={profil.youtube_url} />
+									<div className="space-y-4">
+										{narrativeItems.map((item) => (
+											<NarrativeRow
+												key={item.title}
+												icon={item.icon}
+												title={item.title}
+												value={item.value}
+												emptyText={item.emptyText}
+												accentClass={item.accentClass}
+											/>
+										))}
 									</div>
 								</SectionCard>
 
 								<SectionCard
-									icon={FiImage}
-									eyebrow="Visual"
-									title="Dokumentasi kantor desa"
-									description="Foto kantor desa memperkuat impresi profesional dan memudahkan identifikasi."
+									icon={FiMap}
+									eyebrow="Lokasi"
+									title="Peta kantor desa"
+									description="Titik lokasi kantor desa membantu memudahkan identifikasi dan validasi lapangan."
 								>
 									<div className="overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
-										{imageUrl ? (
-											<img
-												src={imageUrl}
-												alt={`Kantor ${villageLabel} ${profil.desa?.nama || ""}`}
-												className="h-60 w-full object-cover"
-											/>
-										) : (
-											<div className="flex h-60 flex-col items-center justify-center px-6 text-center text-slate-400">
-												<FiCamera className="h-10 w-10" />
-												<p className="mt-3 text-sm font-medium">Belum ada foto kantor desa</p>
-											</div>
-										)}
+										<div className="h-[360px] w-full">
+											<MapContainer
+												center={mapPosition}
+												zoom={15}
+												scrollWheelZoom={false}
+												style={{ height: "100%", width: "100%" }}
+											>
+												<TileLayer
+													attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+													url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+												/>
+												{hasCoordinates ? (
+													<Marker position={mapPosition}>
+														<Popup>{profil.desa?.nama || "Kantor Desa"}</Popup>
+													</Marker>
+												) : null}
+											</MapContainer>
+										</div>
+										<div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-white px-4 py-3 text-xs text-slate-500">
+											<span>{safeText(profil.alamat_kantor, "Alamat kantor belum diisi")}</span>
+											<span>
+												{hasCoordinates
+													? `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`
+													: "Koordinat belum tersedia"}
+											</span>
+										</div>
 									</div>
 								</SectionCard>
-							</aside>
+							</div>
 						</div>
 					</div>
 				)}

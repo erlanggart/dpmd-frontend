@@ -282,7 +282,7 @@ const KetuaTimDashboard = lazy(
   () => import("./pages/ketua-tim/KetuaTimDashboard"),
 );
 const SuperadminLayout = lazy(
-  () => import("./pages/superadmin/SuperadminLayout"),
+  () => import("./layouts/SuperadminLayout"),
 );
 const SuperadminDashboard = lazy(
   () => import("./pages/superadmin/SuperadminDashboard"),

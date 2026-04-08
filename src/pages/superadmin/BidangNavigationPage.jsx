@@ -79,37 +79,31 @@ const BidangNavigationPage = () => {
 	return (
 		<div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
 			{/* Header */}
-			<div className="bg-gradient-to-r from-red-600 via-red-700 to-red-800 text-white shadow-2xl">
-				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-					<div className="text-center">
-						<div className="inline-flex h-20 w-20 bg-white/20 backdrop-blur-md rounded-2xl items-center justify-center mb-6 shadow-lg">
-							<FiGrid className="h-10 w-10 text-white" />
+			<header className="bg-white/80 backdrop-blur-md border-b border-gray-200/50 sticky top-0 z-50">
+				<div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
+					<div className="flex items-center justify-between">
+						<div className="flex items-center gap-4">
+							<div className="relative">
+								<div className="absolute inset-0 bg-red-500 blur-md opacity-20 rounded-xl"></div>
+								<div className="relative h-10 w-10 sm:h-12 sm:w-12 bg-gradient-to-br from-red-500 to-red-700 rounded-xl flex items-center justify-center shadow-sm border border-red-400">
+									<FiGrid className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+								</div>
+							</div>
+							<div>
+								<h1 className="text-lg sm:text-xl lg:text-2xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600">
+									Bidang & Program
+								</h1>
+								<p className="text-xs sm:text-sm font-medium text-gray-500">DPMD Kabupaten Bogor</p>
+							</div>
 						</div>
-						<h1 className="text-4xl font-bold mb-3">Bidang & Program</h1>
-						<p className="text-red-100 text-lg max-w-3xl mx-auto">
-							Kelola semua bidang di DPMD Kabupaten Bogor. Pilih bidang untuk mengakses fitur dan program yang tersedia.
-						</p>
 					</div>
 				</div>
-			</div>
+			</header>
 
 			{/* Main Content */}
 			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
 				{/* Info Banner */}
-				<div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 mb-10 border border-blue-100 shadow-lg">
-					<div className="flex items-start gap-4">
-						<div className="h-12 w-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
-							<FiActivity className="h-6 w-6 text-blue-600" />
-						</div>
-						<div>
-							<h3 className="text-lg font-bold text-gray-800 mb-2">Akses Penuh Superadmin</h3>
-							<p className="text-gray-600 leading-relaxed">
-								Sebagai superadmin, Anda memiliki akses penuh ke <strong>semua bidang</strong> dan dapat melihat serta mengelola 
-								semua data, program, dan aktivitas di setiap bidang tanpa batasan.
-							</p>
-						</div>
-					</div>
-				</div>
+			
 
 				{/* Bidang Cards Grid */}
 				<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">

@@ -1,31 +1,64 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useBidangPath } from '../../hooks/useBidangPath';
-import { Briefcase, FileText, Users as UsersIcon, Activity, ArrowLeft, Clock, CheckCircle, AlertCircle, RefreshCw, Zap, ChevronRight, FileCheck2, MapPinned } from 'lucide-react';
+import { Briefcase, FileText, Users as UsersIcon, Activity, ArrowLeft, Clock, RefreshCw, MapPinned } from 'lucide-react';
 import api from '../../api';
 import toast from 'react-hot-toast';
+import DaftarPegawaiBidang from '../../components/bidang/DaftarPegawaiBidang';
 
 const PemdesPage = () => {
 	const navigate = useNavigate();
 	const { getPath } = useBidangPath();
 	const [loading, setLoading] = useState(true);
-	const [data, setData] = useState(null);
-	const [activeTab, setActiveTab] = useState('overview');
+	const [_data, setData] = useState(null);
 	const [activityLogs, setActivityLogs] = useState([]);
 	const [activityLoading, setActivityLoading] = useState(false);
 	const [activityFilter, setActivityFilter] = useState('');
 
-	useEffect(() => {
-		fetchDashboard();
-	}, []);
+	const menus = [
+		{
+			id: 'musdesus',
+			title: 'Musyawarah Desa Khusus',
+			shortTitle: 'Musdesus',
+			description: 'Musyawarah Desa Khusus',
+			icon: FileText,
+			route: '/core-dashboard/musdesus',
+			gradient: 'from-teal-500 to-teal-600',
+			iconBg: 'bg-teal-500',
+		},
+		{
+			id: 'aparatur-desa',
+			title: 'Aparatur Desa',
+			shortTitle: 'Aparatur',
+			description: 'Data perangkat desa',
+			icon: UsersIcon,
+			route: getPath('/pemdes/aparatur-desa'),
+			gradient: 'from-blue-500 to-blue-600',
+			iconBg: 'bg-blue-500',
+		},
+		{
+			id: 'profil-desa',
+			title: 'Profil Desa',
+			shortTitle: 'Profil',
+			description: 'Dashboard data seluruh desa',
+			icon: MapPinned,
+			route: getPath('/pemdes/profil-desa'),
+			gradient: 'from-emerald-500 to-teal-600',
+			iconBg: 'bg-emerald-500',
+		},
+		{
+			id: 'produk-hukum',
+			title: 'Produk Hukum',
+			shortTitle: 'Produk Hukum',
+			description: 'Peraturan desa & SK',
+			icon: FileText,
+			route: getPath('/pemdes/produk-hukum'),
+			gradient: 'from-purple-500 to-purple-600',
+			iconBg: 'bg-purple-500',
+		},
+	];
 
-	useEffect(() => {
-		if (activeTab === 'activity') {
-			fetchActivityLogs();
-		}
-	}, [activeTab, activityFilter]);
-
-	const fetchActivityLogs = async () => {
+	const fetchActivityLogs = useCallback(async () => {
 		try {
 			setActivityLoading(true);
 			const params = activityFilter ? { module: activityFilter } : {};
@@ -39,7 +72,12 @@ const PemdesPage = () => {
 		} finally {
 			setActivityLoading(false);
 		}
-	};
+	}, [activityFilter]);
+
+	useEffect(() => {
+		fetchDashboard();
+		fetchActivityLogs();
+	}, [fetchActivityLogs]);
 
 	const fetchDashboard = async () => {
 		try {
@@ -67,8 +105,6 @@ const PemdesPage = () => {
 		);
 	}
 
-	const stats = data?.stats || {};
-
 	const getActionColor = (action) => {
 		const colors = {
 			create: 'text-green-600 bg-green-50',
@@ -77,7 +113,7 @@ const PemdesPage = () => {
 			approve: 'text-purple-600 bg-purple-50',
 			reject: 'text-orange-600 bg-orange-50',
 			upload: 'text-teal-600 bg-teal-50',
-			download: 'text-gray-600 bg-gray-50'
+			download: 'text-gray-600 bg-gray-50',
 		};
 		return colors[action] || 'text-gray-600 bg-gray-50';
 	};
@@ -91,225 +127,163 @@ const PemdesPage = () => {
 		if (diff < 3600) return `${Math.floor(diff / 60)} menit yang lalu`;
 		if (diff < 86400) return `${Math.floor(diff / 3600)} jam yang lalu`;
 		if (diff < 604800) return `${Math.floor(diff / 86400)} hari yang lalu`;
-		
-		return date.toLocaleDateString('id-ID', { 
-			day: 'numeric', 
-			month: 'short', 
-			year: 'numeric' 
+
+		return date.toLocaleDateString('id-ID', {
+			day: 'numeric',
+			month: 'short',
+			year: 'numeric',
 		});
 	};
 
 	return (
-		<div className="min-h-screen bg-gray-50 pb-6">
-			<div className="bg-gradient-to-br from-teal-600 via-teal-700 to-teal-800 text-white">
-				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-					<button 
-						onClick={() => navigate(-1)}
-						className="mb-4 flex items-center gap-2 text-teal-100 hover:text-white transition-colors"
-					>
-						<ArrowLeft className="h-5 w-5" />
-						Kembali
-					</button>
-					<div className="flex items-center gap-4">
-						<div className="h-16 w-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
-							<Briefcase className="h-8 w-8" />
-						</div>
-						<div>
-							<h1 className="text-2xl font-bold">Bidang Pemdes</h1>
-							<p className="text-teal-100 mt-1">Kelola data Musdesus, Profil Desa, Aparatur Desa, dan Produk Hukum</p>
+		<div className="min-h-screen bg-gradient-to-br from-teal-50 via-blue-50 to-indigo-50">
+			{/* Header */}
+			<header className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
+				<div className="max-w-7xl mx-auto">
+					<div className="flex items-center px-4 sm:px-6 py-4 gap-3 sm:gap-4">
+						<button
+							onClick={() => navigate(-1)}
+							className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
+							aria-label="Kembali"
+						>
+							<ArrowLeft className="h-5 w-5 text-gray-600" />
+						</button>
+						<div className="flex items-center gap-3">
+							<div className="h-10 w-10 sm:h-12 sm:w-12 bg-gradient-to-br from-teal-500 to-teal-700 rounded-xl flex items-center justify-center shadow-md">
+								<Briefcase className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+							</div>
+							<div>
+								<h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">Bidang Pemdes</h1>
+								<p className="hidden sm:block text-xs sm:text-sm text-gray-500">Pemerintahan Desa</p>
+							</div>
 						</div>
 					</div>
 				</div>
-			</div>
+			</header>
 
-			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-			{activeTab === 'overview' && (
-					<div className="relative bg-gradient-to-br from-white via-white to-purple-50/30 rounded-2xl shadow-xl border border-gray-200/50 p-8 overflow-hidden">
-						{/* Decorative Elements */}
-						<div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-purple-400/10 to-pink-500/10 rounded-full blur-3xl -z-0"></div>
-						<div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-tr from-teal-400/10 to-blue-500/10 rounded-full blur-3xl -z-0"></div>
-
-						<div className="relative z-10">
-							{/* Quick Actions */}
-							<div>
-								<h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-									<Zap className="h-5 w-5 text-yellow-500" />
-									Aksi Cepat
-								</h3>
-								<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+			{/* Main Content */}
+			<div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+				<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+					{/* Left Column */}
+					<div className="lg:col-span-2 space-y-6">
+						{/* Mobile Grid */}
+						<div className="grid grid-cols-2 gap-3 sm:hidden">
+							{menus.map((menu) => {
+								const Icon = menu.icon;
+								return (
 									<button
-										onClick={() => navigate('/core-dashboard/musdesus')}
-										className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border border-gray-100 p-6 hover:border-teal-300 transition-all duration-300 text-left overflow-hidden hover:-translate-y-1"
+										key={menu.id}
+										onClick={() => navigate(menu.route)}
+										className={`flex flex-col items-center gap-2 bg-gradient-to-br ${menu.gradient} rounded-xl shadow-lg p-4 active:scale-95 transition-transform`}
 									>
-										<div className="absolute inset-0 bg-gradient-to-br from-teal-400/5 to-teal-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-										<div className="relative flex items-center gap-5">
-											<div className="h-16 w-16 bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg shadow-teal-500/25">
-												<FileText className="h-8 w-8 text-white" />
-											</div>
-											<div className="flex-1">
-												<h3 className="font-bold text-gray-800 text-lg mb-1">Musdesus</h3>
-												<p className="text-sm text-gray-500">Musyawarah Desa Khusus</p>
-											</div>
-											<ChevronRight className="h-6 w-6 text-gray-400 group-hover:text-teal-600 group-hover:translate-x-1 transition-all" />
+										<div className="h-11 w-11 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
+											<Icon className="h-5 w-5 text-white" />
 										</div>
+										<span className="text-xs font-semibold text-white text-center leading-tight">
+											{menu.shortTitle}
+										</span>
 									</button>
-
-									<button
-									onClick={() => navigate(getPath('/pemdes/aparatur-desa'))}
-									className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border border-gray-100 p-6 hover:border-blue-300 transition-all duration-300 text-left overflow-hidden hover:-translate-y-1"
-								>
-										<div className="absolute inset-0 bg-gradient-to-br from-blue-400/5 to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-										<div className="relative flex items-center gap-5">
-											<div className="h-16 w-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg shadow-blue-500/25">
-												<UsersIcon className="h-8 w-8 text-white" />
-											</div>
-											<div className="flex-1">
-												<h3 className="font-bold text-gray-800 text-lg mb-1">Aparatur Desa</h3>
-												<p className="text-sm text-gray-500">Data perangkat desa</p>
-											</div>
-											<ChevronRight className="h-6 w-6 text-gray-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
-										</div>
-									</button>
-
-									<button
-										onClick={() => navigate(getPath('/pemdes/profil-desa'))}
-										className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border border-gray-100 p-6 hover:border-emerald-300 transition-all duration-300 text-left overflow-hidden hover:-translate-y-1"
-									>
-										<div className="absolute inset-0 bg-gradient-to-br from-emerald-400/5 to-teal-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-										<div className="relative flex items-center gap-5">
-											<div className="h-16 w-16 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg shadow-emerald-500/25">
-												<MapPinned className="h-8 w-8 text-white" />
-											</div>
-											<div className="flex-1">
-												<h3 className="font-bold text-gray-800 text-lg mb-1">Profil Desa</h3>
-												<p className="text-sm text-gray-500">Dashboard data seluruh desa</p>
-											</div>
-											<ChevronRight className="h-6 w-6 text-gray-400 group-hover:text-emerald-600 group-hover:translate-x-1 transition-all" />
-										</div>
-									</button>
-
-									<button
-										onClick={() => navigate(getPath('/pemdes/produk-hukum'))}
-										className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border border-gray-100 p-6 hover:border-purple-300 transition-all duration-300 text-left overflow-hidden hover:-translate-y-1"
-									>
-										<div className="absolute inset-0 bg-gradient-to-br from-purple-400/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-										<div className="relative flex items-center gap-5">
-											<div className="h-16 w-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg shadow-purple-500/25">
-												<FileText className="h-8 w-8 text-white" />
-											</div>
-											<div className="flex-1">
-												<h3 className="font-bold text-gray-800 text-lg mb-1">Produk Hukum</h3>
-												<p className="text-sm text-gray-500">Peraturan desa & SK</p>
-											</div>
-											<ChevronRight className="h-6 w-6 text-gray-400 group-hover:text-purple-600 group-hover:translate-x-1 transition-all" />
-										</div>
-									</button>
-
-									{/* Aktivitas Button */}
-									<button
-										onClick={() => setActiveTab('activity')}
-										className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border border-gray-100 p-6 hover:border-amber-300 transition-all duration-300 text-left overflow-hidden hover:-translate-y-1"
-									>
-										<div className="absolute inset-0 bg-gradient-to-br from-amber-400/5 to-amber-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-										<div className="relative flex items-center gap-5">
-											<div className="h-16 w-16 bg-gradient-to-br from-amber-500 to-amber-600 rounded-2xl flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg shadow-amber-500/25">
-												<Activity className="h-8 w-8 text-white" />
-											</div>
-											<div className="flex-1">
-												<h3 className="font-bold text-gray-800 text-lg mb-1">Log Aktivitas</h3>
-												<p className="text-sm text-gray-500">Pantau aktivitas terkini</p>
-											</div>
-											<ChevronRight className="h-6 w-6 text-gray-400 group-hover:text-amber-600 group-hover:translate-x-1 transition-all" />
-										</div>
-									</button>
-								</div>
-							</div>
+								);
+							})}
 						</div>
-					</div>
-				)}
 
-				{/* Activity Tab */}
-				{activeTab === 'activity' && (
-					<div className="space-y-6">
-						{/* Back Button */}
-						<button
-							onClick={() => setActiveTab('overview')}
-							className="flex items-center gap-2 text-gray-600 hover:text-teal-600 transition-colors mb-4"
-						>
-							<ArrowLeft className="h-5 w-5" />
-							Kembali ke Menu
-						</button>
-
-						{/* Filter */}
-						<div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-							<div className="flex items-center justify-between flex-wrap gap-4">
-								<div className="flex items-center gap-3">
-									<Activity className="h-5 w-5 text-teal-600" />
-									<h2 className="text-lg font-bold text-gray-800">Log Aktivitas</h2>
-								</div>
-								<div className="flex items-center gap-3">
-									<select
-										value={activityFilter}
-										onChange={(e) => setActivityFilter(e.target.value)}
-										className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
+						{/* Desktop Card Grid */}
+						<div className="hidden sm:grid sm:grid-cols-2 gap-4">
+							{menus.map((menu) => {
+								const Icon = menu.icon;
+								return (
+									<button
+										key={menu.id}
+										onClick={() => navigate(menu.route)}
+										className="group relative bg-white rounded-2xl shadow-md hover:shadow-xl border border-gray-100 p-5 transition-all duration-300 text-left overflow-hidden hover:-translate-y-0.5"
 									>
-										<option value="">Semua Modul</option>
-										<option value="musdesus">Musdesus</option>
-										<option value="struktur_pemerintah_desa">Struktur Pemerintah Desa</option>
-									</select>
+										<div className="flex items-start gap-4">
+											<div className={`h-12 w-12 ${menu.iconBg} rounded-xl flex items-center justify-center shadow-md flex-shrink-0 group-hover:scale-110 transition-transform`}>
+												<Icon className="h-6 w-6 text-white" />
+											</div>
+											<div className="flex-1 min-w-0">
+												<h3 className="font-bold text-gray-800 text-base mb-1">{menu.title}</h3>
+												<p className="text-sm text-gray-500 leading-snug">{menu.description}</p>
+											</div>
+										</div>
+										<div className={`absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r ${menu.gradient} opacity-0 group-hover:opacity-100 transition-opacity rounded-b-2xl`}></div>
+									</button>
+								);
+							})}
+						</div>
+
+						<DaftarPegawaiBidang bidangId={6} bidangName="Bidang Pemdes" />
+					</div>
+
+					{/* Right Column - Activity Log */}
+					<div className="lg:col-span-1">
+						<div className="sticky top-20 space-y-4">
+							<div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-4">
+								<div className="flex items-center justify-between mb-3">
+									<div className="flex items-center gap-2">
+										<div className="h-8 w-8 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center">
+											<Activity className="h-4 w-4 text-white" />
+										</div>
+										<h3 className="font-bold text-gray-800">Log Aktivitas</h3>
+									</div>
 									<button
 										onClick={fetchActivityLogs}
-										className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors flex items-center gap-2"
+										className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+										title="Refresh"
 									>
-										<RefreshCw className="h-4 w-4" />
-										Refresh
+										<RefreshCw className="h-4 w-4 text-gray-600" />
 									</button>
 								</div>
+								<select
+									value={activityFilter}
+									onChange={(e) => setActivityFilter(e.target.value)}
+									className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm bg-gray-50"
+								>
+									<option value="">Semua Modul</option>
+									<option value="musdesus">Musdesus</option>
+									<option value="struktur_pemerintah_desa">Struktur Pemerintah Desa</option>
+								</select>
 							</div>
-						</div>
 
-						{/* Activity List */}
-						<div className="bg-white rounded-xl shadow-sm border border-gray-200">
-							{activityLoading ? (
-								<div className="flex items-center justify-center py-12">
-									<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
-								</div>
-							) : activityLogs.length === 0 ? (
-								<div className="text-center py-12">
-									<Activity className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-									<p className="text-gray-500">Belum ada aktivitas</p>
-								</div>
-							) : (
-								<div className="divide-y divide-gray-100">
-									{activityLogs.map((log) => (
-										<div key={log.id} className="p-4 hover:bg-gray-50 transition-colors">
-											<div className="flex gap-4">
-												<div className="flex-shrink-0">
-													<div className={`h-10 w-10 rounded-full ${getActionColor(log.action)} flex items-center justify-center font-semibold text-sm uppercase`}>
-														{log.action.substring(0, 2)}
+							<div className="bg-white rounded-2xl shadow-xl border border-gray-100 max-h-[calc(100vh-280px)] overflow-y-auto">
+								{activityLoading ? (
+									<div className="flex items-center justify-center py-12">
+										<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
+									</div>
+								) : activityLogs.length === 0 ? (
+									<div className="text-center py-12 px-4">
+										<Activity className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+										<p className="text-gray-500 text-sm">Belum ada aktivitas</p>
+									</div>
+								) : (
+									<div className="divide-y divide-gray-100">
+										{activityLogs.map((log) => (
+											<div key={log.id} className="p-4 hover:bg-gray-50 transition-colors">
+												<div className="flex gap-3">
+													<div className="flex-shrink-0">
+														<div className={`h-8 w-8 rounded-lg ${getActionColor(log.action)} flex items-center justify-center font-bold text-xs uppercase shadow-sm`}>
+															{log.action.substring(0, 2)}
+														</div>
 													</div>
-												</div>
-												<div className="flex-1 min-w-0">
-													<p className="text-sm text-gray-800 font-medium">{log.description}</p>
-													<div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
-														<span className="font-medium">{log.userName}</span>
-														<span>•</span>
-														<span className="capitalize">{log.module}</span>
-														<span>•</span>
-														<div className="flex items-center gap-1">
-															<Clock className="h-3 w-3" />
-															{formatTime(log.createdAt)}
+													<div className="flex-1 min-w-0">
+														<p className="text-xs text-gray-800 font-medium mb-1 leading-relaxed">{log.description}</p>
+														<div className="flex flex-col gap-1 text-xs text-gray-500">
+															<span className="font-medium truncate">{log.userName}</span>
+															<div className="flex items-center gap-1">
+																<Clock className="h-3 w-3 flex-shrink-0" />
+																<span className="truncate">{formatTime(log.createdAt)}</span>
+															</div>
 														</div>
 													</div>
 												</div>
 											</div>
-										</div>
-									))}
-								</div>
-							)}
+										))}
+									</div>
+								)}
+							</div>
 						</div>
 					</div>
-				)}
+				</div>
 			</div>
 		</div>
 	);

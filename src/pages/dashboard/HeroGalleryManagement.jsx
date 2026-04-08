@@ -1,6 +1,14 @@
 import React, { useCallback, useEffect, useState } from "react";
 import api from "../../api";
-import { FiImage, FiTrash2, FiToggleLeft, FiToggleRight } from "react-icons/fi";
+import {
+	FiCheckCircle,
+	FiGrid,
+	FiImage,
+	FiTrash2,
+	FiToggleLeft,
+	FiToggleRight,
+	FiUploadCloud,
+} from "react-icons/fi";
 
 import { useDropzone } from "react-dropzone";
 import Swal from "sweetalert2";
@@ -25,7 +33,12 @@ const HeroGalleryManagement = () => {
 		if (file) {
 			setSelectedFile(file);
 			const previewUrl = URL.createObjectURL(file);
-			setPreview(previewUrl);
+			setPreview((currentPreview) => {
+				if (currentPreview) {
+					URL.revokeObjectURL(currentPreview);
+				}
+				return previewUrl;
+			});
 		}
 	}, []);
 
@@ -50,11 +63,14 @@ const HeroGalleryManagement = () => {
 		fetchGallery();
 	}, []);
 
-	const handleFileChange = (e) => {
-		if (e.target.files) {
-			setSelectedFile(e.target.files[0]);
-		}
-	};
+	useEffect(() => {
+		return () => {
+			if (preview) {
+				URL.revokeObjectURL(preview);
+			}
+		};
+	}, [preview]);
+
 	const handleUpload = async (e) => {
 		e.preventDefault();
 		if (!selectedFile) {
@@ -76,7 +92,12 @@ const HeroGalleryManagement = () => {
 			});
 			setSelectedFile(null);
 			setTitle("");
-			setPreview(null);
+			setPreview((currentPreview) => {
+				if (currentPreview) {
+					URL.revokeObjectURL(currentPreview);
+				}
+				return null;
+			});
 			fetchGallery();
 			// 2. Tampilkan notifikasi sukses
 			Swal.fire({
@@ -145,127 +166,226 @@ const HeroGalleryManagement = () => {
 		}
 	};
 
-	if (loading) return <p className="text-white">Memuat galeri...</p>;
-	if (error) return <p className="text-red-500">{error}</p>;
+	const activeCount = gallery.filter((image) => image.is_active).length;
+	const inactiveCount = gallery.length - activeCount;
+	const selectedFileSize = selectedFile
+		? `${(selectedFile.size / (1024 * 1024)).toFixed(2)} MB`
+		: null;
 
-	return (
-		<div>
-			<h1 className="text-3xl font-bold text-primary mb-6">
-				Manajemen Galeri Hero
-			</h1>
-
-			{/* Form Upload */}
-			<form
-				onSubmit={handleUpload}
-				className="bg-white p-6 rounded-lg mb-8 shadow-md"
-			>
-				<h2 className="text-xl font-semibold text-primary mb-4">
-					Tambah Gambar Baru
-				</h2>
-				<div className=" gap-6 items-center space-y-4">
-					{/* Kolom Kiri: Dropzone & Input Judul */}
-					<div className="space-y-4">
-						<div
-							{...getRootProps()}
-							className={`flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-lg cursor-pointer transition-colors
-                ${
-									isDragActive
-										? "border-sky-500 bg-sky-900/30"
-										: "border-gray-600 hover:border-sky-500 hover:bg-gray-300/50 bg-slate-200"
-								}`}
-						>
-							<input {...getInputProps()} id="file-input" />
-							<FiImage className="h-10 w-10 text-gray-400 mb-3" />
-							{isDragActive ? (
-								<p className="text-sky-400">Lepaskan file di sini...</p>
-							) : (
-								<p className="text-gray-400">
-									Seret & lepas gambar di sini, atau klik untuk memilih
-								</p>
-							)}
-						</div>
-						<input
-							type="text"
-							placeholder="Judul/Deskripsi (Opsional)"
-							value={title}
-							onChange={(e) => setTitle(e.target.value)}
-							className="w-full rounded-md border-2 border-slate-400 bg-slate-200 p-3 text-primaryplaceholder-gray-400 focus:ring-primary shadow-md"
-						/>
+	if (loading) {
+		return (
+			<div className="rounded-xl border border-slate-200 bg-white p-10 shadow-sm">
+				<div className="flex items-center gap-4">
+					<div className="flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-pink-500 to-rose-600 text-white shadow-lg">
+						<FiImage className="h-7 w-7" />
 					</div>
-
-					{/* Kolom Kanan: Preview & Tombol Upload */}
-					<div className="flex flex-col items-center justify-center">
-						{preview ? (
-							<div className="w-full text-center">
-								<p className="text-gray-400 mb-2 text-sm">Preview Gambar:</p>
-								<img
-									src={preview}
-									alt="Preview"
-									className="w-full object-cover rounded-lg"
-									onLoad={() => URL.revokeObjectURL(preview)} // Membersihkan memory
-								/>
-							</div>
-						) : (
-							<div className="flex items-center justify-center w-full  h-40 bg-gray-700 rounded-lg">
-								<p className="text-gray-500">Preview akan tampil di sini</p>
-							</div>
-						)}
-						<button
-							type="submit"
-							disabled={isUploading || !selectedFile}
-							className="mt-4 w-full max-w-xs rounded-md bg-sky-600 px-4 py-3 font-semibold text-white transition hover:bg-sky-700 disabled:bg-sky-800 disabled:cursor-not-allowed"
-						>
-							{isUploading ? "Mengunggah..." : "Upload Gambar"}
-						</button>
+					<div>
+						<p className="text-sm font-semibold uppercase tracking-[0.24em] text-pink-500">Hero Gallery</p>
+						<h1 className="text-2xl font-bold text-slate-900">Memuat studio galeri...</h1>
 					</div>
 				</div>
-			</form>
+			</div>
+		);
+	}
 
-			{/* Daftar Gambar */}
-			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-				{gallery.map((image) => (
-					<div
-						key={image.id}
-						className="bg-primary rounded-lg overflow-hidden group"
-					>
-						<img
-							src={`${imageBaseUrl}/storage/uploads/${image.image_path}`}
-							alt={image.title || "Hero Image"}
-							className="w-full h-48 object-cover"
-						/>
-						<div className="p-4">
-							<p className="text-white truncate" title={image.title || ""}>
-								{image.title || "Tanpa Judul"}
-							</p>
-							<div className="flex justify-between items-center mt-4">
-								<button
-									onClick={() => handleToggleActive(image)}
-									className="flex items-center gap-2 text-sm"
-								>
-									{image.is_active ? (
-										<FiToggleRight className="text-green-500 h-6 w-6" />
-									) : (
-										<FiToggleLeft className="text-gray-500 h-6 w-6" />
-									)}
-									<span
-										className={
-											image.is_active ? "text-green-400" : "text-gray-400"
-										}
-									>
-										{image.is_active ? "Aktif" : "Nonaktif"}
-									</span>
-								</button>
-								<button
-									onClick={() => handleDelete(image.id)}
-									className="text-red-500 hover:text-red-400"
-								>
-									<FiTrash2 />
-								</button>
-							</div>
+	if (error) {
+		return (
+			<div className="rounded-xl border border-red-200 bg-red-50 p-8 text-red-600 shadow-sm">
+				<h1 className="text-xl font-bold">Gagal memuat Hero Gallery</h1>
+				<p className="mt-2 text-sm">{error}</p>
+			</div>
+		);
+	}
+
+	return (
+		<div className="space-y-6 p-6">
+			<div>
+				<h1 className="text-3xl font-black text-slate-900">Hero Gallery</h1>
+			</div>
+
+			<section>
+				<form
+					onSubmit={handleUpload}
+					className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
+				>
+					<div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+						<div>
+							<h2 className="text-xl font-bold text-slate-900">Tambah gambar hero baru</h2>
+						</div>
+						<div className="rounded-xl bg-slate-100 px-4 py-3 text-xs text-slate-500">
+							Format: JPG, PNG, WEBP
 						</div>
 					</div>
-				))}
-			</div>
+
+					<div className="mt-6 space-y-5">
+						<div
+							{...getRootProps()}
+							className={`relative overflow-hidden rounded-xl border-2 border-dashed transition-all duration-200 ${
+								isDragActive
+									? "border-pink-400 bg-gradient-to-br from-pink-50 via-white to-rose-50"
+									: "border-slate-200 bg-gradient-to-br from-slate-50 via-white to-slate-100 hover:border-pink-300 hover:shadow-md"
+							}`}
+						>
+							<input {...getInputProps()} id="file-input" />
+							{preview ? (
+								<div className="relative min-h-[320px] sm:min-h-[380px]">
+									<img
+										src={preview}
+										alt="Preview"
+										className="h-full w-full object-cover"
+									/>
+									<div className="absolute inset-x-0 top-0 flex items-center justify-between gap-3 bg-gradient-to-b from-slate-950/70 via-slate-900/30 to-transparent p-4 text-white">
+										<span className="rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] backdrop-blur-sm">
+											{title || "Tanpa judul"}
+										</span>
+										{selectedFileSize && (
+											<span className="rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] backdrop-blur-sm">
+												{selectedFileSize}
+											</span>
+										)}
+									</div>
+									<div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/80 via-slate-900/45 to-transparent p-5 text-white">
+										<p className="text-sm font-semibold">Klik atau drop gambar baru untuk mengganti preview</p>
+										<p className="mt-1 text-xs text-white/70">Preview dan dropzone sekarang menyatu di area ini.</p>
+									</div>
+								</div>
+							) : (
+								<div className="relative flex min-h-[320px] flex-col items-center justify-center px-6 py-10 text-center sm:min-h-[380px]">
+									<div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-pink-200/40 blur-2xl"></div>
+									<div className="relative flex h-16 w-16 items-center justify-center rounded-xl bg-gradient-to-br from-pink-500 to-rose-600 text-white shadow-lg">
+										<FiUploadCloud className="h-8 w-8" />
+									</div>
+									<h3 className="mt-4 text-lg font-bold text-slate-900">
+										{isDragActive ? "Lepaskan gambar di sini" : "Tarik gambar ke area ini"}
+									</h3>
+									<p className="mt-2 max-w-md text-sm leading-6 text-slate-500">
+										Klik untuk memilih file atau drag and drop langsung dari folder Anda.
+									</p>
+								</div>
+							)}
+						</div>
+
+						<div className="grid gap-4 lg:grid-cols-[1fr_auto]">
+							<div className="space-y-2">
+								<label className="text-sm font-semibold text-slate-700">Judul gambar</label>
+								<input
+									type="text"
+									placeholder="Contoh: Suasana pelayanan DPMD"
+									value={title}
+									onChange={(e) => setTitle(e.target.value)}
+									className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-800 outline-none transition focus:border-pink-400 focus:bg-white focus:ring-4 focus:ring-pink-100"
+								/>
+							</div>
+							<button
+								type="submit"
+								disabled={isUploading || !selectedFile}
+								className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-pink-600 to-rose-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-pink-500/20 transition hover:scale-[1.01] hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50"
+							>
+								{isUploading ? "Mengunggah..." : "Upload Gambar"}
+							</button>
+						</div>
+					</div>
+				</form>
+			</section>
+
+			<section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+				<div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+					<div>
+						<p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Gallery Assets</p>
+						<h2 className="mt-2 text-2xl font-black text-slate-900">Daftar gambar hero</h2>
+					</div>
+					<div className="flex flex-wrap gap-2">
+						<span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">
+							<FiGrid className="mr-1 inline-block h-3.5 w-3.5" />
+							{gallery.length} item
+						</span>
+						<span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
+							<FiCheckCircle className="mr-1 inline-block h-3.5 w-3.5" />
+							{activeCount} aktif
+						</span>
+						<span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
+							{inactiveCount} nonaktif
+						</span>
+					</div>
+				</div>
+
+				{gallery.length === 0 ? (
+					<div className="mt-8 flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 px-6 py-16 text-center">
+						<div className="mb-4 flex h-16 w-16 items-center justify-center rounded-xl bg-white text-slate-500 shadow-sm">
+							<FiImage className="h-8 w-8" />
+						</div>
+						<h3 className="text-xl font-bold text-slate-900">Belum ada gambar hero</h3>
+						<p className="mt-2 max-w-md text-sm leading-6 text-slate-500">
+							Unggah gambar pertama Anda dari panel di atas untuk mulai menyusun tampilan utama halaman depan.
+						</p>
+					</div>
+				) : (
+					<div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+						{gallery.map((image) => (
+							<div
+								key={image.id}
+								className="group overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-xl"
+							>
+								<div className="relative overflow-hidden">
+									<img
+										src={`${imageBaseUrl}/storage/uploads/${image.image_path}`}
+										alt={image.title || "Hero Image"}
+										className="h-60 w-full object-cover transition-transform duration-500 group-hover:scale-105"
+									/>
+									<div className="absolute inset-x-0 top-0 flex items-start justify-between p-4">
+										<span className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] backdrop-blur-sm ${
+											image.is_active
+												? "bg-emerald-400/90 text-white"
+												: "bg-slate-900/70 text-white"
+										}`}>
+											{image.is_active ? "Tayang" : "Arsip"}
+										</span>
+										<button
+											onClick={() => handleDelete(image.id)}
+											className="rounded-xl bg-white/90 p-2 text-red-500 shadow-sm transition hover:bg-white"
+										>
+											<FiTrash2 className="h-4 w-4" />
+										</button>
+									</div>
+								</div>
+
+								<div className="space-y-4 p-5">
+									<div>
+										<p className="text-lg font-bold text-slate-900" title={image.title || ""}>
+											{image.title || "Tanpa Judul"}
+										</p>
+										<p className="mt-1 text-sm text-slate-500">
+											Siap digunakan pada area hero halaman depan.
+										</p>
+									</div>
+
+									<div className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-4 py-3">
+										<div>
+											<p className="text-xs uppercase tracking-[0.2em] text-slate-400">Status</p>
+											<p className={`mt-1 text-sm font-semibold ${
+												image.is_active ? "text-emerald-600" : "text-slate-500"
+											}`}>
+												{image.is_active ? "Sedang aktif" : "Tidak aktif"}
+											</p>
+										</div>
+										<button
+											onClick={() => handleToggleActive(image)}
+											className="inline-flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:shadow-md"
+										>
+											{image.is_active ? (
+												<FiToggleRight className="h-5 w-5 text-emerald-500" />
+											) : (
+												<FiToggleLeft className="h-5 w-5 text-slate-400" />
+											)}
+											{image.is_active ? "Nonaktifkan" : "Aktifkan"}
+										</button>
+									</div>
+								</div>
+							</div>
+						))}
+					</div>
+				)}
+			</section>
 		</div>
 	);
 };
