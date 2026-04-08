@@ -340,9 +340,9 @@ const ChatBot = ({ isDesktop = false }) => {
           className={`flex flex-col bg-white overflow-hidden ${
             isDesktop
               ? 'rounded-2xl shadow-2xl shadow-black/10 border border-gray-200/80 w-[420px] h-[600px]'
-              : 'fixed inset-x-3 rounded-2xl shadow-2xl shadow-black/10 border border-gray-200/80'
+              : 'fixed inset-x-2 sm:inset-x-3 rounded-2xl shadow-2xl shadow-black/10 border border-gray-200/80'
           }`}
-          style={!isDesktop ? { bottom: '80px', maxHeight: 'calc(100vh - 120px)' } : {}}
+          style={!isDesktop ? { bottom: '80px', maxHeight: 'calc(100dvh - 100px)' } : {}}
         >
           {/* Header */}
           <div className="relative flex-shrink-0 bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 px-5 py-4">
@@ -396,31 +396,6 @@ const ChatBot = ({ isDesktop = false }) => {
                 <p className="text-gray-500 text-sm text-center max-w-[280px] mb-5 leading-relaxed">
                   Cari data apapun dengan cepat. Ketik sebagian kata saja, misal <span className="font-semibold text-purple-600">"bumdes bina"</span> untuk menemukan semua BUMDes yang mengandung kata "bina"
                 </p>
-
-                {/* Stats */}
-                {stats && (
-                  <div className="grid grid-cols-3 gap-2 w-full max-w-[320px] mb-5">
-                    {[
-                      { label: 'Desa', value: stats.totalDesa, color: 'emerald' },
-                      { label: 'Kelurahan', value: stats.totalKelurahan, color: 'teal' },
-                      { label: 'Pegawai', value: stats.totalPegawai, color: 'orange' },
-                      { label: 'BUMDes', value: stats.totalBumdes, color: 'amber' },
-                      { label: 'Aparatur', value: stats.totalAparatur, color: 'purple' },
-                      { label: 'Kegiatan', value: stats.totalKegiatan, color: 'cyan' },
-                    ].map((s, i) => (
-                      <motion.div
-                        key={i}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.2 + i * 0.1 }}
-                        className={`bg-${s.color}-50 border border-${s.color}-100 rounded-xl px-3 py-2.5 text-center`}
-                      >
-                        <p className={`text-${s.color}-700 font-bold text-lg`}>{s.value || 0}</p>
-                        <p className={`text-${s.color}-500 text-[10px] font-semibold uppercase tracking-wide`}>{s.label}</p>
-                      </motion.div>
-                    ))}
-                  </div>
-                )}
 
                 {/* Quick search chips */}
                 <div className="w-full">
@@ -570,7 +545,7 @@ const ChatBot = ({ isDesktop = false }) => {
         </div>
       ) : (
         /* Mobile: Above bottom bar */
-        <div className="fixed z-[55]" style={{ bottom: '76px', right: '16px' }}>
+        <div className="fixed z-[55] right-3 bottom-[76px]">
           {chatPopup}
           <div className="flex justify-end mt-2">
             {fabButton}
