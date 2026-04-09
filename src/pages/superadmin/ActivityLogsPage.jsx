@@ -19,8 +19,9 @@ const ActivityLogsPage = () => {
 		startDate: '',
 		endDate: '',
 		page: 1,
-		limit: 50
+		limit: 100
 	});
+	const [pagination, setPagination] = useState({ total: 0, page: 1, totalPages: 1 });
 	const [stats, setStats] = useState({
 		total: 0,
 		today: 0,
@@ -37,12 +38,13 @@ const ActivityLogsPage = () => {
 
 	useEffect(() => {
 		fetchBidangList();
+		fetchStats();
 		fetchLogs();
 	}, []);
 
 	useEffect(() => {
 		fetchLogs();
-	}, [filters.bidang_id, filters.module, filters.action]);
+	}, [filters.bidang_id, filters.module, filters.action, filters.limit, filters.page]);
 
 	const fetchBidangList = async () => {
 		try {
@@ -52,7 +54,17 @@ const ActivityLogsPage = () => {
 			}
 		} catch (error) {
 			console.error('Error fetching bidang list:', error);
-			// Keep default bidang list if API fails
+		}
+	};
+
+	const fetchStats = async () => {
+		try {
+			const response = await api.get('/activity-logs/stats');
+			if (response.data.success && response.data.data) {
+				setStats(response.data.data);
+			}
+		} catch (error) {
+			console.error('Error fetching stats:', error);
 		}
 	};
 
@@ -60,16 +72,15 @@ const ActivityLogsPage = () => {
 		try {
 			setLoading(true);
 			
-			// Use new unified API endpoint for superadmin
 			const params = {
 				limit: filters.limit,
+				page: filters.page,
 				module: filters.module || undefined,
 				action: filters.action || undefined,
 				bidang_id: filters.bidang_id || undefined,
 				search: filters.search || undefined
 			};
 			
-			// Remove undefined params
 			Object.keys(params).forEach(key => 
 				params[key] === undefined && delete params[key]
 			);
@@ -77,21 +88,13 @@ const ActivityLogsPage = () => {
 			const response = await api.get('/activity-logs', { params });
 			
 			if (response.data.success && response.data.data) {
-				const allLogs = response.data.data;
-				setLogs(allLogs);
-				
-				// Calculate stats
-				const now = new Date();
-				const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-				const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-				const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-
-				setStats({
-					total: allLogs.length,
-					today: allLogs.filter(log => new Date(log.createdAt) >= today).length,
-					thisWeek: allLogs.filter(log => new Date(log.createdAt) >= weekAgo).length,
-					thisMonth: allLogs.filter(log => new Date(log.createdAt) >= monthStart).length
-				});
+				setLogs(response.data.data);
+				// Update pagination from response meta if available
+				if (response.data.meta) {
+					setPagination(response.data.meta);
+				} else {
+					setPagination(prev => ({ ...prev, total: response.data.data.length }));
+				}
 			}
 
 		} catch (error) {
@@ -107,6 +110,7 @@ const ActivityLogsPage = () => {
 	};
 
 	const handleSearch = () => {
+		setFilters(prev => ({ ...prev, page: 1 }));
 		fetchLogs();
 	};
 
@@ -119,8 +123,9 @@ const ActivityLogsPage = () => {
 			startDate: '',
 			endDate: '',
 			page: 1,
-			limit: 50
+			limit: 100
 		});
+		fetchStats();
 		setTimeout(() => fetchLogs(), 100);
 	};
 
@@ -354,6 +359,21 @@ const ActivityLogsPage = () => {
 							<FiRefreshCw className="h-4 w-4" />
 							Refresh
 						</button>
+						<div className="ml-auto flex items-center gap-2">
+							<label className="text-sm text-gray-600">Tampilkan:</label>
+							<select
+								value={filters.limit}
+								onChange={(e) => setFilters(prev => ({ ...prev, limit: Number(e.target.value), page: 1 }))}
+								className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+							>
+								<option value={50}>50</option>
+								<option value={100}>100</option>
+								<option value={200}>200</option>
+								<option value={500}>500</option>
+								<option value={1000}>1000</option>
+							</select>
+							<span className="text-sm text-gray-500">per halaman</span>
+						</div>
 					</div>
 				</div>
 
@@ -430,8 +450,30 @@ const ActivityLogsPage = () => {
 
 				{/* Footer Info */}
 				{!loading && logs.length > 0 && (
-					<div className="mt-6 text-center text-sm text-gray-500">
-						Menampilkan {logs.length} activity logs terbaru
+					<div className="mt-6 flex items-center justify-between text-sm text-gray-500">
+						<span>
+							Menampilkan <strong className="text-gray-700">{logs.length}</strong> logs
+							{stats.total > 0 && <> dari total <strong className="text-gray-700">{stats.total.toLocaleString('id-ID')}</strong></>}
+						</span>
+						<div className="flex items-center gap-2">
+							<button
+								onClick={() => setFilters(prev => ({ ...prev, page: Math.max(1, prev.page - 1) }))}
+								disabled={filters.page <= 1}
+								className="px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+							>
+								← Prev
+							</button>
+							<span className="px-3 py-1.5 bg-purple-50 text-purple-700 rounded-lg font-medium">
+								Hal. {filters.page}
+							</span>
+							<button
+								onClick={() => setFilters(prev => ({ ...prev, page: prev.page + 1 }))}
+								disabled={logs.length < filters.limit}
+								className="px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+							>
+								Next →
+							</button>
+						</div>
 					</div>
 				)}
 			</div>
