@@ -180,9 +180,6 @@ const VideoMeetingPage = lazy(
 const PublicMeetingPage = lazy(
   () => import("./pages/video-meeting/PublicMeetingPage"),
 );
-const PublicJadwalHarian = lazy(
-  () => import("./pages/public/PublicJadwalHarian"),
-);
 const PerjadinMain = lazy(
   () => import("./pages/pegawai/perjadin/PerjadinMain"),
 );
@@ -764,14 +761,6 @@ function App() {
                 
                 {/* Public Meeting Join - No auth required */}
                 <Route path="/join/:roomId" element={<PublicMeetingPage />} />
-
-                {/* Jadwal Harian - Share link, requires login (internal DPMD only) */}
-                <Route path="/jadwal-harian/:tanggal" element={
-                  <ProtectedRoute>
-                    <PublicJadwalHarian />
-                  </ProtectedRoute>
-                } />
-
 
                 {/* Rute Desa - Exclusive untuk role: desa */}
                 <Route

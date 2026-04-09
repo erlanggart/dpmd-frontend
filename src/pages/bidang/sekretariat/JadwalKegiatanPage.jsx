@@ -442,7 +442,7 @@ const JadwalKegiatanPage = () => {
 								<button
 									onClick={() => {
 										const shareDate = filterTanggal || getTodayDate();
-										const publicUrl = `${window.location.origin}/jadwal-harian/${shareDate}`;
+										const publicUrl = `${window.location.origin}/dpmd/jadwal-kegiatan?tanggal=${shareDate}`;
 										const fmtDate = new Date(shareDate + 'T00:00:00').toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 										const waText = [
 											`📅 *JADWAL KEGIATAN DPMD*`,
@@ -459,7 +459,7 @@ const JadwalKegiatanPage = () => {
 												<p class="text-gray-600 mb-2 text-sm">Jadwal kegiatan tanggal:</p>
 												<p class="font-semibold text-gray-800 mb-4">${fmtDate}</p>
 												<div class="bg-gray-50 rounded-lg p-3 mb-4">
-													<p class="text-xs text-gray-500 mb-1">Link publik:</p>
+													<p class="text-xs text-gray-500 mb-1">Link jadwal:</p>
 													<p class="text-sm text-teal-700 font-mono break-all">${publicUrl}</p>
 												</div>
 												<div class="flex flex-col sm:flex-row gap-2 justify-center">
