@@ -62,6 +62,19 @@ const getDeviceId = () => {
 	return id;
 };
 
+const getDeviceType = () => {
+	const ua = navigator.userAgent;
+	if (/iPhone/i.test(ua)) return "iPhone";
+	if (/iPad/i.test(ua)) return "iPad";
+	if (/Android/i.test(ua)) {
+		const match = ua.match(/;\s*([^;)]+)\s*Build/);
+		return match ? match[1].trim() : "Android";
+	}
+	if (/Windows/i.test(ua)) return "Windows PC";
+	if (/Mac/i.test(ua)) return "Mac";
+	return "Unknown Device";
+};
+
 // ═══════════════════════════════════════════════════════════════
 const AbsensiPage = () => {
 	const [searchParams] = useSearchParams();
@@ -104,7 +117,7 @@ const AbsensiPage = () => {
 				setEligible(data);
 				if (data?.eligible && !data?.device_registered && deviceId) {
 					try {
-						await api.post("/absensi/register-device", { device_id: deviceId });
+						await api.post("/absensi/register-device", { device_id: deviceId, device_type: getDeviceType() });
 						const res2 = await api.get("/absensi/check-eligible");
 						setEligible(res2.data.data);
 					} catch (err) { console.error("Auto device registration failed:", err); }
@@ -146,10 +159,31 @@ const AbsensiPage = () => {
 
 	const checkDevice = () => {
 		if (!eligible?.device_registered) {
-			showAlert({ icon: "warning", title: "Perangkat Belum Terdaftar", text: "Silakan hubungi admin untuk mendaftarkan perangkat Anda." });
+			showAlert({ icon: "warning", title: "Perangkat Belum Terdaftar", text: "Silakan refresh halaman untuk mendaftarkan perangkat secara otomatis." });
 			return false;
 		}
 		return true;
+	};
+
+	const handleRemoveDevice = async () => {
+		const confirm = await showAlert({
+			icon: "warning",
+			title: "Hapus Perangkat Lama?",
+			text: "Perangkat lama akan dihapus dan perangkat ini akan didaftarkan sebagai perangkat baru.",
+			showCancel: true,
+			confirmText: "Ya, Hapus & Daftarkan",
+			cancelText: "Batal",
+		});
+		if (!confirm?.isConfirmed) return;
+		try {
+			await api.delete("/absensi/remove-device");
+			await api.post("/absensi/register-device", { device_id: deviceId, device_type: getDeviceType() });
+			const res = await api.get("/absensi/check-eligible");
+			setEligible(res.data.data);
+			showAlert({ icon: "success", title: "Berhasil!", text: "Perangkat baru berhasil didaftarkan. Silakan coba absen kembali.", timer: 2500 });
+		} catch (err) {
+			showAlert({ icon: "error", title: "Gagal", text: err.response?.data?.message || "Gagal menghapus perangkat" });
+		}
 	};
 
 	const isAbsensiOpen = () => {
@@ -211,12 +245,28 @@ const AbsensiPage = () => {
 			setTujuanDinas("");
 		} catch (err) {
 			const errMsg = err.response?.data?.message || "Gagal absensi";
+			const errCode = err.response?.data?.code;
 			const isJarak = errMsg.toLowerCase().includes("meter");
-			showAlert({
-				icon: "error",
-				title: isJarak ? "Kejauhan Cuy! 🏃‍♂️💨" : "Absensi Gagal",
-				text: isJarak ? `😅 Kamu masih jauh dari kantor nih!\n\n📍 Maksimal 500 meter dari kantor ya!\n\n🦶 Coba deketin dulu baru absen lagi~ 🫡` : errMsg,
-			});
+			if (errCode === "DEVICE_MISMATCH") {
+				const registeredDevice = err.response?.data?.registered_device || "Tidak dikenal";
+				const confirm = await showAlert({
+					icon: "error",
+					title: "Perangkat Berbeda",
+					text: `Perangkat terdaftar: ${registeredDevice}.\n\nHapus perangkat lama dan daftarkan perangkat ini?`,
+					showCancel: true,
+					confirmText: "Hapus & Daftarkan",
+					cancelText: "Batal",
+				});
+				if (confirm?.isConfirmed) {
+					await handleRemoveDevice();
+				}
+			} else {
+				showAlert({
+					icon: "error",
+					title: isJarak ? "Kejauhan Cuy! 🏃‍♂️💨" : "Absensi Gagal",
+					text: isJarak ? `😅 Kamu masih jauh dari kantor nih!\n\n📍 Maksimal 500 meter dari kantor ya!\n\n🦶 Coba deketin dulu baru absen lagi~ 🫡` : errMsg,
+				});
+			}
 		} finally { setClockLoading(false); }
 	};
 

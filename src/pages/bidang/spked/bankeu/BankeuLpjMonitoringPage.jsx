@@ -1,15 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Download, Search, ChevronDown, ChevronUp, Eye, CheckCircle2, XCircle, BarChart3, MapPin, Loader2 } from 'lucide-react';
+import { FileText, Download, Search, ChevronDown, ChevronUp, Eye, CheckCircle2, XCircle, BarChart3, MapPin, Loader2, ShieldCheck, ShieldX, RotateCcw, MessageSquare, Clock, X } from 'lucide-react';
 import api from '../../../../api';
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
+
+const STATUS_CONFIG = {
+  pending: { label: 'Menunggu', color: 'amber', bgBadge: 'bg-amber-100 text-amber-700', icon: Clock },
+  approved: { label: 'Disetujui', color: 'green', bgBadge: 'bg-green-100 text-green-700', icon: CheckCircle2 },
+  rejected: { label: 'Ditolak', color: 'red', bgBadge: 'bg-red-100 text-red-700', icon: XCircle },
+  revision: { label: 'Revisi', color: 'orange', bgBadge: 'bg-orange-100 text-orange-700', icon: RotateCcw },
+};
 
 const BankeuLpjMonitoringPage = ({ tahun = 2025 }) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedKecamatan, setExpandedKecamatan] = useState({});
-  const [filterStatus, setFilterStatus] = useState('all'); // all, uploaded, belum
+  const [filterStatus, setFilterStatus] = useState('all'); // all, uploaded, belum, pending, approved, rejected, revision
+  const [verifyModal, setVerifyModal] = useState(null); // { lpj, desa_nama }
+  const [verifyAction, setVerifyAction] = useState('');
+  const [verifyCatatan, setVerifyCatatan] = useState('');
+  const [verifying, setVerifying] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -78,6 +89,8 @@ const BankeuLpjMonitoringPage = ({ tahun = 2025 }) => {
           filteredDesa = filteredDesa.filter(d => d.has_lpj);
         } else if (filterStatus === 'belum') {
           filteredDesa = filteredDesa.filter(d => !d.has_lpj);
+        } else if (['pending', 'approved', 'rejected', 'revision'].includes(filterStatus)) {
+          filteredDesa = filteredDesa.filter(d => d.has_lpj && d.lpj?.status === filterStatus);
         }
 
         // Filter by search term
@@ -99,6 +112,39 @@ const BankeuLpjMonitoringPage = ({ tahun = 2025 }) => {
       });
   };
 
+  const openVerifyModal = (lpj, desa_nama) => {
+    setVerifyModal({ lpj, desa_nama });
+    setVerifyAction('');
+    setVerifyCatatan('');
+  };
+
+  const handleVerify = async () => {
+    if (!verifyAction) {
+      toast.error('Pilih tindakan verifikasi');
+      return;
+    }
+    if (['rejected', 'revision'].includes(verifyAction) && !verifyCatatan.trim()) {
+      toast.error('Catatan wajib diisi untuk penolakan atau revisi');
+      return;
+    }
+    try {
+      setVerifying(true);
+      const res = await api.put(`/dpmd/bankeu-lpj/${verifyModal.lpj.id}/verify`, {
+        action: verifyAction,
+        catatan: verifyCatatan.trim() || null
+      });
+      if (res.data.success) {
+        toast.success(res.data.message);
+        setVerifyModal(null);
+        fetchData();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Gagal memverifikasi LPJ');
+    } finally {
+      setVerifying(false);
+    }
+  };
+
   const handleExportExcel = () => {
     if (!data?.kecamatan) return;
 
@@ -109,10 +155,13 @@ const BankeuLpjMonitoringPage = ({ tahun = 2025 }) => {
           'Kecamatan': kec.kecamatan_nama,
           'Desa': desa.desa_nama,
           'Status LPJ': desa.has_lpj ? 'Sudah Upload' : 'Belum Upload',
+          'Status Verifikasi': desa.has_lpj ? (STATUS_CONFIG[desa.lpj?.status || 'pending']?.label || '-') : '-',
           'Nama File': desa.lpj?.nama_file || '-',
           'Ukuran File': desa.lpj ? formatFileSize(desa.lpj.file_size) : '-',
           'Tanggal Upload': desa.lpj ? formatDate(desa.lpj.created_at) : '-',
           'Diupload Oleh': desa.lpj?.uploaded_by_name || '-',
+          'Catatan DPMD': desa.lpj?.dpmd_catatan || '-',
+          'Diverifikasi Oleh': desa.lpj?.verified_by_name || '-',
           'Keterangan': desa.lpj?.keterangan || '-'
         });
       });
@@ -152,7 +201,7 @@ const BankeuLpjMonitoringPage = ({ tahun = 2025 }) => {
   return (
     <div className="p-6">
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
         <div
           onClick={() => setFilterStatus('all')}
           className={`bg-white rounded-xl border p-4 cursor-pointer transition-all hover:shadow-md ${filterStatus === 'all' ? 'border-blue-400 ring-2 ring-blue-100' : 'border-gray-200'}`}
@@ -209,6 +258,27 @@ const BankeuLpjMonitoringPage = ({ tahun = 2025 }) => {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Verification Status Filters */}
+      <div className="flex flex-wrap gap-2 mb-6">
+        {[
+          { key: 'pending', label: `Menunggu (${summary.total_pending || 0})`, activeClass: 'bg-amber-500 text-white shadow-sm', inactiveClass: 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200' },
+          { key: 'approved', label: `Disetujui (${summary.total_approved || 0})`, activeClass: 'bg-green-500 text-white shadow-sm', inactiveClass: 'bg-green-50 text-green-700 hover:bg-green-100 border border-green-200' },
+          { key: 'rejected', label: `Ditolak (${summary.total_rejected || 0})`, activeClass: 'bg-red-500 text-white shadow-sm', inactiveClass: 'bg-red-50 text-red-700 hover:bg-red-100 border border-red-200' },
+          { key: 'revision', label: `Revisi (${summary.total_revision || 0})`, activeClass: 'bg-orange-500 text-white shadow-sm', inactiveClass: 'bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200' },
+        ].map(f => (
+          <button
+            key={f.key}
+            onClick={() => setFilterStatus(prev => prev === f.key ? 'all' : f.key)}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+              filterStatus === f.key ? f.activeClass : f.inactiveClass
+            }`}
+          >
+            {React.createElement(STATUS_CONFIG[f.key].icon, { className: 'h-3.5 w-3.5' })}
+            {f.label}
+          </button>
+        ))}
       </div>
 
       {/* Toolbar */}
@@ -306,22 +376,50 @@ const BankeuLpjMonitoringPage = ({ tahun = 2025 }) => {
                       <div
                         key={desa.desa_id}
                         className={`flex items-center justify-between px-4 py-3 ${
-                          desa.has_lpj ? 'bg-green-50/50' : 'bg-white'
+                          desa.has_lpj
+                            ? desa.lpj?.status === 'approved' ? 'bg-green-50/50'
+                              : desa.lpj?.status === 'rejected' ? 'bg-red-50/50'
+                              : desa.lpj?.status === 'revision' ? 'bg-orange-50/50'
+                              : 'bg-amber-50/30'
+                            : 'bg-white'
                         }`}
                       >
                         <div className="flex items-center gap-3 flex-1 min-w-0">
                           {desa.has_lpj ? (
-                            <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />
+                            (() => {
+                              const status = desa.lpj?.status || 'pending';
+                              const cfg = STATUS_CONFIG[status];
+                              const Icon = cfg.icon;
+                              return <Icon className={`h-5 w-5 flex-shrink-0 ${
+                                status === 'approved' ? 'text-green-500' :
+                                status === 'rejected' ? 'text-red-500' :
+                                status === 'revision' ? 'text-orange-500' :
+                                'text-amber-500'
+                              }`} />;
+                            })()
                           ) : (
                             <XCircle className="h-5 w-5 text-gray-300 flex-shrink-0" />
                           )}
                           <div className="min-w-0">
-                            <p className={`font-medium text-sm ${desa.has_lpj ? 'text-gray-800' : 'text-gray-500'}`}>
-                              {desa.desa_nama}
-                            </p>
+                            <div className="flex items-center gap-2">
+                              <p className={`font-medium text-sm ${desa.has_lpj ? 'text-gray-800' : 'text-gray-500'}`}>
+                                {desa.desa_nama}
+                              </p>
+                              {desa.has_lpj && desa.lpj && (
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${STATUS_CONFIG[desa.lpj.status || 'pending'].bgBadge}`}>
+                                  {STATUS_CONFIG[desa.lpj.status || 'pending'].label}
+                                </span>
+                              )}
+                            </div>
                             {desa.has_lpj && desa.lpj && (
                               <p className="text-xs text-gray-400 truncate">
                                 {desa.lpj.nama_file} • {formatFileSize(desa.lpj.file_size)} • {formatDate(desa.lpj.created_at)}
+                              </p>
+                            )}
+                            {desa.has_lpj && desa.lpj?.dpmd_catatan && ['rejected', 'revision'].includes(desa.lpj.status) && (
+                              <p className="text-xs text-red-500 mt-0.5 flex items-center gap-1">
+                                <MessageSquare className="h-3 w-3" />
+                                {desa.lpj.dpmd_catatan}
                               </p>
                             )}
                           </div>
@@ -329,11 +427,6 @@ const BankeuLpjMonitoringPage = ({ tahun = 2025 }) => {
 
                         {desa.has_lpj && desa.lpj && (
                           <div className="flex items-center gap-2 flex-shrink-0 ml-3">
-                            {desa.lpj.keterangan && (
-                              <span className="hidden md:inline-block text-xs text-gray-400 max-w-[200px] truncate" title={desa.lpj.keterangan}>
-                                {desa.lpj.keterangan}
-                              </span>
-                            )}
                             <a
                               href={getFileUrl(desa.lpj.file_path)}
                               target="_blank"
@@ -344,15 +437,18 @@ const BankeuLpjMonitoringPage = ({ tahun = 2025 }) => {
                               <Eye className="h-3.5 w-3.5" />
                               <span className="hidden sm:inline">Lihat</span>
                             </a>
-                            <a
-                              href={getFileUrl(desa.lpj.file_path)}
-                              download={desa.lpj.nama_file}
-                              className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-green-50 text-green-600 hover:bg-green-100 rounded-lg text-xs font-medium transition-colors"
-                              title="Download file"
+                            <button
+                              onClick={() => openVerifyModal(desa.lpj, desa.desa_nama)}
+                              className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                                desa.lpj.status === 'approved'
+                                  ? 'bg-green-50 text-green-600 hover:bg-green-100'
+                                  : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
+                              }`}
+                              title="Verifikasi LPJ"
                             >
-                              <Download className="h-3.5 w-3.5" />
-                              <span className="hidden sm:inline">Download</span>
-                            </a>
+                              <ShieldCheck className="h-3.5 w-3.5" />
+                              <span className="hidden sm:inline">{desa.lpj.status === 'approved' ? 'Ubah' : 'Verifikasi'}</span>
+                            </button>
                           </div>
                         )}
                       </div>
@@ -371,6 +467,133 @@ const BankeuLpjMonitoringPage = ({ tahun = 2025 }) => {
           </div>
         )}
       </div>
+
+      {/* Verify Modal */}
+      {verifyModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setVerifyModal(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-5 border-b border-gray-100">
+              <div>
+                <h3 className="font-bold text-gray-800">Verifikasi LPJ</h3>
+                <p className="text-sm text-gray-500">Desa {verifyModal.desa_nama}</p>
+              </div>
+              <button onClick={() => setVerifyModal(null)} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
+                <X className="h-5 w-5 text-gray-400" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              {/* File Info */}
+              <div className="bg-gray-50 rounded-xl p-3 flex items-center gap-3">
+                <FileText className="h-8 w-8 text-red-400 flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-gray-800 truncate">{verifyModal.lpj.nama_file}</p>
+                  <p className="text-xs text-gray-400">{formatFileSize(verifyModal.lpj.file_size)} • {formatDate(verifyModal.lpj.created_at)}</p>
+                </div>
+                <a href={getFileUrl(verifyModal.lpj.file_path)} target="_blank" rel="noopener noreferrer"
+                  className="ml-auto px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-xs font-medium flex items-center gap-1">
+                  <Eye className="h-3.5 w-3.5" /> Lihat
+                </a>
+              </div>
+
+              {/* Current Status */}
+              {verifyModal.lpj.status && verifyModal.lpj.status !== 'pending' && (
+                <div className="text-xs text-gray-500">
+                  Status saat ini: <span className={`font-semibold ${STATUS_CONFIG[verifyModal.lpj.status]?.bgBadge} px-2 py-0.5 rounded-full`}>
+                    {STATUS_CONFIG[verifyModal.lpj.status]?.label}
+                  </span>
+                  {verifyModal.lpj.verified_by_name && (
+                    <span className="ml-1">oleh {verifyModal.lpj.verified_by_name}</span>
+                  )}
+                </div>
+              )}
+
+              {/* Action Select */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Tindakan</label>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    onClick={() => setVerifyAction('approved')}
+                    className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all text-xs font-medium ${
+                      verifyAction === 'approved'
+                        ? 'border-green-500 bg-green-50 text-green-700'
+                        : 'border-gray-200 hover:border-green-300 text-gray-600'
+                    }`}
+                  >
+                    <ShieldCheck className="h-5 w-5" />
+                    Setujui
+                  </button>
+                  <button
+                    onClick={() => setVerifyAction('revision')}
+                    className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all text-xs font-medium ${
+                      verifyAction === 'revision'
+                        ? 'border-orange-500 bg-orange-50 text-orange-700'
+                        : 'border-gray-200 hover:border-orange-300 text-gray-600'
+                    }`}
+                  >
+                    <RotateCcw className="h-5 w-5" />
+                    Revisi
+                  </button>
+                  <button
+                    onClick={() => setVerifyAction('rejected')}
+                    className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all text-xs font-medium ${
+                      verifyAction === 'rejected'
+                        ? 'border-red-500 bg-red-50 text-red-700'
+                        : 'border-gray-200 hover:border-red-300 text-gray-600'
+                    }`}
+                  >
+                    <ShieldX className="h-5 w-5" />
+                    Tolak
+                  </button>
+                </div>
+              </div>
+
+              {/* Catatan */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Catatan {['rejected', 'revision'].includes(verifyAction) && <span className="text-red-500">*</span>}
+                </label>
+                <textarea
+                  value={verifyCatatan}
+                  onChange={e => setVerifyCatatan(e.target.value)}
+                  placeholder={
+                    verifyAction === 'rejected' ? 'Alasan penolakan LPJ...'
+                    : verifyAction === 'revision' ? 'Tuliskan apa yang perlu direvisi...'
+                    : 'Catatan opsional...'
+                  }
+                  rows={3}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none text-sm"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 p-5 border-t border-gray-100">
+              <button
+                onClick={() => setVerifyModal(null)}
+                className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 font-medium text-sm transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleVerify}
+                disabled={!verifyAction || verifying}
+                className={`flex-1 px-4 py-2.5 rounded-xl font-medium text-sm transition-all text-white ${
+                  !verifyAction || verifying
+                    ? 'bg-gray-300 cursor-not-allowed'
+                    : verifyAction === 'approved' ? 'bg-green-600 hover:bg-green-700'
+                    : verifyAction === 'revision' ? 'bg-orange-500 hover:bg-orange-600'
+                    : 'bg-red-600 hover:bg-red-700'
+                }`}
+              >
+                {verifying ? 'Memproses...' :
+                  verifyAction === 'approved' ? 'Setujui LPJ' :
+                  verifyAction === 'revision' ? 'Minta Revisi' :
+                  verifyAction === 'rejected' ? 'Tolak LPJ' : 'Pilih Tindakan'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

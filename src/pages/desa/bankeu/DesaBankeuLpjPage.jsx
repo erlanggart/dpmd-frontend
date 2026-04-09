@@ -1,8 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { LuUpload, LuFileText, LuTrash2, LuDownload, LuCircleCheck, LuCircleAlert, LuLoader, LuFile } from 'react-icons/lu';
+import { LuUpload, LuFileText, LuTrash2, LuDownload, LuCircleCheck, LuCircleAlert, LuLoader, LuFile, LuMessageSquare, LuClock, LuCircleX, LuPencil } from 'react-icons/lu';
 import Swal from 'sweetalert2';
 import api from '../../../api';
 import toast from 'react-hot-toast';
+
+const STATUS_CONFIG = {
+  pending: { label: 'Menunggu Verifikasi', color: 'amber', icon: LuClock, bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', badge: 'bg-amber-100 text-amber-700' },
+  approved: { label: 'Disetujui', color: 'green', icon: LuCircleCheck, bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-700', badge: 'bg-green-100 text-green-700' },
+  rejected: { label: 'Ditolak', color: 'red', icon: LuCircleX, bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700', badge: 'bg-red-100 text-red-700' },
+  revision: { label: 'Perlu Revisi', color: 'orange', icon: LuPencil, bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-700', badge: 'bg-orange-100 text-orange-700' },
+};
 
 const DesaBankeuLpjPage = ({ tahun = 2025 }) => {
   const [lpjData, setLpjData] = useState(null);
@@ -183,19 +190,54 @@ const DesaBankeuLpjPage = ({ tahun = 2025 }) => {
 
         {/* Status Card */}
         {lpjData ? (
-          <div className="bg-white rounded-2xl shadow-lg border border-green-200 p-6 mb-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="h-10 w-10 bg-green-100 rounded-xl flex items-center justify-center">
-                <LuCircleCheck className="h-5 w-5 text-green-600" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-green-800">LPJ Sudah Diupload</h3>
-                <p className="text-sm text-green-600">File berhasil tersimpan di sistem</p>
-              </div>
-            </div>
+          <div className={`bg-white rounded-2xl shadow-lg border p-6 mb-6 ${
+            lpjData.status === 'rejected' ? 'border-red-300' :
+            lpjData.status === 'revision' ? 'border-orange-300' :
+            lpjData.status === 'approved' ? 'border-green-300' :
+            'border-amber-200'
+          }`}>
+            {(() => {
+              const status = lpjData.status || 'pending';
+              const cfg = STATUS_CONFIG[status];
+              const StatusIcon = cfg.icon;
+              return (
+                <>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className={`h-10 w-10 ${cfg.bg} rounded-xl flex items-center justify-center`}>
+                        <StatusIcon className={`h-5 w-5 ${cfg.text}`} />
+                      </div>
+                      <div>
+                        <h3 className={`font-semibold ${cfg.text}`}>LPJ Sudah Diupload</h3>
+                        <p className={`text-sm ${cfg.text} opacity-75`}>File berhasil tersimpan di sistem</p>
+                      </div>
+                    </div>
+                    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${cfg.badge}`}>
+                      <StatusIcon className="h-3.5 w-3.5" />
+                      {cfg.label}
+                    </span>
+                  </div>
+
+                  {/* DPMD Catatan - Show if rejected or revision */}
+                  {lpjData.dpmd_catatan && ['rejected', 'revision'].includes(status) && (
+                    <div className={`${cfg.bg} border ${cfg.border} rounded-xl p-4 mb-4`}>
+                      <div className="flex items-start gap-2">
+                        <LuMessageSquare className={`h-4 w-4 ${cfg.text} mt-0.5 flex-shrink-0`} />
+                        <div>
+                          <p className={`text-sm font-semibold ${cfg.text} mb-1`}>
+                            Catatan dari DPMD:
+                          </p>
+                          <p className={`text-sm ${cfg.text}`}>{lpjData.dpmd_catatan}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
 
             {/* File info */}
-            <div className="bg-green-50 rounded-xl p-4 mb-4">
+            <div className="bg-gray-50 rounded-xl p-4 mb-4">
               <div className="flex items-center gap-3">
                 <div className="h-12 w-12 bg-white rounded-lg flex items-center justify-center shadow-sm">
                   <LuFile className="h-6 w-6 text-red-500" />
@@ -227,8 +269,13 @@ const DesaBankeuLpjPage = ({ tahun = 2025 }) => {
               </a>
               <button
                 onClick={handleDelete}
-                disabled={deleting}
-                className="inline-flex items-center gap-2 px-4 py-2.5 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors text-sm font-medium border border-red-200"
+                disabled={deleting || lpjData.status === 'approved'}
+                className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
+                  lpjData.status === 'approved'
+                    ? 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed'
+                    : 'bg-red-50 text-red-600 hover:bg-red-100 border-red-200'
+                }`}
+                title={lpjData.status === 'approved' ? 'LPJ yang sudah disetujui tidak dapat dihapus' : ''}
               >
                 {deleting ? <LuLoader className="h-4 w-4 animate-spin" /> : <LuTrash2 className="h-4 w-4" />}
                 {deleting ? 'Menghapus...' : 'Hapus LPJ'}
@@ -333,8 +380,11 @@ const DesaBankeuLpjPage = ({ tahun = 2025 }) => {
           {/* Info */}
           <div className="mt-4 bg-blue-50 border-l-4 border-blue-500 p-3 rounded-lg">
             <p className="text-xs text-blue-700">
-              <strong>Informasi:</strong> File LPJ yang diupload akan tercatat di DPMD dan dapat dilihat oleh Bidang SPKED.
-              {lpjData && ' Upload ulang akan menggantikan file sebelumnya.'}
+              <strong>Informasi:</strong> File LPJ yang diupload akan diverifikasi oleh DPMD.
+              {lpjData && lpjData.status === 'approved' && ' LPJ telah disetujui.'}
+              {lpjData && ['rejected', 'revision'].includes(lpjData.status) && ' Silakan upload ulang sesuai catatan DPMD.'}
+              {lpjData && lpjData.status === 'pending' && ' Menunggu verifikasi dari DPMD.'}
+              {!lpjData && ' Setelah upload, DPMD akan memverifikasi LPJ Anda.'}
             </p>
           </div>
         </div>
