@@ -11,6 +11,9 @@ import {
   LuClock,
   LuShield,
   LuUser,
+  LuHouse,
+  LuMapPin,
+  LuBuilding2,
 } from 'react-icons/lu';
 import api from '../../api';
 import { getAvatarUrl } from '../../utils/avatarUtils';
@@ -173,9 +176,9 @@ export default function OnlineUsersSidebar() {
 
                 return (
                   <div key={user.id} className="px-4 py-2.5 hover:bg-gray-50/80 transition-colors">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-start gap-3">
                       {/* Avatar */}
-                      <div className="relative flex-shrink-0">
+                      <div className="relative flex-shrink-0 mt-0.5">
                         <div className="w-9 h-9 rounded-xl overflow-hidden bg-gradient-to-br from-gray-200 to-gray-300">
                           {avatarUrl ? (
                             <img
@@ -200,12 +203,10 @@ export default function OnlineUsersSidebar() {
 
                       {/* Info */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <p className="text-[13px] font-semibold text-gray-900 truncate">
-                            {user.name}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-1.5 mt-0.5">
+                        <p className="text-[12px] font-semibold text-gray-900 leading-snug break-words" title={user.name}>
+                          {user.name}
+                        </p>
+                        <div className="flex flex-wrap items-center gap-1 mt-0.5">
                           <span className={`inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold rounded ${roleColor}`}>
                             {roleLabel}
                           </span>
@@ -216,10 +217,33 @@ export default function OnlineUsersSidebar() {
                             </span>
                           )}
                         </div>
+                        {/* Desa / Kecamatan / Dinas info */}
+                        {(user.desa || user.kecamatan || user.dinas) && (
+                          <div className="mt-1 space-y-0.5">
+                            {user.desa && (
+                              <p className="text-[10px] text-gray-500 flex items-center gap-1 leading-tight">
+                                <LuHouse className="w-2.5 h-2.5 flex-shrink-0 text-green-500" />
+                                <span className="truncate" title={user.desa.nama}>{user.desa.nama}</span>
+                              </p>
+                            )}
+                            {user.kecamatan && (
+                              <p className="text-[10px] text-gray-500 flex items-center gap-1 leading-tight">
+                                <LuMapPin className="w-2.5 h-2.5 flex-shrink-0 text-violet-500" />
+                                <span className="truncate" title={user.kecamatan.nama}>{user.kecamatan.nama}</span>
+                              </p>
+                            )}
+                            {user.dinas && (
+                              <p className="text-[10px] text-gray-500 flex items-center gap-1 leading-tight">
+                                <LuBuilding2 className="w-2.5 h-2.5 flex-shrink-0 text-amber-500" />
+                                <span className="truncate" title={user.dinas.nama_dinas}>{user.dinas.nama_dinas}</span>
+                              </p>
+                            )}
+                          </div>
+                        )}
                       </div>
 
                       {/* Time */}
-                      <div className="flex-shrink-0 text-right">
+                      <div className="flex-shrink-0 text-right mt-0.5">
                         <span className="text-[10px] text-gray-400 flex items-center gap-0.5">
                           <LuClock className="w-2.5 h-2.5" />
                           {timeAgo(user.last_active_at)}
