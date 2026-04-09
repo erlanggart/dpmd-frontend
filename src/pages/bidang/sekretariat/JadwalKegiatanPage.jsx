@@ -20,6 +20,7 @@ import {
 	LuCalendarDays,
 	LuList,
 	LuEye,
+	LuShare2,
 } from 'react-icons/lu';
 import { useSearchParams } from 'react-router-dom';
 import api from '../../../api';
@@ -436,17 +437,74 @@ const JadwalKegiatanPage = () => {
 								)}
 							</div>
 
-							{/* Tambah Jadwal Button */}
-							{canManageJadwal && (
+							<div className="flex items-center gap-2">
+								{/* Share Jadwal Harian Button */}
 								<button
-									onClick={() => setShowAddModal(true)}
-									className="flex items-center justify-center gap-2 px-5 py-3 bg-gradient-to-r from-teal-600 to-cyan-600 text-white rounded-xl hover:from-teal-700 hover:to-cyan-700 font-semibold shadow-lg hover:shadow-xl transition-all transform hover:scale-105 active:scale-95"
+									onClick={() => {
+										const shareDate = filterTanggal || getTodayDate();
+										const publicUrl = `${window.location.origin}/jadwal-harian/${shareDate}`;
+										const fmtDate = new Date(shareDate + 'T00:00:00').toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+										const waText = [
+											`📅 *JADWAL KEGIATAN DPMD*`,
+											`📆 ${fmtDate}`,
+											``,
+											`🔗 Lihat selengkapnya:`,
+											publicUrl,
+										].join('\n');
+										const waUrl = `https://wa.me/?text=${encodeURIComponent(waText)}`;
+
+										Swal.fire({
+											title: 'Bagikan Jadwal Harian',
+											html: `
+												<p class="text-gray-600 mb-2 text-sm">Jadwal kegiatan tanggal:</p>
+												<p class="font-semibold text-gray-800 mb-4">${fmtDate}</p>
+												<div class="bg-gray-50 rounded-lg p-3 mb-4">
+													<p class="text-xs text-gray-500 mb-1">Link publik:</p>
+													<p class="text-sm text-teal-700 font-mono break-all">${publicUrl}</p>
+												</div>
+												<div class="flex flex-col sm:flex-row gap-2 justify-center">
+													<button id="swal-copy-link" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold text-sm transition-all">
+														📋 Salin Link
+													</button>
+													<a href="${waUrl}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-xl font-semibold text-sm transition-all" style="text-decoration:none">
+														💬 Share WhatsApp
+													</a>
+												</div>
+											`,
+											showConfirmButton: true,
+											confirmButtonText: 'Tutup',
+											confirmButtonColor: '#6366f1',
+											didOpen: () => {
+												const copyBtn = document.getElementById('swal-copy-link');
+												if (copyBtn) {
+													copyBtn.addEventListener('click', () => {
+														navigator.clipboard.writeText(publicUrl);
+														copyBtn.innerHTML = '✅ Tersalin!';
+														setTimeout(() => { copyBtn.innerHTML = '📋 Salin Link'; }, 2000);
+													});
+												}
+											}
+										});
+									}}
+									className="flex items-center justify-center gap-2 px-4 py-3 bg-white border-2 border-teal-200 text-teal-700 rounded-xl hover:bg-teal-50 hover:border-teal-300 font-semibold shadow-sm hover:shadow transition-all"
+									title="Bagikan jadwal kegiatan hari ini"
 								>
-									<LuPlus className="w-5 h-5" />
-									<span className="hidden sm:inline">Tambah Jadwal</span>
-									<span className="sm:hidden">Tambah</span>
+									<LuShare2 className="w-5 h-5" />
+									<span className="hidden sm:inline">Bagikan Harian</span>
 								</button>
-							)}
+
+								{/* Tambah Jadwal Button */}
+								{canManageJadwal && (
+									<button
+										onClick={() => setShowAddModal(true)}
+										className="flex items-center justify-center gap-2 px-5 py-3 bg-gradient-to-r from-teal-600 to-cyan-600 text-white rounded-xl hover:from-teal-700 hover:to-cyan-700 font-semibold shadow-lg hover:shadow-xl transition-all transform hover:scale-105 active:scale-95"
+									>
+										<LuPlus className="w-5 h-5" />
+										<span className="hidden sm:inline">Tambah Jadwal</span>
+										<span className="sm:hidden">Tambah</span>
+									</button>
+								)}
+							</div>
 						</div>
 					</div>
 				</div>
