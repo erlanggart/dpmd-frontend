@@ -457,6 +457,60 @@ const AbsensiManagementPage = () => {
     }
   };
 
+  const handleExportRekapPegawai = async () => {
+    if (!rekapPegawaiData?.pegawai?.length) return;
+    try {
+      const XLSX = await import("xlsx");
+      const pegawaiList = rekapPegawaiData.pegawai
+        .filter(p => {
+          if (!rekapSearch) return true;
+          const name = p.user?.pegawai?.nama_pegawai || p.user?.name || "";
+          return name.toLowerCase().includes(rekapSearch.toLowerCase());
+        });
+
+      const data = pegawaiList.map((p, i) => ({
+        "No": i + 1,
+        "Nama Pegawai": p.user?.pegawai?.nama_pegawai || p.user?.name || "-",
+        "NIP": p.user?.pegawai?.nip || "-",
+        "Jabatan": p.user?.pegawai?.jabatan || p.user?.pegawai?.status_kepegawaian?.replace(/_/g, " ") || "-",
+        "Hadir": p.summary?.hadir || 0,
+        "Izin": p.summary?.izin || 0,
+        "Sakit": p.summary?.sakit || 0,
+        "Alpha": p.summary?.alpha || 0,
+        "Cuti": p.summary?.cuti || 0,
+        "Dinas Luar": p.summary?.dinas_luar || 0,
+        "WFH": p.summary?.wfh || 0,
+        "WFA": p.summary?.wfa || 0,
+        "Telat": p.summary?.telat || 0,
+        "Total": p.total_records || 0,
+      }));
+
+      // Summary row
+      const gs = rekapPegawaiData.global_summary || {};
+      data.push({
+        "No": "", "Nama Pegawai": "TOTAL", "NIP": "", "Jabatan": "",
+        "Hadir": gs.hadir || 0, "Izin": gs.izin || 0, "Sakit": gs.sakit || 0,
+        "Alpha": gs.alpha || 0, "Cuti": gs.cuti || 0, "Dinas Luar": gs.dinas_luar || 0,
+        "WFH": gs.wfh || 0, "WFA": gs.wfa || 0, "Telat": gs.telat || 0, "Total": gs.total || 0,
+      });
+
+      const ws = XLSX.utils.json_to_sheet(data);
+      ws["!cols"] = [
+        { wch: 4 }, { wch: 30 }, { wch: 20 }, { wch: 24 },
+        { wch: 7 }, { wch: 6 }, { wch: 6 }, { wch: 7 },
+        { wch: 6 }, { wch: 11 }, { wch: 6 }, { wch: 6 }, { wch: 6 }, { wch: 7 },
+      ];
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Rekap Pegawai");
+      const fileName = `Rekap_Pegawai_${rekapPegawaiData.periode_label?.replace(/\s+/g, "_") || rekapPeriode}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+      showAlert({ icon: "success", title: "Export Berhasil", text: `File ${fileName} berhasil diunduh`, timer: 2000 });
+    } catch (err) {
+      console.error("Export rekap pegawai error:", err);
+      showAlert({ icon: "error", title: "Gagal Export", text: "Terjadi kesalahan saat mengexport Excel" });
+    }
+  };
+
   // ─── Render ───────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-orange-50/30">
@@ -804,6 +858,10 @@ const AbsensiManagementPage = () => {
                       <h3 className="font-bold text-slate-800 text-sm">Periode: {rekapPegawaiData.periode_label}</h3>
                       <p className="text-[11px] text-slate-400 mt-0.5">{rekapPegawaiData.total_pegawai} pegawai terdaftar</p>
                     </div>
+                    <button onClick={handleExportRekapPegawai} disabled={!rekapPegawaiData?.pegawai?.length}
+                      className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl hover:bg-emerald-100 transition-all text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed">
+                      <LuFileSpreadsheet className="h-4 w-4" /> Ekspor Excel
+                    </button>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
                     {Object.entries(STATUS_MAP).map(([key, { label, color, icon }]) => {

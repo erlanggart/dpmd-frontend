@@ -40,7 +40,6 @@ import EditBidangModal from "../../components/EditBidangModal";
 import EditTanggalLahirModal from "../../components/EditTanggalLahirModal";
 import EditJabatanModal from "../../components/EditJabatanModal";
 import EditAvatarModal from "../../components/EditAvatarModal";
-import RoleManagementModal from "../../components/RoleManagementModal";
 import UserStatsCard from "../../components/UserStatsCard";
 import OnlineUsersSidebar from "../../components/users/OnlineUsersSidebar";
 import { getAvatarUrl } from "../../utils/avatarUtils";
@@ -332,7 +331,6 @@ const UserManagementPage = () => {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
 	const [showAddModal, setShowAddModal] = useState(false);
-	const [showRoleManagement, setShowRoleManagement] = useState(false);
 	const [showResetModal, setShowResetModal] = useState(false);
 	const [showRoleModal, setShowRoleModal] = useState(false);
 	const [showBidangModal, setShowBidangModal] = useState(false);
@@ -1021,16 +1019,6 @@ const UserManagementPage = () => {
 						)}
 					</div>
 
-					{currentUser?.role === 'superadmin' && (
-						<button
-							onClick={() => setShowRoleManagement(true)}
-							className="flex items-center justify-center gap-2 px-6 py-3 bg-white border-2 border-indigo-200 text-indigo-700 rounded-xl hover:bg-indigo-50 hover:border-indigo-300 transition-all duration-200 shadow-sm hover:shadow"
-						>
-							<LuShield className="h-5 w-5" />
-							<span className="font-semibold">Kelola Role</span>
-						</button>
-					)}
-
 					<button
 						onClick={() => setShowAddModal(true)}
 						className="flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl"
@@ -1185,13 +1173,6 @@ const UserManagementPage = () => {
 					isOpen={showAddModal}
 					onClose={() => setShowAddModal(false)}
 					onUserAdded={handleUserAdded}
-				/>
-			)}
-
-			{showRoleManagement && (
-				<RoleManagementModal
-					isOpen={showRoleManagement}
-					onClose={() => setShowRoleManagement(false)}
 				/>
 			)}
 
