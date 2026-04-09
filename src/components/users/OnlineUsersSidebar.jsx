@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   LuWifi,
   LuChevronLeft,
@@ -68,28 +68,62 @@ export default function OnlineUsersSidebar() {
   const [pagination, setPagination] = useState({ page: 1, total: 0, total_pages: 1 });
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const scrollRef = useRef(null);
 
-  const fetchOnline = useCallback(async (p = 1) => {
-    setLoading(true);
+  const fetchOnline = useCallback(async (p = 1, append = false) => {
+    if (append) {
+      setLoadingMore(true);
+    } else {
+      setLoading(true);
+    }
     try {
       const res = await api.get(`/settings/online-users?page=${p}&limit=${ITEMS_PER_PAGE}&minutes=5`);
       if (res.data.success) {
-        setUsers(res.data.data.users);
+        if (append) {
+          setUsers(prev => [...prev, ...res.data.data.users]);
+        } else {
+          setUsers(res.data.data.users);
+        }
         setPagination(res.data.data.pagination);
       }
     } catch {
       // silently fail
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   }, []);
 
+  // Initial load + auto-refresh (resets to page 1)
   useEffect(() => {
-    fetchOnline(page);
-    const interval = setInterval(() => fetchOnline(page), 30000); // refresh every 30s
+    setPage(1);
+    fetchOnline(1);
+    const interval = setInterval(() => {
+      setPage(1);
+      fetchOnline(1);
+    }, 30000);
     return () => clearInterval(interval);
+  }, [fetchOnline]);
+
+  // Load more when page increments
+  useEffect(() => {
+    if (page > 1) {
+      fetchOnline(page, true);
+    }
   }, [page, fetchOnline]);
+
+  const handleScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el || loadingMore || loading) return;
+    const { scrollTop, scrollHeight, clientHeight } = el;
+    if (scrollHeight - scrollTop - clientHeight < 80) {
+      if (page < pagination.total_pages) {
+        setPage(prev => prev + 1);
+      }
+    }
+  }, [loadingMore, loading, page, pagination.total_pages]);
 
   if (collapsed) {
     return (
@@ -129,7 +163,7 @@ export default function OnlineUsersSidebar() {
             </div>
             <div className="flex items-center gap-1">
               <button
-                onClick={() => fetchOnline(page)}
+                onClick={() => { setPage(1); fetchOnline(1); }}
                 disabled={loading}
                 className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors"
                 title="Refresh"
@@ -148,7 +182,7 @@ export default function OnlineUsersSidebar() {
         </div>
 
         {/* User List */}
-        <div className="flex-1 overflow-y-auto min-h-0">
+        <div className="flex-1 overflow-y-auto min-h-0" ref={scrollRef} onScroll={handleScroll}>
           {loading && users.length === 0 ? (
             <div className="p-4 space-y-3">
               {[1, 2, 3, 4, 5].map(i => (
@@ -168,14 +202,14 @@ export default function OnlineUsersSidebar() {
             </div>
           ) : (
             <div className="divide-y divide-gray-50">
-              {users.map((user) => {
+              {users.map((user, idx) => {
                 const avatarUrl = getAvatarUrl(user.avatar);
                 const DeviceIcon = deviceIcons[user.last_login?.device_type] || LuGlobe;
                 const roleColor = ROLE_COLORS[user.role] || 'bg-gray-100 text-gray-700';
                 const roleLabel = ROLE_LABELS[user.role] || user.role;
 
                 return (
-                  <div key={user.id} className="px-4 py-2.5 hover:bg-gray-50/80 transition-colors">
+                  <div key={`${user.id}-${idx}`} className="px-4 py-2.5 hover:bg-gray-50/80 transition-colors">
                     <div className="flex items-start gap-3">
                       {/* Avatar */}
                       <div className="relative flex-shrink-0 mt-0.5">
@@ -255,32 +289,20 @@ export default function OnlineUsersSidebar() {
               })}
             </div>
           )}
-        </div>
-
-        {/* Pagination */}
-        {pagination.total_pages > 1 && (
-          <div className="px-4 py-2.5 border-t border-gray-100 flex items-center justify-between flex-shrink-0 bg-gray-50/50">
-            <span className="text-[11px] text-gray-500">
-              {pagination.page}/{pagination.total_pages}
-            </span>
-            <div className="flex gap-1">
-              <button
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="w-7 h-7 rounded-lg border border-gray-200 flex items-center justify-center hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              >
-                <LuChevronLeft className="w-3.5 h-3.5" />
-              </button>
-              <button
-                onClick={() => setPage(p => Math.min(pagination.total_pages, p + 1))}
-                disabled={page >= pagination.total_pages}
-                className="w-7 h-7 rounded-lg border border-gray-200 flex items-center justify-center hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              >
-                <LuChevronRight className="w-3.5 h-3.5" />
-              </button>
+          {/* Loading more indicator */}
+          {loadingMore && (
+            <div className="p-3 flex items-center justify-center gap-2">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-500" />
+              <span className="text-[11px] text-gray-400">Memuat lainnya...</span>
             </div>
-          </div>
-        )}
+          )}
+          {/* End indicator */}
+          {!loadingMore && page >= pagination.total_pages && users.length > ITEMS_PER_PAGE && (
+            <div className="p-2 text-center">
+              <span className="text-[10px] text-gray-300">Semua user ditampilkan</span>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
