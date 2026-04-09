@@ -235,7 +235,7 @@ export default function OnlineUsersSidebar() {
                             {user.dinas && (
                               <p className="text-[10px] text-gray-500 flex items-center gap-1 leading-tight">
                                 <LuBuilding2 className="w-2.5 h-2.5 flex-shrink-0 text-amber-500" />
-                                <span className="truncate" title={user.dinas.nama_dinas}>{user.dinas.nama_dinas}</span>
+                                <span className="truncate" title={user.dinas.nama_dinas || user.dinas.nama}>{user.dinas.nama_dinas || user.dinas.nama}</span>
                               </p>
                             )}
                           </div>

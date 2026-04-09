@@ -10,103 +10,102 @@
 // Mapping jabatan berdasarkan tipe kelembagaan
 export const JABATAN_MAPPING = {
 	rw: [
-		"Ketua RW",
-		"Sekretaris RW",
-		"Bendahara RW",
-		"Seksi Kesejahteraan Sosial",
-		"Seksi Pembangunan",
-		"Seksi Ketentraman dan Ketertiban",
+		"KETUA RW",
+		"SEKRETARIS RW",
+		"BENDAHARA RW",
+		"SEKSI KESEJAHTERAAN SOSIAL",
+		"SEKSI PEMBANGUNAN",
+		"SEKSI KETENTRAMAN DAN KETERTIBAN",
 	],
 	rt: [
-		"Ketua RT",
-		"Sekretaris RT",
-		"Bendahara RT",
-		"Seksi Kesejahteraan Sosial",
-		"Seksi Pemuda, Olahraga, dan Kesenian",
-		"Seksi Pembangunan",
-		"Seksi Kependudukan",
-		"Seksi Ketentraman dan Ketertiban",
+		"KETUA RT",
+		"SEKRETARIS RT",
+		"BENDAHARA RT",
+		"SEKSI KESEJAHTERAAN SOSIAL",
+		"SEKSI PEMUDA, OLAHRAGA, DAN KESENIAN",
+		"SEKSI PEMBANGUNAN",
+		"SEKSI KEPENDUDUKAN",
+		"SEKSI KETENTRAMAN DAN KETERTIBAN",
 	],
 	posyandu: [
-		"Ketua Posyandu",
-		"Sekretaris Posyandu",
-		"Bendahara Posyandu",
-		"Ketua Bidang Kesehatan",
-        "Ketua Bidang Sosial",
-        "Ketua Bidang Pendidikan",
-        "Ketua Bidang Pekerjaan Umum (PU)",
-        "Ketua Bidang Perumahan Rakyat",
-        "Ketua Bidang Ketertiban Umum & Perlindungan Masyarakat",
-		"Kader Posyandu",
-		
+		"KETUA POSYANDU",
+		"SEKRETARIS POSYANDU",
+		"BENDAHARA POSYANDU",
+		"KETUA BIDANG KESEHATAN",
+		"KETUA BIDANG SOSIAL",
+		"KETUA BIDANG PENDIDIKAN",
+		"KETUA BIDANG PEKERJAAN UMUM (PU)",
+		"KETUA BIDANG PERUMAHAN RAKYAT",
+		"KETUA BIDANG KETERTIBAN UMUM & PERLINDUNGAN MASYARAKAT",
+		"KADER POSYANDU",
 	],
 	satlinmas: [
-		"Kepala Satlinmas",
-        "Kepala Pelaksana",
-        "Komandan Regu Kesiapsiagaan dan Kewaspadaan Dini",
-        "Komandan Regu Pengamanan",
-        "Komandan Regu Pertolongan Pertama pada Korban Bencana dan Kebakaran",
-        "Komandan Regu Penyelamatan dan Evakuasi",
-        "Komandan Regu Dapur Umum",
-        "Anggota Satlinmas",
+		"KEPALA SATLINMAS",
+		"KEPALA PELAKSANA",
+		"KOMANDAN REGU KESIAPSIAGAAN DAN KEWASPADAAN DINI",
+		"KOMANDAN REGU PENGAMANAN",
+		"KOMANDAN REGU PERTOLONGAN PERTAMA PADA KORBAN BENCANA DAN KEBAKARAN",
+		"KOMANDAN REGU PENYELAMATAN DAN EVAKUASI",
+		"KOMANDAN REGU DAPUR UMUM",
+		"ANGGOTA SATLINMAS",
 	],
 	lpm: [
-		"Ketua LPM",
-		"Sekretaris LPM",
-		"Bendahara LPM",
-		"Ketua Bidang Pendidikan",
-        "Ketua Bidang Kesehatan",
-        "Ketua Bidang Perekonomian dan Pembangunan",
-        "Ketua Bidang Pemuda dan Olahraga",
-        "Ketua Bidang Keagamaan",
-        "Ketua Bidang Pemberdayaan Perempuan",
-        "Ketua Bidang Kesejahteraan Sosial",
-        "Anggota"
+		"KETUA LPM",
+		"SEKRETARIS LPM",
+		"BENDAHARA LPM",
+		"KETUA BIDANG PENDIDIKAN",
+		"KETUA BIDANG KESEHATAN",
+		"KETUA BIDANG PEREKONOMIAN DAN PEMBANGUNAN",
+		"KETUA BIDANG PEMUDA DAN OLAHRAGA",
+		"KETUA BIDANG KEAGAMAAN",
+		"KETUA BIDANG PEMBERDAYAAN PEREMPUAN",
+		"KETUA BIDANG KESEJAHTERAAN SOSIAL",
+		"ANGGOTA",
 	],
 	"karang-taruna": [
-		"Ketua Karang Taruna",
-		"Wakil Ketua Karang Taruna",
-		"Sekretaris Karang Taruna",
-		"Seksi Pendidikan dan Pelatihan",
-        "Seksi Usaha Kesejahteraan Sosial",
-        "Seksi Pengabdian Masyarakat",
-        "Seksi Usaha Ekonomi Produktif",
-        "Seksi Olahraga",
-        "Seksi Kesnian",
-        "Seksi Pembinaan Mental/Kerohanian",
-		"Anggota",
+		"KETUA KARANG TARUNA",
+		"WAKIL KETUA KARANG TARUNA",
+		"SEKRETARIS KARANG TARUNA",
+		"SEKSI PENDIDIKAN DAN PELATIHAN",
+		"SEKSI USAHA KESEJAHTERAAN SOSIAL",
+		"SEKSI PENGABDIAN MASYARAKAT",
+		"SEKSI USAHA EKONOMI PRODUKTIF",
+		"SEKSI OLAHRAGA",
+		"SEKSI KESNIAN",
+		"SEKSI PEMBINAAN MENTAL/KEROHANIAN",
+		"ANGGOTA",
 	],
 	pkk: [
-		"Ketua PKK",
-		"Wakil Ketua PKK",
-		"Sekretaris PKK",
-		"Bendahara PKK",
-		"Ketua Pokja I ",
-		"Ketua Pokja II ",
-		"Ketua Pokja III ",
-		"Ketua Pokja IV ",
-        "Sekretaris Pokja I ",
-        "Sekretaris Pokja II ",
-        "Sekretaris Pokja III ",
-        "Sekretaris Pokja IV ", 
-        "Bendahara Pokja I ",
-        "Bendahara Pokja II ",
-        "Bendahara Pokja III ",
-        "Bendahara Pokja IV ",
-        "Anggota Pokja I ",
-        "Anggota Pokja II ",
-        "Anggota Pokja III ",
-        "Anggota Pokja IV ",
+		"KETUA PKK",
+		"WAKIL KETUA PKK",
+		"SEKRETARIS PKK",
+		"BENDAHARA PKK",
+		"KETUA POKJA I",
+		"KETUA POKJA II",
+		"KETUA POKJA III",
+		"KETUA POKJA IV",
+		"SEKRETARIS POKJA I",
+		"SEKRETARIS POKJA II",
+		"SEKRETARIS POKJA III",
+		"SEKRETARIS POKJA IV",
+		"BENDAHARA POKJA I",
+		"BENDAHARA POKJA II",
+		"BENDAHARA POKJA III",
+		"BENDAHARA POKJA IV",
+		"ANGGOTA POKJA I",
+		"ANGGOTA POKJA II",
+		"ANGGOTA POKJA III",
+		"ANGGOTA POKJA IV",
 	],
 };
 
 // Default jabatan jika tipe tidak ditemukan
 export const DEFAULT_JABATAN = [
-	"Ketua",
-	"Wakil Ketua",
-	"Sekretaris",
-	"Bendahara",
-	"Anggota",
+	"KETUA",
+	"WAKIL KETUA",
+	"SEKRETARIS",
+	"BENDAHARA",
+	"ANGGOTA",
 ];
 
 /**
@@ -133,13 +132,26 @@ export const getJabatanList = (kelembagaanType) => {
 };
 
 /**
- * Get display name untuk jabatan (dapat dikustomisasi di masa depan)
+ * Get display name untuk jabatan (title case for proper display)
  * @param {string} jabatan - Nama jabatan
- * @returns {string} Display name
+ * @returns {string} Display name in title case
  */
 export const getDisplayJabatan = (jabatan) => {
-	// Untuk sekarang return as-is, bisa dikustomisasi nanti jika perlu
-	return jabatan;
+	if (!jabatan) return '';
+	// Convert to title case: "KETUA RW" -> "Ketua Rw" -> keep specific abbreviations uppercase
+	return jabatan
+		.toLowerCase()
+		.replace(/\b\w/g, (c) => c.toUpperCase())
+		// Preserve common abbreviations
+		.replace(/\bRw\b/g, 'RW')
+		.replace(/\bRt\b/g, 'RT')
+		.replace(/\bPkk\b/g, 'PKK')
+		.replace(/\bLpm\b/g, 'LPM')
+		.replace(/\b\(Pu\)\b/g, '(PU)')
+		.replace(/\bDan\b/g, 'dan')
+		.replace(/\bDari\b/g, 'dari')
+		.replace(/\bPada\b/g, 'pada')
+		.replace(/\bDi\b/g, 'di');
 };
 
 /**
@@ -150,7 +162,8 @@ export const getDisplayJabatan = (jabatan) => {
  */
 export const isValidJabatan = (kelembagaanType, jabatan) => {
 	const jabatanList = getJabatanList(kelembagaanType);
-	return jabatanList.includes(jabatan);
+	const upperJabatan = jabatan?.toUpperCase()?.trim();
+	return jabatanList.some(j => j.toUpperCase().trim() === upperJabatan);
 };
 
 /**

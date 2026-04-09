@@ -298,11 +298,11 @@ const PengurusJabatanList = ({
 
 		loadPengurus();
 	}, [kelembagaanType, kelembagaanId, desaId, isSuperAdmin, isAdminBidangPMD]);
-	// Buat mapping jabatan dengan pengurus
+	// Buat mapping jabatan dengan pengurus (case-insensitive comparison)
 	const jabatanMap = {};
 	defaultJabatan.forEach((jabatan) => {
 		jabatanMap[jabatan] = activePengurus.filter(
-			(pengurus) => pengurus.jabatan === jabatan,
+			(pengurus) => pengurus.jabatan?.toUpperCase()?.trim() === jabatan.toUpperCase().trim(),
 		);
 	});
 
