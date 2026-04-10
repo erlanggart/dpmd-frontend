@@ -27,6 +27,7 @@ import { useAuth } from "../context/AuthContext";
 import { useConfirm } from "../hooks/useConfirm.jsx";
 import { getAvatarUrl } from "../utils/avatarUtils";
 import { performFullLogout } from "../utils/sessionPersistence";
+import HeaderSearchBot from "../components/chatbot/HeaderSearchBot";
 
 const useResponsive = () => {
 	const [isDesktop, setIsDesktop] = React.useState(window.innerWidth >= 1024);
@@ -571,6 +572,21 @@ const SuperadminLayout = () => {
 					isDesktop ? (isSidebarCollapsed ? "lg:ml-20" : "lg:ml-64") : "pb-24"
 				}`}
 			>
+				{/* Desktop Header Bar with Search */}
+				{isDesktop && (
+					<div className="sticky top-0 z-30 bg-white/70 backdrop-blur-xl border-b border-slate-200/60 shadow-sm">
+						<div className="flex items-center justify-between px-6 py-3">
+							<div className="flex items-center gap-4">
+								<HeaderSearchBot />
+							</div>
+							<div className="flex items-center gap-3">
+								<span className="text-xs text-slate-400 font-medium">
+									{new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+								</span>
+							</div>
+						</div>
+					</div>
+				)}
 				<div className="">
 					<div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
 						<Outlet />
