@@ -6,8 +6,9 @@ import {
   LuEye, LuCheck, LuX, LuRefreshCw, LuClock, LuArrowLeft,
   LuChevronDown, LuChevronRight, LuDownload, LuClipboardList,
   LuMapPin, LuPackage, LuDollarSign, LuInfo,
-  LuShield, LuFileText, LuTriangleAlert, LuMessageCircle, LuHistory
+  LuShield, LuFileText, LuTriangleAlert, LuMessageCircle, LuHistory, LuMessageSquare
 } from "react-icons/lu";
+import ChatDrawer from "../../../components/shared/ChatDrawer";
 
 const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
 
@@ -28,6 +29,7 @@ const BankeuVerificationDetailPage = () => {
   const [submissionOpen, setSubmissionOpen] = useState(true);
   const [kecamatanConfig, setKecamatanConfig] = useState(null);
   const [catatanModal, setCatatanModal] = useState({ show: false, proposal: null });
+  const [chatProposalId, setChatProposalId] = useState(null);
   const [verificationHistory, setVerificationHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
 
@@ -2039,6 +2041,12 @@ const BankeuVerificationDetailPage = () => {
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse" />
                     <p className="text-sm font-semibold text-gray-700">Catatan Revisi Terakhir (Kecamatan)</p>
+                    {catatanModal.proposal.kecamatan_status === 'revision' && (
+                      <button onClick={() => { setChatProposalId(catatanModal.proposal.id); setCatatanModal({ show: false, proposal: null }); }}
+                        className="ml-auto flex items-center gap-1 px-2.5 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 transition-colors">
+                        <LuMessageSquare className="h-3.5 w-3.5" /> Chat Desa
+                      </button>
+                    )}
                   </div>
                   <div className="p-4 bg-orange-50/80 border border-orange-200 rounded-xl">
                     <p className="text-sm text-orange-800 leading-relaxed whitespace-pre-wrap">{catatanModal.proposal.kecamatan_catatan}</p>
@@ -2786,6 +2794,17 @@ const PdfViewerModal = ({ show, onClose, pdfData }) => {
           </div>
         </div>
       </div>
+      {/* Contextual Chat Drawer */}
+      {chatProposalId && (
+        <ChatDrawer
+          referenceType="bankeu_proposal"
+          referenceId={chatProposalId}
+          floating={false}
+          isOpen={!!chatProposalId}
+          onClose={() => setChatProposalId(null)}
+          title="Chat Proposal Bankeu"
+        />
+      )}
     </div>
   );
 };

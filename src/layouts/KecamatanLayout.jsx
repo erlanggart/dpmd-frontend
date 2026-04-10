@@ -18,7 +18,8 @@ import {
   LuClipboardCheck,
   LuPanelLeftClose,
   LuPanelLeft,
-  LuLock
+  LuLock,
+  LuMessageCircle
 } from "react-icons/lu";
 
 // Menu items configuration
@@ -34,6 +35,12 @@ const menuItems = [
     label: "Verifikasi Bankeu",
     path: "/kecamatan/bankeu",
     icon: LuBanknote,
+  },
+  {
+    id: "pesan",
+    label: "Pesan",
+    path: "/kecamatan/pesan",
+    icon: LuMessageCircle,
   },
   {
     id: "settings",

@@ -20,7 +20,8 @@ import {
   LuUser,
   LuKeyRound,
   LuPanelLeftClose,
-  LuPanelLeft
+  LuPanelLeft,
+  LuMessageCircle
 } from "react-icons/lu";
 
 // Menu items configuration for Dinas
@@ -50,6 +51,12 @@ const menuItems = [
     label: "Kelola Verifikator",
     path: "/dinas/verifikator",
     icon: LuUsers,
+  },
+  {
+    id: "pesan",
+    label: "Pesan",
+    path: "/dinas/pesan",
+    icon: LuMessageCircle,
   },
   {
     id: "konfigurasi",

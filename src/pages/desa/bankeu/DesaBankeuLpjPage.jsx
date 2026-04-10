@@ -1,8 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { LuUpload, LuFileText, LuTrash2, LuDownload, LuCircleCheck, LuCircleAlert, LuLoader, LuFile, LuMessageSquare, LuClock, LuCircleX, LuPencil } from 'react-icons/lu';
+import { LuUpload, LuFileText, LuTrash2, LuDownload, LuCircleCheck, LuCircleAlert, LuLoader, LuFile, LuMessageSquare, LuClock, LuCircleX, LuPencil, LuPlus, LuX } from 'react-icons/lu';
 import Swal from 'sweetalert2';
 import api from '../../../api';
 import toast from 'react-hot-toast';
+import ChatDrawer from '../../../components/shared/ChatDrawer';
+
+const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+const MAX_FILES = 10;
 
 const STATUS_CONFIG = {
   pending: { label: 'Menunggu Verifikasi', color: 'amber', icon: LuClock, bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', badge: 'bg-amber-100 text-amber-700' },
@@ -12,12 +16,14 @@ const STATUS_CONFIG = {
 };
 
 const DesaBankeuLpjPage = ({ tahun = 2025 }) => {
-  const [lpjData, setLpjData] = useState(null);
+  const [lpjList, setLpjList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [deleting, setDeleting] = useState(null);
   const [keterangan, setKeterangan] = useState('');
-  const [selectedFile, setSelectedFile] = useState(null);
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [chatLpjId, setChatLpjId] = useState(null);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -29,10 +35,7 @@ const DesaBankeuLpjPage = ({ tahun = 2025 }) => {
       setLoading(true);
       const response = await api.get(`/desa/bankeu-lpj?tahun=${tahun}`);
       if (response.data.success) {
-        setLpjData(response.data.data);
-        if (response.data.data?.keterangan) {
-          setKeterangan(response.data.data.keterangan);
-        }
+        setLpjList(Array.isArray(response.data.data) ? response.data.data : response.data.data ? [response.data.data] : []);
       }
     } catch (error) {
       console.error('Error fetching LPJ:', error);
@@ -43,61 +46,131 @@ const DesaBankeuLpjPage = ({ tahun = 2025 }) => {
   };
 
   const handleFileSelect = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
 
-    if (file.type !== 'application/pdf') {
-      toast.error('Hanya file PDF yang diperbolehkan');
+    const errors = [];
+    const validFiles = [];
+
+    for (const file of files) {
+      if (file.type !== 'application/pdf') {
+        errors.push(`${file.name}: Bukan file PDF. Hanya file PDF yang diperbolehkan.`);
+        continue;
+      }
+      if (file.size > MAX_FILE_SIZE) {
+        errors.push(`${file.name}: Ukuran ${(file.size / (1024 * 1024)).toFixed(1)} MB melebihi batas 100 MB. Silakan kompres file terlebih dahulu.`);
+        continue;
+      }
+      if (file.size === 0) {
+        errors.push(`${file.name}: File kosong (0 bytes). Pastikan file tidak rusak.`);
+        continue;
+      }
+      validFiles.push(file);
+    }
+
+    if (selectedFiles.length + validFiles.length > MAX_FILES) {
+      toast.error(`Maksimal ${MAX_FILES} file per upload. Saat ini sudah ada ${selectedFiles.length} file terpilih.`, { duration: 5000 });
       e.target.value = '';
       return;
     }
 
-    if (file.size > 30 * 1024 * 1024) {
-      toast.error(
-        `Ukuran file ${(file.size / (1024 * 1024)).toFixed(1)} MB melebihi batas maksimal 30 MB. Silakan kompres file PDF terlebih dahulu.`,
-        { duration: 5000, icon: '📄' }
-      );
-      e.target.value = '';
-      return;
+    if (errors.length > 0) {
+      errors.forEach(err => toast.error(err, { duration: 6000, icon: '⚠️' }));
     }
 
-    setSelectedFile(file);
+    if (validFiles.length > 0) {
+      setSelectedFiles(prev => [...prev, ...validFiles]);
+    }
+
+    e.target.value = '';
+  };
+
+  const removeSelectedFile = (index) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const getUploadErrorMessage = (error) => {
+    if (!error.response) {
+      if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+        return 'Upload gagal: Waktu upload habis (timeout). File mungkin terlalu besar atau koneksi internet lambat. Silakan coba lagi.';
+      }
+      if (error.message?.includes('Network Error') || error.message?.includes('ERR_NETWORK')) {
+        return 'Upload gagal: Tidak dapat terhubung ke server. Periksa koneksi internet Anda dan coba lagi.';
+      }
+      return 'Upload gagal: Terjadi kesalahan koneksi. Periksa koneksi internet Anda dan coba lagi.';
+    }
+
+    const status = error.response.status;
+    const serverMsg = error.response.data?.message;
+    const errorCode = error.response.data?.error_code;
+
+    if (status === 413 || errorCode === 'FILE_TOO_LARGE') {
+      return 'Upload gagal: Ukuran file terlalu besar. Maksimal 100 MB per file. Silakan kompres file PDF terlebih dahulu.';
+    }
+    if (errorCode === 'INVALID_FILE_TYPE') {
+      return 'Upload gagal: Format file tidak didukung. Hanya file PDF yang diperbolehkan.';
+    }
+    if (errorCode === 'TOO_MANY_FILES') {
+      return 'Upload gagal: Terlalu banyak file. Maksimal 10 file per upload.';
+    }
+    if (status === 403) {
+      return 'Upload gagal: Anda tidak memiliki akses untuk mengupload LPJ. Hubungi admin.';
+    }
+    if (status === 401) {
+      return 'Upload gagal: Sesi login telah berakhir. Silakan login ulang.';
+    }
+    if (status >= 500) {
+      return 'Upload gagal: Terjadi kesalahan pada server. Silakan coba lagi nanti atau hubungi admin.';
+    }
+
+    return serverMsg || 'Upload gagal: Terjadi kesalahan yang tidak diketahui. Silakan coba lagi.';
   };
 
   const handleUpload = async () => {
-    if (!selectedFile) {
-      toast.error('Pilih file terlebih dahulu');
+    if (selectedFiles.length === 0) {
+      toast.error('Pilih minimal satu file terlebih dahulu');
       return;
     }
 
     try {
       setUploading(true);
+      setUploadProgress(0);
       const formData = new FormData();
-      formData.append('file', selectedFile);
+      selectedFiles.forEach(file => formData.append('files', file));
       formData.append('tahun_anggaran', tahun);
       formData.append('keterangan', keterangan);
 
+      const totalSize = selectedFiles.reduce((sum, f) => sum + f.size, 0);
+      const timeoutMs = Math.max(60000, Math.ceil(totalSize / (50 * 1024)) * 1000); // min 60s, ~50KB/s
+
       const response = await api.post('/desa/bankeu-lpj/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 30000
+        timeout: timeoutMs,
+        onUploadProgress: (progressEvent) => {
+          const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          setUploadProgress(percent);
+        }
       });
 
       if (response.data.success) {
         toast.success(response.data.message);
-        setSelectedFile(null);
+        setSelectedFiles([]);
+        setKeterangan('');
         if (fileInputRef.current) fileInputRef.current.value = '';
         fetchLpj();
       }
     } catch (error) {
       console.error('Error uploading LPJ:', error);
-      toast.error(error.response?.data?.message || 'Gagal mengupload LPJ');
+      const errorMsg = getUploadErrorMessage(error);
+      toast.error(errorMsg, { duration: 8000, icon: '❌' });
     } finally {
       setUploading(false);
+      setUploadProgress(0);
     }
   };
 
-  const handleDelete = async () => {
-    if (!lpjData?.id) return;
+  const handleDelete = async (lpj) => {
+    if (!lpj?.id) return;
 
     const result = await Swal.fire({
       title: 'Hapus File LPJ?',
@@ -105,7 +178,7 @@ const DesaBankeuLpjPage = ({ tahun = 2025 }) => {
         <div style="text-align:left; font-size:14px; color:#4B5563;">
           <p style="margin-bottom:8px;">File berikut akan dihapus secara permanen:</p>
           <div style="background:#FEF2F2; border:1px solid #FECACA; border-radius:8px; padding:12px; margin-bottom:8px;">
-            <p style="font-weight:600; color:#991B1B;">📄 ${lpjData.nama_file}</p>
+            <p style="font-weight:600; color:#991B1B;">📄 ${lpj.nama_file}</p>
           </div>
           <p style="color:#DC2626; font-size:13px;">⚠️ Tindakan ini tidak dapat dibatalkan.</p>
         </div>
@@ -122,19 +195,17 @@ const DesaBankeuLpjPage = ({ tahun = 2025 }) => {
     if (!result.isConfirmed) return;
 
     try {
-      setDeleting(true);
-      const response = await api.delete(`/desa/bankeu-lpj/${lpjData.id}`);
+      setDeleting(lpj.id);
+      const response = await api.delete(`/desa/bankeu-lpj/${lpj.id}`);
       if (response.data.success) {
         toast.success('LPJ berhasil dihapus');
-        setLpjData(null);
-        setKeterangan('');
-        setSelectedFile(null);
+        fetchLpj();
       }
     } catch (error) {
       console.error('Error deleting LPJ:', error);
       toast.error(error.response?.data?.message || 'Gagal menghapus LPJ');
     } finally {
-      setDeleting(false);
+      setDeleting(null);
     }
   };
 
@@ -188,99 +259,96 @@ const DesaBankeuLpjPage = ({ tahun = 2025 }) => {
           </p>
         </div>
 
-        {/* Status Card */}
-        {lpjData ? (
-          <div className={`bg-white rounded-2xl shadow-lg border p-6 mb-6 ${
-            lpjData.status === 'rejected' ? 'border-red-300' :
-            lpjData.status === 'revision' ? 'border-orange-300' :
-            lpjData.status === 'approved' ? 'border-green-300' :
-            'border-amber-200'
-          }`}>
-            {(() => {
-              const status = lpjData.status || 'pending';
+        {/* Uploaded Files List */}
+        {lpjList.length > 0 ? (
+          <div className="space-y-4 mb-6">
+            <h3 className="font-semibold text-gray-700 flex items-center gap-2">
+              <LuFileText className="h-5 w-5 text-green-600" />
+              File LPJ Terupload ({lpjList.length} file)
+            </h3>
+            {lpjList.map((lpj) => {
+              const status = lpj.status || 'pending';
               const cfg = STATUS_CONFIG[status];
               const StatusIcon = cfg.icon;
               return (
-                <>
-                  <div className="flex items-center justify-between mb-4">
+                <div key={lpj.id} className={`bg-white rounded-2xl shadow-lg border p-5 ${
+                  status === 'rejected' ? 'border-red-300' :
+                  status === 'revision' ? 'border-orange-300' :
+                  status === 'approved' ? 'border-green-300' :
+                  'border-amber-200'
+                }`}>
+                  <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3">
-                      <div className={`h-10 w-10 ${cfg.bg} rounded-xl flex items-center justify-center`}>
-                        <StatusIcon className={`h-5 w-5 ${cfg.text}`} />
+                      <div className={`h-9 w-9 ${cfg.bg} rounded-xl flex items-center justify-center`}>
+                        <StatusIcon className={`h-4 w-4 ${cfg.text}`} />
                       </div>
-                      <div>
-                        <h3 className={`font-semibold ${cfg.text}`}>LPJ Sudah Diupload</h3>
-                        <p className={`text-sm ${cfg.text} opacity-75`}>File berhasil tersimpan di sistem</p>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-gray-800 truncate text-sm">{lpj.nama_file}</p>
+                        <p className="text-xs text-gray-500">
+                          {formatFileSize(lpj.file_size)} • {formatDate(lpj.created_at)}
+                        </p>
                       </div>
                     </div>
-                    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${cfg.badge}`}>
-                      <StatusIcon className="h-3.5 w-3.5" />
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${cfg.badge}`}>
+                      <StatusIcon className="h-3 w-3" />
                       {cfg.label}
                     </span>
                   </div>
 
-                  {/* DPMD Catatan - Show if rejected or revision */}
-                  {lpjData.dpmd_catatan && ['rejected', 'revision'].includes(status) && (
-                    <div className={`${cfg.bg} border ${cfg.border} rounded-xl p-4 mb-4`}>
+                  {/* DPMD Catatan */}
+                  {lpj.dpmd_catatan && ['rejected', 'revision'].includes(status) && (
+                    <div className={`${cfg.bg} border ${cfg.border} rounded-xl p-3 mb-3`}>
                       <div className="flex items-start gap-2">
                         <LuMessageSquare className={`h-4 w-4 ${cfg.text} mt-0.5 flex-shrink-0`} />
-                        <div>
-                          <p className={`text-sm font-semibold ${cfg.text} mb-1`}>
-                            Catatan dari DPMD:
-                          </p>
-                          <p className={`text-sm ${cfg.text}`}>{lpjData.dpmd_catatan}</p>
+                        <div className="flex-1">
+                          <p className={`text-xs font-semibold ${cfg.text} mb-0.5`}>Catatan DPMD:</p>
+                          <p className={`text-xs ${cfg.text}`}>{lpj.dpmd_catatan}</p>
                         </div>
+                        {status === 'revision' && (
+                          <button
+                            onClick={() => setChatLpjId(lpj.id)}
+                            className="flex items-center gap-1 px-2.5 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 transition-colors flex-shrink-0"
+                          >
+                            <LuMessageSquare className="h-3.5 w-3.5" />
+                            Chat
+                          </button>
+                        )}
                       </div>
                     </div>
                   )}
-                </>
+
+                  {lpj.keterangan && (
+                    <p className="text-xs text-gray-500 mb-3"><span className="font-medium">Keterangan:</span> {lpj.keterangan}</p>
+                  )}
+
+                  {/* Actions */}
+                  <div className="flex flex-wrap gap-2">
+                    <a
+                      href={getFileUrl(lpj.file_path)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors text-xs font-medium shadow-sm"
+                    >
+                      <LuDownload className="h-3.5 w-3.5" />
+                      Lihat / Download
+                    </a>
+                    <button
+                      onClick={() => handleDelete(lpj)}
+                      disabled={deleting === lpj.id || status === 'approved'}
+                      className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border transition-colors ${
+                        status === 'approved'
+                          ? 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed'
+                          : 'bg-red-50 text-red-600 hover:bg-red-100 border-red-200'
+                      }`}
+                      title={status === 'approved' ? 'LPJ yang sudah disetujui tidak dapat dihapus' : ''}
+                    >
+                      {deleting === lpj.id ? <LuLoader className="h-3.5 w-3.5 animate-spin" /> : <LuTrash2 className="h-3.5 w-3.5" />}
+                      {deleting === lpj.id ? 'Menghapus...' : 'Hapus'}
+                    </button>
+                  </div>
+                </div>
               );
-            })()}
-
-            {/* File info */}
-            <div className="bg-gray-50 rounded-xl p-4 mb-4">
-              <div className="flex items-center gap-3">
-                <div className="h-12 w-12 bg-white rounded-lg flex items-center justify-center shadow-sm">
-                  <LuFile className="h-6 w-6 text-red-500" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-800 truncate">{lpjData.nama_file}</p>
-                  <p className="text-sm text-gray-500">
-                    {formatFileSize(lpjData.file_size)} • Diupload {formatDate(lpjData.created_at)}
-                  </p>
-                </div>
-              </div>
-              {lpjData.keterangan && (
-                <div className="mt-3 pt-3 border-t border-green-200">
-                  <p className="text-sm text-gray-600"><span className="font-medium">Keterangan:</span> {lpjData.keterangan}</p>
-                </div>
-              )}
-            </div>
-
-            {/* Actions */}
-            <div className="flex flex-wrap gap-3">
-              <a
-                href={getFileUrl(lpjData.file_path)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm"
-              >
-                <LuDownload className="h-4 w-4" />
-                Lihat / Download
-              </a>
-              <button
-                onClick={handleDelete}
-                disabled={deleting || lpjData.status === 'approved'}
-                className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
-                  lpjData.status === 'approved'
-                    ? 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed'
-                    : 'bg-red-50 text-red-600 hover:bg-red-100 border-red-200'
-                }`}
-                title={lpjData.status === 'approved' ? 'LPJ yang sudah disetujui tidak dapat dihapus' : ''}
-              >
-                {deleting ? <LuLoader className="h-4 w-4 animate-spin" /> : <LuTrash2 className="h-4 w-4" />}
-                {deleting ? 'Menghapus...' : 'Hapus LPJ'}
-              </button>
-            </div>
+            })}
           </div>
         ) : (
           <div className="bg-white rounded-2xl shadow-lg border border-amber-200 p-6 mb-6">
@@ -300,18 +368,19 @@ const DesaBankeuLpjPage = ({ tahun = 2025 }) => {
         <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
           <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
             <LuUpload className="h-5 w-5 text-blue-600" />
-            {lpjData ? 'Upload Ulang LPJ' : 'Upload LPJ'}
+            Upload LPJ
           </h3>
 
           {/* File Input */}
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               File LPJ <span className="text-red-500">*</span>
+              <span className="text-gray-400 font-normal ml-1">(Bisa pilih beberapa file sekaligus)</span>
             </label>
             <div
               onClick={() => fileInputRef.current?.click()}
-              className={`relative border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${
-                selectedFile
+              className={`relative border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all ${
+                selectedFiles.length > 0
                   ? 'border-blue-400 bg-blue-50'
                   : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50/50'
               }`}
@@ -320,24 +389,33 @@ const DesaBankeuLpjPage = ({ tahun = 2025 }) => {
                 ref={fileInputRef}
                 type="file"
                 accept=".pdf"
+                multiple
                 onChange={handleFileSelect}
                 className="hidden"
               />
-              {selectedFile ? (
-                <div>
-                  <LuFile className="h-10 w-10 text-blue-500 mx-auto mb-2" />
-                  <p className="font-medium text-blue-700">{selectedFile.name}</p>
-                  <p className="text-sm text-blue-500 mt-1">{formatFileSize(selectedFile.size)}</p>
-                  <p className="text-xs text-gray-400 mt-2">Klik untuk mengganti file</p>
-                </div>
-              ) : (
-                <div>
-                  <LuUpload className="h-10 w-10 text-gray-400 mx-auto mb-2" />
-                  <p className="font-medium text-gray-600">Klik untuk memilih file</p>
-                  <p className="text-sm text-gray-400 mt-1">Format: PDF, Maks: 30MB</p>
-                </div>
-              )}
+              <LuPlus className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+              <p className="font-medium text-gray-600">Klik untuk memilih file</p>
+              <p className="text-sm text-gray-400 mt-1">Format: PDF, Maks: 100 MB per file, Maks: {MAX_FILES} file</p>
             </div>
+
+            {/* Selected Files List */}
+            {selectedFiles.length > 0 && (
+              <div className="mt-3 space-y-2">
+                <p className="text-xs font-medium text-gray-500">{selectedFiles.length} file dipilih ({formatFileSize(selectedFiles.reduce((s, f) => s + f.size, 0))} total)</p>
+                {selectedFiles.map((file, idx) => (
+                  <div key={idx} className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+                    <LuFile className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-blue-700 truncate">{file.name}</p>
+                      <p className="text-xs text-blue-500">{formatFileSize(file.size)}</p>
+                    </div>
+                    <button onClick={(e) => { e.stopPropagation(); removeSelectedFile(idx); }} className="p-1 hover:bg-blue-100 rounded-lg">
+                      <LuX className="h-4 w-4 text-blue-400 hover:text-red-500" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Keterangan */}
@@ -354,12 +432,25 @@ const DesaBankeuLpjPage = ({ tahun = 2025 }) => {
             />
           </div>
 
+          {/* Upload Progress */}
+          {uploading && uploadProgress > 0 && (
+            <div className="mb-4">
+              <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+                <span>Mengupload...</span>
+                <span>{uploadProgress}%</span>
+              </div>
+              <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div className="h-full bg-blue-500 rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
+              </div>
+            </div>
+          )}
+
           {/* Submit Button */}
           <button
             onClick={handleUpload}
-            disabled={!selectedFile || uploading}
+            disabled={selectedFiles.length === 0 || uploading}
             className={`w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-white font-semibold transition-all ${
-              !selectedFile || uploading
+              selectedFiles.length === 0 || uploading
                 ? 'bg-gray-300 cursor-not-allowed'
                 : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg shadow-blue-500/25 hover:shadow-xl'
             }`}
@@ -367,12 +458,12 @@ const DesaBankeuLpjPage = ({ tahun = 2025 }) => {
             {uploading ? (
               <>
                 <LuLoader className="h-5 w-5 animate-spin" />
-                Mengupload...
+                Mengupload... {uploadProgress > 0 ? `(${uploadProgress}%)` : ''}
               </>
             ) : (
               <>
                 <LuUpload className="h-5 w-5" />
-                {lpjData ? 'Upload Ulang LPJ' : 'Upload LPJ'}
+                Upload {selectedFiles.length > 0 ? `${selectedFiles.length} File LPJ` : 'LPJ'}
               </>
             )}
           </button>
@@ -381,14 +472,24 @@ const DesaBankeuLpjPage = ({ tahun = 2025 }) => {
           <div className="mt-4 bg-blue-50 border-l-4 border-blue-500 p-3 rounded-lg">
             <p className="text-xs text-blue-700">
               <strong>Informasi:</strong> File LPJ yang diupload akan diverifikasi oleh DPMD.
-              {lpjData && lpjData.status === 'approved' && ' LPJ telah disetujui.'}
-              {lpjData && ['rejected', 'revision'].includes(lpjData.status) && ' Silakan upload ulang sesuai catatan DPMD.'}
-              {lpjData && lpjData.status === 'pending' && ' Menunggu verifikasi dari DPMD.'}
-              {!lpjData && ' Setelah upload, DPMD akan memverifikasi LPJ Anda.'}
+              Anda dapat mengupload beberapa file LPJ sekaligus (maks {MAX_FILES} file, 100 MB per file).
+              Setelah upload, DPMD akan memverifikasi LPJ Anda.
             </p>
           </div>
         </div>
       </div>
+
+      {/* Contextual Chat Drawer */}
+      {chatLpjId && (
+        <ChatDrawer
+          referenceType="bankeu_lpj"
+          referenceId={chatLpjId}
+          floating={false}
+          isOpen={!!chatLpjId}
+          onClose={() => setChatLpjId(null)}
+          title="Chat LPJ Bankeu"
+        />
+      )}
     </div>
   );
 };

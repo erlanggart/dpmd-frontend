@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Download, Search, ChevronDown, ChevronUp, Eye, CheckCircle2, XCircle, BarChart3, MapPin, Loader2, ShieldCheck, ShieldX, RotateCcw, MessageSquare, Clock, X } from 'lucide-react';
+import { FileText, Download, Search, ChevronDown, ChevronUp, Eye, CheckCircle2, XCircle, BarChart3, MapPin, Loader2, ShieldCheck, ShieldX, RotateCcw, MessageSquare, Clock, X, Trash2 } from 'lucide-react';
 import api from '../../../../api';
 import toast from 'react-hot-toast';
+import Swal from 'sweetalert2';
 import * as XLSX from 'xlsx';
+import ChatDrawer from '../../../../components/shared/ChatDrawer';
 
 const STATUS_CONFIG = {
   pending: { label: 'Menunggu', color: 'amber', bgBadge: 'bg-amber-100 text-amber-700', icon: Clock },
@@ -21,6 +23,8 @@ const BankeuLpjMonitoringPage = ({ tahun = 2025 }) => {
   const [verifyAction, setVerifyAction] = useState('');
   const [verifyCatatan, setVerifyCatatan] = useState('');
   const [verifying, setVerifying] = useState(false);
+  const [deletingLpj, setDeletingLpj] = useState(null);
+  const [chatLpjId, setChatLpjId] = useState(null);
 
   useEffect(() => {
     fetchData();
@@ -90,7 +94,7 @@ const BankeuLpjMonitoringPage = ({ tahun = 2025 }) => {
         } else if (filterStatus === 'belum') {
           filteredDesa = filteredDesa.filter(d => !d.has_lpj);
         } else if (['pending', 'approved', 'rejected', 'revision'].includes(filterStatus)) {
-          filteredDesa = filteredDesa.filter(d => d.has_lpj && d.lpj?.status === filterStatus);
+          filteredDesa = filteredDesa.filter(d => d.has_lpj && d.lpj_files?.some(f => f.status === filterStatus));
         }
 
         // Filter by search term
@@ -145,25 +149,83 @@ const BankeuLpjMonitoringPage = ({ tahun = 2025 }) => {
     }
   };
 
+  const handleAdminDelete = async (lpj, desaNama) => {
+    const result = await Swal.fire({
+      title: 'Hapus LPJ Desa?',
+      html: `
+        <div style="text-align:left; font-size:14px; color:#4B5563;">
+          <p style="margin-bottom:8px;">File LPJ berikut akan dihapus:</p>
+          <div style="background:#FEF2F2; border:1px solid #FECACA; border-radius:8px; padding:12px; margin-bottom:8px;">
+            <p style="font-weight:600; color:#991B1B;">📄 ${lpj.nama_file}</p>
+            <p style="font-size:12px; color:#6B7280;">Desa ${desaNama}</p>
+          </div>
+          <p style="color:#DC2626; font-size:13px;">⚠️ Tindakan ini tidak dapat dibatalkan.</p>
+        </div>
+      `,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#DC2626',
+      cancelButtonColor: '#6B7280',
+      confirmButtonText: '🗑️ Ya, Hapus',
+      cancelButtonText: 'Batal',
+      reverseButtons: true
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      setDeletingLpj(lpj.id);
+      const res = await api.delete(`/dpmd/bankeu-lpj/${lpj.id}`);
+      if (res.data.success) {
+        toast.success(res.data.message);
+        fetchData();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Gagal menghapus LPJ');
+    } finally {
+      setDeletingLpj(null);
+    }
+  };
+
   const handleExportExcel = () => {
     if (!data?.kecamatan) return;
 
     const rows = [];
     data.kecamatan.forEach(kec => {
       kec.desa_list.forEach(desa => {
-        rows.push({
-          'Kecamatan': kec.kecamatan_nama,
-          'Desa': desa.desa_nama,
-          'Status LPJ': desa.has_lpj ? 'Sudah Upload' : 'Belum Upload',
-          'Status Verifikasi': desa.has_lpj ? (STATUS_CONFIG[desa.lpj?.status || 'pending']?.label || '-') : '-',
-          'Nama File': desa.lpj?.nama_file || '-',
-          'Ukuran File': desa.lpj ? formatFileSize(desa.lpj.file_size) : '-',
-          'Tanggal Upload': desa.lpj ? formatDate(desa.lpj.created_at) : '-',
-          'Diupload Oleh': desa.lpj?.uploaded_by_name || '-',
-          'Catatan DPMD': desa.lpj?.dpmd_catatan || '-',
-          'Diverifikasi Oleh': desa.lpj?.verified_by_name || '-',
-          'Keterangan': desa.lpj?.keterangan || '-'
-        });
+        if (desa.has_lpj && desa.lpj_files?.length > 0) {
+          desa.lpj_files.forEach((lpj, idx) => {
+            rows.push({
+              'Kecamatan': kec.kecamatan_nama,
+              'Desa': desa.desa_nama,
+              'File Ke': idx + 1,
+              'Status LPJ': 'Sudah Upload',
+              'Status Verifikasi': STATUS_CONFIG[lpj.status || 'pending']?.label || '-',
+              'Nama File': lpj.nama_file || '-',
+              'Ukuran File': formatFileSize(lpj.file_size),
+              'Tanggal Upload': formatDate(lpj.created_at),
+              'Diupload Oleh': lpj.uploaded_by_name || '-',
+              'Catatan DPMD': lpj.dpmd_catatan || '-',
+              'Diverifikasi Oleh': lpj.verified_by_name || '-',
+              'Keterangan': lpj.keterangan || '-'
+            });
+          });
+        } else {
+          rows.push({
+            'Kecamatan': kec.kecamatan_nama,
+            'Desa': desa.desa_nama,
+            'File Ke': '-',
+            'Status LPJ': 'Belum Upload',
+            'Status Verifikasi': '-',
+            'Nama File': '-',
+            'Ukuran File': '-',
+            'Tanggal Upload': '-',
+            'Diupload Oleh': '-',
+            'Catatan DPMD': '-',
+            'Diverifikasi Oleh': '-',
+            'Keterangan': '-'
+          });
+        }
       });
     });
 
@@ -373,84 +435,101 @@ const BankeuLpjMonitoringPage = ({ tahun = 2025 }) => {
                 <div className="border-t border-gray-100">
                   <div className="divide-y divide-gray-100">
                     {kec.desa_list.map((desa) => (
-                      <div
-                        key={desa.desa_id}
-                        className={`flex items-center justify-between px-4 py-3 ${
-                          desa.has_lpj
-                            ? desa.lpj?.status === 'approved' ? 'bg-green-50/50'
-                              : desa.lpj?.status === 'rejected' ? 'bg-red-50/50'
-                              : desa.lpj?.status === 'revision' ? 'bg-orange-50/50'
-                              : 'bg-amber-50/30'
-                            : 'bg-white'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div key={desa.desa_id} className="px-4 py-3">
+                        <div className="flex items-center gap-3 mb-1">
                           {desa.has_lpj ? (
-                            (() => {
-                              const status = desa.lpj?.status || 'pending';
-                              const cfg = STATUS_CONFIG[status];
-                              const Icon = cfg.icon;
-                              return <Icon className={`h-5 w-5 flex-shrink-0 ${
-                                status === 'approved' ? 'text-green-500' :
-                                status === 'rejected' ? 'text-red-500' :
-                                status === 'revision' ? 'text-orange-500' :
-                                'text-amber-500'
-                              }`} />;
-                            })()
+                            <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />
                           ) : (
                             <XCircle className="h-5 w-5 text-gray-300 flex-shrink-0" />
                           )}
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                              <p className={`font-medium text-sm ${desa.has_lpj ? 'text-gray-800' : 'text-gray-500'}`}>
-                                {desa.desa_nama}
-                              </p>
-                              {desa.has_lpj && desa.lpj && (
-                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${STATUS_CONFIG[desa.lpj.status || 'pending'].bgBadge}`}>
-                                  {STATUS_CONFIG[desa.lpj.status || 'pending'].label}
-                                </span>
-                              )}
-                            </div>
-                            {desa.has_lpj && desa.lpj && (
-                              <p className="text-xs text-gray-400 truncate">
-                                {desa.lpj.nama_file} • {formatFileSize(desa.lpj.file_size)} • {formatDate(desa.lpj.created_at)}
-                              </p>
-                            )}
-                            {desa.has_lpj && desa.lpj?.dpmd_catatan && ['rejected', 'revision'].includes(desa.lpj.status) && (
-                              <p className="text-xs text-red-500 mt-0.5 flex items-center gap-1">
-                                <MessageSquare className="h-3 w-3" />
-                                {desa.lpj.dpmd_catatan}
-                              </p>
-                            )}
-                          </div>
+                          <p className={`font-medium text-sm ${desa.has_lpj ? 'text-gray-800' : 'text-gray-500'}`}>
+                            {desa.desa_nama}
+                          </p>
+                          {desa.has_lpj && (
+                            <span className="text-xs text-gray-400">({desa.lpj_files?.length || 0} file)</span>
+                          )}
                         </div>
 
-                        {desa.has_lpj && desa.lpj && (
-                          <div className="flex items-center gap-2 flex-shrink-0 ml-3">
-                            <a
-                              href={getFileUrl(desa.lpj.file_path)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-xs font-medium transition-colors"
-                              title="Lihat / Download file"
-                            >
-                              <Eye className="h-3.5 w-3.5" />
-                              <span className="hidden sm:inline">Lihat</span>
-                            </a>
-                            <button
-                              onClick={() => openVerifyModal(desa.lpj, desa.desa_nama)}
-                              className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                                desa.lpj.status === 'approved'
-                                  ? 'bg-green-50 text-green-600 hover:bg-green-100'
-                                  : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
-                              }`}
-                              title="Verifikasi LPJ"
-                            >
-                              <ShieldCheck className="h-3.5 w-3.5" />
-                              <span className="hidden sm:inline">{desa.lpj.status === 'approved' ? 'Ubah' : 'Verifikasi'}</span>
-                            </button>
-                          </div>
-                        )}
+                        {/* Multiple LPJ files */}
+                        {desa.has_lpj && desa.lpj_files?.map((lpj) => {
+                          const status = lpj.status || 'pending';
+                          const cfg = STATUS_CONFIG[status];
+                          const Icon = cfg.icon;
+                          return (
+                            <div key={lpj.id} className={`ml-8 mt-2 rounded-lg border p-3 ${
+                              status === 'approved' ? 'bg-green-50/50 border-green-200' :
+                              status === 'rejected' ? 'bg-red-50/50 border-red-200' :
+                              status === 'revision' ? 'bg-orange-50/50 border-orange-200' :
+                              'bg-amber-50/30 border-amber-200'
+                            }`}>
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2 min-w-0 flex-1">
+                                  <Icon className={`h-4 w-4 flex-shrink-0 ${
+                                    status === 'approved' ? 'text-green-500' :
+                                    status === 'rejected' ? 'text-red-500' :
+                                    status === 'revision' ? 'text-orange-500' :
+                                    'text-amber-500'
+                                  }`} />
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-xs font-medium text-gray-700 truncate">{lpj.nama_file}</p>
+                                    <p className="text-[10px] text-gray-400">
+                                      {formatFileSize(lpj.file_size)} • {formatDate(lpj.created_at)}
+                                    </p>
+                                  </div>
+                                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${cfg.bgBadge}`}>
+                                    {cfg.label}
+                                  </span>
+                                </div>
+
+                                <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
+                                  <a
+                                    href={getFileUrl(lpj.file_path)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-[10px] font-medium transition-colors"
+                                  >
+                                    <Eye className="h-3 w-3" />
+                                    Lihat
+                                  </a>
+                                  <button
+                                    onClick={() => openVerifyModal(lpj, desa.desa_nama)}
+                                    className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium transition-colors ${
+                                      status === 'approved'
+                                        ? 'bg-green-50 text-green-600 hover:bg-green-100'
+                                        : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
+                                    }`}
+                                  >
+                                    <ShieldCheck className="h-3 w-3" />
+                                    {status === 'approved' ? 'Ubah' : 'Verifikasi'}
+                                  </button>
+                                  <button
+                                    onClick={() => handleAdminDelete(lpj, desa.desa_nama)}
+                                    disabled={deletingLpj === lpj.id}
+                                    className="inline-flex items-center gap-1 px-2 py-1 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg text-[10px] font-medium transition-colors"
+                                    title="Hapus LPJ"
+                                  >
+                                    {deletingLpj === lpj.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+                                    Hapus
+                                  </button>
+                                </div>
+                              </div>
+                              {lpj.dpmd_catatan && ['rejected', 'revision'].includes(status) && (
+                                <div className="flex items-center gap-2 mt-1.5 ml-6">
+                                  <p className="text-[10px] text-red-500 flex items-center gap-1 flex-1">
+                                    <MessageSquare className="h-3 w-3" />
+                                    {lpj.dpmd_catatan}
+                                  </p>
+                                  {status === 'revision' && (
+                                    <button onClick={() => setChatLpjId(lpj.id)}
+                                      className="flex items-center gap-1 px-2 py-1 bg-green-600 text-white rounded text-[10px] font-medium hover:bg-green-700 transition-colors flex-shrink-0">
+                                      <MessageSquare className="h-3 w-3" /> Chat
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     ))}
                   </div>
@@ -593,6 +672,18 @@ const BankeuLpjMonitoringPage = ({ tahun = 2025 }) => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Contextual Chat Drawer */}
+      {chatLpjId && (
+        <ChatDrawer
+          referenceType="bankeu_lpj"
+          referenceId={chatLpjId}
+          floating={false}
+          isOpen={!!chatLpjId}
+          onClose={() => setChatLpjId(null)}
+          title="Chat LPJ Bankeu"
+        />
       )}
     </div>
   );

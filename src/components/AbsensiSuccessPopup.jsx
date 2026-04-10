@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FiCheckCircle, FiX } from "react-icons/fi";
 
@@ -8,14 +8,7 @@ const getStorageUrl = (imagePath) => {
 	return `${base}/storage/${imagePath}`;
 };
 
-const AbsensiSuccessPopup = ({ show, onClose, data, autoCloseMs = 4000 }) => {
-	useEffect(() => {
-		if (show && autoCloseMs > 0) {
-			const timer = setTimeout(() => onClose(), autoCloseMs);
-			return () => clearTimeout(timer);
-		}
-	}, [show, autoCloseMs, onClose]);
-
+const AbsensiSuccessPopup = ({ show, onClose, data }) => {
 	return (
 		<AnimatePresence>
 			{show && (
@@ -25,7 +18,6 @@ const AbsensiSuccessPopup = ({ show, onClose, data, autoCloseMs = 4000 }) => {
 					exit={{ opacity: 0 }}
 					transition={{ duration: 0.2 }}
 					className="fixed inset-0 z-[100] flex items-center justify-center p-6"
-					onClick={onClose}
 				>
 					{/* Backdrop */}
 					<motion.div
@@ -104,15 +96,16 @@ const AbsensiSuccessPopup = ({ show, onClose, data, autoCloseMs = 4000 }) => {
 								</motion.p>
 							)}
 
-							{/* Tap to close hint */}
-							<motion.p
-								initial={{ opacity: 0 }}
-								animate={{ opacity: 0.4 }}
-								transition={{ delay: 1 }}
-								className="text-[10px] text-slate-400 mt-4"
+							{/* Close button */}
+							<motion.button
+								initial={{ opacity: 0, y: 10 }}
+								animate={{ opacity: 1, y: 0 }}
+								transition={{ delay: 0.5 }}
+								onClick={onClose}
+								className="mt-5 w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-semibold text-sm transition-colors"
 							>
-								Ketuk di luar untuk menutup
-							</motion.p>
+								Tutup
+							</motion.button>
 						</div>
 					</motion.div>
 				</motion.div>

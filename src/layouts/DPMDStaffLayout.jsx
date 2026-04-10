@@ -453,6 +453,7 @@ const DPMDStaffLayout = () => {
 		{ path: "/dpmd/perjadin", label: "Perjadin", icon: 'briefcase', color: 'text-amber-600', gradient: 'from-amber-500 to-orange-600' },
 		{ path: "/dpmd/disposisi", label: "Disposisi", icon: 'mail', color: 'text-purple-600', gradient: 'from-purple-500 to-indigo-600' },
 		{ path: "/dpmd/video-meeting", label: "Video Meeting", icon: 'video', color: 'text-cyan-600', gradient: 'from-cyan-500 to-teal-600' },
+		{ path: "/dpmd/pesan", label: "Pesan", icon: 'mail', color: 'text-indigo-600', gradient: 'from-indigo-500 to-purple-600' },
 	];
 
 	// Mobile bottom nav - simplified 3 items with Bidang as main center button

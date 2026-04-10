@@ -73,6 +73,14 @@ const menuItems = [
     color: "text-rose-600",
     gradient: "from-rose-500 to-pink-600",
   },
+  {
+    id: "pesan",
+    label: "Pesan",
+    path: "/desa/pesan",
+    icon: "mail",
+    color: "text-indigo-600",
+    gradient: "from-indigo-500 to-purple-600",
+  },
 ];
 
 // Responsive hook

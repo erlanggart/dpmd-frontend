@@ -3,12 +3,13 @@ import {
   LuSearch, LuEye, LuCircleCheck, LuCircleX, 
   LuRefreshCw, LuClock, LuFileText, LuTriangleAlert,
   LuChevronDown, LuChevronUp, LuMapPin, LuX, LuPackage, LuDollarSign,
-  LuMessageCircle, LuHistory, LuDownload
+  LuMessageCircle, LuHistory, LuDownload, LuMessageSquare
 } from 'react-icons/lu';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import api from '../../api';
 import { useNetwork } from '../../context/NetworkContext';
+import ChatDrawer from '../../components/shared/ChatDrawer';
 
 const DinasVerificationPage = ({ tahun = 2026 }) => {
   const navigate = useNavigate();
@@ -31,6 +32,7 @@ const DinasVerificationPage = ({ tahun = 2026 }) => {
   const [catatanModal, setCatatanModal] = useState({ show: false, proposal: null });
   const [verificationHistory, setVerificationHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [chatProposalId, setChatProposalId] = useState(null);
 
   // Handle refresh data
   const handleRefresh = async () => {
@@ -1266,6 +1268,12 @@ const DinasVerificationPage = ({ tahun = 2026 }) => {
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
                     <p className="text-sm font-semibold text-gray-700">Catatan Revisi Terakhir</p>
+                    {catatanModal.proposal.dinas_status === 'revision' && (
+                      <button onClick={() => { setChatProposalId(catatanModal.proposal.id); setCatatanModal({ show: false, proposal: null }); }}
+                        className="ml-auto flex items-center gap-1 px-2.5 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 transition-colors">
+                        <LuMessageSquare className="h-3.5 w-3.5" /> Chat Desa
+                      </button>
+                    )}
                   </div>
                   <div className="p-4 bg-red-50/80 border border-red-200 rounded-xl">
                     <p className="text-sm text-red-800 leading-relaxed whitespace-pre-wrap">{catatanModal.proposal.dinas_catatan}</p>
@@ -1367,6 +1375,18 @@ const DinasVerificationPage = ({ tahun = 2026 }) => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Contextual Chat Drawer */}
+      {chatProposalId && (
+        <ChatDrawer
+          referenceType="bankeu_proposal"
+          referenceId={chatProposalId}
+          floating={false}
+          isOpen={!!chatProposalId}
+          onClose={() => setChatProposalId(null)}
+          title="Chat Proposal Bankeu"
+        />
       )}
     </div>
   );

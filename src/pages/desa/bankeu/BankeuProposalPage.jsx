@@ -5,8 +5,9 @@ import { useNetwork } from "../../../context/NetworkContext";
 import {
   LuUpload, LuEye, LuClock, LuCheck, LuX, LuRefreshCw, 
   LuChevronDown, LuChevronRight, LuSend, LuTrash2, LuInfo, LuDownload, LuFileText, LuImage,
-  LuPackage, LuMapPin, LuDollarSign, LuTriangleAlert, LuPencil, LuSave, LuWrench
+  LuPackage, LuMapPin, LuDollarSign, LuTriangleAlert, LuPencil, LuSave, LuWrench, LuMessageSquare
 } from "react-icons/lu";
+import ChatDrawer from "../../../components/shared/ChatDrawer";
 
 const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
 
@@ -202,6 +203,8 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
 
   // Submission control state
   const [submissionOpen, setSubmissionOpen] = useState(true);
+  // Chat drawer state
+  const [chatProposalId, setChatProposalId] = useState(null);
 
   useEffect(() => {
     fetchData();
@@ -3296,6 +3299,12 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                                   </p>
                                   <p className="text-sm text-red-700">{proposal.dinas_catatan}</p>
                                 </div>
+                                {proposal.dinas_status === 'revision' && (
+                                  <button onClick={() => setChatProposalId(proposal.id)}
+                                    className="flex items-center gap-1 px-2.5 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 transition-colors flex-shrink-0">
+                                    <LuMessageSquare className="h-3.5 w-3.5" /> Chat
+                                  </button>
+                                )}
                               </div>
                             </div>
                           )}
@@ -3311,6 +3320,12 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                                   </p>
                                   <p className="text-sm text-purple-700">{proposal.kecamatan_catatan}</p>
                                 </div>
+                                {proposal.kecamatan_status === 'revision' && (
+                                  <button onClick={() => setChatProposalId(proposal.id)}
+                                    className="flex items-center gap-1 px-2.5 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 transition-colors flex-shrink-0">
+                                    <LuMessageSquare className="h-3.5 w-3.5" /> Chat
+                                  </button>
+                                )}
                               </div>
                             </div>
                           )}
@@ -3833,6 +3848,12 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                                   </p>
                                   <p className="text-sm text-red-700">{proposal.dinas_catatan}</p>
                                 </div>
+                                {proposal.dinas_status === 'revision' && (
+                                  <button onClick={() => setChatProposalId(proposal.id)}
+                                    className="flex items-center gap-1 px-2.5 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 transition-colors flex-shrink-0">
+                                    <LuMessageSquare className="h-3.5 w-3.5" /> Chat
+                                  </button>
+                                )}
                               </div>
                             </div>
                           )}
@@ -3848,6 +3869,12 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                                   </p>
                                   <p className="text-sm text-purple-700">{proposal.kecamatan_catatan}</p>
                                 </div>
+                                {proposal.kecamatan_status === 'revision' && (
+                                  <button onClick={() => setChatProposalId(proposal.id)}
+                                    className="flex items-center gap-1 px-2.5 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 transition-colors flex-shrink-0">
+                                    <LuMessageSquare className="h-3.5 w-3.5" /> Chat
+                                  </button>
+                                )}
                               </div>
                             </div>
                           )}
@@ -4324,6 +4351,18 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Contextual Chat Drawer for Proposal */}
+      {chatProposalId && (
+        <ChatDrawer
+          referenceType="bankeu_proposal"
+          referenceId={chatProposalId}
+          floating={false}
+          isOpen={!!chatProposalId}
+          onClose={() => setChatProposalId(null)}
+          title="Chat Proposal Bankeu"
+        />
       )}
     </>
   );
