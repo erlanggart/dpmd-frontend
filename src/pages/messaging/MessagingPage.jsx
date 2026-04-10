@@ -89,7 +89,7 @@ function Avatar({ user, size = 'md', online }) {
 	return (
 		<div className="relative flex-shrink-0">
 			{user?.avatar ? (
-				<img src={`${API_URL}/storage/uploads/avatars/${user.avatar}`} alt=""
+				<img src={`${API_URL}${user.avatar}`} alt=""
 					style={{ width: dim, height: dim }}
 					className="rounded-full object-cover" />
 			) : (
