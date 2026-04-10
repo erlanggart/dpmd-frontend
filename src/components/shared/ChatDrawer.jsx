@@ -3,7 +3,7 @@ import { io } from 'socket.io-client';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   FiMessageCircle, FiSend, FiPaperclip, FiX, FiFile, FiDownload,
-  FiLoader, FiChevronDown, FiTrash2
+  FiLoader, FiChevronDown, FiTrash2, FiArrowLeft, FiImage
 } from 'react-icons/fi';
 import api from '../../api';
 
@@ -37,35 +37,102 @@ function formatFileSize(bytes) {
   return (bytes / 1048576).toFixed(1) + ' MB';
 }
 
-const AVATAR_BG = ['bg-blue-500', 'bg-emerald-500', 'bg-purple-500', 'bg-orange-500', 'bg-pink-500', 'bg-teal-500'];
+const AVATAR_COLORS = [
+  ['#3b82f6', '#2563eb'],
+  ['#10b981', '#059669'],
+  ['#8b5cf6', '#7c3aed'],
+  ['#f59e0b', '#d97706'],
+  ['#ec4899', '#db2777'],
+  ['#06b6d4', '#0891b2'],
+  ['#6366f1', '#4f46e5'],
+];
 
-function Avatar({ user, online }) {
-  const bg = AVATAR_BG[(user?.id || 0) % AVATAR_BG.length];
+function Avatar({ user, online, size = 'md' }) {
+  const colors = AVATAR_COLORS[(user?.id || 0) % AVATAR_COLORS.length];
+  const dim = size === 'sm' ? 28 : size === 'lg' ? 44 : 36;
+  const fontSize = size === 'sm' ? 10 : size === 'lg' ? 15 : 12;
+  const dotDim = size === 'sm' ? 8 : 10;
+
   return (
     <div className="relative flex-shrink-0">
       {user?.avatar ? (
-        <img src={`${API_URL}/storage/uploads/avatars/${user.avatar}`} alt="" className="w-9 h-9 rounded-full object-cover" />
+        <img
+          src={`${API_URL}/storage/uploads/avatars/${user.avatar}`}
+          alt=""
+          style={{ width: dim, height: dim }}
+          className="rounded-full object-cover ring-2 ring-white/30"
+        />
       ) : (
-        <div className={`w-9 h-9 rounded-full ${bg} text-white flex items-center justify-center font-semibold text-xs`}>
+        <div
+          style={{
+            width: dim,
+            height: dim,
+            fontSize,
+            background: `linear-gradient(135deg, ${colors[0]}, ${colors[1]})`,
+          }}
+          className="rounded-full text-white flex items-center justify-center font-semibold tracking-wide"
+        >
           {initials(user?.name)}
         </div>
       )}
       {online !== undefined && (
-        <span className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white ${online ? 'bg-green-500' : 'bg-gray-300'}`} />
+        <span
+          style={{ width: dotDim, height: dotDim }}
+          className={`absolute -bottom-0.5 -right-0.5 rounded-full border-[2px] border-white ${online ? 'bg-emerald-400' : 'bg-gray-300'}`}
+        />
       )}
     </div>
   );
 }
 
-function MessageBubble({ msg, isOwn, isRead, onDelete }) {
-  const [showMenu, setShowMenu] = useState(false);
+/* ── Read receipt check marks ── */
+function ReadReceipt({ isRead }) {
+  return isRead ? (
+    <svg width="16" height="11" viewBox="0 0 16 11" className="inline-block ml-0.5 -mb-px">
+      <path d="M11.071.653a.457.457 0 0 0-.304-.102.493.493 0 0 0-.381.178l-6.19 7.636-2.011-2.095a.463.463 0 0 0-.659.003.423.423 0 0 0 .003.63l2.319 2.415a.534.534 0 0 0 .347.152.47.47 0 0 0 .373-.176l6.548-8.085a.418.418 0 0 0-.045-.556z" fill="#34d399" />
+      <path d="M15.071.653a.457.457 0 0 0-.304-.102.493.493 0 0 0-.381.178l-6.19 7.636-1.2-1.25-.648.8 1.526 1.59a.534.534 0 0 0 .347.152.47.47 0 0 0 .373-.176l6.548-8.085a.418.418 0 0 0-.045-.556z" fill="#34d399" />
+    </svg>
+  ) : (
+    <svg width="12" height="11" viewBox="0 0 12 11" className="inline-block ml-0.5 -mb-px">
+      <path d="M11.071.653a.457.457 0 0 0-.304-.102.493.493 0 0 0-.381.178l-6.19 7.636-2.011-2.095a.463.463 0 0 0-.659.003.423.423 0 0 0 .003.63l2.319 2.415a.534.534 0 0 0 .347.152.47.47 0 0 0 .373-.176l6.548-8.085a.418.418 0 0 0-.045-.556z" fill="#9ca3af" />
+    </svg>
+  );
+}
+
+/* ── File attachment card ── */
+function FileCard({ msg, isOwn }) {
+  const isImage = msg.message_type === 'image';
+  return (
+    <div className={`flex items-center gap-2.5 min-w-[200px] rounded-xl p-2 ${isOwn ? 'bg-emerald-600/10' : 'bg-slate-50'}`}>
+      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${isImage ? 'bg-purple-100' : 'bg-blue-100'}`}>
+        {isImage ? <FiImage className="text-purple-500" size={18} /> : <FiFile className="text-blue-500" size={18} />}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-medium truncate leading-tight">{msg.file_name || 'File'}</p>
+        <p className="text-[10px] text-gray-400 mt-0.5">{formatFileSize(msg.file_size)}</p>
+      </div>
+      <a
+        href={`${API_URL}${msg.file_url}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={`p-2 rounded-lg transition-colors flex-shrink-0 ${isOwn ? 'hover:bg-emerald-600/10 text-emerald-600' : 'hover:bg-blue-50 text-blue-500'}`}
+      >
+        <FiDownload size={15} />
+      </a>
+    </div>
+  );
+}
+
+/* ── Message bubble ── */
+function MessageBubble({ msg, isOwn, isRead, onDelete, senderName }) {
+  const [hovered, setHovered] = useState(false);
   const isSystem = msg.message_type === 'system';
   const isFile = msg.message_type === 'file' || msg.message_type === 'image';
 
   if (isSystem) {
     return (
-      <div className="flex justify-center my-2">
-        <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-800 max-w-[85%] whitespace-pre-line text-center">
+      <div className="flex justify-center my-4">
+        <div className="bg-white/80 backdrop-blur-md border border-slate-200/50 rounded-full px-4 py-1.5 text-[11px] text-slate-500 max-w-[85%] text-center shadow-sm font-medium">
           {msg.content}
         </div>
       </div>
@@ -73,71 +140,100 @@ function MessageBubble({ msg, isOwn, isRead, onDelete }) {
   }
 
   return (
-    <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'} mb-1 group`}>
+    <motion.div
+      initial={{ opacity: 0, y: 6, scale: 0.97 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.2, ease: 'easeOut' }}
+      className={`flex ${isOwn ? 'justify-end' : 'justify-start'} mb-2 group`}
+    >
       <div
-        className={`relative max-w-[80%] px-3 py-1.5 rounded-lg text-[13px] leading-relaxed ${
-          isOwn ? 'bg-[#d9fdd3] text-gray-800 rounded-tr-none' : 'bg-white text-gray-800 rounded-tl-none shadow-sm'
-        }`}
-        onMouseEnter={() => isOwn && setShowMenu(true)}
-        onMouseLeave={() => setShowMenu(false)}
+        className={`relative max-w-[78%] transition-all duration-150 ${
+          isOwn
+            ? 'bg-gradient-to-br from-emerald-500 to-emerald-600 text-white rounded-[18px] rounded-br-[4px] shadow-sm shadow-emerald-500/15'
+            : 'bg-white text-slate-800 rounded-[18px] rounded-bl-[4px] shadow-sm shadow-slate-900/[0.04] border border-slate-100'
+        } ${isFile ? 'px-2 pt-2 pb-1.5' : 'px-3.5 py-2'}`}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
       >
+        {!isOwn && senderName && (
+          <p className="text-[11px] font-semibold text-emerald-600 mb-1 tracking-wide">{senderName}</p>
+        )}
+
         {isFile ? (
-          <div className="flex items-center gap-2 min-w-[180px]">
-            <div className="w-8 h-8 rounded bg-blue-100 flex items-center justify-center flex-shrink-0">
-              <FiFile className="text-blue-500" size={16} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium truncate">{msg.file_name || 'File'}</p>
-              <p className="text-[10px] text-gray-400">{formatFileSize(msg.file_size)}</p>
-            </div>
-            <a href={`${API_URL}${msg.file_url}`} target="_blank" rel="noopener noreferrer"
-              className="p-1 rounded hover:bg-gray-100">
-              <FiDownload size={14} className="text-gray-500" />
-            </a>
-          </div>
+          <FileCard msg={msg} isOwn={isOwn} />
         ) : (
-          <span className="whitespace-pre-wrap break-words">{msg.content}</span>
+          <span className="text-[13.5px] leading-[1.45] whitespace-pre-wrap break-words">{msg.content}</span>
         )}
-        <span className={`text-[10px] float-right mt-1 ml-2 ${isOwn ? 'text-gray-500' : 'text-gray-400'}`}>
-          {shortTime(msg.created_at)}
-          {isOwn && (
-            <span className="ml-0.5">
-              {isRead ? (
-                <svg width="16" height="11" viewBox="0 0 16 11" className="inline-block">
-                  <path d="M11.071.653a.457.457 0 0 0-.304-.102.493.493 0 0 0-.381.178l-6.19 7.636-2.011-2.095a.463.463 0 0 0-.659.003.423.423 0 0 0 .003.63l2.319 2.415a.534.534 0 0 0 .347.152.47.47 0 0 0 .373-.176l6.548-8.085a.418.418 0 0 0-.045-.556z" fill="#53bdeb" />
-                  <path d="M15.071.653a.457.457 0 0 0-.304-.102.493.493 0 0 0-.381.178l-6.19 7.636-1.2-1.25-.648.8 1.526 1.59a.534.534 0 0 0 .347.152.47.47 0 0 0 .373-.176l6.548-8.085a.418.418 0 0 0-.045-.556z" fill="#53bdeb" />
-                </svg>
-              ) : (
-                <svg width="12" height="11" viewBox="0 0 12 11" className="inline-block">
-                  <path d="M11.071.653a.457.457 0 0 0-.304-.102.493.493 0 0 0-.381.178l-6.19 7.636-2.011-2.095a.463.463 0 0 0-.659.003.423.423 0 0 0 .003.63l2.319 2.415a.534.534 0 0 0 .347.152.47.47 0 0 0 .373-.176l6.548-8.085a.418.418 0 0 0-.045-.556z" fill="#8696a0" />
-                </svg>
-              )}
-            </span>
+
+        <div className={`flex items-center justify-end gap-0.5 mt-1 ${isFile ? 'px-1' : ''}`}>
+          <span className={`text-[10px] ${isOwn ? 'text-white/60' : 'text-slate-400'}`}>
+            {shortTime(msg.created_at)}
+          </span>
+          {isOwn && <ReadReceipt isRead={isRead} />}
+        </div>
+
+        {/* Delete action */}
+        <AnimatePresence>
+          {hovered && isOwn && (
+            <motion.button
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              transition={{ duration: 0.12 }}
+              onClick={() => onDelete(msg.id)}
+              className="absolute -top-2.5 -left-2.5 bg-white shadow-lg shadow-slate-900/10 rounded-full p-1.5 hover:bg-red-50 transition-colors z-10 border border-slate-200"
+            >
+              <FiTrash2 size={11} className="text-red-400" />
+            </motion.button>
           )}
-        </span>
-        {showMenu && isOwn && (
-          <button onClick={() => onDelete(msg.id)}
-            className="absolute -top-2 -left-2 bg-white shadow rounded-full p-1 hover:bg-red-50 transition-colors z-10">
-            <FiTrash2 size={12} className="text-red-400" />
-          </button>
-        )}
+        </AnimatePresence>
+      </div>
+    </motion.div>
+  );
+}
+
+/* ── Typing indicator ── */
+function TypingIndicator() {
+  return (
+    <div className="flex justify-start mb-2">
+      <div className="bg-white rounded-[18px] rounded-bl-[4px] px-4 py-3 shadow-sm border border-slate-100">
+        <div className="flex items-center gap-1">
+          {[0, 1, 2].map(i => (
+            <motion.span
+              key={i}
+              className="w-[6px] h-[6px] bg-slate-400 rounded-full"
+              animate={{ y: [0, -4, 0] }}
+              transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.15, ease: 'easeInOut' }}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );
 }
 
+/* ── Scroll-to-bottom FAB ── */
+function ScrollToBottom({ show, onClick }) {
+  return (
+    <AnimatePresence>
+      {show && (
+        <motion.button
+          initial={{ opacity: 0, scale: 0.8, y: 10 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.8, y: 10 }}
+          transition={{ duration: 0.2 }}
+          onClick={onClick}
+          className="absolute bottom-2 right-4 z-10 bg-white p-2 rounded-full shadow-lg shadow-slate-900/10 border border-slate-200 hover:bg-slate-50 transition-colors"
+        >
+          <FiChevronDown size={16} className="text-slate-600" />
+        </motion.button>
+      )}
+    </AnimatePresence>
+  );
+}
+
 /**
  * ChatDrawer - Contextual chat drawer for verification pages
- * 
- * Props:
- * - referenceType: 'bankeu_lpj' | 'bankeu_proposal'
- * - referenceId: number/string - the entity ID
- * - targetUserId: number/string - the other participant's user ID (optional, auto-resolved from context endpoint)
- * - title: string - optional custom drawer title
- * - disabled: boolean - if true, don't show the chat button
- * - isOpen: boolean - controlled mode: externally control open/close
- * - onClose: function - controlled mode: callback when drawer closes
- * - floating: boolean - if true (default), show floating button; if false, parent manages open trigger
  */
 export default function ChatDrawer({ referenceType, referenceId, targetUserId, title, disabled, isOpen: controlledOpen, onClose, floating = true }) {
   const [internalOpen, setInternalOpen] = useState(false);
@@ -160,6 +256,7 @@ export default function ChatDrawer({ referenceType, referenceId, targetUserId, t
   const [typingUser, setTypingUser] = useState(null);
   const [onlineOther, setOnlineOther] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [showScrollBtn, setShowScrollBtn] = useState(false);
 
   const socketRef = useRef(null);
   const endRef = useRef(null);
@@ -175,7 +272,6 @@ export default function ChatDrawer({ referenceType, referenceId, targetUserId, t
   // Check for existing conversation & unread count on mount
   useEffect(() => {
     if (!referenceType || !referenceId) return;
-    // Reset state when reference changes
     setConversation(null);
     setMessages([]);
     setUnreadCount(0);
@@ -184,18 +280,18 @@ export default function ChatDrawer({ referenceType, referenceId, targetUserId, t
 
   const checkExistingConversation = async () => {
     try {
-      const res = await api.get(`/api/messaging/conversations/reference/${referenceType}/${referenceId}`);
+      const res = await api.get(`/messaging/conversations/reference/${referenceType}/${referenceId}`);
       if (res.data.success && res.data.data.length > 0) {
         const conv = res.data.data[0];
         setConversation(conv);
         setUnreadCount(conv.unread_count || 0);
       }
     } catch {
-      // No conversation yet — that's fine
+      // No conversation yet
     }
   };
 
-  // Socket connection — connect when drawer is opened
+  // Socket connection
   useEffect(() => {
     if (!open) return;
     const token = localStorage.getItem('expressToken');
@@ -217,7 +313,7 @@ export default function ChatDrawer({ referenceType, referenceId, targetUserId, t
       if (conv && msg.conversation_id === conv.id) {
         setMessages(prev => prev.find(m => m.id === msg.id) ? prev : [...prev, msg]);
         if (msg.sender_id !== currentUser.id) {
-          api.put(`/api/messaging/conversations/${msg.conversation_id}/read`).catch(() => {});
+          api.put(`/messaging/conversations/${msg.conversation_id}/read`).catch(() => {});
         }
       }
     });
@@ -250,13 +346,11 @@ export default function ChatDrawer({ referenceType, referenceId, targetUserId, t
     return () => s.disconnect();
   }, [open, conversation?.id]);
 
-  // Load conversation when drawer opens
   useEffect(() => {
     if (!open) return;
     loadOrCreateConversation();
   }, [open]);
 
-  // Scroll to bottom when new messages arrive
   useEffect(() => {
     if (messages.length > 0 && open) {
       setTimeout(() => endRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
@@ -267,30 +361,27 @@ export default function ChatDrawer({ referenceType, referenceId, targetUserId, t
     if (!referenceType || !referenceId) return;
     setLoading(true);
     try {
-      // If we already have a conversation, just load messages
       if (conversation) {
         await loadMessages(conversation.id);
         if (conversation.unread_count > 0) {
-          api.put(`/api/messaging/conversations/${conversation.id}/read`).catch(() => {});
+          api.put(`/messaging/conversations/${conversation.id}/read`).catch(() => {});
           setUnreadCount(0);
         }
         setLoading(false);
         return;
       }
 
-      // Try to find existing conversation for this reference
-      const refRes = await api.get(`/api/messaging/conversations/reference/${referenceType}/${referenceId}`);
+      const refRes = await api.get(`/messaging/conversations/reference/${referenceType}/${referenceId}`);
       if (refRes.data.success && refRes.data.data.length > 0) {
         const conv = refRes.data.data[0];
         setConversation(conv);
         await loadMessages(conv.id);
         if (conv.unread_count > 0) {
-          api.put(`/api/messaging/conversations/${conv.id}/read`).catch(() => {});
+          api.put(`/messaging/conversations/${conv.id}/read`).catch(() => {});
           setUnreadCount(0);
         }
       } else if (targetUserId) {
-        // Create new contextual conversation
-        const createRes = await api.post('/api/messaging/conversations/context', {
+        const createRes = await api.post('/messaging/conversations/context', {
           target_user_id: targetUserId,
           reference_type: referenceType,
           reference_id: referenceId,
@@ -312,7 +403,7 @@ export default function ChatDrawer({ referenceType, referenceId, targetUserId, t
       setLoadingMsgs(true);
       const params = { limit: 50 };
       if (cursor) params.cursor = cursor;
-      const res = await api.get(`/api/messaging/conversations/${convId}/messages`, { params });
+      const res = await api.get(`/messaging/conversations/${convId}/messages`, { params });
       if (res.data.success) {
         const msgs = res.data.data.reverse();
         cursor ? setMessages(prev => [...msgs, ...prev]) : setMessages(msgs);
@@ -329,7 +420,7 @@ export default function ChatDrawer({ referenceType, referenceId, targetUserId, t
     setInputText('');
     setSending(true);
     try {
-      await api.post(`/api/messaging/conversations/${conversation.id}/messages`, { content });
+      await api.post(`/messaging/conversations/${conversation.id}/messages`, { content });
     } catch {
       setInputText(content);
     } finally {
@@ -345,7 +436,7 @@ export default function ChatDrawer({ referenceType, referenceId, targetUserId, t
     fd.append('file', file);
     try {
       setSending(true);
-      await api.post(`/api/messaging/conversations/${conversation.id}/upload`, fd, {
+      await api.post(`/messaging/conversations/${conversation.id}/upload`, fd, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
     } catch (e) { console.error(e); }
@@ -353,7 +444,7 @@ export default function ChatDrawer({ referenceType, referenceId, targetUserId, t
   };
 
   const deleteMessage = async (msgId) => {
-    try { await api.delete(`/api/messaging/messages/${msgId}`); } catch (e) { console.error(e); }
+    try { await api.delete(`/messaging/messages/${msgId}`); } catch (e) { console.error(e); }
   };
 
   const emitStopTyping = () => {
@@ -369,13 +460,18 @@ export default function ChatDrawer({ referenceType, referenceId, targetUserId, t
       typingTORef.current = setTimeout(emitStopTyping, 2000);
     }
   };
-  const handleKeyDown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } };
 
   const handleScroll = useCallback(() => {
     const c = containerRef.current;
     if (!c) return;
+    const distFromBottom = c.scrollHeight - c.scrollTop - c.clientHeight;
+    setShowScrollBtn(distFromBottom > 200);
     if (c.scrollTop < 50 && hasMore && !loadingMsgs && conversation) loadMessages(conversation.id, nextCursor);
   }, [hasMore, loadingMsgs, conversation, nextCursor]);
+
+  const scrollToBottom = () => {
+    endRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   const groupedMessages = useMemo(() => {
     const groups = [];
@@ -388,138 +484,231 @@ export default function ChatDrawer({ referenceType, referenceId, targetUserId, t
     return groups;
   }, [messages]);
 
+  const sendFirstMessage = async () => {
+    if (!inputText.trim() || !targetUserId || sending) return;
+    const content = inputText.trim();
+    setInputText('');
+    setSending(true);
+    try {
+      const createRes = await api.post('/messaging/conversations/context', {
+        target_user_id: targetUserId,
+        reference_type: referenceType,
+        reference_id: referenceId,
+      });
+      if (createRes.data.success) {
+        const conv = createRes.data.data;
+        setConversation(conv);
+        await api.post(`/messaging/conversations/${conv.id}/messages`, { content });
+        await loadMessages(conv.id);
+      }
+    } catch (err) {
+      console.error('Failed to create conversation:', err);
+      setInputText(content);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleSend = () => {
+    if (conversation) sendMessage();
+    else if (targetUserId) sendFirstMessage();
+  };
+
+  const handleKeyDownWrapped = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
+  };
+
   const otherUser = conversation?.other_user;
-  const drawerTitle = title || (REFERENCE_LABELS[referenceType] ? `Chat - ${REFERENCE_LABELS[referenceType]}` : 'Chat Verifikasi');
+  const drawerTitle = title || (REFERENCE_LABELS[referenceType] ? `Chat ${REFERENCE_LABELS[referenceType]}` : 'Chat Verifikasi');
   const hasConversation = !!conversation;
+  const canSendMessage = hasConversation || !!targetUserId;
 
   if (disabled || (!referenceType || !referenceId)) return null;
 
   return (
     <>
-      {/* Floating chat button (only when floating mode) */}
+      {/* ── Floating trigger button ── */}
       {floating && (
-        <button
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
           onClick={() => setOpen(true)}
-          className="fixed bottom-6 right-6 z-40 bg-green-600 hover:bg-green-700 text-white rounded-full p-3.5 shadow-lg transition-all hover:scale-105 active:scale-95"
+          className="fixed bottom-6 right-6 z-40 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl p-3.5 shadow-xl shadow-emerald-600/20 transition-colors"
           title="Buka chat verifikasi"
         >
-          <FiMessageCircle size={22} />
+          <FiMessageCircle size={22} strokeWidth={2.2} />
           {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 font-bold">
+            <motion.span
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5 font-bold ring-2 ring-white"
+            >
               {unreadCount > 9 ? '9+' : unreadCount}
-            </span>
+            </motion.span>
           )}
-        </button>
+        </motion.button>
       )}
 
-      {/* Drawer overlay */}
+      {/* ── Drawer ── */}
       <AnimatePresence>
         {open && (
           <>
+            {/* Backdrop */}
             <motion.div
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/30 z-40"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40"
               onClick={() => setOpen(false)}
             />
+
+            {/* Panel */}
             <motion.div
-              initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="fixed right-0 top-0 h-full w-full sm:w-[420px] bg-white z-50 flex flex-col shadow-2xl"
+              initial={{ x: '100%', opacity: 0.5 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: '100%', opacity: 0.5 }}
+              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+              className="fixed right-0 top-0 h-full w-full sm:w-[420px] z-50 flex flex-col overflow-hidden bg-white sm:rounded-l-2xl shadow-2xl shadow-slate-900/20"
             >
-              {/* Header */}
-              <div className="flex items-center gap-3 px-4 py-3 bg-[#075e54] text-white flex-shrink-0">
-                <button onClick={() => setOpen(false)} className="p-1 rounded-full hover:bg-white/10">
-                  <FiX size={20} />
+              {/* ── Header ── */}
+              <div className="flex items-center gap-3 px-4 h-[64px] bg-white border-b border-slate-100 flex-shrink-0">
+                <button
+                  onClick={() => setOpen(false)}
+                  className="p-1.5 -ml-1 rounded-xl hover:bg-slate-100 text-slate-500 transition-colors"
+                >
+                  <FiArrowLeft size={20} />
                 </button>
+
                 {otherUser && <Avatar user={otherUser} online={onlineOther} />}
+
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-sm font-semibold truncate">
-                    {otherUser ? (otherUser.name + (otherUser.desas?.nama ? ` - ${otherUser.desas.nama}` : '')) : drawerTitle}
+                  <h3 className="text-[15px] font-semibold text-slate-800 truncate leading-tight">
+                    {otherUser?.name || drawerTitle}
                   </h3>
-                  <p className="text-[11px] text-green-100 truncate">
-                    {typingUser ? 'sedang mengetik...'
-                      : onlineOther ? 'Online'
-                      : (conversation?.reference_label || REFERENCE_LABELS[referenceType] || '')}
+                  <p className="text-[12px] text-slate-400 truncate leading-tight mt-0.5">
+                    {typingUser ? (
+                      <span className="text-emerald-500 font-medium">sedang mengetik...</span>
+                    ) : onlineOther ? (
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                        <span className="text-emerald-600 font-medium">Online</span>
+                      </span>
+                    ) : (
+                      otherUser?.desas?.nama || conversation?.reference_label || REFERENCE_LABELS[referenceType] || ''
+                    )}
                   </p>
                 </div>
-              </div>
 
-              {/* Messages area */}
-              <div
-                ref={containerRef}
-                onScroll={handleScroll}
-                className="flex-1 overflow-y-auto px-3 py-2 bg-[#efeae2]"
-                style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'200\' height=\'200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cdefs%3E%3Cpattern id=\'p\' width=\'40\' height=\'40\' patternUnits=\'userSpaceOnUse\'%3E%3Ccircle cx=\'20\' cy=\'20\' r=\'1\' fill=\'%23d4cfc6\' opacity=\'.3\'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width=\'200\' height=\'200\' fill=\'url(%23p)\'/%3E%3C/svg%3E")' }}
-              >
-                {loading ? (
-                  <div className="flex items-center justify-center h-full">
-                    <FiLoader className="animate-spin text-gray-400" size={24} />
-                  </div>
-                ) : !hasConversation ? (
-                  <div className="flex flex-col items-center justify-center h-full text-gray-400 text-sm text-center px-4">
-                    <FiMessageCircle size={40} className="mb-3 text-gray-300" />
-                    <p>Belum ada percakapan untuk {REFERENCE_LABELS[referenceType] || 'item'} ini.</p>
-                    <p className="text-xs mt-1">Chat akan otomatis dibuat saat verifikator meminta revisi.</p>
-                  </div>
-                ) : (
-                  <>
-                    {loadingMsgs && messages.length > 0 && (
-                      <div className="text-center py-2">
-                        <FiLoader className="animate-spin text-gray-400 mx-auto" size={16} />
-                      </div>
-                    )}
-                    {groupedMessages.map((item, i) =>
-                      item.type === 'date' ? (
-                        <div key={`d-${i}`} className="flex justify-center my-2">
-                          <span className="bg-white/80 rounded-md px-3 py-0.5 text-[11px] text-gray-500 shadow-sm">{item.date}</span>
-                        </div>
-                      ) : (
-                        <MessageBubble
-                          key={item.data.id}
-                          msg={item.data}
-                          isOwn={item.data.sender_id === currentUser.id || String(item.data.sender_id) === String(currentUser.id)}
-                          isRead={item.data.is_read}
-                          onDelete={deleteMessage}
-                        />
-                      )
-                    )}
-                    {typingUser && (
-                      <div className="flex justify-start mb-1">
-                        <div className="bg-white rounded-lg px-3 py-2 text-xs text-gray-400 shadow-sm">
-                          <span className="animate-pulse">mengetik...</span>
-                        </div>
-                      </div>
-                    )}
-                    <div ref={endRef} />
-                  </>
+                {/* Reference badge */}
+                {conversation?.reference_label && (
+                  <span className="hidden sm:inline-flex items-center text-[10px] font-medium text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100 leading-none">
+                    {REFERENCE_LABELS[referenceType]}
+                  </span>
                 )}
               </div>
 
-              {/* Input area */}
-              {hasConversation && (
-                <div className="flex items-center gap-2 px-3 py-2 bg-[#f0f2f5] border-t border-gray-200 flex-shrink-0">
+              {/* ── Messages area ── */}
+              <div className="flex-1 relative overflow-hidden">
+                <div
+                  ref={containerRef}
+                  onScroll={handleScroll}
+                  className="absolute inset-0 overflow-y-auto px-4 py-4"
+                  style={{ backgroundColor: '#f8fafc' }}
+                >
+                  {loading ? (
+                    <div className="flex flex-col items-center justify-center h-full gap-3">
+                      <div className="w-8 h-8 rounded-full border-[2.5px] border-slate-200 border-t-emerald-500 animate-spin" />
+                      <p className="text-xs text-slate-400 font-medium">Memuat percakapan...</p>
+                    </div>
+                  ) : !hasConversation && messages.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full text-center px-8">
+                      <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-emerald-50 to-teal-50 flex items-center justify-center mb-5 border border-emerald-100/50">
+                        <FiMessageCircle size={32} className="text-emerald-400" strokeWidth={1.5} />
+                      </div>
+                      <p className="text-base font-semibold text-slate-700 mb-2">Belum ada pesan</p>
+                      <p className="text-sm text-slate-400 leading-relaxed max-w-[260px]">
+                        {targetUserId
+                          ? `Mulai percakapan terkait ${REFERENCE_LABELS[referenceType] || 'item'} ini dengan mengirim pesan.`
+                          : 'Chat akan otomatis dibuat saat verifikator meminta revisi.'
+                        }
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      {loadingMsgs && messages.length > 0 && (
+                        <div className="flex justify-center py-4">
+                          <div className="w-6 h-6 rounded-full border-2 border-slate-200 border-t-emerald-500 animate-spin" />
+                        </div>
+                      )}
+
+                      {groupedMessages.map((item, i) =>
+                        item.type === 'date' ? (
+                          <div key={`d-${i}`} className="flex justify-center my-4">
+                            <span className="bg-white text-slate-500 text-[11px] font-semibold px-3.5 py-1 rounded-full shadow-sm border border-slate-100 tracking-wide uppercase">{item.date}</span>
+                          </div>
+                        ) : (
+                          <MessageBubble
+                            key={item.data.id}
+                            msg={item.data}
+                            isOwn={item.data.sender_id === currentUser.id || String(item.data.sender_id) === String(currentUser.id)}
+                            isRead={item.data.is_read}
+                            onDelete={deleteMessage}
+                            senderName={
+                              !(item.data.sender_id === currentUser.id || String(item.data.sender_id) === String(currentUser.id))
+                                ? (item.data.sender?.name || otherUser?.name)
+                                : null
+                            }
+                          />
+                        )
+                      )}
+
+                      {typingUser && <TypingIndicator />}
+                      <div ref={endRef} />
+                    </>
+                  )}
+                </div>
+
+                <ScrollToBottom show={showScrollBtn} onClick={scrollToBottom} />
+              </div>
+
+              {/* ── Input area ── */}
+              {canSendMessage && (
+                <div className="flex items-end gap-2 px-3 py-3 bg-white border-t border-slate-100 flex-shrink-0">
                   <input type="file" ref={fileRef} className="hidden" onChange={handleFile} />
-                  <button onClick={() => fileRef.current?.click()} className="p-2 text-gray-500 hover:text-gray-700 rounded-full hover:bg-gray-200">
-                    <FiPaperclip size={18} />
+
+                  <button
+                    onClick={() => fileRef.current?.click()}
+                    disabled={!hasConversation}
+                    className="p-2.5 text-slate-400 hover:text-emerald-600 rounded-xl hover:bg-emerald-50/80 transition-all disabled:opacity-30 disabled:cursor-not-allowed flex-shrink-0"
+                  >
+                    <FiPaperclip size={19} />
                   </button>
-                  <div className="flex-1 relative">
+
+                  <div className="flex-1 min-w-0">
                     <textarea
                       value={inputText}
                       onChange={handleInput}
-                      onKeyDown={handleKeyDown}
-                      placeholder="Ketik pesan..."
+                      onKeyDown={handleKeyDownWrapped}
+                      placeholder="Tulis pesan..."
                       rows={1}
-                      className="w-full px-3 py-2 bg-white rounded-lg text-[13px] resize-none focus:outline-none border border-gray-200 focus:border-green-400 max-h-20"
-                      style={{ minHeight: '36px' }}
+                      className="w-full px-4 py-2.5 bg-slate-50 rounded-2xl text-[13.5px] resize-none focus:outline-none border border-slate-200 focus:border-emerald-400 focus:bg-white focus:ring-2 focus:ring-emerald-500/10 max-h-28 transition-all placeholder:text-slate-400"
+                      style={{ minHeight: '42px' }}
                     />
                   </div>
-                  <button
-                    onClick={sendMessage}
+
+                  <motion.button
+                    whileTap={{ scale: 0.9 }}
+                    onClick={handleSend}
                     disabled={!inputText.trim() || sending}
-                    className="p-2 rounded-full bg-green-600 text-white disabled:bg-gray-300 hover:bg-green-700 transition-colors"
+                    className="p-2.5 rounded-xl bg-emerald-600 text-white disabled:bg-slate-200 disabled:text-slate-400 hover:bg-emerald-700 transition-all flex-shrink-0"
                   >
-                    {sending ? <FiLoader className="animate-spin" size={18} /> : <FiSend size={18} />}
-                  </button>
+                    {sending ? (
+                      <div className="w-[19px] h-[19px] rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                    ) : (
+                      <FiSend size={19} className="-rotate-[0deg]" />
+                    )}
+                  </motion.button>
                 </div>
               )}
             </motion.div>

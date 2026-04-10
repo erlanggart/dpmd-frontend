@@ -25,6 +25,7 @@ const BankeuLpjMonitoringPage = ({ tahun = 2025 }) => {
   const [verifying, setVerifying] = useState(false);
   const [deletingLpj, setDeletingLpj] = useState(null);
   const [chatLpjId, setChatLpjId] = useState(null);
+  const [chatTargetUserId, setChatTargetUserId] = useState(null);
 
   useEffect(() => {
     fetchData();
@@ -520,7 +521,7 @@ const BankeuLpjMonitoringPage = ({ tahun = 2025 }) => {
                                     {lpj.dpmd_catatan}
                                   </p>
                                   {status === 'revision' && (
-                                    <button onClick={() => setChatLpjId(lpj.id)}
+                                    <button onClick={() => { setChatLpjId(lpj.id); setChatTargetUserId(lpj.uploaded_by); }}
                                       className="flex items-center gap-1 px-2 py-1 bg-green-600 text-white rounded text-[10px] font-medium hover:bg-green-700 transition-colors flex-shrink-0">
                                       <MessageSquare className="h-3 w-3" /> Chat
                                     </button>
@@ -679,9 +680,10 @@ const BankeuLpjMonitoringPage = ({ tahun = 2025 }) => {
         <ChatDrawer
           referenceType="bankeu_lpj"
           referenceId={chatLpjId}
+          targetUserId={chatTargetUserId}
           floating={false}
           isOpen={!!chatLpjId}
-          onClose={() => setChatLpjId(null)}
+          onClose={() => { setChatLpjId(null); setChatTargetUserId(null); }}
           title="Chat LPJ Bankeu"
         />
       )}

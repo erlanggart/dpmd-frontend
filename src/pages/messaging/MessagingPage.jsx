@@ -11,27 +11,29 @@ import api from '../../api';
 const API_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:3001';
 
 const ROLE_LABELS = {
-	superadmin: 'Superadmin', kepala_dinas: 'Kepala Dinas', sekretaris_dinas: 'Sekretaris Dinas',
-	kepala_bidang: 'Kepala Bidang', ketua_tim: 'Ketua Tim', pegawai: 'Pegawai',
+	superadmin: 'Superadmin', admin: 'Admin', kepala_dinas: 'Kepala Dinas', sekretaris_dinas: 'Sekretaris Dinas',
+	kepala_bidang: 'Kepala Bidang', ketua_tim: 'Ketua Tim', pegawai: 'Pegawai', sarpras: 'Sarpras', sekretariat: 'Sekretariat',
 	desa: 'Desa', kecamatan: 'Kecamatan', dinas_terkait: 'Dinas Terkait', verifikator_dinas: 'Verifikator Dinas',
 };
 const ROLE_COLORS = {
-	superadmin: 'bg-red-100 text-red-700', kepala_dinas: 'bg-purple-100 text-purple-700',
-	sekretaris_dinas: 'bg-indigo-100 text-indigo-700', kepala_bidang: 'bg-blue-100 text-blue-700',
-	ketua_tim: 'bg-cyan-100 text-cyan-700', pegawai: 'bg-teal-100 text-teal-700',
-	desa: 'bg-green-100 text-green-700', kecamatan: 'bg-orange-100 text-orange-700',
-	dinas_terkait: 'bg-amber-100 text-amber-700', verifikator_dinas: 'bg-rose-100 text-rose-700',
+	superadmin: 'bg-red-50 text-red-600', admin: 'bg-red-50 text-red-600',
+	kepala_dinas: 'bg-purple-50 text-purple-600', sekretaris_dinas: 'bg-indigo-50 text-indigo-600',
+	kepala_bidang: 'bg-blue-50 text-blue-600', ketua_tim: 'bg-cyan-50 text-cyan-600',
+	pegawai: 'bg-teal-50 text-teal-600', sarpras: 'bg-sky-50 text-sky-600', sekretariat: 'bg-slate-100 text-slate-600',
+	desa: 'bg-emerald-50 text-emerald-600', kecamatan: 'bg-orange-50 text-orange-600',
+	dinas_terkait: 'bg-amber-50 text-amber-600', verifikator_dinas: 'bg-rose-50 text-rose-600',
 };
 const ROLE_GROUPS = {
-	dpmd: ['superadmin', 'kepala_dinas', 'sekretaris_dinas', 'kepala_bidang', 'ketua_tim', 'pegawai'],
+	dpmd: ['superadmin', 'admin', 'kepala_dinas', 'sekretaris_dinas', 'kepala_bidang', 'ketua_tim', 'pegawai', 'sarpras', 'sekretariat'],
 	desa: ['desa'], kecamatan: ['kecamatan'], dinas: ['dinas_terkait', 'verifikator_dinas'],
 };
 
+/* ── Helpers ── */
 function displayName(user) {
 	if (!user) return 'Unknown';
 	let n = user.name;
-	if (user.desas?.nama) n += ` - ${user.desas.nama}`;
-	else if (user.kecamatans?.nama) n += ` - Kec. ${user.kecamatans.nama}`;
+	if (user.desas?.nama) n += ` · ${user.desas.nama}`;
+	else if (user.kecamatans?.nama) n += ` · Kec. ${user.kecamatans.nama}`;
 	return n;
 }
 function shortTime(d) {
@@ -73,173 +75,243 @@ function formatFileSize(bytes) {
 	return (bytes / 1048576).toFixed(1) + ' MB';
 }
 
-const AVATAR_BG = ['bg-blue-500', 'bg-emerald-500', 'bg-purple-500', 'bg-orange-500', 'bg-pink-500', 'bg-teal-500', 'bg-cyan-500', 'bg-rose-500'];
+/* ── Avatar ── */
+const AVATAR_COLORS = [
+	['#3b82f6', '#2563eb'], ['#10b981', '#059669'], ['#8b5cf6', '#7c3aed'],
+	['#f59e0b', '#d97706'], ['#ec4899', '#db2777'], ['#06b6d4', '#0891b2'], ['#6366f1', '#4f46e5'],
+];
+
 function Avatar({ user, size = 'md', online }) {
-	const sz = size === 'sm' ? 'w-9 h-9 text-xs' : size === 'lg' ? 'w-12 h-12 text-base' : 'w-11 h-11 text-sm';
-	const dotSz = size === 'sm' ? 'w-2.5 h-2.5' : 'w-3 h-3';
-	const bg = AVATAR_BG[(user?.id || 0) % AVATAR_BG.length];
+	const colors = AVATAR_COLORS[(user?.id || 0) % AVATAR_COLORS.length];
+	const dim = size === 'sm' ? 36 : size === 'lg' ? 48 : 44;
+	const fontSize = size === 'sm' ? 12 : size === 'lg' ? 16 : 14;
+	const dotDim = size === 'sm' ? 9 : 11;
 	return (
 		<div className="relative flex-shrink-0">
 			{user?.avatar ? (
-				<img src={`${API_URL}/storage/uploads/avatars/${user.avatar}`} alt="" className={`${sz} rounded-full object-cover`} />
+				<img src={`${API_URL}/storage/uploads/avatars/${user.avatar}`} alt=""
+					style={{ width: dim, height: dim }}
+					className="rounded-full object-cover" />
 			) : (
-				<div className={`${sz} rounded-full ${bg} text-white flex items-center justify-center font-semibold`}>{initials(user?.name)}</div>
+				<div style={{ width: dim, height: dim, fontSize, background: `linear-gradient(135deg, ${colors[0]}, ${colors[1]})` }}
+					className="rounded-full text-white flex items-center justify-center font-semibold tracking-wide">
+					{initials(user?.name)}
+				</div>
 			)}
 			{online !== undefined && (
-				<span className={`absolute bottom-0 right-0 ${dotSz} rounded-full border-2 border-white ${online ? 'bg-green-500' : 'bg-gray-300'}`} />
+				<span style={{ width: dotDim, height: dotDim }}
+					className={`absolute bottom-0 right-0 rounded-full border-2 border-white ${online ? 'bg-emerald-400' : 'bg-slate-300'}`} />
 			)}
 		</div>
 	);
 }
 
-function MessageStatus({ isOwn, isRead }) {
+/* ── Read receipt ── */
+function ReadReceipt({ isOwn, isRead }) {
 	if (!isOwn) return null;
 	return isRead ? (
-		<svg width="16" height="11" viewBox="0 0 16 11" className="inline-block ml-1 flex-shrink-0">
-			<path d="M11.071.653a.457.457 0 0 0-.304-.102.493.493 0 0 0-.381.178l-6.19 7.636-2.011-2.095a.463.463 0 0 0-.659.003.423.423 0 0 0 .003.63l2.319 2.415a.534.534 0 0 0 .347.152.47.47 0 0 0 .373-.176l6.548-8.085a.418.418 0 0 0-.045-.556z" fill="#53bdeb" />
-			<path d="M15.071.653a.457.457 0 0 0-.304-.102.493.493 0 0 0-.381.178l-6.19 7.636-1.2-1.25-.648.8 1.526 1.59a.534.534 0 0 0 .347.152.47.47 0 0 0 .373-.176l6.548-8.085a.418.418 0 0 0-.045-.556z" fill="#53bdeb" />
+		<svg width="16" height="11" viewBox="0 0 16 11" className="inline-block ml-1 -mb-px flex-shrink-0">
+			<path d="M11.071.653a.457.457 0 0 0-.304-.102.493.493 0 0 0-.381.178l-6.19 7.636-2.011-2.095a.463.463 0 0 0-.659.003.423.423 0 0 0 .003.63l2.319 2.415a.534.534 0 0 0 .347.152.47.47 0 0 0 .373-.176l6.548-8.085a.418.418 0 0 0-.045-.556z" fill="#34d399" />
+			<path d="M15.071.653a.457.457 0 0 0-.304-.102.493.493 0 0 0-.381.178l-6.19 7.636-1.2-1.25-.648.8 1.526 1.59a.534.534 0 0 0 .347.152.47.47 0 0 0 .373-.176l6.548-8.085a.418.418 0 0 0-.045-.556z" fill="#34d399" />
 		</svg>
 	) : (
-		<svg width="12" height="11" viewBox="0 0 12 11" className="inline-block ml-1 flex-shrink-0">
-			<path d="M11.071.653a.457.457 0 0 0-.304-.102.493.493 0 0 0-.381.178l-6.19 7.636-2.011-2.095a.463.463 0 0 0-.659.003.423.423 0 0 0 .003.63l2.319 2.415a.534.534 0 0 0 .347.152.47.47 0 0 0 .373-.176l6.548-8.085a.418.418 0 0 0-.045-.556z" fill="#8696a0" />
+		<svg width="12" height="11" viewBox="0 0 12 11" className="inline-block ml-1 -mb-px flex-shrink-0">
+			<path d="M11.071.653a.457.457 0 0 0-.304-.102.493.493 0 0 0-.381.178l-6.19 7.636-2.011-2.095a.463.463 0 0 0-.659.003.423.423 0 0 0 .003.63l2.319 2.415a.534.534 0 0 0 .347.152.47.47 0 0 0 .373-.176l6.548-8.085a.418.418 0 0 0-.045-.556z" fill="#9ca3af" />
 		</svg>
 	);
 }
 
-function DateSeparator({ date }) {
-	return (
-		<div className="flex items-center justify-center my-3">
-			<span className="bg-white/90 text-[11px] text-gray-500 px-3 py-1 rounded-lg shadow-sm border border-gray-100 font-medium">{date}</span>
-		</div>
-	);
-}
-
+/* ── Message bubble ── */
 function MessageBubble({ message, isOwn, onDelete }) {
-	const [showMenu, setShowMenu] = useState(false);
+	const [hovered, setHovered] = useState(false);
 	const isFile = message.message_type === 'file';
 	const isImage = message.message_type === 'image';
 	const isSystem = message.message_type === 'system';
 
 	if (isSystem) {
 		return (
-			<div className="flex justify-center my-2">
-				<span className="bg-amber-50 text-amber-700 text-[11px] px-3 py-1 rounded-lg">{message.content}</span>
+			<div className="flex justify-center my-4">
+				<span className="bg-white/80 backdrop-blur-sm text-slate-500 text-[11px] px-4 py-1.5 rounded-full shadow-sm border border-slate-100 font-medium">
+					{message.content}
+				</span>
 			</div>
 		);
 	}
 
 	return (
-		<div className={`flex ${isOwn ? 'justify-end' : 'justify-start'} mb-1 group`} onMouseLeave={() => setShowMenu(false)}>
-			<div className="relative max-w-[75%] lg:max-w-[65%]">
-				{isOwn && (
-					<button onClick={() => setShowMenu(!showMenu)}
-						className="absolute -left-7 top-1 opacity-0 group-hover:opacity-100 transition-opacity text-gray-300 hover:text-gray-500 p-0.5">
-						<FiChevronDown size={14} />
-					</button>
-				)}
-				{showMenu && (
-					<div className="absolute -left-7 top-6 bg-white rounded-lg shadow-lg border border-gray-200 z-10 py-1 min-w-[120px]">
-						<button onClick={() => { onDelete(message.id); setShowMenu(false); }}
-							className="flex items-center gap-2 px-3 py-1.5 text-red-600 hover:bg-red-50 w-full text-xs">
-							<FiTrash2 size={12} /> Hapus
-						</button>
-					</div>
-				)}
-				<div className={`rounded-xl px-3 py-1.5 ${isOwn ? 'bg-[#d9fdd3] text-gray-900 rounded-tr-sm' : 'bg-white text-gray-900 rounded-tl-sm shadow-sm'}`}>
+		<motion.div
+			initial={{ opacity: 0, y: 4, scale: 0.98 }}
+			animate={{ opacity: 1, y: 0, scale: 1 }}
+			transition={{ duration: 0.15 }}
+			className={`flex ${isOwn ? 'justify-end' : 'justify-start'} mb-1.5 group`}
+			onMouseEnter={() => setHovered(true)}
+			onMouseLeave={() => setHovered(false)}
+		>
+			<div className="relative max-w-[75%] lg:max-w-[60%]">
+				<div className={`rounded-2xl px-3.5 py-2 ${
+					isOwn
+						? 'bg-emerald-500 text-white rounded-br-[4px]'
+						: 'bg-white text-slate-800 rounded-bl-[4px] shadow-sm border border-slate-50'
+				}`}>
 					{isImage && message.file_path && (
-						<a href={`${API_URL}/${message.file_path}`} target="_blank" rel="noopener noreferrer" className="block mb-1">
-							<img src={`${API_URL}/${message.file_path}`} alt="" className="rounded-lg max-w-full max-h-64" loading="lazy" />
+						<a href={`${API_URL}/${message.file_path}`} target="_blank" rel="noopener noreferrer" className="block mb-1.5">
+							<img src={`${API_URL}/${message.file_path}`} alt="" className="rounded-xl max-w-full max-h-64" loading="lazy" />
 						</a>
 					)}
 					{isFile && (
 						<a href={`${API_URL}/${message.file_path}`} target="_blank" rel="noopener noreferrer"
-							className="flex items-center gap-2.5 bg-gray-50/80 rounded-lg px-3 py-2 mb-1 hover:bg-gray-100/80 transition-colors">
-							<div className="w-10 h-10 rounded-lg bg-blue-500 flex items-center justify-center flex-shrink-0">
-								<FiFile className="text-white" size={18} />
+							className={`flex items-center gap-2.5 rounded-xl px-3 py-2 mb-1.5 transition-colors ${
+								isOwn ? 'bg-emerald-600/30 hover:bg-emerald-600/40' : 'bg-slate-50 hover:bg-slate-100'
+							}`}>
+							<div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+								isOwn ? 'bg-emerald-400/30' : 'bg-blue-100'
+							}`}>
+								<FiFile className={isOwn ? 'text-white' : 'text-blue-500'} size={18} />
 							</div>
 							<div className="flex-1 min-w-0">
-								<p className="text-sm font-medium text-gray-800 truncate">{message.file_name || 'File'}</p>
-								<p className="text-[10px] text-gray-400">{formatFileSize(message.file_size)}</p>
+								<p className={`text-sm font-medium truncate ${isOwn ? 'text-white' : 'text-slate-800'}`}>
+									{message.file_name || 'File'}
+								</p>
+								<p className={`text-[10px] ${isOwn ? 'text-emerald-100' : 'text-slate-400'}`}>
+									{formatFileSize(message.file_size)}
+								</p>
 							</div>
-							<FiDownload className="text-gray-400 flex-shrink-0" size={16} />
+							<FiDownload className={`flex-shrink-0 ${isOwn ? 'text-emerald-100' : 'text-slate-400'}`} size={16} />
 						</a>
 					)}
-					{!isImage && <p className="text-[13.5px] whitespace-pre-wrap break-words leading-[1.35]">{message.content}</p>}
-					<div className={`flex items-center justify-end gap-0.5 -mb-0.5 ${isOwn ? 'text-gray-500' : 'text-gray-400'}`}>
-						<span className="text-[10.5px]">{shortTime(message.created_at)}</span>
-						<MessageStatus isOwn={isOwn} isRead={message.is_read} />
+					{!isImage && (
+						<p className="text-[13.5px] whitespace-pre-wrap break-words leading-[1.4]">{message.content}</p>
+					)}
+					<div className="flex items-center justify-end gap-0.5 mt-0.5">
+						<span className={`text-[10px] ${isOwn ? 'text-white/60' : 'text-slate-400'}`}>
+							{shortTime(message.created_at)}
+						</span>
+						<ReadReceipt isOwn={isOwn} isRead={message.is_read} />
 					</div>
 				</div>
+
+				<AnimatePresence>
+					{hovered && isOwn && (
+						<motion.button
+							initial={{ opacity: 0, scale: 0.8 }}
+							animate={{ opacity: 1, scale: 1 }}
+							exit={{ opacity: 0, scale: 0.8 }}
+							transition={{ duration: 0.1 }}
+							onClick={() => onDelete(message.id)}
+							className="absolute -top-2 -left-2 bg-white shadow-md rounded-full p-1.5 hover:bg-red-50 transition-colors z-10 border border-slate-200"
+						>
+							<FiTrash2 size={11} className="text-red-400" />
+						</motion.button>
+					)}
+				</AnimatePresence>
 			</div>
-		</div>
+		</motion.div>
 	);
 }
 
+/* ── Conversation list item ── */
 function ConversationItem({ conversation, isActive, onClick, isOnline }) {
-	const { other_user, last_message, last_message_at, unread_count, reference_type, reference_label } = conversation;
+	const { other_user, last_message, last_message_at, unread_count, reference_label } = conversation;
 	const preview = last_message
-		? last_message.message_type === 'image' ? '\ud83d\udcf7 Foto'
-			: last_message.message_type === 'file' ? `\ud83d\udcce ${last_message.file_name || 'File'}`
+		? last_message.message_type === 'image' ? '📷 Foto'
+			: last_message.message_type === 'file' ? `📎 ${last_message.file_name || 'File'}`
 				: last_message.content
 		: '';
 
 	return (
-		<div onClick={onClick}
-			className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-all border-b border-gray-50 ${isActive ? 'bg-[#f0f2f5]' : 'hover:bg-[#f5f6f6]'}`}>
+		<button onClick={onClick}
+			className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-all ${
+				isActive ? 'bg-emerald-50/80' : 'hover:bg-slate-50'
+			}`}>
 			<Avatar user={other_user} online={isOnline} />
 			<div className="flex-1 min-w-0">
-				<div className="flex items-center justify-between">
-					<span className={`truncate text-[14.5px] ${unread_count > 0 ? 'font-semibold text-gray-900' : 'font-normal text-gray-800'}`}>
+				<div className="flex items-center justify-between mb-0.5">
+					<span className={`truncate text-[14px] ${
+						unread_count > 0 ? 'font-semibold text-slate-900' : 'font-medium text-slate-700'
+					}`}>
 						{displayName(other_user)}
 					</span>
-					<span className={`text-[11px] flex-shrink-0 ml-2 ${unread_count > 0 ? 'text-green-600 font-medium' : 'text-gray-400'}`}>
+					<span className={`text-[11px] flex-shrink-0 ml-2 ${
+						unread_count > 0 ? 'text-emerald-600 font-semibold' : 'text-slate-400'
+					}`}>
 						{sidebarTime(last_message_at)}
 					</span>
 				</div>
 				{reference_label && (
-					<p className="text-[10px] text-blue-600 truncate mt-0.5 flex items-center gap-1">
+					<p className="text-[10px] text-blue-500 truncate mb-0.5 flex items-center gap-1 font-medium">
 						<span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0" />
 						{reference_label}
 					</p>
 				)}
-				<div className="flex items-center justify-between mt-0.5">
-					<p className={`text-[13px] truncate ${unread_count > 0 ? 'text-gray-700' : 'text-gray-500'}`}>
-						{preview || <span className="italic text-gray-400">Belum ada pesan</span>}
+				<div className="flex items-center justify-between">
+					<p className={`text-[13px] truncate pr-2 ${
+						unread_count > 0 ? 'text-slate-700 font-medium' : 'text-slate-400'
+					}`}>
+						{preview || <span className="italic">Belum ada pesan</span>}
 					</p>
 					{unread_count > 0 && (
-						<span className="bg-green-500 text-white text-[10px] rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 flex-shrink-0 ml-2 font-medium">
+						<span className="bg-emerald-500 text-white text-[10px] rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5 flex-shrink-0 font-semibold">
 							{unread_count > 99 ? '99+' : unread_count}
 						</span>
 					)}
 				</div>
 			</div>
-		</div>
+		</button>
 	);
 }
 
+/* ── Contact item ── */
 function ContactItem({ contact, onClick, isOnline }) {
 	return (
-		<div onClick={() => onClick(contact)} className="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-[#f5f6f6] transition-colors">
+		<button onClick={() => onClick(contact)}
+			className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-slate-50 transition-colors">
 			<Avatar user={contact} size="sm" online={isOnline} />
 			<div className="flex-1 min-w-0">
-				<p className="text-[14px] text-gray-900 truncate font-medium">{displayName(contact)}</p>
-				<span className={`text-[11px] px-1.5 py-0.5 rounded-full ${ROLE_COLORS[contact.role] || 'bg-gray-100 text-gray-600'}`}>
+				<p className="text-[14px] text-slate-800 truncate font-medium">{displayName(contact)}</p>
+				<span className={`inline-block text-[10px] px-2 py-0.5 rounded-full font-medium mt-0.5 ${
+					ROLE_COLORS[contact.role] || 'bg-slate-100 text-slate-500'
+				}`}>
 					{ROLE_LABELS[contact.role] || contact.role}
 				</span>
+			</div>
+		</button>
+	);
+}
+
+/* ── Filter tab ── */
+function FilterTab({ label, active, count, onClick }) {
+	return (
+		<button onClick={onClick}
+			className={`px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all whitespace-nowrap ${
+				active
+					? 'bg-emerald-600 text-white shadow-sm'
+					: 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700'
+			}`}>
+			{label}{count > 0 ? ` (${count})` : ''}
+		</button>
+	);
+}
+
+/* ── Typing dots ── */
+function TypingDots() {
+	return (
+		<div className="flex justify-start mb-1.5">
+			<div className="bg-white rounded-2xl rounded-bl-[4px] px-4 py-3 shadow-sm border border-slate-50">
+				<div className="flex items-center gap-1">
+					{[0, 1, 2].map(i => (
+						<motion.span key={i} className="w-[6px] h-[6px] bg-slate-400 rounded-full"
+							animate={{ y: [0, -4, 0] }}
+							transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.15, ease: 'easeInOut' }} />
+					))}
+				</div>
 			</div>
 		</div>
 	);
 }
 
-function FilterTab({ label, active, count, onClick }) {
-	return (
-		<button onClick={onClick}
-			className={`px-3 py-1 rounded-full text-[11px] font-medium transition-colors whitespace-nowrap ${active ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-			{label} {count > 0 && <span className="ml-0.5">({count})</span>}
-		</button>
-	);
-}
-
+/* ════════════════════════════════════════
+   MAIN COMPONENT
+   ════════════════════════════════════════ */
 export default function MessagingPage() {
 	const [conversations, setConversations] = useState([]);
 	const [activeConv, setActiveConv] = useState(null);
@@ -249,7 +321,7 @@ export default function MessagingPage() {
 	const [searchQ, setSearchQ] = useState('');
 	const [contactSearch, setContactSearch] = useState('');
 	const [contactFilter, setContactFilter] = useState('all');
-	const [showContacts, setShowContacts] = useState(false);
+	const [view, setView] = useState('chats'); // 'chats' | 'contacts'
 	const [loading, setLoading] = useState(false);
 	const [sending, setSending] = useState(false);
 	const [loadingMsgs, setLoadingMsgs] = useState(false);
@@ -272,7 +344,7 @@ export default function MessagingPage() {
 
 	useEffect(() => { activeConvRef.current = activeConv; }, [activeConv]);
 
-	// Socket connection
+	// ── Socket ──
 	useEffect(() => {
 		const token = localStorage.getItem('expressToken');
 		if (!token) return;
@@ -291,7 +363,7 @@ export default function MessagingPage() {
 			if (conv && msg.conversation_id === conv.id) {
 				setMessages(prev => prev.find(m => m.id === msg.id) ? prev : [...prev, msg]);
 				if (msg.sender_id !== currentUser.id) {
-					api.put(`/api/messaging/conversations/${msg.conversation_id}/read`).catch(() => {});
+					api.put(`/messaging/conversations/${msg.conversation_id}/read`).catch(() => {});
 				}
 			}
 			setConversations(prev => {
@@ -330,10 +402,11 @@ export default function MessagingPage() {
 
 	useEffect(() => { loadConversations(); }, []);
 
+	// ── Data loading ──
 	const loadConversations = async () => {
 		try {
 			setLoading(true);
-			const res = await api.get('/api/messaging/conversations');
+			const res = await api.get('/messaging/conversations');
 			if (res.data.success) setConversations(res.data.data);
 		} catch (e) { console.error(e); } finally { setLoading(false); }
 	};
@@ -343,7 +416,7 @@ export default function MessagingPage() {
 			setLoadingMsgs(true);
 			const params = { limit: 50 };
 			if (cursor) params.cursor = cursor;
-			const res = await api.get(`/api/messaging/conversations/${convId}/messages`, { params });
+			const res = await api.get(`/messaging/conversations/${convId}/messages`, { params });
 			if (res.data.success) {
 				const msgs = res.data.data.reverse();
 				cursor ? setMessages(prev => [...msgs, ...prev]) : setMessages(msgs);
@@ -357,11 +430,12 @@ export default function MessagingPage() {
 		try {
 			const params = {};
 			if (search) params.search = search;
-			const res = await api.get('/api/messaging/contacts', { params });
+			const res = await api.get('/messaging/contacts', { params });
 			if (res.data.success) setContacts(res.data.data);
 		} catch (e) { console.error(e); }
 	};
 
+	// ── Actions ──
 	const selectConversation = async (conv) => {
 		setActiveConv(conv);
 		setMobileChat(true);
@@ -370,7 +444,7 @@ export default function MessagingPage() {
 		setShowScrollBtn(false);
 		await loadMessages(conv.id);
 		if (conv.unread_count > 0) {
-			api.put(`/api/messaging/conversations/${conv.id}/read`).catch(() => {});
+			api.put(`/messaging/conversations/${conv.id}/read`).catch(() => {});
 			setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, unread_count: 0 } : c));
 		}
 		setTimeout(() => endRef.current?.scrollIntoView({ behavior: 'auto' }), 50);
@@ -378,11 +452,11 @@ export default function MessagingPage() {
 
 	const startConversation = async (contact) => {
 		try {
-			const res = await api.post('/api/messaging/conversations', { target_user_id: contact.id });
+			const res = await api.post('/messaging/conversations', { target_user_id: contact.id });
 			if (res.data.success) {
 				const conv = res.data.data;
 				setConversations(prev => prev.find(c => c.id === conv.id) ? prev : [conv, ...prev]);
-				setShowContacts(false);
+				setView('chats');
 				setContactSearch('');
 				selectConversation(conv);
 			}
@@ -395,7 +469,7 @@ export default function MessagingPage() {
 		setInputText('');
 		setSending(true);
 		try {
-			await api.post(`/api/messaging/conversations/${activeConv.id}/messages`, { content });
+			await api.post(`/messaging/conversations/${activeConv.id}/messages`, { content });
 		} catch (e) { setInputText(content); console.error(e); }
 		finally { setSending(false); }
 		emitStopTyping();
@@ -408,12 +482,12 @@ export default function MessagingPage() {
 		fd.append('file', file);
 		try {
 			setSending(true);
-			await api.post(`/api/messaging/conversations/${activeConv.id}/upload`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+			await api.post(`/messaging/conversations/${activeConv.id}/upload`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
 		} catch (e) { console.error(e); } finally { setSending(false); if (fileRef.current) fileRef.current.value = ''; }
 	};
 
 	const deleteMessage = async (msgId) => {
-		try { await api.delete(`/api/messaging/messages/${msgId}`); } catch (e) { console.error(e); }
+		try { await api.delete(`/messaging/messages/${msgId}`); } catch (e) { console.error(e); }
 	};
 
 	const emitStopTyping = () => {
@@ -444,6 +518,7 @@ export default function MessagingPage() {
 
 	const scrollToBottom = () => endRef.current?.scrollIntoView({ behavior: 'smooth' });
 
+	// ── Derived ──
 	const groupedMessages = useMemo(() => {
 		const groups = [];
 		let lastDate = '';
@@ -472,197 +547,234 @@ export default function MessagingPage() {
 	const isOnline = (userId) => onlineUserIds.has(String(userId));
 	const totalUnread = conversations.reduce((s, c) => s + (c.unread_count || 0), 0);
 
+	const openContacts = () => {
+		setView('contacts');
+		setContactFilter('all');
+		setContactSearch('');
+		loadContacts();
+	};
+
+	/* ════════════════════════════════════════
+	   RENDER
+	   ════════════════════════════════════════ */
 	return (
-		<div className="flex h-[calc(100vh-80px)] bg-[#eae6df] rounded-xl overflow-hidden shadow-sm border border-gray-200">
+		<div className="flex h-[calc(100vh-80px)] bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-200/80">
 
-			{/* LEFT PANEL */}
-			<div className={`w-full md:w-[380px] lg:w-[420px] flex-shrink-0 bg-white border-r border-gray-200 flex flex-col ${mobileChat ? 'hidden md:flex' : 'flex'}`}>
+			{/* ── LEFT PANEL ── */}
+			<div className={`w-full md:w-[360px] lg:w-[400px] flex-shrink-0 bg-white border-r border-slate-100 flex flex-col ${mobileChat ? 'hidden md:flex' : 'flex'}`}>
 
-				<div className="px-4 pt-3 pb-2 bg-[#f0f2f5] border-b border-gray-200">
-					<div className="flex items-center justify-between mb-2.5">
-						<div className="flex items-center gap-2">
-							<h2 className="text-[17px] font-bold text-gray-800">Chat</h2>
-							{totalUnread > 0 && (
-								<span className="bg-green-500 text-white text-[10px] rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 font-medium">
-									{totalUnread > 99 ? '99+' : totalUnread}
-								</span>
-							)}
-						</div>
-						<button onClick={() => { setShowContacts(!showContacts); if (!showContacts) loadContacts(); }}
-							className="p-2 rounded-full text-gray-500 hover:bg-gray-200 transition-colors" title="Chat baru">
-							<FiPlus size={20} />
-						</button>
-					</div>
-					<div className="relative">
-						<FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
-						<input type="text" placeholder="Cari atau mulai chat baru" value={searchQ}
-							onChange={(e) => setSearchQ(e.target.value)}
-							className="w-full pl-9 pr-3 py-1.5 bg-white rounded-lg text-[13px] focus:outline-none border border-gray-200 focus:border-green-400" />
-					</div>
-				</div>
-
-				<AnimatePresence>
-					{showContacts && (
-						<motion.div initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }} transition={{ duration: 0.15 }}
-							className="absolute inset-0 md:right-auto md:w-[380px] lg:w-[420px] bg-white z-30 flex flex-col">
-							<div className="px-4 pt-3 pb-2 bg-[#f0f2f5] border-b border-gray-200">
-								<div className="flex items-center gap-3 mb-2.5">
-									<button onClick={() => setShowContacts(false)} className="p-1 text-gray-600 hover:text-gray-900">
-										<FiArrowLeft size={20} />
-									</button>
-									<h3 className="text-[17px] font-bold text-gray-800">Chat Baru</h3>
-								</div>
+				{/* Header */}
+				<div className="px-4 pt-4 pb-3 flex-shrink-0 border-b border-slate-100">
+					{view === 'chats' ? (
+						<>
+							<div className="flex items-center justify-between mb-3">
+								<h2 className="text-xl font-bold text-slate-800">Chat</h2>
+								<button onClick={openContacts}
+									className="p-2 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-all" title="Chat baru">
+									<FiPlus size={20} strokeWidth={2.5} />
+								</button>
+							</div>
+							<div className="relative">
+								<FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
+								<input type="text" placeholder="Cari percakapan..." value={searchQ}
+									onChange={(e) => setSearchQ(e.target.value)}
+									className="w-full pl-9 pr-3 py-2 bg-slate-50 rounded-xl text-[13px] focus:outline-none border border-transparent focus:border-emerald-300 focus:bg-white focus:ring-2 focus:ring-emerald-500/10 transition-all placeholder:text-slate-400" />
+							</div>
+						</>
+					) : (
+						<>
+							<div className="flex items-center gap-3 mb-3">
+								<button onClick={() => setView('chats')}
+									className="p-1.5 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-all">
+									<FiArrowLeft size={20} />
+								</button>
+								<h2 className="text-xl font-bold text-slate-800">Kontak Baru</h2>
+							</div>
+							<div className="relative mb-2.5">
+								<FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
 								<input type="text" placeholder="Cari nama kontak..." value={contactSearch}
 									onChange={(e) => { setContactSearch(e.target.value); loadContacts(e.target.value); }}
-									className="w-full pl-3 pr-3 py-1.5 bg-white rounded-lg text-[13px] focus:outline-none border border-gray-200 focus:border-green-400" autoFocus />
-								<div className="flex gap-1.5 mt-2 overflow-x-auto pb-1 scrollbar-hide">
-									<FilterTab label="Semua" active={contactFilter === 'all'} count={contacts.length} onClick={() => setContactFilter('all')} />
-									<FilterTab label="DPMD" active={contactFilter === 'dpmd'} count={contacts.filter(c => ROLE_GROUPS.dpmd.includes(c.role)).length} onClick={() => setContactFilter('dpmd')} />
-									<FilterTab label="Desa" active={contactFilter === 'desa'} count={contacts.filter(c => ROLE_GROUPS.desa.includes(c.role)).length} onClick={() => setContactFilter('desa')} />
-									<FilterTab label="Kecamatan" active={contactFilter === 'kecamatan'} count={contacts.filter(c => ROLE_GROUPS.kecamatan.includes(c.role)).length} onClick={() => setContactFilter('kecamatan')} />
-									<FilterTab label="Dinas" active={contactFilter === 'dinas'} count={contacts.filter(c => ROLE_GROUPS.dinas.includes(c.role)).length} onClick={() => setContactFilter('dinas')} />
-								</div>
+									className="w-full pl-9 pr-3 py-2 bg-slate-50 rounded-xl text-[13px] focus:outline-none border border-transparent focus:border-emerald-300 focus:bg-white focus:ring-2 focus:ring-emerald-500/10 transition-all placeholder:text-slate-400"
+									autoFocus />
 							</div>
-							<div className="flex-1 overflow-auto">
-								{filteredContacts.length === 0 ? (
-									<p className="text-center text-gray-400 text-sm py-8">Tidak ada kontak</p>
-								) : (
-									filteredContacts.map(c => (
-										<ContactItem key={c.id} contact={c} onClick={startConversation} isOnline={isOnline(c.id)} />
-									))
-								)}
+							<div className="flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-hide">
+								<FilterTab label="Semua" active={contactFilter === 'all'} count={contacts.length} onClick={() => setContactFilter('all')} />
+								<FilterTab label="DPMD" active={contactFilter === 'dpmd'} count={contacts.filter(c => ROLE_GROUPS.dpmd.includes(c.role)).length} onClick={() => setContactFilter('dpmd')} />
+								<FilterTab label="Desa" active={contactFilter === 'desa'} count={contacts.filter(c => ROLE_GROUPS.desa.includes(c.role)).length} onClick={() => setContactFilter('desa')} />
+								<FilterTab label="Kecamatan" active={contactFilter === 'kecamatan'} count={contacts.filter(c => ROLE_GROUPS.kecamatan.includes(c.role)).length} onClick={() => setContactFilter('kecamatan')} />
+								<FilterTab label="Dinas" active={contactFilter === 'dinas'} count={contacts.filter(c => ROLE_GROUPS.dinas.includes(c.role)).length} onClick={() => setContactFilter('dinas')} />
 							</div>
-						</motion.div>
+						</>
 					)}
-				</AnimatePresence>
+				</div>
 
-				<div className="flex-1 overflow-auto">
-					{loading ? (
-						<div className="flex items-center justify-center py-16"><FiLoader className="animate-spin text-gray-400" size={24} /></div>
-					) : filteredConvs.length === 0 ? (
-						<div className="text-center py-16 px-6">
-							<FiMessageCircle className="mx-auto text-gray-200 mb-3" size={56} />
-							<p className="text-gray-400 text-sm">Belum ada percakapan</p>
-							<button onClick={() => { setShowContacts(true); loadContacts(); }}
-								className="mt-3 text-green-600 text-sm font-medium hover:underline">Mulai chat baru</button>
-						</div>
+				{/* List: conversations or contacts */}
+				<div className="flex-1 overflow-y-auto">
+					{view === 'chats' ? (
+						loading ? (
+							<div className="flex items-center justify-center py-20">
+								<div className="w-7 h-7 rounded-full border-[2.5px] border-slate-200 border-t-emerald-500 animate-spin" />
+							</div>
+						) : filteredConvs.length === 0 ? (
+							<div className="text-center py-20 px-8">
+								<div className="w-16 h-16 rounded-2xl bg-slate-50 flex items-center justify-center mx-auto mb-4">
+									<FiMessageCircle className="text-slate-300" size={28} />
+								</div>
+								<p className="text-slate-400 text-sm mb-1 font-medium">Belum ada percakapan</p>
+								<p className="text-slate-400 text-xs mb-4">Mulai chat dengan menekan tombol +</p>
+								<button onClick={openContacts}
+									className="text-emerald-600 text-sm font-semibold hover:text-emerald-700 transition-colors">
+									Mulai Chat Baru
+								</button>
+							</div>
+						) : (
+							<div className="divide-y divide-slate-50">
+								{filteredConvs.map(conv => (
+									<ConversationItem key={conv.id} conversation={conv} isActive={activeConv?.id === conv.id}
+										onClick={() => selectConversation(conv)} isOnline={isOnline(conv.other_user?.id)} />
+								))}
+							</div>
+						)
 					) : (
-						filteredConvs.map(conv => (
-							<ConversationItem key={conv.id} conversation={conv} isActive={activeConv?.id === conv.id}
-								onClick={() => selectConversation(conv)} isOnline={isOnline(conv.other_user?.id)} />
-						))
+						filteredContacts.length === 0 ? (
+							<div className="text-center py-20 px-8">
+								<p className="text-slate-400 text-sm font-medium">Tidak ada kontak ditemukan</p>
+							</div>
+						) : (
+							<div className="divide-y divide-slate-50">
+								{filteredContacts.map(c => (
+									<ContactItem key={c.id} contact={c} onClick={startConversation} isOnline={isOnline(c.id)} />
+								))}
+							</div>
+						)
 					)}
 				</div>
 			</div>
 
-			{/* RIGHT PANEL - CHAT */}
-			<div className={`flex-1 flex flex-col ${!mobileChat ? 'hidden md:flex' : 'flex'}`}>
+			{/* ── RIGHT PANEL - CHAT ── */}
+			<div className={`flex-1 flex flex-col bg-slate-50 ${!mobileChat ? 'hidden md:flex' : 'flex'}`}>
 				{activeConv ? (
 					<>
-						<div className="px-4 py-2.5 bg-[#f0f2f5] border-b border-gray-200 flex items-center gap-3">
-							<button onClick={() => setMobileChat(false)} className="md:hidden p-1 text-gray-500 hover:text-gray-700 mr-1">
+						{/* Chat header */}
+						<div className="px-4 py-3 bg-white border-b border-slate-100 flex items-center gap-3 flex-shrink-0">
+							<button onClick={() => setMobileChat(false)}
+								className="md:hidden p-1.5 text-slate-500 hover:text-slate-700 rounded-xl hover:bg-slate-100 transition-all mr-0.5">
 								<FiArrowLeft size={20} />
 							</button>
 							<Avatar user={activeConv.other_user} online={isOnline(activeConv.other_user?.id)} />
 							<div className="flex-1 min-w-0">
-								<h3 className="font-semibold text-[15px] text-gray-900 truncate">{displayName(activeConv.other_user)}</h3>
-								{activeConv.reference_label && (
-									<p className="text-[10px] text-blue-600 truncate flex items-center gap-1">
-										<span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0" />
-										{activeConv.reference_label}
-									</p>
-								)}
-								<p className="text-[11.5px] text-gray-500 truncate">
+								<h3 className="font-semibold text-[15px] text-slate-800 truncate">
+									{displayName(activeConv.other_user)}
+								</h3>
+								<p className="text-[12px] text-slate-400 truncate leading-tight mt-0.5">
 									{typingUser ? (
-										<span className="text-green-600 italic">sedang mengetik...</span>
+										<span className="text-emerald-500 font-medium">sedang mengetik...</span>
 									) : isOnline(activeConv.other_user?.id) ? (
-										<span className="text-green-600">online</span>
+										<span className="flex items-center gap-1.5">
+											<span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+											<span className="text-emerald-600 font-medium">Online</span>
+										</span>
 									) : activeConv.other_user?.last_active_at ? (
-										<span>terakhir dilihat {lastSeenText(activeConv.other_user.last_active_at)}</span>
+										`terakhir dilihat ${lastSeenText(activeConv.other_user.last_active_at)}`
 									) : (
-										<span className={`px-1.5 py-0.5 rounded-full text-[10px] ${ROLE_COLORS[activeConv.other_user?.role] || ''}`}>
+										<span className={`inline-block px-1.5 py-0.5 rounded-full text-[10px] font-medium ${ROLE_COLORS[activeConv.other_user?.role] || ''}`}>
 											{ROLE_LABELS[activeConv.other_user?.role] || ''}
 										</span>
 									)}
 								</p>
+								{activeConv.reference_label && (
+									<p className="text-[10px] text-blue-500 truncate flex items-center gap-1 font-medium mt-0.5">
+										<span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0" />
+										{activeConv.reference_label}
+									</p>
+								)}
 							</div>
 						</div>
 
-						<div ref={containerRef} onScroll={handleScroll}
-							className="flex-1 overflow-auto px-4 md:px-12 lg:px-20 py-2 relative"
-							style={{ backgroundColor: '#efeae2', backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23d4cfc6' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")" }}>
-							{loadingMsgs && messages.length === 0 && (
-								<div className="flex justify-center py-12"><FiLoader className="animate-spin text-gray-400" size={24} /></div>
-							)}
-							{hasMore && (
-								<div className="text-center py-2">
-									<button onClick={() => loadMessages(activeConv.id, nextCursor)} disabled={loadingMsgs}
-										className="text-[11px] text-gray-500 bg-white/80 px-3 py-1 rounded-full shadow-sm hover:bg-white">
-										{loadingMsgs ? 'Memuat...' : '\u2191 Pesan sebelumnya'}
-									</button>
-								</div>
-							)}
-							{groupedMessages.map((item, i) =>
-								item.type === 'date' ? (
-									<DateSeparator key={`d-${i}`} date={item.date} />
-								) : (
-									<MessageBubble key={item.data.id} message={item.data}
-										isOwn={item.data.sender_id === currentUser.id} onDelete={deleteMessage} />
-								)
-							)}
-							{typingUser && (
-								<div className="flex justify-start mb-1">
-									<div className="bg-white rounded-xl px-4 py-2 shadow-sm">
-										<div className="flex gap-1">
-											<span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-											<span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-											<span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-										</div>
+						{/* Messages area */}
+						<div className="flex-1 relative overflow-hidden">
+							<div ref={containerRef} onScroll={handleScroll}
+								className="absolute inset-0 overflow-y-auto px-4 md:px-8 lg:px-16 py-4"
+								style={{ backgroundColor: '#f8fafc' }}>
+								{loadingMsgs && messages.length === 0 && (
+									<div className="flex justify-center py-16">
+										<div className="w-7 h-7 rounded-full border-[2.5px] border-slate-200 border-t-emerald-500 animate-spin" />
 									</div>
-								</div>
-							)}
-							<div ref={endRef} />
+								)}
+								{hasMore && (
+									<div className="text-center py-3">
+										<button onClick={() => loadMessages(activeConv.id, nextCursor)} disabled={loadingMsgs}
+											className="text-[11px] text-slate-500 bg-white px-4 py-1.5 rounded-full shadow-sm hover:bg-slate-50 border border-slate-200 font-medium transition-colors">
+											{loadingMsgs ? 'Memuat...' : '↑ Pesan sebelumnya'}
+										</button>
+									</div>
+								)}
+								{groupedMessages.map((item, i) =>
+									item.type === 'date' ? (
+										<div key={`d-${i}`} className="flex justify-center my-4">
+											<span className="bg-white text-slate-500 text-[11px] px-4 py-1.5 rounded-full shadow-sm border border-slate-100 font-semibold tracking-wide uppercase">
+												{item.date}
+											</span>
+										</div>
+									) : (
+										<MessageBubble key={item.data.id} message={item.data}
+											isOwn={item.data.sender_id === currentUser.id || String(item.data.sender_id) === String(currentUser.id)}
+											onDelete={deleteMessage} />
+									)
+								)}
+								{typingUser && <TypingDots />}
+								<div ref={endRef} />
+							</div>
+
+							<AnimatePresence>
+								{showScrollBtn && (
+									<motion.button
+										initial={{ opacity: 0, scale: 0.8, y: 10 }}
+										animate={{ opacity: 1, scale: 1, y: 0 }}
+										exit={{ opacity: 0, scale: 0.8, y: 10 }}
+										onClick={scrollToBottom}
+										className="absolute bottom-3 right-4 bg-white p-2 rounded-full shadow-lg shadow-slate-900/10 border border-slate-200 hover:bg-slate-50 transition-colors z-10">
+										<FiChevronDown size={18} className="text-slate-600" />
+									</motion.button>
+								)}
+							</AnimatePresence>
 						</div>
 
-						<AnimatePresence>
-							{showScrollBtn && (
-								<motion.button initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
-									onClick={scrollToBottom}
-									className="absolute bottom-20 right-6 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center text-gray-500 hover:text-gray-700 z-10 border border-gray-200">
-									<FiChevronDown size={20} />
-								</motion.button>
-							)}
-						</AnimatePresence>
-
-						<div className="px-4 py-2.5 bg-[#f0f2f5] border-t border-gray-200">
+						{/* Input area */}
+						<div className="px-4 py-3 bg-white border-t border-slate-100 flex-shrink-0">
 							<div className="flex items-end gap-2">
 								<button onClick={() => fileRef.current?.click()}
-									className="p-2 text-gray-500 hover:text-gray-700 transition-colors flex-shrink-0 mb-0.5" title="Lampiran">
+									className="p-2.5 text-slate-400 hover:text-emerald-600 rounded-xl hover:bg-emerald-50/80 transition-all flex-shrink-0" title="Lampiran">
 									<FiPaperclip size={20} />
 								</button>
 								<input ref={fileRef} type="file" onChange={handleFile} className="hidden" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.zip,.rar" />
-								<div className="flex-1">
+								<div className="flex-1 min-w-0">
 									<textarea ref={inputRef} value={inputText} onChange={handleInput} onKeyDown={handleKeyDown}
-										placeholder="Ketik pesan" rows={1}
-										className="w-full px-4 py-2 bg-white rounded-lg text-[13.5px] focus:outline-none border border-gray-200 focus:border-green-400 resize-none max-h-28 leading-5"
-										style={{ minHeight: '36px' }} />
+										placeholder="Tulis pesan..." rows={1}
+										className="w-full px-4 py-2.5 bg-slate-50 rounded-2xl text-[13.5px] focus:outline-none border border-slate-200 focus:border-emerald-400 focus:bg-white focus:ring-2 focus:ring-emerald-500/10 resize-none max-h-28 leading-5 transition-all placeholder:text-slate-400"
+										style={{ minHeight: '42px' }} />
 								</div>
-								<button onClick={sendMessage} disabled={!inputText.trim() || sending}
-									className="p-2.5 bg-green-600 text-white rounded-full hover:bg-green-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0 mb-0.5">
-									{sending ? <FiLoader className="animate-spin" size={18} /> : <FiSend size={18} />}
-								</button>
+								<motion.button whileTap={{ scale: 0.9 }}
+									onClick={sendMessage} disabled={!inputText.trim() || sending}
+									className="p-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-all disabled:bg-slate-200 disabled:text-slate-400 flex-shrink-0">
+									{sending ? (
+										<div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+									) : (
+										<FiSend size={20} />
+									)}
+								</motion.button>
 							</div>
 						</div>
 					</>
 				) : (
-					<div className="flex-1 flex items-center justify-center bg-[#f0f2f5]">
-						<div className="text-center max-w-sm">
-							<div className="w-[160px] h-[160px] mx-auto mb-6 bg-[#e0e0e0] rounded-full flex items-center justify-center">
-								<FiMessageCircle className="text-gray-400" size={64} />
+					<div className="flex-1 flex items-center justify-center">
+						<div className="text-center max-w-sm px-8">
+							<div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-3xl flex items-center justify-center border border-emerald-100/50">
+								<FiMessageCircle className="text-emerald-400" size={40} strokeWidth={1.5} />
 							</div>
-							<h3 className="text-2xl font-light text-gray-700 mb-2">DPMD Bogor Chat</h3>
-							<p className="text-sm text-gray-500 leading-relaxed">
-								Kirim dan terima pesan secara langsung.<br />Pilih percakapan dari daftar atau mulai chat baru.
+							<h3 className="text-xl font-semibold text-slate-700 mb-2">DPMD Bogor Chat</h3>
+							<p className="text-sm text-slate-400 leading-relaxed">
+								Kirim dan terima pesan secara langsung.<br />Pilih percakapan atau mulai chat baru.
 							</p>
 						</div>
 					</div>

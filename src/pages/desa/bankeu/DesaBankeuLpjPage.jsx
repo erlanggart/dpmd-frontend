@@ -484,6 +484,7 @@ const DesaBankeuLpjPage = ({ tahun = 2025 }) => {
         <ChatDrawer
           referenceType="bankeu_lpj"
           referenceId={chatLpjId}
+          targetUserId={lpjList.find(l => l.id === chatLpjId)?.dpmd_verified_by}
           floating={false}
           isOpen={!!chatLpjId}
           onClose={() => setChatLpjId(null)}
