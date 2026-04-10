@@ -36,15 +36,44 @@ import toast from "react-hot-toast";
 
 ChartJS.register(ArcElement, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
+const TYPE_FILTER_OPTIONS = [
+  { value: "rw", label: "RW" },
+  { value: "rt", label: "RT" },
+  { value: "posyandu", label: "Posyandu" },
+  { value: "karang_taruna", label: "Karang Taruna" },
+  { value: "lpm", label: "LPM" },
+  { value: "pkk", label: "PKK" },
+  { value: "satlinmas", label: "Satlinmas" },
+  { value: "lembaga-lainnya", label: "Lembaga Lainnya" },
+];
+
+const TYPE_QUERY_MAP = {
+  rw: "rws",
+  rt: "rts",
+  posyandu: "posyandus",
+  karang_taruna: "karang_tarunas",
+  lpm: "lpms",
+  pkk: "pkks",
+  satlinmas: "satlinmas",
+  "lembaga-lainnya": "lembaga-lainnya",
+};
+
 const TYPE_LABELS = {
   rw: "RW",
+  rws: "RW",
   rt: "RT",
+  rts: "RT",
   posyandu: "Posyandu",
+  posyandus: "Posyandu",
   karang_taruna: "Karang Taruna",
+  karang_tarunas: "Karang Taruna",
   lpm: "LPM",
+  lpms: "LPM",
   pkk: "PKK",
+  pkks: "PKK",
   satlinmas: "Satlinmas",
   "lembaga-lainnya": "Lembaga Lainnya",
+  lembaga_lainnyas: "Lembaga Lainnya",
 };
 
 const EDUCATION_ORDER = [
@@ -132,9 +161,10 @@ export default function PengurusDashboardPage() {
     try {
       setLoading(true);
       const params = new URLSearchParams();
+      const mappedSelectedType = TYPE_QUERY_MAP[selectedType] || selectedType;
       if (selectedKecamatan) params.append("kecamatan_id", selectedKecamatan);
       if (selectedDesa) params.append("desa_id", selectedDesa);
-      if (selectedType) params.append("pengurusable_type", selectedType);
+      if (mappedSelectedType) params.append("pengurusable_type", mappedSelectedType);
       if (searchQuery.trim()) params.append("search", searchQuery.trim());
       params.append("verification_scope", verificationScope);
 
@@ -624,9 +654,9 @@ export default function PengurusDashboardPage() {
               className="px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">Semua Kelembagaan</option>
-              {Object.entries(TYPE_LABELS).map(([key, label]) => (
-                <option key={key} value={key}>
-                  {label}
+              {TYPE_FILTER_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
                 </option>
               ))}
             </select>
