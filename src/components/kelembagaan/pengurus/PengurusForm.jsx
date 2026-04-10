@@ -106,7 +106,7 @@ const pengurusSchema = z.object({
 		}, "Tanggal mulai jabatan tidak boleh di masa depan"),
 	tanggal_akhir_jabatan: z.string().min(1, "Tanggal akhir jabatan wajib diisi"),
 	status_jabatan: z.enum(["aktif", "nonaktif"]).default("aktif"),
-	produk_hukum_id: emptyToUndef(z.string().optional()),
+	produk_hukum_id: z.string().min(1, "Produk hukum (SK) wajib dipilih"),
 	nomor_buku_nikah: emptyToUndef(z.string().max(100, "Nomor buku nikah maksimal 100 karakter").optional()),
 }).refine(
 	(data) => {

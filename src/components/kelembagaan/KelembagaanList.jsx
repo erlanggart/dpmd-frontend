@@ -47,6 +47,244 @@ import {
 } from "react-icons/lu";
 import Swal from "sweetalert2";
 
+// Modal component defined at module scope to prevent focus loss on re-renders
+const SimpleModal = ({ isOpen, title, children, onClose, onSubmit, type, submitting, showKetentuan, setShowKetentuan, gradient, IconComponent }) => {
+	useEffect(() => {
+		if (!isOpen) return;
+
+		const handleKeyDown = (e) => {
+			if (e.key === "Escape") {
+				onClose();
+			}
+		};
+
+		document.addEventListener("keydown", handleKeyDown);
+		return () => document.removeEventListener("keydown", handleKeyDown);
+	}, [isOpen, onClose]);
+
+	if (!isOpen) return null;
+
+	const isRwModal = type === "rw";
+	const isPosyanduModal = type === "posyandu";
+
+	const handleBackdropClick = (e) => {
+		if (e.target === e.currentTarget) {
+			onClose();
+		}
+	};
+
+	return (
+		<div
+			className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+			role="dialog"
+			aria-modal="true"
+			onClick={handleBackdropClick}
+		>
+			<div
+				className={`bg-white rounded-2xl shadow-2xl w-full ${isRwModal || isPosyanduModal ? "max-w-5xl" : "max-w-md"} mx-4 transform transition-all max-h-[90vh] overflow-y-auto`}
+			>
+				<div
+					className={`flex items-center justify-between p-6 border-b border-gray-100 bg-gradient-to-r ${gradient} rounded-t-2xl`}
+				>
+					<div className="flex items-center space-x-3">
+						<div className="p-2 bg-white/20 rounded-lg">
+							<IconComponent className="w-5 h-5 text-white" />
+						</div>
+						<h3 className="text-lg font-semibold text-white">{title}</h3>
+					</div>
+					<button
+						type="button"
+						className="text-white/80 hover:text-white text-xl w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors"
+						onClick={onClose}
+						disabled={submitting}
+					>
+						✕
+					</button>
+				</div>
+
+				{/* Informasi Pembentukan RW */}
+				{isRwModal && (
+					<div className="border-b border-blue-100">
+						<button
+							type="button"
+							className="w-full flex items-center justify-between p-4 bg-gradient-to-br from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 transition-colors"
+							onClick={() => setShowKetentuan((v) => !v)}
+						>
+							<div className="flex items-center space-x-3">
+								<div className="p-1.5 bg-blue-500 rounded-lg flex-shrink-0">
+									<LuFileText className="w-4 h-4 text-white" />
+								</div>
+								<div className="text-left">
+									<h4 className="font-semibold text-blue-900 text-sm">
+										Ketentuan Pembentukan Rukun Warga
+									</h4>
+									<p className="text-xs text-blue-600">Perbup Bogor No. 31 Tahun 2012</p>
+								</div>
+							</div>
+							{showKetentuan ? (
+								<LuChevronUp className="w-5 h-5 text-blue-500" />
+							) : (
+								<LuChevronDown className="w-5 h-5 text-blue-500" />
+							)}
+						</button>
+
+						{showKetentuan && (
+							<div className="p-4 bg-gradient-to-br from-blue-50/50 to-indigo-50/50 space-y-3">
+								<div className="space-y-2">
+									{[
+										<>Pembentukan RW dapat berasal dari <strong>Pembentukan RW baru</strong>, <strong>Pemekaran</strong> dari 1 (satu) RW menjadi 2 (dua) RW atau lebih dan/atau <strong>penggabungan</strong> dari beberapa RW atau bagian RW yang bersandingan.</>,
+										<>Pembentukan RW dapat berasal dari <strong>prakarsa masyarakat</strong> setelah mendapatkan pertimbangan dari Kepala Desa/Lurah.</>,
+										<>Setiap RW paling sedikit terdiri dari <strong>3 (tiga) RT untuk desa</strong> dan <strong>5 (lima) RT untuk kelurahan</strong>.</>,
+										<>Bagi wilayah pemukiman tertentu yang tidak memenuhi ketentuan di atas, tetap mempunyai jarak yang cukup jauh dari RW terdekat, dapat dibentuk RW baru yang terdiri dari sekurang-kurangnya <strong>2 (dua) RT</strong>.</>,
+									].map((text, i) => (
+										<div key={i} className="bg-white rounded-lg p-3 shadow-sm border border-blue-100">
+											<div className="flex items-start space-x-2.5">
+												<div className="flex-shrink-0 w-5 h-5 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">
+													{i + 1}
+												</div>
+												<p className="text-sm text-gray-700 leading-relaxed">{text}</p>
+											</div>
+										</div>
+									))}
+								</div>
+								<div className="flex items-start space-x-2 bg-blue-100 rounded-lg p-3">
+									<LuInfo className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+									<div>
+										<p className="text-sm font-semibold text-blue-900">Peraturan Bupati Bogor Nomor 31 Tahun 2012</p>
+										<p className="text-xs text-blue-700">Tentang Tata Cara Pembentukan, Pengangkatan, dan Pemberhentian Pengurus LPMD/LPMK, RW, dan RT</p>
+									</div>
+								</div>
+							</div>
+						)}
+					</div>
+				)}
+
+				{/* Informasi Pembentukan Posyandu */}
+				{isPosyanduModal && (
+					<div className="border-b border-purple-100">
+						<button
+							type="button"
+							className="w-full flex items-center justify-between p-4 bg-gradient-to-br from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 transition-colors"
+							onClick={() => setShowKetentuan((v) => !v)}
+						>
+							<div className="flex items-center space-x-3">
+								<div className="p-1.5 bg-purple-600 rounded-lg flex-shrink-0">
+									<LuFileText className="w-4 h-4 text-white" />
+								</div>
+								<div className="text-left">
+									<h4 className="font-semibold text-purple-900 text-sm">
+										Kedudukan dan Pembentukan Posyandu
+									</h4>
+									<p className="text-xs text-purple-600">Permendagri No. 13 Tahun 2024</p>
+								</div>
+							</div>
+							{showKetentuan ? (
+								<LuChevronUp className="w-5 h-5 text-purple-500" />
+							) : (
+								<LuChevronDown className="w-5 h-5 text-purple-500" />
+							)}
+						</button>
+
+						{showKetentuan && (
+							<div className="p-4 bg-gradient-to-br from-purple-50/50 to-pink-50/50 space-y-4">
+								{/* Kedudukan dan Pembentukan */}
+								<div className="space-y-2">
+									{[
+										<>Posyandu <strong>berkedudukan di Desa/Kelurahan</strong> setempat.</>,
+										<>Posyandu dibentuk atas <strong>prakarsa Pemerintah Desa/Kelurahan dan masyarakat</strong>.</>,
+										<>Pembentukan Posyandu disertai/diikuti dengan pemberian <strong>nomor registrasi</strong> yang ditetapkan oleh Menteri melalui Direktorat Jenderal Bina Pemerintahan Desa.</>,
+										<>Tata cara pemberian nomor registrasi ditetapkan oleh Menteri.</>,
+									].map((text, i) => (
+										<div key={i} className="bg-white rounded-lg p-3 shadow-sm border border-purple-100">
+											<div className="flex items-start space-x-2.5">
+												<div className="flex-shrink-0 w-5 h-5 bg-purple-600 text-white rounded-full flex items-center justify-center text-xs font-bold">
+													{i + 1}
+												</div>
+												<p className="text-sm text-gray-700 leading-relaxed">{text}</p>
+											</div>
+										</div>
+									))}
+								</div>
+
+								{/* Syarat Pembentukan */}
+								<div className="pt-3 border-t border-purple-200">
+									<h5 className="font-semibold text-purple-900 mb-2 flex items-center text-sm">
+										<LuCheck className="w-4 h-4 mr-1.5" />
+										Syarat Pembentukan
+									</h5>
+									<div className="space-y-2">
+										<div className="bg-white rounded-lg p-3 shadow-sm border border-purple-100">
+											<p className="text-sm text-gray-700 font-medium mb-2">Pembentukan Posyandu dengan memenuhi persyaratan:</p>
+											<ol className="space-y-1 ml-3">
+												{["Keberadaannya bermanfaat dan dibutuhkan masyarakat Desa/Kelurahan", "Memiliki kepengurusan yang tetap", "Memiliki sekretariat, tempat pelayanan, dan sarana pendukung lainnya yang bersifat tetap", "Tidak berafiliasi kepada partai politik"].map((s, i) => (
+													<li key={i} className="flex items-start space-x-2 text-sm text-gray-700">
+														<span className="text-purple-600 font-bold">{String.fromCharCode(97 + i)}.</span>
+														<span>{s}</span>
+													</li>
+												))}
+											</ol>
+										</div>
+										<div className="bg-white rounded-lg p-3 shadow-sm border border-purple-100">
+											<div className="flex items-start space-x-2.5">
+												<div className="flex-shrink-0 w-5 h-5 bg-purple-600 text-white rounded-full flex items-center justify-center text-xs font-bold">2</div>
+												<p className="text-sm text-gray-700 leading-relaxed">Sekretariat, tempat pelayanan, dan sarana pendukung lainnya merupakan <strong>aset Desa/Kelurahan</strong>.</p>
+											</div>
+										</div>
+										<div className="bg-white rounded-lg p-3 shadow-sm border border-purple-100">
+											<div className="flex items-start space-x-2.5">
+												<div className="flex-shrink-0 w-5 h-5 bg-purple-600 text-white rounded-full flex items-center justify-center text-xs font-bold">3</div>
+												<p className="text-sm text-gray-700 leading-relaxed">Dalam hal Pemerintah Desa/Kelurahan tidak memiliki sekretariat, tempat pelayanan, dan sarana pendukung lainnya, dapat <strong>menggunakan fasilitas lainnya</strong>.</p>
+											</div>
+										</div>
+									</div>
+								</div>
+
+								<div className="flex items-start space-x-2 bg-blue-100 rounded-lg p-3">
+									<LuInfo className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+									<div>
+										<p className="text-sm font-semibold text-blue-900">Peraturan Menteri Dalam Negeri Nomor 13 Tahun 2024</p>
+										<p className="text-xs text-blue-700">Tentang Pos Pelayanan Terpadu</p>
+									</div>
+								</div>
+							</div>
+						)}
+					</div>
+				)}
+
+				<div className="p-6 space-y-4">{children}</div>
+				<div className="flex justify-end gap-3 p-6 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
+					<button
+						type="button"
+						className="px-6 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
+						onClick={onClose}
+						disabled={submitting}
+					>
+						Batal
+					</button>
+					<button
+						type="button"
+						className={`px-6 py-2 bg-gradient-to-r ${gradient} text-white rounded-lg hover:shadow-md disabled:opacity-50 transition-all flex items-center space-x-2`}
+						onClick={onSubmit}
+						disabled={submitting}
+					>
+						{submitting ? (
+							<>
+								<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+								<span>Menyimpan...</span>
+							</>
+						) : (
+							<>
+								<LuPlus className="w-4 h-4" />
+								<span>Simpan</span>
+							</>
+						)}
+					</button>
+				</div>
+			</div>
+		</div>
+	);
+};
+
 export default function KelembagaanList() {
 	const { type, desaId: routeDesaId } = useParams(); // Get desaId from route params
 	const navigate = useNavigate();
@@ -124,7 +362,7 @@ export default function KelembagaanList() {
 
 	// Fetch produk hukum options when modal opens (for RW and Posyandu)
 	useEffect(() => {
-		if (!showAddModal || (type !== "rw" && type !== "posyandu")) return;
+		if (!showAddModal || (type !== "rw" && type !== "posyandu" && type !== "lembaga-lainnya")) return;
 		let mounted = true;
 		const fetchProdukHukum = async () => {
 			setLoadingPh(true);
@@ -177,11 +415,15 @@ export default function KelembagaanList() {
 				}
 				await createPosyandu({ nama: addForm.nama.trim(), alamat: addForm.alamat.trim(), produk_hukum_id: addForm.produk_hukum_id });
 			} else if (type === "lembaga-lainnya") {
+				if (!addForm.produk_hukum_id) {
+					alert("Produk Hukum Lembaga wajib dipilih");
+					return;
+				}
 				if (!addForm.nama.trim()) {
 					alert("Nama Lembaga wajib diisi");
 					return;
 				}
-				await createLembagaLainnya({ nama: addForm.nama.trim(), alamat: addForm.alamat.trim() });
+				await createLembagaLainnya({ nama: addForm.nama.trim(), alamat: addForm.alamat.trim(), produk_hukum_id: addForm.produk_hukum_id });
 			}
 
 			setShowAddModal(false);
@@ -234,243 +476,6 @@ export default function KelembagaanList() {
 			return statusMatch && desaMatch;
 		});
 	}, [items, activeTab, desaId]);
-
-	const SimpleModal = ({ isOpen, title, children, onClose, onSubmit }) => {
-		const handleBackdropClick = (e) => {
-			if (e.target === e.currentTarget) {
-				onClose();
-			}
-		};
-
-		useEffect(() => {
-			if (!isOpen) return;
-
-			const handleKeyDown = (e) => {
-				if (e.key === "Escape") {
-					onClose();
-				}
-			};
-
-			document.addEventListener("keydown", handleKeyDown);
-			return () => document.removeEventListener("keydown", handleKeyDown);
-		}, [isOpen, onClose]);
-
-		if (!isOpen) return null;
-
-		const isRwModal = type === "rw";
-		const isPosyanduModal = type === "posyandu";
-
-		return (
-			<div
-				className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
-				role="dialog"
-				aria-modal="true"
-				onClick={handleBackdropClick}
-			>
-				<div
-					className={`bg-white rounded-2xl shadow-2xl w-full ${isRwModal || isPosyanduModal ? "max-w-5xl" : "max-w-md"} mx-4 transform transition-all max-h-[90vh] overflow-y-auto`}
-				>
-					<div
-						className={`flex items-center justify-between p-6 border-b border-gray-100 bg-gradient-to-r ${getGradient()} rounded-t-2xl`}
-					>
-						<div className="flex items-center space-x-3">
-							<div className="p-2 bg-white/20 rounded-lg">
-								<IconComponent className="w-5 h-5 text-white" />
-							</div>
-							<h3 className="text-lg font-semibold text-white">{title}</h3>
-						</div>
-						<button
-							type="button"
-							className="text-white/80 hover:text-white text-xl w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors"
-							onClick={onClose}
-							disabled={submitting}
-						>
-							✕
-						</button>
-					</div>
-
-					{/* Informasi Pembentukan RW */}
-					{isRwModal && (
-						<div className="border-b border-blue-100">
-							<button
-								type="button"
-								className="w-full flex items-center justify-between p-4 bg-gradient-to-br from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 transition-colors"
-								onClick={() => setShowKetentuan((v) => !v)}
-							>
-								<div className="flex items-center space-x-3">
-									<div className="p-1.5 bg-blue-500 rounded-lg flex-shrink-0">
-										<LuFileText className="w-4 h-4 text-white" />
-									</div>
-									<div className="text-left">
-										<h4 className="font-semibold text-blue-900 text-sm">
-											Ketentuan Pembentukan Rukun Warga
-										</h4>
-										<p className="text-xs text-blue-600">Perbup Bogor No. 31 Tahun 2012</p>
-									</div>
-								</div>
-								{showKetentuan ? (
-									<LuChevronUp className="w-5 h-5 text-blue-500" />
-								) : (
-									<LuChevronDown className="w-5 h-5 text-blue-500" />
-								)}
-							</button>
-
-							{showKetentuan && (
-								<div className="p-4 bg-gradient-to-br from-blue-50/50 to-indigo-50/50 space-y-3">
-									<div className="space-y-2">
-										{[
-											<>Pembentukan RW dapat berasal dari <strong>Pembentukan RW baru</strong>, <strong>Pemekaran</strong> dari 1 (satu) RW menjadi 2 (dua) RW atau lebih dan/atau <strong>penggabungan</strong> dari beberapa RW atau bagian RW yang bersandingan.</>,
-											<>Pembentukan RW dapat berasal dari <strong>prakarsa masyarakat</strong> setelah mendapatkan pertimbangan dari Kepala Desa/Lurah.</>,
-											<>Setiap RW paling sedikit terdiri dari <strong>3 (tiga) RT untuk desa</strong> dan <strong>5 (lima) RT untuk kelurahan</strong>.</>,
-											<>Bagi wilayah pemukiman tertentu yang tidak memenuhi ketentuan di atas, tetap mempunyai jarak yang cukup jauh dari RW terdekat, dapat dibentuk RW baru yang terdiri dari sekurang-kurangnya <strong>2 (dua) RT</strong>.</>,
-										].map((text, i) => (
-											<div key={i} className="bg-white rounded-lg p-3 shadow-sm border border-blue-100">
-												<div className="flex items-start space-x-2.5">
-													<div className="flex-shrink-0 w-5 h-5 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">
-														{i + 1}
-													</div>
-													<p className="text-sm text-gray-700 leading-relaxed">{text}</p>
-												</div>
-											</div>
-										))}
-									</div>
-									<div className="flex items-start space-x-2 bg-blue-100 rounded-lg p-3">
-										<LuInfo className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
-										<div>
-											<p className="text-sm font-semibold text-blue-900">Peraturan Bupati Bogor Nomor 31 Tahun 2012</p>
-											<p className="text-xs text-blue-700">Tentang Tata Cara Pembentukan, Pengangkatan, dan Pemberhentian Pengurus LPMD/LPMK, RW, dan RT</p>
-										</div>
-									</div>
-								</div>
-							)}
-						</div>
-					)}
-
-					{/* Informasi Pembentukan Posyandu */}
-					{isPosyanduModal && (
-						<div className="border-b border-purple-100">
-							<button
-								type="button"
-								className="w-full flex items-center justify-between p-4 bg-gradient-to-br from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 transition-colors"
-								onClick={() => setShowKetentuan((v) => !v)}
-							>
-								<div className="flex items-center space-x-3">
-									<div className="p-1.5 bg-purple-600 rounded-lg flex-shrink-0">
-										<LuFileText className="w-4 h-4 text-white" />
-									</div>
-									<div className="text-left">
-										<h4 className="font-semibold text-purple-900 text-sm">
-											Kedudukan dan Pembentukan Posyandu
-										</h4>
-										<p className="text-xs text-purple-600">Permendagri No. 13 Tahun 2024</p>
-									</div>
-								</div>
-								{showKetentuan ? (
-									<LuChevronUp className="w-5 h-5 text-purple-500" />
-								) : (
-									<LuChevronDown className="w-5 h-5 text-purple-500" />
-								)}
-							</button>
-
-							{showKetentuan && (
-								<div className="p-4 bg-gradient-to-br from-purple-50/50 to-pink-50/50 space-y-4">
-									{/* Kedudukan dan Pembentukan */}
-									<div className="space-y-2">
-										{[
-											<>Posyandu <strong>berkedudukan di Desa/Kelurahan</strong> setempat.</>,
-											<>Posyandu dibentuk atas <strong>prakarsa Pemerintah Desa/Kelurahan dan masyarakat</strong>.</>,
-											<>Pembentukan Posyandu disertai/diikuti dengan pemberian <strong>nomor registrasi</strong> yang ditetapkan oleh Menteri melalui Direktorat Jenderal Bina Pemerintahan Desa.</>,
-											<>Tata cara pemberian nomor registrasi ditetapkan oleh Menteri.</>,
-										].map((text, i) => (
-											<div key={i} className="bg-white rounded-lg p-3 shadow-sm border border-purple-100">
-												<div className="flex items-start space-x-2.5">
-													<div className="flex-shrink-0 w-5 h-5 bg-purple-600 text-white rounded-full flex items-center justify-center text-xs font-bold">
-														{i + 1}
-													</div>
-													<p className="text-sm text-gray-700 leading-relaxed">{text}</p>
-												</div>
-											</div>
-										))}
-									</div>
-
-									{/* Syarat Pembentukan */}
-									<div className="pt-3 border-t border-purple-200">
-										<h5 className="font-semibold text-purple-900 mb-2 flex items-center text-sm">
-											<LuCheck className="w-4 h-4 mr-1.5" />
-											Syarat Pembentukan
-										</h5>
-										<div className="space-y-2">
-											<div className="bg-white rounded-lg p-3 shadow-sm border border-purple-100">
-												<p className="text-sm text-gray-700 font-medium mb-2">Pembentukan Posyandu dengan memenuhi persyaratan:</p>
-												<ol className="space-y-1 ml-3">
-													{["Keberadaannya bermanfaat dan dibutuhkan masyarakat Desa/Kelurahan", "Memiliki kepengurusan yang tetap", "Memiliki sekretariat, tempat pelayanan, dan sarana pendukung lainnya yang bersifat tetap", "Tidak berafiliasi kepada partai politik"].map((s, i) => (
-														<li key={i} className="flex items-start space-x-2 text-sm text-gray-700">
-															<span className="text-purple-600 font-bold">{String.fromCharCode(97 + i)}.</span>
-															<span>{s}</span>
-														</li>
-													))}
-												</ol>
-											</div>
-											<div className="bg-white rounded-lg p-3 shadow-sm border border-purple-100">
-												<div className="flex items-start space-x-2.5">
-													<div className="flex-shrink-0 w-5 h-5 bg-purple-600 text-white rounded-full flex items-center justify-center text-xs font-bold">2</div>
-													<p className="text-sm text-gray-700 leading-relaxed">Sekretariat, tempat pelayanan, dan sarana pendukung lainnya merupakan <strong>aset Desa/Kelurahan</strong>.</p>
-												</div>
-											</div>
-											<div className="bg-white rounded-lg p-3 shadow-sm border border-purple-100">
-												<div className="flex items-start space-x-2.5">
-													<div className="flex-shrink-0 w-5 h-5 bg-purple-600 text-white rounded-full flex items-center justify-center text-xs font-bold">3</div>
-													<p className="text-sm text-gray-700 leading-relaxed">Dalam hal Pemerintah Desa/Kelurahan tidak memiliki sekretariat, tempat pelayanan, dan sarana pendukung lainnya, dapat <strong>menggunakan fasilitas lainnya</strong>.</p>
-												</div>
-											</div>
-										</div>
-									</div>
-
-									<div className="flex items-start space-x-2 bg-blue-100 rounded-lg p-3">
-										<LuInfo className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
-										<div>
-											<p className="text-sm font-semibold text-blue-900">Peraturan Menteri Dalam Negeri Nomor 13 Tahun 2024</p>
-											<p className="text-xs text-blue-700">Tentang Pos Pelayanan Terpadu</p>
-										</div>
-									</div>
-								</div>
-							)}
-						</div>
-					)}
-
-					<div className="p-6 space-y-4">{children}</div>
-					<div className="flex justify-end gap-3 p-6 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
-						<button
-							type="button"
-							className="px-6 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
-							onClick={onClose}
-							disabled={submitting}
-						>
-							Batal
-						</button>
-						<button
-							type="button"
-							className={`px-6 py-2 bg-gradient-to-r ${getGradient()} text-white rounded-lg hover:shadow-md disabled:opacity-50 transition-all flex items-center space-x-2`}
-							onClick={onSubmit}
-							disabled={submitting}
-						>
-							{submitting ? (
-								<>
-									<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-									<span>Menyimpan...</span>
-								</>
-							) : (
-								<>
-									<LuPlus className="w-4 h-4" />
-									<span>Simpan</span>
-								</>
-							)}
-						</button>
-					</div>
-				</div>
-			</div>
-		);
-	};
 
 	// Validasi type parameter - RT tidak tersedia di sini, hanya di detail RW
 	const validTypes = ["rw", "posyandu", "lembaga-lainnya"];
@@ -936,6 +941,12 @@ export default function KelembagaanList() {
 					}
 				}}
 				onSubmit={handleCreate}
+				type={type}
+				submitting={submitting}
+				showKetentuan={showKetentuan}
+				setShowKetentuan={setShowKetentuan}
+				gradient={getGradient()}
+				IconComponent={IconComponent}
 			>
 				{type === "rw" ? (
 					<div className="space-y-4">
@@ -1081,7 +1092,97 @@ export default function KelembagaanList() {
 					</div>
 				) : type === "lembaga-lainnya" ? (
 					<div className="space-y-4">
+						{/* Produk Hukum Lembaga */}
 						<div>
+							<label className="block text-sm font-medium mb-1 text-gray-700">
+								Produk Hukum Lembaga <span className="text-red-500">*</span>
+							</label>
+							<p className="text-xs text-gray-500 mb-2">
+								Pilih Perdes/Perkades yang masih berlaku sebagai dasar hukum pembentukan lembaga
+							</p>
+							<div className="relative">
+								<button
+									type="button"
+									className={`w-full text-left border rounded-lg px-3 py-2.5 text-sm flex items-center justify-between transition-colors ${addForm.produk_hukum_id ? "border-slate-300 bg-slate-50" : "border-gray-300 bg-white"} ${submitting ? "opacity-50 cursor-not-allowed" : "hover:border-slate-400"}`}
+									onClick={() => !submitting && setShowPhDropdown((v) => !v)}
+									disabled={submitting}
+								>
+									{addForm.produk_hukum_id ? (
+										<div className="flex-1 min-w-0">
+											<p className="font-medium text-slate-700 truncate">{produkHukumOptions.find((p) => p.id === addForm.produk_hukum_id)?.judul || "—"}</p>
+											<p className="text-xs text-slate-500 mt-0.5">{(produkHukumOptions.find((p) => p.id === addForm.produk_hukum_id)?.jenis || "").replace(/_/g, " ")} — No. {produkHukumOptions.find((p) => p.id === addForm.produk_hukum_id)?.nomor}</p>
+										</div>
+									) : (
+										<span className="text-gray-400">Pilih produk hukum...</span>
+									)}
+									<LuChevronDown className={`w-4 h-4 text-gray-400 flex-shrink-0 ml-2 transition-transform ${showPhDropdown ? "rotate-180" : ""}`} />
+								</button>
+								{showPhDropdown && (
+									<div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg">
+										<div className="p-2 border-b border-gray-100">
+											<div className="relative">
+												<LuSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+												<input
+													className="w-full border border-gray-200 rounded-md pl-8 pr-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-slate-500"
+													placeholder="Cari judul atau nomor..."
+													value={phSearchTerm}
+													onChange={(e) => setPhSearchTerm(e.target.value)}
+													autoFocus
+												/>
+											</div>
+										</div>
+										<div className="max-h-48 overflow-y-auto">
+											{loadingPh ? (
+												<div className="p-3 text-center text-sm text-gray-500">
+													<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-slate-500 mx-auto mb-1"></div>
+													Memuat...
+												</div>
+											) : produkHukumOptions.filter((ph) =>
+												!phSearchTerm || (ph.judul || "").toLowerCase().includes(phSearchTerm.toLowerCase()) || (ph.nomor || "").toLowerCase().includes(phSearchTerm.toLowerCase())
+											).length === 0 ? (
+												<div className="p-3 text-center text-sm text-gray-500">
+													{phSearchTerm ? "Tidak ditemukan" : "Belum ada Perdes/Perkades berlaku"}
+												</div>
+											) : (
+												produkHukumOptions
+													.filter((ph) =>
+														!phSearchTerm || (ph.judul || "").toLowerCase().includes(phSearchTerm.toLowerCase()) || (ph.nomor || "").toLowerCase().includes(phSearchTerm.toLowerCase())
+													)
+													.map((ph) => (
+														<button
+															key={ph.id}
+															type="button"
+															className={`w-full text-left px-3 py-2 border-b border-gray-50 last:border-b-0 hover:bg-slate-50 transition-colors ${addForm.produk_hukum_id === ph.id ? "bg-slate-50" : ""}`}
+															onClick={() => {
+																setAddForm((f) => ({ ...f, produk_hukum_id: ph.id }));
+																setShowPhDropdown(false);
+																setPhSearchTerm("");
+															}}
+														>
+															<div className="flex items-center justify-between">
+																<div className="flex-1 min-w-0">
+																	<p className={`text-sm font-medium truncate ${addForm.produk_hukum_id === ph.id ? "text-slate-700" : "text-gray-900"}`}>{ph.judul}</p>
+																	<p className="text-xs text-gray-500">{(ph.jenis || "").replace(/_/g, " ")} — No. {ph.nomor}</p>
+																</div>
+																{addForm.produk_hukum_id === ph.id && <LuCheck className="w-4 h-4 text-slate-600 ml-2 flex-shrink-0" />}
+															</div>
+														</button>
+													))
+											)}
+										</div>
+									</div>
+								)}
+							</div>
+							{!addForm.produk_hukum_id && (
+								<p className="text-xs text-amber-600 mt-1.5 flex items-center gap-1">
+									<LuLock className="w-3.5 h-3.5" />
+									Pilih produk hukum terlebih dahulu untuk mengisi data di bawah
+								</p>
+							)}
+						</div>
+
+						{/* Nama Lembaga */}
+						<div className={!addForm.produk_hukum_id ? "opacity-50 pointer-events-none" : ""}>
 							<label
 								htmlFor="modal-lembaga-nama"
 								className="block text-sm font-medium mb-1 text-gray-700"
@@ -1102,12 +1203,13 @@ export default function KelembagaanList() {
 										setAddForm((f) => ({ ...f, nama: e.target.value.toUpperCase() }))
 									}
 									placeholder="Contoh: Forum Komunikasi Desa, Kelompok Tani"
-									disabled={submitting}
-									autoFocus
+									disabled={submitting || !addForm.produk_hukum_id}
 								/>
 							</div>
 						</div>
-						<div>
+
+						{/* Alamat */}
+						<div className={!addForm.produk_hukum_id ? "opacity-50 pointer-events-none" : ""}>
 							<label htmlFor="modal-lembaga-alamat" className="block text-sm font-medium mb-1 text-gray-700">
 								Alamat Kelembagaan
 							</label>
@@ -1124,7 +1226,7 @@ export default function KelembagaanList() {
 									value={addForm.alamat}
 									onChange={(e) => setAddForm((f) => ({ ...f, alamat: e.target.value.toUpperCase() }))}
 									placeholder="Masukkan alamat sekretariat memuat dusun/kampung/jalan/gang atau sebutan lain"
-									disabled={submitting}
+									disabled={submitting || !addForm.produk_hukum_id}
 								/>
 							</div>
 						</div>
