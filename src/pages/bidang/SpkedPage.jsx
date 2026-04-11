@@ -456,7 +456,40 @@ const SpkedPage = () => {
 								</div>
 								<div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl border border-gray-200/50 overflow-hidden">
 									<Suspense fallback={<LoadingFallback />}>
-										{(bankeuYear === 2025 || bankeuYear === 2026 || bankeuYear === 2027) ? (
+										{bankeuYear === 2025 ? (
+											<div>
+												{/* Sub-tabs for TA 2025 */}
+												<div className="border-b border-gray-200 bg-gray-50 p-4">
+													<div className="flex gap-2">
+														<button
+															onClick={() => setBankeu2025View('penyaluran')}
+															className={`px-4 py-2 rounded-lg font-medium transition-all ${
+																bankeu2025View === 'penyaluran'
+																	? 'bg-white text-blue-600 shadow-sm'
+																	: 'text-gray-600 hover:bg-white/50'
+															}`}
+														>
+															💰 Penyaluran T1 & T2
+														</button>
+														<button
+															onClick={() => setBankeu2025View('lpj')}
+															className={`px-4 py-2 rounded-lg font-medium transition-all ${
+																bankeu2025View === 'lpj'
+																	? 'bg-white text-amber-600 shadow-sm'
+																	: 'text-gray-600 hover:bg-white/50'
+															}`}
+														>
+															📋 LPJ Bantuan Keuangan
+														</button>
+													</div>
+												</div>
+												{bankeu2025View === 'penyaluran' ? (
+													<BankeuDashboard />
+												) : (
+													<BankeuLpjMonitoringPage tahun={2025} />
+												)}
+											</div>
+										) : (bankeuYear === 2026 || bankeuYear === 2027) ? (
 											<DpmdVerificationPage tahunAnggaran={bankeuYear} />
 										) : null}
 									</Suspense>
