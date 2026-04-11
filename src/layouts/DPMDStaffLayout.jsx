@@ -456,31 +456,16 @@ const DPMDStaffLayout = () => {
 		{ path: "/dpmd/pesan", label: "Pesan", icon: 'mail', color: 'text-indigo-600', gradient: 'from-indigo-500 to-purple-600' },
 	];
 
-	// Mobile bottom nav - simplified 3 items with Bidang as main center button
+	// Mobile bottom nav - 3 items: Home, Aksi Cepat (FAB), Profil
 	const userBidang = BIDANG_ROUTES[user.bidang_id];
 	const ABSENSI_ELIGIBLE_STATUS = ['PPPK Paruh Waktu', 'Tenaga Alih Daya', 'Tenaga Keamanan', 'Tenaga Kebersihan'];
 	const userStatus = user.status_kepegawaian || authUser?.status_kepegawaian;
 	const isAbsensiEligible = ABSENSI_ELIGIBLE_STATUS.includes(userStatus);
-	const isOnAbsensi = location.pathname.startsWith('/dpmd/absensi');
-	const bottomNavItems = isAbsensiEligible
-		? [
-			{ path: "/dpmd/dashboard", label: "Home", icon: FiHome },
-			{ label: "Aksi Cepat", isMain: true, isQuickAction: true },
-			...(isOnAbsensi
-				? [{ path: "/dpmd/absensi?tab=riwayat", label: "Riwayat", icon: FiCalendar }]
-				: [{ path: `${config.basePath}/profile`, label: "Profil", icon: FiUser }]
-			),
-		]
-		: [
-			{ path: "/dpmd/dashboard", label: "Home", icon: FiHome },
-			{ 
-				path: userBidang?.path || "/dpmd/jadwal-kegiatan", 
-				label: userBidang?.name || "Bidang", 
-				icon: userBidang?.icon || FiCalendar, 
-				isMain: true 
-			},
-			{ path: `${config.basePath}/profile`, label: "Profil", icon: FiUser },
-		];
+	const bottomNavItems = [
+		{ path: "/dpmd/dashboard", label: "Home", icon: FiHome },
+		{ label: "Aksi Cepat", isMain: true, isQuickAction: true },
+		{ path: `${config.basePath}/profile`, label: "Profil", icon: FiUser },
+	];
 
 	// Sidebar nav items (includes profile and bidang)
 	const getSidebarNavItems = () => {
@@ -898,129 +883,27 @@ const DPMDStaffLayout = () => {
 									: false;
 								const Icon = item.icon;
 								
-								// Quick Action FAB (for absensi-eligible users)
+								// Aksi Cepat FAB - opens full menu bottom sheet
 								if (item.isQuickAction) {
-									return (
-										<div key={index} className="relative flex flex-col items-center">
-											{/* Quick Action Popup */}
-											<AnimatePresence>
-											{showQuickAction && (
-												<>
-													<motion.div 
-														initial={{ opacity: 0 }}
-														animate={{ opacity: 1 }}
-														exit={{ opacity: 0 }}
-														transition={{ duration: 0.2 }}
-														className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm"
-														onClick={() => setShowQuickAction(false)}
-													/>
-													<motion.div
-														initial={{ opacity: 0, y: 30, scale: 0.8 }}
-														animate={{ opacity: 1, y: 0, scale: 1 }}
-														exit={{ opacity: 0, y: 30, scale: 0.8 }}
-														transition={{ type: "spring", stiffness: 400, damping: 22 }}
-														className="absolute bottom-16 z-50"
-													>
-														<div className="relative bg-white/95 backdrop-blur-2xl rounded-3xl shadow-[0_12px_40px_rgba(0,0,0,0.2)] border border-white/60 p-3 min-w-[220px]">
-															{/* Top notch pointer */}
-															<div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-white/95 rotate-45 border-r border-b border-white/60" />
-															
-															{/* Header */}
-															<p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2 mb-2">Aksi Cepat</p>
-															
-															{/* Bidang Button */}
-															<motion.button
-																initial={{ opacity: 0, x: -15 }}
-																animate={{ opacity: 1, x: 0 }}
-																exit={{ opacity: 0, x: -15 }}
-																transition={{ delay: 0.05, type: "spring", stiffness: 300 }}
-																whileTap={{ scale: 0.97 }}
-																onClick={() => {
-																	setShowQuickAction(false);
-																	navigate(userBidang?.path || "/dpmd/jadwal-kegiatan");
-																}}
-																className="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl hover:bg-slate-50 transition-colors group mb-1"
-															>
-																<div className={`relative h-10 w-10 rounded-2xl bg-gradient-to-br ${userBidang?.gradient || 'from-blue-500 to-indigo-600'} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform`}>
-																	<div className="absolute inset-0 rounded-2xl bg-white/20" />
-																	<AnimatedIcon type={userBidang?.icon || 'briefcase'} isActive={true} className="w-5 h-5 text-white relative z-10" />
-																</div>
-																<div className="text-left">
-																	<span className="text-sm font-bold text-slate-800 block">{userBidang?.name || 'Bidang'}</span>
-																	<span className="text-[10px] text-slate-400">Aktivitas bidang</span>
-																</div>
-																<FiChevronRight className="w-4 h-4 text-slate-300 ml-auto group-hover:text-slate-500 group-hover:translate-x-0.5 transition-all" />
-															</motion.button>
-															
-															{/* Divider */}
-															<div className="h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent mx-2" />
-															
-															{/* Presensi Button */}
-															<motion.button
-																initial={{ opacity: 0, x: -15 }}
-																animate={{ opacity: 1, x: 0 }}
-																exit={{ opacity: 0, x: -15 }}
-																transition={{ delay: 0.1, type: "spring", stiffness: 300 }}
-																whileTap={{ scale: 0.97 }}
-																onClick={() => {
-																	setShowQuickAction(false);
-																	navigate("/dpmd/absensi");
-																}}
-																className="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl hover:bg-slate-50 transition-colors group mt-1"
-															>
-																<div className="relative h-10 w-10 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-																	<div className="absolute inset-0 rounded-2xl bg-white/20" />
-																	<FiClock className="w-5 h-5 text-white relative z-10" />
-																</div>
-																<div className="text-left">
-																	<span className="text-sm font-bold text-slate-800 block">Presensi</span>
-																	<span className="text-[10px] text-slate-400">Absen masuk & pulang</span>
-																</div>
-																<FiChevronRight className="w-4 h-4 text-slate-300 ml-auto group-hover:text-slate-500 group-hover:translate-x-0.5 transition-all" />
-															</motion.button>
-														</div>
-													</motion.div>
-												</>
-											)}
-											</AnimatePresence>
-											{/* Main FAB Button — elevated above the pill */}
-											<div className="relative -mt-8 mb-0.5">
-												<button
-													onClick={() => setShowQuickAction(!showQuickAction)}
-													className={`relative flex items-center justify-center h-[52px] w-[52px] rounded-full shadow-lg ring-[5px] ring-white transition-all duration-300 ${
-														showQuickAction
-															? 'bg-gradient-to-br from-slate-700 to-slate-900 rotate-45 scale-95'
-															: 'bg-gradient-to-br from-cyan-500 to-blue-600 hover:scale-110'
-													}`}
-												>
-													<img src={aksiCepatIcon} alt="Aksi Cepat" className={`h-6 w-6 brightness-0 invert transition-transform duration-300 ${showQuickAction ? '-rotate-45' : ''}`} />
-												</button>
-											</div>
-											<span className={`text-[9px] font-bold tracking-wider uppercase ${showQuickAction ? 'text-slate-700' : 'text-slate-400'}`}>
-												{showQuickAction ? 'Tutup' : item.label}
-											</span>
-										</div>
-									);
-								}
-
-								// Main button (Bidang) - elevated (non-absensi users)
-								if (item.isMain) {
 									return (
 										<button
 											key={index}
-											onClick={() => navigate(item.path)}
+											onClick={() => setShowMenu(true)}
 											className="relative flex flex-col items-center"
 										>
 											<div className="relative -mt-8 mb-0.5">
-												<div className={`relative flex items-center justify-center h-[52px] w-[52px] rounded-full shadow-lg ring-[5px] ring-white transition-all duration-300 bg-gradient-to-br ${theme.gradientFrom} ${theme.gradientTo} text-white ${
-													isActive ? 'scale-110' : 'hover:scale-110'
-												}`}>
-													<AnimatedIcon type={Icon} isActive={isActive} className="w-6 h-6 text-white" />
+												<div className="relative flex items-center justify-center h-[52px] w-[52px] rounded-full shadow-lg ring-[5px] ring-white transition-all duration-300 bg-gradient-to-br from-cyan-500 to-blue-600 hover:scale-110">
+													<img src={aksiCepatIcon} alt="Aksi Cepat" className="h-6 w-6 brightness-0 invert" />
+													{unreadCount > 0 && (
+														<span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+															{unreadCount > 9 ? '9+' : unreadCount}
+														</span>
+													)}
 												</div>
 											</div>
-											<span className={`text-[9px] font-bold tracking-wider uppercase ${
-												isActive ? theme.activeText : 'text-slate-400'
-											}`}>{item.label}</span>
+											<span className="text-[9px] font-bold tracking-wider uppercase text-slate-400">
+												{item.label}
+											</span>
 										</button>
 									);
 								}
@@ -1060,99 +943,215 @@ const DPMDStaffLayout = () => {
 				</nav>
 			)}
 
-			{/* Menu Modal - Mobile Only, Slide from bottom */}
+			{/* Aksi Cepat Menu - Mobile Only, Slide from bottom (superadmin-style) */}
+			<AnimatePresence>
 			{showMenu && !isDesktop && (
 				<>
-					<div 
-						className="fixed inset-0 bg-black/75 z-50 animate-fadeIn"
+					<motion.div
+						initial={{ opacity: 0 }}
+						animate={{ opacity: 1 }}
+						exit={{ opacity: 0 }}
+						className="fixed inset-0 z-50 bg-black/70"
 						onClick={() => setShowMenu(false)}
-					></div>
-					<div className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl z-50 animate-slideUp">
+					/>
+					<motion.div
+						initial={{ y: "100%" }}
+						animate={{ y: 0 }}
+						exit={{ y: "100%" }}
+						transition={{ type: "spring", stiffness: 320, damping: 28 }}
+						className="fixed bottom-0 left-0 right-0 z-50 rounded-t-[2rem] bg-white shadow-2xl"
+					>
 						<div className="max-w-lg mx-auto">
 							{/* Handle Bar */}
 							<div className="flex justify-center pt-3 pb-2">
-								<div className="w-12 h-1.5 bg-gray-300 rounded-full"></div>
+								<div className="w-12 h-1.5 bg-slate-300 rounded-full"></div>
 							</div>
 
-							{/* Menu Header */}
-							<div className={`px-6 py-4 border-b ${theme.menuBorder}`}>
-								<div className="flex items-center gap-3">
+							{/* User Header */}
+							<div className={`border-b ${theme.menuBorder} bg-gradient-to-r from-slate-50 via-blue-50 to-indigo-50 px-6 py-5`}>
+								<div className="flex items-start gap-4">
 									{user.avatar ? (
-										<img 
+										<img
 											src={getAvatarUrl(user.avatar)}
 											alt={user.name}
-											className="h-14 w-14 rounded-full object-cover shadow-md"
+											className="h-14 w-14 rounded-2xl object-cover shadow-md"
 											onError={(e) => {
 												e.target.style.display = 'none';
 												e.target.nextElementSibling.style.display = 'flex';
 											}}
 										/>
 									) : null}
-									<div className={`h-14 w-14 bg-gradient-to-br ${theme.gradientFrom} ${theme.gradientTo} rounded-full flex items-center justify-center shadow-md ${user.avatar ? 'hidden' : ''}`}>
+									<div className={`h-14 w-14 bg-gradient-to-br ${theme.gradientFrom} ${theme.gradientTo} rounded-2xl flex items-center justify-center shadow-md ${user.avatar ? 'hidden' : ''}`}>
 										<span className="text-white font-bold text-xl">
 											{user.name?.charAt(0) || "U"}
 										</span>
 									</div>
-									<div className="flex-1">
-										<h3 className="font-bold text-gray-800 text-lg">{user.name || getDisplayName()}</h3>
-										<p className="text-sm text-gray-500">{user.email}</p>
-										<span className={`inline-block mt-1 px-2 py-0.5 ${theme.badgeBg} ${theme.badgeText} rounded-full text-xs font-medium`}>
+									<div className="min-w-0 flex-1">
+										<p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400 mb-0.5">Aksi Cepat</p>
+										<h3 className="truncate text-lg font-bold text-slate-900">{user.name || getDisplayName()}</h3>
+										<p className="truncate text-sm text-slate-500">{user.email}</p>
+										<span className={`mt-1.5 inline-flex rounded-full ${theme.badgeBg} px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${theme.badgeText}`}>
 											{getShortDisplayName()}
 										</span>
 									</div>
+									<button
+										onClick={() => setShowMenu(false)}
+										className="rounded-2xl bg-white p-2 text-slate-500 shadow-sm transition-colors hover:bg-slate-100"
+									>
+										<FiX className="h-5 w-5" />
+									</button>
+								</div>
+
+								{/* Quick Access: Notifikasi + Profil */}
+								<div className="mt-4 grid grid-cols-2 gap-3">
+									<button
+										onClick={() => {
+											setShowMenu(false);
+											handleNotificationClick();
+										}}
+										className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left shadow-sm"
+									>
+										<div className="relative flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-100 text-blue-700">
+											<FiBell className="h-5 w-5" />
+											{unreadCount > 0 && (
+												<span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+													{unreadCount > 9 ? '9+' : unreadCount}
+												</span>
+											)}
+										</div>
+										<div>
+											<p className="text-sm font-semibold text-slate-800">Notifikasi</p>
+											<p className="text-xs text-slate-400">{unreadCount > 0 ? `${unreadCount} belum dibaca` : 'Semua dibaca'}</p>
+										</div>
+									</button>
+
+									<button
+										onClick={() => {
+											setShowMenu(false);
+											navigate(`${config.basePath}/profile`);
+										}}
+										className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left shadow-sm"
+									>
+										<div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-700">
+											<FiUser className="h-5 w-5" />
+										</div>
+										<div>
+											<p className="text-sm font-semibold text-slate-800">Profil</p>
+											<p className="text-xs text-slate-400">Lihat & edit profil</p>
+										</div>
+									</button>
 								</div>
 							</div>
 
-							{/* Menu Items */}
-							<div className="px-6 py-4 space-y-2 max-h-96 overflow-y-auto">
-								<button 
-									onClick={() => {
-										setShowMenu(false);
-										navigate(`${config.basePath}/profile`);
-									}}
-									className={`w-full flex items-center gap-4 p-4 rounded-xl ${theme.hoverBg} transition-colors text-left`}
-								>
-									<div className={`h-12 w-12 ${theme.badgeBg} rounded-xl flex items-center justify-center`}>
-										<FiUser className={`h-6 w-6 ${theme.badgeText}`} />
+							{/* All Menu Items */}
+							<div className="max-h-[50vh] space-y-1.5 overflow-y-auto px-6 py-4">
+								{/* Bidang Navigation - prioritized at top */}
+								{config.showBidangNav && userBidang && (
+									<div className="border-b border-slate-100 pb-3 mb-3">
+										<p className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-400">Bidang</p>
+										<button
+											onClick={() => {
+												setShowMenu(false);
+												navigate(userBidang.path);
+											}}
+											className={`flex w-full items-center gap-4 rounded-2xl px-4 py-3 text-left transition-all duration-200 ${
+												location.pathname.startsWith(userBidang.path)
+													? `bg-gradient-to-r ${userBidang.gradient} text-white shadow-lg`
+													: 'bg-slate-50 text-slate-700 hover:bg-slate-100'
+											}`}
+										>
+											<div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${
+												location.pathname.startsWith(userBidang.path) ? 'bg-white/15 text-white' : 'bg-white text-slate-600 shadow-sm'
+											}`}>
+												<AnimatedIcon type={userBidang.icon} isActive={location.pathname.startsWith(userBidang.path)} className="w-5 h-5" />
+											</div>
+											<div className="min-w-0 flex-1">
+												<p className="truncate text-sm font-semibold">Bidang {userBidang.name}</p>
+											</div>
+											<FiChevronRight className={`h-4 w-4 ${
+												location.pathname.startsWith(userBidang.path) ? 'text-white/80' : 'text-slate-300'
+											}`} />
+										</button>
 									</div>
-									<div>
-										<h4 className="font-semibold text-gray-800">Profil Saya</h4>
-										<p className="text-sm text-gray-500">Lihat & edit profil</p>
-									</div>
-								</button>
+								)}
 
-								{/* Bidang Navigation */}
-								{renderBidangNavItem()}
+								{/* Nav Items */}
+								{navItems.map((item) => {
+									const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + '/');
+									return (
+										<button
+											key={item.path}
+											onClick={() => {
+												setShowMenu(false);
+												navigate(item.path);
+											}}
+											className={`flex w-full items-center gap-4 rounded-2xl px-4 py-3 text-left transition-all duration-200 ${
+												isActive
+													? `bg-gradient-to-r ${item.gradient} text-white shadow-lg`
+													: 'text-slate-700 hover:bg-slate-100'
+											}`}
+										>
+											<div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${
+												isActive ? 'bg-white/15 text-white' : 'bg-white text-slate-600 shadow-sm'
+											}`}>
+												<AnimatedIcon type={item.icon} isActive={isActive} className="w-5 h-5" />
+											</div>
+											<div className="min-w-0 flex-1">
+												<p className="truncate text-sm font-semibold">{item.label}</p>
+											</div>
+											<FiChevronRight className={`h-4 w-4 ${isActive ? 'text-white/80' : 'text-slate-300'}`} />
+										</button>
+									);
+								})}
 
-								<div className="border-t border-gray-200 my-2"></div>
-
-								<button 
-									onClick={handleLogout}
-									className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-red-50 transition-colors text-left"
-								>
-									<div className="h-12 w-12 bg-red-100 rounded-xl flex items-center justify-center">
-										<FiLogOut className="h-6 w-6 text-red-600" />
-									</div>
-									<div>
-										<h4 className="font-semibold text-red-600">Keluar</h4>
-										<p className="text-sm text-gray-500">Logout dari sistem</p>
-									</div>
-								</button>
+								{/* Presensi - for absensi-eligible users */}
+								{isAbsensiEligible && (
+									<button
+										onClick={() => {
+											setShowMenu(false);
+											navigate('/dpmd/absensi');
+										}}
+										className={`flex w-full items-center gap-4 rounded-2xl px-4 py-3 text-left transition-all duration-200 ${
+											location.pathname.startsWith('/dpmd/absensi')
+												? 'bg-gradient-to-r from-emerald-400 to-teal-600 text-white shadow-lg'
+												: 'text-slate-700 hover:bg-slate-100'
+										}`}
+									>
+										<div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${
+											location.pathname.startsWith('/dpmd/absensi') ? 'bg-white/15 text-white' : 'bg-white text-slate-600 shadow-sm'
+										}`}>
+											<FiClock className="w-5 h-5" />
+										</div>
+										<div className="min-w-0 flex-1">
+											<p className="truncate text-sm font-semibold">Presensi</p>
+										</div>
+										<FiChevronRight className={`h-4 w-4 ${
+											location.pathname.startsWith('/dpmd/absensi') ? 'text-white/80' : 'text-slate-300'
+										}`} />
+									</button>
+								)}
 							</div>
 
-							{/* Close Button */}
-							<div className="px-6 py-4 border-t border-gray-200">
+							{/* Logout */}
+							<div className="border-t border-slate-100 px-6 py-4">
 								<button
-									onClick={() => setShowMenu(false)}
-									className="w-full py-3 text-gray-600 font-medium hover:text-gray-800 transition-colors"
+									onClick={handleLogout}
+									className="flex w-full items-center gap-4 rounded-2xl bg-red-50 px-4 py-3 text-left text-red-600 border border-red-200"
 								>
-									Tutup
+									<div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-red-500 shadow-sm">
+										<FiLogOut className="h-5 w-5" />
+									</div>
+									<div>
+										<p className="text-sm font-semibold">Keluar</p>
+										<p className="text-xs text-red-400">Logout dari aplikasi</p>
+									</div>
 								</button>
 							</div>
 						</div>
-					</div>
+					</motion.div>
 				</>
 			)}
+			</AnimatePresence>
 			{confirmDialog}
 
 			{/* Smart Search ChatBot */}

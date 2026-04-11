@@ -163,9 +163,9 @@ const HeroSection = () => {
 				</div>
 			</div>
 
-			{/* Slide Indicators */}
+			{/* Slide Indicators - hidden but functionality preserved */}
 			{gallery.length > 1 && (
-				<div className="absolute bottom-28 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2">
+				<div className="hidden">
 					{gallery.map((_, i) => (
 						<button
 							key={i}

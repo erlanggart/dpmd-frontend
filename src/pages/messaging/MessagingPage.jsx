@@ -143,19 +143,19 @@ function MessageBubble({ message, isOwn, onDelete }) {
 			initial={{ opacity: 0, y: 4, scale: 0.98 }}
 			animate={{ opacity: 1, y: 0, scale: 1 }}
 			transition={{ duration: 0.15 }}
-			className={`flex ${isOwn ? 'justify-end' : 'justify-start'} mb-1.5 group`}
+			className={`flex ${isOwn ? 'justify-end' : 'justify-start'} mb-1.5 group min-w-0`}
 			onMouseEnter={() => setHovered(true)}
 			onMouseLeave={() => setHovered(false)}
 		>
-			<div className="relative max-w-[75%] lg:max-w-[60%]">
+			<div className="relative max-w-[75%] lg:max-w-[60%] min-w-0">
 				<div className={`rounded-2xl px-3.5 py-2 ${
 					isOwn
 						? 'bg-emerald-500 text-white rounded-br-[4px]'
 						: 'bg-white text-slate-800 rounded-bl-[4px] shadow-sm border border-slate-50'
 				}`}>
 					{isImage && message.file_path && (
-						<a href={`${API_URL}/${message.file_path}`} target="_blank" rel="noopener noreferrer" className="block mb-1.5">
-							<img src={`${API_URL}/${message.file_path}`} alt="" className="rounded-xl max-w-full max-h-64" loading="lazy" />
+						<a href={`${API_URL}/${message.file_path}`} target="_blank" rel="noopener noreferrer" className="block mb-1.5 overflow-hidden rounded-xl">
+							<img src={`${API_URL}/${message.file_path}`} alt="" className="rounded-xl w-full max-h-64 object-cover" loading="lazy" />
 						</a>
 					)}
 					{isFile && (
@@ -505,6 +505,14 @@ export default function MessagingPage() {
 	};
 	const handleKeyDown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } };
 
+	// auto-resize textarea
+	useEffect(() => {
+		const el = inputRef.current;
+		if (!el) return;
+		el.style.height = 'auto';
+		el.style.height = Math.min(el.scrollHeight, 112) + 'px';
+	}, [inputText]);
+
 	useEffect(() => {
 		if (messages.length > 0) endRef.current?.scrollIntoView({ behavior: 'smooth' });
 	}, [messages]);
@@ -558,10 +566,10 @@ export default function MessagingPage() {
 	   RENDER
 	   ════════════════════════════════════════ */
 	return (
-		<div className="flex h-[calc(100vh-80px)] bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-200/80">
+		<div className="flex h-[100dvh] md:h-[calc(100vh-80px)] bg-white md:rounded-2xl overflow-hidden md:shadow-sm md:border md:border-slate-200/80">
 
 			{/* ── LEFT PANEL ── */}
-			<div className={`w-full md:w-[360px] lg:w-[400px] flex-shrink-0 bg-white border-r border-slate-100 flex flex-col ${mobileChat ? 'hidden md:flex' : 'flex'}`}>
+			<div className={`w-full md:w-[360px] lg:w-[400px] flex-shrink-0 bg-white md:border-r border-slate-100 flex flex-col ${mobileChat ? 'hidden md:flex' : 'flex'}`}>
 
 				{/* Header */}
 				<div className="px-4 pt-4 pb-3 flex-shrink-0 border-b border-slate-100">
@@ -599,7 +607,7 @@ export default function MessagingPage() {
 							</div>
 							<div className="flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-hide">
 								<FilterTab label="Semua" active={contactFilter === 'all'} count={contacts.length} onClick={() => setContactFilter('all')} />
-								<FilterTab label="DPMD" active={contactFilter === 'dpmd'} count={contacts.filter(c => ROLE_GROUPS.dpmd.includes(c.role)).length} onClick={() => setContactFilter('dpmd')} />
+								<FilterTab label="Internal" active={contactFilter === 'dpmd'} count={contacts.filter(c => ROLE_GROUPS.dpmd.includes(c.role)).length} onClick={() => setContactFilter('dpmd')} />
 								<FilterTab label="Desa" active={contactFilter === 'desa'} count={contacts.filter(c => ROLE_GROUPS.desa.includes(c.role)).length} onClick={() => setContactFilter('desa')} />
 								<FilterTab label="Kecamatan" active={contactFilter === 'kecamatan'} count={contacts.filter(c => ROLE_GROUPS.kecamatan.includes(c.role)).length} onClick={() => setContactFilter('kecamatan')} />
 								<FilterTab label="Dinas" active={contactFilter === 'dinas'} count={contacts.filter(c => ROLE_GROUPS.dinas.includes(c.role)).length} onClick={() => setContactFilter('dinas')} />
@@ -656,9 +664,9 @@ export default function MessagingPage() {
 				{activeConv ? (
 					<>
 						{/* Chat header */}
-						<div className="px-4 py-3 bg-white border-b border-slate-100 flex items-center gap-3 flex-shrink-0">
+						<div className="px-3 md:px-4 py-2.5 md:py-3 bg-white border-b border-slate-100 flex items-center gap-2.5 md:gap-3 flex-shrink-0 safe-area-top">
 							<button onClick={() => setMobileChat(false)}
-								className="md:hidden p-1.5 text-slate-500 hover:text-slate-700 rounded-xl hover:bg-slate-100 transition-all mr-0.5">
+								className="md:hidden p-1.5 text-slate-500 hover:text-slate-700 rounded-xl hover:bg-slate-100 transition-all flex-shrink-0">
 								<FiArrowLeft size={20} />
 							</button>
 							<Avatar user={activeConv.other_user} online={isOnline(activeConv.other_user?.id)} />
@@ -694,8 +702,7 @@ export default function MessagingPage() {
 						{/* Messages area */}
 						<div className="flex-1 relative overflow-hidden">
 							<div ref={containerRef} onScroll={handleScroll}
-								className="absolute inset-0 overflow-y-auto px-4 md:px-8 lg:px-16 py-4"
-								style={{ backgroundColor: '#f8fafc' }}>
+								className="absolute inset-0 overflow-y-auto overflow-x-hidden px-3 md:px-8 lg:px-16 py-4 chat-bg">
 								{loadingMsgs && messages.length === 0 && (
 									<div className="flex justify-center py-16">
 										<div className="w-7 h-7 rounded-full border-[2.5px] border-slate-200 border-t-emerald-500 animate-spin" />
@@ -733,7 +740,7 @@ export default function MessagingPage() {
 										animate={{ opacity: 1, scale: 1, y: 0 }}
 										exit={{ opacity: 0, scale: 0.8, y: 10 }}
 										onClick={scrollToBottom}
-										className="absolute bottom-3 right-4 bg-white p-2 rounded-full shadow-lg shadow-slate-900/10 border border-slate-200 hover:bg-slate-50 transition-colors z-10">
+										className="absolute bottom-3 right-4 bg-white p-2.5 rounded-full shadow-lg shadow-slate-900/10 border border-slate-200 hover:bg-slate-50 transition-colors z-10">
 										<FiChevronDown size={18} className="text-slate-600" />
 									</motion.button>
 								)}
@@ -741,8 +748,8 @@ export default function MessagingPage() {
 						</div>
 
 						{/* Input area */}
-						<div className="px-4 py-3 bg-white border-t border-slate-100 flex-shrink-0">
-							<div className="flex items-end gap-2">
+						<div className="px-3 md:px-4 py-2.5 md:py-3 bg-white border-t border-slate-100 flex-shrink-0 safe-area-bottom">
+							<div className="flex items-end gap-1.5 md:gap-2">
 								<button onClick={() => fileRef.current?.click()}
 									className="p-2.5 text-slate-400 hover:text-emerald-600 rounded-xl hover:bg-emerald-50/80 transition-all flex-shrink-0" title="Lampiran">
 									<FiPaperclip size={20} />
@@ -751,7 +758,7 @@ export default function MessagingPage() {
 								<div className="flex-1 min-w-0">
 									<textarea ref={inputRef} value={inputText} onChange={handleInput} onKeyDown={handleKeyDown}
 										placeholder="Tulis pesan..." rows={1}
-										className="w-full px-4 py-2.5 bg-slate-50 rounded-2xl text-[13.5px] focus:outline-none border border-slate-200 focus:border-emerald-400 focus:bg-white focus:ring-2 focus:ring-emerald-500/10 resize-none max-h-28 leading-5 transition-all placeholder:text-slate-400"
+										className="w-full px-3.5 md:px-4 py-2.5 bg-slate-50 rounded-2xl text-[14px] md:text-[13.5px] focus:outline-none border border-slate-200 focus:border-emerald-400 focus:bg-white focus:ring-2 focus:ring-emerald-500/10 resize-none max-h-28 leading-5 transition-all placeholder:text-slate-400"
 										style={{ minHeight: '42px' }} />
 								</div>
 								<motion.button whileTap={{ scale: 0.9 }}
