@@ -1063,6 +1063,7 @@ function App() {
                   <Route path="musdesus" element={<MusdesusMonitoringPage />} />
                   <Route path="settings" element={<SettingsPage />} />
                   <Route path="profile" element={<ProfilePage />} />
+                  <Route path="pesan" element={<MessagingPage />} />
 
                   {/* Bidang landing pages - tetap di SuperadminLayout */}
                   <Route path="bidang/sekretariat" element={<SekretariatPage />} />

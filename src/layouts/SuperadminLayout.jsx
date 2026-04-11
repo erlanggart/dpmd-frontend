@@ -14,6 +14,7 @@ import {
 	FiImage,
 	FiLayers,
 	FiLogOut,
+	FiMail,
 	FiMenu,
 	FiSettings,
 	FiShield,
@@ -114,6 +115,14 @@ const MENU_ITEMS = [
 		icon: FiBriefcase,
 		gradient: "from-fuchsia-500 to-purple-600",
 		accent: "text-fuchsia-600",
+	},
+	{
+		path: "/superadmin/pesan",
+		label: "Pesan",
+		description: "Kirim dan terima pesan antar pengguna",
+		icon: FiMail,
+		gradient: "from-indigo-500 to-purple-600",
+		accent: "text-indigo-600",
 	},
 	{
 		path: "/superadmin/settings",
