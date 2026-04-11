@@ -586,7 +586,7 @@ const PublicMeetingPage = () => {
       
       // Connect to socket
       socketRef.current = io(API_URL, {
-        transports: ['websocket'],
+        transports: ['polling', 'websocket'],
         auth: {
           token: token || null,
           guestName: !isLoggedIn ? guestName : null,

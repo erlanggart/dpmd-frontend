@@ -38,6 +38,7 @@ const QUICK_SEARCHES = [
 
 const ChatBot = ({ isDesktop = false }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isHidden, setIsHidden] = useState(() => localStorage.getItem('chatbot_hidden') === 'true');
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -45,16 +46,9 @@ const ChatBot = ({ isDesktop = false }) => {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [expandedResult, setExpandedResult] = useState(null);
   const [stats, setStats] = useState(null);
-  const [position, setPosition] = useState(() => {
-    try { const saved = JSON.parse(localStorage.getItem('chatbot_pos')); if (saved) return saved; } catch {}
-    return null;
-  });
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const chatContainerRef = useRef(null);
-  const dragRef = useRef(null);
-  const isDragging = useRef(false);
-  const dragStart = useRef({ x: 0, y: 0, posX: 0, posY: 0 });
 
   // Load categories & stats on first open
   useEffect(() => {
@@ -170,39 +164,14 @@ const ChatBot = ({ isDesktop = false }) => {
     setSelectedCategory(null);
   };
 
-  // ── Drag logic ──
-  const onPointerDown = (e) => {
-    isDragging.current = false;
-    const rect = e.currentTarget.getBoundingClientRect();
-    dragStart.current = { x: e.clientX, y: e.clientY, posX: rect.left, posY: rect.top };
-    e.currentTarget.setPointerCapture(e.pointerId);
+  const hideBot = () => {
+    setIsHidden(true);
+    setIsOpen(false);
+    localStorage.setItem('chatbot_hidden', 'true');
   };
-  const onPointerMove = (e) => {
-    const dx = e.clientX - dragStart.current.x;
-    const dy = e.clientY - dragStart.current.y;
-    if (Math.abs(dx) > 5 || Math.abs(dy) > 5) isDragging.current = true;
-    if (!isDragging.current) return;
-    const newX = dragStart.current.posX + dx;
-    const newY = dragStart.current.posY + dy;
-    const maxX = window.innerWidth - 60;
-    const maxY = window.innerHeight - 60;
-    const clampedX = Math.max(0, Math.min(newX, maxX));
-    const clampedY = Math.max(0, Math.min(newY, maxY));
-    setPosition({ x: clampedX, y: clampedY });
-  };
-  const onPointerUp = (e) => {
-    if (isDragging.current && position) {
-      localStorage.setItem('chatbot_pos', JSON.stringify(position));
-      // Reset: snap to right edge
-      const snappedX = position.x > window.innerWidth / 2 ? window.innerWidth - 70 : 10;
-      const snapped = { x: snappedX, y: position.y };
-      setPosition(snapped);
-      localStorage.setItem('chatbot_pos', JSON.stringify(snapped));
-    }
-    if (!isDragging.current) {
-      setIsOpen(!isOpen);
-    }
-    isDragging.current = false;
+  const showBot = () => {
+    setIsHidden(false);
+    localStorage.removeItem('chatbot_hidden');
   };
 
   // Render a single search result card
@@ -326,19 +295,17 @@ const ChatBot = ({ isDesktop = false }) => {
 
   // FAB button
   const fabButton = (
-    <motion.div
-      ref={dragRef}
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      className={`relative flex items-center justify-center rounded-full shadow-xl cursor-grab active:cursor-grabbing touch-none select-none transition-all duration-300 ${
-        isOpen
-          ? 'bg-gradient-to-br from-gray-700 to-gray-900 w-12 h-12'
-          : 'bg-gradient-to-br from-violet-500 via-purple-500 to-indigo-600 w-14 h-14 hover:shadow-2xl hover:shadow-purple-500/30'
-      }`}
-      whileTap={{ scale: 0.9 }}
-      aria-label={isOpen ? 'Tutup chatbot' : 'Buka chatbot pencarian'}
-    >
+    <div className="relative group">
+      <motion.button
+        onClick={() => setIsOpen(!isOpen)}
+        className={`relative flex items-center justify-center rounded-full shadow-xl transition-all duration-300 ${
+          isOpen
+            ? 'bg-gradient-to-br from-gray-700 to-gray-900 w-12 h-12'
+            : 'bg-gradient-to-br from-violet-500 via-purple-500 to-indigo-600 w-14 h-14 hover:scale-110 hover:shadow-2xl hover:shadow-purple-500/30'
+        }`}
+        whileTap={{ scale: 0.9 }}
+        aria-label={isOpen ? 'Tutup chatbot' : 'Buka chatbot pencarian'}
+      >
       <AnimatePresence mode="wait">
         {isOpen ? (
           <motion.div
@@ -370,7 +337,18 @@ const ChatBot = ({ isDesktop = false }) => {
           <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-green-400 rounded-full border-2 border-white" />
         </>
       )}
-    </motion.div>
+    </motion.button>
+    {/* Hide button - appears on hover */}
+    {!isOpen && (
+      <button
+        onClick={hideBot}
+        className="absolute -top-1 -left-1 w-5 h-5 rounded-full bg-white shadow border border-gray-200 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-50 hover:border-red-200"
+        title="Sembunyikan"
+      >
+        <FiX className="w-3 h-3 text-gray-400 hover:text-red-500" />
+      </button>
+    )}
+    </div>
   );
 
   // Chat popup
@@ -580,23 +558,42 @@ const ChatBot = ({ isDesktop = false }) => {
     </AnimatePresence>
   );
 
-  // Default positions
-  const defaultPos = isDesktop
-    ? { x: window.innerWidth - 70, y: window.innerHeight - 80 }
-    : { x: window.innerWidth - 70, y: window.innerHeight - 150 };
-  const pos = position || defaultPos;
-
   return (
     <>
-      {/* Chat popup - always fixed */}
-      <div className={`fixed z-[60] ${isDesktop ? 'bottom-6 right-6' : ''}`}
-           style={!isDesktop ? { bottom: '80px', right: '12px' } : {}}>
-        {chatPopup}
-      </div>
-      {/* FAB - draggable */}
-      <div className="fixed z-[55]" style={{ left: pos.x, top: pos.y }}>
-        {fabButton}
-      </div>
+      <AnimatePresence>
+        {!isHidden ? (
+          <motion.div
+            key="chatbot-visible"
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.5 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+          >
+            {/* Chat popup */}
+            <div className={`fixed z-[60] ${isDesktop ? 'bottom-6 right-6' : ''}`}
+                 style={!isDesktop ? { bottom: '80px', right: '12px' } : {}}>
+              {chatPopup}
+            </div>
+            {/* FAB */}
+            <div className={`fixed z-[55] ${isDesktop ? 'bottom-6 right-6' : 'right-3 bottom-[76px]'}`}>
+              {fabButton}
+            </div>
+          </motion.div>
+        ) : (
+          /* Show tab when hidden */
+          <motion.button
+            key="chatbot-hidden"
+            initial={{ x: 40 }}
+            animate={{ x: 0 }}
+            exit={{ x: 40 }}
+            onClick={showBot}
+            className={`fixed z-[55] right-0 ${isDesktop ? 'bottom-6' : 'bottom-[76px]'} bg-gradient-to-l from-violet-600 to-purple-600 text-white pl-2.5 pr-1.5 py-2 rounded-l-xl shadow-lg hover:pr-3 transition-all duration-200`}
+            title="Tampilkan Smart Search"
+          >
+            <FiMessageCircle className="w-4 h-4" />
+          </motion.button>
+        )}
+      </AnimatePresence>
     </>
   );
 };

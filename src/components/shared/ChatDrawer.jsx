@@ -297,7 +297,7 @@ export default function ChatDrawer({ referenceType, referenceId, targetUserId, t
     const token = localStorage.getItem('expressToken');
     if (!token) return;
 
-    const s = io(API_URL, { auth: { token }, transports: ['websocket'] });
+    const s = io(API_URL, { auth: { token }, transports: ['polling', 'websocket'] });
     socketRef.current = s;
 
     s.on('connect', () => {

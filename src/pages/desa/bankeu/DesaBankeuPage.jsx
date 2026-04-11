@@ -103,38 +103,7 @@ const DesaBankeuPage = () => {
     );
   }
 
-  // TA 2025: Maintenance mode
-  if (selectedYear === 2025) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-teal-50 px-4">
-        <div className="text-center max-w-lg">
-          <div className="mb-4">
-            <button
-              onClick={() => setSelectedYear(null)}
-              className="inline-flex items-center gap-1.5 text-gray-500 hover:text-blue-600 transition-colors text-sm font-medium mb-4"
-            >
-              <LuArrowLeft className="w-4 h-4" />
-              <span>Kembali</span>
-            </button>
-          </div>
-          <div className="mb-2">
-            <span className="inline-block px-4 py-1.5 rounded-full bg-amber-100 text-amber-700 text-sm font-semibold tracking-wide">
-              🏓 Maintenance Mode
-            </span>
-          </div>
-          <h1 className="text-3xl md:text-4xl font-extrabold text-gray-800 mb-3">
-            Maaf, Kita Sedang Main
-          </h1>
-         
-          <div className="w-72 md:w-96 mx-auto">
-            <Lottie animationData={tableTennisAnimation} loop autoplay />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Show tabs after year selection (TA 2026, 2027)
+  // Show tabs after year selection
   const tabs = [
     { id: 'pengajuan', label: 'Pengajuan', icon: LuFileText, desc: 'Kelola proposal & surat' },
     { id: 'tracking', label: 'Tracking', icon: LuRadar, desc: 'Pantau status verifikasi' },

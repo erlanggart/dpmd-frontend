@@ -456,23 +456,7 @@ const SpkedPage = () => {
 								</div>
 								<div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl border border-gray-200/50 overflow-hidden">
 									<Suspense fallback={<LoadingFallback />}>
-										{bankeuYear === 2025 ? (
-											<div className="flex flex-col items-center justify-center py-16 px-4">
-												<div className="text-center max-w-lg">
-													<div className="mb-2">
-														<span className="inline-block px-4 py-1.5 rounded-full bg-amber-100 text-amber-700 text-sm font-semibold tracking-wide">
-															🏓 Maintenance Mode
-														</span>
-													</div>
-													<h1 className="text-3xl md:text-4xl font-extrabold text-gray-800 mb-3">
-														Maaf, Kita Sedang Main
-													</h1>
-													<div className="w-72 md:w-96 mx-auto">
-														<Lottie animationData={tableTennisAnimation} loop autoplay />
-													</div>
-												</div>
-											</div>
-										) : bankeuYear === 2026 || bankeuYear === 2027 ? (
+										{(bankeuYear === 2025 || bankeuYear === 2026 || bankeuYear === 2027) ? (
 											<DpmdVerificationPage tahunAnggaran={bankeuYear} />
 										) : null}
 									</Suspense>

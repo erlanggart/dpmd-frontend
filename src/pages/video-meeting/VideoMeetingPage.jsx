@@ -623,7 +623,7 @@ const VideoMeetingPage = () => {
     
     socketRef.current = io(API_URL, {
       auth: { token },
-      transports: ['websocket'],
+      transports: ['polling', 'websocket'],
     });
 
     socketRef.current.on('connect', () => {
