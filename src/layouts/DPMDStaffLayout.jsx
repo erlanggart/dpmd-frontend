@@ -865,7 +865,9 @@ const DPMDStaffLayout = () => {
 			</main>
 
 			{/* Bottom Navigation - Mobile Only - Premium Floating Pill */}
-			{!isDesktop && (
+			{!isDesktop && (() => {
+				const isMessagingPage = location.pathname.startsWith('/dpmd/pesan');
+				return (
 				<nav className="fixed bottom-4 left-5 right-5 z-50">
 					{/* Main navigation container */}
 					<div className="relative bg-white border border-gray-100 shadow-[0_2px_20px_rgba(0,0,0,0.08)] rounded-full">
@@ -884,6 +886,26 @@ const DPMDStaffLayout = () => {
 								
 								// Aksi Cepat FAB - opens full menu bottom sheet
 								if (item.isQuickAction) {
+									// On messaging page: compact icon aligned with other nav items
+									if (isMessagingPage) {
+										return (
+											<button
+												key={index}
+												onClick={() => setShowMenu(true)}
+												className="relative flex flex-col items-center justify-center py-1 group"
+											>
+												<FiGrid className="h-[22px] w-[22px] text-slate-400 group-hover:text-slate-600 transition-all duration-200" />
+												<span className="text-[9px] mt-1 font-bold tracking-wider uppercase text-slate-400">
+													{item.label}
+												</span>
+												{unreadCount > 0 && (
+													<span className="absolute -right-2 top-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-0.5 text-[9px] font-bold text-white">
+														{unreadCount > 9 ? '9+' : unreadCount}
+													</span>
+												)}
+											</button>
+										);
+									}
 									return (
 										<button
 											key={index}
@@ -940,7 +962,8 @@ const DPMDStaffLayout = () => {
 						</div>
 					</div>
 				</nav>
-			)}
+				);
+			})()}
 
 			{/* Aksi Cepat Menu - Mobile Only, Slide from bottom (superadmin-style) */}
 			<AnimatePresence>
