@@ -24,7 +24,8 @@ const QuickActionCard = ({
     pink: "from-pink-500 to-pink-600",
     teal: "from-teal-500 to-teal-600",
     yellow: "from-yellow-500 to-yellow-600",
-    cyan: "from-cyan-500 to-cyan-600"
+    cyan: "from-cyan-500 to-cyan-600",
+    rose: "from-rose-500 to-rose-600"
   };
 
   const selectedGradient = colorVariants[color] || gradient;

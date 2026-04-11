@@ -9,7 +9,7 @@ import {
   LayoutDashboard, Building2, Briefcase, FileText, TrendingUp, Users,
   MapPin, Calendar, BarChart3, PieChart, Activity, Bell, Info, X, ExternalLink,
   Clock, CheckCircle, Send, Mail, Inbox, ChevronRight, User, Phone, Award,
-  FolderOpen, ClipboardList, Newspaper
+  FolderOpen, ClipboardList, Newspaper, Fingerprint
 } from 'lucide-react';
 import api from '../../api';
 import axios from 'axios';
@@ -337,6 +337,9 @@ const DPMDDashboard = () => {
   }, [informasiList.length]);
 
   // ==================== QUICK ACTIONS ====================
+  const ABSENSI_ELIGIBLE_STATUS = ['PPPK Paruh Waktu', 'Tenaga Alih Daya', 'Tenaga Keamanan', 'Tenaga Kebersihan'];
+  const isAbsensiEligible = ABSENSI_ELIGIBLE_STATUS.includes(user.status_kepegawaian);
+
   const quickActions = useMemo(() => {
     const basePath = getBidangPath();
     
@@ -348,12 +351,19 @@ const DPMDDashboard = () => {
         color: 'purple',
         onClick: () => navigate('/core-dashboard/dashboard')
       },
-      {
-        icon: Briefcase,
-        label: 'Perjadin',
-        color: config.primaryColor,
-        onClick: () => navigate('/dpmd/perjadin')
-      },
+      isAbsensiEligible
+        ? {
+            icon: Fingerprint,
+            label: 'Presensi',
+            color: 'rose',
+            onClick: () => navigate('/dpmd/absensi')
+          }
+        : {
+            icon: Briefcase,
+            label: 'Perjadin',
+            color: config.primaryColor,
+            onClick: () => navigate('/dpmd/perjadin')
+          },
       {
         icon: Calendar,
         label: 'Jadwal',
@@ -415,7 +425,7 @@ const DPMDDashboard = () => {
     }
 
     return commonActions;
-  }, [role, config.primaryColor, navigate, getBidangPath]);
+  }, [role, config.primaryColor, navigate, getBidangPath, isAbsensiEligible]);
 
   // ==================== HELPERS ====================
   const formatTanggal = (dateString) => {

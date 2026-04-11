@@ -7,6 +7,7 @@ import {
 	FiLoader, FiChevronDown, FiTrash2, FiDownload, FiSmile
 } from 'react-icons/fi';
 import api from '../../api';
+import useConfirm from '../../hooks/useConfirm';
 
 const EmojiPicker = lazy(() => import('emoji-picker-react'));
 
@@ -337,6 +338,7 @@ function TypingDots() {
    MAIN COMPONENT
    ════════════════════════════════════════ */
 export default function MessagingPage() {
+	const { confirmDialog, showConfirm } = useConfirm();
 	const [conversations, setConversations] = useState([]);
 	const [activeConv, setActiveConv] = useState(null);
 	const [messages, setMessages] = useState([]);
@@ -527,7 +529,14 @@ export default function MessagingPage() {
 	};
 
 	const deleteConversation = async (convId) => {
-		if (!window.confirm('Hapus seluruh percakapan ini? Semua pesan akan dihapus permanen.')) return;
+		const confirmed = await showConfirm({
+			title: 'Hapus Percakapan',
+			message: 'Hapus seluruh percakapan ini? Semua pesan akan dihapus permanen.',
+			confirmText: 'Hapus',
+			cancelText: 'Batal',
+			type: 'danger'
+		});
+		if (!confirmed) return;
 		try {
 			await api.delete(`/messaging/conversations/${convId}`);
 			setConversations(prev => prev.filter(c => c.id !== convId));
@@ -862,6 +871,7 @@ export default function MessagingPage() {
 					</div>
 				)}
 			</div>
+			{confirmDialog}
 		</div>
 	);
 }

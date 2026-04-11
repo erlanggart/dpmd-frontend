@@ -1100,11 +1100,11 @@ const JadwalKegiatanPage = () => {
 				<div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
 					<div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
 						{/* Header */}
-						<div className="bg-gradient-to-r from-teal-600 to-cyan-600 p-6 rounded-t-2xl sticky top-0 z-10">
+						<div className="bg-gradient-to-r from-teal-600 to-cyan-600 p-4 sm:p-6 rounded-t-2xl sticky top-0 z-10">
 							<div className="flex items-start justify-between">
-								<div className="flex-1 pr-4">
-									<h2 className="text-2xl font-bold text-white mb-2">{selectedJadwal.judul}</h2>
-									<p className="text-teal-100 text-sm">Detail Lengkap Jadwal Kegiatan</p>
+								<div className="flex-1 pr-4 min-w-0">
+									<h2 className="text-base sm:text-xl md:text-2xl font-bold text-white mb-1 sm:mb-2 break-words leading-snug">{selectedJadwal.judul}</h2>
+									<p className="text-teal-100 text-xs sm:text-sm">Detail Lengkap Jadwal Kegiatan</p>
 								</div>
 								<button
 									onClick={() => {

@@ -1,8 +1,59 @@
 /**
  * Video Meeting List Page
- * Displays list of meetings and allows creating new ones
+ * MAINTENANCE MODE: Fitur sedang dalam perbaikan
+ * Untuk membuka kembali, comment bagian MAINTENANCE dan uncomment bagian ORIGINAL di bawah
  */
 
+// ==================== MAINTENANCE MODE (ACTIVE) ====================
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
+import Lottie from 'lottie-react';
+import tableTennisAnimation from '../../assets/table-tennis.json';
+
+const VideoMeetingListPage = () => {
+  const navigate = useNavigate();
+
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-cyan-50 via-white to-teal-50 px-4">
+      <div className="text-center max-w-lg">
+        <div className="mb-2">
+          <span className="inline-block px-4 py-1.5 rounded-full bg-amber-100 text-amber-700 text-sm font-semibold tracking-wide">
+            Maintenance Mode
+          </span>
+        </div>
+        <h1 className="text-3xl md:text-4xl font-extrabold text-gray-800 mb-3">
+          Maaf, Kita Sedang Main
+        </h1>
+        <p className="text-gray-500 text-sm md:text-base mb-2">
+          Fitur <strong>Video Meeting</strong> sedang dalam perbaikan untuk pengalaman yang lebih baik.
+        </p>
+        <p className="text-gray-400 text-xs md:text-sm mb-4">
+          Silakan coba lagi nanti. Terima kasih atas kesabarannya!
+        </p>
+
+        <div className="w-72 md:w-96 mx-auto">
+          <Lottie animationData={tableTennisAnimation} loop autoplay />
+        </div>
+
+        <button
+          onClick={() => navigate(-1)}
+          className="mt-6 inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-700 font-semibold shadow-sm hover:bg-gray-50 active:scale-95 transition-all"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Kembali
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default VideoMeetingListPage;
+// ==================== END MAINTENANCE MODE ====================
+
+
+// ==================== ORIGINAL CODE (UNCOMMENT TO RESTORE) ====================
+/*
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -21,7 +72,6 @@ const VideoMeetingListPage = () => {
   const [joinRoomId, setJoinRoomId] = useState('');
   const [creating, setCreating] = useState(false);
   
-  // Form state
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -116,7 +166,6 @@ const VideoMeetingListPage = () => {
   };
 
   const copyMeetingLink = (roomId) => {
-    // Use /join/ for public shareable link (guests can join without login)
     const link = `${window.location.origin}/join/${roomId}`;
     navigator.clipboard.writeText(link);
     toast.success('Link meeting disalin - dapat dibagikan ke siapapun');
@@ -170,7 +219,6 @@ const VideoMeetingListPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Video Meeting</h1>
@@ -194,7 +242,6 @@ const VideoMeetingListPage = () => {
         </div>
       </div>
 
-      {/* Meetings Grid */}
       {loading ? (
         <div className="flex justify-center items-center py-16">
           <Loader2 className="w-8 h-8 animate-spin text-rose-600" />
@@ -289,7 +336,6 @@ const VideoMeetingListPage = () => {
         </div>
       )}
 
-      {/* Create Meeting Dialog */}
       {createDialogOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
@@ -448,7 +494,6 @@ const VideoMeetingListPage = () => {
         </div>
       )}
 
-      {/* Join Meeting Dialog */}
       {joinDialogOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm">
@@ -501,3 +546,5 @@ const VideoMeetingListPage = () => {
 };
 
 export default VideoMeetingListPage;
+*/
+// ==================== END ORIGINAL CODE ====================
