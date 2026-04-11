@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
 import { LuDollarSign, LuFileText, LuRadar, LuArrowLeft, LuClipboardCheck } from 'react-icons/lu';
-import Lottie from 'lottie-react';
-import tableTennisAnimation from '../../../assets/table-tennis.json';
 import BankeuProposalPage from './BankeuProposalPage';
 import BankeuTrackingTab from './BankeuTrackingTab';
 import DesaBankeuLpjPage from './DesaBankeuLpjPage';
@@ -103,7 +101,35 @@ const DesaBankeuPage = () => {
     );
   }
 
-  // Show tabs after year selection
+  // TA 2025: Show LPJ page directly
+  if (selectedYear === 2025) {
+    return (
+      <div className="relative">
+        {/* Back button */}
+        <div className="bg-white border-b border-gray-200">
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="flex items-center gap-3 h-14">
+              <button
+                onClick={() => setSelectedYear(null)}
+                className="flex items-center gap-1.5 text-gray-500 hover:text-blue-600 transition-colors text-sm font-medium"
+              >
+                <LuArrowLeft className="w-4 h-4" />
+                <span>Kembali</span>
+              </button>
+              <div className="h-6 w-px bg-gray-300" />
+              <div className="flex items-center gap-2 text-sm font-semibold text-amber-700">
+                <LuClipboardCheck className="w-4 h-4" />
+                <span>LPJ Bantuan Keuangan TA 2025</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <DesaBankeuLpjPage tahun={2025} />
+      </div>
+    );
+  }
+
+  // Show tabs after year selection (TA 2026, 2027)
   const tabs = [
     { id: 'pengajuan', label: 'Pengajuan', icon: LuFileText, desc: 'Kelola proposal & surat' },
     { id: 'tracking', label: 'Tracking', icon: LuRadar, desc: 'Pantau status verifikasi' },
