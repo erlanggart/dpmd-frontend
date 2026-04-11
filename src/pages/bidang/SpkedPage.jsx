@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Building2, Activity, TrendingUp, ArrowLeft, Clock, CheckCircle2, XCircle, FileText, BarChart3, DollarSign, Zap, ChevronRight, ShieldCheck, ArrowRight, BadgeCheck } from 'lucide-react';
+import Lottie from 'lottie-react';
+import tableTennisAnimation from '../../assets/table-tennis.json';
 import api from '../../api';
 import toast from 'react-hot-toast';
 
@@ -455,37 +457,20 @@ const SpkedPage = () => {
 								<div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl border border-gray-200/50 overflow-hidden">
 									<Suspense fallback={<LoadingFallback />}>
 										{bankeuYear === 2025 ? (
-											<div>
-												{/* Sub-tabs for TA 2025 */}
-												<div className="border-b border-gray-200 bg-gray-50 p-4">
-													<div className="flex gap-2">
-														<button
-															onClick={() => setBankeu2025View('penyaluran')}
-															className={`px-4 py-2 rounded-lg font-medium transition-all ${
-																bankeu2025View === 'penyaluran'
-																	? 'bg-white text-blue-600 shadow-sm'
-																	: 'text-gray-600 hover:bg-white/50'
-															}`}
-														>
-															💰 Penyaluran T1 & T2
-														</button>
-														<button
-															onClick={() => setBankeu2025View('lpj')}
-															className={`px-4 py-2 rounded-lg font-medium transition-all ${
-																bankeu2025View === 'lpj'
-																	? 'bg-white text-amber-600 shadow-sm'
-																	: 'text-gray-600 hover:bg-white/50'
-															}`}
-														>
-															📑 LPJ Bantuan Keuangan
-														</button>
+											<div className="flex flex-col items-center justify-center py-16 px-4">
+												<div className="text-center max-w-lg">
+													<div className="mb-2">
+														<span className="inline-block px-4 py-1.5 rounded-full bg-amber-100 text-amber-700 text-sm font-semibold tracking-wide">
+															🏓 Maintenance Mode
+														</span>
+													</div>
+													<h1 className="text-3xl md:text-4xl font-extrabold text-gray-800 mb-3">
+														Maaf, Kita Sedang Main
+													</h1>
+													<div className="w-72 md:w-96 mx-auto">
+														<Lottie animationData={tableTennisAnimation} loop autoplay />
 													</div>
 												</div>
-												{bankeu2025View === 'penyaluran' ? (
-													<BankeuDashboard />
-												) : (
-													<BankeuLpjMonitoringPage tahun={2025} />
-												)}
 											</div>
 										) : bankeuYear === 2026 || bankeuYear === 2027 ? (
 											<DpmdVerificationPage tahunAnggaran={bankeuYear} />

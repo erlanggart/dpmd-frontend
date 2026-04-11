@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { LuDollarSign, LuFileText, LuRadar, LuArrowLeft, LuClipboardCheck } from 'react-icons/lu';
+import Lottie from 'lottie-react';
+import tableTennisAnimation from '../../../assets/table-tennis.json';
 import BankeuProposalPage from './BankeuProposalPage';
 import BankeuTrackingTab from './BankeuTrackingTab';
 import DesaBankeuLpjPage from './DesaBankeuLpjPage';
@@ -101,30 +103,33 @@ const DesaBankeuPage = () => {
     );
   }
 
-  // TA 2025: Show LPJ page directly
+  // TA 2025: Maintenance mode
   if (selectedYear === 2025) {
     return (
-      <div className="relative">
-        {/* Back button */}
-        <div className="bg-white border-b border-gray-200">
-          <div className="max-w-7xl mx-auto px-4">
-            <div className="flex items-center gap-3 h-14">
-              <button
-                onClick={() => setSelectedYear(null)}
-                className="flex items-center gap-1.5 text-gray-500 hover:text-blue-600 transition-colors text-sm font-medium"
-              >
-                <LuArrowLeft className="w-4 h-4" />
-                <span>Kembali</span>
-              </button>
-              <div className="h-6 w-px bg-gray-300" />
-              <div className="flex items-center gap-2 text-sm font-semibold text-amber-700">
-                <LuClipboardCheck className="w-4 h-4" />
-                <span>LPJ Bantuan Keuangan TA 2025</span>
-              </div>
-            </div>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-teal-50 px-4">
+        <div className="text-center max-w-lg">
+          <div className="mb-4">
+            <button
+              onClick={() => setSelectedYear(null)}
+              className="inline-flex items-center gap-1.5 text-gray-500 hover:text-blue-600 transition-colors text-sm font-medium mb-4"
+            >
+              <LuArrowLeft className="w-4 h-4" />
+              <span>Kembali</span>
+            </button>
+          </div>
+          <div className="mb-2">
+            <span className="inline-block px-4 py-1.5 rounded-full bg-amber-100 text-amber-700 text-sm font-semibold tracking-wide">
+              🏓 Maintenance Mode
+            </span>
+          </div>
+          <h1 className="text-3xl md:text-4xl font-extrabold text-gray-800 mb-3">
+            Maaf, Kita Sedang Main
+          </h1>
+         
+          <div className="w-72 md:w-96 mx-auto">
+            <Lottie animationData={tableTennisAnimation} loop autoplay />
           </div>
         </div>
-        <DesaBankeuLpjPage tahun={2025} />
       </div>
     );
   }
