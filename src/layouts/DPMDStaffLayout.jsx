@@ -9,12 +9,11 @@ import {
 	FiHome, FiUser, FiLogOut, FiMenu, FiMail, FiBell, 
 	FiCalendar, FiBarChart2, FiFileText, FiDollarSign, 
 	FiUsers, FiBriefcase, FiChevronRight,
-	FiSettings, FiX, FiVideo, FiClock
+	FiSettings, FiX, FiVideo, FiClock, FiGrid
 } from "react-icons/fi";
 import { Landmark, ChevronDown, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import AnimatedIcon from '../components/AnimatedIcon';
 import ChatBot from '../components/chatbot/ChatBot';
-import aksiCepatIcon from '../assets/aksi-cepat.png';
 import { performFullLogout } from "../utils/sessionPersistence";
 import { useConfirm } from "../hooks/useConfirm.jsx";
 import { subscribeToPushNotifications } from "../utils/pushNotifications";
@@ -892,8 +891,8 @@ const DPMDStaffLayout = () => {
 											className="relative flex flex-col items-center"
 										>
 											<div className="relative -mt-8 mb-0.5">
-												<div className="relative flex items-center justify-center h-[52px] w-[52px] rounded-full shadow-lg ring-[5px] ring-white transition-all duration-300 bg-gradient-to-br from-cyan-500 to-blue-600 hover:scale-110">
-													<img src={aksiCepatIcon} alt="Aksi Cepat" className="h-6 w-6 brightness-0 invert" />
+												<div className="relative flex items-center justify-center h-[52px] w-[52px] rounded-full shadow-lg ring-[5px] ring-white transition-all duration-300 bg-gradient-to-br from-blue-600 to-indigo-700 hover:scale-110">
+													<FiGrid className="h-6 w-6 text-white" />
 													{unreadCount > 0 && (
 														<span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
 															{unreadCount > 9 ? '9+' : unreadCount}
@@ -1154,8 +1153,8 @@ const DPMDStaffLayout = () => {
 			</AnimatePresence>
 			{confirmDialog}
 
-			{/* Smart Search ChatBot */}
-			<ChatBot isDesktop={isDesktop} />
+			{/* Smart Search ChatBot - only on dashboard */}
+			{location.pathname.endsWith('/dashboard') && <ChatBot isDesktop={isDesktop} />}
 
 			<style>{`
 				@keyframes fadeIn {

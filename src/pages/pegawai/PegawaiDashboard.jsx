@@ -7,6 +7,7 @@ import {
 	User, Briefcase, Calendar, Award,
 	Phone, TrendingUp, FileText,
 	Clock, Activity, Building, Info, X, ExternalLink,
+	Fingerprint,
 } from "lucide-react";
 import api from "../../api";
 import { getUserAvatarUrl } from "../../utils/avatarUtils";
@@ -113,8 +114,14 @@ const PegawaiDashboard = () => {
 
 	const firstName = pegawaiData?.nama_pegawai?.split(" ")[0] || "Pegawai";
 
+	const ABSENSI_ELIGIBLE_STATUS = ['PPPK Paruh Waktu', 'Tenaga Alih Daya', 'Tenaga Keamanan', 'Tenaga Kebersihan'];
+	const isAbsensiEligible = ABSENSI_ELIGIBLE_STATUS.includes(user.status_kepegawaian);
+
 	const quickActions = [
-		{ icon: Briefcase, label: "Perjadin", color: "emerald", emoji: "💼", onClick: () => navigate("/pegawai/perjadin") },
+		...(isAbsensiEligible
+			? [{ icon: Fingerprint, label: "Presensi", color: "rose", emoji: "🕐", onClick: () => navigate("/dpmd/absensi") }]
+			: [{ icon: Briefcase, label: "Perjadin", color: "emerald", emoji: "💼", onClick: () => navigate("/pegawai/perjadin") }]
+		),
 		{ icon: Calendar, label: "Jadwal", color: "sky", emoji: "📅", onClick: () => navigate("/pegawai/jadwal-kegiatan") },
 		{ icon: Info, label: "Informasi", color: "amber", emoji: "📰", onClick: () => navigate("/dpmd/informasi") },
 	];
@@ -123,6 +130,7 @@ const PegawaiDashboard = () => {
 		emerald: { bg: "bg-emerald-500/10", border: "border-emerald-500/20", text: "text-emerald-400", icon: "bg-emerald-500/20" },
 		sky: { bg: "bg-sky-500/10", border: "border-sky-500/20", text: "text-sky-400", icon: "bg-sky-500/20" },
 		amber: { bg: "bg-amber-500/10", border: "border-amber-500/20", text: "text-amber-400", icon: "bg-amber-500/20" },
+		rose: { bg: "bg-rose-500/10", border: "border-rose-500/20", text: "text-rose-400", icon: "bg-rose-500/20" },
 	};
 
 	return (

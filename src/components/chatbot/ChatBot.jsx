@@ -45,9 +45,16 @@ const ChatBot = ({ isDesktop = false }) => {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [expandedResult, setExpandedResult] = useState(null);
   const [stats, setStats] = useState(null);
+  const [position, setPosition] = useState(() => {
+    try { const saved = JSON.parse(localStorage.getItem('chatbot_pos')); if (saved) return saved; } catch {}
+    return null;
+  });
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const chatContainerRef = useRef(null);
+  const dragRef = useRef(null);
+  const isDragging = useRef(false);
+  const dragStart = useRef({ x: 0, y: 0, posX: 0, posY: 0 });
 
   // Load categories & stats on first open
   useEffect(() => {
@@ -161,6 +168,41 @@ const ChatBot = ({ isDesktop = false }) => {
     setMessages([]);
     setExpandedResult(null);
     setSelectedCategory(null);
+  };
+
+  // ── Drag logic ──
+  const onPointerDown = (e) => {
+    isDragging.current = false;
+    const rect = e.currentTarget.getBoundingClientRect();
+    dragStart.current = { x: e.clientX, y: e.clientY, posX: rect.left, posY: rect.top };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+  const onPointerMove = (e) => {
+    const dx = e.clientX - dragStart.current.x;
+    const dy = e.clientY - dragStart.current.y;
+    if (Math.abs(dx) > 5 || Math.abs(dy) > 5) isDragging.current = true;
+    if (!isDragging.current) return;
+    const newX = dragStart.current.posX + dx;
+    const newY = dragStart.current.posY + dy;
+    const maxX = window.innerWidth - 60;
+    const maxY = window.innerHeight - 60;
+    const clampedX = Math.max(0, Math.min(newX, maxX));
+    const clampedY = Math.max(0, Math.min(newY, maxY));
+    setPosition({ x: clampedX, y: clampedY });
+  };
+  const onPointerUp = (e) => {
+    if (isDragging.current && position) {
+      localStorage.setItem('chatbot_pos', JSON.stringify(position));
+      // Reset: snap to right edge
+      const snappedX = position.x > window.innerWidth / 2 ? window.innerWidth - 70 : 10;
+      const snapped = { x: snappedX, y: position.y };
+      setPosition(snapped);
+      localStorage.setItem('chatbot_pos', JSON.stringify(snapped));
+    }
+    if (!isDragging.current) {
+      setIsOpen(!isOpen);
+    }
+    isDragging.current = false;
   };
 
   // Render a single search result card
@@ -284,12 +326,15 @@ const ChatBot = ({ isDesktop = false }) => {
 
   // FAB button
   const fabButton = (
-    <motion.button
-      onClick={() => setIsOpen(!isOpen)}
-      className={`relative flex items-center justify-center rounded-full shadow-xl transition-all duration-300 ${
+    <motion.div
+      ref={dragRef}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      className={`relative flex items-center justify-center rounded-full shadow-xl cursor-grab active:cursor-grabbing touch-none select-none transition-all duration-300 ${
         isOpen
           ? 'bg-gradient-to-br from-gray-700 to-gray-900 w-12 h-12'
-          : 'bg-gradient-to-br from-violet-500 via-purple-500 to-indigo-600 w-14 h-14 hover:scale-110 hover:shadow-2xl hover:shadow-purple-500/30'
+          : 'bg-gradient-to-br from-violet-500 via-purple-500 to-indigo-600 w-14 h-14 hover:shadow-2xl hover:shadow-purple-500/30'
       }`}
       whileTap={{ scale: 0.9 }}
       aria-label={isOpen ? 'Tutup chatbot' : 'Buka chatbot pencarian'}
@@ -325,7 +370,7 @@ const ChatBot = ({ isDesktop = false }) => {
           <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-green-400 rounded-full border-2 border-white" />
         </>
       )}
-    </motion.button>
+    </motion.div>
   );
 
   // Chat popup
@@ -535,23 +580,23 @@ const ChatBot = ({ isDesktop = false }) => {
     </AnimatePresence>
   );
 
+  // Default positions
+  const defaultPos = isDesktop
+    ? { x: window.innerWidth - 70, y: window.innerHeight - 80 }
+    : { x: window.innerWidth - 70, y: window.innerHeight - 150 };
+  const pos = position || defaultPos;
+
   return (
     <>
-      {/* Desktop: Fixed bottom-right */}
-      {isDesktop ? (
-        <div className="fixed bottom-6 right-6 z-[60] flex flex-col items-end gap-3">
-          {chatPopup}
-          {fabButton}
-        </div>
-      ) : (
-        /* Mobile: Above bottom bar */
-        <div className="fixed z-[55] right-3 bottom-[76px]">
-          {chatPopup}
-          <div className="flex justify-end mt-2">
-            {fabButton}
-          </div>
-        </div>
-      )}
+      {/* Chat popup - always fixed */}
+      <div className={`fixed z-[60] ${isDesktop ? 'bottom-6 right-6' : ''}`}
+           style={!isDesktop ? { bottom: '80px', right: '12px' } : {}}>
+        {chatPopup}
+      </div>
+      {/* FAB - draggable */}
+      <div className="fixed z-[55]" style={{ left: pos.x, top: pos.y }}>
+        {fabButton}
+      </div>
     </>
   );
 };

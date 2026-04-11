@@ -1,12 +1,14 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react';
 import { io } from 'socket.io-client';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
 	FiMessageCircle, FiSearch, FiSend, FiPaperclip,
 	FiFile, FiArrowLeft, FiPlus,
-	FiLoader, FiChevronDown, FiTrash2, FiDownload
+	FiLoader, FiChevronDown, FiTrash2, FiDownload, FiSmile
 } from 'react-icons/fi';
 import api from '../../api';
+
+const EmojiPicker = lazy(() => import('emoji-picker-react'));
 
 const API_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:3001';
 
@@ -210,7 +212,8 @@ function MessageBubble({ message, isOwn, onDelete }) {
 }
 
 /* ── Conversation list item ── */
-function ConversationItem({ conversation, isActive, onClick, isOnline }) {
+function ConversationItem({ conversation, isActive, onClick, isOnline, onDelete }) {
+	const [showDelete, setShowDelete] = useState(false);
 	const { other_user, last_message, last_message_at, unread_count, reference_label } = conversation;
 	const preview = last_message
 		? last_message.message_type === 'image' ? '📷 Foto'
@@ -219,12 +222,17 @@ function ConversationItem({ conversation, isActive, onClick, isOnline }) {
 		: '';
 
 	return (
-		<button onClick={onClick}
-			className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-all ${
-				isActive ? 'bg-emerald-50/80' : 'hover:bg-slate-50'
-			}`}>
-			<Avatar user={other_user} online={isOnline} />
-			<div className="flex-1 min-w-0">
+		<div className="relative group"
+			onMouseEnter={() => setShowDelete(true)}
+			onMouseLeave={() => setShowDelete(false)}
+			onContextMenu={(e) => { e.preventDefault(); setShowDelete(true); }}
+		>
+			<button onClick={onClick}
+				className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-all ${
+					isActive ? 'bg-emerald-50/80' : 'hover:bg-slate-50'
+				}`}>
+				<Avatar user={other_user} online={isOnline} />
+				<div className="flex-1 min-w-0">
 				<div className="flex items-center justify-between mb-0.5">
 					<span className={`truncate text-[14px] ${
 						unread_count > 0 ? 'font-semibold text-slate-900' : 'font-medium text-slate-700'
@@ -257,6 +265,22 @@ function ConversationItem({ conversation, isActive, onClick, isOnline }) {
 				</div>
 			</div>
 		</button>
+		{/* Delete button on hover / long-press */}
+		<AnimatePresence>
+			{showDelete && (
+				<motion.button
+					initial={{ opacity: 0, scale: 0.8 }}
+					animate={{ opacity: 1, scale: 1 }}
+					exit={{ opacity: 0, scale: 0.8 }}
+					onClick={(e) => { e.stopPropagation(); onDelete(conversation.id); }}
+					className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-400 hover:text-red-600 transition-colors z-10 border border-red-200"
+					title="Hapus percakapan"
+				>
+					<FiTrash2 size={14} />
+				</motion.button>
+			)}
+		</AnimatePresence>
+		</div>
 	);
 }
 
@@ -331,6 +355,7 @@ export default function MessagingPage() {
 	const [mobileChat, setMobileChat] = useState(false);
 	const [onlineUserIds, setOnlineUserIds] = useState(new Set());
 	const [showScrollBtn, setShowScrollBtn] = useState(false);
+	const [showEmoji, setShowEmoji] = useState(false);
 
 	const socketRef = useRef(null);
 	const endRef = useRef(null);
@@ -397,6 +422,15 @@ export default function MessagingPage() {
 		s.on('user_online', ({ user_id }) => setOnlineUserIds(prev => new Set(prev).add(user_id)));
 		s.on('user_offline', ({ user_id }) => setOnlineUserIds(prev => { const n = new Set(prev); n.delete(user_id); return n; }));
 
+		s.on('conversation_deleted', (data) => {
+			setConversations(prev => prev.filter(c => c.id !== data.conversation_id));
+			if (activeConvRef.current?.id === data.conversation_id) {
+				setActiveConv(null);
+				setMessages([]);
+				setMobileChat(false);
+			}
+		});
+
 		return () => s.disconnect();
 	}, []);
 
@@ -442,6 +476,7 @@ export default function MessagingPage() {
 		setMessages([]);
 		setTypingUser(null);
 		setShowScrollBtn(false);
+		setShowEmoji(false);
 		await loadMessages(conv.id);
 		if (conv.unread_count > 0) {
 			api.put(`/messaging/conversations/${conv.id}/read`).catch(() => {});
@@ -467,6 +502,7 @@ export default function MessagingPage() {
 		if (!inputText.trim() || !activeConv || sending) return;
 		const content = inputText.trim();
 		setInputText('');
+		setShowEmoji(false);
 		setSending(true);
 		try {
 			await api.post(`/messaging/conversations/${activeConv.id}/messages`, { content });
@@ -490,6 +526,19 @@ export default function MessagingPage() {
 		try { await api.delete(`/messaging/messages/${msgId}`); } catch (e) { console.error(e); }
 	};
 
+	const deleteConversation = async (convId) => {
+		if (!window.confirm('Hapus seluruh percakapan ini? Semua pesan akan dihapus permanen.')) return;
+		try {
+			await api.delete(`/messaging/conversations/${convId}`);
+			setConversations(prev => prev.filter(c => c.id !== convId));
+			if (activeConv?.id === convId) {
+				setActiveConv(null);
+				setMessages([]);
+				setMobileChat(false);
+			}
+		} catch (e) { console.error(e); }
+	};
+
 	const emitStopTyping = () => {
 		if (socketRef.current && activeConv) {
 			socketRef.current.emit('stop_typing', { conversation_id: activeConv.id, receiver_id: activeConv.other_user?.id });
@@ -504,6 +553,11 @@ export default function MessagingPage() {
 		}
 	};
 	const handleKeyDown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } };
+
+	const onEmojiClick = (emojiData) => {
+		setInputText(prev => prev + emojiData.emoji);
+		inputRef.current?.focus();
+	};
 
 	// auto-resize textarea
 	useEffect(() => {
@@ -639,7 +693,8 @@ export default function MessagingPage() {
 							<div className="divide-y divide-slate-50">
 								{filteredConvs.map(conv => (
 									<ConversationItem key={conv.id} conversation={conv} isActive={activeConv?.id === conv.id}
-										onClick={() => selectConversation(conv)} isOnline={isOnline(conv.other_user?.id)} />
+										onClick={() => selectConversation(conv)} isOnline={isOnline(conv.other_user?.id)}
+										onDelete={deleteConversation} />
 								))}
 							</div>
 						)
@@ -748,15 +803,35 @@ export default function MessagingPage() {
 						</div>
 
 						{/* Input area */}
-						<div className="px-3 md:px-4 py-2.5 md:py-3 bg-white border-t border-slate-100 flex-shrink-0 safe-area-bottom">
+						<div className="relative px-3 md:px-4 py-2.5 md:py-3 bg-white border-t border-slate-100 flex-shrink-0 safe-area-bottom">
+							{/* Emoji Picker */}
+							<AnimatePresence>
+								{showEmoji && (
+									<motion.div
+										initial={{ opacity: 0, y: 10 }}
+										animate={{ opacity: 1, y: 0 }}
+										exit={{ opacity: 0, y: 10 }}
+										className="absolute bottom-full left-0 right-0 md:left-auto md:right-4 md:w-[350px] z-20 pb-1"
+									>
+										<Suspense fallback={<div className="h-[350px] bg-white rounded-2xl shadow-xl flex items-center justify-center"><FiLoader className="animate-spin text-slate-400" size={20}/></div>}>
+											<EmojiPicker onEmojiClick={onEmojiClick} width="100%" height={350} searchPlaceHolder="Cari emoji..." lazyLoadEmojis previewConfig={{ showPreview: false }} skinTonesDisabled />
+										</Suspense>
+									</motion.div>
+								)}
+							</AnimatePresence>
 							<div className="flex items-end gap-1.5 md:gap-2">
 								<button onClick={() => fileRef.current?.click()}
 									className="p-2.5 text-slate-400 hover:text-emerald-600 rounded-xl hover:bg-emerald-50/80 transition-all flex-shrink-0" title="Lampiran">
 									<FiPaperclip size={20} />
 								</button>
+								<button onClick={() => setShowEmoji(v => !v)}
+									className={`p-2.5 rounded-xl transition-all flex-shrink-0 ${showEmoji ? 'text-emerald-600 bg-emerald-50' : 'text-slate-400 hover:text-emerald-600 hover:bg-emerald-50/80'}`} title="Emoji">
+									<FiSmile size={20} />
+								</button>
 								<input ref={fileRef} type="file" onChange={handleFile} className="hidden" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.zip,.rar" />
 								<div className="flex-1 min-w-0">
 									<textarea ref={inputRef} value={inputText} onChange={handleInput} onKeyDown={handleKeyDown}
+										onFocus={() => setShowEmoji(false)}
 										placeholder="Tulis pesan..." rows={1}
 										className="w-full px-3.5 md:px-4 py-2.5 bg-slate-50 rounded-2xl text-[14px] md:text-[13.5px] focus:outline-none border border-slate-200 focus:border-emerald-400 focus:bg-white focus:ring-2 focus:ring-emerald-500/10 resize-none max-h-28 leading-5 transition-all placeholder:text-slate-400"
 										style={{ minHeight: '42px' }} />
