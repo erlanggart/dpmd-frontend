@@ -52,14 +52,14 @@ const QuickActionCard = ({
         <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/20 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
         
         {customIcon ? customIcon : (Icon && <Icon className="w-5 h-5 sm:w-6 sm:h-6 lg:w-10 lg:h-10 text-white relative z-10 drop-shadow-md" />)}
-        
-        {/* Badge */}
-        {badge && (
-          <div className="absolute -top-1 -right-1 lg:-top-2 lg:-right-2 bg-red-500 text-white text-[9px] lg:text-[10px] font-bold rounded-full min-w-[18px] h-[18px] lg:min-w-[22px] lg:h-[22px] flex items-center justify-center px-1 lg:px-1.5 shadow-lg ring-2 ring-white">
-            {badge > 99 ? '99+' : badge}
-          </div>
-        )}
       </div>
+      
+      {/* Badge - outside overflow-hidden container */}
+      {badge && (
+        <div className="absolute -top-1 -right-1 lg:-top-2 lg:-right-2 z-20 bg-red-500 text-white text-[9px] lg:text-[10px] font-bold rounded-full min-w-[18px] h-[18px] lg:min-w-[22px] lg:h-[22px] flex items-center justify-center px-1 lg:px-1.5 shadow-lg ring-2 ring-white">
+          {badge > 99 ? '99+' : badge}
+        </div>
+      )}
       
       {/* Label - fixed height container for alignment */}
       <div className="mt-2 lg:mt-3 h-8 flex items-start justify-center">
