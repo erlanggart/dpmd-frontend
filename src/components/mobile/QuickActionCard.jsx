@@ -5,7 +5,7 @@ import React from 'react';
  * QuickActionCard - Modern Rounded Style Quick Action Button
  * Elegant card dengan rounded design dan smooth animations
  */
-const QuickActionCard = React.memo(({ 
+const QuickActionCard = ({ 
   icon: Icon, 
   label, 
   badge, 
@@ -68,8 +68,6 @@ const QuickActionCard = React.memo(({
       </div>
     </div>
   );
-});
-
-QuickActionCard.displayName = 'QuickActionCard';
+};
 
 export default QuickActionCard;

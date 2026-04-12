@@ -120,10 +120,8 @@ const DPMDDashboard = () => {
   const [user, setUser] = useState(JSON.parse(localStorage.getItem('user') || '{}'));
   const [loading, setLoading] = useState(true);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [showAllNotifications, setShowAllNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [unreadMessages, setUnreadMessages] = useState(0);
   
   // Data States
   const [dashboardData, setDashboardData] = useState(null);
@@ -426,24 +424,6 @@ const DPMDDashboard = () => {
     return () => clearInterval(interval);
   }, [informasiList.length]);
 
-  // ==================== UNREAD MESSAGES ====================
-  const fetchUnreadMessages = useCallback(async () => {
-    try {
-      const res = await api.get('/messaging/unread-count');
-      if (res.data.success) {
-        setUnreadMessages(res.data.data?.unread_count || 0);
-      }
-    } catch (err) {
-      // silent
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchUnreadMessages();
-    const interval = setInterval(fetchUnreadMessages, 30000);
-    return () => clearInterval(interval);
-  }, [fetchUnreadMessages]);
-
   // ==================== QUICK ACTIONS ====================
   const ABSENSI_ELIGIBLE_STATUS = ['PPPK Paruh Waktu', 'Tenaga Alih Daya', 'Tenaga Keamanan', 'Tenaga Kebersihan'];
   const isAbsensiEligible = ABSENSI_ELIGIBLE_STATUS.includes(user.status_kepegawaian);
@@ -457,7 +437,6 @@ const DPMDDashboard = () => {
         icon: MessageSquare,
         label: 'Pesan',
         color: 'indigo',
-        badge: unreadMessages > 0 ? unreadMessages : null,
         onClick: () => navigate('/dpmd/pesan')
       },
       isAbsensiEligible
@@ -534,7 +513,7 @@ const DPMDDashboard = () => {
     }
 
     return commonActions;
-  }, [role, config.primaryColor, navigate, getBidangPath, isAbsensiEligible, unreadMessages]);
+  }, [role, config.primaryColor, navigate, getBidangPath, isAbsensiEligible]);
 
   // ==================== HELPERS ====================
   const formatTanggal = (dateString) => {
@@ -604,17 +583,16 @@ const DPMDDashboard = () => {
             className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40"
             onClick={() => setShowNotifications(false)}
           />
-          <div className="fixed top-0 left-0 right-0 lg:top-4 lg:right-4 lg:left-auto lg:w-96 bg-white lg:rounded-2xl shadow-2xl z-50 overflow-hidden border border-gray-100 animate-slideDown">
-            {/* Header */}
-            <div className={`bg-gradient-to-r ${config.notifGradient} px-5 py-3.5`}>
+          <div className="fixed top-0 left-0 right-0 lg:top-4 lg:right-4 lg:left-auto lg:w-96 bg-white lg:rounded-2xl shadow-2xl z-50 overflow-hidden border border-gray-100 animate-slideDown max-h-[80vh] lg:max-h-[32rem]">
+            <div className={`bg-gradient-to-r ${config.notifGradient} px-5 py-4`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="h-9 w-9 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
-                    <Bell className="h-4.5 w-4.5 text-white" />
+                  <div className="h-10 w-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                    <Bell className="h-5 w-5 text-white" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-white text-sm">Notifikasi</h3>
-                    <p className="text-[11px] text-white/80">
+                    <h3 className="font-bold text-white text-base">Notifikasi</h3>
+                    <p className="text-xs text-white/80">
                       {unreadCount > 0 ? `${unreadCount} belum dibaca` : 'Semua dibaca'}
                     </p>
                   </div>
@@ -627,85 +605,45 @@ const DPMDDashboard = () => {
                 </button>
               </div>
             </div>
-
-            {/* Content */}
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-gray-100 overflow-y-auto max-h-[calc(80vh-72px)] lg:max-h-[28rem]">
               {notifications.length === 0 ? (
-                <div className="px-6 py-10 text-center">
-                  <div className={`mx-auto mb-3 h-16 w-16 bg-gradient-to-br ${config.notifBg} rounded-2xl flex items-center justify-center`}>
-                    <Bell className={`h-8 w-8 ${config.notifIconColor}`} />
+                <div className="px-6 py-12 text-center">
+                  <div className={`mx-auto mb-4 h-20 w-20 bg-gradient-to-br ${config.notifBg} rounded-2xl flex items-center justify-center`}>
+                    <Bell className={`h-10 w-10 ${config.notifIconColor}`} />
                   </div>
-                  <h4 className="font-semibold text-gray-700 text-sm mb-1">Tidak ada notifikasi</h4>
-                  <p className="text-xs text-gray-400">Notifikasi penting akan muncul di sini</p>
+                  <h4 className="font-semibold text-gray-700 mb-1">Tidak ada notifikasi</h4>
+                  <p className="text-sm text-gray-500">Notifikasi penting akan muncul di sini</p>
                 </div>
               ) : (
-                <>
-                  {notifications.slice(0, showAllNotifications ? 20 : 3).map((notification) => {
-                    const isDisposisi = notification.type === 'disposisi' || notification.data?.type === 'new_disposisi' || notification.data?.type === 'disposisi_update';
-                    const isBirthday = notification.title?.includes('Ulang Tahun');
-                    const isSchedule = notification.data?.type === 'today_schedule' || notification.data?.type === 'tomorrow_schedule';
-                    
-                    let iconBg = 'bg-blue-100';
-                    let iconEl = <Bell className="h-4.5 w-4.5 text-blue-600" />;
-                    if (isDisposisi) {
-                      iconBg = 'bg-orange-100';
-                      iconEl = <Mail className="h-4.5 w-4.5 text-orange-600" />;
-                    } else if (isBirthday) {
-                      iconBg = 'bg-pink-100';
-                      iconEl = <span className="text-base">🎂</span>;
-                    } else if (isSchedule) {
-                      iconBg = 'bg-teal-100';
-                      iconEl = <Calendar className="h-4.5 w-4.5 text-teal-600" />;
-                    }
-
-                    return (
-                      <button
-                        key={notification.id}
-                        onClick={() => handleNotificationItemClick(notification)}
-                        className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors ${
-                          !notification.read ? 'bg-blue-50/40' : ''
-                        }`}
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className={`h-9 w-9 rounded-xl flex items-center justify-center flex-shrink-0 ${iconBg}`}>
-                            {iconEl}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <h4 className="font-semibold text-gray-800 text-[13px] truncate">{notification.title}</h4>
-                              {!notification.read && (
-                                <div className="h-1.5 w-1.5 bg-blue-500 rounded-full flex-shrink-0"></div>
-                              )}
-                            </div>
-                            <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{notification.message}</p>
-                            <span className="text-[10px] text-gray-400 mt-1 inline-block">{notification.time}</span>
-                          </div>
-                          <ChevronRight className="h-4 w-4 text-gray-300 flex-shrink-0 mt-1" />
-                        </div>
-                      </button>
-                    );
-                  })}
-
-                  {/* Lihat Semua / Tutup Button */}
-                  <div className="p-3">
-                    {!showAllNotifications && notifications.length > 3 ? (
-                      <button
-                        onClick={() => setShowAllNotifications(true)}
-                        className={`w-full py-2.5 rounded-xl text-sm font-semibold text-${config.primaryColor}-600 bg-${config.primaryColor}-50 hover:bg-${config.primaryColor}-100 transition-colors flex items-center justify-center gap-2`}
-                      >
-                        Lihat Semua Notifikasi ({notifications.length})
-                        <ChevronRight className="h-4 w-4" />
-                      </button>
-                    ) : showAllNotifications ? (
-                      <button
-                        onClick={() => setShowAllNotifications(false)}
-                        className="w-full py-2.5 rounded-xl text-sm font-semibold text-gray-500 bg-gray-50 hover:bg-gray-100 transition-colors"
-                      >
-                        Tampilkan Lebih Sedikit
-                      </button>
-                    ) : null}
-                  </div>
-                </>
+                notifications.map((notification) => (
+                  <button
+                    key={notification.id}
+                    onClick={() => handleNotificationItemClick(notification)}
+                    className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors ${
+                      !notification.read ? 'bg-blue-50/50' : ''
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className={`h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                        (notification.type === 'disposisi' || notification.data?.type === 'new_disposisi') ? 'bg-orange-100' : 'bg-blue-100'
+                      }`}>
+                        {(notification.type === 'disposisi' || notification.data?.type === 'new_disposisi') ? (
+                          <Mail className="h-5 w-5 text-orange-600" />
+                        ) : (
+                          <Bell className="h-5 w-5 text-blue-600" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold text-gray-800 text-sm">{notification.title}</h4>
+                        <p className="text-sm text-gray-600 mt-0.5 line-clamp-2">{notification.message}</p>
+                        <span className="text-xs text-gray-400 mt-1 inline-block">{notification.time}</span>
+                      </div>
+                      {!notification.read && (
+                        <div className={`h-2 w-2 bg-${config.primaryColor}-500 rounded-full flex-shrink-0 mt-2`}></div>
+                      )}
+                    </div>
+                  </button>
+                ))
               )}
             </div>
           </div>

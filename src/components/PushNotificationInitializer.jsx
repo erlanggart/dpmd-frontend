@@ -10,13 +10,17 @@ const PushNotificationInitializer = () => {
   useEffect(() => {
     const initPushNotifications = async () => {
       try {
+        console.log('🔔 [PushNotificationInitializer] Initializing...');
+        
         // Check if supported
         if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+          console.warn('⚠️ Push notifications not supported');
           return;
         }
 
         // Check current permission
         if (Notification.permission === 'denied') {
+          console.warn('⚠️ Push notification permission denied by user');
           return;
         }
 
@@ -24,22 +28,34 @@ const PushNotificationInitializer = () => {
         const initResult = await pushNotificationManager.initialize();
         
         if (!initResult.success) {
+          console.error('❌ Failed to initialize push notifications:', initResult.error);
           return;
         }
+
+        console.log('✅ Push notification manager initialized');
 
         // Check if already subscribed
         const status = await pushNotificationManager.getSubscriptionStatus();
         
         if (status.subscribed) {
+          console.log('✅ Already subscribed to push notifications');
           return;
         }
 
         // Auto-subscribe if permission is default (first time)
         if (Notification.permission === 'default') {
-          await pushNotificationManager.subscribe();
+          console.log('🔔 Requesting push notification permission...');
+          
+          const subscribeResult = await pushNotificationManager.subscribe();
+          
+          if (subscribeResult.success) {
+            console.log('✅ Auto-subscribed to push notifications');
+          } else {
+            console.log('ℹ️ User needs to manually enable notifications');
+          }
         }
       } catch (error) {
-        // Silent fail - push notifications are non-critical
+        console.error('❌ Error initializing push notifications:', error);
       }
     };
 
