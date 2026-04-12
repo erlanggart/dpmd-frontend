@@ -180,9 +180,6 @@ const VideoMeetingPage = lazy(
 const PublicMeetingPage = lazy(
   () => import("./pages/video-meeting/PublicMeetingPage"),
 );
-const MessagingPage = lazy(
-  () => import("./pages/messaging/MessagingPage"),
-);
 const PerjadinMain = lazy(
   () => import("./pages/pegawai/perjadin/PerjadinMain"),
 );
@@ -737,6 +734,8 @@ function App() {
         <EditModeProvider>
           <ThemeColorWrapper>
             <NetworkProvider>
+            {/* Push Notification Initializer: ensures permission prompt and auto-subscribe */}
+            <PushNotificationInitializer />
             <Suspense
               fallback={
                 <div className="flex h-screen items-center justify-center">
@@ -764,6 +763,7 @@ function App() {
                 
                 {/* Public Meeting Join - No auth required */}
                 <Route path="/join/:roomId" element={<PublicMeetingPage />} />
+
 
                 {/* Rute Desa - Exclusive untuk role: desa */}
                 <Route
@@ -807,7 +807,6 @@ function App() {
                   />
                   <Route path="bankeu" element={<DesaBankeuPage />} />
                   <Route path="aparatur-desa-external" element={<DesaAparaturExternalPage />} />
-                  <Route path="pesan" element={<MessagingPage />} />
                   <Route path="settings" element={<DesaSettings />} />
                 </Route>
                 {/* ============================================ */}
@@ -847,7 +846,6 @@ function App() {
                   <Route path="video-meeting" element={<VideoMeetingListPage />} />
                   <Route path="etanol" element={<CetakBonBensin />} />
                   <Route path="absensi" element={<AbsensiPage />} />
-                  <Route path="pesan" element={<MessagingPage />} />
                 </Route>
                 
                 {/* Rute Bidang - Accessible by pegawai/kepala_bidang/ketua_tim (their own bidang) & kepala_dinas/superadmin (all) */}
@@ -1063,7 +1061,6 @@ function App() {
                   <Route path="musdesus" element={<MusdesusMonitoringPage />} />
                   <Route path="settings" element={<SettingsPage />} />
                   <Route path="profile" element={<ProfilePage />} />
-                  <Route path="pesan" element={<MessagingPage />} />
 
                   {/* Bidang landing pages - tetap di SuperadminLayout */}
                   <Route path="bidang/sekretariat" element={<SekretariatPage />} />
@@ -1135,7 +1132,6 @@ function App() {
                   />
                   <Route path="settings" element={<KecamatanSettings />} />
                   <Route path="change-password" element={<KecamatanChangePasswordPage />} />
-                  <Route path="pesan" element={<MessagingPage />} />
                 </Route>
 
                 {/* Rute Dinas Terkait - Untuk verifikasi teknis */}
@@ -1163,7 +1159,6 @@ function App() {
                   />
                   <Route path="profil" element={<VerifikatorProfilePage />} />
                   <Route path="ganti-password" element={<DinasChangePasswordPage />} />
-                  <Route path="pesan" element={<MessagingPage />} />
                 </Route>
 
                 {/* Rute Core Dashboard - DPMD Internal Only */}

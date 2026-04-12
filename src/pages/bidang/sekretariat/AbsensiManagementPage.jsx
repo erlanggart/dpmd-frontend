@@ -4,9 +4,9 @@ import {
   FiSearch, FiEdit2, FiTrash2, FiCalendar, FiClock,
   FiUsers, FiX, FiSmartphone, FiImage, FiSave,
   FiToggleLeft, FiToggleRight, FiUpload, FiSettings,
-  FiChevronDown, FiFilter, FiArrowLeft, FiEye, FiUser, FiBell, FiSend,
+  FiChevronDown, FiChevronLeft, FiChevronRight, FiFilter, FiArrowLeft, FiEye, FiUser, FiBell, FiSend,
 } from "react-icons/fi";
-import { LuDownload, LuRefreshCw, LuShieldCheck, LuWifi, LuWifiOff, LuLayoutGrid, LuList, LuFileSpreadsheet, LuChartColumn, LuLayoutDashboard } from "react-icons/lu";
+import { LuDownload, LuRefreshCw, LuShieldCheck, LuWifi, LuWifiOff, LuLayoutGrid, LuList, LuFileSpreadsheet, LuChartColumn, LuLayoutDashboard, LuArrowUpDown, LuSlidersHorizontal } from "react-icons/lu";
 import Lottie from "lottie-react";
 import tableTennisAnimation from "../../../assets/table-tennis.json";
 import api from "../../../api";
@@ -128,7 +128,10 @@ const AbsensiManagementPage = () => {
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [viewMode, setViewMode] = useState("table"); // table | card
-  const [filterStatus, setFilterStatus] = useState("semua"); // semua or specific status
+  const [filterStatus, setFilterStatus] = useState("semua"); // semua, masuk, tidak_masuk, telat, or specific status
+  const [sortBy, setSortBy] = useState("default");
+  const [currentPage, setCurrentPage] = useState(1);
+  const RECORDS_PER_PAGE = 25;
 
   // Dashboard state
   const [dashboardData, setDashboardData] = useState(null);
@@ -402,18 +405,55 @@ const AbsensiManagementPage = () => {
   };
 
   // ─── Computed ─────────────────────────────────────────────
-  const filteredRecords = useMemo(() => records.filter((r) => {
-    if (filterStatus !== "semua" && r.status !== filterStatus) return false;
-    if (!searchQuery) return true;
-    const name = r.user?.name || r.user?.pegawai?.nama_pegawai || "";
-    return name.toLowerCase().includes(searchQuery.toLowerCase());
-  }), [records, searchQuery, filterStatus]);
+  const filteredRecords = useMemo(() => {
+    let filtered = records.filter((r) => {
+      if (filterStatus === "masuk") {
+        if (!PRESENT_STATUSES.includes(r.status)) return false;
+      } else if (filterStatus === "tidak_masuk") {
+        if (!ABSENT_STATUSES.includes(r.status)) return false;
+      } else if (filterStatus === "telat") {
+        if (!r.telat_masuk_menit || r.telat_masuk_menit <= 0) return false;
+      } else if (filterStatus !== "semua") {
+        if (r.status !== filterStatus) return false;
+      }
+      if (searchQuery) {
+        const name = r.user?.name || r.user?.pegawai?.nama_pegawai || "";
+        if (!name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      }
+      return true;
+    });
+    if (sortBy !== "default") {
+      filtered = [...filtered].sort((a, b) => {
+        const nameA = (a.user?.pegawai?.nama_pegawai || a.user?.name || "").toLowerCase();
+        const nameB = (b.user?.pegawai?.nama_pegawai || b.user?.name || "").toLowerCase();
+        if (sortBy === "nama_asc") return nameA.localeCompare(nameB);
+        if (sortBy === "nama_desc") return nameB.localeCompare(nameA);
+        if (sortBy === "jam_masuk_asc") return new Date(a.jam_masuk || 0) - new Date(b.jam_masuk || 0);
+        if (sortBy === "jam_masuk_desc") return new Date(b.jam_masuk || 0) - new Date(a.jam_masuk || 0);
+        if (sortBy === "telat_desc") return (b.telat_masuk_menit || 0) - (a.telat_masuk_menit || 0);
+        return 0;
+      });
+    }
+    return filtered;
+  }, [records, searchQuery, filterStatus, sortBy]);
 
   const rekapSummary = useMemo(() => {
-    const s = { total: filteredRecords.length };
-    Object.keys(STATUS_MAP).forEach(k => { s[k] = filteredRecords.filter(r => r.status === k).length; });
+    const s = { total: records.length };
+    Object.keys(STATUS_MAP).forEach(k => { s[k] = records.filter(r => r.status === k).length; });
+    s.masuk = PRESENT_STATUSES.reduce((sum, k) => sum + (s[k] || 0), 0);
+    s.tidak_masuk = ABSENT_STATUSES.reduce((sum, k) => sum + (s[k] || 0), 0);
+    s.telat = records.filter(r => r.telat_masuk_menit > 0).length;
     return s;
-  }, [filteredRecords]);
+  }, [records]);
+
+  const totalPages = Math.ceil(filteredRecords.length / RECORDS_PER_PAGE);
+  const paginatedRecords = useMemo(() => {
+    const start = (currentPage - 1) * RECORDS_PER_PAGE;
+    return filteredRecords.slice(start, start + RECORDS_PER_PAGE);
+  }, [filteredRecords, currentPage, RECORDS_PER_PAGE]);
+
+  // Reset page when filters change
+  useEffect(() => { setCurrentPage(1); }, [filterStatus, searchQuery, filterDate, filterMonth, filterYear, filterMode]);
 
   // ─── Open User History ─────────────────────────────────────
   const openUserHistory = async (userData) => {
@@ -783,20 +823,22 @@ const AbsensiManagementPage = () => {
                     const c = colorMap[color];
                     const count = dashboardData.summary?.[key] || 0;
                     return (
-                      <div key={key} className={`flex items-center gap-2.5 rounded-xl p-3 sm:p-3.5 ${c.bg} ring-1 ${c.ring} transition-all hover:shadow-sm`}>
+                      <button key={key} onClick={() => { setActiveTab("rekap"); setFilterStatus(key); }}
+                        className={`flex items-center gap-2.5 rounded-xl p-3 sm:p-3.5 ${c.bg} ring-1 ${c.ring} transition-all hover:shadow-md hover:scale-[1.02] cursor-pointer text-left`}>
                         <span className="text-xl sm:text-2xl leading-none shrink-0">{icon}</span>
                         <div className="min-w-0">
                           <p className="text-lg sm:text-xl font-black text-slate-800 leading-none tabular-nums">{count}</p>
                           <p className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-wider ${c.text} mt-0.5 truncate`}>{label}</p>
                         </div>
-                      </div>
+                      </button>
                     );
                   })}
                 </div>
 
                 {/* Telat Alert */}
                 {(dashboardData.summary?.telat || 0) > 0 && (
-                  <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-3.5 flex items-center justify-between">
+                  <button onClick={() => { setActiveTab("rekap"); setFilterStatus("telat"); }}
+                    className="w-full bg-amber-50 border border-amber-200 rounded-2xl px-5 py-3.5 flex items-center justify-between hover:bg-amber-100/60 hover:shadow-md transition-all cursor-pointer text-left">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center">
                         <FiClock className="h-5 w-5 text-amber-600" />
@@ -807,7 +849,7 @@ const AbsensiManagementPage = () => {
                       </div>
                     </div>
                     <span className="text-2xl font-black text-amber-700 tabular-nums">{dashboardData.summary.telat}</span>
-                  </div>
+                  </button>
                 )}
 
                 {/* Belum Absen Section (hanya untuk mode harian) */}
@@ -1115,8 +1157,8 @@ const AbsensiManagementPage = () => {
 
         {/* ─── TAB: REKAP ──────────────────────────────────── */}
         {activeTab === "rekap" && (
-          <div className="space-y-5">
-            {/* Filter Bar */}
+          <div className="space-y-4">
+            {/* ══ Filter Bar ══ */}
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-4 sm:p-5">
               <div className="flex flex-wrap items-end gap-3">
                 {/* Filter Mode Toggle */}
@@ -1157,22 +1199,24 @@ const AbsensiManagementPage = () => {
                   <div className="relative">
                     <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                     <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Ketik nama..."
+                      placeholder="Ketik nama pegawai..."
                       className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400 transition-all" />
                   </div>
                 </div>
 
-                {/* Status Filter */}
+                {/* Sort */}
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Status</label>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Urutkan</label>
                   <div className="relative">
-                    <FiFilter className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-                    <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
+                    <LuArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                    <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}
                       className="pl-9 pr-8 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400 appearance-none bg-white transition-all">
-                      <option value="semua">Semua</option>
-                      {Object.entries(STATUS_MAP).map(([key, { label }]) => (
-                        <option key={key} value={key}>{label}</option>
-                      ))}
+                      <option value="default">Default</option>
+                      <option value="nama_asc">Nama A → Z</option>
+                      <option value="nama_desc">Nama Z → A</option>
+                      <option value="jam_masuk_asc">Masuk Paling Awal</option>
+                      <option value="jam_masuk_desc">Masuk Paling Akhir</option>
+                      <option value="telat_desc">Telat Terbanyak</option>
                     </select>
                   </div>
                 </div>
@@ -1190,33 +1234,122 @@ const AbsensiManagementPage = () => {
                 </div>
 
                 {/* Export Button */}
-                <div className="flex gap-1.5 ml-auto">
-                  <button onClick={handleExportExcel} disabled={filteredRecords.length === 0}
-                    className="flex items-center gap-1.5 px-3 py-2 bg-emerald-50 text-emerald-700 rounded-xl text-xs font-bold border border-emerald-200 hover:bg-emerald-100 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
-                    <LuFileSpreadsheet className="h-4 w-4" /> Excel
-                  </button>
-                </div>
+                <button onClick={handleExportExcel} disabled={filteredRecords.length === 0}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-emerald-50 text-emerald-700 rounded-xl text-xs font-bold border border-emerald-200 hover:bg-emerald-100 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+                  <LuFileSpreadsheet className="h-4 w-4" /> Excel
+                </button>
               </div>
             </div>
 
-            {/* Summary Strip */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5">
+            {/* ══ Quick Filter Chips ══ */}
+            <div className="flex flex-wrap gap-2">
+              {/* Semua */}
+              <button onClick={() => setFilterStatus("semua")}
+                className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border transition-all duration-200 ${
+                  filterStatus === "semua"
+                    ? "bg-slate-800 text-white border-slate-800 shadow-md shadow-slate-300/50 scale-[1.02]"
+                    : "bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                }`}>
+                <LuSlidersHorizontal className="h-3.5 w-3.5" />
+                Semua
+                <span className={`ml-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-black tabular-nums ${filterStatus === "semua" ? "bg-white/20" : "bg-slate-100"}`}>
+                  {rekapSummary.total}
+                </span>
+              </button>
+
+              {/* Divider */}
+              <div className="w-px h-8 bg-slate-200 self-center mx-0.5" />
+
+              {/* Masuk Group */}
+              <button onClick={() => setFilterStatus("masuk")}
+                className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border transition-all duration-200 ${
+                  filterStatus === "masuk"
+                    ? "bg-emerald-500 text-white border-emerald-500 shadow-md shadow-emerald-300/50 scale-[1.02]"
+                    : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:border-emerald-300 hover:bg-emerald-100"
+                }`}>
+                ✓ Masuk
+                <span className={`ml-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-black tabular-nums ${filterStatus === "masuk" ? "bg-white/20" : "bg-emerald-100"}`}>
+                  {rekapSummary.masuk}
+                </span>
+              </button>
+
+              {/* Tidak Masuk Group */}
+              <button onClick={() => setFilterStatus("tidak_masuk")}
+                className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border transition-all duration-200 ${
+                  filterStatus === "tidak_masuk"
+                    ? "bg-red-500 text-white border-red-500 shadow-md shadow-red-300/50 scale-[1.02]"
+                    : "bg-red-50 text-red-700 border-red-200 hover:border-red-300 hover:bg-red-100"
+                }`}>
+                ✗ Tidak Masuk
+                <span className={`ml-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-black tabular-nums ${filterStatus === "tidak_masuk" ? "bg-white/20" : "bg-red-100"}`}>
+                  {rekapSummary.tidak_masuk}
+                </span>
+              </button>
+
+              {/* Terlambat */}
+              {rekapSummary.telat > 0 && (
+                <button onClick={() => setFilterStatus("telat")}
+                  className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border transition-all duration-200 ${
+                    filterStatus === "telat"
+                      ? "bg-amber-500 text-white border-amber-500 shadow-md shadow-amber-300/50 scale-[1.02]"
+                      : "bg-amber-50 text-amber-700 border-amber-200 hover:border-amber-300 hover:bg-amber-100"
+                  }`}>
+                  <FiClock className="h-3.5 w-3.5" /> Terlambat
+                  <span className={`ml-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-black tabular-nums ${filterStatus === "telat" ? "bg-white/20" : "bg-amber-100"}`}>
+                    {rekapSummary.telat}
+                  </span>
+                </button>
+              )}
+
+              {/* Divider */}
+              <div className="w-px h-8 bg-slate-200 self-center mx-0.5" />
+
+              {/* Individual Status */}
               {Object.entries(STATUS_MAP).map(([key, { label, color, icon }]) => {
-                const c = colorMap[color];
                 const count = rekapSummary[key] || 0;
+                const isActive = filterStatus === key;
+                const c = colorMap[color];
                 return (
-                  <div key={key} className={`flex items-center gap-2.5 rounded-xl p-3 ${c.bg} ring-1 ${c.ring} transition-all hover:shadow-sm`}>
-                    <span className="text-xl leading-none shrink-0">{icon}</span>
-                    <div className="min-w-0">
-                      <p className="text-lg sm:text-xl font-black text-slate-800 leading-none tabular-nums">{count}</p>
-                      <p className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-wider ${c.text} mt-0.5 truncate`}>{label}</p>
-                    </div>
-                  </div>
+                  <button key={key} onClick={() => setFilterStatus(prev => prev === key ? "semua" : key)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-all duration-200 ${
+                      isActive
+                        ? `${c.badge} border-current shadow-md scale-[1.02]`
+                        : `bg-white text-slate-500 border-slate-200 hover:border-slate-300 hover:bg-slate-50 ${count === 0 ? "opacity-40" : ""}`
+                    }`}
+                    disabled={count === 0 && !isActive}>
+                    <span className="text-sm leading-none">{icon}</span>
+                    <span className="hidden sm:inline">{label}</span>
+                    <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-black tabular-nums ${isActive ? "bg-black/10" : "bg-slate-100"}`}>
+                      {count}
+                    </span>
+                  </button>
                 );
               })}
             </div>
 
-            {/* Records Content */}
+            {/* ══ Active Filter Info Bar ══ */}
+            {filterStatus !== "semua" && (
+              <div className="flex items-center justify-between bg-orange-50 border border-orange-200 rounded-xl px-4 py-2.5">
+                <div className="flex items-center gap-2">
+                  <FiFilter className="h-3.5 w-3.5 text-orange-500" />
+                  <span className="text-xs text-orange-700 font-semibold">
+                    Filter aktif: <strong className="text-orange-800">
+                      {filterStatus === "masuk" ? "Masuk (Hadir+WFH+WFA+Dinas Luar)" :
+                       filterStatus === "tidak_masuk" ? "Tidak Masuk (Izin+Sakit+Alpha+Cuti)" :
+                       filterStatus === "telat" ? "Terlambat" :
+                       STATUS_MAP[filterStatus]?.label || filterStatus}
+                    </strong>
+                  </span>
+                  <span className="text-[11px] text-orange-500">— {filteredRecords.length} dari {rekapSummary.total} data</span>
+                </div>
+                <button onClick={() => setFilterStatus("semua")}
+                  className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold text-orange-600 bg-orange-100 hover:bg-orange-200 rounded-lg transition-colors">
+                  <FiX className="h-3 w-3" /> Hapus Filter
+                </button>
+              </div>
+            )}
+
+            {/* ══ Records Content ══ */}
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden">
               {loading ? (
                 <div className="flex flex-col justify-center items-center py-20 gap-3">
@@ -1232,71 +1365,94 @@ const AbsensiManagementPage = () => {
                     <FiCalendar className="h-7 w-7 text-slate-300" />
                   </div>
                   <p className="text-slate-500 font-medium">Tidak ada data absensi</p>
-                  <p className="text-slate-400 text-sm mt-1">Ubah filter untuk melihat data lain</p>
+                  <p className="text-slate-400 text-sm mt-1">
+                    {filterStatus !== "semua" ? "Coba ubah filter atau hapus filter aktif" : "Ubah periode untuk melihat data lain"}
+                  </p>
+                  {filterStatus !== "semua" && (
+                    <button onClick={() => setFilterStatus("semua")}
+                      className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-orange-50 text-orange-600 border border-orange-200 rounded-xl text-xs font-bold hover:bg-orange-100 transition-all">
+                      <FiX className="h-3 w-3" /> Hapus Filter
+                    </button>
+                  )}
                 </div>
               ) : viewMode === "table" ? (
-                /* TABLE VIEW */
+                /* ── TABLE VIEW ── */
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="bg-gradient-to-r from-slate-50 to-slate-100/50 border-b border-slate-200">
-                        <th className="text-left px-4 py-3.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Pegawai</th>
-                        <th className="text-left px-4 py-3.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Tanggal</th>
-                        <th className="text-center px-4 py-3.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Status</th>
-                        <th className="text-center px-4 py-3.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Masuk</th>
-                        <th className="text-center px-4 py-3.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Keluar</th>
-                        <th className="text-center px-4 py-3.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Jarak</th>
-                        <th className="text-left px-4 py-3.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Keterangan</th>
-                        <th className="text-center px-4 py-3.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Aksi</th>
+                      <tr className="bg-gradient-to-r from-slate-50 to-slate-100/50 border-b border-slate-200 sticky top-0 z-10">
+                        <th className="text-left px-4 py-3.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest w-[30%]">Pegawai</th>
+                        <th className="text-left px-3 py-3.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Tanggal</th>
+                        <th className="text-center px-3 py-3.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Status</th>
+                        <th className="text-center px-3 py-3.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Jam Masuk</th>
+                        <th className="text-center px-3 py-3.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Jam Keluar</th>
+                        <th className="text-center px-3 py-3.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Jarak</th>
+                        <th className="text-left px-3 py-3.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Keterangan</th>
+                        <th className="text-center px-3 py-3.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest w-20">Aksi</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {filteredRecords.map((record) => {
+                      {paginatedRecords.map((record) => {
                         const st = STATUS_MAP[record.status] || STATUS_MAP.alpha;
                         const c = colorMap[st.color];
+                        const avatarUrl = record.user?.avatar ? getStorageUrl(record.user.avatar) : null;
                         return (
                           <tr key={record.id} className="hover:bg-orange-50/30 transition-colors group">
-                            <td className="px-4 py-3.5">
+                            <td className="px-4 py-3">
                               <div className="flex items-center gap-3">
-                                <div className={`w-9 h-9 rounded-xl ${c.bg} flex items-center justify-center text-base shrink-0`}>
-                                  {st.icon}
-                                </div>
+                                {avatarUrl ? (
+                                  <img src={avatarUrl} alt="" className="w-9 h-9 rounded-xl object-cover shrink-0 ring-2 ring-white shadow-sm" />
+                                ) : (
+                                  <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${st.gradient} flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-sm`}>
+                                    {(record.user?.pegawai?.nama_pegawai || record.user?.name || "?")[0].toUpperCase()}
+                                  </div>
+                                )}
                                 <div className="min-w-0">
-                                  <p className="font-semibold text-slate-800 truncate">{record.user?.pegawai?.nama_pegawai || record.user?.name || "-"}</p>
+                                  <p className="font-semibold text-slate-800 text-sm truncate">{record.user?.pegawai?.nama_pegawai || record.user?.name || "-"}</p>
                                   <p className="text-[11px] text-slate-400 truncate">{record.user?.pegawai?.jabatan || record.user?.pegawai?.status_kepegawaian?.replace(/_/g, " ") || ""}</p>
                                 </div>
                               </div>
                             </td>
-                            <td className="px-4 py-3.5 text-slate-600 whitespace-nowrap text-xs">{formatDate(record.tanggal)}</td>
-                            <td className="px-4 py-3.5 text-center">
-                              <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-bold ${c.badge}`}>
-                                {st.label}
+                            <td className="px-3 py-3 text-slate-600 whitespace-nowrap text-xs">{formatDate(record.tanggal)}</td>
+                            <td className="px-3 py-3 text-center">
+                              <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold ${c.badge}`}>
+                                <span className="text-xs">{st.icon}</span> {st.label}
                               </span>
                             </td>
-                            <td className="px-4 py-3.5 text-center">
-                              <span className="font-mono text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-1 rounded-lg">{formatTime(record.jam_masuk)}</span>
-                              {record.telat_masuk_menit > 0 && (
-                                <span className="ml-1 text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-md">Telat {formatTelat(record.telat_masuk_menit)}</span>
-                              )}
+                            <td className="px-3 py-3 text-center">
+                              <div className="inline-flex flex-col items-center gap-0.5">
+                                <span className="font-mono text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-1 rounded-lg">{formatTime(record.jam_masuk)}</span>
+                                {record.telat_masuk_menit > 0 && (
+                                  <span className="text-[9px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-md animate-pulse">
+                                    ⏰ Telat {formatTelat(record.telat_masuk_menit)}
+                                  </span>
+                                )}
+                              </div>
                             </td>
-                            <td className="px-4 py-3.5 text-center">
+                            <td className="px-3 py-3 text-center">
                               <span className="font-mono text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-1 rounded-lg">{formatTime(record.jam_keluar)}</span>
                             </td>
-                            <td className="px-4 py-3.5 text-center text-xs text-slate-500">
-                              {record.jarak_masuk != null ? `${record.jarak_masuk}m` : "-"}
+                            <td className="px-3 py-3 text-center text-xs text-slate-500">
+                              {record.jarak_masuk != null ? (
+                                <span className={`font-mono ${record.jarak_masuk > 100 ? "text-amber-600 font-bold" : "text-slate-500"}`}>
+                                  {record.jarak_masuk}m
+                                </span>
+                              ) : "-"}
                             </td>
-                            <td className="px-4 py-3.5 text-slate-500 max-w-[200px] truncate text-xs">
-                              {record.tujuan_dinas && <span className="text-purple-600 font-medium">📍 {record.tujuan_dinas} </span>}
-                              {record.keterangan || ""}
+                            <td className="px-3 py-3 text-slate-500 max-w-[200px] text-xs">
+                              <div className="truncate">
+                                {record.tujuan_dinas && <span className="text-purple-600 font-medium">📍 {record.tujuan_dinas} </span>}
+                                {record.keterangan || ""}
+                              </div>
                             </td>
-                            <td className="px-4 py-3.5 text-center">
+                            <td className="px-3 py-3 text-center">
                               <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <button onClick={() => setEditingRecord(record)}
-                                  className="p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition-colors" title="Edit">
+                                  className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
                                   <FiEdit2 className="h-3.5 w-3.5" />
                                 </button>
                                 <button onClick={() => handleDeleteRecord(record.id)}
-                                  className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-colors" title="Hapus">
+                                  className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Hapus">
                                   <FiTrash2 className="h-3.5 w-3.5" />
                                 </button>
                               </div>
@@ -1308,54 +1464,64 @@ const AbsensiManagementPage = () => {
                   </table>
                 </div>
               ) : (
-                /* CARD VIEW */
+                /* ── CARD VIEW ── */
                 <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {filteredRecords.map((record) => {
+                  {paginatedRecords.map((record) => {
                     const st = STATUS_MAP[record.status] || STATUS_MAP.alpha;
                     const c = colorMap[st.color];
+                    const avatarUrl = record.user?.avatar ? getStorageUrl(record.user.avatar) : null;
                     return (
-                      <div key={record.id} className={`rounded-xl border border-slate-200 p-4 hover:shadow-md transition-all hover:border-orange-200 relative group`}>
+                      <div key={record.id} className={`rounded-2xl border-2 p-4 hover:shadow-lg transition-all duration-300 relative group ${
+                        record.telat_masuk_menit > 0 ? "border-amber-200 bg-amber-50/30" : "border-slate-200 hover:border-orange-200"
+                      }`}>
                         <div className="flex items-start justify-between mb-3">
                           <div className="flex items-center gap-3">
-                            <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${st.gradient} flex items-center justify-center text-white text-lg shadow-sm`}>
-                              {st.icon}
-                            </div>
+                            {avatarUrl ? (
+                              <img src={avatarUrl} alt="" className="w-10 h-10 rounded-xl object-cover shrink-0 ring-2 ring-white shadow-sm" />
+                            ) : (
+                              <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${st.gradient} flex items-center justify-center text-white text-lg font-bold shadow-sm`}>
+                                {(record.user?.pegawai?.nama_pegawai || record.user?.name || "?")[0].toUpperCase()}
+                              </div>
+                            )}
                             <div className="min-w-0">
                               <p className="font-bold text-slate-800 text-sm truncate">{record.user?.pegawai?.nama_pegawai || record.user?.name || "-"}</p>
                               <p className="text-[11px] text-slate-400">{formatDate(record.tanggal)}</p>
                             </div>
                           </div>
-                          <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold ${c.badge}`}>{st.label}</span>
+                          <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold ${c.badge}`}>{st.icon} {st.label}</span>
                         </div>
-                        <div className="flex items-center gap-4 text-xs">
+                        <div className="flex items-center gap-3 text-xs bg-slate-50 rounded-xl p-2.5">
                           <div className="flex items-center gap-1.5 text-slate-600">
-                            <FiClock className="h-3.5 w-3.5 text-emerald-500" />
-                            <span className="font-mono font-semibold">{formatTime(record.jam_masuk)}</span>
-                            {record.telat_masuk_menit > 0 && (
-                              <span className="text-[9px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-md">Telat {formatTelat(record.telat_masuk_menit)}</span>
-                            )}
+                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                            <span className="font-mono font-bold">{formatTime(record.jam_masuk)}</span>
                           </div>
-                          <span className="text-slate-300">→</span>
+                          <span className="text-slate-300 font-medium">→</span>
                           <div className="flex items-center gap-1.5 text-slate-600">
-                            <FiClock className="h-3.5 w-3.5 text-blue-500" />
-                            <span className="font-mono font-semibold">{formatTime(record.jam_keluar)}</span>
+                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                            <span className="font-mono font-bold">{formatTime(record.jam_keluar)}</span>
                           </div>
                           {record.jarak_masuk != null && (
-                            <span className="text-slate-400 ml-auto">{record.jarak_masuk}m</span>
+                            <span className="text-slate-400 ml-auto text-[11px]">{record.jarak_masuk}m</span>
                           )}
                         </div>
+                        {record.telat_masuk_menit > 0 && (
+                          <div className="mt-2 flex items-center gap-1.5 text-amber-700 bg-amber-100 rounded-lg px-2.5 py-1.5">
+                            <FiClock className="h-3 w-3 animate-pulse" />
+                            <span className="text-[11px] font-bold">Terlambat {formatTelat(record.telat_masuk_menit)}</span>
+                          </div>
+                        )}
                         {(record.tujuan_dinas || record.keterangan) && (
                           <p className="mt-2 text-[11px] text-slate-400 truncate">
-                            {record.tujuan_dinas && <span className="text-purple-500">📍 {record.tujuan_dinas} </span>}
+                            {record.tujuan_dinas && <span className="text-purple-500 font-medium">📍 {record.tujuan_dinas} </span>}
                             {record.keterangan || ""}
                           </p>
                         )}
                         {/* Hover Actions */}
-                        <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => setEditingRecord(record)} className="p-1.5 bg-white text-blue-600 hover:bg-blue-50 rounded-lg shadow-sm border border-slate-200">
+                        <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
+                          <button onClick={() => setEditingRecord(record)} className="p-1.5 bg-white text-blue-600 hover:bg-blue-50 rounded-lg shadow-md border border-slate-200">
                             <FiEdit2 className="h-3 w-3" />
                           </button>
-                          <button onClick={() => handleDeleteRecord(record.id)} className="p-1.5 bg-white text-red-500 hover:bg-red-50 rounded-lg shadow-sm border border-slate-200">
+                          <button onClick={() => handleDeleteRecord(record.id)} className="p-1.5 bg-white text-red-500 hover:bg-red-50 rounded-lg shadow-md border border-slate-200">
                             <FiTrash2 className="h-3 w-3" />
                           </button>
                         </div>
@@ -1365,10 +1531,44 @@ const AbsensiManagementPage = () => {
                 </div>
               )}
 
-              {/* Footer Count */}
+              {/* ── Pagination Footer ── */}
               {!loading && filteredRecords.length > 0 && (
-                <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between">
-                  <p className="text-xs text-slate-500">Menampilkan <strong className="text-slate-700">{filteredRecords.length}</strong> data</p>
+                <div className="px-5 py-3.5 border-t border-slate-100 bg-gradient-to-r from-slate-50/50 to-white flex items-center justify-between gap-4">
+                  <p className="text-xs text-slate-500">
+                    Menampilkan <strong className="text-slate-700">{Math.min((currentPage - 1) * RECORDS_PER_PAGE + 1, filteredRecords.length)}</strong>
+                    {" - "}<strong className="text-slate-700">{Math.min(currentPage * RECORDS_PER_PAGE, filteredRecords.length)}</strong>
+                    {" dari "}<strong className="text-slate-700">{filteredRecords.length}</strong> data
+                    {filterStatus !== "semua" && <span className="text-orange-500"> (difilter)</span>}
+                  </p>
+                  {totalPages > 1 && (
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}
+                        className="p-2 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all">
+                        <FiChevronLeft className="h-4 w-4" />
+                      </button>
+                      {Array.from({ length: totalPages }, (_, i) => i + 1)
+                        .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+                        .reduce((acc, p, i, arr) => {
+                          if (i > 0 && p - arr[i - 1] > 1) acc.push("...");
+                          acc.push(p);
+                          return acc;
+                        }, [])
+                        .map((p, i) => p === "..." ? (
+                          <span key={`dots-${i}`} className="px-1 text-slate-300 text-xs">...</span>
+                        ) : (
+                          <button key={p} onClick={() => setCurrentPage(p)}
+                            className={`min-w-[32px] h-8 rounded-lg text-xs font-bold transition-all ${
+                              currentPage === p
+                                ? "bg-orange-500 text-white shadow-sm shadow-orange-200"
+                                : "text-slate-500 hover:bg-slate-100 border border-slate-200"
+                            }`}>{p}</button>
+                        ))}
+                      <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}
+                        className="p-2 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all">
+                        <FiChevronRight className="h-4 w-4" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
