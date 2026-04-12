@@ -6,7 +6,7 @@ import { Bell } from 'lucide-react';
  * MobileHeader - GoJek Style Mobile Header
  * Header dengan gradient, user info, dan action buttons
  */
-const MobileHeader = ({ 
+const MobileHeader = React.memo(({ 
   userName = "User", 
   userRole = "Role",
   bidangName,
@@ -19,7 +19,6 @@ const MobileHeader = ({
 }) => {
   return (
     <div className={`bg-gradient-to-br ${gradient} rounded-b-[32px] shadow-xl`}>
-      {console.log("Rendering MobileHeader with props:", { userName, userRole, bidangName, greeting, notificationCount })}
       {/* Safe area spacer for PWA standalone mode */}
       <div className="h-[env(safe-area-inset-top,0px)]"></div>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-8">
@@ -80,6 +79,8 @@ const MobileHeader = ({
       </div>
     </div>
   );
-};
+});
+
+MobileHeader.displayName = 'MobileHeader';
 
 export default MobileHeader;

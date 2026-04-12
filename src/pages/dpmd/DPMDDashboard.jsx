@@ -122,6 +122,7 @@ const DPMDDashboard = () => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadMessages, setUnreadMessages] = useState(0);
   
   // Data States
   const [dashboardData, setDashboardData] = useState(null);
@@ -199,6 +200,24 @@ const DPMDDashboard = () => {
     };
   }, [fetchNotifications]);
 
+  // ==================== UNREAD MESSAGES ====================
+  const fetchUnreadMessages = useCallback(async () => {
+    try {
+      const response = await api.get('/messaging/unread-count');
+      if (response.data.success) {
+        setUnreadMessages(response.data.data?.count || 0);
+      }
+    } catch (error) {
+      // Silent fail
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchUnreadMessages();
+    const interval = setInterval(fetchUnreadMessages, 15000);
+    return () => clearInterval(interval);
+  }, [fetchUnreadMessages]);
+
   // Listen for push notifications from Service Worker
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return;
@@ -221,18 +240,21 @@ const DPMDDashboard = () => {
     return () => navigator.serviceWorker.removeEventListener('message', handlePushMessage);
   }, []);
 
-  const handleNotificationClick = async () => {
-    setShowNotifications(!showNotifications);
-    if (!showNotifications && unreadCount > 0) {
-      try {
-        await api.post('/push-notification/notifications/mark-read', { all: true });
-        setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-        setUnreadCount(0);
-      } catch (error) {
-        console.error('Error marking notifications as read:', error);
+  const handleNotificationClick = useCallback(async () => {
+    setShowNotifications(prev => {
+      const willOpen = !prev;
+      if (willOpen) {
+        // Mark all as read when opening
+        api.post('/push-notification/notifications/mark-read', { all: true })
+          .then(() => {
+            setNotifications(n => n.map(item => ({ ...item, read: true })));
+            setUnreadCount(0);
+          })
+          .catch(() => {});
       }
-    }
-  };
+      return willOpen;
+    });
+  }, []);
 
   const handleNotificationItemClick = async (notification) => {
     if (!notification.read) {
@@ -437,6 +459,7 @@ const DPMDDashboard = () => {
         icon: MessageSquare,
         label: 'Pesan',
         color: 'indigo',
+        badge: unreadMessages || null,
         onClick: () => navigate('/dpmd/pesan')
       },
       isAbsensiEligible
@@ -513,7 +536,7 @@ const DPMDDashboard = () => {
     }
 
     return commonActions;
-  }, [role, config.primaryColor, navigate, getBidangPath, isAbsensiEligible]);
+  }, [role, config.primaryColor, navigate, getBidangPath, isAbsensiEligible, unreadMessages]);
 
   // ==================== HELPERS ====================
   const formatTanggal = (dateString) => {

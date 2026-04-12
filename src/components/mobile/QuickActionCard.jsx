@@ -7,6 +7,7 @@ import React from 'react';
  */
 const QuickActionCard = ({ 
   icon: Icon, 
+  customIcon,
   label, 
   badge, 
   onClick, 
@@ -50,7 +51,7 @@ const QuickActionCard = ({
         {/* Subtle Shine Effect */}
         <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/20 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
         
-        {Icon && <Icon className="w-5 h-5 sm:w-6 sm:h-6 lg:w-10 lg:h-10 text-white relative z-10 drop-shadow-md" />}
+        {customIcon ? customIcon : (Icon && <Icon className="w-5 h-5 sm:w-6 sm:h-6 lg:w-10 lg:h-10 text-white relative z-10 drop-shadow-md" />)}
         
         {/* Badge */}
         {badge && (

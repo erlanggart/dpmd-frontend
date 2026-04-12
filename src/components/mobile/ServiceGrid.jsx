@@ -20,6 +20,7 @@ const ServiceGrid = ({ services = [], columns = 3 }) => {
         <QuickActionCard
           key={index}
           icon={service.icon}
+          customIcon={service.customIcon}
           label={service.label}
           badge={service.badge}
           onClick={service.onClick}

@@ -95,7 +95,6 @@ export default function DisposisiSuratModern() {
 	const fetchData = useCallback(async () => {
 		setLoading(true);
 		try {
-			console.log("[DisposisiSurat] Fetching data for activeTab:", activeTab);
 
 			if (activeTab === "surat-masuk") {
 				const suratRes = await api.get("/surat-masuk?status=draft");

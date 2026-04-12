@@ -31,7 +31,6 @@ const useDisposisiAutoReload = (reloadCallback, options = {}) => {
       const now = Date.now();
       // Prevent multiple reloads in quick succession
       if (now - lastReloadRef.current > debounceMs) {
-        console.log('🔄 Auto-reloading disposisi data...');
         reloadCallback();
         lastReloadRef.current = now;
       }
@@ -40,29 +39,22 @@ const useDisposisiAutoReload = (reloadCallback, options = {}) => {
 
   useEffect(() => {
     if (!enabled) {
-      console.log('⏸️ Disposisi auto-reload disabled');
       return;
     }
 
-    console.log('✅ Disposisi auto-reload enabled');
-
     // Setup message listener from service worker
     const messageHandler = (data) => {
-      console.log('📨 Push notification message received:', data);
-
       // Check if it's a notification we care about
       if (data.type === 'PUSH_NOTIFICATION_RECEIVED') {
         const payload = data.payload || {};
         
         if (notificationTypes.includes(payload.type)) {
-          console.log(`🔔 ${payload.type} notification received, triggering reload...`);
           debouncedReload();
         }
       }
 
       // Handle navigation from notification click
       if (data.type === 'NOTIFICATION_CLICK_NAVIGATE') {
-        console.log('👆 Notification clicked, user navigating to:', data.url);
         debouncedReload();
       }
     };

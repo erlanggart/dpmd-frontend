@@ -178,7 +178,6 @@ export const AuthProvider = ({ children }) => {
 
 		// Periodic backup (every 5 minutes - reduced from 30 seconds)
 		const backupInterval = setInterval(() => {
-			console.log('[Auth] ⏰ Periodic backup triggered');
 			backupSessionToIndexedDB();
 		}, 5 * 60 * 1000); // 5 minutes
 
