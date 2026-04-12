@@ -1,7 +1,7 @@
 // src/layouts/DPMDStaffLayout.jsx
 // Unified layout for all internal DPMD staff roles
 // Supports both mobile (bottom nav) and desktop (sidebar) modes
-import React from "react";
+import React, { lazy, Suspense, useState, useEffect } from "react";
 import { Outlet, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
@@ -20,6 +20,28 @@ import { subscribeToPushNotifications } from "../utils/pushNotifications";
 import toast from 'react-hot-toast';
 import api from "../api";
 import { getAvatarUrl } from '../utils/avatarUtils';
+
+const Lottie = lazy(() => import('lottie-react'));
+
+// Floating Lottie chat button - only rendered on dashboard
+const FloatingChatButton = ({ onClick }) => {
+	const [animData, setAnimData] = useState(null);
+	useEffect(() => {
+		import('../assets/lottie/chat-button.json').then(m => setAnimData(m.default));
+	}, []);
+	if (!animData) return null;
+	return (
+		<button
+			onClick={onClick}
+			className="fixed bottom-24 right-5 z-40 w-14 h-14 rounded-full bg-gradient-to-br from-indigo-500 to-indigo-600 shadow-lg shadow-indigo-500/40 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
+			aria-label="Pesan"
+		>
+			<Suspense fallback={<FiMail className="w-6 h-6 text-white" />}>
+				<Lottie animationData={animData} loop autoplay className="w-10 h-10" />
+			</Suspense>
+		</button>
+	);
+};
 
 // ============================================
 // RESPONSIVE HOOK
@@ -1157,6 +1179,11 @@ const DPMDStaffLayout = () => {
 
 			{/* Smart Search ChatBot - only on dashboard */}
 			{location.pathname.endsWith('/dashboard') && <ChatBot isDesktop={isDesktop} />}
+
+			{/* Floating Chat Button - only on dashboard */}
+			{location.pathname.endsWith('/dashboard') && (
+				<FloatingChatButton onClick={() => navigate('/dpmd/pesan')} />
+			)}
 
 			<style>{`
 				@keyframes fadeIn {
