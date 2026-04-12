@@ -205,7 +205,7 @@ const DPMDDashboard = () => {
     try {
       const response = await api.get('/messaging/unread-count');
       if (response.data.success) {
-        setUnreadMessages(response.data.data?.count || 0);
+        setUnreadMessages(response.data.data?.unread_count || 0);
       }
     } catch (error) {
       // Silent fail
