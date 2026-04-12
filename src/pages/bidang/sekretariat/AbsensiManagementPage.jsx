@@ -12,6 +12,7 @@ import tableTennisAnimation from "../../../assets/table-tennis.json";
 import api from "../../../api";
 import { showAlert } from "../../../components/AlertPopup";
 import { useAuth } from "../../../context/AuthContext";
+import { getAvatarUrl } from "../../../utils/avatarUtils";
 
 // ─── Constants ────────────────────────────────────────────────
 const STATUS_MAP = {
@@ -60,6 +61,10 @@ const formatDate = (dateStr) => {
 const getStorageUrl = (imagePath) => {
   if (!imagePath) return null;
   const base = import.meta.env.VITE_IMAGE_BASE_URL || "http://127.0.0.1:3001";
+  // If path already starts with /storage/, just prepend base
+  if (imagePath.startsWith('/storage/')) {
+    return `${base}${imagePath}`;
+  }
   return `${base}/storage/${imagePath}`;
 };
 
@@ -1395,7 +1400,7 @@ const AbsensiManagementPage = () => {
                       {paginatedRecords.map((record) => {
                         const st = STATUS_MAP[record.status] || STATUS_MAP.alpha;
                         const c = colorMap[st.color];
-                        const avatarUrl = record.user?.avatar ? getStorageUrl(record.user.avatar) : null;
+                        const avatarUrl = getAvatarUrl(record.user?.avatar);
                         return (
                           <tr key={record.id} className="hover:bg-orange-50/30 transition-colors group">
                             <td className="px-4 py-3">
@@ -1469,7 +1474,7 @@ const AbsensiManagementPage = () => {
                   {paginatedRecords.map((record) => {
                     const st = STATUS_MAP[record.status] || STATUS_MAP.alpha;
                     const c = colorMap[st.color];
-                    const avatarUrl = record.user?.avatar ? getStorageUrl(record.user.avatar) : null;
+                    const avatarUrl = getAvatarUrl(record.user?.avatar);
                     return (
                       <div key={record.id} className={`rounded-2xl border-2 p-4 hover:shadow-lg transition-all duration-300 relative group ${
                         record.telat_masuk_menit > 0 ? "border-amber-200 bg-amber-50/30" : "border-slate-200 hover:border-orange-200"

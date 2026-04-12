@@ -9,7 +9,7 @@ import {
   LayoutDashboard, Building2, Briefcase, FileText, TrendingUp, Users,
   MapPin, Calendar, BarChart3, PieChart, Activity, Bell, Info, X, ExternalLink,
   Clock, CheckCircle, Send, Mail, Inbox, ChevronRight, User, Phone, Award,
-  FolderOpen, ClipboardList, Newspaper, Fingerprint
+  FolderOpen, ClipboardList, Newspaper, Fingerprint, MessageSquare
 } from 'lucide-react';
 import api from '../../api';
 import axios from 'axios';
@@ -120,6 +120,8 @@ const DPMDDashboard = () => {
   const [user, setUser] = useState(JSON.parse(localStorage.getItem('user') || '{}'));
   const [loading, setLoading] = useState(true);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   
   // Data States
   const [dashboardData, setDashboardData] = useState(null);
@@ -172,6 +174,92 @@ const DPMDDashboard = () => {
     window.addEventListener('userProfileUpdated', handleProfileUpdate);
     return () => window.removeEventListener('userProfileUpdated', handleProfileUpdate);
   }, []);
+
+  // ==================== NOTIFICATIONS ====================
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const response = await api.get('/push-notification/notifications?limit=20');
+      if (response.data.success) {
+        setNotifications(response.data.data || []);
+        setUnreadCount(response.data.unreadCount || 0);
+      }
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 30000);
+    const handleNewNotification = () => fetchNotifications();
+    window.addEventListener('newNotification', handleNewNotification);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('newNotification', handleNewNotification);
+    };
+  }, [fetchNotifications]);
+
+  // Listen for push notifications from Service Worker
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
+    const handlePushMessage = (event) => {
+      if (event.data && event.data.type === 'PUSH_NOTIFICATION_RECEIVED') {
+        const { payload } = event.data;
+        setUnreadCount(prev => prev + 1);
+        setNotifications(prev => [{
+          id: Date.now(),
+          title: payload.title || 'Notifikasi Baru',
+          message: payload.body || payload.message || 'Anda memiliki notifikasi baru',
+          timestamp: new Date().toISOString(),
+          read: false,
+          type: payload.data?.type || 'general',
+          data: payload.data
+        }, ...prev]);
+      }
+    };
+    navigator.serviceWorker.addEventListener('message', handlePushMessage);
+    return () => navigator.serviceWorker.removeEventListener('message', handlePushMessage);
+  }, []);
+
+  const handleNotificationClick = async () => {
+    setShowNotifications(!showNotifications);
+    if (!showNotifications && unreadCount > 0) {
+      try {
+        await api.post('/push-notification/notifications/mark-read', { all: true });
+        setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+        setUnreadCount(0);
+      } catch (error) {
+        console.error('Error marking notifications as read:', error);
+      }
+    }
+  };
+
+  const handleNotificationItemClick = async (notification) => {
+    if (!notification.read) {
+      try {
+        await api.post('/push-notification/notifications/mark-read', { ids: [notification.id] });
+        setNotifications(prev => prev.map(n =>
+          n.id === notification.id ? { ...n, read: true } : n
+        ));
+        setUnreadCount(prev => Math.max(0, prev - 1));
+      } catch (error) {
+        console.error('Error marking notification as read:', error);
+      }
+    }
+    const notifType = notification.data?.type || notification.type || '';
+    if (notifType === 'today_schedule' || notifType === 'tomorrow_schedule') {
+      const targetDate = notification.data?.targetDate || '';
+      const dateParam = targetDate ? `?tanggal=${targetDate}` : '';
+      navigate(`/dpmd/jadwal-kegiatan${dateParam}`);
+    } else if (notification.data?.url) {
+      navigate(notification.data.url);
+    } else if (notifType === 'disposisi' || notifType === 'new_disposisi' || notifType === 'disposisi_update') {
+      navigate('/dpmd/disposisi');
+    } else if (notifType === 'kegiatan') {
+      navigate('/dpmd/jadwal-kegiatan');
+    }
+    setShowNotifications(false);
+  };
 
   // ==================== DATA FETCHING ====================
   const fetchData = useCallback(async () => {
@@ -346,10 +434,10 @@ const DPMDDashboard = () => {
     // Common actions for all roles - using unified /dpmd paths
     const commonActions = [
       {
-        icon: BarChart3,
-        label: 'Dashboard',
-        color: 'purple',
-        onClick: () => navigate('/core-dashboard/dashboard')
+        icon: MessageSquare,
+        label: 'Pesan',
+        color: 'indigo',
+        onClick: () => navigate('/dpmd/pesan')
       },
       isAbsensiEligible
         ? {
@@ -470,8 +558,6 @@ const DPMDDashboard = () => {
     );
   }
 
-  const notifCount = statistik?.masuk?.pending || 0;
-
   // ==================== RENDER ====================
   return (
     <div className="min-h-screen bg-gray-50 pb-20 lg:pb-4">
@@ -485,22 +571,20 @@ const DPMDDashboard = () => {
         bidangName={role === 'pegawai' ? getBidangName() : undefined}
         greeting="Selamat Datang"
         gradient={config.gradient}
-        notificationCount={notifCount}
-        onNotificationClick={() => setShowNotifications(!showNotifications)}
+        notificationCount={unreadCount}
+        onNotificationClick={handleNotificationClick}
         avatar={getUserAvatarUrl(user)}
       />
 
-      {/* Notification Popup */}
+      {/* Notification Panel */}
       {showNotifications && (
         <>
-          <div 
-            className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 transition-opacity"
+          <div
+            className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40"
             onClick={() => setShowNotifications(false)}
           />
-          
-          <div className="fixed top-4 right-4 w-96 max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-2xl z-50 overflow-hidden border border-gray-100 animate-slideDown">
-            {/* Header */}
-            <div className={`relative bg-gradient-to-r ${config.notifGradient} px-5 py-4`}>
+          <div className="fixed top-0 left-0 right-0 lg:top-4 lg:right-4 lg:left-auto lg:w-96 bg-white lg:rounded-2xl shadow-2xl z-50 overflow-hidden border border-gray-100 animate-slideDown max-h-[80vh] lg:max-h-[32rem]">
+            <div className={`bg-gradient-to-r ${config.notifGradient} px-5 py-4`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
@@ -509,7 +593,7 @@ const DPMDDashboard = () => {
                   <div>
                     <h3 className="font-bold text-white text-base">Notifikasi</h3>
                     <p className="text-xs text-white/80">
-                      {notifCount > 0 ? `${notifCount} notifikasi baru` : 'Tidak ada notifikasi baru'}
+                      {unreadCount > 0 ? `${unreadCount} belum dibaca` : 'Semua dibaca'}
                     </p>
                   </div>
                 </div>
@@ -521,48 +605,45 @@ const DPMDDashboard = () => {
                 </button>
               </div>
             </div>
-
-            {/* Content */}
-            <div className="max-h-[calc(100vh-12rem)] overflow-y-auto">
-              {notifCount > 0 ? (
-                <div className="p-4">
-                  <div 
-                    className={`group relative bg-gradient-to-br ${config.notifBg} rounded-xl p-4 border border-${config.primaryColor}-100 hover:border-${config.primaryColor}-300 cursor-pointer transition-all hover:shadow-md`}
-                    onClick={() => {
-                      setShowNotifications(false);
-                      navigate('/dpmd/disposisi');
-                    }}
-                  >
-                    <div className="flex items-start gap-4">
-                      <div className={`h-12 w-12 bg-gradient-to-br ${config.notifGradient} rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg`}>
-                        <Mail className="h-6 w-6 text-white" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2 mb-1">
-                          <h4 className="font-semibold text-gray-800 text-sm">Disposisi Pending</h4>
-                          <span className={`px-2 py-1 bg-${config.primaryColor}-600 text-white text-xs font-bold rounded-full`}>
-                            {notifCount}
-                          </span>
-                        </div>
-                        <p className="text-sm text-gray-600 mb-2">
-                          Anda memiliki {notifCount} disposisi yang menunggu tindakan
-                        </p>
-                        <div className={`flex items-center gap-2 text-xs text-${config.primaryColor}-600 font-medium group-hover:text-${config.primaryColor}-700`}>
-                          <span>Klik untuk melihat detail</span>
-                          <ChevronRight className="h-3 w-3 group-hover:translate-x-1 transition-transform" />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
+            <div className="divide-y divide-gray-100 overflow-y-auto max-h-[calc(80vh-72px)] lg:max-h-[28rem]">
+              {notifications.length === 0 ? (
                 <div className="px-6 py-12 text-center">
                   <div className={`mx-auto mb-4 h-20 w-20 bg-gradient-to-br ${config.notifBg} rounded-2xl flex items-center justify-center`}>
                     <Bell className={`h-10 w-10 ${config.notifIconColor}`} />
                   </div>
-                  <h4 className="font-semibold text-gray-700 mb-1">Belum Ada Notifikasi</h4>
+                  <h4 className="font-semibold text-gray-700 mb-1">Tidak ada notifikasi</h4>
                   <p className="text-sm text-gray-500">Notifikasi penting akan muncul di sini</p>
                 </div>
+              ) : (
+                notifications.map((notification) => (
+                  <button
+                    key={notification.id}
+                    onClick={() => handleNotificationItemClick(notification)}
+                    className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors ${
+                      !notification.read ? 'bg-blue-50/50' : ''
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className={`h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                        (notification.type === 'disposisi' || notification.data?.type === 'new_disposisi') ? 'bg-orange-100' : 'bg-blue-100'
+                      }`}>
+                        {(notification.type === 'disposisi' || notification.data?.type === 'new_disposisi') ? (
+                          <Mail className="h-5 w-5 text-orange-600" />
+                        ) : (
+                          <Bell className="h-5 w-5 text-blue-600" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold text-gray-800 text-sm">{notification.title}</h4>
+                        <p className="text-sm text-gray-600 mt-0.5 line-clamp-2">{notification.message}</p>
+                        <span className="text-xs text-gray-400 mt-1 inline-block">{notification.time}</span>
+                      </div>
+                      {!notification.read && (
+                        <div className={`h-2 w-2 bg-${config.primaryColor}-500 rounded-full flex-shrink-0 mt-2`}></div>
+                      )}
+                    </div>
+                  </button>
+                ))
               )}
             </div>
           </div>

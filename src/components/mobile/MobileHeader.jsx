@@ -49,7 +49,8 @@ const MobileHeader = ({
 
           {/* Action Buttons */}
           <div className="flex items-center gap-2 flex-shrink-0">
-            {/* Notification */}
+            {/* Notification - only show if handler provided */}
+            {onNotificationClick && (
             <button 
               onClick={onNotificationClick}
               className="relative h-10 w-10 sm:h-11 sm:w-11 bg-white/10 rounded-full flex items-center justify-center backdrop-blur-md hover:bg-white/20 transition-all active:scale-95"
@@ -61,6 +62,7 @@ const MobileHeader = ({
                 </div>
               )}
             </button>
+            )}
           </div>
         </div>
 

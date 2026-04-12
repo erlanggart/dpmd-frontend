@@ -1024,35 +1024,14 @@ const DPMDStaffLayout = () => {
 									</button>
 								</div>
 
-								{/* Quick Access: Notifikasi + Profil */}
-								<div className="mt-4 grid grid-cols-2 gap-3">
-									<button
-										onClick={() => {
-											setShowMenu(false);
-											handleNotificationClick();
-										}}
-										className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left shadow-sm"
-									>
-										<div className="relative flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-100 text-blue-700">
-											<FiBell className="h-5 w-5" />
-											{unreadCount > 0 && (
-												<span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
-													{unreadCount > 9 ? '9+' : unreadCount}
-												</span>
-											)}
-										</div>
-										<div>
-											<p className="text-sm font-semibold text-slate-800">Notifikasi</p>
-											<p className="text-xs text-slate-400">{unreadCount > 0 ? `${unreadCount} belum dibaca` : 'Semua dibaca'}</p>
-										</div>
-									</button>
-
+								{/* Quick Access: Profil */}
+								<div className="mt-4">
 									<button
 										onClick={() => {
 											setShowMenu(false);
 											navigate(`${config.basePath}/profile`);
 										}}
-										className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left shadow-sm"
+										className="flex w-full items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left shadow-sm"
 									>
 										<div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-700">
 											<FiUser className="h-5 w-5" />

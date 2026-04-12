@@ -198,6 +198,7 @@ const PegawaiLayout = lazy(() =>
 );
 const PegawaiDashboard = lazy(() => import("./pages/pegawai/PegawaiDashboard"));
 const AbsensiPage = lazy(() => import("./pages/pegawai/AbsensiPage"));
+const MessagingPage = lazy(() => import("./pages/messaging/MessagingPage"));
 const AbsensiManagementPage = lazy(() => import("./pages/bidang/sekretariat/AbsensiManagementPage"));
 
 // Bidang pages
@@ -846,6 +847,7 @@ function App() {
                   <Route path="video-meeting" element={<VideoMeetingListPage />} />
                   <Route path="etanol" element={<CetakBonBensin />} />
                   <Route path="absensi" element={<AbsensiPage />} />
+                  <Route path="pesan" element={<MessagingPage />} />
                 </Route>
                 
                 {/* Rute Bidang - Accessible by pegawai/kepala_bidang/ketua_tim (their own bidang) & kepala_dinas/superadmin (all) */}
