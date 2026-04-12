@@ -809,6 +809,7 @@ function App() {
                   <Route path="bankeu" element={<DesaBankeuPage />} />
                   <Route path="aparatur-desa-external" element={<DesaAparaturExternalPage />} />
                   <Route path="settings" element={<DesaSettings />} />
+                  <Route path="pesan" element={<MessagingPage />} />
                 </Route>
                 {/* ============================================ */}
                 {/* DPMD INTERNAL STAFF ROUTES - Unified Single Route */}
@@ -1107,6 +1108,7 @@ function App() {
                   <Route path="bidang/pemdes/aparatur-desa" element={<PemdesAparaturDesaPage />} />
                   <Route path="bidang/pemdes/produk-hukum" element={<ProdukHukumPemdesPage />} />
                   <Route path="bidang/pemdes/produk-hukum/:id" element={<ProdukHukumDetailPemdesPage />} />
+                  <Route path="pesan" element={<MessagingPage />} />
                 </Route>
 
                 {/* Rute Kecamatan - Exclusive untuk Admin Kecamatan */}
@@ -1134,6 +1136,7 @@ function App() {
                   />
                   <Route path="settings" element={<KecamatanSettings />} />
                   <Route path="change-password" element={<KecamatanChangePasswordPage />} />
+                  <Route path="pesan" element={<MessagingPage />} />
                 </Route>
 
                 {/* Rute Dinas Terkait - Untuk verifikasi teknis */}
@@ -1161,6 +1164,7 @@ function App() {
                   />
                   <Route path="profil" element={<VerifikatorProfilePage />} />
                   <Route path="ganti-password" element={<DinasChangePasswordPage />} />
+                  <Route path="pesan" element={<MessagingPage />} />
                 </Route>
 
                 {/* Rute Core Dashboard - DPMD Internal Only */}
