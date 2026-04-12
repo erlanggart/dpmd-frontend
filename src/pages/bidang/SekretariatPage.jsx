@@ -4,6 +4,7 @@ import { useBidangPath } from '../../hooks/useBidangPath';
 import { FileText, Mail, Plane, Users, Activity, TrendingUp, ArrowLeft, Clock, Zap, ChevronRight, Building, BarChart, Calendar, Bell, Image, RefreshCw, Video, ClipboardCheck } from 'lucide-react';
 import api from '../../api';
 import toast from 'react-hot-toast';
+import DaftarPegawaiBidang from '../../components/bidang/DaftarPegawaiBidang';
 
 const SekretariatPage = () => {
 	const navigate = useNavigate();
@@ -313,6 +314,13 @@ const SekretariatPage = () => {
 								</div>
 							</div>
 						</div>
+					</div>
+				)}
+
+				{/* Daftar Pegawai */}
+				{activeTab === 'overview' && (
+					<div className="mt-6">
+						<DaftarPegawaiBidang bidangId={2} bidangName="Bidang Sekretariat" />
 					</div>
 				)}
 
