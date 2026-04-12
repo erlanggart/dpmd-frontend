@@ -4,7 +4,7 @@ import {
   FiSearch, FiEdit2, FiTrash2, FiCalendar, FiClock,
   FiUsers, FiX, FiSmartphone, FiImage, FiSave,
   FiToggleLeft, FiToggleRight, FiUpload, FiSettings,
-  FiChevronDown, FiFilter, FiArrowLeft, FiEye, FiUser,
+  FiChevronDown, FiFilter, FiArrowLeft, FiEye, FiUser, FiBell, FiSend,
 } from "react-icons/fi";
 import { LuDownload, LuRefreshCw, LuShieldCheck, LuWifi, LuWifiOff, LuLayoutGrid, LuList, LuFileSpreadsheet, LuChartColumn, LuLayoutDashboard } from "react-icons/lu";
 import Lottie from "lottie-react";
@@ -157,6 +157,14 @@ const AbsensiManagementPage = () => {
   const [popupSaving, setPopupSaving] = useState(false);
   const popupFileInputRef = useRef(null);
 
+  // Reminder template state
+  const [reminderTemplates, setReminderTemplates] = useState([]);
+  const [reminderLoading, setReminderLoading] = useState(false);
+  const [reminderEditingType, setReminderEditingType] = useState(null);
+  const [reminderEditForm, setReminderEditForm] = useState({ title: "", message: "", is_active: true });
+  const [reminderSaving, setReminderSaving] = useState(false);
+  const [reminderTesting, setReminderTesting] = useState(null);
+
   // ─── Data Fetchers ────────────────────────────────────────
   const fetchRekap = useCallback(async () => {
     try {
@@ -200,6 +208,18 @@ const AbsensiManagementPage = () => {
       console.error("Error fetching popup messages:", err);
     } finally {
       setPopupLoading(false);
+    }
+  }, []);
+
+  const fetchReminderTemplates = useCallback(async () => {
+    try {
+      setReminderLoading(true);
+      const res = await api.get("/absensi/admin/reminder-templates");
+      setReminderTemplates(res.data.data || []);
+    } catch (err) {
+      console.error("Error fetching reminder templates:", err);
+    } finally {
+      setReminderLoading(false);
     }
   }, []);
 
@@ -261,7 +281,8 @@ const AbsensiManagementPage = () => {
     else if (activeTab === "pegawai") fetchPegawai();
     else if (activeTab === "settings") fetchSettings();
     else if (activeTab === "popup") fetchPopupMessages();
-  }, [activeTab, fetchDashboard, fetchRekap, fetchRekapPegawai, fetchPegawai, fetchSettings, fetchPopupMessages]);
+    else if (activeTab === "reminder") fetchReminderTemplates();
+  }, [activeTab, fetchDashboard, fetchRekap, fetchRekapPegawai, fetchPegawai, fetchSettings, fetchPopupMessages, fetchReminderTemplates]);
 
   // Refetch user history when period changes
   useEffect(() => {
@@ -275,6 +296,7 @@ const AbsensiManagementPage = () => {
     else if (activeTab === "rekap-pegawai") await fetchRekapPegawai();
     else if (activeTab === "pegawai") await fetchPegawai();
     else if (activeTab === "popup") await fetchPopupMessages();
+    else if (activeTab === "reminder") await fetchReminderTemplates();
     setRefreshing(false);
   };
 
@@ -416,6 +438,7 @@ const AbsensiManagementPage = () => {
     { key: "rekap", label: "Rekap Harian", icon: FiCalendar, count: records.length },
     { key: "pegawai", label: "Daftar Pegawai", icon: FiUsers, count: pegawai.length },
     { key: "popup", label: "Popup", icon: FiImage, count: popupMessages.length },
+    { key: "reminder", label: "Reminder", icon: FiBell },
   ];
 
   // ─── Export Functions ─────────────────────────────────────
@@ -1535,6 +1558,149 @@ const AbsensiManagementPage = () => {
                             )}
                             <h4 className="font-bold text-slate-800 text-sm mb-1">{msg.title || "-"}</h4>
                             <p className="text-slate-400 text-xs leading-relaxed">{msg.message || "Belum ada pesan"}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ═══ Reminder Templates Tab ═══════════════════════ */}
+        {activeTab === "reminder" && (
+          <div>
+            <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-2xl">
+              <div className="flex items-start gap-3">
+                <FiBell className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-blue-800">Auto Reminder Absensi</p>
+                  <p className="text-xs text-blue-600 mt-1">
+                    Notifikasi otomatis dikirim 5 menit setelah jam masuk dan jam pulang kepada semua pegawai yang wajib absen.
+                    Anda bisa mengkustomisasi judul dan pesan notifikasi di bawah ini.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {reminderLoading ? (
+              <div className="flex flex-col justify-center items-center py-20 gap-3">
+                <div className="relative h-12 w-12">
+                  <div className="absolute inset-0 rounded-full border-4 border-orange-200" />
+                  <div className="absolute inset-0 rounded-full border-4 border-orange-500 border-t-transparent animate-spin" />
+                </div>
+                <p className="text-sm text-slate-400 font-medium">Memuat template...</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {reminderTemplates.map((tmpl) => {
+                  const isEditing = reminderEditingType === tmpl.type;
+                  const isMasuk = tmpl.type === 'reminder_masuk';
+                  const colors = isMasuk ? 'from-emerald-500 to-green-600' : 'from-blue-500 to-indigo-600';
+                  const label = isMasuk ? 'Reminder Masuk' : 'Reminder Pulang';
+                  const desc = isMasuk
+                    ? `Dikirim 5 menit setelah jam masuk (${settings.jam_masuk || '08:00'} WIB)`
+                    : `Dikirim 5 menit setelah jam pulang (${settings.jam_pulang || '16:00'} WIB)`;
+
+                  return (
+                    <div key={tmpl.type}
+                      className={`bg-white rounded-2xl shadow-sm border-2 transition-all duration-300 overflow-hidden ${
+                        isEditing ? "border-orange-400 shadow-orange-100" : "border-slate-200/60 hover:shadow-md hover:border-slate-300"
+                      }`}>
+                      {/* Card Header */}
+                      <div className={`bg-gradient-to-r ${colors} px-4 py-3 flex items-center justify-between`}>
+                        <div className="flex items-center gap-2.5">
+                          <FiBell className="h-4 w-4 text-white" />
+                          <div>
+                            <span className="text-white font-bold text-sm">{label}</span>
+                            <p className="text-white/70 text-[10px]">{desc}</p>
+                          </div>
+                          {tmpl.is_active ? (
+                            <span className="bg-white/25 text-white text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Aktif</span>
+                          ) : (
+                            <span className="bg-black/25 text-white/60 text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Off</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <button onClick={async () => {
+                            try {
+                              await api.put(`/absensi/admin/reminder-templates/${tmpl.type}`, { is_active: !tmpl.is_active });
+                              await fetchReminderTemplates();
+                            } catch { showAlert({ icon: "error", title: "Gagal", text: "Gagal mengubah status" }); }
+                          }}
+                            className="p-1.5 rounded-lg hover:bg-white/20 transition-colors text-white" title={tmpl.is_active ? "Nonaktifkan" : "Aktifkan"}>
+                            {tmpl.is_active ? <FiToggleRight className="h-5 w-5" /> : <FiToggleLeft className="h-5 w-5" />}
+                          </button>
+                          {!isEditing && (
+                            <button onClick={() => {
+                              setReminderEditingType(tmpl.type);
+                              setReminderEditForm({ title: tmpl.title || '', message: tmpl.message || '', is_active: tmpl.is_active });
+                            }} className="p-1.5 rounded-lg hover:bg-white/20 transition-colors text-white">
+                              <FiEdit2 className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Card Body */}
+                      <div className="p-4">
+                        {isEditing ? (
+                          <div className="space-y-3">
+                            <div>
+                              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 block">Judul Notifikasi</label>
+                              <input type="text" value={reminderEditForm.title} onChange={(e) => setReminderEditForm(f => ({ ...f, title: e.target.value }))}
+                                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400" placeholder="Judul notifikasi..." />
+                            </div>
+                            <div>
+                              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 block">Pesan Notifikasi</label>
+                              <textarea value={reminderEditForm.message} onChange={(e) => setReminderEditForm(f => ({ ...f, message: e.target.value }))}
+                                rows={3} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400 resize-none" placeholder="Pesan notifikasi..." />
+                            </div>
+                            <div className="flex gap-2 justify-end pt-1">
+                              <button onClick={() => { setReminderEditingType(null); setReminderEditForm({ title: "", message: "", is_active: true }); }}
+                                className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800 border border-slate-200 rounded-xl hover:bg-slate-50 font-semibold transition-all">Batal</button>
+                              <button onClick={async () => {
+                                setReminderSaving(true);
+                                try {
+                                  await api.put(`/absensi/admin/reminder-templates/${reminderEditingType}`, {
+                                    title: reminderEditForm.title,
+                                    message: reminderEditForm.message,
+                                  });
+                                  await fetchReminderTemplates();
+                                  setReminderEditingType(null);
+                                  setReminderEditForm({ title: "", message: "", is_active: true });
+                                  showAlert({ icon: "success", title: "Berhasil", text: "Template berhasil diupdate", timer: 1500 });
+                                } catch { showAlert({ icon: "error", title: "Gagal", text: "Gagal update template" }); }
+                                finally { setReminderSaving(false); }
+                              }} disabled={reminderSaving}
+                                className="px-5 py-2 text-sm bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl hover:from-orange-600 hover:to-amber-600 font-bold shadow-sm shadow-orange-200 transition-all disabled:opacity-50 flex items-center gap-1.5">
+                                {reminderSaving ? <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" /> : <FiSave className="h-4 w-4" />}
+                                Simpan
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div>
+                            <h4 className="font-bold text-slate-800 text-sm mb-1">{tmpl.title || "-"}</h4>
+                            <p className="text-slate-400 text-xs leading-relaxed mb-3">{tmpl.message || "Belum ada pesan"}</p>
+                            <button onClick={async () => {
+                              setReminderTesting(tmpl.type);
+                              try {
+                                const res = await api.post(`/absensi/admin/test-reminder/${tmpl.type}`);
+                                showAlert({ icon: "success", title: "Berhasil", text: `Test reminder terkirim ke ${res.data.data?.total || 0} pegawai`, timer: 2000 });
+                              } catch { showAlert({ icon: "error", title: "Gagal", text: "Gagal mengirim test reminder" }); }
+                              finally { setReminderTesting(null); }
+                            }} disabled={reminderTesting === tmpl.type}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-all disabled:opacity-50">
+                              {reminderTesting === tmpl.type ? (
+                                <div className="animate-spin rounded-full h-3 w-3 border-2 border-blue-500 border-t-transparent" />
+                              ) : (
+                                <FiSend className="h-3 w-3" />
+                              )}
+                              Test Kirim
+                            </button>
                           </div>
                         )}
                       </div>
