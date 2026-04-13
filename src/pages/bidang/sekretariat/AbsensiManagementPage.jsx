@@ -97,27 +97,27 @@ const AbsensiManagementPage = () => {
     return <Navigate to="/forbidden" replace />;
   }
 
-  // Maintenance mode: hanya superadmin yang bisa akses kelola absensi
-  if (user?.role !== 'superadmin') {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-teal-50 px-4">
-        <div className="text-center max-w-lg">
-          <div className="mb-2">
-            <span className="inline-block px-4 py-1.5 rounded-full bg-amber-100 text-amber-700 text-sm font-semibold tracking-wide">
-              🏓 Maintenance Mode
-            </span>
-          </div>
-          <h1 className="text-3xl md:text-4xl font-extrabold text-gray-800 mb-3">
-            Maaf, Kita Sedang Main
-          </h1>
-         
-          <div className="w-72 md:w-96 mx-auto">
-            <Lottie animationData={tableTennisAnimation} loop autoplay />
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Maintenance mode: DISABLED - fitur kelola absensi sudah aktif kembali
+  // if (user?.role !== 'superadmin') {
+  //   return (
+  //     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-teal-50 px-4">
+  //       <div className="text-center max-w-lg">
+  //         <div className="mb-2">
+  //           <span className="inline-block px-4 py-1.5 rounded-full bg-amber-100 text-amber-700 text-sm font-semibold tracking-wide">
+  //             🏓 Maintenance Mode
+  //           </span>
+  //         </div>
+  //         <h1 className="text-3xl md:text-4xl font-extrabold text-gray-800 mb-3">
+  //           Maaf, Kita Sedang Main
+  //         </h1>
+  //        
+  //         <div className="w-72 md:w-96 mx-auto">
+  //           <Lottie animationData={tableTennisAnimation} loop autoplay />
+  //         </div>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   const [activeTab, setActiveTab] = useState("dashboard");
   const [records, setRecords] = useState([]);
