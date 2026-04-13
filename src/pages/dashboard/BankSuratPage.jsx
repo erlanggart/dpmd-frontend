@@ -2,6 +2,7 @@ import { useEffect as useEffectOrig } from 'react';
 import { getUserRole } from '../../utils/roleUtils';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { BIDANG_ROUTES } from '../../layouts/DPMDStaffLayout';
 import {
   Search as LuSearch,
   Filter as LuFilter,
@@ -487,8 +488,7 @@ export default function BankSuratPage() {
                         Pengirim <SortIcon field="pengirim" />
                       </button>
                     </th>
-                    <th className="px-4 py-3.5 text-center font-semibold text-slate-500 text-xs uppercase tracking-wider">Status</th>
-                    <th className="px-4 py-3.5 text-center font-semibold text-slate-500 text-xs uppercase tracking-wider">Disposisi</th>
+                    <th className="px-4 py-3.5 text-center font-semibold text-slate-500 text-xs uppercase tracking-wider">Posisi Surat</th>
                     <th className="px-4 py-3.5 text-center font-semibold text-slate-500 text-xs uppercase tracking-wider w-20">Aksi</th>
                   </tr>
                 </thead>
@@ -514,30 +514,29 @@ export default function BankSuratPage() {
                         </div>
                       </td>
                       <td className="px-4 py-3.5 text-center">
-                        {/* Status = posisi surat terakhir */}
-                        {surat.total_disposisi > 0 && surat.status_terakhir && surat.penerima_terakhir ? (
-                          <span className={`inline-flex flex-col items-center gap-0.5`}>
-                            <span className={`text-xs font-bold ${DISPOSISI_STATUS_MAP[surat.status_terakhir]?.color || 'text-slate-600'}`}>
-                              {DISPOSISI_STATUS_MAP[surat.status_terakhir]?.label || surat.status_terakhir}
+                        {/* Posisi Surat: kepala_bidang/ketua_tim → nama bidang saja. Pegawai → 'Pegawai' + bidang. Lainnya: jabatan + bidang. Fallback status label. */}
+                        {surat.total_disposisi > 0 && (surat.penerima_terakhir_jabatan || surat.penerima_terakhir_bidang_id) ? (
+                          <span className="inline-flex flex-col items-center gap-0.5">
+                            <span className="text-xs font-bold text-slate-700">
+                              {(() => {
+                                const bidang = BIDANG_ROUTES[surat.penerima_terakhir_bidang_id]?.name;
+                                let jabatan = surat.penerima_terakhir_jabatan;
+                                if (!jabatan) return bidang || '';
+                                if (jabatan === 'sekretaris_dinas') return 'Sekretaris Dinas';
+                                if (["kepala_bidang", "ketua_tim"].includes(jabatan)) {
+                                  return bidang || '';
+                                }
+                                if (jabatan === 'pegawai') {
+                                  return bidang ? `Pegawai ${bidang}` : 'Pegawai';
+                                }
+                                // Default: jabatan + bidang
+                                jabatan = jabatan.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                                return bidang ? `${jabatan} ${bidang}` : jabatan;
+                              })()}
                             </span>
-                            <span className="text-[11px] text-slate-500 font-medium">{surat.penerima_terakhir}</span>
                           </span>
                         ) : (
                           <StatusBadge status={surat.status} />
-                        )}
-                      </td>
-                      <td className="px-4 py-3.5 text-center">
-                        {surat.total_disposisi > 0 ? (
-                          <div className="inline-flex flex-col items-center gap-0.5">
-                            <span className="text-xs font-bold text-indigo-600">{surat.total_disposisi}x</span>
-                            {surat.status_terakhir && (
-                              <span className={`text-[10px] font-medium ${DISPOSISI_STATUS_MAP[surat.status_terakhir]?.color || 'text-slate-500'}`}>
-                                {DISPOSISI_STATUS_MAP[surat.status_terakhir]?.label || surat.status_terakhir}
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-xs text-slate-300">—</span>
                         )}
                       </td>
                       <td className="px-4 py-3.5 text-center">

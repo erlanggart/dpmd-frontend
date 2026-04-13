@@ -162,7 +162,7 @@ const ROLE_CONFIG = {
 };
 
 // Bidang routes configuration
-const BIDANG_ROUTES = {
+export const BIDANG_ROUTES = {
 	2: { name: 'Sekretariat', path: '/bidang/sekretariat', icon: 'file', gradient: 'from-gray-500 to-slate-600', color: 'text-gray-600' },
 	3: { name: 'SPKED', path: '/bidang/spked', icon: 'landmark', gradient: 'from-cyan-500 to-teal-600', color: 'text-cyan-600' },
 	4: { name: 'KKD', path: '/bidang/kkd', icon: 'dollar', gradient: 'from-emerald-500 to-teal-600', color: 'text-emerald-600' },
