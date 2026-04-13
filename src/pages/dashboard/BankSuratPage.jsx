@@ -522,14 +522,21 @@ export default function BankSuratPage() {
                                 const bidang = BIDANG_ROUTES[surat.penerima_terakhir_bidang_id]?.name;
                                 let jabatan = surat.penerima_terakhir_jabatan;
                                 if (!jabatan) return bidang || '';
+                                // Kepala Dinas & Sekretaris Dinas: tampilkan jabatan saja, tanpa bidang
+                                if (jabatan === 'kepala_dinas') return 'Kepala Dinas';
                                 if (jabatan === 'sekretaris_dinas') return 'Sekretaris Dinas';
-                                if (["kepala_bidang", "ketua_tim"].includes(jabatan)) {
-                                  return bidang || '';
+                                // Kepala Bidang & Ketua Tim: tampilkan bidang saja
+                                if (jabatan === 'kepala_bidang') {
+                                  return bidang ? `Kabid ${bidang}` : 'Kepala Bidang';
                                 }
+                                if (jabatan === 'ketua_tim') {
+                                  return bidang ? `Ketua Tim ${bidang}` : 'Ketua Tim';
+                                }
+                                // Pegawai: tampilkan bidang
                                 if (jabatan === 'pegawai') {
                                   return bidang ? `Pegawai ${bidang}` : 'Pegawai';
                                 }
-                                // Default: jabatan + bidang
+                                // Default fallback
                                 jabatan = jabatan.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
                                 return bidang ? `${jabatan} ${bidang}` : jabatan;
                               })()}
