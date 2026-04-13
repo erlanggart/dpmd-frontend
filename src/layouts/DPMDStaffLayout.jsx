@@ -80,7 +80,6 @@ const ROLE_CONFIG = {
 		basePath: '/dpmd',
 		displayName: (user) => {
 			const bidangMap = {
-				2: 'Kepala Sub Bagian Sekretariat',
 				3: 'Kepala Bidang SPKED',
 				4: 'Kepala Bidang Kekayaan dan Keuangan Desa',
 				5: 'Kepala Bidang Pemberdayaan Masyarakat Desa',
@@ -90,7 +89,6 @@ const ROLE_CONFIG = {
 		},
 		shortDisplayName: (user) => {
 			const bidangMap = {
-				2: 'Kasubag Sekretariat',
 				3: 'Kabid SPKED',
 				4: 'Kabid KKD',
 				5: 'Kabid PMD',
@@ -136,7 +134,8 @@ const ROLE_CONFIG = {
 			menuBorder: 'border-teal-100',
 		},
 		basePath: '/dpmd',
-		displayName: 'Ketua Tim',
+		displayName: (user) => user.sub_bidang ? `Ketua Tim ${user.sub_bidang}` : 'Ketua Tim',
+		shortDisplayName: (user) => user.sub_bidang ? `Ketim ${user.sub_bidang}` : 'Ketua Tim',
 		allowedRoles: ['ketua_tim'],
 		showBidangNav: true,
 	},
@@ -155,8 +154,8 @@ const ROLE_CONFIG = {
 			menuBorder: 'border-purple-100',
 		},
 		basePath: '/dpmd',
-		displayName: 'Sekretaris Dinas',
-		shortDisplayName: 'Sekdis DPMD',
+		displayName: (user) => user.sub_bidang ? `Sekretaris Dinas - ${user.sub_bidang}` : 'Sekretaris Dinas',
+		shortDisplayName: (user) => user.sub_bidang ? `Sekdis - ${user.sub_bidang}` : 'Sekdis DPMD',
 		allowedRoles: ['sekretaris_dinas'],
 		showBidangNav: true,
 	},

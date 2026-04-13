@@ -6,6 +6,7 @@ import Swal from "sweetalert2";
 
 const EditBidangModal = ({ isOpen, onClose, onBidangUpdated, userData }) => {
 	const [selectedBidang, setSelectedBidang] = useState("");
+	const [subBidang, setSubBidang] = useState("");
 	const [bidangList, setBidangList] = useState([]);
 	const [loading, setLoading] = useState(false);
 	const [loadingBidang, setLoadingBidang] = useState(true);
@@ -15,6 +16,7 @@ const EditBidangModal = ({ isOpen, onClose, onBidangUpdated, userData }) => {
 			fetchBidangList();
 			if (userData) {
 				setSelectedBidang(userData.bidang_id ? userData.bidang_id.toString() : "");
+				setSubBidang(userData.sub_bidang || "");
 			}
 		}
 	}, [isOpen, userData]);
@@ -59,6 +61,7 @@ const EditBidangModal = ({ isOpen, onClose, onBidangUpdated, userData }) => {
 			
 			await api.put(`/users/${userData.id}`, {
 				bidang_id: bidangId,
+				sub_bidang: subBidang.trim() || null,
 			});
 
 			Swal.fire({
@@ -150,6 +153,23 @@ const EditBidangModal = ({ isOpen, onClose, onBidangUpdated, userData }) => {
 								))}
 							</select>
 						)}
+					</div>
+
+					{/* Sub Bidang Input */}
+					<div className="mb-6">
+						<label className="block text-sm font-semibold text-gray-700 mb-3">
+							<LuBuilding2 className="inline w-4 h-4 mr-1" />
+							Sub Bidang <span className="font-normal text-gray-400">(opsional)</span>
+						</label>
+						<input
+							type="text"
+							value={subBidang}
+							onChange={(e) => setSubBidang(e.target.value)}
+							placeholder="Contoh: Sub Bagian Umum & Kepegawaian"
+							className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all text-base"
+							disabled={loading}
+						/>
+						<p className="text-xs text-gray-400 mt-1.5">Nama sub bidang untuk ketua tim dan pegawai</p>
 					</div>
 
 					{/* Info Box */}

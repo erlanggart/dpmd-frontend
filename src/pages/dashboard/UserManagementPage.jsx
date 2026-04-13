@@ -231,6 +231,8 @@ const UserCard = ({
 
 					{user.bidang && <InfoRow icon={LuBuilding2}>{user.bidang.nama}</InfoRow>}
 
+					{user.sub_bidang && <InfoRow icon={LuBuilding2}>{user.sub_bidang}</InfoRow>}
+
 					{user.desa && <InfoRow icon={LuHouse}>{user.desa.nama}</InfoRow>}
 
 					{user.kecamatan && <InfoRow icon={LuMapPin}>{user.kecamatan.nama}</InfoRow>}
