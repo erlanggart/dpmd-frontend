@@ -735,7 +735,7 @@ export default function KelembagaanDetailPage({
 							</>
 						)}
 
-						{type === "rt" && detail?.rws ? (
+						{type === "rt" && (detail?.rw || detail?.rws) ? (
 							<>
 								<Link
 									to={
@@ -756,7 +756,7 @@ export default function KelembagaanDetailPage({
 									}
 									className="text-gray-500 hover:text-indigo-600 transition-colors"
 								>
-									RW {detail.rws?.nomor || ""}
+									RW {detail.rw?.nomor || detail.rws?.nomor || ""}
 								</Link>
 								<FaChevronRight className="text-gray-400 text-xs" />
 								<span className="text-gray-900 font-medium">
