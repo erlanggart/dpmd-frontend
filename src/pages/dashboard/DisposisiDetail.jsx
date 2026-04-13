@@ -21,6 +21,7 @@ import {
 } from 'react-icons/fi';
 import api from '../../api';
 import { toast } from 'react-hot-toast';
+import { INSTRUKSI_OPTIONS, getInstruksiBadgeClass, getInstruksiLabel } from '../../constants/disposisiInstruksi';
 
 export default function DisposisiDetail() {
   const { id } = useParams();
@@ -34,7 +35,7 @@ export default function DisposisiDetail() {
   const [formTeruskan, setFormTeruskan] = useState({
     ke_user_id: '',
     catatan: '',
-    instruksi: 'biasa'
+    instruksi: 'laksanakan'
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -128,16 +129,8 @@ export default function DisposisiDetail() {
   };
 
   const getInstruksiBadge = (instruksi) => {
-    const badges = {
-      segera: { bg: 'bg-red-100', text: 'text-red-700', icon: FiZap },
-      penting: { bg: 'bg-orange-100', text: 'text-orange-700', icon: FiAlertCircle },
-      biasa: { bg: 'bg-gray-100', text: 'text-gray-700', icon: FiMail },
-      koordinasi: { bg: 'bg-blue-100', text: 'text-blue-700', icon: FiLayers },
-      teliti_lapor: { bg: 'bg-purple-100', text: 'text-purple-700', icon: FiFileText },
-      edarkan: { bg: 'bg-cyan-100', text: 'text-cyan-700', icon: FiSend },
-      simpan: { bg: 'bg-teal-100', text: 'text-teal-700', icon: FiInbox }
-    };
-    return badges[instruksi] || badges.biasa;
+    const badge = getInstruksiBadgeClass(instruksi);
+    return { ...badge, icon: FiFileText };
   };
 
   const formatTanggal = (tanggal) => {
@@ -233,8 +226,8 @@ export default function DisposisiDetail() {
               </div>
               <div>
                 <p className="text-xs text-gray-600 font-medium">Instruksi</p>
-                <p className={`text-sm font-bold ${instruksiInfo.text} capitalize`}>
-                  {disposisi.instruksi.replace('_', ' ')}
+                <p className={`text-sm font-bold ${instruksiInfo.text}`}>
+                  {getInstruksiLabel(disposisi.instruksi)}
                 </p>
               </div>
             </div>
@@ -632,13 +625,9 @@ export default function DisposisiDetail() {
                   onChange={(e) => setFormTeruskan({ ...formTeruskan, instruksi: e.target.value })}
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all text-gray-900 font-medium"
                 >
-                  <option value="biasa">Biasa</option>
-                  <option value="penting">Penting</option>
-                  <option value="segera">Segera</option>
-                  <option value="koordinasi">Koordinasi</option>
-                  <option value="teliti_lapor">Teliti & Laporkan</option>
-                  <option value="edarkan">Edarkan</option>
-                  <option value="simpan">Simpan</option>
+                  {INSTRUKSI_OPTIONS.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
                 </select>
               </div>
 

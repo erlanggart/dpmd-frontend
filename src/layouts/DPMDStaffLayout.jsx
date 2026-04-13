@@ -452,6 +452,7 @@ const DPMDStaffLayout = () => {
 		{ path: "/dpmd/disposisi", label: "Disposisi", icon: 'mail', color: 'text-purple-600', gradient: 'from-purple-500 to-indigo-600' },
 		{ path: "/dpmd/video-meeting", label: "Video Meeting", icon: 'video', color: 'text-cyan-600', gradient: 'from-cyan-500 to-teal-600' },
 		{ path: "/dpmd/pesan", label: "Pesan", icon: 'mail', color: 'text-indigo-600', gradient: 'from-indigo-500 to-purple-600' },
+		{ path: "/dpmd/bank-surat", label: "Bank Surat", icon: 'archive', color: 'text-teal-600', gradient: 'from-teal-500 to-cyan-600' },
 	];
 
 	// Mobile bottom nav - 3 items: Home, Aksi Cepat (FAB), Profil

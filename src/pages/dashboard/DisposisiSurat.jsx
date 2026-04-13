@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { FiMail, FiSend, FiClock, FiCheck, FiEye, FiPlus, FiUpload, FiX, FiFileText, FiCalendar } from 'react-icons/fi';
 import api from '../../api';
 import { toast } from 'react-hot-toast';
+import { INSTRUKSI_OPTIONS, getInstruksiBadgeClass } from '../../constants/disposisiInstruksi';
 import useDisposisiAutoReload from '../../hooks/useDisposisiAutoReload';
 
 export default function DisposisiSurat() {
@@ -26,7 +27,7 @@ export default function DisposisiSurat() {
   const [formKirim, setFormKirim] = useState({
     kepala_dinas_user_id: '',
     catatan: '',
-    instruksi: 'biasa',
+    instruksi: 'laksanakan',
     instruksi_manual: ''
   });
   const [formData, setFormData] = useState({
@@ -223,7 +224,7 @@ export default function DisposisiSurat() {
       setFormKirim({
         kepala_dinas_user_id: '',
         catatan: '',
-        instruksi: 'biasa',
+        instruksi: 'laksanakan',
         instruksi_manual: ''
       });
       setSelectedSurat(null);
@@ -248,17 +249,8 @@ export default function DisposisiSurat() {
   };
 
   const getInstruksiBadge = (instruksi) => {
-    const badges = {
-      segera: 'bg-red-100 text-red-800',
-      sangat_segera: 'bg-red-200 text-red-900',
-      penting: 'bg-orange-100 text-orange-800',
-      biasa: 'bg-gray-100 text-gray-800',
-      koordinasi: 'bg-blue-100 text-blue-800',
-      teliti_lapor: 'bg-indigo-100 text-indigo-800',
-      edarkan: 'bg-purple-100 text-purple-800',
-      simpan: 'bg-green-100 text-green-800'
-    };
-    return badges[instruksi] || 'bg-gray-100 text-gray-800';
+    const badge = getInstruksiBadgeClass(instruksi);
+    return `${badge.bg} ${badge.text}`;
   };
 
   const formatTanggal = (tanggal) => {
@@ -1132,7 +1124,7 @@ export default function DisposisiSurat() {
                     setFormKirim({
                       kepala_dinas_user_id: '',
                       catatan: '',
-                      instruksi: 'biasa',
+                      instruksi: 'laksanakan',
                       instruksi_manual: ''
                     });
                   }}
@@ -1180,14 +1172,9 @@ export default function DisposisiSurat() {
                   onChange={(e) => setFormKirim({...formKirim, instruksi: e.target.value, instruksi_manual: e.target.value === 'lainnya' ? formKirim.instruksi_manual : ''})}
                   className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                 >
-                  <option value="biasa">Biasa</option>
-                  <option value="segera">Segera</option>
-                  <option value="sangat_segera">Sangat Segera</option>
-                  <option value="penting">Penting</option>
-                  <option value="koordinasi">Koordinasi</option>
-                  <option value="teliti_lapor">Teliti & Lapor</option>
-                  <option value="edarkan">Edarkan</option>
-                  <option value="simpan">Simpan</option>
+                  {INSTRUKSI_OPTIONS.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
                   <option value="lainnya">Lainnya (Input Manual)</option>
                 </select>
                 {formKirim.instruksi === 'lainnya' && (
@@ -1224,7 +1211,7 @@ export default function DisposisiSurat() {
                     setFormKirim({
                       kepala_dinas_user_id: '',
                       catatan: '',
-                      instruksi: 'biasa',
+                      instruksi: 'laksanakan',
                       instruksi_manual: ''
                     });
                   }}

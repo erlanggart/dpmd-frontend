@@ -25,9 +25,15 @@ import {
 	ArrowRight,
 	User,
 	Building2,
+	RotateCcw,
+	Trash2,
+	Pencil,
+	History,
 } from "lucide-react";
 import api from "../../api";
 import { toast } from "react-hot-toast";
+import Swal from "sweetalert2";
+import { INSTRUKSI_OPTIONS } from "../../constants/disposisiInstruksi";
 import useDisposisiAutoReload from "../../hooks/useDisposisiAutoReload";
 
 export default function DisposisiSuratModern() {
@@ -84,6 +90,7 @@ export default function DisposisiSuratModern() {
 	const [suratMasuk, setSuratMasuk] = useState([]);
 	const [disposisiMasuk, setDisposisiMasuk] = useState([]);
 	const [disposisiKeluar, setDisposisiKeluar] = useState([]);
+	const [riwayatData, setRiwayatData] = useState([]);
 	const [statistik, setStatistik] = useState(null);
 	const [loading, setLoading] = useState(true);
 	const [searchQuery, setSearchQuery] = useState("");
@@ -99,6 +106,9 @@ export default function DisposisiSuratModern() {
 			if (activeTab === "surat-masuk") {
 				const suratRes = await api.get("/surat-masuk?status=draft");
 				setSuratMasuk(suratRes.data.data || []);
+			} else if (activeTab === "riwayat") {
+				const riwayatRes = await api.get("/disposisi/riwayat-sekretariat");
+				setRiwayatData(riwayatRes.data.data || []);
 			} else {
 				const [statsRes, disposisiRes] = await Promise.all([
 					api.get("/disposisi/statistik"),
@@ -143,6 +153,107 @@ export default function DisposisiSuratModern() {
 		}
 	};
 
+	// ─── Riwayat: Tarik Kembali ─────────────────────────────────────
+	const handleTarikDisposisi = async (disposisi) => {
+		const result = await Swal.fire({
+			title: 'Tarik Kembali Disposisi?',
+			html: `<p class="text-sm text-gray-600">Surat: <strong>${disposisi.surat?.perihal || '-'}</strong></p>
+			       <p class="text-sm text-gray-600 mt-1">Kepada: <strong>${disposisi.ke_user?.nama_lengkap || '-'}</strong></p>
+			       <p class="text-xs text-amber-600 mt-3">Disposisi hanya bisa ditarik jika belum dibaca penerima.</p>`,
+			icon: 'warning',
+			showCancelButton: true,
+			confirmButtonColor: '#f59e0b',
+			cancelButtonColor: '#6b7280',
+			confirmButtonText: 'Ya, Tarik Kembali',
+			cancelButtonText: 'Batal',
+		});
+
+		if (result.isConfirmed) {
+			try {
+				await api.put(`/disposisi/${disposisi.id}/tarik`);
+				toast.success('Disposisi berhasil ditarik kembali');
+				fetchData();
+			} catch (error) {
+				const msg = error.response?.data?.message || 'Gagal menarik disposisi';
+				toast.error(msg);
+			}
+		}
+	};
+
+	// ─── Riwayat: Hapus Disposisi ───────────────────────────────────
+	const handleHapusDisposisi = async (disposisi) => {
+		const result = await Swal.fire({
+			title: 'Hapus Disposisi?',
+			html: `<p class="text-sm text-gray-600">Surat: <strong>${disposisi.surat?.perihal || '-'}</strong></p>
+			       <p class="text-xs text-red-500 mt-2">Tindakan ini tidak dapat dibatalkan!</p>`,
+			icon: 'error',
+			showCancelButton: true,
+			confirmButtonColor: '#ef4444',
+			cancelButtonColor: '#6b7280',
+			confirmButtonText: 'Ya, Hapus',
+			cancelButtonText: 'Batal',
+		});
+
+		if (result.isConfirmed) {
+			try {
+				await api.delete(`/disposisi/${disposisi.id}`);
+				toast.success('Disposisi berhasil dihapus');
+				fetchData();
+			} catch (error) {
+				const msg = error.response?.data?.message || 'Gagal menghapus disposisi';
+				toast.error(msg);
+			}
+		}
+	};
+
+	// ─── Riwayat: Edit & Kirim Ulang ────────────────────────────────
+	const handleEditDisposisi = async (disposisi) => {
+		const { value: formValues } = await Swal.fire({
+			title: 'Edit & Kirim Ulang Disposisi',
+			html: `
+				<div class="text-left space-y-3">
+					<div>
+						<label class="block text-xs font-semibold text-gray-500 mb-1">Surat</label>
+						<p class="text-sm font-medium text-gray-800">${disposisi.surat?.perihal || '-'}</p>
+					</div>
+					<div>
+						<label class="block text-xs font-semibold text-gray-500 mb-1">Catatan</label>
+						<textarea id="swal-catatan" class="w-full px-3 py-2 border rounded-lg text-sm" rows="3" placeholder="Catatan disposisi...">${disposisi.catatan || ''}</textarea>
+					</div>
+					<div>
+						<label class="block text-xs font-semibold text-gray-500 mb-1">Instruksi</label>
+						<select id="swal-instruksi" class="w-full px-3 py-2 border rounded-lg text-sm">
+							${INSTRUKSI_OPTIONS.map(i => 
+								`<option value="${i.value}" ${disposisi.instruksi === i.value ? 'selected' : ''}>${i.label}</option>`
+							).join('')}
+						</select>
+					</div>
+				</div>
+			`,
+			showCancelButton: true,
+			confirmButtonColor: '#3b82f6',
+			cancelButtonColor: '#6b7280',
+			confirmButtonText: 'Kirim Ulang',
+			cancelButtonText: 'Batal',
+			focusConfirm: false,
+			preConfirm: () => ({
+				catatan: document.getElementById('swal-catatan').value,
+				instruksi: document.getElementById('swal-instruksi').value,
+			}),
+		});
+
+		if (formValues) {
+			try {
+				await api.put(`/disposisi/${disposisi.id}/edit`, formValues);
+				toast.success('Disposisi berhasil diedit dan dikirim ulang');
+				fetchData();
+			} catch (error) {
+				const msg = error.response?.data?.message || 'Gagal mengedit disposisi';
+				toast.error(msg);
+			}
+		}
+	};
+
 	const getStatusBadge = (status) => {
 		const config = {
 			pending: {
@@ -174,6 +285,12 @@ export default function DisposisiSuratModern() {
 				text: "text-purple-800",
 				icon: ArrowRight,
 				label: "Diteruskan",
+			},
+			ditarik: {
+				bg: "bg-gradient-to-r from-red-100 to-orange-100",
+				text: "text-red-800",
+				icon: RotateCcw,
+				label: "Ditarik",
 			},
 		};
 		return config[status] || config.pending;
@@ -474,6 +591,48 @@ export default function DisposisiSuratModern() {
 								</div>
 							</div>
 						</button>
+
+						{/* Riwayat Tab - visible for sekretariat bidang users */}
+						{(user.bidang_id === 2 || user.bidang_id === '2' || user.role === 'superadmin') && (
+						<button
+							onClick={() => setActiveTab("riwayat")}
+							className={`group relative flex-1 flex flex-col items-center justify-center px-4 py-3 rounded-xl font-semibold transition-all duration-300 overflow-hidden ${
+								activeTab === "riwayat"
+									? "bg-white text-amber-600 shadow-md"
+									: "text-gray-500 hover:text-gray-700 hover:bg-white/50"
+							}`}
+						>
+							<div
+								className={`absolute inset-0 bg-gradient-to-br from-amber-500/10 to-orange-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${activeTab === "riwayat" ? "opacity-100" : ""}`}
+							></div>
+
+							<div className="relative flex items-center gap-2">
+								<div
+									className={`h-8 w-8 rounded-lg flex items-center justify-center transition-all duration-300 ${
+										activeTab === "riwayat"
+											? "bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-md"
+											: "bg-gray-200 text-gray-500 group-hover:bg-gray-300"
+									}`}
+								>
+									<History className="h-4 w-4" />
+								</div>
+								<div className="flex items-center gap-2">
+									<span className="text-sm font-bold">Riwayat</span>
+									{riwayatData.length > 0 && (
+										<span
+											className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+												activeTab === "riwayat"
+													? "bg-amber-100 text-amber-700"
+													: "bg-gray-200 text-gray-600"
+											}`}
+										>
+											{riwayatData.length}
+										</span>
+									)}
+								</div>
+							</div>
+						</button>
+						)}
 					</div>
 				</div>
 
@@ -893,6 +1052,139 @@ export default function DisposisiSuratModern() {
 												Next
 											</button>
 										</div>
+									</div>
+								)}
+							</>
+						)}
+
+						{/* ─── Riwayat Tab Content ─────────────────── */}
+						{activeTab === "riwayat" && (
+							<>
+								{riwayatData.length === 0 ? (
+									<div className="bg-white rounded-2xl shadow-lg p-12 text-center">
+										<div className="mx-auto h-24 w-24 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mb-4">
+											<History className="h-12 w-12 text-gray-400" />
+										</div>
+										<h3 className="text-xl font-bold text-gray-800 mb-2">
+											Belum Ada Riwayat
+										</h3>
+										<p className="text-gray-500">
+											Belum ada disposisi yang pernah dikirim
+										</p>
+									</div>
+								) : (
+									<div className="grid gap-3">
+										{riwayatData.map((disposisi) => {
+											const statusConfig = getStatusBadge(disposisi.status);
+											const StatusIcon = statusConfig.icon;
+											const canRecall = disposisi.can_recall;
+											const isDitarik = disposisi.status === 'ditarik';
+
+											return (
+												<div
+													key={disposisi.id}
+													className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden"
+												>
+													{/* Color bar based on status */}
+													<div className={`h-1 ${
+														isDitarik ? 'bg-gradient-to-r from-red-400 to-orange-400' :
+														canRecall ? 'bg-gradient-to-r from-amber-400 to-yellow-400' :
+														'bg-gradient-to-r from-emerald-400 to-green-400'
+													}`}></div>
+
+													<div className="p-3">
+														{/* Header */}
+														<div className="flex items-start gap-2 mb-2">
+															<div className={`h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm ${
+																isDitarik ? 'bg-gradient-to-br from-red-400 to-orange-500' :
+																'bg-gradient-to-br from-amber-500 to-orange-500'
+															}`}>
+																<FileText className="h-5 w-5 text-white" />
+															</div>
+															<div className="flex-1 min-w-0">
+																<h3 className="font-bold text-gray-900 text-sm leading-tight line-clamp-1">
+																	{disposisi.surat?.perihal || "Tanpa Perihal"}
+																</h3>
+																<p className="text-xs text-gray-500 mt-0.5">
+																	{disposisi.surat?.nomor_surat || "-"}
+																</p>
+															</div>
+															<span className={`flex items-center gap-1 px-2 py-1 ${statusConfig.bg} ${statusConfig.text} rounded-lg text-[10px] font-bold whitespace-nowrap`}>
+																<StatusIcon className="h-3 w-3" />
+																{statusConfig.label}
+															</span>
+														</div>
+
+														{/* Info */}
+														<div className="flex items-center gap-3 text-xs text-gray-600 mb-2">
+															<div className="flex items-center gap-1">
+																<User className="h-3 w-3" />
+																<span>Kepada: {disposisi.ke_user?.nama_lengkap || "-"}</span>
+															</div>
+															<div className="flex items-center gap-1">
+																<Calendar className="h-3 w-3" />
+																<span>
+																	{new Date(disposisi.tanggal_disposisi).toLocaleDateString("id-ID", {
+																		day: "numeric",
+																		month: "short",
+																		year: "numeric",
+																	})}
+																</span>
+															</div>
+														</div>
+
+														{disposisi.catatan && (
+															<div className="bg-gray-50 rounded-lg p-2 mb-2">
+																<p className="text-xs text-gray-700 line-clamp-2">{disposisi.catatan}</p>
+															</div>
+														)}
+
+														{/* Actions */}
+														<div className="flex items-center justify-between pt-2 border-t border-gray-100">
+															<div className="flex items-center gap-2">
+																{canRecall && (
+																	<button
+																		onClick={(e) => { e.stopPropagation(); handleTarikDisposisi(disposisi); }}
+																		className="flex items-center gap-1 px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-lg text-xs font-semibold transition-colors"
+																		title="Tarik kembali disposisi"
+																	>
+																		<RotateCcw className="h-3 w-3" />
+																		Tarik
+																	</button>
+																)}
+																{isDitarik && (
+																	<>
+																		<button
+																			onClick={(e) => { e.stopPropagation(); handleEditDisposisi(disposisi); }}
+																			className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-xs font-semibold transition-colors"
+																			title="Edit dan kirim ulang"
+																		>
+																			<Pencil className="h-3 w-3" />
+																			Edit & Kirim
+																		</button>
+																		<button
+																			onClick={(e) => { e.stopPropagation(); handleHapusDisposisi(disposisi); }}
+																			className="flex items-center gap-1 px-2.5 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg text-xs font-semibold transition-colors"
+																			title="Hapus disposisi"
+																		>
+																			<Trash2 className="h-3 w-3" />
+																			Hapus
+																		</button>
+																	</>
+																)}
+															</div>
+															<button
+																onClick={() => navigate(`/dpmd/disposisi/${disposisi.id}`)}
+																className="flex items-center gap-0.5 text-amber-600 font-semibold text-xs hover:gap-1 transition-all"
+															>
+																Detail
+																<ChevronRight className="h-3 w-3" />
+															</button>
+														</div>
+													</div>
+												</div>
+											);
+										})}
 									</div>
 								)}
 							</>

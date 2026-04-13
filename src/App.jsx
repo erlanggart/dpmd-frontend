@@ -240,6 +240,7 @@ const DisposisiSurat = lazy(
   () => import("./pages/dashboard/DisposisiSurat.modern"),
 );
 const DisposisiDetail = lazy(() => import("./pages/dashboard/DisposisiDetail"));
+const BankSuratPage = lazy(() => import("./pages/dashboard/BankSuratPage"));
 const CoreDashboardPublic = lazy(
   () => import("./pages/public/CoreDashboardPublic"),
 );
@@ -849,6 +850,7 @@ function App() {
                   <Route path="etanol" element={<CetakBonBensin />} />
                   <Route path="absensi" element={<AbsensiPage />} />
                   <Route path="pesan" element={<MessagingPage />} />
+                  <Route path="bank-surat" element={<BankSuratPage />} />
                 </Route>
                 
                 {/* Rute Bidang - Accessible by pegawai/kepala_bidang/ketua_tim (their own bidang) & kepala_dinas/superadmin (all) */}
