@@ -1783,7 +1783,7 @@ const AbsensiManagementPage = () => {
                 <div>
                   <p className="text-sm font-semibold text-blue-800">Auto Reminder Absensi</p>
                   <p className="text-xs text-blue-600 mt-1">
-                    Notifikasi otomatis dikirim 5 menit setelah jam masuk dan jam pulang kepada semua pegawai yang wajib absen.
+                    Notifikasi otomatis dikirim 5 menit sebelum jam masuk dan jam pulang kepada semua pegawai yang wajib absen.
                     Anda bisa mengkustomisasi judul dan pesan notifikasi di bawah ini.
                   </p>
                 </div>
@@ -1806,8 +1806,8 @@ const AbsensiManagementPage = () => {
                   const colors = isMasuk ? 'from-emerald-500 to-green-600' : 'from-blue-500 to-indigo-600';
                   const label = isMasuk ? 'Reminder Masuk' : 'Reminder Pulang';
                   const desc = isMasuk
-                    ? `Dikirim 5 menit setelah jam masuk (${settings.jam_masuk || '08:00'} WIB)`
-                    : `Dikirim 5 menit setelah jam pulang (${settings.jam_pulang || '16:00'} WIB)`;
+                    ? `Dikirim 5 menit sebelum jam masuk (${settings.jam_masuk || '08:00'} WIB)`
+                    : `Dikirim 5 menit sebelum jam pulang (${settings.jam_pulang || '16:00'} WIB)`;
 
                   return (
                     <div key={tmpl.type}
