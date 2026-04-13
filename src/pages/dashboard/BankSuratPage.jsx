@@ -1,3 +1,5 @@
+import { useEffect as useEffectOrig } from 'react';
+import { getUserRole } from '../../utils/roleUtils';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -67,7 +69,7 @@ const STATUS_MAP = {
 
 const JENIS_MAP = {
   biasa:   { label: 'Biasa',   bg: 'bg-gray-50',    text: 'text-gray-600',   icon: LuMail },
-  penting: { label: 'Penting', bg: 'bg-amber-50',   text: 'text-amber-700',  icon: LuAlertTriangle },
+  penting: { label: 'Penting', bg: 'bg-amber-50',   text: 'text-amber-700',  icon: AlertTriangle },
   segera:  { label: 'Segera',  bg: 'bg-red-50',     text: 'text-red-700',    icon: LuZap },
   rahasia: { label: 'Rahasia', bg: 'bg-purple-50',  text: 'text-purple-700', icon: LuShield },
 };
@@ -156,6 +158,17 @@ const PdfModal = ({ url, onClose }) => {
 // MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════════════
 export default function BankSuratPage() {
+    // User info
+    const [user, setUser] = useState(() => {
+      try {
+        return JSON.parse(localStorage.getItem('user') || '{}');
+      } catch {
+        return {};
+      }
+    });
+    const userRole = user?.role;
+    const userBidangId = Number(user?.bidang_id);
+
   const navigate = useNavigate();
   const apiBase = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:3001/api').replace('/api', '');
 
@@ -474,8 +487,6 @@ export default function BankSuratPage() {
                         Pengirim <SortIcon field="pengirim" />
                       </button>
                     </th>
-                    <th className="px-4 py-3.5 text-left font-semibold text-slate-500 text-xs uppercase tracking-wider">Perihal</th>
-                    <th className="px-4 py-3.5 text-center font-semibold text-slate-500 text-xs uppercase tracking-wider">Jenis</th>
                     <th className="px-4 py-3.5 text-center font-semibold text-slate-500 text-xs uppercase tracking-wider">Status</th>
                     <th className="px-4 py-3.5 text-center font-semibold text-slate-500 text-xs uppercase tracking-wider">Disposisi</th>
                     <th className="px-4 py-3.5 text-center font-semibold text-slate-500 text-xs uppercase tracking-wider w-20">Aksi</th>
@@ -502,14 +513,18 @@ export default function BankSuratPage() {
                           <span className="text-slate-700 text-[13px] truncate max-w-[180px]" title={surat.pengirim}>{surat.pengirim}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-3.5">
-                        <p className="text-slate-700 text-[13px] truncate max-w-[240px]" title={surat.perihal}>{surat.perihal}</p>
-                      </td>
                       <td className="px-4 py-3.5 text-center">
-                        <JenisBadge jenis={surat.jenis_surat} />
-                      </td>
-                      <td className="px-4 py-3.5 text-center">
-                        <StatusBadge status={surat.status} />
+                        {/* Status = posisi surat terakhir */}
+                        {surat.total_disposisi > 0 && surat.status_terakhir && surat.penerima_terakhir ? (
+                          <span className={`inline-flex flex-col items-center gap-0.5`}>
+                            <span className={`text-xs font-bold ${DISPOSISI_STATUS_MAP[surat.status_terakhir]?.color || 'text-slate-600'}`}>
+                              {DISPOSISI_STATUS_MAP[surat.status_terakhir]?.label || surat.status_terakhir}
+                            </span>
+                            <span className="text-[11px] text-slate-500 font-medium">{surat.penerima_terakhir}</span>
+                          </span>
+                        ) : (
+                          <StatusBadge status={surat.status} />
+                        )}
                       </td>
                       <td className="px-4 py-3.5 text-center">
                         {surat.total_disposisi > 0 ? (
@@ -546,6 +561,8 @@ export default function BankSuratPage() {
                             className="w-8 h-8 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 flex items-center justify-center transition opacity-0 group-hover:opacity-100">
                             <LuFileText className="w-4 h-4" />
                           </button>
+                          {/* Tombol Delete: hanya superadmin atau pegawai bidang sekretariat */}
+                          {/* Fitur delete dihapus, gunakan fitur tarik di disposisi */}
                         </div>
                       </td>
                     </tr>
