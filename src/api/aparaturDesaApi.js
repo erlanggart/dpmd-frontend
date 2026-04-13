@@ -53,7 +53,7 @@ export const createProdukHukum = (data) => {
 };
 
 export const updateProdukHukum = (id, data) => {
-	return api.post(`/desa/produk-hukum/${id}`, data, {
+	return api.put(`/desa/produk-hukum/${id}`, data, {
 		headers: {
 			"Content-Type": "multipart/form-data",
 		},

@@ -883,8 +883,8 @@ function App() {
                   <Route path="pemdes/profil-desa" element={<PemdesProfilDesaPage />} />
                   <Route path="pemdes/profil-desa/:desaId" element={<PemdesProfilDesaDetailPage />} />
                   <Route path="pemdes/aparatur-desa" element={<PemdesAparaturDesaPage />} />
-                  <Route path="pemdes/produk-hukum" element={<ProdukHukumPemdesPage />} />
-                  <Route path="pemdes/produk-hukum/:id" element={<ProdukHukumDetailPemdesPage />} />
+                  <Route path="pemdes/produk-hukum" element={<ProdukHukumPemdesPage detailBasePath="/bidang/pemdes/produk-hukum" />} />
+                  <Route path="pemdes/produk-hukum/:id" element={<ProdukHukumDetailPemdesPage backPath="/bidang/pemdes/produk-hukum" />} />
 
                   {/* Detail Disposisi - Accessible dari semua bidang */}
                   <Route path="disposisi/:id" element={<DisposisiDetail />} />
@@ -934,8 +934,8 @@ function App() {
                     path="pengurus/:id/edit"
                     element={<PengurusEditPage />}
                   />
-                  <Route path="produk-hukum" element={<ProdukHukumPemdesPage />} />
-                  <Route path="produk-hukum/:id" element={<ProdukHukumDetailPemdesPage />} />
+                  <Route path="produk-hukum" element={<ProdukHukumPemdesPage detailBasePath="/bidang/pmd/produk-hukum" />} />
+                  <Route path="produk-hukum/:id" element={<ProdukHukumDetailPemdesPage backPath="/bidang/pmd/produk-hukum" />} />
                 </Route>{" "}
 
                 {/* Routes KKD - Nested under /kkd */}

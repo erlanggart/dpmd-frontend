@@ -1,10 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Swal from "sweetalert2";
-import { useLocation, useNavigate } from "react-router-dom";
 import {
 	getProdukHukums,
 	createProdukHukum,
-	updateProdukHukum,
 } from "../../../api";
 import ProdukHukumList from "../../../components/produk-hukum/ProdukHukumList";
 import ProdukHukumForm from "../../../components/produk-hukum/ProdukHukumForm";
@@ -132,7 +130,6 @@ const EmptyState = ({ hasScopedView, onResetScope, onAdd }) => (
 
 const ProdukHukum = () => {
 	const [produkHukums, setProdukHukums] = useState([]);
-	const [editingProduk, setEditingProduk] = useState(null);
 	const [isFormVisible, setIsFormVisible] = useState(false);
 	const [currentPage, setCurrentPage] = useState(1);
 	const [totalPages, setTotalPages] = useState(1);
@@ -145,8 +142,6 @@ const ProdukHukum = () => {
 	const [filterTahun, setFilterTahun] = useState("");
 	const [showFilters, setShowFilters] = useState(false);
 
-	const location = useLocation();
-	const navigate = useNavigate();
 	const previousSearchRef = useRef("");
 
 	const fetchProdukHukums = useCallback(async (page, search = "") => {
@@ -217,20 +212,10 @@ const ProdukHukum = () => {
 		fetchProdukHukums(currentPage, debouncedSearch);
 	}, [currentPage, debouncedSearch, fetchProdukHukums]);
 
-	useEffect(() => {
-		if (location.state?.editingProduk) {
-			setEditingProduk(location.state.editingProduk);
-			setIsFormVisible(true);
-			navigate(location.pathname, { replace: true });
-		}
-	}, [location.state, location.pathname, navigate]);
-
 	const handleFormSubmit = async (formData) => {
 		try {
-			const action = editingProduk ? "diperbarui" : "ditambahkan";
-
 			Swal.fire({
-				title: `${editingProduk ? "Memperbarui" : "Menyimpan"} produk hukum...`,
+				title: "Menyimpan produk hukum...",
 				text: "Mohon tunggu, sedang memproses data.",
 				allowOutsideClick: false,
 				allowEscapeKey: false,
@@ -240,23 +225,18 @@ const ProdukHukum = () => {
 				},
 			});
 
-			if (editingProduk) {
-				await updateProdukHukum(editingProduk.id, formData);
-			} else {
-				await createProdukHukum(formData);
-			}
+			await createProdukHukum(formData);
 
 			Swal.close();
 			setSearchTerm("");
 			setCurrentPage(1);
 			await fetchProdukHukums(1, "");
 			setIsFormVisible(false);
-			setEditingProduk(null);
 
 			Swal.fire({
 				icon: "success",
 				title: "Berhasil!",
-				text: `Produk hukum berhasil ${action}.`,
+				text: "Produk hukum berhasil ditambahkan.",
 				timer: 2000,
 				showConfirmButton: false,
 			});
@@ -275,13 +255,11 @@ const ProdukHukum = () => {
 	};
 
 	const showAddForm = () => {
-		setEditingProduk(null);
 		setIsFormVisible(true);
 	};
 
 	const handleCancelForm = () => {
 		setIsFormVisible(false);
-		setEditingProduk(null);
 	};
 
 	const clearFilters = () => {
@@ -421,10 +399,10 @@ const ProdukHukum = () => {
 				<div className="absolute bottom-0 left-0 h-64 w-64 rounded-full bg-blue-200/30 blur-3xl" />
 			</div>
 
-			<div className="relative z-10 space-y-8">
+			<div className="relative z-10 space-y-6 lg:space-y-8">
 				<section className="overflow-hidden rounded-lg bg-gradient-to-br from-slate-950 via-sky-900 to-cyan-700 p-6 text-white shadow-[0_32px_90px_-40px_rgba(14,116,144,0.9)] sm:p-8">
-					<div className="grid gap-8 xl:grid-cols-[minmax(0,1.2fr)_320px] xl:items-stretch">
-						<div className="space-y-6">
+						<div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-center">
+							<div className="space-y-5">
 							<div className="inline-flex items-center gap-2 rounded-lg border border-white/15 bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-white/75 backdrop-blur-sm">
 								<LuFileText className="h-4 w-4" />
 								Arsip regulasi desa
@@ -471,14 +449,14 @@ const ProdukHukum = () => {
 							</div>
 						</div>
 
-						<div className="flex h-full flex-col rounded-lg border border-white/15 bg-white/10 p-5 backdrop-blur-sm">
+						<div className="flex self-end rounded-lg border border-white/15 bg-white/10 p-5 backdrop-blur-sm xl:flex-col">
 							{isFormVisible ? (
 								<>
 									<p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/65">
 										Mode editor aktif
 									</p>
 									<h2 className="mt-3 text-2xl font-black tracking-tight text-white">
-										{editingProduk ? "Perbarui produk hukum" : "Tambah produk hukum baru"}
+										Tambah produk hukum baru
 									</h2>
 									<p className="mt-3 text-sm leading-6 text-white/75">
 										Lengkapi metadata dokumen, pastikan file PDF sudah final, lalu simpan agar arsip langsung terstruktur dengan baik.
@@ -489,12 +467,10 @@ const ProdukHukum = () => {
 											Dokumen yang sedang diproses
 										</p>
 										<p className="mt-2 text-base font-semibold text-white">
-											{editingProduk?.judul || "Produk hukum baru"}
+											Produk hukum baru
 										</p>
 										<p className="mt-2 text-xs leading-5 text-white/65">
-											{editingProduk
-												? `${editingProduk.singkatan_jenis || editingProduk.jenis || "Dokumen"} akan diperbarui.`
-												: "Setelah disimpan, dokumen akan langsung masuk ke daftar arsip desa."}
+											Setelah disimpan, dokumen akan langsung masuk ke daftar arsip desa.
 										</p>
 									</div>
 
@@ -528,25 +504,6 @@ const ProdukHukum = () => {
 										Tambah produk hukum
 										<LuArrowRight className="h-4 w-4" />
 									</button>
-
-									<div className="mt-5 space-y-3">
-										<div className="rounded-lg border border-white/10 bg-slate-950/15 p-4 text-sm text-white/80">
-											<p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/55">
-												Arsip terbaru
-											</p>
-											<p className="mt-2 text-base font-semibold text-white">
-												{latestYear ? `Dokumen tahun ${latestYear}` : "Belum ada arsip yang tersimpan"}
-											</p>
-										</div>
-										<div className="rounded-lg border border-white/10 bg-slate-950/15 p-4 text-sm text-white/80">
-											<p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/55">
-												Filter aktif
-											</p>
-											<p className="mt-2 text-base font-semibold text-white">
-												{activeScopeCount > 0 ? `${activeScopeCount} parameter aktif` : "Tampilan masih global"}
-											</p>
-										</div>
-									</div>
 								</>
 							)}
 						</div>
@@ -562,7 +519,7 @@ const ProdukHukum = () => {
 										Editor dokumen
 									</p>
 									<h2 className="mt-2 text-2xl font-black tracking-tight text-slate-900">
-										{editingProduk ? "Edit metadata produk hukum" : "Tambah produk hukum desa"}
+									Tambah produk hukum desa
 									</h2>
 									<p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
 										Lengkapi judul, nomor, tahun, status, dan file PDF agar arsip mudah ditemukan dan siap digunakan pada proses administrasi desa.
@@ -580,7 +537,7 @@ const ProdukHukum = () => {
 							</div>
 
 							<div className="mt-6">
-								<ProdukHukumForm onSubmit={handleFormSubmit} initialData={editingProduk} />
+								<ProdukHukumForm onSubmit={handleFormSubmit} />
 							</div>
 						</section>
 
@@ -610,19 +567,19 @@ const ProdukHukum = () => {
 									Ringkasan mode
 								</p>
 								<h3 className="mt-2 text-xl font-black tracking-tight text-slate-900">
-									{editingProduk ? "Data yang sedang diperbarui" : "Dokumen baru akan ditambahkan"}
+									Dokumen baru akan ditambahkan
 								</h3>
 								<div className="mt-5 space-y-3">
 									<InsightRow
 										icon={LuFileText}
 										label="Judul"
-										value={editingProduk?.judul || "Produk hukum baru"}
+										value="Produk hukum baru"
 										helper="Pastikan judul singkat, formal, dan deskriptif."
 									/>
 									<InsightRow
 										icon={LuScale}
 										label="Jenis"
-										value={editingProduk?.jenis || "Belum dipilih"}
+										value="Belum dipilih"
 										helper="Jenis dokumen akan menentukan singkatan dan konteks arsipnya."
 									/>
 									<InsightRow
@@ -638,7 +595,7 @@ const ProdukHukum = () => {
 				) : (
 					<>
 						<section className={SURFACE_CLASS}>
-							<div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_260px]">
+							<div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_280px] xl:items-start">
 								<div className="space-y-5">
 									<div>
 										<p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-600">
@@ -749,7 +706,7 @@ const ProdukHukum = () => {
 									) : null}
 								</div>
 
-								<div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+								<div className="grid gap-3 md:grid-cols-3 xl:grid-cols-1 xl:self-start">
 									<button
 										type="button"
 										onClick={() => setShowFilters((current) => !current)}
@@ -812,24 +769,12 @@ const ProdukHukum = () => {
 										</p>
 									</div>
 
-									<div className="rounded-lg border border-slate-200 bg-white p-4">
-										<p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-											Dokumen terlihat
-										</p>
-										<p className="mt-2 text-3xl font-black tracking-tight text-slate-900">
-											{formatCount(filteredItems.length)}
-										</p>
-										<p className="mt-2 text-xs leading-5 text-slate-500">
-											{hasScopedView
-												? `Dari total ${formatCount(stats.total)} arsip setelah pencarian dan filter diterapkan.`
-												: "Semua arsip yang tersedia sedang ditampilkan."}
-										</p>
-									</div>
+									
 								</div>
 							</div>
 						</section>
 
-						<div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+						<div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-start">
 							<section className={SURFACE_CLASS}>
 								<div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 pb-5">
 									<div>

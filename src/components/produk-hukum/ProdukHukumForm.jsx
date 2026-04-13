@@ -16,7 +16,7 @@ const produkHukumSchema = z.object({
 		.refine(
 			(val) =>
 				parseInt(val, 10) >= 1900 &&
-				parseInt(val, 10) <= new Date().getFullYear() + 1,
+				parseInt(val, 10) <= new Date().getFullYear() + 2,
 			{
 				message: "Tahun tidak valid",
 			}
@@ -187,11 +187,11 @@ const ProdukHukumForm = ({ onSubmit, initialData }) => {
 
 	return (
 		<form onSubmit={handleSubmit} className="space-y-6" noValidate>
-			{/* Informasi Dasar */}
-			<div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
-				<h3 className="font-semibold text-blue-900 mb-4 flex items-center gap-2">
-					<LuFileText className="w-5 h-5" />
-					Informasi Dasar
+			{/* Informasi Umum */}
+			<div className="bg-white rounded-xl border border-gray-200 p-5">
+				<h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+					<LuFileText className="w-4 h-4 text-teal-600" />
+					Informasi Umum
 				</h3>
 				
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -205,7 +205,7 @@ const ProdukHukumForm = ({ onSubmit, initialData }) => {
 							value={formData.judul}
 							onChange={handleChange}
 							placeholder="Masukkan judul produk hukum"
-							className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
+							className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all ${
 								errors.judul ? "border-red-400 bg-red-50" : "border-gray-300"
 							}`}
 						/>
@@ -226,7 +226,7 @@ const ProdukHukumForm = ({ onSubmit, initialData }) => {
 							value={formData.nomor}
 							onChange={handleChange}
 							placeholder="contoh: 123/XYZ/2023"
-							className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
+							className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all ${
 								errors.nomor ? "border-red-400 bg-red-50" : "border-gray-300"
 							}`}
 						/>
@@ -246,7 +246,7 @@ const ProdukHukumForm = ({ onSubmit, initialData }) => {
 							name="tahun"
 							value={formData.tahun}
 							onChange={handleChange}
-							className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
+							className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all ${
 								errors.tahun ? "border-red-400 bg-red-50" : "border-gray-300"
 							}`}
 							maxLength="4"
@@ -261,10 +261,10 @@ const ProdukHukumForm = ({ onSubmit, initialData }) => {
 				</div>
 			</div>
 
-			{/* Jenis dan Singkatan */}
-			<div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-lg border border-purple-200">
-				<h3 className="font-semibold text-purple-900 mb-4 flex items-center gap-2">
-					<LuFile className="w-5 h-5" />
+			{/* Jenis Produk Hukum */}
+			<div className="bg-white rounded-xl border border-gray-200 p-5">
+				<h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+					<LuFile className="w-4 h-4 text-teal-600" />
 					Jenis Produk Hukum
 				</h3>
 				
@@ -277,7 +277,7 @@ const ProdukHukumForm = ({ onSubmit, initialData }) => {
 							name="jenis"
 							value={formData.jenis}
 							onChange={handleChange}
-							className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+							className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
 						>
 							<option value="Peraturan Desa">Peraturan Desa</option>
 							<option value="Peraturan Kepala Desa">Peraturan Kepala Desa</option>
@@ -301,11 +301,11 @@ const ProdukHukumForm = ({ onSubmit, initialData }) => {
 				</div>
 			</div>
 
-			{/* Lokasi dan Tanggal */}
-			<div className="bg-gradient-to-r from-green-50 to-teal-50 p-4 rounded-lg border border-green-200">
-				<h3 className="font-semibold text-green-900 mb-4 flex items-center gap-2">
-					<LuMapPin className="w-5 h-5" />
-					Lokasi dan Tanggal
+			{/* Penetapan */}
+			<div className="bg-white rounded-xl border border-gray-200 p-5">
+				<h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+					<LuMapPin className="w-4 h-4 text-teal-600" />
+					Penetapan
 				</h3>
 				
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -319,7 +319,7 @@ const ProdukHukumForm = ({ onSubmit, initialData }) => {
 							value={formData.tempat_penetapan}
 							onChange={handleChange}
 							placeholder="contoh: Desa Sukamaju"
-							className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all ${
+							className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all ${
 								errors.tempat_penetapan ? "border-red-400 bg-red-50" : "border-gray-300"
 							}`}
 						/>
@@ -340,7 +340,7 @@ const ProdukHukumForm = ({ onSubmit, initialData }) => {
 							name="tanggal_penetapan"
 							value={formData.tanggal_penetapan}
 							onChange={handleChange}
-							className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all ${
+							className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all ${
 								errors.tanggal_penetapan ? "border-red-400 bg-red-50" : "border-gray-300"
 							}`}
 						/>
@@ -353,9 +353,12 @@ const ProdukHukumForm = ({ onSubmit, initialData }) => {
 				</div>
 			</div>
 
-			{/* Informasi Tambahan */}
-			<div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-lg border border-amber-200">
-				<h3 className="font-semibold text-amber-900 mb-4">Informasi Tambahan</h3>
+			{/* Status & Informasi Tambahan */}
+			<div className="bg-white rounded-xl border border-gray-200 p-5">
+				<h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+					<LuFileText className="w-4 h-4 text-teal-600" />
+					Status & Informasi Tambahan
+				</h3>
 				
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 					<div>
@@ -368,7 +371,7 @@ const ProdukHukumForm = ({ onSubmit, initialData }) => {
 							value={formData.sumber}
 							onChange={handleChange}
 							placeholder="contoh: LDes Sukamaju Tahun 2025 Nomor 5"
-							className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
+							className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
 						/>
 					</div>
 
@@ -382,7 +385,7 @@ const ProdukHukumForm = ({ onSubmit, initialData }) => {
 							value={formData.subjek}
 							onChange={handleChange}
 							placeholder="contoh: Kependudukan, Pembangunan, dll"
-							className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
+							className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
 						/>
 					</div>
 
@@ -394,7 +397,7 @@ const ProdukHukumForm = ({ onSubmit, initialData }) => {
 							name="status_peraturan"
 							value={formData.status_peraturan}
 							onChange={handleChange}
-							className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
+							className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
 						>
 							<option value="berlaku">Berlaku</option>
 							<option value="dicabut">Dicabut</option>
@@ -411,16 +414,16 @@ const ProdukHukumForm = ({ onSubmit, initialData }) => {
 							value={formData.keterangan_status}
 							onChange={handleChange}
 							placeholder="Masukkan keterangan status jika ada"
-							className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
+							className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
 						/>
 					</div>
 				</div>
 			</div>
 
-			{/* Upload File */}
-			<div className="bg-gradient-to-r from-slate-50 to-gray-50 p-4 rounded-lg border border-slate-200">
-				<h3 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-					<LuUpload className="w-5 h-5" />
+			{/* Upload Dokumen */}
+			<div className="bg-white rounded-xl border border-gray-200 p-5">
+				<h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+					<LuUpload className="w-4 h-4 text-teal-600" />
 					Upload Dokumen {!initialData && <span className="text-red-500 text-sm">*</span>}
 				</h3>
 				
@@ -475,7 +478,7 @@ const ProdukHukumForm = ({ onSubmit, initialData }) => {
 					className={`px-8 py-3 rounded-lg font-semibold transition-all duration-200 flex items-center gap-2 shadow-lg ${
 						isSubmitting
 							? "bg-gray-400 cursor-not-allowed"
-							: "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 active:scale-95 shadow-blue-500/50"
+							: "bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 active:scale-95 shadow-teal-500/50"
 					} text-white`}
 					disabled={isSubmitting}
 				>

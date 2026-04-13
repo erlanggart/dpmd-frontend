@@ -104,12 +104,7 @@ export const createProdukHukum = (data) => {
 };
 
 export const updateProdukHukum = (id, data) => {
-	const formData = new FormData();
-	for (const key in data) {
-		formData.append(key, data[key]);
-	}
-	formData.append("_method", "PUT"); // Method override for Express
-	return api.post(`/produk-hukum/${id}`, formData, {
+	return api.put(`/produk-hukum/${id}`, data, {
 		headers: {
 			"Content-Type": "multipart/form-data",
 		},
