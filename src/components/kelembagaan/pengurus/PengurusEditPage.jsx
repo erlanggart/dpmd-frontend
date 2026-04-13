@@ -11,6 +11,7 @@ import {
 	getPkk,
 	getSatlinmas,
 } from "../../../services/kelembagaan";
+import { getDesa } from "../../../services/api";
 import { useAuth } from "../../../context/AuthContext";
 import {
 	FaArrowLeft,
@@ -60,6 +61,8 @@ const PengurusEditPage = () => {
 
 	const [pengurus, setPengurus] = useState(null);
 	const [kelembagaanInfo, setKelembagaanInfo] = useState(null);
+	const [rwInfo, setRwInfo] = useState(null);
+	const [desaInfo, setDesaInfo] = useState(null);
 	const [loading, setLoading] = useState(true);
 	const [saving, setSaving] = useState(false);
 	const [produkHukumList, setProdukHukumList] = useState([]);
@@ -79,6 +82,7 @@ const PengurusEditPage = () => {
 		tanggal_mulai_jabatan: "",
 		tanggal_akhir_jabatan: "",
 		produk_hukum_id: "",
+		nomor_buku_nikah: "",
 		status_verifikasi: "",
 	});
 	const [avatarFile, setAvatarFile] = useState(null);
@@ -150,6 +154,16 @@ const PengurusEditPage = () => {
 
 				const kelembagaanData = response?.data?.data;
 				setKelembagaanInfo(kelembagaanData || null);
+
+				// If it's RT, load parent RW info for breadcrumb
+				if ((pengurusableType === "rts" || pengurusableType === "rt") && kelembagaanData?.rw_id) {
+					try {
+						const rwRes = await getRw(kelembagaanData.rw_id);
+						setRwInfo(rwRes?.data?.data || null);
+					} catch (e) {
+						console.error("Error loading parent RW:", e);
+					}
+				}
 			} catch (error) {
 				console.error("❌ Error loading kelembagaan info:", {
 					type: pengurusableType,
@@ -163,6 +177,15 @@ const PengurusEditPage = () => {
 		},
 		[],
 	);
+
+	const loadDesaInfo = useCallback(async (desaId) => {
+		try {
+			const response = await getDesa(desaId);
+			setDesaInfo(response?.data?.data || null);
+		} catch (error) {
+			console.error("Error loading desa info:", error);
+		}
+	}, []);
 
 	// Helper function to format date for input[type="date"]
 	const formatDateForInput = (dateString) => {
@@ -217,6 +240,7 @@ const PengurusEditPage = () => {
 					pendidikan: data.pendidikan || "",
 					agama: data.agama || "",
 					golongan_darah: data.golongan_darah || "",
+					nomor_buku_nikah: data.nomor_buku_nikah || "",
 					jabatan: data.jabatan || "",
 					tanggal_mulai_jabatan: formatDateForInput(data.tanggal_mulai_jabatan),
 					tanggal_akhir_jabatan: formatDateForInput(data.tanggal_akhir_jabatan),
@@ -230,6 +254,11 @@ const PengurusEditPage = () => {
 						data.pengurusable_type,
 						data.pengurusable_id,
 					);
+				}
+
+				// Load desa info for breadcrumb
+				if (data.desa_id) {
+					await loadDesaInfo(data.desa_id);
 				}
 			}
 		} catch (error) {
@@ -255,7 +284,7 @@ const PengurusEditPage = () => {
 		} finally {
 			setLoading(false);
 		}
-	}, [pengurusId, navigate, loadKelembagaanInfo]);
+	}, [pengurusId, navigate, loadKelembagaanInfo, loadDesaInfo]);
 
 	useEffect(() => {
 		if (!canEdit) {
@@ -347,6 +376,28 @@ const PengurusEditPage = () => {
 				icon: "error",
 				title: "Error",
 				text: "Nama lengkap wajib diisi",
+			});
+			return;
+		}
+
+		if (!formData.produk_hukum_id) {
+			Swal.fire({
+				icon: "error",
+				title: "Error",
+				text: "Produk hukum (SK) wajib dipilih",
+			});
+			return;
+		}
+
+		if (
+			(formData.jabatan === "KETUA RT" || formData.jabatan === "KETUA RW") &&
+			formData.status_perkawinan === "Menikah" &&
+			!formData.nomor_buku_nikah?.trim()
+		) {
+			Swal.fire({
+				icon: "error",
+				title: "Error",
+				text: "Nomor buku nikah wajib diisi untuk Ketua RT/RW yang berstatus menikah",
 			});
 			return;
 		}
@@ -454,6 +505,7 @@ const PengurusEditPage = () => {
 	}
 
 	const basePath = getBasePath();
+	const isAdmin = isSuperAdmin || isAdminBidangPMD;
 
 	return (
 		<div className="min-h-screen bg-gray-50">
@@ -476,20 +528,111 @@ const PengurusEditPage = () => {
 							Kelembagaan
 						</Link>
 						<FaChevronRight className="text-gray-400 text-xs" />
-						<Link
-							to={`${basePath}/kelembagaan/${getRouteType(pengurus.pengurusable_type)}`}
-							className="text-gray-500 hover:text-indigo-600 transition-colors"
-						>
-							{getDisplayName(pengurus.pengurusable_type)}
-						</Link>
-						<FaChevronRight className="text-gray-400 text-xs" />
-						<Link
-							to={`${basePath}/kelembagaan/${getRouteType(pengurus.pengurusable_type)}/${pengurus.pengurusable_id}`}
-							className="text-gray-500 hover:text-indigo-600 transition-colors"
-						>
-							{kelembagaanInfo?.nomor || kelembagaanInfo?.nama || "Detail"}
-						</Link>
-						<FaChevronRight className="text-gray-400 text-xs" />
+
+						{/* Desa Name */}
+						{desaInfo && (
+							<>
+								<Link
+									to={
+										isAdmin
+											? `/bidang/pmd/kelembagaan/admin/${pengurus.desa_id}`
+											: "/desa/kelembagaan"
+									}
+									className="text-gray-500 hover:text-indigo-600 transition-colors"
+								>
+									{desaInfo.nama}
+								</Link>
+								<FaChevronRight className="text-gray-400 text-xs" />
+							</>
+						)}
+
+						{/* If RT, show RW parent in breadcrumb */}
+						{(pengurus.pengurusable_type === "rts" || pengurus.pengurusable_type === "rt") && rwInfo && (
+							<>
+								<Link
+									to={
+										isAdmin
+											? `/bidang/pmd/kelembagaan/admin/${pengurus.desa_id}/rw`
+											: `/desa/kelembagaan/rw`
+									}
+									className="text-gray-500 hover:text-indigo-600 transition-colors"
+								>
+									RW
+								</Link>
+								<FaChevronRight className="text-gray-400 text-xs" />
+								<Link
+									to={
+										isAdmin
+											? `/bidang/pmd/kelembagaan/rw/${rwInfo.id}`
+											: `/desa/kelembagaan/rw/${rwInfo.id}`
+									}
+									className="text-gray-500 hover:text-indigo-600 transition-colors"
+								>
+									RW {rwInfo.nomor}
+								</Link>
+								<FaChevronRight className="text-gray-400 text-xs" />
+								<Link
+									to={
+										isAdmin
+											? `/bidang/pmd/kelembagaan/rt/${pengurus.pengurusable_id}`
+											: `/desa/kelembagaan/rt/${pengurus.pengurusable_id}`
+									}
+									className="text-gray-500 hover:text-indigo-600 transition-colors"
+								>
+									RT {kelembagaanInfo?.nomor || "Detail"}
+								</Link>
+								<FaChevronRight className="text-gray-400 text-xs" />
+							</>
+						)}
+
+						{/* For single-instance types (satlinmas, karang-taruna, lpm, pkk) - direct link */}
+						{["satlinmas", "karang_tarunas", "karang_taruna"].includes(pengurus.pengurusable_type) ||
+						["lpms", "lpm"].includes(pengurus.pengurusable_type) ||
+						["pkks", "pkk"].includes(pengurus.pengurusable_type) ? (
+							<>
+								<Link
+									to={
+										isAdmin
+											? `/bidang/pmd/kelembagaan/${getRouteType(pengurus.pengurusable_type)}/${pengurus.pengurusable_id}`
+											: `/desa/kelembagaan/${getRouteType(pengurus.pengurusable_type)}/${pengurus.pengurusable_id}`
+									}
+									className="text-gray-500 hover:text-indigo-600 transition-colors"
+								>
+									{getDisplayName(pengurus.pengurusable_type)}
+								</Link>
+								<FaChevronRight className="text-gray-400 text-xs" />
+							</>
+						) : (
+							pengurus.pengurusable_type !== "rts" && pengurus.pengurusable_type !== "rt" && (
+								<>
+									{/* For other types (RW, Posyandu) - show type link, then item */}
+									<Link
+										to={
+											isAdmin
+												? `/bidang/pmd/kelembagaan/admin/${pengurus.desa_id}/${getRouteType(pengurus.pengurusable_type)}`
+												: `/desa/kelembagaan/${getRouteType(pengurus.pengurusable_type)}`
+										}
+										className="text-gray-500 hover:text-indigo-600 transition-colors"
+									>
+										{getDisplayName(pengurus.pengurusable_type)}
+									</Link>
+									<FaChevronRight className="text-gray-400 text-xs" />
+									<Link
+										to={
+											isAdmin
+												? `/bidang/pmd/kelembagaan/${getRouteType(pengurus.pengurusable_type)}/${pengurus.pengurusable_id}`
+												: `/desa/kelembagaan/${getRouteType(pengurus.pengurusable_type)}/${pengurus.pengurusable_id}`
+										}
+										className="text-gray-500 hover:text-indigo-600 transition-colors"
+									>
+										{kelembagaanInfo?.nomor || kelembagaanInfo?.nama || "Detail"}
+									</Link>
+									<FaChevronRight className="text-gray-400 text-xs" />
+								</>
+							)
+						)}
+
+						{/* Pengurus Name */}
 						<Link
 							to={`${basePath}/pengurus/${pengurusId}`}
 							className="text-gray-500 hover:text-indigo-600 transition-colors"
@@ -709,6 +852,24 @@ const PengurusEditPage = () => {
 									<option value="Cerai Mati">Cerai Mati</option>
 								</select>
 							</div>
+
+							{/* Nomor Buku Nikah - conditionally required for Ketua RW/RT yang menikah */}
+							{formData.status_perkawinan === "Menikah" &&
+								(formData.jabatan === "KETUA RT" || formData.jabatan === "KETUA RW") && (
+								<div>
+									<label className="block text-sm font-semibold text-gray-800 mb-1.5">
+										Nomor Buku Nikah <span className="text-red-500">*</span>
+									</label>
+									<input
+										type="text"
+										name="nomor_buku_nikah"
+										value={formData.nomor_buku_nikah}
+										onChange={handleInputChange}
+										className="w-full border-2 border-gray-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white/80 backdrop-blur-sm transition-all duration-200"
+										placeholder="Masukkan nomor buku nikah"
+									/>
+								</div>
+							)}
 
 							<div className="md:col-span-2">
 								<label className="block text-sm font-semibold text-gray-800 mb-1.5">

@@ -145,24 +145,30 @@ const PengurusDetailPage = () => {
 		try {
 			let response;
 			// Map table name to appropriate getter function
-			// Note: pengurusable_type from database is singular (rw, rt, etc)
+			// Note: pengurusable_type from database can be table names (rws, rts) or singular (rw, rt)
 			switch (pengurusableType) {
 				case "rw":
+				case "rws":
 					response = await getRw(pengurusableId);
 					break;
 				case "rt":
+				case "rts":
 					response = await getRt(pengurusableId);
 					break;
 				case "posyandu":
+				case "posyandus":
 					response = await getPosyandu(pengurusableId);
 					break;
 				case "karang_taruna":
+				case "karang_tarunas":
 					response = await getKarangTaruna(pengurusableId);
 					break;
 				case "lpm":
+				case "lpms":
 					response = await getLpm(pengurusableId);
 					break;
 				case "pkk":
+				case "pkks":
 					response = await getPkk(pengurusableId);
 					break;
 				case "satlinmas":
@@ -177,7 +183,7 @@ const PengurusDetailPage = () => {
 			setKelembagaanInfo(kelembagaanData || null);
 
 			// If it's RT, load the parent RW
-			if (pengurusableType === "rt" && kelembagaanData) {
+			if ((pengurusableType === "rt" || pengurusableType === "rts") && kelembagaanData) {
 				await loadRwForRt(kelembagaanData);
 			}
 		} catch (error) {
@@ -617,28 +623,19 @@ const PengurusDetailPage = () => {
 						className="flex items-center text-gray-500 hover:text-indigo-600 transition-colors"
 					>
 						<FaHome className="mr-1" />
-						Dashboard
+						Dashboard Kelembagaan
 					</Link>
 					<FaChevronRight className="text-gray-400 text-xs" />
 
-					{/* Kelembagaan */}
-					<Link
-						to={
-							isSuperAdmin() || isAdminBidangPMD()
-								? "/bidang/pmd/kelembagaan"
-								: "/desa/kelembagaan"
-						}
-						className="text-gray-500 hover:text-indigo-600 transition-colors"
-					>
-						Kelembagaan
-					</Link>
-					<FaChevronRight className="text-gray-400 text-xs" />
-
-					{/* Desa Name (for admin only) */}
-					{(isSuperAdmin() || isAdminBidangPMD()) && desaInfo && (
+					{/* Desa Name (both admin and desa) */}
+					{desaInfo && (
 						<>
 							<Link
-								to={`/bidang/pmd/kelembagaan/admin/${pengurus.desa_id}`}
+								to={
+									isSuperAdmin() || isAdminBidangPMD()
+										? `/bidang/pmd/kelembagaan/admin/${pengurus.desa_id}`
+										: "/desa/kelembagaan"
+								}
 								className="text-gray-500 hover:text-indigo-600 transition-colors"
 							>
 								{desaInfo.nama}
@@ -648,7 +645,7 @@ const PengurusDetailPage = () => {
 					)}
 
 					{/* If RT, show RW first */}
-					{pengurus.pengurusable_type === "rt" && rwInfo && (
+					{(pengurus.pengurusable_type === "rt" || pengurus.pengurusable_type === "rts") && rwInfo && (
 						<>
 							{/* RW Link */}
 							<Link
@@ -692,7 +689,7 @@ const PengurusDetailPage = () => {
 					)}
 
 					{/* For single-instance types (satlinmas, karang-taruna, lpm, pkk) - direct link */}
-					{["satlinmas", "karang_taruna", "lpm", "pkk"].includes(
+					{["satlinmas", "karang_taruna", "karang_tarunas", "lpm", "lpms", "pkk", "pkks"].includes(
 						pengurus.pengurusable_type,
 					) ? (
 						<>
@@ -709,7 +706,7 @@ const PengurusDetailPage = () => {
 							<FaChevronRight className="text-gray-400 text-xs" />
 						</>
 					) : (
-						pengurus.pengurusable_type !== "rt" && (
+						pengurus.pengurusable_type !== "rt" && pengurus.pengurusable_type !== "rts" && (
 							<>
 								{/* For other types (RW, Posyandu) - show type link, then item */}
 								<Link
@@ -1068,6 +1065,17 @@ const PengurusDetailPage = () => {
 										{pengurus.golongan_darah || "-"}
 									</p>
 								</div>
+
+								{pengurus.nomor_buku_nikah && (
+									<div>
+										<label className="block text-sm font-medium text-gray-700 mb-1">
+											Nomor Buku Nikah
+										</label>
+										<p className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
+											{pengurus.nomor_buku_nikah}
+										</p>
+									</div>
+								)}
 							</div>
 						</div>
 

@@ -722,12 +722,11 @@ export default function KelembagaanDetailPage({
 						</Link>
 						<FaChevronRight className="text-gray-400 text-xs" />
 						
-
-						{/* Admin: Show Desa name and link */}
-						{isAdmin && detail?.desa_id && (
+						{/* Desa name link (both admin and desa) */}
+						{detail?.desa_id && (
 							<>
 								<Link
-									to={`/bidang/pmd/kelembagaan/admin/${detail.desa_id}`}
+									to={isAdmin ? `/bidang/pmd/kelembagaan/admin/${detail.desa_id}` : "/desa/kelembagaan"}
 									className="text-gray-500 hover:text-indigo-600 transition-colors"
 								>
 									{detail?.desas?.nama || detail?.desa?.nama || "Desa"}
@@ -736,8 +735,19 @@ export default function KelembagaanDetailPage({
 							</>
 						)}
 
-						{type === "rt" && detail?.rw ? (
+						{type === "rt" && detail?.rws ? (
 							<>
+								<Link
+									to={
+										isAdmin
+											? `/bidang/pmd/kelembagaan/admin/${detail.desa_id}/rw`
+											: `/desa/kelembagaan/rw`
+									}
+									className="text-gray-500 hover:text-indigo-600 transition-colors"
+								>
+									RW
+								</Link>
+								<FaChevronRight className="text-gray-400 text-xs" />
 								<Link
 									to={
 										isAdmin
@@ -746,7 +756,7 @@ export default function KelembagaanDetailPage({
 									}
 									className="text-gray-500 hover:text-indigo-600 transition-colors"
 								>
-									RW {detail.rw?.nomor || ""}
+									RW {detail.rws?.nomor || ""}
 								</Link>
 								<FaChevronRight className="text-gray-400 text-xs" />
 								<span className="text-gray-900 font-medium">
