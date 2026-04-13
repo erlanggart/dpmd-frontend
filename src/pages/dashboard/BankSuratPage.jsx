@@ -1,12 +1,34 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  LuSearch, LuFilter, LuDownload, LuFileText, LuCalendar, LuUser,
-  LuMail, LuArchive, LuChevronLeft, LuChevronRight, LuX, LuEye,
-  LuArrowUpDown, LuArrowUp, LuArrowDown, LuInbox, LuSend,
-  LuCheckCircle2, LuClock, LuAlertTriangle, LuZap, LuShield, LuRefreshCw,
-  LuFileSpreadsheet, LuSlidersHorizontal, LuBookOpen, LuExternalLink
-} from 'react-icons/lu';
+  Search as LuSearch,
+  Filter as LuFilter,
+  Download as LuDownload,
+  FileText as LuFileText,
+  Calendar as LuCalendar,
+  User as LuUser,
+  Mail as LuMail,
+  Archive as LuArchive,
+  ChevronLeft as LuChevronLeft,
+  ChevronRight as LuChevronRight,
+  X as LuX,
+  Eye as LuEye,
+  ArrowUpDown as LuArrowUpDown,
+  ArrowUp as LuArrowUp,
+  ArrowDown as LuArrowDown,
+  Inbox as LuInbox,
+  Send as LuSend,
+  CheckCircle2 as LuCheckCircle2,
+  Clock as LuClock,
+  AlertTriangle,
+  Zap as LuZap,
+  Shield as LuShield,
+  RefreshCw as LuRefreshCw,
+  FileSpreadsheet as LuFileSpreadsheet,
+  SlidersHorizontal as LuSlidersHorizontal,
+  BookOpen as LuBookOpen,
+  ExternalLink as LuExternalLink
+} from 'lucide-react';
 import api from '../../api';
 import { toast } from 'react-hot-toast';
 
