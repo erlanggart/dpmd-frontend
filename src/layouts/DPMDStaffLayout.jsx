@@ -128,7 +128,7 @@ const ROLE_CONFIG = {
 			hoverText: 'hover:text-teal-600',
 			hoverBg: 'hover:bg-teal-50',
 			gradientFrom: 'from-teal-600',
-			gradientTo: 'to-teal-800',
+			gradientTo: 'to-teal-801',
 			badgeBg: 'bg-teal-100',
 			badgeText: 'text-teal-700',
 			menuBorder: 'border-teal-100',
