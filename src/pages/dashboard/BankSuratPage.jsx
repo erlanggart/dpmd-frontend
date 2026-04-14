@@ -30,7 +30,8 @@ import {
   FileSpreadsheet as LuFileSpreadsheet,
   SlidersHorizontal as LuSlidersHorizontal,
   BookOpen as LuBookOpen,
-  ExternalLink as LuExternalLink
+  ExternalLink as LuExternalLink,
+  Trash2 as LuTrash2
 } from 'lucide-react';
 import api from '../../api';
 import { toast } from 'react-hot-toast';
@@ -239,6 +240,40 @@ export default function BankSuratPage() {
 
   useEffect(() => { fetchSurat(); }, [fetchSurat]);
   useEffect(() => { fetchStatistik(); }, [fetchStatistik]);
+
+  const canDeleteSurat = userRole === 'superadmin' || userBidangId === 2;
+
+  const handleDeleteSurat = (suratId) => {
+    toast((t) => (
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+            <LuTrash2 className="w-4 h-4 text-red-600" />
+          </div>
+          <p className="text-sm font-medium text-gray-800">Yakin ingin menghapus surat ini?</p>
+        </div>
+        <div className="flex gap-2 justify-end">
+          <button onClick={() => toast.dismiss(t.id)}
+            className="px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition">
+            Batal
+          </button>
+          <button onClick={async () => {
+            toast.dismiss(t.id);
+            try {
+              await api.delete(`/bank-surat/${suratId}`);
+              toast.success('Surat berhasil dihapus');
+              fetchSurat();
+              fetchStatistik();
+            } catch (err) {
+              toast.error(err.response?.data?.message || 'Gagal menghapus surat');
+            }
+          }} className="px-3 py-1.5 text-xs font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition">
+            Hapus
+          </button>
+        </div>
+      </div>
+    ), { duration: 10000, position: 'top-center', style: { maxWidth: '360px' } });
+  };
 
   // Debounced search
   useEffect(() => {
@@ -552,7 +587,7 @@ export default function BankSuratPage() {
                             <button
                               onClick={() => setPdfUrl(`${apiBase}/${surat.file_path}`)}
                               title="Lihat PDF"
-                              className="w-8 h-8 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 flex items-center justify-center transition opacity-0 group-hover:opacity-100">
+                              className="w-8 h-8 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 flex items-center justify-center transition">
                               <LuEye className="w-4 h-4" />
                             </button>
                           )}
@@ -564,11 +599,18 @@ export default function BankSuratPage() {
                               }
                             }}
                             title="Detail"
-                            className="w-8 h-8 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 flex items-center justify-center transition opacity-0 group-hover:opacity-100">
+                            className="w-8 h-8 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 flex items-center justify-center transition">
                             <LuFileText className="w-4 h-4" />
                           </button>
                           {/* Tombol Delete: hanya superadmin atau pegawai bidang sekretariat */}
-                          {/* Fitur delete dihapus, gunakan fitur tarik di disposisi */}
+                          {canDeleteSurat && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDeleteSurat(surat.id); }}
+                              title="Hapus Surat"
+                              className="w-8 h-8 rounded-lg bg-red-50 hover:bg-red-100 text-red-500 flex items-center justify-center transition">
+                              <LuTrash2 className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

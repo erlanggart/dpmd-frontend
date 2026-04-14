@@ -144,17 +144,16 @@ const VideoMeetingListPage = () => {
     }
   };
 
-  const handleDeleteMeeting = async (meetingId) => {
-    if (!window.confirm('Yakin ingin menghapus meeting ini?')) return;
-    
-    try {
-      await api.delete(`/video-meetings/${meetingId}`);
-      toast.success('Meeting berhasil dihapus');
-      fetchMeetings();
-    } catch (error) {
-      console.error('Error deleting meeting:', error);
-      toast.error('Gagal menghapus meeting');
-    }
+  const handleDeleteMeeting = (meetingId) => {
+    toast((t) => (
+      <div className="flex flex-col gap-3">
+        <p className="text-sm font-medium text-gray-800">Yakin ingin menghapus meeting ini?</p>
+        <div className="flex gap-2 justify-end">
+          <button onClick={() => toast.dismiss(t.id)} className="px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition">Batal</button>
+          <button onClick={async () => { toast.dismiss(t.id); try { await api.delete(`/video-meetings/${meetingId}`); toast.success('Meeting berhasil dihapus'); fetchMeetings(); } catch (e) { toast.error('Gagal menghapus meeting'); } }} className="px-3 py-1.5 text-xs font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition">Hapus</button>
+        </div>
+      </div>
+    ), { duration: 10000, position: 'top-center' });
   };
 
   const handleJoinMeeting = () => {

@@ -139,16 +139,16 @@ function VideoMeetingListPage() {
   };
 
   // Handle delete meeting
-  const handleDeleteMeeting = async (id) => {
-    if (!window.confirm('Yakin ingin menghapus meeting ini?')) return;
-
-    try {
-      await videoMeetingService.deleteMeeting(id);
-      toast.success('Meeting berhasil dihapus');
-      fetchMeetings();
-    } catch (error) {
-      toast.error('Gagal menghapus meeting');
-    }
+  const handleDeleteMeeting = (id) => {
+    toast.info(
+      <div className="flex flex-col gap-3">
+        <p className="text-sm font-medium">Yakin ingin menghapus meeting ini?</p>
+        <div className="flex gap-2 justify-end">
+          <button onClick={async () => { toast.dismiss(); try { await videoMeetingService.deleteMeeting(id); toast.success('Meeting berhasil dihapus'); fetchMeetings(); } catch (e) { toast.error('Gagal menghapus meeting'); } }} className="px-3 py-1.5 text-xs font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition">Hapus</button>
+        </div>
+      </div>,
+      { autoClose: 10000 }
+    );
   };
 
   // Copy meeting link

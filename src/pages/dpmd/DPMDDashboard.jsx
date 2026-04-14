@@ -2,18 +2,20 @@
 // Dashboard Tunggal Terintegrasi untuk semua role DPMD
 // Menggantikan: KepalaDinasDashboard, SekretarisDinasDashboard, KepalaBidangDashboard, KetuaTimDashboard, PegawaiDashboard
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   LayoutDashboard, Building2, Briefcase, FileText, TrendingUp, Users,
   MapPin, Calendar, BarChart3, PieChart, Activity, Bell, Info, X, ExternalLink,
   Clock, CheckCircle, Send, Mail, Inbox, ChevronRight, User, Phone, Award,
-  FolderOpen, ClipboardList, Newspaper, Fingerprint, MessageSquare
+  FolderOpen, ClipboardList, Newspaper, Fingerprint, MessageSquare, Plus, Eye, Trash2,
+  Image, Video, Type, Crop, RotateCw, ZoomIn, ChevronUp
 } from 'lucide-react';
 import api from '../../api';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
+import Cropper from 'react-easy-crop';
 import MobileHeader from '../../components/mobile/MobileHeader';
 import ServiceGrid from '../../components/mobile/ServiceGrid';
 import InfoCard from '../../components/mobile/InfoCard';
@@ -37,8 +39,8 @@ const ROLE_CONFIG = {
     primaryColor: 'blue',
     dashboardEndpoint: '/kepala-dinas/dashboard',
     showExecutiveStats: true,
-    showDisposisi: false,
-    showPegawaiInfo: false,
+    showDisposisi: true,
+    showPegawaiInfo: true,
   },
   sekretaris_dinas: {
     gradient: 'from-purple-600 via-purple-700 to-purple-800',
@@ -47,10 +49,10 @@ const ROLE_CONFIG = {
     notifIconColor: 'text-purple-400',
     roleTitle: 'Sekretaris Dinas DPMD',
     primaryColor: 'purple',
-    dashboardEndpoint: null, // Uses disposisi
+    dashboardEndpoint: null,
     showExecutiveStats: false,
     showDisposisi: true,
-    showPegawaiInfo: false,
+    showPegawaiInfo: true,
   },
   kepala_bidang: {
     gradient: 'from-indigo-600 via-indigo-700 to-indigo-800',
@@ -62,19 +64,19 @@ const ROLE_CONFIG = {
     dashboardEndpoint: null,
     showExecutiveStats: false,
     showDisposisi: true,
-    showPegawaiInfo: false,
+    showPegawaiInfo: true,
   },
   ketua_tim: {
-    gradient: 'from-teal-600 via-cyan-600 to-blue-600',
-    notifGradient: 'from-teal-500 to-cyan-600',
-    notifBg: 'from-teal-50 to-cyan-100',
-    notifIconColor: 'text-teal-400',
+    gradient: 'from-green-600 via-green-700 to-green-800',
+    notifGradient: 'from-green-500 to-emerald-600',
+    notifBg: 'from-green-50 to-emerald-100',
+    notifIconColor: 'text-green-400',
     roleTitle: 'Ketua Tim',
-    primaryColor: 'teal',
+    primaryColor: 'green',
     dashboardEndpoint: null,
     showExecutiveStats: false,
-    showDisposisi: true,
-    showPegawaiInfo: false,
+    showDisposisi: false,
+    showPegawaiInfo: true,
   },
   pegawai: {
     gradient: 'from-green-600 via-green-700 to-green-800',
@@ -130,17 +132,41 @@ const DPMDDashboard = () => {
   const [recentDisposisi, setRecentDisposisi] = useState([]);
   const [pegawaiData, setPegawaiData] = useState(null);
   const [sekretariatData, setSekretariatData] = useState(null);
-  const [jadwalStats, setJadwalStats] = useState({
-    totalJadwal: 0,
-    jadwalHariIni: 0,
-    jadwalMendatang: 0
-  });
-  const [upcomingJadwal, setUpcomingJadwal] = useState([]);
   const [error, setError] = useState(null);
   const [informasiList, setInformasiList] = useState([]);
   const [currentInformasiIndex, setCurrentInformasiIndex] = useState(0);
   const [showInformasiModal, setShowInformasiModal] = useState(false);
   const [selectedInformasi, setSelectedInformasi] = useState(null);
+
+  // Status (story) states
+  const [statusGroups, setStatusGroups] = useState([]);
+  const [showStatusCreate, setShowStatusCreate] = useState(false);
+  const [statusContent, setStatusContent] = useState('');
+  const [statusColor, setStatusColor] = useState('#059669');
+  const [showStatusViewer, setShowStatusViewer] = useState(false);
+  const [activeStatusGroup, setActiveStatusGroup] = useState(null);
+  const [activeStatusIndex, setActiveStatusIndex] = useState(0);
+  const [statusViewers, setStatusViewers] = useState([]);
+  const [showViewersSheet, setShowViewersSheet] = useState(false);
+  const [statusMediaFile, setStatusMediaFile] = useState(null);
+  const [statusMediaPreview, setStatusMediaPreview] = useState(null);
+  const [statusType, setStatusType] = useState('text'); // 'text' | 'media'
+  const statusFileRef = useRef(null);
+  const [statusReplyText, setStatusReplyText] = useState('');
+  const [statusReplying, setStatusReplying] = useState(false);
+  const statusReplyRef = useRef(null);
+  // Auto-timer for status viewer
+  const [statusProgress, setStatusProgress] = useState(0);
+  const [statusPaused, setStatusPaused] = useState(false);
+  const statusTimerRef = useRef(null);
+  const statusVideoRef = useRef(null);
+  const STATUS_DURATION = 10000; // 10 seconds for text/image
+  // Crop states
+  const [showCropper, setShowCropper] = useState(false);
+  const [cropImage, setCropImage] = useState(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [cropZoom, setCropZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
 
   // Get role config
   const role = user?.role || 'pegawai';
@@ -159,9 +185,6 @@ const DPMDDashboard = () => {
   const getRoleTitle = useMemo(() => {
     if (role === 'kepala_bidang') {
       return `Kepala Bidang ${getBidangName()}`;
-    }
-    if (role === 'ketua_tim') {
-      return `Ketua Tim - ${getBidangName()}`;
     }
     return config.roleTitle;
   }, [role, config.roleTitle, getBidangName]);
@@ -324,49 +347,6 @@ const DPMDDashboard = () => {
         );
       }
 
-      // Fetch jadwal kegiatan for ketua_tim
-      if (role === 'ketua_tim') {
-        promises.push(
-          api.get('/jadwal-kegiatan?limit=100')
-            .then(res => {
-              const jadwals = res.data.data || [];
-              const today = new Date();
-              today.setHours(0, 0, 0, 0);
-              const tomorrow = new Date(today);
-              tomorrow.setDate(tomorrow.getDate() + 1);
-
-              const jadwalHariIni = jadwals.filter(j => {
-                const jadwalDate = new Date(j.tanggal_mulai);
-                jadwalDate.setHours(0, 0, 0, 0);
-                return jadwalDate.getTime() === today.getTime();
-              });
-
-              const jadwalMendatang = jadwals.filter(j => {
-                const jadwalDate = new Date(j.tanggal_mulai);
-                return jadwalDate >= tomorrow;
-              });
-
-              const upcoming = jadwals
-                .filter(j => new Date(j.tanggal_mulai) >= today)
-                .sort((a, b) => new Date(a.tanggal_mulai) - new Date(b.tanggal_mulai))
-                .slice(0, 5);
-
-              return {
-                type: 'jadwal',
-                data: {
-                  stats: {
-                    totalJadwal: jadwals.length,
-                    jadwalHariIni: jadwalHariIni.length,
-                    jadwalMendatang: jadwalMendatang.length
-                  },
-                  upcoming
-                }
-              };
-            })
-            .catch(() => ({ type: 'jadwal', data: { stats: {}, upcoming: [] } }))
-        );
-      }
-
       // Fetch sekretariat info for all roles (individual endpoints)
       promises.push(
         Promise.all([
@@ -414,10 +394,6 @@ const DPMDDashboard = () => {
           case 'sekretariat':
             setSekretariatData(result.data);
             break;
-          case 'jadwal':
-            setJadwalStats(result.data.stats);
-            setUpcomingJadwal(result.data.upcoming);
-            break;
           case 'informasi':
             setInformasiList(result.data);
             break;
@@ -445,6 +421,275 @@ const DPMDDashboard = () => {
     }, 5000);
     return () => clearInterval(interval);
   }, [informasiList.length]);
+
+  // ==================== STATUS FEATURE ====================
+  const STATUS_COLORS = ['#059669', '#2563eb', '#7c3aed', '#dc2626', '#d97706', '#0891b2', '#e11d48', '#4f46e5'];
+
+  const fetchStatuses = useCallback(async () => {
+    try {
+      const res = await api.get('/status');
+      if (res.data.success) setStatusGroups(res.data.data);
+    } catch (err) { /* silent */ }
+  }, []);
+
+  useEffect(() => { fetchStatuses(); }, [fetchStatuses]);
+
+  const createStatus = async () => {
+    if (!statusContent.trim() && !statusMediaFile) return;
+    try {
+      const fd = new FormData();
+      if (statusContent.trim()) fd.append('content', statusContent.trim());
+      fd.append('background_color', statusColor);
+      if (statusMediaFile) fd.append('media', statusMediaFile);
+      await api.post('/status', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      setShowStatusCreate(false);
+      setStatusContent('');
+      setStatusMediaFile(null);
+      setStatusMediaPreview(null);
+      setStatusType('text');
+      fetchStatuses();
+      toast.success('Status berhasil dibuat');
+    } catch (err) {
+      toast.error('Gagal membuat status');
+    }
+  };
+
+  const handleStatusFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/webm', 'video/quicktime'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Format file tidak didukung');
+      return;
+    }
+
+    if (file.type.startsWith('video/')) {
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      video.onloadedmetadata = () => {
+        URL.revokeObjectURL(video.src);
+        if (video.duration > 30) {
+          toast.error('Video maksimal 30 detik');
+          return;
+        }
+        setStatusMediaFile(file);
+        setStatusMediaPreview(URL.createObjectURL(file));
+        setStatusType('media');
+      };
+      video.src = URL.createObjectURL(file);
+    } else {
+      // For images: open cropper
+      const url = URL.createObjectURL(file);
+      setCropImage(url);
+      setShowCropper(true);
+      setCrop({ x: 0, y: 0 });
+      setCropZoom(1);
+    }
+  };
+
+  const onCropComplete = useCallback((_, croppedPixels) => {
+    setCroppedAreaPixels(croppedPixels);
+  }, []);
+
+  const applyCrop = async () => {
+    if (!cropImage || !croppedAreaPixels) return;
+    try {
+      const image = new window.Image();
+      image.src = cropImage;
+      await new Promise(resolve => { image.onload = resolve; });
+      const canvas = document.createElement('canvas');
+      canvas.width = croppedAreaPixels.width;
+      canvas.height = croppedAreaPixels.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(
+        image,
+        croppedAreaPixels.x, croppedAreaPixels.y,
+        croppedAreaPixels.width, croppedAreaPixels.height,
+        0, 0,
+        croppedAreaPixels.width, croppedAreaPixels.height
+      );
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+      const croppedFile = new File([blob], 'status-photo.jpg', { type: 'image/jpeg' });
+      URL.revokeObjectURL(cropImage);
+      setStatusMediaFile(croppedFile);
+      setStatusMediaPreview(URL.createObjectURL(blob));
+      setStatusType('media');
+      setShowCropper(false);
+      setCropImage(null);
+    } catch (err) {
+      toast.error('Gagal memproses gambar');
+    }
+  };
+
+  const cancelCrop = () => {
+    if (cropImage) URL.revokeObjectURL(cropImage);
+    setCropImage(null);
+    setShowCropper(false);
+    if (statusFileRef.current) statusFileRef.current.value = '';
+  };
+
+  const clearStatusMedia = () => {
+    setStatusMediaFile(null);
+    if (statusMediaPreview) URL.revokeObjectURL(statusMediaPreview);
+    setStatusMediaPreview(null);
+    setStatusType('text');
+    if (statusFileRef.current) statusFileRef.current.value = '';
+  };
+
+  const openStatusViewer = (group, index = 0) => {
+    // Smart start: jump to first unviewed status in the group
+    let startIndex = index;
+    if (!group.is_own && index === 0) {
+      const firstUnviewed = group.statuses.findIndex(s => !s.viewed);
+      if (firstUnviewed > 0) startIndex = firstUnviewed;
+    }
+    setActiveStatusGroup(group);
+    setActiveStatusIndex(startIndex);
+    setShowStatusViewer(true);
+    setStatusViewers([]);
+    setShowViewersSheet(false);
+    setStatusProgress(0);
+    if (group.is_own && group.statuses[startIndex]) {
+      loadStatusViewers(group.statuses[startIndex].id);
+    } else if (group.statuses[startIndex]) {
+      api.post(`/status/${group.statuses[startIndex].id}/view`).then(() => fetchStatuses()).catch(() => {});
+    }
+  };
+
+  const nextStatus = () => {
+    if (!activeStatusGroup) return;
+    if (statusTimerRef.current) { clearInterval(statusTimerRef.current); clearTimeout(statusTimerRef.current); }
+    const next = activeStatusIndex + 1;
+    if (next < activeStatusGroup.statuses.length) {
+      setActiveStatusIndex(next);
+      setShowViewersSheet(false);
+      setStatusProgress(0);
+      if (activeStatusGroup.is_own) {
+        loadStatusViewers(activeStatusGroup.statuses[next].id);
+      } else {
+        api.post(`/status/${activeStatusGroup.statuses[next].id}/view`).then(() => fetchStatuses()).catch(() => {});
+      }
+    } else {
+      // Auto-advance: find next group with unviewed statuses (skip own & already-viewed groups)
+      const currentGroupIndex = statusGroups.findIndex(g => g.user?.id === activeStatusGroup.user?.id);
+      const nextGroup = statusGroups.slice(currentGroupIndex + 1).find(g => !g.is_own && g.has_unviewed);
+      if (nextGroup) {
+        openStatusViewer(nextGroup, 0);
+      } else {
+        // No more unviewed - stop
+        setShowStatusViewer(false);
+      }
+    }
+  };
+
+  const prevStatus = () => {
+    if (statusTimerRef.current) { clearInterval(statusTimerRef.current); clearTimeout(statusTimerRef.current); }
+    if (activeStatusIndex > 0) {
+      const prev = activeStatusIndex - 1;
+      setActiveStatusIndex(prev);
+      setShowViewersSheet(false);
+      if (activeStatusGroup?.is_own) {
+        loadStatusViewers(activeStatusGroup.statuses[prev].id);
+      }
+    }
+  };
+
+  const loadStatusViewers = async (statusId) => {
+    try {
+      const res = await api.get(`/status/${statusId}/viewers`);
+      if (res.data.success) setStatusViewers(res.data.data);
+    } catch (err) { /* silent */ }
+  };
+
+  const deleteStatus = async (statusId) => {
+    try {
+      await api.delete(`/status/${statusId}`);
+      setShowStatusViewer(false);
+      fetchStatuses();
+      toast.success('Status dihapus');
+    } catch (err) {
+      toast.error('Gagal menghapus status');
+    }
+  };
+
+  const replyToStatus = async (statusId, content, type = 'reply') => {
+    if (!content?.trim()) return;
+    try {
+      setStatusReplying(true);
+      await api.post(`/status/${statusId}/reply`, { content: content.trim(), type });
+      setStatusReplyText('');
+      toast.success(type === 'reaction' ? 'Reaksi terkirim' : 'Balasan terkirim');
+    } catch (err) {
+      toast.error('Gagal mengirim');
+    } finally {
+      setStatusReplying(false);
+    }
+  };
+
+  const QUICK_EMOJIS = ['❤️', '😂', '😮', '😢', '🔥', '👏'];
+
+  // Auto-timer for status viewer - progress bar animation + auto-advance
+  useEffect(() => {
+    if (!showStatusViewer || !activeStatusGroup) return;
+    const currentStatus = activeStatusGroup.statuses[activeStatusIndex];
+    if (!currentStatus) return;
+
+    const isVideo = currentStatus.media_path && 
+      (currentStatus.media_path.endsWith('.mp4') || currentStatus.media_path.endsWith('.webm') || currentStatus.media_path.endsWith('.mov'));
+
+    // For own statuses, don't auto-advance (user is checking viewers)
+    if (activeStatusGroup.is_own) {
+      setStatusProgress(100);
+      return;
+    }
+
+    // For video: progress follows video playback, advance on ended
+    if (isVideo) {
+      setStatusProgress(0);
+      const video = statusVideoRef.current;
+      if (!video) return;
+      
+      const onTimeUpdate = () => {
+        if (video.duration && !statusPaused) {
+          setStatusProgress((video.currentTime / video.duration) * 100);
+        }
+      };
+      const onEnded = () => {
+        setStatusProgress(100);
+        // Small delay before advancing
+        statusTimerRef.current = setTimeout(() => nextStatus(), 300);
+      };
+      
+      video.addEventListener('timeupdate', onTimeUpdate);
+      video.addEventListener('ended', onEnded);
+      
+      return () => {
+        video.removeEventListener('timeupdate', onTimeUpdate);
+        video.removeEventListener('ended', onEnded);
+        if (statusTimerRef.current) clearTimeout(statusTimerRef.current);
+      };
+    }
+
+    // For text/image: 10 second timer with smooth progress
+    setStatusProgress(0);
+    const interval = 50; // update every 50ms for smooth animation
+    const steps = STATUS_DURATION / interval;
+    let step = 0;
+
+    const tick = () => {
+      if (statusPaused) return;
+      step++;
+      setStatusProgress((step / steps) * 100);
+      if (step >= steps) {
+        clearInterval(statusTimerRef.current);
+        setTimeout(() => nextStatus(), 200);
+      }
+    };
+
+    statusTimerRef.current = setInterval(tick, interval);
+    return () => { if (statusTimerRef.current) clearInterval(statusTimerRef.current); };
+  }, [showStatusViewer, activeStatusGroup, activeStatusIndex, statusPaused]);
 
   // ==================== QUICK ACTIONS ====================
   const ABSENSI_ELIGIBLE_STATUS = ['PPPK Paruh Waktu', 'Tenaga Alih Daya', 'Tenaga Keamanan', 'Tenaga Kebersihan'];
@@ -508,29 +753,6 @@ const DPMDDashboard = () => {
           label: 'Produk Hukum',
           color: 'cyan',
           onClick: () => navigate(`${basePath}/produk-hukum`)
-        }
-      ];
-    }
-
-    if (role === 'ketua_tim') {
-      return [
-        {
-          icon: Calendar,
-          label: 'Jadwal',
-          color: 'teal',
-          onClick: () => navigate('/dpmd/jadwal-kegiatan')
-        },
-        {
-          icon: ClipboardList,
-          label: 'Disposisi',
-          color: 'blue',
-          onClick: () => navigate('/dpmd/disposisi')
-        },
-        {
-          icon: FolderOpen,
-          label: 'Bidang',
-          color: 'indigo',
-          onClick: () => navigate(basePath)
         }
       ];
     }
@@ -675,6 +897,65 @@ const DPMDDashboard = () => {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-4">
+
+        {/* Status Stories Section */}
+        {statusGroups.length > 0 || true ? (
+          <div className="mb-4 overflow-hidden">
+            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide px-1">
+              {/* Add Status Button */}
+              <button
+                onClick={() => setShowStatusCreate(true)}
+                className="flex flex-col items-center gap-1.5 flex-shrink-0"
+              >
+                <div className="relative w-16 h-16 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center border-2 border-dashed border-gray-300 hover:border-emerald-400 transition-colors">
+                  <Plus className="w-6 h-6 text-gray-400" />
+                </div>
+                <span className="text-[10px] text-gray-500 font-medium w-16 text-center truncate">Buat Status</span>
+              </button>
+
+              {/* Status Rings */}
+              {statusGroups.map((group, i) => {
+                const initial = group.user?.name?.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase() || '?';
+                const hasUnviewed = group.has_unviewed || group.is_own;
+                return (
+                  <button
+                    key={group.user?.id || i}
+                    onClick={() => openStatusViewer(group)}
+                    className="flex flex-col items-center gap-1.5 flex-shrink-0"
+                  >
+                    <div className={`relative w-16 h-16 rounded-full p-[3px] ${
+                      hasUnviewed
+                        ? 'bg-gradient-to-tr from-emerald-500 via-teal-400 to-cyan-500'
+                        : 'bg-gray-300'
+                    }`}>
+                      <div className="w-full h-full rounded-full bg-white p-[2px]">
+                        {group.user?.avatar ? (
+                          <img
+                            src={`${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://127.0.0.1:3001'}${group.user.avatar}`}
+                            alt="" className="w-full h-full rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white text-xs font-bold">
+                            {initial}
+                          </div>
+                        )}
+                      </div>
+                      {group.is_own && (
+                        <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 bg-emerald-500 rounded-full border-2 border-white flex items-center justify-center">
+                          <Plus className="w-3 h-3 text-white" />
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-[10px] text-gray-600 font-medium w-16 text-center truncate">
+                      {group.is_own ? 'Status Saya' : group.user?.name?.split(' ')[0]}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
+
         {/* Quick Actions Section */}
         <div className="bg-white rounded-[24px] sm:rounded-[28px] shadow-lg shadow-gray-200/60 p-5 sm:p-6 mb-5 border border-gray-100">
          
@@ -811,79 +1092,6 @@ const DPMDDashboard = () => {
           </>
         )}
 
-        {/* KETUA_TIM: Jadwal Stats */}
-        {role === 'ketua_tim' && (
-          <>
-            <div className="mb-5">
-              <SectionHeader 
-                title="Statistik Kegiatan" 
-                subtitle="Ringkasan jadwal"
-                icon={Activity}
-              />
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                <InfoCard
-                  icon={Calendar}
-                  title="Total Kegiatan"
-                  value={jadwalStats.totalJadwal}
-                  color="blue"
-                />
-                <InfoCard
-                  icon={Clock}
-                  title="Hari Ini"
-                  value={jadwalStats.jadwalHariIni}
-                  color="green"
-                />
-                <InfoCard
-                  icon={TrendingUp}
-                  title="Mendatang"
-                  value={jadwalStats.jadwalMendatang}
-                  color="purple"
-                />
-                <InfoCard
-                  icon={Bell}
-                  title="Disposisi"
-                  value={statistik?.masuk?.pending || 0}
-                  color="orange"
-                  onClick={() => navigate('/ketua-tim/disposisi')}
-                />
-              </div>
-            </div>
-
-            {/* Upcoming Jadwal */}
-            <div className="mb-5">
-              <SectionHeader 
-                title="Kegiatan Mendatang" 
-                subtitle="Jadwal dalam waktu dekat"
-                icon={Calendar}
-                actionText="Lihat Semua"
-                onActionClick={() => navigate('/ketua-tim/jadwal-kegiatan')}
-              />
-              
-              {upcomingJadwal.length === 0 ? (
-                <div className="bg-white rounded-2xl p-12 text-center shadow-sm">
-                  <Calendar className="mx-auto text-gray-300 mb-4" size={48} />
-                  <p className="text-gray-500 font-medium">Tidak ada kegiatan mendatang</p>
-                  <p className="text-sm text-gray-400 mt-1">Jadwal kegiatan akan muncul di sini</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {upcomingJadwal.map((jadwal) => (
-                    <ActivityCard
-                      key={jadwal.id}
-                      icon={Calendar}
-                      title={jadwal.judul}
-                      subtitle={`📍 ${jadwal.lokasi || 'Lokasi belum ditentukan'}`}
-                      time={formatTanggal(jadwal.tanggal_mulai)}
-                      status="info"
-                      onClick={() => navigate('/ketua-tim/jadwal-kegiatan')}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          </>
-        )}
-
         {/* PEGAWAI: Profile Info */}
         {config.showPegawaiInfo && pegawaiData && (
           <>
@@ -910,8 +1118,8 @@ const DPMDDashboard = () => {
                   </div>
                 )}
 
-                {/* Informasi Banner with Smooth Animation */}
-                {informasiList.length > 0 && (
+                {/* Informasi Banner with Smooth Animation (hidden when status exists) */}
+                {informasiList.length > 0 && statusGroups.length === 0 && (
                   <div className="relative w-full h-44 rounded-2xl overflow-hidden shadow-lg group">
                     <AnimatePresence mode="wait">
                       <motion.button
@@ -932,7 +1140,7 @@ const DPMDDashboard = () => {
                           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"></div>
-                        <div className="absolute inset-0 bg-gradient-to-r from-teal-600/20 to-purple-600/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+
                         <motion.div 
                           initial={{ y: 20, opacity: 0 }}
                           animate={{ y: 0, opacity: 1 }}
@@ -1111,6 +1319,453 @@ const DPMDDashboard = () => {
           </p>
         </div>
       </div>
+
+      {/* Image Cropper Modal */}
+      <AnimatePresence>
+        {showCropper && cropImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black z-[60] flex flex-col"
+          >
+            <div className="flex items-center justify-between px-4 py-3 bg-black/80 backdrop-blur-sm">
+              <button onClick={cancelCrop} className="text-white/70 hover:text-white text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-white/10 transition">
+                Batal
+              </button>
+              <div className="flex items-center gap-2 text-white">
+                <Crop className="w-4 h-4" />
+                <span className="text-sm font-semibold">Sesuaikan Foto</span>
+              </div>
+              <button onClick={applyCrop} className="bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition">
+                Terapkan
+              </button>
+            </div>
+            <div className="flex-1 relative">
+              <Cropper
+                image={cropImage}
+                crop={crop}
+                zoom={cropZoom}
+                aspect={9 / 16}
+                onCropChange={setCrop}
+                onZoomChange={setCropZoom}
+                onCropComplete={onCropComplete}
+                showGrid={false}
+                style={{
+                  containerStyle: { background: '#000' },
+                  cropAreaStyle: { border: '2px solid rgba(255,255,255,0.6)', borderRadius: '16px' }
+                }}
+              />
+            </div>
+            <div className="px-6 py-4 bg-black/80 backdrop-blur-sm flex items-center gap-3">
+              <ZoomIn className="w-4 h-4 text-white/50 flex-shrink-0" />
+              <input
+                type="range"
+                min={1}
+                max={3}
+                step={0.1}
+                value={cropZoom}
+                onChange={(e) => setCropZoom(Number(e.target.value))}
+                className="flex-1 accent-emerald-500 h-1"
+              />
+              <span className="text-white/50 text-xs w-8 text-right">{cropZoom.toFixed(1)}x</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Status Create Modal */}
+      <AnimatePresence>
+        {showStatusCreate && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center z-[60]"
+            onClick={() => { setShowStatusCreate(false); clearStatusMedia(); }}
+          >
+            <motion.div
+              initial={{ y: 100, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 100, opacity: 0 }}
+              transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+              className="w-full sm:max-w-[400px] bg-white rounded-t-[28px] sm:rounded-[28px] shadow-2xl overflow-hidden max-h-[92vh] flex flex-col"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Hidden file input */}
+              <input
+                ref={statusFileRef}
+                type="file"
+                accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,video/quicktime"
+                className="hidden"
+                onChange={handleStatusFileSelect}
+              />
+
+              {/* Drag handle (mobile) */}
+              <div className="sm:hidden flex justify-center pt-3 pb-1">
+                <div className="w-10 h-1 bg-gray-300 rounded-full" />
+              </div>
+
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 py-3">
+                <button
+                  onClick={() => { setShowStatusCreate(false); clearStatusMedia(); }}
+                  className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+                <h3 className="text-sm font-bold text-gray-800">Buat Status</h3>
+                <button
+                  onClick={createStatus}
+                  disabled={!statusContent.trim() && !statusMediaFile}
+                  className="px-4 py-1.5 bg-emerald-500 text-white text-xs font-bold rounded-full disabled:opacity-30 hover:bg-emerald-600 transition-all shadow-sm"
+                >
+                  Bagikan
+                </button>
+              </div>
+
+              {/* Preview Area */}
+              <div
+                className="relative mx-4 rounded-2xl overflow-hidden flex-shrink-0"
+                style={{
+                  aspectRatio: '9/16',
+                  maxHeight: '55vh',
+                  backgroundColor: statusType === 'text' ? statusColor : '#111'
+                }}
+              >
+                {statusType === 'media' && statusMediaPreview ? (
+                  <>
+                    {statusMediaFile?.type?.startsWith('video/') ? (
+                      <video
+                        src={statusMediaPreview}
+                        className="w-full h-full object-cover"
+                        autoPlay muted loop playsInline
+                      />
+                    ) : (
+                      <img
+                        src={statusMediaPreview}
+                        alt="Preview"
+                        className="w-full h-full object-cover"
+                      />
+                    )}
+                    <button
+                      onClick={clearStatusMedia}
+                      className="absolute top-3 right-3 p-2 bg-black/50 backdrop-blur-sm rounded-xl text-white hover:bg-black/70 transition z-20"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                    {/* Caption overlay on media */}
+                    <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/60 via-black/20 to-transparent z-20">
+                      <input
+                        value={statusContent}
+                        onChange={e => setStatusContent(e.target.value)}
+                        placeholder="Tambahkan caption..."
+                        maxLength={500}
+                        className="w-full px-4 py-2.5 bg-white/15 backdrop-blur-md text-white text-sm rounded-2xl border border-white/20 outline-none placeholder-white/50 focus:bg-white/25 transition"
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center p-6">
+                    <textarea
+                      value={statusContent}
+                      onChange={e => setStatusContent(e.target.value)}
+                      placeholder="Ketik sesuatu..."
+                      maxLength={500}
+                      className="w-full text-center text-white text-lg sm:text-xl font-bold bg-transparent border-none outline-none resize-none placeholder-white/40 leading-relaxed"
+                      rows={5}
+                      autoFocus
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Bottom Controls */}
+              <div className="px-5 py-4 space-y-3 flex-shrink-0">
+                {/* Media type buttons */}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => { clearStatusMedia(); setStatusType('text'); }}
+                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${
+                      statusType === 'text'
+                        ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200'
+                        : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
+                    }`}
+                  >
+                    <Type className="w-3.5 h-3.5" /> Teks
+                  </button>
+                  <button
+                    onClick={() => { if (statusFileRef.current) { statusFileRef.current.accept = 'image/jpeg,image/png,image/gif,image/webp'; statusFileRef.current.click(); } }}
+                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${
+                      statusType === 'media' && !statusMediaFile?.type?.startsWith('video/')
+                        ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200'
+                        : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
+                    }`}
+                  >
+                    <Image className="w-3.5 h-3.5" /> Foto
+                  </button>
+                  <button
+                    onClick={() => { if (statusFileRef.current) { statusFileRef.current.accept = 'video/mp4,video/webm,video/quicktime'; statusFileRef.current.click(); statusFileRef.current.accept = 'image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,video/quicktime'; } }}
+                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${
+                      statusType === 'media' && statusMediaFile?.type?.startsWith('video/')
+                        ? 'bg-purple-50 text-purple-700 ring-1 ring-purple-200'
+                        : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
+                    }`}
+                  >
+                    <Video className="w-3.5 h-3.5" /> Video
+                  </button>
+                </div>
+
+                {/* Color picker (text mode only) */}
+                {statusType === 'text' && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-gray-400 font-medium">Warna</span>
+                    <div className="flex gap-1.5 flex-wrap">
+                      {STATUS_COLORS.map(c => (
+                        <button
+                          key={c}
+                          onClick={() => setStatusColor(c)}
+                          className={`w-7 h-7 rounded-full transition-all duration-200 ${
+                            statusColor === c ? 'ring-2 ring-offset-2 ring-gray-400 scale-110' : 'hover:scale-110'
+                          }`}
+                          style={{ backgroundColor: c }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <p className="text-center text-[11px] text-gray-400 pb-[env(safe-area-inset-bottom)]">
+                  Hilang otomatis dalam 24 jam{statusType === 'media' && statusMediaFile?.type?.startsWith('video/') ? ' · Video maks 30 detik' : ''}
+                </p>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Status Viewer (Fullscreen) */}
+      <AnimatePresence>
+        {showStatusViewer && activeStatusGroup && activeStatusGroup.statuses[activeStatusIndex] && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black z-[60] flex flex-col"
+            style={{ paddingTop: 'env(safe-area-inset-top)' }}
+          >
+            {/* Progress bars */}
+            <div className="flex gap-1 px-4 pt-2 pb-1">
+              {activeStatusGroup.statuses.map((_, i) => (
+                <div key={i} className="flex-1 h-[3px] rounded-full bg-white/20 overflow-hidden">
+                  <div 
+                    className="h-full rounded-full bg-white"
+                    style={{
+                      width: i < activeStatusIndex ? '100%' : i === activeStatusIndex ? `${statusProgress}%` : '0%',
+                      transition: i === activeStatusIndex ? 'width 100ms linear' : 'none'
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+
+            {/* Header */}
+            <div className="flex items-center gap-3 px-4 py-2 flex-shrink-0">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white text-sm font-bold shadow-lg">
+                {activeStatusGroup.user?.avatar ? (
+                  <img
+                    src={`${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://127.0.0.1:3001'}${activeStatusGroup.user.avatar}`}
+                    alt="" className="w-full h-full rounded-full object-cover"
+                  />
+                ) : (
+                  activeStatusGroup.user?.name?.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase()
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-white font-semibold text-sm truncate">{activeStatusGroup.user?.name}</p>
+                <p className="text-white/50 text-xs">
+                  {activeStatusGroup.statuses[activeStatusIndex]?.created_at
+                    ? new Date(activeStatusGroup.statuses[activeStatusIndex].created_at).toLocaleString('id-ID', { hour: '2-digit', minute: '2-digit' })
+                    : ''}
+                </p>
+              </div>
+              <div className="flex items-center gap-0.5">
+                {activeStatusGroup.is_own && (
+                    <button
+                      onClick={() => deleteStatus(activeStatusGroup.statuses[activeStatusIndex].id)}
+                      className="p-2 text-white/60 hover:text-red-400 hover:bg-white/10 rounded-full transition-colors"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                )}
+                <button
+                  onClick={() => setShowStatusViewer(false)}
+                  className="p-2 text-white/60 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Status Content */}
+            {(() => {
+              const currentStatus = activeStatusGroup.statuses[activeStatusIndex];
+              const hasMedia = currentStatus?.media_path;
+              const mediaUrl = hasMedia
+                ? `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://127.0.0.1:3001'}/${currentStatus.media_path}`
+                : null;
+              const isVideo = hasMedia && (currentStatus.media_path.endsWith('.mp4') || currentStatus.media_path.endsWith('.webm') || currentStatus.media_path.endsWith('.mov'));
+
+              return (
+                <div
+                  className="flex-1 flex flex-col items-center justify-center relative overflow-hidden min-h-0"
+                  style={{ backgroundColor: hasMedia ? '#000' : (currentStatus?.background_color || '#059669') }}
+                >
+                  {/* Tap zones */}
+                  <button onClick={prevStatus} className="absolute left-0 top-0 w-1/3 h-full z-10" />
+                  <div 
+                    className="absolute left-1/3 top-0 w-1/3 h-full z-10"
+                    onTouchStart={() => setStatusPaused(true)}
+                    onTouchEnd={() => setStatusPaused(false)}
+                    onMouseDown={() => setStatusPaused(true)}
+                    onMouseUp={() => setStatusPaused(false)}
+                  />
+                  <button onClick={nextStatus} className="absolute right-0 top-0 w-1/3 h-full z-10" />
+
+                  {hasMedia ? (
+                    <>
+                      {isVideo ? (
+                        <video
+                          key={currentStatus.id}
+                          ref={statusVideoRef}
+                          src={mediaUrl}
+                          className="w-full h-full object-contain"
+                          autoPlay playsInline
+                        />
+                      ) : (
+                        <img
+                          src={mediaUrl}
+                          alt=""
+                          className="w-full h-full object-contain"
+                        />
+                      )}
+                      {currentStatus.content && (
+                        <div className="absolute bottom-0 left-0 right-0 z-20 px-4" style={{ paddingBottom: activeStatusGroup?.is_own ? 'max(1.5rem, env(safe-area-inset-bottom))' : '1.5rem' }}>
+                          <div className="bg-black/50 backdrop-blur-md rounded-2xl px-5 py-3 max-w-md mx-auto">
+                            <p className="text-white text-sm sm:text-base font-medium text-center leading-relaxed">
+                              {currentStatus.content}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="px-8 py-4">
+                      <p className="text-white text-xl sm:text-2xl font-bold text-center leading-relaxed max-w-md break-words drop-shadow-lg">
+                        {currentStatus?.content}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* Reply & Reaction bar (for other people's statuses) */}
+            {!activeStatusGroup.is_own && (
+              <div className="flex-shrink-0 bg-black/90 backdrop-blur-md border-t border-white/10" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
+                {/* Quick emoji reactions */}
+                <div className="flex items-center justify-center gap-3 px-4 pt-3 pb-1">
+                  {QUICK_EMOJIS.map(emoji => (
+                    <button
+                      key={emoji}
+                      onClick={() => replyToStatus(activeStatusGroup.statuses[activeStatusIndex].id, emoji, 'reaction')}
+                      disabled={statusReplying}
+                      className="text-2xl hover:scale-125 active:scale-90 transition-transform disabled:opacity-50"
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+                {/* Text reply input */}
+                <div className="flex items-center gap-2 px-4 pb-3 pt-1">
+                  <input
+                    ref={statusReplyRef}
+                    type="text"
+                    placeholder="Balas status..."
+                    value={statusReplyText}
+                    onChange={(e) => setStatusReplyText(e.target.value)}
+                    onFocus={() => setStatusPaused(true)}
+                    onBlur={() => setStatusPaused(false)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); replyToStatus(activeStatusGroup.statuses[activeStatusIndex].id, statusReplyText, 'reply'); } }}
+                    className="flex-1 bg-white/10 border border-white/20 text-white placeholder:text-white/40 rounded-full px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-400/50 focus:ring-1 focus:ring-emerald-400/30"
+                  />
+                  <button
+                    onClick={() => replyToStatus(activeStatusGroup.statuses[activeStatusIndex].id, statusReplyText, 'reply')}
+                    disabled={!statusReplyText.trim() || statusReplying}
+                    className="p-2.5 bg-emerald-500 hover:bg-emerald-600 disabled:bg-white/10 disabled:text-white/30 text-white rounded-full transition-all"
+                  >
+                    <Send className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Swipe-up viewers handle (for own statuses) */}
+            {activeStatusGroup.is_own && (
+              <div className="flex-shrink-0">
+                {/* Collapsed handle - tap or swipe up to expand */}
+                <button
+                  onClick={() => setShowViewersSheet(!showViewersSheet)}
+                  className="w-full bg-black/80 backdrop-blur-md border-t border-white/10 flex flex-col items-center py-2 active:bg-black/90 transition-colors"
+                  style={{ paddingBottom: showViewersSheet ? 0 : 'max(0.5rem, env(safe-area-inset-bottom))' }}
+                >
+                  <div className="w-10 h-1 rounded-full bg-white/30 mb-2" />
+                  <div className="flex items-center gap-2">
+                    <Eye className="w-3.5 h-3.5 text-emerald-400" />
+                    <span className="text-white/60 text-xs font-medium">
+                      {statusViewers.length > 0 ? `Dilihat oleh ${statusViewers.length} orang` : 'Belum ada yang melihat'}
+                    </span>
+                    <ChevronUp className={`w-3.5 h-3.5 text-white/40 transition-transform duration-200 ${showViewersSheet ? 'rotate-180' : ''}`} />
+                  </div>
+                </button>
+
+                {/* Expanded viewers list */}
+                <AnimatePresence>
+                  {showViewersSheet && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.25, ease: 'easeInOut' }}
+                      className="overflow-hidden bg-black/90 backdrop-blur-md"
+                      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+                    >
+                      <div className="max-h-52 overflow-y-auto">
+                        {statusViewers.length > 0 ? statusViewers.map(v => (
+                          <div key={v.id} className="px-4 py-2.5 flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-600 to-gray-700 flex items-center justify-center text-white text-[10px] font-bold">
+                              {v.name?.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase()}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-white text-sm font-medium truncate">{v.name}</p>
+                              <p className="text-white/40 text-[10px]">{v.viewed_at ? new Date(v.viewed_at).toLocaleString('id-ID', { hour: '2-digit', minute: '2-digit' }) : ''}</p>
+                            </div>
+                          </div>
+                        )) : (
+                          <div className="px-4 py-6 text-center">
+                            <Eye className="w-6 h-6 text-white/20 mx-auto mb-2" />
+                            <p className="text-white/40 text-xs">Belum ada yang melihat status ini</p>
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Modal Detail Informasi */}
       <AnimatePresence>

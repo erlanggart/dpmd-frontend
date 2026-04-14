@@ -1466,6 +1466,7 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
   const [showAllBumdes, setShowAllBumdes] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletingBumdes, setDeletingBumdes] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(null); // for document file delete
   
   // Document management states
   const [showDocumentModal, setShowDocumentModal] = useState(false);
@@ -1710,9 +1711,11 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
 
   // Delete file function for dashboard
   const deleteDocumentFile = async (filename, documentType, bumdesId = null) => {
-    if (!window.confirm(`Apakah Anda yakin ingin menghapus file "${filename}"? Tindakan ini tidak dapat dibatalkan.`)) {
-      return;
-    }
+    // Use a promise-based confirm via state
+    const confirmed = await new Promise(resolve => {
+      setDeleteConfirm({ filename, resolve });
+    });
+    if (!confirmed) return;
 
     try {
       const token = localStorage.getItem('expressToken');
@@ -2694,6 +2697,27 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
                     Hapus Data
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Document File Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl">
+            <div className="p-6 text-center">
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+                <FiTrash2 className="h-6 w-6 text-red-600" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">Konfirmasi Hapus File</h3>
+              <p className="text-sm text-gray-500 mb-6">
+                Apakah Anda yakin ingin menghapus file <span className="font-medium text-gray-900">"{deleteConfirm.filename}"</span>? Tindakan ini tidak dapat dibatalkan.
+              </p>
+              <div className="flex gap-3 justify-center">
+                <button onClick={() => { deleteConfirm.resolve(false); setDeleteConfirm(null); }} className="px-6 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors duration-300">Batal</button>
+                <button onClick={() => { deleteConfirm.resolve(true); setDeleteConfirm(null); }} className="px-6 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors duration-300">Hapus File</button>
               </div>
             </div>
           </div>

@@ -21,12 +21,16 @@ import {
 	LuList,
 	LuEye,
 	LuShare2,
+	LuSmile,
+	LuHeart,
 } from 'react-icons/lu';
 import { useSearchParams } from 'react-router-dom';
 import api from '../../../api';
 import Swal from 'sweetalert2';
 import JadwalKegiatanModal from '../../../components/JadwalKegiatanModal';
 import JadwalKalenderView from '../../../components/JadwalKalenderView';
+
+const QUICK_EMOJIS = ['👍', '❤️', '🔥', '👏', '💪', '✨'];
 
 const JadwalKegiatanPage = () => {
 	const [searchParams] = useSearchParams();
@@ -76,6 +80,10 @@ const JadwalKegiatanPage = () => {
 	
 	const [viewMode, setViewMode] = useState(getDefaultViewMode()); // 'table', 'grid', or 'calendar'
 	const [showMobileFilters, setShowMobileFilters] = useState(false); // Toggle filter visibility on mobile
+	const [showViewersModal, setShowViewersModal] = useState(false);
+	const [viewersList, setViewersList] = useState([]);
+	const [viewersJadwalId, setViewersJadwalId] = useState(null);
+	const [showEmojiPicker, setShowEmojiPicker] = useState(null); // jadwal id or null
 	const itemsPerPage = 5;
 
 	// Form state
@@ -324,6 +332,7 @@ const JadwalKegiatanPage = () => {
 	const handleViewDetail = (jadwal) => {
 		setSelectedJadwal(jadwal);
 		setShowDetailModal(true);
+		trackView(jadwal.id);
 	};
 
 	// Handle apply filters - immediately apply all filters when button clicked
@@ -342,6 +351,57 @@ const JadwalKegiatanPage = () => {
 		setFilterTanggal(getTodayDate());
 		setCurrentPage(1);
 	};
+
+	// Track view when detail modal opens
+	const trackView = useCallback(async (jadwalId) => {
+		try {
+			const res = await api.post(`/jadwal-kegiatan/${jadwalId}/view`);
+			if (res.data.success) {
+				setJadwals(prev => prev.map(j => j.id === jadwalId ? { ...j, view_count: res.data.data.view_count } : j));
+			}
+		} catch (error) {
+			console.error('Error tracking view:', error);
+		}
+	}, []);
+
+	// Open viewers modal
+	const openViewers = useCallback(async (jadwalId) => {
+		try {
+			setViewersJadwalId(jadwalId);
+			setShowViewersModal(true);
+			const res = await api.get(`/jadwal-kegiatan/${jadwalId}/viewers`);
+			if (res.data.success) setViewersList(res.data.data);
+		} catch (error) {
+			console.error('Error loading viewers:', error);
+		}
+	}, []);
+
+	// Toggle emoji reaction
+	const toggleReaction = useCallback(async (jadwalId, emoji) => {
+		try {
+			const jadwal = jadwals.find(j => j.id === jadwalId);
+			const existing = jadwal?.reactions?.find(r => r.emoji === emoji && r.reacted);
+			
+			let res;
+			if (existing) {
+				res = await api.delete(`/jadwal-kegiatan/${jadwalId}/reactions`, { data: { emoji } });
+			} else {
+				res = await api.post(`/jadwal-kegiatan/${jadwalId}/reactions`, { emoji });
+			}
+			
+			if (res.data.success) {
+				const userId = JSON.parse(localStorage.getItem('user') || '{}').id;
+				setJadwals(prev => prev.map(j => j.id === jadwalId ? {
+					...j, reactions: res.data.data.map(r => ({
+						...r, reacted: r.users.some(u => String(u.id) === String(userId))
+					}))
+				} : j));
+			}
+			setShowEmojiPicker(null);
+		} catch (error) {
+			console.error('Error toggling reaction:', error);
+		}
+	}, [jadwals]);
 
 	// Format date
 	const formatDate = (dateString) => {
@@ -709,6 +769,9 @@ const JadwalKegiatanPage = () => {
 												<th className="px-4 py-3.5 text-center text-xs font-bold text-gray-700 uppercase tracking-wider hidden md:table-cell">
 													Prioritas
 												</th>
+												<th className="px-4 py-3.5 text-center text-xs font-bold text-gray-700 uppercase tracking-wider hidden lg:table-cell">
+													Respon
+												</th>
 												<th className="px-4 py-3.5 text-center text-xs font-bold text-gray-700 uppercase tracking-wider sticky right-0 bg-gradient-to-r from-teal-50 to-cyan-50">
 													Aksi
 												</th>
@@ -761,6 +824,39 @@ const JadwalKegiatanPage = () => {
 														</td>
 														<td className="px-4 py-4 text-center hidden md:table-cell">
 															{getPriorityBadge(jadwal.prioritas)}
+														</td>
+														<td className="px-4 py-4 hidden lg:table-cell">
+															<div className="flex items-center justify-center gap-2">
+																<div className="flex items-center gap-0.5 flex-wrap justify-center">
+																	{(jadwal.reactions || []).slice(0, 3).map(r => (
+																		<button key={r.emoji} onClick={() => toggleReaction(jadwal.id, r.emoji)}
+																			className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs border transition-all ${
+																				r.reacted ? 'bg-blue-50 border-blue-300' : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+																			}`}>
+																			<span>{r.emoji}</span><span className="font-medium text-gray-600">{r.count}</span>
+																		</button>
+																	))}
+																	<div className="relative">
+																		<button onClick={() => setShowEmojiPicker(showEmojiPicker === `tbl-${jadwal.id}` ? null : `tbl-${jadwal.id}`)}
+																			className="p-1 rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
+																			<LuSmile className="w-3.5 h-3.5" />
+																		</button>
+																		{showEmojiPicker === `tbl-${jadwal.id}` && (
+																			<div className="absolute bottom-full right-0 mb-1 bg-white rounded-xl shadow-lg border border-gray-200 p-2 flex gap-1 z-50">
+																				{QUICK_EMOJIS.map(e => (
+																					<button key={e} onClick={() => toggleReaction(jadwal.id, e)}
+																						className="hover:bg-gray-100 rounded-lg p-1.5 text-base transition-colors">{e}</button>
+																				))}
+																			</div>
+																		)}
+																	</div>
+																</div>
+																{jadwal.view_count > 0 && (
+																	<button onClick={() => openViewers(jadwal.id)} className="flex items-center gap-0.5 text-xs text-gray-400 hover:text-teal-600" title="Lihat viewers">
+																		<LuEye className="w-3.5 h-3.5" /><span>{jadwal.view_count}</span>
+																	</button>
+																)}
+															</div>
 														</td>
 														<td className="px-4 py-4 sticky right-0 bg-white">
 															<div className="flex items-center justify-center gap-1.5">
@@ -887,6 +983,45 @@ const JadwalKegiatanPage = () => {
 														<p className="text-xs text-gray-500 line-clamp-2">{jadwal.deskripsi}</p>
 													</div>
 												)}
+
+												{/* Reactions & Views Bar */}
+												<div className="pt-2 border-t border-gray-100">
+													<div className="flex items-center justify-between gap-2">
+														<div className="flex items-center gap-1 flex-wrap">
+															{(jadwal.reactions || []).map(r => (
+																<button key={r.emoji} onClick={() => toggleReaction(jadwal.id, r.emoji)}
+																	className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs border transition-all ${
+																		r.reacted ? 'bg-blue-50 border-blue-300 text-blue-700' : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+																	}`}
+																	title={r.users?.map(u => u.name).join(', ')}>
+																	<span>{r.emoji}</span>
+																	<span className="font-medium">{r.count}</span>
+																</button>
+															))}
+															<div className="relative">
+																<button onClick={() => setShowEmojiPicker(showEmojiPicker === jadwal.id ? null : jadwal.id)}
+																	className="p-1 rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors" title="Tambah reaksi">
+																	<LuSmile className="w-3.5 h-3.5" />
+																</button>
+																{showEmojiPicker === jadwal.id && (
+																	<div className="absolute bottom-full left-0 mb-1 bg-white rounded-xl shadow-lg border border-gray-200 p-2 flex gap-1 z-50">
+																		{QUICK_EMOJIS.map(e => (
+																			<button key={e} onClick={() => toggleReaction(jadwal.id, e)}
+																				className="hover:bg-gray-100 rounded-lg p-1.5 text-base transition-colors">{e}</button>
+																		))}
+																	</div>
+																)}
+															</div>
+														</div>
+														{jadwal.view_count > 0 && (
+															<button onClick={() => openViewers(jadwal.id)}
+																className="flex items-center gap-1 text-xs text-gray-400 hover:text-teal-600 transition-colors flex-shrink-0">
+																<LuEye className="w-3.5 h-3.5" />
+																<span>{jadwal.view_count}</span>
+															</button>
+														)}
+													</div>
+												</div>
 											</div>
 
 											{/* Card Footer - Actions */}
@@ -1231,7 +1366,33 @@ const JadwalKegiatanPage = () => {
 
 						{/* Footer */}
 						<div className="bg-gray-50 p-6 rounded-b-2xl flex flex-col sm:flex-row gap-3 justify-end border-t border-gray-200">
-							<button
+							{/* Reactions bar in detail */}
+							<div className="flex items-center gap-2 flex-1 flex-wrap">
+								{(selectedJadwal.reactions || []).map(r => (
+									<button key={r.emoji} onClick={() => toggleReaction(selectedJadwal.id, r.emoji)}
+										className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-sm border transition-all ${
+											r.reacted ? 'bg-blue-50 border-blue-300 text-blue-700' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-100'
+										}`}
+										title={r.users?.map(u => u.name).join(', ')}>
+										<span>{r.emoji}</span>
+										<span className="font-semibold">{r.count}</span>
+									</button>
+								))}
+								{QUICK_EMOJIS.filter(e => !(selectedJadwal.reactions || []).some(r => r.emoji === e)).slice(0, 3).map(e => (
+									<button key={e} onClick={() => toggleReaction(selectedJadwal.id, e)}
+										className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-sm border border-dashed border-gray-300 text-gray-400 hover:bg-gray-50 hover:text-gray-600 transition-all">
+										<span>{e}</span>
+									</button>
+								))}
+								{selectedJadwal.view_count > 0 && (
+									<button onClick={() => openViewers(selectedJadwal.id)}
+										className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-teal-600 ml-auto transition-colors">
+										<LuEye className="w-4 h-4" /><span>{selectedJadwal.view_count} dilihat</span>
+									</button>
+								)}
+							</div>
+							<div className="flex gap-3 flex-shrink-0">
+								<button
 								onClick={() => {
 									setShowDetailModal(false);
 									setSelectedJadwal(null);
@@ -1251,6 +1412,40 @@ const JadwalKegiatanPage = () => {
 									✏️ Edit Jadwal
 								</button>
 							)}
+							</div>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{/* Viewers Modal */}
+			{showViewersModal && (
+				<div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onClick={() => setShowViewersModal(false)}>
+					<div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[70vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+						<div className="bg-gradient-to-r from-teal-600 to-cyan-600 px-5 py-4 flex items-center justify-between">
+							<div className="flex items-center gap-2 text-white">
+								<LuEye className="w-5 h-5" />
+								<h3 className="font-bold text-lg">Dilihat oleh</h3>
+								<span className="bg-white/20 rounded-full px-2 py-0.5 text-sm">{viewersList.length}</span>
+							</div>
+							<button onClick={() => setShowViewersModal(false)} className="p-1 hover:bg-white/20 rounded-lg transition-colors">
+								<LuX className="w-5 h-5 text-white" />
+							</button>
+						</div>
+						<div className="overflow-y-auto max-h-[50vh] divide-y divide-gray-100">
+							{viewersList.length === 0 ? (
+								<div className="text-center py-10 text-gray-400 text-sm">Belum ada yang melihat</div>
+							) : viewersList.map(v => (
+								<div key={v.id} className="flex items-center gap-3 px-5 py-3">
+									<div className="w-9 h-9 rounded-full bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+										{v.name?.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase()}
+									</div>
+									<div className="flex-1 min-w-0">
+										<p className="text-sm font-semibold text-gray-800 truncate">{v.name}</p>
+										<p className="text-xs text-gray-400">{v.role} · {v.viewed_at ? new Date(v.viewed_at).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}</p>
+									</div>
+								</div>
+							))}
 						</div>
 					</div>
 				</div>
@@ -1260,4 +1455,3 @@ const JadwalKegiatanPage = () => {
 };
 
 export default JadwalKegiatanPage;
-

@@ -43,6 +43,18 @@ const useResponsive = () => {
 // ============================================
 // ROLE CONFIGURATION
 // ============================================
+const ROLE_DISPLAY_MAP = {
+	pegawai: 'Pegawai DPMD',
+	kepala_bidang: (u) => {
+		const m = { 3: 'Kabid SPKED', 4: 'Kabid KKD', 5: 'Kabid PMD', 6: 'Kabid Pemdes' };
+		return m[u?.bidang_id] || 'Kepala Bidang';
+	},
+	kepala_dinas: 'Kepala Dinas',
+	sekretaris_dinas: (u) => u?.sub_bidang ? `Sekdis - ${u.sub_bidang}` : 'Sekretaris Dinas',
+	ketua_tim: (u) => u?.sub_bidang ? `Ketim ${u.sub_bidang}` : 'Ketua Tim',
+	superadmin: 'Superadmin',
+};
+
 const ROLE_CONFIG = {
 	pegawai: {
 		theme: {
@@ -59,7 +71,10 @@ const ROLE_CONFIG = {
 			menuBorder: 'border-orange-100',
 		},
 		basePath: '/dpmd',
-		displayName: 'Pegawai',
+		displayName: (user) => {
+			const fn = ROLE_DISPLAY_MAP[user?.role] || ROLE_DISPLAY_MAP.pegawai;
+			return typeof fn === 'function' ? fn(user) : fn;
+		},
 		allowedRoles: ['pegawai', 'kepala_bidang', 'ketua_tim', 'kepala_dinas', 'superadmin', 'sekretaris_dinas'],
 		showBidangNav: true,
 	},
@@ -201,11 +216,13 @@ const DPMDStaffLayout = () => {
 	const [unreadCount, setUnreadCount] = React.useState(0);
 	const [hoveredItem, setHoveredItem] = React.useState(null);
 	const [showQuickAction, setShowQuickAction] = React.useState(false);
+	const [hideBottomNav, setHideBottomNav] = React.useState(false);
 	const [bidangSubmenuOpen, setBidangSubmenuOpen] = React.useState(false);
 	const [user, setUser] = React.useState(JSON.parse(localStorage.getItem("user") || "{}"));
 	
 	// Auto-detect roleType from user's actual role
-	const roleType = authUser?.role || user?.role || 'pegawai';
+	// All internal DPMD roles use unified pegawai layout
+	const roleType = 'pegawai';
 	const navigate = useNavigate();
 	const location = useLocation();
 	const { confirmDialog, showConfirm } = useConfirm();
@@ -858,14 +875,14 @@ const DPMDStaffLayout = () => {
 				className={`min-h-screen transition-all duration-300 ${
 					isDesktop 
 						? isSidebarCollapsed ? 'ml-20' : 'ml-64'
-						: 'pb-20'
+						: hideBottomNav ? '' : 'pb-20'
 				}`}
 			>
-				<Outlet />
+				<Outlet context={{ setHideBottomNav }} />
 			</main>
 
 			{/* Bottom Navigation - Mobile Only - Premium Floating Pill */}
-			{!isDesktop && (() => {
+			{!isDesktop && !hideBottomNav && (() => {
 				const isMessagingPage = location.pathname.startsWith('/dpmd/pesan');
 				return (
 				<nav className="fixed bottom-4 left-5 right-5 z-50">

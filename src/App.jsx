@@ -259,30 +259,7 @@ const DesaAparaturExternalPage = lazy(
 const ProfilDesaPage = lazy(() => import("./pages/desa/ProfilDesaPage"));
 const DesaSettings = lazy(() => import("./pages/desa/DesaSettings"));
 const DesaBankeuPage = lazy(() => import("./pages/desa/bankeu/DesaBankeuPage"));
-// Leadership layouts - Using unified DPMDStaffLayout
-const KepalaDinasLayout = lazy(() =>
-  import("./layouts/DPMDStaffLayout").then((m) => ({
-    default: m.KepalaDinasLayout,
-  })),
-);
-const KepalaBidangLayout = lazy(() =>
-  import("./layouts/DPMDStaffLayout").then((m) => ({
-    default: m.KepalaBidangLayout,
-  })),
-);
-const SekretarisDinasLayout = lazy(() =>
-  import("./layouts/DPMDStaffLayout").then((m) => ({
-    default: m.SekretarisDinasLayout,
-  })),
-);
-const KetuaTimLayout = lazy(() =>
-  import("./layouts/DPMDStaffLayout").then((m) => ({
-    default: m.KetuaTimLayout,
-  })),
-);
-const KetuaTimDashboard = lazy(
-  () => import("./pages/ketua-tim/KetuaTimDashboard"),
-);
+// Leadership layouts removed - all internal roles use unified DPMDStaffLayout
 const SuperadminLayout = lazy(
   () => import("./layouts/SuperadminLayout"),
 );

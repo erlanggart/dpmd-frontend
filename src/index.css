@@ -393,3 +393,29 @@
 .leaflet-container .leaflet-control-attribution a {
 	color: rgba(255, 255, 255, 0.4) !important;
 }
+/* ===== EMOJI PICKER FIX ===== */
+aside.EmojiPickerReact .epr-category-nav,
+.EmojiPickerReact .epr-category-nav,
+nav.epr-category-nav,
+[class*="epr-category-nav"] {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        padding: 2px 4px !important;
+        gap: 0 !important;
+}
+aside.EmojiPickerReact .epr-category-nav::-webkit-scrollbar,
+.EmojiPickerReact .epr-category-nav::-webkit-scrollbar,
+[class*="epr-category-nav"]::-webkit-scrollbar {
+        display: none;
+}
+aside.EmojiPickerReact .epr-cat-btn,
+.EmojiPickerReact .epr-cat-btn,
+[class*="epr-category-nav"] button {
+        flex-shrink: 0 !important;
+        width: 30px !important;
+        height: 30px !important;
+        min-width: 30px !important;
+        padding: 4px !important;
+}
