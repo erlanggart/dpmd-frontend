@@ -165,7 +165,8 @@ const SuratMasuk = () => {
 
             {/* Form Card */}
             <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-blue-100">
-              <div className="p-8">
+              {/* Tambahkan padding-bottom ekstra agar tombol submit tidak tertutup bottom bar di mobile */}
+              <div className="p-8 pb-28" style={{ paddingBottom: 'max(7rem, env(safe-area-inset-bottom, 0px))' }}>
                 <form onSubmit={handleSubmit} className="space-y-6">
                   {/* Row 1: Asal Surat & Nomor Surat */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

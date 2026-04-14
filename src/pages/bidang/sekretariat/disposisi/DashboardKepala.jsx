@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import MultiSelectDropdown from '../../../../components/MultiSelectDropdown';
 import Swal from 'sweetalert2';
 import api from "../../../../api";
 
@@ -6,9 +7,20 @@ const DashboardKepala = () => {
   const [suratMasuk, setSuratMasuk] = useState([]);
   const [selectedSurat, setSelectedSurat] = useState(null);
   const [disposisiForm, setDisposisiForm] = useState({
-    isi_disposisi: '',
+    instruksi: [], // array of string
     catatan_kepala: ''
   });
+
+  // Daftar instruksi yang bisa dipilih
+  const INSTRUKSI_OPTIONS = [
+    { label: 'Hadiri', value: 'Hadiri' },
+    { label: 'Tindak Lanjut', value: 'Tindak Lanjut' },
+    { label: 'Arsipkan', value: 'Arsipkan' },
+    { label: 'Koordinasikan', value: 'Koordinasikan' },
+    { label: 'Laporkan', value: 'Laporkan' },
+    { label: 'Catat', value: 'Catat' },
+    { label: 'Lainnya', value: 'Lainnya' },
+  ];
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -31,8 +43,15 @@ const DashboardKepala = () => {
 
   const handleViewSurat = (surat) => {
     setSelectedSurat(surat);
+    let instruksiArr = [];
+    if (Array.isArray(surat.disposisi_kepala?.instruksi)) {
+      instruksiArr = surat.disposisi_kepala.instruksi;
+    } else if (typeof surat.disposisi_kepala?.isi_disposisi === 'string') {
+      // fallback legacy: split by koma
+      instruksiArr = surat.disposisi_kepala.isi_disposisi.split(',').map(s => s.trim()).filter(Boolean);
+    }
     setDisposisiForm({
-      isi_disposisi: surat.disposisi_kepala?.isi_disposisi || '',
+      instruksi: instruksiArr,
       catatan_kepala: surat.disposisi_kepala?.catatan_kepala || ''
     });
   };
@@ -44,12 +63,16 @@ const DashboardKepala = () => {
       [name]: value
     }));
   };
+  // Untuk MultiSelectDropdown
+  const handleInstruksiChange = (vals) => {
+    setDisposisiForm(prev => ({ ...prev, instruksi: vals }));
+  };
 
   const handleSubmitDisposisi = async (e) => {
     e.preventDefault();
     
-    if (!disposisiForm.isi_disposisi.trim()) {
-      Swal.fire('Error', 'Isi disposisi tidak boleh kosong!', 'error');
+    if (!disposisiForm.instruksi || disposisiForm.instruksi.length === 0) {
+      Swal.fire('Error', 'Pilih minimal satu instruksi!', 'error');
       return;
     }
 
@@ -57,7 +80,7 @@ const DashboardKepala = () => {
 
     try {
       const response = await api.post(`/disposisi/kepala-dinas/${selectedSurat.id}/disposisi`, {
-        isi_disposisi: disposisiForm.isi_disposisi,
+        instruksi: disposisiForm.instruksi, // array
         catatan_kepala: disposisiForm.catatan_kepala
       });
 
@@ -73,7 +96,7 @@ const DashboardKepala = () => {
         fetchSuratMasuk();
         setSelectedSurat(null);
         setDisposisiForm({
-          isi_disposisi: '',
+          instruksi: [],
           catatan_kepala: ''
         });
       }
@@ -225,18 +248,13 @@ const DashboardKepala = () => {
 
           <form onSubmit={handleSubmitDisposisi} className="disposisi-form">
             <div className="form-group">
-              <label htmlFor="isi_disposisi">
-                <i className="fas fa-clipboard-list"></i>
-                Isi Disposisi untuk Sekretaris Dinas *
-              </label>
-              <textarea
-                id="isi_disposisi"
-                name="isi_disposisi"
-                value={disposisiForm.isi_disposisi}
-                onChange={handleDisposisiChange}
-                placeholder="Tuliskan disposisi yang akan diberikan kepada Sekretaris Dinas..."
-                rows="4"
-                required
+              <MultiSelectDropdown
+                label={<span><i className="fas fa-clipboard-list"></i> Instruksi untuk Sekretaris Dinas *</span>}
+                options={INSTRUKSI_OPTIONS}
+                value={disposisiForm.instruksi}
+                onChange={handleInstruksiChange}
+                placeholder="Pilih instruksi (bisa lebih dari satu)"
+                name="instruksi"
               />
             </div>
 

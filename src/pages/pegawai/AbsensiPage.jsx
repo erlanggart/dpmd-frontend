@@ -1205,8 +1205,8 @@ const DinasLuarModal = ({ onClose, onConfirm }) => {
 		<>
 			<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50" onClick={onClose} />
 			<motion.div {...slideUp} className="fixed bottom-0 left-0 right-0 z-50">
-				<div className="bg-white rounded-t-3xl shadow-xl">
-					<div className="max-w-lg mx-auto p-5">
+				<div className="bg-white rounded-t-3xl shadow-xl" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+					<div className="max-w-lg mx-auto p-5 pb-28">
 						<div className="w-10 h-1 bg-slate-200 rounded-full mx-auto mb-5" />
 						<div className="flex items-center gap-3 mb-4">
 							<div className="w-10 h-10 bg-violet-50 rounded-xl flex items-center justify-center overflow-hidden">

@@ -183,17 +183,15 @@ const RiwayatSurat = () => {
                           Tarik
                         </button>
                       )}
-                      {(item.status === 'ditarik' || item.status === 'pending') && (
-                        <button
-                          className="px-3 py-1.5 rounded-lg bg-red-500 text-white hover:bg-red-600 text-xs font-semibold shadow-sm transition-colors flex items-center gap-1"
-                          onClick={() => handleHapusSurat(surat?.id)}
-                          disabled={!surat?.id}
-                          title="Hapus surat permanen"
-                        >
-                          <i className="fas fa-trash-alt text-[10px]"></i>
-                          Hapus
-                        </button>
-                      )}
+                      <button
+                        className="px-3 py-1.5 rounded-lg bg-red-500 text-white hover:bg-red-600 text-xs font-semibold shadow-sm transition-colors flex items-center gap-1"
+                        onClick={() => handleHapusSurat(surat?.id)}
+                        disabled={!surat?.id}
+                        title="Hapus surat permanen"
+                      >
+                        <i className="fas fa-trash-alt text-[10px]"></i>
+                        Hapus
+                      </button>
                     </div>
                   </td>
                 </tr>
