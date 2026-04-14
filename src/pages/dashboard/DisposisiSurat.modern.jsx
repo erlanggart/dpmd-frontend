@@ -208,25 +208,42 @@ export default function DisposisiSuratModern() {
 
 	// ─── Riwayat: Edit & Kirim Ulang ────────────────────────────────
 	const handleEditDisposisi = async (disposisi) => {
+		// Parse existing instructions if they are JSON string
+		let existingInstruksi = [];
+		try {
+			existingInstruksi = JSON.parse(disposisi.instruksi);
+			if (!Array.isArray(existingInstruksi)) existingInstruksi = [disposisi.instruksi];
+		} catch (e) {
+			existingInstruksi = [disposisi.instruksi];
+		}
+
 		const { value: formValues } = await Swal.fire({
 			title: 'Edit & Kirim Ulang Disposisi',
+			width: '450px',
 			html: `
-				<div class="text-left space-y-3">
-					<div>
-						<label class="block text-xs font-semibold text-gray-500 mb-1">Surat</label>
-						<p class="text-sm font-medium text-gray-800">${disposisi.surat?.perihal || '-'}</p>
+				<div class="text-left space-y-4">
+					<div class="p-3 bg-blue-50 rounded-lg border border-blue-100 mb-4">
+						<label class="block text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-1">Surat</label>
+						<p class="text-sm font-bold text-gray-800 line-clamp-2">${disposisi.surat?.perihal || '-'}</p>
 					</div>
+
 					<div>
-						<label class="block text-xs font-semibold text-gray-500 mb-1">Catatan</label>
-						<textarea id="swal-catatan" class="w-full px-3 py-2 border rounded-lg text-sm" rows="3" placeholder="Catatan disposisi...">${disposisi.catatan || ''}</textarea>
+						<label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Instruksi Disposisi</label>
+						<div class="grid grid-cols-2 gap-2 p-3 bg-gray-50 rounded-xl border border-gray-100">
+							${INSTRUKSI_OPTIONS.map(i => `
+								<label class="flex items-center gap-2 p-2 hover:bg-white rounded-lg cursor-pointer transition-all border border-transparent hover:border-blue-100 group">
+									<input type="checkbox" name="swal-instruksi" value="${i.value}" 
+										${existingInstruksi.includes(i.value) ? 'checked' : ''} 
+										class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+									<span class="text-xs font-medium text-gray-700 group-hover:text-blue-600">${i.label}</span>
+								</label>
+							`).join('')}
+						</div>
 					</div>
+
 					<div>
-						<label class="block text-xs font-semibold text-gray-500 mb-1">Instruksi</label>
-						<select id="swal-instruksi" class="w-full px-3 py-2 border rounded-lg text-sm">
-							${INSTRUKSI_OPTIONS.map(i => 
-								`<option value="${i.value}" ${disposisi.instruksi === i.value ? 'selected' : ''}>${i.label}</option>`
-							).join('')}
-						</select>
+						<label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Catatan Tambahan</label>
+						<textarea id="swal-catatan" class="w-full px-4 py-3 border-2 border-gray-100 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-gray-50/50" rows="3" placeholder="Masukkan catatan disposisi...">${disposisi.catatan || ''}</textarea>
 					</div>
 				</div>
 			`,
@@ -236,10 +253,20 @@ export default function DisposisiSuratModern() {
 			confirmButtonText: 'Kirim Ulang',
 			cancelButtonText: 'Batal',
 			focusConfirm: false,
-			preConfirm: () => ({
-				catatan: document.getElementById('swal-catatan').value,
-				instruksi: document.getElementById('swal-instruksi').value,
-			}),
+			preConfirm: () => {
+				const checkedInstruksi = Array.from(document.querySelectorAll('input[name="swal-instruksi"]:checked'))
+					.map(input => input.value);
+				
+				if (checkedInstruksi.length === 0) {
+					Swal.showValidationMessage('Pilih setidaknya satu instruksi');
+					return false;
+				}
+
+				return {
+					catatan: document.getElementById('swal-catatan').value,
+					instruksi: checkedInstruksi,
+				};
+			},
 		});
 
 		if (formValues) {

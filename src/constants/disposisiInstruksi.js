@@ -51,11 +51,28 @@ export const INSTRUKSI_BADGES = {
   lapor_hasilnya: { bg: 'bg-indigo-100', text: 'text-indigo-800' },
 };
 
+const safeParseInstruksi = (value) => {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [value];
+  } catch(e) {
+    return value.includes(',') ? value.split(',').map(s=>s.trim()) : [value];
+  }
+};
+
 export const getInstruksiLabel = (value) => {
-  const opt = INSTRUKSI_OPTIONS.find(o => o.value === value);
-  return opt ? opt.label : (value || '-').replace(/_/g, ' ');
+  const arr = safeParseInstruksi(value);
+  if (arr.length === 0) return '-';
+  const labels = arr.map(v => {
+    const opt = INSTRUKSI_OPTIONS.find(o => o.value === v);
+    return opt ? opt.label : (v || '-').replace(/_/g, ' ');
+  });
+  return labels.join(' • ');
 };
 
 export const getInstruksiBadgeClass = (value) => {
-  return INSTRUKSI_BADGES[value] || { bg: 'bg-gray-100', text: 'text-gray-700' };
+  const arr = safeParseInstruksi(value);
+  const first = arr[0] || 'laksanakan';
+  return INSTRUKSI_BADGES[first] || { bg: 'bg-gray-100', text: 'text-gray-700' };
 };

@@ -6,16 +6,30 @@ const SekretarisDinas = () => {
   const [loading, setLoading] = useState(true);
   const [selectedDisposisi, setSelectedDisposisi] = useState(null);
   const [showDisposisiModal, setShowDisposisiModal] = useState(false);
+  const [users, setUsers] = useState([]);
   const [disposisiData, setDisposisiData] = useState({
-    tujuan: '',
-    instruksi: '',
+    tujuan: [], // Multiple user IDs
+    instruksi: [], // Multiple instructions
     batas_waktu: '',
     catatan: ''
   });
 
   useEffect(() => {
     fetchDaftarDisposisi();
+    fetchAvailableUsers();
   }, []);
+
+  const fetchAvailableUsers = async () => {
+    try {
+      const response = await fetch('/api/disposisi/available-users');
+      const result = await response.json();
+      if (result.success) {
+        setUsers(result.data);
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    }
+  };
 
   const fetchDaftarDisposisi = async () => {
     try {
@@ -41,7 +55,10 @@ const SekretarisDinas = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(disposisiData)
+        body: JSON.stringify({
+          ...disposisiData,
+          ke_user_id: disposisiData.tujuan // Backend expects ke_user_id
+        })
       });
 
       const result = await response.json();
@@ -51,8 +68,8 @@ const SekretarisDinas = () => {
         setShowDisposisiModal(false);
         setSelectedDisposisi(null);
         setDisposisiData({
-          tujuan: '',
-          instruksi: '',
+          tujuan: [],
+          instruksi: [],
           batas_waktu: '',
           catatan: ''
         });
@@ -343,40 +360,63 @@ const SekretarisDinas = () => {
             </div>
             <div className="modal-body">
               <div className="form-section">
-                <h4>Instruksi dari Kepala Dinas:</h4>
-                <div className="original-instruction">
+                <h4 className="text-sm font-bold text-gray-700 mb-2">Instruksi dari Kepala Dinas:</h4>
+                <div className="original-instruction p-3 bg-blue-50 rounded-lg text-blue-800 border-l-4 border-blue-500 italic mb-4">
                   {selectedDisposisi.instruksi}
                 </div>
               </div>
 
               <div className="form-group">
-                <label>Teruskan ke Bidang:</label>
-                <select 
-                  value={disposisiData.tujuan}
-                  onChange={(e) => setDisposisiData({...disposisiData, tujuan: e.target.value})}
-                  className="form-control"
-                >
-                  <option value="">Pilih Bidang</option>
-                  <option value="kepala_bidang_pemerintahan">Kepala Bidang Pemerintahan</option>
-                  <option value="kepala_bidang_kesra">Kepala Bidang Kesejahteraan Rakyat</option>
-                  <option value="kepala_bidang_ekonomi">Kepala Bidang Ekonomi</option>
-                  <option value="kepala_bidang_fisik">Kepala Bidang Fisik dan Prasarana</option>
-                </select>
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  Teruskan ke Bidang / Staff (Pilih satu atau lebih) <span className="text-red-500">*</span>
+                </label>
+                <div className="checklist-container border-2 border-gray-200 rounded-xl p-3 bg-gray-50 max-h-40 overflow-y-auto">
+                  {users.map((u) => (
+                    <label key={u.id} className="flex items-center gap-3 p-2 hover:bg-white rounded-lg cursor-pointer transition-colors mb-1">
+                      <input 
+                        type="checkbox"
+                        checked={disposisiData.tujuan.includes(u.id)}
+                        onChange={(e) => {
+                          const newTujuan = e.target.checked 
+                            ? [...disposisiData.tujuan, u.id]
+                            : disposisiData.tujuan.filter(id => id !== u.id);
+                          setDisposisiData({...disposisiData, tujuan: newTujuan});
+                        }}
+                        className="w-4 h-4 text-purple-600 rounded"
+                      />
+                      <span className="text-sm font-medium">{u.name} <span className="text-gray-400 capitalize">- {u.role?.replace(/_/g, ' ')}</span></span>
+                    </label>
+                  ))}
+                  {users.length === 0 && <p className="text-xs text-gray-500 italic">Memuat daftar penerima...</p>}
+                </div>
               </div>
 
-              <div className="form-group">
-                <label>Instruksi Tambahan:</label>
-                <textarea 
-                  value={disposisiData.instruksi}
-                  onChange={(e) => setDisposisiData({...disposisiData, instruksi: e.target.value})}
-                  className="form-control"
-                  rows="4"
-                  placeholder="Tambahkan instruksi khusus untuk bidang terkait..."
-                />
+              <div className="form-group mt-4">
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  Instruksi Tambahan (Pilih satu atau lebih) <span className="text-red-500">*</span>
+                </label>
+                <div className="checklist-container border-2 border-gray-200 rounded-xl p-3 bg-gray-50 max-h-40 overflow-y-auto">
+                  {['Tindak lanjuti', 'Selesaikan segera', 'Koordinasikan dengan bidang lain', 'Siapkan jawaban', 'Simpan/Arsipkan'].map((ins) => (
+                    <label key={ins} className="flex items-center gap-3 p-2 hover:bg-white rounded-lg cursor-pointer transition-colors mb-1">
+                      <input 
+                        type="checkbox"
+                        checked={disposisiData.instruksi.includes(ins)}
+                        onChange={(e) => {
+                          const newIns = e.target.checked 
+                            ? [...disposisiData.instruksi, ins]
+                            : disposisiData.instruksi.filter(i => i !== ins);
+                          setDisposisiData({...disposisiData, instruksi: newIns});
+                        }}
+                        className="w-4 h-4 text-blue-600 rounded"
+                      />
+                      <span className="text-sm font-medium">{ins}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
 
-              <div className="form-group">
-                <label>Batas Waktu:</label>
+              <div className="form-group mt-4">
+                <label className="block text-sm font-bold text-gray-700 mb-2">Batas Waktu:</label>
                 <input 
                   type="date"
                   value={disposisiData.batas_waktu}
@@ -386,13 +426,13 @@ const SekretarisDinas = () => {
                 />
               </div>
 
-              <div className="form-group">
-                <label>Catatan:</label>
+              <div className="form-group mt-4">
+                <label className="block text-sm font-bold text-gray-700 mb-2">Catatan:</label>
                 <textarea 
                   value={disposisiData.catatan}
                   onChange={(e) => setDisposisiData({...disposisiData, catatan: e.target.value})}
                   className="form-control"
-                  rows="3"
+                  rows="2"
                   placeholder="Catatan tambahan untuk bidang..."
                 />
               </div>
@@ -401,7 +441,7 @@ const SekretarisDinas = () => {
               <button 
                 className="btn-primary"
                 onClick={handleTeruskanDisposisi}
-                disabled={!disposisiData.tujuan}
+                disabled={disposisiData.tujuan.length === 0}
               >
                 Teruskan Disposisi
               </button>

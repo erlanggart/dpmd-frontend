@@ -25,9 +25,9 @@ export default function DisposisiSurat() {
   const [selectedSurat, setSelectedSurat] = useState(null);
   const [kepalaDinasList, setKepalaDinasList] = useState([]);
   const [formKirim, setFormKirim] = useState({
-    kepala_dinas_user_id: '',
+    kepala_dinas_user_id: [],
     catatan: '',
-    instruksi: 'laksanakan',
+    instruksi: [],
     instruksi_manual: ''
   });
   const [formData, setFormData] = useState({
@@ -197,19 +197,20 @@ export default function DisposisiSurat() {
 
   const handleKirimKeKepalaDinas = async (e) => {
     e.preventDefault();
-    if (!formKirim.kepala_dinas_user_id) {
-      toast.error('Pilih kepala dinas terlebih dahulu');
+    if (formKirim.kepala_dinas_user_id.length === 0) {
+      toast.error('Pilih setidaknya satu kepala dinas');
       return;
     }
 
-    // Resolve instruksi: use manual text when "lainnya" selected
-    const instruksiValue = formKirim.instruksi === 'lainnya'
-      ? formKirim.instruksi_manual
-      : formKirim.instruksi;
-
-    if (!instruksiValue) {
-      toast.error('Instruksi tidak boleh kosong');
+    if (formKirim.instruksi.length === 0 && !formKirim.instruksi_manual) {
+      toast.error('Pilih setidaknya satu instruksi');
       return;
+    }
+
+    // Combine standard instructions and manual one
+    const allInstructions = [...formKirim.instruksi];
+    if (formKirim.instruksi_manual) {
+      allInstructions.push(formKirim.instruksi_manual);
     }
 
     setSubmitting(true);
@@ -217,14 +218,14 @@ export default function DisposisiSurat() {
       await api.post(`/surat-masuk/${selectedSurat.id}/kirim-kepala-dinas`, {
         kepala_dinas_user_id: formKirim.kepala_dinas_user_id,
         catatan: formKirim.catatan,
-        instruksi: instruksiValue,
+        instruksi: allInstructions,
       });
       toast.success('Surat berhasil dikirim ke Kepala Dinas');
       setShowKirimModal(false);
       setFormKirim({
-        kepala_dinas_user_id: '',
+        kepala_dinas_user_id: [],
         catatan: '',
-        instruksi: 'laksanakan',
+        instruksi: [],
         instruksi_manual: ''
       });
       setSelectedSurat(null);
@@ -1145,48 +1146,65 @@ export default function DisposisiSurat() {
 
             <form onSubmit={handleKirimKeKepalaDinas} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Kepala Dinas <span className="text-red-500">*</span>
+                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                  Pilih Kepala Dinas <span className="text-red-500">*</span>
                 </label>
-                <select
-                  value={formKirim.kepala_dinas_user_id}
-                  onChange={(e) => setFormKirim({...formKirim, kepala_dinas_user_id: e.target.value})}
-                  className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  required
-                >
-                  <option value="">-- Pilih Kepala Dinas --</option>
+                <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto p-3 border-2 border-gray-100 rounded-xl bg-gray-50/50">
                   {kepalaDinasList.map(user => (
-                    <option key={user.id} value={user.id}>
-                      {user.name || user.email}
-                    </option>
+                    <label key={user.id} className="flex items-center gap-3 p-2 hover:bg-white rounded-lg cursor-pointer transition-all border border-transparent hover:border-blue-200 group">
+                      <input
+                        type="checkbox"
+                        checked={formKirim.kepala_dinas_user_id.includes(user.id)}
+                        onChange={(e) => {
+                          const ids = e.target.checked
+                            ? [...formKirim.kepala_dinas_user_id, user.id]
+                            : formKirim.kepala_dinas_user_id.filter(id => id !== user.id);
+                          setFormKirim({...formKirim, kepala_dinas_user_id: ids});
+                        }}
+                        className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm font-medium text-gray-700 group-hover:text-blue-600">{user.name || user.email}</span>
+                    </label>
                   ))}
-                </select>
+                  {kepalaDinasList.length === 0 && (
+                    <p className="text-xs text-center text-gray-500 py-2 italic font-medium">Data Kepala Dinas tidak ditemukan</p>
+                  )}
+                </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Instruksi
+                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                  Instruksi <span className="text-red-500">*</span>
                 </label>
-                <select
-                  value={formKirim.instruksi}
-                  onChange={(e) => setFormKirim({...formKirim, instruksi: e.target.value, instruksi_manual: e.target.value === 'lainnya' ? formKirim.instruksi_manual : ''})}
-                  className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                >
+                <div className="grid grid-cols-2 gap-2 p-3 border-2 border-gray-100 rounded-xl bg-gray-50/50">
                   {INSTRUKSI_OPTIONS.map(opt => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    <label key={opt.value} className="flex items-center gap-3 p-2 hover:bg-white rounded-lg cursor-pointer transition-all border border-transparent hover:border-blue-200 group">
+                      <input
+                        type="checkbox"
+                        checked={formKirim.instruksi.includes(opt.value)}
+                        onChange={(e) => {
+                          const inst = e.target.checked
+                            ? [...formKirim.instruksi, opt.value]
+                            : formKirim.instruksi.filter(i => i !== opt.value);
+                          setFormKirim({...formKirim, instruksi: inst});
+                        }}
+                        className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-xs font-semibold text-gray-700 group-hover:text-blue-600">{opt.label}</span>
+                    </label>
                   ))}
-                  <option value="lainnya">Lainnya (Input Manual)</option>
-                </select>
-                {formKirim.instruksi === 'lainnya' && (
+                </div>
+                
+                <div className="mt-3">
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 ml-1">Instruksi Lainnya (Opsional)</label>
                   <input
                     type="text"
                     value={formKirim.instruksi_manual}
                     onChange={(e) => setFormKirim({...formKirim, instruksi_manual: e.target.value})}
-                    className="w-full mt-2 px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    placeholder="Ketik instruksi manual..."
-                    required
+                    className="w-full px-4 py-3 border-2 border-gray-100 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm bg-gray-50/50"
+                    placeholder="Ketik instruksi tambahan..."
                   />
-                )}
+                </div>
               </div>
 
               <div>
@@ -1209,9 +1227,9 @@ export default function DisposisiSurat() {
                     setShowKirimModal(false);
                     setSelectedSurat(null);
                     setFormKirim({
-                      kepala_dinas_user_id: '',
+                      kepala_dinas_user_id: [],
                       catatan: '',
-                      instruksi: 'laksanakan',
+                      instruksi: [],
                       instruksi_manual: ''
                     });
                   }}

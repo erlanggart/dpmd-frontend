@@ -6,16 +6,30 @@ const KepalaDinas = () => {
   const [loading, setLoading] = useState(true);
   const [selectedSurat, setSelectedSurat] = useState(null);
   const [showDisposisiModal, setShowDisposisiModal] = useState(false);
+  const [users, setUsers] = useState([]);
   const [disposisiData, setDisposisiData] = useState({
-    tujuan: '',
-    instruksi: '',
+    tujuan: [], // Multiple user IDs
+    instruksi: [], // Multiple instructions
     batas_waktu: '',
     catatan: ''
   });
 
   useEffect(() => {
     fetchDaftarSurat();
+    fetchAvailableUsers();
   }, []);
+
+  const fetchAvailableUsers = async () => {
+    try {
+      const response = await fetch('/api/disposisi/available-users');
+      const result = await response.json();
+      if (result.success) {
+        setUsers(result.data);
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    }
+  };
 
   const fetchDaftarSurat = async () => {
     try {
@@ -41,7 +55,13 @@ const KepalaDinas = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(disposisiData)
+        body: JSON.stringify({
+          surat_id: selectedSurat.id,
+          ke_user_id: disposisiData.tujuan,
+          instruksi: disposisiData.instruksi,
+          catatan: disposisiData.catatan,
+          level_disposisi: 1 // Kepala Dinas level
+        })
       });
 
       const result = await response.json();
@@ -51,8 +71,8 @@ const KepalaDinas = () => {
         setShowDisposisiModal(false);
         setSelectedSurat(null);
         setDisposisiData({
-          tujuan: '',
-          instruksi: '',
+          tujuan: [],
+          instruksi: [],
           batas_waktu: '',
           catatan: ''
         });
@@ -264,34 +284,56 @@ const KepalaDinas = () => {
             </div>
             <div className="modal-body">
               <div className="form-group">
-                <label>Tujuan Disposisi:</label>
-                <select 
-                  value={disposisiData.tujuan}
-                  onChange={(e) => setDisposisiData({...disposisiData, tujuan: e.target.value})}
-                  className="form-control"
-                >
-                  <option value="">Pilih Tujuan</option>
-                  <option value="sekretaris_dinas">Sekretaris Dinas</option>
-                  <option value="kepala_bidang_pemerintahan">Kepala Bidang Pemerintahan</option>
-                  <option value="kepala_bidang_kesra">Kepala Bidang Kesejahteraan Rakyat</option>
-                  <option value="kepala_bidang_ekonomi">Kepala Bidang Ekonomi</option>
-                  <option value="kepala_bidang_fisik">Kepala Bidang Fisik dan Prasarana</option>
-                </select>
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  Tujuan Disposisi (Pilih satu atau lebih) <span className="text-red-500">*</span>
+                </label>
+                <div className="checklist-container border-2 border-gray-200 rounded-xl p-3 bg-gray-50 max-h-40 overflow-y-auto">
+                  {users.map((u) => (
+                    <label key={u.id} className="flex items-center gap-3 p-2 hover:bg-white rounded-lg cursor-pointer transition-colors mb-1">
+                      <input 
+                        type="checkbox"
+                        checked={disposisiData.tujuan.includes(u.id)}
+                        onChange={(e) => {
+                          const newTujuan = e.target.checked 
+                            ? [...disposisiData.tujuan, u.id]
+                            : disposisiData.tujuan.filter(id => id !== u.id);
+                          setDisposisiData({...disposisiData, tujuan: newTujuan});
+                        }}
+                        className="w-4 h-4 text-blue-600 rounded"
+                      />
+                      <span className="text-sm font-medium">{u.name} <span className="text-gray-400 capitalize">- {u.role?.replace(/_/g, ' ')}</span></span>
+                    </label>
+                  ))}
+                  {users.length === 0 && <p className="text-xs text-gray-500 italic">Memuat daftar penerima...</p>}
+                </div>
               </div>
 
-              <div className="form-group">
-                <label>Instruksi:</label>
-                <textarea 
-                  value={disposisiData.instruksi}
-                  onChange={(e) => setDisposisiData({...disposisiData, instruksi: e.target.value})}
-                  className="form-control"
-                  rows="4"
-                  placeholder="Berikan instruksi untuk surat ini..."
-                />
+              <div className="form-group mt-4">
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  Instruksi (Pilih satu atau lebih) <span className="text-red-500">*</span>
+                </label>
+                <div className="checklist-container border-2 border-gray-200 rounded-xl p-3 bg-gray-50 max-h-40 overflow-y-auto">
+                  {['Segera laksanakan', 'Koordinasikan mslh ini', 'Analisa / Telaah', 'Monitor / Tindak lanjut', 'Siapkan bahan/surat', 'Mewakili / Menghadiri', 'Untuk diketahui/perhatian', 'Selesaikan ssi peraturannya'].map((ins) => (
+                    <label key={ins} className="flex items-center gap-3 p-2 hover:bg-white rounded-lg cursor-pointer transition-colors mb-1">
+                      <input 
+                        type="checkbox"
+                        checked={disposisiData.instruksi.includes(ins)}
+                        onChange={(e) => {
+                          const newIns = e.target.checked 
+                            ? [...disposisiData.instruksi, ins]
+                            : disposisiData.instruksi.filter(i => i !== ins);
+                          setDisposisiData({...disposisiData, instruksi: newIns});
+                        }}
+                        className="w-4 h-4 text-green-600 rounded"
+                      />
+                      <span className="text-sm font-medium">{ins}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
 
-              <div className="form-group">
-                <label>Batas Waktu:</label>
+              <div className="form-group mt-4">
+                <label className="block text-sm font-bold text-gray-700 mb-2">Batas Waktu:</label>
                 <input 
                   type="date"
                   value={disposisiData.batas_waktu}
@@ -300,13 +342,13 @@ const KepalaDinas = () => {
                 />
               </div>
 
-              <div className="form-group">
-                <label>Catatan Tambahan:</label>
+              <div className="form-group mt-4">
+                <label className="block text-sm font-bold text-gray-700 mb-2">Catatan Tambahan (Opsional):</label>
                 <textarea 
                   value={disposisiData.catatan}
                   onChange={(e) => setDisposisiData({...disposisiData, catatan: e.target.value})}
                   className="form-control"
-                  rows="3"
+                  rows="2"
                   placeholder="Catatan tambahan (opsional)..."
                 />
               </div>
@@ -315,7 +357,7 @@ const KepalaDinas = () => {
               <button 
                 className="btn-primary"
                 onClick={handleDisposisi}
-                disabled={!disposisiData.tujuan || !disposisiData.instruksi}
+                disabled={disposisiData.tujuan.length === 0 || disposisiData.instruksi.length === 0}
               >
                 Buat Disposisi
               </button>
