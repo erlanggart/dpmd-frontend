@@ -1,6 +1,16 @@
 // src/components/JadwalKegiatanModal.jsx
 import React, { useState, useRef, useEffect } from 'react';
-import { LuX, LuCalendar, LuMapPin, LuClock, LuChevronDown, LuCheck, LuUsers, LuUser, LuPhone, LuBuilding2, LuTag, LuAlertCircle, LuStar } from 'react-icons/lu';
+import { LuX, LuCalendar, LuMapPin, LuClock, LuChevronDown, LuCheck, LuUsers, LuUser, LuPhone, LuBuilding2, LuTag, LuCircleAlert, LuStar } from 'react-icons/lu';
+
+// ─── Singkatan Bidang ─────────────────────────────────────────────────────────
+const SKIP_WORDS = new Set(['dan', 'atau', 'di', 'ke', 'dari', 'untuk', 'dengan', 'yang', 'pada', 'dalam', 'oleh', 'the', 'of', 'and']);
+export const singkatBidang = (nama) => {
+	if (!nama) return '';
+	const words = nama.split(/\s+/);
+	const meaningful = words.filter(w => !SKIP_WORDS.has(w.toLowerCase()));
+	if (meaningful.length === 1) return meaningful[0]; // already short
+	return meaningful.map(w => w[0].toUpperCase()).join('');
+};
 
 // ─── Multi-Select Bidang Dropdown ────────────────────────────────────────────
 const BidangMultiSelect = ({ bidangList, selectedIds, onChange }) => {
@@ -58,9 +68,10 @@ const BidangMultiSelect = ({ bidangList, selectedIds, onChange }) => {
 					{selectedNames.map((name, i) => (
 						<span
 							key={name}
+							title={name}
 							className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${BADGE_COLORS[i % BADGE_COLORS.length]}`}
 						>
-							{name}
+							{singkatBidang(name)}
 							<button
 								type="button"
 								onClick={() => toggle(bidangList.find(b => b.nama === name)?.id)}
@@ -335,7 +346,7 @@ const JadwalKegiatanModal = ({
 								</div>
 
 								{/* Asal Kegiatan */}
-								<Field label="Asal Kegiatan" icon={LuAlertCircle}>
+								<Field label="Asal Kegiatan" icon={LuCircleAlert}>
 									<input
 										type="text"
 										name="asal_kegiatan"

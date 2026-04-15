@@ -27,7 +27,7 @@ import {
 import { useSearchParams } from 'react-router-dom';
 import api from '../../../api';
 import Swal from 'sweetalert2';
-import JadwalKegiatanModal from '../../../components/JadwalKegiatanModal';
+import JadwalKegiatanModal, { singkatBidang } from '../../../components/JadwalKegiatanModal';
 import JadwalKalenderView from '../../../components/JadwalKalenderView';
 
 const QUICK_EMOJIS = ['👍', '❤️', '🔥', '👏', '💪', '✨'];
@@ -868,6 +868,7 @@ const JadwalKegiatanPage = () => {
 																<div className="flex items-center gap-0.5 flex-wrap justify-center">
 																	{(jadwal.reactions || []).slice(0, 3).map(r => (
 																		<button key={r.emoji} onClick={() => toggleReaction(jadwal.id, r.emoji)}
+																			title={r.users?.map(u => u.name).join('\n') || ''}
 																			className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs border transition-all ${
 																				r.reacted ? 'bg-blue-50 border-blue-300' : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
 																			}`}>
@@ -1013,7 +1014,7 @@ const JadwalKegiatanPage = () => {
 											<p className="text-xs text-gray-500 font-medium">Bidang</p>
 											<div className="flex flex-wrap gap-1 mt-0.5">
 												{(jadwal.bidang_names?.length > 0 ? jadwal.bidang_names : [jadwal.bidang_nama]).map((n, i) => (
-													<span key={i} className="inline-block px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold">{n}</span>
+													<span key={i} title={n} className="inline-block px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold">{singkatBidang(n)}</span>
 												))}
 											</div>
 										</div>
@@ -1365,7 +1366,7 @@ const JadwalKegiatanPage = () => {
 											<p className="text-xs text-purple-700 font-bold uppercase tracking-wide mb-1">Bidang Pelaksana</p>
 											<div className="flex flex-wrap gap-1.5 mt-0.5">
 												{(selectedJadwal.bidang_names?.length > 0 ? selectedJadwal.bidang_names : selectedJadwal.bidang_nama ? [selectedJadwal.bidang_nama] : []).map((n, i) => (
-													<span key={i} className="inline-block px-2.5 py-0.5 bg-purple-200 text-purple-800 rounded-full text-xs font-bold">{n}</span>
+													<span key={i} title={n} className="inline-block px-2.5 py-0.5 bg-purple-200 text-purple-800 rounded-full text-xs font-bold">{singkatBidang(n)}</span>
 												))}
 												{(!selectedJadwal.bidang_names?.length && !selectedJadwal.bidang_nama) && <span className="text-sm font-semibold text-gray-500">Semua Pegawai</span>}
 											</div>
@@ -1420,14 +1421,25 @@ const JadwalKegiatanPage = () => {
 							{/* Reactions bar in detail */}
 							<div className="flex items-center gap-2 flex-1 flex-wrap">
 								{(selectedJadwal.reactions || []).map(r => (
-									<button key={r.emoji} onClick={() => toggleReaction(selectedJadwal.id, r.emoji)}
-										className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-sm border transition-all ${
-											r.reacted ? 'bg-blue-50 border-blue-300 text-blue-700' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-100'
-										}`}
-										title={r.users?.map(u => u.name).join(', ')}>
-										<span>{r.emoji}</span>
-										<span className="font-semibold">{r.count}</span>
-									</button>
+									<div key={r.emoji} className="relative group">
+										<button onClick={() => toggleReaction(selectedJadwal.id, r.emoji)}
+											className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-sm border transition-all ${
+												r.reacted ? 'bg-blue-50 border-blue-300 text-blue-700' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-100'
+											}`}>
+											<span>{r.emoji}</span>
+											<span className="font-semibold">{r.count}</span>
+										</button>
+										{r.users?.length > 0 && (
+											<div className="absolute bottom-full left-0 mb-1.5 hidden group-hover:block z-50 min-w-max">
+												<div className="bg-gray-800 text-white text-xs rounded-lg px-2.5 py-1.5 shadow-lg">
+													{r.users.map(u => (
+														<div key={u.id} className="whitespace-nowrap">{u.name}</div>
+													))}
+													<div className="absolute top-full left-3 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-gray-800" />
+												</div>
+											</div>
+										)}
+									</div>
 								))}
 								{QUICK_EMOJIS.filter(e => !(selectedJadwal.reactions || []).some(r => r.emoji === e)).slice(0, 3).map(e => (
 									<button key={e} onClick={() => toggleReaction(selectedJadwal.id, e)}

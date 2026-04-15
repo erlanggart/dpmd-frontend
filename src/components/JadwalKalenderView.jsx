@@ -7,6 +7,7 @@ LuCalendar,
 LuMapPin, 
 LuClock
 } from 'react-icons/lu';
+import { singkatBidang } from './JadwalKegiatanModal';
 
 const JadwalKalenderView = ({ jadwals, onEventClick }) => {
 	const [currentDate, setCurrentDate] = useState(new Date());
@@ -331,7 +332,7 @@ onEventClick && onEventClick(jadwal);
 {(jadwal.bidang_names?.length > 0 ? jadwal.bidang_names : jadwal.bidang_nama ? [jadwal.bidang_nama] : []).length > 0 && (
 <div className="mt-2 flex flex-wrap gap-1">
 {(jadwal.bidang_names?.length > 0 ? jadwal.bidang_names : [jadwal.bidang_nama]).map((n, i) => (
-<span key={i} className="inline-block px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium">{n}</span>
+<span key={i} title={n} className="inline-block px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium">{singkatBidang(n)}</span>
 ))}
 </div>
 )}
