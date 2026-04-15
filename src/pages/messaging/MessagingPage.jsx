@@ -528,7 +528,11 @@ export default function MessagingPage() {
 	const activeConvRef = useRef(null);
 	const groupAvatarRef = useRef(null);
 
-	const currentUser = useMemo(() => JSON.parse(localStorage.getItem('user') || '{}'), []);
+	const currentUser = useMemo(() => {
+		const u = JSON.parse(localStorage.getItem('user') || '{}');
+		if (u.id) u.id = Number(u.id);
+		return u;
+	}, []);
 
 	useEffect(() => { activeConvRef.current = activeConv; }, [activeConv]);
 

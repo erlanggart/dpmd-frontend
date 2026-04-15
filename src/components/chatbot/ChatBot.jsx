@@ -38,7 +38,6 @@ const QUICK_SEARCHES = [
 
 const ChatBot = ({ isDesktop = false }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [isHidden, setIsHidden] = useState(() => localStorage.getItem('chatbot_hidden') === 'true');
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -164,16 +163,6 @@ const ChatBot = ({ isDesktop = false }) => {
     setSelectedCategory(null);
   };
 
-  const hideBot = () => {
-    setIsHidden(true);
-    setIsOpen(false);
-    localStorage.setItem('chatbot_hidden', 'true');
-  };
-  const showBot = () => {
-    setIsHidden(false);
-    localStorage.removeItem('chatbot_hidden');
-  };
-
   // Render a single search result card
   const renderResultCard = (result, index) => {
     const isExpanded = expandedResult === `${messages.length}-${index}`;
@@ -295,17 +284,16 @@ const ChatBot = ({ isDesktop = false }) => {
 
   // FAB button
   const fabButton = (
-    <div className="relative group">
-      <motion.button
-        onClick={() => setIsOpen(!isOpen)}
-        className={`relative flex items-center justify-center rounded-full shadow-xl transition-all duration-300 ${
-          isOpen
-            ? 'bg-gradient-to-br from-gray-700 to-gray-900 w-12 h-12'
-            : 'bg-gradient-to-br from-violet-500 via-purple-500 to-indigo-600 w-14 h-14 hover:scale-110 hover:shadow-2xl hover:shadow-purple-500/30'
-        }`}
-        whileTap={{ scale: 0.9 }}
-        aria-label={isOpen ? 'Tutup chatbot' : 'Buka chatbot pencarian'}
-      >
+    <motion.button
+      onClick={() => setIsOpen(!isOpen)}
+      className={`relative flex items-center justify-center rounded-full shadow-xl transition-all duration-300 ${
+        isOpen
+          ? 'bg-gradient-to-br from-gray-700 to-gray-900 w-12 h-12'
+          : 'bg-gradient-to-br from-violet-500 via-purple-500 to-indigo-600 w-14 h-14 hover:scale-110 hover:shadow-2xl hover:shadow-purple-500/30'
+      }`}
+      whileTap={{ scale: 0.9 }}
+      aria-label={isOpen ? 'Tutup chatbot' : 'Buka chatbot pencarian'}
+    >
       <AnimatePresence mode="wait">
         {isOpen ? (
           <motion.div
@@ -338,17 +326,6 @@ const ChatBot = ({ isDesktop = false }) => {
         </>
       )}
     </motion.button>
-    {/* Hide button - appears on hover */}
-    {!isOpen && (
-      <button
-        onClick={hideBot}
-        className="absolute -top-1 -left-1 w-5 h-5 rounded-full bg-white shadow border border-gray-200 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-50 hover:border-red-200"
-        title="Sembunyikan"
-      >
-        <FiX className="w-3 h-3 text-gray-400 hover:text-red-500" />
-      </button>
-    )}
-    </div>
   );
 
   // Chat popup
@@ -560,40 +537,21 @@ const ChatBot = ({ isDesktop = false }) => {
 
   return (
     <>
-      <AnimatePresence>
-        {!isHidden ? (
-          <motion.div
-            key="chatbot-visible"
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.5 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-          >
-            {/* Chat popup */}
-            <div className={`fixed z-[60] ${isDesktop ? 'bottom-6 right-6' : ''}`}
-                 style={!isDesktop ? { bottom: '80px', right: '12px' } : {}}>
-              {chatPopup}
-            </div>
-            {/* FAB */}
-            <div className={`fixed z-[55] ${isDesktop ? 'bottom-6 right-6' : 'right-3 bottom-[76px]'}`}>
-              {fabButton}
-            </div>
-          </motion.div>
-        ) : (
-          /* Show tab when hidden */
-          <motion.button
-            key="chatbot-hidden"
-            initial={{ x: 40 }}
-            animate={{ x: 0 }}
-            exit={{ x: 40 }}
-            onClick={showBot}
-            className={`fixed z-[55] right-0 ${isDesktop ? 'bottom-6' : 'bottom-[76px]'} bg-gradient-to-l from-violet-600 to-purple-600 text-white pl-2.5 pr-1.5 py-2 rounded-l-xl shadow-lg hover:pr-3 transition-all duration-200`}
-            title="Tampilkan Smart Search"
-          >
-            <FiMessageCircle className="w-4 h-4" />
-          </motion.button>
-        )}
-      </AnimatePresence>
+      {/* Desktop: Fixed bottom-right */}
+      {isDesktop ? (
+        <div className="fixed bottom-6 right-6 z-[60] flex flex-col items-end gap-3">
+          {chatPopup}
+          {fabButton}
+        </div>
+      ) : (
+        /* Mobile: Above bottom bar */
+        <div className="fixed z-[55] right-3 bottom-[76px]">
+          {chatPopup}
+          <div className="flex justify-end mt-2">
+            {fabButton}
+          </div>
+        </div>
+      )}
     </>
   );
 };

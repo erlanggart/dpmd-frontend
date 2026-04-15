@@ -18,11 +18,12 @@ import {
 	LuChevronRight,
 	LuLayoutGrid,
 	LuCalendarDays,
-	LuList,
 	LuEye,
 	LuShare2,
 	LuSmile,
 	LuHeart,
+	LuMessageCircle,
+	LuSend,
 } from 'react-icons/lu';
 import { useSearchParams } from 'react-router-dom';
 import api from '../../../api';
@@ -70,20 +71,19 @@ const JadwalKegiatanPage = () => {
 	const [totalPages, setTotalPages] = useState(1);
 	const [totalData, setTotalData] = useState(0);
 	
-	// Responsive default view: 'table' for desktop/tablet, 'grid' for mobile
-	const getDefaultViewMode = () => {
-		if (typeof window !== 'undefined') {
-			return window.innerWidth >= 768 ? 'table' : 'grid';
-		}
-		return 'table';
-	};
+	// Default view: grid (table view removed)
+	const getDefaultViewMode = () => 'grid';
 	
-	const [viewMode, setViewMode] = useState(getDefaultViewMode()); // 'table', 'grid', or 'calendar'
+	const [viewMode, setViewMode] = useState(getDefaultViewMode()); // 'grid' or 'calendar'
 	const [showMobileFilters, setShowMobileFilters] = useState(false); // Toggle filter visibility on mobile
 	const [showViewersModal, setShowViewersModal] = useState(false);
 	const [viewersList, setViewersList] = useState([]);
 	const [viewersJadwalId, setViewersJadwalId] = useState(null);
 	const [showEmojiPicker, setShowEmojiPicker] = useState(null); // jadwal id or null
+	const [comments, setComments] = useState([]);
+	const [commentText, setCommentText] = useState('');
+	const [loadingComments, setLoadingComments] = useState(false);
+	const [sendingComment, setSendingComment] = useState(false);
 	const itemsPerPage = 5;
 
 	// Form state
@@ -359,7 +359,10 @@ const JadwalKegiatanPage = () => {
 	const handleViewDetail = (jadwal) => {
 		setSelectedJadwal(jadwal);
 		setShowDetailModal(true);
+		setComments([]);
+		setCommentText('');
 		trackView(jadwal.id);
+		loadComments(jadwal.id);
 	};
 
 	// Handle apply filters - immediately apply all filters when button clicked
@@ -418,17 +421,47 @@ const JadwalKegiatanPage = () => {
 			
 			if (res.data.success) {
 				const userId = JSON.parse(localStorage.getItem('user') || '{}').id;
-				setJadwals(prev => prev.map(j => j.id === jadwalId ? {
-					...j, reactions: res.data.data.map(r => ({
-						...r, reacted: r.users.some(u => String(u.id) === String(userId))
-					}))
-				} : j));
+				const updatedReactions = res.data.data.map(r => ({
+					...r, reacted: r.users.some(u => String(u.id) === String(userId))
+				}));
+				setJadwals(prev => prev.map(j => j.id === jadwalId ? { ...j, reactions: updatedReactions } : j));
+				setSelectedJadwal(prev => prev && prev.id === jadwalId ? { ...prev, reactions: updatedReactions } : prev);
 			}
 			setShowEmojiPicker(null);
 		} catch (error) {
 			console.error('Error toggling reaction:', error);
 		}
 	}, [jadwals]);
+
+	// ── Comments ────────────────────────────────────────────
+	const loadComments = useCallback(async (jadwalId) => {
+		setLoadingComments(true);
+		try {
+			const res = await api.get(`/jadwal-kegiatan/${jadwalId}/comments`);
+			if (res.data.success) setComments(res.data.data);
+		} catch (error) { console.error('Error loading comments:', error); }
+		finally { setLoadingComments(false); }
+	}, []);
+
+	const addComment = useCallback(async (jadwalId) => {
+		if (!commentText.trim() || sendingComment) return;
+		setSendingComment(true);
+		try {
+			const res = await api.post(`/jadwal-kegiatan/${jadwalId}/comments`, { content: commentText.trim() });
+			if (res.data.success) {
+				setComments(prev => [...prev, res.data.data]);
+				setCommentText('');
+			}
+		} catch (error) { console.error('Error adding comment:', error); }
+		finally { setSendingComment(false); }
+	}, [commentText, sendingComment]);
+
+	const deleteComment = useCallback(async (jadwalId, commentId) => {
+		try {
+			const res = await api.delete(`/jadwal-kegiatan/${jadwalId}/comments/${commentId}`);
+			if (res.data.success) setComments(prev => prev.filter(c => c.id !== commentId));
+		} catch (error) { console.error('Error deleting comment:', error); }
+	}, []);
 
 	// Format date
 	const formatDate = (dateString) => {
@@ -725,19 +758,6 @@ const JadwalKegiatanPage = () => {
 					<div className="flex gap-1.5 bg-white border border-gray-200 p-1 rounded-lg shadow-sm">
 								<button
 									type="button"
-									onClick={() => setViewMode('table')}
-									className={`flex items-center gap-1.5 px-3 py-2 rounded-md transition-all text-sm font-medium ${
-										viewMode === 'table'
-											? 'bg-white text-teal-700 shadow-sm'
-											: 'text-gray-600 hover:text-gray-900'
-									}`}
-									title="Tampilan Tabel"
-								>
-									<LuList className="w-4 h-4" />
-									<span className="hidden sm:inline">Tabel</span>
-								</button>
-								<button
-									type="button"
 									onClick={() => setViewMode('grid')}
 									className={`flex items-center gap-1.5 px-3 py-2 rounded-md transition-all text-sm font-medium ${
 										viewMode === 'grid'
@@ -771,170 +791,6 @@ const JadwalKegiatanPage = () => {
 						jadwals={jadwals}
 						onEventClick={canManageJadwal ? handleEdit : undefined}
 					/>
-				) : viewMode === 'table' ? (
-					<>
-						{/* Table View */}
-						{jadwals.length === 0 ? (
-							<div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center">
-								<LuCalendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-								<p className="text-gray-600 font-medium">Tidak ada jadwal kegiatan</p>
-								<p className="text-gray-400 text-sm mt-1">Coba ubah filter pencarian</p>
-							</div>
-						) : (
-							<div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-6">
-								<div className="overflow-x-auto">
-									<table className="w-full">
-										<thead className="bg-gradient-to-r from-teal-50 to-cyan-50 border-b border-gray-200">
-											<tr>
-												<th className="px-4 py-3.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-													Kegiatan
-												</th>
-												<th className="px-4 py-3.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wider whitespace-nowrap">
-													Tanggal
-												</th>
-												<th className="px-4 py-3.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wider hidden lg:table-cell">
-													Lokasi
-												</th>
-												<th className="px-4 py-3.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wider hidden xl:table-cell">
-													Bidang
-												</th>
-												<th className="px-4 py-3.5 text-center text-xs font-bold text-gray-700 uppercase tracking-wider hidden md:table-cell">
-													Status
-												</th>
-												<th className="px-4 py-3.5 text-center text-xs font-bold text-gray-700 uppercase tracking-wider hidden md:table-cell">
-													Prioritas
-												</th>
-												<th className="px-4 py-3.5 text-center text-xs font-bold text-gray-700 uppercase tracking-wider hidden lg:table-cell">
-													Respon
-												</th>
-												<th className="px-4 py-3.5 text-center text-xs font-bold text-gray-700 uppercase tracking-wider sticky right-0 bg-gradient-to-r from-teal-50 to-cyan-50">
-													Aksi
-												</th>
-											</tr>
-										</thead>
-										<tbody className="divide-y divide-gray-100">
-											{jadwals.map((jadwal) => {
-												return (
-													<tr key={jadwal.id} className="hover:bg-teal-50/50 transition-colors">
-														<td className="px-4 py-4">
-															<div className="max-w-xs">
-																<div className="font-semibold text-gray-900 text-sm line-clamp-2">
-																	{jadwal.judul}
-																</div>
-																{jadwal.deskripsi && jadwal.deskripsi !== '-' && (
-																	<div className="text-xs text-gray-500 mt-1 line-clamp-1">
-																		{jadwal.deskripsi}
-																	</div>
-																)}
-																{/* Show badges on mobile */}
-																<div className="flex flex-wrap gap-1.5 mt-2 md:hidden">
-																	{getStatusBadge(jadwal.status)}
-																	{getPriorityBadge(jadwal.prioritas)}
-																</div>
-															</div>
-														</td>
-														<td className="px-4 py-4 whitespace-nowrap">
-															<div className="flex items-start gap-2 text-sm">
-																<LuClock className="w-4 h-4 text-teal-500 flex-shrink-0 mt-0.5" />
-																<div>
-																	<div className="font-medium text-gray-900">{formatDate(jadwal.tanggal_mulai)}</div>
-																	<div className="text-xs text-indigo-600 font-semibold">{formatTime(jadwal.tanggal_mulai)}</div>
-																	<div className="text-xs text-gray-500">s/d {formatDate(jadwal.tanggal_selesai)}</div>
-																</div>
-															</div>
-														</td>
-														<td className="px-4 py-4 hidden lg:table-cell">
-															<div className="flex items-center gap-2 text-sm text-gray-600 max-w-xs">
-																<LuMapPin className="w-4 h-4 text-red-500 flex-shrink-0" />
-																<span className="line-clamp-2">{jadwal.lokasi || '-'}</span>
-															</div>
-														</td>
-														<td className="px-4 py-4 hidden xl:table-cell">
-															<div className="flex flex-wrap gap-1">
-																{(jadwal.bidang_names?.length > 0 ? jadwal.bidang_names : jadwal.bidang_nama ? [jadwal.bidang_nama] : []).map((n, i) => (
-																	<span key={i} className="inline-block px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">{n}</span>
-																))}
-																{(!jadwal.bidang_names?.length && !jadwal.bidang_nama) && <span className="text-gray-400 text-xs">Semua</span>}
-															</div>
-														</td>
-														<td className="px-4 py-4 text-center hidden md:table-cell">
-															{getStatusBadge(jadwal.status)}
-														</td>
-														<td className="px-4 py-4 text-center hidden md:table-cell">
-															{getPriorityBadge(jadwal.prioritas)}
-														</td>
-														<td className="px-4 py-4 hidden lg:table-cell">
-															<div className="flex items-center justify-center gap-2">
-																<div className="flex items-center gap-0.5 flex-wrap justify-center">
-																	{(jadwal.reactions || []).slice(0, 3).map(r => (
-																		<button key={r.emoji} onClick={() => toggleReaction(jadwal.id, r.emoji)}
-																			title={r.users?.map(u => u.name).join('\n') || ''}
-																			className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs border transition-all ${
-																				r.reacted ? 'bg-blue-50 border-blue-300' : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
-																			}`}>
-																			<span>{r.emoji}</span><span className="font-medium text-gray-600">{r.count}</span>
-																		</button>
-																	))}
-																	<div className="relative">
-																		<button onClick={() => setShowEmojiPicker(showEmojiPicker === `tbl-${jadwal.id}` ? null : `tbl-${jadwal.id}`)}
-																			className="p-1 rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
-																			<LuSmile className="w-3.5 h-3.5" />
-																		</button>
-																		{showEmojiPicker === `tbl-${jadwal.id}` && (
-																			<div className="absolute bottom-full right-0 mb-1 bg-white rounded-xl shadow-lg border border-gray-200 p-2 flex gap-1 z-50">
-																				{QUICK_EMOJIS.map(e => (
-																					<button key={e} onClick={() => toggleReaction(jadwal.id, e)}
-																						className="hover:bg-gray-100 rounded-lg p-1.5 text-base transition-colors">{e}</button>
-																				))}
-																			</div>
-																		)}
-																	</div>
-																</div>
-																{jadwal.view_count > 0 && (
-																	<button onClick={() => openViewers(jadwal.id)} className="flex items-center gap-0.5 text-xs text-gray-400 hover:text-teal-600" title="Lihat viewers">
-																		<LuEye className="w-3.5 h-3.5" /><span>{jadwal.view_count}</span>
-																	</button>
-																)}
-															</div>
-														</td>
-														<td className="px-4 py-4 sticky right-0 bg-white">
-															<div className="flex items-center justify-center gap-1.5">
-																<button
-																	onClick={() => handleViewDetail(jadwal)}
-																	className="p-2 text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
-																	title="Lihat Detail"
-																>
-																	<LuEye className="w-4 h-4" />
-																</button>
-																{canManageJadwal && (
-																	<>
-																		<button
-																			onClick={() => handleEdit(jadwal)}
-																			className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-																			title="Edit"
-																		>
-																			<LuPencil className="w-4 h-4" />
-																		</button>
-																		<button
-																			onClick={() => handleDelete(jadwal.id)}
-																			className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-																			title="Hapus"
-																		>
-																			<LuTrash2 className="w-4 h-4" />
-																		</button>
-																	</>
-																)}
-															</div>
-														</td>
-													</tr>
-												);
-											})}
-										</tbody>
-									</table>
-								</div>
-							</div>
-						)}
-					</>
 				) : (
 					<>
 						{/* Grid View */}
@@ -1033,14 +889,25 @@ const JadwalKegiatanPage = () => {
 													<div className="flex items-center justify-between gap-2">
 														<div className="flex items-center gap-1 flex-wrap">
 															{(jadwal.reactions || []).map(r => (
-																<button key={r.emoji} onClick={() => toggleReaction(jadwal.id, r.emoji)}
-																	className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs border transition-all ${
-																		r.reacted ? 'bg-blue-50 border-blue-300 text-blue-700' : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
-																	}`}
-																	title={r.users?.map(u => u.name).join(', ')}>
-																	<span>{r.emoji}</span>
-																	<span className="font-medium">{r.count}</span>
-																</button>
+																<div key={r.emoji} className="relative group">
+																	<button onClick={() => toggleReaction(jadwal.id, r.emoji)}
+																		className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs border transition-all ${
+																			r.reacted ? 'bg-blue-50 border-blue-300 text-blue-700' : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+																		}`}>
+																		<span>{r.emoji}</span>
+																		<span className="font-medium">{r.count}</span>
+																	</button>
+																	{r.users?.length > 0 && (
+																		<div className="absolute bottom-full left-0 mb-1 hidden group-hover:block z-50 min-w-max">
+																			<div className="bg-gray-800 text-white text-[10px] rounded-lg px-2 py-1 shadow-lg">
+																				{r.users.map(u => (
+																					<div key={u.id} className="whitespace-nowrap">{u.name}</div>
+																				))}
+																				<div className="absolute top-full left-2 w-0 h-0 border-l-[3px] border-r-[3px] border-t-[3px] border-l-transparent border-r-transparent border-t-gray-800" />
+																			</div>
+																		</div>
+																	)}
+																</div>
 															))}
 															<div className="relative">
 																<button onClick={() => setShowEmojiPicker(showEmojiPicker === jadwal.id ? null : jadwal.id)}
@@ -1416,10 +1283,9 @@ const JadwalKegiatanPage = () => {
 							)}
 						</div>
 
-						{/* Footer */}
-						<div className="bg-gray-50 p-6 rounded-b-2xl flex flex-col sm:flex-row gap-3 justify-end border-t border-gray-200">
-							{/* Reactions bar in detail */}
-							<div className="flex items-center gap-2 flex-1 flex-wrap">
+						{/* Reactions with user names */}
+						<div className="px-6 py-4 border-t border-gray-100">
+							<div className="flex items-center gap-2 flex-wrap">
 								{(selectedJadwal.reactions || []).map(r => (
 									<div key={r.emoji} className="relative group">
 										<button onClick={() => toggleReaction(selectedJadwal.id, r.emoji)}
@@ -1454,6 +1320,93 @@ const JadwalKegiatanPage = () => {
 									</button>
 								)}
 							</div>
+							{/* Show who reacted */}
+							{(selectedJadwal.reactions || []).some(r => r.users?.length > 0) && (
+								<div className="mt-2 flex flex-wrap gap-1 text-xs text-gray-500">
+									{(() => {
+										const allReactors = [];
+										const seen = new Set();
+										for (const r of (selectedJadwal.reactions || [])) {
+											for (const u of (r.users || [])) {
+												if (!seen.has(u.id)) { seen.add(u.id); allReactors.push(u); }
+											}
+										}
+										const display = allReactors.slice(0, 5);
+										const remaining = allReactors.length - display.length;
+										return (
+											<span>
+												{display.map(u => u.name).join(', ')}
+												{remaining > 0 && ` dan ${remaining} lainnya`}
+												{' '}mereaksi
+											</span>
+										);
+									})()}
+								</div>
+							)}
+						</div>
+
+						{/* Comments Section */}
+						<div className="px-6 py-4 border-t border-gray-100">
+							<p className="text-xs text-gray-700 font-bold uppercase tracking-wide mb-3 flex items-center gap-2">
+								<LuMessageCircle className="w-4 h-4 text-teal-500" />
+								Komentar ({comments.length})
+							</p>
+							
+							{/* Comment list */}
+							<div className="space-y-3 max-h-60 overflow-y-auto mb-3">
+								{loadingComments ? (
+									<div className="text-center py-4 text-gray-400 text-sm">Memuat komentar...</div>
+								) : comments.length === 0 ? (
+									<div className="text-center py-4 text-gray-400 text-sm">Belum ada komentar</div>
+								) : comments.map(c => (
+									<div key={c.id} className="flex gap-2.5">
+										<div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+											{c.user?.name?.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase() || '?'}
+										</div>
+										<div className="flex-1 min-w-0">
+											<div className="bg-gray-50 rounded-xl px-3 py-2">
+												<div className="flex items-center gap-2 mb-0.5">
+													<span className="text-xs font-bold text-gray-800">{c.user?.name || 'Unknown'}</span>
+													<span className="text-[10px] text-gray-400">
+														{c.created_at ? new Date(c.created_at).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}
+													</span>
+													{(String(c.user?.id) === String(user?.id) || user?.role === 'superadmin') && (
+														<button onClick={() => deleteComment(selectedJadwal.id, c.id)}
+															className="ml-auto text-gray-300 hover:text-red-500 transition-colors">
+															<LuTrash2 className="w-3 h-3" />
+														</button>
+													)}
+												</div>
+												<p className="text-sm text-gray-700 whitespace-pre-wrap break-words">{c.content}</p>
+											</div>
+										</div>
+									</div>
+								))}
+							</div>
+
+							{/* Add comment input */}
+							<div className="flex gap-2">
+								<input
+									type="text"
+									value={commentText}
+									onChange={e => setCommentText(e.target.value)}
+									onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addComment(selectedJadwal.id); } }}
+									placeholder="Tulis komentar..."
+									className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-400"
+									maxLength={2000}
+								/>
+								<button
+									onClick={() => addComment(selectedJadwal.id)}
+									disabled={!commentText.trim() || sendingComment}
+									className="px-3 py-2 bg-teal-600 text-white rounded-xl hover:bg-teal-700 disabled:bg-gray-200 disabled:text-gray-400 transition-colors flex-shrink-0"
+								>
+									<LuSend className="w-4 h-4" />
+								</button>
+							</div>
+						</div>
+
+						{/* Footer */}
+						<div className="bg-gray-50 p-6 rounded-b-2xl flex flex-col sm:flex-row gap-3 justify-end border-t border-gray-200">
 							<div className="flex gap-3 flex-shrink-0">
 								<button
 								onClick={() => {
