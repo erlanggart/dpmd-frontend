@@ -31,10 +31,12 @@ import {
   SlidersHorizontal as LuSlidersHorizontal,
   BookOpen as LuBookOpen,
   ExternalLink as LuExternalLink,
-  Trash2 as LuTrash2
+  Trash2 as LuTrash2,
+  Hash as LuHash
 } from 'lucide-react';
 import api from '../../api';
 import { toast } from 'react-hot-toast';
+import NomorSuratTab from './NomorSuratTab';
 
 // ─── XLSX Helper (client-side Excel export) ────────────────────────
 const exportToExcel = async (data, filename) => {
@@ -173,6 +175,9 @@ export default function BankSuratPage() {
 
   const navigate = useNavigate();
   const apiBase = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:3001/api').replace('/api', '');
+
+  // Tab state
+  const [activeTab, setActiveTab] = useState('bank-surat');
 
   // Data
   const [suratList, setSuratList] = useState([]);
@@ -365,21 +370,54 @@ export default function BankSuratPage() {
               <p className="text-sm text-slate-500">Arsip surat masuk DPMD Kabupaten Bogor</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button onClick={() => { fetchSurat(); fetchStatistik(); }}
-              className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 text-sm font-medium flex items-center gap-2 transition shadow-sm">
-              <LuRefreshCw className="w-4 h-4" /> Refresh
-            </button>
-            <button onClick={handleExport} disabled={exporting || total === 0}
-              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-sm font-semibold flex items-center gap-2 hover:shadow-lg hover:shadow-emerald-200/50 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-sm">
-              {exporting ? (
-                <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Mengekspor...</>
-              ) : (
-                <><LuFileSpreadsheet className="w-4 h-4" /> Export Excel</>
-              )}
-            </button>
-          </div>
+          {activeTab === 'bank-surat' && (
+            <div className="flex items-center gap-2">
+              <button onClick={() => { fetchSurat(); fetchStatistik(); }}
+                className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 text-sm font-medium flex items-center gap-2 transition shadow-sm">
+                <LuRefreshCw className="w-4 h-4" /> Refresh
+              </button>
+              <button onClick={handleExport} disabled={exporting || total === 0}
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-sm font-semibold flex items-center gap-2 hover:shadow-lg hover:shadow-emerald-200/50 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-sm">
+                {exporting ? (
+                  <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Mengekspor...</>
+                ) : (
+                  <><LuFileSpreadsheet className="w-4 h-4" /> Export Excel</>
+                )}
+              </button>
+            </div>
+          )}
         </div>
+
+        {/* ─── Tab Navigation ─────────────────────── */}
+        <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm p-1.5 flex gap-1">
+          <button
+            onClick={() => setActiveTab('bank-surat')}
+            className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${
+              activeTab === 'bank-surat'
+                ? 'bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-lg shadow-indigo-200/50'
+                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+            }`}
+          >
+            <LuBookOpen className="w-4 h-4" />
+            Bank Surat
+          </button>
+          <button
+            onClick={() => setActiveTab('nomor-surat')}
+            className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${
+              activeTab === 'nomor-surat'
+                ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-lg shadow-violet-200/50'
+                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+            }`}
+          >
+            <LuHash className="w-4 h-4" />
+            Nomor Surat
+          </button>
+        </div>
+
+        {/* ═══ Tab Content ═══════════════════════ */}
+        {activeTab === 'nomor-surat' ? (
+          <NomorSuratTab />
+        ) : (<>
 
         {/* ─── Statistik Cards ───────────────────── */}
         {statistik && (
@@ -577,6 +615,13 @@ export default function BankSuratPage() {
                               })()}
                             </span>
                           </span>
+                        ) : surat.status === 'selesai' ? (
+                          <StatusBadge status="selesai" />
+                        ) : surat.status === 'dikirim' ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-50 text-amber-700">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                            Menunggu Disposisi
+                          </span>
                         ) : (
                           <StatusBadge status={surat.status} />
                         )}
@@ -593,13 +638,17 @@ export default function BankSuratPage() {
                           )}
                           <button
                             onClick={() => {
-                              // Navigate to disposisi detail based on the first disposisi
                               if (surat.total_disposisi > 0) {
                                 navigate(`/dpmd/disposisi/${surat.id}`);
                               }
                             }}
-                            title="Detail"
-                            className="w-8 h-8 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 flex items-center justify-center transition">
+                            title={surat.total_disposisi > 0 ? 'Lihat Track Disposisi' : 'Belum ada disposisi'}
+                            disabled={surat.total_disposisi === 0}
+                            className={`w-8 h-8 rounded-lg flex items-center justify-center transition ${
+                              surat.total_disposisi > 0
+                                ? 'bg-indigo-50 hover:bg-indigo-100 text-indigo-600 cursor-pointer'
+                                : 'bg-slate-50 text-slate-300 cursor-not-allowed'
+                            }`}>
                             <LuFileText className="w-4 h-4" />
                           </button>
                           {/* Tombol Delete: hanya superadmin atau pegawai bidang sekretariat */}
@@ -661,6 +710,9 @@ export default function BankSuratPage() {
             </div>
           )}
         </div>
+
+        </>)}
+
       </div>
 
       {/* PDF Modal */}

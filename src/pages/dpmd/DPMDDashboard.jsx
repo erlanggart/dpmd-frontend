@@ -10,7 +10,7 @@ import {
   MapPin, Calendar, BarChart3, PieChart, Activity, Bell, Info, X, ExternalLink,
   Clock, CheckCircle, Send, Mail, Inbox, ChevronRight, User, Phone, Award,
   FolderOpen, ClipboardList, Newspaper, Fingerprint, MessageSquare, Plus, Eye, Trash2,
-  Image, Video, Type, Crop, RotateCw, ZoomIn, ChevronUp
+  Image, Video, Type, Crop, RotateCw, ZoomIn, ChevronUp, SlidersHorizontal, Camera
 } from 'lucide-react';
 import api from '../../api';
 import axios from 'axios';
@@ -167,6 +167,12 @@ const DPMDDashboard = () => {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [cropZoom, setCropZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+  const [photoFilters, setPhotoFilters] = useState({ brightness: 100, contrast: 100, saturation: 100 });
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [showCameraMode, setShowCameraMode] = useState(false);
+  const cameraStreamRef = useRef(null);
+  const cameraVideoRef = useRef(null);
 
   // Get role config
   const role = user?.role || 'pegawai';
@@ -424,6 +430,14 @@ const DPMDDashboard = () => {
 
   // ==================== STATUS FEATURE ====================
   const STATUS_COLORS = ['#059669', '#2563eb', '#7c3aed', '#dc2626', '#d97706', '#0891b2', '#e11d48', '#4f46e5'];
+  const FILTER_PRESETS = [
+    { name: 'Normal',   brightness: 100, contrast: 100, saturation: 100 },
+    { name: 'Cerah',    brightness: 115, contrast: 110, saturation: 125 },
+    { name: 'Hangat',   brightness: 108, contrast: 108, saturation: 145 },
+    { name: 'Kalem',    brightness:  95, contrast:  88, saturation:  65 },
+    { name: 'Dramatis', brightness:  88, contrast: 138, saturation:  75 },
+    { name: 'Fade',     brightness: 112, contrast:  82, saturation:  50 },
+  ];
 
   const fetchStatuses = useCallback(async () => {
     try {
@@ -440,7 +454,25 @@ const DPMDDashboard = () => {
       const fd = new FormData();
       if (statusContent.trim()) fd.append('content', statusContent.trim());
       fd.append('background_color', statusColor);
-      if (statusMediaFile) fd.append('media', statusMediaFile);
+      // Bake CSS filters into the image before uploading
+      let mediaToUpload = statusMediaFile;
+      if (statusMediaFile && !statusMediaFile.type.startsWith('video/') && statusMediaPreview &&
+          (photoFilters.brightness !== 100 || photoFilters.contrast !== 100 || photoFilters.saturation !== 100)) {
+        try {
+          const img = new window.Image();
+          img.src = statusMediaPreview;
+          await new Promise(resolve => { img.onload = resolve; });
+          const canvas = document.createElement('canvas');
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          const ctx = canvas.getContext('2d');
+          ctx.filter = `brightness(${photoFilters.brightness}%) contrast(${photoFilters.contrast}%) saturate(${photoFilters.saturation}%)`;
+          ctx.drawImage(img, 0, 0);
+          const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+          mediaToUpload = new File([blob], 'status-photo.jpg', { type: 'image/jpeg' });
+        } catch (e) { /* fall back to original */ }
+      }
+      if (mediaToUpload) fd.append('media', mediaToUpload);
       await api.post('/status', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
       setShowStatusCreate(false);
       setStatusContent('');
@@ -479,12 +511,14 @@ const DPMDDashboard = () => {
       };
       video.src = URL.createObjectURL(file);
     } else {
-      // For images: open cropper
+      // For images: open inline cropper
       const url = URL.createObjectURL(file);
       setCropImage(url);
       setShowCropper(true);
       setCrop({ x: 0, y: 0 });
       setCropZoom(1);
+      setPhotoFilters({ brightness: 100, contrast: 100, saturation: 100 });
+      setShowFilterPanel(false);
     }
   };
 
@@ -502,6 +536,9 @@ const DPMDDashboard = () => {
       canvas.width = croppedAreaPixels.width;
       canvas.height = croppedAreaPixels.height;
       const ctx = canvas.getContext('2d');
+      if (photoFilters.brightness !== 100 || photoFilters.contrast !== 100 || photoFilters.saturation !== 100) {
+        ctx.filter = `brightness(${photoFilters.brightness}%) contrast(${photoFilters.contrast}%) saturate(${photoFilters.saturation}%)`;
+      }
       ctx.drawImage(
         image,
         croppedAreaPixels.x, croppedAreaPixels.y,
@@ -530,11 +567,79 @@ const DPMDDashboard = () => {
   };
 
   const clearStatusMedia = () => {
+    if (cameraStreamRef.current) {
+      cameraStreamRef.current.getTracks().forEach(t => t.stop());
+      cameraStreamRef.current = null;
+    }
+    setShowCameraMode(false);
     setStatusMediaFile(null);
     if (statusMediaPreview) URL.revokeObjectURL(statusMediaPreview);
     setStatusMediaPreview(null);
     setStatusType('text');
     if (statusFileRef.current) statusFileRef.current.value = '';
+    setPhotoFilters({ brightness: 100, contrast: 100, saturation: 100 });
+    setShowFilterPanel(false);
+  };
+
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 720 }, height: { ideal: 1280 } },
+        audio: false
+      });
+      cameraStreamRef.current = stream;
+      setShowCameraMode(true);
+    } catch {
+      toast.error('Tidak bisa mengakses kamera');
+    }
+  };
+
+  const stopCamera = () => {
+    if (cameraStreamRef.current) {
+      cameraStreamRef.current.getTracks().forEach(t => t.stop());
+      cameraStreamRef.current = null;
+    }
+    setShowCameraMode(false);
+  };
+
+  const capturePhoto = () => {
+    const video = cameraVideoRef.current;
+    if (!video) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth || 720;
+    canvas.height = video.videoHeight || 1280;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    canvas.toBlob(blob => {
+      if (!blob) return;
+      stopCamera();
+      const url = URL.createObjectURL(blob);
+      setCropImage(url);
+      setShowCropper(true);
+      setCrop({ x: 0, y: 0 });
+      setCropZoom(1);
+      setPhotoFilters({ brightness: 100, contrast: 100, saturation: 100 });
+      setShowFilterPanel(false);
+    }, 'image/jpeg', 0.92);
+  };
+
+  const handlePreviewDrop = (e) => {
+    e.preventDefault();
+    setIsDraggingOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+    const allowedImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedImageTypes.includes(file.type)) {
+      toast.error('Hanya file gambar yang didukung');
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    setCropImage(url);
+    setShowCropper(true);
+    setCrop({ x: 0, y: 0 });
+    setCropZoom(1);
+    setPhotoFilters({ brightness: 100, contrast: 100, saturation: 100 });
+    setShowFilterPanel(false);
   };
 
   const openStatusViewer = (group, index = 0) => {
@@ -1320,60 +1425,6 @@ const DPMDDashboard = () => {
         </div>
       </div>
 
-      {/* Image Cropper Modal */}
-      <AnimatePresence>
-        {showCropper && cropImage && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black z-[60] flex flex-col"
-          >
-            <div className="flex items-center justify-between px-4 py-3 bg-black/80 backdrop-blur-sm">
-              <button onClick={cancelCrop} className="text-white/70 hover:text-white text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-white/10 transition">
-                Batal
-              </button>
-              <div className="flex items-center gap-2 text-white">
-                <Crop className="w-4 h-4" />
-                <span className="text-sm font-semibold">Sesuaikan Foto</span>
-              </div>
-              <button onClick={applyCrop} className="bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition">
-                Terapkan
-              </button>
-            </div>
-            <div className="flex-1 relative">
-              <Cropper
-                image={cropImage}
-                crop={crop}
-                zoom={cropZoom}
-                aspect={9 / 16}
-                onCropChange={setCrop}
-                onZoomChange={setCropZoom}
-                onCropComplete={onCropComplete}
-                showGrid={false}
-                style={{
-                  containerStyle: { background: '#000' },
-                  cropAreaStyle: { border: '2px solid rgba(255,255,255,0.6)', borderRadius: '16px' }
-                }}
-              />
-            </div>
-            <div className="px-6 py-4 bg-black/80 backdrop-blur-sm flex items-center gap-3">
-              <ZoomIn className="w-4 h-4 text-white/50 flex-shrink-0" />
-              <input
-                type="range"
-                min={1}
-                max={3}
-                step={0.1}
-                value={cropZoom}
-                onChange={(e) => setCropZoom(Number(e.target.value))}
-                className="flex-1 accent-emerald-500 h-1"
-              />
-              <span className="text-white/50 text-xs w-8 text-right">{cropZoom.toFixed(1)}x</span>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Status Create Modal */}
       <AnimatePresence>
         {showStatusCreate && (
@@ -1389,7 +1440,7 @@ const DPMDDashboard = () => {
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 100, opacity: 0 }}
               transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-              className="w-full sm:max-w-[400px] bg-white rounded-t-[28px] sm:rounded-[28px] shadow-2xl overflow-hidden max-h-[92vh] flex flex-col"
+              className="w-full sm:max-w-[400px] bg-white rounded-t-[28px] sm:rounded-[28px] shadow-2xl overflow-hidden max-h-[92dvh] flex flex-col"
               onClick={e => e.stopPropagation()}
             >
               {/* Hidden file input */}
@@ -1417,7 +1468,7 @@ const DPMDDashboard = () => {
                 <h3 className="text-sm font-bold text-gray-800">Buat Status</h3>
                 <button
                   onClick={createStatus}
-                  disabled={!statusContent.trim() && !statusMediaFile}
+                  disabled={showCropper || showCameraMode || (!statusContent.trim() && !statusMediaFile)}
                   className="px-4 py-1.5 bg-emerald-500 text-white text-xs font-bold rounded-full disabled:opacity-30 hover:bg-emerald-600 transition-all shadow-sm"
                 >
                   Bagikan
@@ -1426,14 +1477,44 @@ const DPMDDashboard = () => {
 
               {/* Preview Area */}
               <div
-                className="relative mx-4 rounded-2xl overflow-hidden flex-shrink-0"
+                className={`relative mx-4 rounded-2xl overflow-hidden flex-shrink-0 transition-all duration-200 ${isDraggingOver ? 'ring-2 ring-emerald-400 ring-offset-2' : ''}`}
                 style={{
                   aspectRatio: '9/16',
-                  maxHeight: '55vh',
-                  backgroundColor: statusType === 'text' ? statusColor : '#111'
+                  maxHeight: 'min(48dvh, calc(100dvh - 230px))',
+                  backgroundColor: showCropper ? '#000' : showCameraMode ? '#000' : statusType === 'text' ? statusColor : '#111'
                 }}
+                onDrop={handlePreviewDrop}
+                onDragOver={e => { e.preventDefault(); setIsDraggingOver(true); }}
+                onDragLeave={() => setIsDraggingOver(false)}
               >
-                {statusType === 'media' && statusMediaPreview ? (
+                {showCameraMode ? (
+                  /* ── Live Camera (not mirrored) ── */
+                  <video
+                    ref={el => {
+                      cameraVideoRef.current = el;
+                      if (el && cameraStreamRef.current) el.srcObject = cameraStreamRef.current;
+                    }}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-cover"
+                  />
+                ) : showCropper && cropImage ? (
+                  /* ── Inline Cropper ── */
+                  <Cropper
+                    image={cropImage}
+                    crop={crop}
+                    zoom={cropZoom}
+                    aspect={9 / 16}
+                    onCropChange={setCrop}
+                    onZoomChange={setCropZoom}
+                    onCropComplete={onCropComplete}
+                    showGrid={false}
+                    style={{
+                      cropAreaStyle: { border: '2px solid rgba(255,255,255,0.9)', borderRadius: '12px' }
+                    }}
+                  />
+                ) : statusType === 'media' && statusMediaPreview ? (
                   <>
                     {statusMediaFile?.type?.startsWith('video/') ? (
                       <video
@@ -1446,6 +1527,7 @@ const DPMDDashboard = () => {
                         src={statusMediaPreview}
                         alt="Preview"
                         className="w-full h-full object-cover"
+                        style={{ filter: `brightness(${photoFilters.brightness}%) contrast(${photoFilters.contrast}%) saturate(${photoFilters.saturation}%)` }}
                       />
                     )}
                     <button
@@ -1478,66 +1560,168 @@ const DPMDDashboard = () => {
                     />
                   </div>
                 )}
-              </div>
-
-              {/* Bottom Controls */}
-              <div className="px-5 py-4 space-y-3 flex-shrink-0">
-                {/* Media type buttons */}
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => { clearStatusMedia(); setStatusType('text'); }}
-                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${
-                      statusType === 'text'
-                        ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200'
-                        : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
-                    }`}
-                  >
-                    <Type className="w-3.5 h-3.5" /> Teks
-                  </button>
-                  <button
-                    onClick={() => { if (statusFileRef.current) { statusFileRef.current.accept = 'image/jpeg,image/png,image/gif,image/webp'; statusFileRef.current.click(); } }}
-                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${
-                      statusType === 'media' && !statusMediaFile?.type?.startsWith('video/')
-                        ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200'
-                        : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
-                    }`}
-                  >
-                    <Image className="w-3.5 h-3.5" /> Foto
-                  </button>
-                  <button
-                    onClick={() => { if (statusFileRef.current) { statusFileRef.current.accept = 'video/mp4,video/webm,video/quicktime'; statusFileRef.current.click(); statusFileRef.current.accept = 'image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,video/quicktime'; } }}
-                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${
-                      statusType === 'media' && statusMediaFile?.type?.startsWith('video/')
-                        ? 'bg-purple-50 text-purple-700 ring-1 ring-purple-200'
-                        : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
-                    }`}
-                  >
-                    <Video className="w-3.5 h-3.5" /> Video
-                  </button>
-                </div>
-
-                {/* Color picker (text mode only) */}
-                {statusType === 'text' && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-[11px] text-gray-400 font-medium">Warna</span>
-                    <div className="flex gap-1.5 flex-wrap">
-                      {STATUS_COLORS.map(c => (
-                        <button
-                          key={c}
-                          onClick={() => setStatusColor(c)}
-                          className={`w-7 h-7 rounded-full transition-all duration-200 ${
-                            statusColor === c ? 'ring-2 ring-offset-2 ring-gray-400 scale-110' : 'hover:scale-110'
-                          }`}
-                          style={{ backgroundColor: c }}
-                        />
-                      ))}
+                {/* Drag-over overlay */}
+                {isDraggingOver && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-emerald-500/25 backdrop-blur-sm z-30 pointer-events-none">
+                    <div className="flex flex-col items-center gap-2 text-white drop-shadow-lg">
+                      <Image className="w-10 h-10" />
+                      <span className="text-sm font-bold">Lepas foto di sini</span>
                     </div>
                   </div>
                 )}
+              </div>
 
-                <p className="text-center text-[11px] text-gray-400 pb-[env(safe-area-inset-bottom)]">
-                  Hilang otomatis dalam 24 jam{statusType === 'media' && statusMediaFile?.type?.startsWith('video/') ? ' · Video maks 30 detik' : ''}
-                </p>
+              {/* Bottom Controls */}
+              <div className="px-5 pt-3 pb-3 space-y-3 flex-shrink-0 overflow-y-auto" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
+                {showCameraMode ? (
+                  /* ── Camera Capture Mode ── */
+                  <div className="flex gap-2">
+                    <button
+                      onClick={stopCamera}
+                      className="flex-1 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-all"
+                    >
+                      Batal
+                    </button>
+                    <button
+                      onClick={capturePhoto}
+                      className="flex-1 py-2.5 text-sm font-semibold text-white bg-emerald-500 hover:bg-emerald-600 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2"
+                    >
+                      <Camera className="w-4 h-4" /> Ambil Foto
+                    </button>
+                  </div>
+                ) : showCropper ? (
+                  /* ── Crop Mode ── */
+                  <>
+                    <div className="flex items-center gap-3">
+                      <ZoomIn className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                      <input
+                        type="range" min={1} max={3} step={0.05} value={cropZoom}
+                        onChange={e => setCropZoom(Number(e.target.value))}
+                        className="flex-1 accent-emerald-500 h-1.5 cursor-pointer"
+                      />
+                      <span className="text-gray-400 text-xs w-8 text-right">{cropZoom.toFixed(1)}x</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={cancelCrop}
+                        className="flex-1 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-all"
+                      >
+                        Batal
+                      </button>
+                      <button
+                        onClick={applyCrop}
+                        className="flex-1 py-2.5 text-sm font-semibold text-white bg-emerald-500 hover:bg-emerald-600 rounded-xl transition-all shadow-sm"
+                      >
+                        ✓ Terapkan
+                      </button>
+                    </div>
+                  </>
+                ) : showFilterPanel ? (
+                  /* ── Filter Panel ── */
+                  <>
+                    <div className="flex overflow-x-auto pb-1 gap-3 scrollbar-none -mx-1 px-1">
+                      {FILTER_PRESETS.map(preset => {
+                        const isActive = photoFilters.brightness === preset.brightness && photoFilters.contrast === preset.contrast && photoFilters.saturation === preset.saturation;
+                        return (
+                          <button
+                            key={preset.name}
+                            onClick={() => setPhotoFilters({ brightness: preset.brightness, contrast: preset.contrast, saturation: preset.saturation })}
+                            className={`flex-shrink-0 flex flex-col items-center gap-1.5 transition-all ${isActive ? 'opacity-100 scale-105' : 'opacity-65 hover:opacity-90'}`}
+                          >
+                            <div className={`w-14 h-20 rounded-xl overflow-hidden ring-2 transition-all ${isActive ? 'ring-emerald-500' : 'ring-transparent'}`}>
+                              <img
+                                src={statusMediaPreview}
+                                alt={preset.name}
+                                className="w-full h-full object-cover"
+                                style={{ filter: `brightness(${preset.brightness}%) contrast(${preset.contrast}%) saturate(${preset.saturation}%)` }}
+                              />
+                            </div>
+                            <span className={`text-[10px] font-semibold ${isActive ? 'text-emerald-600' : 'text-gray-500'}`}>{preset.name}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <button
+                      onClick={() => setShowFilterPanel(false)}
+                      className="w-full py-2 text-xs font-semibold text-gray-500 hover:text-gray-700 transition bg-gray-50 hover:bg-gray-100 rounded-xl"
+                    >
+                      Selesai
+                    </button>
+                  </>
+                ) : (
+                  /* ── Normal Mode ── */
+                  <>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => { clearStatusMedia(); setStatusType('text'); }}
+                        className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${
+                          statusType === 'text'
+                            ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200'
+                            : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
+                        }`}
+                      >
+                        <Type className="w-3.5 h-3.5" /> Teks
+                      </button>
+                      <button
+                        onClick={() => { if (statusFileRef.current) { statusFileRef.current.accept = 'image/jpeg,image/png,image/gif,image/webp'; statusFileRef.current.click(); } }}
+                        className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${
+                          statusType === 'media' && !statusMediaFile?.type?.startsWith('video/')
+                            ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200'
+                            : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
+                        }`}
+                      >
+                        <Image className="w-3.5 h-3.5" /> Foto
+                      </button>
+                      <button
+                        onClick={() => { if (statusFileRef.current) { statusFileRef.current.accept = 'video/mp4,video/webm,video/quicktime'; statusFileRef.current.click(); statusFileRef.current.accept = 'image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,video/quicktime'; } }}
+                        className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${
+                          statusType === 'media' && statusMediaFile?.type?.startsWith('video/')
+                            ? 'bg-purple-50 text-purple-700 ring-1 ring-purple-200'
+                            : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
+                        }`}
+                      >
+                        <Video className="w-3.5 h-3.5" /> Video
+                      </button>
+                      <button
+                        onClick={startCamera}
+                        className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-gray-50 text-gray-500 hover:bg-gray-100 transition-all"
+                      >
+                        <Camera className="w-3.5 h-3.5" /> Kamera
+                      </button>
+                      {statusType === 'media' && !statusMediaFile?.type?.startsWith('video/') && (
+                        <button
+                          onClick={() => setShowFilterPanel(true)}
+                          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-gray-50 text-gray-500 hover:bg-gray-100 transition-all ml-auto"
+                        >
+                          <SlidersHorizontal className="w-3.5 h-3.5" /> Filter
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Color picker (text mode only) */}
+                    {statusType === 'text' && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] text-gray-400 font-medium">Warna</span>
+                        <div className="flex gap-1.5 flex-wrap">
+                          {STATUS_COLORS.map(c => (
+                            <button
+                              key={c}
+                              onClick={() => setStatusColor(c)}
+                              className={`w-7 h-7 rounded-full transition-all duration-200 ${
+                                statusColor === c ? 'ring-2 ring-offset-2 ring-gray-400 scale-110' : 'hover:scale-110'
+                              }`}
+                              style={{ backgroundColor: c }}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <p className="text-center text-[11px] text-gray-400">
+                      Hilang otomatis dalam 24 jam{statusType === 'media' && statusMediaFile?.type?.startsWith('video/') ? ' · Video maks 30 detik' : ''}
+                    </p>
+                  </>
+                )}
               </div>
             </motion.div>
           </motion.div>
