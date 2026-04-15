@@ -14,6 +14,7 @@ import { ChevronLeft, Menu } from "lucide-react";
 import { LuStore, LuFileText, LuUsers, LuUserCheck, LuWallpaper, LuLayoutDashboard, LuLandmark, LuBanknote, LuPanelLeftClose, LuPanelLeft, LuDatabase } from "react-icons/lu";
 import AnimatedIcon from "../components/AnimatedIcon";
 import InstallPWA from "../components/InstallPWA";
+import { useUnreadMessages } from "../hooks/useUnreadMessages";
 
 // Menu items configuration
 const menuItems = [
@@ -105,6 +106,7 @@ const DesaLayout = () => {
   const { isDesktop, isSidebarCollapsed, setIsSidebarCollapsed } = useResponsive();
   const [showMenu, setShowMenu] = useState(false);
   const [hoveredItem, setHoveredItem] = useState(null);
+  const { unreadMessages } = useUnreadMessages('/desa/pesan');
 
   const handleLogout = () => {
     logout();
@@ -191,9 +193,19 @@ const DesaLayout = () => {
                       isHovered={hoveredItem === item.label}
                       className="w-5 h-5"
                     />
+                    {item.id === 'pesan' && unreadMessages > 0 && (
+                      <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-0.5 text-[9px] font-bold text-white leading-none">
+                        {unreadMessages > 9 ? '9+' : unreadMessages}
+                      </span>
+                    )}
                   </div>
                   {!isSidebarCollapsed && (
                     <span className="relative font-semibold truncate text-sm">{item.label}</span>
+                  )}
+                  {!isSidebarCollapsed && item.id === 'pesan' && unreadMessages > 0 && (
+                    <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                      {unreadMessages > 9 ? '9+' : unreadMessages}
+                    </span>
                   )}
                 </button>
               );
@@ -298,7 +310,14 @@ const DesaLayout = () => {
                         : 'text-gray-400 hover:text-emerald-600'
                     }`}
                   >
-                    <AnimatedIcon type={item.icon} isActive={isActive} className="w-6 h-6" />
+                      <div className="relative">
+                        <AnimatedIcon type={item.icon} isActive={isActive} className="w-6 h-6" />
+                        {item.action === 'menu' && unreadMessages > 0 && (
+                          <span className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-0.5 text-[9px] font-bold text-white leading-none">
+                            {unreadMessages > 9 ? '9+' : unreadMessages}
+                          </span>
+                        )}
+                      </div>
                     <span className={`text-[11px] mt-1 font-medium ${
                       isActive ? 'text-emerald-700' : 'text-gray-400'
                     }`}>{item.label}</span>
@@ -353,12 +372,22 @@ const DesaLayout = () => {
                     }}
                     className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-emerald-50 transition-colors text-left"
                   >
-                    <div className={`h-12 w-12 bg-gradient-to-br ${item.gradient} rounded-xl flex items-center justify-center`}>
+                    <div className={`relative h-12 w-12 bg-gradient-to-br ${item.gradient} rounded-xl flex items-center justify-center flex-shrink-0`}>
                       <AnimatedIcon type={item.icon} isActive={false} className="w-6 h-6 text-white" />
+                      {item.id === 'pesan' && unreadMessages > 0 && (
+                        <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                          {unreadMessages > 9 ? '9+' : unreadMessages}
+                        </span>
+                      )}
                     </div>
-                    <div>
+                    <div className="flex-1">
                       <h4 className="font-semibold text-gray-800">{item.label}</h4>
                     </div>
+                    {item.id === 'pesan' && unreadMessages > 0 && (
+                      <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-bold text-white">
+                        {unreadMessages > 9 ? '9+' : unreadMessages}
+                      </span>
+                    )}
                   </button>
                 ))}
 
