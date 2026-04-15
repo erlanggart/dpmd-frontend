@@ -93,6 +93,7 @@ const JadwalKegiatanPage = () => {
 		bidang_id: '',
 		tanggal_mulai: '',
 		tanggal_selesai: '',
+		jam: '08:00',
 		lokasi: '',
 		asal_kegiatan: '',
 		prioritas: 'sedang',
@@ -110,6 +111,11 @@ const JadwalKegiatanPage = () => {
 		}));
 	};
 
+	// Handle bidang multi-select change
+	const handleBidangChange = (ids) => {
+		setFormData(prev => ({ ...prev, bidang_ids: ids }));
+	};
+
 	// Reset form data
 	const resetFormData = () => {
 		setFormData({
@@ -118,6 +124,7 @@ const JadwalKegiatanPage = () => {
 			bidang_id: '',
 			tanggal_mulai: '',
 			tanggal_selesai: '',
+			jam: '08:00',
 			lokasi: '',
 			asal_kegiatan: '',
 			prioritas: 'sedang',
@@ -195,13 +202,21 @@ const JadwalKegiatanPage = () => {
 	const handleCreate = async (e) => {
 		e.preventDefault();
 		try {
-			const dataToSend = { ...formData, bidang_id: formData.bidang_id || null };
+			const combinedMulai = formData.tanggal_mulai
+				? `${formData.tanggal_mulai}T${formData.jam || '00:00'}:00`
+				: '';
+			const { jam, ...restForm } = formData;
+			const dataToSend = {
+				...restForm,
+				tanggal_mulai: combinedMulai,
+				bidang_ids: formData.bidang_ids || [],
+			};
 			const res = await api.post('/jadwal-kegiatan', dataToSend);
 			const newId = res.data?.data?.id;
 			setShowAddModal(false);
 			// Pindah filter ke tanggal jadwal baru agar langsung terlihat
 			if (formData.tanggal_mulai) {
-				setFilterTanggal(formData.tanggal_mulai.split('T')[0]);
+				setFilterTanggal(formData.tanggal_mulai);
 			}
 
 			// Format tanggal untuk pesan WA
@@ -215,7 +230,7 @@ const JadwalKegiatanPage = () => {
 				``,
 				`📌 *${formData.judul}*`,
 				formData.lokasi ? `📍 Lokasi: ${formData.lokasi}` : '',
-				`🕐 Mulai: ${fmtTgl(formData.tanggal_mulai)}`,
+				`🕐 Mulai: ${fmtTgl(combinedMulai)}`,
 				`🕑 Selesai: ${fmtTgl(formData.tanggal_selesai)}`,
 				formData.asal_kegiatan ? `🏛️ Asal: ${formData.asal_kegiatan}` : '',
 				formData.pic_name ? `👤 PIC: ${formData.pic_name}${formData.pic_contact ? ` (${formData.pic_contact})` : ''}` : '',
@@ -256,14 +271,22 @@ const JadwalKegiatanPage = () => {
 		if (!selectedJadwal) return;
 		
 		try {
-			const dataToSend = { ...formData, bidang_id: formData.bidang_id || null };
+			const combinedMulai = formData.tanggal_mulai
+				? `${formData.tanggal_mulai}T${formData.jam || '00:00'}:00`
+				: '';
+			const { jam, ...restForm } = formData;
+			const dataToSend = {
+				...restForm,
+				tanggal_mulai: combinedMulai,
+				bidang_ids: formData.bidang_ids || [],
+			};
 			await api.put(`/jadwal-kegiatan/${selectedJadwal.id}`, dataToSend);
 			Swal.fire('Berhasil', 'Jadwal kegiatan berhasil diperbarui', 'success');
 			setShowEditModal(false);
 			setSelectedJadwal(null);
 			// Pindah filter ke tanggal jadwal yang diedit
 			if (formData.tanggal_mulai) {
-				setFilterTanggal(formData.tanggal_mulai.split('T')[0]);
+				setFilterTanggal(formData.tanggal_mulai);
 			}
 			resetFormData();
 		} catch (error) {
@@ -301,23 +324,27 @@ const JadwalKegiatanPage = () => {
 	const handleEdit = (jadwal) => {
 		setSelectedJadwal(jadwal);
 		// Populate form with jadwal data
-		const formatDateTime = (dateString) => {
+		const formatDateOnly = (dateString) => {
 			if (!dateString) return '';
 			const date = new Date(dateString);
 			const year = date.getFullYear();
 			const month = String(date.getMonth() + 1).padStart(2, '0');
 			const day = String(date.getDate()).padStart(2, '0');
-			const hours = String(date.getHours()).padStart(2, '0');
-			const minutes = String(date.getMinutes()).padStart(2, '0');
-			return `${year}-${month}-${day}T${hours}:${minutes}`;
+			return `${year}-${month}-${day}`;
+		};
+		const formatTimeOnly = (dateString) => {
+			if (!dateString) return '08:00';
+			const date = new Date(dateString);
+			return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 		};
 		
 		setFormData({
 			judul: jadwal.judul || '',
 			deskripsi: jadwal.deskripsi || '-',
-			bidang_id: jadwal.bidang_id || '',
-			tanggal_mulai: formatDateTime(jadwal.tanggal_mulai),
-			tanggal_selesai: formatDateTime(jadwal.tanggal_selesai),
+			bidang_ids: jadwal.bidang_ids?.map(Number) || (jadwal.bidang_id ? [Number(jadwal.bidang_id)] : []),
+			tanggal_mulai: formatDateOnly(jadwal.tanggal_mulai),
+			tanggal_selesai: formatDateOnly(jadwal.tanggal_selesai),
+			jam: formatTimeOnly(jadwal.tanggal_mulai),
 			lokasi: jadwal.lokasi || '',
 			asal_kegiatan: jadwal.asal_kegiatan || '',
 			prioritas: jadwal.prioritas || 'sedang',
@@ -411,6 +438,14 @@ const JadwalKegiatanPage = () => {
 			month: 'short',
 			year: 'numeric'
 		});
+	};
+
+	const formatTime = (dateString) => {
+		if (!dateString) return '';
+		const date = new Date(dateString);
+		const h = date.getHours();
+		const m = date.getMinutes();
+		return `${String(h).padStart(2, '0')}.${String(m).padStart(2, '0')}`;
 	};
 
 	// Get status badge
@@ -803,6 +838,7 @@ const JadwalKegiatanPage = () => {
 																<LuClock className="w-4 h-4 text-teal-500 flex-shrink-0 mt-0.5" />
 																<div>
 																	<div className="font-medium text-gray-900">{formatDate(jadwal.tanggal_mulai)}</div>
+																	<div className="text-xs text-indigo-600 font-semibold">{formatTime(jadwal.tanggal_mulai)}</div>
 																	<div className="text-xs text-gray-500">s/d {formatDate(jadwal.tanggal_selesai)}</div>
 																</div>
 															</div>
@@ -814,9 +850,11 @@ const JadwalKegiatanPage = () => {
 															</div>
 														</td>
 														<td className="px-4 py-4 hidden xl:table-cell">
-															<div className="flex items-center gap-2 text-sm text-gray-600">
-																<LuUser className="w-4 h-4 text-purple-500 flex-shrink-0" />
-																<span className="line-clamp-1">{jadwal.bidang_nama || '-'}</span>
+															<div className="flex flex-wrap gap-1">
+																{(jadwal.bidang_names?.length > 0 ? jadwal.bidang_names : jadwal.bidang_nama ? [jadwal.bidang_nama] : []).map((n, i) => (
+																	<span key={i} className="inline-block px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">{n}</span>
+																))}
+																{(!jadwal.bidang_names?.length && !jadwal.bidang_nama) && <span className="text-gray-400 text-xs">Semua</span>}
 															</div>
 														</td>
 														<td className="px-4 py-4 text-center hidden md:table-cell">
@@ -945,6 +983,7 @@ const JadwalKegiatanPage = () => {
 														<p className="font-semibold text-gray-900 text-sm">
 															{formatDate(jadwal.tanggal_mulai)}
 														</p>
+														<p className="text-xs text-indigo-600 font-semibold">{formatTime(jadwal.tanggal_mulai)}</p>
 														<p className="text-xs text-gray-600">
 															s/d {formatDate(jadwal.tanggal_selesai)}
 														</p>
@@ -965,17 +1004,21 @@ const JadwalKegiatanPage = () => {
 												)}
 
 												{/* Bidang */}
-												{jadwal.bidang_nama && (
-													<div className="flex items-start gap-2.5 text-sm">
-														<div className="p-1.5 bg-purple-100 rounded-lg flex-shrink-0">
-															<LuUser className="w-4 h-4 text-purple-600" />
-														</div>
-														<div className="flex-1 min-w-0">
-															<p className="text-xs text-gray-500 font-medium">Bidang</p>
-															<p className="text-gray-900 font-medium">{jadwal.bidang_nama}</p>
-														</div>
-													</div>
-												)}
+								{(jadwal.bidang_names?.length > 0 || jadwal.bidang_nama) && (
+									<div className="flex items-start gap-2.5 text-sm">
+										<div className="p-1.5 bg-purple-100 rounded-lg flex-shrink-0">
+											<LuUser className="w-4 h-4 text-purple-600" />
+										</div>
+										<div className="flex-1 min-w-0">
+											<p className="text-xs text-gray-500 font-medium">Bidang</p>
+											<div className="flex flex-wrap gap-1 mt-0.5">
+												{(jadwal.bidang_names?.length > 0 ? jadwal.bidang_names : [jadwal.bidang_nama]).map((n, i) => (
+													<span key={i} className="inline-block px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold">{n}</span>
+												))}
+											</div>
+										</div>
+									</div>
+								)}
 
 												{/* Deskripsi Preview */}
 												{jadwal.deskripsi && jadwal.deskripsi !== '-' && (
@@ -1208,6 +1251,7 @@ const JadwalKegiatanPage = () => {
 					onSubmit={handleCreate}
 					formData={formData}
 					onChange={handleFormChange}
+					onBidangChange={handleBidangChange}
 					bidangList={bidangList}
 					isEdit={false}
 				/>
@@ -1225,6 +1269,7 @@ const JadwalKegiatanPage = () => {
 					onSubmit={handleUpdate}
 					formData={formData}
 					onChange={handleFormChange}
+					onBidangChange={handleBidangChange}
 					bidangList={bidangList}
 					isEdit={true}
 				/>
@@ -1276,6 +1321,7 @@ const JadwalKegiatanPage = () => {
 										<div>
 											<p className="text-xs text-teal-700 font-bold uppercase tracking-wide mb-1">Mulai</p>
 											<p className="text-base font-bold text-gray-900">{formatDate(selectedJadwal.tanggal_mulai)}</p>
+											<p className="text-sm font-bold text-indigo-600">{formatTime(selectedJadwal.tanggal_mulai)}</p>
 										</div>
 									</div>
 								</div>
@@ -1316,8 +1362,13 @@ const JadwalKegiatanPage = () => {
 											<LuUser className="w-5 h-5 text-white" />
 										</div>
 										<div className="flex-1 min-w-0">
-											<p className="text-xs text-purple-700 font-bold uppercase tracking-wide mb-1">Bidang</p>
-											<p className="text-sm font-semibold text-gray-900">{selectedJadwal.bidang_nama || '-'}</p>
+											<p className="text-xs text-purple-700 font-bold uppercase tracking-wide mb-1">Bidang Pelaksana</p>
+											<div className="flex flex-wrap gap-1.5 mt-0.5">
+												{(selectedJadwal.bidang_names?.length > 0 ? selectedJadwal.bidang_names : selectedJadwal.bidang_nama ? [selectedJadwal.bidang_nama] : []).map((n, i) => (
+													<span key={i} className="inline-block px-2.5 py-0.5 bg-purple-200 text-purple-800 rounded-full text-xs font-bold">{n}</span>
+												))}
+												{(!selectedJadwal.bidang_names?.length && !selectedJadwal.bidang_nama) && <span className="text-sm font-semibold text-gray-500">Semua Pegawai</span>}
+											</div>
 										</div>
 									</div>
 								</div>

@@ -323,12 +323,16 @@ onEventClick && onEventClick(jadwal);
 {jadwal.tanggal_mulai !== jadwal.tanggal_selesai && 
 ` - ${new Date(jadwal.tanggal_selesai).toLocaleDateString('id-ID')}`
 }
+{' · '}
+{`${String(new Date(jadwal.tanggal_mulai).getHours()).padStart(2,'0')}.${String(new Date(jadwal.tanggal_mulai).getMinutes()).padStart(2,'0')}`}
 </span>
 </div>
 </div>
-{jadwal.bidang_nama && (
-<div className="mt-2 inline-block px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium">
-{jadwal.bidang_nama}
+{(jadwal.bidang_names?.length > 0 ? jadwal.bidang_names : jadwal.bidang_nama ? [jadwal.bidang_nama] : []).length > 0 && (
+<div className="mt-2 flex flex-wrap gap-1">
+{(jadwal.bidang_names?.length > 0 ? jadwal.bidang_names : [jadwal.bidang_nama]).map((n, i) => (
+<span key={i} className="inline-block px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium">{n}</span>
+))}
 </div>
 )}
 </div>
