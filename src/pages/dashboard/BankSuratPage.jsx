@@ -21,7 +21,7 @@ import {
   ArrowDown as LuArrowDown,
   Inbox as LuInbox,
   Send as LuSend,
-  CheckCircle2 as LuCheckCircle2,
+  CircleCheckBig as LuCheckCircle2,
   Clock as LuClock,
   AlertTriangle,
   Zap as LuZap,

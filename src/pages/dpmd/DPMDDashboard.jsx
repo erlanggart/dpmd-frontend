@@ -590,16 +590,26 @@ const DPMDDashboard = () => {
   };
 
   const startCamera = async (facing) => {
-    const useFacing = facing || cameraFacing;
+    const useFacing = (typeof facing === 'string') ? facing : cameraFacing;
     try {
       // Stop existing stream first
       if (cameraStreamRef.current) {
         cameraStreamRef.current.getTracks().forEach(t => t.stop());
       }
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: useFacing, width: { ideal: 720 }, height: { ideal: 1280 } },
-        audio: true
-      });
+      let stream;
+      try {
+        // Try exact facingMode first (more reliable on mobile)
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { exact: useFacing }, width: { ideal: 720 }, height: { ideal: 1280 } },
+          audio: true
+        });
+      } catch {
+        // Fallback to hint-based facingMode
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: useFacing, width: { ideal: 720 }, height: { ideal: 1280 } },
+          audio: true
+        });
+      }
       cameraStreamRef.current = stream;
       setCameraFacing(useFacing);
       setShowCameraMode(true);
@@ -654,35 +664,42 @@ const DPMDDashboard = () => {
 
   const startRecording = () => {
     if (!cameraStreamRef.current) return;
-    recordingChunksRef.current = [];
-    const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')
-      ? 'video/webm;codecs=vp9,opus'
-      : MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')
-        ? 'video/webm;codecs=vp8,opus'
-        : 'video/mp4';
-    const recorder = new MediaRecorder(cameraStreamRef.current, { mimeType });
-    recorder.ondataavailable = (e) => {
-      if (e.data.size > 0) recordingChunksRef.current.push(e.data);
-    };
-    recorder.onstop = () => {
-      const blob = new Blob(recordingChunksRef.current, { type: mimeType.split(';')[0] });
-      const ext = mimeType.includes('webm') ? 'webm' : 'mp4';
-      const file = new File([blob], `status-video.${ext}`, { type: blob.type });
-      stopCamera();
-      setStatusMediaFile(file);
-      setStatusMediaPreview(URL.createObjectURL(blob));
-      setStatusType('media');
-    };
-    mediaRecorderRef.current = recorder;
-    recorder.start(100);
-    setIsRecording(true);
-    setRecordingTime(0);
-    recordingTimerRef.current = setInterval(() => {
-      setRecordingTime(prev => {
-        if (prev >= 29) { stopRecording(); return 30; }
-        return prev + 1;
-      });
-    }, 1000);
+    try {
+      recordingChunksRef.current = [];
+      const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')
+        ? 'video/webm;codecs=vp9,opus'
+        : MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')
+          ? 'video/webm;codecs=vp8,opus'
+          : MediaRecorder.isTypeSupported('video/webm')
+            ? 'video/webm'
+            : 'video/mp4';
+      const recorder = new MediaRecorder(cameraStreamRef.current, { mimeType });
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) recordingChunksRef.current.push(e.data);
+      };
+      recorder.onstop = () => {
+        const blob = new Blob(recordingChunksRef.current, { type: mimeType.split(';')[0] });
+        const ext = mimeType.includes('webm') ? 'webm' : 'mp4';
+        const file = new File([blob], `status-video.${ext}`, { type: blob.type });
+        stopCamera();
+        setStatusMediaFile(file);
+        setStatusMediaPreview(URL.createObjectURL(blob));
+        setStatusType('media');
+      };
+      mediaRecorderRef.current = recorder;
+      recorder.start(100);
+      setIsRecording(true);
+      setRecordingTime(0);
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingTime(prev => {
+          if (prev >= 29) { stopRecording(); return 30; }
+          return prev + 1;
+        });
+      }, 1000);
+    } catch (err) {
+      console.error('MediaRecorder error:', err);
+      toast.error('Perangkat tidak mendukung perekaman video');
+    }
   };
 
   const stopRecording = () => {
@@ -1781,7 +1798,16 @@ const DPMDDashboard = () => {
                         <Image className="w-3.5 h-3.5" /> Foto
                       </button>
                       <button
-                        onClick={() => { if (statusFileRef.current) { statusFileRef.current.accept = 'video/mp4,video/webm,video/quicktime'; statusFileRef.current.click(); statusFileRef.current.accept = 'image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,video/quicktime'; } }}
+                        onClick={() => {
+                          if (statusFileRef.current) {
+                            statusFileRef.current.accept = 'video/mp4,video/webm,video/quicktime';
+                            statusFileRef.current.click();
+                            // Reset accept after a delay to avoid resetting before dialog opens
+                            setTimeout(() => {
+                              if (statusFileRef.current) statusFileRef.current.accept = 'image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,video/quicktime';
+                            }, 500);
+                          }
+                        }}
                         className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${
                           statusType === 'media' && statusMediaFile?.type?.startsWith('video/')
                             ? 'bg-purple-50 text-purple-700 ring-1 ring-purple-200'

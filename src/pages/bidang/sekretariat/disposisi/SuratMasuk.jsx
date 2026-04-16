@@ -12,6 +12,9 @@ const SuratMasuk = () => {
     perihal_surat: '',
     tanggal_diterima: '',
     ringkasan_isi: '',
+    jam_kegiatan: '',
+    lokasi_kegiatan: '',
+    tanggal_kegiatan: '',
     file_surat: null
   });
   const [loading, setLoading] = useState(false);
@@ -69,6 +72,9 @@ const SuratMasuk = () => {
       submitData.append('perihal_surat', formData.perihal_surat);
       submitData.append('tanggal_diterima', formData.tanggal_diterima);
       submitData.append('ringkasan_isi', formData.ringkasan_isi);
+      if (formData.jam_kegiatan) submitData.append('jam_kegiatan', formData.jam_kegiatan);
+      if (formData.lokasi_kegiatan) submitData.append('lokasi_kegiatan', formData.lokasi_kegiatan);
+      if (formData.tanggal_kegiatan) submitData.append('tanggal_kegiatan', formData.tanggal_kegiatan);
       submitData.append('file_surat', formData.file_surat);
 
       const response = await api.post('/disposisi/surat-masuk', submitData, {
@@ -92,6 +98,9 @@ const SuratMasuk = () => {
           perihal_surat: '',
           tanggal_diterima: '',
           ringkasan_isi: '',
+          jam_kegiatan: '',
+          lokasi_kegiatan: '',
+          tanggal_kegiatan: '',
           file_surat: null
         });
         
@@ -253,6 +262,57 @@ const SuratMasuk = () => {
                     />
                   </div>
 
+                  {/* Info Jadwal Kegiatan (opsional) */}
+                  <div className="border-2 border-dashed border-indigo-200 rounded-xl p-5 bg-indigo-50/30">
+                    <h3 className="flex items-center gap-2 text-sm font-bold text-indigo-700 mb-4">
+                      <i className="fas fa-calendar-check text-indigo-500"></i>
+                      Info Jadwal Kegiatan <span className="text-xs font-normal text-gray-400">(opsional)</span>
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+                          <i className="fas fa-calendar-day text-indigo-400 mr-1"></i> Tanggal Kegiatan
+                        </label>
+                        <input
+                          type="date"
+                          name="tanggal_kegiatan"
+                          value={formData.tanggal_kegiatan}
+                          onChange={handleInputChange}
+                          className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 transition-all duration-200 outline-none text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+                          <i className="fas fa-clock text-indigo-400 mr-1"></i> Jam Kegiatan
+                        </label>
+                        <input
+                          type="time"
+                          name="jam_kegiatan"
+                          value={formData.jam_kegiatan}
+                          onChange={handleInputChange}
+                          className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 transition-all duration-200 outline-none text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+                          <i className="fas fa-map-marker-alt text-indigo-400 mr-1"></i> Lokasi Kegiatan
+                        </label>
+                        <input
+                          type="text"
+                          name="lokasi_kegiatan"
+                          value={formData.lokasi_kegiatan}
+                          onChange={handleInputChange}
+                          placeholder="Contoh: Ruang Rapat Lt.2"
+                          className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 transition-all duration-200 outline-none text-sm"
+                        />
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-indigo-400 mt-2">
+                      <i className="fas fa-info-circle mr-1"></i>
+                      Data ini akan otomatis muncul di Jadwal Kegiatan setelah didisposisi
+                    </p>
+                  </div>
+
                   {/* Upload File */}
                   <div className="group">
                     <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700 mb-2">
@@ -310,6 +370,9 @@ const SuratMasuk = () => {
                           perihal_surat: '',
                           tanggal_diterima: '',
                           ringkasan_isi: '',
+                          jam_kegiatan: '',
+                          lokasi_kegiatan: '',
+                          tanggal_kegiatan: '',
                           file_surat: null
                         });
                         document.getElementById('file_surat').value = '';

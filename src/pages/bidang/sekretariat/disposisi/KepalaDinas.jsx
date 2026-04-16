@@ -1,15 +1,15 @@
-// src/pages/bidang/sekretariat/disposisi/KepalaDinas.jsx
+﻿// src/pages/bidang/sekretariat/disposisi/KepalaDinas.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '../../../../api';
 import Swal from 'sweetalert2';
 import {
-  LuInbox, LuSend, LuClock, LuCheckCircle2,
+  LuInbox, LuSend, LuClock, LuCircleCheckBig,
   LuArrowRight, LuFileText, LuUser, LuUsers, LuCalendar, LuSearch, LuRefreshCw,
   LuX, LuCheck, LuBuilding2, LuBookOpen, LuMessageSquare, LuExternalLink
 } from 'react-icons/lu';
 import { INSTRUKSI_OPTIONS, INSTRUKSI_BADGES, getInstruksiLabel } from '../../../../constants/disposisiInstruksi';
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const fmt = (d) => {
   if (!d) return '-';
   return new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -63,12 +63,12 @@ const InstruksiBadge = ({ value }) => {
   );
 };
 
-// ─── Teruskan Modal ───────────────────────────────────────────────────────────
+// â”€â”€â”€ Teruskan Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const ROLE_ORDER = ['sekretaris_dinas', 'kepala_bidang', 'ketua_tim'];
 const ROLE_SECTION_CFG = {
-  sekretaris_dinas: { label: 'Sekretaris Dinas', color: 'border-purple-200 bg-purple-50', badge: 'bg-purple-100 text-purple-700 border-purple-300', check: 'bg-purple-600 border-purple-600', icon: '🏢' },
-  kepala_bidang:    { label: 'Kepala Bidang',    color: 'border-blue-200 bg-blue-50',    badge: 'bg-blue-100 text-blue-700 border-blue-300',     check: 'bg-blue-600 border-blue-600',   icon: '👔' },
-  ketua_tim:        { label: 'Ketua Tim',         color: 'border-teal-200 bg-teal-50',    badge: 'bg-teal-100 text-teal-700 border-teal-300',     check: 'bg-teal-600 border-teal-600',   icon: '👥' },
+  sekretaris_dinas: { label: 'Sekretaris Dinas', color: 'border-purple-200 bg-purple-50', badge: 'bg-purple-100 text-purple-700 border-purple-300', check: 'bg-purple-600 border-purple-600', icon: 'ðŸ¢' },
+  kepala_bidang:    { label: 'Kepala Bidang',    color: 'border-blue-200 bg-blue-50',    badge: 'bg-blue-100 text-blue-700 border-blue-300',     check: 'bg-blue-600 border-blue-600',   icon: 'ðŸ‘”' },
+  ketua_tim:        { label: 'Ketua Tim',         color: 'border-teal-200 bg-teal-50',    badge: 'bg-teal-100 text-teal-700 border-teal-300',     check: 'bg-teal-600 border-teal-600',   icon: 'ðŸ‘¥' },
 };
 
 const TeruskanModal = ({ disposisi, availableUsers, onClose, onSuccess }) => {
@@ -134,7 +134,7 @@ const TeruskanModal = ({ disposisi, availableUsers, onClose, onSuccess }) => {
                 <h2 className="text-lg font-bold text-white">Teruskan Disposisi</h2>
               </div>
               <p className="text-white/70 text-xs ml-10 line-clamp-1">
-                {disposisi.surat_masuk?.nomor_surat} — {disposisi.surat_masuk?.perihal}
+                {disposisi.surat_masuk?.nomor_surat} â€” {disposisi.surat_masuk?.perihal}
               </p>
             </div>
             <button onClick={onClose} className="p-2 hover:bg-white/20 rounded-xl transition-all text-white flex-shrink-0"><LuX className="w-5 h-5" /></button>
@@ -244,7 +244,7 @@ const TeruskanModal = ({ disposisi, availableUsers, onClose, onSuccess }) => {
   );
 };
 
-// ─── Detail Panel ──────────────────────────────────────────────────────────────
+// â”€â”€â”€ Detail Panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const DetailPanel = ({ disposisi, onClose, onAction, availableUsers }) => {
   const [showTeruskan, setShowTeruskan] = useState(false);
   const [updating, setUpdating] = useState(false);
@@ -276,7 +276,7 @@ const DetailPanel = ({ disposisi, onClose, onAction, availableUsers }) => {
               <div className="min-w-0">
                 <p className="text-teal-200 text-xs mb-0.5">{surat?.nomor_surat}</p>
                 <h3 className="text-white font-bold text-base leading-snug line-clamp-2">{surat?.perihal}</h3>
-                <p className="text-teal-100/70 text-xs mt-1">Dari: {dariUser?.name} • {fmt(disposisi.tanggal_disposisi)}</p>
+                <p className="text-teal-100/70 text-xs mt-1">Dari: {dariUser?.name} â€¢ {fmt(disposisi.tanggal_disposisi)}</p>
               </div>
               <button onClick={onClose} className="p-2 hover:bg-white/20 rounded-xl transition-all text-white flex-shrink-0"><LuX className="w-5 h-5" /></button>
             </div>
@@ -325,13 +325,13 @@ const DetailPanel = ({ disposisi, onClose, onAction, availableUsers }) => {
                     <LuArrowRight className="w-4 h-4" /> Teruskan
                   </button>
                   <button onClick={() => handleAction('selesai')} disabled={updating} className="flex-1 min-w-[120px] px-4 py-2.5 bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2">
-                    <LuCheckCircle2 className="w-4 h-4" /> Selesai
+                    <LuCircleCheckBig className="w-4 h-4" /> Selesai
                   </button>
                 </>
               )}
               {(disposisi.status === 'selesai' || disposisi.status === 'teruskan') && (
                 <div className="flex-1 flex items-center gap-2 text-gray-400 text-sm font-medium px-4 py-2.5 bg-gray-50 rounded-xl">
-                  <LuCheckCircle2 className="w-4 h-4 text-green-500" />
+                  <LuCircleCheckBig className="w-4 h-4 text-green-500" />
                   {disposisi.status === 'teruskan' ? 'Sudah diteruskan' : 'Sudah diselesaikan'}
                 </div>
               )}
@@ -346,7 +346,7 @@ const DetailPanel = ({ disposisi, onClose, onAction, availableUsers }) => {
   );
 };
 
-// ─── Disposisi Card ───────────────────────────────────────────────────────────
+// â”€â”€â”€ Disposisi Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const DisposisiCard = ({ item, onClick }) => {
   const surat = item.surat_masuk || item.surat;
   const dariUser = item.users_disposisi_dari_user_idTousers || item.dari_user;
@@ -377,7 +377,7 @@ const DisposisiCard = ({ item, onClick }) => {
   );
 };
 
-// ─── Riwayat Card (sent) ──────────────────────────────────────────────────────
+// â”€â”€â”€ Riwayat Card (sent) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const RiwayatCard = ({ item }) => {
   const surat = item.surat_masuk || item.surat;
   const keUser = item.users_disposisi_ke_user_idTousers || item.ke_user;
@@ -409,7 +409,7 @@ const RiwayatCard = ({ item }) => {
   );
 };
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Main â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const KepalaDinas = () => {
   const [activeTab, setActiveTab] = useState('masuk');
   const [masukList, setMasukList] = useState([]);
@@ -491,7 +491,7 @@ const KepalaDinas = () => {
               { label: 'Pending', val: stats.pending, color: 'from-yellow-400 to-orange-400', Icon: LuClock },
               { label: 'Dibaca', val: stats.dibaca, color: 'from-blue-400 to-cyan-400', Icon: LuBookOpen },
               { label: 'Proses', val: stats.proses, color: 'from-indigo-400 to-purple-400', Icon: LuArrowRight },
-              { label: 'Selesai', val: stats.selesai, color: 'from-green-400 to-emerald-400', Icon: LuCheckCircle2 },
+              { label: 'Selesai', val: stats.selesai, color: 'from-green-400 to-emerald-400', Icon: LuCircleCheckBig },
             ].map(s => (
               <div key={s.label} className="bg-white/10 backdrop-blur-sm rounded-2xl p-3 text-center">
                 <div className={`w-8 h-8 mx-auto mb-1 rounded-lg bg-gradient-to-br ${s.color} flex items-center justify-center`}>

@@ -58,10 +58,10 @@ const DisposisiRouter = () => {
   // Route based on role
   switch (userRole) {
     case 'kepala_dinas':
-      return <KepalaDinas />;
-    
     case 'sekretaris_dinas':
-      return <SekretarisDinas />;
+      // Redirect ke disposisi sidebar
+      navigate('/dpmd/disposisi', { replace: true });
+      return null;
     
     case 'kepala_bidang': {
       const kbData = JSON.parse(localStorage.getItem('user') || '{}');
