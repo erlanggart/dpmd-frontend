@@ -9,6 +9,8 @@ import {
   LuCircleCheck,
   LuCircleAlert,
   LuCircleMinus,
+  LuX,
+  LuMapPin,
 } from "react-icons/lu";
 import api from "../../../api";
 
@@ -58,6 +60,7 @@ const PosyanduComparisonPage = () => {
   const [expandedDesa, setExpandedDesa] = useState(new Set());
   const [showOnlyDiscrepancy, setShowOnlyDiscrepancy] = useState(false);
   const [sortBy, setSortBy] = useState("kode");
+  const [desaModal, setDesaModal] = useState(null); // { title, list }
 
   useEffect(() => {
     fetchData();
@@ -215,18 +218,29 @@ const PosyanduComparisonPage = () => {
           label="Database"
           value={data.summary.totalDbPosyandu}
           color="indigo"
+          subtitle={`${data.summary.totalDesa} desa`}
         />
         <SummaryCard
           icon={<LuFileSpreadsheet />}
           label="Gema"
           value={data.summary.totalGemaPosyandu}
           color="purple"
+          subtitle={`${data.summary.totalGemaDesa || '?'} desa`}
+          extraInfo={data.summary.desaWithoutGema?.length > 0 ? {
+            label: `${data.summary.desaWithoutGema.length} desa tanpa data`,
+            onClick: () => setDesaModal({ title: 'Desa Tanpa Data Gema', list: data.summary.desaWithoutGema }),
+          } : null}
         />
         <SummaryCard
           icon={<LuFileSpreadsheet />}
           label="ADD"
           value={data.summary.totalAddPosyandu}
           color="cyan"
+          subtitle={`${data.summary.totalAddDesa || '?'} desa`}
+          extraInfo={data.summary.desaWithoutAdd?.length > 0 ? {
+            label: `${data.summary.desaWithoutAdd.length} desa tanpa data`,
+            onClick: () => setDesaModal({ title: 'Desa Tanpa Data ADD', list: data.summary.desaWithoutAdd }),
+          } : null}
         />
         <SummaryCard
           icon={<LuCircleCheck />}
@@ -240,14 +254,50 @@ const PosyanduComparisonPage = () => {
           label="Hanya Gema"
           value={data.summary.totalOnlyGema}
           color="yellow"
+          extraInfo={data.summary.unmatchedGemaDesa?.length > 0 ? {
+            label: `${data.summary.unmatchedGemaDesa.length} desa tidak cocok DB`,
+            onClick: () => setDesaModal({ title: 'Desa Gema Tidak Cocok Database', list: data.summary.unmatchedGemaDesa }),
+          } : null}
         />
         <SummaryCard
           icon={<LuCircleMinus />}
           label="Hanya ADD"
           value={data.summary.totalOnlyAdd}
           color="blue"
+          extraInfo={data.summary.unmatchedAddDesa?.length > 0 ? {
+            label: `${data.summary.unmatchedAddDesa.length} desa tidak cocok DB`,
+            onClick: () => setDesaModal({ title: 'Desa ADD Tidak Cocok Database', list: data.summary.unmatchedAddDesa }),
+          } : null}
         />
       </div>
+
+      {/* Desa List Modal */}
+      {desaModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setDesaModal(null)}>
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 max-h-[70vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+              <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                <LuMapPin className="w-4 h-4 text-gray-400" />
+                {desaModal.title}
+              </h3>
+              <button onClick={() => setDesaModal(null)} className="p-1 hover:bg-gray-100 rounded-lg">
+                <LuX className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            <div className="overflow-y-auto px-4 py-3 flex-1">
+              <p className="text-xs text-gray-500 mb-2">{desaModal.list.length} desa</p>
+              <ul className="space-y-1">
+                {desaModal.list.map((d, i) => (
+                  <li key={i} className="text-sm text-gray-700 py-1 px-2 rounded hover:bg-gray-50 flex items-center gap-2">
+                    <span className="text-xs text-gray-400 w-6 text-right">{i + 1}.</span>
+                    {d}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
@@ -377,7 +427,7 @@ const PosyanduComparisonPage = () => {
   );
 };
 
-const SummaryCard = ({ icon, label, value, color, subtitle }) => {
+const SummaryCard = ({ icon, label, value, color, subtitle, extraInfo }) => {
   const colorMap = {
     indigo: "bg-indigo-50 text-indigo-600 border-indigo-200",
     purple: "bg-purple-50 text-purple-600 border-purple-200",
@@ -395,6 +445,14 @@ const SummaryCard = ({ icon, label, value, color, subtitle }) => {
       </div>
       <p className="text-2xl font-bold">{value.toLocaleString("id-ID")}</p>
       {subtitle && <p className="text-xs opacity-60 mt-0.5">{subtitle}</p>}
+      {extraInfo && (
+        <button
+          onClick={extraInfo.onClick}
+          className="text-[10px] mt-1 underline opacity-60 hover:opacity-100 transition-opacity"
+        >
+          {extraInfo.label}
+        </button>
+      )}
     </div>
   );
 };
