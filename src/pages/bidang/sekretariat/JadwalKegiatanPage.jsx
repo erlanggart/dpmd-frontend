@@ -24,6 +24,7 @@ import {
 	LuHeart,
 	LuMessageCircle,
 	LuSend,
+	LuFileText,
 } from 'react-icons/lu';
 import { useSearchParams } from 'react-router-dom';
 import api from '../../../api';
@@ -84,6 +85,7 @@ const JadwalKegiatanPage = () => {
 	const [commentText, setCommentText] = useState('');
 	const [loadingComments, setLoadingComments] = useState(false);
 	const [sendingComment, setSendingComment] = useState(false);
+
 	const itemsPerPage = 5;
 
 	// Form state
@@ -134,6 +136,8 @@ const JadwalKegiatanPage = () => {
 		});
 	};
 
+
+
 	const [bidangList, setBidangList] = useState([]);
 
 	// Fetch bidang list
@@ -177,6 +181,8 @@ const JadwalKegiatanPage = () => {
 		fetchJadwal();
 	}, [fetchJadwal]);
 
+
+
 	// Saat navigasi dari notifikasi (React Router), update filter tanggal dari URL
 	useEffect(() => {
 		const tanggal = searchParams.get('tanggal');
@@ -203,7 +209,7 @@ const JadwalKegiatanPage = () => {
 		e.preventDefault();
 		try {
 			const combinedMulai = formData.tanggal_mulai
-				? `${formData.tanggal_mulai}T${formData.jam || '00:00'}:00`
+				? `${formData.tanggal_mulai}T${formData.jam || '00:00'}:00+07:00`
 				: '';
 			const { jam, ...restForm } = formData;
 			const dataToSend = {
@@ -274,7 +280,7 @@ const JadwalKegiatanPage = () => {
 		
 		try {
 			const combinedMulai = formData.tanggal_mulai
-				? `${formData.tanggal_mulai}T${formData.jam || '00:00'}:00`
+				? `${formData.tanggal_mulai}T${formData.jam || '00:00'}:00+07:00`
 				: '';
 			const { jam, ...restForm } = formData;
 			const dataToSend = {
@@ -624,18 +630,6 @@ const JadwalKegiatanPage = () => {
 									<LuShare2 className="w-5 h-5" />
 									<span className="hidden sm:inline">Bagikan Harian</span>
 								</button>
-
-								{/* Tambah Jadwal Button */}
-								{canManageJadwal && (
-									<button
-										onClick={() => setShowAddModal(true)}
-										className="flex items-center justify-center gap-2 px-5 py-3 bg-gradient-to-r from-teal-600 to-cyan-600 text-white rounded-xl hover:from-teal-700 hover:to-cyan-700 font-semibold shadow-lg hover:shadow-xl transition-all transform hover:scale-105 active:scale-95"
-									>
-										<LuPlus className="w-5 h-5" />
-										<span className="hidden sm:inline">Tambah Jadwal</span>
-										<span className="sm:hidden">Tambah</span>
-									</button>
-								)}
 							</div>
 						</div>
 					</div>
@@ -877,6 +871,9 @@ const JadwalKegiatanPage = () => {
 													<span key={i} title={n} className="inline-block px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold">{singkatBidang(n)}</span>
 												))}
 											</div>
+											{jadwal.sub_bidang_pelaksana && (
+												<p className="text-xs text-purple-500 mt-0.5">Sub: {jadwal.sub_bidang_pelaksana}</p>
+											)}
 										</div>
 									</div>
 								)}
@@ -1241,6 +1238,9 @@ const JadwalKegiatanPage = () => {
 												))}
 												{(!selectedJadwal.bidang_names?.length && !selectedJadwal.bidang_nama) && <span className="text-sm font-semibold text-gray-500">Semua Pegawai</span>}
 											</div>
+											{selectedJadwal.sub_bidang_pelaksana && (
+												<p className="text-xs text-purple-600 mt-1.5 font-medium">Sub Bidang: {selectedJadwal.sub_bidang_pelaksana}</p>
+											)}
 										</div>
 									</div>
 								</div>
@@ -1470,6 +1470,8 @@ const JadwalKegiatanPage = () => {
 					</div>
 				</div>
 			)}
+
+
 		</div>
 	);
 };
