@@ -547,7 +547,7 @@ export default function MessagingPage() {
 		const token = localStorage.getItem('expressToken');
 		if (!token) return;
 
-		const s = io(API_URL, { auth: { token }, transports: ['polling'] });
+		const s = io(API_URL, { auth: { token }, transports: ['polling', 'websocket'] });
 		socketRef.current = s;
 
 		s.on('connect', () => {
