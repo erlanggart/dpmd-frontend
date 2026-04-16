@@ -72,14 +72,25 @@ export default function OnlineUsersSidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const scrollRef = useRef(null);
 
+  const abortRef = useRef(null);
+
   const fetchOnline = useCallback(async (p = 1, append = false) => {
+    // Cancel previous in-flight request
+    if (abortRef.current) {
+      abortRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     if (append) {
       setLoadingMore(true);
     } else {
       setLoading(true);
     }
     try {
-      const res = await api.get(`/settings/online-users?page=${p}&limit=${ITEMS_PER_PAGE}&minutes=5`);
+      const res = await api.get(`/settings/online-users?page=${p}&limit=${ITEMS_PER_PAGE}&minutes=5`, {
+        signal: controller.signal,
+      });
       if (res.data.success) {
         if (append) {
           setUsers(prev => [...prev, ...res.data.data.users]);
@@ -88,8 +99,9 @@ export default function OnlineUsersSidebar() {
         }
         setPagination(res.data.data.pagination);
       }
-    } catch {
-      // silently fail
+    } catch (err) {
+      if (err?.name === 'CanceledError' || err?.code === 'ERR_CANCELED') return;
+      // silently fail other errors
     } finally {
       setLoading(false);
       setLoadingMore(false);
@@ -103,8 +115,11 @@ export default function OnlineUsersSidebar() {
     const interval = setInterval(() => {
       setPage(1);
       fetchOnline(1);
-    }, 30000);
-    return () => clearInterval(interval);
+    }, 300000);
+    return () => {
+      clearInterval(interval);
+      if (abortRef.current) abortRef.current.abort();
+    };
   }, [fetchOnline]);
 
   // Load more when page increments
