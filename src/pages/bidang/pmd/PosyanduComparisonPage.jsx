@@ -465,61 +465,9 @@ const DesaRow = ({ desa, expanded, onToggle, filterStatus }) => {
                 </tr>
               </thead>
               <tbody>
-                {items.map((item, idx) => {
-                  const cfg = STATUS_CONFIG[item.status];
-                  const statusCfg = item.isFuzzy && item.status === 'matched' ? STATUS_CONFIG.fuzzy_matched : cfg;
-                  return (
-                    <tr
-                      key={item.normalized + idx}
-                      className="border-t border-gray-50 hover:bg-gray-50"
-                    >
-                      <td className="px-4 py-2 text-gray-400">{idx + 1}</td>
-                      <td className="px-4 py-2">
-                        {item.dbNama && item.dbNama.length > 0 ? (
-                          <span className="font-medium text-gray-900">{item.dbNama.join(', ')}</span>
-                        ) : (
-                          <span className="text-gray-400 italic text-xs">(tidak ada)</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-2">
-                        {item.gemaNama && item.gemaNama.length > 0 ? (
-                          <span className="font-medium text-gray-900">{item.gemaNama.join(', ')}</span>
-                        ) : (
-                          <span className="text-gray-400 italic text-xs">(tidak ada)</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-2">
-                        {item.addNama && item.addNama.length > 0 ? (
-                          <div>
-                            <span className="font-medium text-gray-900">{item.addNama.join(', ')}</span>
-                            {item.isFuzzy && (
-                              <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-orange-100 text-orange-700 border border-orange-200">
-                                ~mirip
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-gray-400 italic text-xs">(tidak ada)</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-2">
-                        <span
-                          className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${statusCfg.color}`}
-                        >
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full ${statusCfg.dotColor}`}
-                          ></span>
-                          {statusCfg.label}
-                        </span>
-                      </td>
-                      <td className="px-4 py-2 text-right text-gray-600">
-                        {item.addNilai > 0
-                          ? formatCurrency(item.addNilai)
-                          : "-"}
-                      </td>
-                    </tr>
-                  );
-                })}
+                {items.map((item, idx) => (
+                  <PosyanduItemRow key={item.normalized + idx} item={item} idx={idx} />
+                ))}
               </tbody>
             </table>
           </div>
@@ -532,6 +480,115 @@ const DesaRow = ({ desa, expanded, onToggle, filterStatus }) => {
         </div>
       )}
     </div>
+  );
+};
+
+const PosyanduItemRow = ({ item, idx }) => {
+  const [expanded, setExpanded] = useState(false);
+  const cfg = STATUS_CONFIG[item.status];
+  const statusCfg = item.isFuzzy && item.status === 'matched' ? STATUS_CONFIG.fuzzy_matched : cfg;
+  const hasDetails = item.addDetails && item.addDetails.length > 0;
+
+  return (
+    <>
+      <tr
+        className={`border-t border-gray-50 hover:bg-gray-50 ${hasDetails ? "cursor-pointer" : ""}`}
+        onClick={hasDetails ? () => setExpanded(!expanded) : undefined}
+      >
+        <td className="px-4 py-2 text-gray-400">
+          <div className="flex items-center gap-1">
+            {hasDetails && (
+              <span className="text-gray-400">
+                {expanded ? <LuChevronDown className="w-3.5 h-3.5" /> : <LuChevronRight className="w-3.5 h-3.5" />}
+              </span>
+            )}
+            {idx + 1}
+          </div>
+        </td>
+        <td className="px-4 py-2">
+          {item.dbNama && item.dbNama.length > 0 ? (
+            <span className="font-medium text-gray-900">{item.dbNama.join(', ')}</span>
+          ) : (
+            <span className="text-gray-400 italic text-xs">(tidak ada)</span>
+          )}
+        </td>
+        <td className="px-4 py-2">
+          {item.gemaNama && item.gemaNama.length > 0 ? (
+            <span className="font-medium text-gray-900">{item.gemaNama.join(', ')}</span>
+          ) : (
+            <span className="text-gray-400 italic text-xs">(tidak ada)</span>
+          )}
+        </td>
+        <td className="px-4 py-2">
+          {item.addNama && item.addNama.length > 0 ? (
+            <div>
+              <span className="font-medium text-gray-900">{item.addNama.join(', ')}</span>
+              {item.isFuzzy && (
+                <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-orange-100 text-orange-700 border border-orange-200">
+                  ~mirip
+                </span>
+              )}
+              {hasDetails && (
+                <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-cyan-100 text-cyan-700 border border-cyan-200">
+                  {item.addDetails.length} termin
+                </span>
+              )}
+            </div>
+          ) : (
+            <span className="text-gray-400 italic text-xs">(tidak ada)</span>
+          )}
+        </td>
+        <td className="px-4 py-2">
+          <span
+            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${statusCfg.color}`}
+          >
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${statusCfg.dotColor}`}
+            ></span>
+            {statusCfg.label}
+          </span>
+        </td>
+        <td className="px-4 py-2 text-right text-gray-600">
+          {item.addNilai > 0
+            ? formatCurrency(item.addNilai)
+            : "-"}
+        </td>
+      </tr>
+      {expanded && hasDetails && (
+        <tr>
+          <td colSpan={6} className="px-0 py-0">
+            <div className="bg-cyan-50/50 border-y border-cyan-100">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-cyan-700 border-b border-cyan-100">
+                    <th className="px-4 py-1.5 text-left font-medium w-10">#</th>
+                    <th className="px-4 py-1.5 text-left font-medium">No SPP</th>
+                    <th className="px-4 py-1.5 text-left font-medium w-28">Tgl Bukti</th>
+                    <th className="px-4 py-1.5 text-left font-medium">Keterangan</th>
+                    <th className="px-4 py-1.5 text-right font-medium w-36">Nilai</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {item.addDetails.map((d, i) => (
+                    <tr key={i} className="border-t border-cyan-50 hover:bg-cyan-50">
+                      <td className="px-4 py-1.5 text-gray-400">{i + 1}</td>
+                      <td className="px-4 py-1.5 text-gray-700 font-mono text-[11px]">{d.noSpp}</td>
+                      <td className="px-4 py-1.5 text-gray-600">{d.tglBukti}</td>
+                      <td className="px-4 py-1.5 text-gray-700">{d.keterangan}</td>
+                      <td className="px-4 py-1.5 text-right text-gray-700 font-medium">{formatCurrency(d.nilai)}</td>
+                    </tr>
+                  ))}
+                  <tr className="border-t border-cyan-200 bg-cyan-50 font-semibold text-cyan-800">
+                    <td colSpan={4} className="px-4 py-1.5 text-right">Total</td>
+                    <td className="px-4 py-1.5 text-right">{formatCurrency(item.addNilai)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
   );
 };
 
