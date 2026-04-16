@@ -218,6 +218,8 @@ const JadwalKegiatanPage = () => {
 			if (formData.tanggal_mulai) {
 				setFilterTanggal(formData.tanggal_mulai);
 			}
+			// Selalu refresh list—jika tanggal filter tidak berubah, setFilterTanggal tidak memicu refetch
+			fetchJadwal();
 
 			// Format tanggal untuk pesan WA
 			const fmtTgl = (dt) => {
@@ -281,7 +283,6 @@ const JadwalKegiatanPage = () => {
 				bidang_ids: formData.bidang_ids || [],
 			};
 			await api.put(`/jadwal-kegiatan/${selectedJadwal.id}`, dataToSend);
-			Swal.fire('Berhasil', 'Jadwal kegiatan berhasil diperbarui', 'success');
 			setShowEditModal(false);
 			setSelectedJadwal(null);
 			// Pindah filter ke tanggal jadwal yang diedit
@@ -289,6 +290,9 @@ const JadwalKegiatanPage = () => {
 				setFilterTanggal(formData.tanggal_mulai);
 			}
 			resetFormData();
+			// Selalu refresh list—jika tanggal filter tidak berubah, setFilterTanggal tidak memicu refetch
+			fetchJadwal();
+			Swal.fire('Berhasil', 'Jadwal kegiatan berhasil diperbarui', 'success');
 		} catch (error) {
 			console.error('Error updating jadwal:', error);
 			Swal.fire('Error', error.response?.data?.message || 'Gagal memperbarui jadwal kegiatan', 'error');

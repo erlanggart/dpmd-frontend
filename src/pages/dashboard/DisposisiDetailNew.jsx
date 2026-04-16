@@ -33,17 +33,18 @@ export default function DisposisiDetail() {
   const [pdfUrl, setPdfUrl] = useState('');
   const [users, setUsers] = useState([]);
   const [formTeruskan, setFormTeruskan] = useState({
-    ke_user_id: [],
+    ke_user_id: '',
     catatan: '',
-    instruksi: []
+    instruksi: 'laksanakan'
   });
   const [submitting, setSubmitting] = useState(false);
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const canForward = ['kepala_dinas', 'sekretaris_dinas', 'kepala_bidang', 'ketua_tim'].includes(user.role);
 
   useEffect(() => {
     fetchDisposisi();
-    fetchAvailableUsers();
+    if (canForward) fetchAvailableUsers();
   }, [id]);
 
   const fetchDisposisi = async () => {
@@ -91,15 +92,6 @@ export default function DisposisiDetail() {
   const handleTeruskan = async (e) => {
     e.preventDefault();
     setSubmitting(true);
-
-    if (formTeruskan.ke_user_id.length === 0) {
-      setSubmitting(false);
-      return toast.error("Minimal pilih satu penerima disposisi", { icon: "⚠️" });
-    }
-    if (formTeruskan.instruksi.length === 0) {
-      setSubmitting(false);
-      return toast.error("Minimal pilih satu instruksi", { icon: "⚠️" });
-    }
 
     try {
       const currentLevel = disposisi.level_disposisi;
@@ -608,53 +600,35 @@ export default function DisposisiDetail() {
                 <label className="block text-sm font-bold text-gray-700 mb-2">
                   Teruskan Kepada <span className="text-red-500">*</span>
                 </label>
-                <div className="w-full border-2 border-gray-300 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-purple-500 focus-within:border-purple-500 transition-all font-medium bg-white">
-                  <div className="max-h-48 overflow-y-auto p-2 space-y-1">
-                    {users.filter(u => u.id.toString() !== user.id.toString()).map((u) => (
-                      <label key={u.id} className="flex items-center gap-3 p-2 hover:bg-purple-50 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-purple-200">
-                        <input
-                          type="checkbox"
-                          value={u.id}
-                          checked={formTeruskan.ke_user_id.includes(u.id)}
-                          onChange={(e) => {
-                            const newZ = e.target.checked 
-                              ? [...formTeruskan.ke_user_id, u.id]
-                              : formTeruskan.ke_user_id.filter(val => val !== u.id);
-                            setFormTeruskan({ ...formTeruskan, ke_user_id: newZ });
-                          }}
-                          className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
-                        />
-                        <span className="text-gray-900">{u.name} <span className="text-gray-500 text-sm ml-1 capitalize">- {u.role?.replace(/_/g, ' ')}</span></span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
+                <select
+                  value={formTeruskan.ke_user_id}
+                  onChange={(e) => setFormTeruskan({ ...formTeruskan, ke_user_id: e.target.value })}
+                  required
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all text-gray-900 font-medium"
+                >
+                  <option value="">-- Pilih Penerima --</option>
+                  {users.filter(u => u.id.toString() !== user.id.toString()).map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name} - {u.role?.replace(/_/g, ' ')}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">
                   Instruksi
                 </label>
-                <div className="w-full border-2 border-gray-300 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-purple-500 focus-within:border-purple-500 transition-all font-medium bg-white">
-                  <div className="max-h-48 overflow-y-auto p-2 space-y-1">
-                    {INSTRUKSI_OPTIONS.map(opt => (
-                      <label key={opt.value} className="flex items-center gap-3 p-2 hover:bg-purple-50 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-purple-200">
-                        <input
-                          type="checkbox"
-                          value={opt.value}
-                          checked={formTeruskan.instruksi.includes(opt.value)}
-                          onChange={(e) => {
-                            const newZ = e.target.checked 
-                              ? [...formTeruskan.instruksi, opt.value]
-                              : formTeruskan.instruksi.filter(val => val !== opt.value);
-                            setFormTeruskan({ ...formTeruskan, instruksi: newZ });
-                          }}
-                          className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
-                        />
-                        <span className="text-gray-900">{opt.label}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
+                <select
+                  value={formTeruskan.instruksi}
+                  onChange={(e) => setFormTeruskan({ ...formTeruskan, instruksi: e.target.value })}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all text-gray-900 font-medium"
+                >
+                  {INSTRUKSI_OPTIONS.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
 
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">

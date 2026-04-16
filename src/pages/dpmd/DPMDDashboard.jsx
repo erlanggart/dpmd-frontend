@@ -10,7 +10,8 @@ import {
   MapPin, Calendar, BarChart3, PieChart, Activity, Bell, Info, X, ExternalLink,
   Clock, CheckCircle, Send, Mail, Inbox, ChevronRight, User, Phone, Award,
   FolderOpen, ClipboardList, Newspaper, Fingerprint, MessageSquare, Plus, Eye, Trash2,
-  Image, Video, Type, Crop, RotateCw, ZoomIn, ChevronUp, SlidersHorizontal, Camera
+  Image, Video, Type, Crop, RotateCw, ZoomIn, ChevronUp, SlidersHorizontal, Camera,
+  SwitchCamera, Circle, Square
 } from 'lucide-react';
 import api from '../../api';
 import axios from 'axios';
@@ -171,8 +172,14 @@ const DPMDDashboard = () => {
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [showCameraMode, setShowCameraMode] = useState(false);
+  const [cameraFacing, setCameraFacing] = useState('environment'); // 'user' | 'environment'
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
   const cameraStreamRef = useRef(null);
   const cameraVideoRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const recordingChunksRef = useRef([]);
+  const recordingTimerRef = useRef(null);
 
   // Get role config
   const role = user?.role || 'pegawai';
@@ -567,6 +574,7 @@ const DPMDDashboard = () => {
   };
 
   const clearStatusMedia = () => {
+    stopRecording();
     if (cameraStreamRef.current) {
       cameraStreamRef.current.getTracks().forEach(t => t.stop());
       cameraStreamRef.current = null;
@@ -581,20 +589,36 @@ const DPMDDashboard = () => {
     setShowFilterPanel(false);
   };
 
-  const startCamera = async () => {
+  const startCamera = async (facing) => {
+    const useFacing = facing || cameraFacing;
     try {
+      // Stop existing stream first
+      if (cameraStreamRef.current) {
+        cameraStreamRef.current.getTracks().forEach(t => t.stop());
+      }
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 720 }, height: { ideal: 1280 } },
-        audio: false
+        video: { facingMode: useFacing, width: { ideal: 720 }, height: { ideal: 1280 } },
+        audio: true
       });
       cameraStreamRef.current = stream;
+      setCameraFacing(useFacing);
       setShowCameraMode(true);
+      // Attach stream to video element if already rendered
+      if (cameraVideoRef.current) {
+        cameraVideoRef.current.srcObject = stream;
+      }
     } catch {
       toast.error('Tidak bisa mengakses kamera');
     }
   };
 
+  const switchCamera = async () => {
+    const newFacing = cameraFacing === 'user' ? 'environment' : 'user';
+    await startCamera(newFacing);
+  };
+
   const stopCamera = () => {
+    stopRecording();
     if (cameraStreamRef.current) {
       cameraStreamRef.current.getTracks().forEach(t => t.stop());
       cameraStreamRef.current = null;
@@ -609,6 +633,11 @@ const DPMDDashboard = () => {
     canvas.width = video.videoWidth || 720;
     canvas.height = video.videoHeight || 1280;
     const ctx = canvas.getContext('2d');
+    // Mirror the photo if using front camera
+    if (cameraFacing === 'user') {
+      ctx.translate(canvas.width, 0);
+      ctx.scale(-1, 1);
+    }
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     canvas.toBlob(blob => {
       if (!blob) return;
@@ -621,6 +650,51 @@ const DPMDDashboard = () => {
       setPhotoFilters({ brightness: 100, contrast: 100, saturation: 100 });
       setShowFilterPanel(false);
     }, 'image/jpeg', 0.92);
+  };
+
+  const startRecording = () => {
+    if (!cameraStreamRef.current) return;
+    recordingChunksRef.current = [];
+    const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')
+      ? 'video/webm;codecs=vp9,opus'
+      : MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')
+        ? 'video/webm;codecs=vp8,opus'
+        : 'video/mp4';
+    const recorder = new MediaRecorder(cameraStreamRef.current, { mimeType });
+    recorder.ondataavailable = (e) => {
+      if (e.data.size > 0) recordingChunksRef.current.push(e.data);
+    };
+    recorder.onstop = () => {
+      const blob = new Blob(recordingChunksRef.current, { type: mimeType.split(';')[0] });
+      const ext = mimeType.includes('webm') ? 'webm' : 'mp4';
+      const file = new File([blob], `status-video.${ext}`, { type: blob.type });
+      stopCamera();
+      setStatusMediaFile(file);
+      setStatusMediaPreview(URL.createObjectURL(blob));
+      setStatusType('media');
+    };
+    mediaRecorderRef.current = recorder;
+    recorder.start(100);
+    setIsRecording(true);
+    setRecordingTime(0);
+    recordingTimerRef.current = setInterval(() => {
+      setRecordingTime(prev => {
+        if (prev >= 29) { stopRecording(); return 30; }
+        return prev + 1;
+      });
+    }, 1000);
+  };
+
+  const stopRecording = () => {
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+    setIsRecording(false);
+    setRecordingTime(0);
   };
 
   const handlePreviewDrop = (e) => {
@@ -1488,17 +1562,34 @@ const DPMDDashboard = () => {
                 onDragLeave={() => setIsDraggingOver(false)}
               >
                 {showCameraMode ? (
-                  /* ── Live Camera (not mirrored) ── */
-                  <video
-                    ref={el => {
-                      cameraVideoRef.current = el;
-                      if (el && cameraStreamRef.current) el.srcObject = cameraStreamRef.current;
-                    }}
-                    autoPlay
-                    playsInline
-                    muted
-                    className="w-full h-full object-cover"
-                  />
+                  /* ── Live Camera (mirrored for front camera) ── */
+                  <>
+                    <video
+                      ref={el => {
+                        cameraVideoRef.current = el;
+                        if (el && cameraStreamRef.current) el.srcObject = cameraStreamRef.current;
+                      }}
+                      autoPlay
+                      playsInline
+                      muted
+                      className="w-full h-full object-cover"
+                      style={cameraFacing === 'user' ? { transform: 'scaleX(-1)' } : undefined}
+                    />
+                    {/* Switch camera button */}
+                    <button
+                      onClick={switchCamera}
+                      className="absolute top-3 right-3 p-2.5 bg-black/50 backdrop-blur-sm rounded-full text-white hover:bg-black/70 transition z-20"
+                    >
+                      <SwitchCamera className="w-5 h-5" />
+                    </button>
+                    {/* Recording indicator */}
+                    {isRecording && (
+                      <div className="absolute top-3 left-3 flex items-center gap-2 px-3 py-1.5 bg-red-500/80 backdrop-blur-sm rounded-full z-20">
+                        <div className="w-2.5 h-2.5 bg-white rounded-full animate-pulse" />
+                        <span className="text-white text-xs font-bold">{recordingTime}s / 30s</span>
+                      </div>
+                    )}
+                  </>
                 ) : showCropper && cropImage ? (
                   /* ── Inline Cropper ── */
                   <Cropper
@@ -1582,12 +1673,29 @@ const DPMDDashboard = () => {
                     >
                       Batal
                     </button>
-                    <button
-                      onClick={capturePhoto}
-                      className="flex-1 py-2.5 text-sm font-semibold text-white bg-emerald-500 hover:bg-emerald-600 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2"
-                    >
-                      <Camera className="w-4 h-4" /> Ambil Foto
-                    </button>
+                    {isRecording ? (
+                      <button
+                        onClick={stopRecording}
+                        className="flex-1 py-2.5 text-sm font-semibold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 animate-pulse"
+                      >
+                        <Square className="w-4 h-4" /> Stop ({recordingTime}s)
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          onClick={capturePhoto}
+                          className="flex-1 py-2.5 text-sm font-semibold text-white bg-emerald-500 hover:bg-emerald-600 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2"
+                        >
+                          <Camera className="w-4 h-4" /> Foto
+                        </button>
+                        <button
+                          onClick={startRecording}
+                          className="flex-1 py-2.5 text-sm font-semibold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2"
+                        >
+                          <Circle className="w-4 h-4" /> Rekam
+                        </button>
+                      </>
+                    )}
                   </div>
                 ) : showCropper ? (
                   /* ── Crop Mode ── */
