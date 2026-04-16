@@ -80,6 +80,19 @@ const PMDPage = () => {
       iconBg: 'bg-amber-500',
       textColor: 'text-amber-700',
       descColor: 'text-amber-500',
+    },
+    {
+      id: 'posyandu-comparison',
+      title: 'Perbandingan Posyandu',
+      shortTitle: 'Posyandu',
+      description: 'Perbandingan data Posyandu antara Gema dan ADD',
+      icon: FileText,
+      route: getPath('/bidang/pmd/kelembagaan/posyandu-comparison'),
+      gradient: 'from-red-500 to-orange-600',
+      bgLight: 'bg-red-50 border-red-200 hover:bg-red-100',
+      iconBg: 'bg-red-500',
+      textColor: 'text-red-700',
+      descColor: 'text-red-500',
     }
   ];
 
