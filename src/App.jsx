@@ -172,13 +172,13 @@ const InformasiManagement = lazy(
   () => import("./pages/sekretariat/InformasiManagement"),
 );
 const VideoMeetingListPage = lazy(
-  () => import("./pages/video-meeting/VideoMeetingListPage"),
+  () => import("./pages/video-meeting/VideoMeetingMaintenance"),
 );
 const VideoMeetingPage = lazy(
-  () => import("./pages/video-meeting/VideoMeetingPage"),
+  () => import("./pages/video-meeting/VideoMeetingMaintenance"),
 );
 const PublicMeetingPage = lazy(
-  () => import("./pages/video-meeting/PublicMeetingPage"),
+  () => import("./pages/video-meeting/VideoMeetingMaintenance"),
 );
 const PerjadinMain = lazy(
   () => import("./pages/pegawai/perjadin/PerjadinMain"),
@@ -998,25 +998,10 @@ function App() {
                   <Route path="video-meeting" element={<VideoMeetingListPage />} />
                 </Route>
 
-                {/* Video Meeting Room - Auth Only */}
+                {/* Video Meeting Room - MAINTENANCE */}
                 <Route
                   path="/meet/:roomId"
-                  element={
-                    <RoleProtectedRoute
-                      allowedRoles={[
-                        "pegawai",
-                        "kepala_bidang",
-                        "ketua_tim",
-                        "kepala_dinas",
-                        "superadmin",
-                        "sekretaris_dinas",
-                        "kecamatan",
-                        "desa",
-                      ]}
-                    >
-                      <VideoMeetingPage />
-                    </RoleProtectedRoute>
-                  }
+                  element={<VideoMeetingPage />}
                 />
 
                 {/* Rute Superadmin - Full System Control */}
