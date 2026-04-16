@@ -487,7 +487,7 @@ const SummaryCard = ({ icon, label, value, color, subtitle, extraInfo }) => {
         <span className="text-lg">{icon}</span>
         <span className="text-xs font-medium opacity-75">{label}</span>
       </div>
-      <p className="text-2xl font-bold">{value.toLocaleString("id-ID")}</p>
+      <p className="text-2xl font-bold">{(value ?? 0).toLocaleString("id-ID")}</p>
       {subtitle && <p className="text-xs opacity-60 mt-0.5">{subtitle}</p>}
       {extraInfo && (
         <button
