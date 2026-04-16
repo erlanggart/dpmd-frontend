@@ -73,8 +73,18 @@ export default function OnlineUsersSidebar() {
   const scrollRef = useRef(null);
 
   const abortRef = useRef(null);
+  const lastFetchRef = useRef(0);
+  const errorCountRef = useRef(0);
 
   const fetchOnline = useCallback(async (p = 1, append = false) => {
+    // Throttle: minimum 5s between requests
+    const now = Date.now();
+    if (now - lastFetchRef.current < 5000) return;
+    lastFetchRef.current = now;
+
+    // Back off after repeated errors (max 3 consecutive errors, then stop until manual refresh)
+    if (errorCountRef.current >= 3 && !append) return;
+
     // Cancel previous in-flight request
     if (abortRef.current) {
       abortRef.current.abort();
@@ -88,10 +98,14 @@ export default function OnlineUsersSidebar() {
       setLoading(true);
     }
     try {
-      const res = await api.get(`/settings/online-users?page=${p}&limit=${ITEMS_PER_PAGE}&minutes=5`, {
+      const res = await api.get('/settings/online-users', {
+        params: { page: p, limit: ITEMS_PER_PAGE, minutes: 5, _t: now },
         signal: controller.signal,
+        maxRedirects: 0,
+        headers: { 'Cache-Control': 'no-cache, no-store' },
       });
       if (res.data.success) {
+        errorCountRef.current = 0;
         if (append) {
           setUsers(prev => [...prev, ...res.data.data.users]);
         } else {
@@ -101,7 +115,7 @@ export default function OnlineUsersSidebar() {
       }
     } catch (err) {
       if (err?.name === 'CanceledError' || err?.code === 'ERR_CANCELED') return;
-      // silently fail other errors
+      errorCountRef.current += 1;
     } finally {
       setLoading(false);
       setLoadingMore(false);
@@ -178,7 +192,7 @@ export default function OnlineUsersSidebar() {
             </div>
             <div className="flex items-center gap-1">
               <button
-                onClick={() => { setPage(1); fetchOnline(1); }}
+                onClick={() => { errorCountRef.current = 0; lastFetchRef.current = 0; setPage(1); fetchOnline(1); }}
                 disabled={loading}
                 className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors"
                 title="Refresh"
