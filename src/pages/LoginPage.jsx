@@ -13,6 +13,8 @@ const LoginPage = () => {
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 	const [error, setError] = useState(null);
+	const [emailError, setEmailError] = useState(null);
+	const [passwordError, setPasswordError] = useState(null);
 	const [loading, setLoading] = useState(false);
 	const navigate = useNavigate();
 	const [showPassword, setShowPassword] = useState(false);
@@ -116,6 +118,8 @@ const LoginPage = () => {
 
 		setLoading(true);
 		setError(null);
+		setEmailError(null);
+		setPasswordError(null);
 		try {
 			// Get device ID for auto-registration
 			let deviceId = localStorage.getItem('dpmd_device_id');
@@ -167,10 +171,13 @@ const LoginPage = () => {
 				if (rateLimit?.retry_after_ms) {
 					setLockoutUntil(Date.now() + rateLimit.retry_after_ms);
 				} else {
-					// Fallback: 5 menit
 					setLockoutUntil(Date.now() + 5 * 60 * 1000);
 				}
 				setError(error.response.data?.message || 'Terlalu banyak percobaan login. Silakan coba lagi dalam 5 menit.');
+			} else if (error.response?.data?.error_type === 'email_not_found') {
+				setEmailError('Email salah atau tidak ditemukan');
+			} else if (error.response?.data?.error_type === 'wrong_password') {
+				setPasswordError('Password salah');
 			} else {
 				setError(error.response?.data?.message || "Login gagal. Silakan coba lagi.");
 			}
@@ -279,40 +286,54 @@ const LoginPage = () => {
 
 					<form onSubmit={handleLogin} className="mt-8 space-y-6">
 						<div>
-							<label htmlFor="email" className="sr-only">
-								Alamat Email
+							<label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+								Email
 							</label>
 							<input
 								type="email"
 								id="email"
 								placeholder="anda@email.com"
-								className="w-full bg-white rounded-lg border border-gray-300 px-4 py-3 focus:border-[rgb(var(--color-primary))] focus:ring-1 focus:ring-[rgb(var(--color-primary))] focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
+								className={`w-full bg-white rounded-lg border px-4 py-3 focus:ring-1 focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60 ${emailError ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-[rgb(var(--color-primary))] focus:ring-[rgb(var(--color-primary))]'}`}
 								value={email}
-								onChange={(e) => setEmail(e.target.value)}
+								onChange={(e) => { setEmail(e.target.value); setEmailError(null); }}
 								required
 							/>
+							{emailError && (
+								<p className="mt-1.5 text-sm text-red-600 flex items-center gap-1">
+									<FiAlertCircle className="w-4 h-4 flex-shrink-0" />
+									{emailError}
+								</p>
+							)}
 						</div>
-						<div className="relative">
-							<label htmlFor="password" className="sr-only">
+						<div>
+							<label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
 								Password
 							</label>
-							<input
-								type={showPassword ? "text" : "password"}
-								id="password"
-								placeholder="Password"
-								className="w-full bg-white rounded-lg border border-gray-300 px-4 py-3 pr-10 focus:border-[rgb(var(--color-primary))] focus:ring-1 focus:ring-[rgb(var(--color-primary))] focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
-								value={password}
-								onChange={(e) => setPassword(e.target.value)}
-								required
-							/>
-							<button
-								type="button"
-								onClick={() => setShowPassword(!showPassword)}
-								className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700 focus:outline-none"
-								aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
-							>
-								{showPassword ? <FiEyeOff size={20} /> : <FiEye size={20} />}
-							</button>
+							<div className="relative">
+								<input
+									type={showPassword ? "text" : "password"}
+									id="password"
+									placeholder="Password"
+									className={`w-full bg-white rounded-lg border px-4 py-3 pr-10 focus:ring-1 focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60 ${passwordError ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-[rgb(var(--color-primary))] focus:ring-[rgb(var(--color-primary))]'}`}
+									value={password}
+									onChange={(e) => { setPassword(e.target.value); setPasswordError(null); }}
+									required
+								/>
+								<button
+									type="button"
+									onClick={() => setShowPassword(!showPassword)}
+									className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700 focus:outline-none"
+									aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
+								>
+									{showPassword ? <FiEyeOff size={20} /> : <FiEye size={20} />}
+								</button>
+							</div>
+							{passwordError && (
+								<p className="mt-1.5 text-sm text-red-600 flex items-center gap-1">
+									<FiAlertCircle className="w-4 h-4 flex-shrink-0" />
+									{passwordError}
+								</p>
+							)}
 						</div>
 						<button
 							type="submit"
@@ -358,24 +379,9 @@ const LoginPage = () => {
 
 						{error && !isLockedOut && (
 							<div className="rounded-lg bg-red-50 border border-red-200 p-4 animate-shake">
-								<div className="flex items-start gap-3">
-									<FiAlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-									<div className="flex-1">
-										<h3 className="text-sm font-semibold text-red-800 mb-1">
-											Login Gagal
-										</h3>
-										<p className="text-sm text-red-700 mb-2">
-											{error}
-										</p>
-										<div className="text-xs text-red-600 space-y-1 pt-2 border-t border-red-200">
-											<p className="font-medium">Pastikan:</p>
-											<ul className="list-disc list-inside space-y-0.5 ml-1">
-												<li>Email yang dimasukkan sudah benar</li>
-												<li>Password yang dimasukkan sudah benar</li>
-												<li>Password default: <strong>password</strong></li>
-											</ul>
-										</div>
-									</div>
+								<div className="flex items-center gap-3">
+									<FiAlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+									<p className="text-sm text-red-700">{error}</p>
 								</div>
 							</div>
 						)}
