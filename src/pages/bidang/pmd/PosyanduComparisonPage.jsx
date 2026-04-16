@@ -15,28 +15,43 @@ import {
 import api from "../../../api";
 
 const STATUS_CONFIG = {
-  matched: {
-    label: "Cocok (Gema & ADD)",
+  all_three: {
+    label: "DB + Gema + ADD",
     color: "bg-green-100 text-green-800",
     dotColor: "bg-green-500",
   },
+  db_gema: {
+    label: "DB + Gema",
+    color: "bg-emerald-100 text-emerald-800",
+    dotColor: "bg-emerald-500",
+  },
+  db_add: {
+    label: "DB + ADD",
+    color: "bg-teal-100 text-teal-800",
+    dotColor: "bg-teal-500",
+  },
+  gema_add: {
+    label: "Gema + ADD",
+    color: "bg-indigo-100 text-indigo-800",
+    dotColor: "bg-indigo-500",
+  },
   fuzzy_matched: {
-    label: "Cocok (Nama Mirip)",
+    label: "Nama Mirip",
     color: "bg-orange-100 text-orange-800",
     dotColor: "bg-orange-500",
   },
   only_gema: {
-    label: "Hanya di Gema",
+    label: "Hanya Gema",
     color: "bg-yellow-100 text-yellow-800",
     dotColor: "bg-yellow-500",
   },
   only_add: {
-    label: "Hanya di ADD",
+    label: "Hanya ADD",
     color: "bg-blue-100 text-blue-800",
     dotColor: "bg-blue-500",
   },
   only_db: {
-    label: "Hanya di Database",
+    label: "Hanya Database",
     color: "bg-gray-100 text-gray-700",
     dotColor: "bg-gray-400",
   },
@@ -120,7 +135,7 @@ const PosyanduComparisonPage = () => {
         .map((d) => ({
           ...d,
           items: d.items.filter((item) => {
-            if (filterStatus === 'fuzzy_matched') return item.status === 'matched' && item.isFuzzy;
+            if (filterStatus === 'fuzzy_matched') return item.isFuzzy;
             return item.status === filterStatus;
           }),
         }))
@@ -140,7 +155,10 @@ const PosyanduComparisonPage = () => {
   const filteredSummary = useMemo(() => {
     return {
       totalDesa: filteredData.length,
-      totalMatched: filteredData.reduce((a, d) => a + d.matched, 0),
+      totalAllThree: filteredData.reduce((a, d) => a + (d.allThree || 0), 0),
+      totalDbGema: filteredData.reduce((a, d) => a + (d.dbGema || 0), 0),
+      totalDbAdd: filteredData.reduce((a, d) => a + (d.dbAdd || 0), 0),
+      totalGemaAdd: filteredData.reduce((a, d) => a + (d.gemaAdd || 0), 0),
       totalOnlyGema: filteredData.reduce((a, d) => a + d.onlyGema, 0),
       totalOnlyAdd: filteredData.reduce((a, d) => a + d.onlyAdd, 0),
       totalOnlyDb: filteredData.reduce((a, d) => a + d.onlyDb, 0),
@@ -211,14 +229,18 @@ const PosyanduComparisonPage = () => {
         </p>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      {/* Summary Cards - Sumber Data */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-3">
         <SummaryCard
           icon={<LuDatabase />}
           label="Database"
           value={data.summary.totalDbPosyandu}
           color="indigo"
-          subtitle={`${data.summary.totalDesa} desa`}
+          subtitle={`${data.summary.totalDesaWithDb || data.summary.totalDesa} / ${data.summary.totalDesa} desa`}
+          extraInfo={data.summary.desaWithoutDb?.length > 0 ? {
+            label: `${data.summary.desaWithoutDb.length} desa tanpa data`,
+            onClick: () => setDesaModal({ title: 'Desa Tanpa Data di Database', list: data.summary.desaWithoutDb }),
+          } : null}
         />
         <SummaryCard
           icon={<LuFileSpreadsheet />}
@@ -242,12 +264,31 @@ const PosyanduComparisonPage = () => {
             onClick: () => setDesaModal({ title: 'Desa Tanpa Data ADD', list: data.summary.desaWithoutAdd }),
           } : null}
         />
+      </div>
+
+      {/* Summary Cards - Status Kecocokan */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
         <SummaryCard
           icon={<LuCircleCheck />}
-          label="Cocok"
-          value={data.summary.totalMatched}
+          label="Lengkap (3)"
+          value={data.summary.totalAllThree}
           color="green"
           subtitle={data.summary.totalFuzzyMatched > 0 ? `${data.summary.totalFuzzyMatched} nama mirip` : null}
+        />
+        <SummaryCard
+          label="DB + Gema"
+          value={data.summary.totalDbGema}
+          color="green"
+        />
+        <SummaryCard
+          label="DB + ADD"
+          value={data.summary.totalDbAdd}
+          color="green"
+        />
+        <SummaryCard
+          label="Gema + ADD"
+          value={data.summary.totalGemaAdd}
+          color="indigo"
         />
         <SummaryCard
           icon={<LuCircleAlert />}
@@ -268,6 +309,11 @@ const PosyanduComparisonPage = () => {
             label: `${data.summary.unmatchedAddDesa.length} desa tidak cocok DB`,
             onClick: () => setDesaModal({ title: 'Desa ADD Tidak Cocok Database', list: data.summary.unmatchedAddDesa }),
           } : null}
+        />
+        <SummaryCard
+          label="Hanya DB"
+          value={data.summary.totalOnlyDb}
+          color="indigo"
         />
       </div>
 
@@ -335,11 +381,14 @@ const PosyanduComparisonPage = () => {
             className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
           >
             <option value="">Semua Status</option>
-            <option value="matched">Cocok (Gema & ADD)</option>
-            <option value="fuzzy_matched">Cocok (Nama Mirip)</option>
-            <option value="only_gema">Hanya di Gema</option>
-            <option value="only_add">Hanya di ADD</option>
-            <option value="only_db">Hanya di Database</option>
+            <option value="all_three">DB + Gema + ADD (Lengkap)</option>
+            <option value="db_gema">DB + Gema</option>
+            <option value="db_add">DB + ADD</option>
+            <option value="gema_add">Gema + ADD</option>
+            <option value="fuzzy_matched">Nama Mirip</option>
+            <option value="only_gema">Hanya Gema</option>
+            <option value="only_add">Hanya ADD</option>
+            <option value="only_db">Hanya Database</option>
           </select>
 
           {/* Discrepancy toggle */}
@@ -389,18 +438,13 @@ const PosyanduComparisonPage = () => {
         {/* Filtered result count */}
         <div className="flex flex-wrap gap-4 mt-3 text-xs text-gray-500">
           <span>{filteredSummary.totalDesa} desa</span>
-          <span className="text-green-600">
-            {filteredSummary.totalMatched} cocok
-          </span>
-          <span className="text-yellow-600">
-            {filteredSummary.totalOnlyGema} hanya gema
-          </span>
-          <span className="text-blue-600">
-            {filteredSummary.totalOnlyAdd} hanya ADD
-          </span>
-          <span className="text-gray-500">
-            {filteredSummary.totalOnlyDb} hanya DB
-          </span>
+          <span className="text-green-600">{filteredSummary.totalAllThree} lengkap</span>
+          <span className="text-emerald-600">{filteredSummary.totalDbGema} DB+Gema</span>
+          <span className="text-teal-600">{filteredSummary.totalDbAdd} DB+ADD</span>
+          <span className="text-indigo-600">{filteredSummary.totalGemaAdd} Gema+ADD</span>
+          <span className="text-yellow-600">{filteredSummary.totalOnlyGema} hanya Gema</span>
+          <span className="text-blue-600">{filteredSummary.totalOnlyAdd} hanya ADD</span>
+          <span className="text-gray-400">{filteredSummary.totalOnlyDb} hanya DB</span>
         </div>
       </div>
 
@@ -461,7 +505,7 @@ const DesaRow = ({ desa, expanded, onToggle, filterStatus }) => {
   const hasDiscrepancy = desa.onlyGema > 0 || desa.onlyAdd > 0;
   const items = filterStatus
     ? desa.items.filter((i) => {
-        if (filterStatus === 'fuzzy_matched') return i.status === 'matched' && i.isFuzzy;
+        if (filterStatus === 'fuzzy_matched') return i.isFuzzy;
         return i.status === filterStatus;
       })
     : desa.items;
@@ -473,35 +517,32 @@ const DesaRow = ({ desa, expanded, onToggle, filterStatus }) => {
       {/* Header */}
       <button
         onClick={onToggle}
-        className="w-full flex items-center gap-3 p-4 hover:bg-gray-50 transition-colors text-left"
+        className="w-full flex items-center gap-2 px-4 py-3 hover:bg-gray-50 transition-colors text-left"
       >
-        <span className="text-gray-400">
+        <span className="text-gray-400 shrink-0">
           {expanded ? (
             <LuChevronDown className="w-5 h-5" />
           ) : (
             <LuChevronRight className="w-5 h-5" />
           )}
         </span>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-semibold text-gray-900">{desa.desaNama}</span>
-            <span className="text-xs text-gray-400">•</span>
-            <span className="text-sm text-gray-500">{desa.kecamatanNama}</span>
-          </div>
+        <div className="min-w-0 w-56 shrink-0">
+          <span className="font-semibold text-gray-900 text-sm truncate block">{desa.desaNama}</span>
+          <span className="text-xs text-gray-400 truncate block">{desa.kecamatanNama}</span>
         </div>
-        <div className="flex items-center gap-2 flex-wrap justify-end">
-          <Badge count={desa.totalDb} label="DB" variant="gray" />
-          <Badge count={desa.totalGema} label="Gema" variant="purple" />
-          <Badge count={desa.totalAdd} label="ADD" variant="cyan" />
-          {desa.matched > 0 && (
-            <Badge count={desa.matched} label="Cocok" variant="green" />
-          )}
-          {desa.onlyGema > 0 && (
-            <Badge count={desa.onlyGema} label="Hanya Gema" variant="yellow" />
-          )}
-          {desa.onlyAdd > 0 && (
-            <Badge count={desa.onlyAdd} label="Hanya ADD" variant="blue" />
-          )}
+        {/* Data columns */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <Badge count={desa.totalDb} label="DB" variant="gray" fixed />
+          <Badge count={desa.totalGema} label="Gema" variant="purple" fixed />
+          <Badge count={desa.totalAdd} label="ADD" variant="cyan" fixed />
+        </div>
+        <span className="text-gray-200 shrink-0">│</span>
+        {/* Status columns */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <Badge count={desa.allThree || 0} label="Lengkap" variant="green" fixed />
+          <Badge count={desa.dbGema || 0} label="DB+Gema" variant="green" fixed />
+          <Badge count={desa.dbAdd || 0} label="DB+ADD" variant="cyan" fixed />
+          <Badge count={desa.gemaAdd || 0} label="Gema+ADD" variant="purple" fixed />
         </div>
       </button>
 
@@ -544,7 +585,7 @@ const DesaRow = ({ desa, expanded, onToggle, filterStatus }) => {
 const PosyanduItemRow = ({ item, idx }) => {
   const [expanded, setExpanded] = useState(false);
   const cfg = STATUS_CONFIG[item.status];
-  const statusCfg = item.isFuzzy && item.status === 'matched' ? STATUS_CONFIG.fuzzy_matched : cfg;
+  const statusCfg = item.isFuzzy ? STATUS_CONFIG.fuzzy_matched : cfg;
   const hasDetails = item.addDetails && item.addDetails.length > 0;
 
   return (
@@ -650,7 +691,7 @@ const PosyanduItemRow = ({ item, idx }) => {
   );
 };
 
-const Badge = ({ count, label, variant }) => {
+const Badge = ({ count, label, variant, fixed }) => {
   const variants = {
     gray: "bg-gray-100 text-gray-600",
     purple: "bg-purple-100 text-purple-600",
@@ -660,9 +701,11 @@ const Badge = ({ count, label, variant }) => {
     blue: "bg-blue-100 text-blue-600",
   };
 
+  const dimmed = fixed && count === 0;
+
   return (
     <span
-      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${variants[variant]}`}
+      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${fixed ? "w-[5.5rem] justify-center" : ""} ${dimmed ? "opacity-30" : ""} ${variants[variant]}`}
     >
       <span className="font-bold">{count}</span>
       <span className="hidden sm:inline">{label}</span>
