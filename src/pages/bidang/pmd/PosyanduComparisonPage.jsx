@@ -11,7 +11,9 @@ import {
   LuCircleMinus,
   LuX,
   LuMapPin,
+  LuDownload,
 } from "react-icons/lu";
+import * as XLSX from "xlsx";
 import api from "../../../api";
 
 const STATUS_CONFIG = {
@@ -164,6 +166,62 @@ const PosyanduComparisonPage = () => {
       totalOnlyDb: filteredData.reduce((a, d) => a + d.onlyDb, 0),
     };
   }, [filteredData]);
+
+  const exportToExcel = () => {
+    const rows = [];
+
+    filteredData.forEach((desa) => {
+      const items = filterStatus
+        ? desa.items.filter((i) => {
+            if (filterStatus === "fuzzy_matched") return i.isFuzzy;
+            return i.status === filterStatus;
+          })
+        : desa.items;
+
+      items.forEach((item) => {
+        const statusLabel = item.isFuzzy
+          ? STATUS_CONFIG.fuzzy_matched.label
+          : STATUS_CONFIG[item.status]?.label || item.status;
+
+        rows.push({
+          Kecamatan: desa.kecamatanNama,
+          "Kode Desa": desa.desaKode,
+          Desa: desa.desaNama,
+          "Nama Posyandu": item.nama,
+          "Nama di Database": (item.dbNama || []).join(", ") || "-",
+          "Nama di Gema": (item.gemaNama || []).join(", ") || "-",
+          "Nama di ADD": (item.addNama || []).join(", ") || "-",
+          Status: statusLabel,
+          "Nilai ADD": item.addNilai || 0,
+        });
+      });
+    });
+
+    if (rows.length === 0) return;
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+
+    // Auto-width columns
+    const colWidths = Object.keys(rows[0]).map((key) => {
+      const maxLen = Math.max(
+        key.length,
+        ...rows.map((r) => String(r[key] ?? "").length),
+      );
+      return { wch: Math.min(maxLen + 2, 50) };
+    });
+    ws["!cols"] = colWidths;
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Perbandingan Posyandu");
+
+    const parts = ["Posyandu_Comparison"];
+    if (filterKecamatan) parts.push(filterKecamatan.replace(/\s+/g, "_"));
+    if (filterStatus) parts.push(filterStatus);
+    parts.push(new Date().toISOString().split("T")[0]);
+    const filename = parts.join("_") + ".xlsx";
+
+    XLSX.writeFile(wb, filename);
+  };
 
   const toggleDesa = (desaId) => {
     setExpandedDesa((prev) => {
@@ -433,6 +491,16 @@ const PosyanduComparisonPage = () => {
               Tutup Semua
             </button>
           </div>
+
+          {/* Export */}
+          <button
+            onClick={exportToExcel}
+            disabled={filteredData.length === 0}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <LuDownload className="w-3.5 h-3.5" />
+            Export Excel
+          </button>
         </div>
 
         {/* Filtered result count */}
