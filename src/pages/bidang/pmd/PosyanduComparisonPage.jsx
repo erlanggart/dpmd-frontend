@@ -223,6 +223,84 @@ const PosyanduComparisonPage = () => {
     XLSX.writeFile(wb, filename);
   };
 
+  const exportDesaModal = () => {
+    if (!desaModal || !data) return;
+    const desaNames = new Set(desaModal.list.map((d) => d.toUpperCase()));
+    const matchedDesa = data.comparison.filter((d) => desaNames.has(d.desaNama.toUpperCase()));
+    const rows = [];
+
+    if (matchedDesa.length > 0) {
+      matchedDesa.forEach((desa) => {
+        if (desa.items.length === 0) {
+          rows.push({
+            Kecamatan: desa.kecamatanNama,
+            "Kode Desa": desa.desaKode,
+            Desa: desa.desaNama,
+            "Nama Posyandu": "-",
+            "Nama di Database": "-",
+            "Nama di Gema": "-",
+            "Nama di ADD": "-",
+            Status: "-",
+            "Nilai ADD": 0,
+          });
+        } else {
+          desa.items.forEach((item) => {
+            const statusLabel = item.isFuzzy
+              ? STATUS_CONFIG.fuzzy_matched.label
+              : STATUS_CONFIG[item.status]?.label || item.status;
+            rows.push({
+              Kecamatan: desa.kecamatanNama,
+              "Kode Desa": desa.desaKode,
+              Desa: desa.desaNama,
+              "Nama Posyandu": item.nama,
+              "Nama di Database": (item.dbNama || []).join(", ") || "-",
+              "Nama di Gema": (item.gemaNama || []).join(", ") || "-",
+              "Nama di ADD": (item.addNama || []).join(", ") || "-",
+              Status: statusLabel,
+              "Nilai ADD": item.addNilai || 0,
+            });
+          });
+        }
+      });
+    }
+
+    // Also add desa names that weren't found in comparison data
+    const foundNames = new Set(matchedDesa.map((d) => d.desaNama.toUpperCase()));
+    desaModal.list.forEach((name) => {
+      if (!foundNames.has(name.toUpperCase())) {
+        rows.push({
+          Kecamatan: "-",
+          "Kode Desa": "-",
+          Desa: name,
+          "Nama Posyandu": "-",
+          "Nama di Database": "-",
+          "Nama di Gema": "-",
+          "Nama di ADD": "-",
+          Status: "-",
+          "Nilai ADD": 0,
+        });
+      }
+    });
+
+    if (rows.length === 0) return;
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const colWidths = Object.keys(rows[0]).map((key) => {
+      const maxLen = Math.max(
+        key.length,
+        ...rows.map((r) => String(r[key] ?? "").length),
+      );
+      return { wch: Math.min(maxLen + 2, 50) };
+    });
+    ws["!cols"] = colWidths;
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Data Desa");
+
+    const filename = desaModal.title.replace(/\s+/g, "_") + "_" + new Date().toISOString().split("T")[0] + ".xlsx";
+    XLSX.writeFile(wb, filename);
+  };
+
   const toggleDesa = (desaId) => {
     setExpandedDesa((prev) => {
       const next = new Set(prev);
@@ -297,7 +375,7 @@ const PosyanduComparisonPage = () => {
           subtitle={`${data.summary.totalDesaWithDb || data.summary.totalDesa} / ${data.summary.totalDesa} desa`}
           extraInfo={data.summary.desaWithoutDb?.length > 0 ? {
             label: `${data.summary.desaWithoutDb.length} desa tanpa data`,
-            onClick: () => setDesaModal({ title: 'Desa Tanpa Data di Database', list: data.summary.desaWithoutDb }),
+            onClick: () => setDesaModal({ title: 'Desa Tanpa Data di Database', list: data.summary.desaWithoutDb, exportType: 'without_db' }),
           } : null}
         />
         <SummaryCard
@@ -308,7 +386,7 @@ const PosyanduComparisonPage = () => {
           subtitle={`${data.summary.totalGemaDesa || '?'} desa`}
           extraInfo={data.summary.desaWithoutGema?.length > 0 ? {
             label: `${data.summary.desaWithoutGema.length} desa tanpa data`,
-            onClick: () => setDesaModal({ title: 'Desa Tanpa Data Gema', list: data.summary.desaWithoutGema }),
+            onClick: () => setDesaModal({ title: 'Desa Tanpa Data Gema', list: data.summary.desaWithoutGema, exportType: 'without_gema' }),
           } : null}
         />
         <SummaryCard
@@ -319,7 +397,7 @@ const PosyanduComparisonPage = () => {
           subtitle={`${data.summary.totalAddDesa || '?'} desa`}
           extraInfo={data.summary.desaWithoutAdd?.length > 0 ? {
             label: `${data.summary.desaWithoutAdd.length} desa tanpa data`,
-            onClick: () => setDesaModal({ title: 'Desa Tanpa Data ADD', list: data.summary.desaWithoutAdd }),
+            onClick: () => setDesaModal({ title: 'Desa Tanpa Data ADD', list: data.summary.desaWithoutAdd, exportType: 'without_add' }),
           } : null}
         />
       </div>
@@ -355,7 +433,7 @@ const PosyanduComparisonPage = () => {
           color="yellow"
           extraInfo={data.summary.unmatchedGemaDesa?.length > 0 ? {
             label: `${data.summary.unmatchedGemaDesa.length} desa tidak cocok DB`,
-            onClick: () => setDesaModal({ title: 'Desa Gema Tidak Cocok Database', list: data.summary.unmatchedGemaDesa }),
+            onClick: () => setDesaModal({ title: 'Desa Gema Tidak Cocok Database', list: data.summary.unmatchedGemaDesa, exportType: 'unmatched_gema' }),
           } : null}
         />
         <SummaryCard
@@ -365,7 +443,7 @@ const PosyanduComparisonPage = () => {
           color="blue"
           extraInfo={data.summary.unmatchedAddDesa?.length > 0 ? {
             label: `${data.summary.unmatchedAddDesa.length} desa tidak cocok DB`,
-            onClick: () => setDesaModal({ title: 'Desa ADD Tidak Cocok Database', list: data.summary.unmatchedAddDesa }),
+            onClick: () => setDesaModal({ title: 'Desa ADD Tidak Cocok Database', list: data.summary.unmatchedAddDesa, exportType: 'unmatched_add' }),
           } : null}
         />
         <SummaryCard
@@ -389,7 +467,16 @@ const PosyanduComparisonPage = () => {
               </button>
             </div>
             <div className="overflow-y-auto px-4 py-3 flex-1">
-              <p className="text-xs text-gray-500 mb-2">{desaModal.list.length} desa</p>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs text-gray-500">{desaModal.list.length} desa</p>
+                <button
+                  onClick={exportDesaModal}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                >
+                  <LuDownload className="w-3.5 h-3.5" />
+                  Export Excel
+                </button>
+              </div>
               <ul className="space-y-1">
                 {desaModal.list.map((d, i) => (
                   <li key={i} className="text-sm text-gray-700 py-1 px-2 rounded hover:bg-gray-50 flex items-center gap-2">
