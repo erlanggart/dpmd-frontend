@@ -225,53 +225,42 @@ const PosyanduComparisonPage = () => {
 
   const exportDesaModal = () => {
     if (!desaModal || !data) return;
-    const desaNames = new Set(desaModal.list.map((d) => d.toUpperCase()));
-    const matchedDesa = data.comparison.filter((d) => desaNames.has(d.desaNama.toUpperCase()));
-    const rows = [];
 
-    if (matchedDesa.length > 0) {
-      matchedDesa.forEach((desa) => {
-        if (desa.items.length === 0) {
+    // Build a lookup: "DESANAMA (KECAMATANNAMA)" -> comparison entry
+    const comparisonMap = new Map();
+    data.comparison.forEach((d) => {
+      const key = `${d.desaNama} (${d.kecamatanNama})`.toUpperCase();
+      comparisonMap.set(key, d);
+    });
+
+    const rows = [];
+    desaModal.list.forEach((label) => {
+      const desa = comparisonMap.get(label.toUpperCase());
+      if (desa && desa.items.length > 0) {
+        desa.items.forEach((item) => {
+          const statusLabel = item.isFuzzy
+            ? STATUS_CONFIG.fuzzy_matched.label
+            : STATUS_CONFIG[item.status]?.label || item.status;
           rows.push({
             Kecamatan: desa.kecamatanNama,
             "Kode Desa": desa.desaKode,
             Desa: desa.desaNama,
-            "Nama Posyandu": "-",
-            "Nama di Database": "-",
-            "Nama di Gema": "-",
-            "Nama di ADD": "-",
-            Status: "-",
-            "Nilai ADD": 0,
+            "Nama Posyandu": item.nama,
+            "Nama di Database": (item.dbNama || []).join(", ") || "-",
+            "Nama di Gema": (item.gemaNama || []).join(", ") || "-",
+            "Nama di ADD": (item.addNama || []).join(", ") || "-",
+            Status: statusLabel,
+            "Nilai ADD": item.addNilai || 0,
           });
-        } else {
-          desa.items.forEach((item) => {
-            const statusLabel = item.isFuzzy
-              ? STATUS_CONFIG.fuzzy_matched.label
-              : STATUS_CONFIG[item.status]?.label || item.status;
-            rows.push({
-              Kecamatan: desa.kecamatanNama,
-              "Kode Desa": desa.desaKode,
-              Desa: desa.desaNama,
-              "Nama Posyandu": item.nama,
-              "Nama di Database": (item.dbNama || []).join(", ") || "-",
-              "Nama di Gema": (item.gemaNama || []).join(", ") || "-",
-              "Nama di ADD": (item.addNama || []).join(", ") || "-",
-              Status: statusLabel,
-              "Nilai ADD": item.addNilai || 0,
-            });
-          });
-        }
-      });
-    }
-
-    // Also add desa names that weren't found in comparison data
-    const foundNames = new Set(matchedDesa.map((d) => d.desaNama.toUpperCase()));
-    desaModal.list.forEach((name) => {
-      if (!foundNames.has(name.toUpperCase())) {
+        });
+      } else {
+        // Desa found in comparison but has no items, or not found at all
+        const kec = desa?.kecamatanNama || label.match(/\((.+)\)$/)?.[1] || "-";
+        const desaNama = desa?.desaNama || label.replace(/\s*\(.+\)$/, "");
         rows.push({
-          Kecamatan: "-",
-          "Kode Desa": "-",
-          Desa: name,
+          Kecamatan: kec,
+          "Kode Desa": desa?.desaKode || "-",
+          Desa: desaNama,
           "Nama Posyandu": "-",
           "Nama di Database": "-",
           "Nama di Gema": "-",
