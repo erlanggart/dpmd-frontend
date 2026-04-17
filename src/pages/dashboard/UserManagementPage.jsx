@@ -30,6 +30,7 @@ import {
 	LuBadgeCheck,
 	LuCamera,
 	LuSmartphone,
+	LuTrophy,
 } from "react-icons/lu";
 import * as XLSX from 'xlsx';
 import api from "../../api";
@@ -58,6 +59,9 @@ const ROLE_THEME = {
 	kecamatan:        { gradient: "from-violet-500 via-purple-500 to-fuchsia-600", ring: "ring-violet-200", bg: "bg-violet-500", glow: "shadow-violet-200/60" },
 	dinas_terkait:    { gradient: "from-amber-500 via-orange-500 to-yellow-600", ring: "ring-amber-200",  bg: "bg-amber-500",  glow: "shadow-amber-200/60" },
 	verifikator_dinas:{ gradient: "from-orange-500 via-rose-500 to-pink-500", ring: "ring-orange-200", bg: "bg-orange-500", glow: "shadow-orange-200/60" },
+	penyelenggara:    { gradient: "from-purple-500 via-violet-500 to-fuchsia-600", ring: "ring-purple-200", bg: "bg-purple-500", glow: "shadow-purple-200/60" },
+	pelatih:          { gradient: "from-lime-500 via-green-500 to-emerald-600", ring: "ring-lime-200", bg: "bg-lime-500", glow: "shadow-lime-200/60" },
+	juri:             { gradient: "from-yellow-500 via-amber-500 to-orange-500", ring: "ring-yellow-200", bg: "bg-yellow-500", glow: "shadow-yellow-200/60" },
 };
 const DEFAULT_THEME = { gradient: "from-gray-400 to-gray-600", ring: "ring-gray-200", bg: "bg-gray-500", glow: "shadow-gray-200/60" };
 
@@ -376,6 +380,13 @@ const UserManagementPage = () => {
 		{ id: "desa", label: "Admin Desa", role: "desa", icon: LuHouse, color: "emerald" },
 		{ id: "kecamatan", label: "Admin Kecamatan", role: "kecamatan", icon: LuMapPin, color: "violet" },
 		{ id: "dinas_terkait", label: "Dinas Terkait", role: "dinas_terkait", icon: LuBuilding2, color: "amber" },
+		{ 
+			id: "admin_pb", 
+			label: "Admin PB", 
+			roles: ["penyelenggara", "pelatih", "juri"], 
+			icon: LuTrophy, 
+			color: "purple" 
+		},
 	];
 
 	// Fetch users
@@ -620,6 +631,9 @@ const UserManagementPage = () => {
 			kecamatan: { label: "Admin Kecamatan", color: "bg-violet-100 text-violet-700 border-violet-200" },
 			dinas_terkait: { label: "Dinas Terkait", color: "bg-amber-100 text-amber-700 border-amber-200" },
 			verifikator_dinas: { label: "Verifikator Dinas", color: "bg-orange-100 text-orange-700 border-orange-200" },
+			penyelenggara: { label: "Penyelenggara", color: "bg-purple-100 text-purple-700 border-purple-200" },
+			pelatih: { label: "Pelatih", color: "bg-lime-100 text-lime-700 border-lime-200" },
+			juri: { label: "Juri", color: "bg-yellow-100 text-yellow-700 border-yellow-200" },
 		};
 		return roleMap[role] || { label: role, color: "bg-gray-100 text-gray-700 border-gray-200" };
 	};
