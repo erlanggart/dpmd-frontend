@@ -3,6 +3,9 @@ import axios from "axios";
 import { API_ENDPOINTS } from "./config/apiConfig";
 import { performFullLogout } from "./utils/sessionPersistence";
 
+// Flag to prevent multiple simultaneous logouts
+let isLoggingOut = false;
+
 const api = axios.create({
 	baseURL: API_ENDPOINTS.EXPRESS_BASE, // Express only
 	timeout: 30000,
@@ -72,12 +75,20 @@ api.interceptors.request.use(
 api.interceptors.response.use(
 	(response) => response,
 	(error) => {
+		// Skip cancelled/aborted requests — don't trigger logout for stale navigated-away requests
+		if (axios.isCancel(error) || error.code === 'ERR_CANCELED' || error.code === 'ECONNABORTED') {
+			return Promise.reject(error);
+		}
+
 		// Check if error is 401
 		if (error.response && error.response.status === 401) {
-			// Only redirect if NOT on login or landing page
-			if (window.location.pathname !== "/login" && window.location.pathname !== "/") {
+			// Only redirect if NOT on login or landing page, and not already logging out
+			if (window.location.pathname !== "/login" && window.location.pathname !== "/" && !isLoggingOut) {
+				isLoggingOut = true;
 				performFullLogout().then(() => {
 					window.location.href = "/";
+				}).finally(() => {
+					isLoggingOut = false;
 				});
 			}
 		}
