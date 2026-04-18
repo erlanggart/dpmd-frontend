@@ -639,6 +639,11 @@ const RwRow = ({ rw, basePath, navigate }) => {
 					</div>
 					<span className="text-sm font-semibold text-gray-800">RW {rw.nomor}</span>
 					<VerifBadge status={rw.status_verifikasi} />
+					{rw.pengurus_count > 0 && (
+						<span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-blue-50 text-blue-600">
+							<LuUsers className="w-2.5 h-2.5" />{rw.pengurus_count}
+						</span>
+					)}
 					{rts.length > 0 && (
 						<span className="text-[10px] font-medium text-gray-400">{rts.length} RT</span>
 					)}
@@ -659,6 +664,11 @@ const RwRow = ({ rw, basePath, navigate }) => {
 								<div className="w-1.5 h-1.5 rounded-full bg-gray-300 flex-shrink-0"></div>
 								<span className="text-xs font-medium text-gray-600">RT {rt.nomor}</span>
 								<VerifBadge status={rt.status_verifikasi} />
+								{rt.pengurus_count > 0 && (
+									<span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-blue-50 text-blue-600">
+										<LuUsers className="w-2.5 h-2.5" />{rt.pengurus_count}
+									</span>
+								)}
 							</div>
 							<FaChevronRight className="w-2.5 h-2.5 text-gray-300 flex-shrink-0" />
 						</div>
