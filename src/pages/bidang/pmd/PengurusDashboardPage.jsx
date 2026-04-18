@@ -10,6 +10,7 @@ import {
   LuArrowLeft,
   LuChevronDown,
   LuChevronRight,
+  LuChevronLeft,
   LuTriangleAlert,
   LuFilter,
   LuX,
@@ -18,8 +19,11 @@ import {
   LuMapPin,
   LuBuilding2,
   LuExternalLink,
+  LuDownload,
+  LuHeart,
 } from "react-icons/lu";
 import { FaMars, FaVenus } from "react-icons/fa";
+import * as XLSX from "xlsx";
 import {
   Chart as ChartJS,
   ArcElement,
@@ -77,7 +81,7 @@ const TYPE_LABELS = {
 };
 
 const EDUCATION_ORDER = [
-  "SD", "SMP", "SMA", "SMK", "D1", "D2", "D3", "D4", "S1", "S2", "S3",
+  "TIDAK SEKOLAH", "SD/MI", "SMP/MTS", "SMA/SMK/MA", "D1", "D2", "D3", "D4", "S1", "S2", "S3",
 ];
 
 const AGE_RANGE_LABELS = {
@@ -143,36 +147,49 @@ export default function PengurusDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState([]);
   const [summary, setSummary] = useState(null);
+  const [pagination, setPagination] = useState({ page: 1, per_page: 25, total: 0, total_pages: 1 });
   const [unverified, setUnverified] = useState([]);
   const [rejected, setRejected] = useState([]);
   const [filters, setFilters] = useState({ kecamatans: [], desas: [] });
+  const [exporting, setExporting] = useState(false);
 
   // Filter state
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedKecamatan, setSelectedKecamatan] = useState("");
   const [selectedDesa, setSelectedDesa] = useState("");
   const [selectedType, setSelectedType] = useState("");
+  const [selectedJabatan, setSelectedJabatan] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
   const [verificationScope, setVerificationScope] = useState("verified");
   const [showFilters, setShowFilters] = useState(false);
   const [showUnverified, setShowUnverified] = useState(false);
   const [showRejected, setShowRejected] = useState(false);
 
-  const fetchData = useCallback(async () => {
+  const buildParams = useCallback((overrides = {}) => {
+    const params = new URLSearchParams();
+    const mappedSelectedType = TYPE_QUERY_MAP[selectedType] || selectedType;
+    if (selectedKecamatan) params.append("kecamatan_id", selectedKecamatan);
+    if (selectedDesa) params.append("desa_id", selectedDesa);
+    if (mappedSelectedType) params.append("pengurusable_type", mappedSelectedType);
+    if (searchQuery.trim()) params.append("search", searchQuery.trim());
+    if (selectedJabatan) params.append("jabatan", selectedJabatan);
+    params.append("verification_scope", verificationScope);
+    params.append("page", String(overrides.page || currentPage));
+    params.append("per_page", "25");
+    Object.entries(overrides).forEach(([k, v]) => { if (k !== 'page') params.set(k, String(v)); });
+    return params;
+  }, [selectedKecamatan, selectedDesa, selectedType, selectedJabatan, searchQuery, verificationScope, currentPage]);
+
+  const fetchData = useCallback(async (pageOverride) => {
     try {
       setLoading(true);
-      const params = new URLSearchParams();
-      const mappedSelectedType = TYPE_QUERY_MAP[selectedType] || selectedType;
-      if (selectedKecamatan) params.append("kecamatan_id", selectedKecamatan);
-      if (selectedDesa) params.append("desa_id", selectedDesa);
-      if (mappedSelectedType) params.append("pengurusable_type", mappedSelectedType);
-      if (searchQuery.trim()) params.append("search", searchQuery.trim());
-      params.append("verification_scope", verificationScope);
-
+      const params = buildParams(pageOverride ? { page: pageOverride } : {});
       const qs = params.toString();
       const res = await api.get(`/kelembagaan/pengurus-dashboard${qs ? `?${qs}` : ""}`);
       if (res.data.success) {
         setData(res.data.data || []);
         setSummary(res.data.summary || null);
+        setPagination(res.data.pagination || { page: 1, per_page: 25, total: 0, total_pages: 1 });
         setUnverified(res.data.unverified || []);
         setRejected(res.data.ditolak || []);
         setFilters(res.data.filters || { kecamatans: [], desas: [] });
@@ -183,11 +200,57 @@ export default function PengurusDashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [selectedKecamatan, selectedDesa, selectedType, searchQuery, verificationScope]);
+  }, [buildParams]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedKecamatan, selectedDesa, selectedType, selectedJabatan, searchQuery, verificationScope]);
+
+  const handlePageChange = (newPage) => {
+    setCurrentPage(newPage);
+    fetchData(newPage);
+  };
+
+  const handleExport = async () => {
+    try {
+      setExporting(true);
+      const params = buildParams({ page: 1 });
+      params.set("export_all", "1");
+      const qs = params.toString();
+      const res = await api.get(`/kelembagaan/pengurus-dashboard?${qs}`);
+      if (!res.data.success) { toast.error("Gagal export data"); return; }
+      const rows = (res.data.data || []).map((p, i) => ({
+        No: i + 1,
+        Nama: p.nama_lengkap || '-',
+        NIK: p.nik || '-',
+        Jabatan: p.jabatan || '-',
+        Kelembagaan: TYPE_LABELS[p.pengurusable_type] || p.pengurusable_type,
+        Desa: p.desa_nama || '-',
+        Kecamatan: p.kecamatan_nama || '-',
+        'Jenis Kelamin': p.jenis_kelamin === 'Laki_laki' ? 'Laki-laki' : p.jenis_kelamin === 'Perempuan' ? 'Perempuan' : '-',
+        Pendidikan: p.pendidikan || '-',
+        Agama: p.agama || '-',
+        'No HP': p.no_telepon || '-',
+        'Status Verifikasi': p.status_verifikasi || '-',
+      }));
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Pengurus");
+      const filterLabel = [selectedKecamatan && filters.kecamatans.find(k => String(k.id) === String(selectedKecamatan))?.nama, selectedDesa && filters.desas.find(d => String(d.id) === String(selectedDesa))?.nama].filter(Boolean).join('_') || 'Semua';
+      XLSX.writeFile(wb, `Pengurus_${filterLabel}_${new Date().toISOString().slice(0,10)}.xlsx`);
+      toast.success(`Berhasil export ${rows.length} data`);
+    } catch (error) {
+      console.error("Export error:", error);
+      toast.error("Gagal export data");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   // Filter desas based on selected kecamatan
   const filteredDesas = useMemo(() => {
@@ -195,19 +258,22 @@ export default function PengurusDashboardPage() {
     return filters.desas.filter((d) => String(d.kecamatan_id) === String(selectedKecamatan));
   }, [filters.desas, selectedKecamatan]);
 
-  const displayedData = useMemo(() => data, [data]);
+  const jabatanList = summary?.jabatanList || [];
+  const maxAgamaCount = summary ? Math.max(...Object.values(summary.agamaStats || {}), 1) : 1;
 
   const resetFilters = () => {
     setSearchQuery("");
     setSelectedKecamatan("");
     setSelectedDesa("");
     setSelectedType("");
+    setSelectedJabatan("");
+    setCurrentPage(1);
     setVerificationScope("verified");
     setShowUnverified(false);
     setShowRejected(false);
   };
 
-  const hasActiveFilters = searchQuery || selectedKecamatan || selectedDesa || selectedType || verificationScope !== "verified";
+  const hasActiveFilters = searchQuery || selectedKecamatan || selectedDesa || selectedType || selectedJabatan || verificationScope !== "verified";
   const hasTypeStats = Boolean(summary && Object.keys(summary.typeStats || {}).length > 0);
   const hasYearlyStats = Boolean(summary && Object.keys(summary.yearlyStats || {}).length > 0);
   const matchingCounts = summary?.matchingCounts || { all: 0, verified: 0, unverified: 0, ditolak: 0 };
@@ -488,7 +554,7 @@ export default function PengurusDashboardPage() {
 
       {/* Infographics */}
       {summary && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-4">
           {/* Gender Pie Chart */}
           <div className="bg-white rounded-xl border border-gray-200 p-5">
             <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
@@ -558,22 +624,45 @@ export default function PengurusDashboardPage() {
                 ))}
             </div>
           </div>
+
+          {/* Religion Distribution */}
+          {summary.agamaStats && Object.keys(summary.agamaStats).length > 0 && (
+            <div className="bg-white rounded-xl border border-gray-200 p-5">
+              <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                <LuHeart className="w-4 h-4 text-rose-500" />
+                Agama
+              </h3>
+              <div className="space-y-2">
+                {Object.entries(summary.agamaStats)
+                  .sort((a, b) => b[1] - a[1])
+                  .map(([agama, count]) => (
+                    <BarRow
+                      key={agama}
+                      label={agama}
+                      value={count}
+                      max={maxAgamaCount}
+                      color="bg-rose-400"
+                    />
+                  ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
       {/* Kelembagaan Charts */}
       {summary && (hasTypeStats || hasYearlyStats) && (
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-12" style={{ alignItems: 'stretch' }}>
           {hasTypeStats && (
             <TypeDistributionChart
               typeStats={summary.typeStats}
-              className={hasYearlyStats ? "xl:col-span-4" : "xl:col-span-12"}
+              className={hasYearlyStats ? "xl:col-span-4 flex flex-col" : "xl:col-span-12"}
             />
           )}
           {hasYearlyStats && (
             <YearlyPengurusChart
               yearlyStats={summary.yearlyStats}
-              className={hasTypeStats ? "xl:col-span-8" : "xl:col-span-12"}
+              className={hasTypeStats ? "xl:col-span-8 flex flex-col" : "xl:col-span-12"}
             />
           )}
         </div>
@@ -616,11 +705,19 @@ export default function PengurusDashboardPage() {
               Reset
             </button>
           )}
+          <button
+            onClick={handleExport}
+            disabled={exporting}
+            className="flex items-center gap-2 px-4 py-2.5 text-sm bg-emerald-500 text-white hover:bg-emerald-600 rounded-lg transition-colors disabled:opacity-50"
+          >
+            <LuDownload className="w-4 h-4" />
+            {exporting ? "Mengexport..." : "Export Excel"}
+          </button>
         </div>
 
         {/* Filter dropdowns */}
         {showFilters && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3 pt-3 border-t border-gray-100">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-3 pt-3 border-t border-gray-100">
             <select
               value={selectedKecamatan}
               onChange={(e) => {
@@ -660,6 +757,18 @@ export default function PengurusDashboardPage() {
                 </option>
               ))}
             </select>
+            <select
+              value={selectedJabatan}
+              onChange={(e) => setSelectedJabatan(e.target.value)}
+              className="px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Semua Jabatan</option>
+              {jabatanList.map((jab) => (
+                <option key={jab} value={jab}>
+                  {jab}
+                </option>
+              ))}
+            </select>
           </div>
         )}
       </div>
@@ -670,11 +779,11 @@ export default function PengurusDashboardPage() {
           <h3 className="font-semibold text-gray-800">
             {tableTitle}
             <span className="text-sm font-normal text-gray-500 ml-2">
-              ({displayedData.length} orang)
+              ({pagination.total} orang)
             </span>
           </h3>
         </div>
-        {displayedData.length === 0 ? (
+        {data.length === 0 ? (
           <div className="p-8 text-center text-gray-400">
             <LuUsers className="w-10 h-10 mx-auto mb-2 opacity-50" />
             <p>{emptyTableText}</p>
@@ -697,8 +806,9 @@ export default function PengurusDashboardPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {displayedData.map((p, idx) => {
+                {data.map((p, idx) => {
                   const verificationStatus = getVerificationStatus(p.status_verifikasi);
+                  const rowNum = (pagination.page - 1) * pagination.per_page + idx + 1;
 
                   return (
                     <tr
@@ -706,7 +816,7 @@ export default function PengurusDashboardPage() {
                       className="hover:bg-blue-50/50 transition-colors cursor-pointer"
                       onClick={() => navigate(getPath(`/bidang/pmd/pengurus/${p.id}`))}
                     >
-                      <td className="px-4 py-3 text-gray-500">{idx + 1}</td>
+                      <td className="px-4 py-3 text-gray-500">{rowNum}</td>
                       <td className="px-4 py-3 font-medium text-gray-800">
                         {p.nama_lengkap}
                       </td>
@@ -744,6 +854,56 @@ export default function PengurusDashboardPage() {
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {pagination.total_pages > 1 && (
+          <div className="px-5 py-3 border-t border-gray-100 flex items-center justify-between">
+            <p className="text-xs text-gray-500">
+              Menampilkan {(pagination.page - 1) * pagination.per_page + 1}–{Math.min(pagination.page * pagination.per_page, pagination.total)} dari {pagination.total}
+            </p>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => handlePageChange(pagination.page - 1)}
+                disabled={pagination.page <= 1}
+                className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              >
+                <LuChevronLeft className="w-4 h-4" />
+              </button>
+              {Array.from({ length: Math.min(pagination.total_pages, 7) }, (_, i) => {
+                let pageNum;
+                if (pagination.total_pages <= 7) {
+                  pageNum = i + 1;
+                } else if (pagination.page <= 4) {
+                  pageNum = i + 1;
+                } else if (pagination.page >= pagination.total_pages - 3) {
+                  pageNum = pagination.total_pages - 6 + i;
+                } else {
+                  pageNum = pagination.page - 3 + i;
+                }
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => handlePageChange(pageNum)}
+                    className={`w-8 h-8 rounded-lg text-xs font-medium transition-colors ${
+                      pageNum === pagination.page
+                        ? "bg-blue-500 text-white"
+                        : "hover:bg-gray-100 text-gray-600"
+                    }`}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
+              <button
+                onClick={() => handlePageChange(pagination.page + 1)}
+                disabled={pagination.page >= pagination.total_pages}
+                className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              >
+                <LuChevronRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -1041,7 +1201,7 @@ function YearlyPengurusChart({ yearlyStats, className = "" }) {
         Jumlah Pengurus per Kelembagaan per Tahun
       </h3>
       <p className="text-xs text-gray-400 mb-4">Pengurus aktif sesuai filter dan status verifikasi yang sedang dipilih</p>
-      <div className="h-80">
+      <div className="flex-1 min-h-[320px]">
         <Bar data={chartData} options={chartOptions} />
       </div>
     </div>
