@@ -112,13 +112,14 @@ const AbsensiPage = () => {
 	useEffect(() => {
 		const check = async () => {
 			try {
-				const res = await api.get("/absensi/check-eligible");
+				// Cache-bust agar service worker tidak serve response lama
+				const res = await api.get(`/absensi/check-eligible?_t=${Date.now()}`);
 				const data = res.data.data;
 				setEligible(data);
 				if (data?.eligible && !data?.device_registered && deviceId) {
 					try {
 						await api.post("/absensi/register-device", { device_id: deviceId, device_type: getDeviceType() });
-						const res2 = await api.get("/absensi/check-eligible");
+						const res2 = await api.get(`/absensi/check-eligible?_t=${Date.now()}`);
 						setEligible(res2.data.data);
 					} catch (err) { console.error("Auto device registration failed:", err); }
 				}
