@@ -31,6 +31,7 @@ import {
 	FaHome,
 	FaLock,
 	FaLockOpen,
+	FaUniversity,
 } from "react-icons/fa";
 import Swal from "sweetalert2";
 
@@ -1172,6 +1173,41 @@ const PengurusDetailPage = () => {
 								)}
 							</div>
 						</div>
+
+						{/* Informasi Rekening */}
+						{(pengurus.nama_bank || pengurus.nomor_rekening || pengurus.nama_rekening) && (
+							<div className="bg-gradient-to-br from-sky-50 via-blue-50 to-cyan-50 rounded-2xl shadow-sm border-2 border-sky-100 p-6">
+								<div className="flex items-center gap-3 mb-6">
+									<div className="w-10 h-10 bg-gradient-to-br from-sky-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+										<FaUniversity className="text-white w-5 h-5" />
+									</div>
+									<div>
+										<h3 className="text-lg font-bold text-gray-900">Informasi Rekening</h3>
+										<p className="text-sm text-gray-600">Data rekening untuk keperluan insentif</p>
+									</div>
+								</div>
+								<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+									<div>
+										<label className="block text-sm font-medium text-gray-700 mb-1">Nama Bank</label>
+										<p className="text-sm text-gray-900 bg-white/70 backdrop-blur-sm border-2 border-sky-100 p-3 rounded-lg font-medium">
+											{pengurus.nama_bank || "-"}
+										</p>
+									</div>
+									<div>
+										<label className="block text-sm font-medium text-gray-700 mb-1">Nomor Rekening</label>
+										<p className="text-sm text-gray-900 bg-white/70 backdrop-blur-sm border-2 border-sky-100 p-3 rounded-lg font-mono tracking-wider">
+											{pengurus.nomor_rekening || "-"}
+										</p>
+									</div>
+									<div>
+										<label className="block text-sm font-medium text-gray-700 mb-1">Nama Pemilik Rekening</label>
+										<p className="text-sm text-gray-900 bg-white/70 backdrop-blur-sm border-2 border-sky-100 p-3 rounded-lg font-medium">
+											{pengurus.nama_rekening || "-"}
+										</p>
+									</div>
+								</div>
+							</div>
+						)}
 
 						{/* SK Pengangkatan */}
 						<div className="bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 rounded-2xl shadow-sm border-2 border-amber-100 p-6">
