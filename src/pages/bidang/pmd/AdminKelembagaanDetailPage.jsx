@@ -4,6 +4,7 @@ import Swal from "sweetalert2";
 import {
 	LuBuilding2,
 	LuUsers,
+	LuUser,
 	LuHeart,
 	LuShield,
 	LuSprout,
@@ -500,6 +501,21 @@ const VerifBadge = ({ status }) => {
 	);
 };
 
+const KetuaBadge = ({ ketuaNama, jabatan = "Ketua" }) => {
+	if (ketuaNama) {
+		return (
+			<span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full bg-emerald-50 text-emerald-700">
+				<LuUser className="w-2.5 h-2.5" /> {jabatan}: {ketuaNama}
+			</span>
+		);
+	}
+	return (
+		<span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full bg-amber-50 text-amber-600">
+			<LuTriangleAlert className="w-2.5 h-2.5" /> Belum ada {jabatan}
+		</span>
+	);
+};
+
 // Row-based kelembagaan item
 const KelembagaanRow = ({ item, basePath, desaId, navigate, onCreateClick }) => {
 	const Icon = item.icon;
@@ -561,7 +577,7 @@ const KelembagaanRow = ({ item, basePath, desaId, navigate, onCreateClick }) => 
 											<Icon className="w-3 h-3" />
 										</div>
 										<span className="text-sm font-medium text-gray-800 truncate">{child.nama}</span>
-										<VerifBadge status={child.status_verifikasi} />
+								<KetuaBadge ketuaNama={child.ketua_nama} jabatan="Ketua" />
 									</div>
 									<FaChevronRight className="w-3 h-3 text-gray-300 flex-shrink-0" />
 								</div>
@@ -616,7 +632,7 @@ const KelembagaanRow = ({ item, basePath, desaId, navigate, onCreateClick }) => 
 					<Icon className="w-4 h-4" />
 				</div>
 				<span className="text-sm font-semibold text-gray-800">{item.name}</span>
-				<VerifBadge status={item.data?.status_verifikasi} />
+				<KetuaBadge ketuaNama={item.data?.ketua_nama} jabatan="Ketua" />
 			</div>
 			<FaChevronRight className="w-3 h-3 text-gray-300" />
 		</div>
@@ -638,12 +654,7 @@ const RwRow = ({ rw, basePath, navigate }) => {
 						<LuBuilding2 className="w-3 h-3" />
 					</div>
 					<span className="text-sm font-semibold text-gray-800">RW {rw.nomor}</span>
-					<VerifBadge status={rw.status_verifikasi} />
-					{rw.pengurus_count > 0 && (
-						<span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-blue-50 text-blue-600">
-							<LuUsers className="w-2.5 h-2.5" />{rw.pengurus_count}
-						</span>
-					)}
+					<KetuaBadge ketuaNama={rw.ketua_nama} jabatan="Ketua RW" />
 					{rts.length > 0 && (
 						<span className="text-[10px] font-medium text-gray-400">{rts.length} RT</span>
 					)}
@@ -663,12 +674,7 @@ const RwRow = ({ rw, basePath, navigate }) => {
 							<div className="flex items-center gap-2.5 min-w-0">
 								<div className="w-1.5 h-1.5 rounded-full bg-gray-300 flex-shrink-0"></div>
 								<span className="text-xs font-medium text-gray-600">RT {rt.nomor}</span>
-								<VerifBadge status={rt.status_verifikasi} />
-								{rt.pengurus_count > 0 && (
-									<span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-blue-50 text-blue-600">
-										<LuUsers className="w-2.5 h-2.5" />{rt.pengurus_count}
-									</span>
-								)}
+							<KetuaBadge ketuaNama={rt.ketua_nama} jabatan="Ketua RT" />
 							</div>
 							<FaChevronRight className="w-2.5 h-2.5 text-gray-300 flex-shrink-0" />
 						</div>
