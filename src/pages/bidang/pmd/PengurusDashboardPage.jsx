@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useBidangPath } from "../../../hooks/useBidangPath";
 import {
@@ -164,6 +164,7 @@ export default function PengurusDashboardPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [showUnverified, setShowUnverified] = useState(false);
   const [showRejected, setShowRejected] = useState(false);
+  const tableRef = useRef(null);
 
   const buildParams = useCallback((overrides = {}) => {
     const params = new URLSearchParams();
@@ -213,7 +214,9 @@ export default function PengurusDashboardPage() {
 
   const handlePageChange = (newPage) => {
     setCurrentPage(newPage);
-    fetchData(newPage);
+    fetchData(newPage).then(() => {
+      tableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
   };
 
   const handleExport = async () => {
@@ -790,7 +793,7 @@ export default function PengurusDashboardPage() {
       </div>
 
       {/* Pengurus Table */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div ref={tableRef} className="bg-white rounded-xl border border-gray-200 overflow-hidden scroll-mt-4">
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
           <h3 className="font-semibold text-gray-800">
             {tableTitle}
@@ -816,8 +819,6 @@ export default function PengurusDashboardPage() {
                   <th className="text-left px-4 py-3 font-medium">Desa</th>
                   <th className="text-left px-4 py-3 font-medium">Kecamatan</th>
                   <th className="text-left px-4 py-3 font-medium">Verifikasi</th>
-                  <th className="text-left px-4 py-3 font-medium">JK</th>
-                  <th className="text-left px-4 py-3 font-medium">Pendidikan</th>
                   <th className="text-center px-4 py-3 font-medium">Aksi</th>
                 </tr>
               </thead>
@@ -839,7 +840,7 @@ export default function PengurusDashboardPage() {
                       <td className="px-4 py-3 text-gray-600">{p.jabatan}</td>
                       <td className="px-4 py-3">
                         <span className="inline-block px-2 py-0.5 text-xs font-medium bg-teal-100 text-teal-700 rounded-full">
-                          {TYPE_LABELS[p.pengurusable_type] || p.pengurusable_type}
+                          {p.lembaga_label || TYPE_LABELS[p.pengurusable_type] || p.pengurusable_type}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-gray-600">{p.desa_nama}</td>
@@ -849,10 +850,6 @@ export default function PengurusDashboardPage() {
                           {verificationStatus.label}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-gray-600">
-                        {p.jenis_kelamin === "Laki_laki" ? "L" : p.jenis_kelamin === "Perempuan" ? "P" : "-"}
-                      </td>
-                      <td className="px-4 py-3 text-gray-600">{p.pendidikan || "-"}</td>
                       <td className="px-4 py-3 text-center">
                         <button
                           onClick={(e) => {
