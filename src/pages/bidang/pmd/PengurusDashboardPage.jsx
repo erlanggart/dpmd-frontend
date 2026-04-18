@@ -224,20 +224,36 @@ export default function PengurusDashboardPage() {
       const qs = params.toString();
       const res = await api.get(`/kelembagaan/pengurus-dashboard?${qs}`);
       if (!res.data.success) { toast.error("Gagal export data"); return; }
-      const rows = (res.data.data || []).map((p, i) => ({
-        No: i + 1,
-        Nama: p.nama_lengkap || '-',
-        NIK: p.nik || '-',
-        Jabatan: p.jabatan || '-',
-        Kelembagaan: TYPE_LABELS[p.pengurusable_type] || p.pengurusable_type,
-        Desa: p.desa_nama || '-',
-        Kecamatan: p.kecamatan_nama || '-',
-        'Jenis Kelamin': p.jenis_kelamin === 'Laki_laki' ? 'Laki-laki' : p.jenis_kelamin === 'Perempuan' ? 'Perempuan' : '-',
-        Pendidikan: p.pendidikan || '-',
-        Agama: p.agama || '-',
-        'No HP': p.no_telepon || '-',
-        'Status Verifikasi': p.status_verifikasi || '-',
-      }));
+      const rows = (res.data.data || []).map((p, i) => {
+        const gender = p.jenis_kelamin === 'Laki_laki' ? 'Laki-laki' : p.jenis_kelamin === 'Perempuan' ? 'Perempuan' : '-';
+        const tipeLabel = TYPE_LABELS[p.pengurusable_type] || p.pengurusable_type;
+        const lembaga = p.lembaga_label ? `${tipeLabel} ${p.lembaga_label}` : tipeLabel;
+        const fmtDate = (d) => d ? new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-';
+        const phParts = [p.produk_hukum_nomor, p.produk_hukum_tahun].filter(Boolean);
+        return {
+          No: i + 1,
+          NIK: p.nik || '-',
+          Nama: p.nama_lengkap || '-',
+          'Tempat Lahir': p.tempat_lahir || '-',
+          'Tanggal Lahir': fmtDate(p.tanggal_lahir),
+          'Jenis Kelamin': gender,
+          Agama: p.agama || '-',
+          'Status Perkawinan': p.status_perkawinan || '-',
+          'Golongan Darah': p.golongan_darah || '-',
+          'No HP/Telepon': p.no_telepon || '-',
+          Alamat: p.alamat || '-',
+          Jabatan: p.jabatan || '-',
+          Lembaga: lembaga,
+          Desa: p.desa_nama || '-',
+          Kecamatan: p.kecamatan_nama || '-',
+          'Tanggal Mulai Jabatan': fmtDate(p.tanggal_mulai_jabatan),
+          'Tanggal Akhir Jabatan': fmtDate(p.tanggal_akhir_jabatan),
+          'Produk Hukum (Nomor, Tahun)': phParts.length ? phParts.join(', ') : '-',
+          'Nama Bank': p.nama_bank || '-',
+          'Nomor Rekening': p.nomor_rekening || '-',
+          'Nama Pemilik Rekening': p.nama_rekening || '-',
+        };
+      });
       const ws = XLSX.utils.json_to_sheet(rows);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Pengurus");
