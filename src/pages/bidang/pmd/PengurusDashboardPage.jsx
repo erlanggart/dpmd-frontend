@@ -227,7 +227,7 @@ export default function PengurusDashboardPage() {
       const rows = (res.data.data || []).map((p, i) => {
         const gender = p.jenis_kelamin === 'Laki_laki' ? 'Laki-laki' : p.jenis_kelamin === 'Perempuan' ? 'Perempuan' : '-';
         const tipeLabel = TYPE_LABELS[p.pengurusable_type] || p.pengurusable_type;
-        const lembaga = p.lembaga_label ? `${tipeLabel} ${p.lembaga_label}` : tipeLabel;
+        const lembaga = p.lembaga_label || tipeLabel;
         const fmtDate = (d) => d ? new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-';
         const phParts = [p.produk_hukum_nomor, p.produk_hukum_tahun].filter(Boolean);
         return {
