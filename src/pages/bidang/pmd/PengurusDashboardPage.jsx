@@ -144,7 +144,8 @@ export default function PengurusDashboardPage() {
   const navigate = useNavigate();
   const { getPath } = useBidangPath();
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [data, setData] = useState([]);
   const [summary, setSummary] = useState(null);
   const [pagination, setPagination] = useState({ page: 1, per_page: 25, total: 0, total_pages: 1 });
@@ -207,6 +208,7 @@ export default function PengurusDashboardPage() {
       toast.error("Gagal memuat data pengurus");
     } finally {
       setLoading(false);
+      setInitialLoading(false);
     }
   }, [buildParams]);
 
@@ -336,7 +338,7 @@ export default function PengurusDashboardPage() {
     ? Math.max(...Object.values(summary.educationStats), 1)
     : 1;
 
-  if (loading) {
+  if (initialLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
@@ -810,7 +812,12 @@ export default function PengurusDashboardPage() {
             </span>
           </h3>
         </div>
-        {data.length === 0 ? (
+        {loading ? (
+          <div className="p-8 text-center text-gray-400">
+            <LuRefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-blue-500" />
+            <p className="text-sm">Memuat data...</p>
+          </div>
+        ) : data.length === 0 ? (
           <div className="p-8 text-center text-gray-400">
             <LuUsers className="w-10 h-10 mx-auto mb-2 opacity-50" />
             <p>{emptyTableText}</p>
