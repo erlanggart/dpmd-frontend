@@ -154,6 +154,7 @@ export default function PengurusDashboardPage() {
   const [exporting, setExporting] = useState(false);
 
   // Filter state
+  const [searchInput, setSearchInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedKecamatan, setSelectedKecamatan] = useState("");
   const [selectedDesa, setSelectedDesa] = useState("");
@@ -165,6 +166,12 @@ export default function PengurusDashboardPage() {
   const [showUnverified, setShowUnverified] = useState(false);
   const [showRejected, setShowRejected] = useState(false);
   const tableRef = useRef(null);
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => setSearchQuery(searchInput), 400);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   const buildParams = useCallback((overrides = {}) => {
     const params = new URLSearchParams();
@@ -281,6 +288,7 @@ export default function PengurusDashboardPage() {
   const maxAgamaCount = summary ? Math.max(...Object.values(summary.agamaStats || {}), 1) : 1;
 
   const resetFilters = () => {
+    setSearchInput("");
     setSearchQuery("");
     setSelectedKecamatan("");
     setSelectedDesa("");
@@ -292,7 +300,7 @@ export default function PengurusDashboardPage() {
     setShowRejected(false);
   };
 
-  const hasActiveFilters = searchQuery || selectedKecamatan || selectedDesa || selectedType || selectedJabatan || verificationScope !== "verified";
+  const hasActiveFilters = searchInput || selectedKecamatan || selectedDesa || selectedType || selectedJabatan || verificationScope !== "verified";
   const hasTypeStats = Boolean(summary && Object.keys(summary.typeStats || {}).length > 0);
   const hasYearlyStats = Boolean(summary && Object.keys(summary.yearlyStats || {}).length > 0);
   const matchingCounts = summary?.matchingCounts || { all: 0, verified: 0, unverified: 0, ditolak: 0 };
@@ -696,8 +704,8 @@ export default function PengurusDashboardPage() {
             <input
               type="text"
               placeholder="Cari nama, jabatan, atau NIK..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
