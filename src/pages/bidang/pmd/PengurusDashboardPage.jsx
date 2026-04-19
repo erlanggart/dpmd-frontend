@@ -168,9 +168,12 @@ export default function PengurusDashboardPage() {
   const [showRejected, setShowRejected] = useState(false);
   const tableRef = useRef(null);
 
-  // Debounce search input
+  // Debounce search input — reset page on new search
   useEffect(() => {
-    const timer = setTimeout(() => setSearchQuery(searchInput), 400);
+    const timer = setTimeout(() => {
+      setSearchQuery(searchInput);
+      setCurrentPage(1);
+    }, 400);
     return () => clearTimeout(timer);
   }, [searchInput]);
 
@@ -189,22 +192,38 @@ export default function PengurusDashboardPage() {
     return params;
   }, [selectedKecamatan, selectedDesa, selectedType, selectedJabatan, searchQuery, verificationScope, currentPage]);
 
-  const fetchData = useCallback(async (pageOverride) => {
+  // Fetch summary/stats — only depends on verificationScope (no filters/search)
+  const fetchSummary = useCallback(async () => {
     try {
-      setLoading(true);
-      const params = buildParams(pageOverride ? { page: pageOverride } : {});
-      const qs = params.toString();
-      const res = await api.get(`/kelembagaan/pengurus-dashboard${qs ? `?${qs}` : ""}`);
+      const params = new URLSearchParams();
+      params.append("verification_scope", verificationScope);
+      params.append("page", "1");
+      params.append("per_page", "1");
+      const res = await api.get(`/kelembagaan/pengurus-dashboard?${params}`);
       if (res.data.success) {
-        setData(res.data.data || []);
         setSummary(res.data.summary || null);
-        setPagination(res.data.pagination || { page: 1, per_page: 25, total: 0, total_pages: 1 });
         setUnverified(res.data.unverified || []);
         setRejected(res.data.ditolak || []);
         setFilters(res.data.filters || { kecamatans: [], desas: [] });
       }
     } catch (error) {
-      console.error("Error fetching pengurus dashboard:", error);
+      console.error("Error fetching summary:", error);
+    }
+  }, [verificationScope]);
+
+  // Fetch table data — depends on all filters/search/pagination
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const params = buildParams();
+      const qs = params.toString();
+      const res = await api.get(`/kelembagaan/pengurus-dashboard${qs ? `?${qs}` : ""}`);
+      if (res.data.success) {
+        setData(res.data.data || []);
+        setPagination(res.data.pagination || { page: 1, per_page: 25, total: 0, total_pages: 1 });
+      }
+    } catch (error) {
+      console.error("Error fetching data:", error);
       toast.error("Gagal memuat data pengurus");
     } finally {
       setLoading(false);
@@ -212,20 +231,28 @@ export default function PengurusDashboardPage() {
     }
   }, [buildParams]);
 
+  // Summary: re-fetch only when verificationScope changes
+  useEffect(() => {
+    fetchSummary();
+  }, [fetchSummary]);
+
+  // Table data: re-fetch when any filter/search/pagination/scope changes
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  // Reset page when filters change
+  // Scroll to table after pagination
+  const [shouldScrollToTable, setShouldScrollToTable] = useState(false);
   useEffect(() => {
-    setCurrentPage(1);
-  }, [selectedKecamatan, selectedDesa, selectedType, selectedJabatan, searchQuery, verificationScope]);
+    if (!loading && shouldScrollToTable) {
+      setShouldScrollToTable(false);
+      tableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [loading, shouldScrollToTable]);
 
   const handlePageChange = (newPage) => {
+    setShouldScrollToTable(true);
     setCurrentPage(newPage);
-    fetchData(newPage).then(() => {
-      tableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
   };
 
   const handleExport = async () => {
@@ -370,7 +397,7 @@ export default function PengurusDashboardPage() {
                     </div>
                   </div>
                   <button
-                    onClick={fetchData}
+                    onClick={() => { fetchSummary(); fetchData(); }}
                     className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-500 text-white hover:bg-blue-600 rounded-lg transition-colors"
                   >
                     <LuRefreshCw className="h-4 w-4" />
@@ -404,7 +431,7 @@ export default function PengurusDashboardPage() {
                 <button
                   key={option.id}
                   type="button"
-                  onClick={() => setVerificationScope(option.id)}
+                  onClick={() => { setVerificationScope(option.id); setCurrentPage(1); }}
                   className={`rounded-xl border px-4 py-3 text-left transition-all ${
                     isActive
                       ? `${option.activeClass} shadow-sm`
@@ -752,6 +779,7 @@ export default function PengurusDashboardPage() {
               onChange={(e) => {
                 setSelectedKecamatan(e.target.value);
                 setSelectedDesa("");
+                setCurrentPage(1);
               }}
               className="px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
@@ -764,7 +792,7 @@ export default function PengurusDashboardPage() {
             </select>
             <select
               value={selectedDesa}
-              onChange={(e) => setSelectedDesa(e.target.value)}
+              onChange={(e) => { setSelectedDesa(e.target.value); setCurrentPage(1); }}
               className="px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">Semua Desa</option>
@@ -776,7 +804,7 @@ export default function PengurusDashboardPage() {
             </select>
             <select
               value={selectedType}
-              onChange={(e) => setSelectedType(e.target.value)}
+              onChange={(e) => { setSelectedType(e.target.value); setCurrentPage(1); }}
               className="px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">Semua Kelembagaan</option>
@@ -788,7 +816,7 @@ export default function PengurusDashboardPage() {
             </select>
             <select
               value={selectedJabatan}
-              onChange={(e) => setSelectedJabatan(e.target.value)}
+              onChange={(e) => { setSelectedJabatan(e.target.value); setCurrentPage(1); }}
               className="px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">Semua Jabatan</option>
