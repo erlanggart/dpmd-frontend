@@ -6,7 +6,7 @@ import {
 	updatePengurusVerifikasi,
 	ajukanUlangPengurusVerifikasi,
 } from "../../../services/pengurus";
-import { getProdukHukums, getDesa } from "../../../services/api";
+import { getDesa } from "../../../services/api";
 import {
 	getRw,
 	getRt,
@@ -74,12 +74,7 @@ const getDisplayName = (pengurusableType) => {
 };
 
 // Helper function to determine correct routing based on user role
-const getPengurusRoutePath = (user, pengurusId, action = "") => {
-	const isSuperAdmin = user?.role === "superadmin";
-	const isAdminBidangPMD = ["pemberdayaan_masyarakat", "pmd"].includes(
-		user?.role,
-	);
-
+const getPengurusRoutePath = (isSuperAdmin, isAdminBidangPMD, pengurusId, action = "") => {
 	if (isSuperAdmin || isAdminBidangPMD) {
 		return `/dashboard/pengurus/${pengurusId}${action ? `/${action}` : ""}`;
 	}
@@ -92,7 +87,7 @@ const PengurusDetailPage = () => {
 	const params = useParams();
 	const pengurusId = params.id; // Changed from destructuring to direct access
 	const navigate = useNavigate();
-	const { user, isSuperAdmin, isAdminBidangPMD, canManageKelembagaan } =
+	const { isSuperAdmin, isAdminBidangPMD, canManageKelembagaan } =
 		useAuth();
 	const { isEditMode } = useEditMode();
 
@@ -102,21 +97,9 @@ const PengurusDetailPage = () => {
 	const [rwInfo, setRwInfo] = useState(null);
 	const [loading, setLoading] = useState(true);
 	const [updating, setUpdating] = useState(false);
-	const [produkHukumList, setProdukHukumList] = useState([]);
 
 	// Check permissions using AuthContext helpers
 	const canManage = canManageKelembagaan();
-
-	const loadProdukHukumList = async () => {
-		try {
-			const response = await getProdukHukums(1, "");
-			const allData = response?.data?.data || [];
-			setProdukHukumList(allData.data || []);
-		} catch (error) {
-			console.error("Error loading produk hukum:", error);
-			setProdukHukumList([]);
-		}
-	};
 
 	const loadDesaInfo = async (desaId) => {
 		try {
@@ -232,7 +215,6 @@ const PengurusDetailPage = () => {
 
 	useEffect(() => {
 		loadPengurusDetail();
-		loadProdukHukumList();
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [pengurusId]); // Only depend on pengurusId to avoid infinite loop
 
@@ -579,7 +561,7 @@ const PengurusDetailPage = () => {
 	};
 	const handleEdit = () => {
 		// Navigate to edit page using role-based routing
-		navigate(getPengurusRoutePath(user, pengurusId, "edit"));
+		navigate(getPengurusRoutePath(isSuperAdmin(), isAdminBidangPMD(), pengurusId, "edit"));
 	};
 
 	if (loading) {
@@ -899,7 +881,7 @@ const PengurusDetailPage = () => {
 								<div className="relative inline-block">
 									{pengurus.avatar ? (
 										<img
-											src={`${imageBaseUrl}/uploads/${pengurus.avatar}`}
+											src={`${imageBaseUrl}/${pengurus.avatar}`}
 											alt={pengurus.nama_lengkap}
 											className="w-40 h-40 rounded-2xl object-cover mx-auto border-4 border-white shadow-2xl ring-4 ring-blue-200"
 										/>
@@ -1221,10 +1203,7 @@ const PengurusDetailPage = () => {
 								</div>
 							</div>
 
-							{pengurus.produk_hukum_id &&
-							produkHukumList.find(
-								(ph) => ph.id === pengurus.produk_hukum_id,
-							) ? (
+							{pengurus.produk_hukum ? (
 								<div className="p-5 rounded-xl bg-white/70 backdrop-blur-sm border-2 border-green-200 hover:shadow-lg transition-all duration-300">
 									<div className="flex items-start space-x-3">
 										<div className="mt-1 w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center flex-shrink-0 shadow-md">
@@ -1243,42 +1222,35 @@ const PengurusDetailPage = () => {
 											</svg>
 										</div>
 										<div className="flex-1">
-											{(() => {
-												const ph = produkHukumList.find(
-													(ph) => ph.id === pengurus.produk_hukum_id,
-												);
-												return (
-													<div className="space-y-3">
-														<div>
-															<p className="text-xs font-semibold text-green-700 mb-1">SK Terpilih</p>
-															<h4 className="font-bold text-gray-900 text-base mb-1">
-																Nomor {ph.nomor} Tahun {ph.tahun}
-															</h4>
-															<p className="text-gray-700 leading-relaxed text-sm">
-																{ph.judul}
-															</p>
-														</div>
+											<div className="space-y-3">
+												<div>
+													<p className="text-xs font-semibold text-green-700 mb-1">SK Terpilih</p>
+													<h4 className="font-bold text-gray-900 text-base mb-1">
+														Nomor {pengurus.produk_hukum.nomor} Tahun {pengurus.produk_hukum.tahun}
+													</h4>
+													<p className="text-gray-700 leading-relaxed text-sm">
+														{pengurus.produk_hukum.judul}
+													</p>
+												</div>
 
-														<div className="flex items-center justify-between pt-3 border-t-2 border-green-100">
-															<div className="text-xs">
-																<span className="font-semibold text-gray-700">Jenis:</span>{" "}
-																<span className="text-green-700 font-medium">{ph.jenis}</span>
-															</div>
-															<button
-																onClick={() =>
-																	navigate(
-																		`/desa/produk-hukum/${pengurus.produk_hukum_id}`,
-																	)
-																}
-																className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white text-xs font-semibold rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-md hover:shadow-lg"
-															>
-																<FaExternalLinkAlt className="w-3 h-3" />
-																<span>Lihat Detail SK</span>
-															</button>
-														</div>
+												<div className="flex items-center justify-between pt-3 border-t-2 border-green-100">
+													<div className="text-xs">
+														<span className="font-semibold text-gray-700">Jenis:</span>{" "}
+														<span className="text-green-700 font-medium">{pengurus.produk_hukum.jenis}</span>
 													</div>
-												);
-											})()}
+													<button
+														onClick={() =>
+															navigate(
+																`/desa/produk-hukum/${pengurus.produk_hukum_id}`,
+															)
+														}
+														className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white text-xs font-semibold rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-md hover:shadow-lg"
+													>
+														<FaExternalLinkAlt className="w-3 h-3" />
+														<span>Lihat Detail SK</span>
+													</button>
+												</div>
+											</div>
 										</div>
 									</div>
 								</div>
