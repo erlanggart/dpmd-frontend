@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useDropzone } from 'react-dropzone';
 import {
 	ArrowLeft,
@@ -18,12 +18,26 @@ import {
 	Save,
 	Upload,
 	File as FileIcon,
+	Users,
+	Building2,
+	ChevronRight,
 } from 'lucide-react';
 import api, { updateProdukHukum } from '../../../api';
 import Swal from 'sweetalert2';
 
 const INPUT_CLASS =
 	'w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all';
+
+const KELEMBAGAAN_CONFIG = {
+	rws: { label: 'RW', route: (id) => `/bidang/pmd/kelembagaan/rw/${id}`, displayName: (item) => `RW ${item.nomor}` },
+	rts: { label: 'RT', route: (id) => `/bidang/pmd/kelembagaan/rt/${id}`, displayName: (item) => `RT ${item.nomor}${item.rws ? ` / RW ${item.rws.nomor}` : ''}` },
+	posyandus: { label: 'Posyandu', route: (id) => `/bidang/pmd/kelembagaan/posyandu/${id}`, displayName: (item) => item.nama },
+	karang_tarunas: { label: 'Karang Taruna', route: (id) => `/bidang/pmd/kelembagaan/karang-taruna/${id}`, displayName: (item) => item.nama },
+	lpms: { label: 'LPM', route: (id) => `/bidang/pmd/kelembagaan/lpm/${id}`, displayName: (item) => item.nama },
+	pkks: { label: 'PKK', route: (id) => `/bidang/pmd/kelembagaan/pkk/${id}`, displayName: (item) => item.nama },
+	satlinmas: { label: 'Satlinmas', route: (id) => `/bidang/pmd/kelembagaan/satlinmas/${id}`, displayName: () => 'Satlinmas' },
+	lembaga_lainnyas: { label: 'Lembaga Lainnya', route: (id) => `/bidang/pmd/kelembagaan/lembaga-lainnya/${id}`, displayName: (item) => item.nama },
+};
 
 const JENIS_BADGE_COLOR = {
 	PERDES: 'bg-blue-100 text-blue-700',
@@ -104,6 +118,9 @@ const ProdukHukumDetailPage = ({
 	const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 	const [selectedFile, setSelectedFile] = useState(null);
 
+	const [relatedData, setRelatedData] = useState(null);
+	const [relatedLoading, setRelatedLoading] = useState(false);
+
 	const handleBack = () => {
 		if (backPath) {
 			navigate(backPath);
@@ -139,6 +156,26 @@ const ProdukHukumDetailPage = ({
 		return () => {
 			active = false;
 		};
+	}, [id, apiPrefix]);
+
+	/* ───── Fetch related kelembagaan & pengurus ───── */
+	useEffect(() => {
+		let active = true;
+		const fetchRelated = async () => {
+			setRelatedLoading(true);
+			try {
+				const res = await api.get(`${apiPrefix}/${id}/related`);
+				if (!active) return;
+				if (res.data.success) setRelatedData(res.data.data);
+			} catch (err) {
+				if (!active) return;
+				console.error('Error fetching related:', err);
+			} finally {
+				if (active) setRelatedLoading(false);
+			}
+		};
+		fetchRelated();
+		return () => { active = false; };
 	}, [id, apiPrefix]);
 
 	useEffect(() => {
@@ -577,6 +614,155 @@ const ProdukHukumDetailPage = ({
 						</div>
 					</div>
 				</div>
+			</div>
+
+			{/* ── Related Kelembagaan & Pengurus ── */}
+			<div className="bg-white rounded-xl border border-gray-200 p-5">
+				<h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+					<Users className="h-4 w-4 text-teal-600" />
+					Terkait dengan Produk Hukum Ini
+					{!relatedLoading && relatedData && (() => {
+						const total =
+							Object.values(relatedData.kelembagaan).reduce((s, a) => s + a.length, 0) +
+							relatedData.pengurus.length +
+							relatedData.aparatur_desa.length;
+						return total > 0 ? (
+							<span className="ml-2 px-2 py-0.5 text-xs font-semibold bg-teal-100 text-teal-700 rounded-full">{total}</span>
+						) : null;
+					})()}
+				</h3>
+
+				{relatedLoading ? (
+					<div className="flex items-center gap-2 text-sm text-gray-500 py-4">
+						<Loader2 className="h-4 w-4 animate-spin text-teal-500" />
+						Memuat data terkait...
+					</div>
+				) : !relatedData ? null : (() => {
+					const kelembagaanEntries = Object.entries(relatedData.kelembagaan).filter(([, arr]) => arr.length > 0);
+					const hasKelembagaan = kelembagaanEntries.length > 0;
+					const hasPengurus = relatedData.pengurus.length > 0;
+					const hasAparatur = relatedData.aparatur_desa.length > 0;
+					const hasAny = hasKelembagaan || hasPengurus || hasAparatur;
+
+					if (!hasAny) {
+						return (
+							<div className="flex items-center gap-3 py-6 text-sm text-gray-400">
+								<Building2 className="h-5 w-5 flex-shrink-0" />
+								<span>Tidak ada kelembagaan atau pengurus yang terkait dengan produk hukum ini.</span>
+							</div>
+						);
+					}
+
+					return (
+						<div className="space-y-5">
+							{/* Kelembagaan */}
+							{hasKelembagaan && (
+								<div>
+									<p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+										<Building2 className="h-3.5 w-3.5" /> Kelembagaan
+									</p>
+									<div className="space-y-3">
+										{kelembagaanEntries.map(([type, items]) => {
+											const config = KELEMBAGAAN_CONFIG[type];
+											if (!config) return null;
+											return (
+												<div key={type}>
+													<p className="text-xs text-gray-400 mb-1.5">{config.label}</p>
+													<div className="flex flex-wrap gap-2">
+														{items.map((item) => (
+															<Link
+																key={item.id}
+																to={config.route(item.id)}
+																className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-teal-50 text-teal-700 border border-teal-200 rounded-lg hover:bg-teal-100 transition-colors"
+															>
+																{config.displayName(item)}
+																{item.desas?.nama && (
+																	<span className="text-teal-500">· {item.desas.nama}</span>
+																)}
+																<span className={`ml-1 w-1.5 h-1.5 rounded-full flex-shrink-0 ${item.status_kelembagaan === 'aktif' ? 'bg-green-500' : 'bg-red-400'}`} />
+																<ChevronRight className="h-3 w-3 text-teal-400" />
+															</Link>
+														))}
+													</div>
+												</div>
+											);
+										})}
+									</div>
+								</div>
+							)}
+
+							{/* Pengurus */}
+							{hasPengurus && (
+								<div>
+									<p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+										<Users className="h-3.5 w-3.5" /> Pengurus Kelembagaan
+									</p>
+									<div className="overflow-x-auto">
+										<table className="w-full text-xs">
+											<thead>
+												<tr className="bg-gray-50 text-gray-500">
+													<th className="text-left px-3 py-2 font-semibold rounded-l-lg">Nama</th>
+													<th className="text-left px-3 py-2 font-semibold">Jabatan</th>
+													<th className="text-left px-3 py-2 font-semibold">Desa</th>
+													<th className="text-left px-3 py-2 font-semibold">Status</th>
+													<th className="px-3 py-2 rounded-r-lg" />
+												</tr>
+											</thead>
+											<tbody className="divide-y divide-gray-100">
+												{relatedData.pengurus.map((p) => (
+													<tr key={p.id} className="hover:bg-gray-50 transition-colors">
+														<td className="px-3 py-2 font-medium text-gray-800">{p.nama_lengkap}</td>
+														<td className="px-3 py-2 text-gray-600">{p.jabatan}</td>
+														<td className="px-3 py-2 text-gray-500">{p.desas?.nama || '-'}</td>
+														<td className="px-3 py-2">
+															<span className={`inline-flex px-1.5 py-0.5 rounded text-xs font-medium ${p.status_jabatan === 'aktif' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+																{p.status_jabatan === 'aktif' ? 'Aktif' : 'Selesai'}
+															</span>
+														</td>
+														<td className="px-3 py-2">
+															<Link to={`/bidang/pmd/pengurus/${p.id}`} className="text-teal-600 hover:text-teal-800 transition-colors">
+																<ChevronRight className="h-4 w-4" />
+															</Link>
+														</td>
+													</tr>
+												))}
+											</tbody>
+										</table>
+									</div>
+								</div>
+							)}
+
+							{/* Aparatur Desa */}
+							{hasAparatur && (
+								<div>
+									<p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+										<Users className="h-3.5 w-3.5" /> Aparatur Desa
+									</p>
+									<div className="overflow-x-auto">
+										<table className="w-full text-xs">
+											<thead>
+												<tr className="bg-gray-50 text-gray-500">
+													<th className="text-left px-3 py-2 font-semibold rounded-l-lg">Nama</th>
+													<th className="text-left px-3 py-2 font-semibold">Jabatan</th>
+													<th className="text-left px-3 py-2 font-semibold rounded-r-lg">Desa</th>
+												</tr>
+											</thead>
+											<tbody className="divide-y divide-gray-100">
+												{relatedData.aparatur_desa.map((a) => (
+													<tr key={a.id} className="hover:bg-gray-50 transition-colors">
+														<td className="px-3 py-2 font-medium text-gray-800">{a.nama_lengkap}</td>
+														<td className="px-3 py-2 text-gray-600">{a.jabatan}</td>
+														<td className="px-3 py-2 text-gray-500">{a.desas?.nama || '-'}</td>
+													</tr>
+												))}
+											</tbody>
+										</table>
+									</div>
+								</div>
+							)}
+						</div>
+					);
+				})()}
 			</div>
 		</div>
 	);
