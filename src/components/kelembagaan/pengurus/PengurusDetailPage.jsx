@@ -76,7 +76,7 @@ const getDisplayName = (pengurusableType) => {
 // Helper function to determine correct routing based on user role
 const getPengurusRoutePath = (isSuperAdmin, isAdminBidangPMD, pengurusId, action = "") => {
 	if (isSuperAdmin || isAdminBidangPMD) {
-		return `/dashboard/pengurus/${pengurusId}${action ? `/${action}` : ""}`;
+		return `/bidang/pmd/pengurus/${pengurusId}${action ? `/${action}` : ""}`;
 	}
 
 	// Default for desa users
@@ -1241,7 +1241,9 @@ const PengurusDetailPage = () => {
 													<button
 														onClick={() =>
 															navigate(
-																`/desa/produk-hukum/${pengurus.produk_hukum_id}`,
+																isSuperAdmin() || isAdminBidangPMD()
+																	? `/bidang/pmd/produk-hukum/${pengurus.produk_hukum_id}`
+																	: `/desa/produk-hukum/${pengurus.produk_hukum_id}`,
 															)
 														}
 														className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white text-xs font-semibold rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-md hover:shadow-lg"
