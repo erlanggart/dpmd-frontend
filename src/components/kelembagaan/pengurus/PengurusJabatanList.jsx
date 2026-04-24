@@ -171,7 +171,7 @@ const PengurusItem = ({ pengurus, user }) => {
 					{/* Avatar */}
 					{pengurus.avatar ? (
 						<img
-							src={`${imageBaseUrl}/uploads/${pengurus.avatar}`}
+							src={`${imageBaseUrl}/${pengurus.avatar}`}
 							alt={pengurus.nama_lengkap}
 							className="w-12 h-12 rounded-full object-cover ring-2 ring-gray-200 group-hover:ring-blue-300 transition-all duration-200"
 						/>
@@ -425,7 +425,7 @@ const PengurusJabatanList = ({
 												{/* Avatar */}
 												{pengurus.avatar ? (
 													<img
-														src={`${imageBaseUrl}/uploads/${pengurus.avatar}`}
+														src={`${imageBaseUrl}/${pengurus.avatar}`}
 														alt={pengurus.nama_lengkap}
 														className="w-12 h-12 rounded-full object-cover border-2 border-gray-200 opacity-75"
 													/>

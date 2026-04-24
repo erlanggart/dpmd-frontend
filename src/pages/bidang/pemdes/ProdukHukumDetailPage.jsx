@@ -359,7 +359,7 @@ const ProdukHukumDetailPage = ({
 	const inputCls = (f) => `${INPUT_CLASS} ${formErrors[f] ? 'border-red-400 bg-red-50' : 'border-gray-300'}`;
 
 	return (
-		<div className="space-y-6">
+		<div className="space-y-6 p-6">
 			{/* ── Header ── */}
 			<div className="bg-gradient-to-r from-teal-600 to-teal-700 rounded-xl p-6 text-white">
 				<div className="flex items-center justify-between mb-3">
