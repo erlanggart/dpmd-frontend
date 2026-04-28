@@ -92,6 +92,7 @@ const colorMap = {
 // ─── Main Component ───────────────────────────────────────────
 const AbsensiManagementPage = () => {
   const { user } = useAuth();
+  const canManageAbsensiRecords = user?.role === "superadmin";
 
   if (user?.role !== 'superadmin' && Number(user?.bidang_id) !== 2) {
     return <Navigate to="/forbidden" replace />;
@@ -310,6 +311,11 @@ const AbsensiManagementPage = () => {
 
   // ─── CRUD Handlers ────────────────────────────────────────
   const handleDeleteRecord = async (id) => {
+    if (!canManageAbsensiRecords) {
+      showAlert({ icon: "warning", title: "Akses Ditolak", text: "Hanya super admin yang dapat menghapus data absensi." });
+      return;
+    }
+
     const confirm = await showAlert({
       title: "Hapus Data Absensi?", text: "Data yang dihapus tidak dapat dikembalikan",
       icon: "warning", showCancelButton: true, cancelButtonText: "Batal", confirmButtonText: "Hapus",
@@ -325,6 +331,11 @@ const AbsensiManagementPage = () => {
   };
 
   const handleUpdateRecord = async (id, data) => {
+    if (!canManageAbsensiRecords) {
+      showAlert({ icon: "warning", title: "Akses Ditolak", text: "Hanya super admin yang dapat mengedit data absensi." });
+      return;
+    }
+
     try {
       await api.put(`/absensi/admin/${id}`, data);
       showAlert({ icon: "success", title: "Berhasil", text: "Data absensi berhasil diupdate", timer: 1500 });
@@ -1393,7 +1404,9 @@ const AbsensiManagementPage = () => {
                         <th className="text-center px-3 py-3.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Jam Keluar</th>
                         <th className="text-center px-3 py-3.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Jarak</th>
                         <th className="text-left px-3 py-3.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Keterangan</th>
-                        <th className="text-center px-3 py-3.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest w-20">Aksi</th>
+                        {canManageAbsensiRecords && (
+                          <th className="text-center px-3 py-3.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest w-20">Aksi</th>
+                        )}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -1450,18 +1463,20 @@ const AbsensiManagementPage = () => {
                                 {record.keterangan || ""}
                               </div>
                             </td>
-                            <td className="px-3 py-3 text-center">
-                              <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button onClick={() => setEditingRecord(record)}
-                                  className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
-                                  <FiEdit2 className="h-3.5 w-3.5" />
-                                </button>
-                                <button onClick={() => handleDeleteRecord(record.id)}
-                                  className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Hapus">
-                                  <FiTrash2 className="h-3.5 w-3.5" />
-                                </button>
-                              </div>
-                            </td>
+                            {canManageAbsensiRecords && (
+                              <td className="px-3 py-3 text-center">
+                                <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <button onClick={() => setEditingRecord(record)}
+                                    className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
+                                    <FiEdit2 className="h-3.5 w-3.5" />
+                                  </button>
+                                  <button onClick={() => handleDeleteRecord(record.id)}
+                                    className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Hapus">
+                                    <FiTrash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              </td>
+                            )}
                           </tr>
                         );
                       })}
@@ -1521,15 +1536,16 @@ const AbsensiManagementPage = () => {
                             {record.keterangan || ""}
                           </p>
                         )}
-                        {/* Hover Actions */}
-                        <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
-                          <button onClick={() => setEditingRecord(record)} className="p-1.5 bg-white text-blue-600 hover:bg-blue-50 rounded-lg shadow-md border border-slate-200">
-                            <FiEdit2 className="h-3 w-3" />
-                          </button>
-                          <button onClick={() => handleDeleteRecord(record.id)} className="p-1.5 bg-white text-red-500 hover:bg-red-50 rounded-lg shadow-md border border-slate-200">
-                            <FiTrash2 className="h-3 w-3" />
-                          </button>
-                        </div>
+                        {canManageAbsensiRecords && (
+                          <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
+                            <button onClick={() => setEditingRecord(record)} className="p-1.5 bg-white text-blue-600 hover:bg-blue-50 rounded-lg shadow-md border border-slate-200">
+                              <FiEdit2 className="h-3 w-3" />
+                            </button>
+                            <button onClick={() => handleDeleteRecord(record.id)} className="p-1.5 bg-white text-red-500 hover:bg-red-50 rounded-lg shadow-md border border-slate-200">
+                              <FiTrash2 className="h-3 w-3" />
+                            </button>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -1919,7 +1935,7 @@ const AbsensiManagementPage = () => {
       </div>
 
       {/* ═══ Modals ═════════════════════════════════════════ */}
-      {editingRecord && (
+      {canManageAbsensiRecords && editingRecord && (
         <EditAbsensiModal record={editingRecord} onClose={() => setEditingRecord(null)} onSave={handleUpdateRecord} />
       )}
       {showSettingsModal && (
