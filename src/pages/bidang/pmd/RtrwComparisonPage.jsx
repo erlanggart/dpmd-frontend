@@ -67,6 +67,7 @@ const formatCurrency = (value) => {
 };
 
 const joinNames = (names) => (names && names.length > 0 ? names.join(", ") : "-");
+const pendingDetailsText = (count) => (count ? `${count} detail` : "-");
 
 const RtrwComparisonPage = () => {
   const [data, setData] = useState(null);
@@ -84,10 +85,16 @@ const RtrwComparisonPage = () => {
   }, []);
 
   const fetchData = async () => {
+    let keepLoading = false;
     try {
       setLoading(true);
       setError(null);
       const response = await api.get("/kelembagaan/rtrw-comparison");
+      if (response.data.processing) {
+        keepLoading = true;
+        window.setTimeout(fetchData, 3000);
+        return;
+      }
       if (response.data.success) {
         setData(response.data.data);
       } else {
@@ -96,7 +103,7 @@ const RtrwComparisonPage = () => {
     } catch (err) {
       setError(err.response?.data?.message || err.message || "Gagal memuat data");
     } finally {
-      setLoading(false);
+      if (!keepLoading) setLoading(false);
     }
   };
 
@@ -207,13 +214,13 @@ const RtrwComparisonPage = () => {
           "Nilai ADD": item.addNilai || 0,
           "Detail Database": (item.dbDetails || [])
             .map((d) => `${d.jabatan || "-"} ${d.jenis || ""} ${d.rtNomor ? `RT ${d.rtNomor}` : ""} ${d.rwNomor ? `RW ${d.rwNomor}` : ""} | NIK: ${d.nik || "-"}`)
-            .join("; "),
+            .join("; ") || pendingDetailsText(item.dbDetailCount),
           "Detail ADD": (item.addDetails || [])
             .map((d) => `${d.tglBukti || "-"} | ${d.keterangan || "-"} | ${formatCurrency(d.nilai)}`)
-            .join("; "),
+            .join("; ") || pendingDetailsText(item.addDetailCount),
           "Detail BPJS": (item.bpjsDetails || [])
             .map((d) => `${d.nik || "-"} | KPJ ${d.kpj || "-"} | BLTH ${d.blth || "-"} | ${formatCurrency(d.upah)}`)
-            .join("; "),
+            .join("; ") || pendingDetailsText(item.bpjsDetailCount),
         });
       });
     });
@@ -238,7 +245,7 @@ const RtrwComparisonPage = () => {
         <div className="text-center">
           <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600" />
           <p className="font-medium text-gray-600">Memproses persandingan RT/RW...</p>
-          <p className="mt-1 text-sm text-gray-400">Membaca data ADD, BPJS, dan database</p>
+          <p className="mt-1 text-sm text-gray-400">Membaca ringkasan ADD, BPJS, dan database</p>
         </div>
       </div>
     );
@@ -524,7 +531,7 @@ const DesaRow = ({ desa, expanded, onToggle }) => {
                   </tr>
                 ) : (
                   desa.items.map((item, index) => (
-                    <RtrwItemRow key={`${item.key}-${index}`} item={item} index={index} />
+                    <RtrwItemRow key={`${item.key}-${index}`} item={item} index={index} desaKode={desa.desaKode} />
                   ))
                 )}
               </tbody>
@@ -536,14 +543,59 @@ const DesaRow = ({ desa, expanded, onToggle }) => {
   );
 };
 
-const RtrwItemRow = ({ item, index }) => {
+const RtrwItemRow = ({ item, index, desaKode }) => {
   const [expanded, setExpanded] = useState(false);
+  const [detailItem, setDetailItem] = useState(item);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState(null);
   const statusConfig = item.nikMismatch ? STATUS_CONFIG.nik_mismatch : STATUS_CONFIG[item.status];
-  const hasDetails = item.dbDetails?.length || item.addDetails?.length || item.bpjsDetails?.length;
+  const hasDetails = Boolean(
+    item.dbDetailCount ||
+    item.addDetailCount ||
+    item.bpjsDetailCount ||
+    item.dbDetails?.length ||
+    item.addDetails?.length ||
+    item.bpjsDetails?.length
+  );
+
+  const handleToggle = async () => {
+    if (!hasDetails) return;
+    if (expanded) {
+      setExpanded(false);
+      return;
+    }
+
+    setExpanded(true);
+    if (detailItem.detailsLoaded || detailLoading) return;
+
+    try {
+      setDetailLoading(true);
+      setDetailError(null);
+      const response = await api.get("/kelembagaan/rtrw-comparison", {
+        params: {
+          desaKode,
+          itemKey: item.key,
+          includeDetails: 1,
+        },
+      });
+      if (response.data?.processing) {
+        throw new Error("Data sumber masih disiapkan, coba buka detail lagi sebentar lagi");
+      }
+      const loadedItem = response.data?.data?.comparison?.[0]?.items?.[0];
+      if (!response.data?.success || !loadedItem) {
+        throw new Error(response.data?.message || "Detail tidak ditemukan");
+      }
+      setDetailItem(loadedItem);
+    } catch (err) {
+      setDetailError(err.response?.data?.message || err.message || "Gagal memuat detail");
+    } finally {
+      setDetailLoading(false);
+    }
+  };
 
   return (
     <>
-      <tr className={`border-t border-gray-50 hover:bg-gray-50 ${hasDetails ? "cursor-pointer" : ""}`} onClick={() => hasDetails && setExpanded(!expanded)}>
+      <tr className={`border-t border-gray-50 hover:bg-gray-50 ${hasDetails ? "cursor-pointer" : ""}`} onClick={handleToggle}>
         <td className="px-4 py-2 text-gray-400">
           <div className="flex items-center gap-1">
             {hasDetails && (expanded ? <LuChevronDown className="h-3.5 w-3.5" /> : <LuChevronRight className="h-3.5 w-3.5" />)}
@@ -574,17 +626,23 @@ const RtrwItemRow = ({ item, index }) => {
       {expanded && (
         <tr>
           <td colSpan={7} className="bg-slate-50 px-4 py-3">
-            <div className="grid gap-3 lg:grid-cols-3">
-              <DetailPanel title="Database" icon={<LuDatabase />} emptyText="Tidak ada di database" empty={!item.dbDetails?.length}>
-                <DbDetails details={item.dbDetails} />
-              </DetailPanel>
-              <DetailPanel title="ADD" icon={<LuFileSpreadsheet />} emptyText="Tidak ada di ADD" empty={!item.addDetails?.length}>
-                <AddDetails details={item.addDetails} total={item.addNilai} />
-              </DetailPanel>
-              <DetailPanel title="BPJS" icon={<LuShieldCheck />} emptyText="Tidak ada di BPJS" empty={!item.bpjsDetails?.length}>
-                <BpjsDetails details={item.bpjsDetails} />
-              </DetailPanel>
-            </div>
+            {detailLoading ? (
+              <div className="py-6 text-center text-xs text-gray-500">Memuat detail sumber data...</div>
+            ) : detailError ? (
+              <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600">{detailError}</div>
+            ) : (
+              <div className="grid gap-3 lg:grid-cols-3">
+                <DetailPanel title="Database" icon={<LuDatabase />} emptyText="Tidak ada di database" empty={!detailItem.dbDetails?.length}>
+                  <DbDetails details={detailItem.dbDetails} />
+                </DetailPanel>
+                <DetailPanel title="ADD" icon={<LuFileSpreadsheet />} emptyText="Tidak ada di ADD" empty={!detailItem.addDetails?.length}>
+                  <AddDetails details={detailItem.addDetails} total={detailItem.addNilai} />
+                </DetailPanel>
+                <DetailPanel title="BPJS" icon={<LuShieldCheck />} emptyText="Tidak ada di BPJS" empty={!detailItem.bpjsDetails?.length}>
+                  <BpjsDetails details={detailItem.bpjsDetails} />
+                </DetailPanel>
+              </div>
+            )}
           </td>
         </tr>
       )}
