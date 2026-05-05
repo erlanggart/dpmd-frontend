@@ -582,6 +582,10 @@ const RtrwItemRow = ({ item, index, desaKode }) => {
   const bpjsSuspectText = item.bpjsTangkilSuspect
     ? `Kode BPJS asal ${item.bpjsOriginalDesaNama || "Tangkil"} (${item.bpjsOriginalDesaKode || "-"}), disandingkan berdasarkan nama${item.bpjsTangkilAmbiguous ? ` dari ${item.bpjsTangkilCandidateCount} kandidat` : ""}.`
     : "";
+  const statusTooltip = [
+    item.keterangan,
+    bpjsSuspectText,
+  ].filter(Boolean).join("\n");
   const hasDetails = Boolean(
     item.dbDetailCount ||
     item.addDetailCount ||
@@ -646,7 +650,10 @@ const RtrwItemRow = ({ item, index, desaKode }) => {
           </div>
         </td>
         <td className="px-4 py-2">
-          <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${statusConfig.color}`}>
+          <span
+            title={statusTooltip}
+            className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${statusConfig.color}`}
+          >
             <span className={`h-1.5 w-1.5 rounded-full ${statusConfig.dotColor}`} />
             {statusConfig.label}
           </span>
@@ -659,7 +666,6 @@ const RtrwItemRow = ({ item, index, desaKode }) => {
               BPJS ?
             </span>
           )}
-          <p className="mt-1 text-[11px] leading-snug text-gray-400">{item.keterangan}</p>
         </td>
         <td className="px-4 py-2 text-right text-gray-600">
           {item.addNilai ? formatCurrency(item.addNilai) : "-"}
