@@ -4,6 +4,7 @@ import {
   LuChevronRight,
   LuCircleAlert,
   LuCircleCheck,
+  LuCircleHelp,
   LuDatabase,
   LuDownload,
   LuFileSpreadsheet,
@@ -56,6 +57,11 @@ const STATUS_CONFIG = {
     color: "bg-red-100 text-red-800",
     dotColor: "bg-red-500",
   },
+  bpjs_tangkil_suspect: {
+    label: "BPJS ?",
+    color: "bg-violet-100 text-violet-800",
+    dotColor: "bg-violet-500",
+  },
 };
 
 const formatCurrency = (value) => {
@@ -68,6 +74,11 @@ const formatCurrency = (value) => {
 
 const joinNames = (names) => (names && names.length > 0 ? names.join(", ") : "-");
 const pendingDetailsText = (count) => (count ? `${count} detail` : "-");
+const formatCandidate = (candidate) => {
+  if (!candidate) return "";
+  const source = candidate.sources?.length ? ` (${candidate.sources.join("+")})` : "";
+  return `${candidate.desaNama || candidate.desaKode}${candidate.kecamatanNama ? ` - ${candidate.kecamatanNama}` : ""}${source}`;
+};
 
 const RtrwComparisonPage = () => {
   const [data, setData] = useState(null);
@@ -138,7 +149,7 @@ const RtrwComparisonPage = () => {
 
     if (showOnlyDiscrepancy) {
       result = result.filter((desa) => {
-        return desa.items.some((item) => item.status !== "all_three" || item.nikMismatch);
+        return desa.items.some((item) => item.status !== "all_three" || item.nikMismatch || item.bpjsTangkilSuspect);
       });
     }
 
@@ -148,6 +159,7 @@ const RtrwComparisonPage = () => {
           ...desa,
           items: desa.items.filter((item) => {
             if (filterStatus === "nik_mismatch") return item.nikMismatch;
+            if (filterStatus === "bpjs_tangkil_suspect") return item.bpjsTangkilSuspect;
             return item.status === filterStatus;
           }),
         }))
@@ -176,6 +188,10 @@ const RtrwComparisonPage = () => {
         (sum, desa) => sum + desa.items.filter((item) => item.nikMismatch).length,
         0,
       ),
+      totalBpjsTangkilSuspect: filteredData.reduce(
+        (sum, desa) => sum + desa.items.filter((item) => item.bpjsTangkilSuspect).length,
+        0,
+      ),
     };
   }, [filteredData]);
 
@@ -195,6 +211,8 @@ const RtrwComparisonPage = () => {
       desa.items.forEach((item) => {
         const statusLabel = item.nikMismatch
           ? STATUS_CONFIG.nik_mismatch.label
+          : item.bpjsTangkilSuspect
+            ? `${STATUS_CONFIG[item.status]?.label || item.status} / BPJS ?`
           : STATUS_CONFIG[item.status]?.label || item.status;
 
         rows.push({
@@ -209,6 +227,9 @@ const RtrwComparisonPage = () => {
           "Nama Database": joinNames(item.dbNama),
           "Nama ADD": joinNames(item.addNama),
           "Nama BPJS": joinNames(item.bpjsNama),
+          "BPJS Kode Asal": item.bpjsOriginalDesaKode || "-",
+          "BPJS Perlu Verifikasi": item.bpjsTangkilSuspect ? "Ya" : "Tidak",
+          "Kandidat BPJS": (item.bpjsTangkilCandidates || []).map(formatCandidate).join("; ") || "-",
           Status: statusLabel,
           Keterangan: item.keterangan,
           "Nilai ADD": item.addNilai || 0,
@@ -321,7 +342,7 @@ const RtrwComparisonPage = () => {
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-7">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-8">
         <SummaryCard label="DB + ADD" value={data.summary.totalDbAdd} color="teal" />
         <SummaryCard label="DB + BPJS" value={data.summary.totalDbBpjs} color="green" />
         <SummaryCard label="ADD + BPJS" value={data.summary.totalAddBpjs} color="indigo" />
@@ -329,6 +350,12 @@ const RtrwComparisonPage = () => {
         <SummaryCard label="Hanya ADD" value={data.summary.totalOnlyAdd} color="blue" />
         <SummaryCard label="Hanya BPJS" value={data.summary.totalOnlyBpjs} color="amber" />
         <SummaryCard label="NIK Berbeda" value={data.summary.totalNikMismatch} color="red" />
+        <SummaryCard
+          label="BPJS ?"
+          value={data.summary.totalBpjsTangkilRelocated}
+          color="violet"
+          subtitle={data.summary.totalBpjsTangkilSuspect ? `${data.summary.totalBpjsTangkilSuspect} baris sandingan` : undefined}
+        />
       </div>
 
       {listModal && (
@@ -431,6 +458,7 @@ const RtrwComparisonPage = () => {
           <span className="text-blue-600">{filteredSummary.totalOnlyAdd} hanya ADD</span>
           <span className="text-amber-600">{filteredSummary.totalOnlyBpjs} hanya BPJS</span>
           <span className="text-red-600">{filteredSummary.totalNikMismatch} NIK berbeda</span>
+          <span className="text-violet-600">{filteredSummary.totalBpjsTangkilSuspect} BPJS ?</span>
         </div>
       </div>
 
@@ -464,6 +492,7 @@ const SummaryCard = ({ icon, label, value, color, subtitle, extraInfo }) => {
     teal: "bg-teal-50 text-teal-600 border-teal-200",
     indigo: "bg-indigo-50 text-indigo-600 border-indigo-200",
     red: "bg-red-50 text-red-600 border-red-200",
+    violet: "bg-violet-50 text-violet-600 border-violet-200",
   };
 
   return (
@@ -484,7 +513,7 @@ const SummaryCard = ({ icon, label, value, color, subtitle, extraInfo }) => {
 };
 
 const DesaRow = ({ desa, expanded, onToggle }) => {
-  const hasDiscrepancy = desa.items.some((item) => item.status !== "all_three" || item.nikMismatch);
+  const hasDiscrepancy = desa.items.some((item) => item.status !== "all_three" || item.nikMismatch || item.bpjsTangkilSuspect);
 
   return (
     <div className={`overflow-hidden rounded-xl border bg-white shadow-sm ${hasDiscrepancy ? "border-yellow-300" : "border-gray-200"}`}>
@@ -506,6 +535,7 @@ const DesaRow = ({ desa, expanded, onToggle }) => {
           <Badge count={desa.onlyAdd} label="Hanya ADD" variant="blue" />
           <Badge count={desa.onlyBpjs} label="Hanya BPJS" variant="amber" />
           <Badge count={desa.nikMismatch} label="NIK beda" variant="red" />
+          <Badge count={desa.bpjsTangkilSuspect} label="BPJS ?" variant="violet" />
         </div>
       </button>
 
@@ -549,6 +579,9 @@ const RtrwItemRow = ({ item, index, desaKode }) => {
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState(null);
   const statusConfig = item.nikMismatch ? STATUS_CONFIG.nik_mismatch : STATUS_CONFIG[item.status];
+  const bpjsSuspectText = item.bpjsTangkilSuspect
+    ? `Kode BPJS asal ${item.bpjsOriginalDesaNama || "Tangkil"} (${item.bpjsOriginalDesaKode || "-"}), disandingkan berdasarkan nama${item.bpjsTangkilAmbiguous ? ` dari ${item.bpjsTangkilCandidateCount} kandidat` : ""}.`
+    : "";
   const hasDetails = Boolean(
     item.dbDetailCount ||
     item.addDetailCount ||
@@ -604,7 +637,7 @@ const RtrwItemRow = ({ item, index, desaKode }) => {
         </td>
         <SourceCell names={item.dbNama} />
         <SourceCell names={item.addNama} />
-        <SourceCell names={item.bpjsNama} nik={item.nik} />
+        <SourceCell names={item.bpjsNama} nik={item.nik} suspect={item.bpjsTangkilSuspect} suspectText={bpjsSuspectText} />
         <td className="px-4 py-2 text-gray-600">
           <div className="text-xs font-medium text-gray-800">{item.jenis || "-"}</div>
           <div className="text-xs text-gray-500">
@@ -617,6 +650,15 @@ const RtrwItemRow = ({ item, index, desaKode }) => {
             <span className={`h-1.5 w-1.5 rounded-full ${statusConfig.dotColor}`} />
             {statusConfig.label}
           </span>
+          {item.bpjsTangkilSuspect && (
+            <span
+              title={bpjsSuspectText}
+              className="ml-1 inline-flex items-center gap-1 rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-medium text-violet-700"
+            >
+              <LuCircleHelp className="h-3 w-3" />
+              BPJS ?
+            </span>
+          )}
           <p className="mt-1 text-[11px] leading-snug text-gray-400">{item.keterangan}</p>
         </td>
         <td className="px-4 py-2 text-right text-gray-600">
@@ -631,16 +673,29 @@ const RtrwItemRow = ({ item, index, desaKode }) => {
             ) : detailError ? (
               <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600">{detailError}</div>
             ) : (
-              <div className="grid gap-3 lg:grid-cols-3">
-                <DetailPanel title="Database" icon={<LuDatabase />} emptyText="Tidak ada di database" empty={!detailItem.dbDetails?.length}>
-                  <DbDetails details={detailItem.dbDetails} />
-                </DetailPanel>
-                <DetailPanel title="ADD" icon={<LuFileSpreadsheet />} emptyText="Tidak ada di ADD" empty={!detailItem.addDetails?.length}>
-                  <AddDetails details={detailItem.addDetails} total={detailItem.addNilai} />
-                </DetailPanel>
-                <DetailPanel title="BPJS" icon={<LuShieldCheck />} emptyText="Tidak ada di BPJS" empty={!detailItem.bpjsDetails?.length}>
-                  <BpjsDetails details={detailItem.bpjsDetails} />
-                </DetailPanel>
+              <div className="space-y-3">
+                {detailItem.bpjsTangkilSuspect && (
+                  <div className="rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-xs text-violet-700">
+                    <div className="flex items-center gap-1 font-semibold">
+                      <LuCircleHelp className="h-4 w-4" />
+                      BPJS memakai kode asal {detailItem.bpjsOriginalDesaNama || "Tangkil"} ({detailItem.bpjsOriginalDesaKode || "-"})
+                    </div>
+                    <p className="mt-1">
+                      Disandingkan berdasarkan nama. Kandidat: {(detailItem.bpjsTangkilCandidates || []).map(formatCandidate).join("; ") || "-"}.
+                    </p>
+                  </div>
+                )}
+                <div className="grid gap-3 lg:grid-cols-3">
+                  <DetailPanel title="Database" icon={<LuDatabase />} emptyText="Tidak ada di database" empty={!detailItem.dbDetails?.length}>
+                    <DbDetails details={detailItem.dbDetails} />
+                  </DetailPanel>
+                  <DetailPanel title="ADD" icon={<LuFileSpreadsheet />} emptyText="Tidak ada di ADD" empty={!detailItem.addDetails?.length}>
+                    <AddDetails details={detailItem.addDetails} total={detailItem.addNilai} />
+                  </DetailPanel>
+                  <DetailPanel title="BPJS" icon={<LuShieldCheck />} emptyText="Tidak ada di BPJS" empty={!detailItem.bpjsDetails?.length}>
+                    <BpjsDetails details={detailItem.bpjsDetails} />
+                  </DetailPanel>
+                </div>
               </div>
             )}
           </td>
@@ -650,11 +705,16 @@ const RtrwItemRow = ({ item, index, desaKode }) => {
   );
 };
 
-const SourceCell = ({ names, nik }) => (
+const SourceCell = ({ names, nik, suspect, suspectText }) => (
   <td className="px-4 py-2">
     {names && names.length > 0 ? (
       <div>
-        <span className="font-medium text-gray-900">{names.join(", ")}</span>
+        <span className="inline-flex items-center gap-1 font-medium text-gray-900">
+          {names.join(", ")}
+          {suspect && (
+            <LuCircleHelp title={suspectText} className="h-4 w-4 shrink-0 text-violet-600" />
+          )}
+        </span>
         {nik?.length > 0 && <p className="mt-0.5 text-[11px] text-gray-400">NIK: {nik.join(", ")}</p>}
       </div>
     ) : (
@@ -719,6 +779,9 @@ const BpjsDetails = ({ details = [] }) => {
           <div className="font-semibold text-gray-800">{detail.namaLengkap}</div>
           <div className="text-gray-500">NIK: {detail.nik || "-"}</div>
           <div className="text-gray-500">KPJ: {detail.kpj || "-"} / Kode TK: {detail.kodeTk || "-"}</div>
+          {detail.originalIdPegawai && (
+            <div className="text-violet-600">ID Pegawai asal: {detail.originalIdPegawai}</div>
+          )}
           <div className="text-gray-500">Tgl Lahir: {detail.tglLahir || "-"} / BLTH: {detail.blth || "-"}</div>
           <div className="mt-1 font-semibold text-amber-700">Upah {formatCurrency(detail.upah)}</div>
         </div>
@@ -734,6 +797,7 @@ const Badge = ({ count, label, variant }) => {
     amber: "bg-amber-100 text-amber-700",
     green: "bg-green-100 text-green-600",
     red: "bg-red-100 text-red-600",
+    violet: "bg-violet-100 text-violet-700",
   };
 
   return (
