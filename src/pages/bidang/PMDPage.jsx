@@ -93,6 +93,19 @@ const PMDPage = () => {
       iconBg: 'bg-red-500',
       textColor: 'text-red-700',
       descColor: 'text-red-500',
+    },
+    {
+      id: 'rtrw-comparison',
+      title: 'Persandingan RT/RW',
+      shortTitle: 'RT/RW',
+      description: 'Komparasi pengurus RT/RW, insentif ADD, dan BPJS',
+      icon: FileText,
+      route: getPath('/bidang/pmd/kelembagaan/rtrw-comparison'),
+      gradient: 'from-slate-600 to-cyan-600',
+      bgLight: 'bg-slate-50 border-slate-200 hover:bg-slate-100',
+      iconBg: 'bg-slate-600',
+      textColor: 'text-slate-700',
+      descColor: 'text-slate-500',
     }
   ];
 
