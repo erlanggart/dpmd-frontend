@@ -5,6 +5,7 @@ import {
 	updatePengurusStatus,
 	updatePengurusVerifikasi,
 	ajukanUlangPengurusVerifikasi,
+	deletePengurus,
 } from "../../../services/pengurus";
 import { getDesa } from "../../../services/api";
 import {
@@ -32,6 +33,7 @@ import {
 	FaLock,
 	FaLockOpen,
 	FaUniversity,
+	FaTrash,
 } from "react-icons/fa";
 import Swal from "sweetalert2";
 
@@ -252,7 +254,7 @@ const PengurusDetailPage = () => {
 
 				setUpdating(true);
 				try {
-					await updatePengurusStatus(pengurusId, newStatus, endDate);
+					await updatePengurusStatus(pengurusId, newStatus, endDate, pengurus.desa_id);
 
 					await Swal.fire({
 						icon: "success",
@@ -289,7 +291,7 @@ const PengurusDetailPage = () => {
 
 				setUpdating(true);
 				try {
-					await updatePengurusStatus(pengurusId, newStatus);
+					await updatePengurusStatus(pengurusId, newStatus, null, pengurus.desa_id);
 
 					await Swal.fire({
 						icon: "success",
@@ -327,7 +329,7 @@ const PengurusDetailPage = () => {
 
 			setUpdating(true);
 			try {
-				await updatePengurusStatus(pengurusId, newStatus);
+				await updatePengurusStatus(pengurusId, newStatus, null, pengurus.desa_id);
 
 				await Swal.fire({
 					icon: "success",
@@ -562,6 +564,47 @@ const PengurusDetailPage = () => {
 	const handleEdit = () => {
 		// Navigate to edit page using role-based routing
 		navigate(getPengurusRoutePath(isSuperAdmin(), isAdminBidangPMD(), pengurusId, "edit"));
+	};
+
+	const handleDeletePengurus = async () => {
+		if (!isSuperAdmin()) return;
+
+		const result = await Swal.fire({
+			title: "Hapus Pengurus?",
+			text: `${pengurus.nama_lengkap} akan dihapus permanen.`,
+			icon: "warning",
+			showCancelButton: true,
+			confirmButtonText: "Ya, hapus",
+			cancelButtonText: "Batal",
+			confirmButtonColor: "#dc2626",
+		});
+
+		if (!result.isConfirmed) return;
+
+		setUpdating(true);
+		try {
+			await deletePengurus(pengurusId, pengurus.desa_id);
+
+			await Swal.fire({
+				icon: "success",
+				title: "Berhasil",
+				text: "Pengurus berhasil dihapus",
+				timer: 2000,
+				showConfirmButton: false,
+			});
+
+			const parentPath = `/bidang/pmd/kelembagaan/${getRouteType(pengurus.pengurusable_type)}/${pengurus.pengurusable_id}`;
+			navigate(parentPath, { replace: true });
+		} catch (error) {
+			console.error("Error deleting pengurus:", error);
+			Swal.fire({
+				icon: "error",
+				title: "Gagal",
+				text: error?.response?.data?.message || "Gagal menghapus pengurus",
+			});
+		} finally {
+			setUpdating(false);
+		}
 	};
 
 	if (loading) {
@@ -866,6 +909,18 @@ const PengurusDetailPage = () => {
 									<span>{pengurus.status_verifikasi === "ditolak" ? "Verifikasi Ulang" : "Verifikasi Pengurus"}</span>
 								</>
 							)}
+						</button>
+					)}
+
+					{isSuperAdmin() && (
+						<button
+							onClick={handleDeletePengurus}
+							disabled={updating}
+							className="flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-red-600 text-white hover:bg-red-700"
+							title="Hapus pengurus"
+						>
+							<FaTrash className="text-sm" />
+							<span>Hapus</span>
 						</button>
 					)}
 				</div>

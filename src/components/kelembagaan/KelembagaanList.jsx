@@ -12,6 +12,10 @@ import {
 	createRw,
 	createPosyandu,
 	createLembagaLainnya,
+	deleteRw,
+	deleteRt,
+	deletePosyandu,
+	deleteLembagaLainnya,
 } from "../../services/kelembagaan";
 import { getProdukHukums } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
@@ -44,6 +48,7 @@ import {
 	LuChevronDown,
 	LuChevronUp,
 	LuSearch,
+	LuTrash2,
 } from "react-icons/lu";
 import Swal from "sweetalert2";
 
@@ -305,6 +310,7 @@ export default function KelembagaanList() {
 	const [phSearchTerm, setPhSearchTerm] = useState("");
 	const [loadingPh, setLoadingPh] = useState(false);
 	const [showPhDropdown, setShowPhDropdown] = useState(false);
+	const [deletingId, setDeletingId] = useState(null);
 
 	// Determine if add button should show
 	// For admin (superadmin/admin bidang): always show
@@ -443,6 +449,114 @@ export default function KelembagaanList() {
 			alert("Gagal menyimpan data");
 		} finally {
 			setSubmitting(false);
+		}
+	};
+
+	const handleDeleteKelembagaan = async (item, event) => {
+		event.stopPropagation();
+
+		if (!isSuperAdmin()) return;
+
+		const itemName = type === "rw" ? `RW ${item.nomor}` : item.nama;
+		const relatedText =
+			type === "rw"
+				? "RT dan pengurus yang terkait juga akan dihapus."
+				: "Pengurus yang terkait juga akan dihapus.";
+
+		const result = await Swal.fire({
+			title: `Hapus ${itemName}?`,
+			text: `Data akan dihapus permanen. ${relatedText}`,
+			icon: "warning",
+			showCancelButton: true,
+			confirmButtonText: "Ya, hapus",
+			cancelButtonText: "Batal",
+			confirmButtonColor: "#dc2626",
+		});
+
+		if (!result.isConfirmed) return;
+
+		setDeletingId(item.id);
+		try {
+			if (type === "rw") {
+				await deleteRw(item.id);
+			} else if (type === "posyandu") {
+				await deletePosyandu(item.id);
+			} else if (type === "lembaga-lainnya") {
+				await deleteLembagaLainnya(item.id);
+			}
+
+			setItems((prev) => prev.filter((current) => current.id !== item.id));
+
+			await Swal.fire({
+				icon: "success",
+				title: "Berhasil",
+				text: `${itemName} berhasil dihapus`,
+				timer: 2000,
+				showConfirmButton: false,
+			});
+		} catch (error) {
+			console.error("Error deleting kelembagaan:", error);
+			Swal.fire({
+				icon: "error",
+				title: "Gagal",
+				text: error?.response?.data?.message || "Gagal menghapus kelembagaan",
+			});
+		} finally {
+			setDeletingId(null);
+		}
+	};
+
+	const handleDeleteRt = async (rt, rwId, event) => {
+		event.stopPropagation();
+
+		if (!isSuperAdmin()) return;
+
+		const itemName = `RT ${rt.nomor}`;
+		const result = await Swal.fire({
+			title: `Hapus ${itemName}?`,
+			text: "Data RT dan pengurus yang terkait akan dihapus permanen.",
+			icon: "warning",
+			showCancelButton: true,
+			confirmButtonText: "Ya, hapus",
+			cancelButtonText: "Batal",
+			confirmButtonColor: "#dc2626",
+		});
+
+		if (!result.isConfirmed) return;
+
+		setDeletingId(rt.id);
+		try {
+			await deleteRt(rt.id);
+
+			setItems((prev) =>
+				prev.map((item) => {
+					if (item.id !== rwId) return item;
+					const rts = (item.rts || []).filter((current) => current.id !== rt.id);
+					return {
+						...item,
+						rts,
+						jumlah_rt: rts.length,
+						rt_count: rts.length,
+					};
+				}),
+			);
+
+			await Swal.fire({
+				icon: "success",
+				title: "Berhasil",
+				text: `${itemName} berhasil dihapus`,
+				timer: 2000,
+				showConfirmButton: false,
+			});
+		} catch (error) {
+			console.error("Error deleting RT:", error);
+			Swal.fire({
+				icon: "error",
+				title: "Gagal",
+				text: error?.response?.data?.message || "Gagal menghapus RT",
+			});
+		} finally {
+			setDeletingId(null);
 		}
 	};
 
@@ -821,6 +935,19 @@ export default function KelembagaanList() {
 																</span>
 															</div>
 														)}
+
+														{isSuperAdmin() && (
+															<button
+																type="button"
+																onClick={(event) => handleDeleteKelembagaan(item, event)}
+																disabled={deletingId === item.id}
+																className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-200 bg-red-50 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+																title={`Hapus ${title}`}
+															>
+																<LuTrash2 className="w-3.5 h-3.5" />
+																<span>{deletingId === item.id ? "Menghapus..." : "Hapus"}</span>
+															</button>
+														)}
 													</div>
 												</div>
 												{/* End Card Content Wrapper */}
@@ -898,6 +1025,18 @@ export default function KelembagaanList() {
 																				<span className="text-xs text-gray-500">{rt.ketua_nama}</span>
 																			) : (
 																				<span className="text-xs text-gray-400 italic">Belum ada ketua</span>
+																			)}
+																			{isSuperAdmin() && (
+																				<button
+																					type="button"
+																					onClick={(event) => handleDeleteRt(rt, item.id, event)}
+																					disabled={deletingId === rt.id}
+																					className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-red-200 bg-red-50 text-[10px] font-semibold text-red-700 hover:bg-red-100 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+																					title="Hapus RT"
+																				>
+																					<LuTrash2 className="w-3 h-3" />
+																					<span>{deletingId === rt.id ? "..." : "Hapus"}</span>
+																				</button>
 																			)}
 																			<FaChevronRight className="w-3 h-3 text-gray-400" />
 																		</div>

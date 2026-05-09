@@ -152,8 +152,10 @@ export const updatePengurus = (id, data, opts = {}) => {
 	return makeApiCall(api, "pengurus", "update", id, data, { params });
 };
 
-export const deletePengurus = (id) =>
-	makeApiCall(api, "pengurus", "delete", id);
+export const deletePengurus = (id, desaId = null) => {
+	const baseParams = desaId ? { desa_id: desaId } : {};
+	return makeApiCall(api, "pengurus", "delete", id, null, { params: baseParams });
+};
 
 // Get pengurus by ID
 export const getPengurusById = (id, desaId = null) => {
