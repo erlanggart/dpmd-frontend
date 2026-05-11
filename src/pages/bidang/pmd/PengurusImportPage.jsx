@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   LuUpload, LuFileSpreadsheet, LuX, LuCircleCheck, LuCircleAlert,
   LuChevronDown, LuChevronRight, LuRefreshCw, LuArrowLeft, LuInfo,
-  LuBuilding2, LuUsers, LuTriangleAlert, LuLoader, LuTrash2,
+  LuBuilding2, LuUsers, LuLoader, LuTrash2,
 } from "react-icons/lu";
 import api from "../../../api";
 import toast from "react-hot-toast";
@@ -21,6 +21,12 @@ const LEMBAGA_TYPES = [
   { key: "lembaga-lainnya", label: "Lainnya" },
 ];
 
+const TYPE_LABEL_MAP = {
+  rws: "RW", rts: "RT", posyandus: "Posyandu", lpms: "LPM",
+  karang_tarunas: "Karang Taruna", pkks: "PKK", satlinmas: "Linmas",
+  "lembaga-lainnya": "Lembaga Lainnya",
+};
+
 const SHEET_LABELS = {
   "01_RTRW":             "RT/RW",
   "02_POSYANDU":         "Posyandu",
@@ -31,7 +37,88 @@ const SHEET_LABELS = {
   "07_LEMBAGA_LAINNYA":  "Lembaga Lainnya",
 };
 
-// ─── Sub-components ─────────────────────────────────────────────────────────
+// Jabatan priority (lower index = higher priority)
+const JABATAN_PRIORITY = [
+  "KETUA", "KETUA RW", "KETUA RT",
+  "WAKIL KETUA", "PLT. KETUA", "PLT KETUA",
+  "SEKRETARIS", "SEKRETARIS I", "SEKRETARIS 1",
+  "WAKIL SEKRETARIS", "SEKRETARIS II", "SEKRETARIS 2",
+  "BENDAHARA", "BENDAHARA I", "BENDAHARA 1",
+  "WAKIL BENDAHARA", "BENDAHARA II", "BENDAHARA 2",
+  "KOORDINATOR", "KOORDINATOR BIDANG",
+];
+
+function jabatanOrder(jabatan) {
+  const j = (jabatan || "").toUpperCase().trim();
+  for (let i = 0; i < JABATAN_PRIORITY.length; i++) {
+    const k = JABATAN_PRIORITY[i];
+    if (j === k || j.startsWith(k + " ") || j.startsWith(k + "/")) return i;
+  }
+  return JABATAN_PRIORITY.length; // ANGGOTA, KADER, etc. → alphabetical
+}
+
+function sortByJabatan(list) {
+  return [...list].sort((a, b) => {
+    const d = jabatanOrder(a.jabatan) - jabatanOrder(b.jabatan);
+    return d !== 0 ? d : (a.nama_lengkap || "").localeCompare(b.nama_lengkap || "");
+  });
+}
+
+// Build RW → RT hierarchy from flat pengurus list
+function buildRwRtHierarchy(rwPengurus, rtPengurus) {
+  const rwByNomor = new Map(); // nomor → { nomor, list[] }
+  const rtByRwNomor = new Map(); // rwNomor → Map(rtId → { id, nomor, list[] })
+
+  rwPengurus.forEach(p => {
+    const nomor = (p.lembaga_nama || "").replace(/^RW\s+/i, "").trim() || "?";
+    if (!rwByNomor.has(nomor)) rwByNomor.set(nomor, { nomor, list: [] });
+    rwByNomor.get(nomor).list.push(p);
+  });
+
+  rtPengurus.forEach(p => {
+    const m = (p.lembaga_nama || "").match(/^RT\s+(\S+)\s*\/\s*RW\s+(\S+)/i);
+    const rtNomor = m ? m[1] : "?";
+    const rwNomor = m ? m[2] : "?";
+    if (!rtByRwNomor.has(rwNomor)) rtByRwNomor.set(rwNomor, new Map());
+    const rtMap = rtByRwNomor.get(rwNomor);
+    if (!rtMap.has(p.pengurusable_id)) rtMap.set(p.pengurusable_id, { id: p.pengurusable_id, nomor: rtNomor, list: [] });
+    rtMap.get(p.pengurusable_id).list.push(p);
+  });
+
+  const allNomors = new Set([...rwByNomor.keys(), ...rtByRwNomor.keys()]);
+
+  return [...allNomors]
+    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+    .map(rwNomor => ({
+      rwNomor,
+      rwList: rwByNomor.get(rwNomor)?.list || [],
+      rtGroups: [...(rtByRwNomor.get(rwNomor)?.values() || [])]
+        .sort((a, b) => a.nomor.localeCompare(b.nomor, undefined, { numeric: true })),
+    }));
+}
+
+// Build tabs, merging rws+rts into one RTRW tab
+const NON_RTRW_TYPES = ["posyandus", "lpms", "karang_tarunas", "pkks", "satlinmas", "lembaga-lainnya"];
+
+function buildTabs(pengurus) {
+  const hasRw = pengurus.some(p => p.pengurusable_type === "rws");
+  const hasRt = pengurus.some(p => p.pengurusable_type === "rts");
+  const tabs = [];
+  if (hasRw || hasRt) {
+    tabs.push({
+      key: "rtrw",
+      label: "RT/RW",
+      count: pengurus.filter(p => p.pengurusable_type === "rws" || p.pengurusable_type === "rts").length,
+    });
+  }
+  NON_RTRW_TYPES.forEach(type => {
+    const count = pengurus.filter(p => p.pengurusable_type === type).length;
+    if (count > 0) tabs.push({ key: type, label: TYPE_LABEL_MAP[type], count });
+  });
+  return tabs;
+}
+
+// ─── Shared Badge Components ─────────────────────────────────────────────────
 
 function Badge({ imported }) {
   if (imported) {
@@ -64,17 +151,170 @@ function VerifikasiBadge({ status }) {
 
 function StatCard({ label, value, color = "slate" }) {
   const colorMap = {
-    blue:    "bg-blue-50 border-blue-200 text-blue-700",
-    green:   "bg-emerald-50 border-emerald-200 text-emerald-700",
-    amber:   "bg-amber-50 border-amber-200 text-amber-700",
-    red:     "bg-rose-50 border-rose-200 text-rose-700",
-    slate:   "bg-slate-50 border-slate-200 text-slate-700",
+    blue:  "bg-blue-50 border-blue-200 text-blue-700",
+    green: "bg-emerald-50 border-emerald-200 text-emerald-700",
+    amber: "bg-amber-50 border-amber-200 text-amber-700",
+    red:   "bg-rose-50 border-rose-200 text-rose-700",
+    slate: "bg-slate-50 border-slate-200 text-slate-700",
   };
   return (
     <div className={`flex flex-col items-center p-3 rounded-lg border ${colorMap[color]}`}>
       <span className="text-2xl font-bold">{value}</span>
       <span className="text-xs mt-0.5 text-center">{label}</span>
     </div>
+  );
+}
+
+// ─── Table header & row (shared) ─────────────────────────────────────────────
+
+function PengurusTableHead() {
+  return (
+    <thead>
+      <tr className="bg-gray-50 border-b border-gray-200 sticky top-0 z-20">
+        <th className="text-center px-2 py-2.5 font-semibold text-gray-400 text-xs w-9">No.</th>
+        <th className="text-left px-4 py-2.5 font-semibold text-gray-600 text-sm min-w-[180px]">Nama</th>
+        <th className="text-left px-4 py-2.5 font-semibold text-gray-600 text-sm min-w-[140px]">NIK</th>
+        <th className="text-left px-4 py-2.5 font-semibold text-gray-600 text-sm min-w-[160px]">Jabatan</th>
+        <th className="text-center px-3 py-2.5 font-semibold text-gray-600 text-sm">Sumber</th>
+        <th className="text-center px-3 py-2.5 font-semibold text-gray-600 text-sm">Verifikasi</th>
+      </tr>
+    </thead>
+  );
+}
+
+function PengurusRow({ p, rowNum, onPengurusClick }) {
+  return (
+    <tr
+      onClick={() => onPengurusClick(p.id)}
+      className={`cursor-pointer hover:bg-blue-50 transition-colors ${p.imported ? "bg-blue-50/20" : ""}`}
+    >
+      <td className="px-2 py-2.5 text-gray-400 text-xs text-center">{rowNum}</td>
+      <td className="px-4 py-2.5">
+        <p className="font-medium text-gray-900 text-sm">{p.nama_lengkap}</p>
+      </td>
+      <td className="px-4 py-2.5 text-gray-500 text-xs font-mono">{p.nik || "-"}</td>
+      <td className="px-4 py-2.5 text-gray-700 text-sm">{p.jabatan}</td>
+      <td className="px-3 py-2.5 text-center"><Badge imported={p.imported} /></td>
+      <td className="px-3 py-2.5 text-center"><VerifikasiBadge status={p.status_verifikasi} /></td>
+    </tr>
+  );
+}
+
+// ─── RW / RT Hierarchical View ───────────────────────────────────────────────
+
+function RwRtView({ rwPengurus, rtPengurus, onPengurusClick }) {
+  const hierarchy = React.useMemo(
+    () => buildRwRtHierarchy(rwPengurus, rtPengurus),
+    [rwPengurus, rtPengurus]
+  );
+
+  if (!hierarchy.length) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+        <LuUsers className="h-8 w-8 mb-2 text-gray-300" />
+        <p className="text-sm">Tidak ada data RT/RW.</p>
+      </div>
+    );
+  }
+
+  return (
+    <table className="w-full text-sm">
+      <PengurusTableHead />
+      <tbody>
+        {hierarchy.map(({ rwNomor, rwList, rtGroups }) => {
+          const rwSorted = sortByJabatan(rwList);
+          return (
+            <React.Fragment key={rwNomor}>
+              {/* RW Section header */}
+              <tr className="sticky top-[41px] z-10 bg-blue-100">
+                <td colSpan={6} className="px-4 py-2">
+                  <span className="font-bold text-blue-800 text-sm">RW {rwNomor}</span>
+                  {rwList.length > 0 && (
+                    <span className="text-xs font-normal text-blue-600 ml-2">· {rwList.length} pengurus RW</span>
+                  )}
+                  {rtGroups.length > 0 && (
+                    <span className="text-xs font-normal text-blue-500 ml-1">
+                      · {rtGroups.length} RT ({rtGroups.reduce((s, rt) => s + rt.list.length, 0)} pengurus)
+                    </span>
+                  )}
+                </td>
+              </tr>
+
+              {/* RW pengurus rows */}
+              {rwSorted.map((p, i) => (
+                <PengurusRow key={p.id} p={p} rowNum={i + 1} onPengurusClick={onPengurusClick} />
+              ))}
+
+              {/* RT sub-sections */}
+              {rtGroups.map(rt => {
+                const rtSorted = sortByJabatan(rt.list);
+                return (
+                  <React.Fragment key={rt.id}>
+                    <tr className="bg-slate-50 border-y border-slate-200">
+                      <td colSpan={6} className="px-4 py-1.5 pl-8">
+                        <span className="font-semibold text-slate-700 text-xs">RT {rt.nomor} / RW {rwNomor}</span>
+                        <span className="text-xs text-slate-400 ml-2">· {rt.list.length} pengurus</span>
+                      </td>
+                    </tr>
+                    {rtSorted.map((p, i) => (
+                      <PengurusRow key={p.id} p={p} rowNum={i + 1} onPengurusClick={onPengurusClick} />
+                    ))}
+                  </React.Fragment>
+                );
+              })}
+            </React.Fragment>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+}
+
+// ─── Lembaga Group View (Posyandu, LPM, PKK, etc.) ──────────────────────────
+
+function LembagaGroupView({ pengurus, onPengurusClick }) {
+  const groups = React.useMemo(() => {
+    const map = new Map();
+    pengurus.forEach(p => {
+      if (!map.has(p.pengurusable_id)) {
+        map.set(p.pengurusable_id, { nama: p.lembaga_nama || "Lembaga", list: [] });
+      }
+      map.get(p.pengurusable_id).list.push(p);
+    });
+    return [...map.values()].sort((a, b) => a.nama.localeCompare(b.nama));
+  }, [pengurus]);
+
+  if (!groups.length) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+        <LuUsers className="h-8 w-8 mb-2 text-gray-300" />
+        <p className="text-sm">Tidak ada data.</p>
+      </div>
+    );
+  }
+
+  return (
+    <table className="w-full text-sm">
+      <PengurusTableHead />
+      <tbody>
+        {groups.map((group) => {
+          const sorted = sortByJabatan(group.list);
+          return (
+            <React.Fragment key={group.nama}>
+              <tr className="sticky top-[41px] z-10 bg-emerald-50 border-y border-emerald-200">
+                <td colSpan={6} className="px-4 py-2">
+                  <span className="font-bold text-emerald-800 text-sm">{group.nama}</span>
+                  <span className="text-xs font-normal text-emerald-600 ml-2">· {group.list.length} pengurus</span>
+                </td>
+              </tr>
+              {sorted.map((p, i) => (
+                <PengurusRow key={p.id} p={p} rowNum={i + 1} onPengurusClick={onPengurusClick} />
+              ))}
+            </React.Fragment>
+          );
+        })}
+      </tbody>
+    </table>
   );
 }
 
@@ -96,12 +336,6 @@ function DropZone({ files, onChange }) {
     });
   };
 
-  const onDrop = (e) => {
-    e.preventDefault();
-    setDragging(false);
-    addFiles(e.dataTransfer.files);
-  };
-
   return (
     <div>
       <div
@@ -110,20 +344,14 @@ function DropZone({ files, onChange }) {
         }`}
         onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
-        onDrop={onDrop}
+        onDrop={(e) => { e.preventDefault(); setDragging(false); addFiles(e.dataTransfer.files); }}
         onClick={() => inputRef.current?.click()}
       >
         <LuFileSpreadsheet className="mx-auto h-12 w-12 text-gray-400 mb-3" />
         <p className="text-sm font-medium text-gray-700">Drag & drop file Excel, atau klik untuk memilih</p>
         <p className="text-xs text-gray-400 mt-1">Format: .xlsx / .xls — bisa pilih banyak file sekaligus (maks. 20 file, 50MB/file)</p>
-        <input
-          ref={inputRef}
-          type="file"
-          accept=".xlsx,.xls"
-          multiple
-          className="hidden"
-          onChange={(e) => addFiles(e.target.files)}
-        />
+        <input ref={inputRef} type="file" accept=".xlsx,.xls" multiple className="hidden"
+          onChange={(e) => addFiles(e.target.files)} />
       </div>
 
       {files.length > 0 && (
@@ -153,7 +381,6 @@ function DropZone({ files, onChange }) {
 
 function ImportReport({ results }) {
   const [expanded, setExpanded] = useState(() => results.map((_, i) => i === 0));
-
   const toggle = (i) => setExpanded(prev => { const n = [...prev]; n[i] = !n[i]; return n; });
 
   return (
@@ -185,7 +412,6 @@ function ImportReport({ results }) {
 
             {expanded[i] && (
               <div className="border-t border-gray-100 px-5 py-4 space-y-4">
-                {/* Stats row */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <StatCard label="Baru Diinsert" value={r.stats.inserted} color="green" />
                   <StatCard label="Diperbarui" value={r.stats.updated} color="blue" />
@@ -193,7 +419,6 @@ function ImportReport({ results }) {
                   <StatCard label="Error / Tidak Valid" value={r.stats.errors + r.stats.skip_invalid + r.stats.desa_missing} color="red" />
                 </div>
 
-                {/* Per-sheet breakdown */}
                 <div>
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Per Sheet</p>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -208,7 +433,6 @@ function ImportReport({ results }) {
                   </div>
                 </div>
 
-                {/* Error list */}
                 {r.errors.length > 0 && (
                   <div>
                     <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
@@ -286,7 +510,6 @@ function KecamatanStats({ stats, onDesaClick }) {
 
             return (
               <React.Fragment key={kec.id}>
-                {/* Kecamatan row */}
                 <tr
                   className="bg-blue-50 hover:bg-blue-100 cursor-pointer transition-colors"
                   onClick={() => toggle(kec.id)}
@@ -307,7 +530,6 @@ function KecamatanStats({ stats, onDesaClick }) {
                   <td className="text-center px-3 py-2.5 text-blue-700 font-medium">{kecImported}</td>
                 </tr>
 
-                {/* Desa rows */}
                 {expanded[kec.id] && kec.desas.map(desa => (
                   <tr
                     key={desa.id}
@@ -337,86 +559,48 @@ function KecamatanStats({ stats, onDesaClick }) {
 
 // ─── Desa Pengurus Modal ──────────────────────────────────────────────────────
 
-const TYPE_ORDER = ["rws", "rts", "posyandus", "lpms", "karang_tarunas", "pkks", "satlinmas", "lembaga-lainnya"];
-const TYPE_LABEL_MAP = {
-  rws: "RW", rts: "RT", posyandus: "Posyandu", lpms: "LPM",
-  karang_tarunas: "Karang Taruna", pkks: "PKK", satlinmas: "Linmas", "lembaga-lainnya": "Lembaga Lainnya",
-};
-
-function PengurusTable({ rows }) {
-  if (rows.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12 text-gray-400">
-        <LuUsers className="h-8 w-8 mb-2 text-gray-300" />
-        <p className="text-sm">Tidak ada data pengurus.</p>
-      </div>
-    );
-  }
-  return (
-    <table className="w-full text-sm">
-      <thead>
-        <tr className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
-          <th className="text-left px-4 py-2.5 font-semibold text-gray-600">Nama</th>
-          <th className="text-left px-4 py-2.5 font-semibold text-gray-600">Jabatan</th>
-          <th className="text-left px-4 py-2.5 font-semibold text-gray-600">Lembaga</th>
-          <th className="text-center px-3 py-2.5 font-semibold text-gray-600">Sumber</th>
-          <th className="text-center px-3 py-2.5 font-semibold text-gray-600">Verifikasi</th>
-        </tr>
-      </thead>
-      <tbody className="divide-y divide-gray-100">
-        {rows.map(p => (
-          <tr key={p.id} className={`hover:bg-gray-50 transition-colors ${p.imported ? "bg-blue-50/30" : ""}`}>
-            <td className="px-4 py-2.5">
-              <p className="font-medium text-gray-900">{p.nama_lengkap}</p>
-              {p.nik && <p className="text-xs text-gray-400">{p.nik}</p>}
-            </td>
-            <td className="px-4 py-2.5 text-gray-700">{p.jabatan}</td>
-            <td className="px-4 py-2.5 text-gray-600 text-xs font-medium">
-              {p.lembaga_nama || TYPE_LABEL_MAP[p.pengurusable_type] || p.pengurusable_type}
-            </td>
-            <td className="px-3 py-2.5 text-center"><Badge imported={p.imported} /></td>
-            <td className="px-3 py-2.5 text-center"><VerifikasiBadge status={p.status_verifikasi} /></td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-}
-
-function DesaModal({ desa, kecamatanNama, pengurus, loading, onDelete, deleting, isSuperadmin, onClose }) {
+function DesaModal({ desa, kecamatanNama, pengurus, loading, onDelete, deleting, isSuperadmin, onPengurusClick, onClose }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [activeTab, setActiveTab] = useState(null);
 
-  // Group pengurus by type, in fixed order
-  const grouped = TYPE_ORDER.reduce((acc, type) => {
-    const rows = pengurus.filter(p => p.pengurusable_type === type);
-    if (rows.length > 0) acc[type] = rows;
-    return acc;
-  }, {});
-  const tabs = Object.keys(grouped);
+  const tabs = React.useMemo(() => buildTabs(pengurus), [pengurus]);
 
-  // Set default active tab when data loads
   React.useEffect(() => {
-    if (tabs.length > 0 && (activeTab === null || !tabs.includes(activeTab))) {
-      setActiveTab(tabs[0]);
+    if (tabs.length > 0 && (activeTab === null || !tabs.find(t => t.key === activeTab))) {
+      setActiveTab(tabs[0].key);
     }
-  }, [tabs.join(",")]); // eslint-disable-line
+  }, [tabs.map(t => t.key).join(",")]); // eslint-disable-line
 
   const importedCount = pengurus.filter(p => p.imported).length;
-  const activeRows = activeTab ? (grouped[activeTab] || []) : [];
+
+  // Content for active tab
+  const activeTabContent = () => {
+    if (loading || deleting) return null;
+    if (!activeTab) return null;
+
+    if (activeTab === "rtrw") {
+      const rwP = pengurus.filter(p => p.pengurusable_type === "rws");
+      const rtP = pengurus.filter(p => p.pengurusable_type === "rts");
+      return <RwRtView rwPengurus={rwP} rtPengurus={rtP} onPengurusClick={onPengurusClick} />;
+    }
+
+    const tabRows = pengurus.filter(p => p.pengurusable_type === activeTab);
+    return <LembagaGroupView pengurus={tabRows} onPengurusClick={onPengurusClick} />;
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[88vh] flex flex-col">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[88vh] flex flex-col">
 
         {/* Header */}
         <div className="flex items-start justify-between px-6 py-4 border-b border-gray-200 gap-4">
           <div>
             <h2 className="text-lg font-bold text-gray-900">{desa.nama}</h2>
-            <p className="text-sm text-gray-500">Kecamatan {kecamatanNama} · {loading ? "..." : pengurus.length} pengurus aktif</p>
+            <p className="text-sm text-gray-500">
+              Kecamatan {kecamatanNama} · {loading ? "..." : pengurus.length} pengurus aktif
+            </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            {/* Delete button — superadmin only */}
             {isSuperadmin && importedCount > 0 && !confirmDelete && (
               <button
                 onClick={() => setConfirmDelete(true)}
@@ -450,42 +634,45 @@ function DesaModal({ desa, kecamatanNama, pengurus, loading, onDelete, deleting,
         </div>
 
         {/* Legend */}
-        <div className="flex items-center gap-4 px-6 py-2.5 bg-gray-50 border-b border-gray-200 text-xs text-gray-500">
-          <span className="flex items-center gap-1.5"><span className="inline-block w-2.5 h-2.5 rounded-full bg-blue-400"></span>Import Excel</span>
-          <span className="flex items-center gap-1.5"><span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400"></span>Input manual</span>
+        <div className="flex items-center gap-4 px-6 py-2 bg-gray-50 border-b border-gray-200 text-xs text-gray-500">
+          <span className="flex items-center gap-1.5"><span className="inline-block w-2 h-2 rounded-full bg-blue-400"></span>Import Excel</span>
+          <span className="flex items-center gap-1.5"><span className="inline-block w-2 h-2 rounded-full bg-emerald-400"></span>Input manual</span>
+          <span className="text-gray-400 ml-auto">Klik baris pengurus untuk melihat detail</span>
         </div>
 
         {loading || deleting ? (
-          <div className="flex flex-col items-center justify-center py-20">
+          <div className="flex flex-col items-center justify-center flex-1">
             <LuLoader className="h-8 w-8 text-blue-500 animate-spin" />
             {deleting && <p className="text-sm text-gray-500 mt-3">Menghapus data import...</p>}
           </div>
         ) : pengurus.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+          <div className="flex flex-col items-center justify-center flex-1 text-gray-400">
             <LuUsers className="h-10 w-10 mb-2 text-gray-300" />
             <p className="text-sm">Tidak ada data pengurus aktif.</p>
           </div>
         ) : (
           <>
             {/* Tabs */}
-            <div className="flex gap-1 px-4 pt-3 pb-0 border-b border-gray-200 overflow-x-auto">
-              {tabs.map(type => {
-                const isActive = activeTab === type;
-                const count = grouped[type].length;
-                const importedInTab = grouped[type].filter(p => p.imported).length;
+            <div className="flex gap-1 px-4 pt-3 pb-0 border-b border-gray-200 overflow-x-auto shrink-0">
+              {tabs.map(tab => {
+                const isActive = activeTab === tab.key;
+                const importedInTab = pengurus.filter(p => {
+                  if (tab.key === "rtrw") return (p.pengurusable_type === "rws" || p.pengurusable_type === "rts") && p.imported;
+                  return p.pengurusable_type === tab.key && p.imported;
+                }).length;
                 return (
                   <button
-                    key={type}
-                    onClick={() => setActiveTab(type)}
+                    key={tab.key}
+                    onClick={() => setActiveTab(tab.key)}
                     className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-t-lg border-b-2 whitespace-nowrap transition-colors ${
                       isActive
                         ? "border-blue-500 text-blue-700 bg-blue-50"
                         : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50"
                     }`}
                   >
-                    {TYPE_LABEL_MAP[type] || type}
+                    {tab.label}
                     <span className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${isActive ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-500"}`}>
-                      {count}
+                      {tab.count}
                     </span>
                     {importedInTab > 0 && (
                       <span className="w-1.5 h-1.5 rounded-full bg-blue-400 inline-block"></span>
@@ -497,7 +684,7 @@ function DesaModal({ desa, kecamatanNama, pengurus, loading, onDelete, deleting,
 
             {/* Tab content — fixed height, scrollable */}
             <div className="overflow-y-auto flex-1 min-h-0">
-              <PengurusTable rows={activeRows} />
+              {activeTabContent()}
             </div>
           </>
         )}
@@ -590,7 +777,6 @@ export default function PengurusImportPage() {
     try {
       const res = await api.delete(`/kelembagaan/pengurus/import/desa/${selectedDesa.id}`);
       toast.success(res.data.message || "Data import berhasil dihapus");
-      // Reload pengurus list in modal
       const listRes = await api.get(`/kelembagaan/pengurus/import/desa/${selectedDesa.id}`);
       setDesaPengurus(listRes.data.data || []);
       fetchStats();
@@ -601,8 +787,19 @@ export default function PengurusImportPage() {
     }
   };
 
+  // Navigate to pengurus detail — derive base path from current URL
+  const handlePengurusClick = (id) => {
+    const currentPath = window.location.pathname; // e.g. /bidang/pmd/pengurus/import
+    const base = currentPath.replace(/\/import$/, "");
+    navigate(`${base}/${id}`);
+  };
+
   const totalStats = stats
-    ? { desas: stats.reduce((s, k) => s + k.desas.length, 0), pengurus: stats.reduce((s, k) => s + k.desas.reduce((ss, d) => ss + d.total, 0), 0), imported: stats.reduce((s, k) => s + k.desas.reduce((ss, d) => ss + d.imported_total, 0), 0) }
+    ? {
+        desas: stats.reduce((s, k) => s + k.desas.length, 0),
+        pengurus: stats.reduce((s, k) => s + k.desas.reduce((ss, d) => ss + d.total, 0), 0),
+        imported: stats.reduce((s, k) => s + k.desas.reduce((ss, d) => ss + d.imported_total, 0), 0),
+      }
     : null;
 
   return (
@@ -714,6 +911,7 @@ export default function PengurusImportPage() {
           onDelete={handleDeleteImported}
           deleting={deletingDesa}
           isSuperadmin={isSuperadmin}
+          onPengurusClick={handlePengurusClick}
           onClose={closeModal}
         />
       )}
