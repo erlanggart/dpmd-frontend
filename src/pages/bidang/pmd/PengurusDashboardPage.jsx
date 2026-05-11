@@ -21,6 +21,7 @@ import {
   LuExternalLink,
   LuDownload,
   LuHeart,
+  LuFileSpreadsheet,
 } from "react-icons/lu";
 import { FaMars, FaVenus } from "react-icons/fa";
 import * as XLSX from "xlsx";
@@ -396,13 +397,22 @@ export default function PengurusDashboardPage() {
                       </p>
                     </div>
                   </div>
-                  <button
-                    onClick={() => { fetchSummary(); fetchData(); }}
-                    className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-500 text-white hover:bg-blue-600 rounded-lg transition-colors"
-                  >
-                    <LuRefreshCw className="h-4 w-4" />
-                    <span className="hidden sm:inline">Refresh</span>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => navigate(getPath("/bidang/pmd/pengurus/import"))}
+                      className="flex items-center gap-2 px-3 py-2 text-sm bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg transition-colors"
+                    >
+                      <LuFileSpreadsheet className="h-4 w-4" />
+                      <span className="hidden sm:inline">Import Excel</span>
+                    </button>
+                    <button
+                      onClick={() => { fetchSummary(); fetchData(); }}
+                      className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-500 text-white hover:bg-blue-600 rounded-lg transition-colors"
+                    >
+                      <LuRefreshCw className="h-4 w-4" />
+                      <span className="hidden sm:inline">Refresh</span>
+                    </button>
+                  </div>
                 
               
             </header>
