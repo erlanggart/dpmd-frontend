@@ -27,6 +27,7 @@ import {
 	LuUserRoundCheck,
 	LuShieldCheck,
 	LuShieldAlert,
+	LuTriangleAlert,
 } from "react-icons/lu";
 import {
 	getJabatanList,
@@ -241,6 +242,118 @@ const PengurusItem = ({ pengurus, user }) => {
 	);
 };
 
+// Kartu khusus untuk pengurus yang jabatannya tidak ada di jabatan mapping
+const UnmappedJabatanCard = ({ pengurusList, user }) => {
+	const [isExpanded, setIsExpanded] = useState(true);
+
+	return (
+		<div className="bg-white rounded-xl border border-amber-300 shadow-sm hover:shadow-md transition-all duration-300">
+			<div
+				className="flex items-center justify-between p-4 cursor-pointer"
+				onClick={() => setIsExpanded(!isExpanded)}
+			>
+				<div className="flex items-center space-x-3">
+					<div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-orange-500 rounded-lg flex items-center justify-center text-white shadow-md">
+						<LuTriangleAlert className="w-5 h-5" />
+					</div>
+					<div>
+						<h5 className="font-semibold text-amber-800">
+							Jabatan Tidak Sesuai Mapping
+						</h5>
+						<p className="text-sm text-amber-600">
+							{pengurusList.length} pengurus dengan jabatan di luar struktur
+						</p>
+					</div>
+				</div>
+				<div className="flex items-center space-x-3">
+					<span className="px-3 py-1 bg-amber-100 text-amber-700 text-xs font-medium rounded-full border border-amber-300">
+						{pengurusList.length} Perlu Ditinjau
+					</span>
+					{isExpanded ? (
+						<LuChevronUp className="w-5 h-5 text-amber-400" />
+					) : (
+						<LuChevronDown className="w-5 h-5 text-amber-400" />
+					)}
+				</div>
+			</div>
+
+			{isExpanded && (
+				<div className="border-t border-amber-200">
+					<div className="divide-y divide-amber-50">
+						{pengurusList.map((pengurus, index) => (
+							<div
+								key={pengurus.id || index}
+								className="group p-4 hover:bg-amber-50 transition-all duration-200"
+							>
+								<div className="flex items-center justify-between">
+									<div className="flex items-center space-x-4">
+										{pengurus.avatar ? (
+											<img
+												src={`${imageBaseUrl}/${pengurus.avatar}`}
+												alt={pengurus.nama_lengkap}
+												className="w-12 h-12 rounded-full object-cover ring-2 ring-amber-200 group-hover:ring-amber-400 transition-all duration-200"
+											/>
+										) : (
+											<div className="w-12 h-12 bg-gradient-to-br from-amber-300 to-orange-400 rounded-full flex items-center justify-center ring-2 ring-amber-200 group-hover:ring-amber-400 transition-all duration-200">
+												<span className="text-white font-semibold text-sm">
+													{pengurus.nama_lengkap?.charAt(0)?.toUpperCase()}
+												</span>
+											</div>
+										)}
+
+										<div className="space-y-1">
+											<div className="flex items-center space-x-2">
+												<h6 className="font-semibold text-gray-800 group-hover:text-amber-800 transition-colors">
+													{pengurus.nama_lengkap}
+												</h6>
+												{/* Badge jabatan asli */}
+												<span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-amber-100 text-amber-700 border border-amber-300 font-medium">
+													<LuTriangleAlert className="w-3 h-3 mr-1" />
+													{pengurus.jabatan || "Tidak ada jabatan"}
+												</span>
+											</div>
+											<div className="flex items-center space-x-4 text-xs text-gray-500">
+												{pengurus.status_verifikasi === "verified" ? (
+													<span className="inline-flex items-center text-green-600">
+														<LuShieldCheck className="w-3 h-3 mr-1" />
+														Terverifikasi
+													</span>
+												) : (
+													<span className="inline-flex items-center text-yellow-600">
+														<LuShieldAlert className="w-3 h-3 mr-1" />
+														Belum Verifikasi
+													</span>
+												)}
+												{pengurus.tanggal_mulai_jabatan && (
+													<div className="flex items-center space-x-1">
+														<LuCalendar className="w-3 h-3" />
+														<span>
+															Mulai{" "}
+															{new Date(pengurus.tanggal_mulai_jabatan).getFullYear()}
+														</span>
+													</div>
+												)}
+											</div>
+										</div>
+									</div>
+
+									<Link
+										to={getPengurusRoutePath(user, pengurus.id)}
+										className="flex items-center space-x-2 px-4 py-2 text-sm text-amber-700 hover:text-white bg-amber-50 hover:bg-gradient-to-r hover:from-amber-500 hover:to-orange-500 rounded-lg border border-amber-300 hover:border-amber-500 transform hover:scale-105 transition-all duration-200 shadow-sm hover:shadow-md"
+									>
+										<LuEye className="w-4 h-4" />
+										<span className="font-medium">Detail</span>
+									</Link>
+								</div>
+							</div>
+						))}
+					</div>
+				</div>
+			)}
+		</div>
+	);
+};
+
 // Note: Fungsi getJabatanList, getDisplayJabatan, getJabatanColor sudah diimport dari constants/jabatanMapping.js
 
 const PengurusJabatanList = ({
@@ -305,6 +418,13 @@ const PengurusJabatanList = ({
 			(pengurus) => pengurus.jabatan?.toUpperCase()?.trim() === jabatan.toUpperCase().trim(),
 		);
 	});
+
+	// Pengurus yang jabatannya tidak ada di mapping
+	const unmappedPengurus = activePengurus.filter(
+		(pengurus) => !defaultJabatan.some(
+			(jabatan) => jabatan.toUpperCase().trim() === pengurus.jabatan?.toUpperCase()?.trim()
+		)
+	);
 
 	if (loading) {
 		return (
@@ -386,6 +506,12 @@ const PengurusJabatanList = ({
 								showAddButton={canManagePengurus && showAddButton && !showHistory}
 							/>
 						))}
+						{unmappedPengurus.length > 0 && (
+							<UnmappedJabatanCard
+								pengurusList={unmappedPengurus}
+								user={user}
+							/>
+						)}
 					</div>
 				)}
 
