@@ -72,12 +72,104 @@ const formatCurrency = (value) => {
   }).format(Number(value || 0));
 };
 
-const joinNames = (names) => (names && names.length > 0 ? names.join(", ") : "-");
-const pendingDetailsText = (count) => (count ? `${count} detail` : "-");
 const formatCandidate = (candidate) => {
   if (!candidate) return "";
   const source = candidate.sources?.length ? ` (${candidate.sources.join("+")})` : "";
   return `${candidate.desaNama || candidate.desaKode}${candidate.kecamatanNama ? ` - ${candidate.kecamatanNama}` : ""}${source}`;
+};
+
+const joinValues = (values) => {
+  const filtered = (values || []).map((v) => (v ?? "").toString().trim()).filter(Boolean);
+  return filtered.length > 0 ? [...new Set(filtered)].join("; ") : "";
+};
+
+const sumValues = (values) => (values || []).reduce((sum, v) => sum + Number(v || 0), 0);
+
+const loadAllDetailsForExport = async (filteredData) => {
+  const hasAllDetails = filteredData.every((desa) =>
+    desa.items.every((item) => item.detailsLoaded),
+  );
+  if (hasAllDetails) return filteredData;
+
+  const response = await api.get("/kelembagaan/rtrw-comparison", {
+    params: { includeDetails: 1, waitForCache: 1 },
+  });
+  if (response.data?.processing) {
+    throw new Error("Cache data masih disiapkan, coba lagi sebentar lagi.");
+  }
+  if (!response.data?.success) {
+    throw new Error(response.data?.message || "Gagal memuat detail data");
+  }
+
+  const fullComparison = response.data.data.comparison || [];
+  const itemMap = new Map();
+  fullComparison.forEach((desa) => {
+    desa.items.forEach((item) => {
+      itemMap.set(`${desa.desaKode}::${item.key}`, item);
+    });
+  });
+
+  return filteredData.map((desa) => ({
+    ...desa,
+    items: desa.items.map((item) => itemMap.get(`${desa.desaKode}::${item.key}`) || item),
+  }));
+};
+
+const buildExportRows = (filteredData) => {
+  const rows = [];
+  filteredData.forEach((desa) => {
+    desa.items.forEach((item) => {
+      const db = item.dbDetails || [];
+      const bpjs = item.bpjsDetails || [];
+      const add = item.addDetails || [];
+
+      rows.push({
+        // 17 kolom Database
+        "NAMA": joinValues(db.map((d) => d.namaLengkap || d.nama)) || item.dbNama?.join("; ") || "",
+        "NIK": joinValues(db.map((d) => d.nik)),
+        "JENIS KELAMIN": joinValues(db.map((d) => d.jenisKelamin)),
+        "TEMPAT LAHIR": joinValues(db.map((d) => d.tempatLahir)),
+        "TANGGAL LAHIR": joinValues(db.map((d) => d.tglLahir)),
+        "JABATAN": joinValues(db.map((d) => d.jabatan)),
+        "NOMOR RW": joinValues(db.map((d) => d.rwNomor)) || item.rwNomor || "",
+        "NOMOR RT": joinValues(db.map((d) => d.rtNomor)) || item.rtNomor || "",
+        "ALAMAT": joinValues(db.map((d) => d.alamat)),
+        "DESA": desa.desaNama,
+        "KECAMATAN": desa.kecamatanNama,
+        "PENDIDIKAN": joinValues(db.map((d) => d.pendidikan)),
+        "STATUS PERNIKAHAN": joinValues(db.map((d) => d.statusPerkawinan)),
+        "NO HP": joinValues(db.map((d) => d.noTelepon)),
+        "NAMA BANK": joinValues(db.map((d) => d.namaBank)),
+        "NOMOR REKENING": joinValues(db.map((d) => d.nomorRekening)),
+        "NAMA REKENING": joinValues(db.map((d) => d.namaRekening)),
+
+        // Detail BPJS
+        "NIK BPJS": joinValues(bpjs.map((d) => d.nik)),
+        "NAMA BPJS": joinValues(bpjs.map((d) => d.namaLengkap)) || item.bpjsNama?.join("; ") || "",
+        "TGL LAHIR BPJS": joinValues(bpjs.map((d) => d.tglLahir)),
+        "KPJ": joinValues(bpjs.map((d) => d.kpj)),
+        "KODE TK": joinValues(bpjs.map((d) => d.kodeTk)),
+        "UPAH BPJS": sumValues(bpjs.map((d) => d.upah)),
+        "BLTH": joinValues(bpjs.map((d) => d.blth)),
+        "ID PEGAWAI ASAL": joinValues(bpjs.map((d) => d.originalIdPegawai || d.idPegawai)),
+
+        // Detail ADD
+        "NAMA ADD": item.addNama?.join("; ") || "",
+        "TOTAL NILAI ADD": item.addNilai || 0,
+        "NO BUKTI ADD": joinValues(add.map((d) => d.noBukti)),
+        "TGL BUKTI ADD": joinValues(add.map((d) => d.tglBukti)),
+        "KETERANGAN ADD": joinValues(add.map((d) => d.keterangan)),
+        "REK BANK ADD": joinValues(add.map((d) => d.rekBank)),
+        "NM BANK ADD": joinValues(add.map((d) => d.nmBank)),
+
+        // Keterangan
+        "NIK BERBEDA": item.nikMismatch ? "Ya" : "Tidak",
+        "TANGGAL LAHIR BERBEDA": item.tglLahirMismatch ? "Ya" : "Tidak",
+        "NO REK BERBEDA": item.norekMismatch ? "Ya" : "Tidak",
+      });
+    });
+  });
+  return rows;
 };
 
 const RtrwComparisonPage = () => {
@@ -91,6 +183,7 @@ const RtrwComparisonPage = () => {
   const [showOnlyDiscrepancy, setShowOnlyDiscrepancy] = useState(false);
   const [expandedDesa, setExpandedDesa] = useState(new Set());
   const [listModal, setListModal] = useState(null);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -205,60 +298,31 @@ const RtrwComparisonPage = () => {
     });
   };
 
-  const exportToExcel = () => {
-    const rows = [];
+  const exportToExcel = async () => {
+    if (exporting || filteredData.length === 0) return;
 
-    filteredData.forEach((desa) => {
-      desa.items.forEach((item) => {
-        const statusLabel = item.nikMismatch
-          ? STATUS_CONFIG.nik_mismatch.label
-          : item.bpjsTangkilSuspect
-            ? `${STATUS_CONFIG[item.status]?.label || item.status} / BPJS ?`
-          : STATUS_CONFIG[item.status]?.label || item.status;
+    setExporting(true);
+    try {
+      const itemsWithDetails = await loadAllDetailsForExport(filteredData);
+      const rows = buildExportRows(itemsWithDetails);
+      if (rows.length === 0) return;
 
-        rows.push({
-          Kecamatan: desa.kecamatanNama,
-          "Kode Desa": desa.desaKode,
-          Desa: desa.desaNama,
-          Nama: item.nama,
-          NIK: (item.nik || []).join(", ") || "-",
-          Jenis: item.jenis || "-",
-          RW: item.rwNomor || "-",
-          RT: item.rtNomor || "-",
-          "Nama Database": joinNames(item.dbNama),
-          "Nama ADD": joinNames(item.addNama),
-          "Nama BPJS": joinNames(item.bpjsNama),
-          "BPJS Kode Asal": item.bpjsOriginalDesaKode || "-",
-          "BPJS Perlu Verifikasi": item.bpjsTangkilSuspect ? "Ya" : "Tidak",
-          "Kandidat BPJS": (item.bpjsTangkilCandidates || []).map(formatCandidate).join("; ") || "-",
-          Status: statusLabel,
-          Keterangan: item.keterangan,
-          "Nilai ADD": item.addNilai || 0,
-          "Detail Database": (item.dbDetails || [])
-            .map((d) => `${d.jabatan || "-"} ${d.jenis || ""} ${d.rtNomor ? `RT ${d.rtNomor}` : ""} ${d.rwNomor ? `RW ${d.rwNomor}` : ""} | NIK: ${d.nik || "-"}`)
-            .join("; ") || pendingDetailsText(item.dbDetailCount),
-          "Detail ADD": (item.addDetails || [])
-            .map((d) => `${d.tglBukti || "-"} | ${d.keterangan || "-"} | ${formatCurrency(d.nilai)}`)
-            .join("; ") || pendingDetailsText(item.addDetailCount),
-          "Detail BPJS": (item.bpjsDetails || [])
-            .map((d) => `${d.nik || "-"} | KPJ ${d.kpj || "-"} | BLTH ${d.blth || "-"} | ${formatCurrency(d.upah)}`)
-            .join("; ") || pendingDetailsText(item.bpjsDetailCount),
-        });
+      const ws = XLSX.utils.json_to_sheet(rows);
+      ws["!cols"] = Object.keys(rows[0]).map((key) => {
+        const maxLen = Math.max(key.length, ...rows.map((row) => String(row[key] ?? "").length));
+        return { wch: Math.min(maxLen + 2, 60) };
       });
-    });
 
-    if (rows.length === 0) return;
-
-    const ws = XLSX.utils.json_to_sheet(rows);
-    ws["!cols"] = Object.keys(rows[0]).map((key) => {
-      const maxLen = Math.max(key.length, ...rows.map((row) => String(row[key] ?? "").length));
-      return { wch: Math.min(maxLen + 2, 70) };
-    });
-
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Perbandingan RT RW");
-    const filename = `RT_RW_Comparison_${new Date().toISOString().split("T")[0]}.xlsx`;
-    XLSX.writeFile(wb, filename);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Perbandingan RT RW");
+      const filename = `RT_RW_Comparison_${new Date().toISOString().split("T")[0]}.xlsx`;
+      XLSX.writeFile(wb, filename);
+    } catch (err) {
+      console.error("Export Excel gagal:", err);
+      alert(err?.response?.data?.message || err?.message || "Gagal mengekspor Excel");
+    } finally {
+      setExporting(false);
+    }
   };
 
   if (loading) {
@@ -478,11 +542,20 @@ const RtrwComparisonPage = () => {
               </button>
               <button
                 onClick={exportToExcel}
-                disabled={filteredData.length === 0}
+                disabled={filteredData.length === 0 || exporting}
                 className="flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-2 text-xs text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-40"
               >
-                <LuDownload className="h-3.5 w-3.5" />
-                Export Excel
+                {exporting ? (
+                  <>
+                    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                    Menyiapkan...
+                  </>
+                ) : (
+                  <>
+                    <LuDownload className="h-3.5 w-3.5" />
+                    Export Excel
+                  </>
+                )}
               </button>
             </div>
 
