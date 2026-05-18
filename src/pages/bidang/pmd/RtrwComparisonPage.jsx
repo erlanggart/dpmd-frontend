@@ -93,6 +93,7 @@ const loadAllDetailsForExport = async (filteredData) => {
 
   const response = await api.get("/kelembagaan/rtrw-comparison", {
     params: { includeDetails: 1, waitForCache: 1 },
+    timeout: 300000,
   });
   if (response.data?.processing) {
     throw new Error("Cache data masih disiapkan, coba lagi sebentar lagi.");
