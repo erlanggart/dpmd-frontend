@@ -2,7 +2,6 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import {
 	LuUsers,
-	LuUser,
 	LuMail,
 	LuCalendar,
 	LuPlus,
@@ -366,20 +365,20 @@ const UserManagementPage = () => {
 		Number(currentUser?.bidang_id) === 2;
 
 	// Tab configuration
-	const tabs = [
+	const tabs = useMemo(() => [
 		{ id: "superadmin", label: "Super Admin", role: "superadmin", icon: LuShield, color: "red" },
-		{ 
-			id: "pegawai", 
-			label: "Pegawai DPMD", 
-			roles: ["kepala_dinas", "sekretaris_dinas", "kepala_bidang", "ketua_tim", "pegawai"], 
-			icon: LuBriefcase, 
-			color: "blue" 
+		{
+			id: "pegawai",
+			label: "Pegawai DPMD",
+			roles: ["kepala_dinas", "sekretaris_dinas", "kepala_bidang", "ketua_tim", "pegawai"],
+			icon: LuBriefcase,
+			color: "blue"
 		},
 		{ id: "desa", label: "Admin Desa", role: "desa", icon: LuHouse, color: "emerald" },
 		{ id: "kecamatan", label: "Admin Kecamatan", role: "kecamatan", icon: LuMapPin, color: "violet" },
 		{ id: "dinas_terkait", label: "Dinas Terkait", role: "dinas_terkait", icon: LuBuilding2, color: "amber" },
 		{ id: "bpjs", label: "BPJS", role: "bpjs", icon: LuShieldCheck, color: "emerald" },
-	];
+	], []);
 
 	// Fetch users
 	const fetchUsers = useCallback(async () => {
@@ -625,16 +624,6 @@ const UserManagementPage = () => {
 			verifikator_dinas: { label: "Verifikator Dinas", color: "bg-orange-100 text-orange-700 border-orange-200" },
 		};
 		return roleMap[role] || { label: role, color: "bg-gray-100 text-gray-700 border-gray-200" };
-	};
-
-	// Get icon for role
-	const getRoleIcon = (role) => {
-		if (role === "desa") return LuHouse;
-		if (role === "kecamatan") return LuMapPin;
-		if (["kepala_bidang", "ketua_tim", "pegawai", "sekretariat", "sarana_prasarana", "kekayaan_keuangan", "pemberdayaan_masyarakat", "pemerintahan_desa"].includes(role)) {
-			return LuBriefcase;
-		}
-		return LuUser;
 	};
 
 	// Filter users

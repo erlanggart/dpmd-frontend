@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   LuArrowRight,
@@ -87,7 +87,7 @@ const BpjsDashboardPage = () => {
 
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
-  const loadSummary = async (isRefresh = false) => {
+  const loadSummary = useCallback(async (isRefresh = false) => {
     try {
       if (isRefresh) setRefreshing(true);
       else setLoading(true);
@@ -110,11 +110,11 @@ const BpjsDashboardPage = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadSummary();
-  }, []);
+  }, [loadSummary]);
 
   const greeting = (() => {
     const h = new Date().getHours();
