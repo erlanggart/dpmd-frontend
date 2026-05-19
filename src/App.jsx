@@ -96,6 +96,7 @@ function HomeRedirect() {
       kecamatan: "/kecamatan/dashboard",
       dinas_terkait: "/dinas/dashboard",
       verifikator_dinas: "/dinas/dashboard",
+      bpjs: "/bpjs/dashboard",
     };
 
     const dashboardPath = roleDashboardMap[user.role] || "/dashboard";
@@ -162,6 +163,8 @@ const PengurusDashboardPage = lazy(() => import("./pages/bidang/pmd/PengurusDash
 const PengurusImportPage = lazy(() => import("./pages/bidang/pmd/PengurusImportPage"));
 const PosyanduComparisonPage = lazy(() => import("./pages/bidang/pmd/PosyanduComparisonPage"));
 const RtrwComparisonPage = lazy(() => import("./pages/bidang/pmd/RtrwComparisonPage"));
+const BpjsLayout = lazy(() => import("./layouts/BpjsLayout"));
+const BpjsDashboardPage = lazy(() => import("./pages/bpjs/BpjsDashboardPage"));
 const DisposisiRouter = lazy(
   () => import("./pages/bidang/sekretariat/disposisi/DisposisiRouter"),
 );
@@ -1139,6 +1142,21 @@ function App() {
                   <Route path="profil" element={<VerifikatorProfilePage />} />
                   <Route path="ganti-password" element={<DinasChangePasswordPage />} />
                   <Route path="pesan" element={<MessagingPage />} />
+                </Route>
+
+                {/* Rute BPJS - Akses terbatas hanya ke RT/RW Comparison */}
+                <Route
+                  path="/bpjs"
+                  element={
+                    <RoleProtectedRoute allowedRoles={["bpjs"]}>
+                      <BpjsLayout />
+                    </RoleProtectedRoute>
+                  }
+                >
+                  <Route index element={<Navigate to="dashboard" replace />} />
+                  <Route path="dashboard" element={<BpjsDashboardPage />} />
+                  <Route path="rtrw-comparison" element={<RtrwComparisonPage />} />
+                  <Route path="*" element={<Navigate to="dashboard" replace />} />
                 </Route>
 
                 {/* Rute Core Dashboard - DPMD Internal Only */}

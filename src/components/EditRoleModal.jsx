@@ -15,6 +15,7 @@ const ROLE_OPTIONS = [
 	{ value: "kecamatan", label: "Admin Kecamatan" },
 	{ value: "dinas_terkait", label: "Dinas Terkait" },
 	{ value: "verifikator_dinas", label: "Verifikator Dinas" },
+	{ value: "bpjs", label: "BPJS Ketenagakerjaan" },
 ];
 
 const EditRoleModal = ({ isOpen, onClose, onRoleUpdated, userData }) => {

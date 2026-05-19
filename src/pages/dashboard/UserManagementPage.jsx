@@ -30,6 +30,7 @@ import {
 	LuBadgeCheck,
 	LuCamera,
 	LuSmartphone,
+	LuShieldCheck,
 } from "react-icons/lu";
 import * as XLSX from 'xlsx';
 import api from "../../api";
@@ -58,6 +59,7 @@ const ROLE_THEME = {
 	kecamatan:        { gradient: "from-violet-500 via-purple-500 to-fuchsia-600", ring: "ring-violet-200", bg: "bg-violet-500", glow: "shadow-violet-200/60" },
 	dinas_terkait:    { gradient: "from-amber-500 via-orange-500 to-yellow-600", ring: "ring-amber-200",  bg: "bg-amber-500",  glow: "shadow-amber-200/60" },
 	verifikator_dinas:{ gradient: "from-orange-500 via-rose-500 to-pink-500", ring: "ring-orange-200", bg: "bg-orange-500", glow: "shadow-orange-200/60" },
+	bpjs:             { gradient: "from-emerald-500 via-teal-500 to-emerald-700", ring: "ring-emerald-200", bg: "bg-emerald-500", glow: "shadow-emerald-200/60" },
 };
 const DEFAULT_THEME = { gradient: "from-gray-400 to-gray-600", ring: "ring-gray-200", bg: "bg-gray-500", glow: "shadow-gray-200/60" };
 
@@ -376,6 +378,7 @@ const UserManagementPage = () => {
 		{ id: "desa", label: "Admin Desa", role: "desa", icon: LuHouse, color: "emerald" },
 		{ id: "kecamatan", label: "Admin Kecamatan", role: "kecamatan", icon: LuMapPin, color: "violet" },
 		{ id: "dinas_terkait", label: "Dinas Terkait", role: "dinas_terkait", icon: LuBuilding2, color: "amber" },
+		{ id: "bpjs", label: "BPJS", role: "bpjs", icon: LuShieldCheck, color: "emerald" },
 	];
 
 	// Fetch users

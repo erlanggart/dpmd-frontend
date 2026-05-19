@@ -154,6 +154,8 @@ const LoginPage = () => {
 				navigate("/kecamatan/dashboard");
 			} else if (newUser.role === "dinas_terkait" || newUser.role === "verifikator_dinas") {
 				navigate("/dinas/dashboard");
+			} else if (newUser.role === "bpjs") {
+				navigate("/bpjs/dashboard");
 			} else if (newUser.role === "superadmin") {
 				navigate("/superadmin/dashboard");
 			} else if (["pegawai", "ketua_tim", "kepala_bidang", "kepala_dinas", "sekretaris_dinas"].includes(newUser.role)) {

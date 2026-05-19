@@ -48,6 +48,12 @@ const ROLE_GROUPS = [
 			{ value: "verifikator_dinas", label: "Verifikator Dinas" },
 		],
 	},
+	{
+		label: "Instansi Eksternal",
+		roles: [
+			{ value: "bpjs", label: "BPJS Ketenagakerjaan" },
+		],
+	},
 ];
 
 const AddUserModal = ({ isOpen, onClose, onUserAdded }) => {
