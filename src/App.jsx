@@ -206,6 +206,10 @@ const PegawaiDashboard = lazy(() => import("./pages/pegawai/PegawaiDashboard"));
 const AbsensiPage = lazy(() => import("./pages/pegawai/AbsensiPage"));
 const MessagingPage = lazy(() => import("./pages/messaging/MessagingPage"));
 const AbsensiManagementPage = lazy(() => import("./pages/bidang/sekretariat/AbsensiManagementPage"));
+const AnggaranPage = lazy(() => import("./pages/bidang/sekretariat/anggaran/AnggaranPage"));
+const ProgramKegiatanPage = lazy(() => import("./pages/bidang/sekretariat/anggaran/ProgramKegiatanPage"));
+const ItemAnggaranPage = lazy(() => import("./pages/bidang/sekretariat/anggaran/ItemAnggaranPage"));
+const ShtPage = lazy(() => import("./pages/bidang/sekretariat/anggaran/ShtPage"));
 
 // Bidang pages
 const SekretariatPage = lazy(() => import("./pages/bidang/SekretariatPage"));
@@ -1005,6 +1009,10 @@ function App() {
                   <Route path="informasi" element={<InformasiManagement />} />
                   <Route path="absensi-management" element={<AbsensiManagementPage />} />
                   <Route path="video-meeting" element={<VideoMeetingListPage />} />
+                  <Route path="anggaran" element={<AnggaranPage />} />
+                  <Route path="anggaran/program-kegiatan" element={<ProgramKegiatanPage />} />
+                  <Route path="anggaran/item-rka" element={<ItemAnggaranPage />} />
+                  <Route path="anggaran/sht" element={<ShtPage />} />
                 </Route>
 
                 {/* Video Meeting Room - MAINTENANCE */}
@@ -1057,6 +1065,10 @@ function App() {
                   <Route path="bidang/sekretariat/informasi" element={<InformasiManagement />} />
                   <Route path="bidang/sekretariat/absensi-management" element={<AbsensiManagementPage />} />
                   <Route path="bidang/sekretariat/video-meeting" element={<VideoMeetingListPage />} />
+                  <Route path="bidang/sekretariat/anggaran" element={<AnggaranPage />} />
+                  <Route path="bidang/sekretariat/anggaran/program-kegiatan" element={<ProgramKegiatanPage />} />
+                  <Route path="bidang/sekretariat/anggaran/item-rka" element={<ItemAnggaranPage />} />
+                  <Route path="bidang/sekretariat/anggaran/sht" element={<ShtPage />} />
 
                   {/* KKD sub-routes */}
                   <Route path="bidang/kkd/add" element={<AddDashboard />} />

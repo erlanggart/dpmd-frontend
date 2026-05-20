@@ -4,6 +4,7 @@ import { Building2, Activity, TrendingUp, ArrowLeft, Clock, CheckCircle2, XCircl
 import Lottie from 'lottie-react';
 import tableTennisAnimation from '../../assets/table-tennis.json';
 import api from '../../api';
+import AnggaranBidangSection from '../../components/bidang/AnggaranBidangSection';
 import toast from 'react-hot-toast';
 
 // Lazy load BUMDes components
@@ -326,6 +327,10 @@ const SpkedPage = () => {
 										</div>
 									</button>
 								</div>
+							</div>
+
+							<div className="mt-8">
+								<AnggaranBidangSection bidangId={3} />
 							</div>
 						</div>
 					</div>

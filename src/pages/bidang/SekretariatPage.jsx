@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useBidangPath } from '../../hooks/useBidangPath';
-import { FileText, Mail, Plane, Users, Activity, TrendingUp, ArrowLeft, Clock, Zap, ChevronRight, Building, BarChart, Calendar, Bell, Image, RefreshCw, Video, ClipboardCheck } from 'lucide-react';
+import { FileText, Mail, Plane, Users, Activity, TrendingUp, ArrowLeft, Clock, Zap, ChevronRight, Building, BarChart, Calendar, Bell, Image, RefreshCw, Video, ClipboardCheck, DollarSign } from 'lucide-react';
 import api from '../../api';
 import toast from 'react-hot-toast';
 import DaftarPegawaiBidang from '../../components/bidang/DaftarPegawaiBidang';
@@ -293,6 +293,24 @@ const SekretariatPage = () => {
 											</div>
 										</button>
 									)}
+
+									{/* Anggaran Bidang - semua user bisa lihat */}
+									<button
+										onClick={() => navigate(getPath('/sekretariat/anggaran'))}
+										className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border border-gray-100 p-6 hover:border-emerald-300 transition-all duration-300 text-left overflow-hidden hover:-translate-y-1"
+									>
+										<div className="absolute inset-0 bg-gradient-to-br from-emerald-400/5 to-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+										<div className="relative flex items-center gap-5">
+											<div className="h-16 w-16 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg shadow-emerald-500/25">
+												<DollarSign className="h-8 w-8 text-white" />
+											</div>
+											<div className="flex-1">
+												<h3 className="font-bold text-gray-800 text-lg mb-1">Anggaran Bidang</h3>
+												<p className="text-sm text-gray-500">Program kegiatan & rincian RKA</p>
+											</div>
+											<ChevronRight className="h-6 w-6 text-gray-400 group-hover:text-emerald-600 group-hover:translate-x-1 transition-all" />
+										</div>
+									</button>
 
 									{/* Aktivitas Button */}
 									<button
