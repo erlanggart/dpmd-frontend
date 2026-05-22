@@ -41,7 +41,22 @@ const kategoriOptions = [
   { value: 'musdesus', label: 'Musdesus' }
 ];
 
-const getFileUrl = (filename) => filename ? `${STORAGE_BASE}/storage/uploads/berita/${filename}` : null;
+const getFileUrl = (filePath) => {
+  if (!filePath) return null;
+  if (/^https?:\/\//i.test(filePath)) return filePath;
+
+  const normalizedPath = String(filePath)
+    .replace(/^\/+/, '')
+    .replace(/^storage\/uploads\/berita\//, '')
+    .replace(/^uploads\/berita\//, '');
+
+  const encodedPath = normalizedPath
+    .split('/')
+    .map((segment) => encodeURIComponent(segment))
+    .join('/');
+
+  return `${STORAGE_BASE}/storage/uploads/berita/${encodedPath}`;
+};
 
 const UploadCard = ({ title, description, accept, file, currentUrl, currentLabel, previewUrl, icon: Icon, onDrop, onClear }) => {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({

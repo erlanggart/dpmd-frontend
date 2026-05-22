@@ -8,6 +8,8 @@ const API_CONFIG = {
   BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:3001/api'
 };
 
+const DEFAULT_PDF_CONTENT = 'Dokumen berita tersedia dalam lampiran PDF.';
+
 const BeritaDetailPage = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
@@ -17,6 +19,23 @@ const BeritaDetailPage = () => {
 
   const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:3001/api';
   const STORAGE_BASE = API_BASE.replace(/\/api$/, '');
+
+  const getBeritaFileUrl = (filePath) => {
+    if (!filePath) return null;
+    if (/^https?:\/\//i.test(filePath)) return filePath;
+
+    const normalizedPath = String(filePath)
+      .replace(/^\/+/, '')
+      .replace(/^storage\/uploads\/berita\//, '')
+      .replace(/^uploads\/berita\//, '');
+
+    const encodedPath = normalizedPath
+      .split('/')
+      .map((segment) => encodeURIComponent(segment))
+      .join('/');
+
+    return `${STORAGE_BASE}/storage/uploads/berita/${encodedPath}`;
+  };
 
   useEffect(() => {
     fetchBeritaDetail();
@@ -71,7 +90,11 @@ const BeritaDetailPage = () => {
     return labels[kategori] || 'Umum';
   };
 
-  const pdfUrl = berita?.dokumen_pdf ? `${STORAGE_BASE}/storage/uploads/berita/${berita.dokumen_pdf}` : null;
+  const pdfUrl = getBeritaFileUrl(berita?.dokumen_pdf);
+  const imageUrl = getBeritaFileUrl(berita?.gambar);
+  const shouldShowArticleBody = Boolean(
+    berita?.konten && !(pdfUrl && berita.konten.trim() === DEFAULT_PDF_CONTENT)
+  );
 
   if (loading) {
     return (
@@ -123,7 +146,7 @@ const BeritaDetailPage = () => {
         {/* Featured Image */}
         <div className="mb-8 rounded-3xl overflow-hidden shadow-2xl">
           <img
-            src={berita.gambar ? `${STORAGE_BASE}/storage/uploads/berita/${berita.gambar}` : '/placeholder-news.jpg'}
+            src={imageUrl || '/placeholder-news.jpg'}
             alt={berita.judul}
             className="w-full h-[500px] object-cover"
             onError={(e) => {
@@ -176,12 +199,14 @@ const BeritaDetailPage = () => {
         </div>
 
         {/* Article Body */}
-        <div className="bg-white rounded-3xl shadow-xl p-8">
-          <div 
-            className="prose prose-lg max-w-none prose-headings:text-gray-900 prose-p:text-gray-700 prose-a:text-blue-600 prose-strong:text-gray-900"
-            dangerouslySetInnerHTML={{ __html: berita.konten }}
-          />
-        </div>
+        {shouldShowArticleBody && (
+          <div className="bg-white rounded-3xl shadow-xl p-8">
+            <div 
+              className="prose prose-lg max-w-none prose-headings:text-gray-900 prose-p:text-gray-700 prose-a:text-blue-600 prose-strong:text-gray-900"
+              dangerouslySetInnerHTML={{ __html: berita.konten }}
+            />
+          </div>
+        )}
 
         {pdfUrl && (
           <section className="mt-8 overflow-hidden rounded-3xl bg-white shadow-xl">
