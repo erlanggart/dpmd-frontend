@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { FiArrowLeft, FiCalendar, FiUser, FiEye, FiTag } from 'react-icons/fi';
+import { FiArrowLeft, FiCalendar, FiDownload, FiExternalLink, FiFileText, FiUser, FiEye, FiTag } from 'react-icons/fi';
 
 const API_CONFIG = {
   BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:3001/api'
@@ -70,6 +70,8 @@ const BeritaDetailPage = () => {
     };
     return labels[kategori] || 'Umum';
   };
+
+  const pdfUrl = berita?.dokumen_pdf ? `${STORAGE_BASE}/storage/uploads/berita/${berita.dokumen_pdf}` : null;
 
   if (loading) {
     return (
@@ -180,6 +182,46 @@ const BeritaDetailPage = () => {
             dangerouslySetInnerHTML={{ __html: berita.konten }}
           />
         </div>
+
+        {pdfUrl && (
+          <section className="mt-8 overflow-hidden rounded-3xl bg-white shadow-xl">
+            <div className="flex flex-col gap-4 border-b border-gray-100 p-6 md:flex-row md:items-center md:justify-between">
+              <div className="flex items-center gap-4">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-red-50 text-red-600">
+                  <FiFileText className="h-7 w-7" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Dokumen PDF Berita</h2>
+                  <p className="text-sm text-gray-500">Baca lampiran resmi langsung dari halaman ini.</p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <a
+                  href={pdfUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-blue-700"
+                >
+                  <FiExternalLink className="h-4 w-4" />
+                  Buka PDF
+                </a>
+                <a
+                  href={pdfUrl}
+                  download
+                  className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-3 text-sm font-bold text-gray-700 transition hover:bg-gray-50"
+                >
+                  <FiDownload className="h-4 w-4" />
+                  Download
+                </a>
+              </div>
+            </div>
+            <iframe
+              src={pdfUrl}
+              title={`PDF ${berita.judul}`}
+              className="h-[720px] w-full bg-gray-100"
+            />
+          </section>
+        )}
 
         {/* Share Section */}
         <div className="mt-8 bg-white rounded-3xl shadow-xl p-6 text-center">

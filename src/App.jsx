@@ -1007,6 +1007,7 @@ function App() {
                   />
                   <Route path="notifikasi" element={<KelolaNotifikasiPage />} />
                   <Route path="informasi" element={<InformasiManagement />} />
+                  <Route path="berita" element={<BeritaManagement />} />
                   <Route path="absensi-management" element={<AbsensiManagementPage />} />
                   <Route path="video-meeting" element={<VideoMeetingListPage />} />
                   <Route path="anggaran" element={<AnggaranPage />} />
@@ -1063,6 +1064,7 @@ function App() {
                   <Route path="bidang/sekretariat/perjadin/detail/:id" element={<PerjadinDetail />} />
                   <Route path="bidang/sekretariat/notifikasi" element={<KelolaNotifikasiPage />} />
                   <Route path="bidang/sekretariat/informasi" element={<InformasiManagement />} />
+                  <Route path="bidang/sekretariat/berita" element={<BeritaManagement />} />
                   <Route path="bidang/sekretariat/absensi-management" element={<AbsensiManagementPage />} />
                   <Route path="bidang/sekretariat/video-meeting" element={<VideoMeetingListPage />} />
                   <Route path="bidang/sekretariat/anggaran" element={<AnggaranPage />} />

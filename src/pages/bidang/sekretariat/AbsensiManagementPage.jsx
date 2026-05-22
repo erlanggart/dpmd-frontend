@@ -90,6 +90,56 @@ const colorMap = {
 };
 
 // ─── Main Component ───────────────────────────────────────────
+const getDateKey = (value) => {
+  if (!value) return "";
+  if (typeof value === "string") return value.slice(0, 10);
+  return new Date(value).toISOString().slice(0, 10);
+};
+
+const getDailyStatusTone = (status) => {
+  if (!status) {
+    return {
+      box: "bg-white border-slate-200 text-slate-300",
+      text: "text-slate-300",
+      badge: "bg-slate-100 text-slate-400",
+    };
+  }
+  if (PRESENT_STATUSES.includes(status)) {
+    return {
+      box: "bg-emerald-50 border-emerald-200 text-emerald-800 shadow-emerald-100/60",
+      text: "text-emerald-700",
+      badge: "bg-emerald-100 text-emerald-700",
+    };
+  }
+  if (status === "alpha") {
+    return {
+      box: "bg-slate-50 border-slate-200 text-slate-700",
+      text: "text-slate-700",
+      badge: "bg-slate-200 text-slate-700",
+    };
+  }
+  return {
+    box: "bg-amber-50 border-amber-200 text-amber-800 shadow-amber-100/60",
+    text: "text-amber-700",
+    badge: "bg-amber-100 text-amber-700",
+  };
+};
+
+const formatDailyRecord = (record, { multiline = false } = {}) => {
+  if (!record) return "-";
+  const label = STATUS_MAP[record.status]?.label || record.status || "-";
+  const masuk = formatTime(record.jam_masuk);
+  const keluar = formatTime(record.jam_keluar);
+  const hasTime = record.jam_masuk || record.jam_keluar;
+  const timeText = hasTime ? `${masuk} - ${keluar}` : "";
+  const telatText = record.telat_masuk_menit > 0 ? `Telat ${formatTelat(record.telat_masuk_menit)}` : "";
+
+  if (multiline) {
+    return [label, timeText, telatText].filter(Boolean);
+  }
+  return [label, timeText, telatText ? `(${telatText})` : ""].filter(Boolean).join(" ");
+};
+
 const AbsensiManagementPage = () => {
   const { user } = useAuth();
   const canManageAbsensiRecords = user?.role === "superadmin";
@@ -515,6 +565,19 @@ const AbsensiManagementPage = () => {
     keterangan: [r.tujuan_dinas, r.keterangan].filter(Boolean).join(" - ") || "-",
   }));
 
+  const filteredRekapPegawai = useMemo(() => {
+    const list = rekapPegawaiData?.pegawai || [];
+    if (!rekapSearch) return list;
+    const keyword = rekapSearch.toLowerCase();
+    return list.filter((p) => {
+      const name = p.user?.pegawai?.nama_pegawai || p.user?.name || "";
+      const nip = p.user?.pegawai?.nip || "";
+      return `${name} ${nip}`.toLowerCase().includes(keyword);
+    });
+  }, [rekapPegawaiData, rekapSearch]);
+
+  const rekapCalendarDays = rekapPegawaiData?.calendar_days || [];
+
   const handleExportExcel = async () => {
     try {
       const XLSX = await import("xlsx");
@@ -545,47 +608,65 @@ const AbsensiManagementPage = () => {
     if (!rekapPegawaiData?.pegawai?.length) return;
     try {
       const XLSX = await import("xlsx");
-      const pegawaiList = rekapPegawaiData.pegawai
-        .filter(p => {
-          if (!rekapSearch) return true;
-          const name = p.user?.pegawai?.nama_pegawai || p.user?.name || "";
-          return name.toLowerCase().includes(rekapSearch.toLowerCase());
-        });
+      const dayHeaders = rekapCalendarDays.map((day) => day.label || `${String(day.day).padStart(2, "0")} ${day.day_label}`);
+      const headers = [
+        "No",
+        "Nama Pegawai",
+        "NIP",
+        "Jabatan",
+        ...dayHeaders,
+        "Total Masuk",
+        "Tidak Masuk",
+        "Telat",
+        "Total",
+      ];
 
-      const data = pegawaiList.map((p, i) => ({
-        "No": i + 1,
-        "Nama Pegawai": p.user?.pegawai?.nama_pegawai || p.user?.name || "-",
-        "NIP": p.user?.pegawai?.nip || "-",
-        "Jabatan": p.user?.pegawai?.jabatan || p.user?.pegawai?.status_kepegawaian?.replace(/_/g, " ") || "-",
-        "Total Masuk": PRESENT_STATUSES.reduce((sum, k) => sum + (p.summary?.[k] || 0), 0),
-        "Hadir": p.summary?.hadir || 0,
-        "WFH": p.summary?.wfh || 0,
-        "WFA": p.summary?.wfa || 0,
-        "Dinas Luar": p.summary?.dinas_luar || 0,
-        "Izin": p.summary?.izin || 0,
-        "Sakit": p.summary?.sakit || 0,
-        "Alpha": p.summary?.alpha || 0,
-        "Cuti": p.summary?.cuti || 0,
-        "Telat": p.summary?.telat || 0,
-        "Total": p.total_records || 0,
-      }));
+      const data = [
+        headers,
+        ...filteredRekapPegawai.map((p, i) => {
+          const daily = p.daily || {};
+          const masuk = PRESENT_STATUSES.reduce((sum, k) => sum + (p.summary?.[k] || 0), 0);
+          const tidakMasuk = ABSENT_STATUSES.reduce((sum, k) => sum + (p.summary?.[k] || 0), 0);
+          return [
+            i + 1,
+            p.user?.pegawai?.nama_pegawai || p.user?.name || "-",
+            p.user?.pegawai?.nip || "-",
+            p.user?.pegawai?.jabatan || p.user?.pegawai?.status_kepegawaian?.replace(/_/g, " ") || "-",
+            ...rekapCalendarDays.map((day) => formatDailyRecord(daily[getDateKey(day.date)])),
+            masuk,
+            tidakMasuk,
+            p.summary?.telat || 0,
+            p.total_records || 0,
+          ];
+        }),
+      ];
 
-      // Summary row
-      const gs = rekapPegawaiData.global_summary || {};
-      data.push({
-        "No": "", "Nama Pegawai": "TOTAL", "NIP": "", "Jabatan": "",
-        "Total Masuk": PRESENT_STATUSES.reduce((sum, k) => sum + (gs[k] || 0), 0),
-        "Hadir": gs.hadir || 0, "WFH": gs.wfh || 0, "WFA": gs.wfa || 0,
-        "Dinas Luar": gs.dinas_luar || 0, "Izin": gs.izin || 0, "Sakit": gs.sakit || 0,
-        "Alpha": gs.alpha || 0, "Cuti": gs.cuti || 0, "Telat": gs.telat || 0, "Total": gs.total || 0,
-      });
+      if (filteredRekapPegawai.length) {
+        const gs = rekapPegawaiData.global_summary || {};
+        data.push([
+          "",
+          "TOTAL",
+          "",
+          "",
+          ...rekapCalendarDays.map(() => ""),
+          PRESENT_STATUSES.reduce((sum, k) => sum + (gs[k] || 0), 0),
+          ABSENT_STATUSES.reduce((sum, k) => sum + (gs[k] || 0), 0),
+          gs.telat || 0,
+          gs.total || 0,
+        ]);
+      }
 
-      const ws = XLSX.utils.json_to_sheet(data);
+      const ws = XLSX.utils.aoa_to_sheet(data);
       ws["!cols"] = [
-        { wch: 4 }, { wch: 30 }, { wch: 20 }, { wch: 24 },
-        { wch: 11 }, { wch: 7 }, { wch: 6 }, { wch: 6 },
-        { wch: 11 }, { wch: 6 }, { wch: 6 }, { wch: 7 },
-        { wch: 6 }, { wch: 6 }, { wch: 7 },
+        { wch: 4 },
+        { wch: 28 },
+        { wch: 20 },
+        { wch: 24 },
+        ...rekapCalendarDays.map(() => ({ wch: 14 })),
+        { wch: 12 },
+        { wch: 12 },
+        { wch: 8 },
+        { wch: 8 },
       ];
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Rekap Pegawai");
@@ -1079,92 +1160,112 @@ const AbsensiManagementPage = () => {
                   </div>
                 </div>
 
-                {/* Per User Recap Table */}
+                {/* Monthly Calendar Recap */}
                 <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="bg-gradient-to-r from-slate-50 to-slate-100/50 border-b border-slate-200">
-                          <th className="text-left px-4 py-3.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Pegawai</th>
-                          <th className="text-center px-3 py-3.5 font-bold text-[11px] text-emerald-600 uppercase tracking-widest w-16">Masuk</th>
-                          <th className="text-left px-4 py-3.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Rekap Presensi</th>
-                          <th className="text-center px-3 py-3.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest w-16">Total</th>
-                          <th className="text-center px-3 py-3.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest w-20">Aksi</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {(rekapPegawaiData.pegawai || [])
-                          .filter(p => {
-                            if (!rekapSearch) return true;
-                            const name = p.user?.pegawai?.nama_pegawai || p.user?.name || "";
-                            return name.toLowerCase().includes(rekapSearch.toLowerCase());
-                          })
-                          .map((p) => (
-                          <tr key={p.user.id} className="hover:bg-orange-50/30 transition-colors group">
-                            <td className="px-4 py-3.5">
-                              <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 bg-gradient-to-br from-orange-400 to-amber-500 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0">
-                                  {(p.user?.pegawai?.nama_pegawai || p.user?.name || "?")[0].toUpperCase()}
+                  <div className="px-5 py-4 border-b border-slate-100 bg-white">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                      <div>
+                        <h3 className="font-black text-slate-800 text-sm">Kalender Presensi Bulanan</h3>
+                        <p className="text-[11px] text-slate-400 mt-0.5">
+                          Setiap kolom hari kerja menampilkan jam masuk dan jam keluar per pegawai
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold">
+                        <span className="px-2.5 py-1 rounded-md bg-emerald-100 text-emerald-700">Hadir/WFH/WFA/DL</span>
+                        <span className="px-2.5 py-1 rounded-md bg-amber-100 text-amber-700">Izin/Sakit/Cuti/Alpha</span>
+                        <span className="px-2.5 py-1 rounded-md bg-slate-100 text-slate-500">Belum ada data</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {rekapCalendarDays.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full min-w-max text-sm border-separate border-spacing-0">
+                        <thead>
+                          <tr className="bg-slate-50 border-b border-slate-200">
+                            <th className="sticky left-0 z-20 bg-slate-50 text-left px-4 py-3.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest min-w-[230px] border-r border-slate-200">
+                              Pegawai
+                            </th>
+                            {rekapCalendarDays.map((day) => (
+                              <th key={day.date} className="px-2 py-3 text-center min-w-[76px] border-r border-slate-100">
+                                <div className="text-[10px] font-black uppercase tracking-wider text-slate-400">{day.day_label}</div>
+                                <div className="mt-1 mx-auto h-6 min-w-6 px-2 rounded-lg bg-orange-100 text-orange-700 inline-flex items-center justify-center text-[11px] font-black tabular-nums">
+                                  {String(day.day).padStart(2, "0")}
                                 </div>
-                                <div className="min-w-0">
-                                  <p className="font-semibold text-slate-800 text-sm truncate">{p.user?.pegawai?.nama_pegawai || p.user?.name || "-"}</p>
-                                  <p className="text-[11px] text-slate-400 truncate">{p.user?.pegawai?.jabatan || p.user?.pegawai?.status_kepegawaian?.replace(/_/g, " ") || "-"}</p>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="text-center px-3 py-3.5">
-                              {(() => {
-                                const masuk = PRESENT_STATUSES.reduce((sum, k) => sum + (p.summary?.[k] || 0), 0);
-                                return (
-                                  <span className={`inline-flex items-center justify-center min-w-[32px] h-8 rounded-lg text-xs font-bold tabular-nums ${
-                                    masuk > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'
-                                  }`}>
-                                    {masuk}
-                                  </span>
-                                );
-                              })()}
-                            </td>
-                            <td className="px-4 py-3.5">
-                              <div className="flex flex-wrap gap-1.5">
-                                {Object.entries(STATUS_MAP).map(([key, { label, icon, color }]) => {
-                                  const count = p.summary?.[key] || 0;
-                                  if (count === 0) return null;
-                                  const c = colorMap[color];
+                              </th>
+                            ))}
+                            <th className="px-3 py-3.5 text-center min-w-[76px] font-bold text-[11px] text-emerald-600 uppercase tracking-widest">Masuk</th>
+                            <th className="px-3 py-3.5 text-center min-w-[86px] font-bold text-[11px] text-amber-600 uppercase tracking-widest">Tidak Masuk</th>
+                            <th className="px-3 py-3.5 text-center min-w-[72px] font-bold text-[11px] text-slate-500 uppercase tracking-widest">Aksi</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredRekapPegawai.map((p) => {
+                            const masuk = PRESENT_STATUSES.reduce((sum, k) => sum + (p.summary?.[k] || 0), 0);
+                            const tidakMasuk = ABSENT_STATUSES.reduce((sum, k) => sum + (p.summary?.[k] || 0), 0);
+                            return (
+                              <tr key={p.user.id} className="group">
+                                <td className="sticky left-0 z-10 bg-white group-hover:bg-orange-50/40 px-4 py-3.5 min-w-[230px] border-r border-b border-slate-100">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-9 h-9 bg-gradient-to-br from-orange-400 to-amber-500 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0">
+                                      {(p.user?.pegawai?.nama_pegawai || p.user?.name || "?")[0].toUpperCase()}
+                                    </div>
+                                    <div className="min-w-0">
+                                      <p className="font-bold text-slate-800 text-sm truncate">{p.user?.pegawai?.nama_pegawai || p.user?.name || "-"}</p>
+                                      <p className="text-[11px] text-slate-400 truncate">{p.user?.pegawai?.jabatan || p.user?.pegawai?.status_kepegawaian?.replace(/_/g, " ") || "-"}</p>
+                                    </div>
+                                  </div>
+                                </td>
+                                {rekapCalendarDays.map((day) => {
+                                  const record = p.daily?.[getDateKey(day.date)];
+                                  const tone = getDailyStatusTone(record?.status);
+                                  const lines = formatDailyRecord(record, { multiline: true });
                                   return (
-                                    <span key={key} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold ${c.badge}`} title={label}>
-                                      <span className="text-xs">{icon}</span> {count}
-                                    </span>
+                                    <td key={`${p.user.id}-${day.date}`} className="px-1.5 py-2 border-b border-slate-100">
+                                      <div className={`h-[58px] w-[68px] mx-auto rounded-lg border ${tone.box} flex flex-col items-center justify-center text-center leading-tight shadow-sm`}>
+                                        {record ? (
+                                          <>
+                                            <span className={`text-[9px] font-black uppercase ${tone.text}`}>{lines[0]}</span>
+                                            {lines[1] && <span className="mt-0.5 text-[10px] font-mono font-bold text-slate-700">{lines[1]}</span>}
+                                            {lines[2] && <span className={`mt-1 px-1.5 py-0.5 rounded text-[8px] font-black ${tone.badge}`}>{lines[2]}</span>}
+                                          </>
+                                        ) : (
+                                          <span className="text-sm font-bold text-slate-300">-</span>
+                                        )}
+                                      </div>
+                                    </td>
                                   );
                                 })}
-                                {(p.summary?.telat || 0) > 0 && (
-                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-amber-100 text-amber-700" title="Telat">
-                                    <FiClock className="h-3 w-3" /> {p.summary.telat}x telat
-                                  </span>
-                                )}
-                                {p.total_records === 0 && <span className="text-xs text-slate-300 italic">Belum ada data</span>}
-                              </div>
-                            </td>
-                            <td className="text-center px-3 py-3.5">
-                              <span className="inline-flex items-center justify-center min-w-[32px] h-8 bg-slate-100 text-slate-700 rounded-lg text-xs font-bold tabular-nums">
-                                {p.total_records}
-                              </span>
-                            </td>
-                            <td className="text-center px-3 py-3.5">
-                              <button onClick={() => openUserHistory(p.user)}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-orange-600 bg-orange-50 hover:bg-orange-100 rounded-lg text-[11px] font-bold border border-orange-200 transition-all">
-                                <FiEye className="h-3.5 w-3.5" /> Detail
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  {rekapPegawaiData.pegawai?.length > 0 && (
-                    <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/50">
-                      <p className="text-xs text-slate-500">Total: <strong className="text-slate-700">{rekapPegawaiData.pegawai.length}</strong> pegawai</p>
+                                <td className="px-3 py-3.5 text-center border-b border-slate-100">
+                                  <span className="inline-flex items-center justify-center min-w-[34px] h-8 rounded-lg bg-emerald-100 text-emerald-700 text-xs font-black tabular-nums">{masuk}</span>
+                                </td>
+                                <td className="px-3 py-3.5 text-center border-b border-slate-100">
+                                  <span className="inline-flex items-center justify-center min-w-[34px] h-8 rounded-lg bg-amber-100 text-amber-700 text-xs font-black tabular-nums">{tidakMasuk}</span>
+                                </td>
+                                <td className="px-3 py-3.5 text-center border-b border-slate-100">
+                                  <button onClick={() => openUserHistory(p.user)}
+                                    className="inline-flex items-center justify-center w-8 h-8 text-orange-600 bg-orange-50 hover:bg-orange-100 rounded-lg border border-orange-200 transition-all"
+                                    title="Detail pegawai">
+                                    <FiEye className="h-3.5 w-3.5" />
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="p-8 text-center">
+                      <p className="text-sm font-semibold text-slate-600">Kalender harian tersedia untuk periode bulanan.</p>
+                      <p className="text-xs text-slate-400 mt-1">Pilih tab Bulanan untuk melihat format kalender selama 1 bulan.</p>
                     </div>
                   )}
+
+                  <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                    <p className="text-xs text-slate-500">Total: <strong className="text-slate-700">{filteredRekapPegawai.length}</strong> pegawai</p>
+                    <p className="text-xs text-slate-400">{rekapCalendarDays.length} hari kerja</p>
+                  </div>
                 </div>
               </>
             ) : null}
