@@ -47,7 +47,6 @@ const SpkedPage = () => {
 	const loggedRef = useRef({ userInfo: false, dashboard: false });
 	
 	// Get user info for debugging (log only once)
-	const user = JSON.parse(localStorage.getItem('user') || '{}');
 	if (!loggedRef.current.userInfo) {
 		console.log('🔍 [SpkedPage] User Info:', {
 			id: user.id,
