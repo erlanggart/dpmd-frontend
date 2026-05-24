@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useBidangPath } from '../../hooks/useBidangPath';
+import { useAuth } from '../../context/AuthContext';
 import {
   Landmark, Activity, Clock, DollarSign,
   FileCheck, TrendingUp, ChevronRight, ArrowUpRight, RotateCcw,
@@ -245,6 +246,8 @@ const ActivityTimeline = ({ logs, loading, onRefresh }) => {
 const KKDPage = () => {
   const navigate = useNavigate();
   const { getPath } = useBidangPath();
+  const { user } = useAuth();
+  const isBendahara = user?.role === 'bendahara' || user?.role === 'superadmin';
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
   const [activityLogs, setActivityLogs] = useState([]);
@@ -426,11 +429,13 @@ const KKDPage = () => {
               </div>
             </section>
 
-            {/* Anggaran */}
-            <section>
-              <SectionHeader kicker="Anggaran 2026" title="Program Kegiatan & Pagu" />
-              <AnggaranBidangSection bidangId={4} />
-            </section>
+            {/* Anggaran — hanya tampil untuk Bendahara */}
+            {isBendahara && (
+              <section>
+                <SectionHeader kicker="Anggaran 2026" title="Program Kegiatan & Pagu" />
+                <AnggaranBidangSection bidangId={4} />
+              </section>
+            )}
 
           </div>
 

@@ -10,6 +10,7 @@ const ROLE_OPTIONS = [
 	{ value: "sekretaris_dinas", label: "Sekretaris Dinas" },
 	{ value: "kepala_bidang", label: "Kepala Bidang" },
 	{ value: "ketua_tim", label: "Ketua Tim" },
+	{ value: "bendahara", label: "Bendahara" },
 	{ value: "pegawai", label: "Pegawai" },
 	{ value: "desa", label: "Admin Desa" },
 	{ value: "kecamatan", label: "Admin Kecamatan" },

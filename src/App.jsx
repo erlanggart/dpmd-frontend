@@ -92,6 +92,7 @@ function HomeRedirect() {
       sekretaris_dinas: "/dpmd/dashboard",
       kepala_bidang: "/dpmd/dashboard",
       ketua_tim: "/dpmd/dashboard",
+      bendahara: "/dpmd/dashboard",
       pegawai: "/dpmd/dashboard",
       desa: "/desa/dashboard",
       kecamatan: "/kecamatan/dashboard",
@@ -211,6 +212,7 @@ const AnggaranPage = lazy(() => import("./pages/bidang/sekretariat/anggaran/Angg
 const ProgramKegiatanPage = lazy(() => import("./pages/bidang/sekretariat/anggaran/ProgramKegiatanPage"));
 const ItemAnggaranPage = lazy(() => import("./pages/bidang/sekretariat/anggaran/ItemAnggaranPage"));
 const ShtPage = lazy(() => import("./pages/bidang/sekretariat/anggaran/ShtPage"));
+const DetailSubKegiatanPage = lazy(() => import("./pages/bidang/sekretariat/anggaran/DetailSubKegiatanPage"));
 
 // Bidang pages
 const SekretariatPage = lazy(() => import("./pages/bidang/SekretariatPage"));
@@ -823,6 +825,7 @@ function App() {
                         "kepala_bidang",
                         "kepala_dinas",
                         "sekretaris_dinas",
+                        "bendahara",
                         "superadmin"
                       ]}
                     >
@@ -861,6 +864,7 @@ function App() {
                         "ketua_tim",
                         "kepala_dinas",
                         "sekretaris_dinas",
+                        "bendahara",
                         "superadmin",
                       ]}
                     >
@@ -899,6 +903,7 @@ function App() {
                         "kepala_bidang",
                         "ketua_tim",
                         "kepala_dinas",
+                        "bendahara",
                         "superadmin",
                       ]}
                     >
@@ -997,6 +1002,7 @@ function App() {
                         "kepala_dinas",
                         "superadmin",
                         "sekretaris_dinas",
+                        "bendahara",
                       ]}
                     >
                       <PegawaiLayout />
@@ -1020,10 +1026,11 @@ function App() {
                   <Route path="berita" element={<BeritaManagement />} />
                   <Route path="absensi-management" element={<AbsensiManagementPage />} />
                   <Route path="video-meeting" element={<VideoMeetingListPage />} />
-                  <Route path="anggaran" element={<AnggaranPage />} />
-                  <Route path="anggaran/program-kegiatan" element={<ProgramKegiatanPage />} />
-                  <Route path="anggaran/item-rka" element={<ItemAnggaranPage />} />
-                  <Route path="anggaran/sht" element={<ShtPage />} />
+                  <Route path="anggaran" element={<RoleProtectedRoute allowedRoles={["bendahara", "superadmin"]}><AnggaranPage /></RoleProtectedRoute>} />
+                  <Route path="anggaran/program-kegiatan" element={<RoleProtectedRoute allowedRoles={["bendahara", "superadmin"]}><ProgramKegiatanPage /></RoleProtectedRoute>} />
+                  <Route path="anggaran/item-rka" element={<RoleProtectedRoute allowedRoles={["bendahara", "superadmin"]}><ItemAnggaranPage /></RoleProtectedRoute>} />
+                  <Route path="anggaran/sht" element={<RoleProtectedRoute allowedRoles={["bendahara", "superadmin"]}><ShtPage /></RoleProtectedRoute>} />
+                  <Route path="anggaran/detail-sub-kegiatan" element={<RoleProtectedRoute allowedRoles={["bendahara", "superadmin"]}><DetailSubKegiatanPage /></RoleProtectedRoute>} />
                 </Route>
 
                 {/* Video Meeting Room - MAINTENANCE */}
@@ -1077,10 +1084,11 @@ function App() {
                   <Route path="bidang/sekretariat/berita" element={<BeritaManagement />} />
                   <Route path="bidang/sekretariat/absensi-management" element={<AbsensiManagementPage />} />
                   <Route path="bidang/sekretariat/video-meeting" element={<VideoMeetingListPage />} />
-                  <Route path="bidang/sekretariat/anggaran" element={<AnggaranPage />} />
-                  <Route path="bidang/sekretariat/anggaran/program-kegiatan" element={<ProgramKegiatanPage />} />
-                  <Route path="bidang/sekretariat/anggaran/item-rka" element={<ItemAnggaranPage />} />
-                  <Route path="bidang/sekretariat/anggaran/sht" element={<ShtPage />} />
+                  <Route path="bidang/sekretariat/anggaran" element={<RoleProtectedRoute allowedRoles={["bendahara", "superadmin"]}><AnggaranPage /></RoleProtectedRoute>} />
+                  <Route path="bidang/sekretariat/anggaran/program-kegiatan" element={<RoleProtectedRoute allowedRoles={["bendahara", "superadmin"]}><ProgramKegiatanPage /></RoleProtectedRoute>} />
+                  <Route path="bidang/sekretariat/anggaran/item-rka" element={<RoleProtectedRoute allowedRoles={["bendahara", "superadmin"]}><ItemAnggaranPage /></RoleProtectedRoute>} />
+                  <Route path="bidang/sekretariat/anggaran/sht" element={<RoleProtectedRoute allowedRoles={["bendahara", "superadmin"]}><ShtPage /></RoleProtectedRoute>} />
+                  <Route path="bidang/sekretariat/anggaran/detail-sub-kegiatan" element={<RoleProtectedRoute allowedRoles={["bendahara", "superadmin"]}><DetailSubKegiatanPage /></RoleProtectedRoute>} />
 
                   {/* KKD sub-routes */}
                   <Route path="bidang/kkd/add" element={<AddDashboard />} />

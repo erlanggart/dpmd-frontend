@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useBidangPath } from '../../hooks/useBidangPath';
-import { DollarSign, FileText, ChevronDown, ChevronUp, Calendar, TrendingUp } from 'lucide-react';
+import { DollarSign, BarChart2, ChevronDown, ChevronUp, Calendar, TrendingUp } from 'lucide-react';
 import api from '../../api';
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -79,13 +79,13 @@ const SubRow = ({ master, tahun, onNavigateItem }) => {
             </>
           )}
 
-          {/* Tombol Item RKA */}
+          {/* Tombol Detail Sub Kegiatan */}
           <button
-            onClick={() => onNavigateItem(pagu.id, master.nama_sub_kegiatan)}
+            onClick={() => onNavigateItem(master.id, master.nama_sub_kegiatan)}
             className="ml-auto flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-semibold hover:bg-emerald-100 transition-colors shrink-0"
           >
-            <FileText className="h-3.5 w-3.5" />
-            <span>Rencana Kerja dan Anggaran</span>
+            <BarChart2 className="h-3.5 w-3.5" />
+            <span>Detail Program Sub Kegiatan</span>
             {pagu.item_count > 0 && (
               <span className="bg-emerald-200 text-emerald-800 rounded-full px-1.5 py-0 text-[10px] font-bold">
                 {pagu.item_count}
@@ -232,9 +232,9 @@ const AnggaranBidangSection = ({ bidangId }) => {
     return s + (p?.pagu || 0);
   }, 0);
 
-  const handleNavigateItem = (paguId, label) => {
-    const params = new URLSearchParams({ pagu_id: paguId, label });
-    navigate(`${getPath('/sekretariat/anggaran/item-rka')}?${params}`);
+  const handleNavigateItem = (masterId, label) => {
+    const params = new URLSearchParams({ master_id: masterId, label });
+    navigate(`${getPath('/sekretariat/anggaran/detail-sub-kegiatan')}?${params}`);
   };
 
   return (

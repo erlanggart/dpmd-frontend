@@ -59,6 +59,7 @@ const ROLE_THEME = {
 	dinas_terkait:    { gradient: "from-amber-500 via-orange-500 to-yellow-600", ring: "ring-amber-200",  bg: "bg-amber-500",  glow: "shadow-amber-200/60" },
 	verifikator_dinas:{ gradient: "from-orange-500 via-rose-500 to-pink-500", ring: "ring-orange-200", bg: "bg-orange-500", glow: "shadow-orange-200/60" },
 	bpjs:             { gradient: "from-emerald-500 via-teal-500 to-emerald-700", ring: "ring-emerald-200", bg: "bg-emerald-500", glow: "shadow-emerald-200/60" },
+	bendahara:        { gradient: "from-green-500 via-emerald-500 to-teal-600", ring: "ring-green-200", bg: "bg-green-500", glow: "shadow-green-200/60" },
 };
 const DEFAULT_THEME = { gradient: "from-gray-400 to-gray-600", ring: "ring-gray-200", bg: "bg-gray-500", glow: "shadow-gray-200/60" };
 
@@ -370,7 +371,7 @@ const UserManagementPage = () => {
 		{
 			id: "pegawai",
 			label: "Pegawai DPMD",
-			roles: ["kepala_dinas", "sekretaris_dinas", "kepala_bidang", "ketua_tim", "pegawai"],
+			roles: ["kepala_dinas", "sekretaris_dinas", "kepala_bidang", "ketua_tim", "bendahara", "pegawai"],
 			icon: LuBriefcase,
 			color: "blue"
 		},
@@ -617,6 +618,7 @@ const UserManagementPage = () => {
 			sekretaris_dinas: { label: "Sekretaris Dinas", color: "bg-blue-100 text-blue-700 border-blue-200" },
 			kepala_bidang: { label: "Kepala Bidang", color: "bg-teal-100 text-teal-700 border-teal-200" },
 			ketua_tim: { label: "Ketua Tim", color: "bg-cyan-100 text-cyan-700 border-cyan-200" },
+			bendahara: { label: "Bendahara", color: "bg-green-100 text-green-700 border-green-200" },
 			pegawai: { label: "Pegawai", color: "bg-gray-100 text-gray-700 border-gray-200" },
 			desa: { label: "Admin Desa", color: "bg-emerald-100 text-emerald-700 border-emerald-200" },
 			kecamatan: { label: "Admin Kecamatan", color: "bg-violet-100 text-violet-700 border-violet-200" },

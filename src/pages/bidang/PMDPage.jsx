@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useBidangPath } from '../../hooks/useBidangPath';
+import { useAuth } from '../../context/AuthContext';
 import {
   Users, Activity, Clock, UserCheck, Scale,
   Building2, ChevronRight, ArrowUpRight, BarChart3, GitMerge, RotateCcw,
@@ -252,6 +253,8 @@ const ActivityTimeline = ({ logs, loading, onRefresh }) => {
 const PMDPage = () => {
   const navigate = useNavigate();
   const { getPath } = useBidangPath();
+  const { user } = useAuth();
+  const isBendahara = user?.role === 'bendahara' || user?.role === 'superadmin';
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
   const [activityLogs, setActivityLogs] = useState([]);
@@ -463,11 +466,13 @@ const PMDPage = () => {
               </div>
             </section>
 
-            {/* Anggaran */}
-            <section>
-              <SectionHeader kicker="Anggaran 2026" title="Program Kegiatan & Pagu" />
-              <AnggaranBidangSection bidangId={5} />
-            </section>
+            {/* Anggaran — hanya tampil untuk Bendahara */}
+            {isBendahara && (
+              <section>
+                <SectionHeader kicker="Anggaran 2026" title="Program Kegiatan & Pagu" />
+                <AnggaranBidangSection bidangId={5} />
+              </section>
+            )}
 
           </div>
 

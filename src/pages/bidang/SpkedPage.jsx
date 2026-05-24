@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import { Building2, Activity, TrendingUp, ArrowLeft, Clock, CheckCircle2, XCircle, FileText, BarChart3, DollarSign, Zap, ChevronRight, ShieldCheck, ArrowRight, BadgeCheck } from 'lucide-react';
 import Lottie from 'lottie-react';
 import tableTennisAnimation from '../../assets/table-tennis.json';
@@ -28,6 +29,8 @@ const LoadingFallback = () => (
 
 const SpkedPage = () => {
 	const navigate = useNavigate();
+	const { user } = useAuth();
+	const isBendahara = user?.role === 'bendahara' || user?.role === 'superadmin';
 	const [loading, setLoading] = useState(true);
 	const [data, setData] = useState(null);
 	const [activeTab, setActiveTab] = useState('overview'); // overview, bumdes, bankeu, activity
@@ -332,9 +335,12 @@ const SpkedPage = () => {
 								</div>
 							</div>
 
-							<div className="mt-8">
-								<AnggaranBidangSection bidangId={3} />
-							</div>
+							{/* Anggaran — hanya tampil untuk Bendahara */}
+							{isBendahara && (
+								<div className="mt-8">
+									<AnggaranBidangSection bidangId={3} />
+								</div>
+							)}
 						</div>
 					</div>
 				)}
