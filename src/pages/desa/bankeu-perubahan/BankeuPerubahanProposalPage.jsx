@@ -482,9 +482,15 @@ const BankeuPerubahanProposalPage = ({ tahun }) => {
             const availableList = availableKegiatan[kat];
             const isExpanded = expandedSection[kat];
             const isFormOpen = showAddForm[kat];
+            const isDropdownOpen = dropdownOpen[kat];
 
             return (
-              <div key={kat} className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
+              <div
+                key={kat}
+                className={`bg-white rounded-2xl shadow-lg border border-gray-100 ${
+                  isDropdownOpen ? 'relative z-30 overflow-visible' : 'overflow-hidden'
+                }`}
+              >
                 {/* Section Header */}
                 <button
                   onClick={() => setExpandedSection(s => ({ ...s, [kat]: !s[kat] }))}
@@ -509,7 +515,13 @@ const BankeuPerubahanProposalPage = ({ tahun }) => {
                 </button>
 
                 {/* Section Body */}
-                <div className={`transition-all duration-300 ease-in-out ${isExpanded ? 'max-h-[10000px] opacity-100' : 'max-h-0 opacity-0 overflow-hidden'}`}>
+                <div
+                  className={`transition-all duration-300 ease-in-out ${
+                    isExpanded
+                      ? `max-h-[10000px] opacity-100 ${isDropdownOpen ? 'overflow-visible' : ''}`
+                      : 'max-h-0 opacity-0 overflow-hidden'
+                  }`}
+                >
                   {/* Existing proposals list */}
                   {sectionProposals.length > 0 && (
                     <div className="p-4 bg-gray-50 space-y-2 border-b border-gray-200">
@@ -555,7 +567,7 @@ const BankeuPerubahanProposalPage = ({ tahun }) => {
                           <div className={`mt-4 p-4 sm:p-6 bg-white rounded-2xl border-2 ${meta.boxBorder} shadow-xl`}>
                             <div className="space-y-5">
                               {/* Step 1: Pilih Kegiatan */}
-                              <div className={`dropdown-${kat} relative`}>
+                              <div className={`dropdown-${kat} relative ${isDropdownOpen ? 'mb-80 sm:mb-96' : ''}`}>
                                 <label className="flex items-center gap-3 text-base sm:text-lg font-bold text-gray-900 mb-3">
                                   <div className={`flex items-center justify-center w-8 h-8 bg-gradient-to-br ${meta.gradFrom} ${meta.gradTo} text-white rounded-full shadow-md`}>
                                     <span className="text-sm font-bold">1</span>
@@ -583,7 +595,7 @@ const BankeuPerubahanProposalPage = ({ tahun }) => {
                                     <LuChevronDown className={`w-6 h-6 text-gray-600 transition-transform duration-200 ${dropdownOpen[kat] ? 'rotate-180' : ''}`} />
                                   </div>
 
-                                  {dropdownOpen[kat] && (
+                                  {isDropdownOpen && (
                                     <div className={`absolute left-0 right-0 top-full mt-2 z-50 bg-white border-2 ${meta.boxBorder} rounded-xl shadow-2xl overflow-hidden`}>
                                       <div className="max-h-72 overflow-y-auto">
                                         {availableList.map((item, idx) => (
