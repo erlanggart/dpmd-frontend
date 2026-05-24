@@ -158,7 +158,7 @@ const LoginPage = () => {
 				navigate("/bpjs/dashboard");
 			} else if (newUser.role === "superadmin") {
 				navigate("/superadmin/dashboard");
-			} else if (["pegawai", "ketua_tim", "kepala_bidang", "kepala_dinas", "sekretaris_dinas"].includes(newUser.role)) {
+			} else if (["pegawai", "ketua_tim", "kepala_bidang", "kepala_dinas", "sekretaris_dinas", "bendahara"].includes(newUser.role)) {
 				// All DPMD internal staff go to unified /dpmd route
 				navigate("/dpmd/dashboard");
 			} else {
