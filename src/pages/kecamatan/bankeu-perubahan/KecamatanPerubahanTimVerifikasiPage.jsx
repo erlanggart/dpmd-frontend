@@ -1,15 +1,17 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import api from '../../../api';
 import Swal from 'sweetalert2';
+import SignatureCanvas from 'react-signature-canvas';
 import {
-  LuUsers, LuPlus, LuTrash2, LuUpload, LuRefreshCw, LuArrowLeft, LuSave, LuImage, LuEye
+  LuUsers, LuPlus, LuTrash2, LuUpload, LuRefreshCw, LuSave, LuImage, LuEye,
+  LuPenTool, LuRotateCcw, LuCheck, LuX
 } from 'react-icons/lu';
 
 const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
 
 const KecamatanPerubahanTimVerifikasiPage = () => {
   const [kecamatanId, setKecamatanId] = useState(null);
-  const [activeTab, setActiveTab] = useState('config'); // config | tim
+  const [activeTab, setActiveTab] = useState('config');
 
   // Config state
   const [config, setConfig] = useState({
@@ -23,6 +25,11 @@ const KecamatanPerubahanTimVerifikasiPage = () => {
   const [tim, setTim] = useState([]);
   const [showAddTim, setShowAddTim] = useState(false);
   const [newTim, setNewTim] = useState({ jabatan: '', jabatan_label: '', nama: '', nip: '' });
+
+  // Signature modal state
+  const [signingMember, setSigningMember] = useState(null); // member being signed
+  const [signMode, setSignMode] = useState('draw'); // 'draw' | 'upload'
+  const signatureRef = useRef(null);
 
   const fetchUserKecamatan = async () => {
     try {
@@ -158,6 +165,32 @@ const KecamatanPerubahanTimVerifikasiPage = () => {
     }
   };
 
+  const openSignDialog = (member) => {
+    setSigningMember(member);
+    setSignMode('draw');
+  };
+
+  const closeSignDialog = () => {
+    setSigningMember(null);
+    if (signatureRef.current) signatureRef.current.clear();
+  };
+
+  const handleSaveCanvasSignature = async () => {
+    if (!signatureRef.current || signatureRef.current.isEmpty()) {
+      return Swal.fire('Validasi', 'Mohon buat tanda tangan terlebih dahulu', 'warning');
+    }
+    try {
+      const dataURL = signatureRef.current.toDataURL('image/png');
+      const blob = await (await fetch(dataURL)).blob();
+      const file = new File([blob], `ttd-${signingMember.id}.png`, { type: 'image/png' });
+      await handleUploadTimSig(signingMember.id, file);
+      closeSignDialog();
+    } catch (err) {
+      console.error('Save signature error:', err);
+      Swal.fire('Gagal', 'Tidak dapat menyimpan tanda tangan', 'error');
+    }
+  };
+
   if (!kecamatanId) {
     return <div className="p-8 text-center text-gray-500">Loading...</div>;
   }
@@ -240,7 +273,12 @@ const KecamatanPerubahanTimVerifikasiPage = () => {
         {activeTab === 'tim' && (
           <div className="space-y-3">
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 flex justify-between items-center">
-              <span className="text-sm text-gray-600">{tim.length} anggota tim aktif</span>
+              <div>
+                <span className="text-sm text-gray-600">{tim.length} anggota tim aktif</span>
+                <div className="text-xs text-gray-500 mt-0.5">
+                  TTD wajib untuk semua anggota sebelum Berita Acara dapat di-generate
+                </div>
+              </div>
               <button
                 onClick={() => setShowAddTim(true)}
                 className="inline-flex items-center gap-1 px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold rounded-lg"
@@ -255,32 +293,50 @@ const KecamatanPerubahanTimVerifikasiPage = () => {
               </div>
             ) : (
               tim.map(t => (
-                <div key={t.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    {t.ttd_path ? (
-                      <img src={`${imageBaseUrl}/storage/uploads/signatures/${t.ttd_path}`} alt="ttd" className="w-12 h-12 object-contain border rounded" />
-                    ) : (
-                      <div className="w-12 h-12 bg-gray-100 rounded flex items-center justify-center text-gray-400">
-                        <LuImage className="w-5 h-5" />
+                <div key={t.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      {t.ttd_path ? (
+                        <img
+                          src={`${imageBaseUrl}/storage/uploads/signatures/${t.ttd_path}`}
+                          alt="ttd"
+                          className="w-16 h-16 object-contain border rounded-lg bg-white flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="w-16 h-16 bg-gray-100 rounded-lg flex flex-col items-center justify-center text-gray-400 flex-shrink-0 border-2 border-dashed border-gray-300">
+                          <LuImage className="w-5 h-5" />
+                          <span className="text-[10px] mt-0.5">No TTD</span>
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="font-bold text-gray-800 truncate">{t.nama}</div>
+                        <div className="text-xs text-gray-500">{t.jabatan_label || t.jabatan}</div>
+                        {t.nip && <div className="text-xs text-gray-500">NIP: {t.nip}</div>}
+                        {t.ttd_path ? (
+                          <div className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-full text-xs font-semibold border border-emerald-200">
+                            <LuCheck className="w-3 h-3" /> TTD tersimpan
+                          </div>
+                        ) : (
+                          <div className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-amber-50 text-amber-700 rounded-full text-xs font-semibold border border-amber-200">
+                            <LuX className="w-3 h-3" /> Belum ada TTD
+                          </div>
+                        )}
                       </div>
-                    )}
-                    <div className="min-w-0">
-                      <div className="font-bold text-gray-800">{t.nama}</div>
-                      <div className="text-xs text-gray-500">{t.jabatan_label || t.jabatan}</div>
-                      {t.nip && <div className="text-xs text-gray-500">NIP: {t.nip}</div>}
                     </div>
-                  </div>
-                  <div className="flex gap-1">
-                    <label className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold rounded-lg cursor-pointer">
-                      <LuUpload className="w-3.5 h-3.5" /> TTD
-                      <input type="file" accept=".png,.jpg,.jpeg" className="hidden" onChange={e => handleUploadTimSig(t.id, e.target.files?.[0])} />
-                    </label>
-                    <button
-                      onClick={() => handleRemoveTim(t.id)}
-                      className="inline-flex items-center gap-1 px-2 py-1 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-semibold rounded-lg"
-                    >
-                      <LuTrash2 className="w-3.5 h-3.5" />
-                    </button>
+                    <div className="flex flex-col gap-1 flex-shrink-0">
+                      <button
+                        onClick={() => openSignDialog(t)}
+                        className="inline-flex items-center justify-center gap-1 px-3 py-1.5 bg-violet-600 hover:bg-violet-700 text-white text-xs font-semibold rounded-lg"
+                      >
+                        <LuPenTool className="w-3.5 h-3.5" /> {t.ttd_path ? 'Ganti TTD' : 'Buat TTD'}
+                      </button>
+                      <button
+                        onClick={() => handleRemoveTim(t.id)}
+                        className="inline-flex items-center justify-center gap-1 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-semibold rounded-lg"
+                      >
+                        <LuTrash2 className="w-3.5 h-3.5" /> Hapus
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))
@@ -304,6 +360,102 @@ const KecamatanPerubahanTimVerifikasiPage = () => {
                   <button type="submit" className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white font-semibold rounded-xl shadow-sm">Tambah</button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Signature dialog */}
+        {signingMember && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl">
+              <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-800">Tanda Tangan Anggota Tim</h3>
+                  <p className="text-xs text-gray-500 mt-0.5">{signingMember.nama} · {signingMember.jabatan_label || signingMember.jabatan}</p>
+                </div>
+                <button onClick={closeSignDialog} className="text-gray-400 hover:text-gray-600">
+                  <LuX className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="px-6 py-4 space-y-3">
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setSignMode('draw')}
+                    className={`flex-1 px-3 py-2 text-sm font-semibold rounded-xl border-2 transition-colors ${
+                      signMode === 'draw' ? 'bg-violet-50 border-violet-500 text-violet-700' : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
+                    }`}
+                  >
+                    <LuPenTool className="w-4 h-4 inline mr-1" /> Gambar Tanda Tangan
+                  </button>
+                  <button
+                    onClick={() => setSignMode('upload')}
+                    className={`flex-1 px-3 py-2 text-sm font-semibold rounded-xl border-2 transition-colors ${
+                      signMode === 'upload' ? 'bg-violet-50 border-violet-500 text-violet-700' : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
+                    }`}
+                  >
+                    <LuUpload className="w-4 h-4 inline mr-1" /> Upload File
+                  </button>
+                </div>
+
+                {signMode === 'draw' && (
+                  <div className="space-y-2">
+                    <div className="border-2 border-dashed border-gray-300 rounded-xl bg-gray-50 overflow-hidden">
+                      <SignatureCanvas
+                        ref={signatureRef}
+                        penColor="black"
+                        canvasProps={{
+                          width: 500,
+                          height: 200,
+                          className: 'w-full h-[200px] bg-white'
+                        }}
+                      />
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <button
+                        onClick={() => signatureRef.current?.clear()}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-lg"
+                      >
+                        <LuRotateCcw className="w-3.5 h-3.5" /> Hapus
+                      </button>
+                      <p className="text-xs text-gray-500">Tanda tangan akan disimpan sebagai gambar PNG</p>
+                    </div>
+                  </div>
+                )}
+
+                {signMode === 'upload' && (
+                  <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center">
+                    <LuUpload className="w-10 h-10 mx-auto text-gray-400 mb-2" />
+                    <p className="text-sm text-gray-700 mb-2">Upload file gambar tanda tangan (PNG/JPG)</p>
+                    <input
+                      type="file"
+                      accept=".png,.jpg,.jpeg"
+                      onChange={e => {
+                        if (e.target.files?.[0]) {
+                          handleUploadTimSig(signingMember.id, e.target.files[0]);
+                          closeSignDialog();
+                        }
+                      }}
+                      className="block mx-auto text-sm file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {signMode === 'draw' && (
+                <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-2">
+                  <button
+                    onClick={closeSignDialog}
+                    className="px-4 py-2 bg-white border border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-50"
+                  >Batal</button>
+                  <button
+                    onClick={handleSaveCanvasSignature}
+                    className="inline-flex items-center gap-1 px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white font-semibold rounded-xl shadow-sm"
+                  >
+                    <LuSave className="w-4 h-4" /> Simpan Tanda Tangan
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}

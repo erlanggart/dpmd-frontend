@@ -3,8 +3,11 @@ import api from '../../../api';
 import Swal from 'sweetalert2';
 import {
   LuEye, LuCheck, LuX, LuRefreshCw, LuSend, LuInfo,
-  LuClipboardCheck, LuMessageSquare, LuChevronDown, LuChevronRight
+  LuClipboardCheck, LuMessageSquare, LuChevronDown, LuChevronRight,
+  LuFilter, LuSearch, LuPackage, LuMapPin, LuDollarSign,
+  LuFileText, LuStamp, LuTriangleAlert, LuClipboardList
 } from 'react-icons/lu';
+import BankeuPerubahanQuestionnaireForm from '../../../components/BankeuPerubahanQuestionnaireForm';
 
 const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
 
@@ -26,33 +29,67 @@ const StatusBadge = ({ status }) => (
   </span>
 );
 
-const KATEGORI_LABELS = {
-  wajib: 'Wajib',
-  pilihan_infrastruktur: 'Pilihan Infrastruktur',
-  pilihan_non_infrastruktur: 'Pilihan Non-Infrastruktur',
+const KATEGORI_META = {
+  wajib: {
+    label: 'Wajib',
+    sublabel: 'Kegiatan WAJIB',
+    gradFrom: 'from-red-500', gradTo: 'to-rose-600',
+    headerBg: 'from-red-50 via-rose-50 to-red-50',
+    headerHover: 'hover:from-red-100 hover:via-rose-100 hover:to-red-100',
+    badge: 'bg-red-100 text-red-700 border-red-300',
+  },
+  pilihan_infrastruktur: {
+    label: 'Pilihan Infrastruktur',
+    sublabel: 'Kegiatan fisik/bangunan',
+    gradFrom: 'from-orange-500', gradTo: 'to-amber-600',
+    headerBg: 'from-orange-50 via-amber-50 to-orange-50',
+    headerHover: 'hover:from-orange-100 hover:via-amber-100 hover:to-orange-100',
+    badge: 'bg-orange-100 text-orange-700 border-orange-300',
+  },
+  pilihan_non_infrastruktur: {
+    label: 'Pilihan Non-Infrastruktur',
+    sublabel: 'Program/pemberdayaan',
+    gradFrom: 'from-blue-500', gradTo: 'to-indigo-600',
+    headerBg: 'from-blue-50 via-indigo-50 to-blue-50',
+    headerHover: 'hover:from-blue-100 hover:via-indigo-100 hover:to-blue-100',
+    badge: 'bg-blue-100 text-blue-700 border-blue-300',
+  },
 };
-const KATEGORI_BADGES = {
-  wajib: 'bg-red-100 text-red-700 border-red-300',
-  pilihan_infrastruktur: 'bg-orange-100 text-orange-700 border-orange-300',
-  pilihan_non_infrastruktur: 'bg-blue-100 text-blue-700 border-blue-300',
-};
+const KATEGORI_KEYS = Object.keys(KATEGORI_META);
 
 const BankeuPerubahanVerificationPage = ({ tahun }) => {
   const [proposals, setProposals] = useState([]);
   const [stats, setStats] = useState({});
+  const [kecamatanConfig, setKecamatanConfig] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [expanded, setExpanded] = useState({});
-  const [verifyModal, setVerifyModal] = useState(null); // { proposal, status }
+  const [expandedDesa, setExpandedDesa] = useState({});
+  const [expandedKategori, setExpandedKategori] = useState({});
+  const [verifyModal, setVerifyModal] = useState(null);
+  const [quisionerModal, setQuisionerModal] = useState(null); // proposal to fill quisioner for
+
+  // Filters
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterKategori, setFilterKategori] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [proposalsRes, statsRes] = await Promise.all([
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const kecamatanId = user?.kecamatan_id;
+
+      const requests = [
         api.get('/kecamatan/bankeu-perubahan/proposals', { params: { tahun } }),
         api.get('/kecamatan/bankeu-perubahan/statistics', { params: { tahun } }),
-      ]);
+      ];
+      if (kecamatanId) {
+        requests.push(api.get(`/kecamatan/bankeu-perubahan/config/${kecamatanId}`).catch(() => ({ data: { data: null } })));
+      }
+
+      const [proposalsRes, statsRes, configRes] = await Promise.all(requests);
       setProposals(proposalsRes.data?.data || []);
       setStats(statsRes.data?.data || {});
+      if (configRes) setKecamatanConfig(configRes.data?.data || null);
     } catch (err) {
       console.error('Error fetch:', err);
       Swal.fire('Gagal', 'Tidak dapat mengambil data proposal perubahan', 'error');
@@ -63,16 +100,62 @@ const BankeuPerubahanVerificationPage = ({ tahun }) => {
 
   useEffect(() => { fetchData(); }, [tahun]);
 
-  // Group by desa
+  const isKecamatanConfigComplete = () => {
+    if (!kecamatanConfig) return false;
+    return !!(kecamatanConfig.nama_camat && kecamatanConfig.ttd_camat_path && kecamatanConfig.stempel_path && kecamatanConfig.alamat);
+  };
+
+  const getConfigMissingItems = () => {
+    const missing = [];
+    if (!kecamatanConfig) {
+      return ['Konfigurasi Kecamatan belum dibuat (buka menu Tim Verifikasi → Konfigurasi)'];
+    }
+    if (!kecamatanConfig.nama_camat) missing.push('Nama Camat');
+    if (!kecamatanConfig.ttd_camat_path) missing.push('Tanda Tangan Camat');
+    if (!kecamatanConfig.stempel_path) missing.push('Stempel Kecamatan');
+    if (!kecamatanConfig.alamat) missing.push('Alamat Kecamatan');
+    return missing;
+  };
+
+  // Filter proposals
+  const filteredProposals = useMemo(() => {
+    return proposals.filter(p => {
+      if (filterStatus !== 'all') {
+        if (filterStatus === 'pending' && p.kecamatan_status && p.kecamatan_status !== 'pending') return false;
+        if (filterStatus !== 'pending' && p.kecamatan_status !== filterStatus) return false;
+      }
+      if (filterKategori !== 'all' && p.jenis_kegiatan !== filterKategori) return false;
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const inJudul = p.judul_proposal?.toLowerCase().includes(q);
+        const inDesa = p.desa_nama?.toLowerCase().includes(q);
+        const inKegiatan = (p.kegiatan_list || []).some(k => k.nama_kegiatan?.toLowerCase().includes(q));
+        if (!inJudul && !inDesa && !inKegiatan) return false;
+      }
+      return true;
+    });
+  }, [proposals, filterStatus, filterKategori, searchQuery]);
+
+  // Group by desa, then by kategori
   const groupedByDesa = useMemo(() => {
     const groups = {};
-    proposals.forEach(p => {
+    filteredProposals.forEach(p => {
       const key = p.desa_id;
-      if (!groups[key]) groups[key] = { desa_id: p.desa_id, desa_nama: p.desa_nama, items: [] };
+      if (!groups[key]) {
+        groups[key] = {
+          desa_id: p.desa_id,
+          desa_nama: p.desa_nama,
+          items: [],
+          byKategori: { wajib: [], pilihan_infrastruktur: [], pilihan_non_infrastruktur: [] },
+        };
+      }
       groups[key].items.push(p);
+      if (groups[key].byKategori[p.jenis_kegiatan]) {
+        groups[key].byKategori[p.jenis_kegiatan].push(p);
+      }
     });
     return Object.values(groups);
-  }, [proposals]);
+  }, [filteredProposals]);
 
   const openVerify = (proposal, status) => {
     setVerifyModal({ proposal, status, catatan: '' });
@@ -115,6 +198,224 @@ const BankeuPerubahanVerificationPage = ({ tahun }) => {
     }
   };
 
+  const showConfigMissingAlert = (action) => {
+    const missing = getConfigMissingItems();
+    return Swal.fire({
+      icon: 'warning',
+      title: 'Konfigurasi Belum Lengkap',
+      html: `
+        <div class="text-left">
+          <p class="text-gray-700 mb-2">Lengkapi item berikut di menu <strong>Tim Verifikasi → Konfigurasi Kecamatan</strong> sebelum ${action}:</p>
+          <ul class="bg-amber-50 rounded-lg p-3 text-sm text-amber-800 list-disc list-inside">
+            ${missing.map(i => `<li>${i}</li>`).join('')}
+          </ul>
+        </div>
+      `,
+      confirmButtonText: 'Mengerti',
+    });
+  };
+
+  // Validate tim & quisioner kelengkapan sebelum generate BA
+  const validateTimAndQuisioner = async (proposal) => {
+    try {
+      const res = await api.get(`/bankeu-perubahan/berita-acara/validate/${proposal.desa_id}/${proposal.id}`);
+      const data = res.data?.data;
+      if (data?.valid) return { ok: true };
+
+      // Compose missing items message from response
+      const reasons = [];
+      if (data?.missing_tim_members?.length) {
+        reasons.push(`Anggota tim belum lengkap: ${data.missing_tim_members.join(', ')}`);
+      }
+      if (data?.missing_signatures?.length) {
+        reasons.push(`TTD belum dibuat untuk: ${data.missing_signatures.join(', ')}`);
+      }
+      if (data?.missing_quisioner?.length) {
+        reasons.push(`Quisioner belum diisi oleh: ${data.missing_quisioner.join(', ')}`);
+      }
+      if (reasons.length === 0 && data?.message) {
+        reasons.push(data.message);
+      }
+      return { ok: false, reasons };
+    } catch (err) {
+      // If endpoint not yet implemented, allow generation but warn
+      if (err.response?.status === 404) {
+        console.warn('Validate endpoint not available, skipping client-side check');
+        return { ok: true };
+      }
+      console.error('Validate error:', err);
+      return { ok: false, reasons: [err.response?.data?.message || 'Gagal memvalidasi tim'] };
+    }
+  };
+
+  // Generate Berita Acara per proposal
+  const handleGenerateBeritaAcara = async (proposal) => {
+    if (!isKecamatanConfigComplete()) {
+      return showConfigMissingAlert('membuat Berita Acara');
+    }
+    const kegiatanId = proposal.kegiatan_list?.[0]?.id || proposal.kegiatan_id;
+    if (!kegiatanId) {
+      return Swal.fire('Gagal', 'Proposal tidak terkait dengan kegiatan apapun', 'error');
+    }
+
+    // Validasi tim & quisioner
+    const validation = await validateTimAndQuisioner(proposal);
+    if (!validation.ok) {
+      return Swal.fire({
+        icon: 'warning',
+        title: 'Belum Siap Generate Berita Acara',
+        html: `
+          <div class="text-left">
+            <p class="mb-2 text-gray-700">Lengkapi item berikut terlebih dahulu:</p>
+            <ul class="list-disc pl-5 text-sm text-gray-700 bg-amber-50 p-3 rounded-lg space-y-1">
+              ${validation.reasons.map(r => `<li>${r}</li>`).join('')}
+            </ul>
+            <p class="text-xs text-gray-500 mt-3">
+              Tim Verifikasi & TTD diatur di menu <strong>Tim Verifikasi</strong>.
+              Quisioner diisi via tombol <strong>Quisioner</strong> pada proposal ini.
+            </p>
+          </div>
+        `,
+        confirmButtonText: 'Mengerti',
+      });
+    }
+
+    const isInfrastruktur = proposal.jenis_kegiatan === 'pilihan_infrastruktur';
+    const optionalItemsConfig = [
+      { key: 'item_5', label: 'Surat Pernyataan Kepala Desa (lokasi tidak sengketa)' },
+      { key: 'item_7', label: 'Dokumen kesediaan peralihan hak hibah' },
+      { key: 'item_8', label: 'Dokumen pernyataan kesanggupan (tidak minta ganti rugi)' },
+      { key: 'item_9', label: 'Persetujuan pemanfaatan barang milik Daerah/Negara' },
+    ];
+    const optionalCheckboxes = isInfrastruktur ? `
+      <div class="text-left mt-3 mb-2">
+        <p class="text-sm font-semibold text-gray-700 mb-2">Dokumen opsional yang dilampirkan:</p>
+        <div class="bg-gray-50 rounded-lg p-3 space-y-2">
+          ${optionalItemsConfig.map(item => `
+            <label class="flex items-start gap-2 cursor-pointer hover:bg-gray-100 rounded p-1.5">
+              <input type="checkbox" id="opt_${item.key}" class="mt-0.5 w-4 h-4 text-orange-600 rounded" />
+              <span class="text-sm text-gray-700">${item.label}</span>
+            </label>
+          `).join('')}
+        </div>
+      </div>
+    ` : '';
+
+    const result = await Swal.fire({
+      title: proposal.berita_acara_path ? 'Regenerate Berita Acara?' : 'Generate Berita Acara?',
+      html: `
+        <div class="text-left">
+          <p class="text-sm text-gray-600 mb-2">Desa <strong>${proposal.desa_nama}</strong></p>
+          <p class="text-sm text-gray-600 mb-2">Proposal: <strong>${proposal.judul_proposal}</strong></p>
+          ${optionalCheckboxes}
+          <div class="mt-3">
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Tanggal Berita Acara</label>
+            <input type="date" id="swal-tanggal-ba" value="${new Date().toISOString().split('T')[0]}"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500" />
+          </div>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: proposal.berita_acara_path ? 'Regenerate' : 'Generate',
+      cancelButtonText: 'Batal',
+      confirmButtonColor: '#ea580c',
+      preConfirm: () => {
+        const tanggal = document.getElementById('swal-tanggal-ba')?.value || null;
+        let optionalItems = null;
+        if (isInfrastruktur) {
+          optionalItems = {};
+          optionalItemsConfig.forEach(item => {
+            optionalItems[item.key] = !!document.getElementById(`opt_${item.key}`)?.checked;
+          });
+        }
+        return { tanggal, optionalItems };
+      },
+    });
+    if (!result.isConfirmed) return;
+
+    try {
+      Swal.fire({ title: 'Generating...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+      const response = await api.post(`/kecamatan/bankeu-perubahan/desa/${proposal.desa_id}/berita-acara`, {
+        proposalId: proposal.id,
+        kegiatanId,
+        optionalItems: result.value.optionalItems,
+        tanggal: result.value.tanggal,
+      });
+      await fetchData();
+      const filePath = response.data?.data?.file_path;
+      Swal.fire({
+        icon: 'success',
+        title: 'Berhasil!',
+        html: `Berita Acara berhasil dibuat${filePath ? `<br/><a href="${imageBaseUrl}${filePath}" target="_blank" class="inline-block mt-3 px-4 py-2 bg-orange-600 text-white rounded-lg">Lihat Berita Acara</a>` : ''}`,
+        showConfirmButton: !filePath,
+      });
+    } catch (err) {
+      console.error('BA error:', err);
+      Swal.fire('Gagal', err.response?.data?.message || 'Gagal membuat Berita Acara', 'error');
+    }
+  };
+
+  // Generate Surat Pengantar per proposal
+  const handleGenerateSuratPengantar = async (proposal) => {
+    if (!isKecamatanConfigComplete()) {
+      return showConfigMissingAlert('membuat Surat Pengantar');
+    }
+
+    const result = await Swal.fire({
+      title: proposal.surat_pengantar_kecamatan_path ? 'Regenerate Surat Pengantar?' : 'Generate Surat Pengantar?',
+      html: `
+        <div class="text-left">
+          <p class="text-sm text-gray-600 mb-2">Desa <strong>${proposal.desa_nama}</strong></p>
+          <p class="text-sm text-gray-600 mb-3">Proposal: <strong>${proposal.judul_proposal}</strong></p>
+          <div class="mb-3">
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Nomor Surat <span class="text-red-500">*</span></label>
+            <input type="text" id="swal-nomor-surat"
+              placeholder="Contoh: 005/123/Kec.X/2026"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Tanggal Surat</label>
+            <input type="date" id="swal-tanggal-sp" value="${new Date().toISOString().split('T')[0]}"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+          </div>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: proposal.surat_pengantar_kecamatan_path ? 'Regenerate' : 'Generate',
+      cancelButtonText: 'Batal',
+      confirmButtonColor: '#2563eb',
+      preConfirm: () => {
+        const nomorSurat = document.getElementById('swal-nomor-surat')?.value?.trim();
+        const tanggal = document.getElementById('swal-tanggal-sp')?.value || null;
+        if (!nomorSurat) {
+          Swal.showValidationMessage('Nomor Surat wajib diisi');
+          return false;
+        }
+        return { nomor_surat: nomorSurat, tanggal };
+      },
+    });
+    if (!result.isConfirmed) return;
+
+    try {
+      Swal.fire({ title: 'Generating...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+      const response = await api.post(
+        `/kecamatan/bankeu-perubahan/proposals/${proposal.id}/surat-pengantar`,
+        result.value
+      );
+      await fetchData();
+      const pdfPath = response.data?.data?.pdf_path;
+      Swal.fire({
+        icon: 'success',
+        title: 'Berhasil!',
+        html: `Surat Pengantar berhasil dibuat${pdfPath ? `<br/><a href="${imageBaseUrl}${pdfPath}" target="_blank" class="inline-block mt-3 px-4 py-2 bg-blue-600 text-white rounded-lg">Lihat Surat Pengantar</a>` : ''}`,
+        showConfirmButton: !pdfPath,
+      });
+    } catch (err) {
+      console.error('SP error:', err);
+      Swal.fire('Gagal', err.response?.data?.message || 'Gagal membuat Surat Pengantar', 'error');
+    }
+  };
+
   const submitToDpmd = async (desaId, desaNama) => {
     const desaProposals = proposals.filter(p =>
       p.desa_id === desaId &&
@@ -124,6 +425,33 @@ const BankeuPerubahanVerificationPage = ({ tahun }) => {
     if (desaProposals.length === 0) {
       return Swal.fire('Info', 'Tidak ada proposal yang siap dikirim ke DPMD', 'info');
     }
+
+    // Prerequisite: semua proposal approved harus punya Quisioner + BA + Surat Pengantar
+    const missingDocs = desaProposals.filter(p =>
+      !p.quisioner_completed || !p.berita_acara_path || !p.surat_pengantar_kecamatan_path
+    );
+    if (missingDocs.length > 0) {
+      return Swal.fire({
+        icon: 'warning',
+        title: 'Dokumen Belum Lengkap',
+        html: `
+          <div class="text-left">
+            <p class="text-gray-700 mb-2">
+              ${missingDocs.length} proposal belum lengkap dokumennya.
+              Setiap proposal yang dikirim ke DPMD wajib memiliki:
+            </p>
+            <ul class="list-disc list-inside text-sm text-gray-700 bg-amber-50 p-3 rounded-lg">
+              <li>Quisioner Verifikasi (oleh Tim Kecamatan)</li>
+              <li>Berita Acara Verifikasi Kecamatan</li>
+              <li>Surat Pengantar Kecamatan</li>
+            </ul>
+            <p class="text-xs text-gray-500 mt-3">Lengkapi dokumen tersebut dengan tombol Quisioner & Generate pada masing-masing proposal.</p>
+          </div>
+        `,
+        confirmButtonText: 'Mengerti',
+      });
+    }
+
     const result = await Swal.fire({
       title: `Kirim ${desaProposals.length} proposal ke DPMD?`,
       text: `Dari Desa: ${desaNama}`,
@@ -143,11 +471,28 @@ const BankeuPerubahanVerificationPage = ({ tahun }) => {
     }
   };
 
+  const toggleDesa = (desaId) => setExpandedDesa(e => ({ ...e, [desaId]: e[desaId] === undefined ? false : !e[desaId] }));
+  const toggleKategori = (desaId, kat) => {
+    const key = `${desaId}-${kat}`;
+    setExpandedKategori(e => ({ ...e, [key]: e[key] === undefined ? false : !e[key] }));
+  };
+  const isDesaExpanded = (desaId) => expandedDesa[desaId] !== false;
+  const isKategoriExpanded = (desaId, kat) => expandedKategori[`${desaId}-${kat}`] !== false;
+
+  // Per-desa kirim-ke-DPMD status (Quisioner + BA + Surat Pengantar lengkap)
+  const getDesaReadiness = (group) => {
+    const approved = group.items.filter(p => p.kecamatan_status === 'approved' && !p.submitted_to_dpmd);
+    const readyCount = approved.filter(p =>
+      p.quisioner_completed && p.berita_acara_path && p.surat_pengantar_kecamatan_path
+    ).length;
+    return { approvedCount: approved.length, readyCount, allReady: approved.length > 0 && readyCount === approved.length };
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-orange-50 p-4 md:p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Stats */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 mb-5">
+      <div className="max-w-7xl mx-auto space-y-5">
+        {/* Header & Stats */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
               <LuClipboardCheck className="w-5 h-5 text-orange-600" />
@@ -168,8 +513,64 @@ const BankeuPerubahanVerificationPage = ({ tahun }) => {
             <StatCard label="Revision" value={stats.revision || 0} color="bg-orange-50 text-orange-700" />
             <StatCard label="Ke DPMD" value={stats.submitted_to_dpmd || 0} color="bg-purple-50 text-purple-700" />
           </div>
+
+          {/* Config completeness warning */}
+          {!isKecamatanConfigComplete() && (
+            <div className="mt-4 bg-amber-50 border border-amber-300 rounded-xl p-3 flex items-start gap-3">
+              <LuTriangleAlert className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1 text-sm">
+                <p className="font-semibold text-amber-800">Konfigurasi Kecamatan belum lengkap</p>
+                <p className="text-amber-700 mt-0.5">
+                  Generate Berita Acara & Surat Pengantar memerlukan: {getConfigMissingItems().join(', ')}.
+                  Lengkapi di menu <strong>Tim Verifikasi → Konfigurasi Kecamatan</strong>.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
+        {/* Filter Bar */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+            <LuFilter className="w-4 h-4" /> Filter:
+          </div>
+          <select
+            value={filterStatus}
+            onChange={e => setFilterStatus(e.target.value)}
+            className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+          >
+            <option value="all">Semua Status</option>
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+            <option value="revision">Revision</option>
+          </select>
+          <select
+            value={filterKategori}
+            onChange={e => setFilterKategori(e.target.value)}
+            className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+          >
+            <option value="all">Semua Kategori</option>
+            {KATEGORI_KEYS.map(k => (
+              <option key={k} value={k}>{KATEGORI_META[k].label}</option>
+            ))}
+          </select>
+          <div className="relative flex-1 min-w-[200px] max-w-xs">
+            <LuSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Cari judul / desa / kegiatan..."
+              className="w-full pl-9 pr-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+            />
+          </div>
+          <span className="ml-auto text-xs text-gray-500">
+            {filteredProposals.length} dari {proposals.length} proposal
+          </span>
+        </div>
+
+        {/* List grouped by Desa */}
         {loading ? (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center text-gray-500">
             Memuat data...
@@ -177,48 +578,102 @@ const BankeuPerubahanVerificationPage = ({ tahun }) => {
         ) : groupedByDesa.length === 0 ? (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center">
             <LuInfo className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-            <p className="text-gray-600 font-medium">Belum ada proposal perubahan dari desa</p>
+            <p className="text-gray-600 font-medium">
+              {proposals.length === 0
+                ? 'Belum ada proposal perubahan dari desa'
+                : 'Tidak ada proposal yang sesuai filter'}
+            </p>
           </div>
         ) : (
           <div className="space-y-3">
             {groupedByDesa.map(group => {
-              const isExpanded = expanded[group.desa_id] !== false;
-              const approvedCount = group.items.filter(p => p.kecamatan_status === 'approved' && !p.submitted_to_dpmd).length;
+              const desaExpanded = isDesaExpanded(group.desa_id);
+              const { approvedCount, readyCount, allReady } = getDesaReadiness(group);
+              const totalAnggaran = group.items.reduce((s, p) => s + (Number(p.anggaran_usulan) || 0), 0);
               return (
                 <div key={group.desa_id} className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
                   <button
-                    onClick={() => setExpanded(e => ({ ...e, [group.desa_id]: isExpanded ? false : true }))}
-                    className="w-full px-5 py-4 flex items-center justify-between hover:bg-gray-50"
+                    onClick={() => toggleDesa(group.desa_id)}
+                    className="w-full px-5 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
                   >
                     <div className="flex items-center gap-3">
-                      {isExpanded ? <LuChevronDown className="w-5 h-5 text-gray-400" /> : <LuChevronRight className="w-5 h-5 text-gray-400" />}
+                      {desaExpanded ? <LuChevronDown className="w-5 h-5 text-gray-400" /> : <LuChevronRight className="w-5 h-5 text-gray-400" />}
                       <div className="text-left">
                         <div className="font-bold text-gray-800">Desa {group.desa_nama}</div>
-                        <div className="text-xs text-gray-500">{group.items.length} proposal perubahan</div>
+                        <div className="text-xs text-gray-500">
+                          {group.items.length} proposal · Rp {totalAnggaran.toLocaleString('id-ID')}
+                        </div>
                       </div>
                     </div>
                     {approvedCount > 0 && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); submitToDpmd(group.desa_id, group.desa_nama); }}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold rounded-lg"
-                      >
-                        <LuSend className="w-3.5 h-3.5" /> Kirim {approvedCount} ke DPMD
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs font-semibold px-2 py-1 rounded-full border ${
+                          allReady ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'
+                        }`}>
+                          Dokumen: {readyCount}/{approvedCount}
+                        </span>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); submitToDpmd(group.desa_id, group.desa_nama); }}
+                          disabled={!allReady}
+                          className={`inline-flex items-center gap-1 px-3 py-1.5 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors ${
+                            allReady ? 'bg-purple-600 hover:bg-purple-700' : 'bg-gray-400 cursor-not-allowed'
+                          }`}
+                          title={allReady ? '' : 'Lengkapi BA + Surat Pengantar untuk semua proposal yang sudah approved'}
+                        >
+                          <LuSend className="w-3.5 h-3.5" /> Kirim {approvedCount} ke DPMD
+                        </button>
+                      </div>
                     )}
                   </button>
 
-                  {isExpanded && (
-                    <div className="border-t border-gray-100 divide-y divide-gray-100">
-                      {group.items.map(p => (
-                        <ProposalRow
-                          key={p.id}
-                          proposal={p}
-                          onApprove={() => openVerify(p, 'approved')}
-                          onReject={() => openVerify(p, 'rejected')}
-                          onRevision={() => openVerify(p, 'revision')}
-                          onCancel={() => cancelApproval(p.id)}
-                        />
-                      ))}
+                  {desaExpanded && (
+                    <div className="border-t border-gray-100 p-3 space-y-3 bg-gray-50">
+                      {KATEGORI_KEYS.map(kat => {
+                        const items = group.byKategori[kat];
+                        if (items.length === 0) return null;
+                        const meta = KATEGORI_META[kat];
+                        const katExpanded = isKategoriExpanded(group.desa_id, kat);
+                        return (
+                          <div key={kat} className="bg-white rounded-xl overflow-hidden border border-gray-200">
+                            <button
+                              onClick={() => toggleKategori(group.desa_id, kat)}
+                              className={`w-full px-4 py-3 flex items-center justify-between bg-gradient-to-r ${meta.headerBg} ${meta.headerHover} transition-colors`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className={`w-8 h-8 bg-gradient-to-br ${meta.gradFrom} ${meta.gradTo} rounded-lg flex items-center justify-center shadow-sm`}>
+                                  {katExpanded
+                                    ? <LuChevronDown className="w-4 h-4 text-white" />
+                                    : <LuChevronRight className="w-4 h-4 text-white" />}
+                                </div>
+                                <div className="text-left">
+                                  <div className="font-bold text-gray-800 text-sm">{meta.label}</div>
+                                  <div className="text-xs text-gray-600">{items.length} proposal · {meta.sublabel}</div>
+                                </div>
+                              </div>
+                              <span className={`text-xs font-bold px-2 py-0.5 rounded border ${meta.badge}`}>
+                                {items.length}
+                              </span>
+                            </button>
+                            {katExpanded && (
+                              <div className="divide-y divide-gray-100">
+                                {items.map(p => (
+                                  <ProposalRow
+                                    key={p.id}
+                                    proposal={p}
+                                    onApprove={() => openVerify(p, 'approved')}
+                                    onReject={() => openVerify(p, 'rejected')}
+                                    onRevision={() => openVerify(p, 'revision')}
+                                    onCancel={() => cancelApproval(p.id)}
+                                    onGenerateBA={() => handleGenerateBeritaAcara(p)}
+                                    onGenerateSP={() => handleGenerateSuratPengantar(p)}
+                                    onQuisioner={() => setQuisionerModal(p)}
+                                  />
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -267,6 +722,36 @@ const BankeuPerubahanVerificationPage = ({ tahun }) => {
           </div>
         </div>
       )}
+
+      {/* Quisioner modal */}
+      {quisionerModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl my-8 max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-gray-800">Quisioner Verifikasi Dokumen</h3>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Desa <strong>{quisionerModal.desa_nama}</strong> · {quisionerModal.judul_proposal}
+                </p>
+              </div>
+              <button onClick={() => setQuisionerModal(null)} className="text-gray-400 hover:text-gray-600">
+                <LuX className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="overflow-y-auto p-4 flex-1 bg-gray-50">
+              <BankeuPerubahanQuestionnaireForm
+                proposalId={quisionerModal.id}
+                verifierType="kecamatan_tim"
+                jenisKegiatan={quisionerModal.jenis_kegiatan}
+                onSaveSuccess={() => {
+                  setQuisionerModal(null);
+                  fetchData();
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -278,36 +763,72 @@ const StatCard = ({ label, value, color }) => (
   </div>
 );
 
-const ProposalRow = ({ proposal, onApprove, onReject, onRevision, onCancel }) => {
+const ProposalRow = ({ proposal, onApprove, onReject, onRevision, onCancel, onGenerateBA, onGenerateSP, onQuisioner }) => {
   const submittedToDpmd = proposal.submitted_to_dpmd;
   const kecApproved = proposal.kecamatan_status === 'approved';
-  const isPending = proposal.kecamatan_status === 'pending';
+  const isPending = !proposal.kecamatan_status || proposal.kecamatan_status === 'pending';
+  const firstKegiatan = proposal.kegiatan_list?.[0];
+  const hasBA = !!proposal.berita_acara_path;
+  const hasSP = !!proposal.surat_pengantar_kecamatan_path;
+  const hasQuisioner = !!proposal.quisioner_completed;
 
   return (
-    <div className="px-5 py-4">
+    <div className="px-4 py-3">
       <div className="flex flex-col md:flex-row md:items-start gap-3">
         <div className="flex-1 min-w-0">
-          <div className="flex flex-wrap items-center gap-2 mb-2">
-            <span className={`text-xs font-bold uppercase px-2 py-0.5 rounded border ${KATEGORI_BADGES[proposal.jenis_kegiatan] || 'bg-gray-100 text-gray-700 border-gray-300'}`}>
-              {KATEGORI_LABELS[proposal.jenis_kegiatan] || proposal.jenis_kegiatan}
-            </span>
-            <StatusBadge status={proposal.kecamatan_status} />
+          <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+            <StatusBadge status={proposal.kecamatan_status || 'pending'} />
             {submittedToDpmd && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-full border bg-purple-100 text-purple-700 border-purple-300">
-                Dikirim ke DPMD: {STATUS_LABELS[proposal.dpmd_status] || proposal.dpmd_status}
+                DPMD: {STATUS_LABELS[proposal.dpmd_status] || proposal.dpmd_status}
               </span>
             )}
+            {kecApproved && (
+              <>
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-full border ${
+                  hasQuisioner ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-gray-50 text-gray-500 border-gray-200'
+                }`}>
+                  <LuClipboardList className="w-3 h-3" /> Quisioner {hasQuisioner ? '✓' : '✗'}
+                </span>
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-full border ${
+                  hasBA ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-gray-50 text-gray-500 border-gray-200'
+                }`}>
+                  <LuFileText className="w-3 h-3" /> BA {hasBA ? '✓' : '✗'}
+                </span>
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-full border ${
+                  hasSP ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-gray-50 text-gray-500 border-gray-200'
+                }`}>
+                  <LuStamp className="w-3 h-3" /> Surat {hasSP ? '✓' : '✗'}
+                </span>
+              </>
+            )}
           </div>
-          <h4 className="font-bold text-gray-800">{proposal.judul_proposal}</h4>
+          <h4 className="font-bold text-gray-800 text-sm md:text-base leading-tight">{proposal.judul_proposal}</h4>
+          {firstKegiatan && (
+            <p className="text-xs text-gray-600 mt-1">
+              <span className="font-semibold">Kegiatan:</span> {firstKegiatan.nama_kegiatan}
+            </p>
+          )}
           {proposal.nama_kegiatan_spesifik && (
             <p className="text-sm text-gray-600 mt-0.5">{proposal.nama_kegiatan_spesifik}</p>
           )}
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2 text-xs text-gray-600">
-            {proposal.volume && <div><span className="font-semibold">Vol:</span> {proposal.volume}</div>}
-            {proposal.lokasi && <div><span className="font-semibold">Lokasi:</span> {proposal.lokasi}</div>}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 mt-2 text-xs">
+            {proposal.volume && (
+              <div className="flex items-center gap-1.5 px-2 py-1 bg-blue-50 rounded text-blue-800">
+                <LuPackage className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="truncate"><strong>Vol:</strong> {proposal.volume}</span>
+              </div>
+            )}
+            {proposal.lokasi && (
+              <div className="flex items-center gap-1.5 px-2 py-1 bg-green-50 rounded text-green-800">
+                <LuMapPin className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="truncate"><strong>Lokasi:</strong> {proposal.lokasi}</span>
+              </div>
+            )}
             {proposal.anggaran_usulan && (
-              <div className="md:col-span-1">
-                <span className="font-semibold">Anggaran:</span> Rp {Number(proposal.anggaran_usulan).toLocaleString('id-ID')}
+              <div className="flex items-center gap-1.5 px-2 py-1 bg-amber-50 rounded text-amber-800">
+                <LuDollarSign className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="truncate"><strong>Rp</strong> {Number(proposal.anggaran_usulan).toLocaleString('id-ID')}</span>
               </div>
             )}
           </div>
@@ -316,36 +837,112 @@ const ProposalRow = ({ proposal, onApprove, onReject, onRevision, onCancel }) =>
               <strong>Catatan Anda:</strong> {proposal.kecamatan_catatan}
             </div>
           )}
+          {proposal.dpmd_catatan && (
+            <div className="mt-2 text-xs bg-purple-50 border border-purple-200 rounded p-2 text-purple-800">
+              <strong>Catatan DPMD:</strong> {proposal.dpmd_catatan}
+            </div>
+          )}
         </div>
 
-        <div className="flex flex-wrap gap-1 flex-shrink-0">
-          {proposal.file_proposal && (
-            <a
-              href={`${imageBaseUrl}/storage/uploads/bankeu-perubahan/${proposal.file_proposal}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-lg"
-            >
-              <LuEye className="w-3.5 h-3.5" /> File
-            </a>
-          )}
-          {!submittedToDpmd && isPending && (
-            <>
-              <button onClick={onApprove} className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-lg">
-                <LuCheck className="w-3.5 h-3.5" /> Approve
+        <div className="flex flex-col gap-2 flex-shrink-0">
+          {/* Action: verify / cancel */}
+          <div className="flex flex-wrap gap-1 justify-end">
+            {proposal.file_proposal && (
+              <a
+                href={`${imageBaseUrl}/storage/uploads/bankeu-perubahan/${proposal.file_proposal}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-lg"
+              >
+                <LuEye className="w-3.5 h-3.5" /> Proposal
+              </a>
+            )}
+            {!submittedToDpmd && isPending && (
+              <>
+                <button onClick={onApprove} className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-lg">
+                  <LuCheck className="w-3.5 h-3.5" /> Approve
+                </button>
+                <button onClick={onRevision} className="inline-flex items-center gap-1 px-2.5 py-1 bg-orange-50 hover:bg-orange-100 text-orange-700 text-xs font-semibold rounded-lg">
+                  <LuMessageSquare className="w-3.5 h-3.5" /> Revisi
+                </button>
+                <button onClick={onReject} className="inline-flex items-center gap-1 px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-semibold rounded-lg">
+                  <LuX className="w-3.5 h-3.5" /> Tolak
+                </button>
+              </>
+            )}
+            {!submittedToDpmd && kecApproved && (
+              <button onClick={onCancel} className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-semibold rounded-lg">
+                <LuRefreshCw className="w-3.5 h-3.5" /> Batalkan
               </button>
-              <button onClick={onRevision} className="inline-flex items-center gap-1 px-2.5 py-1 bg-orange-50 hover:bg-orange-100 text-orange-700 text-xs font-semibold rounded-lg">
-                <LuMessageSquare className="w-3.5 h-3.5" /> Revisi
+            )}
+          </div>
+
+          {/* Dokumen Kecamatan: Quisioner + BA + Surat Pengantar - hanya untuk proposal approved */}
+          {kecApproved && !submittedToDpmd && (
+            <div className="flex flex-wrap gap-1 justify-end pt-1 border-t border-gray-100">
+              <button
+                onClick={onQuisioner}
+                className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg shadow-sm ${
+                  hasQuisioner
+                    ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700'
+                    : 'bg-amber-600 hover:bg-amber-700 text-white'
+                }`}
+              >
+                <LuClipboardList className="w-3.5 h-3.5" /> {hasQuisioner ? 'Quisioner ✓' : 'Isi Quisioner'}
               </button>
-              <button onClick={onReject} className="inline-flex items-center gap-1 px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-semibold rounded-lg">
-                <LuX className="w-3.5 h-3.5" /> Tolak
-              </button>
-            </>
-          )}
-          {!submittedToDpmd && kecApproved && (
-            <button onClick={onCancel} className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-semibold rounded-lg">
-              <LuRefreshCw className="w-3.5 h-3.5" /> Batalkan
-            </button>
+              {hasBA ? (
+                <>
+                  <a
+                    href={`${imageBaseUrl}${proposal.berita_acara_path.startsWith('/') ? '' : '/'}${proposal.berita_acara_path}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-violet-50 hover:bg-violet-100 text-violet-700 text-xs font-semibold rounded-lg"
+                  >
+                    <LuFileText className="w-3.5 h-3.5" /> Lihat BA
+                  </a>
+                  <button
+                    onClick={onGenerateBA}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-violet-50 hover:bg-violet-100 text-violet-700 text-xs font-semibold rounded-lg"
+                    title="Regenerate Berita Acara"
+                  >
+                    <LuRefreshCw className="w-3.5 h-3.5" />
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={onGenerateBA}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-violet-600 hover:bg-violet-700 text-white text-xs font-semibold rounded-lg shadow-sm"
+                >
+                  <LuFileText className="w-3.5 h-3.5" /> Generate BA
+                </button>
+              )}
+              {hasSP ? (
+                <>
+                  <a
+                    href={`${imageBaseUrl}${proposal.surat_pengantar_kecamatan_path.startsWith('/') ? '' : '/'}${proposal.surat_pengantar_kecamatan_path}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold rounded-lg"
+                  >
+                    <LuStamp className="w-3.5 h-3.5" /> Lihat Surat
+                  </a>
+                  <button
+                    onClick={onGenerateSP}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold rounded-lg"
+                    title="Regenerate Surat Pengantar"
+                  >
+                    <LuRefreshCw className="w-3.5 h-3.5" />
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={onGenerateSP}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm"
+                >
+                  <LuStamp className="w-3.5 h-3.5" /> Generate Surat
+                </button>
+              )}
+            </div>
           )}
         </div>
       </div>

@@ -1,7 +1,11 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import api from '../../../../api';
 import Swal from 'sweetalert2';
-import { Eye, Check, X, RefreshCw, Filter, MessageSquare, Info } from 'lucide-react';
+import {
+  LuEye, LuCheck, LuX, LuRefreshCw, LuFilter, LuMessageSquare, LuInfo,
+  LuChevronDown, LuChevronRight, LuSearch, LuPackage, LuMapPin, LuDollarSign,
+  LuClipboardCheck
+} from 'react-icons/lu';
 
 const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
 
@@ -23,16 +27,33 @@ const StatusBadge = ({ status }) => (
   </span>
 );
 
-const KATEGORI_LABELS = {
-  wajib: 'Wajib',
-  pilihan_infrastruktur: 'Pilihan Infrastruktur',
-  pilihan_non_infrastruktur: 'Pilihan Non-Infrastruktur',
+const KATEGORI_META = {
+  wajib: {
+    label: 'Wajib',
+    sublabel: 'Kegiatan WAJIB',
+    gradFrom: 'from-red-500', gradTo: 'to-rose-600',
+    headerBg: 'from-red-50 via-rose-50 to-red-50',
+    headerHover: 'hover:from-red-100 hover:via-rose-100 hover:to-red-100',
+    badge: 'bg-red-100 text-red-700 border-red-300',
+  },
+  pilihan_infrastruktur: {
+    label: 'Pilihan Infrastruktur',
+    sublabel: 'Kegiatan fisik/bangunan',
+    gradFrom: 'from-orange-500', gradTo: 'to-amber-600',
+    headerBg: 'from-orange-50 via-amber-50 to-orange-50',
+    headerHover: 'hover:from-orange-100 hover:via-amber-100 hover:to-orange-100',
+    badge: 'bg-orange-100 text-orange-700 border-orange-300',
+  },
+  pilihan_non_infrastruktur: {
+    label: 'Pilihan Non-Infrastruktur',
+    sublabel: 'Program/pemberdayaan',
+    gradFrom: 'from-blue-500', gradTo: 'to-indigo-600',
+    headerBg: 'from-blue-50 via-indigo-50 to-blue-50',
+    headerHover: 'hover:from-blue-100 hover:via-indigo-100 hover:to-blue-100',
+    badge: 'bg-blue-100 text-blue-700 border-blue-300',
+  },
 };
-const KATEGORI_BADGES = {
-  wajib: 'bg-red-100 text-red-700 border-red-300',
-  pilihan_infrastruktur: 'bg-orange-100 text-orange-700 border-orange-300',
-  pilihan_non_infrastruktur: 'bg-blue-100 text-blue-700 border-blue-300',
-};
+const KATEGORI_KEYS = Object.keys(KATEGORI_META);
 
 const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
   const [proposals, setProposals] = useState([]);
@@ -40,7 +61,10 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterKecamatan, setFilterKecamatan] = useState('all');
+  const [filterKategori, setFilterKategori] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [verifyModal, setVerifyModal] = useState(null);
+  const [expandedKategori, setExpandedKategori] = useState({});
 
   const fetchData = async () => {
     setLoading(true);
@@ -71,9 +95,27 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
     return proposals.filter(p => {
       if (filterStatus !== 'all' && p.dpmd_status !== filterStatus) return false;
       if (filterKecamatan !== 'all' && String(p.desa_kecamatan_id) !== String(filterKecamatan)) return false;
+      if (filterKategori !== 'all' && p.jenis_kegiatan !== filterKategori) return false;
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const inJudul = p.judul_proposal?.toLowerCase().includes(q);
+        const inDesa = p.desa_nama?.toLowerCase().includes(q);
+        const inKec = p.kecamatan_nama?.toLowerCase().includes(q);
+        const inKegiatan = (p.kegiatan_list || []).some(k => k.nama_kegiatan?.toLowerCase().includes(q));
+        if (!inJudul && !inDesa && !inKec && !inKegiatan) return false;
+      }
       return true;
     });
-  }, [proposals, filterStatus, filterKecamatan]);
+  }, [proposals, filterStatus, filterKecamatan, filterKategori, searchQuery]);
+
+  // Group by kategori
+  const groupedByKategori = useMemo(() => {
+    const groups = { wajib: [], pilihan_infrastruktur: [], pilihan_non_infrastruktur: [] };
+    filteredProposals.forEach(p => {
+      if (groups[p.jenis_kegiatan]) groups[p.jenis_kegiatan].push(p);
+    });
+    return groups;
+  }, [filteredProposals]);
 
   const openVerify = (proposal, status) => {
     setVerifyModal({ proposal, status, catatan: '' });
@@ -95,18 +137,24 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
     }
   };
 
+  const toggleKategori = (kat) => setExpandedKategori(e => ({ ...e, [kat]: e[kat] === undefined ? false : !e[kat] }));
+  const isKategoriExpanded = (kat) => expandedKategori[kat] !== false;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-orange-50 p-4 md:p-6">
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto space-y-5">
         {/* Stats */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 mb-5">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-gray-800">Statistik DPMD - Bankeu Perubahan TA {tahun}</h2>
+            <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+              <LuClipboardCheck className="w-5 h-5 text-orange-600" />
+              Statistik DPMD - Bankeu Perubahan TA {tahun}
+            </h2>
             <button
               onClick={fetchData}
               className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold rounded-lg"
             >
-              <RefreshCw className="w-4 h-4" /> Refresh
+              <LuRefreshCw className="w-4 h-4" /> Refresh
             </button>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -124,9 +172,9 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 mb-5 flex flex-wrap items-center gap-3">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-            <Filter className="w-4 h-4" /> Filter:
+            <LuFilter className="w-4 h-4" /> Filter:
           </div>
           <select
             value={filterStatus}
@@ -140,6 +188,16 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
             <option value="revision">Revision</option>
           </select>
           <select
+            value={filterKategori}
+            onChange={e => setFilterKategori(e.target.value)}
+            className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+          >
+            <option value="all">Semua Kategori</option>
+            {KATEGORI_KEYS.map(k => (
+              <option key={k} value={k}>{KATEGORI_META[k].label}</option>
+            ))}
+          </select>
+          <select
             value={filterKecamatan}
             onChange={e => setFilterKecamatan(e.target.value)}
             className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
@@ -149,32 +207,82 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
               <option key={k.id} value={k.id}>{k.nama}</option>
             ))}
           </select>
+          <div className="relative flex-1 min-w-[200px] max-w-xs">
+            <LuSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Cari judul / desa / kecamatan / kegiatan..."
+              className="w-full pl-9 pr-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+            />
+          </div>
           <span className="ml-auto text-xs text-gray-500">
-            Menampilkan {filteredProposals.length} dari {proposals.length} proposal
+            {filteredProposals.length} dari {proposals.length} proposal
           </span>
         </div>
 
-        {/* List */}
+        {/* List grouped by Kategori */}
         {loading ? (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center text-gray-500">
             Memuat data...
           </div>
         ) : filteredProposals.length === 0 ? (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center">
-            <Info className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-            <p className="text-gray-600 font-medium">Tidak ada proposal yang sesuai filter</p>
+            <LuInfo className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+            <p className="text-gray-600 font-medium">
+              {proposals.length === 0
+                ? 'Belum ada proposal yang masuk ke DPMD'
+                : 'Tidak ada proposal yang sesuai filter'}
+            </p>
           </div>
         ) : (
           <div className="space-y-3">
-            {filteredProposals.map(p => (
-              <ProposalCard
-                key={p.id}
-                proposal={p}
-                onApprove={() => openVerify(p, 'approved')}
-                onReject={() => openVerify(p, 'rejected')}
-                onRevision={() => openVerify(p, 'revision')}
-              />
-            ))}
+            {KATEGORI_KEYS.map(kat => {
+              const items = groupedByKategori[kat];
+              if (items.length === 0) return null;
+              const meta = KATEGORI_META[kat];
+              const expanded = isKategoriExpanded(kat);
+              const totalAnggaran = items.reduce((s, p) => s + (Number(p.anggaran_usulan) || 0), 0);
+              return (
+                <div key={kat} className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                  <button
+                    onClick={() => toggleKategori(kat)}
+                    className={`w-full px-5 py-4 flex items-center justify-between bg-gradient-to-r ${meta.headerBg} ${meta.headerHover} transition-colors`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 bg-gradient-to-br ${meta.gradFrom} ${meta.gradTo} rounded-xl flex items-center justify-center shadow-md`}>
+                        {expanded
+                          ? <LuChevronDown className="w-5 h-5 text-white" />
+                          : <LuChevronRight className="w-5 h-5 text-white" />}
+                      </div>
+                      <div className="text-left">
+                        <h3 className="font-bold text-gray-900 text-base">{meta.label}</h3>
+                        <p className="text-xs text-gray-600">
+                          {items.length} proposal · Rp {totalAnggaran.toLocaleString('id-ID')} · {meta.sublabel}
+                        </p>
+                      </div>
+                    </div>
+                    <span className={`text-sm font-bold px-3 py-1 rounded border ${meta.badge}`}>
+                      {items.length}
+                    </span>
+                  </button>
+                  {expanded && (
+                    <div className="divide-y divide-gray-100">
+                      {items.map(p => (
+                        <ProposalRow
+                          key={p.id}
+                          proposal={p}
+                          onApprove={() => openVerify(p, 'approved')}
+                          onReject={() => openVerify(p, 'rejected')}
+                          onRevision={() => openVerify(p, 'revision')}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
@@ -228,31 +336,47 @@ const StatCard = ({ label, value, color }) => (
   </div>
 );
 
-const ProposalCard = ({ proposal, onApprove, onReject, onRevision }) => {
-  const isPending = proposal.dpmd_status === 'pending';
+const ProposalRow = ({ proposal, onApprove, onReject, onRevision }) => {
+  const isPending = !proposal.dpmd_status || proposal.dpmd_status === 'pending';
+  const firstKegiatan = proposal.kegiatan_list?.[0];
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow">
+    <div className="px-5 py-4">
       <div className="flex flex-col md:flex-row md:items-start gap-3">
         <div className="flex-1 min-w-0">
-          <div className="flex flex-wrap items-center gap-2 mb-2">
-            <span className={`text-xs font-bold uppercase px-2 py-0.5 rounded border ${KATEGORI_BADGES[proposal.jenis_kegiatan] || 'bg-gray-100 text-gray-700 border-gray-300'}`}>
-              {KATEGORI_LABELS[proposal.jenis_kegiatan] || proposal.jenis_kegiatan}
+          <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+            <StatusBadge status={proposal.dpmd_status || 'pending'} />
+            <span className="text-xs text-gray-500">
+              Desa <strong className="text-gray-800">{proposal.desa_nama}</strong> · Kec <strong className="text-gray-800">{proposal.kecamatan_nama}</strong>
             </span>
-            <StatusBadge status={proposal.dpmd_status} />
           </div>
-          <h4 className="font-bold text-gray-800">{proposal.judul_proposal}</h4>
-          <div className="text-xs text-gray-500 mt-0.5">
-            Desa <strong>{proposal.desa_nama}</strong> | Kecamatan <strong>{proposal.kecamatan_nama}</strong>
-          </div>
-          {proposal.nama_kegiatan_spesifik && (
-            <p className="text-sm text-gray-600 mt-1">{proposal.nama_kegiatan_spesifik}</p>
+          <h4 className="font-bold text-gray-800 text-sm md:text-base leading-tight">{proposal.judul_proposal}</h4>
+          {firstKegiatan && (
+            <p className="text-xs text-gray-600 mt-1">
+              <span className="font-semibold">Kegiatan:</span> {firstKegiatan.nama_kegiatan}
+            </p>
           )}
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2 text-xs text-gray-600">
-            {proposal.volume && <div><span className="font-semibold">Vol:</span> {proposal.volume}</div>}
-            {proposal.lokasi && <div><span className="font-semibold">Lokasi:</span> {proposal.lokasi}</div>}
+          {proposal.nama_kegiatan_spesifik && (
+            <p className="text-sm text-gray-600 mt-0.5">{proposal.nama_kegiatan_spesifik}</p>
+          )}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 mt-2 text-xs">
+            {proposal.volume && (
+              <div className="flex items-center gap-1.5 px-2 py-1 bg-blue-50 rounded text-blue-800">
+                <LuPackage className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="truncate"><strong>Vol:</strong> {proposal.volume}</span>
+              </div>
+            )}
+            {proposal.lokasi && (
+              <div className="flex items-center gap-1.5 px-2 py-1 bg-green-50 rounded text-green-800">
+                <LuMapPin className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="truncate"><strong>Lokasi:</strong> {proposal.lokasi}</span>
+              </div>
+            )}
             {proposal.anggaran_usulan && (
-              <div><span className="font-semibold">Anggaran:</span> Rp {Number(proposal.anggaran_usulan).toLocaleString('id-ID')}</div>
+              <div className="flex items-center gap-1.5 px-2 py-1 bg-amber-50 rounded text-amber-800">
+                <LuDollarSign className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="truncate"><strong>Rp</strong> {Number(proposal.anggaran_usulan).toLocaleString('id-ID')}</span>
+              </div>
             )}
           </div>
           {proposal.kecamatan_catatan && (
@@ -275,19 +399,19 @@ const ProposalCard = ({ proposal, onApprove, onReject, onRevision }) => {
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-lg"
             >
-              <Eye className="w-3.5 h-3.5" /> File
+              <LuEye className="w-3.5 h-3.5" /> File
             </a>
           )}
           {isPending && (
             <>
               <button onClick={onApprove} className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-lg">
-                <Check className="w-3.5 h-3.5" /> Approve
+                <LuCheck className="w-3.5 h-3.5" /> Approve
               </button>
               <button onClick={onRevision} className="inline-flex items-center gap-1 px-2.5 py-1 bg-orange-50 hover:bg-orange-100 text-orange-700 text-xs font-semibold rounded-lg">
-                <MessageSquare className="w-3.5 h-3.5" /> Revisi
+                <LuMessageSquare className="w-3.5 h-3.5" /> Revisi
               </button>
               <button onClick={onReject} className="inline-flex items-center gap-1 px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-semibold rounded-lg">
-                <X className="w-3.5 h-3.5" /> Tolak
+                <LuX className="w-3.5 h-3.5" /> Tolak
               </button>
             </>
           )}
