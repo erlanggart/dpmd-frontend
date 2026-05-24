@@ -39,6 +39,7 @@ import LoginPage from "./pages/LoginPage";
 import LandingPage from "./pages/LandingPage";
 import BeritaDetailPage from "./pages/BeritaDetailPage";
 import BankeuPublicPage from "./pages/BankeuPublicPage";
+import BankeuPerubahanPublicPage from "./pages/BankeuPerubahanPublicPage";
 import NotFound from "./pages/NotFound";
 import Forbidden from "./pages/Forbidden";
 import Spinner from "./components/ui/Spinner";
@@ -269,6 +270,7 @@ const DesaAparaturExternalPage = lazy(
 const ProfilDesaPage = lazy(() => import("./pages/desa/ProfilDesaPage"));
 const DesaSettings = lazy(() => import("./pages/desa/DesaSettings"));
 const DesaBankeuPage = lazy(() => import("./pages/desa/bankeu/DesaBankeuPage"));
+const DesaBankeuPerubahanPage = lazy(() => import("./pages/desa/bankeu-perubahan/DesaBankeuPerubahanPage"));
 // Leadership layouts removed - all internal roles use unified DPMDStaffLayout
 const SuperadminLayout = lazy(
   () => import("./layouts/SuperadminLayout"),
@@ -295,6 +297,9 @@ const KecamatanLayout = lazy(() => import("./layouts/KecamatanLayout"));
 const DinasLayout = lazy(() => import("./layouts/DinasLayout"));
 const KecamatanBankeuPage = lazy(
   () => import("./pages/kecamatan/bankeu/KecamatanBankeuPage"),
+);
+const KecamatanBankeuPerubahanPage = lazy(
+  () => import("./pages/kecamatan/bankeu-perubahan/KecamatanBankeuPerubahanPage"),
 );
 const BankeuVerificationPage = lazy(
   () => import("./pages/kecamatan/bankeu/BankeuVerificationPage"),
@@ -741,6 +746,10 @@ function App() {
                   element={<BankeuPublicPage />}
                 />
                 <Route
+                  path="/bantuan-keuangan-perubahan"
+                  element={<BankeuPerubahanPublicPage />}
+                />
+                <Route
                   path="/public-dashboard"
                   element={<CoreDashboardPublic />}
                 />
@@ -795,6 +804,7 @@ function App() {
                     element={<ProdukHukumDetail />}
                   />
                   <Route path="bankeu" element={<DesaBankeuPage />} />
+                  <Route path="bankeu-perubahan" element={<DesaBankeuPerubahanPage />} />
                   <Route path="aparatur-desa-external" element={<DesaAparaturExternalPage />} />
                   <Route path="settings" element={<DesaSettings />} />
                   <Route path="pesan" element={<MessagingPage />} />
@@ -1117,6 +1127,7 @@ function App() {
                     element={<KecamatanDashboardPage />}
                   />
                   <Route path="bankeu" element={<KecamatanBankeuPage />} />
+                  <Route path="bankeu-perubahan" element={<KecamatanBankeuPerubahanPage />} />
                   <Route
                     path="bankeu/verifikasi/:desaId"
                     element={<BankeuVerificationDetailPage />}

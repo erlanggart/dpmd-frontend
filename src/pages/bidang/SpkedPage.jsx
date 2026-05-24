@@ -16,6 +16,8 @@ const BumdesDokumenManager = lazy(() => import('./spked/bumdes/BumdesDokumenMana
 const BankeuDashboard = lazy(() => import('./spked/bankeu/BankeuDashboard'));
 const DpmdVerificationPage = lazy(() => import('./spked/bankeu/DpmdVerificationPage'));
 const BankeuLpjMonitoringPage = lazy(() => import('./spked/bankeu/BankeuLpjMonitoringPage'));
+// Bankeu Perubahan 2026 (DPMD final verification)
+const DpmdBankeuPerubahanPage = lazy(() => import('./spked/bankeu-perubahan/DpmdBankeuPerubahanPage'));
 
 // Loading component
 const LoadingFallback = () => (
@@ -187,6 +189,7 @@ const SpkedPage = () => {
 		{ id: 'overview', label: 'Overview', icon: BarChart3, color: 'green' },
 		{ id: 'bumdes', label: 'BUMDes', icon: Building2, color: 'green' },
 		{ id: 'bankeu', label: 'Bantuan Keuangan', icon: DollarSign, color: 'blue' },
+		{ id: 'bankeu-perubahan', label: 'Bankeu Perubahan', icon: DollarSign, color: 'orange' },
 		{ id: 'activity', label: 'Aktivitas', icon: Activity, color: 'orange' },
 	];
 
@@ -501,6 +504,14 @@ const SpkedPage = () => {
 								</div>
 							</div>
 						)}
+					</div>
+				)}
+
+				{activeTab === 'bankeu-perubahan' && (
+					<div className="relative bg-white rounded-2xl shadow-xl border border-gray-200/50 overflow-hidden">
+						<Suspense fallback={<LoadingFallback />}>
+							<DpmdBankeuPerubahanPage />
+						</Suspense>
 					</div>
 				)}
 

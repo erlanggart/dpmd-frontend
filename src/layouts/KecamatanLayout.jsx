@@ -11,15 +11,16 @@ import {
   FiMapPin,
   FiMenu,
 } from "react-icons/fi";
-import { 
-  LuLayoutDashboard, 
-  LuBanknote, 
+import {
+  LuLayoutDashboard,
+  LuBanknote,
   LuBuilding2,
   LuClipboardCheck,
   LuPanelLeftClose,
   LuPanelLeft,
   LuLock,
-  LuMessageCircle
+  LuMessageCircle,
+  LuCoins
 } from "react-icons/lu";
 
 // Menu items configuration
@@ -35,6 +36,12 @@ const menuItems = [
     label: "Verifikasi Bankeu",
     path: "/kecamatan/bankeu",
     icon: LuBanknote,
+  },
+  {
+    id: "bankeu-perubahan",
+    label: "Verifikasi Bankeu Perubahan",
+    path: "/kecamatan/bankeu-perubahan",
+    icon: LuCoins,
   },
   {
     id: "pesan",

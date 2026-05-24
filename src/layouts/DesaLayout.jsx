@@ -75,6 +75,14 @@ const menuItems = [
     gradient: "from-rose-500 to-pink-600",
   },
   {
+    id: "bankeu-perubahan",
+    label: "Bankeu Perubahan",
+    path: "/desa/bankeu-perubahan",
+    icon: "coins",
+    color: "text-orange-600",
+    gradient: "from-orange-500 to-amber-600",
+  },
+  {
     id: "pesan",
     label: "Pesan",
     path: "/desa/pesan",
