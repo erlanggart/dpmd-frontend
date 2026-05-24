@@ -75,7 +75,7 @@ const ROLE_CONFIG = {
 			const fn = ROLE_DISPLAY_MAP[user?.role] || ROLE_DISPLAY_MAP.pegawai;
 			return typeof fn === 'function' ? fn(user) : fn;
 		},
-		allowedRoles: ['pegawai', 'kepala_bidang', 'ketua_tim', 'kepala_dinas', 'superadmin', 'sekretaris_dinas'],
+		allowedRoles: ['pegawai', 'kepala_bidang', 'ketua_tim', 'kepala_dinas', 'superadmin', 'sekretaris_dinas', 'bendahara'],
 		showBidangNav: true,
 	},
 	kepala_bidang: {

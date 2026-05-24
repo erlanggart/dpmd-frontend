@@ -90,6 +90,18 @@ const ROLE_CONFIG = {
     showExecutiveStats: false,
     showDisposisi: false,
     showPegawaiInfo: true,
+  },
+  bendahara: {
+    gradient: 'from-teal-600 via-teal-700 to-emerald-800',
+    notifGradient: 'from-teal-500 to-emerald-600',
+    notifBg: 'from-teal-50 to-emerald-100',
+    notifIconColor: 'text-teal-400',
+    roleTitle: 'Bendahara DPMD',
+    primaryColor: 'teal',
+    dashboardEndpoint: null,
+    showExecutiveStats: false,
+    showDisposisi: false,
+    showPegawaiInfo: true,
   }
 };
 
