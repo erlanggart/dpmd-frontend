@@ -1060,7 +1060,7 @@ const ItemAnggaranPage = () => {
   const [groupMode, setGroupMode]         = useState('grup'); // 'grup' | 'rekening'
 
   const user         = JSON.parse(localStorage.getItem('user') || '{}');
-  const isSuperadmin = user.role === 'superadmin';
+  const isSuperadmin = user.role === 'superadmin' || user.role === 'bendahara';
 
   const fetchItems = useCallback(async () => {
     if (!paguId) return;
