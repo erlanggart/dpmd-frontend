@@ -213,6 +213,10 @@ const ProgramKegiatanPage = lazy(() => import("./pages/bidang/sekretariat/anggar
 const ItemAnggaranPage = lazy(() => import("./pages/bidang/sekretariat/anggaran/ItemAnggaranPage"));
 const ShtPage = lazy(() => import("./pages/bidang/sekretariat/anggaran/ShtPage"));
 const DetailSubKegiatanPage = lazy(() => import("./pages/bidang/sekretariat/anggaran/DetailSubKegiatanPage"));
+const PencairanAtkListPage = lazy(() => import("./pages/bidang/sekretariat/pencairan/PencairanAtkListPage"));
+const PencairanAtkFormPage = lazy(() => import("./pages/bidang/sekretariat/pencairan/PencairanAtkFormPage"));
+const PencairanAtkDetailPage = lazy(() => import("./pages/bidang/sekretariat/pencairan/PencairanAtkDetailPage"));
+const PenyediaPage = lazy(() => import("./pages/bidang/sekretariat/pencairan/PenyediaPage"));
 
 // Bidang pages
 const SekretariatPage = lazy(() => import("./pages/bidang/SekretariatPage"));
@@ -1031,6 +1035,11 @@ function App() {
                   <Route path="anggaran/item-rka" element={<RoleProtectedRoute allowedRoles={["bendahara", "superadmin"]}><ItemAnggaranPage /></RoleProtectedRoute>} />
                   <Route path="anggaran/sht" element={<RoleProtectedRoute allowedRoles={["bendahara", "superadmin"]}><ShtPage /></RoleProtectedRoute>} />
                   <Route path="anggaran/detail-sub-kegiatan" element={<RoleProtectedRoute allowedRoles={["bendahara", "superadmin"]}><DetailSubKegiatanPage /></RoleProtectedRoute>} />
+                  <Route path="pencairan/atk" element={<RoleProtectedRoute allowedRoles={["bendahara", "superadmin"]}><PencairanAtkListPage /></RoleProtectedRoute>} />
+                  <Route path="pencairan/atk/new" element={<RoleProtectedRoute allowedRoles={["bendahara", "superadmin"]}><PencairanAtkFormPage /></RoleProtectedRoute>} />
+                  <Route path="pencairan/atk/:id" element={<RoleProtectedRoute allowedRoles={["bendahara", "superadmin"]}><PencairanAtkDetailPage /></RoleProtectedRoute>} />
+                  <Route path="pencairan/atk/:id/edit" element={<RoleProtectedRoute allowedRoles={["bendahara", "superadmin"]}><PencairanAtkFormPage /></RoleProtectedRoute>} />
+                  <Route path="pencairan/penyedia" element={<RoleProtectedRoute allowedRoles={["bendahara", "superadmin"]}><PenyediaPage /></RoleProtectedRoute>} />
                 </Route>
 
                 {/* Video Meeting Room - MAINTENANCE */}
@@ -1089,6 +1098,11 @@ function App() {
                   <Route path="bidang/sekretariat/anggaran/item-rka" element={<RoleProtectedRoute allowedRoles={["bendahara", "superadmin"]}><ItemAnggaranPage /></RoleProtectedRoute>} />
                   <Route path="bidang/sekretariat/anggaran/sht" element={<RoleProtectedRoute allowedRoles={["bendahara", "superadmin"]}><ShtPage /></RoleProtectedRoute>} />
                   <Route path="bidang/sekretariat/anggaran/detail-sub-kegiatan" element={<RoleProtectedRoute allowedRoles={["bendahara", "superadmin"]}><DetailSubKegiatanPage /></RoleProtectedRoute>} />
+                  <Route path="bidang/sekretariat/pencairan/atk" element={<RoleProtectedRoute allowedRoles={["bendahara", "superadmin"]}><PencairanAtkListPage /></RoleProtectedRoute>} />
+                  <Route path="bidang/sekretariat/pencairan/atk/new" element={<RoleProtectedRoute allowedRoles={["bendahara", "superadmin"]}><PencairanAtkFormPage /></RoleProtectedRoute>} />
+                  <Route path="bidang/sekretariat/pencairan/atk/:id" element={<RoleProtectedRoute allowedRoles={["bendahara", "superadmin"]}><PencairanAtkDetailPage /></RoleProtectedRoute>} />
+                  <Route path="bidang/sekretariat/pencairan/atk/:id/edit" element={<RoleProtectedRoute allowedRoles={["bendahara", "superadmin"]}><PencairanAtkFormPage /></RoleProtectedRoute>} />
+                  <Route path="bidang/sekretariat/pencairan/penyedia" element={<RoleProtectedRoute allowedRoles={["bendahara", "superadmin"]}><PenyediaPage /></RoleProtectedRoute>} />
 
                   {/* KKD sub-routes */}
                   <Route path="bidang/kkd/add" element={<AddDashboard />} />

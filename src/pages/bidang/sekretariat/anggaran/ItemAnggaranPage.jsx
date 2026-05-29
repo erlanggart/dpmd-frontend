@@ -4,7 +4,7 @@ import {
   ArrowLeft, Plus, Edit2, Trash2, X, Save, AlertCircle,
   DollarSign, RefreshCw, Search, CheckCircle,
   ChevronRight, ChevronDown, ChevronUp, FileText, Minus, Layers,
-  Package, Users, UserCheck, Calendar, Mic, Zap,
+  Package, Users, UserCheck, Calendar, Mic, Zap, Calculator,
 } from 'lucide-react';
 import api from '../../../../api';
 import toast from 'react-hot-toast';
@@ -21,6 +21,27 @@ const rekeningParent = (kode) => {
   return parts.length > 1 ? parts.slice(0, -1).join('.') : kode;
 };
 
+// Bangun pohon hierarki rekening dari daftar item flat
+function buildRekeningTree(items) {
+  const root = { code: null, depth: -1, children: new Map(), items: [], total: 0, itemCount: 0 };
+  for (const item of items) {
+    const kode = (item.kode_rekening || '').trim();
+    const parts = kode ? kode.split('.') : ['—'];
+    let node = root;
+    for (let i = 0; i < parts.length; i++) {
+      const prefix = parts.slice(0, i + 1).join('.');
+      if (!node.children.has(prefix)) {
+        node.children.set(prefix, { code: prefix, depth: i, children: new Map(), items: [], total: 0, itemCount: 0 });
+      }
+      node = node.children.get(prefix);
+      node.total += Number(item.total) || 0;
+      node.itemCount += 1;
+    }
+    node.items.push(item);
+  }
+  return root;
+}
+
 const fmtCompact = (n) => {
   if (!n && n !== 0) return '—';
   if (n >= 1_000_000_000) return `Rp ${(n / 1_000_000_000).toFixed(1).replace(/\.0$/, '')} M`;
@@ -34,6 +55,23 @@ const SATUAN_OPTIONS = [
   'Unit', 'Buah', 'Set', 'Paket', 'Lembar', 'Rim', 'Buku',
   'Porsi', 'Kg', 'Liter', 'M', 'M2', 'M3', 'Roll',
 ];
+
+// ─── Fotokopi preset & helpers ───────────────────────────────────────────────
+// Query awal untuk mencari item penggandaan/fotocopy dari katalog SSH.
+const FOTOCOPY_SEARCH_DEFAULT = 'foto copy';
+const isFotocopyItem = (it) => {
+  const n = String(it?.nama_item || '').toLowerCase();
+  return n.includes('fotocopy') || n.includes('fotokopi') || n.includes('penggandaan') || n.includes('foto copy');
+};
+
+// Parse input desimal yang ramah pengguna Indonesia: terima "1,5" maupun "1.5"
+const parseDecimalInput = (raw) => {
+  if (raw === '' || raw == null) return '';
+  const v = String(raw).replace(',', '.');
+  // izinkan hanya digit + maksimum satu titik, allow intermediate "1." while typing
+  if (/^[0-9]*\.?[0-9]*$/.test(v)) return v;
+  return null; // signal invalid → caller akan ignore
+};
 
 // ─── Package Templates ───────────────────────────────────────────────────────
 // Setiap row punya formula(dims) → volume otomatis dari parameter global.
@@ -274,13 +312,18 @@ const CatalogPanel = ({ shtType, onShtTypeChange, onSelect, selectedItem }) => {
 };
 
 // ─── Item Modal ───────────────────────────────────────────────────────────────
+const parseRekeningList = (val) =>
+  val ? val.split(',').map(s => s.trim()).filter(Boolean) : [];
+
 const ItemModal = ({ isOpen, onClose, onSave, editData, loading, existingGroups }) => {
-  const [shtType, setShtType]       = useState('SSH');
-  const [shtSelected, setShtSelected] = useState(null);
-  const [volume, setVolume]         = useState(1);
-  const [extraKoef, setExtraKoef]   = useState([]);
-  const [grup, setGrup]             = useState('');
-  const [keterangan, setKeterangan] = useState('');
+  const [shtType, setShtType]             = useState('SSH');
+  const [shtSelected, setShtSelected]     = useState(null);
+  const [selectedRekening, setSelectedRekening] = useState('');
+  const [volume, setVolume]               = useState(1);
+  const [extraKoef, setExtraKoef]         = useState([]);
+  const [grup, setGrup]                   = useState('');
+  const [keterangan, setKeterangan]       = useState('');
+
   useEffect(() => {
     if (!isOpen) return;
     if (editData) {
@@ -293,6 +336,7 @@ const ItemModal = ({ isOpen, onClose, onSave, editData, loading, existingGroups 
         harga_satuan:  editData.harga_satuan,
         satuan:        editData.satuan || 'Unit',
       });
+      setSelectedRekening(editData.kode_rekening || '');
       const koefArr = editData.koefisien?.length
         ? editData.koefisien
         : [{ nilai: editData.volume ?? 1, satuan: editData.satuan || 'Unit' }];
@@ -303,6 +347,7 @@ const ItemModal = ({ isOpen, onClose, onSave, editData, loading, existingGroups 
     } else {
       setShtType('SSH');
       setShtSelected(null);
+      setSelectedRekening('');
       setVolume(1);
       setExtraKoef([]);
       setGrup('');
@@ -310,12 +355,14 @@ const ItemModal = ({ isOpen, onClose, onSave, editData, loading, existingGroups 
     }
   }, [editData, isOpen]);
 
-  const handleShtTypeChange = (type) => { setShtType(type); setShtSelected(null); };
+  const handleShtTypeChange = (type) => { setShtType(type); setShtSelected(null); setSelectedRekening(''); };
 
   const handleSelectItem = (item) => {
     setShtSelected(item);
     setVolume(1);
     setExtraKoef([]);
+    const list = parseRekeningList(item.kode_rekening);
+    setSelectedRekening(list.length === 1 ? list[0] : '');
     if (!editData) {
       if (item.spesifikasi) setKeterangan(item.spesifikasi);
       if (item.kelompok)    setGrup(item.kelompok);
@@ -332,12 +379,17 @@ const ItemModal = ({ isOpen, onClose, onSave, editData, loading, existingGroups 
   const updateExtraKoef = (i, field, val) =>
     setExtraKoef(p => p.map((k, idx) => idx === i ? { ...k, [field]: val } : k));
 
+  const rekeningList = parseRekeningList(shtSelected?.kode_rekening);
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!shtSelected) return toast.error('Pilih item dari katalog terlebih dahulu');
+    if (rekeningList.length > 1 && !selectedRekening)
+      return toast.error('Pilih kode rekening untuk item ini');
+    const rekening = selectedRekening || firstRekening(shtSelected.kode_rekening);
     onSave({
       nama_item:     shtSelected.uraian,
-      kode_rekening: firstRekening(shtSelected.kode_rekening),
+      kode_rekening: rekening,
       kode_sht:      shtSelected.kode_barang   || null,
       harga_satuan:  shtSelected.harga_satuan,
       satuan:        computedSatuan,
@@ -426,25 +478,69 @@ const ItemModal = ({ isOpen, onClose, onSave, editData, loading, existingGroups 
                   </div>
                 </div>
 
+                {/* Kode Rekening picker — muncul jika item punya >1 rekening */}
+                {rekeningList.length > 1 && (
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1.5">
+                      Kode Rekening
+                      <span className="ml-1 font-normal normal-case tracking-normal text-rose-400">— wajib dipilih</span>
+                    </label>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {rekeningList.map(rek => (
+                        <button
+                          key={rek}
+                          type="button"
+                          onClick={() => setSelectedRekening(rek)}
+                          className={`text-left px-3 py-2 rounded-xl border text-xs font-mono transition-all ${
+                            selectedRekening === rek
+                              ? 'border-indigo-500 bg-indigo-50 text-indigo-800 font-bold ring-1 ring-indigo-300'
+                              : 'border-gray-200 bg-white text-gray-600 hover:border-indigo-300 hover:bg-indigo-50/40'
+                          }`}
+                        >
+                          {selectedRekening === rek && <span className="mr-1 text-indigo-500">✓</span>}
+                          {rek}
+                        </button>
+                      ))}
+                    </div>
+                    {!selectedRekening && (
+                      <p className="mt-1.5 text-[10.5px] text-rose-500 flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3 shrink-0" /> Pilih salah satu kode rekening di atas
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Kode rekening tunggal — tampilkan sebagai info */}
+                {rekeningList.length === 1 && (
+                  <div className="bg-gray-50 border border-gray-100 rounded-xl px-3 py-2.5">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Kode Rekening</p>
+                    <p className="text-xs font-mono text-gray-700">{rekeningList[0]}</p>
+                  </div>
+                )}
+
                 {/* Volume stepper */}
                 <div>
                   <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">
                     Volume Kebutuhan
+                    <span className="ml-1 text-gray-300 font-normal normal-case tracking-normal">— mendukung desimal, mis. 12,5 atau 12.5</span>
                   </label>
                   <div className="flex items-center gap-3">
                     <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden">
                       <button type="button"
-                        onClick={() => setVolume(v => Math.max(0, Number(v) - 1))}
+                        onClick={() => setVolume(v => String(Math.max(0, (Number(v) || 0) - 1)))}
                         className="px-3.5 py-2.5 text-gray-500 hover:bg-gray-100 transition-colors text-lg font-bold leading-none">
                         −
                       </button>
                       <input
-                        type="number" value={volume} min="0" step="any"
-                        onChange={e => setVolume(e.target.value)}
-                        className="w-20 text-center py-2.5 text-sm font-bold text-gray-800 border-x border-gray-200 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-400"
+                        type="text" inputMode="decimal" value={volume}
+                        onChange={e => {
+                          const v = parseDecimalInput(e.target.value);
+                          if (v !== null) setVolume(v);
+                        }}
+                        className="w-24 text-center py-2.5 text-sm font-bold text-gray-800 border-x border-gray-200 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-400"
                       />
                       <button type="button"
-                        onClick={() => setVolume(v => Number(v) + 1)}
+                        onClick={() => setVolume(v => String((Number(v) || 0) + 1))}
                         className="px-3.5 py-2.5 text-gray-500 hover:bg-gray-100 transition-colors text-lg font-bold leading-none">
                         +
                       </button>
@@ -484,8 +580,11 @@ const ItemModal = ({ isOpen, onClose, onSave, editData, loading, existingGroups 
                       {extraKoef.map((k, i) => (
                         <div key={i} className="flex items-center gap-2">
                           <span className="text-sm font-bold text-gray-400 shrink-0">×</span>
-                          <input type="number" value={k.nilai} min="0" step="any"
-                            onChange={e => updateExtraKoef(i, 'nilai', e.target.value)}
+                          <input type="text" inputMode="decimal" value={k.nilai}
+                            onChange={e => {
+                              const v = parseDecimalInput(e.target.value);
+                              if (v !== null) updateExtraKoef(i, 'nilai', v);
+                            }}
                             className="w-24 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none"
                             placeholder="1" />
                           <input type="text" list="koef-satuan-opts" value={k.satuan}
@@ -853,8 +952,11 @@ const PaketModal = ({ isOpen, onClose, onSave, loading, existingGroups }) => {
                         <span>Override volume manual</span>
                       </summary>
                       <div className="mt-1.5 flex items-center gap-1">
-                        <input type="number" value={st.volumeOverride ?? ''} placeholder={`auto ${vol}`}
-                          onChange={e => setRowsState(p => ({ ...p, [row.id]: { ...p[row.id], volumeOverride: e.target.value === '' ? null : e.target.value } }))}
+                        <input type="text" inputMode="decimal" value={st.volumeOverride ?? ''} placeholder={`auto ${vol}`}
+                          onChange={e => {
+                            const v = parseDecimalInput(e.target.value);
+                            if (v !== null) setRowsState(p => ({ ...p, [row.id]: { ...p[row.id], volumeOverride: v === '' ? null : v } }));
+                          }}
                           className="w-full px-2 py-1 text-xs border border-gray-200 rounded focus:ring-1 focus:ring-violet-400 focus:outline-none" />
                         {st.volumeOverride != null && (
                           <button type="button" onClick={() => setRowsState(p => ({ ...p, [row.id]: { ...p[row.id], volumeOverride: null } }))}
@@ -1041,6 +1143,469 @@ const GroupSection = ({ groupName, isRekening, grupNames, items, isSuperadmin, o
   );
 };
 
+// ─── Item Detail Row (reusable untuk tree rekening) ─────────────────────────
+const ItemDetailRow = ({ item, globalIdx, isSuperadmin, onEdit, onDelete, indentLeft = 20 }) => {
+  const hasKoef = item.koefisien?.length > 1;
+  return (
+    <div className="hover:bg-slate-50/60 transition-colors group border-b border-slate-50 last:border-0">
+      {/* Desktop */}
+      <div className="hidden md:grid items-start gap-3 py-3"
+        style={{ gridTemplateColumns: '2.5rem 1fr 4.5rem 9rem 9rem 9rem 5rem', paddingLeft: `${indentLeft}px`, paddingRight: '20px' }}>
+        <div className="text-sm font-mono text-slate-400 pt-0.5">{String(globalIdx + 1).padStart(2, '0')}</div>
+        <div>
+          <p className="font-semibold text-slate-800 text-sm leading-snug">{item.nama_item}</p>
+          {item.keterangan && <p className="text-[11px] text-slate-500 mt-0.5">{item.keterangan}</p>}
+        </div>
+        <div className="flex justify-center pt-0.5">
+          <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${
+            item.jenis_sht === 'SSH' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
+          }`}>{item.jenis_sht}</span>
+        </div>
+        <div className="text-right">
+          <p className="text-sm font-semibold text-slate-700">
+            {item.volume} <span className="text-slate-500 font-normal text-xs">{item.satuan}</span>
+          </p>
+          {hasKoef && (
+            <p className="text-[10px] text-slate-400 mt-0.5">
+              {item.koefisien.map(k => `${k.nilai} ${k.satuan}`).join(' × ')}
+            </p>
+          )}
+        </div>
+        <div className="text-right text-sm text-slate-600">{formatRupiah(item.harga_satuan)}</div>
+        <div className="text-right font-bold text-emerald-700 text-sm">{formatRupiah(item.total)}</div>
+        <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          {isSuperadmin && (
+            <>
+              <button onClick={() => onEdit(item)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
+                <Edit2 className="h-3.5 w-3.5" />
+              </button>
+              <button onClick={() => onDelete(item)} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors">
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+      {/* Mobile */}
+      <div className="md:hidden px-4 py-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5 mb-1">
+              <span className="text-[11px] font-mono text-slate-400">#{globalIdx + 1}</span>
+              <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded ${
+                item.jenis_sht === 'SSH' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
+              }`}>{item.jenis_sht}</span>
+            </div>
+            <p className="font-semibold text-slate-800 text-sm leading-snug">{item.nama_item}</p>
+            {item.keterangan && <p className="text-[11px] text-slate-500 mt-0.5">{item.keterangan}</p>}
+          </div>
+          {isSuperadmin && (
+            <div className="flex gap-1 shrink-0">
+              <button onClick={() => onEdit(item)} className="p-1.5 text-indigo-500 hover:bg-indigo-50 rounded-lg"><Edit2 className="h-4 w-4" /></button>
+              <button onClick={() => onDelete(item)} className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg"><Trash2 className="h-4 w-4" /></button>
+            </div>
+          )}
+        </div>
+        <div className="flex items-center justify-between text-sm mt-1">
+          <span className="text-slate-500">{item.volume} {item.satuan} × {formatRupiah(item.harga_satuan)}</span>
+          <span className="font-bold text-emerald-700">{formatRupiah(item.total)}</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── Rekening Tree Node ───────────────────────────────────────────────────────
+// Style berdasarkan kedalaman segmen: 0='5', 1='5.1', 2='5.1.02', dst.
+const REKENING_DEPTH_STYLES = [
+  { bg: 'bg-blue-400',  text: 'text-white',     countText: 'text-blue-100',   border: 'border-blue-500',  accText: 'text-emerald-100', size: 'text-[11.5px]', weight: 'font-black'    },
+  { bg: 'bg-blue-300',  text: 'text-blue-950',  countText: 'text-blue-700',   border: 'border-blue-400',  accText: 'text-emerald-700', size: 'text-[11px]',   weight: 'font-bold'     },
+  { bg: 'bg-blue-200',  text: 'text-blue-950',  countText: 'text-blue-600',   border: 'border-blue-300',  accText: 'text-emerald-700', size: 'text-[11px]',   weight: 'font-bold'     },
+  { bg: 'bg-indigo-50', text: 'text-indigo-900',countText: 'text-indigo-400', border: 'border-indigo-100',accText: 'text-emerald-700', size: 'text-xs',       weight: 'font-bold'     },
+  { bg: 'bg-slate-50',  text: 'text-slate-700', countText: 'text-slate-400',  border: 'border-slate-200', accText: 'text-emerald-700', size: 'text-xs',       weight: 'font-semibold' },
+  { bg: 'bg-white',     text: 'text-slate-500', countText: 'text-slate-300',  border: 'border-slate-100', accText: 'text-emerald-700', size: 'text-[11px]',   weight: 'font-semibold' },
+];
+const INDENT_STEP = 16; // px per kedalaman
+
+const RekeningTreeNode = ({ node, isSuperadmin, onEdit, onDelete, itemIndexMap }) => {
+  const [open, setOpen] = useState(true);
+  const depth = node.depth; // 0-indexed (0 = segmen pertama, mis. '5')
+  const s = REKENING_DEPTH_STYLES[Math.min(depth, REKENING_DEPTH_STYLES.length - 1)];
+  const headerIndent = 12 + depth * INDENT_STEP;
+  const itemIndent   = headerIndent + INDENT_STEP + 4;
+  const hasChildren  = node.children.size > 0;
+
+  return (
+    <div>
+      {/* Header node */}
+      <button
+        onClick={() => setOpen(v => !v)}
+        className={`w-full flex items-center gap-2 py-2 border-b ${s.border} ${s.bg} transition-colors text-left`}
+        style={{ paddingLeft: `${headerIndent}px`, paddingRight: '16px' }}
+      >
+        {open
+          ? <ChevronDown  className={`h-3 w-3 shrink-0 ${s.text} opacity-60`} />
+          : <ChevronRight className={`h-3 w-3 shrink-0 ${s.text} opacity-60`} />}
+        <span className={`font-mono ${s.size} ${s.weight} ${s.text} flex-1 min-w-0 truncate`}>
+          {node.code}
+        </span>
+        <span className={`text-[10px] ${s.countText} mr-3 shrink-0`}>{node.itemCount} item</span>
+        <span className={`text-[11.5px] font-bold ${s.accText} shrink-0`}>
+          {fmtCompact(node.total)}
+        </span>
+      </button>
+
+      {/* Konten: child nodes lalu item di node ini */}
+      {open && (
+        <div>
+          {[...node.children.values()].map(child => (
+            <RekeningTreeNode
+              key={child.code}
+              node={child}
+              isSuperadmin={isSuperadmin}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              itemIndexMap={itemIndexMap}
+            />
+          ))}
+          {/* Table header mini — hanya muncul jika node ini punya item langsung */}
+          {node.items.length > 0 && (
+            <div className="hidden md:grid py-1.5 border-b border-slate-50 text-[9.5px] font-bold uppercase tracking-widest text-slate-300"
+              style={{ gridTemplateColumns: '2.5rem 1fr 4.5rem 9rem 9rem 9rem 5rem', paddingLeft: `${itemIndent}px`, paddingRight: '20px' }}>
+              <div>No</div><div>Uraian Item</div>
+              <div className="text-center">Jenis</div>
+              <div className="text-right">Vol. Satuan</div>
+              <div className="text-right">Harga Satuan</div>
+              <div className="text-right">Total</div>
+              <div />
+            </div>
+          )}
+          {node.items.map(item => (
+            <ItemDetailRow
+              key={item.id}
+              item={item}
+              globalIdx={itemIndexMap[item.id] ?? 0}
+              isSuperadmin={isSuperadmin}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              indentLeft={itemIndent}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─── Sesuaikan Sidebar — REFERENSI saja, tidak mengubah koefisien langsung ────
+// Menampilkan saran volume baru untuk tiap item agar total anggaran = pagu.
+// User klik "Buka untuk Edit" → ItemModal terbuka dengan volume yang sudah
+// terisi sesuai saran, tapi user tetap harus konfirmasi & klik Save sendiri.
+const SesuaikanSidebar = ({
+  items, pagu, totalAnggaran,
+  onOpenEditWithSuggestion, onAutoAddFotocopy, savingAuto,
+}) => {
+  const [fotocopySearch, setFotocopySearch] = useState(FOTOCOPY_SEARCH_DEFAULT);
+  const [fotocopyItems, setFotocopyItems] = useState([]);
+  const [fotocopyLoading, setFotocopyLoading] = useState(false);
+  const [selectedFotocopyItem, setSelectedFotocopyItem] = useState(null);
+
+  const selisih    = pagu - totalAnggaran;
+  const absSelisih = Math.abs(selisih);
+  const isPositive = selisih > 0;          // pagu masih sisa → perlu naikkan volume
+  const isMatched  = absSelisih < 1;       // toleransi 1 rupiah dianggap sudah pas
+
+  const existingFotocopy = items.find(isFotocopyItem);
+
+  // Hitung saran volume untuk tiap item — masing-masing item dihitung independen
+  // (asumsi: yang berubah hanya satu item ini, sisanya tetap)
+  const suggestions = items
+    .filter(it => Number(it.harga_satuan) > 0)
+    .map(it => {
+      const currentSubtotal  = Number(it.volume) * Number(it.harga_satuan);
+      const otherTotal       = totalAnggaran - currentSubtotal;
+      const neededSubtotal   = pagu - otherTotal;
+      const suggestedVolume  = neededSubtotal / Number(it.harga_satuan);
+      return {
+        item: it,
+        currentSubtotal,
+        suggestedVolume,
+        suggestedSubtotal: neededSubtotal,
+        deltaVolume: suggestedVolume - Number(it.volume),
+        possible: suggestedVolume > 0,
+        isFotocopy: isFotocopyItem(it),
+      };
+    });
+
+  // Urutkan: fotokopi existing dulu, lalu yang feasible (delta kecil) dulu
+  suggestions.sort((a, b) => {
+    if (a.isFotocopy && !b.isFotocopy) return -1;
+    if (!a.isFotocopy && b.isFotocopy) return 1;
+    if (a.possible && !b.possible) return -1;
+    if (!a.possible && b.possible) return 1;
+    return Math.abs(a.deltaVolume) - Math.abs(b.deltaVolume);
+  });
+
+  const showFotocopyCatalog = !existingFotocopy && !isMatched && isPositive;
+
+  const doSearchFotocopy = useCallback(async (q) => {
+    setFotocopyLoading(true);
+    try {
+      const res = await api.get('/anggaran/sht/ssh', {
+        params: { search: q || FOTOCOPY_SEARCH_DEFAULT, limit: 30 },
+      });
+      const data = res.data.success ? res.data.data : [];
+      setFotocopyItems(data);
+      setSelectedFotocopyItem(prev => {
+        if (prev && data.some(item => pinKey(item) === pinKey(prev))) return prev;
+        return data[0] || null;
+      });
+    } catch {
+      setFotocopyItems([]);
+      setSelectedFotocopyItem(null);
+    } finally {
+      setFotocopyLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!showFotocopyCatalog) return undefined;
+    const timer = setTimeout(() => doSearchFotocopy(fotocopySearch), 350);
+    return () => clearTimeout(timer);
+  }, [showFotocopyCatalog, fotocopySearch, doSearchFotocopy]);
+
+  const selectedFotocopyPrice = Number(selectedFotocopyItem?.harga_satuan || 0);
+  const fotocopySuggestion = showFotocopyCatalog && selectedFotocopyItem && selectedFotocopyPrice > 0
+    ? { volume: selisih / selectedFotocopyPrice, subtotal: selisih }
+    : null;
+
+  return (
+    <aside className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col xl:sticky xl:top-16 xl:max-h-[calc(100vh-5rem)]">
+
+        {/* Header */}
+        <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 bg-emerald-100 rounded-xl flex items-center justify-center">
+              <Calculator className="h-5 w-5 text-emerald-600" />
+            </div>
+            <div>
+              <h2 className="font-bold text-slate-900">Referensi Penyesuaian ke Pagu</h2>
+              <p className="text-xs text-slate-500 mt-0.5">Saran volume baru — tidak mengubah data, hanya menunjukkan opsi</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Summary */}
+        <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/50 shrink-0">
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Pagu</p>
+              <p className="text-sm font-bold text-slate-800 mt-0.5">{formatRupiah(pagu)}</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Total Saat Ini</p>
+              <p className="text-sm font-bold text-slate-800 mt-0.5">{formatRupiah(totalAnggaran)}</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Selisih</p>
+              <p className={`text-sm font-bold mt-0.5 ${
+                isMatched ? 'text-emerald-600' : isPositive ? 'text-amber-600' : 'text-rose-600'
+              }`}>
+                {isMatched
+                  ? '✓ Sesuai'
+                  : isPositive
+                    ? `+ ${formatRupiah(absSelisih)}`
+                    : `− ${formatRupiah(absSelisih)}`}
+              </p>
+              <p className="text-[10px] text-slate-400 mt-0.5">
+                {isMatched
+                  ? 'tidak perlu disesuaikan'
+                  : isPositive
+                    ? 'pagu masih sisa'
+                    : 'melebihi pagu'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto px-5 py-4">
+          {isMatched ? (
+            <div className="text-center py-8">
+              <CheckCircle className="h-10 w-10 mx-auto mb-2 text-emerald-500" />
+              <p className="font-semibold text-emerald-700">Total anggaran sudah sesuai dengan pagu</p>
+              <p className="text-sm text-slate-500 mt-1">Tidak ada penyesuaian yang diperlukan</p>
+            </div>
+          ) : (
+            <>
+              <p className="text-xs font-semibold text-slate-700 mb-1">
+                Item yang volumenya bisa diubah untuk menyamakan total dengan pagu:
+              </p>
+              <p className="text-[11px] text-slate-400 mb-3">
+                Klik <strong>Buka untuk Edit</strong> pada item yang diinginkan — form edit akan terbuka dengan volume sudah terisi sesuai saran, lalu Anda klik Simpan sendiri.
+              </p>
+
+              {suggestions.length === 0 ? (
+                <div className="text-center py-6 text-slate-400 text-sm">
+                  Belum ada item yang bisa dijadikan referensi penyesuaian.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {suggestions.map(({ item, currentSubtotal, suggestedVolume, suggestedSubtotal, possible, deltaVolume, isFotocopy: fc }) => (
+                    <div key={item.id} className={`border rounded-xl p-3 transition-colors ${
+                      possible ? 'border-slate-200 bg-white hover:border-emerald-200' : 'border-slate-100 bg-slate-50/40 opacity-60'
+                    }`}>
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
+                            <p className="font-semibold text-slate-800 text-sm leading-snug">{item.nama_item}</p>
+                            {fc && (
+                              <span className="text-[9px] font-bold uppercase tracking-wider bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">Fotokopi</span>
+                            )}
+                            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                              item.jenis_sht === 'SSH' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
+                            }`}>{item.jenis_sht}</span>
+                          </div>
+                          {item.grup && <p className="text-[11px] text-slate-500">Grup: {item.grup}</p>}
+                        </div>
+                        {possible && (
+                          <button type="button"
+                            onClick={() => onOpenEditWithSuggestion(item, suggestedVolume)}
+                            className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-[11px] font-semibold hover:bg-emerald-700 shrink-0 whitespace-nowrap transition-colors">
+                            Buka untuk Edit
+                          </button>
+                        )}
+                      </div>
+
+                      {!possible ? (
+                        <p className="text-[11px] text-rose-600 font-medium bg-rose-50 border border-rose-100 rounded-lg px-2 py-1.5">
+                          ✗ Tidak bisa disesuaikan — selisih lebih besar dari subtotal item ini (volume jadi negatif)
+                        </p>
+                      ) : (
+                        <div className="bg-slate-50 border border-slate-100 rounded-lg p-2 text-[11px] space-y-1">
+                          <div className="flex justify-between text-slate-500">
+                            <span>Saat ini:</span>
+                            <span className="font-mono">
+                              {Number(item.volume).toLocaleString('id-ID', { maximumFractionDigits: 4 })} {item.satuan} × {formatRupiah(item.harga_satuan)} = {formatRupiah(currentSubtotal)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-emerald-700 font-bold">
+                            <span>Saran:</span>
+                            <span className="font-mono">
+                              {suggestedVolume.toLocaleString('id-ID', { maximumFractionDigits: 4 })} {item.satuan} × {formatRupiah(item.harga_satuan)} = {formatRupiah(suggestedSubtotal)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-slate-400 text-[10px]">
+                            <span>Selisih volume:</span>
+                            <span className="font-mono">
+                              {deltaVolume > 0 ? '+ ' : '− '}
+                              {Math.abs(deltaVolume).toLocaleString('id-ID', { maximumFractionDigits: 4 })} {item.satuan}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Fallback: tambah item fotokopi dari katalog SSH kalau belum ada */}
+              {showFotocopyCatalog && (
+                <div className="mt-4 border-2 border-dashed border-amber-300 bg-amber-50/40 rounded-xl p-3">
+                  <div className="flex items-start gap-2 mb-2">
+                    <div className="h-8 w-8 bg-amber-100 rounded-lg flex items-center justify-center shrink-0">
+                      <Search className="h-4 w-4 text-amber-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-amber-900 text-sm">Alternatif: Item Fotokopi dari SSH</p>
+                      <p className="text-[11px] text-amber-700/80 mt-0.5">
+                        Pilih item "foto copy" dari katalog SSH, lalu volume dihitung dari selisih pagu.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="relative mb-2">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-amber-500 pointer-events-none" />
+                    <input
+                      type="text"
+                      value={fotocopySearch}
+                      onChange={e => setFotocopySearch(e.target.value)}
+                      placeholder="Cari item SSH, mis. foto copy A4"
+                      className="w-full pl-8 pr-3 py-2 bg-white border border-amber-200 rounded-lg text-xs focus:ring-2 focus:ring-amber-400 focus:outline-none"
+                    />
+                  </div>
+                  <div className="max-h-52 overflow-y-auto bg-white border border-amber-200 rounded-lg divide-y divide-amber-100 mb-2">
+                    {fotocopyLoading ? (
+                      <div className="flex items-center justify-center py-5">
+                        <span className="animate-spin rounded-full h-5 w-5 border-b-2 border-amber-600" />
+                      </div>
+                    ) : fotocopyItems.length === 0 ? (
+                      <div className="px-3 py-4 text-center text-[11px] text-amber-700/70">
+                        Tidak ada item SSH yang cocok.
+                      </div>
+                    ) : (
+                      fotocopyItems.map((item, i) => {
+                        const selected = selectedFotocopyItem && pinKey(item) === pinKey(selectedFotocopyItem);
+                        return (
+                          <button
+                            key={`${pinKey(item)}-${i}`}
+                            type="button"
+                            onClick={() => setSelectedFotocopyItem(item)}
+                            className={`w-full text-left px-3 py-2 transition-colors ${
+                              selected ? 'bg-amber-100/70' : 'hover:bg-amber-50'
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0 flex-1">
+                                <p className="text-xs font-semibold text-slate-800 leading-snug">{item.uraian}</p>
+                                {item.spesifikasi && (
+                                  <p className="text-[10.5px] text-slate-500 mt-0.5 leading-snug">{item.spesifikasi}</p>
+                                )}
+                                <p className="text-[10px] text-slate-400 mt-1">{item.satuan}</p>
+                              </div>
+                              <div className="text-right shrink-0">
+                                <p className="text-[11px] font-bold text-emerald-700">{formatRupiah(item.harga_satuan)}</p>
+                                {selected && <p className="text-[9px] font-bold text-amber-700 mt-0.5">Terpilih</p>}
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                  {fotocopySuggestion && (
+                  <div className="bg-white border border-amber-200 rounded-lg p-2 text-[11px] mb-2">
+                    <div className="flex justify-between text-emerald-700 font-bold">
+                      <span>Saran:</span>
+                      <span className="font-mono">
+                        {fotocopySuggestion.volume.toLocaleString('id-ID', { maximumFractionDigits: 4 })} {selectedFotocopyItem.satuan || 'Lembar'} x {formatRupiah(selectedFotocopyPrice)} = {formatRupiah(fotocopySuggestion.subtotal)}
+                      </span>
+                    </div>
+                  </div>
+                  )}
+                  <button type="button"
+                    onClick={() => onAutoAddFotocopy(selectedFotocopyItem, fotocopySuggestion?.volume)}
+                    disabled={savingAuto || !fotocopySuggestion}
+                    className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-amber-600 text-white rounded-lg text-xs font-bold hover:bg-amber-700 disabled:opacity-50 transition-colors">
+                    {savingAuto ? <span className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white" /> : <Plus className="h-3.5 w-3.5" />}
+                    Tambah Item Fotokopi dari SSH
+                  </button>
+                </div>
+              )}
+
+              <div className="mt-4 flex items-start gap-2 text-[11px] text-slate-500 bg-slate-50 border border-slate-100 rounded-lg px-3 py-2">
+                <AlertCircle className="h-3.5 w-3.5 text-slate-400 shrink-0 mt-0.5" />
+                <span>
+                  Sidebar ini hanya menampilkan referensi — tidak ada data yang diubah sampai Anda menyimpan secara eksplisit di form edit.
+                </span>
+              </div>
+            </>
+          )}
+        </div>
+
+    </aside>
+  );
+};
+
 // ─── Halaman Utama ───────────────────────────────────────────────────────────
 const ItemAnggaranPage = () => {
   const navigate = useNavigate();
@@ -1058,6 +1623,7 @@ const ItemAnggaranPage = () => {
   const [editData, setEditData]           = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [groupMode, setGroupMode]         = useState('grup'); // 'grup' | 'rekening'
+  const [savingFotocopy, setSavingFotocopy] = useState(false);
 
   const user         = JSON.parse(localStorage.getItem('user') || '{}');
   const isSuperadmin = user.role === 'superadmin' || user.role === 'bendahara';
@@ -1078,25 +1644,36 @@ const ItemAnggaranPage = () => {
 
   useEffect(() => { fetchItems(); }, [fetchItems]);
 
-  // Group items by grup name or by rekening parent code
+  // Group items by grup name (mode 'grup')
   const groupedItems = useMemo(() => {
+    if (groupMode !== 'grup') return [];
     const map = new Map();
     items.forEach(item => {
-      const key = groupMode === 'rekening'
-        ? (rekeningParent(firstRekening(item.kode_rekening)) || '—')
-        : (item.grup || '');
+      const key = item.grup || '';
       if (!map.has(key)) map.set(key, []);
       map.get(key).push(item);
     });
-    return Array.from(map.entries()).map(([name, its]) => ({
-      name,
-      items: its,
-      isRekening: groupMode === 'rekening',
-      grupNames: groupMode === 'rekening'
-        ? [...new Set(its.map(i => i.grup).filter(Boolean))]
-        : [],
-    }));
+    return Array.from(map.entries()).map(([name, its]) => ({ name, items: its }));
   }, [items, groupMode]);
+
+  // Pohon hierarki rekening — hanya dibangun saat mode 'rekening'
+  const rekeningTree = useMemo(
+    () => groupMode === 'rekening' ? buildRekeningTree(items) : null,
+    [items, groupMode]
+  );
+
+  // Peta item.id → index global (urutan DFS) untuk penomoran item di tree
+  const itemGlobalIndex = useMemo(() => {
+    if (!rekeningTree) return {};
+    const map = {};
+    let idx = 0;
+    function dfs(node) {
+      node.children.forEach(child => dfs(child));
+      node.items.forEach(item => { map[item.id] = idx++; });
+    }
+    dfs(rekeningTree);
+    return map;
+  }, [rekeningTree]);
 
   const existingGroups = useMemo(
     () => [...new Set(items.map(i => i.grup).filter(Boolean))],
@@ -1146,10 +1723,55 @@ const ItemAnggaranPage = () => {
     }
   };
 
+  // Buka ItemModal dengan volume sudah terisi sesuai saran dari SesuaikanSidebar.
+  // Tidak menyimpan apa pun — user tetap harus klik Save di form edit.
+  const handleOpenEditWithSuggestion = (item, suggestedVolume) => {
+    const satuanAsli = item.satuan || 'Unit';
+    setEditData({
+      ...item,
+      volume: suggestedVolume,
+      koefisien: [{ nilai: suggestedVolume, satuan: satuanAsli }],
+    });
+    setModalOpen(true);
+  };
+
+  // Tambah item fotokopi dari katalog SSH sebagai item baru (BUKAN ubah koefisien existing).
+  const handleAutoAddFotocopy = async (sshItem, suggestedVolume) => {
+    if (!sshItem || !suggestedVolume) {
+      toast.error('Pilih item fotokopi dari katalog SSH terlebih dahulu');
+      return;
+    }
+
+    try {
+      setSavingFotocopy(true);
+      await api.post(`/anggaran/pagu/${paguId}/items`, {
+        nama_item:    sshItem.uraian,
+        kode_rekening: firstRekening(sshItem.kode_rekening),
+        satuan:       sshItem.satuan || 'Lembar',
+        volume:       suggestedVolume,
+        harga_satuan: sshItem.harga_satuan,
+        jenis_sht:    'SSH',
+        kode_sht:     sshItem.kode_barang || null,
+        keterangan:   sshItem.spesifikasi
+          ? `${sshItem.spesifikasi} - Penyesuaian akhir agar total anggaran sama dengan pagu`
+          : 'Penyesuaian akhir agar total anggaran sama dengan pagu',
+        koefisien:    [{ nilai: suggestedVolume, satuan: sshItem.satuan || 'Lembar' }],
+        grup:         sshItem.kelompok || 'Penggandaan',
+      });
+      toast.success('Item fotokopi dari SSH berhasil ditambahkan');
+      fetchItems();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Gagal menambahkan item fotokopi');
+    } finally {
+      setSavingFotocopy(false);
+    }
+  };
+
   const pagu    = paguInfo?.pagu || 0;
   const sisa    = pagu - totalAnggaran;
   const pctUsed = pagu > 0 ? Math.min(100, (totalAnggaran / pagu) * 100) : 0;
   const mk      = paguInfo?.master_kegiatan;
+  const showSesuaikanSidebar = isSuperadmin && !loading && pagu > 0 && items.length > 0;
 
   // Running index across all groups for row numbering
   let runningIdx = 0;
@@ -1211,9 +1833,15 @@ const ItemAnggaranPage = () => {
                 <p className="text-[11px] text-slate-400">{formatRupiah(pagu)}</p>
               </div>
               <div className="p-4">
-                <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Dianggarkan</div>
+                <div className={`text-[10px] font-bold uppercase tracking-widest mb-1.5 ${
+                  pctUsed > 100 ? 'text-rose-600' : 'text-slate-400'
+                }`}>
+                  {pctUsed > 100 ? '⚠ Melebihi Pagu' : 'Dianggarkan'}
+                </div>
                 <div className="flex items-baseline gap-1.5">
-                  <span className="text-lg font-bold text-slate-800">{pctUsed.toFixed(1)}%</span>
+                  <span className={`text-lg font-bold ${pctUsed > 100 ? 'text-rose-600' : 'text-slate-800'}`}>
+                    {pctUsed.toFixed(1)}%
+                  </span>
                   <span className="text-sm text-slate-500">{fmtCompact(totalAnggaran)}</span>
                 </div>
                 <div className="mt-2 h-1.5 bg-slate-100 rounded-full overflow-hidden">
@@ -1226,7 +1854,23 @@ const ItemAnggaranPage = () => {
           </div>
         )}
 
+        {/* ── Banner: Total melebihi pagu (call-to-action) ── */}
+        {!loading && pagu > 0 && totalAnggaran > pagu && (
+          <div className="bg-rose-50 border-2 border-rose-200 rounded-2xl px-4 py-3 flex items-center gap-3 flex-wrap">
+            <AlertCircle className="h-5 w-5 text-rose-600 shrink-0" />
+            <div className="flex-1 min-w-[200px]">
+              <p className="font-bold text-rose-700 text-sm">
+                Total anggaran melebihi pagu sebesar {formatRupiah(totalAnggaran - pagu)}
+              </p>
+              <p className="text-[11px] text-rose-600/80 mt-0.5">
+                Kurangi item atau gunakan panel referensi penyesuaian di samping daftar item.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* ── Items Section ── */}
+        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_420px] gap-5 items-start">
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
 
           {/* Toolbar */}
@@ -1236,9 +1880,14 @@ const ItemAnggaranPage = () => {
               <div className="flex items-center gap-2 mt-0.5">
                 <h2 className="font-bold text-slate-800">Daftar Item RKA</h2>
                 <span className="bg-slate-100 text-slate-600 text-xs font-bold px-2 py-0.5 rounded-full">{items.length} item</span>
-                {groupedItems.length > 1 && (
+                {groupMode === 'grup' && groupedItems.length > 1 && (
                   <span className="bg-indigo-100 text-indigo-700 text-xs font-semibold px-2 py-0.5 rounded-full flex items-center gap-1">
                     <Layers className="h-3 w-3" />{groupedItems.length} grup
+                  </span>
+                )}
+                {groupMode === 'rekening' && (
+                  <span className="bg-indigo-100 text-indigo-700 text-xs font-semibold px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <Layers className="h-3 w-3" />Hierarki Rekening
                   </span>
                 )}
               </div>
@@ -1297,23 +1946,36 @@ const ItemAnggaranPage = () => {
           ) : (
             <>
               <div className="divide-y divide-slate-100">
-                {groupedItems.map(({ name, items: gItems, isRekening, grupNames }) => {
-                  const start = runningIdx;
-                  runningIdx += gItems.length;
-                  return (
-                    <GroupSection
-                      key={name}
-                      groupName={name}
-                      isRekening={isRekening}
-                      grupNames={grupNames}
-                      items={gItems}
+                {groupMode === 'rekening' && rekeningTree ? (
+                  [...rekeningTree.children.values()].map(node => (
+                    <RekeningTreeNode
+                      key={node.code}
+                      node={node}
                       isSuperadmin={isSuperadmin}
-                      startIdx={start}
                       onEdit={(item) => { setEditData(item); setModalOpen(true); }}
                       onDelete={(item) => setDeleteConfirm(item)}
+                      itemIndexMap={itemGlobalIndex}
                     />
-                  );
-                })}
+                  ))
+                ) : (
+                  groupedItems.map(({ name, items: gItems }) => {
+                    const start = runningIdx;
+                    runningIdx += gItems.length;
+                    return (
+                      <GroupSection
+                        key={name}
+                        groupName={name}
+                        isRekening={false}
+                        grupNames={[]}
+                        items={gItems}
+                        isSuperadmin={isSuperadmin}
+                        startIdx={start}
+                        onEdit={(item) => { setEditData(item); setModalOpen(true); }}
+                        onDelete={(item) => setDeleteConfirm(item)}
+                      />
+                    );
+                  })
+                )}
               </div>
 
               {/* Total */}
@@ -1321,7 +1983,9 @@ const ItemAnggaranPage = () => {
                 <div className="flex items-end justify-between">
                   <div className="flex items-center gap-2 text-xs text-slate-500">
                     <span className="h-2 w-2 rounded-full bg-indigo-400 inline-block" />
-                    TOTAL ANGGARAN · Akumulasi {items.length} item{groupedItems.length > 1 && ` · ${groupedItems.length} grup`}
+                    TOTAL ANGGARAN · Akumulasi {items.length} item
+                    {groupMode === 'grup' && groupedItems.length > 1 && ` · ${groupedItems.length} grup`}
+                    {groupMode === 'rekening' && rekeningTree && ` · ${rekeningTree.children.size} kelompok rekening`}
                   </div>
                   <div className="text-right">
                     <p className="text-2xl font-bold text-slate-900 tracking-tight">{formatRupiah(totalAnggaran)}</p>
@@ -1338,9 +2002,19 @@ const ItemAnggaranPage = () => {
             </>
           )}
         </div>
+        {showSesuaikanSidebar && (
+          <SesuaikanSidebar
+            items={items}
+            pagu={pagu}
+            totalAnggaran={totalAnggaran}
+            onOpenEditWithSuggestion={handleOpenEditWithSuggestion}
+            onAutoAddFotocopy={handleAutoAddFotocopy}
+            savingAuto={savingFotocopy}
+          />
+        )}
+        </div>
       </div>
 
-      {/* ── Sticky Footer ── */}
       <div className="fixed bottom-0 left-0 right-0 border-t border-slate-200 bg-white/90 backdrop-blur-sm z-20 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
         <div className="mx-auto px-4 sm:px-6 h-14 flex items-center gap-4">
           <div className="hidden sm:block">
