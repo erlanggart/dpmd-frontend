@@ -276,12 +276,7 @@ export default function EventAttendancePublicPage({ mode = "scan" }) {
               Layar khusus booth untuk menampilkan QR daftar hadir. Pengunjung cukup scan QR memakai kamera HP dan mengisi form digital di perangkat masing-masing.
             </p>
 
-            <div className="mt-8 grid gap-3 sm:grid-cols-2">
-              <InfoTile icon={CalendarDays} label="Tanggal Event" value={formatEventDate(config.event_date)} />
-              <InfoTile icon={MapPin} label="Lokasi" value={config.location || "Booth DPMD Kabupaten Bogor"} />
-            </div>
-
-            <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            <div className="mt-8 grid gap-3 sm:grid-cols-3">
               {[
                 ["1", "Scan QR", "Kamera HP"],
                 ["2", "Isi Form", "30 detik"],
@@ -303,20 +298,6 @@ export default function EventAttendancePublicPage({ mode = "scan" }) {
       </div>
       <AttendanceListPanel open={attendanceOpen} onClose={() => setAttendanceOpen(false)} />
     </EventShell>
-  );
-}
-
-function InfoTile({ icon: Icon, label, value }) {
-  return (
-    <div className="flex items-center gap-3 rounded-[1.4rem] border border-white/70 bg-white/75 p-4 shadow-lg shadow-slate-200/50 backdrop-blur-xl">
-      <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-slate-950 text-white">
-        <Icon className="h-5 w-5" />
-      </div>
-      <div className="min-w-0">
-        <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">{label}</p>
-        <p className="truncate text-sm font-black text-slate-900">{value}</p>
-      </div>
-    </div>
   );
 }
 
