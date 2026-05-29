@@ -68,9 +68,10 @@ const DaftarPegawaiBidang = ({ bidangId, bidangName }) => {
 		const colors = {
 			'kepala_bidang': 'bg-purple-100 text-purple-800 border-purple-200',
 			'sekretaris': 'bg-blue-100 text-blue-800 border-blue-200',
-			'staff': 'bg-gray-100 text-gray-800 border-gray-200',
 			'koordinator': 'bg-green-100 text-green-800 border-green-200',
-			'ketua_tim': 'bg-orange-100 text-orange-800 border-orange-200'
+			'ketua_tim': 'bg-orange-100 text-orange-800 border-orange-200',
+			'bendahara': 'bg-emerald-100 text-emerald-800 border-emerald-200',
+			'staff': 'bg-gray-100 text-gray-800 border-gray-200'
 		};
 		return colors[role] || 'bg-gray-100 text-gray-800 border-gray-200';
 	};
@@ -79,25 +80,48 @@ const DaftarPegawaiBidang = ({ bidangId, bidangName }) => {
 		const labels = {
 			'kepala_bidang': 'Kepala Bidang',
 			'sekretaris': 'Sekretaris',
-			'staff': 'Staff',
 			'koordinator': 'Koordinator',
-			'ketua_tim': 'Ketua Tim'
+			'ketua_tim': 'Ketua Tim',
+			'bendahara': 'Bendahara',
+			'staff': 'Staff'
 		};
 		return labels[role] || role;
 	};
 
+	const getRoleOrder = (role) => {
+		const orders = {
+			'kepala_bidang': 1,
+			'sekretaris': 2,
+			'koordinator': 3,
+			'ketua_tim': 4,
+			'bendahara': 5,
+			'staff': 6
+		};
+		return orders[role] || 99;
+	};
+
 	const currentList = showAll ? allPegawai : pegawai;
-	const filteredList = currentList.filter((p) => {
-		if (!searchTerm) return true;
-		const q = searchTerm.toLowerCase();
-		return (
-			(p.user?.fullname || '').toLowerCase().includes(q) ||
-			(p.user?.nip || '').toLowerCase().includes(q) ||
-			(p.user?.jabatan || '').toLowerCase().includes(q) ||
-			(p.user?.email || '').toLowerCase().includes(q) ||
-			(p.user?.bidang_nama || '').toLowerCase().includes(q)
-		);
-	});
+	const filteredList = currentList
+		.filter((p) => {
+			if (!searchTerm) return true;
+			const q = searchTerm.toLowerCase();
+			return (
+				(p.user?.fullname || '').toLowerCase().includes(q) ||
+				(p.user?.nip || '').toLowerCase().includes(q) ||
+				(p.user?.jabatan || '').toLowerCase().includes(q) ||
+				(p.user?.email || '').toLowerCase().includes(q) ||
+				(p.user?.bidang_nama || '').toLowerCase().includes(q) ||
+				(getRoleLabel(p.role) || '').toLowerCase().includes(q)
+			);
+		})
+		.sort((a, b) => {
+			const roleDiff = getRoleOrder(a.role) - getRoleOrder(b.role);
+			if (roleDiff !== 0) return roleDiff;
+
+			return (a.user?.fullname || '').localeCompare(b.user?.fullname || '', 'id-ID', {
+				sensitivity: 'base'
+			});
+		});
 
 	const PegawaiCard = ({ p }) => (
 		<div className="group relative bg-white rounded-xl p-4 border border-gray-200 hover:border-purple-200 hover:shadow-md transition-all duration-200">
