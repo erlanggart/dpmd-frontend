@@ -142,7 +142,7 @@ const HeroSection = () => {
 							initial={{ opacity: 0, y: 30 }}
 							animate={{ opacity: 1, y: 0 }}
 							transition={{ duration: 0.8, delay: 0.8 }}
-							className="flex flex-col sm:flex-row gap-4"
+							className="flex flex-col sm:flex-row sm:flex-wrap gap-4"
 						>
 							<Link
 								to="/login"

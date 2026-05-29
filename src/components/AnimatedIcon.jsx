@@ -26,6 +26,7 @@ import {
   Home,
   Menu,
   Archive,
+  Camera,
 } from 'lucide-react';
 import './AnimatedIcon.css';
 
@@ -54,6 +55,7 @@ const ICON_MAP = {
   home: Home,
   menu: Menu,
   archive: Archive,
+  camera: Camera,
 };
 
 const AnimatedIcon = ({ type, isActive, isHovered, className = 'w-5 h-5' }) => {

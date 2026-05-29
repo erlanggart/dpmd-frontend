@@ -258,6 +258,8 @@ const DisposisiSurat = lazy(
 );
 const DisposisiDetail = lazy(() => import("./pages/dashboard/DisposisiDetail"));
 const BankSuratPage = lazy(() => import("./pages/dashboard/BankSuratPage"));
+const PhotoBoothPage = lazy(() => import("./pages/pegawai/PhotoBoothPage"));
+const EventAttendancePublicPage = lazy(() => import("./pages/event/EventAttendancePublicPage"));
 const CoreDashboardPublic = lazy(
   () => import("./pages/public/CoreDashboardPublic"),
 );
@@ -855,6 +857,7 @@ function App() {
                   <Route path="absensi" element={<AbsensiPage />} />
                   <Route path="pesan" element={<MessagingPage />} />
                   <Route path="bank-surat" element={<BankSuratPage />} />
+                  <Route path="photo-booth" element={<PhotoBoothPage />} />
                 </Route>
                 
                 {/* Rute Bidang - Accessible by pegawai/kepala_bidang/ketua_tim (their own bidang) & kepala_dinas/superadmin (all) */}
@@ -1047,6 +1050,9 @@ function App() {
                   path="/meet/:roomId"
                   element={<VideoMeetingPage />}
                 />
+
+                <Route path="/hari-jadi-bogor-544" element={<EventAttendancePublicPage mode="scan" />} />
+                <Route path="/hari-jadi-bogor-544/form" element={<EventAttendancePublicPage mode="form" />} />
 
                 {/* Rute Superadmin - Full System Control */}
                 <Route
