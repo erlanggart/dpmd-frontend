@@ -89,7 +89,7 @@ const PengurusDetailPage = () => {
 	const params = useParams();
 	const pengurusId = params.id; // Changed from destructuring to direct access
 	const navigate = useNavigate();
-	const { isSuperAdmin, isAdminBidangPMD, canManageKelembagaan } =
+	const { user, isSuperAdmin, isAdminBidangPMD, canManageKelembagaan } =
 		useAuth();
 	const { isEditMode } = useEditMode();
 
@@ -102,6 +102,8 @@ const PengurusDetailPage = () => {
 
 	// Check permissions using AuthContext helpers
 	const canManage = canManageKelembagaan();
+	const isBidangKelembagaanViewer = () =>
+		isSuperAdmin() || isAdminBidangPMD() || user?.role === "bendahara";
 
 	const loadDesaInfo = async (desaId) => {
 		try {
@@ -642,7 +644,7 @@ const PengurusDetailPage = () => {
 					{/* Dashboard */}
 					<Link
 						to={
-							isSuperAdmin() || isAdminBidangPMD()
+							isBidangKelembagaanViewer()
 								? "/bidang/pmd/kelembagaan"
 								: "/desa/dashboard"
 						}
@@ -658,7 +660,7 @@ const PengurusDetailPage = () => {
 						<>
 							<Link
 								to={
-									isSuperAdmin() || isAdminBidangPMD()
+									isBidangKelembagaanViewer()
 										? `/bidang/pmd/kelembagaan/admin/${pengurus.desa_id}`
 										: "/desa/kelembagaan"
 								}
@@ -676,7 +678,7 @@ const PengurusDetailPage = () => {
 							{/* RW Link */}
 							<Link
 								to={
-									isSuperAdmin() || isAdminBidangPMD()
+									isBidangKelembagaanViewer()
 										? `/bidang/pmd/kelembagaan/admin/${pengurus.desa_id}/rw`
 										: `/desa/kelembagaan/rw`
 								}
@@ -689,7 +691,7 @@ const PengurusDetailPage = () => {
 							{/* RW Number */}
 							<Link
 								to={
-									isSuperAdmin() || isAdminBidangPMD()
+									isBidangKelembagaanViewer()
 										? `/bidang/pmd/kelembagaan/rw/${rwInfo.id}`
 										: `/desa/kelembagaan/rw/${rwInfo.id}`
 								}
@@ -702,7 +704,7 @@ const PengurusDetailPage = () => {
 							{/* RT Number */}
 							<Link
 								to={
-									isSuperAdmin() || isAdminBidangPMD()
+									isBidangKelembagaanViewer()
 										? `/bidang/pmd/kelembagaan/rt/${pengurus.pengurusable_id}`
 										: `/desa/kelembagaan/rt/${pengurus.pengurusable_id}`
 								}
@@ -721,7 +723,7 @@ const PengurusDetailPage = () => {
 						<>
 							<Link
 								to={
-									isSuperAdmin() || isAdminBidangPMD()
+									isBidangKelembagaanViewer()
 										? `/bidang/pmd/kelembagaan/${getRouteType(pengurus.pengurusable_type)}/${pengurus.pengurusable_id}`
 										: `/desa/kelembagaan/${getRouteType(pengurus.pengurusable_type)}/${pengurus.pengurusable_id}`
 								}
@@ -737,7 +739,7 @@ const PengurusDetailPage = () => {
 								{/* For other types (RW, Posyandu) - show type link, then item */}
 								<Link
 									to={
-										isSuperAdmin() || isAdminBidangPMD()
+										isBidangKelembagaanViewer()
 											? `/bidang/pmd/kelembagaan/admin/${pengurus.desa_id}/${getRouteType(pengurus.pengurusable_type)}`
 											: `/desa/kelembagaan/${getRouteType(pengurus.pengurusable_type)}`
 									}
@@ -750,7 +752,7 @@ const PengurusDetailPage = () => {
 								{/* Kelembagaan Number/Name */}
 								<Link
 									to={
-										isSuperAdmin() || isAdminBidangPMD()
+										isBidangKelembagaanViewer()
 											? `/bidang/pmd/kelembagaan/${getRouteType(pengurus.pengurusable_type)}/${pengurus.pengurusable_id}`
 											: `/desa/kelembagaan/${getRouteType(pengurus.pengurusable_type)}/${pengurus.pengurusable_id}`
 									}

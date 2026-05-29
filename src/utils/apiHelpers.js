@@ -28,7 +28,8 @@ export const isAdminUser = () => {
 		"kepala_dinas",
 		"sekretaris_dinas",
 		"kepala_bidang",
-		"pegawai"
+		"pegawai",
+		"bendahara"
 	];
 	return user && adminRoles.includes(user.role);
 };

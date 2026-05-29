@@ -47,8 +47,9 @@ const getPengurusRoutePath = (user, pengurusId) => {
 	const isAdminBidangRole =
 		(user?.role === "kepala_bidang" || user?.role === "pegawai") &&
 		user?.bidang_id === 5;
+	const isBendaharaRole = user?.role === "bendahara";
 
-	if (isSuperAdminRole || isAdminBidangRole) {
+	if (isSuperAdminRole || isAdminBidangRole || isBendaharaRole) {
 		return `/bidang/pmd/pengurus/${pengurusId}`;
 	}
 
