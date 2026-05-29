@@ -6,18 +6,34 @@ import * as XLSX from "xlsx";
 import {
   ArrowLeft,
   BadgeCheck,
+  Building2,
+  CalendarDays,
   CheckCircle2,
   ChevronRight,
+  Copy,
   Download,
-  Loader2,
-  QrCode,
   FileSpreadsheet,
+  Loader2,
+  MapPin,
+  Printer,
+  QrCode,
+  ShieldCheck,
   Sparkles,
   UserRoundCheck,
+  UsersRound,
 } from "lucide-react";
 import api from "../../api";
 
 const CATEGORIES = ["masyarakat", "ASN", "pelajar", "mahasiswa", "perangkat desa", "lainnya"];
+
+const CATEGORY_META = {
+  masyarakat: "Warga umum",
+  ASN: "Aparatur sipil",
+  pelajar: "Siswa sekolah",
+  mahasiswa: "Perguruan tinggi",
+  "perangkat desa": "Pemerintah desa",
+  lainnya: "Kategori custom",
+};
 
 const getDeviceId = () => {
   const key = "dpmd_hjb544_device_id";
@@ -80,6 +96,77 @@ const downloadQrCode = (config) => {
   link.click();
 };
 
+const getFormUrl = (config) => {
+  if (config?.formUrl) return config.formUrl;
+  return `${window.location.origin}/hari-jadi-bogor-544/form?token=${encodeURIComponent(config?.qr_payload || "")}`;
+};
+
+const copyFormUrl = async (config) => {
+  try {
+    await navigator.clipboard.writeText(getFormUrl(config));
+    toast.success("Link form berhasil disalin");
+  } catch (error) {
+    toast.error("Gagal menyalin link form");
+  }
+};
+
+const escapeHtml = (value) =>
+  String(value || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+
+const printQrCode = (config) => {
+  if (!config?.qrDataUrl) return;
+  const win = window.open("", "_blank", "width=720,height=900");
+  if (!win) {
+    toast.error("Popup print diblokir browser");
+    return;
+  }
+
+  win.document.write(`
+    <html>
+      <head>
+        <title>QR Daftar Hadir DPMD</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 0; padding: 48px; color: #0f172a; text-align: center; }
+          .sheet { border: 2px solid #0f766e; border-radius: 28px; padding: 40px; }
+          h1 { margin: 0 0 8px; font-size: 32px; }
+          p { margin: 8px 0; color: #475569; font-size: 16px; }
+          img { width: 420px; max-width: 100%; margin: 28px auto 18px; display: block; }
+          .tag { display: inline-block; margin-bottom: 18px; padding: 8px 14px; border-radius: 999px; background: #ccfbf1; color: #0f766e; font-weight: 800; }
+          @media print { body { padding: 24px; } }
+        </style>
+      </head>
+      <body>
+        <div class="sheet">
+          <div class="tag">Hari Jadi Bogor ke-544</div>
+          <h1>Daftar Hadir Booth DPMD</h1>
+          <p>${escapeHtml(config.event_name || "DPMD Kabupaten Bogor")}</p>
+          <img src="${config.qrDataUrl}" alt="QR Daftar Hadir" />
+          <p>Scan QR ini untuk mengisi daftar hadir pengunjung booth.</p>
+        </div>
+        <script>window.onload = () => { window.print(); };</script>
+      </body>
+    </html>
+  `);
+  win.document.close();
+};
+
+const formatEventDate = (value) => {
+  if (!value) return "Hari Jadi Bogor ke-544";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Hari Jadi Bogor ke-544";
+  return date.toLocaleDateString("id-ID", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+};
+
 export default function EventAttendancePublicPage({ mode = "scan" }) {
   const [config, setConfig] = React.useState(null);
   const [searchParams] = useSearchParams();
@@ -95,8 +182,11 @@ export default function EventAttendancePublicPage({ mode = "scan" }) {
   if (!config) {
     return (
       <EventShell>
-        <div className="grid min-h-[70vh] place-items-center">
-          <Loader2 className="h-10 w-10 animate-spin text-teal-500" />
+        <div className="relative z-10 grid min-h-screen place-items-center">
+          <div className="rounded-[2rem] border border-white/70 bg-white/80 p-8 text-center shadow-2xl shadow-teal-900/10 backdrop-blur-2xl">
+            <Loader2 className="mx-auto h-10 w-10 animate-spin text-teal-500" />
+            <p className="mt-4 text-sm font-black uppercase tracking-[0.22em] text-slate-400">Memuat QR Event</p>
+          </div>
         </div>
       </EventShell>
     );
@@ -108,83 +198,134 @@ export default function EventAttendancePublicPage({ mode = "scan" }) {
 
   return (
     <EventShell>
-      <div className="mx-auto grid min-h-screen max-w-7xl grid-cols-1 items-center gap-8 px-4 py-16 lg:grid-cols-[.95fr_1.05fr] lg:px-8">
-        <motion.section initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} className="relative z-10">
-          <div className="mb-8 flex flex-wrap gap-3">
-            <Link to="/" className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/70 px-4 py-2 text-sm font-bold text-slate-600 shadow-sm backdrop-blur-xl">
-              <ArrowLeft className="h-4 w-4" />
-              Beranda DPMD
-            </Link>
+      <div className="relative z-10 mx-auto flex min-h-screen max-w-7xl flex-col px-4 py-6 lg:px-8">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-[1.5rem] border border-white/70 bg-white/70 px-4 py-3 shadow-lg shadow-teal-900/5 backdrop-blur-2xl">
+          <Link to="/" className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-black text-slate-600 shadow-sm transition hover:border-teal-200 hover:text-teal-700">
+            <ArrowLeft className="h-4 w-4" />
+            Beranda DPMD
+          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-2 rounded-full bg-teal-50 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-teal-700">
+              <ShieldCheck className="h-4 w-4" />
+              Booth Access
+            </span>
             {canExport && (
-              <button onClick={exportAttendanceExcel} className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-black text-emerald-700 shadow-sm backdrop-blur-xl">
+              <button onClick={exportAttendanceExcel} className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-black text-emerald-700 shadow-sm transition hover:bg-emerald-100">
                 <FileSpreadsheet className="h-4 w-4" />
                 Export Excel
               </button>
             )}
           </div>
-          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-teal-100 bg-teal-50 px-4 py-2 text-sm font-bold text-teal-700">
-            <Sparkles className="h-4 w-4" />
-            Hari Jadi Bogor ke-544
-          </div>
-          <h1 className="max-w-4xl text-4xl font-black tracking-tight text-slate-950 md:text-6xl">
-            Daftar Hadir Booth DPMD
-          </h1>
-          <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">
-            Tampilkan QR ini di booth. Pengunjung cukup scan memakai kamera HP, lalu mengisi form daftar hadir digital.
-          </p>
-          <div className="mt-8 grid gap-3 sm:grid-cols-3">
-            {["Scan QR", "Isi Form", "Selesai"].map((item, index) => (
-              <div key={item} className="rounded-3xl border border-white/70 bg-white/75 p-4 shadow-xl shadow-slate-200/60 backdrop-blur-xl">
-                <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-500 to-blue-600 text-white">
-                  {index + 1}
-                </div>
-                <p className="font-black text-slate-900">{item}</p>
-              </div>
-            ))}
-          </div>
-        </motion.section>
+        </div>
 
-        <QrDisplayPanel config={config} />
+        <div className="grid flex-1 grid-cols-1 items-center gap-8 pb-10 lg:grid-cols-[.9fr_1.1fr]">
+          <motion.section initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} className="relative">
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-teal-100 bg-white/80 px-4 py-2 text-sm font-black text-teal-700 shadow-sm backdrop-blur-xl">
+              <Sparkles className="h-4 w-4" />
+              Hari Jadi Bogor ke-544
+            </div>
+            <h1 className="max-w-4xl text-5xl font-black leading-[0.94] tracking-tight text-slate-950 md:text-7xl">
+              Daftar Hadir Booth DPMD
+            </h1>
+            <p className="mt-6 max-w-2xl text-lg font-medium leading-8 text-slate-600">
+              Layar khusus booth untuk menampilkan QR daftar hadir. Pengunjung cukup scan QR memakai kamera HP dan mengisi form digital di perangkat masing-masing.
+            </p>
+
+            <div className="mt-8 grid gap-3 sm:grid-cols-2">
+              <InfoTile icon={CalendarDays} label="Tanggal Event" value={formatEventDate(config.event_date)} />
+              <InfoTile icon={MapPin} label="Lokasi" value={config.location || "Booth DPMD Kabupaten Bogor"} />
+            </div>
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-3">
+              {[
+                ["1", "Scan QR", "Kamera HP"],
+                ["2", "Isi Form", "30 detik"],
+                ["3", "Tercatat", "Anti double"],
+              ].map(([number, title, subtitle]) => (
+                <div key={title} className="rounded-[1.4rem] border border-white/70 bg-white/75 p-4 shadow-xl shadow-slate-200/60 backdrop-blur-xl">
+                  <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-500 via-cyan-500 to-blue-600 text-sm font-black text-white shadow-lg shadow-teal-500/20">
+                    {number}
+                  </div>
+                  <p className="font-black text-slate-950">{title}</p>
+                  <p className="mt-1 text-xs font-bold uppercase tracking-[0.12em] text-slate-400">{subtitle}</p>
+                </div>
+              ))}
+            </div>
+          </motion.section>
+
+          <QrDisplayPanel config={config} />
+        </div>
       </div>
     </EventShell>
   );
 }
 
+function InfoTile({ icon: Icon, label, value }) {
+  return (
+    <div className="flex items-center gap-3 rounded-[1.4rem] border border-white/70 bg-white/75 p-4 shadow-lg shadow-slate-200/50 backdrop-blur-xl">
+      <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-slate-950 text-white">
+        <Icon className="h-5 w-5" />
+      </div>
+      <div className="min-w-0">
+        <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">{label}</p>
+        <p className="truncate text-sm font-black text-slate-900">{value}</p>
+      </div>
+    </div>
+  );
+}
+
 function QrDisplayPanel({ config }) {
   return (
-    <motion.section initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} className="relative z-10 rounded-[2.5rem] border border-white/70 bg-white/85 p-5 shadow-2xl shadow-teal-900/10 backdrop-blur-2xl md:p-7">
-      <div className="mb-5 flex items-center justify-between gap-4">
+    <motion.section initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} className="relative overflow-hidden rounded-[2.3rem] border border-white/80 bg-white/90 p-4 shadow-[0_30px_90px_rgba(15,118,110,.18)] backdrop-blur-2xl md:p-6">
+      <div className="absolute inset-x-8 top-0 h-1 rounded-full bg-gradient-to-r from-teal-400 via-sky-500 to-indigo-500" />
+      <div className="mb-5 flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-xs font-black uppercase tracking-[0.22em] text-teal-600">QR Event</p>
-          <h2 className="text-2xl font-black text-slate-950 md:text-3xl">QR Daftar Hadir</h2>
-          <p className="mt-1 text-sm font-semibold text-slate-500">{config.event_name}</p>
+          <p className="text-xs font-black uppercase tracking-[0.24em] text-teal-600">Display QR Booth</p>
+          <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950 md:text-4xl">Scan untuk Daftar Hadir</h2>
+          <p className="mt-2 text-sm font-semibold leading-6 text-slate-500">{config.event_name}</p>
         </div>
-        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-white">
+        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-white shadow-xl shadow-slate-900/20">
           <QrCode className="h-7 w-7" />
         </div>
       </div>
-      <div className="rounded-[2rem] border border-slate-100 bg-white p-5 shadow-inner">
-        {config.qrDataUrl ? (
-          <img src={config.qrDataUrl} alt="QR daftar hadir Booth DPMD" className="mx-auto aspect-square w-full max-w-[460px] object-contain" />
-        ) : (
-          <div className="grid aspect-square place-items-center rounded-3xl bg-slate-50">
-            <QrCode className="h-24 w-24 text-slate-300" />
-          </div>
-        )}
+
+      <div className="relative rounded-[2rem] bg-gradient-to-br from-slate-950 via-teal-950 to-blue-950 p-3 shadow-inner">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_24%_18%,rgba(45,212,191,.35),transparent_34%),radial-gradient(circle_at_82%_20%,rgba(96,165,250,.32),transparent_28%)]" />
+        <div className="relative rounded-[1.55rem] border border-white/10 bg-white p-5">
+          {config.qrDataUrl ? (
+            <img src={config.qrDataUrl} alt="QR daftar hadir Booth DPMD" className="mx-auto aspect-square w-full max-w-[480px] object-contain" />
+          ) : (
+            <div className="grid aspect-square place-items-center rounded-3xl bg-slate-50">
+              <QrCode className="h-24 w-24 text-slate-300" />
+            </div>
+          )}
+        </div>
       </div>
+
       <div className="mt-5 grid gap-3 sm:grid-cols-2">
-        <button onClick={() => downloadQrCode(config)} className="flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-4 text-sm font-black text-white shadow-xl shadow-slate-900/15">
+        <button onClick={() => downloadQrCode(config)} className="flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-4 text-sm font-black text-white shadow-xl shadow-slate-900/15 transition hover:-translate-y-0.5">
           <Download className="h-5 w-5" />
           Download QR
         </button>
-        <Link to={`/hari-jadi-bogor-544/form?token=${encodeURIComponent(config.qr_payload)}`} className="flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-teal-500 to-blue-600 px-5 py-4 text-sm font-black text-white shadow-xl shadow-teal-500/20">
+        <button onClick={() => printQrCode(config)} className="flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-4 text-sm font-black text-slate-800 shadow-lg shadow-slate-200/70 transition hover:-translate-y-0.5">
+          <Printer className="h-5 w-5" />
+          Print QR
+        </button>
+        <button onClick={() => copyFormUrl(config)} className="flex items-center justify-center gap-2 rounded-2xl border border-teal-100 bg-teal-50 px-5 py-4 text-sm font-black text-teal-800 shadow-lg shadow-teal-100/70 transition hover:-translate-y-0.5">
+          <Copy className="h-5 w-5" />
+          Copy Link
+        </button>
+        <Link to={`/hari-jadi-bogor-544/form?token=${encodeURIComponent(config.qr_payload)}`} className="flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-teal-500 via-sky-500 to-blue-600 px-5 py-4 text-sm font-black text-white shadow-xl shadow-teal-500/20 transition hover:-translate-y-0.5">
           Buka Form
           <ChevronRight className="h-5 w-5" />
         </Link>
       </div>
-      <p className="mt-4 text-center text-sm font-semibold leading-6 text-slate-500">
-        QR ini bisa ditempel di banner, layar monitor, atau dicetak untuk akses daftar hadir.
-      </p>
+
+      <div className="mt-5 rounded-[1.4rem] border border-slate-100 bg-slate-50/80 px-4 py-3 text-center">
+        <p className="text-sm font-bold leading-6 text-slate-600">
+          QR hanya ditampilkan di booth agar pengisian daftar hadir tetap berasal dari pengunjung yang hadir langsung.
+        </p>
+      </div>
     </motion.section>
   );
 }
@@ -225,72 +366,87 @@ function AttendanceForm({ config, scanPayload, canExport }) {
 
   return (
     <EventShell>
-      <div className="mx-auto grid min-h-screen max-w-5xl place-items-center px-4 py-24">
+      <div className="relative z-10 mx-auto grid min-h-screen max-w-6xl place-items-center px-4 py-8 lg:py-12">
         <AnimatePresence mode="wait">
           {success ? (
-            <motion.div key="success" initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} className="w-full max-w-xl rounded-[2rem] border border-white/70 bg-white/85 p-8 text-center shadow-2xl shadow-teal-900/10 backdrop-blur-2xl">
-              <div className="mx-auto mb-6 grid h-24 w-24 place-items-center rounded-full bg-gradient-to-br from-emerald-400 to-teal-600 text-white shadow-2xl shadow-emerald-500/30">
+            <motion.div key="success" initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} className="w-full max-w-2xl overflow-hidden rounded-[2.4rem] border border-white/75 bg-white/90 p-7 text-center shadow-[0_30px_90px_rgba(15,118,110,.18)] backdrop-blur-2xl md:p-10">
+              <div className="mx-auto mb-6 grid h-24 w-24 place-items-center rounded-full bg-gradient-to-br from-emerald-400 via-teal-500 to-blue-600 text-white shadow-2xl shadow-emerald-500/30">
                 <BadgeCheck className="h-12 w-12" />
               </div>
               <p className="text-sm font-black uppercase tracking-[0.24em] text-teal-600">Berhasil Tercatat</p>
-              <h1 className="mt-3 text-4xl font-black text-slate-950">Terima kasih!</h1>
-              <p className="mt-4 text-slate-600">
+              <h1 className="mt-3 text-5xl font-black tracking-tight text-slate-950">Terima kasih!</h1>
+              <p className="mx-auto mt-4 max-w-lg text-lg leading-8 text-slate-600">
                 Selamat datang di Booth DPMD Kabupaten Bogor, <span className="font-black text-slate-900">{success.full_name}</span>.
               </p>
               <div className="mt-8 grid gap-3 sm:grid-cols-2">
-                <Link to="/hari-jadi-bogor-544" className="rounded-2xl bg-slate-950 px-5 py-4 text-sm font-black text-white">Scan Lagi</Link>
-                <Link to="/" className="rounded-2xl border border-slate-200 bg-white px-5 py-4 text-sm font-black text-slate-700">Kembali</Link>
+                <Link to="/hari-jadi-bogor-544" className="rounded-2xl bg-slate-950 px-5 py-4 text-sm font-black text-white shadow-xl shadow-slate-900/15">Lihat QR</Link>
+                <Link to="/" className="rounded-2xl border border-slate-200 bg-white px-5 py-4 text-sm font-black text-slate-700 shadow-lg shadow-slate-200/60">Kembali</Link>
               </div>
             </motion.div>
           ) : (
-            <motion.form key="form" initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} onSubmit={submit} className="w-full rounded-[2rem] border border-white/70 bg-white/85 p-5 shadow-2xl shadow-teal-900/10 backdrop-blur-2xl md:p-8">
-              <div className="mb-6 flex flex-wrap gap-3">
-                <Link to="/hari-jadi-bogor-544" className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600">
-                  <ArrowLeft className="h-4 w-4" />
-                  Scan ulang
-                </Link>
-                {canExport && (
-                  <button type="button" onClick={exportAttendanceExcel} className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-black text-emerald-700">
-                    <FileSpreadsheet className="h-4 w-4" />
-                    Export Excel
-                  </button>
-                )}
-              </div>
-              <div className="mb-8 flex items-start gap-4">
-                <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-teal-500 to-blue-600 text-white">
-                  <UserRoundCheck className="h-7 w-7" />
-                </div>
-                <div>
-                  <p className="text-xs font-black uppercase tracking-[0.22em] text-teal-600">Form Daftar Hadir</p>
-                  <h1 className="mt-1 text-3xl font-black text-slate-950">{config.event_name}</h1>
-                </div>
-              </div>
-              <div className="grid gap-5">
-                <Field label="Nama Lengkap">
-                  <input required value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} className="event-input" placeholder="Masukkan nama lengkap" />
-                </Field>
-                <Field label="Asal / Instansi">
-                  <input required value={form.origin} onChange={(e) => setForm({ ...form, origin: e.target.value })} className="event-input" placeholder="Contoh: Desa Cibinong / SMAN 1 / Umum" />
-                </Field>
-                <Field label="Kategori Pengunjung">
-                  <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
-                    {CATEGORIES.map((category) => (
-                      <button key={category} type="button" onClick={() => setForm({ ...form, category })} className={`rounded-2xl border px-3 py-3 text-sm font-black capitalize transition ${form.category === category ? "border-teal-500 bg-teal-50 text-teal-700" : "border-slate-200 bg-white text-slate-600"}`}>
-                        {category}
-                      </button>
-                    ))}
+            <motion.form key="form" initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} onSubmit={submit} className="grid w-full overflow-hidden rounded-[2.4rem] border border-white/75 bg-white/90 shadow-[0_30px_90px_rgba(15,118,110,.18)] backdrop-blur-2xl lg:grid-cols-[.8fr_1.2fr]">
+              <aside className="relative overflow-hidden bg-slate-950 p-6 text-white md:p-8">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(45,212,191,.34),transparent_36%),radial-gradient(circle_at_88%_18%,rgba(59,130,246,.34),transparent_34%)]" />
+                <div className="relative">
+                  <Link to="/hari-jadi-bogor-544" className="mb-8 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-black text-white backdrop-blur-xl">
+                    <ArrowLeft className="h-4 w-4" />
+                    Lihat QR
+                  </Link>
+                  <div className="grid h-16 w-16 place-items-center rounded-3xl bg-white text-slate-950 shadow-2xl">
+                    <UserRoundCheck className="h-8 w-8" />
                   </div>
-                </Field>
-                {form.category === "lainnya" && (
-                  <Field label="Kategori Lainnya">
-                    <input required value={form.custom_category} onChange={(e) => setForm({ ...form, custom_category: e.target.value })} className="event-input" placeholder="Tulis kategori pengunjung" />
+                  <p className="mt-7 text-xs font-black uppercase tracking-[0.28em] text-teal-200">Form Daftar Hadir</p>
+                  <h1 className="mt-3 text-3xl font-black leading-tight md:text-4xl">{config.event_name}</h1>
+                  <div className="mt-8 space-y-3">
+                    <SideFact icon={MapPin} label={config.location || "Booth DPMD Kabupaten Bogor"} />
+                    <SideFact icon={CalendarDays} label={formatEventDate(config.event_date)} />
+                    <SideFact icon={ShieldCheck} label="Validasi otomatis anti data double" />
+                  </div>
+                </div>
+              </aside>
+
+              <div className="p-5 md:p-8">
+                <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-[0.22em] text-teal-600">Data Pengunjung</p>
+                    <h2 className="mt-1 text-2xl font-black text-slate-950">Isi identitas singkat</h2>
+                  </div>
+                  {canExport && (
+                    <button type="button" onClick={exportAttendanceExcel} className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-black text-emerald-700">
+                      <FileSpreadsheet className="h-4 w-4" />
+                      Export Excel
+                    </button>
+                  )}
+                </div>
+
+                <div className="grid gap-5">
+                  <Field label="Nama Lengkap" icon={UsersRound}>
+                    <input required value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} className="event-input" placeholder="Masukkan nama lengkap" />
                   </Field>
-                )}
+                  <Field label="Asal / Instansi" icon={Building2}>
+                    <input required value={form.origin} onChange={(e) => setForm({ ...form, origin: e.target.value })} className="event-input" placeholder="Contoh: Desa Cibinong / SMAN 1 / Umum" />
+                  </Field>
+                  <Field label="Kategori Pengunjung">
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                      {CATEGORIES.map((category) => (
+                        <button key={category} type="button" onClick={() => setForm({ ...form, category })} className={`rounded-2xl border px-4 py-3 text-left transition ${form.category === category ? "border-teal-500 bg-teal-50 text-teal-800 shadow-lg shadow-teal-100/70" : "border-slate-200 bg-white text-slate-600 hover:border-teal-100 hover:bg-slate-50"}`}>
+                          <span className="block text-sm font-black capitalize">{category}</span>
+                          <span className="mt-1 block text-xs font-bold text-slate-400">{CATEGORY_META[category]}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </Field>
+                  {form.category === "lainnya" && (
+                    <Field label="Kategori Lainnya">
+                      <input required value={form.custom_category} onChange={(e) => setForm({ ...form, custom_category: e.target.value })} className="event-input" placeholder="Tulis kategori pengunjung" />
+                    </Field>
+                  )}
+                </div>
+                <button disabled={submitting} className="mt-8 flex w-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-teal-500 via-sky-500 to-blue-600 px-6 py-4 text-base font-black text-white shadow-xl shadow-teal-500/20 transition hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60">
+                  {submitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <CheckCircle2 className="h-5 w-5" />}
+                  Submit Daftar Hadir
+                </button>
               </div>
-              <button disabled={submitting} className="mt-8 flex w-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-teal-500 via-blue-600 to-indigo-600 px-6 py-4 text-base font-black text-white shadow-xl shadow-teal-500/20 disabled:opacity-60">
-                {submitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <CheckCircle2 className="h-5 w-5" />}
-                Submit Daftar Hadir
-              </button>
             </motion.form>
           )}
         </AnimatePresence>
@@ -300,25 +456,38 @@ function AttendanceForm({ config, scanPayload, canExport }) {
           width: 100%;
           border-radius: 1rem;
           border: 1px solid rgb(226 232 240);
-          background: rgba(255,255,255,.9);
-          padding: .95rem 1rem;
-          font-weight: 700;
+          background: rgba(255,255,255,.95);
+          padding: 1rem;
+          font-weight: 800;
           color: rgb(15 23 42);
           outline: none;
+          box-shadow: 0 10px 30px rgba(15,23,42,.04);
         }
         .event-input:focus {
           border-color: rgb(20 184 166);
-          box-shadow: 0 0 0 4px rgba(20,184,166,.12);
+          box-shadow: 0 0 0 4px rgba(20,184,166,.12), 0 12px 30px rgba(15,23,42,.08);
         }
       `}</style>
     </EventShell>
   );
 }
 
-function Field({ label, children }) {
+function SideFact({ icon: Icon, label }) {
+  return (
+    <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/10 px-4 py-3 backdrop-blur-xl">
+      <Icon className="h-5 w-5 shrink-0 text-teal-200" />
+      <p className="text-sm font-bold leading-5 text-white/85">{label}</p>
+    </div>
+  );
+}
+
+function Field({ label, icon: Icon, children }) {
   return (
     <label className="block">
-      <span className="mb-2 block text-sm font-black text-slate-700">{label}</span>
+      <span className="mb-2 flex items-center gap-2 text-sm font-black text-slate-700">
+        {Icon && <Icon className="h-4 w-4 text-teal-600" />}
+        {label}
+      </span>
       {children}
     </label>
   );
@@ -327,9 +496,9 @@ function Field({ label, children }) {
 function EventShell({ children }) {
   return (
     <div className="relative min-h-screen overflow-hidden bg-[linear-gradient(135deg,#f8fafc_0%,#ecfeff_42%,#eef2ff_100%)]">
-      <div className="pointer-events-none absolute -left-24 top-20 h-80 w-80 rounded-full bg-teal-300/30 blur-3xl" />
-      <div className="pointer-events-none absolute right-0 top-0 h-96 w-96 rounded-full bg-blue-300/30 blur-3xl" />
-      <div className="pointer-events-none absolute bottom-0 left-1/3 h-80 w-80 rounded-full bg-fuchsia-200/30 blur-3xl" />
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(15,23,42,.035)_1px,transparent_1px),linear-gradient(90deg,rgba(15,23,42,.035)_1px,transparent_1px)] bg-[size:42px_42px]" />
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(115deg,rgba(20,184,166,.13),transparent_34%,rgba(59,130,246,.1)_70%,transparent)]" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-white/65 backdrop-blur-2xl" />
       {children}
     </div>
   );
