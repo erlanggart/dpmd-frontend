@@ -10,15 +10,21 @@ import {
   CalendarDays,
   CheckCircle2,
   ChevronRight,
+  Clock3,
   Copy,
   Download,
+  Eye,
   FileSpreadsheet,
   Loader2,
   MapPin,
   Printer,
   QrCode,
+  RefreshCw,
+  Search,
   ShieldCheck,
   Sparkles,
+  TrendingUp,
+  X,
   UserRoundCheck,
   UsersRound,
 } from "lucide-react";
@@ -167,8 +173,41 @@ const formatEventDate = (value) => {
   });
 };
 
+const formatDateTime = (value) => {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return date.toLocaleString("id-ID", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+const getCategoryLabel = (item) => item?.category_label || item?.custom_category || item?.category || "-";
+
+const buildAttendanceStats = (rows, totalFromServer) => {
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const categories = rows.reduce((acc, item) => {
+    const label = getCategoryLabel(item);
+    acc[label] = (acc[label] || 0) + 1;
+    return acc;
+  }, {});
+
+  return {
+    total: Number(totalFromServer || rows.length || 0),
+    today: rows.filter((item) => String(item.created_at || "").slice(0, 10) === todayKey).length,
+    categories: Object.entries(categories)
+      .map(([label, total]) => ({ label, total }))
+      .sort((a, b) => b.total - a.total),
+  };
+};
+
 export default function EventAttendancePublicPage({ mode = "scan" }) {
   const [config, setConfig] = React.useState(null);
+  const [attendanceOpen, setAttendanceOpen] = React.useState(false);
   const [searchParams] = useSearchParams();
   const canExport = Boolean(localStorage.getItem("expressToken"));
 
@@ -210,10 +249,16 @@ export default function EventAttendancePublicPage({ mode = "scan" }) {
               Booth Access
             </span>
             {canExport && (
-              <button onClick={exportAttendanceExcel} className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-black text-emerald-700 shadow-sm transition hover:bg-emerald-100">
-                <FileSpreadsheet className="h-4 w-4" />
-                Export Excel
-              </button>
+              <>
+                <button onClick={() => setAttendanceOpen(true)} className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-black text-sky-700 shadow-sm transition hover:bg-sky-100">
+                  <Eye className="h-4 w-4" />
+                  Lihat Daftar Hadir
+                </button>
+                <button onClick={exportAttendanceExcel} className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-black text-emerald-700 shadow-sm transition hover:bg-emerald-100">
+                  <FileSpreadsheet className="h-4 w-4" />
+                  Export Excel
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -256,6 +301,7 @@ export default function EventAttendancePublicPage({ mode = "scan" }) {
           <QrDisplayPanel config={config} />
         </div>
       </div>
+      <AttendanceListPanel open={attendanceOpen} onClose={() => setAttendanceOpen(false)} />
     </EventShell>
   );
 }
@@ -339,6 +385,7 @@ function AttendanceForm({ config, scanPayload, canExport }) {
   });
   const [submitting, setSubmitting] = React.useState(false);
   const [success, setSuccess] = React.useState(null);
+  const [attendanceOpen, setAttendanceOpen] = React.useState(false);
 
   const submit = async (event) => {
     event.preventDefault();
@@ -412,10 +459,16 @@ function AttendanceForm({ config, scanPayload, canExport }) {
                     <h2 className="mt-1 text-2xl font-black text-slate-950">Isi identitas singkat</h2>
                   </div>
                   {canExport && (
-                    <button type="button" onClick={exportAttendanceExcel} className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-black text-emerald-700">
-                      <FileSpreadsheet className="h-4 w-4" />
-                      Export Excel
-                    </button>
+                    <div className="flex flex-wrap gap-2">
+                      <button type="button" onClick={() => setAttendanceOpen(true)} className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-black text-sky-700">
+                        <Eye className="h-4 w-4" />
+                        Lihat Daftar Hadir
+                      </button>
+                      <button type="button" onClick={exportAttendanceExcel} className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-black text-emerald-700">
+                        <FileSpreadsheet className="h-4 w-4" />
+                        Export Excel
+                      </button>
+                    </div>
                   )}
                 </div>
 
@@ -468,7 +521,241 @@ function AttendanceForm({ config, scanPayload, canExport }) {
           box-shadow: 0 0 0 4px rgba(20,184,166,.12), 0 12px 30px rgba(15,23,42,.08);
         }
       `}</style>
+      <AttendanceListPanel open={attendanceOpen} onClose={() => setAttendanceOpen(false)} />
     </EventShell>
+  );
+}
+
+function AttendanceListPanel({ open, onClose }) {
+  const [rows, setRows] = React.useState([]);
+  const [pagination, setPagination] = React.useState({ total: 0, page: 1, limit: 80 });
+  const [search, setSearch] = React.useState("");
+  const [category, setCategory] = React.useState("all");
+  const [loading, setLoading] = React.useState(false);
+
+  const fetchRows = React.useCallback(async () => {
+    if (!open) return;
+    setLoading(true);
+    try {
+      const response = await api.get("/event-attendance/admin/attendances", {
+        params: {
+          search: search.trim() || undefined,
+          category,
+          limit: 80,
+          page: 1,
+        },
+      });
+      setRows(response.data.data || []);
+      setPagination(response.data.pagination || { total: 0, page: 1, limit: 80 });
+    } catch (error) {
+      toast.error(error.response?.status === 401 ? "Silakan login sebagai pegawai DPMD" : "Gagal memuat daftar hadir");
+    } finally {
+      setLoading(false);
+    }
+  }, [category, open, search]);
+
+  React.useEffect(() => {
+    fetchRows();
+  }, [fetchRows]);
+
+  React.useEffect(() => {
+    if (!open) return undefined;
+    const timer = window.setInterval(fetchRows, 15000);
+    return () => window.clearInterval(timer);
+  }, [fetchRows, open]);
+
+  const stats = buildAttendanceStats(rows, pagination.total);
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          className="fixed inset-0 z-[80] overflow-y-auto bg-slate-950/45 px-3 py-4 backdrop-blur-xl md:px-6 md:py-8"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+        >
+          <motion.section
+            initial={{ opacity: 0, y: 30, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.98 }}
+            className="mx-auto min-h-[calc(100vh-2rem)] max-w-7xl overflow-hidden rounded-[2rem] border border-white/75 bg-white/95 shadow-[0_40px_110px_rgba(15,23,42,.35)] backdrop-blur-2xl md:min-h-0"
+          >
+            <div className="flex flex-col gap-4 border-b border-slate-100 bg-[linear-gradient(135deg,#ffffff_0%,#ecfeff_52%,#eff6ff_100%)] p-5 md:p-6">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.22em] text-teal-600">Monitoring Pegawai</p>
+                  <h2 className="mt-1 text-3xl font-black tracking-tight text-slate-950 md:text-4xl">Daftar Hadir Masuk</h2>
+                  <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-500">
+                    Data pengunjung yang sudah mengisi daftar hadir booth DPMD.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button onClick={fetchRows} disabled={loading} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-black text-slate-700 shadow-sm transition hover:border-teal-200 hover:text-teal-700 disabled:opacity-60">
+                    <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+                    Refresh
+                  </button>
+                  <button onClick={exportAttendanceExcel} className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-black text-emerald-700 shadow-sm transition hover:bg-emerald-100">
+                    <FileSpreadsheet className="h-4 w-4" />
+                    Export Excel
+                  </button>
+                  <button onClick={onClose} className="grid h-10 w-10 place-items-center rounded-full bg-slate-950 text-white shadow-lg shadow-slate-900/20" aria-label="Tutup daftar hadir">
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-3">
+                <AttendanceMetric icon={UsersRound} label="Total Data" value={stats.total} tone="dark" />
+                <AttendanceMetric icon={TrendingUp} label="Tercatat Hari Ini" value={stats.today} tone="teal" />
+                <AttendanceMetric icon={Clock3} label="Ditampilkan" value={rows.length} tone="blue" />
+              </div>
+
+              <div className="grid gap-3 lg:grid-cols-[1fr_auto]">
+                <label className="relative block">
+                  <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+                  <input
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    placeholder="Cari nama, asal, atau kategori..."
+                    className="h-12 w-full rounded-2xl border border-slate-200 bg-white pl-12 pr-4 text-sm font-bold text-slate-800 outline-none transition focus:border-teal-400 focus:ring-4 focus:ring-teal-100"
+                  />
+                </label>
+                <select
+                  value={category}
+                  onChange={(event) => setCategory(event.target.value)}
+                  className="h-12 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 outline-none transition focus:border-teal-400 focus:ring-4 focus:ring-teal-100"
+                >
+                  <option value="all">Semua Kategori</option>
+                  {CATEGORIES.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid gap-4 p-5 md:p-6 xl:grid-cols-[1fr_320px]">
+              <div className="overflow-hidden rounded-[1.5rem] border border-slate-100 bg-white shadow-sm">
+                <div className="hidden overflow-x-auto md:block">
+                  <table className="min-w-full divide-y divide-slate-100">
+                    <thead className="bg-slate-50">
+                      <tr>
+                        {["Nama", "Asal / Instansi", "Kategori", "Waktu"].map((heading) => (
+                          <th key={heading} className="px-5 py-4 text-left text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+                            {heading}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {rows.map((item) => (
+                        <tr key={item.id} className="transition hover:bg-teal-50/40">
+                          <td className="px-5 py-4">
+                            <p className="font-black text-slate-950">{item.full_name}</p>
+                            <p className="text-xs font-bold text-slate-400">ID #{item.id}</p>
+                          </td>
+                          <td className="px-5 py-4 text-sm font-bold text-slate-600">{item.origin}</td>
+                          <td className="px-5 py-4">
+                            <span className="inline-flex rounded-full bg-teal-50 px-3 py-1 text-xs font-black capitalize text-teal-700">
+                              {getCategoryLabel(item)}
+                            </span>
+                          </td>
+                          <td className="px-5 py-4 text-sm font-bold text-slate-500">{formatDateTime(item.created_at)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="grid gap-3 p-3 md:hidden">
+                  {rows.map((item) => (
+                    <div key={item.id} className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-black text-slate-950">{item.full_name}</p>
+                          <p className="mt-1 text-sm font-bold text-slate-500">{item.origin}</p>
+                        </div>
+                        <span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-black capitalize text-teal-700">
+                          {getCategoryLabel(item)}
+                        </span>
+                      </div>
+                      <p className="mt-4 flex items-center gap-2 text-xs font-bold text-slate-400">
+                        <Clock3 className="h-4 w-4" />
+                        {formatDateTime(item.created_at)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                {!loading && rows.length === 0 && (
+                  <div className="grid min-h-[260px] place-items-center px-6 text-center">
+                    <div>
+                      <div className="mx-auto grid h-16 w-16 place-items-center rounded-3xl bg-slate-100 text-slate-400">
+                        <Search className="h-8 w-8" />
+                      </div>
+                      <p className="mt-4 text-lg font-black text-slate-900">Belum ada data cocok</p>
+                      <p className="mt-1 text-sm font-semibold text-slate-500">Coba ubah kata kunci atau filter kategori.</p>
+                    </div>
+                  </div>
+                )}
+
+                {loading && (
+                  <div className="grid min-h-[260px] place-items-center px-6 text-center">
+                    <div>
+                      <Loader2 className="mx-auto h-10 w-10 animate-spin text-teal-500" />
+                      <p className="mt-3 text-sm font-black uppercase tracking-[0.18em] text-slate-400">Memuat data</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <aside className="rounded-[1.5rem] border border-slate-100 bg-slate-950 p-5 text-white shadow-xl shadow-slate-900/20">
+                <p className="text-xs font-black uppercase tracking-[0.2em] text-teal-200">Kategori Pengunjung</p>
+                <div className="mt-5 space-y-3">
+                  {stats.categories.length ? (
+                    stats.categories.map((item) => (
+                      <div key={item.label}>
+                        <div className="mb-2 flex items-center justify-between gap-3 text-sm">
+                          <span className="font-black capitalize text-white">{item.label}</span>
+                          <span className="font-black text-teal-200">{item.total}</span>
+                        </div>
+                        <div className="h-2 overflow-hidden rounded-full bg-white/10">
+                          <div className="h-full rounded-full bg-gradient-to-r from-teal-300 to-sky-400" style={{ width: `${Math.max(8, Math.round((item.total / Math.max(1, rows.length)) * 100))}%` }} />
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm font-semibold leading-6 text-white/60">Statistik kategori akan muncul setelah ada data.</p>
+                  )}
+                </div>
+              </aside>
+            </div>
+          </motion.section>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+function AttendanceMetric({ icon: Icon, label, value, tone }) {
+  const toneClass = {
+    dark: "bg-slate-950 text-white",
+    teal: "bg-teal-600 text-white",
+    blue: "bg-blue-600 text-white",
+  }[tone];
+
+  return (
+    <div className="flex items-center gap-4 rounded-[1.4rem] border border-white/70 bg-white/80 p-4 shadow-lg shadow-slate-200/60 backdrop-blur-xl">
+      <div className={`grid h-12 w-12 shrink-0 place-items-center rounded-2xl ${toneClass}`}>
+        <Icon className="h-6 w-6" />
+      </div>
+      <div>
+        <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">{label}</p>
+        <p className="mt-1 text-2xl font-black text-slate-950">{value}</p>
+      </div>
+    </div>
   );
 }
 
