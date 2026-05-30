@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0f766e" />
+<title>Daftar Hadir Booth DPMD — Hari Jadi Bogor ke-544</title>
+<style>
+  /* Halaman SENGAJA dibuat mandiri & ringan (tanpa React/library) supaya tetap
+     bisa dibuka pada koneksi sangat buruk, termasuk saat pertama kali scan QR. */
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{--teal:#0f766e;--teal2:#14b8a6;--ink:#0f172a;--muted:#64748b;--line:#e2e8f0;--bg:#f1f5f9}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:linear-gradient(160deg,#ecfeff 0%,#f1f5f9 50%,#eef2ff 100%);color:var(--ink);
+    -webkit-font-smoothing:antialiased;line-height:1.5;padding:16px}
+  .wrap{max-width:480px;margin:0 auto}
+  .card{background:#fff;border:1px solid var(--line);border-radius:20px;
+    box-shadow:0 12px 40px rgba(15,118,110,.10);overflow:hidden}
+  .head{background:linear-gradient(135deg,#0f766e,#0e7490);color:#fff;padding:22px 20px}
+  .badge{display:inline-block;background:rgba(255,255,255,.18);padding:5px 12px;border-radius:999px;
+    font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+  .head h1{font-size:22px;font-weight:800;margin-top:10px}
+  .head p{font-size:13px;opacity:.9;margin-top:4px}
+  .body{padding:20px}
+  label.field{display:block;margin-bottom:16px}
+  label.field .lbl{display:block;font-size:13px;font-weight:800;margin-bottom:7px;color:#334155}
+  input[type=text]{width:100%;border:1px solid var(--line);border-radius:12px;padding:13px 14px;
+    font-size:16px;font-weight:600;color:var(--ink);outline:none;background:#fff}
+  input[type=text]:focus{border-color:var(--teal2);box-shadow:0 0 0 3px rgba(20,184,166,.15)}
+  .cats{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .cat{border:1px solid var(--line);border-radius:12px;padding:11px 12px;font-size:14px;font-weight:700;
+    background:#fff;color:#475569;text-align:left;cursor:pointer;transition:.15s}
+  .cat.active{border-color:var(--teal);background:#f0fdfa;color:var(--teal);box-shadow:0 4px 14px rgba(15,118,110,.12)}
+  .btn{width:100%;border:none;border-radius:14px;padding:15px;font-size:16px;font-weight:800;color:#fff;
+    background:linear-gradient(135deg,#0f766e,#14b8a6);cursor:pointer;margin-top:6px}
+  .btn:disabled{opacity:.6;cursor:default}
+  .note{margin-top:14px;font-size:12px;color:var(--muted);text-align:center;line-height:1.6}
+  .qbar{display:none;margin-bottom:14px;background:#fffbeb;border:1px solid #fde68a;color:#b45309;
+    border-radius:12px;padding:10px 14px;font-size:13px;font-weight:700;text-align:center}
+  .qbar.show{display:block}
+  /* layar hasil */
+  .result{display:none;text-align:center;padding:36px 22px}
+  .result.show{display:block}
+  .icon{width:84px;height:84px;border-radius:50%;margin:0 auto 18px;display:flex;align-items:center;
+    justify-content:center;font-size:42px;color:#fff}
+  .icon.ok{background:linear-gradient(135deg,#10b981,#0f766e)}
+  .icon.queued{background:linear-gradient(135deg,#f59e0b,#d97706)}
+  .result h2{font-size:26px;font-weight:800}
+  .result p{color:var(--muted);margin-top:10px;font-size:15px}
+  .result .alert{margin-top:16px;background:#fffbeb;border:1px solid #fde68a;color:#b45309;
+    border-radius:14px;padding:14px;font-size:13px;font-weight:600;line-height:1.6}
+  .again{margin-top:22px;display:inline-block;border:1px solid var(--line);border-radius:12px;
+    padding:12px 22px;font-size:14px;font-weight:800;color:#334155;text-decoration:none;background:#fff;cursor:pointer}
+  .err{display:none;margin-top:12px;background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;
+    border-radius:12px;padding:11px 14px;font-size:13px;font-weight:700;text-align:center}
+  .err.show{display:block}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <div class="head">
+      <span class="badge">Hari Jadi Bogor ke-544</span>
+      <h1>Daftar Hadir Booth DPMD</h1>
+      <p>Isi data singkat untuk mencatat kehadiran Anda.</p>
+    </div>
+
+    <div class="body" id="formArea">
+      <div class="qbar" id="qbar"></div>
+      <form id="form" autocomplete="on">
+        <label class="field">
+          <span class="lbl">Nama Lengkap</span>
+          <input type="text" id="full_name" required placeholder="Masukkan nama lengkap" />
+        </label>
+        <label class="field">
+          <span class="lbl">Asal / Instansi</span>
+          <input type="text" id="origin" required placeholder="Contoh: Desa Cibinong / SMAN 1 / Umum" />
+        </label>
+        <div class="field">
+          <span class="lbl">Kategori Pengunjung</span>
+          <div class="cats" id="cats"></div>
+        </div>
+        <label class="field" id="customWrap" style="display:none">
+          <span class="lbl">Kategori Lainnya</span>
+          <input type="text" id="custom_category" placeholder="Tulis kategori pengunjung" />
+        </label>
+        <div class="err" id="err"></div>
+        <button type="submit" class="btn" id="submitBtn">Submit Daftar Hadir</button>
+        <p class="note">Data divalidasi otomatis anti-duplikat. Bila koneksi terputus, data tetap tersimpan dan terkirim saat online.</p>
+      </form>
+    </div>
+
+    <div class="result" id="result">
+      <div class="icon ok" id="resultIcon">✓</div>
+      <h2 id="resultTitle">Terima kasih!</h2>
+      <p id="resultMsg"></p>
+      <div class="alert" id="resultAlert" style="display:none"></div>
+      <a class="again" id="againBtn">Isi lagi untuk pengunjung lain</a>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var API = "/api/event-attendance/public/register";
+  var QUEUE_KEY = "dpmd_hjb544_queue";
+  var DEVICE_KEY = "dpmd_hjb544_device_id";
+  var CATEGORIES = ["masyarakat","ASN","pelajar","mahasiswa","perangkat desa","lainnya"];
+  var token = new URLSearchParams(location.search).get("token") || "DPMD-HJB-544";
+
+  function deviceId(){
+    try{
+      var v = localStorage.getItem(DEVICE_KEY);
+      if(!v){ v = "device-"+Date.now()+"-"+Math.random().toString(16).slice(2); localStorage.setItem(DEVICE_KEY, v); }
+      return v;
+    }catch(e){ return "device-"+Date.now(); }
+  }
+
+  // ---- antrian offline (localStorage) ----
+  function readQueue(){ try{ return JSON.parse(localStorage.getItem(QUEUE_KEY)||"[]"); }catch(e){ return []; } }
+  function writeQueue(q){ try{ localStorage.setItem(QUEUE_KEY, JSON.stringify(q)); }catch(e){} }
+  function enqueue(rec){ var q=readQueue(); q.push(rec); writeQueue(q); updateQbar(); }
+
+  function updateQbar(){
+    var n = readQueue().length, bar = document.getElementById("qbar");
+    if(n>0){ bar.textContent = n+" data menunggu terkirim — akan otomatis saat online"; bar.classList.add("show"); }
+    else { bar.classList.remove("show"); }
+  }
+
+  // kirim 1 record; resolve("ok"|"duplicate") sukses, reject(network) bila gagal jaringan
+  function send(rec){
+    var ctrl = new AbortController();
+    var timer = setTimeout(function(){ ctrl.abort(); }, 12000);
+    return fetch(API, {
+      method:"POST",
+      headers:{ "Content-Type":"application/json", "Accept":"application/json" },
+      body: JSON.stringify(rec),
+      signal: ctrl.signal
+    }).then(function(res){
+      clearTimeout(timer);
+      if(res.status === 409) return "duplicate";   // sudah tercatat = anggap selesai
+      if(res.ok) return "ok";
+      // 4xx/5xx lain: respons server diterima, jangan diantri ulang tanpa batas
+      return res.json().catch(function(){return {};}).then(function(j){
+        var e = new Error(j.message || "Gagal menyimpan"); e.serverError = true; throw e;
+      });
+    }).catch(function(e){
+      clearTimeout(timer);
+      throw e; // termasuk AbortError / network error
+    });
+  }
+
+  // flush antrian: berhenti di kegagalan jaringan pertama, sisanya tetap tersimpan
+  var flushing = false;
+  function flushQueue(){
+    if(flushing || !navigator.onLine) return;
+    var q = readQueue();
+    if(!q.length) return;
+    flushing = true;
+    (function next(){
+      var cur = readQueue();
+      if(!cur.length){ flushing=false; updateQbar(); return; }
+      send(cur[0]).then(function(){
+        var c2 = readQueue(); c2.shift(); writeQueue(c2); updateQbar(); next();
+      }).catch(function(err){
+        if(err && err.serverError){ // ditolak server (mis. validasi) -> buang agar tak macet
+          var c3 = readQueue(); c3.shift(); writeQueue(c3); updateQbar(); next();
+        } else { flushing=false; } // gagal jaringan -> coba lagi nanti
+      });
+    })();
+  }
+
+  // ---- UI ----
+  var selectedCat = "masyarakat";
+  function buildCats(){
+    var box = document.getElementById("cats");
+    CATEGORIES.forEach(function(c){
+      var b = document.createElement("button");
+      b.type="button"; b.className="cat"+(c===selectedCat?" active":""); b.textContent=c;
+      b.onclick=function(){
+        selectedCat=c;
+        Array.prototype.forEach.call(box.children,function(el){ el.classList.toggle("active", el===b); });
+        document.getElementById("customWrap").style.display = (c==="lainnya")?"block":"none";
+      };
+      box.appendChild(b);
+    });
+  }
+
+  function showError(msg){ var e=document.getElementById("err"); e.textContent=msg; e.classList.add("show"); }
+  function clearError(){ document.getElementById("err").classList.remove("show"); }
+
+  function showResult(state, name){
+    document.getElementById("formArea").style.display="none";
+    var r=document.getElementById("result"); r.classList.add("show");
+    var icon=document.getElementById("resultIcon"), title=document.getElementById("resultTitle"),
+        msg=document.getElementById("resultMsg"), alert=document.getElementById("resultAlert");
+    if(state==="queued"){
+      icon.className="icon queued"; icon.textContent="⏱";
+      title.textContent="Tersimpan di Perangkat";
+      msg.innerHTML="Terima kasih, <b>"+escapeHtml(name)+"</b>.";
+      alert.style.display="block";
+      alert.innerHTML="Koneksi internet sedang terputus. Data Anda <b>aman tersimpan</b> dan akan <b>terkirim otomatis</b> saat jaringan kembali. Tidak perlu mengisi ulang.";
+    } else {
+      icon.className="icon ok"; icon.textContent="✓";
+      title.textContent="Terima kasih!";
+      msg.innerHTML = (state==="duplicate")
+        ? "Data <b>"+escapeHtml(name)+"</b> sudah tercatat sebelumnya."
+        : "Selamat datang di Booth DPMD Kabupaten Bogor, <b>"+escapeHtml(name)+"</b>.";
+      alert.style.display="none";
+    }
+  }
+
+  function escapeHtml(s){ return String(s||"").replace(/[&<>"']/g,function(c){
+    return ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"})[c]; }); }
+
+  function resetForm(){
+    document.getElementById("result").classList.remove("show");
+    document.getElementById("formArea").style.display="block";
+    document.getElementById("form").reset();
+    selectedCat="masyarakat";
+    Array.prototype.forEach.call(document.getElementById("cats").children,function(el,i){
+      el.classList.toggle("active", i===0); });
+    document.getElementById("customWrap").style.display="none";
+    clearError();
+  }
+
+  function init(){
+    buildCats();
+    updateQbar();
+    flushQueue(); // kirim sisa antrian dari kunjungan sebelumnya bila sudah online
+
+    document.getElementById("againBtn").onclick=resetForm;
+
+    document.getElementById("form").addEventListener("submit", function(ev){
+      ev.preventDefault();
+      clearError();
+      var name=document.getElementById("full_name").value.trim();
+      var origin=document.getElementById("origin").value.trim();
+      var custom=document.getElementById("custom_category").value.trim();
+      if(!name||!origin){ showError("Nama dan asal/instansi wajib diisi."); return; }
+      if(selectedCat==="lainnya" && !custom){ showError("Kategori lainnya wajib diisi."); return; }
+
+      var rec={ full_name:name, origin:origin, category:selectedCat,
+        custom_category:(selectedCat==="lainnya")?custom:null,
+        scan_payload:token, device_id:deviceId() };
+
+      var btn=document.getElementById("submitBtn");
+      btn.disabled=true; btn.textContent="Menyimpan...";
+
+      var finish=function(){ btn.disabled=false; btn.textContent="Submit Daftar Hadir"; };
+
+      if(!navigator.onLine){ enqueue(rec); finish(); showResult("queued", name); return; }
+
+      send(rec).then(function(state){
+        finish(); showResult(state==="duplicate"?"duplicate":"ok", name);
+      }).catch(function(err){
+        finish();
+        if(err && err.serverError){ showError(err.message); return; }
+        // gagal jaringan -> antri & beri tahu, akan terkirim otomatis
+        enqueue(rec); showResult("queued", name);
+      });
+    });
+  }
+
+  window.addEventListener("online", flushQueue);
+  if(document.readyState!=="loading") init(); else document.addEventListener("DOMContentLoaded", init);
+})();
+</script>
+</body>
+</html>

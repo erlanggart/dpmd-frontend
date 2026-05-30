@@ -2,7 +2,6 @@ import React from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import toast from "react-hot-toast";
-import * as XLSX from "xlsx";
 import {
   ArrowLeft,
   BadgeCheck,
@@ -50,6 +49,35 @@ const getDeviceId = () => {
   return next;
 };
 
+// Persisted config so the page tetap terbuka walau koneksi buruk/putus.
+const CONFIG_CACHE_KEY = "dpmd_hjb544_config";
+
+// Label default agar form bisa langsung tampil tanpa menunggu API config.
+const FALLBACK_CONFIG = {
+  event_name: "Booth DPMD Kabupaten Bogor",
+  location: "Booth DPMD Kabupaten Bogor",
+  event_date: null,
+  qr_payload: "",
+  qrDataUrl: null,
+};
+
+const readCachedConfig = () => {
+  try {
+    const raw = localStorage.getItem(CONFIG_CACHE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
+
+const writeCachedConfig = (config) => {
+  try {
+    localStorage.setItem(CONFIG_CACHE_KEY, JSON.stringify(config));
+  } catch {
+    /* abaikan kuota localStorage penuh */
+  }
+};
+
 const playSuccessTone = () => {
   const AudioContext = window.AudioContext || window.webkitAudioContext;
   if (!AudioContext) return;
@@ -72,6 +100,9 @@ const playSuccessTone = () => {
 const exportAttendanceExcel = async () => {
   const toastId = toast.loading("Menyiapkan file Excel...");
   try {
+    // Muat pustaka xlsx (~1 MB) hanya saat dibutuhkan, bukan saat halaman dibuka,
+    // agar pengunjung di koneksi buruk tidak perlu mengunduhnya sama sekali.
+    const XLSX = await import("xlsx");
     const response = await api.get("/event-attendance/admin/attendances", {
       params: { limit: 5000 },
     });
@@ -104,7 +135,8 @@ const downloadQrCode = (config) => {
 
 const getFormUrl = (config) => {
   if (config?.formUrl) return config.formUrl;
-  return `${window.location.origin}/hari-jadi-bogor-544/form?token=${encodeURIComponent(config?.qr_payload || "")}`;
+  // Halaman form ringan mandiri (lihat public/daftar-hadir-hjb544.html).
+  return `${window.location.origin}/daftar-hadir-hjb544.html?token=${encodeURIComponent(config?.qr_payload || "")}`;
 };
 
 const copyFormUrl = async (config) => {
@@ -206,17 +238,38 @@ const buildAttendanceStats = (rows, totalFromServer) => {
 };
 
 export default function EventAttendancePublicPage({ mode = "scan" }) {
-  const [config, setConfig] = React.useState(null);
+  // Mulai dari config yang tersimpan di perangkat — agar tampil instan walau offline.
+  const [config, setConfig] = React.useState(() => readCachedConfig());
   const [attendanceOpen, setAttendanceOpen] = React.useState(false);
   const [searchParams] = useSearchParams();
   const canExport = Boolean(localStorage.getItem("expressToken"));
 
   React.useEffect(() => {
+    let active = true;
     api
-      .get("/event-attendance/public/config")
-      .then((res) => setConfig(res.data.data))
-      .catch(() => toast.error("Gagal memuat konfigurasi event"));
-  }, []);
+      // Timeout pendek: jangan biarkan pengunjung menatap loader 30 detik saat sinyal jelek.
+      .get("/event-attendance/public/config", { timeout: 8000 })
+      .then((res) => {
+        if (!active) return;
+        setConfig(res.data.data);
+        writeCachedConfig(res.data.data);
+      })
+      .catch(() => {
+        if (!active) return;
+        // Koneksi buruk/putus: pakai config tersimpan, atau fallback agar halaman tetap terbuka.
+        setConfig((prev) => prev || readCachedConfig() || (mode === "form" ? FALLBACK_CONFIG : null));
+      });
+    return () => {
+      active = false;
+    };
+  }, [mode]);
+
+  // Form pengunjung TIDAK butuh config dari server — token QR sudah ada di URL.
+  // Jadi langsung tampilkan form tanpa menunggu jaringan.
+  if (mode === "form") {
+    const formConfig = config || FALLBACK_CONFIG;
+    return <AttendanceForm config={formConfig} canExport={canExport} scanPayload={searchParams.get("token") || formConfig.qr_payload} />;
+  }
 
   if (!config) {
     return (
@@ -229,10 +282,6 @@ export default function EventAttendancePublicPage({ mode = "scan" }) {
         </div>
       </EventShell>
     );
-  }
-
-  if (mode === "form") {
-    return <AttendanceForm config={config} canExport={canExport} scanPayload={searchParams.get("token") || config.qr_payload} />;
   }
 
   return (
@@ -342,10 +391,10 @@ function QrDisplayPanel({ config }) {
           <Copy className="h-5 w-5" />
           Copy Link
         </button>
-        <Link to={`/hari-jadi-bogor-544/form?token=${encodeURIComponent(config.qr_payload)}`} className="flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-teal-500 via-sky-500 to-blue-600 px-5 py-4 text-sm font-black text-white shadow-xl shadow-teal-500/20 transition hover:-translate-y-0.5">
+        <a href={getFormUrl(config)} className="flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-teal-500 via-sky-500 to-blue-600 px-5 py-4 text-sm font-black text-white shadow-xl shadow-teal-500/20 transition hover:-translate-y-0.5">
           Buka Form
           <ChevronRight className="h-5 w-5" />
-        </Link>
+        </a>
       </div>
 
       <div className="mt-5 rounded-[1.4rem] border border-slate-100 bg-slate-50/80 px-4 py-3 text-center">
@@ -372,20 +421,39 @@ function AttendanceForm({ config, scanPayload, canExport }) {
     event.preventDefault();
     setSubmitting(true);
     try {
-      const response = await api.post("/event-attendance/public/register", {
-        ...form,
-        scan_payload: scanPayload,
-        device_id: getDeviceId(),
-      });
+      const response = await api.post(
+        "/event-attendance/public/register",
+        {
+          ...form,
+          scan_payload: scanPayload,
+          device_id: getDeviceId(),
+        },
+        // Timeout pendek: jika koneksi macet, segera fall back ke antrian offline.
+        { timeout: 12000 },
+      );
       setSuccess(response.data.data);
       playSuccessTone();
     } catch (error) {
-      const message = error.response?.data?.message || "Gagal menyimpan daftar hadir";
-      if (error.response?.status === 409) {
-        toast.error(message);
-        setSuccess(error.response.data.data || { full_name: form.full_name });
+      // Server merespons (mis. 409 data double) → tangani normal.
+      if (error.response) {
+        const message = error.response.data?.message || "Gagal menyimpan daftar hadir";
+        if (error.response.status === 409) {
+          toast.error(message);
+          setSuccess(error.response.data.data || { full_name: form.full_name });
+        } else {
+          toast.error(message);
+        }
+        return;
+      }
+
+      // Tidak ada respons = koneksi putus/macet. Bila service worker aktif, request
+      // sudah diantri (Background Sync) dan akan terkirim otomatis saat online.
+      const swActive = "serviceWorker" in navigator && navigator.serviceWorker.controller;
+      if (swActive) {
+        setSuccess({ full_name: form.full_name, queued: true });
+        playSuccessTone();
       } else {
-        toast.error(message);
+        toast.error("Koneksi terputus dan data belum tersimpan. Coba lagi saat ada sinyal.");
       }
     } finally {
       setSubmitting(false);
@@ -398,14 +466,21 @@ function AttendanceForm({ config, scanPayload, canExport }) {
         <AnimatePresence mode="wait">
           {success ? (
             <motion.div key="success" initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} className="w-full max-w-2xl overflow-hidden rounded-[2.4rem] border border-white/75 bg-white/90 p-7 text-center shadow-[0_30px_90px_rgba(15,118,110,.18)] backdrop-blur-2xl md:p-10">
-              <div className="mx-auto mb-6 grid h-24 w-24 place-items-center rounded-full bg-gradient-to-br from-emerald-400 via-teal-500 to-blue-600 text-white shadow-2xl shadow-emerald-500/30">
-                <BadgeCheck className="h-12 w-12" />
+              <div className={`mx-auto mb-6 grid h-24 w-24 place-items-center rounded-full text-white shadow-2xl ${success.queued ? "bg-gradient-to-br from-amber-400 via-orange-500 to-amber-600 shadow-amber-500/30" : "bg-gradient-to-br from-emerald-400 via-teal-500 to-blue-600 shadow-emerald-500/30"}`}>
+                {success.queued ? <Clock3 className="h-12 w-12" /> : <BadgeCheck className="h-12 w-12" />}
               </div>
-              <p className="text-sm font-black uppercase tracking-[0.24em] text-teal-600">Berhasil Tercatat</p>
+              <p className={`text-sm font-black uppercase tracking-[0.24em] ${success.queued ? "text-amber-600" : "text-teal-600"}`}>
+                {success.queued ? "Tersimpan di Perangkat" : "Berhasil Tercatat"}
+              </p>
               <h1 className="mt-3 text-5xl font-black tracking-tight text-slate-950">Terima kasih!</h1>
               <p className="mx-auto mt-4 max-w-lg text-lg leading-8 text-slate-600">
                 Selamat datang di Booth DPMD Kabupaten Bogor, <span className="font-black text-slate-900">{success.full_name}</span>.
               </p>
+              {success.queued && (
+                <p className="mx-auto mt-5 max-w-lg rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm font-bold leading-6 text-amber-700">
+                  Koneksi internet sedang terputus. Data Anda <span className="font-black">aman tersimpan</span> di perangkat ini dan akan <span className="font-black">terkirim otomatis</span> begitu jaringan kembali. Tidak perlu mengisi ulang.
+                </p>
+              )}
               <div className="mt-8 grid gap-3 sm:grid-cols-2">
                 <Link to="/hari-jadi-bogor-544" className="rounded-2xl bg-slate-950 px-5 py-4 text-sm font-black text-white shadow-xl shadow-slate-900/15">Lihat QR</Link>
                 <Link to="/" className="rounded-2xl border border-slate-200 bg-white px-5 py-4 text-sm font-black text-slate-700 shadow-lg shadow-slate-200/60">Kembali</Link>
