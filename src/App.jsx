@@ -857,9 +857,28 @@ function App() {
                   <Route path="absensi" element={<AbsensiPage />} />
                   <Route path="pesan" element={<MessagingPage />} />
                   <Route path="bank-surat" element={<BankSuratPage />} />
-                  <Route path="photo-booth" element={<PhotoBoothPage />} />
                 </Route>
-                
+
+                {/* Photo Booth - full screen tanpa sidebar (di luar DPMDStaffLayout) */}
+                <Route
+                  path="/dpmd/photo-booth"
+                  element={
+                    <RoleProtectedRoute
+                      allowedRoles={[
+                        "pegawai",
+                        "ketua_tim",
+                        "kepala_bidang",
+                        "kepala_dinas",
+                        "sekretaris_dinas",
+                        "bendahara",
+                        "superadmin",
+                      ]}
+                    >
+                      <PhotoBoothPage />
+                    </RoleProtectedRoute>
+                  }
+                />
+
                 {/* Rute Bidang - Accessible by pegawai/kepala_bidang/ketua_tim (their own bidang) & kepala_dinas/superadmin (all) */}
                 <Route
                   path="/bidang"
