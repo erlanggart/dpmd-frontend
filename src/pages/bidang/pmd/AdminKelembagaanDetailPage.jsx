@@ -176,17 +176,9 @@ const AdminKelembagaanDetailPage = () => {
 	
 	// Helper function to get base path based on user role
 	const getBasePath = () => {
-		if (user?.role === "desa") {
-			return "/desa";
-		} else if (
-			user?.role === "superadmin" ||
-			user?.role === "kepala_dinas" ||
-			(user?.role === "kepala_bidang" && user?.bidang_id === 5) ||
-			(user?.role === "pegawai" && user?.bidang_id === 5)
-		) {
-			return "/bidang/pmd";
-		}
-		return "/desa"; // Default fallback
+		if (user?.role === "desa") return "/desa";
+		if (user?.role === "kecamatan") return "/kecamatan";
+		return "/bidang/pmd"; // All internal DPMD staff
 	};
 
 	const basePath = getBasePath();

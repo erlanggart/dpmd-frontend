@@ -146,14 +146,16 @@ const EditModal = ({
 export default function KelembagaanDetailPage({
 	isAdminView: propIsAdminView,
 }) {
-	const { user, isKelembagaanAdmin } = useAuth();
+	const { user, isKelembagaanAdmin, isKecamatan } = useAuth();
 	const { isEditMode } = useEditMode();
 	const { type, id, desaId: routeDesaId } = useParams();
 	const navigate = useNavigate();
 	const aktivitasLogRef = useRef(null);
 
-	// Auto-detect admin mode
-	const isAdmin = propIsAdminView ?? isKelembagaanAdmin();
+	const isKecamatanUser = isKecamatan?.() ?? false;
+
+	// Kecamatan is treated as admin for API access (read-only view + verify)
+	const isAdmin = propIsAdminView ?? (isKelembagaanAdmin() || isKecamatanUser);
 	const targetDesaId = routeDesaId || user?.desa_id;
 
 	const [detail, setDetail] = useState(null);
@@ -532,64 +534,77 @@ export default function KelembagaanDetailPage({
 
 	const handleToggleVerification = async (kelembagaanId, currentStatus) => {
 		if (currentStatus === "verified") {
-			// Already verified → show tunda/batal modal with feedback
+			// Sudah verified → tampilkan modal tolak/batalkan
 			await showTundaVerifikasiModal(kelembagaanId);
-		} else {
-			// Not yet verified → show choice: Tunda or Verifikasi
-			let selectedAction = null;
+			return;
+		}
 
+		// Belum verified → CEK KELENGKAPAN DATA TERLEBIH DAHULU
+		const missing = [];
+		if (!detail?.produk_hukum_id) missing.push("SK Pembentukan Lembaga");
+		if (!pengurusCount || pengurusCount === 0) missing.push("Data Pengurus (minimal 1 orang)");
+		if (!detail?.alamat) missing.push("Alamat Kelembagaan");
+
+		if (missing.length > 0) {
+			// Data tidak lengkap → hanya tampilkan info, tidak bisa verifikasi
 			await Swal.fire({
-				title: "Opsi Verifikasi",
+				title: "Data Belum Lengkap",
 				html: `
-					<div class="text-left space-y-3">
-						<button id="swal-verify-btn" class="w-full text-left p-3 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors cursor-pointer">
-							<p class="font-medium text-blue-800 text-sm">✅ Verifikasi Lembaga</p>
-							<p class="text-xs text-blue-600 mt-1">Data sudah sesuai dan lengkap, setujui verifikasi.</p>
-						</button>
-						<button id="swal-tunda-btn" class="w-full text-left p-3 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors cursor-pointer">
-							<p class="font-medium text-red-800 text-sm">❌ Tolak Verifikasi</p>
-							<p class="text-xs text-red-600 mt-1">Data belum sesuai, kirim catatan ke desa untuk diperbaiki.</p>
-						</button>
+					<div class="text-left">
+						<p class="text-sm text-gray-600 mb-3">Lengkapi data berikut sebelum melakukan verifikasi:</p>
+						<ul class="space-y-1.5 mb-4">
+							${missing.map(m => `
+								<li class="flex items-center gap-2 text-sm text-gray-700">
+									<span class="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0"></span>
+									${m}
+								</li>`).join("")}
+						</ul>
+						<p class="text-xs text-gray-400">Hubungi pihak desa untuk melengkapi data terlebih dahulu.</p>
 					</div>`,
+				icon: "warning",
 				showConfirmButton: false,
 				showCancelButton: true,
-				cancelButtonText: "Batal",
-				didOpen: () => {
-					document.getElementById("swal-verify-btn").addEventListener("click", () => {
-						selectedAction = "verify";
-						Swal.close();
-					});
-					document.getElementById("swal-tunda-btn").addEventListener("click", () => {
-						selectedAction = "tunda";
-						Swal.close();
-					});
-				},
+				cancelButtonText: "Tutup",
+				cancelButtonColor: "#6b7280",
 			});
+			return;
+		}
 
-			if (selectedAction === "verify") {
-				// Check completeness before verifying
-				const missing = [];
-				if (!detail?.produk_hukum_id) missing.push("SK Pembentukan");
-				if (!pengurusCount || pengurusCount === 0) missing.push("Data Pengurus");
-				if (!detail?.alamat) missing.push("Alamat");
+		// Data lengkap → tampilkan pilihan Verifikasi / Tolak
+		let selectedAction = null;
 
-				if (missing.length > 0) {
-					const confirm = await Swal.fire({
-						title: "Data Belum Lengkap",
-						html: `<div class="text-left"><p class="mb-2">Data berikut masih kosong:</p><ul class="list-disc pl-5 space-y-1">${missing.map(m => `<li>${m}</li>`).join("")}</ul><p class="mt-3 text-sm text-gray-500">Apakah tetap ingin memverifikasi?</p></div>`,
-						icon: "warning",
-						showCancelButton: true,
-						confirmButtonText: "Ya, Tetap Verifikasi",
-						cancelButtonText: "Batal",
-						confirmButtonColor: "#3b82f6",
-					});
-					if (!confirm.isConfirmed) return;
-				}
+		await Swal.fire({
+			title: "Opsi Verifikasi",
+			html: `
+				<div class="text-left space-y-3">
+					<button id="swal-verify-btn" class="w-full text-left p-3 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors cursor-pointer">
+						<p class="font-medium text-blue-800 text-sm">✅ Verifikasi Lembaga</p>
+						<p class="text-xs text-blue-600 mt-1">Data sudah sesuai dan lengkap, setujui verifikasi.</p>
+					</button>
+					<button id="swal-tunda-btn" class="w-full text-left p-3 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors cursor-pointer">
+						<p class="font-medium text-red-800 text-sm">❌ Tolak Verifikasi</p>
+						<p class="text-xs text-red-600 mt-1">Data belum sesuai, kirim catatan ke desa untuk diperbaiki.</p>
+					</button>
+				</div>`,
+			showConfirmButton: false,
+			showCancelButton: true,
+			cancelButtonText: "Batal",
+			didOpen: () => {
+				document.getElementById("swal-verify-btn").addEventListener("click", () => {
+					selectedAction = "verify";
+					Swal.close();
+				});
+				document.getElementById("swal-tunda-btn").addEventListener("click", () => {
+					selectedAction = "tunda";
+					Swal.close();
+				});
+			},
+		});
 
-				await executeVerification(kelembagaanId);
-			} else if (selectedAction === "tunda") {
-				await showTundaVerifikasiModal(kelembagaanId);
-			}
+		if (selectedAction === "verify") {
+			await executeVerification(kelembagaanId);
+		} else if (selectedAction === "tunda") {
+			await showTundaVerifikasiModal(kelembagaanId);
 		}
 	};
 
@@ -714,19 +729,25 @@ export default function KelembagaanDetailPage({
 					{/* Breadcrumb */}
 					<nav className="flex items-center space-x-2 text-sm flex-1 overflow-x-auto">
 						<Link
-							to={isAdmin ? "/bidang/pmd/kelembagaan" : "/desa/dashboard"}
+							to={isKecamatanUser ? "/kecamatan/kelembagaan" : isAdmin ? "/bidang/pmd/kelembagaan" : "/desa/dashboard"}
 							className="flex items-center text-gray-500 hover:text-indigo-600 transition-colors"
 						>
 							<FaHome className="mr-1" />
-							Dashboard Kelembagaan
+							{isKecamatanUser ? "Verifikasi Kelembagaan" : "Dashboard Kelembagaan"}
 						</Link>
 						<FaChevronRight className="text-gray-400 text-xs" />
-						
-						{/* Desa name link (both admin and desa) */}
+
+						{/* Desa name link */}
 						{detail?.desa_id && (
 							<>
 								<Link
-									to={isAdmin ? `/bidang/pmd/kelembagaan/admin/${detail.desa_id}` : "/desa/kelembagaan"}
+									to={
+										isKecamatanUser
+											? "/kecamatan/kelembagaan"
+											: isAdmin
+											? `/bidang/pmd/kelembagaan/admin/${detail.desa_id}`
+											: "/desa/kelembagaan"
+									}
 									className="text-gray-500 hover:text-indigo-600 transition-colors"
 								>
 									{detail?.desas?.nama || detail?.desa?.nama || "Desa"}
@@ -739,7 +760,9 @@ export default function KelembagaanDetailPage({
 							<>
 								<Link
 									to={
-										isAdmin
+										isKecamatanUser
+											? `/kecamatan/kelembagaan/${detail.desa_id}/rw`
+											: isAdmin
 											? `/bidang/pmd/kelembagaan/admin/${detail.desa_id}/rw`
 											: `/desa/kelembagaan/rw`
 									}
@@ -750,7 +773,9 @@ export default function KelembagaanDetailPage({
 								<FaChevronRight className="text-gray-400 text-xs" />
 								<Link
 									to={
-										isAdmin
+										isKecamatanUser
+											? `/kecamatan/kelembagaan/${detail.desa_id}/rw/${detail.rw_id}`
+											: isAdmin
 											? `/bidang/pmd/kelembagaan/rw/${detail.rw_id}`
 											: `/desa/kelembagaan/rw/${detail.rw_id}`
 									}
@@ -773,7 +798,9 @@ export default function KelembagaanDetailPage({
 							<>
 								<Link
 									to={
-										isAdmin
+										isKecamatanUser
+											? `/kecamatan/kelembagaan/${detail.desa_id}/${type}`
+											: isAdmin
 											? `/bidang/pmd/kelembagaan/admin/${detail.desa_id}/${type}`
 											: `/desa/kelembagaan/${type}`
 									}
@@ -811,22 +838,24 @@ export default function KelembagaanDetailPage({
 					</span>
 				</div>
 			</div>
-			<div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-				<div className="col-span-1 lg:col-span-2 space-y-4">
+				<div className="mb-6">
 					<ProfilCard
 						profil={detail}
 						type={type}
-						onEdit={handleOpenEdit}
+						onEdit={isKecamatanUser ? null : handleOpenEdit}
 						rtCount={type === "rw" ? anak.length : 0}
 						rtList={type === "rw" ? anak : []}
 						pengurusCount={pengurusCount}
-						onToggleStatus={handleToggleStatus}
+						onToggleStatus={isKecamatanUser ? null : handleToggleStatus}
 						onToggleVerification={handleToggleVerification}
-						onAjukanUlang={handleAjukanUlang}
+						onAjukanUlang={isKecamatanUser ? null : handleAjukanUlang}
 						produkHukumList={produkHukumList}
-						onUpdatePenduduk={type === "rt" ? handleUpdatePenduduk : undefined}
+						onUpdatePenduduk={type === "rt" && !isKecamatanUser ? handleUpdatePenduduk : undefined}
 					/>
-
+				</div>
+			<div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+				
+				<div className="lg:col-span-2">
 					<PengurusKelembagaan
 						kelembagaanType={type}
 						kelembagaanId={detail.id}
@@ -835,28 +864,30 @@ export default function KelembagaanDetailPage({
 						onPengurusCountChange={setPengurusCount}
 					/>
 				</div>
-				<div className="space-y-4">
-					{type === "rw" && (
-						<AnakLembagaCard
-							list={anak}
-							label="Daftar RT"
-							onClickItem={(rt) =>
-								navigate(
-									isAdmin
-										? `/bidang/pmd/kelembagaan/rt/${rt.id}`
-										: `/desa/kelembagaan/rt/${rt.id}`,
-								)
-							}
-							onAddRT={handleAddRT}
-							rwId={detail.id}
+					<div className="lg:col-span-1 space-y-6">
+						{type === "rw" && (
+							<AnakLembagaCard
+								list={anak}
+								label="Daftar RT"
+								onClickItem={(rt) =>
+									navigate(
+										isKecamatanUser
+											? `/kecamatan/kelembagaan/${detail.desa_id}/rt/${rt.id}`
+											: isAdmin
+											? `/bidang/pmd/kelembagaan/rt/${rt.id}`
+											: `/desa/kelembagaan/rt/${rt.id}`,
+									)
+								}
+								onAddRT={handleAddRT}
+								rwId={detail.id}
+							/>
+						)}
+						<AktivitasLog
+							ref={aktivitasLogRef}
+							lembagaType={type}
+							lembagaId={id}
 						/>
-					)}
-					<AktivitasLog
-						ref={aktivitasLogRef}
-						lembagaType={type}
-						lembagaId={id}
-					/>
-				</div>
+					</div>
 			</div>{" "}
 			<EditModal
 				title={`Edit ${getDisplayName(type)}${detail?.nomor ? ` ${detail.nomor}` : detail?.nama ? ` — ${detail.nama}` : ""}`}

@@ -321,6 +321,9 @@ const KecamatanTimVerifikasiPage = lazy(
 const KecamatanSettings = lazy(
   () => import("./pages/kecamatan/KecamatanSettings"),
 );
+const KecamatanKelembagaanPage = lazy(
+  () => import("./pages/kecamatan/kelembagaan/KecamatanKelembagaanPage"),
+);
 const KecamatanChangePasswordPage = lazy(
   () => import("./pages/kecamatan/KecamatanChangePasswordPage"),
 );
@@ -1183,6 +1186,16 @@ function App() {
                     path="bankeu/tim-verifikasi/:desaId"
                     element={<KecamatanTimVerifikasiPage />}
                   />
+                  <Route path="kelembagaan" element={<KecamatanKelembagaanPage />} />
+                  <Route
+                    path="kelembagaan/:desaId/:type"
+                    element={<KelembagaanList />}
+                  />
+                  <Route
+                    path="kelembagaan/:desaId/:type/:id"
+                    element={<KelembagaanDetailPage />}
+                  />
+                  <Route path="pengurus/:id" element={<PengurusDetailPage />} />
                   <Route path="settings" element={<KecamatanSettings />} />
                   <Route path="change-password" element={<KecamatanChangePasswordPage />} />
                   <Route path="pesan" element={<MessagingPage />} />

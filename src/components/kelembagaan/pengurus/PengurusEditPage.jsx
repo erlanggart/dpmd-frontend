@@ -99,10 +99,9 @@ const PengurusEditPage = () => {
 
 	// Determine base path based on role
 	const getBasePath = () => {
-		if (isSuperAdmin || isAdminBidangPMD) {
-			return "/bidang/pmd";
-		}
-		return "/desa";
+		if (user?.role === "desa") return "/desa";
+		if (user?.role === "kecamatan") return "/kecamatan";
+		return "/bidang/pmd"; // All internal DPMD staff
 	};
 
 	const loadProdukHukumList = useCallback(async () => {

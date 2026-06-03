@@ -16,12 +16,13 @@ export const getCurrentUser = () => {
 
 /**
  * Check if current user is admin (superadmin, pemberdayaan_masyarakat, pmd, super_admin, admin, kepala_dinas, etc.)
+ * Kecamatan is included so they use the /kelembagaan/ API prefix (read-only view).
  */
 export const isAdminUser = () => {
 	const user = getCurrentUser();
 	const adminRoles = [
 		"superadmin",
-		"super_admin", 
+		"super_admin",
 		"admin",
 		"pemberdayaan_masyarakat",
 		"pmd",
@@ -29,9 +30,18 @@ export const isAdminUser = () => {
 		"sekretaris_dinas",
 		"kepala_bidang",
 		"pegawai",
-		"bendahara"
+		"bendahara",
+		"kecamatan",
 	];
 	return user && adminRoles.includes(user.role);
+};
+
+/**
+ * Check if current user is kecamatan
+ */
+export const isKecamatanUser = () => {
+	const user = getCurrentUser();
+	return user && user.role === "kecamatan";
 };
 
 /**
@@ -52,6 +62,7 @@ export const getDesaIdFromUrl = () => {
 	const patterns = [
 		/\/bidang\/pmd\/kelembagaan\/admin\/([^/]+)/, // /bidang/pmd/kelembagaan/admin/{desaId} or /bidang/pmd/kelembagaan/admin/{desaId}/{type}
 		/\/kelembagaan\/admin\/([^/]+)/, // /kelembagaan/admin/{desaId} or /kelembagaan/admin/{desaId}/{type}
+		/\/kecamatan\/kelembagaan\/([^/?]+)/, // /kecamatan/kelembagaan/{desaId}/...
 		/\/admin\/desa\/([^/]+)/, // /admin/desa/{desaId}
 		/\/dashboard\/admin\/([^/]+)/, // /dashboard/admin/{desaId}
 	];

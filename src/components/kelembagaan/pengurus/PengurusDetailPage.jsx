@@ -76,21 +76,23 @@ const getDisplayName = (pengurusableType) => {
 };
 
 // Helper function to determine correct routing based on user role
-const getPengurusRoutePath = (isSuperAdmin, isAdminBidangPMD, pengurusId, action = "") => {
+const getPengurusRoutePath = (isSuperAdmin, isAdminBidangPMD, pengurusId, action = "", isKecamatanUser = false) => {
+	if (isKecamatanUser) {
+		return `/kecamatan/pengurus/${pengurusId}${action ? `/${action}` : ""}`;
+	}
 	if (isSuperAdmin || isAdminBidangPMD) {
 		return `/bidang/pmd/pengurus/${pengurusId}${action ? `/${action}` : ""}`;
 	}
-
-	// Default for desa users
 	return `/desa/pengurus/${pengurusId}${action ? `/${action}` : ""}`;
 };
 
 const PengurusDetailPage = () => {
 	const params = useParams();
-	const pengurusId = params.id; // Changed from destructuring to direct access
+	const pengurusId = params.id;
 	const navigate = useNavigate();
-	const { user, isSuperAdmin, isAdminBidangPMD, canManageKelembagaan } =
+	const { user, isSuperAdmin, isAdminBidangPMD, canManageKelembagaan, isKecamatan, canVerifyKelembagaan } =
 		useAuth();
+
 	const { isEditMode } = useEditMode();
 
 	const [pengurus, setPengurus] = useState(null);
@@ -100,10 +102,34 @@ const PengurusDetailPage = () => {
 	const [loading, setLoading] = useState(true);
 	const [updating, setUpdating] = useState(false);
 
+	const isKecamatanUser = isKecamatan?.() ?? false;
+
 	// Check permissions using AuthContext helpers
 	const canManage = canManageKelembagaan();
 	const isBidangKelembagaanViewer = () =>
 		isSuperAdmin() || isAdminBidangPMD() || user?.role === "bendahara";
+
+	// Kecamatan, admin PMD, dan superadmin boleh verifikasi
+	const canVerify = canVerifyKelembagaan?.() ?? (isSuperAdmin() || isAdminBidangPMD());
+
+	// Breadcrumb path helper: kecamatan selalu kembali ke halaman utama kelembagaan kecamatan
+	const bcPath = (adminPath, desaPath) => {
+		if (isKecamatanUser) return "/kecamatan/kelembagaan";
+		if (isBidangKelembagaanViewer()) return adminPath;
+		return desaPath;
+	};
+
+	// Breadcrumb path untuk link detail kelembagaan (termasuk desaId untuk kecamatan)
+	const bcDetailPath = (adminPath, desaPath) => {
+		if (isKecamatanUser) {
+			const desaId = pengurus?.desa_id;
+			const type = getRouteType(pengurus?.pengurusable_type);
+			const id = pengurus?.pengurusable_id;
+			return desaId && type && id ? `/kecamatan/kelembagaan/${desaId}/${type}/${id}` : "/kecamatan/kelembagaan";
+		}
+		if (isBidangKelembagaanViewer()) return adminPath;
+		return desaPath;
+	};
 
 	const loadDesaInfo = async (desaId) => {
 		try {
@@ -466,65 +492,79 @@ const PengurusDetailPage = () => {
 
 	const handleVerificationUpdate = async () => {
 		if (pengurus.status_verifikasi === "verified") {
-			// Already verified → show tunda/batal modal with feedback
+			// Sudah verified → tampilkan modal tolak/batalkan
 			await showTundaVerifikasiPengurusModal();
-		} else {
-			// Not yet verified → show choice: Tunda or Verifikasi
-			let selectedAction = null;
+			return;
+		}
 
+		// Belum verified → CEK KELENGKAPAN DATA TERLEBIH DAHULU
+		const missing = [];
+		if (!pengurus.nik) missing.push("NIK");
+		if (!pengurus.produk_hukum_id) missing.push("SK Pengangkatan");
+		if (!pengurus.telepon) missing.push("Nomor Telepon");
+		if (!pengurus.alamat) missing.push("Alamat");
+		if (!pengurus.tanggal_mulai_jabatan) missing.push("Tanggal Mulai Jabatan");
+
+		if (missing.length > 0) {
+			// Data tidak lengkap → hanya tampilkan info, tidak bisa verifikasi
 			await Swal.fire({
-				title: "Opsi Verifikasi",
+				title: "Data Belum Lengkap",
 				html: `
-					<div class="text-left space-y-3">
-						<button id="swal-verify-btn" class="w-full text-left p-3 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors cursor-pointer">
-							<p class="font-medium text-blue-800 text-sm">✅ Verifikasi Pengurus</p>
-							<p class="text-xs text-blue-600 mt-1">Data sudah sesuai dan lengkap, setujui verifikasi.</p>
-						</button>
-						<button id="swal-tunda-btn" class="w-full text-left p-3 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors cursor-pointer">
-							<p class="font-medium text-red-800 text-sm">❌ Tolak Verifikasi</p>
-							<p class="text-xs text-red-600 mt-1">Data belum sesuai, kirim catatan ke desa untuk diperbaiki.</p>
-						</button>
+					<div class="text-left">
+						<p class="text-sm text-gray-600 mb-3">Lengkapi data berikut sebelum melakukan verifikasi:</p>
+						<ul class="space-y-1.5 mb-4">
+							${missing.map(m => `
+								<li class="flex items-center gap-2 text-sm text-gray-700">
+									<span class="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0"></span>
+									${m}
+								</li>`).join("")}
+						</ul>
+						<p class="text-xs text-gray-400">Hubungi pihak desa untuk melengkapi data terlebih dahulu.</p>
 					</div>`,
+				icon: "warning",
 				showConfirmButton: false,
 				showCancelButton: true,
-				cancelButtonText: "Batal",
-				didOpen: () => {
-					document.getElementById("swal-verify-btn").addEventListener("click", () => {
-						selectedAction = "verify";
-						Swal.close();
-					});
-					document.getElementById("swal-tunda-btn").addEventListener("click", () => {
-						selectedAction = "tunda";
-						Swal.close();
-					});
-				},
+				cancelButtonText: "Tutup",
+				cancelButtonColor: "#6b7280",
 			});
+			return;
+		}
 
-			if (selectedAction === "verify") {
-				// Check completeness before verifying
-				const missing = [];
-				if (!pengurus.nik) missing.push("NIK");
-				if (!pengurus.produk_hukum_id) missing.push("SK Pengangkatan");
-				if (!pengurus.alamat) missing.push("Alamat");
-				if (!pengurus.tanggal_mulai_jabatan) missing.push("Tanggal Mulai Jabatan");
+		// Data lengkap → tampilkan pilihan Verifikasi / Tolak
+		let selectedAction = null;
 
-				if (missing.length > 0) {
-					const confirm = await Swal.fire({
-						title: "Data Belum Lengkap",
-						html: `<div class="text-left"><p class="mb-2">Data berikut masih kosong:</p><ul class="list-disc pl-5 space-y-1">${missing.map(m => `<li>${m}</li>`).join("")}</ul><p class="mt-3 text-sm text-gray-500">Apakah tetap ingin memverifikasi?</p></div>`,
-						icon: "warning",
-						showCancelButton: true,
-						confirmButtonText: "Ya, Tetap Verifikasi",
-						cancelButtonText: "Batal",
-						confirmButtonColor: "#3b82f6",
-					});
-					if (!confirm.isConfirmed) return;
-				}
+		await Swal.fire({
+			title: "Opsi Verifikasi",
+			html: `
+				<div class="text-left space-y-3">
+					<button id="swal-verify-btn" class="w-full text-left p-3 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors cursor-pointer">
+						<p class="font-medium text-blue-800 text-sm">✅ Verifikasi Pengurus</p>
+						<p class="text-xs text-blue-600 mt-1">Data sudah sesuai dan lengkap, setujui verifikasi.</p>
+					</button>
+					<button id="swal-tunda-btn" class="w-full text-left p-3 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors cursor-pointer">
+						<p class="font-medium text-red-800 text-sm">❌ Tolak Verifikasi</p>
+						<p class="text-xs text-red-600 mt-1">Data belum sesuai, kirim catatan ke desa untuk diperbaiki.</p>
+					</button>
+				</div>`,
+			showConfirmButton: false,
+			showCancelButton: true,
+			cancelButtonText: "Batal",
+			didOpen: () => {
+				document.getElementById("swal-verify-btn").addEventListener("click", () => {
+					selectedAction = "verify";
+					Swal.close();
+				});
+				document.getElementById("swal-tunda-btn").addEventListener("click", () => {
+					selectedAction = "tunda";
+					Swal.close();
+				});
+			},
+		});
 
-				await executePengurusVerification();
-			} else if (selectedAction === "tunda") {
-				await showTundaVerifikasiPengurusModal();
-			}
+		if (selectedAction === "verify") {
+			await executePengurusVerification();
+		} else if (selectedAction === "tunda") {
+			await showTundaVerifikasiPengurusModal();
 		}
 	};
 
@@ -565,7 +605,7 @@ const PengurusDetailPage = () => {
 	};
 	const handleEdit = () => {
 		// Navigate to edit page using role-based routing
-		navigate(getPengurusRoutePath(isSuperAdmin(), isAdminBidangPMD(), pengurusId, "edit"));
+		navigate(getPengurusRoutePath(isSuperAdmin(), isAdminBidangPMD(), pengurusId, "edit", isKecamatanUser));
 	};
 
 	const handleDeletePengurus = async () => {
@@ -643,27 +683,19 @@ const PengurusDetailPage = () => {
 				<nav className="flex items-center space-x-2 text-sm">
 					{/* Dashboard */}
 					<Link
-						to={
-							isBidangKelembagaanViewer()
-								? "/bidang/pmd/kelembagaan"
-								: "/desa/dashboard"
-						}
+						to={bcPath("/bidang/pmd/kelembagaan", "/desa/dashboard")}
 						className="flex items-center text-gray-500 hover:text-indigo-600 transition-colors"
 					>
 						<FaHome className="mr-1" />
-						Dashboard Kelembagaan
+						{isKecamatanUser ? "Verifikasi Kelembagaan" : "Dashboard Kelembagaan"}
 					</Link>
 					<FaChevronRight className="text-gray-400 text-xs" />
 
-					{/* Desa Name (both admin and desa) */}
+					{/* Desa Name */}
 					{desaInfo && (
 						<>
 							<Link
-								to={
-									isBidangKelembagaanViewer()
-										? `/bidang/pmd/kelembagaan/admin/${pengurus.desa_id}`
-										: "/desa/kelembagaan"
-								}
+								to={bcPath(`/bidang/pmd/kelembagaan/admin/${pengurus.desa_id}`, "/desa/kelembagaan")}
 								className="text-gray-500 hover:text-indigo-600 transition-colors"
 							>
 								{desaInfo.nama}
@@ -677,10 +709,11 @@ const PengurusDetailPage = () => {
 						<>
 							{/* RW Link */}
 							<Link
-								to={
-									isBidangKelembagaanViewer()
-										? `/bidang/pmd/kelembagaan/admin/${pengurus.desa_id}/rw`
-										: `/desa/kelembagaan/rw`
+								to={isKecamatanUser
+									? `/kecamatan/kelembagaan/${pengurus.desa_id}/rw`
+									: isBidangKelembagaanViewer()
+									? `/bidang/pmd/kelembagaan/admin/${pengurus.desa_id}/rw`
+									: `/desa/kelembagaan/rw`
 								}
 								className="text-gray-500 hover:text-indigo-600 transition-colors"
 							>
@@ -690,10 +723,11 @@ const PengurusDetailPage = () => {
 
 							{/* RW Number */}
 							<Link
-								to={
-									isBidangKelembagaanViewer()
-										? `/bidang/pmd/kelembagaan/rw/${rwInfo.id}`
-										: `/desa/kelembagaan/rw/${rwInfo.id}`
+								to={isKecamatanUser
+									? `/kecamatan/kelembagaan/${pengurus.desa_id}/rw/${rwInfo.id}`
+									: isBidangKelembagaanViewer()
+									? `/bidang/pmd/kelembagaan/rw/${rwInfo.id}`
+									: `/desa/kelembagaan/rw/${rwInfo.id}`
 								}
 								className="text-gray-500 hover:text-indigo-600 transition-colors"
 							>
@@ -703,10 +737,11 @@ const PengurusDetailPage = () => {
 
 							{/* RT Number */}
 							<Link
-								to={
-									isBidangKelembagaanViewer()
-										? `/bidang/pmd/kelembagaan/rt/${pengurus.pengurusable_id}`
-										: `/desa/kelembagaan/rt/${pengurus.pengurusable_id}`
+								to={isKecamatanUser
+									? `/kecamatan/kelembagaan/${pengurus.desa_id}/rt/${pengurus.pengurusable_id}`
+									: isBidangKelembagaanViewer()
+									? `/bidang/pmd/kelembagaan/rt/${pengurus.pengurusable_id}`
+									: `/desa/kelembagaan/rt/${pengurus.pengurusable_id}`
 								}
 								className="text-gray-500 hover:text-indigo-600 transition-colors"
 							>
@@ -722,11 +757,10 @@ const PengurusDetailPage = () => {
 					) ? (
 						<>
 							<Link
-								to={
-									isBidangKelembagaanViewer()
-										? `/bidang/pmd/kelembagaan/${getRouteType(pengurus.pengurusable_type)}/${pengurus.pengurusable_id}`
-										: `/desa/kelembagaan/${getRouteType(pengurus.pengurusable_type)}/${pengurus.pengurusable_id}`
-								}
+								to={bcDetailPath(
+									`/bidang/pmd/kelembagaan/${getRouteType(pengurus.pengurusable_type)}/${pengurus.pengurusable_id}`,
+									`/desa/kelembagaan/${getRouteType(pengurus.pengurusable_type)}/${pengurus.pengurusable_id}`
+								)}
 								className="text-gray-500 hover:text-indigo-600 transition-colors"
 							>
 								{getDisplayName(pengurus.pengurusable_type)}
@@ -738,10 +772,11 @@ const PengurusDetailPage = () => {
 							<>
 								{/* For other types (RW, Posyandu) - show type link, then item */}
 								<Link
-									to={
-										isBidangKelembagaanViewer()
-											? `/bidang/pmd/kelembagaan/admin/${pengurus.desa_id}/${getRouteType(pengurus.pengurusable_type)}`
-											: `/desa/kelembagaan/${getRouteType(pengurus.pengurusable_type)}`
+									to={isKecamatanUser
+										? `/kecamatan/kelembagaan/${pengurus.desa_id}/${getRouteType(pengurus.pengurusable_type)}`
+										: isBidangKelembagaanViewer()
+										? `/bidang/pmd/kelembagaan/admin/${pengurus.desa_id}/${getRouteType(pengurus.pengurusable_type)}`
+										: `/desa/kelembagaan/${getRouteType(pengurus.pengurusable_type)}`
 									}
 									className="text-gray-500 hover:text-indigo-600 transition-colors"
 								>
@@ -751,11 +786,10 @@ const PengurusDetailPage = () => {
 
 								{/* Kelembagaan Number/Name */}
 								<Link
-									to={
-										isBidangKelembagaanViewer()
-											? `/bidang/pmd/kelembagaan/${getRouteType(pengurus.pengurusable_type)}/${pengurus.pengurusable_id}`
-											: `/desa/kelembagaan/${getRouteType(pengurus.pengurusable_type)}/${pengurus.pengurusable_id}`
-									}
+									to={bcDetailPath(
+										`/bidang/pmd/kelembagaan/${getRouteType(pengurus.pengurusable_type)}/${pengurus.pengurusable_id}`,
+										`/desa/kelembagaan/${getRouteType(pengurus.pengurusable_type)}/${pengurus.pengurusable_id}`
+									)}
 									className="text-gray-500 hover:text-indigo-600 transition-colors"
 								>
 									{kelembagaanInfo?.nomor || kelembagaanInfo?.nama || "Detail"}
@@ -795,7 +829,7 @@ const PengurusDetailPage = () => {
 			<div className="bg-white flex items-center justify-between p-4 mb-4 rounded-md shadow-sm">
 				<div className="flex items-center space-x-4">
 					<button
-						onClick={() => navigate(-1)}
+						onClick={() => isKecamatanUser ? navigate("/kecamatan/kelembagaan") : navigate(-1)}
 						className="flex items-center justify-center w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors"
 						title="Kembali"
 					>
@@ -812,7 +846,7 @@ const PengurusDetailPage = () => {
 				</div>
 
 				<div className="flex gap-3">
-				{canManage && (
+				{canManage && !isKecamatanUser && (
 					<div className="flex items-center space-x-3">
 						{/* Hide edit button for desa users when pengurus is verified */}
 						{!(!(isSuperAdmin() || isAdminBidangPMD()) && pengurus.status_verifikasi === "verified") && (
@@ -858,55 +892,39 @@ const PengurusDetailPage = () => {
 						</div>
 					)}
 
-					{/* Verification Button - Only for superadmin or admin bidang PMD */}
-					{(isSuperAdmin() || isAdminBidangPMD()) && (
+					{/* Verification Button - kecamatan, admin PMD, dan superadmin */}
+					{canVerify && (
 						<button
 							onClick={() => handleVerificationUpdate()}
 							disabled={updating}
 							className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
 								pengurus.status_verifikasi === "verified"
-									? "bg-yellow-100 text-yellow-700 hover:bg-yellow-200 border border-yellow-300"
+									? isKecamatanUser
+										? "bg-gray-100 text-gray-500 border border-gray-300 cursor-not-allowed"
+										: "bg-yellow-100 text-yellow-700 hover:bg-yellow-200 border border-yellow-300"
 									: "bg-green-100 text-green-700 hover:bg-green-200 border border-green-300"
 							}`}
 							title={
 								pengurus.status_verifikasi === "verified"
-									? "Batalkan verifikasi pengurus"
+									? isKecamatanUser ? "Sudah terverifikasi" : "Batalkan verifikasi pengurus"
 									: pengurus.status_verifikasi === "ditolak"
-										? "Verifikasi ulang pengurus"
-										: "Verifikasi pengurus"
+									? "Verifikasi ulang pengurus"
+									: "Verifikasi pengurus"
 							}
+							// Kecamatan tidak bisa unverify — hanya bisa verify/tolak
+							disabled={updating || (isKecamatanUser && pengurus.status_verifikasi === "verified")}
 						>
 							{pengurus.status_verifikasi === "verified" ? (
 								<>
-									<svg
-										className="w-4 h-4"
-										fill="none"
-										stroke="currentColor"
-										viewBox="0 0 24 24"
-									>
-										<path
-											strokeLinecap="round"
-											strokeLinejoin="round"
-											strokeWidth={2}
-											d="M6 18L18 6M6 6l12 12"
-										/>
+									<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
 									</svg>
-									<span>Batalkan Verifikasi</span>
+									<span>{isKecamatanUser ? "Terverifikasi" : "Batalkan Verifikasi"}</span>
 								</>
 							) : (
 								<>
-									<svg
-										className="w-4 h-4"
-										fill="none"
-										stroke="currentColor"
-										viewBox="0 0 24 24"
-									>
-										<path
-											strokeLinecap="round"
-											strokeLinejoin="round"
-											strokeWidth={2}
-											d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-										/>
+									<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
 									</svg>
 									<span>{pengurus.status_verifikasi === "ditolak" ? "Verifikasi Ulang" : "Verifikasi Pengurus"}</span>
 								</>
@@ -1195,7 +1213,7 @@ const PengurusDetailPage = () => {
 								)}
 
 								{/* Ajukan Ulang Verifikasi - For desa when ditolak */}
-								{pengurus.status_verifikasi === "ditolak" && !isSuperAdmin() && !isAdminBidangPMD() && (
+								{pengurus.status_verifikasi === "ditolak" && !isSuperAdmin() && !isAdminBidangPMD() && !isKecamatanUser && (
 									<div className="md:col-span-2">
 										<button
 											onClick={handleAjukanUlangPengurus}

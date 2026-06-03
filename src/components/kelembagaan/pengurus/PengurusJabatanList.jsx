@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import {
 	getPengurusByKelembagaan,
@@ -11,20 +11,9 @@ import {
 	LuPlus,
 	LuHistory,
 	LuEye,
-	LuEyeOff,
-	LuCrown,
 	LuUser,
-	LuMail,
 	LuPhone,
-	LuMapPin,
-	LuChevronDown,
-	LuChevronUp,
 	LuCalendar,
-	LuBadgeCheck,
-	LuUserX,
-	LuAward,
-	LuUserRoundCog,
-	LuUserRoundCheck,
 	LuShieldCheck,
 	LuShieldAlert,
 	LuTriangleAlert,
@@ -32,600 +21,399 @@ import {
 import {
 	getJabatanList,
 	getDisplayJabatan,
-	getJabatanColor,
 } from "../../../constants/jabatanMapping";
 
 const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
 
-// Helper function to determine correct routing based on user role
-// Uses same logic pattern as AuthContext helpers
 const getPengurusRoutePath = (user, pengurusId) => {
-	// Check if user is superadmin
+	if (user?.role === "kecamatan") return `/kecamatan/pengurus/${pengurusId}`;
 	const isSuperAdminRole = user?.role === "superadmin";
-
-	// Check if user is admin bidang PMD (kepala_bidang or pegawai with bidang_id = 5)
 	const isAdminBidangRole =
-		(user?.role === "kepala_bidang" || user?.role === "pegawai") &&
-		user?.bidang_id === 5;
+		(user?.role === "kepala_bidang" || user?.role === "pegawai") && user?.bidang_id === 5;
 	const isBendaharaRole = user?.role === "bendahara";
-
-	if (isSuperAdminRole || isAdminBidangRole || isBendaharaRole) {
+	if (isSuperAdminRole || isAdminBidangRole || isBendaharaRole)
 		return `/bidang/pmd/pengurus/${pengurusId}`;
-	}
-
-	// Default for desa users
 	return `/desa/pengurus/${pengurusId}`;
 };
 
-// Komponen untuk kartu jabatan individual
-const JabatanCard = ({ jabatan, pengurusList, user, onAddPengurus, showAddButton }) => {
-	const [isExpanded, setIsExpanded] = useState(true);
+const getInitials = (name = "") =>
+	name
+		.split(" ")
+		.filter(Boolean)
+		.slice(0, 2)
+		.map((n) => n[0].toUpperCase())
+		.join("");
 
-	const getJabatanIcon = (jabatanName) => {
-		const lowerJabatan = jabatanName.toLowerCase();
-		if (lowerJabatan.includes("bidang"))
-			return <LuUserRoundCheck className="w-5 h-5" />;
-		if (
-			lowerJabatan.includes("ketua") &&
-			!lowerJabatan.includes("wakil") &&
-			!lowerJabatan.includes("kepala")
-		)
-			return <LuCrown className="w-5 h-5" />;
-
-		if (lowerJabatan.includes("sekretaris"))
-			return <LuUser className="w-5 h-5" />;
-		if (lowerJabatan.includes("bendahara"))
-			return <LuUser className="w-5 h-5" />;
-		if (
-			lowerJabatan.includes("koordinator") ||
-			lowerJabatan.includes("komandan")
-		)
-			return <LuUser className="w-5 h-5" />;
-		return <LuUser className="w-5 h-5" />;
-	};
-
+const VerifikasiBadge = ({ status }) => {
+	if (status === "verified")
+		return (
+			<span className="inline-flex items-center gap-1 text-[11px] font-medium text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full">
+				<LuShieldCheck className="w-3 h-3" />
+				Terverifikasi
+			</span>
+		);
+	if (status === "ditolak")
+		return (
+			<span className="inline-flex items-center gap-1 text-[11px] font-medium text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full">
+				<LuShieldAlert className="w-3 h-3" />
+				Ditolak
+			</span>
+		);
 	return (
-		<div className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300">
-			{/* Header Jabatan */}
-			<div
-				className="flex items-center justify-between p-4 cursor-pointer"
-				onClick={() => setIsExpanded(!isExpanded)}
-			>
-				<div className="flex items-center space-x-3">
-					<div
-						className={`w-10 h-10 bg-gradient-to-br ${getJabatanColor(jabatan)} rounded-lg flex items-center justify-center text-white shadow-md`}
-					>
-						{getJabatanIcon(jabatan)}
-					</div>
-					<div>
-						<h5 className="font-semibold text-gray-900">
-							{getDisplayJabatan(jabatan)}
-						</h5>
-						<p className="text-sm text-gray-500">
-							{pengurusList.length > 0
-								? `${pengurusList.length} Pengurus`
-								: "Belum ada pengurus"}
-						</p>
-					</div>
-				</div>
-
-				<div className="flex items-center space-x-3">
-					{pengurusList.length > 0 && (
-						<span className="px-3 py-1 bg-gradient-to-r from-emerald-100 to-green-100 text-emerald-700 text-xs font-medium rounded-full">
-							{pengurusList.length} Aktif
-						</span>
-					)}
-					{showAddButton && (
-						<button
-							onClick={(e) => {
-								e.stopPropagation();
-								onAddPengurus?.(jabatan);
-							}}
-							className="flex items-center space-x-1.5 px-3 py-1.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 transform hover:scale-105 transition-all duration-200 shadow-sm hover:shadow-md text-xs font-medium"
-						>
-							<LuPlus className="w-3.5 h-3.5" />
-							<span>Tambah</span>
-						</button>
-					)}
-					{isExpanded ? (
-						<LuChevronUp className="w-5 h-5 text-gray-400" />
-					) : (
-						<LuChevronDown className="w-5 h-5 text-gray-400" />
-					)}
-				</div>
-			</div>
-
-			{/* Daftar Pengurus */}
-			{isExpanded && (
-				<div className="border-t border-gray-100">
-					{pengurusList.length > 0 ? (
-						<div className="divide-y divide-gray-50">
-							{pengurusList.map((pengurus, index) => (
-								<PengurusItem
-									key={pengurus.id || index}
-									pengurus={pengurus}
-									user={user}
-								/>
-							))}
-						</div>
-					) : (
-						<div className="p-6 text-center">
-							<div className="w-16 h-16 mx-auto mb-3 bg-gray-100 rounded-full flex items-center justify-center">
-								<LuUserX className="w-6 h-6 text-gray-400" />
-							</div>
-							<p className="text-sm text-gray-500">
-								Belum ada pengurus untuk jabatan ini
-							</p>
-						</div>
-					)}
-				</div>
-			)}
-		</div>
+		<span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+			<LuShieldAlert className="w-3 h-3" />
+			Menunggu Verifikasi
+		</span>
 	);
 };
 
-// Komponen untuk item pengurus individual
-const PengurusItem = ({ pengurus, user }) => {
-	return (
-		<div className="group p-4 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-200">
-			<div className="flex items-center justify-between">
-				<div className="flex items-center space-x-4">
-					{/* Avatar */}
-					{pengurus.avatar ? (
-						<img
-							src={`${imageBaseUrl}/${pengurus.avatar}`}
-							alt={pengurus.nama_lengkap}
-							className="w-12 h-12 rounded-full object-cover ring-2 ring-gray-200 group-hover:ring-blue-300 transition-all duration-200"
-						/>
-					) : (
-						<div className="w-12 h-12 bg-gradient-to-br from-gray-300 to-gray-400 rounded-full flex items-center justify-center ring-2 ring-gray-200 group-hover:ring-blue-300 transition-all duration-200">
-							<span className="text-white font-semibold text-sm">
-								{pengurus.nama_lengkap.charAt(0).toUpperCase()}
-							</span>
-						</div>
-					)}
-
-					{/* Info Pengurus */}
-					<div className="space-y-1">
-						<div className="flex items-center space-x-2">
-							<h6 className="font-semibold text-gray-800 group-hover:text-blue-800 transition-colors">
-								{pengurus.nama_lengkap}
-							</h6>
-							{pengurus.status_verifikasi === "verified" ? (
-								<span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 shadow-sm">
-									<LuShieldCheck className="w-3 h-3 mr-1" />
-									Terverifikasi
-								</span>
-							) : (
-								<span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-gradient-to-r from-yellow-100 to-amber-100 text-yellow-700 shadow-sm">
-									<LuShieldAlert className="w-3 h-3 mr-1" />
-									Belum Verifikasi
-								</span>
-							)}
-						</div>
-
-						<div className="flex items-center space-x-4 text-xs text-gray-500">
-							{pengurus.tanggal_mulai_jabatan && (
-								<div className="flex items-center space-x-1">
-									<LuCalendar className="w-3 h-3" />
-									<span>
-										Mulai{" "}
-										{new Date(pengurus.tanggal_mulai_jabatan).getFullYear()}
-									</span>
-								</div>
-							)}
-							{pengurus.email && (
-								<div className="flex items-center space-x-1">
-									<LuMail className="w-3 h-3" />
-									<span>{pengurus.email}</span>
-								</div>
-							)}
-							{pengurus.telepon && (
-								<div className="flex items-center space-x-1">
-									<LuPhone className="w-3 h-3" />
-									<span>{pengurus.telepon}</span>
-								</div>
-							)}
-						</div>
-					</div>
-				</div>
-
-				{/* Action Button */}
-				<Link
-					to={getPengurusRoutePath(user, pengurus.id)}
-					className="flex items-center space-x-2 px-4 py-2 text-sm text-blue-600 hover:text-white bg-blue-50 hover:bg-gradient-to-r hover:from-blue-500 hover:to-indigo-600 rounded-lg border border-blue-200 hover:border-blue-500 transform hover:scale-105 transition-all duration-200 shadow-sm hover:shadow-md"
-				>
-					<LuEye className="w-4 h-4" />
-					<span className="font-medium">Detail</span>
-				</Link>
-			</div>
-		</div>
-	);
-};
-
-// Kartu khusus untuk pengurus yang jabatannya tidak ada di jabatan mapping
-const UnmappedJabatanCard = ({ pengurusList, user }) => {
-	const [isExpanded, setIsExpanded] = useState(true);
+// Baris satu pengurus
+const PengurusRow = ({ pengurus, user }) => {
+	const hasPhone = pengurus.telepon;
+	const hasPhone2 = pengurus.no_hp || pengurus.telepon2;
 
 	return (
-		<div className="bg-white rounded-xl border border-amber-300 shadow-sm hover:shadow-md transition-all duration-300">
-			<div
-				className="flex items-center justify-between p-4 cursor-pointer"
-				onClick={() => setIsExpanded(!isExpanded)}
-			>
-				<div className="flex items-center space-x-3">
-					<div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-orange-500 rounded-lg flex items-center justify-center text-white shadow-md">
-						<LuTriangleAlert className="w-5 h-5" />
-					</div>
-					<div>
-						<h5 className="font-semibold text-amber-800">
-							Jabatan Tidak Sesuai Mapping
-						</h5>
-						<p className="text-sm text-amber-600">
-							{pengurusList.length} pengurus dengan jabatan di luar struktur
-						</p>
-					</div>
-				</div>
-				<div className="flex items-center space-x-3">
-					<span className="px-3 py-1 bg-amber-100 text-amber-700 text-xs font-medium rounded-full border border-amber-300">
-						{pengurusList.length} Perlu Ditinjau
+		<div className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors">
+			{/* Avatar */}
+			{pengurus.avatar ? (
+				<img
+					src={`${imageBaseUrl}/${pengurus.avatar}`}
+					alt={pengurus.nama_lengkap}
+					className="w-9 h-9 rounded-full object-cover flex-shrink-0"
+				/>
+			) : (
+				<div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0">
+					<span className="text-xs font-bold text-slate-600">
+						{getInitials(pengurus.nama_lengkap)}
 					</span>
-					{isExpanded ? (
-						<LuChevronUp className="w-5 h-5 text-amber-400" />
-					) : (
-						<LuChevronDown className="w-5 h-5 text-amber-400" />
-					)}
 				</div>
+			)}
+
+			{/* Info */}
+			<div className="flex-1 min-w-0">
+				<div className="flex items-center gap-2 flex-wrap">
+					<span className="text-sm font-semibold text-gray-900 truncate">
+						{pengurus.nama_lengkap}
+					</span>
+					<VerifikasiBadge status={pengurus.status_verifikasi} />
+				</div>
+				{(hasPhone || hasPhone2) && (
+					<div className="flex items-center gap-3 mt-0.5">
+						{hasPhone && (
+							<span className="flex items-center gap-1 text-xs text-gray-400">
+								<LuPhone className="w-3 h-3" />
+								{pengurus.telepon}
+							</span>
+						)}
+						{hasPhone2 && (
+							<span className="flex items-center gap-1 text-xs text-gray-400">
+								<LuPhone className="w-3 h-3" />
+								{hasPhone2}
+							</span>
+						)}
+					</div>
+				)}
 			</div>
 
-			{isExpanded && (
-				<div className="border-t border-amber-200">
-					<div className="divide-y divide-amber-50">
-						{pengurusList.map((pengurus, index) => (
-							<div
-								key={pengurus.id || index}
-								className="group p-4 hover:bg-amber-50 transition-all duration-200"
-							>
-								<div className="flex items-center justify-between">
-									<div className="flex items-center space-x-4">
-										{pengurus.avatar ? (
-											<img
-												src={`${imageBaseUrl}/${pengurus.avatar}`}
-												alt={pengurus.nama_lengkap}
-												className="w-12 h-12 rounded-full object-cover ring-2 ring-amber-200 group-hover:ring-amber-400 transition-all duration-200"
-											/>
-										) : (
-											<div className="w-12 h-12 bg-gradient-to-br from-amber-300 to-orange-400 rounded-full flex items-center justify-center ring-2 ring-amber-200 group-hover:ring-amber-400 transition-all duration-200">
-												<span className="text-white font-semibold text-sm">
-													{pengurus.nama_lengkap?.charAt(0)?.toUpperCase()}
-												</span>
-											</div>
-										)}
+			{/* Detail button */}
+			<Link
+				to={getPengurusRoutePath(user, pengurus.id)}
+				className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg border border-gray-200 hover:border-indigo-200 transition-all flex-shrink-0"
+				title="Lihat detail"
+			>
+				<LuEye className="w-3.5 h-3.5" />
+				<span>Detail</span>
+			</Link>
+		</div>
+	);
+};
 
-										<div className="space-y-1">
-											<div className="flex items-center space-x-2">
-												<h6 className="font-semibold text-gray-800 group-hover:text-amber-800 transition-colors">
-													{pengurus.nama_lengkap}
-												</h6>
-												{/* Badge jabatan asli */}
-												<span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-amber-100 text-amber-700 border border-amber-300 font-medium">
-													<LuTriangleAlert className="w-3 h-3 mr-1" />
-													{pengurus.jabatan || "Tidak ada jabatan"}
-												</span>
-											</div>
-											<div className="flex items-center space-x-4 text-xs text-gray-500">
-												{pengurus.status_verifikasi === "verified" ? (
-													<span className="inline-flex items-center text-green-600">
-														<LuShieldCheck className="w-3 h-3 mr-1" />
-														Terverifikasi
-													</span>
-												) : (
-													<span className="inline-flex items-center text-yellow-600">
-														<LuShieldAlert className="w-3 h-3 mr-1" />
-														Belum Verifikasi
-													</span>
-												)}
-												{pengurus.tanggal_mulai_jabatan && (
-													<div className="flex items-center space-x-1">
-														<LuCalendar className="w-3 h-3" />
-														<span>
-															Mulai{" "}
-															{new Date(pengurus.tanggal_mulai_jabatan).getFullYear()}
-														</span>
-													</div>
-												)}
-											</div>
-										</div>
-									</div>
+// Grup satu jabatan (header + semua pengurusnya)
+const JabatanGroup = ({ jabatan, pengurusList, user, showAddButton, onAddPengurus }) => {
+	const displayJabatan = getDisplayJabatan(jabatan);
+	const isEmpty = pengurusList.length === 0;
 
-									<Link
-										to={getPengurusRoutePath(user, pengurus.id)}
-										className="flex items-center space-x-2 px-4 py-2 text-sm text-amber-700 hover:text-white bg-amber-50 hover:bg-gradient-to-r hover:from-amber-500 hover:to-orange-500 rounded-lg border border-amber-300 hover:border-amber-500 transform hover:scale-105 transition-all duration-200 shadow-sm hover:shadow-md"
-									>
-										<LuEye className="w-4 h-4" />
-										<span className="font-medium">Detail</span>
-									</Link>
-								</div>
-							</div>
-						))}
+	return (
+		<div className="border-b border-gray-50 last:border-0">
+			{/* Jabatan header */}
+			<div className="flex items-center justify-between px-4 py-2 bg-gray-50/70">
+				<span className="text-xs font-semibold text-gray-500 tracking-wide">
+					{displayJabatan}
+				</span>
+				{showAddButton && (
+					<button
+						onClick={() => onAddPengurus?.(jabatan)}
+						className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
+					>
+						<LuPlus className="w-3 h-3" />
+						Tambah
+					</button>
+				)}
+			</div>
+
+			{/* Pengurus list atau placeholder kosong */}
+			{isEmpty ? (
+				<div className="flex items-center gap-3 px-4 py-2.5">
+					<div className="w-9 h-9 rounded-full bg-gray-100 border-2 border-dashed border-gray-200 flex items-center justify-center flex-shrink-0">
+						<LuUser className="w-3.5 h-3.5 text-gray-300" />
 					</div>
+					<p className="text-xs text-gray-400">Belum ada pengurus</p>
 				</div>
+			) : (
+				pengurusList.map((pengurus) => (
+					<PengurusRow key={pengurus.id} pengurus={pengurus} user={user} />
+				))
 			)}
 		</div>
 	);
 };
 
-// Note: Fungsi getJabatanList, getDisplayJabatan, getJabatanColor sudah diimport dari constants/jabatanMapping.js
+// Baris pengurus jabatan tidak terpetakan
+const UnmappedRow = ({ pengurus, user }) => (
+	<div className="border-b border-gray-50 last:border-0">
+		<div className="flex items-center justify-between px-4 py-2 bg-amber-50/60">
+			<div className="flex items-center gap-1.5">
+				<LuTriangleAlert className="w-3 h-3 text-amber-500" />
+				<span className="text-xs font-semibold text-amber-600 tracking-wide">
+					{pengurus.jabatan || "Jabatan tidak dikenal"}
+				</span>
+				<span className="text-[10px] text-amber-500 bg-amber-100 border border-amber-200 px-1.5 py-0.5 rounded-full">
+					Di luar struktur
+				</span>
+			</div>
+		</div>
+		<div className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors">
+			{pengurus.avatar ? (
+				<img
+					src={`${imageBaseUrl}/${pengurus.avatar}`}
+					alt={pengurus.nama_lengkap}
+					className="w-9 h-9 rounded-full object-cover flex-shrink-0"
+				/>
+			) : (
+				<div className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+					<span className="text-xs font-bold text-amber-600">
+						{getInitials(pengurus.nama_lengkap)}
+					</span>
+				</div>
+			)}
+			<div className="flex-1 min-w-0">
+				<div className="flex items-center gap-2 flex-wrap">
+					<span className="text-sm font-semibold text-gray-900">{pengurus.nama_lengkap}</span>
+					<VerifikasiBadge status={pengurus.status_verifikasi} />
+				</div>
+			</div>
+			<Link
+				to={getPengurusRoutePath(user, pengurus.id)}
+				className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg border border-gray-200 hover:border-indigo-200 transition-all flex-shrink-0"
+			>
+				<LuEye className="w-3.5 h-3.5" />
+				<span>Detail</span>
+			</Link>
+		</div>
+	</div>
+);
 
-const PengurusJabatanList = ({
-	kelembagaanType,
-	kelembagaanId,
-	onAddPengurus,
-
-	desaId,
-}) => {
-	const { user, isSuperAdmin, isAdminBidangPMD, isUserDesa } = useAuth();
+const PengurusJabatanList = ({ kelembagaanType, kelembagaanId, onAddPengurus, desaId }) => {
+	const { user, isSuperAdmin, isAdminBidangPMD, isUserDesa, isKecamatan } = useAuth();
 	const { isEditMode } = useEditMode();
 
-	const canManagePengurus =
-		isSuperAdmin() || isAdminBidangPMD() || isUserDesa();
-
-	// Determine if add button should be shown
-	// For admin (superadmin/admin bidang): always show
-	// For desa: only show if edit mode is ON
-	const showAddButton =
-		isSuperAdmin() || isAdminBidangPMD() || (isUserDesa() && isEditMode);
+	const showAddButton = isSuperAdmin() || isAdminBidangPMD() || (isUserDesa() && isEditMode);
 
 	const [activePengurus, setActivePengurus] = useState([]);
 	const [historyPengurus, setHistoryPengurus] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [showHistory, setShowHistory] = useState(false);
 
-	const toggleHistory = () => setShowHistory(!showHistory);
-
 	const defaultJabatan = getJabatanList(kelembagaanType);
 
+	const loadPengurus = useCallback(async () => {
+		if (!kelembagaanId || !kelembagaanType) return;
+		setLoading(true);
+		try {
+			const adminDesaId =
+				isSuperAdmin() || isAdminBidangPMD() || isKecamatan?.() ? desaId : null;
+			const [activeRes, historyRes] = await Promise.all([
+				getPengurusByKelembagaan(kelembagaanType, kelembagaanId, adminDesaId),
+				getPengurusHistory(kelembagaanType, kelembagaanId, adminDesaId),
+			]);
+			setActivePengurus(activeRes?.data?.data || []);
+			setHistoryPengurus(historyRes?.data?.data || []);
+		} catch (err) {
+			console.error("Error loading pengurus:", err);
+			setActivePengurus([]);
+			setHistoryPengurus([]);
+		} finally {
+			setLoading(false);
+		}
+	}, [kelembagaanType, kelembagaanId, desaId]);
+
 	useEffect(() => {
-		const loadPengurus = async () => {
-			if (!kelembagaanId || !kelembagaanType) return;
-
-			setLoading(true);
-			try {
-				// Pass desaId for admin access
-				const adminDesaId =
-					isSuperAdmin() || isAdminBidangPMD() ? desaId : null;
-				const [activeResponse, historyResponse] = await Promise.all([
-					getPengurusByKelembagaan(kelembagaanType, kelembagaanId, adminDesaId),
-					getPengurusHistory(kelembagaanType, kelembagaanId, adminDesaId),
-				]);
-
-				setActivePengurus(activeResponse?.data?.data || []);
-				setHistoryPengurus(historyResponse?.data?.data || []);
-			} catch (error) {
-				console.error("Error loading pengurus:", error);
-				setActivePengurus([]);
-				setHistoryPengurus([]);
-			} finally {
-				setLoading(false);
-			}
-		};
-
 		loadPengurus();
-	}, [kelembagaanType, kelembagaanId, desaId, isSuperAdmin, isAdminBidangPMD]);
-	// Buat mapping jabatan dengan pengurus (case-insensitive comparison)
+	}, [loadPengurus]);
+
+	// Mapping jabatan → semua pengurus (case-insensitive)
 	const jabatanMap = {};
 	defaultJabatan.forEach((jabatan) => {
 		jabatanMap[jabatan] = activePengurus.filter(
-			(pengurus) => pengurus.jabatan?.toUpperCase()?.trim() === jabatan.toUpperCase().trim(),
+			(p) => p.jabatan?.toUpperCase()?.trim() === jabatan.toUpperCase().trim(),
 		);
 	});
 
-	// Pengurus yang jabatannya tidak ada di mapping
 	const unmappedPengurus = activePengurus.filter(
-		(pengurus) => !defaultJabatan.some(
-			(jabatan) => jabatan.toUpperCase().trim() === pengurus.jabatan?.toUpperCase()?.trim()
-		)
+		(p) =>
+			!defaultJabatan.some(
+				(j) => j.toUpperCase().trim() === p.jabatan?.toUpperCase()?.trim(),
+			),
 	);
+
+	const filledCount = Object.values(jabatanMap).filter((list) => list.length > 0).length;
+	const totalJabatan = defaultJabatan.length;
 
 	if (loading) {
 		return (
-			<div className="bg-gradient-to-br from-white to-slate-50 rounded-2xl border border-gray-200 shadow-lg">
-				<div className="h-1.5 bg-gradient-to-r from-indigo-400 to-purple-500 rounded-t-2xl"></div>
-				<div className="p-6">
-					<div className="flex items-center space-x-4 mb-6">
-						<div className="w-14 h-14 bg-gray-200 rounded-xl animate-pulse"></div>
-						<div>
-							<div className="h-6 bg-gray-200 rounded w-48 mb-2 animate-pulse"></div>
-							<div className="h-4 bg-gray-200 rounded w-32 animate-pulse"></div>
-						</div>
-					</div>
-					<div className="text-center py-8 text-gray-500">
-						Memuat data pengurus...
+			<div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+				<div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
+					<div className="w-8 h-8 bg-gray-100 rounded-lg animate-pulse" />
+					<div className="space-y-1.5">
+						<div className="h-3.5 w-32 bg-gray-100 rounded animate-pulse" />
+						<div className="h-3 w-24 bg-gray-100 rounded animate-pulse" />
 					</div>
 				</div>
+				{[...Array(5)].map((_, i) => (
+					<div key={i} className="border-b border-gray-50 last:border-0">
+						<div className="h-8 bg-gray-50 px-4 flex items-center">
+							<div className="h-3 w-28 bg-gray-100 rounded animate-pulse" />
+						</div>
+						<div className="flex items-center gap-3 px-4 py-2.5">
+							<div className="w-9 h-9 rounded-full bg-gray-100 animate-pulse flex-shrink-0" />
+							<div className="flex-1 space-y-1.5">
+								<div className="h-3 w-36 bg-gray-100 rounded animate-pulse" />
+								<div className="h-2.5 w-24 bg-gray-100 rounded animate-pulse" />
+							</div>
+						</div>
+					</div>
+				))}
 			</div>
 		);
 	}
 
 	return (
-		<div className="bg-gradient-to-br from-white to-slate-50 rounded-2xl border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300">
-			{/* Header dengan gradient accent */}
-			<div className="h-1.5 bg-gradient-to-r from-indigo-400 to-purple-500 rounded-t-2xl"></div>
-
-			<div className="p-6 border-b border-gray-200">
-				<div className="flex justify-between items-center">
-					<div className="flex items-center space-x-4">
-						<div className="w-14 h-14 bg-gradient-to-br from-indigo-400 to-purple-600 rounded-xl flex items-center justify-center text-white shadow-lg">
-							<LuUsers className="w-7 h-7" />
-						</div>
-						<div>
-							<h3 className="text-2xl font-bold text-gray-800">
-								Struktur Pengurus
-							</h3>
-							<p className="text-sm text-gray-500 mt-1">
-								{showHistory
-									? `Riwayat pengurus yang pernah menjabat • ${historyPengurus.length} Orang`
-									: `Daftar jabatan dan pengurus aktif • ${Object.keys(jabatanMap).length} Jabatan`}
-							</p>
-						</div>
+		<div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+			{/* Header */}
+			<div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+				<div className="flex items-center gap-3">
+					<div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
+						<LuUsers className="w-4 h-4 text-indigo-500" />
 					</div>
-					<div className="flex space-x-3">
-						{historyPengurus.length > 0 && (
-							<button
-								onClick={toggleHistory}
-								className={`flex items-center space-x-2 px-4 py-2.5 rounded-lg transition-colors duration-200 shadow-sm ${
-									showHistory
-										? "bg-indigo-100 text-indigo-700 border border-indigo-300"
-										: "border border-gray-300 hover:bg-gray-50"
-								}`}
-							>
-								{showHistory ? (
-									<LuUsers className="w-4 h-4" />
-								) : (
-									<LuHistory className="w-4 h-4" />
-								)}
-								<span className="text-sm font-medium">
-									{showHistory ? "Pengurus Aktif" : "Riwayat Pengurus"}
-								</span>
-							</button>
-						)}
+					<div>
+						<h3 className="text-sm font-semibold text-gray-800">Struktur Pengurus</h3>
+						<p className="text-xs text-gray-500">
+							{filledCount} dari {totalJabatan} jabatan terisi
+						</p>
 					</div>
 				</div>
-			</div>
 
-			<div className="p-6">
-				{/* Active Pengurus */}
-				{!showHistory && (
-					<div className="grid gap-4">
-						{Object.entries(jabatanMap).map(([jabatan, pengurusList]) => (
-							<JabatanCard
-								key={jabatan}
-								jabatan={jabatan}
-								pengurusList={pengurusList}
-								user={user}
-								onAddPengurus={onAddPengurus}
-								showAddButton={canManagePengurus && showAddButton && !showHistory}
-							/>
-						))}
-						{unmappedPengurus.length > 0 && (
-							<UnmappedJabatanCard
-								pengurusList={unmappedPengurus}
-								user={user}
-							/>
+				{historyPengurus.length > 0 && (
+					<button
+						onClick={() => setShowHistory((v) => !v)}
+						className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${
+							showHistory
+								? "bg-indigo-50 text-indigo-700 border-indigo-200"
+								: "text-gray-500 border-gray-200 hover:bg-gray-50"
+						}`}
+					>
+						{showHistory ? (
+							<LuUsers className="w-3.5 h-3.5" />
+						) : (
+							<LuHistory className="w-3.5 h-3.5" />
 						)}
-					</div>
-				)}
-
-				{/* History Section */}
-				{showHistory && historyPengurus.length > 0 && (
-					<div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
-						<div className="flex items-center space-x-3 mb-4">
-							<div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-indigo-600 rounded-lg flex items-center justify-center text-white">
-								<LuHistory className="w-5 h-5" />
-							</div>
-							<div>
-								<h4 className="text-lg font-bold text-blue-900">
-									Ringkasan Riwayat Pengurus
-								</h4>
-								<p className="text-sm text-blue-700">
-									Total riwayat pengurus yang pernah menjabat
-								</p>
-							</div>
-						</div>
-
-						{/* Daftar History Pengurus */}
-						<div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-							<div className="p-4 bg-gray-50 border-b border-gray-200 rounded-t-xl">
-								<h5 className="font-semibold text-gray-800 flex items-center space-x-2">
-									<LuHistory className="w-5 h-5" />
-									<span>Daftar Pengurus Sebelumnya ({historyPengurus.length} orang)</span>
-								</h5>
-							</div>
-							<div className="divide-y divide-gray-100">
-								{historyPengurus.map((pengurus, index) => (
-									<div
-										key={`history-${pengurus.id || index}`}
-										className="p-4 hover:bg-gray-50 transition-colors duration-200"
-									>
-										<div className="flex items-center justify-between">
-											<div className="flex items-center space-x-4">
-												{/* Avatar */}
-												{pengurus.avatar ? (
-													<img
-														src={`${imageBaseUrl}/${pengurus.avatar}`}
-														alt={pengurus.nama_lengkap}
-														className="w-12 h-12 rounded-full object-cover border-2 border-gray-200 opacity-75"
-													/>
-												) : (
-													<div className="w-12 h-12 bg-gradient-to-br from-gray-400 to-gray-500 rounded-full flex items-center justify-center opacity-75">
-														<span className="text-white font-semibold text-sm">
-															{pengurus.nama_lengkap
-																?.charAt(0)
-																?.toUpperCase() || "?"}
-														</span>
-													</div>
-												)}
-
-												{/* Info Pengurus */}
-												<div className="space-y-1">
-													<div className="flex items-center space-x-2">
-														<h6 className="font-semibold text-gray-800">
-															{pengurus.nama_lengkap}
-														</h6>
-														<span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-gradient-to-r from-red-100 to-red-200 text-red-700 shadow-sm">
-															<LuHistory className="w-3 h-3 mr-1" />
-															Selesai Menjabat
-														</span>
-													</div>
-
-													<div className="flex items-center space-x-4 text-xs text-gray-600">
-														<div className="flex items-center space-x-1">
-															<LuCrown className="w-3 h-3" />
-															<span className="font-medium">
-																{pengurus.jabatan}
-															</span>
-														</div>
-														{pengurus.tanggal_mulai_jabatan &&
-															pengurus.tanggal_akhir_jabatan && (
-																<div className="flex items-center space-x-1">
-																	<LuCalendar className="w-3 h-3" />
-																	<span>
-																		{new Date(
-																			pengurus.tanggal_mulai_jabatan,
-																		).getFullYear()}{" "}
-																		-{" "}
-																		{new Date(
-																			pengurus.tanggal_akhir_jabatan,
-																		).getFullYear()}
-																	</span>
-																</div>
-															)}
-														{pengurus.email && (
-															<div className="flex items-center space-x-1">
-																<LuMail className="w-3 h-3" />
-																<span>{pengurus.email}</span>
-															</div>
-														)}
-													</div>
-												</div>
-											</div>
-
-											{/* Action Button */}
-											<Link
-												to={getPengurusRoutePath(user, pengurus.id)}
-												className="flex items-center space-x-2 px-3 py-1.5 text-sm text-gray-600 hover:text-blue-600 bg-gray-100 hover:bg-blue-50 rounded-lg border border-gray-200 hover:border-blue-200 transition-all duration-200"
-											>
-												<LuEye className="w-4 h-4" />
-												<span>Detail</span>
-											</Link>
-										</div>
-									</div>
-								))}
-							</div>
-						</div>
-					</div>
+						{showHistory ? "Aktif" : "Riwayat"}
+					</button>
 				)}
 			</div>
+
+			{/* Daftar jabatan — grouped */}
+			{!showHistory && (
+				<>
+					{defaultJabatan.map((jabatan) => (
+						<JabatanGroup
+							key={jabatan}
+							jabatan={jabatan}
+							pengurusList={jabatanMap[jabatan] || []}
+							user={user}
+							showAddButton={showAddButton}
+							onAddPengurus={onAddPengurus}
+						/>
+					))}
+
+					{unmappedPengurus.map((p) => (
+						<UnmappedRow key={p.id} pengurus={p} user={user} />
+					))}
+				</>
+			)}
+
+			{/* Riwayat */}
+			{showHistory && (
+				<div className="divide-y divide-gray-50">
+					{historyPengurus.length === 0 ? (
+						<div className="py-10 text-center text-sm text-gray-400">
+							Tidak ada riwayat pengurus
+						</div>
+					) : (
+						historyPengurus.map((pengurus) => (
+							<div
+								key={pengurus.id}
+								className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors"
+							>
+								{pengurus.avatar ? (
+									<img
+										src={`${imageBaseUrl}/${pengurus.avatar}`}
+										alt={pengurus.nama_lengkap}
+										className="w-9 h-9 rounded-full object-cover opacity-70 flex-shrink-0"
+									/>
+								) : (
+									<div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
+										<span className="text-xs font-bold text-gray-500">
+											{getInitials(pengurus.nama_lengkap)}
+										</span>
+									</div>
+								)}
+
+								<div className="flex-1 min-w-0">
+									<div className="flex items-center gap-2 flex-wrap">
+										<span className="text-sm font-semibold text-gray-700">
+											{pengurus.nama_lengkap}
+										</span>
+										<span className="text-[11px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+											Selesai Menjabat
+										</span>
+									</div>
+									<div className="flex items-center gap-3 mt-0.5">
+										<span className="text-xs text-gray-500">
+											{getDisplayJabatan(pengurus.jabatan) || pengurus.jabatan}
+										</span>
+										{pengurus.tanggal_mulai_jabatan && pengurus.tanggal_akhir_jabatan && (
+											<span className="flex items-center gap-1 text-xs text-gray-400">
+												<LuCalendar className="w-3 h-3" />
+												{new Date(pengurus.tanggal_mulai_jabatan).getFullYear()} –{" "}
+												{new Date(pengurus.tanggal_akhir_jabatan).getFullYear()}
+											</span>
+										)}
+									</div>
+								</div>
+
+								<Link
+									to={getPengurusRoutePath(user, pengurus.id)}
+									className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg border border-gray-200 hover:border-indigo-200 transition-all flex-shrink-0"
+								>
+									<LuEye className="w-3.5 h-3.5" />
+									<span>Detail</span>
+								</Link>
+							</div>
+						))
+					)}
+				</div>
+			)}
 		</div>
 	);
 };

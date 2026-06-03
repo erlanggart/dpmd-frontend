@@ -1,258 +1,341 @@
-import React, { useEffect, useState, useImperativeHandle, forwardRef, useRef, useCallback } from "react";
-import { 
-	LuSettings2, 
-	LuUser, 
-	LuCalendar, 
-	LuPlus, 
-	LuPencil, 
-	LuRefreshCw, 
-	LuCircleCheck, 
-	LuFileText,
+import React, {
+	useEffect,
+	useState,
+	useImperativeHandle,
+	forwardRef,
+	useRef,
+	useCallback,
+} from "react";
+import {
+	LuActivity,
+	LuPlus,
+	LuPencil,
+	LuRefreshCw,
+	LuCircleCheck,
 	LuUserPlus,
-	LuUserCheck
+	LuUserCheck,
+	LuFileText,
+	LuArrowLeftRight,
 } from "react-icons/lu";
-import { getDetailActivityLogs, getListActivityLogs, getAllActivityLogs } from "../../services/activityLogs";
+import {
+	getDetailActivityLogs,
+	getListActivityLogs,
+	getAllActivityLogs,
+} from "../../services/activityLogs";
 import { useAuth } from "../../context/AuthContext";
 
-const AktivitasLog = forwardRef(({ lembagaType, lembagaId, mode = "detail", title, desaId }, ref) => {
-	const PAGE_SIZE = 10;
-	const { user } = useAuth();
-	const [logs, setLogs] = useState([]);
-	const [loading, setLoading] = useState(true);
-	const [loadingMore, setLoadingMore] = useState(false);
-	const [hasMore, setHasMore] = useState(false);
-	const [offset, setOffset] = useState(0);
-	const scrollContainerRef = useRef(null);
+// ── Relative time formatter ────────────────────────────────────────────────
+const formatRelative = (dateString) => {
+	const date = new Date(dateString);
+	const now = new Date();
+	const diffMs = now - date;
+	const diffMin = Math.floor(diffMs / 60_000);
+	const diffHour = Math.floor(diffMs / 3_600_000);
+	const diffDay = Math.floor(diffMs / 86_400_000);
 
-	const fetchLogs = useCallback(async ({ reset = false } = {}) => {
-		if (mode !== "all" && !lembagaType) return;
+	if (diffMin < 1) return "Baru saja";
+	if (diffMin < 60) return `${diffMin} menit lalu`;
+	if (diffHour < 24) return `${diffHour} jam lalu`;
 
-		const targetOffset = reset ? 0 : offset;
-		
-		if (reset) {
-			setLoading(true);
-		} else {
-			if (loading || loadingMore || !hasMore) return;
-			setLoadingMore(true);
-		}
-		try {
-			let response;
-			if (mode === "all") {
-				// All mode - tampilkan semua log semua kelembagaan di desa
-				const targetDesaId = desaId || user?.desa_id;
-				if (!targetDesaId) return;
-				response = await getAllActivityLogs({ desa_id: targetDesaId, limit: PAGE_SIZE, offset: targetOffset });
-			} else if (mode === "list") {
-				// List mode - tampilkan semua log untuk type ini di desa
-				// Gunakan desaId dari prop (untuk admin) atau user.desa_id (untuk user desa)
-				const targetDesaId = desaId || user?.desa_id;
-				if (!targetDesaId) return;
-				response = await getListActivityLogs(lembagaType, targetDesaId, PAGE_SIZE, targetOffset);
-			} else {
-				// Detail mode - tampilkan log spesifik lembaga
-				if (!lembagaId) return;
-				response = await getDetailActivityLogs(lembagaType, lembagaId, PAGE_SIZE, targetOffset);
-			}
+	const isYesterday =
+		diffDay === 1 ||
+		(diffDay === 0 &&
+			new Date(now.getFullYear(), now.getMonth(), now.getDate()) >
+				new Date(date.getFullYear(), date.getMonth(), date.getDate()));
 
-			const nextLogs = response?.data?.logs || [];
-			const nextHasMore = Boolean(response?.data?.hasMore);
+	if (isYesterday) {
+		const time = date.toLocaleTimeString("id-ID", {
+			hour: "2-digit",
+			minute: "2-digit",
+		});
+		return `Kemarin, ${time}`;
+	}
 
-			setLogs((prevLogs) => {
-				if (reset) return nextLogs;
-				const existingIds = new Set(prevLogs.map((log) => log.id));
-				const dedupedLogs = nextLogs.filter((log) => !existingIds.has(log.id));
-				return [...prevLogs, ...dedupedLogs];
-			});
-			setOffset(targetOffset + nextLogs.length);
-			setHasMore(nextHasMore);
-		} catch (error) {
-			console.error('Error fetching activity logs:', error);
-			if (reset) {
-				setLogs([]);
-				setHasMore(false);
-				setOffset(0);
-			}
-		} finally {
-			if (reset) {
-				setLoading(false);
-			} else {
-				setLoadingMore(false);
-			}
-		}
-	}, [desaId, hasMore, lembagaId, lembagaType, loading, loadingMore, mode, offset, user?.desa_id]);
+	return date.toLocaleDateString("id-ID", {
+		day: "numeric",
+		month: "short",
+		year: "numeric",
+	});
+};
 
-	const handleScroll = useCallback((event) => {
-		const element = event.currentTarget;
-		const distanceToBottom = element.scrollHeight - element.scrollTop - element.clientHeight;
+// ── Icon per activity type ─────────────────────────────────────────────────
+const ACTIVITY_ICON_MAP = {
+	create: {
+		icon: LuPlus,
+		bg: "bg-indigo-50",
+		color: "text-indigo-500",
+		border: "border-indigo-100",
+	},
+	update: {
+		icon: LuPencil,
+		bg: "bg-amber-50",
+		color: "text-amber-500",
+		border: "border-amber-100",
+	},
+	toggle_status: {
+		icon: LuArrowLeftRight,
+		bg: "bg-orange-50",
+		color: "text-orange-500",
+		border: "border-orange-100",
+	},
+	verify: {
+		icon: LuCircleCheck,
+		bg: "bg-green-50",
+		color: "text-green-500",
+		border: "border-green-100",
+	},
+	resubmit: {
+		icon: LuRefreshCw,
+		bg: "bg-sky-50",
+		color: "text-sky-500",
+		border: "border-sky-100",
+	},
+	add_pengurus: {
+		icon: LuUserPlus,
+		bg: "bg-blue-50",
+		color: "text-blue-500",
+		border: "border-blue-100",
+	},
+	update_pengurus: {
+		icon: LuPencil,
+		bg: "bg-amber-50",
+		color: "text-amber-500",
+		border: "border-amber-100",
+	},
+	toggle_pengurus_status: {
+		icon: LuArrowLeftRight,
+		bg: "bg-orange-50",
+		color: "text-orange-500",
+		border: "border-orange-100",
+	},
+	verify_pengurus: {
+		icon: LuUserCheck,
+		bg: "bg-green-50",
+		color: "text-green-500",
+		border: "border-green-100",
+	},
+	resubmit_pengurus: {
+		icon: LuRefreshCw,
+		bg: "bg-sky-50",
+		color: "text-sky-500",
+		border: "border-sky-100",
+	},
+};
 
-		if (distanceToBottom < 120 && !loading && !loadingMore && hasMore) {
-			fetchLogs({ reset: false });
-		}
-	}, [fetchLogs, hasMore, loading, loadingMore]);
+const DEFAULT_ICON = {
+	icon: LuFileText,
+	bg: "bg-gray-50",
+	color: "text-gray-400",
+	border: "border-gray-100",
+};
 
-	// Expose refresh function to parent via ref
-	useImperativeHandle(ref, () => ({
-		refresh: () => fetchLogs({ reset: true })
-	}));
-
-	useEffect(() => {
-		setLogs([]);
-		setOffset(0);
-		setHasMore(false);
-		fetchLogs({ reset: true });
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [lembagaType, lembagaId, mode, desaId, user?.desa_id]);
-
-	const formatDate = (dateString) => {
-		const date = new Date(dateString);
-		return new Intl.DateTimeFormat('id-ID', {
-			day: 'numeric',
-			month: 'short',
-			year: 'numeric',
-			hour: '2-digit',
-			minute: '2-digit'
-		}).format(date);
-	};
-
-	const getActivityIcon = (activityType) => {
-		const iconProps = "w-5 h-5";
-		switch (activityType) {
-			case 'create':
-				return <LuPlus className={`${iconProps} text-green-600`} />;
-			case 'update':
-				return <LuPencil className={`${iconProps} text-blue-600`} />;
-			case 'toggle_status':
-				return <LuRefreshCw className={`${iconProps} text-orange-600`} />;
-			case 'verify':
-				return <LuCircleCheck className={`${iconProps} text-green-600`} />;
-			case 'add_pengurus':
-				return <LuUserPlus className={`${iconProps} text-purple-600`} />;
-			case 'update_pengurus':
-				return <LuPencil className={`${iconProps} text-blue-600`} />;
-			case 'toggle_pengurus_status':
-				return <LuRefreshCw className={`${iconProps} text-orange-600`} />;
-			case 'verify_pengurus':
-				return <LuUserCheck className={`${iconProps} text-green-600`} />;
-			default:
-				return <LuFileText className={`${iconProps} text-gray-600`} />;
-		}
-	};
-
-	const getEntityBadge = (entityType) => {
-		return entityType === 'lembaga' 
-			? <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">Lembaga</span>
-			: <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">Pengurus</span>;
-	};
-
+const ActivityIcon = ({ type }) => {
+	const cfg = ACTIVITY_ICON_MAP[type] || DEFAULT_ICON;
+	const Icon = cfg.icon;
 	return (
-		<div className="bg-gradient-to-br from-white to-slate-50 rounded-2xl border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300">
-			{/* Header dengan gradient accent */}
-			<div className="h-1.5 bg-gradient-to-r from-purple-400 to-pink-500 rounded-t-2xl"></div>
+		<div
+			className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 border ${cfg.bg} ${cfg.border}`}
+		>
+			<Icon className={`w-3.5 h-3.5 ${cfg.color}`} />
+		</div>
+	);
+};
 
-			<div className="p-6">
-				{/* Header Section */}
-				<div className="flex items-center space-x-3 mb-6">
-					<div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-pink-600 rounded-xl flex items-center justify-center text-white shadow-lg">
-						<LuSettings2 className="w-6 h-6" />
+// ── Main component ─────────────────────────────────────────────────────────
+const AktivitasLog = forwardRef(
+	({ lembagaType, lembagaId, mode = "detail", title, desaId }, ref) => {
+		const PAGE_SIZE = 10;
+		const { user } = useAuth();
+		const [logs, setLogs] = useState([]);
+		const [loading, setLoading] = useState(true);
+		const [loadingMore, setLoadingMore] = useState(false);
+		const [hasMore, setHasMore] = useState(false);
+		const [offset, setOffset] = useState(0);
+		const scrollContainerRef = useRef(null);
+
+		const fetchLogs = useCallback(
+			async ({ reset = false } = {}) => {
+				if (mode !== "all" && !lembagaType) return;
+				const targetOffset = reset ? 0 : offset;
+
+				if (reset) {
+					setLoading(true);
+				} else {
+					if (loading || loadingMore || !hasMore) return;
+					setLoadingMore(true);
+				}
+
+				try {
+					let response;
+					if (mode === "all") {
+						const targetDesaId = desaId || user?.desa_id;
+						if (!targetDesaId) return;
+						response = await getAllActivityLogs({
+							desa_id: targetDesaId,
+							limit: PAGE_SIZE,
+							offset: targetOffset,
+						});
+					} else if (mode === "list") {
+						const targetDesaId = desaId || user?.desa_id;
+						if (!targetDesaId) return;
+						response = await getListActivityLogs(
+							lembagaType,
+							targetDesaId,
+							PAGE_SIZE,
+							targetOffset,
+						);
+					} else {
+						if (!lembagaId) return;
+						response = await getDetailActivityLogs(
+							lembagaType,
+							lembagaId,
+							PAGE_SIZE,
+							targetOffset,
+						);
+					}
+
+					const nextLogs = response?.data?.logs || [];
+					const nextHasMore = Boolean(response?.data?.hasMore);
+
+					setLogs((prev) => {
+						if (reset) return nextLogs;
+						const ids = new Set(prev.map((l) => l.id));
+						return [...prev, ...nextLogs.filter((l) => !ids.has(l.id))];
+					});
+					setOffset(targetOffset + nextLogs.length);
+					setHasMore(nextHasMore);
+				} catch (err) {
+					console.error("Error fetching activity logs:", err);
+					if (reset) {
+						setLogs([]);
+						setHasMore(false);
+						setOffset(0);
+					}
+				} finally {
+					reset ? setLoading(false) : setLoadingMore(false);
+				}
+			},
+			[desaId, hasMore, lembagaId, lembagaType, loading, loadingMore, mode, offset, user?.desa_id],
+		);
+
+		const handleScroll = useCallback(
+			(e) => {
+				const el = e.currentTarget;
+				if (
+					el.scrollHeight - el.scrollTop - el.clientHeight < 120 &&
+					!loading &&
+					!loadingMore &&
+					hasMore
+				) {
+					fetchLogs({ reset: false });
+				}
+			},
+			[fetchLogs, hasMore, loading, loadingMore],
+		);
+
+		useImperativeHandle(ref, () => ({
+			refresh: () => fetchLogs({ reset: true }),
+		}));
+
+		useEffect(() => {
+			setLogs([]);
+			setOffset(0);
+			setHasMore(false);
+			fetchLogs({ reset: true });
+			// eslint-disable-next-line react-hooks/exhaustive-deps
+		}, [lembagaType, lembagaId, mode, desaId, user?.desa_id]);
+
+		const subtitle =
+			mode === "all"
+				? "Riwayat aktivitas seluruh kelembagaan"
+				: mode === "list"
+					? `Riwayat perubahan ${title || lembagaType}`
+					: "Riwayat perubahan dan aktivitas";
+
+		return (
+			<div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+				{/* Header */}
+				<div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
+					<div className="w-8 h-8 bg-gray-50 rounded-lg border border-gray-100 flex items-center justify-center flex-shrink-0">
+						<LuActivity className="w-4 h-4 text-gray-500" />
 					</div>
 					<div>
-						<h3 className="text-xl font-bold text-gray-800">Log Aktivitas</h3>
-						<p className="text-sm text-gray-500">
-							{mode === "all"
-								? "Riwayat aktivitas seluruh kelembagaan"
-								: mode === "list" 
-									? `Riwayat perubahan ${title || "semua " + lembagaType}`
-									: "Riwayat perubahan dan aktivitas"}
-						</p>
+						<h3 className="text-sm font-bold text-gray-900">Log Aktivitas</h3>
+						<p className="text-xs text-gray-400">{subtitle}</p>
 					</div>
 				</div>
 
-				{/* Content */}
+				{/* Body */}
 				{loading ? (
-					<div className="text-center py-12">
-						<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
-						<p className="text-sm text-gray-500 mt-4">Memuat riwayat...</p>
+					<div className="py-10 flex flex-col items-center gap-2">
+						<div className="w-5 h-5 border-2 border-gray-200 border-t-indigo-400 rounded-full animate-spin" />
+						<p className="text-xs text-gray-400">Memuat riwayat...</p>
 					</div>
 				) : logs.length === 0 ? (
-					<div className="text-center py-12">
-						<div className="w-20 h-20 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-							<LuSettings2 className="w-8 h-8 text-gray-400" />
+					<div className="py-10 flex flex-col items-center gap-2 text-center px-4">
+						<div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+							<LuActivity className="w-5 h-5 text-gray-400" />
 						</div>
-						<h4 className="text-lg font-medium text-gray-600 mb-2">
-							Belum ada aktivitas
-						</h4>
-						<p className="text-sm text-gray-500">
-							Riwayat aktivitas akan tampil di sini setelah ada perubahan data
+						<p className="text-sm font-medium text-gray-500">Belum ada aktivitas</p>
+						<p className="text-xs text-gray-400">
+							Riwayat akan muncul setelah ada perubahan data
 						</p>
 					</div>
 				) : (
 					<div
 						ref={scrollContainerRef}
 						onScroll={handleScroll}
-						className="space-y-3 max-h-[600px] overflow-y-auto pr-2"
+						className="max-h-[480px] overflow-y-auto"
 					>
-						{logs.map((log) => (
-							<div
-								key={log.id}
-								className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-200 border border-gray-100"
-							>
-								<div className="flex items-start space-x-3">
-									<div className="flex-shrink-0 w-10 h-10 bg-white rounded-lg flex items-center justify-center border border-gray-200 shadow-sm">
-										{getActivityIcon(log.activity_type)}
-									</div>
-									<div className="flex-1 min-w-0">
-										<div className="flex items-start justify-between mb-2">
-											<div className="flex-1">
-												<p className="text-sm font-medium text-gray-800 leading-relaxed">
-													{log.action_description}
-												</p>
-												<div className="flex items-center space-x-2 mt-1">
-													{getEntityBadge(log.entity_type)}
-													{(mode === "list" || mode === "all") && log.kelembagaan_nama && (
-														<span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-semibold rounded truncate">
-															{log.kelembagaan_nama}
-														</span>
-													)}
-													{log.entity_name && (
-														<span className="text-xs text-gray-500">
-															· {log.entity_name}
-														</span>
-													)}
-												</div>
-											</div>
-										</div>
-										<div className="flex items-center space-x-4 text-xs text-gray-500">
-											<div className="flex items-center space-x-1">
-												<LuUser className="w-3 h-3" />
-												<span>{log.user_name}</span>
-											</div>
-											<div className="flex items-center space-x-1">
-												<LuCalendar className="w-3 h-3" />
-												<span>{formatDate(log.created_at)}</span>
-											</div>
-										</div>
-									</div>
-								</div>
-							</div>
-					))}
-						{loadingMore && (
-							<div className="flex items-center justify-center py-3 text-sm text-gray-500">
-								<LuRefreshCw className="w-4 h-4 animate-spin mr-2" />
-								Memuat log berikutnya...
-							</div>
-						)}
-						{!hasMore && logs.length > 0 && (
-							<div className="text-center py-2 text-xs text-gray-400">
-								Semua log sudah dimuat
-							</div>
-						)}
-				</div>
-			)}
-		</div>
-	</div>
-);
-});
+						<div className="relative px-4 py-3">
+							{/* Vertical timeline line */}
+							<div className="absolute left-[27px] top-3 bottom-3 w-px bg-gray-100" />
 
-AktivitasLog.displayName = 'AktivitasLog';
+							<div className="space-y-4">
+								{logs.map((log) => (
+									<div key={log.id} className="flex gap-3">
+										{/* Icon — sits on the timeline line */}
+										<div className="relative z-10">
+											<ActivityIcon type={log.activity_type} />
+										</div>
+
+										{/* Content */}
+										<div className="flex-1 min-w-0 pt-0.5">
+											<p className="text-sm text-gray-800 leading-snug">
+												{log.action_description}
+											</p>
+											<p className="text-xs text-gray-400 mt-0.5">
+												<span className="font-medium text-gray-500">
+													{log.user_name || "—"}
+												</span>
+												{" · "}
+												{formatRelative(log.created_at)}
+											</p>
+										</div>
+									</div>
+								))}
+							</div>
+
+							{loadingMore && (
+								<div className="flex items-center justify-center gap-2 pt-4 text-xs text-gray-400">
+									<LuRefreshCw className="w-3.5 h-3.5 animate-spin" />
+									Memuat lebih banyak...
+								</div>
+							)}
+
+							{!hasMore && logs.length > 0 && (
+								<p className="text-center text-xs text-gray-300 pt-4">
+									— Semua log sudah ditampilkan —
+								</p>
+							)}
+						</div>
+					</div>
+				)}
+			</div>
+		);
+	},
+);
+
+AktivitasLog.displayName = "AktivitasLog";
 
 export default AktivitasLog;

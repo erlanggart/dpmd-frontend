@@ -293,10 +293,23 @@ export const AuthProvider = ({ children }) => {
 		return user?.role === "desa";
 	};
 
+	// Memeriksa apakah user adalah kecamatan
+	const isKecamatan = () => {
+		return user?.role === "kecamatan";
+	};
+
 	// Memeriksa apakah user memiliki akses admin untuk kelembagaan
-	// (superadmin atau admin bidang)
+	// (superadmin, admin bidang PMD, atau internal DPMD staff lainnya)
 	const isKelembagaanAdmin = () => {
-		return isSuperAdmin() || isAdminBidangPMD();
+		if (!user) return false;
+		const nonAdminRoles = ['desa', 'kecamatan', 'dinas_terkait', 'verifikator_dinas', 'bpjs'];
+		return !nonAdminRoles.includes(user.role);
+	};
+
+	// Memeriksa apakah user dapat memverifikasi kelembagaan & pengurus
+	// (superadmin, admin bidang PMD, atau kecamatan)
+	const canVerifyKelembagaan = () => {
+		return isSuperAdmin() || isAdminBidangPMD() || isKecamatan();
 	};
 
 	// Memeriksa apakah user dapat mengelola kelembagaan
@@ -318,7 +331,9 @@ export const AuthProvider = ({ children }) => {
 		isSuperAdmin,
 		isAdminBidangPMD,
 		isUserDesa,
+		isKecamatan,
 		isKelembagaanAdmin,
+		canVerifyKelembagaan,
 		canManageKelembagaan,
 	};
 

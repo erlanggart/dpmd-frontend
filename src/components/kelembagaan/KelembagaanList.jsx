@@ -296,7 +296,7 @@ export default function KelembagaanList() {
 	const [searchParams] = useSearchParams();
 	const queryDesaId = searchParams.get("desaId"); // Get desaId from query params
 	const desaId = routeDesaId || queryDesaId; // Prioritize route param over query param
-	const { user, isSuperAdmin, isAdminBidangPMD, isUserDesa } = useAuth(); // Get user for role-based navigation
+	const { user, isSuperAdmin, isAdminBidangPMD, isUserDesa, isKecamatan } = useAuth(); // Get user for role-based navigation
 	const { isEditMode } = useEditMode();
 	const [items, setItems] = useState([]);
 	const [loading, setLoading] = useState(true);
@@ -313,10 +313,9 @@ export default function KelembagaanList() {
 	const [deletingId, setDeletingId] = useState(null);
 
 	// Determine if add button should show
-	// For admin (superadmin/admin bidang): always show
-	// For desa: only show if edit mode is ON
+	// Kecamatan: view-only, no add
 	const showAddButton =
-		isSuperAdmin() || isAdminBidangPMD() || (isUserDesa() && isEditMode);
+		!isKecamatan?.() && (isSuperAdmin() || isAdminBidangPMD() || (isUserDesa() && isEditMode));
 
 	useEffect(() => {
 		let mounted = true;
@@ -562,17 +561,9 @@ export default function KelembagaanList() {
 
 	// Helper function to get base path based on user role
 	const getBasePath = () => {
-		if (user?.role === "desa") {
-			return "/desa";
-		} else if (
-			user?.role === "superadmin" ||
-			user?.role === "kepala_dinas" ||
-			(user?.role === "kepala_bidang" && user?.bidang_id === 5) ||
-			(user?.role === "pegawai" && user?.bidang_id === 5)
-		) {
-			return "/bidang/pmd";
-		}
-		return "/desa"; // Default fallback
+		if (user?.role === "desa") return "/desa";
+		if (user?.role === "kecamatan") return "/kecamatan";
+		return "/bidang/pmd"; // All internal DPMD staff
 	};
 
 	const basePath = getBasePath();
@@ -616,13 +607,13 @@ export default function KelembagaanList() {
 		return null;
 	}
 
-	// Back navigation - handle admin route
+	// Back navigation - handle admin & kecamatan routes
 	const handleBack = () => {
-		if (desaId) {
-			// If viewing specific desa (admin mode), go back to that desa's detail page
+		if (isKecamatan && isKecamatan()) {
+			navigate("/kecamatan/kelembagaan");
+		} else if (desaId) {
 			navigate(`/bidang/pmd/kelembagaan/admin/${desaId}`);
 		} else {
-			// Normal mode, go back to kelembagaan index
 			navigate(`${basePath}/kelembagaan`);
 		}
 	};
@@ -673,11 +664,11 @@ export default function KelembagaanList() {
 						
 						<FaChevronRight className="text-gray-400 text-xs" />
 
-						{/* Admin: Show Desa name and link */}
+						{/* Admin/Kecamatan: Show Desa name and link */}
 						{desaId && filteredItems.length > 0 && (
 							<>
 								<Link
-									to={`/bidang/pmd/kelembagaan/admin/${desaId}`}
+									to={isKecamatan?.() ? "/kecamatan/kelembagaan" : `/bidang/pmd/kelembagaan/admin/${desaId}`}
 									className="text-gray-500 hover:text-indigo-600 transition-colors"
 								>
 									{filteredItems[0]?.desas?.nama ||
@@ -855,7 +846,11 @@ export default function KelembagaanList() {
 											<div
 												className="flex justify-between p-6 cursor-pointer"
 												onClick={() =>
-													navigate(`${basePath}/kelembagaan/${type}/${item.id}`)
+													navigate(
+														isKecamatan?.()
+															? `/kecamatan/kelembagaan/${desaId}/${type}/${item.id}`
+															: `${basePath}/kelembagaan/${type}/${item.id}`
+													)
 												}
 											>
 												{/* Card Header */}
@@ -986,7 +981,11 @@ export default function KelembagaanList() {
 																		key={rt.id}
 																		className="flex items-center justify-between px-6 py-3 hover:bg-blue-50 cursor-pointer transition-colors"
 																		onClick={() =>
-																			navigate(`${basePath}/kelembagaan/rt/${rt.id}`)
+																			navigate(
+																				isKecamatan?.()
+																					? `/kecamatan/kelembagaan/${desaId}/rt/${rt.id}`
+																					: `${basePath}/kelembagaan/rt/${rt.id}`
+																			)
 																		}
 																	>
 																		<div className="flex items-center gap-3">

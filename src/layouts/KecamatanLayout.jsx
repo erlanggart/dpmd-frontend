@@ -20,7 +20,8 @@ import {
   LuPanelLeft,
   LuLock,
   LuMessageCircle,
-  LuCoins
+  LuCoins,
+  LuShield,
 } from "react-icons/lu";
 
 // Menu items configuration
@@ -42,6 +43,12 @@ const menuItems = [
     label: "Verifikasi Bankeu Perubahan",
     path: "/kecamatan/bankeu-perubahan",
     icon: LuCoins,
+  },
+  {
+    id: "kelembagaan",
+    label: "Verifikasi Kelembagaan",
+    path: "/kecamatan/kelembagaan",
+    icon: LuBuilding2,
   },
   {
     id: "pesan",
