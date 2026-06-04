@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../../api';
 import Swal from 'sweetalert2';
@@ -6,8 +6,9 @@ import {
   LuEye, LuCheck, LuX, LuRefreshCw, LuSend, LuInfo,
   LuClipboardCheck, LuMessageSquare, LuChevronDown, LuChevronRight,
   LuFilter, LuSearch, LuPackage, LuMapPin, LuDollarSign,
-  LuFileText, LuStamp, LuTriangleAlert, LuUsers, LuClipboardList
+  LuFileText, LuStamp, LuTriangleAlert, LuUsers, LuClipboardList, LuPencilLine
 } from 'react-icons/lu';
+import PdfAnnotationEditor from '../../../components/shared/PdfAnnotationEditor';
 
 const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
 
@@ -66,6 +67,12 @@ const BankeuPerubahanVerificationPage = ({ tahun }) => {
   const [expandedDesa, setExpandedDesa] = useState({});
   const [expandedKategori, setExpandedKategori] = useState({});
   const [verifyModal, setVerifyModal] = useState(null);
+
+  // Anotasi PDF (revisi visual)
+  const [annotateModal, setAnnotateModal] = useState(null); // { proposal, fileUrl, initialAnnotation }
+  const [annotateCatatan, setAnnotateCatatan] = useState('');
+  const [annotateSubmitting, setAnnotateSubmitting] = useState(false);
+  const annotationGetRef = useRef(null);
 
   // Filters
   const [filterStatus, setFilterStatus] = useState('all');
@@ -176,6 +183,58 @@ const BankeuPerubahanVerificationPage = ({ tahun }) => {
       fetchData();
     } catch (err) {
       Swal.fire('Gagal', err.response?.data?.message || 'Gagal verifikasi', 'error');
+    }
+  };
+
+  // Buka editor anotasi untuk minta revisi (revisi visual di atas PDF)
+  const openAnnotate = async (proposal) => {
+    annotationGetRef.current = null;
+    setAnnotateCatatan(proposal.kecamatan_catatan || '');
+    let initialAnnotation = null;
+    try {
+      const res = await api.get(`/kecamatan/bankeu-perubahan/proposals/${proposal.id}/annotation`);
+      initialAnnotation = res.data?.data?.annotation || null;
+    } catch (e) { /* abaikan, mulai dari kosong */ }
+    setAnnotateModal({
+      proposal,
+      fileUrl: `${imageBaseUrl}/storage/uploads/bankeu-perubahan/${proposal.file_proposal}`,
+      initialAnnotation,
+    });
+  };
+
+  const saveAnnotationDraft = async (data) => {
+    if (!annotateModal) return;
+    try {
+      await api.put(`/kecamatan/bankeu-perubahan/proposals/${annotateModal.proposal.id}/annotation`, {
+        annotation_data: data,
+      });
+      Swal.fire({ icon: 'success', title: 'Draft tersimpan', timer: 1200, showConfirmButton: false });
+    } catch (err) {
+      Swal.fire('Gagal', err.response?.data?.message || 'Gagal menyimpan draft', 'error');
+    }
+  };
+
+  const submitAnnotateRevision = async () => {
+    if (!annotateModal) return;
+    if (!annotateCatatan.trim()) {
+      return Swal.fire('Validasi', 'Catatan revisi wajib diisi', 'warning');
+    }
+    const annotation_data = annotationGetRef.current ? annotationGetRef.current() : null;
+    setAnnotateSubmitting(true);
+    try {
+      await api.patch(`/kecamatan/bankeu-perubahan/proposals/${annotateModal.proposal.id}/verify`, {
+        status: 'revision',
+        catatan: annotateCatatan,
+        annotation_data,
+      });
+      Swal.fire('Berhasil', 'Revisi beranotasi terkirim ke Desa', 'success');
+      setAnnotateModal(null);
+      setAnnotateCatatan('');
+      fetchData();
+    } catch (err) {
+      Swal.fire('Gagal', err.response?.data?.message || 'Gagal mengirim revisi', 'error');
+    } finally {
+      setAnnotateSubmitting(false);
     }
   };
 
@@ -662,7 +721,7 @@ const BankeuPerubahanVerificationPage = ({ tahun }) => {
                                     proposal={p}
                                     onApprove={() => openVerify(p, 'approved')}
                                     onReject={() => openVerify(p, 'rejected')}
-                                    onRevision={() => openVerify(p, 'revision')}
+                                    onRevision={() => openAnnotate(p)}
                                     onCancel={() => cancelApproval(p.id)}
                                     onGenerateBA={() => handleGenerateBeritaAcara(p)}
                                     onGenerateSP={() => handleGenerateSuratPengantar(p)}
@@ -718,6 +777,61 @@ const BankeuPerubahanVerificationPage = ({ tahun }) => {
                   'bg-red-600 hover:bg-red-700'
                 }`}
               >Simpan Verifikasi</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Anotasi PDF (revisi visual) */}
+      {annotateModal && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex flex-col">
+          <div className="bg-white flex items-center justify-between px-4 py-3 border-b border-gray-200 shrink-0">
+            <div className="min-w-0">
+              <h3 className="text-base font-bold text-gray-800 flex items-center gap-2">
+                <LuPencilLine className="w-4 h-4 text-orange-600" /> Anotasi Revisi Proposal
+              </h3>
+              <p className="text-xs text-gray-500 truncate">{annotateModal.proposal.judul_proposal}</p>
+            </div>
+            <button onClick={() => { setAnnotateModal(null); setAnnotateCatatan(''); }}
+              className="p-2 rounded-lg hover:bg-gray-100 text-gray-500"><LuX className="w-5 h-5" /></button>
+          </div>
+
+          <div className="flex-1 flex flex-col lg:flex-row min-h-0">
+            {/* Editor */}
+            <div className="flex-1 min-h-0 bg-gray-100">
+              <PdfAnnotationEditor
+                fileUrl={annotateModal.fileUrl}
+                initialAnnotation={annotateModal.initialAnnotation}
+                getAnnotationRef={annotationGetRef}
+                onSaveDraft={saveAnnotationDraft}
+              />
+            </div>
+            {/* Panel catatan & kirim */}
+            <div className="lg:w-80 shrink-0 bg-white border-t lg:border-t-0 lg:border-l border-gray-200 p-4 flex flex-col gap-3">
+              <div className="text-xs text-gray-500 bg-orange-50 border border-orange-200 rounded-lg p-2.5">
+                Beri tanda langsung pada dokumen (highlight, coret, kotak, teks, gambar) lalu tulis ringkasan revisi di bawah. Desa akan menerima PDF beranotasi ini.
+              </div>
+              <label className="block text-sm font-semibold text-gray-700">Catatan Revisi *</label>
+              <textarea
+                value={annotateCatatan}
+                onChange={e => setAnnotateCatatan(e.target.value)}
+                rows={5}
+                className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+                placeholder="Ringkasan bagian yang perlu diperbaiki..."
+              />
+              <div className="mt-auto flex flex-col gap-2">
+                <button
+                  onClick={submitAnnotateRevision}
+                  disabled={annotateSubmitting}
+                  className="w-full px-4 py-2.5 bg-orange-600 hover:bg-orange-700 text-white font-semibold rounded-xl shadow-sm disabled:opacity-60 flex items-center justify-center gap-2"
+                >
+                  <LuSend className="w-4 h-4" /> {annotateSubmitting ? 'Mengirim...' : 'Kirim Revisi ke Desa'}
+                </button>
+                <button
+                  onClick={() => { setAnnotateModal(null); setAnnotateCatatan(''); }}
+                  className="w-full px-4 py-2 bg-white border border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-100"
+                >Batal</button>
+              </div>
             </div>
           </div>
         </div>

@@ -34,6 +34,8 @@ export default defineConfig({
 					if (id.includes('leaflet')) return 'leaflet';
 					if (id.includes('xlsx')) return 'xlsx';
 					if (id.includes('jspdf') || id.includes('html2canvas')) return 'pdf';
+					if (id.includes('pdfjs-dist')) return 'pdfjs';
+					if (id.includes('fabric')) return 'fabric';
 					if (id.includes('chart.js') || id.includes('recharts') || id.includes('d3-')) return 'charts';
 					if (id.includes('framer-motion')) return 'motion';
 					return undefined;

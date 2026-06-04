@@ -4,8 +4,9 @@ import Swal from 'sweetalert2';
 import {
   LuUpload, LuEye, LuCheck, LuX, LuRefreshCw, LuChevronDown, LuChevronRight,
   LuSend, LuTrash2, LuInfo, LuPencil, LuTriangleAlert, LuPlus, LuCoins, LuFileText,
-  LuPackage, LuMapPin, LuDollarSign
+  LuPackage, LuMapPin, LuDollarSign, LuHistory, LuPencilLine
 } from 'react-icons/lu';
+import BankeuRevisionHistoryModal from '../../../components/shared/BankeuRevisionHistoryModal';
 
 const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
 const MAX_ANGGARAN = 1_500_000_000;
@@ -859,6 +860,8 @@ const ProposalCard = ({ proposal, expanded, onToggleExpand, onEdit, onDelete, on
   const canDelete = !submitted;
   const meta = KATEGORI_META[proposal.jenis_kegiatan] || KATEGORI_META.wajib;
   const firstKegiatan = proposal.kegiatan_list?.[0];
+  const [showHistory, setShowHistory] = useState(false);
+  const hasHistory = submitted || (proposal.current_version || 1) > 1;
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
@@ -947,6 +950,14 @@ const ProposalCard = ({ proposal, expanded, onToggleExpand, onEdit, onDelete, on
               {proposal.kecamatan_catatan && (
                 <div className="text-xs bg-blue-50 border border-blue-200 rounded p-2 text-blue-800">
                   <strong>Catatan Kecamatan:</strong> {proposal.kecamatan_catatan}
+                  {kecRevisi && (
+                    <button
+                      onClick={() => setShowHistory(true)}
+                      className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 bg-orange-600 hover:bg-orange-700 text-white text-[11px] font-semibold rounded"
+                    >
+                      <LuPencilLine className="w-3 h-3" /> Lihat coretan revisi
+                    </button>
+                  )}
                 </div>
               )}
               {proposal.dpmd_catatan && (
@@ -976,6 +987,14 @@ const ProposalCard = ({ proposal, expanded, onToggleExpand, onEdit, onDelete, on
                 <LuPencil className="w-3.5 h-3.5" /> Edit
               </button>
             )}
+            {hasHistory && (
+              <button
+                onClick={() => setShowHistory(true)}
+                className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-lg"
+              >
+                <LuHistory className="w-3.5 h-3.5" /> Riwayat & Versi
+              </button>
+            )}
             {canDelete && (
               <button
                 onClick={onDelete}
@@ -986,6 +1005,15 @@ const ProposalCard = ({ proposal, expanded, onToggleExpand, onEdit, onDelete, on
             )}
           </div>
         </div>
+      )}
+
+      {showHistory && (
+        <BankeuRevisionHistoryModal
+          apiBase="/desa/bankeu-perubahan"
+          proposalId={proposal.id}
+          proposalTitle={proposal.judul_proposal}
+          onClose={() => setShowHistory(false)}
+        />
       )}
     </div>
   );

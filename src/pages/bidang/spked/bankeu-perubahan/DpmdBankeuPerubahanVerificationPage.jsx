@@ -4,8 +4,9 @@ import Swal from 'sweetalert2';
 import {
   LuEye, LuCheck, LuX, LuRefreshCw, LuFilter, LuMessageSquare, LuInfo,
   LuChevronDown, LuChevronRight, LuSearch, LuPackage, LuMapPin, LuDollarSign,
-  LuClipboardCheck
+  LuClipboardCheck, LuHistory
 } from 'react-icons/lu';
+import BankeuRevisionHistoryModal from '../../../../components/shared/BankeuRevisionHistoryModal';
 
 const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
 
@@ -342,6 +343,7 @@ const StatCard = ({ label, value, color }) => (
 
 const ProposalRow = ({ proposal, onApprove, onReject, onRevision }) => {
   const isPending = !proposal.dpmd_status || proposal.dpmd_status === 'pending';
+  const [showHistory, setShowHistory] = useState(false);
   const firstKegiatan = proposal.kegiatan_list?.[0];
 
   return (
@@ -406,6 +408,10 @@ const ProposalRow = ({ proposal, onApprove, onReject, onRevision }) => {
               <LuEye className="w-3.5 h-3.5" /> File
             </a>
           )}
+          <button onClick={() => setShowHistory(true)}
+            className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-lg">
+            <LuHistory className="w-3.5 h-3.5" /> Riwayat
+          </button>
           {isPending && (
             <>
               <button onClick={onApprove} className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-lg">
@@ -421,6 +427,15 @@ const ProposalRow = ({ proposal, onApprove, onReject, onRevision }) => {
           )}
         </div>
       </div>
+
+      {showHistory && (
+        <BankeuRevisionHistoryModal
+          apiBase="/dpmd/bankeu-perubahan"
+          proposalId={proposal.id}
+          proposalTitle={proposal.judul_proposal}
+          onClose={() => setShowHistory(false)}
+        />
+      )}
     </div>
   );
 };
