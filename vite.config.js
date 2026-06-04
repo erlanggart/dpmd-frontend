@@ -19,6 +19,28 @@ export default defineConfig({
 	esbuild: {
 		drop: process.env.NODE_ENV === 'production' ? ['console', 'debugger'] : [],
 	},
+	build: {
+		chunkSizeWarningLimit: 1500,
+		rollupOptions: {
+			output: {
+				// Pisahkan pustaka berat ke chunk sendiri: bundle awal lebih kecil,
+				// dan tiap pustaka di-cache terpisah (tak perlu unduh ulang saat update kecil).
+				manualChunks(id) {
+					if (!id.includes('node_modules')) return undefined;
+					// React core dijaga satu chunk agar urutan inisialisasi aman.
+					if (/[\\/]node_modules[\\/](react|react-dom|react-router|react-router-dom|scheduler)[\\/]/.test(id)) return 'react-vendor';
+					if (id.includes('face-api')) return 'faceapi';
+					if (id.includes('mediasoup')) return 'mediasoup';
+					if (id.includes('leaflet')) return 'leaflet';
+					if (id.includes('xlsx')) return 'xlsx';
+					if (id.includes('jspdf') || id.includes('html2canvas')) return 'pdf';
+					if (id.includes('chart.js') || id.includes('recharts') || id.includes('d3-')) return 'charts';
+					if (id.includes('framer-motion')) return 'motion';
+					return undefined;
+				},
+			},
+		},
+	},
 	plugins: [
 		react(), 
 		tailwindcss(),
@@ -32,6 +54,37 @@ export default defineConfig({
 				navigateFallbackDenylist: [/^\/api\//, /^\/storage\//, /^\/uploads\//, /^\/public\//, /\/version\.json$/],
 				// Custom SW will be injected by inject-custom-sw.js script
 				runtimeCaching: [
+					{
+						// Submit daftar hadir HJB-544: jika koneksi putus, request POST diantri
+						// ke IndexedDB (Background Sync) dan dikirim ulang otomatis saat online.
+						urlPattern: /\/api\/event-attendance\/public\/register/i,
+						handler: 'NetworkOnly',
+						method: 'POST',
+						options: {
+							backgroundSync: {
+								name: 'attendance-register-queue',
+								options: {
+									maxRetentionTime: 60 * 24 * 7 // simpan antrian hingga 7 hari (dalam menit)
+								}
+							}
+						}
+					},
+					{
+						// Config daftar hadir HJB-544: simpan lama & sajikan instan dari cache
+						// agar halaman tetap terbuka saat koneksi booth buruk/putus.
+						urlPattern: /\/api\/event-attendance\/public\/config/i,
+						handler: 'StaleWhileRevalidate',
+						options: {
+							cacheName: 'event-config-cache',
+							expiration: {
+								maxEntries: 4,
+								maxAgeSeconds: 60 * 60 * 24 * 14 // 14 hari (cukup untuk durasi event)
+							},
+							cacheableResponse: {
+								statuses: [200]
+							}
+						}
+					},
 					{
 						urlPattern: /^https:\/\/dpmdbogorkab\.id\/api\/.*/i,
 						handler: 'NetworkFirst',
