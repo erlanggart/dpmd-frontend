@@ -6,7 +6,7 @@ import {
   FiToggleLeft, FiToggleRight, FiUpload, FiSettings,
   FiChevronDown, FiChevronLeft, FiChevronRight, FiFilter, FiArrowLeft, FiEye, FiUser, FiBell, FiSend,
 } from "react-icons/fi";
-import { LuDownload, LuRefreshCw, LuShieldCheck, LuWifi, LuWifiOff, LuLayoutGrid, LuList, LuFileSpreadsheet, LuChartColumn, LuLayoutDashboard, LuArrowUpDown, LuSlidersHorizontal } from "react-icons/lu";
+import { LuDownload, LuRefreshCw, LuShieldCheck, LuWifi, LuWifiOff, LuLayoutGrid, LuList, LuFileSpreadsheet, LuFileText, LuChartColumn, LuLayoutDashboard, LuArrowUpDown, LuSlidersHorizontal } from "react-icons/lu";
 import Lottie from "lottie-react";
 import tableTennisAnimation from "../../../assets/table-tennis.json";
 import api from "../../../api";
@@ -138,6 +138,48 @@ const formatDailyRecord = (record, { multiline = false } = {}) => {
     return [label, timeText, telatText].filter(Boolean);
   }
   return [label, timeText, telatText ? `(${telatText})` : ""].filter(Boolean).join(" ");
+};
+
+// Hex palette mirroring colorMap, untuk chart & PDF
+const STATUS_HEX = {
+  emerald: "#10b981", amber: "#f59e0b", red: "#ef4444", gray: "#64748b",
+  blue: "#3b82f6", purple: "#a855f7", teal: "#14b8a6", indigo: "#6366f1",
+};
+
+// Format satu sel hari untuk PDF: hanya jam masuk / pulang, "-" jika tidak hadir
+const formatDayCellPDF = (record) => {
+  if (!record) return "-";
+  const masuk = formatTime(record.jam_masuk);
+  const keluar = formatTime(record.jam_keluar);
+  if (masuk === "-" && keluar === "-") return "-";
+  return `${masuk}\n${keluar}`;
+};
+
+// Render konfigurasi Chart.js ke data URL PNG (latar putih) untuk disisipkan ke PDF
+const renderChartToImage = async (config, width, height) => {
+  const { default: Chart } = await import("chart.js/auto");
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const whiteBg = {
+    id: "whiteBg",
+    beforeDraw: (chart) => {
+      const { ctx } = chart;
+      ctx.save();
+      ctx.globalCompositeOperation = "destination-over";
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, chart.width, chart.height);
+      ctx.restore();
+    },
+  };
+  const chart = new Chart(canvas, {
+    ...config,
+    plugins: [whiteBg, ...(config.plugins || [])],
+    options: { ...(config.options || {}), responsive: false, animation: false },
+  });
+  const img = canvas.toDataURL("image/png", 1.0);
+  chart.destroy();
+  return img;
 };
 
 const AbsensiManagementPage = () => {
@@ -679,6 +721,240 @@ const AbsensiManagementPage = () => {
     }
   };
 
+  const handleExportRekapPegawaiPDF = async () => {
+    if (!rekapPegawaiData?.pegawai?.length) return;
+    try {
+      const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+        import("jspdf"),
+        import("jspdf-autotable"),
+      ]);
+
+      const doc = new jsPDF("l", "mm", "a4");
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 10;
+      const usableWidth = pageWidth - margin * 2;
+
+      const periodeLabel = rekapPegawaiData.periode_label || rekapPeriode;
+      const gs = rekapPegawaiData.global_summary || {};
+      const totalMasuk = PRESENT_STATUSES.reduce((s, k) => s + (gs[k] || 0), 0);
+      const totalTidakMasuk = ABSENT_STATUSES.reduce((s, k) => s + (gs[k] || 0), 0);
+      const dayCount = rekapCalendarDays.length;
+
+      // ── Header band ──
+      doc.setFillColor(194, 65, 12); // orange-700
+      doc.rect(0, 0, pageWidth, 22, "F");
+      doc.setFillColor(245, 158, 11); // amber-500 accent
+      doc.rect(0, 0, pageWidth, 2.5, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(14);
+      doc.setFont(undefined, "bold");
+      doc.text("REKAP ABSENSI PEGAWAI", margin, 11);
+      doc.setFontSize(9);
+      doc.setFont(undefined, "normal");
+      doc.setTextColor(255, 237, 213); // orange-100
+      doc.text("Dinas Pemberdayaan Masyarakat dan Desa", margin, 17);
+      doc.setFontSize(9);
+      doc.setFont(undefined, "bold");
+      doc.setTextColor(255, 255, 255);
+      doc.text(`Periode: ${periodeLabel}`, pageWidth - margin, 11, { align: "right" });
+      const now = new Date();
+      doc.setFontSize(7.5);
+      doc.setFont(undefined, "normal");
+      doc.setTextColor(255, 237, 213);
+      doc.text(
+        `Dicetak: ${now.toLocaleDateString("id-ID", { day: "2-digit", month: "long", year: "numeric" })} ${now.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })} WIB`,
+        pageWidth - margin, 17, { align: "right" }
+      );
+
+      // ── Analisis chart kehadiran ──
+      // Tren kehadiran harian (jumlah pegawai masuk per hari)
+      const dailyMasuk = rekapCalendarDays.map((day) => {
+        const key = getDateKey(day.date);
+        return filteredRekapPegawai.reduce((c, p) => {
+          const r = p.daily?.[key];
+          return c + (r && PRESENT_STATUSES.includes(r.status) ? 1 : 0);
+        }, 0);
+      });
+      const dayLabels = rekapCalendarDays.map((d) => String(d.day).padStart(2, "0"));
+
+      // Distribusi status keseluruhan periode
+      const statusLabels = [];
+      const statusData = [];
+      const statusColors = [];
+      Object.entries(STATUS_MAP).forEach(([key, v]) => {
+        const c = gs[key] || 0;
+        if (c > 0) {
+          statusLabels.push(v.label);
+          statusData.push(c);
+          statusColors.push(STATUS_HEX[v.color] || "#94a3b8");
+        }
+      });
+
+      const chartTop = 26;
+      const chartHeight = 50;
+      let tableStartY = chartTop + chartHeight + 6;
+
+      try {
+        if (dayCount > 0) {
+          const trendImg = await renderChartToImage(
+            {
+              type: "bar",
+              data: {
+                labels: dayLabels,
+                datasets: [{ label: "Pegawai Masuk", data: dailyMasuk, backgroundColor: "#10b981", borderRadius: 4, maxBarThickness: 26 }],
+              },
+              options: {
+                plugins: {
+                  legend: { display: false },
+                  title: { display: true, text: "Tren Kehadiran Harian (Jumlah Pegawai Masuk)", font: { size: 18, weight: "bold" }, color: "#1e293b", padding: { bottom: 10 } },
+                },
+                scales: {
+                  x: { grid: { display: false }, ticks: { font: { size: 12 }, color: "#475569" } },
+                  y: { beginAtZero: true, ticks: { precision: 0, font: { size: 12 }, color: "#475569" }, grid: { color: "#e2e8f0" } },
+                },
+              },
+            },
+            1080, 320
+          );
+          doc.addImage(trendImg, "PNG", margin, chartTop, usableWidth * 0.62, chartHeight);
+        }
+
+        if (statusData.length > 0) {
+          const doughImg = await renderChartToImage(
+            {
+              type: "doughnut",
+              data: { labels: statusLabels, datasets: [{ data: statusData, backgroundColor: statusColors, borderColor: "#ffffff", borderWidth: 2 }] },
+              options: {
+                cutout: "55%",
+                plugins: {
+                  legend: { position: "right", labels: { font: { size: 13 }, color: "#334155", boxWidth: 14, padding: 8 } },
+                  title: { display: true, text: "Distribusi Kehadiran", font: { size: 18, weight: "bold" }, color: "#1e293b", padding: { bottom: 6 } },
+                },
+              },
+            },
+            560, 320
+          );
+          const doughX = margin + usableWidth * 0.64;
+          doc.addImage(doughImg, "PNG", doughX, chartTop, usableWidth * 0.36, chartHeight);
+        }
+      } catch (chartErr) {
+        console.error("Chart render error:", chartErr);
+        tableStartY = chartTop; // tetap lanjut tanpa chart
+      }
+
+      // ── Tabel kalender presensi ──
+      const head = [[
+        "Nama Pegawai",
+        ...rekapCalendarDays.map((d) => `${d.day_label}\n${String(d.day).padStart(2, "0")}`),
+        "Masuk",
+        "Tdk\nMasuk",
+      ]];
+
+      const body = filteredRekapPegawai.map((p) => {
+        const masuk = PRESENT_STATUSES.reduce((s, k) => s + (p.summary?.[k] || 0), 0);
+        const tidakMasuk = ABSENT_STATUSES.reduce((s, k) => s + (p.summary?.[k] || 0), 0);
+        return [
+          p.user?.pegawai?.nama_pegawai || p.user?.name || "-",
+          ...rekapCalendarDays.map((day) => formatDayCellPDF(p.daily?.[getDateKey(day.date)])),
+          String(masuk),
+          String(tidakMasuk),
+        ];
+      });
+
+      const foot = [[
+        "TOTAL",
+        ...rekapCalendarDays.map(() => ""),
+        String(totalMasuk),
+        String(totalTidakMasuk),
+      ]];
+
+      const nameWidth = 34;
+      const masukWidth = 11;
+      const tidakWidth = 13;
+      const dayWidth = dayCount > 0 ? (usableWidth - nameWidth - masukWidth - tidakWidth) / dayCount : 12;
+
+      const columnStyles = {
+        0: { halign: "left", cellWidth: nameWidth, fontStyle: "bold", fontSize: 6, overflow: "linebreak" },
+      };
+      rekapCalendarDays.forEach((_, i) => {
+        columnStyles[i + 1] = { halign: "center", cellWidth: dayWidth, fontSize: 5.4 };
+      });
+      columnStyles[dayCount + 1] = { halign: "center", cellWidth: masukWidth, fontStyle: "bold", textColor: [5, 150, 105] };
+      columnStyles[dayCount + 2] = { halign: "center", cellWidth: tidakWidth, fontStyle: "bold", textColor: [217, 119, 6] };
+
+      autoTable(doc, {
+        head,
+        body,
+        foot,
+        startY: tableStartY,
+        margin: { left: margin, right: margin, top: 14 },
+        theme: "grid",
+        styles: {
+          fontSize: 5.6,
+          cellPadding: { top: 1, right: 0.5, bottom: 1, left: 0.5 },
+          valign: "middle",
+          halign: "center",
+          lineColor: [226, 232, 240],
+          lineWidth: 0.2,
+          textColor: [51, 65, 85],
+          overflow: "linebreak",
+        },
+        headStyles: {
+          fillColor: [194, 65, 12],
+          textColor: [255, 255, 255],
+          fontSize: 6,
+          fontStyle: "bold",
+          halign: "center",
+          valign: "middle",
+          lineColor: [194, 65, 12],
+          lineWidth: 0.2,
+        },
+        footStyles: {
+          fillColor: [255, 247, 237],
+          textColor: [154, 52, 18],
+          fontStyle: "bold",
+          fontSize: 6,
+          halign: "center",
+        },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        columnStyles,
+        showHead: "everyPage",
+        showFoot: "lastPage",
+        didParseCell: (data) => {
+          // Warnai sel jam (hijau) vs tidak hadir (abu) pada kolom hari
+          if (data.section === "body" && data.column.index >= 1 && data.column.index <= dayCount) {
+            const raw = Array.isArray(data.cell.raw) ? data.cell.raw.join("") : String(data.cell.raw ?? "");
+            if (raw.trim() === "-") {
+              data.cell.styles.textColor = [203, 213, 225];
+            } else {
+              data.cell.styles.textColor = [4, 120, 87];
+              data.cell.styles.fontStyle = "bold";
+            }
+          }
+          if (data.section === "head" && data.column.index === 0) {
+            data.cell.styles.halign = "left";
+          }
+        },
+        didDrawPage: () => {
+          const pageNum = doc.internal.getNumberOfPages();
+          doc.setFontSize(7);
+          doc.setFont(undefined, "normal");
+          doc.setTextColor(148, 163, 184);
+          doc.text("Format jam: baris atas = jam masuk, baris bawah = jam pulang. Tanda - menandakan tidak ada kehadiran.", margin, pageHeight - 5);
+          doc.text(`Halaman ${pageNum}`, pageWidth - margin, pageHeight - 5, { align: "right" });
+        },
+      });
+
+      const fileName = `Rekap_Absensi_${String(periodeLabel).replace(/\s+/g, "_")}.pdf`;
+      doc.save(fileName);
+      showAlert({ icon: "success", title: "Export Berhasil", text: `File ${fileName} berhasil diunduh`, timer: 2000 });
+    } catch (err) {
+      console.error("Export rekap pegawai PDF error:", err);
+      showAlert({ icon: "error", title: "Gagal Export", text: "Terjadi kesalahan saat mengexport PDF" });
+    }
+  };
+
   // ─── Render ───────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-orange-50/30">
@@ -1114,10 +1390,16 @@ const AbsensiManagementPage = () => {
                       <h3 className="font-bold text-slate-800 text-sm">Periode: {rekapPegawaiData.periode_label}</h3>
                       <p className="text-[11px] text-slate-400 mt-0.5">{rekapPegawaiData.total_pegawai} pegawai terdaftar</p>
                     </div>
-                    <button onClick={handleExportRekapPegawai} disabled={!rekapPegawaiData?.pegawai?.length}
-                      className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl hover:bg-emerald-100 transition-all text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed">
-                      <LuFileSpreadsheet className="h-4 w-4" /> Ekspor Excel
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button onClick={handleExportRekapPegawaiPDF} disabled={!rekapPegawaiData?.pegawai?.length}
+                        className="flex items-center gap-2 px-4 py-2 bg-rose-50 text-rose-700 border border-rose-200 rounded-xl hover:bg-rose-100 transition-all text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed">
+                        <LuFileText className="h-4 w-4" /> Ekspor PDF
+                      </button>
+                      <button onClick={handleExportRekapPegawai} disabled={!rekapPegawaiData?.pegawai?.length}
+                        className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl hover:bg-emerald-100 transition-all text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed">
+                        <LuFileSpreadsheet className="h-4 w-4" /> Ekspor Excel
+                      </button>
+                    </div>
                   </div>
                   {/* Total Masuk highlight */}
                   {(() => {
