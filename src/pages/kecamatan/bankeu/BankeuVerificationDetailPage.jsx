@@ -2171,6 +2171,18 @@ const BankeuVerificationDetailPage = () => {
           pdfData={selectedPdf}
         />
       )}
+
+      {/* Contextual Chat Drawer */}
+      {chatProposalId && (
+        <ChatDrawer
+          referenceType="bankeu_proposal"
+          referenceId={chatProposalId}
+          floating={false}
+          isOpen={!!chatProposalId}
+          onClose={() => setChatProposalId(null)}
+          title="Chat Proposal Bankeu"
+        />
+      )}
     </div>
   );
 };
@@ -2794,17 +2806,6 @@ const PdfViewerModal = ({ show, onClose, pdfData }) => {
           </div>
         </div>
       </div>
-      {/* Contextual Chat Drawer */}
-      {chatProposalId && (
-        <ChatDrawer
-          referenceType="bankeu_proposal"
-          referenceId={chatProposalId}
-          floating={false}
-          isOpen={!!chatProposalId}
-          onClose={() => setChatProposalId(null)}
-          title="Chat Proposal Bankeu"
-        />
-      )}
     </div>
   );
 };
