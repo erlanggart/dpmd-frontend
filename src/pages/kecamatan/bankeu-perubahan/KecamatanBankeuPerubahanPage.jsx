@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LuCoins, LuArrowLeft, LuClipboardCheck, LuMail, LuUsers } from 'react-icons/lu';
+import { LuCoins, LuArrowLeft, LuClipboardCheck, LuSettings } from 'react-icons/lu';
 import BankeuPerubahanVerificationPage from './BankeuPerubahanVerificationPage';
-import BankeuPerubahanSuratReviewPage from './BankeuPerubahanSuratReviewPage';
 import KecamatanPerubahanTimVerifikasiPage from './KecamatanPerubahanTimVerifikasiPage';
 
 const KecamatanBankeuPerubahanPage = () => {
@@ -45,8 +44,7 @@ const KecamatanBankeuPerubahanPage = () => {
 
   const tabs = [
     { id: 'verifikasi', label: 'Verifikasi Proposal', icon: LuClipboardCheck },
-    { id: 'surat', label: 'Review Surat', icon: LuMail },
-    { id: 'tim', label: 'Tim Verifikasi & Config', icon: LuUsers },
+    { id: 'tim', label: 'Konfigurasi', icon: LuSettings },
   ];
 
   return (
@@ -80,7 +78,6 @@ const KecamatanBankeuPerubahanPage = () => {
         </div>
       </div>
       {activeTab === 'verifikasi' && <BankeuPerubahanVerificationPage tahun={selectedYear} />}
-      {activeTab === 'surat' && <BankeuPerubahanSuratReviewPage tahun={selectedYear} />}
       {activeTab === 'tim' && <KecamatanPerubahanTimVerifikasiPage />}
     </div>
   );

@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-import { LuCoins, LuFileText, LuRadar, LuArrowLeft, LuMail, LuClipboardCheck } from 'react-icons/lu';
+import { LuCoins, LuFileText, LuRadar, LuArrowLeft, LuClipboardCheck } from 'react-icons/lu';
 import BankeuPerubahanProposalPage from './BankeuPerubahanProposalPage';
 import BankeuPerubahanTrackingTab from './BankeuPerubahanTrackingTab';
-import BankeuPerubahanSuratTab from './BankeuPerubahanSuratTab';
 import DesaBankeuPerubahanLpjPage from './DesaBankeuPerubahanLpjPage';
 
 const DesaBankeuPerubahanPage = () => {
@@ -67,7 +66,6 @@ const DesaBankeuPerubahanPage = () => {
 
   const tabs = [
     { id: 'pengajuan', label: 'Pengajuan', icon: LuFileText, desc: 'Kelola proposal perubahan' },
-    { id: 'surat', label: 'Surat', icon: LuMail, desc: 'Surat pengantar & permohonan' },
     { id: 'tracking', label: 'Tracking', icon: LuRadar, desc: 'Pantau status verifikasi' },
     { id: 'lpj', label: 'LPJ', icon: LuClipboardCheck, desc: 'Laporan pertanggungjawaban' },
   ];
@@ -111,7 +109,6 @@ const DesaBankeuPerubahanPage = () => {
       </div>
 
       {activeTab === 'pengajuan' && <BankeuPerubahanProposalPage tahun={selectedYear} />}
-      {activeTab === 'surat' && <BankeuPerubahanSuratTab tahun={selectedYear} />}
       {activeTab === 'tracking' && (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-orange-50 p-4 md:p-6">
           <div className="max-w-4xl mx-auto">

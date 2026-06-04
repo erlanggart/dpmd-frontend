@@ -164,11 +164,15 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
             <StatCard label="Rejected" value={stats.rejected || 0} color="bg-red-50 text-red-700" />
             <StatCard label="Revision" value={stats.revision || 0} color="bg-orange-50 text-orange-700" />
           </div>
-          {stats.total_anggaran && (
-            <div className="mt-3 text-sm text-gray-600">
-              Total Anggaran: <strong className="text-orange-700">Rp {Number(stats.total_anggaran).toLocaleString('id-ID')}</strong>
+          <div className="mt-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 p-4 flex items-center justify-between shadow-md">
+            <div className="flex items-center gap-2 text-white/90">
+              <LuDollarSign className="w-5 h-5" />
+              <span className="text-sm font-semibold">Total Anggaran Usulan</span>
             </div>
-          )}
+            <div className="text-xl md:text-2xl font-bold text-white">
+              Rp {Number(stats.total_anggaran || 0).toLocaleString('id-ID')}
+            </div>
+          </div>
         </div>
 
         {/* Filters */}

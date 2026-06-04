@@ -1,13 +1,13 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../../../api';
 import Swal from 'sweetalert2';
 import {
   LuEye, LuCheck, LuX, LuRefreshCw, LuSend, LuInfo,
   LuClipboardCheck, LuMessageSquare, LuChevronDown, LuChevronRight,
   LuFilter, LuSearch, LuPackage, LuMapPin, LuDollarSign,
-  LuFileText, LuStamp, LuTriangleAlert, LuClipboardList
+  LuFileText, LuStamp, LuTriangleAlert, LuUsers, LuClipboardList
 } from 'react-icons/lu';
-import BankeuPerubahanQuestionnaireForm from '../../../components/BankeuPerubahanQuestionnaireForm';
 
 const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
 
@@ -58,6 +58,7 @@ const KATEGORI_META = {
 const KATEGORI_KEYS = Object.keys(KATEGORI_META);
 
 const BankeuPerubahanVerificationPage = ({ tahun }) => {
+  const navigate = useNavigate();
   const [proposals, setProposals] = useState([]);
   const [stats, setStats] = useState({});
   const [kecamatanConfig, setKecamatanConfig] = useState(null);
@@ -65,7 +66,6 @@ const BankeuPerubahanVerificationPage = ({ tahun }) => {
   const [expandedDesa, setExpandedDesa] = useState({});
   const [expandedKategori, setExpandedKategori] = useState({});
   const [verifyModal, setVerifyModal] = useState(null);
-  const [quisionerModal, setQuisionerModal] = useState(null); // proposal to fill quisioner for
 
   // Filters
   const [filterStatus, setFilterStatus] = useState('all');
@@ -471,12 +471,12 @@ const BankeuPerubahanVerificationPage = ({ tahun }) => {
     }
   };
 
-  const toggleDesa = (desaId) => setExpandedDesa(e => ({ ...e, [desaId]: e[desaId] === undefined ? false : !e[desaId] }));
+  const toggleDesa = (desaId) => setExpandedDesa(e => ({ ...e, [desaId]: !e[desaId] }));
   const toggleKategori = (desaId, kat) => {
     const key = `${desaId}-${kat}`;
     setExpandedKategori(e => ({ ...e, [key]: e[key] === undefined ? false : !e[key] }));
   };
-  const isDesaExpanded = (desaId) => expandedDesa[desaId] !== false;
+  const isDesaExpanded = (desaId) => expandedDesa[desaId] === true;
   const isKategoriExpanded = (desaId, kat) => expandedKategori[`${desaId}-${kat}`] !== false;
 
   // Per-desa kirim-ke-DPMD status (Quisioner + BA + Surat Pengantar lengkap)
@@ -490,7 +490,7 @@ const BankeuPerubahanVerificationPage = ({ tahun }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-orange-50 p-4 md:p-6">
-      <div className="max-w-7xl mx-auto space-y-5">
+      <div className="w-full space-y-5">
         {/* Header & Stats */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
           <div className="flex items-center justify-between mb-4">
@@ -666,7 +666,7 @@ const BankeuPerubahanVerificationPage = ({ tahun }) => {
                                     onCancel={() => cancelApproval(p.id)}
                                     onGenerateBA={() => handleGenerateBeritaAcara(p)}
                                     onGenerateSP={() => handleGenerateSuratPengantar(p)}
-                                    onQuisioner={() => setQuisionerModal(p)}
+                                    onTim={() => navigate(`/kecamatan/bankeu-perubahan/tim-verifikasi/${p.desa_id}?proposalId=${p.id}&tahun=${tahun}`)}
                                   />
                                 ))}
                               </div>
@@ -723,35 +723,6 @@ const BankeuPerubahanVerificationPage = ({ tahun }) => {
         </div>
       )}
 
-      {/* Quisioner modal */}
-      {quisionerModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl my-8 max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-bold text-gray-800">Quisioner Verifikasi Dokumen</h3>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  Desa <strong>{quisionerModal.desa_nama}</strong> · {quisionerModal.judul_proposal}
-                </p>
-              </div>
-              <button onClick={() => setQuisionerModal(null)} className="text-gray-400 hover:text-gray-600">
-                <LuX className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="overflow-y-auto p-4 flex-1 bg-gray-50">
-              <BankeuPerubahanQuestionnaireForm
-                proposalId={quisionerModal.id}
-                verifierType="kecamatan_tim"
-                jenisKegiatan={quisionerModal.jenis_kegiatan}
-                onSaveSuccess={() => {
-                  setQuisionerModal(null);
-                  fetchData();
-                }}
-              />
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
@@ -763,7 +734,7 @@ const StatCard = ({ label, value, color }) => (
   </div>
 );
 
-const ProposalRow = ({ proposal, onApprove, onReject, onRevision, onCancel, onGenerateBA, onGenerateSP, onQuisioner }) => {
+const ProposalRow = ({ proposal, onApprove, onReject, onRevision, onCancel, onGenerateBA, onGenerateSP, onTim }) => {
   const submittedToDpmd = proposal.submitted_to_dpmd;
   const kecApproved = proposal.kecamatan_status === 'approved';
   const isPending = !proposal.kecamatan_status || proposal.kecamatan_status === 'pending';
@@ -881,14 +852,15 @@ const ProposalRow = ({ proposal, onApprove, onReject, onRevision, onCancel, onGe
           {kecApproved && !submittedToDpmd && (
             <div className="flex flex-wrap gap-1 justify-end pt-1 border-t border-gray-100">
               <button
-                onClick={onQuisioner}
+                onClick={onTim}
                 className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg shadow-sm ${
                   hasQuisioner
                     ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700'
                     : 'bg-amber-600 hover:bg-amber-700 text-white'
                 }`}
+                title="Atur tim verifikasi & isi quisioner per anggota"
               >
-                <LuClipboardList className="w-3.5 h-3.5" /> {hasQuisioner ? 'Quisioner ✓' : 'Isi Quisioner'}
+                <LuUsers className="w-3.5 h-3.5" /> {hasQuisioner ? 'Tim Verifikasi ✓' : 'Tim Verifikasi'}
               </button>
               {hasBA ? (
                 <>

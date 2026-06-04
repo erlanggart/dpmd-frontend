@@ -6,6 +6,7 @@ import {
   LuUsers, LuPlus, LuTrash2, LuUpload, LuRefreshCw, LuSave, LuImage, LuEye,
   LuPenTool, LuRotateCcw, LuCheck, LuX
 } from 'react-icons/lu';
+import { JABATAN_OPTIONS } from '../../../constants/jabatanOptions';
 
 const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
 
@@ -20,6 +21,10 @@ const KecamatanPerubahanTimVerifikasiPage = () => {
     logo_path: null, ttd_camat_path: null, stempel_path: null,
   });
   const [savingConfig, setSavingConfig] = useState(false);
+
+  // Tanda tangan camat (digambar via canvas, bukan upload)
+  const [showCamatSignaturePad, setShowCamatSignaturePad] = useState(false);
+  const camatSigCanvasRef = useRef(null);
 
   // Tim state
   const [tim, setTim] = useState([]);
@@ -87,6 +92,26 @@ const KecamatanPerubahanTimVerifikasiPage = () => {
     }
   };
 
+  const handleSyncFromReguler = async () => {
+    const r = await Swal.fire({
+      title: 'Sinkron dari Bankeu Reguler?',
+      text: 'Data camat, TTD Camat, dan stempel akan disalin dari konfigurasi Bankeu reguler (menimpa yang ada di sini).',
+      icon: 'question', showCancelButton: true,
+      confirmButtonColor: '#ea580c', confirmButtonText: 'Ya, sinkron', cancelButtonText: 'Batal',
+    });
+    if (!r.isConfirmed) return;
+    setSavingConfig(true);
+    try {
+      await api.post(`/kecamatan/bankeu-perubahan/config/${kecamatanId}/sync-from-reguler`);
+      Swal.fire('Berhasil', 'Konfigurasi disinkron dari Bankeu reguler', 'success');
+      fetchConfig();
+    } catch (err) {
+      Swal.fire('Gagal', err.response?.data?.message || 'Gagal sinkron konfigurasi', 'error');
+    } finally {
+      setSavingConfig(false);
+    }
+  };
+
   const handleUploadFile = async (endpoint, file, label) => {
     if (!file) return;
     const fd = new FormData();
@@ -115,6 +140,22 @@ const KecamatanPerubahanTimVerifikasiPage = () => {
       fetchConfig();
     } catch (err) {
       Swal.fire('Gagal', err.response?.data?.message || `Gagal hapus ${label}`, 'error');
+    }
+  };
+
+  const handleSaveCamatSignature = async () => {
+    if (!camatSigCanvasRef.current || camatSigCanvasRef.current.isEmpty()) {
+      return Swal.fire('Validasi', 'Silakan gambar tanda tangan terlebih dahulu', 'warning');
+    }
+    try {
+      const dataUrl = camatSigCanvasRef.current.toDataURL('image/png');
+      const blob = await (await fetch(dataUrl)).blob();
+      const file = new File([blob], 'ttd-camat.png', { type: 'image/png' });
+      await handleUploadFile('upload-camat-signature', file, 'TTD Camat');
+      setShowCamatSignaturePad(false);
+    } catch (err) {
+      console.error('Save camat signature error:', err);
+      Swal.fire('Gagal', 'Tidak dapat menyimpan tanda tangan', 'error');
     }
   };
 
@@ -202,39 +243,42 @@ const KecamatanPerubahanTimVerifikasiPage = () => {
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
               <LuUsers className="w-6 h-6 text-orange-600" />
-              Konfigurasi & Tim Verifikasi Bankeu Perubahan
+              Konfigurasi Kop Surat &amp; Tanda Tangan Camat
             </h2>
           </div>
-          <div className="flex gap-2 mt-4 border-b border-gray-200">
-            <button
-              onClick={() => setActiveTab('config')}
-              className={`px-4 py-2 text-sm font-semibold border-b-2 -mb-px transition-colors ${
-                activeTab === 'config' ? 'border-orange-600 text-orange-700' : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >Konfigurasi Kecamatan</button>
-            <button
-              onClick={() => setActiveTab('tim')}
-              className={`px-4 py-2 text-sm font-semibold border-b-2 -mb-px transition-colors ${
-                activeTab === 'tim' ? 'border-orange-600 text-orange-700' : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >Tim Verifikasi</button>
-          </div>
+          <p className="text-sm text-gray-500 mt-1">
+            Tim verifikasi diatur <strong>per-proposal</strong> — buka tab <strong>Verifikasi Proposal</strong>,
+            lalu klik tombol <strong>"Tim Verifikasi"</strong> pada proposal yang sudah disetujui.
+          </p>
         </div>
 
-        {activeTab === 'config' && (
+        {(
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Field label="Nama Camat *" value={config.nama_camat} onChange={v => setConfig({...config, nama_camat: v})} />
-              <Field label="NIP Camat" value={config.nip_camat || ''} onChange={v => setConfig({...config, nip_camat: v})} />
-              <Field label="Jabatan Penandatangan" value={config.jabatan_penandatangan || 'Camat'} onChange={v => setConfig({...config, jabatan_penandatangan: v})} />
+              <SelectField
+                label="Jabatan Penandatangan"
+                value={config.jabatan_penandatangan || 'Camat'}
+                onChange={v => setConfig({...config, jabatan_penandatangan: v})}
+                options={['Camat', 'Plt. Camat', 'Pj. Camat']}
+              />
               <Field label="Kode Pos" value={config.kode_pos || ''} onChange={v => setConfig({...config, kode_pos: v})} />
+              <Field label={`Nama ${config.jabatan_penandatangan || 'Camat'} *`} value={config.nama_camat} onChange={v => setConfig({...config, nama_camat: v})} />
+              <Field label={`NIP ${config.jabatan_penandatangan || 'Camat'}`} value={config.nip_camat || ''} onChange={v => setConfig({...config, nip_camat: v})} />
               <Field label="Telepon" value={config.telepon || ''} onChange={v => setConfig({...config, telepon: v})} />
               <Field label="Email" value={config.email || ''} onChange={v => setConfig({...config, email: v})} />
               <Field label="Website" value={config.website || ''} onChange={v => setConfig({...config, website: v})} />
               <Field label="Alamat" value={config.alamat || ''} onChange={v => setConfig({...config, alamat: v})} textarea />
             </div>
 
-            <div className="flex justify-end">
+            <div className="flex flex-wrap justify-end gap-2">
+              <button
+                onClick={handleSyncFromReguler}
+                disabled={savingConfig}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-orange-300 text-orange-700 hover:bg-orange-50 font-semibold rounded-xl shadow-sm disabled:opacity-50"
+                title="Salin data camat, TTD, dan stempel dari konfigurasi Bankeu reguler"
+              >
+                <LuRefreshCw className="w-4 h-4" /> Sinkron dari Bankeu Reguler
+              </button>
               <button
                 onClick={handleSaveConfig}
                 disabled={savingConfig}
@@ -244,103 +288,89 @@ const KecamatanPerubahanTimVerifikasiPage = () => {
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+            {/* Tanda Tangan Camat - digambar via canvas (bukan upload) */}
+            <div className="mt-6 border-t border-gray-200 pt-5">
+              <label className="block text-sm font-semibold text-gray-700 mb-3">
+                Tanda Tangan {config.jabatan_penandatangan || 'Camat'}
+              </label>
+
+              {!config.ttd_camat_path ? (
+                !showCamatSignaturePad ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowCamatSignaturePad(true)}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white font-semibold rounded-xl shadow-sm"
+                  >
+                    <LuPenTool className="w-4 h-4" /> Gambar Tanda Tangan
+                  </button>
+                ) : (
+                  <div className="border-2 border-violet-300 rounded-xl p-3 bg-white max-w-md">
+                    <div className="border border-gray-300 rounded-lg overflow-hidden bg-white">
+                      <SignatureCanvas
+                        ref={camatSigCanvasRef}
+                        penColor="black"
+                        canvasProps={{ width: 500, height: 160, className: 'w-full h-40 bg-white' }}
+                      />
+                    </div>
+                    <div className="flex gap-2 mt-3">
+                      <button
+                        type="button"
+                        onClick={handleSaveCamatSignature}
+                        className="inline-flex items-center gap-1 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg"
+                      >
+                        <LuCheck className="w-4 h-4" /> Simpan
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => camatSigCanvasRef.current?.clear()}
+                        className="inline-flex items-center gap-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold rounded-lg"
+                      >
+                        <LuRotateCcw className="w-4 h-4" /> Hapus
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowCamatSignaturePad(false)}
+                        className="inline-flex items-center gap-1 px-4 py-2 bg-red-50 hover:bg-red-100 text-red-700 text-sm font-semibold rounded-lg"
+                      >
+                        <LuX className="w-4 h-4" /> Batal
+                      </button>
+                    </div>
+                  </div>
+                )
+              ) : (
+                <div className="flex gap-4 items-start">
+                  <div className="flex-1">
+                    <p className="text-xs text-gray-600 mb-2">Tanda Tangan Saat Ini</p>
+                    <img
+                      src={`${imageBaseUrl}/storage/uploads/bankeu-perubahan/config/${config.ttd_camat_path}`}
+                      alt="Tanda Tangan Camat"
+                      className="h-24 border border-gray-200 rounded p-2 bg-white"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await handleDeleteFile('delete-camat-signature', 'TTD Camat');
+                      setShowCamatSignaturePad(true);
+                    }}
+                    className="inline-flex items-center gap-1 px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-lg"
+                  >
+                    <LuRotateCcw className="w-4 h-4" /> Gambar Ulang
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Stempel - via upload (logo kop memakai logo Kabupaten Bogor standar, tidak diupload) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
               <FileUploadCard
-                label="Logo Kecamatan"
-                filename={config.logo_path}
-                onUpload={f => handleUploadFile('upload-logo', f, 'Logo')}
-                onDelete={null}
-                folder="bankeu-perubahan/config"
-              />
-              <FileUploadCard
-                label="TTD Camat"
-                filename={config.ttd_camat_path}
-                onUpload={f => handleUploadFile('upload-camat-signature', f, 'TTD Camat')}
-                onDelete={() => handleDeleteFile('delete-camat-signature', 'TTD Camat')}
-                folder="bankeu-perubahan/config"
-              />
-              <FileUploadCard
-                label="Stempel"
+                label="Stempel (PNG Transparan)"
                 filename={config.stempel_path}
                 onUpload={f => handleUploadFile('upload-stempel', f, 'Stempel')}
                 onDelete={() => handleDeleteFile('delete-stempel', 'Stempel')}
                 folder="bankeu-perubahan/config"
               />
             </div>
-          </div>
-        )}
-
-        {activeTab === 'tim' && (
-          <div className="space-y-3">
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 flex justify-between items-center">
-              <div>
-                <span className="text-sm text-gray-600">{tim.length} anggota tim aktif</span>
-                <div className="text-xs text-gray-500 mt-0.5">
-                  TTD wajib untuk semua anggota sebelum Berita Acara dapat di-generate
-                </div>
-              </div>
-              <button
-                onClick={() => setShowAddTim(true)}
-                className="inline-flex items-center gap-1 px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold rounded-lg"
-              >
-                <LuPlus className="w-4 h-4" /> Tambah Anggota
-              </button>
-            </div>
-
-            {tim.length === 0 ? (
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center text-gray-500">
-                Belum ada anggota tim verifikasi
-              </div>
-            ) : (
-              tim.map(t => (
-                <div key={t.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                      {t.ttd_path ? (
-                        <img
-                          src={`${imageBaseUrl}/storage/uploads/signatures/${t.ttd_path}`}
-                          alt="ttd"
-                          className="w-16 h-16 object-contain border rounded-lg bg-white flex-shrink-0"
-                        />
-                      ) : (
-                        <div className="w-16 h-16 bg-gray-100 rounded-lg flex flex-col items-center justify-center text-gray-400 flex-shrink-0 border-2 border-dashed border-gray-300">
-                          <LuImage className="w-5 h-5" />
-                          <span className="text-[10px] mt-0.5">No TTD</span>
-                        </div>
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <div className="font-bold text-gray-800 truncate">{t.nama}</div>
-                        <div className="text-xs text-gray-500">{t.jabatan_label || t.jabatan}</div>
-                        {t.nip && <div className="text-xs text-gray-500">NIP: {t.nip}</div>}
-                        {t.ttd_path ? (
-                          <div className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-full text-xs font-semibold border border-emerald-200">
-                            <LuCheck className="w-3 h-3" /> TTD tersimpan
-                          </div>
-                        ) : (
-                          <div className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-amber-50 text-amber-700 rounded-full text-xs font-semibold border border-amber-200">
-                            <LuX className="w-3 h-3" /> Belum ada TTD
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-1 flex-shrink-0">
-                      <button
-                        onClick={() => openSignDialog(t)}
-                        className="inline-flex items-center justify-center gap-1 px-3 py-1.5 bg-violet-600 hover:bg-violet-700 text-white text-xs font-semibold rounded-lg"
-                      >
-                        <LuPenTool className="w-3.5 h-3.5" /> {t.ttd_path ? 'Ganti TTD' : 'Buat TTD'}
-                      </button>
-                      <button
-                        onClick={() => handleRemoveTim(t.id)}
-                        className="inline-flex items-center justify-center gap-1 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-semibold rounded-lg"
-                      >
-                        <LuTrash2 className="w-3.5 h-3.5" /> Hapus
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
           </div>
         )}
 
@@ -351,8 +381,22 @@ const KecamatanPerubahanTimVerifikasiPage = () => {
                 <h3 className="text-lg font-bold text-gray-800">Tambah Anggota Tim</h3>
               </div>
               <form onSubmit={handleAddTim} className="px-6 py-4 space-y-3">
-                <Field label="Jabatan Kode *" value={newTim.jabatan} onChange={v => setNewTim({...newTim, jabatan: v})} placeholder="ketua / sekretaris / anggota" />
-                <Field label="Jabatan Label" value={newTim.jabatan_label} onChange={v => setNewTim({...newTim, jabatan_label: v})} placeholder="Ketua Tim Verifikasi" />
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Jabatan *</label>
+                  <select
+                    value={newTim.jabatan}
+                    onChange={e => {
+                      const opt = JABATAN_OPTIONS.find(o => o.value === e.target.value);
+                      setNewTim({ ...newTim, jabatan: e.target.value, jabatan_label: opt?.label || '' });
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white"
+                  >
+                    <option value="">Pilih jabatan...</option>
+                    {JABATAN_OPTIONS.map(o => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                </div>
                 <Field label="Nama *" value={newTim.nama} onChange={v => setNewTim({...newTim, nama: v})} />
                 <Field label="NIP" value={newTim.nip} onChange={v => setNewTim({...newTim, nip: v})} />
                 <div className="flex justify-end gap-2 pt-2">
@@ -484,6 +528,21 @@ const Field = ({ label, value, onChange, placeholder, textarea }) => (
         placeholder={placeholder}
       />
     )}
+  </div>
+);
+
+const SelectField = ({ label, value, onChange, options }) => (
+  <div>
+    <label className="block text-sm font-semibold text-gray-700 mb-1">{label}</label>
+    <select
+      value={value || ''}
+      onChange={e => onChange(e.target.value)}
+      className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white"
+    >
+      {options.map(opt => (
+        <option key={opt} value={opt}>{opt}</option>
+      ))}
+    </select>
   </div>
 );
 

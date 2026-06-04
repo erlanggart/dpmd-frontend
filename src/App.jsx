@@ -318,6 +318,9 @@ const BankeuVerificationDetailPage = lazy(
 const KecamatanTimVerifikasiPage = lazy(
   () => import("./pages/kecamatan/bankeu/KecamatanTimVerifikasiPage"),
 );
+const KecamatanPerubahanTimProposalPage = lazy(
+  () => import("./pages/kecamatan/bankeu-perubahan/KecamatanPerubahanTimProposalPage"),
+);
 const KecamatanSettings = lazy(
   () => import("./pages/kecamatan/KecamatanSettings"),
 );
@@ -1185,6 +1188,10 @@ function App() {
                   <Route
                     path="bankeu/tim-verifikasi/:desaId"
                     element={<KecamatanTimVerifikasiPage />}
+                  />
+                  <Route
+                    path="bankeu-perubahan/tim-verifikasi/:desaId"
+                    element={<KecamatanPerubahanTimProposalPage />}
                   />
                   <Route path="kelembagaan" element={<KecamatanKelembagaanPage />} />
                   <Route
