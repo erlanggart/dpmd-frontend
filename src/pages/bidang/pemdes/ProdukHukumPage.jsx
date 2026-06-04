@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
 	Search,
@@ -14,26 +14,25 @@ import {
 	ChevronLeft,
 	ChevronRight,
 	Scale,
+	Plus,
+	X,
+	Upload,
+	MapPin,
+	Building2,
 } from 'lucide-react';
 import {
-	PieChart,
-	Pie,
-	Cell,
-	ResponsiveContainer,
-	Legend as RechartsLegend,
-	Tooltip as RechartsTooltip,
-	BarChart,
-	Bar,
-	XAxis,
-	YAxis,
-	CartesianGrid,
+	PieChart, Pie, Cell, ResponsiveContainer,
+	Legend as RechartsLegend, Tooltip as RechartsTooltip,
+	BarChart, Bar, XAxis, YAxis, CartesianGrid,
 } from 'recharts';
 import api from '../../../api';
 import toast from 'react-hot-toast';
+import { useAuth } from '../../../context/AuthContext';
 
 const JENIS_COLORS = ['#3b82f6', '#f59e0b', '#22c55e'];
 const STATUS_COLORS = ['#22c55e', '#ef4444'];
 const TAHUN_COLORS = ['#6366f1', '#8b5cf6', '#a78bfa', '#c4b5fd', '#818cf8', '#6366f1', '#4f46e5', '#4338ca', '#3730a3', '#312e81'];
+const LS_KEY = 'admin_ph_selected_desa';
 
 const RADIAN = Math.PI / 180;
 const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
@@ -48,74 +47,353 @@ const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent
 	);
 };
 
+const getTodayDate = () => new Date().toISOString().split('T')[0];
+
+const JENIS_OPTIONS = [
+	{ value: 'Peraturan Desa', label: 'Peraturan Desa', singkatan: 'PERDES' },
+	{ value: 'Peraturan Kepala Desa', label: 'Peraturan Kepala Desa', singkatan: 'PERKADES' },
+	{ value: 'Keputusan Kepala Desa', label: 'Keputusan Kepala Desa', singkatan: 'SK_KADES' },
+];
+
+const EMPTY_FORM = {
+	judul: '', nomor: '', tahun: '', jenis: 'Peraturan Desa', singkatan_jenis: 'PERDES',
+	tempat_penetapan: '', tanggal_penetapan: getTodayDate(),
+	sumber: '', subjek: '', status_peraturan: 'berlaku', keterangan_status: '',
+};
+
+// ── Modal Tambah Produk Hukum ────────────────────────────────────────────────
+const TambahModal = ({ open, onClose, onSuccess, kecamatanList }) => {
+	const fileRef = useRef(null);
+
+	// Desa selection — baca dari localStorage
+	const [sel, setSel] = useState(() => {
+		try { return JSON.parse(localStorage.getItem(LS_KEY)) || { kecamatan_id: '', kecamatan_nama: '', desa_id: '', desa_nama: '' };
+		} catch { return { kecamatan_id: '', kecamatan_nama: '', desa_id: '', desa_nama: '' }; }
+	});
+	const [desaList, setDesaList] = useState([]);
+	const [loadingDesa, setLoadingDesa] = useState(false);
+
+	// Form state
+	const [form, setForm] = useState(EMPTY_FORM);
+	const [file, setFile] = useState(null);
+	const [submitting, setSubmitting] = useState(false);
+	const [errors, setErrors] = useState({});
+
+	// Load desa when kecamatan selected
+	useEffect(() => {
+		if (!sel.kecamatan_id) { setDesaList([]); return; }
+		setLoadingDesa(true);
+		api.get(`/desas/kecamatan/${sel.kecamatan_id}`)
+			.then(r => setDesaList(r.data.data || []))
+			.catch(() => setDesaList([]))
+			.finally(() => setLoadingDesa(false));
+	}, [sel.kecamatan_id]);
+
+	// Auto-singkatan from jenis
+	useEffect(() => {
+		const found = JENIS_OPTIONS.find(j => j.value === form.jenis);
+		if (found) setForm(f => ({ ...f, singkatan_jenis: found.singkatan }));
+	}, [form.jenis]);
+
+	const saveSel = (next) => {
+		setSel(next);
+		localStorage.setItem(LS_KEY, JSON.stringify(next));
+	};
+
+	const handleKecamatanChange = (e) => {
+		const id = e.target.value;
+		const nama = kecamatanList.find(k => String(k.id) === id)?.nama || '';
+		saveSel({ kecamatan_id: id, kecamatan_nama: nama, desa_id: '', desa_nama: '' });
+	};
+
+	const handleDesaChange = (e) => {
+		const id = e.target.value;
+		const nama = desaList.find(d => String(d.id) === id)?.nama || '';
+		saveSel({ ...sel, desa_id: id, desa_nama: nama });
+	};
+
+	const handleField = (e) => {
+		const { name, value } = e.target;
+		setForm(f => ({ ...f, [name]: value }));
+		if (errors[name]) setErrors(er => ({ ...er, [name]: null }));
+	};
+
+	const validate = () => {
+		const err = {};
+		if (!sel.desa_id) err.desa = 'Pilih desa terlebih dahulu';
+		if (!form.judul.trim()) err.judul = 'Judul wajib diisi';
+		if (!form.nomor.trim()) err.nomor = 'Nomor wajib diisi';
+		if (!form.tahun || !/^\d{4}$/.test(form.tahun)) err.tahun = 'Tahun harus 4 digit angka';
+		if (!form.tempat_penetapan.trim()) err.tempat_penetapan = 'Tempat penetapan wajib diisi';
+		if (!form.tanggal_penetapan) err.tanggal_penetapan = 'Tanggal penetapan wajib diisi';
+		setErrors(err);
+		return Object.keys(err).length === 0;
+	};
+
+	const handleSubmit = async (e) => {
+		e.preventDefault();
+		if (!validate()) return;
+		setSubmitting(true);
+		try {
+			const fd = new FormData();
+			Object.entries(form).forEach(([k, v]) => fd.append(k, v ?? ''));
+			if (file) fd.append('file', file);
+			await api.post(`/produk-hukum?desa_id=${sel.desa_id}`, fd, {
+				headers: { 'Content-Type': 'multipart/form-data' },
+			});
+			toast.success(`Produk hukum berhasil ditambahkan untuk ${sel.desa_nama}`);
+			// Reset form tapi PERTAHANKAN pilihan desa/kecamatan di localStorage
+			setForm(EMPTY_FORM);
+			setFile(null);
+			if (fileRef.current) fileRef.current.value = '';
+			setErrors({});
+			onSuccess();
+		} catch (err) {
+			const msg = err.response?.data?.message || 'Gagal menyimpan produk hukum';
+			toast.error(msg);
+		} finally {
+			setSubmitting(false);
+		}
+	};
+
+	if (!open) return null;
+
+	const desaSelected = !!sel.desa_id;
+
+	return (
+		<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={e => e.target === e.currentTarget && !submitting && onClose()}>
+			<div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+				{/* Header */}
+				<div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-teal-600 to-teal-700 rounded-t-2xl">
+					<div className="flex items-center gap-3">
+						<div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
+							<Scale className="w-4 h-4 text-white" />
+						</div>
+						<h3 className="text-base font-semibold text-white">Tambah Produk Hukum</h3>
+					</div>
+					<button onClick={onClose} disabled={submitting} className="text-white/70 hover:text-white p-1 rounded-lg hover:bg-white/10 transition">
+						<X className="w-5 h-5" />
+					</button>
+				</div>
+
+				<form onSubmit={handleSubmit} className="p-6 space-y-5">
+					{/* ── Pilihan Desa (tersimpan di localStorage) ── */}
+					<div className="bg-teal-50 border border-teal-200 rounded-xl p-4 space-y-3">
+						<p className="text-xs font-semibold text-teal-700 flex items-center gap-1.5 uppercase tracking-wide">
+							<MapPin className="w-3.5 h-3.5" />
+							Pilih Desa — tersimpan otomatis
+						</p>
+						<div className="grid grid-cols-2 gap-3">
+							<div>
+								<label className="block text-xs font-medium text-gray-600 mb-1">Kecamatan <span className="text-red-500">*</span></label>
+								<select
+									value={sel.kecamatan_id}
+									onChange={handleKecamatanChange}
+									className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
+								>
+									<option value="">-- Pilih Kecamatan --</option>
+									{kecamatanList.map(k => (
+										<option key={k.id} value={k.id}>{k.nama}</option>
+									))}
+								</select>
+							</div>
+							<div>
+								<label className="block text-xs font-medium text-gray-600 mb-1">Desa <span className="text-red-500">*</span></label>
+								<select
+									value={sel.desa_id}
+									onChange={handleDesaChange}
+									disabled={!sel.kecamatan_id || loadingDesa}
+									className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white disabled:bg-gray-50 disabled:text-gray-400"
+								>
+									<option value="">{loadingDesa ? 'Memuat...' : '-- Pilih Desa --'}</option>
+									{desaList.map(d => (
+										<option key={d.id} value={d.id}>{d.nama}</option>
+									))}
+								</select>
+								{errors.desa && <p className="text-red-500 text-xs mt-1">{errors.desa}</p>}
+							</div>
+						</div>
+						{desaSelected && (
+							<div className="flex items-center gap-2 text-xs text-teal-700 bg-teal-100 rounded-lg px-3 py-2">
+								<Building2 className="w-3.5 h-3.5 flex-shrink-0" />
+								<span>Input akan disimpan untuk: <strong>{sel.desa_nama}</strong> · Kec. {sel.kecamatan_nama}</span>
+							</div>
+						)}
+					</div>
+
+					{/* ── Form fields — hanya tampil jika desa sudah dipilih ── */}
+					{desaSelected ? (
+						<>
+							{/* Judul */}
+							<div>
+								<label className="block text-sm font-medium text-gray-700 mb-1">Judul <span className="text-red-500">*</span></label>
+								<input name="judul" value={form.judul} onChange={handleField}
+									placeholder="Judul produk hukum"
+									className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent ${errors.judul ? 'border-red-400 bg-red-50' : 'border-gray-300'}`} />
+								{errors.judul && <p className="text-red-500 text-xs mt-1">{errors.judul}</p>}
+							</div>
+
+							{/* Nomor + Tahun */}
+							<div className="grid grid-cols-2 gap-3">
+								<div>
+									<label className="block text-sm font-medium text-gray-700 mb-1">Nomor <span className="text-red-500">*</span></label>
+									<input name="nomor" value={form.nomor} onChange={handleField}
+										placeholder="contoh: 01/2024"
+										className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent ${errors.nomor ? 'border-red-400 bg-red-50' : 'border-gray-300'}`} />
+									{errors.nomor && <p className="text-red-500 text-xs mt-1">{errors.nomor}</p>}
+								</div>
+								<div>
+									<label className="block text-sm font-medium text-gray-700 mb-1">Tahun <span className="text-red-500">*</span></label>
+									<input name="tahun" value={form.tahun} onChange={handleField}
+										placeholder="2024" maxLength={4}
+										className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent ${errors.tahun ? 'border-red-400 bg-red-50' : 'border-gray-300'}`} />
+									{errors.tahun && <p className="text-red-500 text-xs mt-1">{errors.tahun}</p>}
+								</div>
+							</div>
+
+							{/* Jenis */}
+							<div>
+								<label className="block text-sm font-medium text-gray-700 mb-1">Jenis <span className="text-red-500">*</span></label>
+								<select name="jenis" value={form.jenis} onChange={handleField}
+									className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent">
+									{JENIS_OPTIONS.map(j => <option key={j.value} value={j.value}>{j.label} ({j.singkatan})</option>)}
+								</select>
+							</div>
+
+							{/* Tempat + Tanggal Penetapan */}
+							<div className="grid grid-cols-2 gap-3">
+								<div>
+									<label className="block text-sm font-medium text-gray-700 mb-1">Tempat Penetapan <span className="text-red-500">*</span></label>
+									<input name="tempat_penetapan" value={form.tempat_penetapan} onChange={handleField}
+										placeholder="Nama tempat"
+										className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent ${errors.tempat_penetapan ? 'border-red-400 bg-red-50' : 'border-gray-300'}`} />
+									{errors.tempat_penetapan && <p className="text-red-500 text-xs mt-1">{errors.tempat_penetapan}</p>}
+								</div>
+								<div>
+									<label className="block text-sm font-medium text-gray-700 mb-1">Tanggal Penetapan <span className="text-red-500">*</span></label>
+									<input type="date" name="tanggal_penetapan" value={form.tanggal_penetapan} onChange={handleField}
+										className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent ${errors.tanggal_penetapan ? 'border-red-400 bg-red-50' : 'border-gray-300'}`} />
+									{errors.tanggal_penetapan && <p className="text-red-500 text-xs mt-1">{errors.tanggal_penetapan}</p>}
+								</div>
+							</div>
+
+							{/* Subjek + Sumber */}
+							<div className="grid grid-cols-2 gap-3">
+								<div>
+									<label className="block text-sm font-medium text-gray-700 mb-1">Subjek</label>
+									<input name="subjek" value={form.subjek} onChange={handleField}
+										placeholder="Subjek (opsional)"
+										className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
+								</div>
+								<div>
+									<label className="block text-sm font-medium text-gray-700 mb-1">Sumber</label>
+									<input name="sumber" value={form.sumber} onChange={handleField}
+										placeholder="Sumber (opsional)"
+										className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
+								</div>
+							</div>
+
+							{/* Status */}
+							<div>
+								<label className="block text-sm font-medium text-gray-700 mb-1">Status Peraturan</label>
+								<select name="status_peraturan" value={form.status_peraturan} onChange={handleField}
+									className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent">
+									<option value="berlaku">Berlaku</option>
+									<option value="dicabut">Dicabut</option>
+								</select>
+							</div>
+
+							{/* File PDF */}
+							<div>
+								<label className="block text-sm font-medium text-gray-700 mb-1">File PDF <span className="text-gray-400 font-normal">(opsional, maks 10MB)</span></label>
+								<label className={`flex items-center gap-3 px-4 py-3 border-2 border-dashed rounded-lg cursor-pointer transition ${file ? 'border-teal-400 bg-teal-50' : 'border-gray-300 hover:border-teal-400 hover:bg-teal-50'}`}>
+									<Upload className={`w-4 h-4 flex-shrink-0 ${file ? 'text-teal-600' : 'text-gray-400'}`} />
+									<span className={`text-sm truncate ${file ? 'text-teal-700 font-medium' : 'text-gray-500'}`}>
+										{file ? file.name : 'Pilih file PDF...'}
+									</span>
+									<input ref={fileRef} type="file" accept=".pdf" className="hidden"
+										onChange={e => setFile(e.target.files[0] || null)} />
+								</label>
+								{file && (
+									<button type="button" onClick={() => { setFile(null); if (fileRef.current) fileRef.current.value = ''; }}
+										className="mt-1 text-xs text-red-500 hover:underline">Hapus file</button>
+								)}
+							</div>
+
+							{/* Buttons */}
+							<div className="flex gap-3 pt-2 border-t border-gray-100">
+								<button type="button" onClick={onClose} disabled={submitting}
+									className="flex-1 px-4 py-2 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition">
+									Batal
+								</button>
+								<button type="submit" disabled={submitting}
+									className="flex-1 px-4 py-2 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 transition flex items-center justify-center gap-2">
+									{submitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Menyimpan...</> : <><Plus className="w-4 h-4" /> Simpan & Input Lagi</>}
+								</button>
+							</div>
+						</>
+					) : (
+						<div className="text-center py-8 text-gray-400 text-sm">
+							<MapPin className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+							Pilih kecamatan dan desa untuk mulai input
+						</div>
+					)}
+				</form>
+			</div>
+		</div>
+	);
+};
+
+// ── Main Page ─────────────────────────────────────────────────────────────────
 const ProdukHukumPage = ({ detailBasePath = '/pemdes/produk-hukum' }) => {
 	const navigate = useNavigate();
+	const { isSuperAdmin, isAdminBidangPMD, user } = useAuth();
+
+	const isAdmin = isSuperAdmin?.() || isAdminBidangPMD?.() ||
+		['kepala_dinas', 'ketua_tim', 'bendahara', 'sekretaris_dinas'].includes(user?.role);
+
 	const [loading, setLoading] = useState(true);
 	const [data, setData] = useState([]);
 	const [stats, setStats] = useState(null);
 	const [pagination, setPagination] = useState({ page: 1, limit: 20, totalPages: 1, totalItems: 0 });
 	const [filters, setFilters] = useState({
-		search: '',
-		kecamatan_id: '',
-		desa_id: '',
-		singkatan_jenis: '',
-		tahun: '',
-		status_peraturan: '',
+		search: '', kecamatan_id: '', desa_id: '', singkatan_jenis: '', tahun: '', status_peraturan: '',
 	});
 	const [kecamatanList, setKecamatanList] = useState([]);
 	const [desaList, setDesaList] = useState([]);
 	const [showFilters, setShowFilters] = useState(false);
+	const [showTambah, setShowTambah] = useState(false);
 
 	useEffect(() => {
 		fetchKecamatanList();
 		fetchStats();
 	}, []);
 
-	useEffect(() => {
-		fetchData();
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [pagination.page, filters]);
+	useEffect(() => { fetchData(); }, [pagination.page, filters]); // eslint-disable-line
 
 	useEffect(() => {
 		if (filters.kecamatan_id) {
-			fetchDesaByKecamatan(filters.kecamatan_id);
+			api.get(`/desas/kecamatan/${filters.kecamatan_id}`)
+				.then(r => setDesaList(r.data.data || []))
+				.catch(() => setDesaList([]));
 		} else {
 			setDesaList([]);
-			setFilters((prev) => ({ ...prev, desa_id: '' }));
+			setFilters(p => ({ ...p, desa_id: '' }));
 		}
 	}, [filters.kecamatan_id]);
 
 	const fetchKecamatanList = async () => {
 		try {
-			const response = await api.get('/kecamatans');
-			if (response.data.success) {
-				setKecamatanList(response.data.data || []);
-			}
-		} catch (error) {
-			console.error('Failed to fetch kecamatan:', error);
-		}
-	};
-
-	const fetchDesaByKecamatan = async (kecamatanId) => {
-		try {
-			const response = await api.get(`/desas/kecamatan/${kecamatanId}`);
-			if (response.data.success) {
-				setDesaList(response.data.data || []);
-			}
-		} catch (error) {
-			console.error('Failed to fetch desa:', error);
-		}
+			const r = await api.get('/kecamatans');
+			if (r.data.success) setKecamatanList(r.data.data || []);
+		} catch (e) { console.error(e); }
 	};
 
 	const fetchStats = async () => {
 		try {
-			const response = await api.get('/pemdes/produk-hukum/stats');
-			if (response.data.success) {
-				setStats(response.data.data);
-			}
-		} catch (error) {
-			console.error('Failed to fetch stats:', error);
-		}
+			const r = await api.get('/pemdes/produk-hukum/stats');
+			if (r.data.success) setStats(r.data.data);
+		} catch (e) { console.error(e); }
 	};
 
 	const fetchData = async () => {
@@ -130,185 +408,110 @@ const ProdukHukumPage = ({ detailBasePath = '/pemdes/produk-hukum' }) => {
 			if (filters.status_peraturan) params.append('status_peraturan', filters.status_peraturan);
 			params.append('page', pagination.page);
 			params.append('limit', pagination.limit);
-
-			const response = await api.get(`/pemdes/produk-hukum?${params.toString()}`);
-			if (response.data.success) {
-				setData(response.data.data || []);
-				if (response.data.pagination) {
-					setPagination((prev) => ({
-						...prev,
-						totalPages: response.data.pagination.totalPages || 1,
-						totalItems: response.data.pagination.totalItems || 0,
-					}));
-				}
+			const r = await api.get(`/pemdes/produk-hukum?${params.toString()}`);
+			if (r.data.success) {
+				setData(r.data.data || []);
+				if (r.data.pagination) setPagination(p => ({ ...p, totalPages: r.data.pagination.totalPages || 1, totalItems: r.data.pagination.totalItems || 0 }));
 			}
-		} catch (error) {
-			console.error('Failed to fetch produk hukum:', error);
+		} catch (e) {
+			console.error(e);
 			toast.error('Gagal memuat data produk hukum');
 		} finally {
 			setLoading(false);
 		}
 	};
 
-	const handleSearch = (e) => {
-		e.preventDefault();
-		setPagination((prev) => ({ ...prev, page: 1 }));
-	};
-
 	const handleFilterChange = (key, value) => {
-		setFilters((prev) => ({ ...prev, [key]: value }));
-		setPagination((prev) => ({ ...prev, page: 1 }));
+		setFilters(p => ({ ...p, [key]: value }));
+		setPagination(p => ({ ...p, page: 1 }));
 	};
 
 	const resetFilters = () => {
 		setFilters({ search: '', kecamatan_id: '', desa_id: '', singkatan_jenis: '', tahun: '', status_peraturan: '' });
-		setPagination((prev) => ({ ...prev, page: 1 }));
+		setPagination(p => ({ ...p, page: 1 }));
 	};
 
-	const viewDetail = (item) => {
-		navigate(`${detailBasePath}/${item.id}`);
-	};
-
-	const getJenisLabel = (singkatan) => {
-		const map = { PERDES: 'Peraturan Desa', PERKADES: 'Peraturan Kepala Desa', SK_KADES: 'SK Kepala Desa' };
-		return map[singkatan] || singkatan;
-	};
-
-	const getJenisBadgeColor = (singkatan) => {
-		const map = {
-			PERDES: 'bg-blue-100 text-blue-700',
-			PERKADES: 'bg-amber-100 text-amber-700',
-			SK_KADES: 'bg-green-100 text-green-700',
-		};
-		return map[singkatan] || 'bg-gray-100 text-gray-700';
-	};
+	const getJenisLabel = (s) => ({ PERDES: 'Peraturan Desa', PERKADES: 'Peraturan Kepala Desa', SK_KADES: 'SK Kepala Desa' }[s] || s);
+	const getJenisBadgeColor = (s) => ({ PERDES: 'bg-blue-100 text-blue-700', PERKADES: 'bg-amber-100 text-amber-700', SK_KADES: 'bg-green-100 text-green-700' }[s] || 'bg-gray-100 text-gray-700');
 
 	return (
 		<div className="min-h-screen p-8">
 			{/* Header */}
 			<div className="bg-gradient-to-r from-teal-600 to-teal-700 rounded-xl p-6 mb-6 text-white">
-				<div className="flex items-center gap-3 mb-2">
-					<Scale className="h-7 w-7" />
-					<h1 className="text-2xl font-bold">Produk Hukum Desa</h1>
+				<div className="flex items-center justify-between">
+					<div className="flex items-center gap-3">
+						<Scale className="h-7 w-7" />
+						<div>
+							<h1 className="text-2xl font-bold">Produk Hukum Desa</h1>
+							<p className="text-teal-100 mt-0.5 text-sm">Data produk hukum dari seluruh desa</p>
+						</div>
+					</div>
+					{isAdmin && (
+						<button onClick={() => setShowTambah(true)}
+							className="flex items-center gap-2 px-4 py-2 bg-white text-teal-700 rounded-lg font-medium text-sm hover:bg-teal-50 transition shadow-sm">
+							<Plus className="w-4 h-4" />
+							Tambah Produk Hukum
+						</button>
+					)}
 				</div>
-				<p className="text-teal-100 mt-1">Data produk hukum dari seluruh desa</p>
 			</div>
 
 			{/* Stats Cards */}
 			{stats && (
 				<>
 					<div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-						<div className="bg-white rounded-xl border border-gray-200 p-4">
-							<div className="flex items-center gap-3">
-								<div className="h-10 w-10 bg-blue-100 rounded-lg flex items-center justify-center">
-									<FileText className="h-5 w-5 text-blue-600" />
-								</div>
-								<div>
-									<p className="text-xs text-gray-500">Total Produk Hukum</p>
-									<p className="text-2xl font-bold text-gray-900">{stats.total}</p>
-								</div>
-							</div>
-						</div>
-						<div className="bg-white rounded-xl border border-gray-200 p-4">
-							<div className="flex items-center gap-3">
-								<div className="h-10 w-10 bg-green-100 rounded-lg flex items-center justify-center">
-									<CheckCircle className="h-5 w-5 text-green-600" />
-								</div>
-								<div>
-									<p className="text-xs text-gray-500">Berlaku</p>
-									<p className="text-2xl font-bold text-green-700">{stats.berlaku}</p>
+						{[
+							{ label: 'Total Produk Hukum', value: stats.total, icon: FileText, cls: 'bg-blue-100 text-blue-600' },
+							{ label: 'Berlaku', value: stats.berlaku, icon: CheckCircle, cls: 'bg-green-100 text-green-600', textCls: 'text-green-700' },
+							{ label: 'Dicabut', value: stats.dicabut, icon: XCircle, cls: 'bg-red-100 text-red-600', textCls: 'text-red-700' },
+							{ label: 'Jenis', value: stats.jenis?.length || 0, icon: Scale, cls: 'bg-purple-100 text-purple-600', textCls: 'text-purple-700' },
+						].map(({ label, value, icon: Icon, cls, textCls }) => (
+							<div key={label} className="bg-white rounded-xl border border-gray-200 p-4">
+								<div className="flex items-center gap-3">
+									<div className={`h-10 w-10 rounded-lg flex items-center justify-center ${cls}`}>
+										<Icon className="h-5 w-5" />
+									</div>
+									<div>
+										<p className="text-xs text-gray-500">{label}</p>
+										<p className={`text-2xl font-bold ${textCls || 'text-gray-900'}`}>{value}</p>
+									</div>
 								</div>
 							</div>
-						</div>
-						<div className="bg-white rounded-xl border border-gray-200 p-4">
-							<div className="flex items-center gap-3">
-								<div className="h-10 w-10 bg-red-100 rounded-lg flex items-center justify-center">
-									<XCircle className="h-5 w-5 text-red-600" />
-								</div>
-								<div>
-									<p className="text-xs text-gray-500">Dicabut</p>
-									<p className="text-2xl font-bold text-red-700">{stats.dicabut}</p>
-								</div>
-							</div>
-						</div>
-						<div className="bg-white rounded-xl border border-gray-200 p-4">
-							<div className="flex items-center gap-3">
-								<div className="h-10 w-10 bg-purple-100 rounded-lg flex items-center justify-center">
-									<Scale className="h-5 w-5 text-purple-600" />
-								</div>
-								<div>
-									<p className="text-xs text-gray-500">Jenis</p>
-									<p className="text-2xl font-bold text-purple-700">{stats.jenis?.length || 0}</p>
-								</div>
-							</div>
-						</div>
+						))}
 					</div>
 
 					{/* Charts */}
 					<div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-						{/* Pie Chart - Jenis */}
 						<div className="bg-white rounded-xl border border-gray-200 p-4">
 							<h3 className="text-sm font-semibold text-gray-700 mb-3">Distribusi Jenis Produk Hukum</h3>
 							{stats.jenis?.length > 0 ? (
 								<ResponsiveContainer width="100%" height={250}>
 									<PieChart>
-										<Pie
-											data={stats.jenis}
-											cx="50%"
-											cy="50%"
-											outerRadius={90}
-											dataKey="value"
-											nameKey="name"
-											labelLine={false}
-											label={renderCustomLabel}
-										>
-											{stats.jenis.map((_, index) => (
-												<Cell key={`cell-jenis-${index}`} fill={JENIS_COLORS[index % JENIS_COLORS.length]} />
-											))}
+										<Pie data={stats.jenis} cx="50%" cy="50%" outerRadius={90} dataKey="value" nameKey="name" labelLine={false} label={renderCustomLabel}>
+											{stats.jenis.map((_, i) => <Cell key={i} fill={JENIS_COLORS[i % JENIS_COLORS.length]} />)}
 										</Pie>
-										<RechartsTooltip formatter={(value, name) => [value, getJenisLabel(name)]} />
-										<RechartsLegend
-											formatter={(value) => getJenisLabel(value)}
-											wrapperStyle={{ fontSize: '12px' }}
-										/>
+										<RechartsTooltip formatter={(v, n) => [v, getJenisLabel(n)]} />
+										<RechartsLegend formatter={v => getJenisLabel(v)} wrapperStyle={{ fontSize: '12px' }} />
 									</PieChart>
 								</ResponsiveContainer>
-							) : (
-								<p className="text-gray-400 text-sm text-center py-10">Tidak ada data</p>
-							)}
+							) : <p className="text-gray-400 text-sm text-center py-10">Tidak ada data</p>}
 						</div>
 
-						{/* Doughnut Chart - Status */}
 						<div className="bg-white rounded-xl border border-gray-200 p-4">
 							<h3 className="text-sm font-semibold text-gray-700 mb-3">Status Peraturan</h3>
 							{stats.status?.length > 0 ? (
 								<ResponsiveContainer width="100%" height={250}>
 									<PieChart>
-										<Pie
-											data={stats.status}
-											cx="50%"
-											cy="50%"
-											innerRadius={50}
-											outerRadius={90}
-											dataKey="value"
-											nameKey="name"
-											labelLine={false}
-											label={renderCustomLabel}
-										>
-											{stats.status.map((_, index) => (
-												<Cell key={`cell-status-${index}`} fill={STATUS_COLORS[index % STATUS_COLORS.length]} />
-											))}
+										<Pie data={stats.status} cx="50%" cy="50%" innerRadius={50} outerRadius={90} dataKey="value" nameKey="name" labelLine={false} label={renderCustomLabel}>
+											{stats.status.map((_, i) => <Cell key={i} fill={STATUS_COLORS[i % STATUS_COLORS.length]} />)}
 										</Pie>
 										<RechartsTooltip />
 										<RechartsLegend wrapperStyle={{ fontSize: '12px' }} />
 									</PieChart>
 								</ResponsiveContainer>
-							) : (
-								<p className="text-gray-400 text-sm text-center py-10">Tidak ada data</p>
-							)}
+							) : <p className="text-gray-400 text-sm text-center py-10">Tidak ada data</p>}
 						</div>
 
-						{/* Bar Chart - Per Tahun */}
 						<div className="bg-white rounded-xl border border-gray-200 p-4">
 							<h3 className="text-sm font-semibold text-gray-700 mb-3">Produk Hukum per Tahun</h3>
 							{stats.tahun?.length > 0 ? (
@@ -319,15 +522,11 @@ const ProdukHukumPage = ({ detailBasePath = '/pemdes/produk-hukum' }) => {
 										<YAxis type="category" dataKey="name" width={50} tick={{ fontSize: 11 }} />
 										<RechartsTooltip />
 										<Bar dataKey="value" name="Jumlah" radius={[0, 4, 4, 0]}>
-											{stats.tahun.map((_, index) => (
-												<Cell key={`cell-tahun-${index}`} fill={TAHUN_COLORS[index % TAHUN_COLORS.length]} />
-											))}
+											{stats.tahun.map((_, i) => <Cell key={i} fill={TAHUN_COLORS[i % TAHUN_COLORS.length]} />)}
 										</Bar>
 									</BarChart>
 								</ResponsiveContainer>
-							) : (
-								<p className="text-gray-400 text-sm text-center py-10">Tidak ada data</p>
-							)}
+							) : <p className="text-gray-400 text-sm text-center py-10">Tidak ada data</p>}
 						</div>
 					</div>
 				</>
@@ -335,94 +534,53 @@ const ProdukHukumPage = ({ detailBasePath = '/pemdes/produk-hukum' }) => {
 
 			{/* Search & Filters */}
 			<div className="bg-white rounded-xl border border-gray-200 p-4 mb-6">
-				<form onSubmit={handleSearch} className="flex gap-3 mb-3">
+				<form onSubmit={e => { e.preventDefault(); setPagination(p => ({ ...p, page: 1 })); }} className="flex gap-3 mb-3">
 					<div className="relative flex-1">
-						<Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-						<input
-							type="text"
-							value={filters.search}
-							onChange={(e) => handleFilterChange('search', e.target.value)}
+						<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+						<input type="text" value={filters.search} onChange={e => handleFilterChange('search', e.target.value)}
 							placeholder="Cari judul, nomor, atau subjek..."
-							className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-						/>
+							className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
 					</div>
-					<button
-						type="button"
-						onClick={() => setShowFilters(!showFilters)}
-						className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm border transition ${
-							showFilters ? 'bg-teal-50 border-teal-300 text-teal-700' : 'border-gray-300 text-gray-600 hover:bg-gray-50'
-						}`}
-					>
-						<Filter className="h-4 w-4" />
-						Filter
+					<button type="button" onClick={() => setShowFilters(!showFilters)}
+						className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm border transition ${showFilters ? 'bg-teal-50 border-teal-300 text-teal-700' : 'border-gray-300 text-gray-600 hover:bg-gray-50'}`}>
+						<Filter className="h-4 w-4" />Filter
 						<ChevronDown className={`h-4 w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
 					</button>
-					<button
-						type="button"
-						onClick={() => {
-							resetFilters();
-							fetchStats();
-						}}
-						className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm border border-gray-300 text-gray-600 hover:bg-gray-50"
-					>
-						<RefreshCw className="h-4 w-4" />
-						Reset
+					<button type="button" onClick={() => { resetFilters(); fetchStats(); }}
+						className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm border border-gray-300 text-gray-600 hover:bg-gray-50">
+						<RefreshCw className="h-4 w-4" />Reset
 					</button>
 				</form>
 
 				{showFilters && (
 					<div className="grid grid-cols-2 md:grid-cols-5 gap-3 pt-3 border-t border-gray-200">
-						<select
-							value={filters.kecamatan_id}
-							onChange={(e) => handleFilterChange('kecamatan_id', e.target.value)}
-							className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500"
-						>
+						<select value={filters.kecamatan_id} onChange={e => handleFilterChange('kecamatan_id', e.target.value)}
+							className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500">
 							<option value="">Semua Kecamatan</option>
-							{kecamatanList.map((k) => (
-								<option key={k.id} value={k.id}>
-									{k.nama}
-								</option>
-							))}
+							{kecamatanList.map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}
 						</select>
-						<select
-							value={filters.desa_id}
-							onChange={(e) => handleFilterChange('desa_id', e.target.value)}
-							className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500"
+						<select value={filters.desa_id} onChange={e => handleFilterChange('desa_id', e.target.value)}
 							disabled={!filters.kecamatan_id}
-						>
+							className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500">
 							<option value="">Semua Desa</option>
-							{desaList.map((d) => (
-								<option key={d.id} value={d.id}>
-									{d.nama}
-								</option>
-							))}
+							{desaList.map(d => <option key={d.id} value={d.id}>{d.nama}</option>)}
 						</select>
-						<select
-							value={filters.singkatan_jenis}
-							onChange={(e) => handleFilterChange('singkatan_jenis', e.target.value)}
-							className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500"
-						>
+						<select value={filters.singkatan_jenis} onChange={e => handleFilterChange('singkatan_jenis', e.target.value)}
+							className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500">
 							<option value="">Semua Jenis</option>
 							<option value="PERDES">PERDES</option>
 							<option value="PERKADES">PERKADES</option>
 							<option value="SK_KADES">SK KADES</option>
 						</select>
-						<select
-							value={filters.status_peraturan}
-							onChange={(e) => handleFilterChange('status_peraturan', e.target.value)}
-							className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500"
-						>
+						<select value={filters.status_peraturan} onChange={e => handleFilterChange('status_peraturan', e.target.value)}
+							className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500">
 							<option value="">Semua Status</option>
 							<option value="berlaku">Berlaku</option>
 							<option value="dicabut">Dicabut</option>
 						</select>
-						<input
-							type="number"
-							value={filters.tahun}
-							onChange={(e) => handleFilterChange('tahun', e.target.value)}
+						<input type="number" value={filters.tahun} onChange={e => handleFilterChange('tahun', e.target.value)}
 							placeholder="Tahun"
-							className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500"
-						/>
+							className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500" />
 					</div>
 				)}
 			</div>
@@ -431,8 +589,7 @@ const ProdukHukumPage = ({ detailBasePath = '/pemdes/produk-hukum' }) => {
 			<div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
 				<div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
 					<p className="text-sm text-gray-600">
-						Menampilkan <span className="font-semibold">{data.length}</span> dari{' '}
-						<span className="font-semibold">{pagination.totalItems}</span> produk hukum
+						Menampilkan <span className="font-semibold">{data.length}</span> dari <span className="font-semibold">{pagination.totalItems}</span> produk hukum
 					</p>
 				</div>
 
@@ -451,22 +608,15 @@ const ProdukHukumPage = ({ detailBasePath = '/pemdes/produk-hukum' }) => {
 						<table className="min-w-full divide-y divide-gray-200">
 							<thead className="bg-gray-50">
 								<tr>
-									<th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">No</th>
-									<th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Judul</th>
-									<th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nomor</th>
-									<th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Jenis</th>
-									<th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tahun</th>
-									<th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Desa</th>
-									<th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-									<th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Aksi</th>
+									{['No', 'Judul', 'Nomor', 'Jenis', 'Tahun', 'Desa', 'Status', 'Aksi'].map(h => (
+										<th key={h} className={`px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase ${h === 'Aksi' ? 'text-center' : ''}`}>{h}</th>
+									))}
 								</tr>
 							</thead>
 							<tbody className="bg-white divide-y divide-gray-200">
-								{data.map((item, index) => (
+								{data.map((item, i) => (
 									<tr key={item.id} className="hover:bg-gray-50">
-										<td className="px-4 py-3 text-sm text-gray-500">
-											{(pagination.page - 1) * pagination.limit + index + 1}
-										</td>
+										<td className="px-4 py-3 text-sm text-gray-500">{(pagination.page - 1) * pagination.limit + i + 1}</td>
 										<td className="px-4 py-3 text-sm text-gray-900 max-w-xs truncate">{item.judul}</td>
 										<td className="px-4 py-3 text-sm text-gray-600">{item.nomor}</td>
 										<td className="px-4 py-3">
@@ -476,29 +626,18 @@ const ProdukHukumPage = ({ detailBasePath = '/pemdes/produk-hukum' }) => {
 										</td>
 										<td className="px-4 py-3 text-sm text-gray-600">{item.tahun}</td>
 										<td className="px-4 py-3 text-sm text-gray-600">
-											<div>
-												<p className="font-medium">{item.desa?.nama || '-'}</p>
-												<p className="text-xs text-gray-400">{item.desa?.kecamatan?.nama || ''}</p>
-											</div>
+											<p className="font-medium">{item.desa?.nama || '-'}</p>
+											<p className="text-xs text-gray-400">{item.desa?.kecamatan?.nama || ''}</p>
 										</td>
 										<td className="px-4 py-3">
-											<span
-												className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-													item.status_peraturan === 'berlaku'
-														? 'bg-green-100 text-green-700'
-														: 'bg-red-100 text-red-700'
-												}`}
-											>
+											<span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${item.status_peraturan === 'berlaku' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
 												{item.status_peraturan === 'berlaku' ? 'Berlaku' : 'Dicabut'}
 											</span>
 										</td>
 										<td className="px-4 py-3 text-center">
-											<button
-												onClick={() => viewDetail(item)}
-												className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-teal-700 bg-teal-50 rounded-lg hover:bg-teal-100 transition"
-											>
-												<Eye className="h-3.5 w-3.5" />
-												Detail
+											<button onClick={() => navigate(`${detailBasePath}/${item.id}`)}
+												className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-teal-700 bg-teal-50 rounded-lg hover:bg-teal-100 transition">
+												<Eye className="h-3.5 w-3.5" />Detail
 											</button>
 										</td>
 									</tr>
@@ -508,34 +647,30 @@ const ProdukHukumPage = ({ detailBasePath = '/pemdes/produk-hukum' }) => {
 					</div>
 				)}
 
-				{/* Pagination */}
 				{pagination.totalPages > 1 && (
 					<div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between">
-						<p className="text-sm text-gray-600">
-							Halaman {pagination.page} dari {pagination.totalPages}
-						</p>
+						<p className="text-sm text-gray-600">Halaman {pagination.page} dari {pagination.totalPages}</p>
 						<div className="flex gap-2">
-							<button
-								disabled={pagination.page <= 1}
-								onClick={() => setPagination((prev) => ({ ...prev, page: prev.page - 1 }))}
-								className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-							>
-								<ChevronLeft className="h-4 w-4" />
-								Prev
+							<button disabled={pagination.page <= 1} onClick={() => setPagination(p => ({ ...p, page: p.page - 1 }))}
+								className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+								<ChevronLeft className="h-4 w-4" />Prev
 							</button>
-							<button
-								disabled={pagination.page >= pagination.totalPages}
-								onClick={() => setPagination((prev) => ({ ...prev, page: prev.page + 1 }))}
-								className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-							>
-								Next
-								<ChevronRight className="h-4 w-4" />
+							<button disabled={pagination.page >= pagination.totalPages} onClick={() => setPagination(p => ({ ...p, page: p.page + 1 }))}
+								className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+								Next<ChevronRight className="h-4 w-4" />
 							</button>
 						</div>
 					</div>
 				)}
 			</div>
 
+			{/* Modal Tambah */}
+			<TambahModal
+				open={showTambah}
+				onClose={() => setShowTambah(false)}
+				onSuccess={() => { fetchData(); fetchStats(); }}
+				kecamatanList={kecamatanList}
+			/>
 		</div>
 	);
 };
