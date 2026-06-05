@@ -23,6 +23,8 @@ export default function BankeuRevisionHistoryModal({ apiBase, proposalId, propos
   const [versions, setVersions] = useState([]);
   const [revisions, setRevisions] = useState([]);
   const [error, setError] = useState(null);
+  // Pratinjau PDF inline (popup) — { url, title } | null
+  const [preview, setPreview] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -37,7 +39,7 @@ export default function BankeuRevisionHistoryModal({ apiBase, proposalId, propos
         if (cancelled) return;
         setVersions(vRes.data?.data || []);
         setRevisions(rRes.data?.data || []);
-      } catch (e) {
+      } catch {
         if (!cancelled) setError('Gagal memuat riwayat dokumen.');
       } finally {
         if (!cancelled) setLoading(false);
@@ -94,10 +96,11 @@ export default function BankeuRevisionHistoryModal({ apiBase, proposalId, propos
                         <div className="flex items-center justify-between mt-2">
                           <span className="text-[10px] text-gray-500">oleh {r.annotated_by_name || '-'}</span>
                           {r.annotated_pdf_url ? (
-                            <a href={fullUrl(r.annotated_pdf_url)} target="_blank" rel="noopener noreferrer"
+                            <button type="button"
+                              onClick={() => setPreview({ url: fullUrl(r.annotated_pdf_url), title: `PDF Beranotasi · Revisi ke-${r.round_number}` })}
                               className="inline-flex items-center gap-1 px-2.5 py-1 bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold rounded-lg">
                               <LuFileText className="w-3.5 h-3.5" /> Lihat PDF Beranotasi
-                            </a>
+                            </button>
                           ) : (
                             <span className="text-[10px] text-gray-400 italic">Tanpa anotasi visual</span>
                           )}
@@ -125,10 +128,11 @@ export default function BankeuRevisionHistoryModal({ apiBase, proposalId, propos
                           <p className="text-[10px] text-gray-400">{fmtDate(v.created_at)} · {v.uploaded_by_name || '-'}</p>
                         </div>
                         {v.file_url && (
-                          <a href={fullUrl(v.file_url)} target="_blank" rel="noopener noreferrer"
+                          <button type="button"
+                            onClick={() => setPreview({ url: fullUrl(v.file_url), title: `Versi ${v.version_number} · ${SOURCE_LABEL[v.source] || v.source}` })}
                             className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-lg shrink-0">
                             <LuDownload className="w-3.5 h-3.5" /> Buka
-                          </a>
+                          </button>
                         )}
                       </div>
                     ))}
@@ -139,6 +143,32 @@ export default function BankeuRevisionHistoryModal({ apiBase, proposalId, propos
           )}
         </div>
       </div>
+
+      {/* Popup pratinjau PDF (inline, tanpa buka tab baru) */}
+      {preview && (
+        <div className="fixed inset-0 bg-black/70 z-[60] flex items-center justify-center p-4"
+          onClick={() => setPreview(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[92vh] flex flex-col overflow-hidden"
+            onClick={(e) => e.stopPropagation()}>
+            <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between shrink-0">
+              <h4 className="text-sm font-bold text-gray-800 flex items-center gap-2 min-w-0">
+                <LuFileText className="w-4 h-4 text-orange-600 shrink-0" />
+                <span className="truncate">{preview.title || 'Pratinjau PDF'}</span>
+              </h4>
+              <div className="flex items-center gap-1 shrink-0">
+                <a href={preview.url} target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-lg">
+                  <LuDownload className="w-3.5 h-3.5" /> Unduh
+                </a>
+                <button onClick={() => setPreview(null)} className="p-2 rounded-lg hover:bg-gray-100 text-gray-500">
+                  <LuX className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            <iframe src={preview.url} title={preview.title || 'Pratinjau PDF'} className="flex-1 w-full bg-gray-100" />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

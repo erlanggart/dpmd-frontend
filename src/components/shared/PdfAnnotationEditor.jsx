@@ -3,7 +3,7 @@ import * as pdfjsLib from 'pdfjs-dist';
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { Canvas as FabricCanvas, Rect, IText, PencilBrush } from 'fabric';
 import {
-  LuHighlighter, LuStrikethrough, LuSquare, LuType, LuPen, LuMousePointer2,
+  LuType, LuPen, LuMousePointer2,
   LuTrash2, LuChevronLeft, LuChevronRight, LuSave, LuLoader,
 } from 'react-icons/lu';
 
@@ -12,9 +12,6 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 const COLORS = ['#e53935', '#fb8c00', '#fdd835', '#43a047', '#1e88e5', '#000000'];
 const TOOLS = [
   { key: 'select', label: 'Pilih', icon: LuMousePointer2 },
-  { key: 'highlight', label: 'Highlight', icon: LuHighlighter },
-  { key: 'strike', label: 'Coret', icon: LuStrikethrough },
-  { key: 'rect', label: 'Kotak', icon: LuSquare },
   { key: 'text', label: 'Teks', icon: LuType },
   { key: 'draw', label: 'Gambar', icon: LuPen },
 ];
@@ -208,6 +205,15 @@ export default function PdfAnnotationEditor({
       selection: !readOnly,
     });
     fabricRef.current = fc;
+    // Fabric membungkus canvas overlay dalam <div.canvas-container> yang secara
+    // default berada di aliran normal (muncul DI BAWAH canvas PDF), sehingga area
+    // interaksi tidak pernah menumpuk di atas PDF dan anotasi tidak bisa digambar.
+    // Paksa wrapper menumpuk tepat di atas canvas PDF.
+    if (fc.wrapperEl) {
+      fc.wrapperEl.style.position = 'absolute';
+      fc.wrapperEl.style.top = '0';
+      fc.wrapperEl.style.left = '0';
+    }
     fc.freeDrawingBrush = new PencilBrush(fc);
 
     fc.on('path:created', (e) => {
@@ -244,7 +250,7 @@ export default function PdfAnnotationEditor({
         setPageNum(1);
         await renderPage(1);
         if (!cancelled) setLoading(false);
-      } catch (e) {
+      } catch {
         if (!cancelled) { setError('Gagal memuat PDF. Pastikan file tersedia.'); setLoading(false); }
       }
     })();
@@ -267,44 +273,53 @@ export default function PdfAnnotationEditor({
   useEffect(() => {
     const fc = fabricRef.current;
     if (!fc || readOnly) return;
+    const isSelect = tool === 'select';
     fc.isDrawingMode = tool === 'draw';
     if (tool === 'draw') {
       fc.freeDrawingBrush.color = color;
       fc.freeDrawingBrush.width = 2;
     }
-    fc.selection = tool === 'select';
-    fc.forEachObject((o) => { o.selectable = tool === 'select'; });
+    fc.selection = isSelect;
+    // Di mode anotasi (Teks/Highlight/Coret/Kotak), objek lama dibuat
+    // non-interaktif (evented:false) agar tidak "menangkap" klik — sehingga
+    // anotasi baru selalu bisa ditempatkan di mana saja, termasuk di atas
+    // coretan yg bounding box-nya besar. Di mode Pilih, objek interaktif lagi.
+    fc.forEachObject((o) => { o.selectable = isSelect; o.evented = isSelect; });
+    if (!isSelect) fc.discardActiveObject();
     fc.requestRenderAll();
   }, [tool, color, readOnly, pageNum, loading]);
 
-  // ---- Tambah objek dgn klik (untuk highlight/strike/rect/text) ----
+  // ---- Tambah teks dgn klik (mode "Teks") ----
   useEffect(() => {
     const fc = fabricRef.current;
     if (!fc || readOnly) return;
     const handler = (opt) => {
-      if (!['highlight', 'strike', 'rect', 'text'].includes(tool)) return;
-      if (opt.target) return; // klik di atas objek lain -> jangan buat baru
-      const p = fc.getPointer(opt.e);
-      if (tool === 'text') {
-        const txt = new IText('Tulis catatan...', {
-          left: p.x, top: p.y, fontSize: 16, fill: color, editable: true,
-        });
-        txt.annType = 'text';
-        fc.add(txt); fc.setActiveObject(txt); txt.enterEditing?.(); txt.selectAll?.();
-      } else {
-        const isHi = tool === 'highlight';
-        const rect = new Rect({
-          left: p.x, top: p.y,
-          width: 160, height: tool === 'strike' ? 22 : 40,
-          fill: isHi ? hexA(color, 0.35) : 'transparent',
-          stroke: tool === 'rect' || tool === 'strike' ? color : 'transparent',
-          strokeWidth: tool === 'rect' ? 1.5 : 0,
-        });
-        rect.annType = tool;
-        rect.annColor = color;
-        if (tool === 'strike') decorateStrike(rect, color);
-        fc.add(rect); fc.setActiveObject(rect);
-      }
+      if (tool !== 'text') return;
+      // Fabric v7: getPointer() dihapus, gunakan getScenePoint().
+      const p = fc.getScenePoint(opt.e);
+      const PLACEHOLDER = 'Tulis catatan…';
+      const txt = new IText(PLACEHOLDER, {
+        left: p.x, top: p.y, fontSize: 18, fill: color,
+        editable: true, fontFamily: 'Arial',
+        backgroundColor: 'rgba(253, 224, 71, 0.35)',
+      });
+      txt.annType = 'text';
+      // bersihkan bila placeholder dibiarkan / kosong, lalu balik ke mode Pilih
+      txt.on('editing:exited', () => {
+        const v = (txt.text || '').trim();
+        if (!v || v === PLACEHOLDER) fc.remove(txt);
+        fc.requestRenderAll();
+        setTool('select');
+      });
+      fc.add(txt);
+      fc.setActiveObject(txt);
+      // aktifkan kursor & seleksi placeholder agar langsung tertimpa saat mengetik
+      setTimeout(() => {
+        txt.enterEditing();
+        txt.selectAll();
+        txt.hiddenTextarea?.focus();
+        fc.requestRenderAll();
+      }, 10);
       fc.requestRenderAll();
       markDirty();
     };

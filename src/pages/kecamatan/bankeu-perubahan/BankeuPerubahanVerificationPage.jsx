@@ -4,7 +4,7 @@ import api from '../../../api';
 import Swal from 'sweetalert2';
 import {
   LuEye, LuCheck, LuX, LuRefreshCw, LuSend, LuInfo,
-  LuClipboardCheck, LuMessageSquare, LuChevronDown, LuChevronRight,
+  LuClipboardCheck, LuChevronDown, LuChevronRight,
   LuFilter, LuSearch, LuPackage, LuMapPin, LuDollarSign,
   LuFileText, LuStamp, LuTriangleAlert, LuUsers, LuClipboardList, LuPencilLine
 } from 'react-icons/lu';
@@ -194,7 +194,7 @@ const BankeuPerubahanVerificationPage = ({ tahun }) => {
     try {
       const res = await api.get(`/kecamatan/bankeu-perubahan/proposals/${proposal.id}/annotation`);
       initialAnnotation = res.data?.data?.annotation || null;
-    } catch (e) { /* abaikan, mulai dari kosong */ }
+    } catch { /* abaikan, mulai dari kosong */ }
     setAnnotateModal({
       proposal,
       fileUrl: `${imageBaseUrl}/storage/uploads/bankeu-perubahan/${proposal.file_proposal}`,
@@ -216,10 +216,12 @@ const BankeuPerubahanVerificationPage = ({ tahun }) => {
 
   const submitAnnotateRevision = async () => {
     if (!annotateModal) return;
-    if (!annotateCatatan.trim()) {
-      return Swal.fire('Validasi', 'Catatan revisi wajib diisi', 'warning');
-    }
     const annotation_data = annotationGetRef.current ? annotationGetRef.current() : null;
+    // Catatan revisi tidak wajib jika sudah ada anotasi (teks/gambar/catatan halaman) di PDF.
+    const hasAnnotation = !!(annotation_data?.pages?.length);
+    if (!annotateCatatan.trim() && !hasAnnotation) {
+      return Swal.fire('Validasi', 'Beri anotasi pada PDF atau isi catatan revisi (minimal salah satu)', 'warning');
+    }
     setAnnotateSubmitting(true);
     try {
       await api.patch(`/kecamatan/bankeu-perubahan/proposals/${annotateModal.proposal.id}/verify`, {
@@ -809,9 +811,9 @@ const BankeuPerubahanVerificationPage = ({ tahun }) => {
             {/* Panel catatan & kirim */}
             <div className="lg:w-80 shrink-0 bg-white border-t lg:border-t-0 lg:border-l border-gray-200 p-4 flex flex-col gap-3">
               <div className="text-xs text-gray-500 bg-orange-50 border border-orange-200 rounded-lg p-2.5">
-                Beri tanda langsung pada dokumen (highlight, coret, kotak, teks, gambar) lalu tulis ringkasan revisi di bawah. Desa akan menerima PDF beranotasi ini.
+                Beri tanda langsung pada dokumen (teks, gambar) di atas PDF. Catatan revisi di bawah opsional — boleh dikosongkan jika sudah ada anotasi pada PDF. Desa akan menerima PDF beranotasi ini.
               </div>
-              <label className="block text-sm font-semibold text-gray-700">Catatan Revisi *</label>
+              <label className="block text-sm font-semibold text-gray-700">Catatan Revisi <span className="font-normal text-gray-400">(opsional)</span></label>
               <textarea
                 value={annotateCatatan}
                 onChange={e => setAnnotateCatatan(e.target.value)}
@@ -932,7 +934,9 @@ const ProposalRow = ({ proposal, onApprove, onReject, onRevision, onCancel, onGe
         <div className="flex flex-col gap-2 flex-shrink-0">
           {/* Action: verify / cancel */}
           <div className="flex flex-wrap gap-1 justify-end">
-            {proposal.file_proposal && (
+            {/* Tombol "Proposal" hanya untuk status non-pending; saat masih pending,
+                aksi "Review" sudah membuka & menampilkan PDF proposalnya sekaligus. */}
+            {proposal.file_proposal && !(!submittedToDpmd && isPending) && (
               <a
                 href={`${imageBaseUrl}/storage/uploads/bankeu-perubahan/${proposal.file_proposal}`}
                 target="_blank"
@@ -944,11 +948,11 @@ const ProposalRow = ({ proposal, onApprove, onReject, onRevision, onCancel, onGe
             )}
             {!submittedToDpmd && isPending && (
               <>
+                <button onClick={onRevision} className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold rounded-lg">
+                  <LuEye className="w-3.5 h-3.5" /> Review
+                </button>
                 <button onClick={onApprove} className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-lg">
                   <LuCheck className="w-3.5 h-3.5" /> Approve
-                </button>
-                <button onClick={onRevision} className="inline-flex items-center gap-1 px-2.5 py-1 bg-orange-50 hover:bg-orange-100 text-orange-700 text-xs font-semibold rounded-lg">
-                  <LuMessageSquare className="w-3.5 h-3.5" /> Revisi
                 </button>
                 <button onClick={onReject} className="inline-flex items-center gap-1 px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-semibold rounded-lg">
                   <LuX className="w-3.5 h-3.5" /> Tolak
