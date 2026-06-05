@@ -288,7 +288,7 @@ const BankeuPerubahanProposalPage = ({ tahun }) => {
   const openEditModal = (proposal) => {
     setEditingProposal(proposal);
     setEditForm({
-      judul_proposal: proposal.judul_proposal || '',
+      judul_proposal: proposal.kegiatan_list?.[0]?.nama_kegiatan || proposal.judul_proposal || '',
       nama_kegiatan_spesifik: proposal.nama_kegiatan_spesifik || '',
       volume: proposal.volume || '',
       lokasi: proposal.lokasi || '',
@@ -434,8 +434,8 @@ const BankeuPerubahanProposalPage = ({ tahun }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-orange-50 p-4 md:p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <>
+      <div className="space-y-6">
         {/* Header */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -627,10 +627,10 @@ const BankeuPerubahanProposalPage = ({ tahun }) => {
                                             onClick={() => {
                                               setSelectedKegiatanId(s => ({ ...s, [kat]: item.id.toString() }));
                                               setDropdownOpen(d => ({ ...d, [kat]: false }));
-                                              // Pre-fill judul dari nama_kegiatan jika belum diisi
+                                              // Judul proposal baku = nama kegiatan yang dipilih
                                               setAddForm(f => ({
                                                 ...f,
-                                                [kat]: { ...f[kat], judul_proposal: f[kat].judul_proposal || item.nama_kegiatan }
+                                                [kat]: { ...f[kat], judul_proposal: item.nama_kegiatan }
                                               }));
                                             }}
                                             className={`w-full px-5 py-3 text-left text-sm sm:text-base font-medium transition-colors leading-relaxed ${
@@ -763,7 +763,7 @@ const BankeuPerubahanProposalPage = ({ tahun }) => {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 };
 
@@ -781,11 +781,12 @@ const FormFields = ({ form, onChange, isAnggaranOverLimit, isEdit = false, curre
       <input
         type="text"
         value={form.judul_proposal}
-        onChange={e => onChange('judul_proposal', e.target.value)}
-        className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-        placeholder="Contoh: Pembangunan Jalan Desa RT 02 RW 03"
-        maxLength={255}
+        readOnly
+        disabled
+        className="w-full px-3 py-2 border border-gray-200 rounded-xl bg-gray-100 text-gray-600 cursor-not-allowed focus:outline-none"
+        placeholder="Otomatis dari kegiatan yang dipilih"
       />
+      <p className="text-xs text-gray-400 mt-1">Judul mengikuti nama kegiatan yang dipilih (tidak dapat diubah).</p>
     </div>
 
     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

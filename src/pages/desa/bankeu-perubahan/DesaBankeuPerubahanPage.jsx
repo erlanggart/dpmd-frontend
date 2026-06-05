@@ -1,12 +1,61 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { LuCoins, LuFileText, LuRadar, LuArrowLeft, LuClipboardCheck } from 'react-icons/lu';
+import api from '../../../api';
 import BankeuPerubahanProposalPage from './BankeuPerubahanProposalPage';
 import BankeuPerubahanTrackingTab from './BankeuPerubahanTrackingTab';
 import DesaBankeuPerubahanLpjPage from './DesaBankeuPerubahanLpjPage';
 
+// Timestamp update verifikasi terbaru pada sebuah proposal (0 jika belum ada)
+const latestUpdateTime = (p) => {
+  const times = [];
+  if (['approved', 'revision', 'rejected'].includes(p.kecamatan_status) && p.kecamatan_verified_at)
+    times.push(new Date(p.kecamatan_verified_at).getTime());
+  if (['approved', 'revision', 'rejected'].includes(p.dpmd_status) && p.dpmd_verified_at)
+    times.push(new Date(p.dpmd_verified_at).getTime());
+  return times.length ? Math.max(...times) : 0;
+};
+
 const DesaBankeuPerubahanPage = () => {
   const [selectedYear, setSelectedYear] = useState(null);
   const [activeTab, setActiveTab] = useState('pengajuan');
+  const [trackingUpdates, setTrackingUpdates] = useState(0);
+
+  const seenKey = selectedYear ? `bankeuPerubahanTrackingSeen_${selectedYear}` : null;
+
+  // Tandai semua update tracking sebagai sudah dibaca
+  const markTrackingSeen = useCallback((proposals = null) => {
+    if (!seenKey) return;
+    const stored = Number(localStorage.getItem(seenKey) || 0);
+    const maxTime = proposals
+      ? Math.max(stored, 0, ...proposals.map(latestUpdateTime))
+      : Math.max(stored, Date.now());
+    localStorage.setItem(seenKey, String(maxTime));
+    setTrackingUpdates(0);
+  }, [seenKey]);
+
+  // Poll proposal untuk menghitung jumlah update verifikasi yang belum dibaca
+  useEffect(() => {
+    if (!selectedYear) return;
+    let active = true;
+    const fetchUpdates = async () => {
+      try {
+        const res = await api.get('/desa/bankeu-perubahan/proposals', { params: { tahun: selectedYear } });
+        if (!active) return;
+        const proposals = res.data?.data || [];
+        if (activeTab === 'tracking') {
+          markTrackingSeen(proposals);
+        } else {
+          const lastSeen = Number(localStorage.getItem(seenKey) || 0);
+          setTrackingUpdates(proposals.filter(p => latestUpdateTime(p) > lastSeen).length);
+        }
+      } catch {
+        // abaikan error polling
+      }
+    };
+    fetchUpdates();
+    const id = setInterval(fetchUpdates, 30000);
+    return () => { active = false; clearInterval(id); };
+  }, [selectedYear, activeTab, seenKey, markTrackingSeen]);
 
   // Year selection screen (Phase 1 hanya TA 2026)
   if (!selectedYear) {
@@ -89,7 +138,10 @@ const DesaBankeuPerubahanPage = () => {
               {tabs.map(tab => (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => {
+                    setActiveTab(tab.id);
+                    if (tab.id === 'tracking') markTrackingSeen();
+                  }}
                   className={`relative flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
                     activeTab === tab.id
                       ? 'bg-orange-50 text-orange-700 shadow-sm'
@@ -98,6 +150,11 @@ const DesaBankeuPerubahanPage = () => {
                 >
                   <tab.icon className="w-4 h-4" />
                   <span>{tab.label}</span>
+                  {tab.id === 'tracking' && trackingUpdates > 0 && (
+                    <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white leading-none">
+                      {trackingUpdates > 9 ? '9+' : trackingUpdates}
+                    </span>
+                  )}
                   {activeTab === tab.id && (
                     <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-orange-600 rounded-full" />
                   )}

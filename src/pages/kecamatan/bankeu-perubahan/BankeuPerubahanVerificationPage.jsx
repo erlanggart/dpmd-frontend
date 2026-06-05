@@ -341,34 +341,12 @@ const BankeuPerubahanVerificationPage = ({ tahun }) => {
       });
     }
 
-    const isInfrastruktur = proposal.jenis_kegiatan === 'pilihan_infrastruktur';
-    const optionalItemsConfig = [
-      { key: 'item_5', label: 'Surat Pernyataan Kepala Desa (lokasi tidak sengketa)' },
-      { key: 'item_7', label: 'Dokumen kesediaan peralihan hak hibah' },
-      { key: 'item_8', label: 'Dokumen pernyataan kesanggupan (tidak minta ganti rugi)' },
-      { key: 'item_9', label: 'Persetujuan pemanfaatan barang milik Daerah/Negara' },
-    ];
-    const optionalCheckboxes = isInfrastruktur ? `
-      <div class="text-left mt-3 mb-2">
-        <p class="text-sm font-semibold text-gray-700 mb-2">Dokumen opsional yang dilampirkan:</p>
-        <div class="bg-gray-50 rounded-lg p-3 space-y-2">
-          ${optionalItemsConfig.map(item => `
-            <label class="flex items-start gap-2 cursor-pointer hover:bg-gray-100 rounded p-1.5">
-              <input type="checkbox" id="opt_${item.key}" class="mt-0.5 w-4 h-4 text-orange-600 rounded" />
-              <span class="text-sm text-gray-700">${item.label}</span>
-            </label>
-          `).join('')}
-        </div>
-      </div>
-    ` : '';
-
     const result = await Swal.fire({
       title: proposal.berita_acara_path ? 'Regenerate Berita Acara?' : 'Generate Berita Acara?',
       html: `
         <div class="text-left">
           <p class="text-sm text-gray-600 mb-2">Desa <strong>${proposal.desa_nama}</strong></p>
           <p class="text-sm text-gray-600 mb-2">Proposal: <strong>${proposal.judul_proposal}</strong></p>
-          ${optionalCheckboxes}
           <div class="mt-3">
             <label class="block text-sm font-semibold text-gray-700 mb-1">Tanggal Berita Acara</label>
             <input type="date" id="swal-tanggal-ba" value="${new Date().toISOString().split('T')[0]}"
@@ -382,14 +360,7 @@ const BankeuPerubahanVerificationPage = ({ tahun }) => {
       confirmButtonColor: '#ea580c',
       preConfirm: () => {
         const tanggal = document.getElementById('swal-tanggal-ba')?.value || null;
-        let optionalItems = null;
-        if (isInfrastruktur) {
-          optionalItems = {};
-          optionalItemsConfig.forEach(item => {
-            optionalItems[item.key] = !!document.getElementById(`opt_${item.key}`)?.checked;
-          });
-        }
-        return { tanggal, optionalItems };
+        return { tanggal };
       },
     });
     if (!result.isConfirmed) return;
@@ -399,7 +370,6 @@ const BankeuPerubahanVerificationPage = ({ tahun }) => {
       const response = await api.post(`/kecamatan/bankeu-perubahan/desa/${proposal.desa_id}/berita-acara`, {
         proposalId: proposal.id,
         kegiatanId,
-        optionalItems: result.value.optionalItems,
         tanggal: result.value.tanggal,
       });
       await fetchData();

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import api from '../../../api';
-import { LuClock, LuCheck, LuX, LuRefreshCw, LuRadar, LuArrowRight, LuInfo } from 'react-icons/lu';
+import { LuClock, LuCheck, LuX, LuRefreshCw, LuRadar, LuArrowRight, LuInfo, LuTriangleAlert } from 'react-icons/lu';
 
 const STATUS_STYLES = {
   pending:   { bg: 'bg-amber-100', text: 'text-amber-700', border: 'border-amber-300', label: 'Pending' },
@@ -37,7 +37,13 @@ const BankeuPerubahanTrackingTab = ({ tahun }) => {
 
   useEffect(() => { fetchData(); }, [tahun]);
 
-  const submittedProposals = proposals.filter(p => p.submitted_to_kecamatan);
+  // Tampilkan proposal yang sudah dikirim ATAU yang dikembalikan untuk revisi/ditolak
+  // (saat direvisi, backend mengeset submitted_to_kecamatan = FALSE sehingga harus tetap tampil)
+  const submittedProposals = proposals.filter(p =>
+    p.submitted_to_kecamatan ||
+    ['revision', 'rejected'].includes(p.kecamatan_status) ||
+    ['revision', 'rejected'].includes(p.dpmd_status)
+  );
 
   if (loading) {
     return (
@@ -76,23 +82,51 @@ const BankeuPerubahanTrackingTab = ({ tahun }) => {
         </div>
       ) : (
         <div className="space-y-3">
-          {submittedProposals.map(p => (
-            <div key={p.id} className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
+          {submittedProposals.map(p => {
+            const kecRevisi = ['revision', 'rejected'].includes(p.kecamatan_status);
+            const dpmdRevisi = ['revision', 'rejected'].includes(p.dpmd_status);
+            // Dikembalikan ke desa untuk diperbaiki (belum dikirim ulang)
+            const perluRevisi = (kecRevisi || dpmdRevisi) && !p.submitted_to_kecamatan;
+            const revisiSumber = dpmdRevisi ? 'DPMD' : (kecRevisi ? 'Kecamatan' : null);
+            const revisiDitolak = (dpmdRevisi && p.dpmd_status === 'rejected') || (kecRevisi && p.kecamatan_status === 'rejected');
+            return (
+            <div key={p.id} className={`bg-white rounded-2xl shadow-sm border p-5 ${perluRevisi ? 'border-orange-300' : 'border-gray-200'}`}>
               <h4 className="font-bold text-gray-800">{p.judul_proposal}</h4>
-              <p className="text-xs text-gray-500 mt-0.5">
-                Dikirim: {new Date(p.submitted_at).toLocaleString('id-ID')}
-              </p>
+              {p.submitted_at && (
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Dikirim: {new Date(p.submitted_at).toLocaleString('id-ID')}
+                </p>
+              )}
+
+              {/* Banner revisi */}
+              {perluRevisi && (
+                <div className="mt-3 flex items-start gap-2 bg-orange-50 border border-orange-200 rounded-xl p-3">
+                  <LuTriangleAlert className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm text-orange-800">
+                    <span className="font-bold">
+                      {revisiDitolak ? `Ditolak oleh ${revisiSumber}` : `Dikembalikan ${revisiSumber} untuk revisi`}
+                    </span>
+                    <p className="text-xs text-orange-700 mt-0.5">
+                      Perbaiki proposal di tab Pengajuan, lalu kirim ulang ke Kecamatan.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Flow visualization */}
               <div className="mt-4 flex flex-col md:flex-row md:items-center gap-3">
                 {/* Stage 1: Desa */}
-                <div className="flex-1 bg-emerald-50 border border-emerald-200 rounded-xl p-3">
+                <div className={`flex-1 border rounded-xl p-3 ${perluRevisi ? 'bg-orange-50 border-orange-200' : 'bg-emerald-50 border-emerald-200'}`}>
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="text-xs font-semibold text-emerald-700 uppercase">Desa</div>
-                      <div className="text-sm font-bold text-emerald-800 mt-0.5">Terkirim</div>
+                      <div className={`text-xs font-semibold uppercase ${perluRevisi ? 'text-orange-700' : 'text-emerald-700'}`}>Desa</div>
+                      <div className={`text-sm font-bold mt-0.5 ${perluRevisi ? 'text-orange-800' : 'text-emerald-800'}`}>
+                        {perluRevisi ? 'Perlu Revisi' : 'Terkirim'}
+                      </div>
                     </div>
-                    <LuCheck className="w-5 h-5 text-emerald-600" />
+                    {perluRevisi
+                      ? <LuRefreshCw className="w-5 h-5 text-orange-600" />
+                      : <LuCheck className="w-5 h-5 text-emerald-600" />}
                   </div>
                 </div>
 
@@ -160,7 +194,8 @@ const BankeuPerubahanTrackingTab = ({ tahun }) => {
                 </div>
               )}
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

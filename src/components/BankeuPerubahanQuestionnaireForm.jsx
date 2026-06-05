@@ -8,9 +8,13 @@ import Swal from 'sweetalert2';
  *
  * Mirror dari BankeuQuestionnaireForm tapi pakai endpoint perubahan.
  *
- * Checklist berbeda berdasarkan jenis_kegiatan:
- * - pilihan_infrastruktur: 12 item (item 5,7,8,9 opsional)
- * - lainnya (wajib, pilihan_non_infrastruktur): 5 item
+ * Checklist mengikuti format resmi (lihat tabel Berita Acara):
+ * - Item 1–4: dokumen umum (berlaku untuk semua jenis kegiatan)
+ * - Item 5–9: khusus INFRASTRUKTUR (kolom KET = "Infrastruktur")
+ *
+ * Sehingga:
+ * - pilihan_infrastruktur: 9 item (1–9)
+ * - lainnya (wajib, pilihan_non_infrastruktur): 4 item (1–4)
  *
  * Endpoint:
  * - GET  /bankeu-perubahan/questionnaire/{proposalId}?verifier_type=...&verifier_id=...
@@ -38,23 +42,24 @@ const BankeuPerubahanQuestionnaireForm = ({
 
   const checklistItems = isInfrastruktur ? [
     { key: 'item_1', label: 'Surat Pengantar dari Kepala Desa' },
-    { key: 'item_2', label: 'Surat Permohonan Bantuan Keuangan Perubahan' },
-    { key: 'item_3', label: 'Proposal (Latar Belakang, Maksud dan Tujuan, Bentuk Kegiatan, Jadwal Pelaksanaan)' },
-    { key: 'item_4', label: 'RPA dan RAB' },
-    { key: 'item_5', label: 'Surat Pernyataan Kepala Desa (lokasi tidak dalam sengketa)', optional: true },
-    { key: 'item_6', label: 'Bukti kepemilikan Aset Desa (untuk Rehab Kantor Desa)', optional: true },
-    { key: 'item_7', label: 'Dokumen kesediaan peralihan hak hibah atas tanah', optional: true },
-    { key: 'item_8', label: 'Dokumen pernyataan kesanggupan (tidak minta ganti rugi)', optional: true },
-    { key: 'item_9', label: 'Persetujuan pemanfaatan barang milik Daerah/Negara', optional: true },
-    { key: 'item_10', label: 'Foto lokasi rencana pelaksanaan kegiatan' },
-    { key: 'item_11', label: 'Peta lokasi rencana kegiatan' },
-    { key: 'item_12', label: 'Berita Acara Musyawarah Desa' },
+    { key: 'item_2', label: 'Surat Permohonan Bantuan Keuangan Khusus Akselerasi Pembangunan Perdesaan' },
+    { key: 'item_3', label: 'Proposal Bantuan Keuangan Khusus Akselerasi Pembangunan Perdesaan (Latar Belakang, Maksud dan Tujuan, Bentuk Kegiatan, Jadwal Pelaksanaan)' },
+    { key: 'item_4', label: 'Rencana Penggunaan Bantuan Keuangan dan RAB' },
+    { key: 'item_5', label: 'Foto lokasi rencana pelaksanaan kegiatan (0%)', infra: true },
+    { key: 'item_6', label: 'Peta desa dan titik lokasi rencana kegiatan', infra: true },
+    { key: 'item_7', label: 'Berita Acara Hasil Musyawarah Desa', infra: true },
+    { key: 'item_8', label: 'SK Kepala Desa tentang Penetapan Tim Pelaksana Kegiatan (TPK)', infra: true },
+    {
+      key: 'item_9',
+      label: 'Ketersediaan lahan dan kepastian status lahan',
+      infra: true,
+      note: 'Lampirkan salah satu sesuai kondisi lahan: surat pernyataan Kepala Desa (Aset Desa tidak bermasalah); surat izin/persetujuan pemanfaatan dari perorangan pemilik lahan; persetujuan pemanfaatan barang milik Daerah/Negara; persetujuan pemanfaatan dari Badan Usaha/Badan Hukum; atau fotokopi bukti kepemilikan Aset Desa untuk rehabilitasi kantor desa.',
+    },
   ] : [
     { key: 'item_1', label: 'Surat Pengantar dari Kepala Desa' },
-    { key: 'item_2', label: 'Surat Permohonan Bantuan Keuangan Perubahan' },
-    { key: 'item_3', label: 'Proposal (Latar Belakang, Maksud dan Tujuan, Bentuk Kegiatan, Jadwal Pelaksanaan)' },
-    { key: 'item_4', label: 'Rencana Anggaran Biaya' },
-    { key: 'item_5', label: 'Tidak Duplikasi Anggaran' },
+    { key: 'item_2', label: 'Surat Permohonan Bantuan Keuangan Khusus Akselerasi Pembangunan Perdesaan' },
+    { key: 'item_3', label: 'Proposal Bantuan Keuangan Khusus Akselerasi Pembangunan Perdesaan (Latar Belakang, Maksud dan Tujuan, Bentuk Kegiatan, Jadwal Pelaksanaan)' },
+    { key: 'item_4', label: 'Rencana Penggunaan Bantuan Keuangan dan RAB' },
   ];
 
   const requiredItems = checklistItems.filter(i => !i.optional);
@@ -98,26 +103,31 @@ const BankeuPerubahanQuestionnaireForm = ({
   const getUncheckedRequired = () => requiredItems.filter(i => formData[i.key] !== true);
 
   const handleSave = async () => {
+    // Quisioner mencatat status Ada/Tidak Ada — tidak harus semua dicentang.
+    // Jika ada yang belum tersedia, cukup konfirmasi (verifikator boleh tetap menyimpan).
     if (!allRequiredChecked()) {
       const unchecked = getUncheckedRequired();
-      Swal.fire({
+      const result = await Swal.fire({
         icon: 'warning',
-        title: 'Tidak Dapat Menyimpan',
+        title: 'Sebagian Dokumen Belum Tersedia',
         html: `
           <div class="text-left">
-            <p class="mb-3">Semua item wajib harus dicentang (tersedia) untuk menyimpan quisioner.</p>
-            <p class="font-bold mb-2">Item wajib yang belum dicentang:</p>
+            <p class="mb-3">Item berikut belum ditandai tersedia:</p>
             <ul class="list-disc pl-5 text-sm text-gray-600">
               ${unchecked.map(i => `<li>${i.label}</li>`).join('')}
             </ul>
-            <p class="mt-4 text-sm text-red-600">
-              <strong>Jika dokumen tidak tersedia, kembalikan proposal ke desa untuk dilengkapi.</strong>
+            <p class="mt-4 text-sm text-gray-600">
+              Quisioner tetap dapat disimpan. Jika dokumen penting tidak tersedia,
+              pertimbangkan mengembalikan proposal ke desa untuk dilengkapi.
             </p>
           </div>
         `,
-        confirmButtonText: 'Mengerti',
+        showCancelButton: true,
+        confirmButtonText: 'Tetap Simpan',
+        cancelButtonText: 'Batal',
+        confirmButtonColor: '#ea580c',
       });
-      return;
+      if (!result.isConfirmed) return;
     }
     try {
       setSaving(true);
@@ -208,10 +218,13 @@ const BankeuPerubahanQuestionnaireForm = ({
                     <p className={`text-sm font-medium ${formData[item.key] ? 'text-green-800' : 'text-gray-800'}`}>
                       {item.label}
                     </p>
-                    {item.optional && (
-                      <span className="inline-block px-2 py-0.5 mt-1 bg-blue-50 text-blue-600 text-xs rounded font-medium">
-                        Opsional
+                    {item.infra && (
+                      <span className="inline-block px-2 py-0.5 mt-1 bg-orange-50 text-orange-600 text-xs rounded font-medium">
+                        Infrastruktur
                       </span>
+                    )}
+                    {item.note && (
+                      <p className="text-xs text-gray-500 mt-1 leading-relaxed">{item.note}</p>
                     )}
                   </div>
                   {!readOnly && (
@@ -257,12 +270,12 @@ const BankeuPerubahanQuestionnaireForm = ({
         <div className="p-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
           <div className="text-xs text-gray-600">
             {isComplete
-              ? '✓ Semua item wajib tercentang, siap disimpan'
-              : `Belum lengkap: ${totalRequiredItems - checkedRequiredCount} item wajib`}
+              ? '✓ Semua item tercentang tersedia'
+              : `${checkedCount}/${totalItems} item ditandai tersedia · sisanya akan tercatat "Tidak Ada"`}
           </div>
           <button
             onClick={handleSave}
-            disabled={saving || !isComplete}
+            disabled={saving}
             className="inline-flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm rounded-xl shadow-sm"
           >
             <LuSave className="w-4 h-4" />
