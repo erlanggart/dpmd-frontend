@@ -11,11 +11,23 @@ import BankeuRevisionHistoryModal from '../../../components/shared/BankeuRevisio
 const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
 const MAX_ANGGARAN = 1_500_000_000;
 
+// Parse nilai anggaran ke integer rupiah dengan AMAN terhadap nilai desimal.
+// Penting: kolom DB bertipe DECIMAL dikembalikan sebagai string "1111111.00".
+// Memakai replace(/\D/g,'') akan membuang titik tapi menyisakan "00" → nilai ×100.
+// Karena itu kita pakai Number() dulu (yang benar membaca desimal), baru fallback strip digit.
+const parseAnggaran = (val) => {
+  if (val === null || val === undefined || val === '') return 0;
+  let num = Number(val);
+  if (!Number.isFinite(num)) num = parseInt(String(val).replace(/\D/g, ''), 10);
+  return Number.isFinite(num) ? Math.round(num) : 0;
+};
+
 const formatRupiah = (val) => {
   if (val === null || val === undefined || val === '') return '';
-  const num = parseInt(String(val).replace(/\D/g, ''), 10);
-  if (isNaN(num)) return '';
-  return num.toLocaleString('id-ID');
+  let num = Number(val);
+  if (!Number.isFinite(num)) num = parseInt(String(val).replace(/\D/g, ''), 10);
+  if (!Number.isFinite(num)) return '';
+  return Math.round(num).toLocaleString('id-ID');
 };
 
 const KATEGORI_META = {
@@ -189,12 +201,12 @@ const BankeuPerubahanProposalPage = ({ tahun }) => {
   const getTotalExistingAnggaran = (excludeProposalId = null) => {
     return proposals.reduce((total, p) => {
       if (excludeProposalId && p.id === excludeProposalId) return total;
-      return total + (Math.round(Number(p.anggaran_usulan) || 0));
+      return total + parseAnggaran(p.anggaran_usulan);
     }, 0);
   };
   const isAnggaranOverLimit = (value, excludeProposalId = null) => {
     if (!value) return false;
-    const newVal = parseInt(String(value).replace(/\D/g, ''), 10) || 0;
+    const newVal = parseAnggaran(value);
     return (getTotalExistingAnggaran(excludeProposalId) + newVal) > MAX_ANGGARAN;
   };
   const getRemainingAnggaran = (excludeProposalId = null) => MAX_ANGGARAN - getTotalExistingAnggaran(excludeProposalId);
@@ -247,7 +259,7 @@ const BankeuPerubahanProposalPage = ({ tahun }) => {
     if (form.file.size > 10 * 1024 * 1024) {
       return Swal.fire('Validasi', 'Ukuran file maksimal 10MB', 'warning');
     }
-    const anggaranNum = parseInt(String(form.anggaran_usulan).replace(/\D/g, ''), 10) || 0;
+    const anggaranNum = parseAnggaran(form.anggaran_usulan);
     if (form.anggaran_usulan && isAnggaranOverLimit(form.anggaran_usulan)) {
       const sisa = getRemainingAnggaran();
       return Swal.fire({
@@ -293,7 +305,7 @@ const BankeuPerubahanProposalPage = ({ tahun }) => {
       volume: proposal.volume || '',
       lokasi: proposal.lokasi || '',
       deskripsi: proposal.deskripsi || '',
-      anggaran_usulan: proposal.anggaran_usulan ? String(proposal.anggaran_usulan) : '',
+      anggaran_usulan: proposal.anggaran_usulan ? String(parseAnggaran(proposal.anggaran_usulan)) : '',
       file: null,
     });
   };
@@ -308,7 +320,7 @@ const BankeuPerubahanProposalPage = ({ tahun }) => {
     if (!editForm.judul_proposal.trim()) {
       return Swal.fire('Validasi', 'Judul proposal wajib diisi', 'warning');
     }
-    const anggaranNum = parseInt(String(editForm.anggaran_usulan).replace(/\D/g, ''), 10) || 0;
+    const anggaranNum = parseAnggaran(editForm.anggaran_usulan);
     if (editForm.anggaran_usulan && isAnggaranOverLimit(editForm.anggaran_usulan, editingProposal.id)) {
       const sisa = getRemainingAnggaran(editingProposal.id);
       return Swal.fire({

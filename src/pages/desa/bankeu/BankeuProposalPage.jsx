@@ -1024,9 +1024,13 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
   const MAX_ANGGARAN = 1_500_000_000; // 1.5 Miliar (total seluruh proposal)
 
   const formatRupiah = (value) => {
-    if (!value) return "";
-    const number = value.replace(/\D/g, "");
-    return new Intl.NumberFormat("id-ID").format(number);
+    if (value === null || value === undefined || value === "") return "";
+    // Decimal-safe: nilai dari DB bisa berupa Decimal string "692485000.00".
+    // replace(/\D/g,"") akan membuang titik tapi menyisakan "00" → nilai ×100, jadi pakai Number() dulu.
+    let number = Number(value);
+    if (!Number.isFinite(number)) number = parseInt(String(value).replace(/\D/g, ""), 10);
+    if (!Number.isFinite(number)) return "";
+    return new Intl.NumberFormat("id-ID").format(Math.round(number));
   };
 
   // Hitung total anggaran dari seluruh proposal yang sudah ada
@@ -1902,7 +1906,8 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
       nama_kegiatan_spesifik: proposal.nama_kegiatan_spesifik || '',
       volume: proposal.volume || '',
       lokasi: proposal.lokasi || '',
-      anggaran_usulan: proposal.anggaran_usulan ? proposal.anggaran_usulan.toString() : '',
+      // Bulatkan ke integer rupiah agar Decimal string DB ("692485000.00") tidak ter-×100 saat diformat/disimpan
+      anggaran_usulan: proposal.anggaran_usulan ? String(Math.round(Number(proposal.anggaran_usulan))) : '',
       file: null
     });
     setShowEditModal(true);
