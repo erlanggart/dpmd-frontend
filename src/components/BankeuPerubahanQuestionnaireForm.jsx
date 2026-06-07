@@ -40,10 +40,19 @@ const BankeuPerubahanQuestionnaireForm = ({
 
   const isInfrastruktur = jenisKegiatan === 'pilihan_infrastruktur';
 
+  const PROPOSAL_SUBITEMS = ['Latar Belakang', 'Maksud dan Tujuan', 'Bentuk Kegiatan', 'Jadwal Pelaksanaan'];
+  const LAHAN_SUBITEMS = [
+    'surat pernyataan dari Kepala Desa yang menyatakan bahwa lokasi kegiatan tidak dalam keadaan bermasalah apabila merupakan Aset Desa;',
+    'surat izin/persetujuan pemanfaatan dari perorangan selaku pemilik lahan, yang menyatakan tidak keberatan lahannya akan dipergunakan untuk pembangunan infrastuktur desa dan tanpa persyaratan apa pun, yang disetujui oleh keluarga;',
+    'persetujuan pemanfaatan barang milik Daerah/Negara dalam hal lahan yang akan dipergunakan untuk pembangunan infrastuktur desa merupakan milik/dikuasai Pemerintah Daerah/Pemerintah Provinsi, Pemerintah Pusat;',
+    'persetujuan pemanfaatan/penggunaan dari Badan Usaha/Badan Hukum selaku pemilik lahan, yang menyatakan tidak keberatan lahannya akan dipergunakan untuk pembangunan infrastuktur desa dan tanpa persyaratan apa pun.',
+    'Fotokopi bukti kepemilikan Aset Desa sesuai ketentuan perundang-undangan, dalam hal usulan kegiatan yang diusulkan berupa rehabilitasi kantor desa.',
+  ];
+
   const checklistItems = isInfrastruktur ? [
     { key: 'item_1', label: 'Surat Pengantar dari Kepala Desa' },
     { key: 'item_2', label: 'Surat Permohonan Bantuan Keuangan Khusus Akselerasi Pembangunan Perdesaan' },
-    { key: 'item_3', label: 'Proposal Bantuan Keuangan Khusus Akselerasi Pembangunan Perdesaan (Latar Belakang, Maksud dan Tujuan, Bentuk Kegiatan, Jadwal Pelaksanaan)' },
+    { key: 'item_3', label: 'Proposal Bantuan Keuangan Khusus Akselerasi Pembangunan Perdesaan', subItems: PROPOSAL_SUBITEMS },
     { key: 'item_4', label: 'Rencana Penggunaan Bantuan Keuangan dan RAB' },
     { key: 'item_5', label: 'Foto lokasi rencana pelaksanaan kegiatan (0%)', infra: true },
     { key: 'item_6', label: 'Peta desa dan titik lokasi rencana kegiatan', infra: true },
@@ -51,14 +60,14 @@ const BankeuPerubahanQuestionnaireForm = ({
     { key: 'item_8', label: 'SK Kepala Desa tentang Penetapan Tim Pelaksana Kegiatan (TPK)', infra: true },
     {
       key: 'item_9',
-      label: 'Ketersediaan lahan dan kepastian status lahan',
+      label: 'Ketersediaan lahan dan kepastian status lahan :',
       infra: true,
-      note: 'Lampirkan salah satu sesuai kondisi lahan: surat pernyataan Kepala Desa (Aset Desa tidak bermasalah); surat izin/persetujuan pemanfaatan dari perorangan pemilik lahan; persetujuan pemanfaatan barang milik Daerah/Negara; persetujuan pemanfaatan dari Badan Usaha/Badan Hukum; atau fotokopi bukti kepemilikan Aset Desa untuk rehabilitasi kantor desa.',
+      subItems: LAHAN_SUBITEMS,
     },
   ] : [
     { key: 'item_1', label: 'Surat Pengantar dari Kepala Desa' },
     { key: 'item_2', label: 'Surat Permohonan Bantuan Keuangan Khusus Akselerasi Pembangunan Perdesaan' },
-    { key: 'item_3', label: 'Proposal Bantuan Keuangan Khusus Akselerasi Pembangunan Perdesaan (Latar Belakang, Maksud dan Tujuan, Bentuk Kegiatan, Jadwal Pelaksanaan)' },
+    { key: 'item_3', label: 'Proposal Bantuan Keuangan Khusus Akselerasi Pembangunan Perdesaan', subItems: PROPOSAL_SUBITEMS },
     { key: 'item_4', label: 'Rencana Penggunaan Bantuan Keuangan dan RAB' },
   ];
 
@@ -222,6 +231,16 @@ const BankeuPerubahanQuestionnaireForm = ({
                       <span className="inline-block px-2 py-0.5 mt-1 bg-orange-50 text-orange-600 text-xs rounded font-medium">
                         Infrastruktur
                       </span>
+                    )}
+                    {item.subItems && item.subItems.length > 0 && (
+                      <ul className="mt-2 space-y-1">
+                        {item.subItems.map((sub, si) => (
+                          <li key={si} className="flex items-start gap-1.5 text-xs text-gray-600 leading-relaxed">
+                            <span className="flex-shrink-0 mt-0.5 text-gray-400">&#9633;</span>
+                            <span>{sub}</span>
+                          </li>
+                        ))}
+                      </ul>
                     )}
                     {item.note && (
                       <p className="text-xs text-gray-500 mt-1 leading-relaxed">{item.note}</p>
