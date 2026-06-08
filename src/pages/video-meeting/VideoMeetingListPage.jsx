@@ -1,64 +1,13 @@
 /**
  * Video Meeting List Page
- * MAINTENANCE MODE: Fitur sedang dalam perbaikan
- * Untuk membuka kembali, comment bagian MAINTENANCE dan uncomment bagian ORIGINAL di bawah
+ * Aktif kembali setelah port RTC (mediasoup) dibuka oleh Diskominfo.
  */
 
-// ==================== MAINTENANCE MODE (ACTIVE) ====================
-import React from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
-import Lottie from 'lottie-react';
-import tableTennisAnimation from '../../assets/table-tennis.json';
-
-const VideoMeetingListPage = () => {
-  const navigate = useNavigate();
-
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-cyan-50 via-white to-teal-50 px-4">
-      <div className="text-center max-w-lg">
-        <div className="mb-2">
-          <span className="inline-block px-4 py-1.5 rounded-full bg-amber-100 text-amber-700 text-sm font-semibold tracking-wide">
-            Maintenance Mode
-          </span>
-        </div>
-        <h1 className="text-3xl md:text-4xl font-extrabold text-gray-800 mb-3">
-          Maaf, Kita Sedang Main
-        </h1>
-        <p className="text-gray-500 text-sm md:text-base mb-2">
-          Fitur <strong>Video Meeting</strong> sedang dalam perbaikan untuk pengalaman yang lebih baik.
-        </p>
-        <p className="text-gray-400 text-xs md:text-sm mb-4">
-          Silakan coba lagi nanti. Terima kasih atas kesabarannya!
-        </p>
-
-        <div className="w-72 md:w-96 mx-auto">
-          <Lottie animationData={tableTennisAnimation} loop autoplay />
-        </div>
-
-        <button
-          onClick={() => navigate(-1)}
-          className="mt-6 inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-700 font-semibold shadow-sm hover:bg-gray-50 active:scale-95 transition-all"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Kembali
-        </button>
-      </div>
-    </div>
-  );
-};
-
-export default VideoMeetingListPage;
-// ==================== END MAINTENANCE MODE ====================
-
-
-// ==================== ORIGINAL CODE (UNCOMMENT TO RESTORE) ====================
-/*
-import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { 
-  Video, Plus, Play, Trash2, Copy, Clock, Users, Link2, X, 
-  Calendar, Settings, Loader2, VideoOff 
+import {
+  Video, Plus, Play, Trash2, Copy, Clock, Users, Link2, X,
+  Loader2, VideoOff
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../api';
@@ -71,7 +20,7 @@ const VideoMeetingListPage = () => {
   const [joinDialogOpen, setJoinDialogOpen] = useState(false);
   const [joinRoomId, setJoinRoomId] = useState('');
   const [creating, setCreating] = useState(false);
-  
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -150,7 +99,7 @@ const VideoMeetingListPage = () => {
         <p className="text-sm font-medium text-gray-800">Yakin ingin menghapus meeting ini?</p>
         <div className="flex gap-2 justify-end">
           <button onClick={() => toast.dismiss(t.id)} className="px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition">Batal</button>
-          <button onClick={async () => { toast.dismiss(t.id); try { await api.delete(`/video-meetings/${meetingId}`); toast.success('Meeting berhasil dihapus'); fetchMeetings(); } catch (e) { toast.error('Gagal menghapus meeting'); } }} className="px-3 py-1.5 text-xs font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition">Hapus</button>
+          <button onClick={async () => { toast.dismiss(t.id); try { await api.delete(`/video-meetings/${meetingId}`); toast.success('Meeting berhasil dihapus'); fetchMeetings(); } catch { toast.error('Gagal menghapus meeting'); } }} className="px-3 py-1.5 text-xs font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition">Hapus</button>
         </div>
       </div>
     ), { duration: 10000, position: 'top-center' });
@@ -261,7 +210,7 @@ const VideoMeetingListPage = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {meetings.map((meeting) => (
-            <div 
+            <div
               key={meeting.id}
               className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-all hover:-translate-y-1"
             >
@@ -271,7 +220,7 @@ const VideoMeetingListPage = () => {
                 </h3>
                 {getStatusBadge(meeting.status)}
               </div>
-              
+
               {meeting.description && (
                 <p className="text-sm text-gray-500 mb-3 line-clamp-2">
                   {meeting.description}
@@ -347,7 +296,7 @@ const VideoMeetingListPage = () => {
                 <X className="w-5 h-5" />
               </button>
             </div>
-            
+
             <div className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -505,7 +454,7 @@ const VideoMeetingListPage = () => {
                 <X className="w-5 h-5" />
               </button>
             </div>
-            
+
             <div className="p-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Room ID
@@ -545,5 +494,3 @@ const VideoMeetingListPage = () => {
 };
 
 export default VideoMeetingListPage;
-*/
-// ==================== END ORIGINAL CODE ====================
