@@ -294,6 +294,7 @@ function PdfPage({
   const didRenderRef = useRef(false);
   const [renderTick, setRenderTick] = useState(0);
   const [dims, setDims] = useState({ w: 0, h: 0 });
+  const [renderErr, setRenderErr] = useState(null);
   const [note, setNote] = useState(annByPageRef.current[pageNum]?.note || '');
 
   // ---- Render halaman PDF + (re)buat overlay fabric ----
@@ -318,7 +319,16 @@ function PdfPage({
     baseCanvas.style.width = `${viewport.width}px`;
     baseCanvas.style.height = `${viewport.height}px`;
     setDims({ w: viewport.width, h: viewport.height });
-    await page.render({ canvasContext: ctx, viewport }).promise;
+    // Latar putih eksplisit + tangkap error: bila pdf.js gagal menggambar isi
+    // halaman (mis. encoding gambar scan yang tak didukung), halaman tak lagi
+    // "diam-diam kosong" — penyebabnya tercatat & ditandai agar bisa didiagnosa.
+    setRenderErr(null);
+    try {
+      await page.render({ canvasContext: ctx, viewport, background: 'white' }).promise;
+    } catch (err) {
+      console.error(`[PdfAnnotationEditor] gagal render halaman ${pageNum}:`, err?.name || err, err);
+      setRenderErr(err?.name || 'RenderError');
+    }
 
     // dispose fabric lama bila ada
     if (fabricRef.current) {
@@ -462,6 +472,11 @@ function PdfPage({
       <div className="relative inline-block text-left shadow-lg bg-white align-top">
         <canvas ref={baseCanvasRef} className="block" />
         <canvas ref={fabricElRef} className="absolute top-0 left-0" />
+        {renderErr && (
+          <div className="absolute top-2 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-lg bg-red-600 text-white text-xs font-medium shadow">
+            Halaman {pageNum} gagal dirender ({renderErr}) — isi mungkin tak tampil di sini
+          </div>
+        )}
       </div>
       {showNote && (
         <div className="mx-auto mt-1.5" style={{ width: dims.w ? `${dims.w}px` : '100%', maxWidth: '100%' }}>
