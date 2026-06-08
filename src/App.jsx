@@ -180,13 +180,13 @@ const InformasiManagement = lazy(
   () => import("./pages/sekretariat/InformasiManagement"),
 );
 const VideoMeetingListPage = lazy(
-  () => import("./pages/video-meeting/VideoMeetingMaintenance"),
+  () => import("./pages/video-meeting/VideoMeetingListPage"),
 );
 const VideoMeetingPage = lazy(
-  () => import("./pages/video-meeting/VideoMeetingMaintenance"),
+  () => import("./pages/video-meeting/VideoMeetingPage"),
 );
 const PublicMeetingPage = lazy(
-  () => import("./pages/video-meeting/VideoMeetingMaintenance"),
+  () => import("./pages/video-meeting/PublicMeetingPage"),
 );
 const PerjadinMain = lazy(
   () => import("./pages/pegawai/perjadin/PerjadinMain"),
