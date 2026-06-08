@@ -7,7 +7,11 @@ import {
   LuTrash2, LuChevronLeft, LuChevronRight, LuSave, LuLoader,
 } from 'react-icons/lu';
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+// Query versi pada worker: memaksa browser mengambil ulang file `.mjs` dari server.
+// Cache lama bisa menyimpan worker dengan MIME salah ("application/octet-stream")
+// dari sebelum nginx diperbaiki — URL dengan query baru = cache-key baru = fetch
+// segar (kini "text/javascript"). Naikkan angka ini bila isu MIME terulang.
+pdfjsLib.GlobalWorkerOptions.workerSrc = `${pdfWorkerUrl}?v=mjs2`;
 
 const COLORS = ['#e53935', '#fb8c00', '#fdd835', '#43a047', '#1e88e5', '#000000'];
 const TOOLS = [
