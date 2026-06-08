@@ -121,7 +121,14 @@ export default function PdfAnnotationEditor({
         return;
       }
       try {
-        const loadingTask = pdfjsLib.getDocument({ url: fileUrl, withCredentials: false });
+        const loadingTask = pdfjsLib.getDocument({
+          url: fileUrl,
+          withCredentials: false,
+          // WASM untuk decode gambar JBIG2/JPEG2000 (PDF hasil scan). Tanpa ini
+          // halaman ber-JBIG2 gagal di-decode dan tampil kosong. Disajikan dari
+          // /pdfjs-wasm/ (lihat pdfjsWasmPlugin di vite.config.js).
+          wasmUrl: '/pdfjs-wasm/',
+        });
         const pdf = await loadingTask.promise;
         if (cancelled) return;
         pdfDocRef.current = pdf;

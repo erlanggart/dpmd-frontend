@@ -10,6 +10,34 @@ const packageJson = JSON.parse(fs.readFileSync('./package.json', 'utf-8'));
 const appVersion = packageJson.version;
 const buildDate = new Date().toISOString();
 
+// pdf.js 6.x men-decode gambar JBIG2/JPEG2000 lewat WASM. File wasm-nya ada di
+// node_modules/pdfjs-dist/wasm dan harus disajikan via URL (parameter `wasmUrl`).
+// Plugin ini menyalinnya ke dist/pdfjs-wasm saat build dan menyajikannya saat dev,
+// sehingga halaman PDF hasil scan (JBIG2) tidak gagal render / tampil kosong.
+function pdfjsWasmPlugin() {
+	const wasmDir = path.resolve(process.cwd(), 'node_modules/pdfjs-dist/wasm');
+	const mime = (f) => (path.extname(f) === '.wasm' ? 'application/wasm' : 'text/javascript');
+	return {
+		name: 'pdfjs-wasm-assets',
+		buildStart() {
+			if (!fs.existsSync(wasmDir)) return;
+			for (const f of fs.readdirSync(wasmDir)) {
+				if (!/\.(wasm|js)$/.test(f)) continue;
+				this.emitFile({ type: 'asset', fileName: `pdfjs-wasm/${f}`, source: fs.readFileSync(path.join(wasmDir, f)) });
+			}
+		},
+		configureServer(server) {
+			server.middlewares.use('/pdfjs-wasm', (req, res, next) => {
+				const fp = path.join(wasmDir, decodeURIComponent((req.url || '').split('?')[0]));
+				if (fp.startsWith(wasmDir) && fs.existsSync(fp) && fs.statSync(fp).isFile()) {
+					res.setHeader('Content-Type', mime(fp));
+					fs.createReadStream(fp).pipe(res);
+				} else next();
+			});
+		},
+	};
+}
+
 // https://vite.dev/config/
 export default defineConfig({
 	define: {
@@ -44,8 +72,9 @@ export default defineConfig({
 		},
 	},
 	plugins: [
-		react(), 
+		react(),
 		tailwindcss(),
+		pdfjsWasmPlugin(),
 		VitePWA({
 			registerType: 'autoUpdate',
 			injectRegister: 'auto',
