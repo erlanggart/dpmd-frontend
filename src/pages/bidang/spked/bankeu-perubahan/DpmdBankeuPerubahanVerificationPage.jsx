@@ -4,9 +4,10 @@ import Swal from 'sweetalert2';
 import {
   LuEye, LuCheck, LuX, LuRefreshCw, LuFilter, LuMessageSquare, LuInfo,
   LuChevronDown, LuChevronRight, LuSearch, LuPackage, LuMapPin, LuDollarSign,
-  LuClipboardCheck, LuHistory
+  LuClipboardCheck, LuHistory, LuRoute
 } from 'react-icons/lu';
 import BankeuRevisionHistoryModal from '../../../../components/shared/BankeuRevisionHistoryModal';
+import BankeuPerubahanTrackingModal from '../../../../components/shared/BankeuPerubahanTrackingModal';
 
 const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
 
@@ -344,6 +345,7 @@ const StatCard = ({ label, value, color }) => (
 const ProposalRow = ({ proposal, onApprove, onReject, onRevision }) => {
   const isPending = !proposal.dpmd_status || proposal.dpmd_status === 'pending';
   const [showHistory, setShowHistory] = useState(false);
+  const [showTracking, setShowTracking] = useState(false);
   const firstKegiatan = proposal.kegiatan_list?.[0];
 
   return (
@@ -408,6 +410,10 @@ const ProposalRow = ({ proposal, onApprove, onReject, onRevision }) => {
               <LuEye className="w-3.5 h-3.5" /> File
             </a>
           )}
+          <button onClick={() => setShowTracking(true)}
+            className="inline-flex items-center gap-1 px-2.5 py-1 bg-orange-50 hover:bg-orange-100 text-orange-700 text-xs font-semibold rounded-lg">
+            <LuRoute className="w-3.5 h-3.5" /> Lacak
+          </button>
           <button onClick={() => setShowHistory(true)}
             className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-lg">
             <LuHistory className="w-3.5 h-3.5" /> Riwayat
@@ -434,6 +440,13 @@ const ProposalRow = ({ proposal, onApprove, onReject, onRevision }) => {
           proposalId={proposal.id}
           proposalTitle={proposal.judul_proposal}
           onClose={() => setShowHistory(false)}
+        />
+      )}
+
+      {showTracking && (
+        <BankeuPerubahanTrackingModal
+          proposal={proposal}
+          onClose={() => setShowTracking(false)}
         />
       )}
     </div>

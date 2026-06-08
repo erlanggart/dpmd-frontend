@@ -176,26 +176,29 @@ const BankeuPerubahanProposalPage = ({ tahun }) => {
     return groups;
   }, [proposals]);
 
-  // Get kegiatan IDs that already have a proposal (per kategori)
-  const usedKegiatanIds = useMemo(() => {
-    const used = { wajib: new Set(), pilihan_infrastruktur: new Set(), pilihan_non_infrastruktur: new Set() };
+  // Berapa banyak proposal yang sudah memakai tiap kegiatan (per kategori).
+  // Kegiatan TIDAK lagi "habis" setelah dipakai — satu jenis kegiatan boleh
+  // diajukan beberapa kali (mis. Jalan Desa di titik lokasi berbeda). Hitungan
+  // ini hanya dipakai sebagai penanda informatif di dropdown.
+  const kegiatanUsageCount = useMemo(() => {
+    const count = { wajib: {}, pilihan_infrastruktur: {}, pilihan_non_infrastruktur: {} };
     proposals.forEach(p => {
       const kat = p.jenis_kegiatan;
-      if (!used[kat]) return;
-      (p.kegiatan_list || []).forEach(k => used[kat].add(k.id));
-      if (p.kegiatan_id) used[kat].add(p.kegiatan_id);
+      if (!count[kat]) return;
+      const ids = new Set();
+      (p.kegiatan_list || []).forEach(k => ids.add(k.id));
+      if (p.kegiatan_id) ids.add(p.kegiatan_id);
+      ids.forEach(id => { count[kat][id] = (count[kat][id] || 0) + 1; });
     });
-    return used;
+    return count;
   }, [proposals]);
 
-  // Available kegiatan per kategori (not yet proposed)
+  // Semua kegiatan master SELALU tersedia untuk dipilih (tidak difilter habis).
   const availableKegiatan = useMemo(() => {
     const out = {};
-    KATEGORI_KEYS.forEach(k => {
-      out[k] = (masterKegiatan[k] || []).filter(item => !usedKegiatanIds[k].has(item.id));
-    });
+    KATEGORI_KEYS.forEach(k => { out[k] = masterKegiatan[k] || []; });
     return out;
-  }, [masterKegiatan, usedKegiatanIds]);
+  }, [masterKegiatan]);
 
   // Total anggaran (semua proposal)
   const getTotalExistingAnggaran = (excludeProposalId = null) => {
@@ -457,7 +460,7 @@ const BankeuPerubahanProposalPage = ({ tahun }) => {
                 Bankeu Perubahan TA {tahun}
               </h2>
               <p className="text-sm text-gray-500 mt-1">
-                Alur verifikasi: Desa → Kecamatan → DPMD &nbsp;·&nbsp; 1 kegiatan = 1 proposal
+                Alur verifikasi: Desa → Kecamatan → DPMD &nbsp;·&nbsp; 1 kegiatan boleh lebih dari 1 proposal (lokasi berbeda)
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -575,10 +578,10 @@ const BankeuPerubahanProposalPage = ({ tahun }) => {
                   {/* Add Proposal Button + Inline Form */}
                   <div className="p-6">
                     {availableList.length === 0 ? (
-                      <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-start gap-3 text-sm text-emerald-800">
-                        <LuCheck className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                      <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 flex items-start gap-3 text-sm text-gray-600">
+                        <LuInfo className="w-5 h-5 flex-shrink-0 mt-0.5" />
                         <div>
-                          Semua kegiatan di kategori <strong>{meta.label}</strong> sudah memiliki proposal.
+                          Belum ada master kegiatan di kategori <strong>{meta.label}</strong>. Hubungi DPMD untuk konfigurasi.
                         </div>
                       </div>
                     ) : (
@@ -632,7 +635,9 @@ const BankeuPerubahanProposalPage = ({ tahun }) => {
                                   {isDropdownOpen && (
                                     <div className={`absolute left-0 right-0 top-full mt-2 z-50 bg-white border-2 ${meta.boxBorder} rounded-xl shadow-2xl overflow-hidden`}>
                                       <div className="max-h-72 overflow-y-auto">
-                                        {availableList.map((item, idx) => (
+                                        {availableList.map((item, idx) => {
+                                          const usedCount = kegiatanUsageCount[kat]?.[item.id] || 0;
+                                          return (
                                           <button
                                             key={item.id}
                                             type="button"
@@ -654,9 +659,15 @@ const BankeuPerubahanProposalPage = ({ tahun }) => {
                                             <span className="block">
                                               {item.urutan ? <strong className="mr-1">{item.urutan}.</strong> : null}
                                               {item.nama_kegiatan}
+                                              {usedCount > 0 && (
+                                                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-700 border border-amber-200 align-middle">
+                                                  sudah ada {usedCount} proposal
+                                                </span>
+                                              )}
                                             </span>
                                           </button>
-                                        ))}
+                                          );
+                                        })}
                                       </div>
                                     </div>
                                   )}

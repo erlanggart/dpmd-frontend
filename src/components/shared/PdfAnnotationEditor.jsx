@@ -241,6 +241,12 @@ export default function PdfAnnotationEditor({
       annByPageRef.current[p.page] = { items: p.items || [], note: p.note || '' };
     });
     (async () => {
+      // Tanpa file name, URL berakhir di "/bankeu-perubahan/" → pasti gagal.
+      // Tangani lebih awal dengan pesan jelas, jangan kirim request ngawur.
+      if (!fileUrl || /\/$/.test(fileUrl)) {
+        if (!cancelled) { setError('File proposal belum tersedia (file_proposal kosong).'); setLoading(false); }
+        return;
+      }
       try {
         const loadingTask = pdfjsLib.getDocument({ url: fileUrl, withCredentials: false });
         const pdf = await loadingTask.promise;
@@ -250,8 +256,27 @@ export default function PdfAnnotationEditor({
         setPageNum(1);
         await renderPage(1);
         if (!cancelled) setLoading(false);
-      } catch {
-        if (!cancelled) { setError('Gagal memuat PDF. Pastikan file tersedia.'); setLoading(false); }
+      } catch (err) {
+        if (cancelled) return;
+        // Bedakan penyebab agar bisa didiagnosa (tiap proposal bisa beda kasus):
+        //  - MissingPDF / 404  → file tidak ada di server
+        //  - status lain       → masalah server/akses
+        //  - InvalidPDF        → file rusak / bukan PDF
+        const name = err?.name;
+        let msg;
+        if (name === 'MissingPDFException' || err?.status === 404) {
+          msg = 'File PDF tidak ditemukan di server (404). File mungkin sudah terhapus atau belum terupload.';
+        } else if (name === 'UnexpectedResponseException') {
+          msg = `Server menolak permintaan file (status ${err?.status || '?'}).`;
+        } else if (name === 'InvalidPDFException') {
+          msg = 'File rusak atau bukan PDF yang valid.';
+        } else {
+          msg = 'Gagal memuat PDF. Periksa koneksi atau ketersediaan file.';
+        }
+        // Detail teknis tetap dicatat utk diagnosa lanjutan.
+        console.error('[PdfAnnotationEditor] gagal memuat PDF:', fileUrl, err);
+        setError(msg);
+        setLoading(false);
       }
     })();
     return () => {
@@ -399,7 +424,17 @@ export default function PdfAnnotationEditor({
             <LuLoader className="w-5 h-5 animate-spin" /> Memuat PDF...
           </div>
         )}
-        {error && <div className="text-center text-red-600 py-8">{error}</div>}
+        {error && (
+          <div className="text-center py-8">
+            <div className="text-red-600">{error}</div>
+            {fileUrl && !/\/$/.test(fileUrl) && (
+              <a href={fileUrl} target="_blank" rel="noopener noreferrer"
+                className="inline-block mt-2 text-xs text-blue-600 underline break-all">
+                Coba buka file langsung
+              </a>
+            )}
+          </div>
+        )}
         <div className="relative mx-auto shadow-lg bg-white" style={{ width: 'fit-content', display: loading || error ? 'none' : 'block' }}>
           <canvas ref={baseCanvasRef} className="block" />
           <canvas ref={fabricElRef} className="absolute top-0 left-0" />
