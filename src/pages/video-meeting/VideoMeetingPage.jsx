@@ -623,7 +623,11 @@ const VideoMeetingPage = () => {
     
     socketRef.current = io(API_URL, {
       auth: { token },
-      transports: ['polling', 'websocket'],
+      // Polling-only: LB/proxy di depan (TLS) belum meneruskan upgrade WebSocket,
+      // sehingga 'websocket' selalu gagal & memunculkan error di console. Polling
+      // sudah cukup untuk signaling (media tetap via WebRTC langsung). Kembalikan
+      // ke ['polling','websocket'] bila WebSocket passthrough sudah diaktifkan.
+      transports: ['polling'],
     });
 
     socketRef.current.on('connect', () => {

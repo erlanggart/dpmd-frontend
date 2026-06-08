@@ -586,7 +586,11 @@ const PublicMeetingPage = () => {
       
       // Connect to socket
       socketRef.current = io(API_URL, {
-        transports: ['polling', 'websocket'],
+        // Polling-only: LB/proxy di depan (TLS) belum meneruskan upgrade WebSocket,
+        // sehingga 'websocket' selalu gagal & memunculkan error di console. Polling
+        // sudah cukup untuk signaling (media tetap via WebRTC langsung). Kembalikan
+        // ke ['polling','websocket'] bila WebSocket passthrough sudah diaktifkan.
+        transports: ['polling'],
         auth: {
           token: token || null,
           guestName: !isLoggedIn ? guestName : null,
