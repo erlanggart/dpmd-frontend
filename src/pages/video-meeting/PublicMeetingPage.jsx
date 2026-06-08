@@ -3,7 +3,7 @@
  * Allows anyone to join a meeting via shared link without login
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Mic, MicOff, Video, VideoOff, Monitor, MonitorOff, 
@@ -161,6 +161,27 @@ const PublicMeetingPage = () => {
   
   // Remote streams state
   const [remoteStreams, setRemoteStreams] = useState({});
+
+  // Buka kunci pemutaran audio remote (atasi blokir autoplay audio browser):
+  // putar ulang semua <audio> pada interaksi pertama / via tombol "Aktifkan Suara".
+  const [audioUnlocked, setAudioUnlocked] = useState(false);
+  const unlockAudio = useCallback(() => {
+    document.querySelectorAll('audio').forEach((el) => {
+      const p = el.play();
+      if (p && p.catch) p.catch(() => {});
+    });
+    setAudioUnlocked(true);
+  }, []);
+  useEffect(() => {
+    if (audioUnlocked) return undefined;
+    const handler = () => unlockAudio();
+    window.addEventListener('pointerdown', handler, { once: true });
+    window.addEventListener('keydown', handler, { once: true });
+    return () => {
+      window.removeEventListener('pointerdown', handler);
+      window.removeEventListener('keydown', handler);
+    };
+  }, [audioUnlocked, unlockAudio]);
 
   // Get user info
   const user = isLoggedIn 
@@ -1129,6 +1150,15 @@ const PublicMeetingPage = () => {
   // Main meeting view
   return (
     <div className="h-screen bg-gray-900 flex flex-col">
+      {/* Banner aktifkan suara: muncul sampai user berinteraksi (atasi blokir autoplay audio) */}
+      {!audioUnlocked && (
+        <button
+          onClick={unlockAudio}
+          className="fixed top-3 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500 text-white text-sm font-semibold shadow-lg hover:bg-amber-600 transition-colors animate-pulse"
+        >
+          <Volume2 className="w-4 h-4" /> Klik untuk mengaktifkan suara peserta
+        </button>
+      )}
       {/* Header */}
       <div className="px-4 py-3 flex items-center justify-between border-b border-white/10">
         <div className="flex items-center gap-3">
