@@ -857,7 +857,7 @@ const StatCard = ({ label, value, color }) => (
 );
 
 const ProposalRow = ({ proposal, onApprove, onReject, onRevision, onCancel, onGenerateBA, onGenerateSP, onTim }) => {
-  const submittedToDpmd = proposal.submitted_to_dpmd;
+  const submittedToDpmd = !!proposal.submitted_to_dpmd;
   const kecApproved = proposal.kecamatan_status === 'approved';
   const isPending = !proposal.kecamatan_status || proposal.kecamatan_status === 'pending';
   const canManageKecamatanDocs = !submittedToDpmd && (isPending || kecApproved);
