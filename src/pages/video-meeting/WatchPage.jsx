@@ -9,8 +9,11 @@ import Hls from 'hls.js';
 import { Loader2, Radio, Volume2 } from 'lucide-react';
 import api from '../../api';
 
-// Origin backend (untuk URL HLS). VITE_API_BASE_URL mis. https://dpmdbogorkab.id/api
+// Origin backend (untuk status API). VITE_API_BASE_URL mis. https://dpmdbogorkab.id/api
 const API_ORIGIN = import.meta.env.VITE_API_BASE_URL?.replace(/\/api\/?$/, '') || 'http://localhost:3001';
+// Basis URL HLS. Set VITE_HLS_BASE_URL ke domain CDN (mis. https://cdn.dpmdbogorkab.id)
+// untuk fan-out skala 1000; default ke origin backend (lewat nginx /hls).
+const HLS_BASE = import.meta.env.VITE_HLS_BASE_URL?.replace(/\/$/, '') || API_ORIGIN;
 
 export default function WatchPage() {
   const { roomId } = useParams();
@@ -29,7 +32,7 @@ export default function WatchPage() {
         if (stop) return;
         const d = res.data?.data;
         setLive(!!d?.live);
-        setPlaylist(d?.playlist ? `${API_ORIGIN}${d.playlist}` : null);
+        setPlaylist(d?.playlist ? `${HLS_BASE}${d.playlist}` : null);
       } catch {
         if (!stop) setLive(false);
       }

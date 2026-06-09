@@ -518,6 +518,14 @@ const VideoMeetingPage = () => {
       if (videoTrack) {
         const videoProducer = await sendTransportRef.current.produce({
           track: videoTrack,
+          // Simulcast: kirim 3 lapis kualitas. SFU bisa meneruskan lapis rendah ke
+          // penonton/koneksi lemah → kapasitas naik & adaptif (skala besar).
+          encodings: [
+            { rid: 'r0', maxBitrate: 150000, scaleResolutionDownBy: 4 },
+            { rid: 'r1', maxBitrate: 500000, scaleResolutionDownBy: 2 },
+            { rid: 'r2', maxBitrate: 1200000 },
+          ],
+          codecOptions: { videoGoogleStartBitrate: 1000 },
           appData: { mediaType: 'video' }
         });
         producersRef.current.set('video', videoProducer);

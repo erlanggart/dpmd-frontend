@@ -517,6 +517,13 @@ const PublicMeetingPage = () => {
       if (videoTrack) {
         const videoProducer = await sendTransportRef.current.produce({
           track: videoTrack,
+          // Simulcast: 3 lapis kualitas (adaptif & hemat untuk skala besar).
+          encodings: [
+            { rid: 'r0', maxBitrate: 150000, scaleResolutionDownBy: 4 },
+            { rid: 'r1', maxBitrate: 500000, scaleResolutionDownBy: 2 },
+            { rid: 'r2', maxBitrate: 1200000 },
+          ],
+          codecOptions: { videoGoogleStartBitrate: 1000 },
           appData: { mediaType: 'video' }
         });
         producersRef.current.set('video', videoProducer);
