@@ -106,7 +106,8 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
   const [filterKategori, setFilterKategori] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [verifyModal, setVerifyModal] = useState(null);
-  const [expandedKategori, setExpandedKategori] = useState({});
+  const [expandedKec, setExpandedKec] = useState({});   // default: terbuka
+  const [expandedDesa, setExpandedDesa] = useState({}); // default: tertutup
 
   // Tracking lintas-tahap (semua proposal)
   const [trackingData, setTrackingData] = useState([]);
@@ -194,10 +195,31 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
     });
   }, [proposals, filterStatus, filterKecamatan, filterKategori, searchQuery]);
 
-  const groupedByKategori = useMemo(() => {
-    const groups = { wajib: [], pilihan_infrastruktur: [], pilihan_non_infrastruktur: [] };
-    filteredProposals.forEach(p => { if (groups[p.jenis_kegiatan]) groups[p.jenis_kegiatan].push(p); });
-    return groups;
+  // Hierarki: Kecamatan → Desa → Proposal
+  const groupedByKecamatan = useMemo(() => {
+    const kecMap = new Map();
+    filteredProposals.forEach(p => {
+      const kecId = p.desa_kecamatan_id ?? `none-${p.kecamatan_nama || ''}`;
+      const kecNama = p.kecamatan_nama || 'Tanpa Kecamatan';
+      if (!kecMap.has(kecId)) kecMap.set(kecId, { kecId, kecNama, count: 0, anggaran: 0, desaMap: new Map() });
+      const kec = kecMap.get(kecId);
+      kec.count += 1;
+      kec.anggaran += Number(p.anggaran_usulan) || 0;
+
+      const desaId = p.desa_id ?? `none-${p.desa_nama || ''}`;
+      const desaNama = p.desa_nama || 'Tanpa Desa';
+      if (!kec.desaMap.has(desaId)) kec.desaMap.set(desaId, { desaId, desaNama, count: 0, anggaran: 0, items: [] });
+      const desa = kec.desaMap.get(desaId);
+      desa.count += 1;
+      desa.anggaran += Number(p.anggaran_usulan) || 0;
+      desa.items.push(p);
+    });
+    return Array.from(kecMap.values())
+      .map(k => ({
+        ...k,
+        desas: Array.from(k.desaMap.values()).sort((a, b) => (a.desaNama || '').localeCompare(b.desaNama || '')),
+      }))
+      .sort((a, b) => (a.kecNama || '').localeCompare(b.kecNama || ''));
   }, [filteredProposals]);
 
   // ---- TRACKING: filter ----
@@ -317,12 +339,14 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
     }
   };
 
-  const toggleKategori = (kat) => setExpandedKategori(e => ({ ...e, [kat]: e[kat] === undefined ? false : !e[kat] }));
-  const isKategoriExpanded = (kat) => expandedKategori[kat] !== false;
+  const toggleKec = (id) => setExpandedKec(e => ({ ...e, [id]: e[id] === undefined ? false : !e[id] }));
+  const isKecExpanded = (id) => expandedKec[id] !== false;          // default terbuka
+  const toggleDesa = (key) => setExpandedDesa(e => ({ ...e, [key]: !e[key] }));
+  const isDesaExpanded = (key) => expandedDesa[key] === true;       // default tertutup
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-orange-50 p-4 md:p-6">
-      <div className="max-w-7xl mx-auto space-y-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-orange-50 p-4 md:p-6 lg:px-8">
+      <div className="max-w-[1700px] mx-auto space-y-4">
         {/* Tab bar */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-2 flex flex-wrap items-center gap-1.5">
           {TABS.map(t => {
@@ -356,8 +380,9 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
             searchQuery={searchQuery} setSearchQuery={setSearchQuery}
             kecamatanOptions={kecamatanOptions}
             filteredProposals={filteredProposals} proposals={proposals}
-            groupedByKategori={groupedByKategori}
-            isKategoriExpanded={isKategoriExpanded} toggleKategori={toggleKategori}
+            groupedByKecamatan={groupedByKecamatan}
+            isKecExpanded={isKecExpanded} toggleKec={toggleKec}
+            isDesaExpanded={isDesaExpanded} toggleDesa={toggleDesa}
             openVerify={openVerify}
           />
         )}
@@ -429,7 +454,8 @@ const StatCard = ({ label, value, color }) => (
 const ArchiveTab = ({
   tahun, stats, loading, filterStatus, setFilterStatus, filterKategori, setFilterKategori,
   filterKecamatan, setFilterKecamatan, searchQuery, setSearchQuery, kecamatanOptions,
-  filteredProposals, proposals, groupedByKategori, isKategoriExpanded, toggleKategori, openVerify,
+  filteredProposals, proposals, groupedByKecamatan,
+  isKecExpanded, toggleKec, isDesaExpanded, toggleDesa, openVerify,
 }) => (
   <div className="space-y-4">
     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4">
@@ -483,36 +509,71 @@ const ArchiveTab = ({
         <p className="text-gray-600 font-medium">{proposals.length === 0 ? 'Belum ada proposal yang masuk ke DPMD' : 'Tidak ada proposal yang sesuai filter'}</p>
       </div>
     ) : (
-      <div className="space-y-3">
-        {KATEGORI_KEYS.map(kat => {
-          const items = groupedByKategori[kat];
-          if (items.length === 0) return null;
-          const meta = KATEGORI_META[kat];
-          const expanded = isKategoriExpanded(kat);
-          const totalAnggaran = items.reduce((s, p) => s + (Number(p.anggaran_usulan) || 0), 0);
+      <div className="space-y-4">
+        {groupedByKecamatan.map(kec => {
+          const kecOpen = isKecExpanded(kec.kecId);
           return (
-            <div key={kat} className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-              <button onClick={() => toggleKategori(kat)}
-                className={`w-full px-5 py-4 flex items-center justify-between bg-gradient-to-r ${meta.headerBg} ${meta.headerHover} transition-colors`}>
+            <div key={kec.kecId} className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+              {/* Header Kecamatan */}
+              <button onClick={() => toggleKec(kec.kecId)}
+                className="w-full px-5 py-4 flex items-center justify-between bg-gradient-to-r from-orange-50 via-amber-50 to-orange-50 hover:from-orange-100 hover:via-amber-100 hover:to-orange-100 transition-colors">
                 <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 bg-gradient-to-br ${meta.gradFrom} ${meta.gradTo} rounded-xl flex items-center justify-center shadow-md`}>
-                    {expanded ? <LuChevronDown className="w-5 h-5 text-white" /> : <LuChevronRight className="w-5 h-5 text-white" />}
+                  <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-amber-600 rounded-xl flex items-center justify-center shadow-md">
+                    {kecOpen ? <LuChevronDown className="w-5 h-5 text-white" /> : <LuChevronRight className="w-5 h-5 text-white" />}
                   </div>
                   <div className="text-left">
-                    <h3 className="font-bold text-gray-900 text-base">{meta.label}</h3>
-                    <p className="text-xs text-gray-600">{items.length} proposal · {rupiah(totalAnggaran)} · {meta.sublabel}</p>
+                    <h3 className="font-bold text-gray-900 text-base flex items-center gap-1.5">
+                      <LuMapPin className="w-4 h-4 text-orange-600" /> Kec. {kec.kecNama}
+                    </h3>
+                    <p className="text-xs text-gray-600">{kec.desas.length} desa · {kec.count} proposal · {rupiah(kec.anggaran)}</p>
                   </div>
                 </div>
-                <span className={`text-sm font-bold px-3 py-1 rounded border ${meta.badge}`}>{items.length}</span>
+                <span className="text-sm font-bold px-3 py-1 rounded border bg-orange-100 text-orange-700 border-orange-300">{kec.count}</span>
               </button>
-              {expanded && (
-                <div className="divide-y divide-gray-100">
-                  {items.map(p => (
-                    <ProposalRow key={p.id} proposal={p}
-                      onApprove={() => openVerify(p, 'approved')}
-                      onReject={() => openVerify(p, 'rejected')}
-                      onRevision={() => openVerify(p, 'revision')} />
-                  ))}
+
+              {/* Daftar Desa (default tertutup) */}
+              {kecOpen && (
+                <div className="p-3 space-y-2 bg-gray-50/60">
+                  {kec.desas.map(desa => {
+                    const desaKey = `${kec.kecId}::${desa.desaId}`;
+                    const desaOpen = isDesaExpanded(desaKey);
+                    return (
+                      <div key={desaKey} className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+                        <button onClick={() => toggleDesa(desaKey)}
+                          className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-lg flex items-center justify-center shadow-sm flex-shrink-0">
+                              {desaOpen ? <LuChevronDown className="w-4 h-4 text-white" /> : <LuChevronRight className="w-4 h-4 text-white" />}
+                            </div>
+                            <div className="text-left min-w-0">
+                              <h4 className="font-bold text-gray-800 text-sm truncate">Desa {desa.desaNama}</h4>
+                              <p className="text-[11px] text-gray-500">{desa.count} proposal</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 text-xs font-bold border border-amber-200">
+                              <LuDollarSign className="w-3.5 h-3.5" /> {rupiah(desa.anggaran)}
+                            </span>
+                            <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-indigo-100 text-indigo-700 border border-indigo-200">{desa.count}</span>
+                          </div>
+                        </button>
+                        {/* Total anggaran versi mobile */}
+                        {desaOpen && (
+                          <div className="divide-y divide-gray-100 border-t border-gray-100">
+                            <div className="sm:hidden px-4 py-2 bg-amber-50 text-amber-800 text-xs font-bold flex items-center gap-1">
+                              <LuDollarSign className="w-3.5 h-3.5" /> Total {rupiah(desa.anggaran)}
+                            </div>
+                            {desa.items.map(p => (
+                              <ProposalRow key={p.id} proposal={p}
+                                onApprove={() => openVerify(p, 'approved')}
+                                onReject={() => openVerify(p, 'rejected')}
+                                onRevision={() => openVerify(p, 'revision')} />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -535,9 +596,11 @@ const ProposalRow = ({ proposal, onApprove, onReject, onRevision }) => {
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
             <StatusBadge status={proposal.dpmd_status || 'pending'} />
-            <span className="text-xs text-gray-500">
-              Desa <strong className="text-gray-800">{proposal.desa_nama}</strong> · Kec <strong className="text-gray-800">{proposal.kecamatan_nama}</strong>
-            </span>
+            {KATEGORI_META[proposal.jenis_kegiatan] && (
+              <span className={`inline-flex items-center px-2 py-0.5 text-[11px] font-semibold rounded-full border ${KATEGORI_META[proposal.jenis_kegiatan].badge}`}>
+                {KATEGORI_META[proposal.jenis_kegiatan].label}
+              </span>
+            )}
           </div>
           <h4 className="font-bold text-gray-800 text-sm md:text-base leading-tight">{proposal.judul_proposal}</h4>
           {firstKegiatan && <p className="text-xs text-gray-600 mt-1"><span className="font-semibold">Kegiatan:</span> {firstKegiatan.nama_kegiatan}</p>}
