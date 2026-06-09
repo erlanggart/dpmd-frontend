@@ -8,7 +8,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   Mic, MicOff, Video, VideoOff, Monitor, MonitorOff,
   MessageSquare, Users, PhoneOff, Send, Copy, X, Loader2,
-  User, ArrowRight, Volume2, VolumeX, Hand
+  User, ArrowRight, Volume2, VolumeX, Hand, Settings, Signal
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { io } from 'socket.io-client';
@@ -28,7 +28,7 @@ const getOrCreateGuestId = (roomId) => {
 };
 
 // Remote Video Component
-const RemoteVideo = ({ participant, stream, isSpeakerMuted }) => {
+const RemoteVideo = ({ participant, stream, isSpeakerMuted, isActive }) => {
   const videoRef = useRef(null);
   const audioRef = useRef(null);
   const [hasVideo, setHasVideo] = useState(false);
@@ -78,7 +78,7 @@ const RemoteVideo = ({ participant, stream, isSpeakerMuted }) => {
   }, [stream]);
   
   return (
-    <div className="relative bg-gray-800 rounded-xl overflow-hidden aspect-video flex items-center justify-center">
+    <div className={`relative bg-gray-800 rounded-xl overflow-hidden aspect-video flex items-center justify-center transition-all ${isActive ? 'ring-4 ring-emerald-400' : ''}`}>
       <video
         ref={videoRef}
         autoPlay
@@ -136,6 +136,14 @@ const PublicMeetingPage = () => {
   const onStageRef = useRef(true);
   const [myHandRaised, setMyHandRaised] = useState(false);
   const isWebinar = meetingSettings?.mode === 'webinar';
+
+  // Pembicara aktif (disorot), kualitas jaringan, pilih kamera/mikrofon
+  const [activeSpeaker, setActiveSpeaker] = useState(null);
+  const [netQuality, setNetQuality] = useState(null);
+  const [devices, setDevices] = useState({ cams: [], mics: [] });
+  const [selectedCam, setSelectedCam] = useState('');
+  const [selectedMic, setSelectedMic] = useState('');
+  const [showSettings, setShowSettings] = useState(false);
 
   // Media state
   const [localStream, setLocalStream] = useState(null);
@@ -487,6 +495,85 @@ const PublicMeetingPage = () => {
     toast(next ? 'Tangan diangkat ✋' : 'Tangan diturunkan', { icon: next ? '✋' : '👇' });
   };
 
+  // ===== Pilih kamera/mikrofon (#6) =====
+  const refreshDevices = useCallback(async () => {
+    try {
+      const list = await navigator.mediaDevices.enumerateDevices();
+      setDevices({
+        cams: list.filter((d) => d.kind === 'videoinput'),
+        mics: list.filter((d) => d.kind === 'audioinput'),
+      });
+    } catch (e) { /* abaikan */ }
+  }, []);
+  useEffect(() => { if (localStream) refreshDevices(); }, [localStream, refreshDevices]);
+
+  const applyDeviceSelection = async ({ camId, micId }) => {
+    const stream = localStreamRef.current;
+    if (!stream) return;
+    try {
+      if (camId !== undefined) {
+        const ns = await navigator.mediaDevices.getUserMedia({ video: camId ? { deviceId: { exact: camId } } : true });
+        const nv = ns.getVideoTracks()[0];
+        const ov = stream.getVideoTracks()[0];
+        if (nv) {
+          if (ov) { ov.stop(); stream.removeTrack(ov); }
+          stream.addTrack(nv);
+          const vp = producersRef.current.get('video');
+          if (vp && !vp.closed) await vp.replaceTrack({ track: nv });
+          if (localVideoRef.current) localVideoRef.current.srcObject = stream;
+        }
+        setSelectedCam(camId || '');
+      }
+      if (micId !== undefined) {
+        const ns = await navigator.mediaDevices.getUserMedia({ audio: micId ? { deviceId: { exact: micId } } : true });
+        const na = ns.getAudioTracks()[0];
+        const oa = stream.getAudioTracks()[0];
+        if (na) {
+          if (oa) { oa.stop(); stream.removeTrack(oa); }
+          stream.addTrack(na);
+          const ap = producersRef.current.get('audio');
+          if (ap && !ap.closed) await ap.replaceTrack({ track: na });
+        }
+        setSelectedMic(micId || '');
+      }
+      toast.success('Perangkat diperbarui');
+    } catch (e) {
+      console.error('[Devices] switch error:', e);
+      toast.error('Gagal mengganti perangkat');
+    }
+  };
+
+  // ===== Indikator kualitas jaringan (#8) =====
+  useEffect(() => {
+    if (!connected) return undefined;
+    let prev = { lost: 0, sent: 0 };
+    const id = setInterval(async () => {
+      const t = sendTransportRef.current;
+      if (!t) return;
+      try {
+        const stats = await t.getStats();
+        let lost = 0, sent = 0, rtt = null;
+        stats.forEach((r) => {
+          if (r.type === 'outbound-rtp') sent += r.packetsSent || 0;
+          if (r.type === 'remote-inbound-rtp') {
+            lost += r.packetsLost || 0;
+            if (r.roundTripTime != null) rtt = r.roundTripTime;
+          }
+          if (r.type === 'candidate-pair' && r.nominated && r.currentRoundTripTime != null) rtt = r.currentRoundTripTime;
+        });
+        const dSent = sent - prev.sent;
+        const dLost = lost - prev.lost;
+        prev = { lost, sent };
+        const lossRate = dSent + dLost > 0 ? dLost / (dSent + dLost) : 0;
+        let q = 'good';
+        if (lossRate > 0.08 || (rtt != null && rtt > 0.4)) q = 'poor';
+        else if (lossRate > 0.03 || (rtt != null && rtt > 0.2)) q = 'fair';
+        setNetQuality(q);
+      } catch (e) { /* abaikan */ }
+    }, 4000);
+    return () => clearInterval(id);
+  }, [connected]);
+
   const produceLocalTracks = async () => {
     // Mode webinar: penonton (bukan on-stage) tidak publish apa pun.
     if (!onStageRef.current) {
@@ -659,7 +746,7 @@ const PublicMeetingPage = () => {
         // sehingga 'websocket' selalu gagal & memunculkan error di console. Polling
         // sudah cukup untuk signaling (media tetap via WebRTC langsung). Kembalikan
         // ke ['polling','websocket'] bila WebSocket passthrough sudah diaktifkan.
-        transports: ['polling'],
+        transports: (import.meta.env.VITE_SOCKET_TRANSPORTS || 'polling').split(',').map((t) => t.trim()),
         auth: {
           token: token || null,
           guestName: !isLoggedIn ? guestName : null,
@@ -850,6 +937,16 @@ const PublicMeetingPage = () => {
         if (!chatOpen) {
           setUnreadCount(prev => prev + 1);
         }
+      });
+
+      // Pembicara dominan berubah → sorot tile-nya.
+      socketRef.current.on('active-speaker', (data) => {
+        if (data?.peerId != null) setActiveSpeaker(String(data.peerId));
+      });
+
+      // Server media terputus (worker mediasoup mati).
+      socketRef.current.on('meeting-interrupted', (data) => {
+        toast.error(data?.message || 'Server media terputus. Muat ulang halaman.');
       });
 
       // Webinar: status panggung berubah (diangkat/diturunkan host)
@@ -1245,6 +1342,18 @@ const PublicMeetingPage = () => {
         </div>
         
         <div className="flex items-center gap-2">
+          {netQuality && (
+            <span title={`Kualitas jaringan: ${netQuality}`} className="flex items-center">
+              <Signal className={`w-4 h-4 ${netQuality === 'good' ? 'text-green-400' : netQuality === 'fair' ? 'text-yellow-400' : 'text-red-400'}`} />
+            </span>
+          )}
+          <button
+            onClick={() => { refreshDevices(); setShowSettings(true); }}
+            className="p-2 text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+            title="Pengaturan perangkat"
+          >
+            <Settings className="w-4 h-4" />
+          </button>
           <span className="text-white/60 text-sm">Room: {roomId}</span>
           <button
             onClick={copyMeetingLink}
@@ -1296,6 +1405,7 @@ const PublicMeetingPage = () => {
               participant={participant}
               stream={remoteStreams[participant.oduserId]}
               isSpeakerMuted={isSpeakerMuted}
+              isActive={activeSpeaker === participant.oduserId}
             />
           ))}
         </div>
@@ -1399,10 +1509,10 @@ const PublicMeetingPage = () => {
               <p className="text-white/40 text-center text-sm">Belum ada pesan</p>
             ) : (
               messages.map((msg, index) => (
-                <div key={index} className={`flex flex-col ${msg.oduserId === user.id ? 'items-end' : 'items-start'}`}>
+                <div key={index} className={`flex flex-col ${String(msg.senderId) === String(myPeerId) ? 'items-end' : 'items-start'}`}>
                   <span className="text-white/40 text-xs mb-1">{msg.userName}</span>
                   <div className={`px-4 py-2 rounded-xl max-w-[80%] ${
-                    msg.oduserId === user.id ? 'bg-blue-500 text-white' : 'bg-white/10 text-white'
+                    String(msg.senderId) === String(myPeerId) ? 'bg-blue-500 text-white' : 'bg-white/10 text-white'
                   }`}>
                     <p className="text-sm">{msg.message}</p>
                   </div>
@@ -1463,6 +1573,43 @@ const PublicMeetingPage = () => {
       )}
 
       {/* Leave Dialog */}
+      {/* Pengaturan Perangkat (kamera/mikrofon) */}
+      {showSettings && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-2xl shadow-xl w-full max-w-md p-6 text-white">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold flex items-center gap-2"><Settings className="w-5 h-5" /> Pengaturan Perangkat</h2>
+              <button onClick={() => setShowSettings(false)} className="p-2 hover:bg-white/10 rounded-lg"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-white/60 mb-1">Kamera</label>
+                <select
+                  value={selectedCam}
+                  onChange={(e) => applyDeviceSelection({ camId: e.target.value })}
+                  className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                >
+                  <option value="">Default</option>
+                  {devices.cams.map((d, i) => <option key={d.deviceId || i} value={d.deviceId}>{d.label || `Kamera ${i + 1}`}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm text-white/60 mb-1">Mikrofon</label>
+                <select
+                  value={selectedMic}
+                  onChange={(e) => applyDeviceSelection({ micId: e.target.value })}
+                  className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                >
+                  <option value="">Default</option>
+                  {devices.mics.map((d, i) => <option key={d.deviceId || i} value={d.deviceId}>{d.label || `Mikrofon ${i + 1}`}</option>)}
+                </select>
+              </div>
+              <p className="text-xs text-white/40">Jika nama perangkat kosong, izinkan akses kamera/mikrofon lalu buka menu ini lagi.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {leaveDialogOpen && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
