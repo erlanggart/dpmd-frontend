@@ -504,6 +504,18 @@ const BankeuPerubahanProposalPage = ({ tahun }) => {
             <StatCard label="Approved DPMD" value={counts.dpmd_approved} color="bg-green-50 text-green-700" />
             <StatCard label="Revisi" value={counts.revision} color="bg-orange-50 text-orange-700" />
           </div>
+
+          {/* Total anggaran usulan seluruh proposal desa */}
+          <div className="mt-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 shadow-md">
+            <div className="flex items-center gap-2 text-white/90">
+              <LuDollarSign className="w-5 h-5" />
+              <span className="text-sm font-semibold">Total Anggaran Usulan</span>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-xl md:text-2xl font-bold text-white">Rp {formatRupiah(getTotalExistingAnggaran())}</span>
+              <span className="text-xs text-white/80">/ Rp {formatRupiah(MAX_ANGGARAN)} · sisa Rp {formatRupiah(getRemainingAnggaran())}</span>
+            </div>
+          </div>
         </div>
 
         {/* Sections per kategori */}

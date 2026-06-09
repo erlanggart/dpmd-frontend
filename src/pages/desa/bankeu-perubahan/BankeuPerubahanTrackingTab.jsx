@@ -45,6 +45,9 @@ const BankeuPerubahanTrackingTab = ({ tahun }) => {
     ['revision', 'rejected'].includes(p.dpmd_status)
   );
 
+  const totalAnggaran = submittedProposals.reduce((s, p) => s + (Number(p.anggaran_usulan) || 0), 0);
+  const rupiah = (n) => 'Rp ' + Number(n || 0).toLocaleString('id-ID');
+
   if (loading) {
     return (
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center text-gray-500">
@@ -72,6 +75,15 @@ const BankeuPerubahanTrackingTab = ({ tahun }) => {
             Refresh
           </button>
         </div>
+
+        {submittedProposals.length > 0 && (
+          <div className="mt-4 rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 p-3 flex items-center justify-between shadow-sm">
+            <span className="text-sm font-semibold text-white/90">
+              Total Anggaran Usulan ({submittedProposals.length} proposal)
+            </span>
+            <span className="text-lg md:text-xl font-bold text-white">{rupiah(totalAnggaran)}</span>
+          </div>
+        )}
       </div>
 
       {submittedProposals.length === 0 ? (

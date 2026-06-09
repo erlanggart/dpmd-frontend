@@ -6,7 +6,7 @@ import {
   LuEye, LuCheck, LuX, LuRefreshCw, LuFilter, LuMessageSquare, LuInfo,
   LuChevronDown, LuChevronRight, LuSearch, LuPackage, LuMapPin, LuDollarSign,
   LuClipboardCheck, LuHistory, LuRoute, LuFolder, LuActivity, LuUsers,
-  LuPower, LuDownload, LuChartColumn, LuToggleRight, LuToggleLeft, LuClock,
+  LuDownload, LuChartColumn,
 } from 'react-icons/lu';
 import BankeuRevisionHistoryModal from '../../../../components/shared/BankeuRevisionHistoryModal';
 import BankeuPerubahanTrackingModal from '../../../../components/shared/BankeuPerubahanTrackingModal';
@@ -61,7 +61,6 @@ const TABS = [
   { key: 'tracking', icon: LuActivity, label: 'Tracking Status' },
   { key: 'partisipasi', icon: LuUsers, label: 'Partisipasi Desa' },
   { key: 'statistics', icon: LuChartColumn, label: 'Statistik Dashboard' },
-  { key: 'control', icon: LuPower, label: 'Kontrol Pengajuan' },
 ];
 
 const fmtDate = (d) =>
@@ -119,12 +118,6 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
   const [allDesa, setAllDesa] = useState([]);
   const [allKecamatan, setAllKecamatan] = useState([]);
 
-  // Kontrol pengajuan
-  const [submissionOpen, setSubmissionOpen] = useState(true);
-  const [submissionConfig, setSubmissionConfig] = useState(null);
-  const [loadingSettings, setLoadingSettings] = useState(true);
-  const [savingSettings, setSavingSettings] = useState(false);
-
   const [exporting, setExporting] = useState(false);
 
   const fetchData = async () => {
@@ -166,30 +159,14 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
     }
   };
 
-  const fetchSubmission = async () => {
-    setLoadingSettings(true);
-    try {
-      const res = await api.get(`/app-settings/bankeu_perubahan_submission_desa_${tahun}`)
-        .catch(() => ({ data: { data: { value: true, config: null } } }));
-      setSubmissionOpen(res.data?.data?.value ?? true);
-      setSubmissionConfig(res.data?.data?.config || { enabled: res.data?.data?.value ?? true, schedule: null });
-    } catch {
-      setSubmissionOpen(true);
-      setSubmissionConfig({ enabled: true, schedule: null });
-    } finally {
-      setLoadingSettings(false);
-    }
-  };
-
   useEffect(() => {
     fetchData();
     fetchTracking();
     fetchDesaKecamatan();
-    fetchSubmission();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tahun]);
 
-  const refreshAll = () => { fetchData(); fetchTracking(); fetchSubmission(); };
+  const refreshAll = () => { fetchData(); fetchTracking(); };
 
   // ---- Opsi kecamatan (gabungan dari master + proposal) ----
   const kecamatanOptions = useMemo(() => {
@@ -303,22 +280,6 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
     }
   };
 
-  // ---- Kontrol pengajuan ----
-  const saveSubmission = async (enabled) => {
-    setSavingSettings(true);
-    try {
-      const value = { enabled, schedule: submissionConfig?.schedule || null };
-      const res = await api.put(`/app-settings/bankeu_perubahan_submission_desa_${tahun}`, { value });
-      setSubmissionOpen(res.data?.data?.value ?? enabled);
-      setSubmissionConfig(res.data?.data?.config || value);
-      Swal.fire({ icon: 'success', title: enabled ? 'Pengajuan dibuka' : 'Pengajuan ditutup', timer: 1300, showConfirmButton: false });
-    } catch (err) {
-      Swal.fire('Gagal', err.response?.data?.message || 'Gagal menyimpan pengaturan', 'error');
-    } finally {
-      setSavingSettings(false);
-    }
-  };
-
   // ---- Export Excel (lintas-tahap) ----
   const exportExcel = () => {
     if (!trackingData.length) {
@@ -416,11 +377,6 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
 
         {activeTab === 'statistics' && (
           <StatisticsTab stats={stats} funnel={funnel} perKategori={perKategori} perKecamatan={perKecamatan} tahun={tahun} />
-        )}
-
-        {activeTab === 'control' && (
-          <ControlTab loading={loadingSettings} saving={savingSettings} open={submissionOpen}
-            config={submissionConfig} onSave={saveSubmission} tahun={tahun} />
         )}
       </div>
 
@@ -686,6 +642,10 @@ const StageDots = ({ proposal }) => {
 
 const TrackingTab = ({ loading, data, search, setSearch, kecamatan, setKecamatan, kecamatanOptions, total }) => {
   const [trackProposal, setTrackProposal] = useState(null);
+  const totalAnggaran = useMemo(
+    () => data.reduce((s, p) => s + (Number(p.anggaran_usulan) || 0), 0),
+    [data]
+  );
   return (
     <div className="space-y-3">
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 flex flex-wrap items-center gap-3">
@@ -701,6 +661,15 @@ const TrackingTab = ({ loading, data, search, setSearch, kecamatan, setKecamatan
             className="w-full pl-9 pr-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500" />
         </div>
         <span className="ml-auto text-xs text-gray-500">{data.length} dari {total} proposal</span>
+      </div>
+
+      {/* Ringkasan total anggaran usulan (mengikuti filter) */}
+      <div className="rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 p-4 flex items-center justify-between shadow-md">
+        <div className="flex items-center gap-2 text-white/90">
+          <LuDollarSign className="w-5 h-5" />
+          <span className="text-sm font-semibold">Total Anggaran Usulan ({data.length} proposal)</span>
+        </div>
+        <div className="text-xl md:text-2xl font-bold text-white">{rupiah(totalAnggaran)}</div>
       </div>
 
       {loading ? (
@@ -721,6 +690,9 @@ const TrackingTab = ({ loading, data, search, setSearch, kecamatan, setKecamatan
                     <span className="text-xs text-gray-500">Kec <strong className="text-gray-800">{p.kecamatan_nama}</strong> · Desa <strong className="text-gray-800">{p.desa_nama}</strong></span>
                   </div>
                   <p className="text-sm font-semibold text-gray-800 truncate mt-0.5">{p.judul_proposal}</p>
+                  <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-amber-50 text-amber-800 text-xs font-semibold rounded">
+                    <LuDollarSign className="w-3.5 h-3.5" /> {rupiah(p.anggaran_usulan)}
+                  </span>
                 </div>
                 <StageDots proposal={p} />
                 <button onClick={() => setTrackProposal(p)}
@@ -880,47 +852,6 @@ const StatisticsTab = ({ stats, funnel, perKategori, perKecamatan, tahun }) => {
             </table>
           </div>
         )}
-      </div>
-    </div>
-  );
-};
-
-// ============================ KONTROL ============================
-const ControlTab = ({ loading, saving, open, config, onSave, tahun }) => {
-  const scheduled = config?.schedule ? true : false;
-  return (
-    <div className="space-y-4">
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-        <h2 className="text-base font-bold text-gray-800 flex items-center gap-2 mb-1"><LuPower className="w-5 h-5 text-rose-600" /> Kontrol Pengajuan Desa - TA {tahun}</h2>
-        <p className="text-xs text-gray-500 mb-5">Buka/tutup kemampuan Desa mengajukan proposal Bankeu Perubahan. Berlaku untuk seluruh desa.</p>
-
-        {loading ? (
-          <div className="text-gray-500 text-sm">Memuat pengaturan...</div>
-        ) : (
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl border border-gray-200 bg-gray-50">
-            <div className="flex items-center gap-3">
-              <span className={`w-12 h-12 rounded-xl flex items-center justify-center ${open ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
-                {open ? <LuToggleRight className="w-7 h-7" /> : <LuToggleLeft className="w-7 h-7" />}
-              </span>
-              <div>
-                <p className="font-bold text-gray-800">Status: {open ? 'TERBUKA' : 'DITUTUP'}</p>
-                <p className="text-xs text-gray-500">{open ? 'Desa dapat mengajukan proposal sekarang.' : 'Pengajuan dari Desa sedang ditutup.'}</p>
-                {scheduled && <p className="text-[11px] text-amber-600 mt-0.5 flex items-center gap-1"><LuClock className="w-3 h-3" /> Ada jadwal terpasang (atur via halaman jadwal bila perlu).</p>}
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <button disabled={saving || open} onClick={() => onSave(true)}
-                className="px-4 py-2 rounded-xl text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40">Buka</button>
-              <button disabled={saving || !open} onClick={() => onSave(false)}
-                className="px-4 py-2 rounded-xl text-sm font-semibold bg-red-600 text-white hover:bg-red-700 disabled:opacity-40">Tutup</button>
-            </div>
-          </div>
-        )}
-
-        <div className="mt-4 text-xs bg-blue-50 border border-blue-200 rounded-lg p-3 text-blue-700 flex gap-2">
-          <LuInfo className="w-4 h-4 flex-shrink-0 mt-0.5" />
-          <div>Pengaturan ini menggunakan kunci <code className="font-mono">bankeu_perubahan_submission_desa_{tahun}</code> dan hanya dapat diubah oleh Bidang SPKED / Superadmin.</div>
-        </div>
       </div>
     </div>
   );
