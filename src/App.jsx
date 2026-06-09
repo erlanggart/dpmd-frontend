@@ -188,6 +188,9 @@ const VideoMeetingPage = lazy(
 const PublicMeetingPage = lazy(
   () => import("./pages/video-meeting/PublicMeetingPage"),
 );
+const WatchPage = lazy(
+  () => import("./pages/video-meeting/WatchPage"),
+);
 const PerjadinMain = lazy(
   () => import("./pages/pegawai/perjadin/PerjadinMain"),
 );
@@ -775,6 +778,9 @@ function App() {
                 
                 {/* Public Meeting Join - No auth required */}
                 <Route path="/join/:roomId" element={<PublicMeetingPage />} />
+
+                {/* Penonton Webinar (HLS, view-only) - No auth required */}
+                <Route path="/watch/:roomId" element={<WatchPage />} />
 
 
                 {/* Rute Desa - Exclusive untuk role: desa */}

@@ -8,7 +8,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   Mic, MicOff, Video, VideoOff, Monitor, MonitorOff,
   MessageSquare, Users, PhoneOff, Send, Copy, X, Loader2,
-  Volume2, VolumeX, Hand, ArrowUpCircle, ArrowDownCircle
+  Volume2, VolumeX, Hand, ArrowUpCircle, ArrowDownCircle, Radio
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { io } from 'socket.io-client';
@@ -138,6 +138,7 @@ const VideoMeetingPage = () => {
   const onStageRef = useRef(true);
   const [myHandRaised, setMyHandRaised] = useState(false);
   const [raisedHands, setRaisedHands] = useState({}); // { [peerId]: userName } — utk host
+  const [broadcasting, setBroadcasting] = useState(false); // siaran HLS aktif (host)
   const isWebinar = meetingSettings?.mode === 'webinar';
 
   // Media state
@@ -1188,6 +1189,28 @@ const VideoMeetingPage = () => {
     toast.success('Link meeting disalin - dapat dibagikan ke siapapun');
   };
 
+  // Webinar broadcast (HLS) — host
+  const copyWatchLink = () => {
+    const link = `${window.location.origin}/watch/${roomId}`;
+    navigator.clipboard.writeText(link);
+    toast.success('Link tonton (penonton) disalin');
+  };
+  const toggleBroadcast = async () => {
+    try {
+      if (!broadcasting) {
+        await api.post(`/video-meetings/${roomId}/broadcast/start`);
+        setBroadcasting(true);
+        toast.success('Siaran webinar dimulai (penonton bisa menonton di /watch)');
+      } else {
+        await api.post(`/video-meetings/${roomId}/broadcast/stop`);
+        setBroadcasting(false);
+        toast('Siaran dihentikan', { icon: '⏹️' });
+      }
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Gagal mengubah status siaran');
+    }
+  };
+
   const openChat = () => {
     setChatOpen(true);
     setUnreadCount(0);
@@ -1238,9 +1261,35 @@ const VideoMeetingPage = () => {
           <span className={`px-2 py-0.5 rounded-full text-xs ${connected ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>
             {connected ? 'Terhubung' : 'Menghubungkan...'}
           </span>
+          {isWebinar && (
+            <span className="px-2 py-0.5 rounded-full text-xs bg-purple-500/20 text-purple-300">
+              Webinar{!onStage ? ' · Penonton' : ''}
+            </span>
+          )}
         </div>
-        
+
         <div className="flex items-center gap-2">
+          {/* Host webinar: kontrol siaran HLS untuk penonton massal */}
+          {isWebinar && meetingSettings?.isHost && (
+            <>
+              <button
+                onClick={toggleBroadcast}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                  broadcasting ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-purple-600 hover:bg-purple-700 text-white'
+                }`}
+                title="Siaran HLS untuk penonton (skala besar)"
+              >
+                {broadcasting ? '⏹️ Stop Siaran' : '🔴 Mulai Siaran'}
+              </button>
+              <button
+                onClick={copyWatchLink}
+                className="p-2 text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                title="Salin link tonton (penonton)"
+              >
+                <Radio className="w-4 h-4" />
+              </button>
+            </>
+          )}
           <span className="text-white/60 text-sm">Room: {roomId}</span>
           <button
             onClick={copyMeetingLink}

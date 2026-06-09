@@ -23,6 +23,7 @@
     "fabric": "^7.4.0",
     "face-api.js": "^0.20.0",
     "framer-motion": "^12.23.22",
+    "hls.js": "^1.6.16",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.2",
