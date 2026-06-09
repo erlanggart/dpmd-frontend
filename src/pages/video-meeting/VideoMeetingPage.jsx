@@ -6,9 +6,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  Mic, MicOff, Video, VideoOff, Monitor, MonitorOff, 
+  Mic, MicOff, Video, VideoOff, Monitor, MonitorOff,
   MessageSquare, Users, PhoneOff, Send, Copy, X, Loader2,
-  Volume2, VolumeX
+  Volume2, VolumeX, Hand, ArrowUpCircle, ArrowDownCircle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { io } from 'socket.io-client';
@@ -132,7 +132,14 @@ const VideoMeetingPage = () => {
   const [participants, setParticipants] = useState([]);
   const [myPeerId, setMyPeerId] = useState(null);
   const [meetingSettings, setMeetingSettings] = useState(null);
-  
+
+  // Webinar: hanya peserta "on stage" yang publish. Default true (mode rapat biasa).
+  const [onStage, setOnStage] = useState(true);
+  const onStageRef = useRef(true);
+  const [myHandRaised, setMyHandRaised] = useState(false);
+  const [raisedHands, setRaisedHands] = useState({}); // { [peerId]: userName } — utk host
+  const isWebinar = meetingSettings?.mode === 'webinar';
+
   // Media state
   const [localStream, setLocalStream] = useState(null);
   const [isMuted, setIsMuted] = useState(false);
@@ -479,6 +486,11 @@ const VideoMeetingPage = () => {
   
   // Produce local audio/video tracks
   const produceLocalTracks = async () => {
+    // Mode webinar: penonton (bukan on-stage) tidak publish apa pun.
+    if (!onStageRef.current) {
+      console.log('[Webinar] Bukan di panggung — lewati publish (mode penonton).');
+      return;
+    }
     const stream = localStreamRef.current;
     if (!sendTransportRef.current || !stream) {
       console.log('[Mediasoup] Cannot produce - sendTransport or stream not ready', {
@@ -514,7 +526,48 @@ const VideoMeetingPage = () => {
       console.error('[Mediasoup] Produce error:', error);
     }
   };
-  
+
+  // Naik panggung (mulai publish) — dipakai saat host meng-"angkat" peserta.
+  const goLive = async () => {
+    onStageRef.current = true;
+    setOnStage(true);
+    producedRef.current = true;
+    await produceLocalTracks();
+  };
+
+  // Turun panggung (berhenti publish) — tutup producer audio/video sendiri.
+  const stopLive = () => {
+    ['audio', 'video'].forEach((k) => {
+      const pr = producersRef.current.get(k);
+      if (pr) {
+        try { pr.close(); } catch { /* noop */ }
+        socketRef.current?.emit('close-producer', { producerId: pr.id });
+        producersRef.current.delete(k);
+      }
+    });
+    producedRef.current = false;
+    onStageRef.current = false;
+    setOnStage(false);
+  };
+
+  // Kontrol webinar (emit ke server)
+  const toggleRaiseHand = () => {
+    const next = !myHandRaised;
+    setMyHandRaised(next);
+    socketRef.current?.emit('raise-hand', { raised: next }, () => {});
+    toast(next ? 'Tangan diangkat ✋' : 'Tangan diturunkan', { icon: next ? '✋' : '👇' });
+  };
+  const promoteToStage = (peerId) => {
+    socketRef.current?.emit('promote-to-stage', { targetPeerId: peerId }, (r) => {
+      if (r?.error) toast.error(r.error);
+    });
+  };
+  const demoteFromStage = (peerId) => {
+    socketRef.current?.emit('demote-from-stage', { targetPeerId: peerId }, (r) => {
+      if (r?.error) toast.error(r.error);
+    });
+  };
+
   // Consume a remote producer
   const consumeProducer = async (producerId, peerId, kind) => {
     // Ensure peerId is always a string for consistency
@@ -678,11 +731,15 @@ const VideoMeetingPage = () => {
             console.log('My peer ID:', response.peerId);
           }
           
-          // Save meeting settings (includes isHost)
+          // Save meeting settings (includes isHost, mode, onStage)
           if (response.meetingSettings) {
             console.log('Meeting settings received:', response.meetingSettings);
             console.log('Am I the host?', response.meetingSettings.isHost);
             setMeetingSettings(response.meetingSettings);
+            // Webinar: onStage menentukan apakah kita publish. Default true (rapat biasa).
+            const stage = response.meetingSettings.onStage !== false;
+            onStageRef.current = stage;
+            setOnStage(stage);
           }
           
           // Set existing peers from the room (excluding self)
@@ -832,6 +889,42 @@ const VideoMeetingPage = () => {
       setMessages((prev) => [...prev, message]);
       if (!chatOpen) {
         setUnreadCount((prev) => prev + 1);
+      }
+    });
+
+    // Webinar: tangan diangkat/diturunkan oleh peserta lain (untuk daftar host)
+    socketRef.current.on('hand-updated', (data) => {
+      const { peerId, userName, raised } = data || {};
+      const pid = String(peerId);
+      setRaisedHands((prev) => {
+        const next = { ...prev };
+        if (raised) next[pid] = userName || 'Peserta';
+        else delete next[pid];
+        return next;
+      });
+      if (raised && String(peerId) !== String(user.id)) {
+        toast(`${userName || 'Peserta'} mengangkat tangan ✋`, { icon: '✋' });
+      }
+    });
+
+    // Webinar: status panggung berubah (diangkat/diturunkan host)
+    socketRef.current.on('stage-updated', async (data) => {
+      const { peerId, onStage: nowOnStage } = data || {};
+      const pid = String(peerId);
+      // Tandai di daftar peserta (untuk UI)
+      setParticipants((prev) => prev.map((p) => (p.oduserId === pid ? { ...p, onStage: nowOnStage } : p)));
+      // Bersihkan status tangan untuk peserta tsb
+      setRaisedHands((prev) => { const n = { ...prev }; delete n[pid]; return n; });
+      // Kalau yang diubah adalah DIRI SENDIRI → mulai/berhenti publish
+      if (pid === String(user.id)) {
+        if (nowOnStage) {
+          setMyHandRaised(false);
+          toast.success('Anda diangkat ke panggung — kamera & mic aktif');
+          await goLive();
+        } else {
+          toast('Anda dipindah ke penonton', { icon: '🔇' });
+          stopLive();
+        }
       }
     });
 
@@ -1228,35 +1321,50 @@ const VideoMeetingPage = () => {
 
       {/* Controls */}
       <div className="px-4 py-4 flex items-center justify-center gap-2 border-t border-white/10">
-        <button
-          onClick={toggleMute}
-          className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
-            isMuted ? 'bg-red-500 hover:bg-red-600' : 'bg-white/10 hover:bg-white/20'
-          } text-white`}
-          title={isMuted ? 'Nyalakan Mikrofon' : 'Matikan Mikrofon'}
-        >
-          {isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-        </button>
+        {isWebinar && !onStage ? (
+          /* Penonton webinar: tidak publish — hanya tombol angkat tangan */
+          <button
+            onClick={toggleRaiseHand}
+            className={`flex items-center gap-2 px-5 h-12 rounded-full transition-colors text-white ${
+              myHandRaised ? 'bg-amber-500 hover:bg-amber-600' : 'bg-white/10 hover:bg-white/20'
+            }`}
+            title="Minta izin bicara"
+          >
+            <Hand className="w-5 h-5" /> {myHandRaised ? 'Turunkan Tangan' : 'Angkat Tangan'}
+          </button>
+        ) : (
+          <>
+            <button
+              onClick={toggleMute}
+              className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
+                isMuted ? 'bg-red-500 hover:bg-red-600' : 'bg-white/10 hover:bg-white/20'
+              } text-white`}
+              title={isMuted ? 'Nyalakan Mikrofon' : 'Matikan Mikrofon'}
+            >
+              {isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+            </button>
 
-        <button
-          onClick={toggleVideo}
-          className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
-            isVideoOff ? 'bg-red-500 hover:bg-red-600' : 'bg-white/10 hover:bg-white/20'
-          } text-white`}
-          title={isVideoOff ? 'Nyalakan Kamera' : 'Matikan Kamera'}
-        >
-          {isVideoOff ? <VideoOff className="w-5 h-5" /> : <Video className="w-5 h-5" />}
-        </button>
+            <button
+              onClick={toggleVideo}
+              className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
+                isVideoOff ? 'bg-red-500 hover:bg-red-600' : 'bg-white/10 hover:bg-white/20'
+              } text-white`}
+              title={isVideoOff ? 'Nyalakan Kamera' : 'Matikan Kamera'}
+            >
+              {isVideoOff ? <VideoOff className="w-5 h-5" /> : <Video className="w-5 h-5" />}
+            </button>
 
-        <button
-          onClick={toggleScreenShare}
-          className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
-            isScreenSharing ? 'bg-green-500 hover:bg-green-600' : 'bg-white/10 hover:bg-white/20'
-          } text-white`}
-          title={isScreenSharing ? 'Hentikan Screen Share' : 'Screen Share'}
-        >
-          {isScreenSharing ? <MonitorOff className="w-5 h-5" /> : <Monitor className="w-5 h-5" />}
-        </button>
+            <button
+              onClick={toggleScreenShare}
+              className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
+                isScreenSharing ? 'bg-green-500 hover:bg-green-600' : 'bg-white/10 hover:bg-white/20'
+              } text-white`}
+              title={isScreenSharing ? 'Hentikan Screen Share' : 'Screen Share'}
+            >
+              {isScreenSharing ? <MonitorOff className="w-5 h-5" /> : <Monitor className="w-5 h-5" />}
+            </button>
+          </>
+        )}
 
         <button
           onClick={toggleSpeaker}
@@ -1388,7 +1496,36 @@ const VideoMeetingPage = () => {
                 <div className="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center text-white font-semibold">
                   {(participant.userName || 'U')[0].toUpperCase()}
                 </div>
-                <p className="text-white text-sm">{participant.userName}</p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-white text-sm truncate">{participant.userName}</p>
+                  {isWebinar && (
+                    <p className="text-xs text-white/40">{participant.onStage ? 'Panggung' : 'Penonton'}</p>
+                  )}
+                </div>
+                {/* Badge tangan terangkat */}
+                {raisedHands[participant.oduserId] && (
+                  <span title="Mengangkat tangan" className="text-amber-400"><Hand className="w-4 h-4" /></span>
+                )}
+                {/* Kontrol host webinar: naik/turun panggung */}
+                {isWebinar && meetingSettings?.isHost && (
+                  participant.onStage ? (
+                    <button
+                      onClick={() => demoteFromStage(participant.oduserId)}
+                      title="Turunkan dari panggung"
+                      className="p-1.5 rounded-lg bg-white/10 hover:bg-red-500/80 text-white"
+                    >
+                      <ArrowDownCircle className="w-4 h-4" />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => promoteToStage(participant.oduserId)}
+                      title="Naikkan ke panggung"
+                      className="p-1.5 rounded-lg bg-white/10 hover:bg-emerald-500/80 text-white"
+                    >
+                      <ArrowUpCircle className="w-4 h-4" />
+                    </button>
+                  )
+                )}
               </div>
             ))}
           </div>
