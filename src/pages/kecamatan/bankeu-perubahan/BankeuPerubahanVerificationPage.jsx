@@ -164,7 +164,40 @@ const BankeuPerubahanVerificationPage = ({ tahun }) => {
     return Object.values(groups);
   }, [filteredProposals]);
 
+  const getApprovalMissingItems = (proposal) => {
+    const missing = [];
+    if (!proposal.berita_acara_path) missing.push('Berita Acara Verifikasi Kecamatan');
+    if (!proposal.surat_pengantar_kecamatan_path) missing.push('Surat Pengantar Kecamatan');
+    return missing;
+  };
+
+  const showApprovalMissingAlert = (proposal) => {
+    const missing = getApprovalMissingItems(proposal);
+    return Swal.fire({
+      icon: 'warning',
+      title: 'Dokumen Belum Lengkap',
+      html: `
+        <div class="text-left">
+          <p class="text-gray-700 mb-2">
+            Proposal belum dapat disetujui. Buat dokumen berikut terlebih dahulu:
+          </p>
+          <ul class="list-disc pl-5 text-sm text-gray-700 bg-amber-50 p-3 rounded-lg space-y-1">
+            ${missing.map(item => `<li>${item}</li>`).join('')}
+          </ul>
+          <p class="text-xs text-gray-500 mt-3">
+            Flow ini mengikuti Bankeu Reguler: BA dan Surat Pengantar Kecamatan harus tersedia sebelum persetujuan dilanjutkan.
+          </p>
+        </div>
+      `,
+      confirmButtonText: 'Mengerti',
+    });
+  };
+
   const openVerify = (proposal, status) => {
+    if (status === 'approved' && getApprovalMissingItems(proposal).length > 0) {
+      showApprovalMissingAlert(proposal);
+      return;
+    }
     setVerifyModal({ proposal, status, catatan: '' });
   };
 
@@ -173,6 +206,9 @@ const BankeuPerubahanVerificationPage = ({ tahun }) => {
     const { proposal, status, catatan } = verifyModal;
     if ((status === 'rejected' || status === 'revision') && !catatan.trim()) {
       return Swal.fire('Validasi', 'Catatan wajib diisi untuk tolak/revisi', 'warning');
+    }
+    if (status === 'approved' && getApprovalMissingItems(proposal).length > 0) {
+      return showApprovalMissingAlert(proposal);
     }
     try {
       await api.patch(`/kecamatan/bankeu-perubahan/proposals/${proposal.id}/verify`, {
@@ -824,10 +860,12 @@ const ProposalRow = ({ proposal, onApprove, onReject, onRevision, onCancel, onGe
   const submittedToDpmd = proposal.submitted_to_dpmd;
   const kecApproved = proposal.kecamatan_status === 'approved';
   const isPending = !proposal.kecamatan_status || proposal.kecamatan_status === 'pending';
+  const canManageKecamatanDocs = !submittedToDpmd && (isPending || kecApproved);
   const firstKegiatan = proposal.kegiatan_list?.[0];
   const hasBA = !!proposal.berita_acara_path;
   const hasSP = !!proposal.surat_pengantar_kecamatan_path;
   const hasQuisioner = !!proposal.quisioner_completed;
+  const canApprove = hasBA && hasSP;
 
   return (
     <div className="px-4 py-3">
@@ -840,7 +878,7 @@ const ProposalRow = ({ proposal, onApprove, onReject, onRevision, onCancel, onGe
                 DPMD: {STATUS_LABELS[proposal.dpmd_status] || proposal.dpmd_status}
               </span>
             )}
-            {kecApproved && (
+            {canManageKecamatanDocs && (
               <>
                 <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-full border ${
                   hasQuisioner ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-gray-50 text-gray-500 border-gray-200'
@@ -921,7 +959,15 @@ const ProposalRow = ({ proposal, onApprove, onReject, onRevision, onCancel, onGe
                 <button onClick={onRevision} className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold rounded-lg">
                   <LuEye className="w-3.5 h-3.5" /> Review
                 </button>
-                <button onClick={onApprove} className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-lg">
+                <button
+                  onClick={onApprove}
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg ${
+                    canApprove
+                      ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700'
+                      : 'bg-gray-100 hover:bg-amber-50 text-gray-500 hover:text-amber-700'
+                  }`}
+                  title={canApprove ? 'Setujui proposal' : 'Buat BA dan Surat Pengantar terlebih dahulu'}
+                >
                   <LuCheck className="w-3.5 h-3.5" /> Approve
                 </button>
                 <button onClick={onReject} className="inline-flex items-center gap-1 px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-semibold rounded-lg">
@@ -936,8 +982,8 @@ const ProposalRow = ({ proposal, onApprove, onReject, onRevision, onCancel, onGe
             )}
           </div>
 
-          {/* Dokumen Kecamatan: Quisioner + BA + Surat Pengantar - hanya untuk proposal approved */}
-          {kecApproved && !submittedToDpmd && (
+          {/* Dokumen Kecamatan: Quisioner + BA + Surat Pengantar */}
+          {canManageKecamatanDocs && (
             <div className="flex flex-wrap gap-1 justify-end pt-1 border-t border-gray-100">
               <button
                 onClick={onTim}
