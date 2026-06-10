@@ -161,6 +161,7 @@ const VideoMeetingPage = () => {
   const [selectedMic, setSelectedMic] = useState('');
   const [showSettings, setShowSettings] = useState(false);
   const [recordBroadcast, setRecordBroadcast] = useState(false); // host: rekam saat siaran
+  const [broadcastLayout, setBroadcastLayout] = useState('speaker'); // host: 'speaker' | 'gallery'
 
   // Media state
   const [localStream, setLocalStream] = useState(null);
@@ -1338,9 +1339,9 @@ const VideoMeetingPage = () => {
   const toggleBroadcast = async () => {
     try {
       if (!broadcasting) {
-        await api.post(`/video-meetings/${roomId}/broadcast/start`, { record: recordBroadcast });
+        await api.post(`/video-meetings/${roomId}/broadcast/start`, { record: recordBroadcast, layout: broadcastLayout });
         setBroadcasting(true);
-        toast.success(`Siaran webinar dimulai${recordBroadcast ? ' (direkam)' : ''} — penonton bisa menonton di /watch`);
+        toast.success(`Siaran webinar dimulai${broadcastLayout === 'gallery' ? ' (galeri)' : ''}${recordBroadcast ? ' · direkam' : ''} — penonton bisa menonton di /watch`);
       } else {
         await api.post(`/video-meetings/${roomId}/broadcast/stop`);
         setBroadcasting(false);
@@ -1426,6 +1427,16 @@ const VideoMeetingPage = () => {
           {/* Host webinar: kontrol siaran HLS untuk penonton massal */}
           {isWebinar && meetingSettings?.isHost && (
             <>
+              <select
+                value={broadcastLayout}
+                disabled={broadcasting}
+                onChange={(e) => setBroadcastLayout(e.target.value)}
+                title="Tata letak siaran: Pembicara aktif (1 sumber) atau Galeri (grid)"
+                className="bg-white/10 text-white/80 text-xs rounded-lg px-2 py-1 border border-white/20 focus:outline-none disabled:opacity-50"
+              >
+                <option className="text-gray-900" value="speaker">Pembicara aktif</option>
+                <option className="text-gray-900" value="gallery">Galeri</option>
+              </select>
               <label className="flex items-center gap-1 text-xs text-white/70 select-none" title="Rekam siaran ke file (MP4)">
                 <input type="checkbox" checked={recordBroadcast} disabled={broadcasting} onChange={(e) => setRecordBroadcast(e.target.checked)} />
                 Rekam
