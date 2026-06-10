@@ -72,18 +72,18 @@ function currentStage(p) {
   const kec = p.kecamatan_status || 'pending';
   const dpmd = p.dpmd_status || 'pending';
   if (p.submitted_to_dpmd) {
-    if (dpmd === 'approved') return { label: 'Disetujui DPMD', tone: 'emerald' };
-    if (dpmd === 'rejected') return { label: 'Ditolak DPMD', tone: 'red' };
-    if (dpmd === 'revision') return { label: 'Revisi DPMD', tone: 'orange' };
-    return { label: 'Menunggu DPMD', tone: 'amber' };
+    if (dpmd === 'approved') return { key: 'disetujui_dpmd', label: 'Disetujui DPMD', tone: 'emerald' };
+    if (dpmd === 'rejected') return { key: 'ditolak_dpmd', label: 'Ditolak DPMD', tone: 'red' };
+    if (dpmd === 'revision') return { key: 'revisi_dpmd', label: 'Revisi DPMD', tone: 'orange' };
+    return { key: 'menunggu_dpmd', label: 'Menunggu DPMD', tone: 'amber' };
   }
   if (p.submitted_to_kecamatan) {
-    if (kec === 'approved') return { label: 'Disetujui Kec. (belum diteruskan)', tone: 'cyan' };
-    if (kec === 'rejected') return { label: 'Ditolak Kecamatan', tone: 'red' };
-    if (kec === 'revision') return { label: 'Revisi Kecamatan', tone: 'orange' };
-    return { label: 'Menunggu Kecamatan', tone: 'amber' };
+    if (kec === 'approved') return { key: 'disetujui_kec', label: 'Disetujui Kec. (belum diteruskan)', tone: 'cyan' };
+    if (kec === 'rejected') return { key: 'ditolak_kec', label: 'Ditolak Kecamatan', tone: 'red' };
+    if (kec === 'revision') return { key: 'revisi_kec', label: 'Revisi Kecamatan', tone: 'orange' };
+    return { key: 'menunggu_kec', label: 'Menunggu Kecamatan', tone: 'amber' };
   }
-  return { label: 'Draft di Desa', tone: 'gray' };
+  return { key: 'draft', label: 'Draft di Desa', tone: 'gray' };
 }
 const TONE = {
   emerald: 'bg-emerald-100 text-emerald-700 border-emerald-300',
@@ -93,6 +93,23 @@ const TONE = {
   cyan: 'bg-cyan-100 text-cyan-700 border-cyan-300',
   gray: 'bg-gray-100 text-gray-600 border-gray-300',
 };
+// Titik berwarna untuk header grup (dipakai di Tracking — dikelompokkan per status).
+const TONE_DOT = {
+  emerald: 'bg-emerald-500', red: 'bg-red-500', orange: 'bg-orange-500',
+  amber: 'bg-amber-500', cyan: 'bg-cyan-500', gray: 'bg-gray-400',
+};
+// Urutan tahap mengikuti alur Desa → Kecamatan → DPMD (untuk pengelompokan Tracking).
+const STAGE_ORDER = [
+  { key: 'draft', label: 'Draft di Desa', tone: 'gray' },
+  { key: 'menunggu_kec', label: 'Menunggu Kecamatan', tone: 'amber' },
+  { key: 'revisi_kec', label: 'Revisi Kecamatan', tone: 'orange' },
+  { key: 'ditolak_kec', label: 'Ditolak Kecamatan', tone: 'red' },
+  { key: 'disetujui_kec', label: 'Disetujui Kec. (belum diteruskan)', tone: 'cyan' },
+  { key: 'menunggu_dpmd', label: 'Menunggu DPMD', tone: 'amber' },
+  { key: 'revisi_dpmd', label: 'Revisi DPMD', tone: 'orange' },
+  { key: 'ditolak_dpmd', label: 'Ditolak DPMD', tone: 'red' },
+  { key: 'disetujui_dpmd', label: 'Disetujui DPMD', tone: 'emerald' },
+];
 
 const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
   const [activeTab, setActiveTab] = useState('archive');
@@ -705,10 +722,30 @@ const StageDots = ({ proposal }) => {
 
 const TrackingTab = ({ loading, data, search, setSearch, kecamatan, setKecamatan, kecamatanOptions, total }) => {
   const [trackProposal, setTrackProposal] = useState(null);
+  const [collapsed, setCollapsed] = useState({});
   const totalAnggaran = useMemo(
     () => data.reduce((s, p) => s + (Number(p.anggaran_usulan) || 0), 0),
     [data]
   );
+
+  // Kelompokkan per status (tahap saat ini), diurutkan mengikuti alur Desa→Kec→DPMD.
+  const grouped = useMemo(() => {
+    const m = new Map();
+    data.forEach(p => {
+      const { key } = currentStage(p);
+      if (!m.has(key)) m.set(key, { items: [], total: 0 });
+      const g = m.get(key);
+      g.items.push(p);
+      g.total += Number(p.anggaran_usulan) || 0;
+    });
+    return m;
+  }, [data]);
+
+  const sections = STAGE_ORDER.filter(s => grouped.has(s.key));
+  const toggle = (key) => setCollapsed(c => ({ ...c, [key]: !c[key] }));
+  const expandAll = () => setCollapsed({});
+  const collapseAll = () => setCollapsed(Object.fromEntries(sections.map(s => [s.key, true])));
+
   return (
     <div className="space-y-3">
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 flex flex-wrap items-center gap-3">
@@ -735,6 +772,26 @@ const TrackingTab = ({ loading, data, search, setSearch, kecamatan, setKecamatan
         <div className="text-xl md:text-2xl font-bold text-white">{rupiah(totalAnggaran)}</div>
       </div>
 
+      {/* Ikhtisar status: klik chip untuk buka/tutup grup terkait */}
+      {!loading && data.length > 0 && (
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-3 flex flex-wrap items-center gap-2">
+          {sections.map(s => {
+            const g = grouped.get(s.key);
+            return (
+              <button key={s.key} onClick={() => toggle(s.key)} title={`${g.items.length} proposal · ${rupiah(g.total)}`}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-semibold transition-opacity ${TONE[s.tone]} ${collapsed[s.key] ? 'opacity-40' : ''}`}>
+                <span className={`w-2 h-2 rounded-full ${TONE_DOT[s.tone]}`} /> {s.label}
+                <span className="ml-0.5 px-1.5 rounded-full bg-white/70">{g.items.length}</span>
+              </button>
+            );
+          })}
+          <div className="ml-auto flex items-center gap-1">
+            <button onClick={expandAll} className="px-2 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-lg">Buka semua</button>
+            <button onClick={collapseAll} className="px-2 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-lg">Tutup semua</button>
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center text-gray-500">Memuat tracking...</div>
       ) : data.length === 0 ? (
@@ -742,26 +799,43 @@ const TrackingTab = ({ loading, data, search, setSearch, kecamatan, setKecamatan
           <LuInfo className="w-12 h-12 mx-auto text-gray-300 mb-3" /><p className="text-gray-600 font-medium">Tidak ada data.</p>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 divide-y divide-gray-100">
-          {data.map(p => {
-            const stage = currentStage(p);
+        <div className="space-y-3">
+          {sections.map(s => {
+            const g = grouped.get(s.key);
+            const open = !collapsed[s.key];
             return (
-              <div key={p.id} className="px-4 py-3 flex flex-col md:flex-row md:items-center gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded-full border ${TONE[stage.tone]}`}>{stage.label}</span>
-                    <span className="text-xs text-gray-500">Kec <strong className="text-gray-800">{p.kecamatan_nama}</strong> · Desa <strong className="text-gray-800">{p.desa_nama}</strong></span>
+              <div key={s.key} className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                {/* Header status */}
+                <button onClick={() => toggle(s.key)}
+                  className="w-full px-4 py-3 flex items-center justify-between gap-3 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    {open ? <LuChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" /> : <LuChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />}
+                    <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${TONE_DOT[s.tone]}`} />
+                    <span className="font-bold text-gray-800 text-sm truncate">{s.label}</span>
+                    <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border flex-shrink-0 ${TONE[s.tone]}`}>{g.items.length}</span>
                   </div>
-                  <p className="text-sm font-semibold text-gray-800 truncate mt-0.5">{p.judul_proposal}</p>
-                  <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-amber-50 text-amber-800 text-xs font-semibold rounded">
-                    <LuDollarSign className="w-3.5 h-3.5" /> {rupiah(p.anggaran_usulan)}
-                  </span>
-                </div>
-                <StageDots proposal={p} />
-                <button onClick={() => setTrackProposal(p)}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-orange-50 hover:bg-orange-100 text-orange-700 text-xs font-semibold rounded-lg shrink-0">
-                  <LuRoute className="w-3.5 h-3.5" /> Lacak
+                  <span className="text-xs font-semibold text-gray-600 flex-shrink-0">{rupiah(g.total)}</span>
                 </button>
+                {open && (
+                  <div className="divide-y divide-gray-100 border-t border-gray-100">
+                    {g.items.map(p => (
+                      <div key={p.id} className="px-4 py-3 flex flex-col md:flex-row md:items-center gap-3">
+                        <div className="flex-1 min-w-0">
+                          <span className="text-xs text-gray-500">Kec <strong className="text-gray-800">{p.kecamatan_nama}</strong> · Desa <strong className="text-gray-800">{p.desa_nama}</strong></span>
+                          <p className="text-sm font-semibold text-gray-800 truncate mt-0.5">{p.judul_proposal}</p>
+                          <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-amber-50 text-amber-800 text-xs font-semibold rounded">
+                            <LuDollarSign className="w-3.5 h-3.5" /> {rupiah(p.anggaran_usulan)}
+                          </span>
+                        </div>
+                        <StageDots proposal={p} />
+                        <button onClick={() => setTrackProposal(p)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 bg-orange-50 hover:bg-orange-100 text-orange-700 text-xs font-semibold rounded-lg shrink-0">
+                          <LuRoute className="w-3.5 h-3.5" /> Lacak
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             );
           })}
