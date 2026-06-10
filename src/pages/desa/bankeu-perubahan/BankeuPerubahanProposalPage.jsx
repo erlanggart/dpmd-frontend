@@ -910,7 +910,7 @@ const FormFields = ({ form, onChange, isAnggaranOverLimit, isEdit = false, curre
 );
 
 const ProposalCard = ({ proposal, expanded, onToggleExpand, onEdit, onDelete, onView }) => {
-  const submitted = proposal.submitted_to_kecamatan;
+  const submitted = !!proposal.submitted_to_kecamatan;
   const kecRevisi = ['revision','rejected'].includes(proposal.kecamatan_status);
   const dpmdRevisi = ['revision','rejected'].includes(proposal.dpmd_status);
   const inRevisi = kecRevisi || dpmdRevisi;
@@ -957,7 +957,7 @@ const ProposalCard = ({ proposal, expanded, onToggleExpand, onEdit, onDelete, on
               {submitted && (
                 <>
                   <StatusBadge status={proposal.kecamatan_status} label={`Kec: ${proposal.kecamatan_status || 'pending'}`} />
-                  {proposal.submitted_to_dpmd && (
+                  {!!proposal.submitted_to_dpmd && (
                     <StatusBadge status={proposal.dpmd_status} label={`DPMD: ${proposal.dpmd_status || 'pending'}`} />
                   )}
                 </>
