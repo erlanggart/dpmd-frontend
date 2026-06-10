@@ -345,8 +345,8 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
   const isDesaExpanded = (key) => expandedDesa[key] === true;       // default tertutup
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-orange-50 p-4 md:p-6 lg:px-8">
-      <div className="max-w-[1700px] mx-auto space-y-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-orange-50 p-4 md:p-6">
+      <div className="w-full mx-auto space-y-4">
         {/* Tab bar */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-2 flex flex-wrap items-center gap-1.5">
           {TABS.map(t => {

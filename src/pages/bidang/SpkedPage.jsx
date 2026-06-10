@@ -198,7 +198,7 @@ const SpkedPage = () => {
 	return (
 		<div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/20 to-green-50/20">
 			{/* Main Content */}
-			<div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+			<div className={`mx-auto px-4 sm:px-6 py-6 ${activeTab === 'bankeu-perubahan' ? 'max-w-[1800px]' : 'max-w-7xl'}`}>
 				{/* Tab Navigation */}
 				<div className="flex items-center gap-2 mb-6 overflow-x-auto pb-1 scrollbar-hide">
 					{spkedTabs.map((tab) => {
