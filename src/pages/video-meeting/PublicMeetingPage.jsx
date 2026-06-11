@@ -9,7 +9,7 @@ import {
   Mic, MicOff, Video, VideoOff, Monitor, MonitorOff,
   MessageSquare, Users, PhoneOff, Send, Copy, X, Loader2,
   User, ArrowRight, Volume2, VolumeX, Hand, Settings, Signal,
-  Clock, Sparkles, ShieldCheck, AlertTriangle, Disc, Square
+  Clock, Sparkles, ShieldCheck, AlertTriangle, Disc, Square, Reply
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { io } from 'socket.io-client';
@@ -212,6 +212,8 @@ const PublicMeetingPage = () => {
   const [participantsOpen, setParticipantsOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
+  const [replyTo, setReplyTo] = useState(null); // pesan yang sedang dibalas
+  const chatInputRef = useRef(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
   
@@ -1246,14 +1248,28 @@ const PublicMeetingPage = () => {
 
   const sendMessage = () => {
     if (!newMessage.trim() || !socketRef.current) return;
-    
+
     socketRef.current.emit('chat-message', {
       roomId,
       message: newMessage.trim(),
       userName: isLoggedIn ? (user?.nama || user?.username || 'User') : (guestName || 'Guest'),
+      replyTo: replyTo
+        ? { id: replyTo.id, senderName: replyTo.senderName, message: replyTo.message }
+        : null,
     });
-    
+
     setNewMessage('');
+    setReplyTo(null);
+  };
+
+  // Mulai membalas sebuah pesan (fokuskan input).
+  const startReply = (msg) => {
+    setReplyTo({
+      id: msg.id,
+      senderName: msg.senderName || msg.userName || 'Peserta',
+      message: msg.message,
+    });
+    setTimeout(() => chatInputRef.current?.focus(), 0);
   };
 
   const handleLeave = () => {
@@ -1713,31 +1729,81 @@ const PublicMeetingPage = () => {
             </button>
           </div>
           
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div className="flex-1 overflow-y-auto p-4 space-y-3">
             {messages.length === 0 ? (
               <p className="text-white/40 text-center text-sm">Belum ada pesan</p>
             ) : (
-              messages.map((msg, index) => (
-                <div key={index} className={`flex flex-col ${String(msg.senderId) === String(myPeerId) ? 'items-end' : 'items-start'}`}>
-                  <span className="text-white/40 text-xs mb-1">{msg.userName}</span>
-                  <div className={`px-4 py-2 rounded-xl max-w-[80%] ${
-                    String(msg.senderId) === String(myPeerId) ? 'bg-blue-500 text-white' : 'bg-white/10 text-white'
-                  }`}>
-                    <p className="text-sm">{msg.message}</p>
+              messages.map((msg, index) => {
+                const isOwn = String(msg.senderId) === String(myPeerId);
+                const senderName = msg.senderName || msg.userName || 'Peserta';
+                return (
+                  <div key={msg.id || index} className={`group flex flex-col ${isOwn ? 'items-end' : 'items-start'}`}>
+                    <span className="text-white/45 text-xs mb-1 px-1 font-medium">
+                      {isOwn ? 'Anda' : senderName}
+                    </span>
+                    <div className="flex items-end gap-1.5 max-w-[85%]">
+                      {isOwn && (
+                        <button
+                          onClick={() => startReply(msg)}
+                          title="Balas"
+                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-white/40 hover:text-white shrink-0"
+                        >
+                          <Reply className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      <div className={`px-3.5 py-2 rounded-2xl ${
+                        isOwn ? 'bg-blue-500 text-white rounded-br-md' : 'bg-white/10 text-white rounded-bl-md'
+                      }`}>
+                        {msg.replyTo && (msg.replyTo.message || msg.replyTo.senderName) && (
+                          <div className={`mb-1.5 px-2 py-1 rounded-lg border-l-2 text-xs ${
+                            isOwn ? 'bg-white/15 border-white/50' : 'bg-black/20 border-blue-400'
+                          }`}>
+                            <span className="block font-semibold opacity-90 truncate">{msg.replyTo.senderName || 'Peserta'}</span>
+                            <span className="block opacity-70 truncate">{msg.replyTo.message}</span>
+                          </div>
+                        )}
+                        <p className="text-sm break-words whitespace-pre-wrap">{msg.message}</p>
+                      </div>
+                      {!isOwn && (
+                        <button
+                          onClick={() => startReply(msg)}
+                          title="Balas"
+                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-white/40 hover:text-white shrink-0"
+                        >
+                          <Reply className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
-          
+
           <div className="p-4 border-t border-white/10">
+            {replyTo && (
+              <div className="mb-2 flex items-center gap-2 bg-white/[0.06] border-l-2 border-blue-400 rounded-lg px-3 py-2">
+                <Reply className="w-3.5 h-3.5 text-blue-300 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <span className="block text-xs font-semibold text-blue-200 truncate">Membalas {replyTo.senderName}</span>
+                  <span className="block text-xs text-white/50 truncate">{replyTo.message}</span>
+                </div>
+                <button onClick={() => setReplyTo(null)} title="Batal balas" className="p-1 text-white/40 hover:text-white shrink-0">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
             <div className="flex gap-2">
               <input
+                ref={chatInputRef}
                 type="text"
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                placeholder="Ketik pesan..."
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') sendMessage();
+                  if (e.key === 'Escape') setReplyTo(null);
+                }}
+                placeholder={replyTo ? `Balas ${replyTo.senderName}…` : 'Ketik pesan...'}
                 className="flex-1 px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:border-blue-500"
               />
               <button onClick={sendMessage} className="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg">
