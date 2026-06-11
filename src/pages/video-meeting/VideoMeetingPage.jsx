@@ -853,6 +853,18 @@ const VideoMeetingPage = () => {
     }
   };
 
+  // Paksa elemen <video> self-view menyegarkan tampilan. Saat track di dalam stream
+  // diganti tapi REFERENSI stream-nya sama, sebagian browser tidak render ulang →
+  // tampil hitam. Set null lalu set ulang + play() untuk memicu refresh.
+  const refreshLocalVideo = (stream) => {
+    const v = localVideoRef.current;
+    if (!v) return;
+    try { v.srcObject = null; } catch { /* noop */ }
+    v.srcObject = stream;
+    const p = v.play?.();
+    if (p && p.catch) p.catch(() => {});
+  };
+
   // ===== Virtual background (efek latar) =====
   // Terapkan efek: 'none' (kamera apa adanya), 'blur', atau 'image' (gambar device).
   const applyBgEffect = useCallback(async (next) => {
@@ -864,18 +876,22 @@ const VideoMeetingPage = () => {
       if (!rawCamTrackRef.current) {
         rawCamTrackRef.current = stream.getVideoTracks()[0] || null;
       }
-      const rawTrack = rawCamTrackRef.current;
+      let rawTrack = rawCamTrackRef.current;
 
       // Matikan efek → kembalikan kamera mentah.
       if (next.type === 'none') {
         if (bgProcessorRef.current) { bgProcessorRef.current.stop(); bgProcessorRef.current = null; }
-        if (rawTrack) {
-          const cur = stream.getVideoTracks()[0];
-          if (cur && cur !== rawTrack) stream.removeTrack(cur);
-          if (!stream.getVideoTracks().includes(rawTrack)) stream.addTrack(rawTrack);
-          if (producer && !producer.closed) await producer.replaceTrack({ track: rawTrack });
-          if (localVideoRef.current) localVideoRef.current.srcObject = stream;
+        // Kamera mentah mungkin sudah mati → ambil ulang agar self-view tidak hitam.
+        if (!rawTrack || rawTrack.readyState === 'ended') {
+          const ns = await navigator.mediaDevices.getUserMedia({ video: selectedCam ? { deviceId: { exact: selectedCam } } : true });
+          rawTrack = ns.getVideoTracks()[0];
+          rawCamTrackRef.current = rawTrack;
         }
+        const cur = stream.getVideoTracks()[0];
+        if (cur && cur !== rawTrack) stream.removeTrack(cur);
+        if (!stream.getVideoTracks().includes(rawTrack)) stream.addTrack(rawTrack);
+        if (producer && !producer.closed) await producer.replaceTrack({ track: rawTrack });
+        refreshLocalVideo(stream);
         setBgEffect({ type: 'none', image: null, url: null });
         return;
       }
@@ -899,7 +915,7 @@ const VideoMeetingPage = () => {
       if (cur && cur !== processed) stream.removeTrack(cur);
       if (processed && !stream.getVideoTracks().includes(processed)) stream.addTrack(processed);
       if (producer && !producer.closed && processed) await producer.replaceTrack({ track: processed });
-      if (localVideoRef.current) localVideoRef.current.srcObject = stream;
+      refreshLocalVideo(stream);
 
       setBgEffect({ type: next.type, image: next.image || null, url: next.url || null });
     } catch (e) {

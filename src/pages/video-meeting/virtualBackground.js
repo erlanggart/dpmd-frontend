@@ -17,7 +17,10 @@
 
 // Muat library secara lazy agar bundle awal tidak membengkak; WASM/model diambil
 // dari CDN jsDelivr (butuh internet di sisi klien — sama seperti hls.js dll).
-const MP_CDN = 'https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation';
+// PENTING: versi CDN HARUS sama dengan paket npm yang terpasang. Bila tidak cocok,
+// model bisa mengembalikan mask kosong → orang tidak terdeteksi → "full background".
+const MP_VERSION = '0.1.1675465747';
+const MP_CDN = `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation@${MP_VERSION}`;
 
 export class VirtualBackgroundProcessor {
   constructor() {
@@ -25,6 +28,8 @@ export class VirtualBackgroundProcessor {
     this.video = null;          // <video> tersembunyi sumber frame mentah
     this.canvas = null;         // canvas keluaran
     this.ctx = null;
+    this.fgCanvas = null;       // canvas offscreen untuk siluet orang
+    this.fgCtx = null;
     this.inputStream = null;    // MediaStream pembungkus track kamera mentah
     this.outputStream = null;   // hasil canvas.captureStream()
     this.effect = { type: 'none', image: null, blurAmount: 12 };
@@ -81,6 +86,9 @@ export class VirtualBackgroundProcessor {
 
     this.canvas = document.createElement('canvas');
     this.ctx = this.canvas.getContext('2d');
+    // Canvas offscreen untuk menyusun siluet orang (foreground) terpisah dari latar.
+    this.fgCanvas = document.createElement('canvas');
+    this.fgCtx = this.fgCanvas.getContext('2d');
 
     await this.setInputTrack(inputTrack);
 
@@ -97,6 +105,7 @@ export class VirtualBackgroundProcessor {
     const settings = inputTrack.getSettings?.() || {};
     this.canvas.width = settings.width || 640;
     this.canvas.height = settings.height || 480;
+    if (this.fgCanvas) { this.fgCanvas.width = this.canvas.width; this.fgCanvas.height = this.canvas.height; }
 
     this.inputStream = new MediaStream([inputTrack]);
     this.video.srcObject = this.inputStream;
@@ -124,23 +133,21 @@ export class VirtualBackgroundProcessor {
     this._rafId = requestAnimationFrame(() => this._loop());
   }
 
-  /** Komposit hasil segmentasi: orang tetap tajam, latar diganti/di-blur. */
+  /**
+   * Komposit hasil segmentasi. Strategi: GAMBAR LATAR DULU memenuhi kanvas, lalu
+   * tempelkan SILUET ORANG (foreground) di atasnya. Dengan begitu orang selalu jadi
+   * subjek utama (seperti Zoom) — bukan latar yang menutupi orang.
+   */
   _draw(results) {
     const ctx = this.ctx;
+    const fg = this.fgCtx;
     const { width: w, height: h } = this.canvas;
-    if (!ctx || !w || !h) return;
+    if (!ctx || !fg || !w || !h) return;
 
+    // 1) Lapisan LATAR (penuh kanvas).
     ctx.save();
+    ctx.globalCompositeOperation = 'source-over';
     ctx.clearRect(0, 0, w, h);
-
-    // 1) gambar mask segmentasi (area orang).
-    ctx.drawImage(results.segmentationMask, 0, 0, w, h);
-    // 2) sisakan hanya piksel orang dari frame asli.
-    ctx.globalCompositeOperation = 'source-in';
-    ctx.drawImage(results.image, 0, 0, w, h);
-    // 3) gambar latar di belakang orang.
-    ctx.globalCompositeOperation = 'destination-over';
-
     if (this.effect.type === 'image' && this.effect.image) {
       this._drawCover(ctx, this.effect.image, w, h);
     } else if (this.effect.type === 'blur') {
@@ -148,11 +155,21 @@ export class VirtualBackgroundProcessor {
       ctx.drawImage(results.image, 0, 0, w, h);
       ctx.filter = 'none';
     } else {
-      // 'none' seharusnya tak memakai processor, tapi jaga-jaga: gambar apa adanya.
       ctx.drawImage(results.image, 0, 0, w, h);
     }
-
     ctx.restore();
+
+    // 2) Lapisan ORANG di kanvas offscreen: mask → ambil piksel orang dari frame.
+    fg.save();
+    fg.globalCompositeOperation = 'source-over';
+    fg.clearRect(0, 0, w, h);
+    fg.drawImage(results.segmentationMask, 0, 0, w, h);
+    fg.globalCompositeOperation = 'source-in';
+    fg.drawImage(results.image, 0, 0, w, h);
+    fg.restore();
+
+    // 3) Tempel siluet orang di atas latar.
+    ctx.drawImage(this.fgCanvas, 0, 0, w, h);
   }
 
   /** Gambar gambar latar dengan mode "cover" (penuhi canvas, jaga rasio). */
@@ -180,6 +197,8 @@ export class VirtualBackgroundProcessor {
     this.video = null;
     this.canvas = null;
     this.ctx = null;
+    this.fgCanvas = null;
+    this.fgCtx = null;
   }
 }
 
