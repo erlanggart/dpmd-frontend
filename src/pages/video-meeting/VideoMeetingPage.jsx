@@ -3,13 +3,13 @@
  * Main video conferencing room with WebRTC via mediasoup
  */
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Mic, MicOff, Video, VideoOff, Monitor, MonitorOff,
   MessageSquare, Users, PhoneOff, Send, Copy, X, Loader2,
   Volume2, VolumeX, Hand, ArrowUpCircle, ArrowDownCircle, Radio,
-  Pin, PinOff, Settings, Signal
+  Pin, PinOff, Settings, Signal, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { io } from 'socket.io-client';
@@ -23,16 +23,7 @@ const RemoteVideo = ({ participant, stream, isSpeakerMuted, isActive, isPinned, 
   const videoRef = useRef(null);
   const audioRef = useRef(null);
   const [hasVideo, setHasVideo] = useState(false);
-  
-  // Debug: log stream state on each render
-  useEffect(() => {
-    console.log(`[RemoteVideo] ${participant.userName} (${participant.oduserId}):`, {
-      stream: !!stream,
-      tracks: stream?.getTracks().map(t => `${t.kind}:${t.enabled}`),
-      hasVideo
-    });
-  });
-  
+
   // Set video srcObject
   useEffect(() => {
     if (videoRef.current && stream) {
@@ -87,7 +78,7 @@ const RemoteVideo = ({ participant, stream, isSpeakerMuted, isActive, isPinned, 
   }, [stream, participant.userName]);
   
   return (
-    <div className={`relative bg-gray-800 rounded-xl overflow-hidden aspect-video flex items-center justify-center transition-all ${isActive ? 'ring-4 ring-emerald-400' : ''} ${isPinned ? 'ring-2 ring-blue-400' : ''}`}>
+    <div className={`relative w-full h-full min-h-0 bg-gray-800 rounded-xl overflow-hidden flex items-center justify-center transition-all ${isActive ? 'ring-4 ring-emerald-400' : ''} ${isPinned ? 'ring-2 ring-blue-400' : ''}`}>
       {/* Tombol pin (spotlight) */}
       {onTogglePin && (
         <button
@@ -112,13 +103,13 @@ const RemoteVideo = ({ participant, stream, isSpeakerMuted, isActive, isPinned, 
       
       {/* Avatar fallback when no video */}
       {!hasVideo && (
-        <div className="w-20 h-20 bg-gray-700 rounded-full flex items-center justify-center text-white text-2xl font-semibold">
+        <div className="w-12 h-12 md:w-20 md:h-20 bg-gray-700 rounded-full flex items-center justify-center text-white text-lg md:text-2xl font-semibold">
           {(participant.userName || 'U')[0].toUpperCase()}
         </div>
       )}
-      
-      <div className="absolute bottom-2 left-2 bg-black/60 px-3 py-1.5 rounded-lg">
-        <span className="text-white text-sm">{participant.userName}</span>
+
+      <div className="absolute bottom-1.5 left-1.5 max-w-[90%] bg-black/60 px-2 py-0.5 md:py-1 rounded-md md:rounded-lg">
+        <span className="text-white text-xs md:text-sm truncate block">{participant.userName}</span>
       </div>
     </div>
   );
@@ -162,6 +153,24 @@ const VideoMeetingPage = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [recordBroadcast, setRecordBroadcast] = useState(false); // host: rekam saat siaran
   const [broadcastLayout, setBroadcastLayout] = useState('speaker'); // host: 'speaker' | 'gallery'
+
+  // Galeri ala Zoom: halaman + jumlah tile per halaman (responsif) supaya layout tetap
+  // rapih walau ratusan peserta. Self-view selalu ikut sebagai tile pertama tiap halaman.
+  const [galleryPage, setGalleryPage] = useState(0);
+  const [gallerySize, setGallerySize] = useState(25);
+  useEffect(() => {
+    const computeSize = () => {
+      const w = window.innerWidth;
+      if (w < 640) return 4;     // ponsel: 2×2
+      if (w < 1024) return 9;    // tablet: 3×3
+      if (w < 1536) return 16;   // laptop: 4×4
+      return 25;                 // desktop besar: 5×5 (ala Zoom)
+    };
+    const onResize = () => setGallerySize(computeSize());
+    onResize();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   // Media state
   const [localStream, setLocalStream] = useState(null);
@@ -663,6 +672,67 @@ const VideoMeetingPage = () => {
       requestLayers(p.oduserId, high ? 2 : 0);
     });
   }, [pinnedId, activeSpeaker, participants, connected, requestLayers]);
+
+  // ===== Galeri ala Zoom: susun & paginasi tile + daftar peer yang terlihat =====
+  // Urutan stabil (hanya pin yang dipindah ke depan) supaya halaman tidak acak saat
+  // pembicara berganti. `visibleRemoteIds` dipakai untuk menjeda video peserta di
+  // luar halaman aktif → hemat bandwidth/CPU saat peserta sangat banyak.
+  const gallery = useMemo(() => {
+    const remoteTiles = participants
+      .filter((p) => p.oduserId !== myPeerId && p.oduserId !== String(user.id))
+      .map((p) => ({ key: p.oduserId, type: 'remote', participant: p }));
+
+    const pinnedTile = pinnedId
+      ? remoteTiles.find((t) => t.participant.oduserId === pinnedId) || null
+      : null;
+    // Mode speaker (ada yang di-pin) → 1 tile besar + filmstrip; selain itu galeri grid.
+    const stripTiles = pinnedTile ? remoteTiles.filter((t) => t !== pinnedTile) : remoteTiles;
+
+    // Self-view selalu tile pertama tiap halaman; sisanya slot untuk peserta lain.
+    const perPage = Math.max(1, (pinnedTile ? Math.min(gallerySize, 8) : gallerySize) - 1);
+    const totalPages = Math.max(1, Math.ceil(stripTiles.length / perPage));
+    const page = Math.min(galleryPage, totalPages - 1);
+    const pageRemotes = stripTiles.slice(page * perPage, page * perPage + perPage);
+    const pageTiles = [{ key: '__local__', type: 'local' }, ...pageRemotes];
+
+    // Grid kotak rapih: kolom ≈ akar dari jumlah tile pada halaman ini.
+    const cols = Math.max(1, Math.ceil(Math.sqrt(pageTiles.length)));
+    const rows = Math.max(1, Math.ceil(pageTiles.length / cols));
+
+    // Video yang perlu aktif: peserta yang di-pin + yang ada di halaman saat ini.
+    const visibleRemoteIds = new Set([
+      ...(pinnedTile ? [pinnedTile.participant.oduserId] : []),
+      ...pageRemotes.map((t) => t.participant.oduserId),
+    ]);
+
+    return { pinnedTile, stripTiles, pageTiles, cols, rows, totalPages, page, visibleRemoteIds };
+  }, [participants, myPeerId, user.id, pinnedId, galleryPage, gallerySize]);
+
+  // Jeda video consumer untuk peserta di luar halaman aktif; lanjutkan untuk yang
+  // terlihat. Audio tetap jalan agar suara tetap terdengar meski tile tak tampak.
+  const pausedVideoRef = useRef(new Set());
+  useEffect(() => {
+    if (!connected) return;
+    const visible = gallery.visibleRemoteIds;
+    consumersRef.current.forEach((peerConsumers, peerId) => {
+      const vc = peerConsumers?.video;
+      if (!vc) return;
+      const paused = pausedVideoRef.current.has(peerId);
+      if (visible.has(peerId)) {
+        if (paused) {
+          socketRef.current?.emit('resume-consumer', { consumerId: vc.id }, () => {});
+          pausedVideoRef.current.delete(peerId);
+        }
+      } else if (!paused) {
+        socketRef.current?.emit('pause-consumer', { consumerId: vc.id }, () => {});
+        pausedVideoRef.current.add(peerId);
+      }
+    });
+    // Bersihkan catatan untuk peer yang sudah keluar.
+    pausedVideoRef.current.forEach((peerId) => {
+      if (!consumersRef.current.has(peerId)) pausedVideoRef.current.delete(peerId);
+    });
+  }, [gallery.visibleRemoteIds, connected, remoteStreams]);
 
   // ===== Indikator kualitas jaringan (#8) via getStats transport kirim =====
   useEffect(() => {
@@ -1382,6 +1452,46 @@ const VideoMeetingPage = () => {
     );
   }
 
+  // Hasil paginasi galeri (dihitung di useMemo `gallery`).
+  const { pinnedTile, stripTiles, pageTiles, cols, rows, totalPages, page } = gallery;
+
+  // Render satu tile (self-view atau peserta remote).
+  const renderTile = (tile) => {
+    if (tile.type === 'local') {
+      return (
+        <div className="relative w-full h-full min-h-0 bg-gray-800 rounded-xl overflow-hidden flex items-center justify-center">
+          <video
+            ref={localVideoRef}
+            autoPlay
+            muted
+            playsInline
+            className={`w-full h-full object-cover scale-x-[-1] ${isVideoOff ? 'hidden' : ''}`}
+          />
+          {isVideoOff && (
+            <div className="w-12 h-12 md:w-20 md:h-20 bg-gray-700 rounded-full flex items-center justify-center text-white text-lg md:text-2xl font-semibold">
+              {(user.nama || user.username || 'U')[0].toUpperCase()}
+            </div>
+          )}
+          <div className="absolute bottom-1.5 left-1.5 max-w-[90%] flex items-center gap-1.5 bg-black/60 px-2 py-0.5 md:py-1 rounded-md md:rounded-lg">
+            <span className="text-white text-xs md:text-sm truncate">{user.nama || user.username} (Anda)</span>
+            {isMuted && <MicOff className="w-3.5 h-3.5 text-red-500 shrink-0" />}
+            {isScreenSharing && <Monitor className="w-3.5 h-3.5 text-green-500 shrink-0" />}
+          </div>
+        </div>
+      );
+    }
+    return (
+      <RemoteVideo
+        participant={tile.participant}
+        stream={remoteStreams[tile.participant.oduserId]}
+        isSpeakerMuted={isSpeakerMuted}
+        isActive={activeSpeaker === tile.participant.oduserId}
+        isPinned={pinnedId === tile.participant.oduserId}
+        onTogglePin={togglePin}
+      />
+    );
+  };
+
   return (
     <div className="h-screen bg-gray-900 flex flex-col">
       {/* Banner aktifkan suara: muncul sampai user berinteraksi (atasi blokir autoplay audio) */}
@@ -1471,70 +1581,59 @@ const VideoMeetingPage = () => {
       </div>
 
       {/* Video Grid */}
-      <div className="flex-1 p-4 overflow-auto">
-        <div className={`grid gap-4 h-full ${
-          participants.length > 1 
-            ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' 
-            : 'max-w-4xl mx-auto'
-        }`}>
-          {/* Local Video */}
-          <div className="relative bg-gray-800 rounded-xl overflow-hidden aspect-video">
-            <video
-              ref={localVideoRef}
-              autoPlay
-              muted
-              playsInline
-              className={`w-full h-full object-cover scale-x-[-1] ${isVideoOff ? 'hidden' : ''}`}
-            />
-            
-            {isVideoOff && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-20 h-20 bg-gray-700 rounded-full flex items-center justify-center text-white text-2xl font-semibold">
-                  {(user.nama || user.username || 'U')[0].toUpperCase()}
-                </div>
-              </div>
-            )}
-            
-            <div className="absolute bottom-2 left-2 flex items-center gap-2 bg-black/60 px-3 py-1.5 rounded-lg">
-              <span className="text-white text-sm">
-                {user.nama || user.username} (Anda)
-              </span>
-              {isMuted && <MicOff className="w-4 h-4 text-red-500" />}
-              {isScreenSharing && <Monitor className="w-4 h-4 text-green-500" />}
+      <div className="flex-1 p-3 md:p-4 overflow-hidden flex flex-col min-h-0">
+        {pinnedTile ? (
+          /* Mode speaker: 1 tile besar (di-pin) + filmstrip halaman ini */
+          <div className="flex-1 flex flex-col gap-3 min-h-0">
+            <div className="flex-1 min-h-0">{renderTile(pinnedTile)}</div>
+            <div
+              className="shrink-0 grid gap-2 md:gap-3 h-24 md:h-32"
+              style={{ gridTemplateColumns: `repeat(${pageTiles.length}, minmax(0, 1fr))` }}
+            >
+              {pageTiles.map((tile) => (
+                <div key={tile.key} className="min-h-0">{renderTile(tile)}</div>
+              ))}
             </div>
           </div>
+        ) : (
+          /* Mode galeri: grid kotak seragam, dipaginasi agar tetap rapih */
+          <div
+            className="flex-1 grid gap-2 md:gap-3 min-h-0"
+            style={{
+              gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+              gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`,
+            }}
+          >
+            {pageTiles.map((tile) => (
+              <div key={tile.key} className="min-h-0">{renderTile(tile)}</div>
+            ))}
+          </div>
+        )}
 
-          {/* Remote Videos */}
-          {(() => {
-            console.log('[VideoMeetingPage] Rendering remote videos:', {
-              participants: participants.map(p => ({ id: p.oduserId, name: p.userName })),
-              remoteStreamsKeys: Object.keys(remoteStreams),
-              remoteStreamsDetail: Object.entries(remoteStreams).map(([k, v]) => ({ 
-                peerId: k, 
-                tracks: v?.getTracks().map(t => `${t.kind}:${t.enabled}`) 
-              })),
-              myPeerId,
-              userId: user.id
-            });
-            return null;
-          })()}
-          {participants.filter(p => p.oduserId !== myPeerId && p.oduserId !== String(user.id)).map((participant) => {
-            const stream = remoteStreams[participant.oduserId];
-            const pinned = pinnedId === participant.oduserId;
-            return (
-              <div key={participant.oduserId} className={pinned ? 'md:col-span-2 lg:col-span-2' : ''}>
-                <RemoteVideo
-                  participant={participant}
-                  stream={stream}
-                  isSpeakerMuted={isSpeakerMuted}
-                  isActive={activeSpeaker === participant.oduserId}
-                  isPinned={pinned}
-                  onTogglePin={togglePin}
-                />
-              </div>
-            );
-          })}
-        </div>
+        {/* Navigasi halaman (muncul saat peserta melebihi 1 halaman) */}
+        {totalPages > 1 && (
+          <div className="shrink-0 flex items-center justify-center gap-3 pt-3">
+            <button
+              onClick={() => setGalleryPage(Math.max(0, page - 1))}
+              disabled={page === 0}
+              className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              title="Halaman sebelumnya"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <span className="text-white/70 text-sm tabular-nums">
+              Halaman {page + 1} / {totalPages} · {stripTiles.length + 1} peserta
+            </span>
+            <button
+              onClick={() => setGalleryPage(Math.min(totalPages - 1, page + 1))}
+              disabled={page >= totalPages - 1}
+              className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              title="Halaman berikutnya"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Controls */}
