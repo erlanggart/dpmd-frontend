@@ -10,6 +10,11 @@ import {
 } from 'react-icons/lu';
 import BankeuRevisionHistoryModal from '../../../../components/shared/BankeuRevisionHistoryModal';
 import BankeuPerubahanTrackingModal from '../../../../components/shared/BankeuPerubahanTrackingModal';
+import {
+  PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  Tooltip as RTooltip, ResponsiveContainer, RadialBarChart, RadialBar,
+  LabelList, PolarAngleAxis,
+} from 'recharts';
 
 const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
 
@@ -772,7 +777,8 @@ const StageDots = ({ proposal }) => {
 
 const TrackingTab = ({ loading, data, search, setSearch, kecamatan, setKecamatan, kecamatanOptions, total }) => {
   const [trackProposal, setTrackProposal] = useState(null);
-  const [collapsed, setCollapsed] = useState({});
+  // Default: semua grup status TERTUTUP. openMap[key] === true berarti grup dibuka.
+  const [openMap, setOpenMap] = useState({});
   const totalAnggaran = useMemo(
     () => data.reduce((s, p) => s + (Number(p.anggaran_usulan) || 0), 0),
     [data]
@@ -792,9 +798,9 @@ const TrackingTab = ({ loading, data, search, setSearch, kecamatan, setKecamatan
   }, [data]);
 
   const sections = STAGE_ORDER.filter(s => grouped.has(s.key));
-  const toggle = (key) => setCollapsed(c => ({ ...c, [key]: !c[key] }));
-  const expandAll = () => setCollapsed({});
-  const collapseAll = () => setCollapsed(Object.fromEntries(sections.map(s => [s.key, true])));
+  const toggle = (key) => setOpenMap(o => ({ ...o, [key]: !o[key] }));
+  const expandAll = () => setOpenMap(Object.fromEntries(sections.map(s => [s.key, true])));
+  const collapseAll = () => setOpenMap({});
 
   return (
     <div className="space-y-3">
@@ -829,7 +835,7 @@ const TrackingTab = ({ loading, data, search, setSearch, kecamatan, setKecamatan
             const g = grouped.get(s.key);
             return (
               <button key={s.key} onClick={() => toggle(s.key)} title={`${g.items.length} proposal · ${rupiah(g.total)}`}
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-semibold transition-opacity ${TONE[s.tone]} ${collapsed[s.key] ? 'opacity-40' : ''}`}>
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-semibold transition-opacity ${TONE[s.tone]} ${!openMap[s.key] ? 'opacity-40' : ''}`}>
                 <span className={`w-2 h-2 rounded-full ${TONE_DOT[s.tone]}`} /> {s.label}
                 <span className="ml-0.5 px-1.5 rounded-full bg-white/70">{g.items.length}</span>
               </button>
@@ -852,7 +858,7 @@ const TrackingTab = ({ loading, data, search, setSearch, kecamatan, setKecamatan
         <div className="space-y-3">
           {sections.map(s => {
             const g = grouped.get(s.key);
-            const open = !collapsed[s.key];
+            const open = !!openMap[s.key];
             return (
               <div key={s.key} className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
                 {/* Header status */}
@@ -969,18 +975,114 @@ const PartisipasiTab = ({ loading, data }) => {
 };
 
 // ============================ STATISTIK ============================
+const CHART_COLORS = { pending: '#f59e0b', approved: '#10b981', rejected: '#ef4444', revision: '#f97316' };
+const KATEGORI_HEX = { wajib: '#ef4444', pilihan_infrastruktur: '#f97316', pilihan_non_infrastruktur: '#3b82f6' };
+
+// Rupiah ringkas untuk label/axis chart (Rp 7,0 M · Rp 16 Jt · Rp 250 Rb)
+const compactRupiah = (n) => {
+  const v = Number(n || 0);
+  if (v >= 1e9) return `Rp ${(v / 1e9).toFixed(1).replace('.', ',')} M`;
+  if (v >= 1e6) return `Rp ${Math.round(v / 1e6)} Jt`;
+  if (v >= 1e3) return `Rp ${Math.round(v / 1e3)} Rb`;
+  return `Rp ${v}`;
+};
+
+const TipBox = ({ label, rows }) => (
+  <div className="bg-white/95 backdrop-blur border border-gray-200 rounded-xl shadow-lg px-3 py-2 text-xs">
+    {label && <p className="font-bold text-gray-800 mb-1">{label}</p>}
+    {rows.map((r, i) => (
+      <p key={i} className="flex items-center gap-1.5 text-gray-600 leading-relaxed">
+        {r.color && <span className="w-2 h-2 rounded-full inline-block" style={{ background: r.color }} />}
+        <span>{r.name}:</span> <strong className="text-gray-800">{r.value}</strong>
+      </p>
+    ))}
+  </div>
+);
+
+const ChartCard = ({ title, icon: Icon, iconColor, subtitle, children }) => (
+  <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
+    <div className="mb-4">
+      <h3 className="text-sm font-bold text-gray-700 flex items-center gap-2">
+        {Icon && <Icon className={`w-4 h-4 ${iconColor || 'text-gray-500'}`} />} {title}
+      </h3>
+      {subtitle && <p className="text-xs text-gray-400 mt-0.5">{subtitle}</p>}
+    </div>
+    {children}
+  </div>
+);
+
+const KPI_META = [
+  { key: 'total', label: 'Total Masuk', icon: LuFolder, ring: 'text-gray-500', bar: 'bg-gray-400', bg: 'from-gray-50' },
+  { key: 'pending', label: 'Pending', icon: LuHistory, ring: 'text-amber-600', bar: 'bg-amber-500', bg: 'from-amber-50' },
+  { key: 'approved', label: 'Disetujui', icon: LuCheck, ring: 'text-emerald-600', bar: 'bg-emerald-500', bg: 'from-emerald-50' },
+  { key: 'rejected', label: 'Ditolak', icon: LuX, ring: 'text-red-600', bar: 'bg-red-500', bg: 'from-red-50' },
+  { key: 'revision', label: 'Revisi', icon: LuMessageSquare, ring: 'text-orange-600', bar: 'bg-orange-500', bg: 'from-orange-50' },
+];
+
 const StatisticsTab = ({ stats, funnel, perKategori, perKecamatan, tahun }) => {
   const totalAnggaran = stats.total_anggaran || Object.values(perKategori).reduce((s, v) => s + v.anggaran, 0);
+  const totalMasuk = Number(stats.total) || 0;
+
+  const statusData = [
+    { name: 'Pending', value: Number(stats.pending) || 0, color: CHART_COLORS.pending },
+    { name: 'Disetujui', value: Number(stats.approved) || 0, color: CHART_COLORS.approved },
+    { name: 'Ditolak', value: Number(stats.rejected) || 0, color: CHART_COLORS.rejected },
+    { name: 'Revisi', value: Number(stats.revision) || 0, color: CHART_COLORS.revision },
+  ];
+  const statusNonZero = statusData.filter(d => d.value > 0);
+
+  const tahapData = [
+    { name: 'Masih di Desa', value: funnel.desa || 0, color: '#94a3b8' },
+    { name: 'Di Kecamatan', value: funnel.kecamatan || 0, color: '#f59e0b' },
+    { name: 'Menunggu DPMD', value: funnel.dpmd || 0, color: '#3b82f6' },
+    { name: 'Disetujui DPMD', value: funnel.selesai || 0, color: '#10b981' },
+  ];
+
+  const kategoriData = KATEGORI_KEYS.map(k => ({
+    key: k,
+    name: KATEGORI_META[k].label,
+    count: perKategori[k]?.count || 0,
+    anggaran: perKategori[k]?.anggaran || 0,
+    fill: KATEGORI_HEX[k],
+  }));
+  const totalKategoriCount = kategoriData.reduce((s, d) => s + d.count, 0);
+  const maxKategoriCount = Math.max(...kategoriData.map(d => d.count), 1);
+
+  const kecSorted = [...perKecamatan].sort((a, b) => b.count - a.count);
+  const kecTop = kecSorted.slice(0, 12);
+
   return (
     <div className="space-y-4">
+      {/* Header + KPI */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
-        <h2 className="text-base font-bold text-gray-800 flex items-center gap-2 mb-4"><LuChartColumn className="w-5 h-5 text-cyan-600" /> Statistik Verifikasi DPMD - TA {tahun}</h2>
+        <h2 className="text-base font-bold text-gray-800 flex items-center gap-2 mb-4">
+          <LuChartColumn className="w-5 h-5 text-cyan-600" /> Statistik Verifikasi DPMD · TA {tahun}
+        </h2>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <StatCard label="Total Masuk DPMD" value={stats.total || 0} color="bg-gray-50 text-gray-700" />
-          <StatCard label="Pending" value={stats.pending || 0} color="bg-amber-50 text-amber-700" />
-          <StatCard label="Approved" value={stats.approved || 0} color="bg-emerald-50 text-emerald-700" />
-          <StatCard label="Rejected" value={stats.rejected || 0} color="bg-red-50 text-red-700" />
-          <StatCard label="Revision" value={stats.revision || 0} color="bg-orange-50 text-orange-700" />
+          {KPI_META.map(m => {
+            const val = Number(stats[m.key]) || 0;
+            const pct = totalMasuk ? Math.round((val / totalMasuk) * 100) : 0;
+            const Icon = m.icon;
+            return (
+              <div key={m.key} className={`relative overflow-hidden rounded-2xl border border-gray-100 bg-gradient-to-br ${m.bg} to-white p-4`}>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-gray-500">{m.label}</span>
+                  <Icon className={`w-4 h-4 ${m.ring}`} />
+                </div>
+                <div className="text-3xl font-extrabold text-gray-800 mt-2 tabular-nums">{val}</div>
+                {m.key === 'total' ? (
+                  <span className="text-[10px] text-gray-400 mt-2 inline-block">proposal masuk DPMD</span>
+                ) : (
+                  <div className="mt-2">
+                    <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                      <div className={`h-full ${m.bar} rounded-full transition-all`} style={{ width: `${pct}%` }} />
+                    </div>
+                    <span className="text-[10px] text-gray-400 mt-1 inline-block">{pct}% dari total</span>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
         <div className="mt-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 p-4 flex items-center justify-between shadow-md">
           <div className="flex items-center gap-2 text-white/90"><LuDollarSign className="w-5 h-5" /><span className="text-sm font-semibold">Total Anggaran Usulan (masuk DPMD)</span></div>
@@ -988,58 +1090,175 @@ const StatisticsTab = ({ stats, funnel, perKategori, perKecamatan, tahun }) => {
         </div>
       </div>
 
-      {/* Funnel lintas-tahap */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
-        <h3 className="text-sm font-bold text-gray-700 mb-3">Sebaran Tahap (semua proposal: {funnel.total})</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <StatCard label="Masih di Desa" value={funnel.desa} color="bg-slate-50 text-slate-700" />
-          <StatCard label="Di Kecamatan" value={funnel.kecamatan} color="bg-amber-50 text-amber-700" />
-          <StatCard label="Menunggu DPMD" value={funnel.dpmd} color="bg-blue-50 text-blue-700" />
-          <StatCard label="Disetujui DPMD" value={funnel.selesai} color="bg-emerald-50 text-emerald-700" />
-        </div>
-      </div>
-
-      {/* Per kategori */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
-        <h3 className="text-sm font-bold text-gray-700 mb-3">Per Kategori Kegiatan</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {KATEGORI_KEYS.map(k => {
-            const meta = KATEGORI_META[k]; const v = perKategori[k] || { count: 0, anggaran: 0 };
-            return (
-              <div key={k} className={`rounded-xl border p-4 ${meta.badge}`}>
-                <p className="text-xs font-bold">{meta.label}</p>
-                <p className="text-2xl font-bold mt-1">{v.count}</p>
-                <p className="text-xs mt-1 opacity-80">{rupiah(v.anggaran)}</p>
+      {/* Donut status + Pipeline tahap */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Donut: Keputusan DPMD */}
+        <ChartCard title="Komposisi Keputusan DPMD" icon={LuClipboardCheck} iconColor="text-emerald-600"
+          subtitle="Distribusi status verifikasi proposal yang masuk ke DPMD">
+          {totalMasuk === 0 ? (
+            <div className="h-[240px] flex items-center justify-center text-sm text-gray-400">Belum ada data.</div>
+          ) : (
+            <div className="flex flex-col sm:flex-row items-center gap-4">
+              <div className="relative w-full sm:w-1/2" style={{ height: 240 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={statusNonZero} dataKey="value" nameKey="name" cx="50%" cy="50%"
+                      innerRadius={62} outerRadius={96} paddingAngle={3} cornerRadius={6} stroke="none">
+                      {statusNonZero.map((d, i) => <Cell key={i} fill={d.color} />)}
+                    </Pie>
+                    <RTooltip content={({ active, payload }) => {
+                      if (!active || !payload?.length) return null;
+                      const d = payload[0].payload;
+                      const pct = totalMasuk ? Math.round((d.value / totalMasuk) * 100) : 0;
+                      return <TipBox rows={[{ name: d.name, value: `${d.value} (${pct}%)`, color: d.color }]} />;
+                    }} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                  <span className="text-3xl font-extrabold text-gray-800 tabular-nums">{totalMasuk}</span>
+                  <span className="text-[11px] text-gray-400 font-semibold">Total Proposal</span>
+                </div>
               </div>
-            );
-          })}
-        </div>
+              <div className="flex-1 w-full space-y-2.5">
+                {statusData.map(d => {
+                  const pct = totalMasuk ? Math.round((d.value / totalMasuk) * 100) : 0;
+                  return (
+                    <div key={d.name} className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: d.color }} />
+                      <span className="text-xs text-gray-600 flex-1">{d.name}</span>
+                      <span className="text-sm font-bold text-gray-800 tabular-nums">{d.value}</span>
+                      <span className="text-[10px] text-gray-400 w-9 text-right tabular-nums">{pct}%</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </ChartCard>
+
+        {/* Pipeline: Sebaran Tahap */}
+        <ChartCard title="Sebaran Tahap (Pipeline)" icon={LuActivity} iconColor="text-violet-600"
+          subtitle={`Semua proposal lintas-tahap: ${funnel.total || 0}`}>
+          <ResponsiveContainer width="100%" height={240}>
+            <BarChart data={tahapData} layout="vertical" margin={{ left: 0, right: 28, top: 4, bottom: 4 }}>
+              <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="#f1f5f9" />
+              <XAxis type="number" tick={{ fontSize: 11, fill: '#94a3b8' }} allowDecimals={false} />
+              <YAxis type="category" dataKey="name" width={104} tick={{ fontSize: 11, fill: '#475569' }} />
+              <RTooltip cursor={{ fill: '#f8fafc' }} content={({ active, payload }) => {
+                if (!active || !payload?.length) return null;
+                const d = payload[0].payload;
+                const pct = funnel.total ? Math.round((d.value / funnel.total) * 100) : 0;
+                return <TipBox label={d.name} rows={[{ name: 'Jumlah', value: `${d.value} (${pct}%)`, color: d.color }]} />;
+              }} />
+              <Bar dataKey="value" radius={[0, 8, 8, 0]} barSize={26}>
+                {tahapData.map((d, i) => <Cell key={i} fill={d.color} />)}
+                <LabelList dataKey="value" position="right" style={{ fontSize: 11, fontWeight: 700, fill: '#475569' }} />
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartCard>
       </div>
 
-      {/* Per kecamatan */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
-        <h3 className="text-sm font-bold text-gray-700 mb-3">Per Kecamatan</h3>
+      {/* Radial kategori + ringkasan anggaran */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <ChartCard title="Proposal per Kategori Kegiatan" icon={LuPackage} iconColor="text-orange-600"
+          subtitle={`Total ${totalKategoriCount} proposal`}>
+          <div className="flex flex-col sm:flex-row items-center gap-4">
+            <div className="w-full sm:w-1/2" style={{ height: 220 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <RadialBarChart innerRadius="32%" outerRadius="100%" data={kategoriData} startAngle={90} endAngle={-270}>
+                  <PolarAngleAxis type="number" domain={[0, maxKategoriCount]} tick={false} />
+                  <RadialBar background={{ fill: '#f1f5f9' }} dataKey="count" cornerRadius={8} />
+                  <RTooltip content={({ active, payload }) => {
+                    if (!active || !payload?.length) return null;
+                    const d = payload[0].payload;
+                    return <TipBox label={d.name} rows={[
+                      { name: 'Proposal', value: d.count, color: d.fill },
+                      { name: 'Anggaran', value: compactRupiah(d.anggaran) },
+                    ]} />;
+                  }} />
+                </RadialBarChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="flex-1 w-full space-y-2">
+              {kategoriData.map(d => (
+                <div key={d.key} className="rounded-xl border border-gray-100 p-3" style={{ background: `${d.fill}0d` }}>
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 text-xs font-bold text-gray-700">
+                      <span className="w-2.5 h-2.5 rounded-full" style={{ background: d.fill }} /> {d.name}
+                    </span>
+                    <span className="text-lg font-extrabold tabular-nums" style={{ color: d.fill }}>{d.count}</span>
+                  </div>
+                  <p className="text-[11px] text-gray-500 mt-0.5">{rupiah(d.anggaran)}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </ChartCard>
+
+        {/* Per kecamatan - horizontal bar (top 12) */}
+        <ChartCard title="Top Kecamatan (Jumlah Proposal)" icon={LuMapPin} iconColor="text-rose-600"
+          subtitle={kecTop.length ? `Menampilkan ${kecTop.length} dari ${perKecamatan.length} kecamatan` : undefined}>
+          {kecTop.length === 0 ? (
+            <div className="h-[220px] flex items-center justify-center text-sm text-gray-400">Belum ada data.</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={Math.max(220, kecTop.length * 30)}>
+              <BarChart data={kecTop} layout="vertical" margin={{ left: 0, right: 30, top: 4, bottom: 4 }}>
+                <defs>
+                  <linearGradient id="kecGrad" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stopColor="#fb923c" />
+                    <stop offset="100%" stopColor="#f97316" />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis type="number" tick={{ fontSize: 11, fill: '#94a3b8' }} allowDecimals={false} />
+                <YAxis type="category" dataKey="nama" width={92} tick={{ fontSize: 11, fill: '#475569' }} interval={0} />
+                <RTooltip cursor={{ fill: '#f8fafc' }} content={({ active, payload }) => {
+                  if (!active || !payload?.length) return null;
+                  const d = payload[0].payload;
+                  return <TipBox label={d.nama} rows={[
+                    { name: 'Proposal', value: d.count, color: '#f97316' },
+                    { name: 'Anggaran', value: compactRupiah(d.anggaran) },
+                  ]} />;
+                }} />
+                <Bar dataKey="count" radius={[0, 6, 6, 0]} fill="url(#kecGrad)" barSize={18}>
+                  <LabelList dataKey="count" position="right" style={{ fontSize: 11, fontWeight: 700, fill: '#475569' }} />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </ChartCard>
+      </div>
+
+      {/* Tabel detail per kecamatan */}
+      <ChartCard title="Detail per Kecamatan" icon={LuChartColumn} iconColor="text-cyan-600">
         {perKecamatan.length === 0 ? (
           <p className="text-xs text-gray-400">Belum ada data.</p>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto -mx-1">
             <table className="w-full text-sm">
-              <thead><tr className="text-left text-xs text-gray-500 border-b border-gray-200">
-                <th className="py-2">Kecamatan</th><th className="py-2 text-right">Proposal</th><th className="py-2 text-right">Anggaran</th>
-              </tr></thead>
+              <thead>
+                <tr className="text-left text-xs text-gray-500 border-b border-gray-200">
+                  <th className="py-2 px-1">#</th>
+                  <th className="py-2 px-1">Kecamatan</th>
+                  <th className="py-2 px-1 text-right">Proposal</th>
+                  <th className="py-2 px-1 text-right">Anggaran</th>
+                </tr>
+              </thead>
               <tbody>
-                {perKecamatan.map(r => (
-                  <tr key={r.nama} className="border-b border-gray-50">
-                    <td className="py-2 text-gray-800">{r.nama}</td>
-                    <td className="py-2 text-right font-semibold text-gray-700">{r.count}</td>
-                    <td className="py-2 text-right text-gray-600">{rupiah(r.anggaran)}</td>
+                {kecSorted.map((r, i) => (
+                  <tr key={r.nama} className="border-b border-gray-50 hover:bg-gray-50/60">
+                    <td className="py-2 px-1 text-gray-400 tabular-nums">{i + 1}</td>
+                    <td className="py-2 px-1 text-gray-800">{r.nama}</td>
+                    <td className="py-2 px-1 text-right font-semibold text-gray-700 tabular-nums">{r.count}</td>
+                    <td className="py-2 px-1 text-right text-gray-600 tabular-nums">{rupiah(r.anggaran)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         )}
-      </div>
+      </ChartCard>
     </div>
   );
 };
