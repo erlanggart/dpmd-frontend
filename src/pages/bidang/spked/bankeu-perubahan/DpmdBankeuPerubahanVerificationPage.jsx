@@ -6,7 +6,7 @@ import {
   LuEye, LuCheck, LuX, LuRefreshCw, LuFilter, LuMessageSquare, LuInfo,
   LuChevronDown, LuChevronRight, LuSearch, LuPackage, LuMapPin, LuDollarSign,
   LuClipboardCheck, LuHistory, LuRoute, LuFolder, LuActivity, LuUsers,
-  LuDownload, LuChartColumn, LuFileText, LuStamp, LuRotateCcw,
+  LuDownload, LuChartColumn, LuFileText, LuStamp, LuRotateCcw, LuWrench,
 } from 'react-icons/lu';
 import BankeuRevisionHistoryModal from '../../../../components/shared/BankeuRevisionHistoryModal';
 import BankeuPerubahanTrackingModal from '../../../../components/shared/BankeuPerubahanTrackingModal';
@@ -329,15 +329,73 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
       Swal.fire('Gagal', err.response?.data?.message || 'Gagal membatalkan persetujuan', 'error');
     }
   };
+
+  // Troubleshoot Revisi: paksa kembalikan proposal nyangkut/salah ke Desa (reset semua tahap)
+  const troubleshootRevision = async (proposal) => {
+    const stageLabel = currentStage(proposal).label;
+    const result = await Swal.fire({
+      title: '🔧 Troubleshoot Revisi',
+      html: `<div class="text-left space-y-3">
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <p class="text-sm font-semibold text-blue-800">${proposal.judul_proposal}</p>
+          <p class="text-sm text-blue-700">Desa ${proposal.desa_nama || ''} · Kec. ${proposal.kecamatan_nama || ''}</p>
+          <p class="text-sm text-blue-600 mt-1">Posisi saat ini: <strong>${stageLabel}</strong></p>
+        </div>
+        <div class="bg-amber-50 border border-amber-200 rounded-lg p-3">
+          <p class="text-sm text-amber-800">⚠️ Proposal akan dikembalikan ke <strong>Desa</strong> untuk direvisi. Semua status verifikasi (Kecamatan & DPMD), Berita Acara, Surat Pengantar, dan Quisioner akan di-reset. Dokumen desa tetap dipertahankan.</p>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Alasan Troubleshoot <span class="text-red-500">*</span></label>
+          <textarea id="swal-ts-catatan" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500" rows="3" placeholder="Contoh: Salah ACC / proposal nyangkut, desa minta revisi ulang..."></textarea>
+        </div>
+      </div>`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#f59e0b',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: '🔧 Ya, Revisi Proposal',
+      cancelButtonText: 'Batal',
+      preConfirm: () => {
+        const catatan = document.getElementById('swal-ts-catatan')?.value;
+        if (!catatan || catatan.trim().length === 0) {
+          Swal.showValidationMessage('Alasan troubleshoot wajib diisi');
+          return false;
+        }
+        return catatan.trim();
+      },
+    });
+    if (!result.isConfirmed || !result.value) return;
+    try {
+      Swal.fire({ title: 'Memproses...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+      const res = await api.patch(`/dpmd/bankeu-perubahan/proposals/${proposal.id}/troubleshoot-revision`, { catatan: result.value });
+      refreshAll();
+      Swal.fire({
+        icon: 'success',
+        title: 'Troubleshoot Berhasil',
+        html: `<p class="text-sm">${res.data?.message || 'Proposal berhasil dikembalikan ke Desa'}</p>`,
+        timer: 3500,
+        showConfirmButton: true,
+      });
+    } catch (err) {
+      Swal.fire('Gagal', err.response?.data?.message || 'Gagal melakukan troubleshoot revisi', 'error');
+    }
+  };
+
   const submitVerify = async () => {
     if (!verifyModal) return;
     const { proposal, status, catatan } = verifyModal;
-    if ((status === 'rejected' || status === 'revision') && !catatan.trim()) {
-      return Swal.fire('Validasi', 'Catatan wajib diisi untuk tolak/revisi', 'warning');
+    if (status === 'revision' && !catatan.trim()) {
+      return Swal.fire('Validasi', 'Catatan revisi untuk kecamatan wajib diisi', 'warning');
     }
     try {
       await api.patch(`/dpmd/bankeu-perubahan/proposals/${proposal.id}/verify`, { status, catatan });
-      Swal.fire('Berhasil', 'Verifikasi tersimpan', 'success');
+      Swal.fire(
+        'Berhasil',
+        status === 'approved'
+          ? 'Surat Pengantar & Berita Acara disetujui DPMD'
+          : 'Proposal dikembalikan ke Kecamatan untuk revisi SP & BA',
+        'success'
+      );
       setVerifyModal(null);
       refreshAll();
     } catch (err) {
@@ -427,6 +485,7 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
             isKecExpanded={isKecExpanded} toggleKec={toggleKec}
             isDesaExpanded={isDesaExpanded} toggleDesa={toggleDesa}
             openVerify={openVerify} cancelApproval={cancelApproval}
+            troubleshootRevision={troubleshootRevision}
           />
         )}
 
@@ -436,6 +495,7 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
             search={trackSearch} setSearch={setTrackSearch}
             kecamatan={trackKecamatan} setKecamatan={setTrackKecamatan}
             kecamatanOptions={kecamatanOptions} total={trackingData.length}
+            onTroubleshoot={troubleshootRevision}
           />
         )}
 
@@ -453,31 +513,42 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
             <div className="px-6 py-4 border-b border-gray-200">
               <h3 className="text-lg font-bold text-gray-800">
-                {verifyModal.status === 'approved' ? 'Setujui (Final)' : verifyModal.status === 'revision' ? 'Minta Revisi' : 'Tolak'} - DPMD
+                {verifyModal.status === 'approved' ? 'Setujui Dokumen Kecamatan (SP & BA)' : 'Revisi Dokumen Kecamatan (SP & BA)'}
               </h3>
               <p className="text-xs text-gray-500 mt-1">{verifyModal.proposal.judul_proposal}</p>
             </div>
-            <div className="px-6 py-4">
-              <label className="block text-sm font-semibold text-gray-700 mb-1">
-                Catatan {verifyModal.status !== 'approved' && '*'}
-              </label>
-              <textarea
-                value={verifyModal.catatan}
-                onChange={e => setVerifyModal({ ...verifyModal, catatan: e.target.value })}
-                rows={4}
-                className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
-                placeholder={verifyModal.status === 'approved' ? 'Catatan (opsional)' : 'Tulis catatan untuk kecamatan...'}
-              />
+            <div className="px-6 py-4 space-y-3">
+              <div className={`flex items-start gap-2 text-xs rounded-xl p-3 border ${
+                verifyModal.status === 'approved'
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                  : 'bg-orange-50 border-orange-200 text-orange-800'}`}>
+                <LuInfo className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                <span>
+                  {verifyModal.status === 'approved'
+                    ? 'DPMD memverifikasi Surat Pengantar & Berita Acara dari kecamatan (bukan menilai isi proposal desa). Pastikan kedua dokumen sudah sesuai sebelum menyetujui.'
+                    : 'Proposal akan dikembalikan ke Kecamatan untuk men-generate ulang Surat Pengantar & Berita Acara. Status verifikasi kecamatan & proposal desa tetap dipertahankan.'}
+                </span>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Catatan {verifyModal.status === 'revision' && <span className="text-red-500">*</span>}
+                </label>
+                <textarea
+                  value={verifyModal.catatan}
+                  onChange={e => setVerifyModal({ ...verifyModal, catatan: e.target.value })}
+                  rows={4}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  placeholder={verifyModal.status === 'approved' ? 'Catatan (opsional)' : 'Tulis bagian SP / BA yang perlu diperbaiki kecamatan...'}
+                />
+              </div>
             </div>
             <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-2">
               <button onClick={() => setVerifyModal(null)}
                 className="px-4 py-2 bg-white border border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-100">Batal</button>
               <button onClick={submitVerify}
                 className={`px-4 py-2 text-white font-semibold rounded-xl shadow-sm ${
-                  verifyModal.status === 'approved' ? 'bg-emerald-600 hover:bg-emerald-700' :
-                  verifyModal.status === 'revision' ? 'bg-orange-600 hover:bg-orange-700' :
-                  'bg-red-600 hover:bg-red-700'}`}
-              >Simpan</button>
+                  verifyModal.status === 'approved' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-orange-600 hover:bg-orange-700'}`}
+              >{verifyModal.status === 'approved' ? 'Setujui SP & BA' : 'Kirim Revisi ke Kecamatan'}</button>
             </div>
           </div>
         </div>
@@ -498,7 +569,7 @@ const ArchiveTab = ({
   tahun, stats, loading, filterStatus, setFilterStatus, filterKategori, setFilterKategori,
   filterKecamatan, setFilterKecamatan, searchQuery, setSearchQuery, kecamatanOptions,
   filteredProposals, proposals, groupedByKecamatan,
-  isKecExpanded, toggleKec, isDesaExpanded, toggleDesa, openVerify, cancelApproval,
+  isKecExpanded, toggleKec, isDesaExpanded, toggleDesa, openVerify, cancelApproval, troubleshootRevision,
 }) => (
   <div className="space-y-4">
     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4">
@@ -609,9 +680,9 @@ const ArchiveTab = ({
                             {desa.items.map(p => (
                               <ProposalRow key={p.id} proposal={p}
                                 onApprove={() => openVerify(p, 'approved')}
-                                onReject={() => openVerify(p, 'rejected')}
                                 onRevision={() => openVerify(p, 'revision')}
-                                onCancelApproval={() => cancelApproval(p)} />
+                                onCancelApproval={() => cancelApproval(p)}
+                                onTroubleshoot={() => troubleshootRevision(p)} />
                             ))}
                           </div>
                         )}
@@ -628,7 +699,7 @@ const ArchiveTab = ({
   </div>
 );
 
-const ProposalRow = ({ proposal, onApprove, onReject, onRevision, onCancelApproval }) => {
+const ProposalRow = ({ proposal, onApprove, onRevision, onCancelApproval, onTroubleshoot }) => {
   const isPending = !proposal.dpmd_status || proposal.dpmd_status === 'pending';
   const isApproved = proposal.dpmd_status === 'approved';
   const [showHistory, setShowHistory] = useState(false);
@@ -696,6 +767,11 @@ const ProposalRow = ({ proposal, onApprove, onReject, onRevision, onCancelApprov
             className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-lg">
             <LuHistory className="w-3.5 h-3.5" /> Riwayat
           </button>
+          {(baUrl || spUrl) && (
+            <span className="inline-flex items-center gap-1.5 pl-1 pr-0.5 text-[11px] font-semibold text-purple-700">
+              <span className="w-1.5 h-1.5 rounded-full bg-purple-500" /> Dok. Kecamatan:
+            </span>
+          )}
           {baUrl && (
             <a href={baUrl} target="_blank" rel="noopener noreferrer"
               className="inline-flex items-center gap-1 px-2.5 py-1 bg-violet-50 hover:bg-violet-100 text-violet-700 text-xs font-semibold rounded-lg"
@@ -712,14 +788,15 @@ const ProposalRow = ({ proposal, onApprove, onReject, onRevision, onCancelApprov
           )}
           {isPending && (
             <>
-              <button onClick={onApprove} className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-lg">
-                <LuCheck className="w-3.5 h-3.5" /> Approve
+              <button onClick={onApprove}
+                className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-lg"
+                title="Setujui Surat Pengantar & Berita Acara dari kecamatan">
+                <LuCheck className="w-3.5 h-3.5" /> Setujui SP & BA
               </button>
-              <button onClick={onRevision} className="inline-flex items-center gap-1 px-2.5 py-1 bg-orange-50 hover:bg-orange-100 text-orange-700 text-xs font-semibold rounded-lg">
-                <LuMessageSquare className="w-3.5 h-3.5" /> Revisi
-              </button>
-              <button onClick={onReject} className="inline-flex items-center gap-1 px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-semibold rounded-lg">
-                <LuX className="w-3.5 h-3.5" /> Tolak
+              <button onClick={onRevision}
+                className="inline-flex items-center gap-1 px-2.5 py-1 bg-orange-50 hover:bg-orange-100 text-orange-700 text-xs font-semibold rounded-lg"
+                title="Kembalikan ke kecamatan untuk revisi Surat Pengantar & Berita Acara">
+                <LuRefreshCw className="w-3.5 h-3.5" /> Revisi BA/SP
               </button>
             </>
           )}
@@ -728,6 +805,13 @@ const ProposalRow = ({ proposal, onApprove, onReject, onRevision, onCancelApprov
               className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-semibold rounded-lg"
               title="Batalkan persetujuan (salah pencet) — proposal kembali ke Menunggu DPMD">
               <LuRotateCcw className="w-3.5 h-3.5" /> Batalkan
+            </button>
+          )}
+          {onTroubleshoot && (
+            <button onClick={onTroubleshoot}
+              className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-800 text-xs font-semibold rounded-lg"
+              title="Troubleshoot: paksa kembalikan proposal ke Desa untuk direvisi (reset semua tahap)">
+              <LuWrench className="w-3.5 h-3.5" /> Troubleshoot
             </button>
           )}
         </div>
@@ -775,7 +859,7 @@ const StageDots = ({ proposal }) => {
   );
 };
 
-const TrackingTab = ({ loading, data, search, setSearch, kecamatan, setKecamatan, kecamatanOptions, total }) => {
+const TrackingTab = ({ loading, data, search, setSearch, kecamatan, setKecamatan, kecamatanOptions, total, onTroubleshoot }) => {
   const [trackProposal, setTrackProposal] = useState(null);
   // Default: semua grup status TERTUTUP. openMap[key] === true berarti grup dibuka.
   const [openMap, setOpenMap] = useState({});
@@ -884,10 +968,19 @@ const TrackingTab = ({ loading, data, search, setSearch, kecamatan, setKecamatan
                           </span>
                         </div>
                         <StageDots proposal={p} />
-                        <button onClick={() => setTrackProposal(p)}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 bg-orange-50 hover:bg-orange-100 text-orange-700 text-xs font-semibold rounded-lg shrink-0">
-                          <LuRoute className="w-3.5 h-3.5" /> Lacak
-                        </button>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button onClick={() => setTrackProposal(p)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-orange-50 hover:bg-orange-100 text-orange-700 text-xs font-semibold rounded-lg">
+                            <LuRoute className="w-3.5 h-3.5" /> Lacak
+                          </button>
+                          {onTroubleshoot && (
+                            <button onClick={() => onTroubleshoot(p)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-semibold rounded-lg"
+                              title="Troubleshoot: paksa kembalikan proposal ini ke Desa untuk direvisi (reset semua tahap)">
+                              <LuWrench className="w-3.5 h-3.5" /> Troubleshoot
+                            </button>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
