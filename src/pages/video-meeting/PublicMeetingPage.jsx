@@ -8,7 +8,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   Mic, MicOff, Video, VideoOff, Monitor, MonitorOff,
   MessageSquare, Users, PhoneOff, Send, Copy, X, Loader2,
-  User, ArrowRight, Volume2, VolumeX, Hand, Settings, Signal
+  User, ArrowRight, Volume2, VolumeX, Hand, Settings, Signal,
+  Clock, Sparkles, ShieldCheck, AlertTriangle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { io } from 'socket.io-client';
@@ -99,6 +100,59 @@ const RemoteVideo = ({ participant, stream, isSpeakerMuted, isActive }) => {
     </div>
   );
 };
+
+// Keyframes & util animasi untuk layar lobby (di-inject sekali via <style>).
+const LobbyStyles = () => (
+  <style>{`
+    @keyframes lobbyBlob {
+      0%, 100% { transform: translate(0,0) scale(1); }
+      33% { transform: translate(40px,-50px) scale(1.12); }
+      66% { transform: translate(-30px,30px) scale(0.92); }
+    }
+    @keyframes lobbyFadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes lobbyGlowPulse {
+      0%, 100% { opacity: .5; }
+      50% { opacity: .9; }
+    }
+    @keyframes lobbyGridPan {
+      from { background-position: 0 0; }
+      to { background-position: 56px 56px; }
+    }
+    .lobby-blob { animation: lobbyBlob 18s ease-in-out infinite; will-change: transform; }
+    .lobby-fade { opacity: 0; animation: lobbyFadeUp .7s cubic-bezier(.21,1.02,.73,1) forwards; }
+    .lobby-glow { animation: lobbyGlowPulse 4s ease-in-out infinite; }
+    @media (prefers-reduced-motion: reduce) {
+      .lobby-blob, .lobby-fade, .lobby-glow { animation: none !important; opacity: 1 !important; }
+    }
+  `}</style>
+);
+
+// Latar belakang aurora + grid halus, dipakai di semua layar pra-masuk room.
+const LobbyShell = ({ children }) => (
+  <div className="relative min-h-screen overflow-hidden bg-[#080b16] flex items-center justify-center p-4 sm:p-6">
+    <LobbyStyles />
+    {/* Grid halus */}
+    <div
+      className="absolute inset-0 opacity-[0.07]"
+      style={{
+        backgroundImage:
+          'linear-gradient(to right, #fff 1px, transparent 1px), linear-gradient(to bottom, #fff 1px, transparent 1px)',
+        backgroundSize: '56px 56px',
+        animation: 'lobbyGridPan 8s linear infinite',
+      }}
+    />
+    {/* Orb gradien melayang */}
+    <div className="lobby-blob absolute -top-32 -left-24 w-[28rem] h-[28rem] rounded-full bg-indigo-600/30 blur-[120px]" />
+    <div className="lobby-blob absolute top-1/3 -right-24 w-[26rem] h-[26rem] rounded-full bg-violet-600/25 blur-[120px]" style={{ animationDelay: '-6s' }} />
+    <div className="lobby-blob absolute -bottom-32 left-1/4 w-[24rem] h-[24rem] rounded-full bg-sky-500/20 blur-[120px]" style={{ animationDelay: '-12s' }} />
+    {/* Vignette */}
+    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#080b16]" />
+    <div className="relative z-10 w-full">{children}</div>
+  </div>
+);
 
 const PublicMeetingPage = () => {
   const { roomId } = useParams();
@@ -1167,154 +1221,231 @@ const PublicMeetingPage = () => {
   // Loading state
   if (loadingInfo) {
     return (
-      <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center gap-4">
-        <Loader2 className="w-10 h-10 animate-spin text-white" />
-        <p className="text-white">Memuat informasi meeting...</p>
-      </div>
+      <LobbyShell>
+        <div className="lobby-fade flex flex-col items-center justify-center gap-5 text-center">
+          <div className="relative">
+            <div className="lobby-glow absolute inset-0 rounded-full bg-indigo-500/40 blur-xl" />
+            <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-2xl shadow-indigo-500/30">
+              <Video className="w-8 h-8 text-white" />
+            </div>
+          </div>
+          <div className="flex items-center gap-2 text-white/80">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span className="text-sm">Memuat informasi meeting…</span>
+          </div>
+        </div>
+      </LobbyShell>
     );
   }
 
   // Auto-rejoining state
   if (autoJoining && !joined) {
     return (
-      <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center gap-4">
-        <Loader2 className="w-10 h-10 animate-spin text-white" />
-        <p className="text-white">Menghubungkan kembali ke meeting...</p>
-      </div>
+      <LobbyShell>
+        <div className="lobby-fade flex flex-col items-center justify-center gap-5 text-center">
+          <div className="relative">
+            <div className="lobby-glow absolute inset-0 rounded-full bg-emerald-500/40 blur-xl" />
+            <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-2xl shadow-emerald-500/30">
+              <Loader2 className="w-8 h-8 text-white animate-spin" />
+            </div>
+          </div>
+          <span className="text-sm text-white/80">Menghubungkan kembali ke meeting…</span>
+        </div>
+      </LobbyShell>
     );
   }
 
   // Error state
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center gap-4">
-        <div className="bg-red-500/20 text-red-400 px-6 py-4 rounded-xl max-w-md text-center">
-          {error}
+      <LobbyShell>
+        <div className="lobby-fade mx-auto w-full max-w-md text-center bg-white/[0.04] backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl">
+          <div className="mx-auto mb-5 w-14 h-14 rounded-2xl bg-red-500/15 border border-red-500/30 flex items-center justify-center">
+            <AlertTriangle className="w-7 h-7 text-red-400" />
+          </div>
+          <h2 className="text-lg font-semibold text-white mb-2">Tidak dapat membuka meeting</h2>
+          <p className="text-sm text-white/60 mb-6">{error}</p>
+          <button
+            onClick={() => navigate('/')}
+            className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-white text-gray-900 font-semibold hover:bg-gray-100 transition-colors"
+          >
+            Kembali ke Beranda
+          </button>
         </div>
-        <button 
-          onClick={() => navigate('/')}
-          className="px-6 py-2 bg-white text-gray-900 rounded-lg hover:bg-gray-100 transition-colors"
-        >
-          Kembali ke Beranda
-        </button>
-      </div>
+      </LobbyShell>
     );
   }
 
   // Pre-join screen
   if (!joined) {
+    const sched = meetingInfo?.scheduled_start ? new Date(meetingInfo.scheduled_start) : null;
+    const schedStr = sched && !isNaN(sched.getTime())
+      ? sched.toLocaleString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })
+      : null;
+    const currentP = meetingInfo?.current_participants ?? 0;
+    const maxP = meetingInfo?.max_participants;
+    const canJoin = !joining && (isLoggedIn || guestName.trim());
+
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4">
-        <div className="w-full max-w-4xl">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-white mb-2">
+      <LobbyShell>
+        <div className="mx-auto w-full max-w-5xl">
+          {/* Header */}
+          <div className="lobby-fade text-center mb-7 sm:mb-9" style={{ animationDelay: '.05s' }}>
+            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.06] border border-white/10 text-xs font-medium text-indigo-200 mb-4 backdrop-blur-sm">
+              <Sparkles className="w-3.5 h-3.5 text-indigo-300" />
+              DPMD · Video Meeting
+            </span>
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight bg-gradient-to-r from-white via-indigo-100 to-violet-200 bg-clip-text text-transparent mb-3 px-2">
               {meetingInfo?.title || 'Video Meeting'}
             </h1>
             {meetingInfo?.description && (
-              <p className="text-gray-400">{meetingInfo.description}</p>
+              <p className="text-white/55 max-w-xl mx-auto text-sm sm:text-base px-4">{meetingInfo.description}</p>
             )}
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-2 sm:gap-3 text-xs sm:text-sm">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.05] border border-white/10 text-white/70">
+                <span className="relative flex h-2 w-2">
+                  <span className="lobby-glow absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                </span>
+                {currentP > 0 ? `${currentP} sedang di ruangan` : 'Jadilah yang pertama bergabung'}
+              </span>
+              {schedStr && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.05] border border-white/10 text-white/70">
+                  <Clock className="w-3.5 h-3.5 text-indigo-300" /> {schedStr}
+                </span>
+              )}
+              {maxP ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.05] border border-white/10 text-white/70">
+                  <Users className="w-3.5 h-3.5 text-violet-300" /> maks {maxP}
+                </span>
+              ) : null}
+            </div>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-8">
+          {/* Card */}
+          <div
+            className="lobby-fade grid lg:grid-cols-[1.15fr_.85fr] gap-5 sm:gap-6 items-stretch"
+            style={{ animationDelay: '.18s' }}
+          >
             {/* Video Preview */}
-            <div className="bg-gray-800 rounded-2xl overflow-hidden aspect-video relative">
-              <video
-                ref={previewVideoRef}
-                autoPlay
-                muted
-                playsInline
-                className={`w-full h-full object-cover scale-x-[-1] ${isVideoOff ? 'hidden' : ''}`}
-              />
-              
-              {isVideoOff && (
-                <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
-                  <div className="w-24 h-24 bg-gray-700 rounded-full flex items-center justify-center">
-                    <User className="w-12 h-12 text-gray-400" />
-                  </div>
-                </div>
-              )}
+            <div className="relative group">
+              <div className="lobby-glow absolute -inset-px rounded-[1.75rem] bg-gradient-to-r from-indigo-500/40 via-violet-500/30 to-sky-500/40 blur-md" />
+              <div className="relative bg-gray-900/80 backdrop-blur-xl rounded-[1.6rem] overflow-hidden aspect-video border border-white/10 shadow-2xl">
+                <video
+                  ref={previewVideoRef}
+                  autoPlay
+                  muted
+                  playsInline
+                  className={`w-full h-full object-cover scale-x-[-1] transition-opacity duration-300 ${isVideoOff ? 'opacity-0' : 'opacity-100'}`}
+                />
 
-              {/* Preview controls */}
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-                <button
-                  onClick={toggleMute}
-                  className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
-                    isMuted ? 'bg-red-500' : 'bg-white/20 hover:bg-white/30'
-                  } text-white`}
-                >
-                  {isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-                </button>
-                <button
-                  onClick={toggleVideo}
-                  className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
-                    isVideoOff ? 'bg-red-500' : 'bg-white/20 hover:bg-white/30'
-                  } text-white`}
-                >
-                  {isVideoOff ? <VideoOff className="w-5 h-5" /> : <Video className="w-5 h-5" />}
-                </button>
+                {isVideoOff && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gradient-to-br from-gray-800 to-gray-900">
+                    <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-white/[0.06] border border-white/10 flex items-center justify-center">
+                      <User className="w-10 h-10 sm:w-12 sm:h-12 text-white/40" />
+                    </div>
+                    <span className="text-xs text-white/40">Kamera dimatikan</span>
+                  </div>
+                )}
+
+                {/* Pill status preview */}
+                <div className="absolute top-3 left-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/45 backdrop-blur-sm border border-white/10 text-[11px] font-medium text-white/80">
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 lobby-glow" />
+                  Pratinjau
+                </div>
+
+                {/* Gradient bawah utk keterbacaan kontrol */}
+                <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
+
+                {/* Kontrol preview */}
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-3">
+                  <button
+                    onClick={toggleMute}
+                    title={isMuted ? 'Nyalakan mikrofon' : 'Matikan mikrofon'}
+                    className={`w-12 h-12 rounded-full flex items-center justify-center transition-all active:scale-95 backdrop-blur-md border ${
+                      isMuted
+                        ? 'bg-red-500/90 border-red-400/50 text-white shadow-lg shadow-red-500/30'
+                        : 'bg-white/15 border-white/20 hover:bg-white/25 text-white'
+                    }`}
+                  >
+                    {isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                  </button>
+                  <button
+                    onClick={toggleVideo}
+                    title={isVideoOff ? 'Nyalakan kamera' : 'Matikan kamera'}
+                    className={`w-12 h-12 rounded-full flex items-center justify-center transition-all active:scale-95 backdrop-blur-md border ${
+                      isVideoOff
+                        ? 'bg-red-500/90 border-red-400/50 text-white shadow-lg shadow-red-500/30'
+                        : 'bg-white/15 border-white/20 hover:bg-white/25 text-white'
+                    }`}
+                  >
+                    {isVideoOff ? <VideoOff className="w-5 h-5" /> : <Video className="w-5 h-5" />}
+                  </button>
+                </div>
               </div>
             </div>
 
             {/* Join Form */}
-            <div className="flex flex-col justify-center">
-              <div className="bg-gray-800 rounded-2xl p-6">
-                <h2 className="text-xl font-semibold text-white mb-6">
-                  Siap untuk bergabung?
-                </h2>
+            <div className="bg-white/[0.04] backdrop-blur-xl rounded-[1.6rem] border border-white/10 shadow-2xl p-6 sm:p-7 flex flex-col justify-center">
+              <h2 className="text-xl sm:text-2xl font-semibold text-white mb-1">Siap bergabung?</h2>
+              <p className="text-sm text-white/50 mb-6">Periksa kamera & mikrofon Anda sebelum masuk.</p>
 
-                {!isLoggedIn && (
-                  <div className="mb-6">
-                    <label className="block text-sm font-medium text-gray-400 mb-2">
-                      Nama Anda
-                    </label>
-                    <input
-                      type="text"
-                      value={guestName}
-                      onChange={(e) => setGuestName(e.target.value)}
-                      placeholder="Masukkan nama Anda"
-                      className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
-                    />
+              {!isLoggedIn && (
+                <div className="mb-5">
+                  <label className="block text-sm font-medium text-white/70 mb-2">Nama Anda</label>
+                  <input
+                    type="text"
+                    value={guestName}
+                    onChange={(e) => setGuestName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && canJoin) handleJoinMeeting(); }}
+                    placeholder="Masukkan nama Anda"
+                    autoFocus
+                    className="w-full px-4 py-3 bg-white/[0.05] border border-white/15 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-indigo-400/70 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                  />
+                </div>
+              )}
+
+              {isLoggedIn && (
+                <div className="mb-5 flex items-center gap-3 bg-white/[0.05] border border-white/10 rounded-xl p-4">
+                  <div className="w-11 h-11 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-semibold shadow-lg shadow-indigo-500/25">
+                    {(storedUser?.nama || storedUser?.username || 'U')[0]?.toUpperCase() || 'U'}
                   </div>
-                )}
-
-                {isLoggedIn && (
-                  <div className="mb-6 flex items-center gap-3 bg-gray-700 rounded-lg p-4">
-                    <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-semibold">
-                      {(storedUser?.nama || storedUser?.username || 'U')[0]?.toUpperCase() || 'U'}
-                    </div>
-                    <div>
-                      <p className="text-white font-medium">{storedUser?.nama || storedUser?.username || 'User'}</p>
-                      <p className="text-gray-400 text-sm">Masuk sebagai {storedUser?.role || 'pegawai'}</p>
-                    </div>
+                  <div className="min-w-0">
+                    <p className="text-white font-medium truncate">{storedUser?.nama || storedUser?.username || 'User'}</p>
+                    <p className="text-white/45 text-sm capitalize">Masuk sebagai {storedUser?.role || 'pegawai'}</p>
                   </div>
+                </div>
+              )}
+
+              <button
+                onClick={handleJoinMeeting}
+                disabled={!canJoin}
+                className="group/btn w-full relative flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-semibold text-white overflow-hidden transition-all active:scale-[.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 bg-gradient-to-r from-indigo-500 via-violet-500 to-blue-500 shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50"
+              >
+                <span className="absolute inset-0 bg-white/0 group-hover/btn:bg-white/10 transition-colors" />
+                {joining ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span className="relative">Bergabung…</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="relative">Gabung Sekarang</span>
+                    <ArrowRight className="w-5 h-5 relative transition-transform group-hover/btn:translate-x-1" />
+                  </>
                 )}
+              </button>
 
-                <button
-                  onClick={handleJoinMeeting}
-                  disabled={joining || (!isLoggedIn && !guestName.trim())}
-                  className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {joining ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Bergabung...
-                    </>
-                  ) : (
-                    <>
-                      Gabung Sekarang
-                      <ArrowRight className="w-5 h-5" />
-                    </>
-                  )}
-                </button>
-
-                <p className="text-gray-500 text-sm text-center mt-4">
-                  Room ID: <span className="font-mono text-gray-400">{roomId}</span>
-                </p>
+              <div className="mt-5 flex items-center justify-between text-xs text-white/40">
+                <span className="inline-flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400/70" /> Koneksi terenkripsi
+                </span>
+                <span className="font-mono">Room: {roomId}</span>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </LobbyShell>
     );
   }
 

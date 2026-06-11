@@ -9,12 +9,13 @@ import {
   Mic, MicOff, Video, VideoOff, Monitor, MonitorOff,
   MessageSquare, Users, PhoneOff, Send, Copy, X, Loader2,
   Volume2, VolumeX, Hand, ArrowUpCircle, ArrowDownCircle, Radio,
-  Pin, PinOff, Settings, Signal, ChevronLeft, ChevronRight
+  Pin, PinOff, Settings, Signal, ChevronLeft, ChevronRight, Disc, Square
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { io } from 'socket.io-client';
 import { Device } from 'mediasoup-client';
 import api from '../../api';
+import useMeetingRecorder from './useMeetingRecorder';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:3001';
 
@@ -229,6 +230,67 @@ const VideoMeetingPage = () => {
     };
   }, [audioUnlocked, unlockAudio]);
   const producedRef = useRef(false); // Track if we've already produced
+
+  // ── Rekam lokal: kumpulkan sumber video/audio terkini ke satu ref stabil.
+  // Pakai ref (bukan closure) agar loop perekam yang sedang berjalan selalu
+  // membaca peserta TERBARU (peserta yang join saat merekam ikut terekam).
+  const recorderDataRef = useRef({ video: [], audio: [] });
+  useEffect(() => {
+    const video = [];
+    const audio = [];
+    // Sumber lokal (self-view). Audio mic tetap disertakan walau kamera mati.
+    if (localStream) {
+      if (!isVideoOff) {
+        const vt = localStream.getVideoTracks();
+        if (vt.length && vt[0].enabled !== false) {
+          video.push({ id: 'local', stream: localStream, label: `${user.nama || user.username || 'Saya'} (Anda)` });
+        }
+      }
+      if (localStream.getAudioTracks().length) audio.push(localStream);
+    }
+    // Sumber peserta remote.
+    participants.forEach((p) => {
+      const s = remoteStreams[p.oduserId];
+      if (!s) return;
+      const vt = s.getVideoTracks();
+      if (vt.length && vt[0].enabled !== false) {
+        video.push({ id: String(p.oduserId), stream: s, label: p.userName });
+      }
+      if (s.getAudioTracks().length) audio.push(s);
+    });
+    recorderDataRef.current = { video, audio };
+  }, [localStream, isVideoOff, remoteStreams, participants, user.nama, user.username]);
+
+  const getVideoSources = useCallback(() => recorderDataRef.current.video, []);
+  const getAudioStreams = useCallback(() => recorderDataRef.current.audio, []);
+  const getRecordingTitle = useCallback(() => meeting?.title || 'Rekaman Rapat', [meeting]);
+
+  const recorder = useMeetingRecorder({
+    getVideoSources,
+    getAudioStreams,
+    getTitle: getRecordingTitle,
+  });
+
+  // Tampilkan galat perekaman ke user.
+  useEffect(() => {
+    if (recorder.error) toast.error(recorder.error);
+  }, [recorder.error]);
+
+  const handleToggleRecording = useCallback(async () => {
+    if (recorder.isRecording) {
+      recorder.stopRecording();
+      toast('Rekaman dihentikan — menyimpan file…', { icon: '⏹️' });
+      return;
+    }
+    try {
+      const started = await recorder.startRecording();
+      if (started) toast.success('Mulai merekam ke device Anda 🔴');
+    } catch (e) {
+      toast.error(e?.message || 'Gagal memulai rekaman');
+    }
+  }, [recorder]);
+
+  const fmtElapsed = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
   // Sync localStreamRef with localStream state (for use in socket callbacks)
   useEffect(() => {
@@ -1692,6 +1754,28 @@ const VideoMeetingPage = () => {
         >
           {isSpeakerMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
         </button>
+
+        {/* Rekam lokal: simpan rekaman rapat ke device perekam (pilih folder dulu) */}
+        {recorder.supported && (
+          <button
+            onClick={handleToggleRecording}
+            className={`h-12 rounded-full flex items-center justify-center transition-colors text-white ${
+              recorder.isRecording
+                ? 'px-4 gap-2 bg-red-600 hover:bg-red-700'
+                : 'w-12 bg-white/10 hover:bg-white/20'
+            }`}
+            title={recorder.isRecording ? 'Hentikan & simpan rekaman' : 'Rekam rapat ke device (pilih lokasi simpan)'}
+          >
+            {recorder.isRecording ? (
+              <>
+                <Square className="w-4 h-4 fill-current" />
+                <span className="text-sm font-semibold tabular-nums">{fmtElapsed(recorder.elapsed)}</span>
+              </>
+            ) : (
+              <Disc className="w-5 h-5" />
+            )}
+          </button>
+        )}
 
         <button
           onClick={openChat}
