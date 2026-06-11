@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useBidangPath } from '../../hooks/useBidangPath';
-import { FileText, Mail, Plane, Users, Activity, TrendingUp, ArrowLeft, Clock, Zap, ChevronRight, Building, BarChart, Calendar, Bell, Image, Newspaper, RefreshCw, Video, ClipboardCheck, DollarSign } from 'lucide-react';
+import { FileText, Mail, Plane, Users, Activity, TrendingUp, ArrowLeft, Clock, Zap, ChevronRight, Building, BarChart, Calendar, Bell, Image, Newspaper, RefreshCw, ClipboardCheck, DollarSign } from 'lucide-react';
+import Lottie from 'lottie-react';
 import api from '../../api';
 import toast from 'react-hot-toast';
 import DaftarPegawaiBidang from '../../components/bidang/DaftarPegawaiBidang';
+import movieLoadingAnimation from '../../assets/lottie/movie-loading.json';
 
 const SekretariatPage = () => {
 	const navigate = useNavigate();
@@ -301,8 +303,14 @@ const SekretariatPage = () => {
 										>
 											<div className="absolute inset-0 bg-gradient-to-br from-rose-400/5 to-rose-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 											<div className="relative flex items-center gap-5">
-												<div className="h-16 w-16 bg-gradient-to-br from-rose-500 to-rose-600 rounded-2xl flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg shadow-rose-500/25">
-													<Video className="h-8 w-8 text-white" />
+												<div className="h-16 w-16 bg-white border border-rose-100 rounded-2xl flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg shadow-rose-500/20 overflow-hidden">
+													<Lottie
+														animationData={movieLoadingAnimation}
+														loop
+														autoplay
+														className="h-[4.5rem] w-[4.5rem]"
+														aria-label="Logo Video Meeting"
+													/>
 												</div>
 												<div className="flex-1">
 													<h3 className="font-bold text-gray-800 text-lg mb-1">Video Meeting</h3>

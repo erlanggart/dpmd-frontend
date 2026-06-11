@@ -59,6 +59,7 @@ export default defineConfig({
 					if (/[\\/]node_modules[\\/](react|react-dom|react-router|react-router-dom|scheduler)[\\/]/.test(id)) return 'react-vendor';
 					if (id.includes('face-api')) return 'faceapi';
 					if (id.includes('mediasoup')) return 'mediasoup';
+					if (id.includes('@mediapipe')) return 'mediapipe';
 					if (id.includes('leaflet')) return 'leaflet';
 					if (id.includes('xlsx')) return 'xlsx';
 					if (id.includes('jspdf') || id.includes('html2canvas')) return 'pdf';
