@@ -110,8 +110,8 @@ const BankeuPerubahanPublicPage = () => {
                 gradient="from-amber-500 to-orange-600"
               />
               <StatBox
-                label="Disetujui DPMD"
-                value={summary.approved_dpmd || 0}
+                label="Diterima DPMD"
+                value={summary.submitted_to_dpmd || 0}
                 icon={CheckCircle2}
                 gradient="from-emerald-500 to-teal-600"
               />
@@ -139,7 +139,7 @@ const BankeuPerubahanPublicPage = () => {
                         <th className="px-3 py-2 text-left font-semibold text-gray-700">Kecamatan</th>
                         <th className="px-3 py-2 text-right font-semibold text-gray-700">Total Desa</th>
                         <th className="px-3 py-2 text-right font-semibold text-gray-700">Total Proposal</th>
-                        <th className="px-3 py-2 text-right font-semibold text-gray-700">Approved DPMD</th>
+                        <th className="px-3 py-2 text-right font-semibold text-gray-700">Diterima DPMD</th>
                         <th className="px-3 py-2 text-right font-semibold text-gray-700">Total Anggaran</th>
                       </tr>
                     </thead>
@@ -149,7 +149,7 @@ const BankeuPerubahanPublicPage = () => {
                           <td className="px-3 py-2 font-semibold text-gray-800">{k.kecamatan_nama}</td>
                           <td className="px-3 py-2 text-right text-gray-700">{k.total_desa}</td>
                           <td className="px-3 py-2 text-right text-gray-700">{k.total_proposals}</td>
-                          <td className="px-3 py-2 text-right text-emerald-700 font-semibold">{k.approved_dpmd}</td>
+                          <td className="px-3 py-2 text-right text-emerald-700 font-semibold">{k.diterima_dpmd}</td>
                           <td className="px-3 py-2 text-right text-gray-700">{formatRupiahShort(k.total_anggaran)}</td>
                         </tr>
                       ))}
@@ -176,7 +176,7 @@ const BankeuPerubahanPublicPage = () => {
                         {meta.label}
                       </div>
                       <div className="text-2xl font-bold text-gray-800">{j.total} proposal</div>
-                      <div className="text-xs text-emerald-700 mt-1">{j.approved} disetujui DPMD</div>
+                      <div className="text-xs text-emerald-700 mt-1">{j.diterima} diterima DPMD</div>
                       {j.total_anggaran && (
                         <div className="text-xs text-gray-600 mt-1">
                           Anggaran: {formatRupiahShort(j.total_anggaran)}

@@ -75,12 +75,12 @@ const rupiah = (n) => 'Rp ' + Number(n || 0).toLocaleString('id-ID');
 // Tahap "saat ini" sebuah proposal di alur Desa→Kecamatan→DPMD
 function currentStage(p) {
   const kec = p.kecamatan_status || 'pending';
-  const dpmd = p.dpmd_status || 'pending';
+  // DPMD hanya MENERIMA proposal desa — tidak memverifikasi isi proposal.
+  // Verifikasi SP & BA (dokumen kecamatan) bersifat internal kecamatan↔DPMD dan
+  // tidak ditampilkan sebagai tahap tracking proposal, jadi begitu sampai di DPMD
+  // statusnya cukup "Diterima DPMD".
   if (p.submitted_to_dpmd) {
-    if (dpmd === 'approved') return { key: 'disetujui_dpmd', label: 'Disetujui DPMD', tone: 'emerald' };
-    if (dpmd === 'rejected') return { key: 'ditolak_dpmd', label: 'Ditolak DPMD', tone: 'red' };
-    if (dpmd === 'revision') return { key: 'revisi_dpmd', label: 'Revisi DPMD', tone: 'orange' };
-    return { key: 'menunggu_dpmd', label: 'Menunggu DPMD', tone: 'amber' };
+    return { key: 'diterima_dpmd', label: 'Diterima DPMD', tone: 'emerald' };
   }
   if (p.submitted_to_kecamatan) {
     if (kec === 'approved') return { key: 'disetujui_kec', label: 'Disetujui Kec. (belum diteruskan)', tone: 'cyan' };
@@ -110,10 +110,7 @@ const STAGE_ORDER = [
   { key: 'revisi_kec', label: 'Revisi Kecamatan', tone: 'orange' },
   { key: 'ditolak_kec', label: 'Ditolak Kecamatan', tone: 'red' },
   { key: 'disetujui_kec', label: 'Disetujui Kec. (belum diteruskan)', tone: 'cyan' },
-  { key: 'menunggu_dpmd', label: 'Menunggu DPMD', tone: 'amber' },
-  { key: 'revisi_dpmd', label: 'Revisi DPMD', tone: 'orange' },
-  { key: 'ditolak_dpmd', label: 'Ditolak DPMD', tone: 'red' },
-  { key: 'disetujui_dpmd', label: 'Disetujui DPMD', tone: 'emerald' },
+  { key: 'diterima_dpmd', label: 'Diterima DPMD', tone: 'emerald' },
 ];
 
 const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
@@ -309,11 +306,11 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
   // ---- Verifikasi ----
   const openVerify = (proposal, status) => setVerifyModal({ proposal, status, catatan: '' });
 
-  // Batalkan persetujuan DPMD (salah pencet) -> kembali ke "Menunggu DPMD"
+  // Batalkan verifikasi SP & BA (salah pencet) -> SP & BA kembali menunggu verifikasi DPMD
   const cancelApproval = async (proposal) => {
     const result = await Swal.fire({
-      title: 'Batalkan persetujuan?',
-      html: `<p class="text-sm text-gray-600">Keputusan DPMD untuk <strong>${proposal.judul_proposal}</strong> akan dibatalkan dan proposal kembali ke status <strong>Menunggu DPMD</strong>.</p>`,
+      title: 'Batalkan verifikasi SP & BA?',
+      html: `<p class="text-sm text-gray-600">Verifikasi Surat Pengantar &amp; Berita Acara untuk <strong>${proposal.judul_proposal}</strong> akan dibatalkan dan dokumen kembali menunggu verifikasi DPMD. Status proposal tetap <strong>Diterima DPMD</strong>.</p>`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#d97706',
@@ -323,7 +320,7 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
     if (!result.isConfirmed) return;
     try {
       await api.patch(`/dpmd/bankeu-perubahan/proposals/${proposal.id}/cancel-approval`);
-      Swal.fire('Berhasil', 'Persetujuan DPMD dibatalkan', 'success');
+      Swal.fire('Berhasil', 'Verifikasi SP & BA dibatalkan', 'success');
       refreshAll();
     } catch (err) {
       Swal.fire('Gagal', err.response?.data?.message || 'Gagal membatalkan persetujuan', 'error');
@@ -803,7 +800,7 @@ const ProposalRow = ({ proposal, onApprove, onRevision, onCancelApproval, onTrou
           {isApproved && (
             <button onClick={onCancelApproval}
               className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-semibold rounded-lg"
-              title="Batalkan persetujuan (salah pencet) — proposal kembali ke Menunggu DPMD">
+              title="Batalkan verifikasi SP & BA (salah pencet) — dokumen kembali menunggu verifikasi DPMD">
               <LuRotateCcw className="w-3.5 h-3.5" /> Batalkan
             </button>
           )}
@@ -1127,8 +1124,8 @@ const StatisticsTab = ({ stats, funnel, perKategori, perKecamatan, tahun }) => {
   const tahapData = [
     { name: 'Masih di Desa', value: funnel.desa || 0, color: '#94a3b8' },
     { name: 'Di Kecamatan', value: funnel.kecamatan || 0, color: '#f59e0b' },
-    { name: 'Menunggu DPMD', value: funnel.dpmd || 0, color: '#3b82f6' },
-    { name: 'Disetujui DPMD', value: funnel.selesai || 0, color: '#10b981' },
+    { name: 'Diterima DPMD', value: funnel.dpmd || 0, color: '#3b82f6' },
+    { name: 'SP & BA Diverifikasi', value: funnel.selesai || 0, color: '#10b981' },
   ];
 
   const kategoriData = KATEGORI_KEYS.map(k => ({
