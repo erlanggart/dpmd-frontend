@@ -6,7 +6,7 @@ import {
   LuEye, LuCheck, LuX, LuRefreshCw, LuFilter, LuMessageSquare, LuInfo,
   LuChevronDown, LuChevronRight, LuSearch, LuPackage, LuMapPin, LuDollarSign,
   LuClipboardCheck, LuHistory, LuRoute, LuFolder, LuActivity, LuUsers,
-  LuDownload, LuChartColumn,
+  LuDownload, LuChartColumn, LuFileText, LuStamp, LuRotateCcw,
 } from 'react-icons/lu';
 import BankeuRevisionHistoryModal from '../../../../components/shared/BankeuRevisionHistoryModal';
 import BankeuPerubahanTrackingModal from '../../../../components/shared/BankeuPerubahanTrackingModal';
@@ -303,6 +303,27 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
 
   // ---- Verifikasi ----
   const openVerify = (proposal, status) => setVerifyModal({ proposal, status, catatan: '' });
+
+  // Batalkan persetujuan DPMD (salah pencet) -> kembali ke "Menunggu DPMD"
+  const cancelApproval = async (proposal) => {
+    const result = await Swal.fire({
+      title: 'Batalkan persetujuan?',
+      html: `<p class="text-sm text-gray-600">Keputusan DPMD untuk <strong>${proposal.judul_proposal}</strong> akan dibatalkan dan proposal kembali ke status <strong>Menunggu DPMD</strong>.</p>`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d97706',
+      confirmButtonText: 'Ya, batalkan',
+      cancelButtonText: 'Tidak',
+    });
+    if (!result.isConfirmed) return;
+    try {
+      await api.patch(`/dpmd/bankeu-perubahan/proposals/${proposal.id}/cancel-approval`);
+      Swal.fire('Berhasil', 'Persetujuan DPMD dibatalkan', 'success');
+      refreshAll();
+    } catch (err) {
+      Swal.fire('Gagal', err.response?.data?.message || 'Gagal membatalkan persetujuan', 'error');
+    }
+  };
   const submitVerify = async () => {
     if (!verifyModal) return;
     const { proposal, status, catatan } = verifyModal;
@@ -400,7 +421,7 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
             groupedByKecamatan={groupedByKecamatan}
             isKecExpanded={isKecExpanded} toggleKec={toggleKec}
             isDesaExpanded={isDesaExpanded} toggleDesa={toggleDesa}
-            openVerify={openVerify}
+            openVerify={openVerify} cancelApproval={cancelApproval}
           />
         )}
 
@@ -472,7 +493,7 @@ const ArchiveTab = ({
   tahun, stats, loading, filterStatus, setFilterStatus, filterKategori, setFilterKategori,
   filterKecamatan, setFilterKecamatan, searchQuery, setSearchQuery, kecamatanOptions,
   filteredProposals, proposals, groupedByKecamatan,
-  isKecExpanded, toggleKec, isDesaExpanded, toggleDesa, openVerify,
+  isKecExpanded, toggleKec, isDesaExpanded, toggleDesa, openVerify, cancelApproval,
 }) => (
   <div className="space-y-4">
     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4">
@@ -584,7 +605,8 @@ const ArchiveTab = ({
                               <ProposalRow key={p.id} proposal={p}
                                 onApprove={() => openVerify(p, 'approved')}
                                 onReject={() => openVerify(p, 'rejected')}
-                                onRevision={() => openVerify(p, 'revision')} />
+                                onRevision={() => openVerify(p, 'revision')}
+                                onCancelApproval={() => cancelApproval(p)} />
                             ))}
                           </div>
                         )}
@@ -601,11 +623,18 @@ const ArchiveTab = ({
   </div>
 );
 
-const ProposalRow = ({ proposal, onApprove, onReject, onRevision }) => {
+const ProposalRow = ({ proposal, onApprove, onReject, onRevision, onCancelApproval }) => {
   const isPending = !proposal.dpmd_status || proposal.dpmd_status === 'pending';
+  const isApproved = proposal.dpmd_status === 'approved';
   const [showHistory, setShowHistory] = useState(false);
   const [showTracking, setShowTracking] = useState(false);
   const firstKegiatan = proposal.kegiatan_list?.[0];
+  const baUrl = proposal.berita_acara_path
+    ? `${imageBaseUrl}${proposal.berita_acara_path.startsWith('/') ? '' : '/'}${proposal.berita_acara_path}`
+    : null;
+  const spUrl = proposal.surat_pengantar_kecamatan_path
+    ? `${imageBaseUrl}${proposal.surat_pengantar_kecamatan_path.startsWith('/') ? '' : '/'}${proposal.surat_pengantar_kecamatan_path}`
+    : null;
 
   return (
     <div className="px-5 py-4">
@@ -662,6 +691,20 @@ const ProposalRow = ({ proposal, onApprove, onReject, onRevision }) => {
             className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-lg">
             <LuHistory className="w-3.5 h-3.5" /> Riwayat
           </button>
+          {baUrl && (
+            <a href={baUrl} target="_blank" rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 px-2.5 py-1 bg-violet-50 hover:bg-violet-100 text-violet-700 text-xs font-semibold rounded-lg"
+              title="Lihat Berita Acara Verifikasi Kecamatan">
+              <LuFileText className="w-3.5 h-3.5" /> Lihat BA
+            </a>
+          )}
+          {spUrl && (
+            <a href={spUrl} target="_blank" rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold rounded-lg"
+              title="Lihat Surat Pengantar Kecamatan">
+              <LuStamp className="w-3.5 h-3.5" /> Lihat SP
+            </a>
+          )}
           {isPending && (
             <>
               <button onClick={onApprove} className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-lg">
@@ -674,6 +717,13 @@ const ProposalRow = ({ proposal, onApprove, onReject, onRevision }) => {
                 <LuX className="w-3.5 h-3.5" /> Tolak
               </button>
             </>
+          )}
+          {isApproved && (
+            <button onClick={onCancelApproval}
+              className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-semibold rounded-lg"
+              title="Batalkan persetujuan (salah pencet) — proposal kembali ke Menunggu DPMD">
+              <LuRotateCcw className="w-3.5 h-3.5" /> Batalkan
+            </button>
           )}
         </div>
       </div>

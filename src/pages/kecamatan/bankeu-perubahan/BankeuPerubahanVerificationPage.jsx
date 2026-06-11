@@ -6,7 +6,8 @@ import {
   LuEye, LuCheck, LuX, LuRefreshCw, LuSend, LuInfo,
   LuClipboardCheck, LuChevronDown, LuChevronRight,
   LuFilter, LuSearch, LuPackage, LuMapPin, LuDollarSign,
-  LuFileText, LuStamp, LuTriangleAlert, LuUsers, LuClipboardList, LuPencilLine
+  LuFileText, LuStamp, LuTriangleAlert, LuUsers, LuClipboardList, LuPencilLine,
+  LuDownload
 } from 'react-icons/lu';
 import PdfAnnotationEditor from '../../../components/shared/PdfAnnotationEditor';
 
@@ -866,6 +867,12 @@ const ProposalRow = ({ proposal, onApprove, onReject, onRevision, onCancel, onGe
   const hasSP = !!proposal.surat_pengantar_kecamatan_path;
   const hasQuisioner = !!proposal.quisioner_completed;
   const canApprove = hasBA && hasSP;
+  const baUrl = hasBA
+    ? `${imageBaseUrl}${proposal.berita_acara_path.startsWith('/') ? '' : '/'}${proposal.berita_acara_path}`
+    : null;
+  const spUrl = hasSP
+    ? `${imageBaseUrl}${proposal.surat_pengantar_kecamatan_path.startsWith('/') ? '' : '/'}${proposal.surat_pengantar_kecamatan_path}`
+    : null;
 
   return (
     <div className="px-4 py-3">
@@ -1047,6 +1054,58 @@ const ProposalRow = ({ proposal, onApprove, onReject, onRevision, onCancel, onGe
                 >
                   <LuStamp className="w-3.5 h-3.5" /> Generate Surat
                 </button>
+              )}
+            </div>
+          )}
+
+          {/* Sudah dikirim ke DPMD: dokumen BA & Surat Pengantar tetap bisa dilihat,
+              dicetak, & disimpan (tombol generate tidak ditampilkan lagi). */}
+          {submittedToDpmd && (hasBA || hasSP) && (
+            <div className="flex flex-wrap items-center gap-1 justify-end pt-1 border-t border-gray-100">
+              <span className="w-full text-right text-[10px] font-semibold text-gray-400">
+                Sudah dikirim ke DPMD — dokumen tetap bisa dilihat & dicetak
+              </span>
+              {hasBA && (
+                <>
+                  <a
+                    href={baUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-violet-50 hover:bg-violet-100 text-violet-700 text-xs font-semibold rounded-lg"
+                    title="Lihat / Cetak Berita Acara"
+                  >
+                    <LuFileText className="w-3.5 h-3.5" /> Lihat BA
+                  </a>
+                  <a
+                    href={baUrl}
+                    download
+                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-violet-50 hover:bg-violet-100 text-violet-700 text-xs font-semibold rounded-lg"
+                    title="Simpan / Print Berita Acara"
+                  >
+                    <LuDownload className="w-3.5 h-3.5" /> Print/Save
+                  </a>
+                </>
+              )}
+              {hasSP && (
+                <>
+                  <a
+                    href={spUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold rounded-lg"
+                    title="Lihat / Cetak Surat Pengantar"
+                  >
+                    <LuStamp className="w-3.5 h-3.5" /> Lihat Surat
+                  </a>
+                  <a
+                    href={spUrl}
+                    download
+                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold rounded-lg"
+                    title="Simpan / Print Surat Pengantar"
+                  >
+                    <LuDownload className="w-3.5 h-3.5" /> Print/Save
+                  </a>
+                </>
               )}
             </div>
           )}
