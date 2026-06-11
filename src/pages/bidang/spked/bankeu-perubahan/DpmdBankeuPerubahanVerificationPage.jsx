@@ -265,8 +265,16 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
       (submittedDesaIds.has(Number(d.id)) ? byKec[kecName].sudah : byKec[kecName].belum).push(d.nama);
     });
     let totalSudah = 0, totalBelum = 0;
-    Object.values(byKec).forEach(v => { totalSudah += v.sudah.length; totalBelum += v.belum.length; });
-    return { byKec, totalSudah, totalBelum };
+    // Statistik per-kecamatan (untuk grafik & identifikasi kecamatan yang tertinggal).
+    const kecStats = Object.entries(byKec).map(([nama, v]) => {
+      const sudah = v.sudah.length, belum = v.belum.length, total = sudah + belum;
+      totalSudah += sudah; totalBelum += belum;
+      return { nama, sudah, belum, total, pct: total ? Math.round((sudah / total) * 100) : 0 };
+    });
+    const total = totalSudah + totalBelum;
+    const pct = total ? Math.round((totalSudah / total) * 100) : 0;
+    const kecTuntas = kecStats.filter(k => k.total > 0 && k.belum === 0).length;
+    return { byKec, totalSudah, totalBelum, total, pct, kecStats, kecTuntas, totalKec: kecStats.length };
   }, [allDesa, allKecamatan, trackingData]);
 
   // ---- STATISTIK: funnel & breakdown lintas-tahap ----
@@ -501,7 +509,7 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
         )}
 
         {activeTab === 'statistics' && (
-          <StatisticsTab stats={stats} funnel={funnel} perKategori={perKategori} perKecamatan={perKecamatan} tahun={tahun} />
+          <StatisticsTab stats={stats} funnel={funnel} perKategori={perKategori} perKecamatan={perKecamatan} partisipasi={partisipasiData} tahun={tahun} />
         )}
       </div>
 
@@ -993,6 +1001,52 @@ const TrackingTab = ({ loading, data, search, setSearch, kecamatan, setKecamatan
 };
 
 // ============================ PARTISIPASI ============================
+// Gauge radial persentase partisipasi (dipakai di tab Partisipasi & dashboard Statistik).
+const ParticipationGauge = ({ sudah = 0, belum = 0, height = 200 }) => {
+  const total = sudah + belum;
+  const pct = total ? Math.round((sudah / total) * 100) : 0;
+  const data = [{ name: 'Sudah', value: pct, fill: '#10b981' }];
+  return (
+    <div className="relative w-full" style={{ height }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <RadialBarChart innerRadius="72%" outerRadius="100%" data={data} startAngle={90} endAngle={-270}>
+          <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
+          <RadialBar background={{ fill: '#f1f5f9' }} dataKey="value" cornerRadius={20} />
+        </RadialBarChart>
+      </ResponsiveContainer>
+      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+        <span className="text-4xl font-extrabold text-emerald-600 tabular-nums leading-none">{pct}%</span>
+        <span className="text-[11px] text-gray-400 font-semibold mt-1">desa sudah</span>
+      </div>
+    </div>
+  );
+};
+
+const KPI_ACCENT = {
+  slate:   { bg: 'from-slate-50',   text: 'text-slate-700',   icon: 'text-slate-400',   bar: 'bg-slate-400' },
+  emerald: { bg: 'from-emerald-50', text: 'text-emerald-700', icon: 'text-emerald-500', bar: 'bg-emerald-500' },
+  rose:    { bg: 'from-rose-50',    text: 'text-rose-600',    icon: 'text-rose-400',    bar: 'bg-rose-400' },
+  violet:  { bg: 'from-violet-50',  text: 'text-violet-600',  icon: 'text-violet-400',  bar: 'bg-violet-500' },
+};
+const KpiTile = ({ label, value, sub, icon: Icon, accent = 'slate', pct }) => {
+  const a = KPI_ACCENT[accent] || KPI_ACCENT.slate;
+  return (
+    <div className={`relative overflow-hidden rounded-2xl border border-gray-100 bg-gradient-to-br ${a.bg} to-white p-4 flex flex-col`}>
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold text-gray-500">{label}</span>
+        {Icon && <Icon className={`w-4 h-4 ${a.icon}`} />}
+      </div>
+      <div className={`text-3xl font-extrabold mt-1 tabular-nums ${a.text}`}>{value}</div>
+      {typeof pct === 'number' && (
+        <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden mt-2">
+          <div className={`h-full ${a.bar} rounded-full transition-all`} style={{ width: `${pct}%` }} />
+        </div>
+      )}
+      {sub && <span className="text-[10px] text-gray-400 mt-1.5">{sub}</span>}
+    </div>
+  );
+};
+
 const PartisipasiTab = ({ loading, data }) => {
   const [tab, setTab] = useState('belum');
   const [expanded, setExpanded] = useState({});
@@ -1000,24 +1054,74 @@ const PartisipasiTab = ({ loading, data }) => {
 
   if (loading) return <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center text-gray-500">Memuat partisipasi...</div>;
 
+  const { totalSudah = 0, totalBelum = 0, total = 0, pct = 0, kecTuntas = 0, totalKec = 0 } = data;
+  const belumPct = total ? Math.round((totalBelum / total) * 100) : 0;
+
+  // Urut kecamatan: yang paling banyak BELUM di atas (paling perlu perhatian).
+  const kecBar = [...(data.kecStats || [])]
+    .filter(k => k.total > 0)
+    .sort((a, b) => b.belum - a.belum || b.total - a.total);
+
   const kecList = Object.entries(data.byKec)
     .map(([nama, v]) => ({ nama, sudah: v.sudah, belum: v.belum }))
     .filter(k => !search || k.nama.toLowerCase().includes(search.toLowerCase()) || k.sudah.some(d => d.toLowerCase().includes(search.toLowerCase())) || k.belum.some(d => d.toLowerCase().includes(search.toLowerCase())))
     .sort((a, b) => tab === 'belum' ? b.belum.length - a.belum.length : b.sudah.length - a.sudah.length);
 
   return (
-    <div className="space-y-3">
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-sm font-semibold text-gray-700"><LuUsers className="w-4 h-4 text-fuchsia-600" /> Partisipasi Desa (sudah mengajukan ke Kecamatan)</div>
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-emerald-600 font-semibold">Sudah: {data.totalSudah}</span>
-            <span className="text-xs text-gray-500 font-semibold">Belum: {data.totalBelum}</span>
+    <div className="space-y-4">
+      {/* Ringkasan infografis: gauge % + KPI */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <ChartCard title="Tingkat Partisipasi Desa" icon={LuUsers} iconColor="text-fuchsia-600"
+          subtitle="Desa yang sudah mengajukan ke Kecamatan">
+          <ParticipationGauge sudah={totalSudah} belum={totalBelum} height={210} />
+          <div className="flex items-center justify-center gap-4 mt-1">
+            <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> Sudah {totalSudah}</span>
+            <span className="flex items-center gap-1.5 text-xs font-semibold text-rose-600"><span className="w-2.5 h-2.5 rounded-full bg-rose-400" /> Belum {totalBelum}</span>
           </div>
+        </ChartCard>
+
+        <div className="lg:col-span-2 grid grid-cols-2 gap-3">
+          <KpiTile label="Total Desa" value={total} sub={`tersebar di ${totalKec} kecamatan`} icon={LuMapPin} accent="slate" />
+          <KpiTile label="Sudah Mengajukan" value={totalSudah} sub={`${pct}% dari total desa`} icon={LuCheck} accent="emerald" pct={pct} />
+          <KpiTile label="Belum Mengajukan" value={totalBelum} sub={`${belumPct}% masih perlu didorong`} icon={LuX} accent="rose" pct={belumPct} />
+          <KpiTile label="Kecamatan Tuntas" value={kecTuntas} sub={`dari ${totalKec} kecamatan (100% desa)`} icon={LuClipboardCheck} accent="violet" />
         </div>
-        <div className="flex items-center gap-2 mt-3">
-          <button onClick={() => setTab('belum')} className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${tab === 'belum' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600'}`}>Belum Mengajukan</button>
-          <button onClick={() => setTab('sudah')} className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${tab === 'sudah' ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600'}`}>Sudah Mengajukan</button>
+      </div>
+
+      {/* Per-kecamatan: sudah vs belum (stacked bar) */}
+      <ChartCard title="Partisipasi per Kecamatan" icon={LuMapPin} iconColor="text-rose-600"
+        subtitle="Diurutkan dari yang paling banyak desa BELUM mengajukan">
+        {kecBar.length === 0 ? (
+          <div className="h-[220px] flex items-center justify-center text-sm text-gray-400">Belum ada data.</div>
+        ) : (
+          <ResponsiveContainer width="100%" height={Math.max(240, kecBar.length * 30)}>
+            <BarChart data={kecBar} layout="vertical" margin={{ left: 0, right: 34, top: 4, bottom: 4 }}>
+              <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="#f1f5f9" />
+              <XAxis type="number" tick={{ fontSize: 11, fill: '#94a3b8' }} allowDecimals={false} />
+              <YAxis type="category" dataKey="nama" width={92} tick={{ fontSize: 11, fill: '#475569' }} interval={0} />
+              <RTooltip cursor={{ fill: '#f8fafc' }} content={({ active, payload }) => {
+                if (!active || !payload?.length) return null;
+                const d = payload[0].payload;
+                return <TipBox label={d.nama} rows={[
+                  { name: 'Sudah', value: `${d.sudah} (${d.pct}%)`, color: '#10b981' },
+                  { name: 'Belum', value: d.belum, color: '#fb7185' },
+                  { name: 'Total desa', value: d.total },
+                ]} />;
+              }} />
+              <Bar dataKey="sudah" stackId="a" fill="#10b981" barSize={16} radius={[6, 0, 0, 6]} />
+              <Bar dataKey="belum" stackId="a" fill="#fda4af" barSize={16} radius={[0, 6, 6, 0]}>
+                <LabelList dataKey="belum" position="right" formatter={(v) => (v > 0 ? v : '')} style={{ fontSize: 11, fontWeight: 700, fill: '#e11d48' }} />
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+      </ChartCard>
+
+      {/* Drill-down: daftar desa per kecamatan */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <button onClick={() => setTab('belum')} className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${tab === 'belum' ? 'bg-rose-600 text-white' : 'bg-gray-100 text-gray-600'}`}>Belum Mengajukan ({totalBelum})</button>
+          <button onClick={() => setTab('sudah')} className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${tab === 'sudah' ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600'}`}>Sudah Mengajukan ({totalSudah})</button>
           <div className="relative flex-1 min-w-[160px] max-w-xs ml-auto">
             <LuSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari kecamatan / desa..."
@@ -1033,17 +1137,25 @@ const PartisipasiTab = ({ loading, data }) => {
           {kecList.map(kec => {
             const items = tab === 'sudah' ? kec.sudah : kec.belum;
             const isOpen = expanded[kec.nama];
+            const totalDesa = kec.sudah.length + kec.belum.length;
+            const kpct = totalDesa ? Math.round((kec.sudah.length / totalDesa) * 100) : 0;
             return (
               <div key={kec.nama} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                 <button onClick={() => setExpanded(e => ({ ...e, [kec.nama]: !e[kec.nama] }))}
-                  className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50">
-                  <div className="flex items-center gap-2">
-                    {isOpen ? <LuChevronDown className="w-4 h-4 text-gray-400" /> : <LuChevronRight className="w-4 h-4 text-gray-400" />}
-                    <span className="font-semibold text-gray-800 text-sm">{kec.nama}</span>
+                  className="w-full px-4 py-3 flex items-center justify-between gap-3 hover:bg-gray-50">
+                  <div className="flex items-center gap-2 min-w-0">
+                    {isOpen ? <LuChevronDown className="w-4 h-4 text-gray-400 shrink-0" /> : <LuChevronRight className="w-4 h-4 text-gray-400 shrink-0" />}
+                    <span className="font-semibold text-gray-800 text-sm truncate">{kec.nama}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-[11px]">
-                    <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-semibold">{kec.sudah.length} sudah</span>
-                    <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-semibold">{kec.belum.length} belum</span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div className="hidden sm:flex items-center gap-1.5">
+                      <div className="w-24 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                        <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${kpct}%` }} />
+                      </div>
+                      <span className="text-[11px] text-gray-400 tabular-nums w-8 text-right">{kpct}%</span>
+                    </div>
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-semibold text-[11px]">{kec.sudah.length} sudah</span>
+                    <span className="px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 font-semibold text-[11px]">{kec.belum.length} belum</span>
                   </div>
                 </button>
                 {isOpen && (
@@ -1051,7 +1163,7 @@ const PartisipasiTab = ({ loading, data }) => {
                     {items.length === 0 ? (
                       <span className="text-xs text-gray-400 italic">Tidak ada desa pada kategori ini.</span>
                     ) : items.map(d => (
-                      <span key={d} className={`px-2 py-1 rounded-lg text-xs font-medium ${tab === 'sudah' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-gray-50 text-gray-600 border border-gray-200'}`}>{d}</span>
+                      <span key={d} className={`px-2 py-1 rounded-lg text-xs font-medium ${tab === 'sudah' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-600 border border-rose-200'}`}>{d}</span>
                     ))}
                   </div>
                 )}
@@ -1109,7 +1221,7 @@ const KPI_META = [
   { key: 'revision', label: 'Revisi', icon: LuMessageSquare, ring: 'text-orange-600', bar: 'bg-orange-500', bg: 'from-orange-50' },
 ];
 
-const StatisticsTab = ({ stats, funnel, perKategori, perKecamatan, tahun }) => {
+const StatisticsTab = ({ stats, funnel, perKategori, perKecamatan, partisipasi, tahun }) => {
   const totalAnggaran = stats.total_anggaran || Object.values(perKategori).reduce((s, v) => s + v.anggaran, 0);
   const totalMasuk = Number(stats.total) || 0;
 
@@ -1179,6 +1291,24 @@ const StatisticsTab = ({ stats, funnel, perKategori, perKecamatan, tahun }) => {
           <div className="text-xl md:text-2xl font-bold text-white">{rupiah(totalAnggaran)}</div>
         </div>
       </div>
+
+      {/* Partisipasi Desa — sinkron dgn tab Partisipasi (gauge % sudah/belum mengajukan) */}
+      {partisipasi && partisipasi.total > 0 && (
+        <ChartCard title="Partisipasi Desa — Pengajuan ke Kecamatan" icon={LuUsers} iconColor="text-fuchsia-600"
+          subtitle={`${partisipasi.totalSudah} dari ${partisipasi.total} desa sudah mengajukan · ${partisipasi.pct}%`}>
+          <div className="flex flex-col sm:flex-row items-center gap-5">
+            <div className="w-full sm:w-1/3 max-w-[220px]">
+              <ParticipationGauge sudah={partisipasi.totalSudah} belum={partisipasi.totalBelum} height={190} />
+            </div>
+            <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-3 w-full">
+              <KpiTile label="Total Desa" value={partisipasi.total} sub={`${partisipasi.totalKec} kecamatan`} icon={LuMapPin} accent="slate" />
+              <KpiTile label="Sudah" value={partisipasi.totalSudah} sub={`${partisipasi.pct}% dari total`} icon={LuCheck} accent="emerald" pct={partisipasi.pct} />
+              <KpiTile label="Belum" value={partisipasi.totalBelum} sub={`${partisipasi.total ? Math.round((partisipasi.totalBelum / partisipasi.total) * 100) : 0}% perlu didorong`} icon={LuX} accent="rose" pct={partisipasi.total ? Math.round((partisipasi.totalBelum / partisipasi.total) * 100) : 0} />
+              <KpiTile label="Kec. Tuntas" value={partisipasi.kecTuntas} sub={`dari ${partisipasi.totalKec} kecamatan`} icon={LuClipboardCheck} accent="violet" />
+            </div>
+          </div>
+        </ChartCard>
+      )}
 
       {/* Donut status + Pipeline tahap */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
