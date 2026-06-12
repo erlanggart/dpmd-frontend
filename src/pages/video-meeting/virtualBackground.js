@@ -238,7 +238,7 @@ export class VirtualBackgroundProcessor {
     ctx.globalCompositeOperation = 'source-over';
     ctx.clearRect(0, 0, w, h);
     if (this.effect.type === 'image' && imageEffectReady) {
-      this._drawCover(ctx, this.effect.image, w, h);
+      this._drawContain(ctx, this.effect.image, w, h);
     } else if (this.effect.type === 'blur') {
       ctx.filter = `blur(${this.effect.blurAmount || 12}px)`;
       ctx.drawImage(src, 0, 0, w, h);
@@ -365,12 +365,14 @@ export class VirtualBackgroundProcessor {
     } catch { /* abaikan → anggap layak agar tidak mematikan efek tanpa alasan */ this._maskUsable = true; }
   }
 
-  /** Gambar gambar latar dengan mode "cover" (penuhi canvas, jaga rasio). */
-  _drawCover(ctx, img, w, h) {
+  /** Tampilkan seluruh gambar tanpa crop; area sisa diberi letterbox hitam. */
+  _drawContain(ctx, img, w, h) {
     const iw = img.naturalWidth || img.width;
     const ih = img.naturalHeight || img.height;
     if (!iw || !ih) return;
-    const scale = Math.max(w / iw, h / ih);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, w, h);
+    const scale = Math.min(w / iw, h / ih);
     const dw = iw * scale;
     const dh = ih * scale;
     ctx.drawImage(img, (w - dw) / 2, (h - dh) / 2, dw, dh);

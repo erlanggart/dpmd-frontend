@@ -1901,8 +1901,8 @@ const PublicMeetingPage = () => {
                   autoPlay
                   muted
                   playsInline
-                  className={`w-full h-full object-cover transition-opacity duration-300 ${
-                    bgEffect.type === 'image' ? '' : 'scale-x-[-1]'
+                  className={`w-full h-full transition-opacity duration-300 ${
+                    bgEffect.type === 'image' ? 'object-contain' : 'object-cover scale-x-[-1]'
                   } ${isVideoOff ? 'opacity-0' : 'opacity-100'}`}
                 />
 
@@ -2130,8 +2130,8 @@ const PublicMeetingPage = () => {
                 autoPlay
                 muted
                 playsInline
-                className={`w-full h-full object-cover ${
-                  bgEffect.type === 'image' ? '' : 'scale-x-[-1]'
+                className={`w-full h-full ${
+                  bgEffect.type === 'image' ? 'object-contain' : 'object-cover scale-x-[-1]'
                 } ${isVideoOff ? 'hidden' : ''}`}
               />
               {isVideoOff && (
