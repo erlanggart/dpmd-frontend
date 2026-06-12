@@ -3,14 +3,14 @@
  * Allows anyone to join a meeting via shared link without login
  */
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Mic, MicOff, Video, VideoOff, Monitor, MonitorOff,
   MessageSquare, Users, PhoneOff, Send, Copy, X, Loader2,
   User, ArrowRight, Volume2, VolumeX, Hand, Settings, Signal,
   Clock, Sparkles, ShieldCheck, AlertTriangle, Disc, Square, Reply,
-  Upload, Ban, Smile, Maximize, Minimize, Lock
+  Upload, Ban, Smile, Maximize, Minimize, Lock, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { io } from 'socket.io-client';
@@ -19,6 +19,8 @@ import useMeetingRecorder from './useMeetingRecorder';
 import { VirtualBackgroundProcessor, loadImageFromFile } from './virtualBackground';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:3001';
+
+const cleanRoomDisplayName = (value) => String(value || '').replace(/\s+/g, ' ').trim().slice(0, 80);
 
 // Generate or get persistent guest ID
 const getOrCreateGuestId = (roomId) => {
@@ -32,7 +34,7 @@ const getOrCreateGuestId = (roomId) => {
 };
 
 // Remote Video Component
-const RemoteVideo = ({ participant, stream, isSpeakerMuted, isActive }) => {
+const RemoteVideo = ({ participant, stream, isSpeakerMuted, isActive, isHost, onHostMute, onHostUnmute }) => {
   const videoRef = useRef(null);
   const audioRef = useRef(null);
   const [hasVideo, setHasVideo] = useState(false);
@@ -95,7 +97,27 @@ const RemoteVideo = ({ participant, stream, isSpeakerMuted, isActive }) => {
   }, [stream, getHasVideo]);
   
   return (
-    <div className={`relative bg-gray-800 rounded-xl overflow-hidden aspect-video flex items-center justify-center transition-all ${isActive ? 'ring-4 ring-emerald-400' : ''}`}>
+    <div className={`relative w-full h-full min-h-0 bg-gray-800 rounded-xl overflow-hidden flex items-center justify-center transition-all ${isActive ? 'ring-4 ring-emerald-400' : ''}`}>
+      {isHost && (
+        <div className="absolute top-2 right-2 z-10 flex gap-1">
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onHostMute?.(participant.oduserId, 'audio'); }}
+            title="Mute mikrofon peserta"
+            className="p-1.5 rounded-lg bg-black/55 hover:bg-amber-500/85 text-white"
+          >
+            <MicOff className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onHostUnmute?.(participant.oduserId, 'audio'); }}
+            title="Unmute mikrofon peserta"
+            className="p-1.5 rounded-lg bg-black/55 hover:bg-emerald-500/85 text-white"
+          >
+            <Mic className="w-4 h-4" />
+          </button>
+        </div>
+      )}
       <video
         ref={videoRef}
         autoPlay
@@ -110,8 +132,8 @@ const RemoteVideo = ({ participant, stream, isSpeakerMuted, isActive }) => {
         </div>
       )}
       
-      <div className="absolute bottom-2 left-2 bg-black/60 px-3 py-1.5 rounded-lg">
-        <span className="text-white text-sm">{participant.userName}</span>
+      <div className="absolute bottom-1.5 left-1.5 max-w-[90%] bg-black/60 px-2 py-0.5 md:py-1 rounded-md md:rounded-lg">
+        <span className="text-white text-xs md:text-sm truncate block">{participant.userName}</span>
       </div>
     </div>
   );
@@ -193,9 +215,12 @@ const PublicMeetingPage = () => {
   // Check for existing session (for auto-rejoin on refresh)
   const existingSession = sessionStorage.getItem(`meeting_${roomId}`);
   const sessionData = existingSession ? JSON.parse(existingSession) : null;
+  const accountDisplayName = cleanRoomDisplayName(storedUser?.name || storedUser?.nama || storedUser?.username);
+  const initialRoomDisplayName = cleanRoomDisplayName(sessionData?.displayName || sessionData?.guestName || accountDisplayName);
   
   // Pre-join state
-  const [guestName, setGuestName] = useState(sessionData?.guestName || '');
+  const [roomDisplayName, setRoomDisplayName] = useState(initialRoomDisplayName);
+  const [roomNameDraft, setRoomNameDraft] = useState(initialRoomDisplayName);
   const [password, setPassword] = useState('');
   const [passwordError, setPasswordError] = useState(false);
   const [joined, setJoined] = useState(false);
@@ -226,6 +251,22 @@ const PublicMeetingPage = () => {
   const [selectedMic, setSelectedMic] = useState('');
   const [showSettings, setShowSettings] = useState(false);
 
+  const [galleryPage, setGalleryPage] = useState(0);
+  const [gallerySize, setGallerySize] = useState(25);
+  useEffect(() => {
+    const computeSize = () => {
+      const w = window.innerWidth;
+      if (w < 640) return 4;
+      if (w < 1024) return 9;
+      if (w < 1536) return 16;
+      return 25;
+    };
+    const onResize = () => setGallerySize(computeSize());
+    onResize();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
   // Media state
   const [localStream, setLocalStream] = useState(null);
   const [isMuted, setIsMuted] = useState(false);
@@ -255,8 +296,9 @@ const PublicMeetingPage = () => {
   // Reactions, waiting room, lock
   const [reactions, setReactions] = useState([]);
   const [showReactionPicker, setShowReactionPicker] = useState(false);
+  const [showHostAudioMenu, setShowHostAudioMenu] = useState(false);
   const [waitingRoom, setWaitingRoom] = useState(false);
-  const [isLocked, setIsLocked] = useState(false);
+  const [, setIsLocked] = useState(false);
   const REACTION_EMOJIS = ['👍', '👏', '❤️', '😂', '😮', '🎉', '🙏', '✋'];
 
   // Refs
@@ -314,9 +356,29 @@ const PublicMeetingPage = () => {
   // Get user info
   const user = isLoggedIn
     ? storedUser
-    : { id: `guest_${Date.now()}`, nama: guestName, isGuest: true };
+    : { id: `guest_${Date.now()}`, name: roomDisplayName, nama: roomDisplayName, isGuest: true };
 
-  const selfLabel = isLoggedIn ? (storedUser?.nama || storedUser?.username || 'Saya') : (guestName || 'Tamu');
+  const selfLabel = roomDisplayName || accountDisplayName || 'Saya';
+
+  const gallery = useMemo(() => {
+    const remoteTiles = participants
+      .filter((p) => p.oduserId !== myPeerId)
+      .map((p) => ({ key: p.oduserId, type: 'remote', participant: p }));
+    const perPage = Math.max(1, gallerySize - 1);
+    const totalPages = Math.max(1, Math.ceil(remoteTiles.length / perPage));
+    const page = Math.min(galleryPage, totalPages - 1);
+    const pageRemotes = remoteTiles.slice(page * perPage, page * perPage + perPage);
+    const pageTiles = [{ key: '__local__', type: 'local' }, ...pageRemotes];
+    const cols = Math.max(1, Math.ceil(Math.sqrt(pageTiles.length)));
+    const rows = Math.max(1, Math.ceil(pageTiles.length / cols));
+    return { pageTiles, cols, rows, totalPages, page };
+  }, [participants, myPeerId, galleryPage, gallerySize]);
+
+  useEffect(() => {
+    if (galleryPage > gallery.totalPages - 1) {
+      setGalleryPage(Math.max(0, gallery.totalPages - 1));
+    }
+  }, [galleryPage, gallery.totalPages]);
 
   // ── Rekam lokal: kumpulkan sumber video/audio terkini ke ref stabil
   // (anti stale-closure) agar peserta yang join saat merekam ikut terekam.
@@ -465,6 +527,10 @@ const PublicMeetingPage = () => {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (showSettings) setRoomNameDraft(roomDisplayName);
+  }, [showSettings, roomDisplayName]);
 
   const initPreviewMedia = async () => {
     try {
@@ -672,7 +738,7 @@ const PublicMeetingPage = () => {
         cams: list.filter((d) => d.kind === 'videoinput'),
         mics: list.filter((d) => d.kind === 'audioinput'),
       });
-    } catch (e) { /* abaikan */ }
+    } catch { /* abaikan */ }
   }, []);
   useEffect(() => { if (localStream) refreshDevices(); }, [localStream, refreshDevices]);
 
@@ -741,13 +807,29 @@ const PublicMeetingPage = () => {
       if (!rawCamTrackRef.current) rawCamTrackRef.current = stream.getVideoTracks()[0] || null;
       let rawTrack = rawCamTrackRef.current;
 
+      const ensureLiveRawTrack = async () => {
+        const current = localStreamRef.current?.getVideoTracks()[0] || null;
+        const looksLikeCanvas = rawTrack?.label?.toLowerCase?.().includes('canvas');
+        const isBad =
+          !rawTrack ||
+          rawTrack.readyState === 'ended' ||
+          rawTrack.muted ||
+          looksLikeCanvas ||
+          (bgProcessorRef.current && current && rawTrack === current);
+
+        if (!isBad) return rawTrack;
+
+        const ns = await navigator.mediaDevices.getUserMedia({
+          video: selectedCam ? { deviceId: { exact: selectedCam } } : true,
+        });
+        rawTrack = ns.getVideoTracks()[0];
+        rawCamTrackRef.current = rawTrack;
+        return rawTrack;
+      };
+
       if (next.type === 'none') {
         if (bgProcessorRef.current) { bgProcessorRef.current.stop(); bgProcessorRef.current = null; }
-        if (!rawTrack || rawTrack.readyState === 'ended') {
-          const ns = await navigator.mediaDevices.getUserMedia({ video: selectedCam ? { deviceId: { exact: selectedCam } } : true });
-          rawTrack = ns.getVideoTracks()[0];
-          rawCamTrackRef.current = rawTrack;
-        }
+        rawTrack = await ensureLiveRawTrack();
         const cur = stream.getVideoTracks()[0];
         if (cur && cur !== rawTrack) stream.removeTrack(cur);
         if (!stream.getVideoTracks().includes(rawTrack)) stream.addTrack(rawTrack);
@@ -757,6 +839,7 @@ const PublicMeetingPage = () => {
         return;
       }
       if (!VirtualBackgroundProcessor.isSupported()) { toast.error('Browser tidak mendukung virtual background'); return; }
+      rawTrack = await ensureLiveRawTrack();
       if (!rawTrack) { toast.error('Kamera tidak aktif'); return; }
 
       let processed;
@@ -768,10 +851,15 @@ const PublicMeetingPage = () => {
         processed = bgProcessorRef.current.getOutputTrack();
       }
 
+      if (!processed || processed.readyState === 'ended') {
+        throw new Error('Track virtual background tidak tersedia');
+      }
+
+      if (producer && !producer.closed && processed) await producer.replaceTrack({ track: processed });
+
       const cur = stream.getVideoTracks()[0];
       if (cur && cur !== processed) stream.removeTrack(cur);
       if (processed && !stream.getVideoTracks().includes(processed)) stream.addTrack(processed);
-      if (producer && !producer.closed && processed) await producer.replaceTrack({ track: processed });
       refreshLocalVideo(stream);
 
       setBgEffect({ type: next.type, image: next.image || null, url: next.url || null });
@@ -779,10 +867,23 @@ const PublicMeetingPage = () => {
       console.error('[BG] apply error', e);
       toast.error('Gagal menerapkan latar virtual. Coba lagi.');
       if (bgProcessorRef.current) { try { bgProcessorRef.current.stop(); } catch { /* noop */ } bgProcessorRef.current = null; }
+      const fallbackRaw = rawCamTrackRef.current;
+      const streamNow = localStreamRef.current;
+      if (streamNow && fallbackRaw && fallbackRaw.readyState !== 'ended') {
+        const cur = streamNow.getVideoTracks()[0];
+        if (cur && cur !== fallbackRaw) streamNow.removeTrack(cur);
+        if (!streamNow.getVideoTracks().includes(fallbackRaw)) streamNow.addTrack(fallbackRaw);
+        try {
+          const producer = producersRef.current.get('video');
+          if (producer && !producer.closed) await producer.replaceTrack({ track: fallbackRaw });
+        } catch { /* preview tetap dipulihkan */ }
+        refreshLocalVideo(streamNow);
+      }
+      setBgEffect({ type: 'none', image: null, url: null });
     } finally {
       setBgBusy(false);
     }
-  }, []);
+  }, [selectedCam]);
 
   const handleUploadBgImage = useCallback(async (e) => {
     const file = e.target.files?.[0];
@@ -801,6 +902,34 @@ const PublicMeetingPage = () => {
   const sendReaction = (emoji) => {
     socketRef.current?.emit('reaction', { emoji });
     setShowReactionPicker(false);
+  };
+
+  const hostMuteParticipant = (peerId, kind = 'audio') => {
+    socketRef.current?.emit('host-mute-participant', { targetPeerId: peerId, kind }, (response) => {
+      if (response?.error) toast.error(response.error);
+      else toast.success(kind === 'video' ? 'Kamera peserta dimatikan' : 'Mikrofon peserta dimatikan');
+    });
+  };
+
+  const hostUnmuteParticipant = (peerId, kind = 'audio') => {
+    socketRef.current?.emit('host-unmute-participant', { targetPeerId: peerId, kind }, (response) => {
+      if (response?.error) toast.error(response.error);
+      else toast.success(kind === 'video' ? 'Kamera peserta dinyalakan' : 'Mikrofon peserta dinyalakan');
+    });
+  };
+
+  const hostMuteAll = () => {
+    socketRef.current?.emit('host-mute-all', {}, (response) => {
+      if (response?.error) toast.error(response.error);
+      else toast.success('Mikrofon semua peserta dimatikan');
+    });
+  };
+
+  const hostUnmuteAll = () => {
+    socketRef.current?.emit('host-unmute-all', {}, (response) => {
+      if (response?.error) toast.error(response.error);
+      else toast.success('Mikrofon semua peserta dinyalakan');
+    });
   };
 
   // ===== Indikator kualitas jaringan (#8) =====
@@ -829,7 +958,7 @@ const PublicMeetingPage = () => {
         if (lossRate > 0.08 || (rtt != null && rtt > 0.4)) q = 'poor';
         else if (lossRate > 0.03 || (rtt != null && rtt > 0.2)) q = 'fair';
         setNetQuality(q);
-      } catch (e) { /* abaikan */ }
+      } catch { /* abaikan */ }
     }, 4000);
     return () => clearInterval(id);
   }, [connected]);
@@ -977,10 +1106,13 @@ const PublicMeetingPage = () => {
   };
 
   const handleJoinMeeting = async () => {
-    if (!isLoggedIn && !guestName.trim()) {
+    const cleanName = cleanRoomDisplayName(roomDisplayName);
+    if (!cleanName) {
       toast.error('Silakan masukkan nama Anda');
       return;
     }
+    setRoomDisplayName(cleanName);
+    setRoomNameDraft(cleanName);
 
     setJoining(true);
     
@@ -1009,7 +1141,8 @@ const PublicMeetingPage = () => {
         transports: (import.meta.env.VITE_SOCKET_TRANSPORTS || 'polling').split(',').map((t) => t.trim()),
         auth: {
           token: token || null,
-          guestName: !isLoggedIn ? guestName : null,
+          guestName: cleanName,
+          displayName: cleanName,
           guestId: persistentGuestId, // Persistent guest ID for reconnection
         }
       });
@@ -1038,6 +1171,9 @@ const PublicMeetingPage = () => {
         }
 
         if (response.success) {
+          const joinedName = cleanRoomDisplayName(response.displayName || response.userName || cleanName);
+          setRoomDisplayName(joinedName);
+          setRoomNameDraft(joinedName);
           setWaitingRoom(false);
           setConnected(true);
           setJoined(true);
@@ -1046,7 +1182,8 @@ const PublicMeetingPage = () => {
 
           // Save session for auto-rejoin on refresh
           sessionStorage.setItem(`meeting_${roomId}`, JSON.stringify({
-            guestName: !isLoggedIn ? guestName : null,
+            guestName: joinedName,
+            displayName: joinedName,
             joinedAt: Date.now()
           }));
 
@@ -1072,7 +1209,7 @@ const PublicMeetingPage = () => {
               .filter(p => String(p.oduserId) !== myId)
               .map(p => ({
                 oduserId: String(p.oduserId),
-                userName: p.userName || 'User'
+                userName: p.userName || 'Peserta'
               }));
             console.log('[existingPeers] Normalized peers:', filteredPeers);
             setParticipants(filteredPeers);
@@ -1096,7 +1233,8 @@ const PublicMeetingPage = () => {
         setParticipants([]);
         socketRef.current.emit('join-room', {
           roomId,
-          guestName: !isLoggedIn ? guestName : null,
+          guestName: cleanName,
+          displayName: cleanName,
           guestId: persistentGuestId,
           password: password || undefined,
         }, handleJoinResponse);
@@ -1139,6 +1277,19 @@ const PublicMeetingPage = () => {
           return [...prev, { oduserId: peerIdStr, userName: data.name }];
         });
         toast.success(`${data.name} bergabung`);
+      });
+
+      socketRef.current.on('participant-renamed', (data) => {
+        const peerIdStr = String(data?.peerId || '');
+        const nextName = cleanRoomDisplayName(data?.userName || data?.displayName);
+        if (!peerIdStr || !nextName) return;
+        setParticipants((prev) => prev.map((p) => (
+          p.oduserId === peerIdStr ? { ...p, userName: nextName } : p
+        )));
+        if (peerIdStr === String(myPeerIdRef.current)) {
+          setRoomDisplayName(nextName);
+          setRoomNameDraft(nextName);
+        }
       });
 
       socketRef.current.on('peer-left', (data) => {
@@ -1189,7 +1340,7 @@ const PublicMeetingPage = () => {
         setParticipants((prev) => {
           if (prev.some(p => p.oduserId === peerIdStr)) return prev;
           console.log('[new-producer] Adding participant:', { oduserId: peerIdStr, userName });
-          return [...prev, { oduserId: peerIdStr, userName: userName || 'User' }];
+          return [...prev, { oduserId: peerIdStr, userName: userName || 'Peserta' }];
         });
         
         // Wait for recv transport to be ready (might be race condition on initial load)
@@ -1331,6 +1482,27 @@ const PublicMeetingPage = () => {
         }
       });
 
+      socketRef.current.on('force-unmuted', (data) => {
+        const kind = data?.kind || 'audio';
+        if (kind === 'audio') {
+          const track = localStreamRef.current?.getAudioTracks()[0];
+          if (track && !track.enabled) {
+            track.enabled = true;
+            setIsMuted(false);
+            socketRef.current?.emit('media-state-change', { roomId, isMuted: false, isVideoOff });
+          }
+          toast(`Mikrofon Anda dinyalakan oleh ${data?.by || 'host'}`, { icon: '🎙️' });
+        } else {
+          const track = localStreamRef.current?.getVideoTracks()[0];
+          if (track && !track.enabled) {
+            track.enabled = true;
+            setIsVideoOff(false);
+            socketRef.current?.emit('media-state-change', { roomId, isMuted, isVideoOff: false });
+          }
+          toast(`Kamera Anda dinyalakan oleh ${data?.by || 'host'}`, { icon: '📷' });
+        }
+      });
+
       socketRef.current.on('removed-by-host', (data) => {
         toast.error(`Anda dikeluarkan dari meeting oleh ${data?.by || 'host'}`);
         cleanup();
@@ -1466,7 +1638,7 @@ const PublicMeetingPage = () => {
 
         setLocalScreenStream(new MediaStream([screenTrack]));
         setScreenSharerPeerId(myPeerIdRef.current);
-        screenSharerNameRef.current = `${storedUser?.name || guestName || 'Anda'} (Anda)`;
+        screenSharerNameRef.current = `${roomDisplayName || accountDisplayName || 'Anda'} (Anda)`;
         isScreenSharingRef.current = true;
 
         screenTrack.onended = () => { toggleScreenShare(); };
@@ -1539,7 +1711,7 @@ const PublicMeetingPage = () => {
     socketRef.current.emit('chat-message', {
       roomId,
       message: newMessage.trim(),
-      userName: isLoggedIn ? (user?.nama || user?.username || 'User') : (guestName || 'Guest'),
+      userName: roomDisplayName || accountDisplayName || 'Peserta',
       replyTo: replyTo
         ? { id: replyTo.id, senderName: replyTo.senderName, message: replyTo.message }
         : null,
@@ -1547,6 +1719,40 @@ const PublicMeetingPage = () => {
 
     setNewMessage('');
     setReplyTo(null);
+  };
+
+  const saveRoomDisplayName = () => {
+    const nextName = cleanRoomDisplayName(roomNameDraft);
+    if (!nextName) {
+      toast.error('Nama di room tidak boleh kosong');
+      return;
+    }
+
+    const applyName = (name) => {
+      setRoomDisplayName(name);
+      setRoomNameDraft(name);
+      const prev = JSON.parse(sessionStorage.getItem(`meeting_${roomId}`) || '{}');
+      sessionStorage.setItem(`meeting_${roomId}`, JSON.stringify({
+        ...prev,
+        guestName: name,
+        displayName: name,
+        joinedAt: prev.joinedAt || Date.now(),
+      }));
+    };
+
+    if (!socketRef.current?.connected) {
+      applyName(nextName);
+      return;
+    }
+
+    socketRef.current.emit('update-display-name', { displayName: nextName }, (response) => {
+      if (response?.error) {
+        toast.error(response.error);
+        return;
+      }
+      applyName(cleanRoomDisplayName(response?.displayName || nextName));
+      toast.success('Nama di room diperbarui');
+    });
   };
 
   // Mulai membalas sebuah pesan (fokuskan input).
@@ -1643,7 +1849,7 @@ const PublicMeetingPage = () => {
       : null;
     const currentP = meetingInfo?.current_participants ?? 0;
     const maxP = meetingInfo?.max_participants;
-    const canJoin = !joining && (isLoggedIn || guestName.trim()) && (!meetingInfo?.requires_password || password.trim());
+    const canJoin = !joining && roomDisplayName.trim() && (!meetingInfo?.requires_password || password.trim());
 
     return (
       <LobbyShell>
@@ -1749,32 +1955,33 @@ const PublicMeetingPage = () => {
               <h2 className="text-xl sm:text-2xl font-semibold text-white mb-1">Siap bergabung?</h2>
               <p className="text-sm text-white/50 mb-6">Periksa kamera & mikrofon Anda sebelum masuk.</p>
 
-              {!isLoggedIn && (
-                <div className="mb-5">
-                  <label className="block text-sm font-medium text-white/70 mb-2">Nama Anda</label>
-                  <input
-                    type="text"
-                    value={guestName}
-                    onChange={(e) => setGuestName(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter' && canJoin) handleJoinMeeting(); }}
-                    placeholder="Masukkan nama Anda"
-                    autoFocus
-                    className="w-full px-4 py-3 bg-white/[0.05] border border-white/15 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-indigo-400/70 focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                  />
-                </div>
-              )}
-
               {isLoggedIn && (
                 <div className="mb-5 flex items-center gap-3 bg-white/[0.05] border border-white/10 rounded-xl p-4">
                   <div className="w-11 h-11 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-semibold shadow-lg shadow-indigo-500/25">
-                    {(storedUser?.nama || storedUser?.username || 'U')[0]?.toUpperCase() || 'U'}
+                    {(accountDisplayName || 'U')[0]?.toUpperCase() || 'U'}
                   </div>
                   <div className="min-w-0">
-                    <p className="text-white font-medium truncate">{storedUser?.nama || storedUser?.username || 'User'}</p>
+                    <p className="text-white font-medium truncate">{accountDisplayName || 'Peserta'}</p>
                     <p className="text-white/45 text-sm capitalize">Masuk sebagai {storedUser?.role || 'pegawai'}</p>
                   </div>
                 </div>
               )}
+
+              <div className="mb-5">
+                <label className="block text-sm font-medium text-white/70 mb-2">Nama di room</label>
+                <input
+                  type="text"
+                  value={roomDisplayName}
+                  onChange={(e) => {
+                    setRoomDisplayName(e.target.value);
+                    setRoomNameDraft(e.target.value);
+                  }}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && canJoin) handleJoinMeeting(); }}
+                  placeholder="Masukkan nama yang tampil di meeting"
+                  autoFocus={!isLoggedIn}
+                  className="w-full px-4 py-3 bg-white/[0.05] border border-white/15 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-indigo-400/70 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                />
+              </div>
 
               {meetingInfo?.requires_password && (
                 <div className="mb-5">
@@ -1833,7 +2040,7 @@ const PublicMeetingPage = () => {
 
   // Main meeting view
   return (
-    <div className="h-screen bg-gray-900 flex flex-col">
+    <div className="h-[100dvh] bg-gray-900 flex flex-col overflow-hidden">
       {/* Banner aktifkan suara: muncul sampai user berinteraksi (atasi blokir autoplay audio) */}
       {!audioUnlocked && (
         <button
@@ -1844,13 +2051,13 @@ const PublicMeetingPage = () => {
         </button>
       )}
       {/* Header */}
-      <div className="px-4 py-3 flex items-center justify-between border-b border-white/10">
-        <div className="flex items-center gap-3">
-          <h1 className="text-white font-semibold text-lg">
+      <div className="px-3 sm:px-4 py-2.5 sm:py-3 flex items-center justify-between gap-2 border-b border-white/10">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <h1 className="text-white font-semibold text-base sm:text-lg truncate max-w-[40vw] sm:max-w-none">
             {meetingInfo?.title || 'Video Meeting'}
           </h1>
-          <span className={`px-2 py-0.5 rounded-full text-xs ${connected ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>
-            {connected ? 'Terhubung' : 'Menghubungkan...'}
+          <span className={`shrink-0 px-2 py-0.5 rounded-full text-xs ${connected ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>
+            {connected ? 'Terhubung' : '…'}
           </span>
           {connected && (
             <span className="hidden sm:flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-white/10 text-white/70 tabular-nums" title="Durasi meeting">
@@ -1859,11 +2066,32 @@ const PublicMeetingPage = () => {
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           {netQuality && (
             <span title={`Kualitas jaringan: ${netQuality}`} className="flex items-center">
               <Signal className={`w-4 h-4 ${netQuality === 'good' ? 'text-green-400' : netQuality === 'fair' ? 'text-yellow-400' : 'text-red-400'}`} />
             </span>
+          )}
+          {/* Rekam lokal ke device (dipindah dari toolbar) */}
+          {recorder.supported && (
+            <button
+              onClick={handleToggleRecording}
+              className={`flex items-center gap-1.5 rounded-lg transition-colors ${
+                recorder.isRecording
+                  ? 'px-2.5 py-1.5 bg-red-600/90 hover:bg-red-700 text-white'
+                  : 'p-2 text-white/60 hover:text-white hover:bg-white/10'
+              }`}
+              title={recorder.isRecording ? 'Hentikan & simpan rekaman' : 'Rekam rapat ke device'}
+            >
+              {recorder.isRecording ? (
+                <>
+                  <Square className="w-3.5 h-3.5 fill-current" />
+                  <span className="text-xs font-semibold tabular-nums">{fmtElapsed(recorder.elapsed)}</span>
+                </>
+              ) : (
+                <Disc className="w-4 h-4" />
+              )}
+            </button>
           )}
           <button
             onClick={toggleFullscreen}
@@ -1875,11 +2103,11 @@ const PublicMeetingPage = () => {
           <button
             onClick={() => { refreshDevices(); setShowSettings(true); }}
             className="p-2 text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-            title="Pengaturan perangkat"
+            title="Pengaturan"
           >
             <Settings className="w-4 h-4" />
           </button>
-          <span className="text-white/60 text-sm">Room: {roomId}</span>
+          <span className="hidden md:inline text-white/60 text-sm">Room: {roomId}</span>
           <button
             onClick={copyMeetingLink}
             className="p-2 text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
@@ -1890,7 +2118,7 @@ const PublicMeetingPage = () => {
       </div>
 
       {/* Video Grid */}
-      <div ref={mainAreaRef} className="flex-1 p-3 md:p-4 overflow-hidden flex flex-col min-h-0 bg-gray-900">
+      <div ref={mainAreaRef} className="flex-1 p-2 sm:p-3 md:p-4 overflow-hidden flex flex-col min-h-0 bg-gray-900">
         {/* Tile self-view (dipakai di galeri & filmstrip; hanya 1 yang ter-mount) */}
         {(() => {
           const LocalTile = (
@@ -1905,13 +2133,13 @@ const PublicMeetingPage = () => {
               {isVideoOff && (
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="w-12 h-12 md:w-20 md:h-20 bg-gray-700 rounded-full flex items-center justify-center text-white text-lg md:text-2xl font-semibold">
-                    {((isLoggedIn ? (user?.nama || user?.username || 'U') : guestName) || 'G')[0]?.toUpperCase() || 'G'}
+                    {((roomDisplayName || accountDisplayName || 'P')[0] || 'P').toUpperCase()}
                   </div>
                 </div>
               )}
               <div className="absolute bottom-1.5 left-1.5 flex items-center gap-1.5 bg-black/60 px-2 py-0.5 md:py-1 rounded-md md:rounded-lg max-w-[90%]">
                 <span className="text-white text-xs md:text-sm truncate">
-                  {isLoggedIn ? (user?.nama || user?.username || 'User') : (guestName || 'Guest')} (Anda)
+                  {roomDisplayName || accountDisplayName || 'Peserta'} (Anda)
                 </span>
                 {isMuted && <MicOff className="w-3.5 h-3.5 text-red-500 shrink-0" />}
                 {isScreenSharing && <Monitor className="w-3.5 h-3.5 text-green-500 shrink-0" />}
@@ -1923,7 +2151,7 @@ const PublicMeetingPage = () => {
             ...(localScreenStream ? [{
               peerId: myPeerId,
               stream: localScreenStream,
-              name: `${(isLoggedIn ? (user?.nama || user?.username) : guestName) || 'Anda'} (Anda)`,
+              name: `${roomDisplayName || accountDisplayName || 'Anda'} (Anda)`,
             }] : []),
             ...Object.entries(screenStreams).map(([peerId, stream]) => ({
               peerId,
@@ -1948,6 +2176,9 @@ const PublicMeetingPage = () => {
                         stream={remoteStreams[screenSpotlightId]}
                         isSpeakerMuted={isSpeakerMuted}
                         isActive={activeSpeaker === screenSpotlightId}
+                        isHost={meetingSettings?.isHost}
+                        onHostMute={hostMuteParticipant}
+                        onHostUnmute={hostUnmuteParticipant}
                       />
                     </div>
                   ) : s ? (
@@ -2013,6 +2244,9 @@ const PublicMeetingPage = () => {
                         stream={remoteStreams[participant.oduserId]}
                         isSpeakerMuted={isSpeakerMuted}
                         isActive={activeSpeaker === participant.oduserId}
+                        isHost={meetingSettings?.isHost}
+                        onHostMute={hostMuteParticipant}
+                        onHostUnmute={hostUnmuteParticipant}
                       />
                     </button>
                   ))}
@@ -2021,30 +2255,68 @@ const PublicMeetingPage = () => {
             );
           }
 
+          const renderGalleryTile = (tile) => {
+            if (tile.type === 'local') return LocalTile;
+            return (
+              <RemoteVideo
+                participant={tile.participant}
+                stream={remoteStreams[tile.participant.oduserId]}
+                isSpeakerMuted={isSpeakerMuted}
+                isActive={activeSpeaker === tile.participant.oduserId}
+                isHost={meetingSettings?.isHost}
+                onHostMute={hostMuteParticipant}
+                onHostUnmute={hostUnmuteParticipant}
+              />
+            );
+          };
+
           return (
-            <div className={`grid gap-4 flex-1 min-h-0 ${
-              participants.length > 1
-                ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
-                : 'max-w-4xl mx-auto w-full'
-            }`}>
-              <div className="aspect-video">{LocalTile}</div>
-              {participants.filter((p) => p.oduserId !== myPeerId).map((participant) => (
-                <div key={participant.oduserId} className="aspect-video">
-                  <RemoteVideo
-                    participant={participant}
-                    stream={remoteStreams[participant.oduserId]}
-                    isSpeakerMuted={isSpeakerMuted}
-                    isActive={activeSpeaker === participant.oduserId}
-                  />
+            <>
+              <div
+                className="flex-1 grid gap-2 md:gap-3 min-h-0"
+                style={{
+                  gridTemplateColumns: `repeat(${gallery.cols}, minmax(0, 1fr))`,
+                  gridTemplateRows: `repeat(${gallery.rows}, minmax(0, 1fr))`,
+                }}
+              >
+                {gallery.pageTiles.map((tile) => (
+                  <div key={tile.key} className="min-h-0">
+                    {renderGalleryTile(tile)}
+                  </div>
+                ))}
+              </div>
+              {gallery.totalPages > 1 && (
+                <div className="shrink-0 flex items-center justify-center gap-3 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => setGalleryPage(Math.max(0, gallery.page - 1))}
+                    disabled={gallery.page === 0}
+                    className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    title="Halaman sebelumnya"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <span className="text-white/70 text-sm tabular-nums">
+                    {gallery.page + 1} / {gallery.totalPages}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setGalleryPage(Math.min(gallery.totalPages - 1, gallery.page + 1))}
+                    disabled={gallery.page >= gallery.totalPages - 1}
+                    className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    title="Halaman berikutnya"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           );
         })()}
       </div>
 
       {/* Controls */}
-      <div className="px-2 sm:px-4 py-3 sm:py-4 flex flex-wrap items-center justify-center gap-2 border-t border-white/10">
+      <div className="shrink-0 px-1.5 sm:px-4 py-2.5 sm:py-4 flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 border-t border-white/10">
         {isWebinar && !onStage ? (
           <button
             onClick={toggleRaiseHand}
@@ -2059,7 +2331,7 @@ const PublicMeetingPage = () => {
           <>
             <button
               onClick={toggleMute}
-              className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
+              className={`w-9 h-9 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-colors ${
                 isMuted ? 'bg-red-500 hover:bg-red-600' : 'bg-white/10 hover:bg-white/20'
               } text-white`}
             >
@@ -2068,7 +2340,7 @@ const PublicMeetingPage = () => {
 
             <button
               onClick={toggleVideo}
-              className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
+              className={`w-9 h-9 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-colors ${
                 isVideoOff ? 'bg-red-500 hover:bg-red-600' : 'bg-white/10 hover:bg-white/20'
               } text-white`}
             >
@@ -2077,22 +2349,11 @@ const PublicMeetingPage = () => {
 
             <button
               onClick={toggleScreenShare}
-              className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
+              className={`w-9 h-9 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-colors ${
                 isScreenSharing ? 'bg-green-500 hover:bg-green-600' : 'bg-white/10 hover:bg-white/20'
               } text-white`}
             >
               {isScreenSharing ? <MonitorOff className="w-5 h-5" /> : <Monitor className="w-5 h-5" />}
-            </button>
-
-            {/* Virtual background (efek latar) */}
-            <button
-              onClick={() => setShowBgPanel(true)}
-              className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors text-white ${
-                bgEffect.type !== 'none' ? 'bg-indigo-500 hover:bg-indigo-600' : 'bg-white/10 hover:bg-white/20'
-              }`}
-              title="Efek latar (virtual background)"
-            >
-              <Sparkles className="w-5 h-5" />
             </button>
           </>
         )}
@@ -2101,7 +2362,7 @@ const PublicMeetingPage = () => {
         <div className="relative">
           <button
             onClick={() => setShowReactionPicker((v) => !v)}
-            className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors text-white ${
+            className={`w-9 h-9 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-colors text-white ${
               showReactionPicker ? 'bg-amber-500 hover:bg-amber-600' : 'bg-white/10 hover:bg-white/20'
             }`}
             title="Kirim reaksi"
@@ -2125,7 +2386,7 @@ const PublicMeetingPage = () => {
 
         <button
           onClick={toggleSpeaker}
-          className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
+          className={`w-9 h-9 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-colors ${
             isSpeakerMuted ? 'bg-red-500 hover:bg-red-600' : 'bg-white/10 hover:bg-white/20'
           } text-white`}
           title={isSpeakerMuted ? 'Nyalakan Speaker' : 'Matikan Speaker'}
@@ -2133,31 +2394,44 @@ const PublicMeetingPage = () => {
           {isSpeakerMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
         </button>
 
-        {/* Rekam lokal: simpan rekaman rapat ke device perekam (pilih folder dulu) */}
-        {recorder.supported && (
-          <button
-            onClick={handleToggleRecording}
-            className={`h-12 rounded-full flex items-center justify-center transition-colors text-white ${
-              recorder.isRecording
-                ? 'px-4 gap-2 bg-red-600 hover:bg-red-700'
-                : 'w-12 bg-white/10 hover:bg-white/20'
-            }`}
-            title={recorder.isRecording ? 'Hentikan & simpan rekaman' : 'Rekam rapat ke device (pilih lokasi simpan)'}
-          >
-            {recorder.isRecording ? (
-              <>
-                <Square className="w-4 h-4 fill-current" />
-                <span className="text-sm font-semibold tabular-nums">{fmtElapsed(recorder.elapsed)}</span>
-              </>
-            ) : (
-              <Disc className="w-5 h-5" />
+        {meetingSettings?.isHost && (
+          <div className="relative">
+            <button
+              onClick={() => {
+                setShowHostAudioMenu((v) => !v);
+                setShowReactionPicker(false);
+              }}
+              className={`w-9 h-9 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-colors text-white ${
+                showHostAudioMenu ? 'bg-amber-500 hover:bg-amber-600' : 'bg-white/10 hover:bg-white/20'
+              }`}
+              title="Kontrol mikrofon peserta"
+            >
+              <MicOff className="w-5 h-5" />
+            </button>
+            {showHostAudioMenu && (
+              <div className="absolute bottom-14 left-1/2 -translate-x-1/2 z-20 min-w-48 overflow-hidden rounded-xl border border-white/10 bg-gray-800 shadow-xl">
+                <button
+                  onClick={() => { setShowHostAudioMenu(false); hostMuteAll(); }}
+                  className="w-full flex items-center gap-2 px-3 py-2.5 text-left text-sm text-white hover:bg-white/10"
+                >
+                  <MicOff className="w-4 h-4 text-amber-300" />
+                  Mute semua
+                </button>
+                <button
+                  onClick={() => { setShowHostAudioMenu(false); hostUnmuteAll(); }}
+                  className="w-full flex items-center gap-2 px-3 py-2.5 text-left text-sm text-white hover:bg-white/10"
+                >
+                  <Mic className="w-4 h-4 text-emerald-300" />
+                  Unmute semua
+                </button>
+              </div>
             )}
-          </button>
+          </div>
         )}
 
         <button
           onClick={openChat}
-          className="w-12 h-12 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 text-white relative transition-colors"
+          className="w-9 h-9 sm:w-12 sm:h-12 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 text-white relative transition-colors"
         >
           <MessageSquare className="w-5 h-5" />
           {unreadCount > 0 && (
@@ -2169,7 +2443,7 @@ const PublicMeetingPage = () => {
 
         <button
           onClick={() => setParticipantsOpen(true)}
-          className="w-12 h-12 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 text-white relative transition-colors"
+          className="w-9 h-9 sm:w-12 sm:h-12 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 text-white relative transition-colors"
         >
           <Users className="w-5 h-5" />
           <span className="absolute -top-1 -right-1 w-5 h-5 bg-blue-500 rounded-full text-xs flex items-center justify-center">
@@ -2179,7 +2453,7 @@ const PublicMeetingPage = () => {
 
         <button
           onClick={() => setLeaveDialogOpen(true)}
-          className="w-12 h-12 rounded-full flex items-center justify-center bg-red-500 hover:bg-red-600 text-white ml-4 transition-colors"
+          className="w-9 h-9 sm:w-12 sm:h-12 rounded-full flex items-center justify-center bg-red-500 hover:bg-red-600 text-white ml-1 sm:ml-4 transition-colors"
         >
           <PhoneOff className="w-5 h-5" />
         </button>
@@ -2187,7 +2461,7 @@ const PublicMeetingPage = () => {
 
       {/* Chat Sidebar */}
       {chatOpen && (
-        <div className="fixed inset-y-0 right-0 w-80 bg-gray-800 shadow-2xl flex flex-col z-50">
+        <div className="fixed inset-y-0 right-0 w-full sm:w-80 bg-gray-800 shadow-2xl flex flex-col z-50">
           <div className="p-4 border-b border-white/10 flex justify-between items-center">
             <h2 className="text-white font-semibold">Chat</h2>
             <button onClick={() => setChatOpen(false)} className="p-2 hover:bg-white/10 rounded-lg">
@@ -2285,7 +2559,7 @@ const PublicMeetingPage = () => {
 
       {/* Participants Sidebar */}
       {participantsOpen && (
-        <div className="fixed inset-y-0 right-0 w-72 bg-gray-800 shadow-2xl flex flex-col z-50">
+        <div className="fixed inset-y-0 right-0 w-full sm:w-72 bg-gray-800 shadow-2xl flex flex-col z-50">
           <div className="p-4 border-b border-white/10 flex justify-between items-center">
             <h2 className="text-white font-semibold">Peserta ({participants.length})</h2>
             <button onClick={() => setParticipantsOpen(false)} className="p-2 hover:bg-white/10 rounded-lg">
@@ -2301,7 +2575,7 @@ const PublicMeetingPage = () => {
                 }`}>
                   {(participant.userName || 'U')[0].toUpperCase()}
                 </div>
-                <div>
+                <div className="flex-1 min-w-0">
                   <p className="text-white text-sm">
                     {participant.userName}
                     {participant.oduserId === user.id && ' (Anda)'}
@@ -2310,23 +2584,69 @@ const PublicMeetingPage = () => {
                     <p className="text-white/40 text-xs">Tamu</p>
                   )}
                 </div>
+                {meetingSettings?.isHost && String(participant.oduserId) !== String(myPeerId) && (
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => hostMuteParticipant(participant.oduserId, 'audio')}
+                      title="Mute mikrofon peserta"
+                      className="p-1.5 rounded-lg bg-white/10 hover:bg-amber-500/80 text-white"
+                    >
+                      <MicOff className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => hostUnmuteParticipant(participant.oduserId, 'audio')}
+                      title="Unmute mikrofon peserta"
+                      className="p-1.5 rounded-lg bg-white/10 hover:bg-emerald-500/80 text-white"
+                    >
+                      <Mic className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => hostMuteParticipant(participant.oduserId, 'video')}
+                      title="Matikan kamera peserta"
+                      className="p-1.5 rounded-lg bg-white/10 hover:bg-orange-500/80 text-white"
+                    >
+                      <VideoOff className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* Leave Dialog */}
-      {/* Pengaturan Perangkat (kamera/mikrofon) */}
+      {/* Pengaturan (perangkat + efek latar) */}
       {showSettings && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-2xl shadow-xl w-full max-w-md p-6 text-white">
+        <div className="fixed inset-0 bg-black/70 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4" onClick={() => setShowSettings(false)}>
+          <div className="bg-gray-800 rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-md p-5 sm:p-6 text-white max-h-[88vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold flex items-center gap-2"><Settings className="w-5 h-5" /> Pengaturan Perangkat</h2>
+              <h2 className="text-lg font-semibold flex items-center gap-2"><Settings className="w-5 h-5" /> Pengaturan</h2>
               <button onClick={() => setShowSettings(false)} className="p-2 hover:bg-white/10 rounded-lg"><X className="w-5 h-5" /></button>
             </div>
             <div className="space-y-4">
-              <div>
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-white/40">Nama Room</p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={roomNameDraft}
+                    onChange={(e) => setRoomNameDraft(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') saveRoomDisplayName(); }}
+                    className="flex-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:border-blue-500"
+                    placeholder="Nama yang tampil di meeting"
+                  />
+                  <button
+                    type="button"
+                    onClick={saveRoomDisplayName}
+                    disabled={!cleanRoomDisplayName(roomNameDraft) || cleanRoomDisplayName(roomNameDraft) === roomDisplayName}
+                    className="px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:hover:bg-blue-600 rounded-lg text-sm font-medium"
+                  >
+                    Simpan
+                  </button>
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-white/10">
                 <label className="block text-sm text-white/60 mb-1">Kamera</label>
                 <select
                   value={selectedCam}
@@ -2349,6 +2669,45 @@ const PublicMeetingPage = () => {
                 </select>
               </div>
               <p className="text-xs text-white/40">Jika nama perangkat kosong, izinkan akses kamera/mikrofon lalu buka menu ini lagi.</p>
+
+              {meetingSettings?.isHost && (
+                <div className="space-y-2 pt-3 border-t border-white/10">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-white/40">Kontrol Host</p>
+                  <button
+                    onClick={hostMuteAll}
+                    className="w-full flex items-center gap-2 px-3 py-2.5 bg-white/10 hover:bg-white/15 rounded-lg transition-colors text-left"
+                  >
+                    <MicOff className="w-4 h-4 text-white/60 shrink-0" />
+                    Matikan mikrofon semua peserta
+                  </button>
+                  <button
+                    onClick={hostUnmuteAll}
+                    className="w-full flex items-center gap-2 px-3 py-2.5 bg-white/10 hover:bg-white/15 rounded-lg transition-colors text-left"
+                  >
+                    <Mic className="w-4 h-4 text-white/60 shrink-0" />
+                    Nyalakan mikrofon semua peserta
+                  </button>
+                </div>
+              )}
+
+              {/* Efek latar (virtual background) */}
+              {!(isWebinar && !onStage) && (
+                <div className="space-y-2 pt-3 border-t border-white/10">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-white/40">Efek Latar</p>
+                  <button
+                    onClick={() => { setShowSettings(false); setShowBgPanel(true); }}
+                    className="w-full flex items-center justify-between gap-2 px-3 py-2.5 bg-white/10 hover:bg-white/15 rounded-lg transition-colors"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Sparkles className={`w-4 h-4 ${bgEffect.type !== 'none' ? 'text-indigo-400' : 'text-white/60'}`} />
+                      Virtual Background
+                    </span>
+                    <span className="text-xs text-white/50">
+                      {bgEffect.type === 'none' ? 'Nonaktif' : bgEffect.type === 'blur' ? 'Blur' : 'Gambar'} ›
+                    </span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
