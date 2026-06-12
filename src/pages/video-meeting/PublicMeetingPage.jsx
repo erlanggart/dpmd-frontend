@@ -1901,7 +1901,9 @@ const PublicMeetingPage = () => {
                   autoPlay
                   muted
                   playsInline
-                  className={`w-full h-full object-cover scale-x-[-1] transition-opacity duration-300 ${isVideoOff ? 'opacity-0' : 'opacity-100'}`}
+                  className={`w-full h-full object-cover transition-opacity duration-300 ${
+                    bgEffect.type === 'image' ? '' : 'scale-x-[-1]'
+                  } ${isVideoOff ? 'opacity-0' : 'opacity-100'}`}
                 />
 
                 {isVideoOff && (
@@ -2128,7 +2130,9 @@ const PublicMeetingPage = () => {
                 autoPlay
                 muted
                 playsInline
-                className={`w-full h-full object-cover scale-x-[-1] ${isVideoOff ? 'hidden' : ''}`}
+                className={`w-full h-full object-cover ${
+                  bgEffect.type === 'image' ? '' : 'scale-x-[-1]'
+                } ${isVideoOff ? 'hidden' : ''}`}
               />
               {isVideoOff && (
                 <div className="absolute inset-0 flex items-center justify-center">

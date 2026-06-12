@@ -2061,7 +2061,9 @@ const VideoMeetingPage = () => {
             autoPlay
             muted
             playsInline
-            className={`w-full h-full object-cover scale-x-[-1] ${isVideoOff ? 'hidden' : ''}`}
+            className={`w-full h-full object-cover ${
+              bgEffect.type === 'image' ? '' : 'scale-x-[-1]'
+            } ${isVideoOff ? 'hidden' : ''}`}
           />
           {isVideoOff && (
             <div className="w-12 h-12 md:w-20 md:h-20 bg-gray-700 rounded-full flex items-center justify-center text-white text-lg md:text-2xl font-semibold">
