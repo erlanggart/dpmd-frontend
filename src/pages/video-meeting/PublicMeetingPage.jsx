@@ -20,6 +20,7 @@ import { VirtualBackgroundProcessor, loadImageFromFile } from './virtualBackgrou
 
 const API_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:3001';
 const GALLERY_PAGE_SIZE = 50;
+const SIGNAL_ACK_TIMEOUT_MS = 12000;
 
 const cleanRoomDisplayName = (value) => String(value || '').replace(/\s+/g, ' ').trim().slice(0, 80);
 
@@ -32,6 +33,17 @@ const getOrCreateGuestId = (roomId) => {
     sessionStorage.setItem(key, guestId);
   }
   return guestId;
+};
+
+const getMeetingClientId = (roomId) => {
+  const key = `meeting_client_${roomId}`;
+  let clientId = sessionStorage.getItem(key);
+  if (!clientId) {
+    clientId = globalThis.crypto?.randomUUID?.()
+      || `${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    sessionStorage.setItem(key, clientId);
+  }
+  return clientId;
 };
 
 // Remote Video Component
@@ -213,7 +225,7 @@ const PublicMeetingPage = () => {
   // Generate persistent guest ID for this room
   const persistentGuestId = !isLoggedIn ? getOrCreateGuestId(roomId) : null;
   
-  // Check for existing session (for auto-rejoin on refresh)
+  // Sesi lama hanya dipakai untuk mengingat nama, bukan untuk auto-join.
   const existingSession = sessionStorage.getItem(`meeting_${roomId}`);
   const sessionData = existingSession ? JSON.parse(existingSession) : null;
   const accountDisplayName = cleanRoomDisplayName(storedUser?.name || storedUser?.nama || storedUser?.username);
@@ -229,10 +241,10 @@ const PublicMeetingPage = () => {
   const [meetingInfo, setMeetingInfo] = useState(null);
   const [loadingInfo, setLoadingInfo] = useState(true);
   const [error, setError] = useState(null);
-  const [autoJoining, setAutoJoining] = useState(!!sessionData);
   
   // Meeting state
   const [connected, setConnected] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState('idle');
   const [participants, setParticipants] = useState([]);
   const [myPeerId, setMyPeerId] = useState(persistentGuestId || storedUser?.id?.toString());
   const myPeerIdRef = useRef(persistentGuestId || storedUser?.id?.toString());
@@ -292,6 +304,8 @@ const PublicMeetingPage = () => {
   const localVideoRef = useRef(null);
   const previewVideoRef = useRef(null);
   const socketRef = useRef(null);
+  const meetingClientIdRef = useRef(getMeetingClientId(roomId));
+  const mediaRecoveryRef = useRef(false);
   const localStreamRef = useRef(null); // Mirror of localStream state for use in callbacks
   const attachLocalVideo = useCallback((element) => {
     localVideoRef.current = element;
@@ -513,22 +527,9 @@ const PublicMeetingPage = () => {
     fetchMeetingInfo();
   }, [roomId]);
 
-  // Auto-rejoin on refresh if session exists (kecuali meeting butuh password —
-  // tidak ada password tersimpan, biarkan user mengisi di lobby).
-  useEffect(() => {
-    if (sessionData && meetingInfo && !meetingInfo.requires_password && !joined && !joining) {
-      console.log('Auto-rejoining from session:', sessionData);
-      setAutoJoining(true);
-      // Initialize media first, then join
-      initPreviewMedia().then(() => {
-        handleJoinMeeting();
-      });
-    }
-  }, [meetingInfo, sessionData]);
-
   // Preview camera before joining
   useEffect(() => {
-    if (!joined && !autoJoining) {
+    if (!joined) {
       initPreviewMedia();
     }
     
@@ -571,9 +572,60 @@ const PublicMeetingPage = () => {
     }
   };
 
+  const recoverMeetingConnection = useCallback((message) => {
+    if (mediaRecoveryRef.current) return;
+    mediaRecoveryRef.current = true;
+    setConnected(false);
+    setConnectionStatus('reconnecting');
+    toast.loading(message || 'Memulihkan koneksi meeting...', {
+      id: 'public-meeting-connection-status',
+    });
+
+    consumersRef.current.forEach((peerConsumers) => {
+      Object.values(peerConsumers).forEach((consumer) => consumer?.close());
+    });
+    consumersRef.current.clear();
+    producersRef.current.forEach((producer) => producer?.close());
+    producersRef.current.clear();
+    sendTransportRef.current?.close();
+    recvTransportRef.current?.close();
+    sendTransportRef.current = null;
+    recvTransportRef.current = null;
+    deviceRef.current = null;
+    producedRef.current = false;
+    setRemoteStreams({});
+    setScreenStreams({});
+
+    const socket = socketRef.current;
+    if (!socket) {
+      mediaRecoveryRef.current = false;
+      return;
+    }
+
+    socket.disconnect();
+    setTimeout(() => {
+      if (socketRef.current === socket) socket.connect();
+    }, 1000);
+  }, []);
+
   // Helper: Create and setup mediasoup device
   const setupMediasoup = async (rtpCapabilities, existingProducers) => {
     try {
+      consumersRef.current.forEach((peerConsumers) => {
+        Object.values(peerConsumers).forEach((consumer) => consumer?.close());
+      });
+      consumersRef.current.clear();
+      producersRef.current.forEach((producer) => producer?.close());
+      producersRef.current.clear();
+      sendTransportRef.current?.close();
+      recvTransportRef.current?.close();
+      sendTransportRef.current = null;
+      recvTransportRef.current = null;
+      deviceRef.current = null;
+      producedRef.current = false;
+      setRemoteStreams({});
+      setScreenStreams({});
+
       console.log('[Mediasoup] Setting up device with RTP capabilities');
       rtpCapabilitiesRef.current = rtpCapabilities;
       
@@ -611,13 +663,17 @@ const PublicMeetingPage = () => {
       }
     } catch (error) {
       console.error('[Mediasoup] Setup error:', error);
-      toast.error('Gagal setup video conference');
+      recoverMeetingConnection('Setup media terganggu, mencoba kembali...');
     }
   };
   
   const createSendTransport = async () => {
     return new Promise((resolve, reject) => {
-      socketRef.current.emit('create-transport', { direction: 'send' }, async (response) => {
+      socketRef.current.timeout(SIGNAL_ACK_TIMEOUT_MS).emit('create-transport', { direction: 'send' }, async (ackError, response) => {
+        if (ackError) {
+          reject(new Error('Timeout membuat koneksi upload'));
+          return;
+        }
         if (response.error) {
           console.error('[Mediasoup] Create send transport error:', response.error);
           reject(new Error(response.error));
@@ -628,10 +684,14 @@ const PublicMeetingPage = () => {
         
         transport.on('connect', ({ dtlsParameters }, callback, errback) => {
           console.log('[Mediasoup] Send transport connecting...');
-          socketRef.current.emit('connect-transport', {
+          socketRef.current.timeout(SIGNAL_ACK_TIMEOUT_MS).emit('connect-transport', {
             transportId: transport.id,
             dtlsParameters
-          }, (res) => {
+          }, (ackError, res) => {
+            if (ackError) {
+              errback(new Error('Timeout menghubungkan transport upload'));
+              return;
+            }
             if (res.error) {
               console.error('[Mediasoup] Send transport connect error:', res.error);
               errback(new Error(res.error));
@@ -644,12 +704,16 @@ const PublicMeetingPage = () => {
         
         transport.on('produce', ({ kind, rtpParameters, appData }, callback, errback) => {
           console.log('[Mediasoup] Producing:', kind);
-          socketRef.current.emit('produce', {
+          socketRef.current.timeout(SIGNAL_ACK_TIMEOUT_MS).emit('produce', {
             transportId: transport.id,
             kind,
             rtpParameters,
             appData
-          }, (res) => {
+          }, (ackError, res) => {
+            if (ackError) {
+              errback(new Error(`Timeout mengirim ${kind}`));
+              return;
+            }
             if (res.error) errback(new Error(res.error));
             else callback({ id: res.id });
           });
@@ -660,7 +724,7 @@ const PublicMeetingPage = () => {
           console.log('[Mediasoup] Send transport connection state:', state);
           if (state === 'failed') {
             console.error('[Mediasoup] Send transport connection failed!');
-            toast.error('Koneksi upload gagal. Coba refresh halaman.');
+            recoverMeetingConnection('Koneksi upload terganggu, memulihkan meeting...');
           }
         });
         
@@ -673,7 +737,11 @@ const PublicMeetingPage = () => {
   
   const createRecvTransport = async () => {
     return new Promise((resolve, reject) => {
-      socketRef.current.emit('create-transport', { direction: 'recv' }, async (response) => {
+      socketRef.current.timeout(SIGNAL_ACK_TIMEOUT_MS).emit('create-transport', { direction: 'recv' }, async (ackError, response) => {
+        if (ackError) {
+          reject(new Error('Timeout membuat koneksi penerimaan'));
+          return;
+        }
         if (response.error) {
           console.error('[Mediasoup] Create recv transport error:', response.error);
           reject(new Error(response.error));
@@ -684,10 +752,14 @@ const PublicMeetingPage = () => {
         
         transport.on('connect', ({ dtlsParameters }, callback, errback) => {
           console.log('[Mediasoup] Recv transport connecting...');
-          socketRef.current.emit('connect-transport', {
+          socketRef.current.timeout(SIGNAL_ACK_TIMEOUT_MS).emit('connect-transport', {
             transportId: transport.id,
             dtlsParameters
-          }, (res) => {
+          }, (ackError, res) => {
+            if (ackError) {
+              errback(new Error('Timeout menghubungkan transport penerimaan'));
+              return;
+            }
             if (res.error) {
               console.error('[Mediasoup] Recv transport connect error:', res.error);
               errback(new Error(res.error));
@@ -703,7 +775,7 @@ const PublicMeetingPage = () => {
           console.log('[Mediasoup] Recv transport connection state:', state);
           if (state === 'failed') {
             console.error('[Mediasoup] Recv transport connection failed!');
-            toast.error('Koneksi video gagal. Coba refresh halaman.');
+            recoverMeetingConnection('Koneksi video terganggu, memulihkan meeting...');
           }
         });
         
@@ -1019,6 +1091,7 @@ const PublicMeetingPage = () => {
       }
     } catch (error) {
       console.error('[Mediasoup] Produce error:', error);
+      recoverMeetingConnection('Pengiriman kamera/mikrofon terganggu, memulihkan meeting...');
     }
   };
   
@@ -1036,11 +1109,15 @@ const PublicMeetingPage = () => {
     console.log(`[Mediasoup] consumeProducer called:`, { producerId, peerId: peerIdStr, kind });
     
     return new Promise((resolve, reject) => {
-      socketRef.current.emit('consume', {
+      socketRef.current.timeout(SIGNAL_ACK_TIMEOUT_MS).emit('consume', {
         transportId: recvTransportRef.current.id,
         producerId,
         rtpCapabilities: deviceRef.current.rtpCapabilities
-      }, async (response) => {
+      }, async (ackError, response) => {
+        if (ackError) {
+          reject(new Error('Timeout menerima media peserta'));
+          return;
+        }
         if (response.error) {
           console.error('[Mediasoup] Consume error:', response.error);
           reject(new Error(response.error));
@@ -1067,7 +1144,11 @@ const PublicMeetingPage = () => {
           });
           
           // Resume consumer
-          socketRef.current.emit('resume-consumer', { consumerId: consumer.id }, (resumeRes) => {
+          socketRef.current.timeout(SIGNAL_ACK_TIMEOUT_MS).emit('resume-consumer', { consumerId: consumer.id }, (ackError, resumeRes) => {
+            if (ackError) {
+              console.warn('[Mediasoup] Resume consumer timeout:', consumer.id);
+              return;
+            }
             console.log('[Mediasoup] Consumer resumed:', consumer.id, 'response:', resumeRes);
           });
           
@@ -1127,6 +1208,7 @@ const PublicMeetingPage = () => {
     setRoomNameDraft(cleanName);
 
     setJoining(true);
+    setConnectionStatus('connecting');
     
     try {
       // Get token from authSession or expressToken
@@ -1146,6 +1228,11 @@ const PublicMeetingPage = () => {
       
       // Connect to socket
       socketRef.current = io(API_URL, {
+        reconnection: true,
+        reconnectionAttempts: Infinity,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
+        timeout: 10000,
         // Polling-only: LB/proxy di depan (TLS) belum meneruskan upgrade WebSocket,
         // sehingga 'websocket' selalu gagal & memunculkan error di console. Polling
         // sudah cukup untuk signaling (media tetap via WebRTC langsung). Kembalikan
@@ -1156,18 +1243,42 @@ const PublicMeetingPage = () => {
           guestName: cleanName,
           displayName: cleanName,
           guestId: persistentGuestId, // Persistent guest ID for reconnection
+          meetingClientId: meetingClientIdRef.current,
         }
       });
 
+      let joinInFlight = false;
+      let joinCompleted = false;
+      let joinRetryTimer = null;
+
+      const scheduleJoinRetry = (message) => {
+        if (joinCompleted || joinRetryTimer) return;
+        joinInFlight = false;
+        setConnectionStatus('reconnecting');
+        toast.loading(message || 'Menyiapkan ulang koneksi meeting...', {
+          id: 'public-meeting-connection-status',
+        });
+        joinRetryTimer = setTimeout(() => {
+          joinRetryTimer = null;
+          doJoinRoom();
+        }, 3000);
+      };
+
       const handleJoinResponse = async (response) => {
         console.log('Join room response:', response);
+        joinInFlight = false;
 
         if (response.error) {
           const isPwd = /password/i.test(response.error);
-          toast.error(isPwd ? 'Password meeting salah' : response.error);
+          if (!isPwd && !/not found|not active|dikunci/i.test(response.error)) {
+            scheduleJoinRetry(response.error);
+            return;
+          }
+          toast.error(isPwd ? 'Password meeting salah' : response.error, {
+            id: 'public-meeting-connection-status',
+          });
           setPasswordError(isPwd);
           setJoining(false);
-          setAutoJoining(false);
           // Putuskan socket gagal agar tidak menumpuk saat mencoba lagi.
           try { socketRef.current?.disconnect(); } catch { /* noop */ }
           sessionStorage.removeItem(`meeting_${roomId}`);
@@ -1177,22 +1288,27 @@ const PublicMeetingPage = () => {
         // Waiting room: host belum menerima. Tampilkan layar menunggu.
         if (response.waiting) {
           setJoining(false);
-          setAutoJoining(false);
           setWaitingRoom(true);
           return;
         }
 
         if (response.success) {
+          if (joinCompleted) return;
+          joinCompleted = true;
+          if (joinRetryTimer) clearTimeout(joinRetryTimer);
+          joinRetryTimer = null;
           const joinedName = cleanRoomDisplayName(response.displayName || response.userName || cleanName);
           setRoomDisplayName(joinedName);
           setRoomNameDraft(joinedName);
           setWaitingRoom(false);
           setConnected(true);
+          setConnectionStatus('connected');
+          mediaRecoveryRef.current = false;
+          toast.dismiss('public-meeting-connection-status');
           setJoined(true);
           setJoining(false);
-          setAutoJoining(false);
 
-          // Save session for auto-rejoin on refresh
+          // Simpan nama tampilan untuk kunjungan berikutnya, tanpa auto-join.
           sessionStorage.setItem(`meeting_${roomId}`, JSON.stringify({
             guestName: joinedName,
             displayName: joinedName,
@@ -1227,7 +1343,6 @@ const PublicMeetingPage = () => {
             setParticipants(filteredPeers);
           }
 
-          // Setup mediasoup with RTP capabilities
           if (response.rtpCapabilities) {
             await setupMediasoup(response.rtpCapabilities, response.producers);
           }
@@ -1242,14 +1357,26 @@ const PublicMeetingPage = () => {
       };
 
       const doJoinRoom = () => {
+        if (joinInFlight || joinCompleted || !socketRef.current?.connected) return;
+        joinInFlight = true;
         setParticipants([]);
-        socketRef.current.emit('join-room', {
-          roomId,
-          guestName: cleanName,
-          displayName: cleanName,
-          guestId: persistentGuestId,
-          password: password || undefined,
-        }, handleJoinResponse);
+        socketRef.current.timeout(SIGNAL_ACK_TIMEOUT_MS).emit(
+          'join-room',
+          {
+            roomId,
+            guestName: cleanName,
+            displayName: cleanName,
+            guestId: persistentGuestId,
+            password: password || undefined,
+          },
+          (ackError, response) => {
+            if (ackError) {
+              scheduleJoinRetry('Server belum merespons, mencoba kembali...');
+              return;
+            }
+            handleJoinResponse(response);
+          },
+        );
       };
 
       socketRef.current.on('connect', () => {
@@ -1270,8 +1397,14 @@ const PublicMeetingPage = () => {
 
       socketRef.current.on('connect_error', (error) => {
         console.error('Socket connection error:', error);
-        toast.error('Gagal terhubung ke server');
-        setJoining(false);
+        setConnectionStatus('reconnecting');
+        toast.loading('Koneksi terganggu, mencoba menyambungkan kembali...', {
+          id: 'public-meeting-connection-status',
+        });
+      });
+
+      socketRef.current.io.on('reconnect_attempt', () => {
+        setConnectionStatus('reconnecting');
       });
 
       socketRef.current.on('peer-joined', (data) => {
@@ -1420,7 +1553,7 @@ const PublicMeetingPage = () => {
 
       // Server media terputus (worker mediasoup mati).
       socketRef.current.on('meeting-interrupted', (data) => {
-        toast.error(data?.message || 'Server media terputus. Muat ulang halaman.');
+        recoverMeetingConnection(data?.message || 'Server media terputus, memulihkan meeting...');
       });
 
       // Webinar: status panggung berubah (diangkat/diturunkan host)
@@ -1446,8 +1579,18 @@ const PublicMeetingPage = () => {
         setJoining(false);
       });
 
-      socketRef.current.on('disconnect', () => {
+      socketRef.current.on('disconnect', (reason) => {
         setConnected(false);
+        joinInFlight = false;
+        joinCompleted = false;
+        if (joinRetryTimer) clearTimeout(joinRetryTimer);
+        joinRetryTimer = null;
+        if (reason !== 'io client disconnect') {
+          setConnectionStatus('reconnecting');
+          toast.loading('Koneksi terputus, mencoba menyambungkan kembali...', {
+            id: 'public-meeting-connection-status',
+          });
+        }
       });
 
       // Handle meeting ended by host
@@ -1561,9 +1704,8 @@ const PublicMeetingPage = () => {
       rawCamTrackRef.current = null;
     }
 
-    if (localStream) {
-      localStream.getTracks().forEach(track => track.stop());
-    }
+    localStreamRef.current?.getTracks().forEach(track => track.stop());
+    localStreamRef.current = null;
     if (localScreenStream) {
       localScreenStream.getTracks().forEach(track => track.stop());
     }
@@ -1815,23 +1957,6 @@ const PublicMeetingPage = () => {
     );
   }
 
-  // Auto-rejoining state
-  if (autoJoining && !joined) {
-    return (
-      <LobbyShell>
-        <div className="lobby-fade flex flex-col items-center justify-center gap-5 text-center">
-          <div className="relative">
-            <div className="lobby-glow absolute inset-0 rounded-full bg-emerald-500/40 blur-xl" />
-            <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-2xl shadow-emerald-500/30">
-              <Loader2 className="w-8 h-8 text-white animate-spin" />
-            </div>
-          </div>
-          <span className="text-sm text-white/80">Menghubungkan kembali ke meeting…</span>
-        </div>
-      </LobbyShell>
-    );
-  }
-
   // Error state
   if (error) {
     return (
@@ -2055,6 +2180,12 @@ const PublicMeetingPage = () => {
   // Main meeting view
   return (
     <div className="h-[100dvh] bg-gray-900 flex flex-col overflow-hidden">
+      {connectionStatus === 'reconnecting' && (
+        <div className="fixed inset-x-0 top-0 z-[90] flex items-center justify-center gap-2 bg-amber-500 px-4 py-2 text-sm font-medium text-white shadow-lg">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Menyambungkan kembali ke meeting...
+        </div>
+      )}
       {/* Banner aktifkan suara: muncul sampai user berinteraksi (atasi blokir autoplay audio) */}
       {!audioUnlocked && (
         <button
