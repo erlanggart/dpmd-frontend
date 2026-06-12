@@ -7,6 +7,7 @@ import {
   LuChevronDown, LuChevronRight, LuSearch, LuPackage, LuMapPin, LuDollarSign,
   LuClipboardCheck, LuHistory, LuRoute, LuFolder, LuActivity, LuUsers,
   LuDownload, LuChartColumn, LuFileText, LuStamp, LuRotateCcw, LuWrench,
+  LuPencil, LuSave,
 } from 'react-icons/lu';
 import BankeuRevisionHistoryModal from '../../../../components/shared/BankeuRevisionHistoryModal';
 import BankeuPerubahanTrackingModal from '../../../../components/shared/BankeuPerubahanTrackingModal';
@@ -125,6 +126,7 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
   const [filterKategori, setFilterKategori] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [verifyModal, setVerifyModal] = useState(null);
+  const [editModal, setEditModal] = useState(null);
   const [expandedKec, setExpandedKec] = useState({});   // default: terbuka
   const [expandedDesa, setExpandedDesa] = useState({}); // default: tertutup
 
@@ -314,6 +316,55 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
   // ---- Verifikasi ----
   const openVerify = (proposal, status) => setVerifyModal({ proposal, status, catatan: '' });
 
+  const openEditDetail = (proposal) => {
+    setEditModal({
+      proposal,
+      saving: false,
+      data: {
+        anggaran_usulan: proposal.anggaran_usulan ?? '',
+        volume: proposal.volume || '',
+        lokasi: proposal.lokasi || '',
+        nama_kegiatan_spesifik: proposal.nama_kegiatan_spesifik || '',
+      },
+    });
+  };
+
+  const updateEditField = (field, value) => {
+    setEditModal(current => current
+      ? { ...current, data: { ...current.data, [field]: value } }
+      : current);
+  };
+
+  const submitEditDetail = async () => {
+    if (!editModal || editModal.saving) return;
+
+    const rawAnggaran = editModal.data.anggaran_usulan;
+    const anggaran = rawAnggaran === '' ? '' : Number(rawAnggaran);
+    if (anggaran !== '' && (!Number.isFinite(anggaran) || anggaran < 0 || anggaran > 1_500_000_000)) {
+      return Swal.fire('Validasi', 'Anggaran harus antara Rp 0 sampai Rp 1.500.000.000', 'warning');
+    }
+
+    setEditModal(current => current ? { ...current, saving: true } : current);
+    try {
+      await api.patch(`/dpmd/bankeu-perubahan/proposals/${editModal.proposal.id}/edit-detail`, {
+        ...editModal.data,
+        anggaran_usulan: anggaran,
+      });
+      setEditModal(null);
+      await Promise.all([fetchData(), fetchTracking()]);
+      Swal.fire({
+        icon: 'success',
+        title: 'Berhasil',
+        text: 'Detail proposal berhasil diperbarui',
+        timer: 1600,
+        showConfirmButton: false,
+      });
+    } catch (err) {
+      setEditModal(current => current ? { ...current, saving: false } : current);
+      Swal.fire('Gagal', err.response?.data?.message || 'Gagal menyimpan perubahan', 'error');
+    }
+  };
+
   // Batalkan verifikasi SP & BA (salah pencet) -> SP & BA kembali menunggu verifikasi DPMD
   const cancelApproval = async (proposal) => {
     const result = await Swal.fire({
@@ -490,7 +541,7 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
             isKecExpanded={isKecExpanded} toggleKec={toggleKec}
             isDesaExpanded={isDesaExpanded} toggleDesa={toggleDesa}
             openVerify={openVerify} cancelApproval={cancelApproval}
-            troubleshootRevision={troubleshootRevision}
+            troubleshootRevision={troubleshootRevision} openEditDetail={openEditDetail}
           />
         )}
 
@@ -500,7 +551,7 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
             search={trackSearch} setSearch={setTrackSearch}
             kecamatan={trackKecamatan} setKecamatan={setTrackKecamatan}
             kecamatanOptions={kecamatanOptions} total={trackingData.length}
-            onTroubleshoot={troubleshootRevision}
+            onTroubleshoot={troubleshootRevision} onEdit={openEditDetail}
           />
         )}
 
@@ -512,6 +563,89 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
           <StatisticsTab stats={stats} funnel={funnel} perKategori={perKategori} perKecamatan={perKecamatan} partisipasi={partisipasiData} tahun={tahun} />
         )}
       </div>
+
+      {editModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[calc(100vh-1.5rem)] overflow-y-auto">
+            <div className="sticky top-0 bg-white px-4 sm:px-6 py-4 border-b border-gray-200 rounded-t-2xl z-10">
+              <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                <LuPencil className="w-5 h-5 text-blue-600" /> Edit Detail Proposal
+              </h3>
+              <p className="text-xs text-gray-500 mt-1">
+                Desa {editModal.proposal.desa_nama || '-'} · {editModal.proposal.judul_proposal}
+              </p>
+            </div>
+            <div className="px-4 sm:px-6 py-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Kegiatan Spesifik</label>
+                <input
+                  type="text"
+                  maxLength={255}
+                  value={editModal.data.nama_kegiatan_spesifik}
+                  onChange={e => updateEditField('nama_kegiatan_spesifik', e.target.value)}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Nama kegiatan spesifik"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Volume</label>
+                <input
+                  type="text"
+                  maxLength={255}
+                  value={editModal.data.volume}
+                  onChange={e => updateEditField('volume', e.target.value)}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Contoh: 1 paket"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Lokasi</label>
+                <input
+                  type="text"
+                  maxLength={255}
+                  value={editModal.data.lokasi}
+                  onChange={e => updateEditField('lokasi', e.target.value)}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Lokasi kegiatan"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Anggaran Usulan</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="1500000000"
+                  step="1"
+                  value={editModal.data.anggaran_usulan}
+                  onChange={e => updateEditField('anggaran_usulan', e.target.value)}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Maksimal 1500000000"
+                />
+                <p className="text-xs text-gray-500 mt-1">Maksimal Rp 1.500.000.000 per proposal.</p>
+              </div>
+            </div>
+            <div className="sticky bottom-0 px-4 sm:px-6 py-4 border-t border-gray-200 bg-gray-50 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 rounded-b-2xl">
+              <button
+                onClick={() => setEditModal(null)}
+                disabled={editModal.saving}
+                className="w-full sm:w-auto px-4 py-2.5 bg-white border border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-100 disabled:opacity-60"
+              >
+                Batal
+              </button>
+              <button
+                onClick={submitEditDetail}
+                disabled={editModal.saving}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-sm disabled:opacity-60"
+              >
+                {editModal.saving
+                  ? <LuRefreshCw className="w-4 h-4 animate-spin" />
+                  : <LuSave className="w-4 h-4" />}
+                {editModal.saving ? 'Menyimpan...' : 'Simpan Perubahan'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {verifyModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -575,6 +709,7 @@ const ArchiveTab = ({
   filterKecamatan, setFilterKecamatan, searchQuery, setSearchQuery, kecamatanOptions,
   filteredProposals, proposals, groupedByKecamatan,
   isKecExpanded, toggleKec, isDesaExpanded, toggleDesa, openVerify, cancelApproval, troubleshootRevision,
+  openEditDetail,
 }) => (
   <div className="space-y-4">
     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4">
@@ -687,7 +822,8 @@ const ArchiveTab = ({
                                 onApprove={() => openVerify(p, 'approved')}
                                 onRevision={() => openVerify(p, 'revision')}
                                 onCancelApproval={() => cancelApproval(p)}
-                                onTroubleshoot={() => troubleshootRevision(p)} />
+                                onTroubleshoot={() => troubleshootRevision(p)}
+                                onEdit={() => openEditDetail(p)} />
                             ))}
                           </div>
                         )}
@@ -704,7 +840,7 @@ const ArchiveTab = ({
   </div>
 );
 
-const ProposalRow = ({ proposal, onApprove, onRevision, onCancelApproval, onTroubleshoot }) => {
+const ProposalRow = ({ proposal, onApprove, onRevision, onCancelApproval, onTroubleshoot, onEdit }) => {
   const isPending = !proposal.dpmd_status || proposal.dpmd_status === 'pending';
   const isApproved = proposal.dpmd_status === 'approved';
   const [showHistory, setShowHistory] = useState(false);
@@ -771,6 +907,10 @@ const ProposalRow = ({ proposal, onApprove, onRevision, onCancelApproval, onTrou
           <button onClick={() => setShowHistory(true)}
             className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-lg">
             <LuHistory className="w-3.5 h-3.5" /> Riwayat
+          </button>
+          <button onClick={onEdit}
+            className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold rounded-lg">
+            <LuPencil className="w-3.5 h-3.5" /> Edit Detail
           </button>
           {(baUrl || spUrl) && (
             <span className="inline-flex items-center gap-1.5 pl-1 pr-0.5 text-[11px] font-semibold text-purple-700">
@@ -864,7 +1004,7 @@ const StageDots = ({ proposal }) => {
   );
 };
 
-const TrackingTab = ({ loading, data, search, setSearch, kecamatan, setKecamatan, kecamatanOptions, total, onTroubleshoot }) => {
+const TrackingTab = ({ loading, data, search, setSearch, kecamatan, setKecamatan, kecamatanOptions, total, onTroubleshoot, onEdit }) => {
   const [trackProposal, setTrackProposal] = useState(null);
   // Default: semua grup status TERTUTUP. openMap[key] === true berarti grup dibuka.
   const [openMap, setOpenMap] = useState({});
@@ -974,6 +1114,10 @@ const TrackingTab = ({ loading, data, search, setSearch, kecamatan, setKecamatan
                         </div>
                         <StageDots proposal={p} />
                         <div className="flex items-center gap-1 shrink-0">
+                          <button onClick={() => onEdit(p)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold rounded-lg">
+                            <LuPencil className="w-3.5 h-3.5" /> Edit Detail
+                          </button>
                           <button onClick={() => setTrackProposal(p)}
                             className="inline-flex items-center gap-1 px-2.5 py-1 bg-orange-50 hover:bg-orange-100 text-orange-700 text-xs font-semibold rounded-lg">
                             <LuRoute className="w-3.5 h-3.5" /> Lacak
