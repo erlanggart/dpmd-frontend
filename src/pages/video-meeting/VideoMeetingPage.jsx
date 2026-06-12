@@ -22,6 +22,8 @@ import useMeetingRecorder from './useMeetingRecorder';
 import { VirtualBackgroundProcessor, loadImageFromFile } from './virtualBackground';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:3001';
+const GALLERY_PAGE_SIZE = 50;
+const PINNED_FILMSTRIP_PAGE_SIZE = 8;
 
 // Remote Video Component
 const RemoteVideo = ({
@@ -223,23 +225,9 @@ const VideoMeetingPage = () => {
   const [recordBroadcast, setRecordBroadcast] = useState(false); // host: rekam saat siaran
   const [broadcastLayout, setBroadcastLayout] = useState('speaker'); // host: 'speaker' | 'gallery'
 
-  // Galeri ala Zoom: halaman + jumlah tile per halaman (responsif) supaya layout tetap
-  // rapih walau ratusan peserta. Self-view selalu ikut sebagai tile pertama tiap halaman.
+  // Galeri ala Zoom: maksimal 50 tile per halaman. Saat peserta dipin, filmstrip
+  // tetap dibatasi agar tile utama tidak kehilangan ruang.
   const [galleryPage, setGalleryPage] = useState(0);
-  const [gallerySize, setGallerySize] = useState(25);
-  useEffect(() => {
-    const computeSize = () => {
-      const w = window.innerWidth;
-      if (w < 640) return 4;     // ponsel: 2×2
-      if (w < 1024) return 9;    // tablet: 3×3
-      if (w < 1536) return 16;   // laptop: 4×4
-      return 25;                 // desktop besar: 5×5 (ala Zoom)
-    };
-    const onResize = () => setGallerySize(computeSize());
-    onResize();
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
 
   // Media state
   const [localStream, setLocalStream] = useState(null);
@@ -287,6 +275,14 @@ const VideoMeetingPage = () => {
   const socketRef = useRef(null);
   const isEndingMeetingRef = useRef(false);
   const localStreamRef = useRef(null); // Mirror of localStream to avoid stale closures
+  const attachLocalVideo = useCallback((element) => {
+    localVideoRef.current = element;
+    const stream = localStreamRef.current;
+    if (!element || !stream) return;
+    element.srcObject = stream;
+    const playPromise = element.play?.();
+    if (playPromise?.catch) playPromise.catch(() => {});
+  }, []);
   const initializedRef = useRef(false); // Prevent double initialization (React StrictMode)
   
   // Mediasoup refs
@@ -310,8 +306,20 @@ const VideoMeetingPage = () => {
   // Fullscreen & durasi meeting
   const [isFullscreen, setIsFullscreen] = useState(false);
   const mainAreaRef = useRef(null);
+  const [galleryAspect, setGalleryAspect] = useState(16 / 9);
   const [elapsed, setElapsed] = useState(0); // detik sejak terhubung
   const kbdActionsRef = useRef({}); // aksi terbaru untuk shortcut keyboard (hindari stale closure)
+
+  useEffect(() => {
+    const area = mainAreaRef.current;
+    if (!area || typeof ResizeObserver === 'undefined') return undefined;
+    const observer = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      if (width > 0 && height > 0) setGalleryAspect(width / height);
+    });
+    observer.observe(area);
+    return () => observer.disconnect();
+  }, [connected]);
 
   // Buka kunci pemutaran audio remote. Browser memblokir autoplay audio sampai
   // ada interaksi user; saat masuk halaman /meet via navigasi belum ada gesture,
@@ -1053,25 +1061,47 @@ const VideoMeetingPage = () => {
     // Mode speaker (ada yang di-pin) → 1 tile besar + filmstrip; selain itu galeri grid.
     const stripTiles = pinnedTile ? remoteTiles.filter((t) => t !== pinnedTile) : remoteTiles;
 
-    // Self-view selalu tile pertama tiap halaman; sisanya slot untuk peserta lain.
-    const perPage = Math.max(1, (pinnedTile ? Math.min(gallerySize, 8) : gallerySize) - 1);
-    const totalPages = Math.max(1, Math.ceil(stripTiles.length / perPage));
+    const paginationTiles = [
+      { key: '__local__', type: 'local' },
+      ...(pinnedTile ? stripTiles : remoteTiles),
+    ];
+    const pageSize = pinnedTile ? PINNED_FILMSTRIP_PAGE_SIZE : GALLERY_PAGE_SIZE;
+    const totalPages = Math.max(1, Math.ceil(paginationTiles.length / pageSize));
     const page = Math.min(galleryPage, totalPages - 1);
-    const pageRemotes = stripTiles.slice(page * perPage, page * perPage + perPage);
-    const pageTiles = [{ key: '__local__', type: 'local' }, ...pageRemotes];
+    const pageTiles = paginationTiles.slice(page * pageSize, page * pageSize + pageSize);
 
     // Grid kotak rapih: kolom ≈ akar dari jumlah tile pada halaman ini.
-    const cols = Math.max(1, Math.ceil(Math.sqrt(pageTiles.length)));
+    const cols = Math.min(
+      pageTiles.length,
+      Math.max(1, Math.ceil(Math.sqrt((pageTiles.length * galleryAspect) / (16 / 9))))
+    );
     const rows = Math.max(1, Math.ceil(pageTiles.length / cols));
 
     // Video yang perlu aktif: peserta yang di-pin + yang ada di halaman saat ini.
     const visibleRemoteIds = new Set([
       ...(pinnedTile ? [pinnedTile.participant.oduserId] : []),
-      ...pageRemotes.map((t) => t.participant.oduserId),
+      ...pageTiles
+        .filter((tile) => tile.type === 'remote')
+        .map((tile) => tile.participant.oduserId),
     ]);
 
-    return { pinnedTile, stripTiles, pageTiles, cols, rows, totalPages, page, visibleRemoteIds };
-  }, [participants, myPeerId, user.id, pinnedId, galleryPage, gallerySize]);
+    return {
+      pinnedTile,
+      pageTiles,
+      cols,
+      rows,
+      totalPages,
+      page,
+      visibleRemoteIds,
+      participantCount: remoteTiles.length + 1,
+    };
+  }, [participants, myPeerId, user.id, pinnedId, galleryPage, galleryAspect]);
+
+  useEffect(() => {
+    if (galleryPage > gallery.totalPages - 1) {
+      setGalleryPage(Math.max(0, gallery.totalPages - 1));
+    }
+  }, [galleryPage, gallery.totalPages]);
 
   // Jeda video consumer untuk peserta di luar halaman aktif; lanjutkan untuk yang
   // terlihat. Audio tetap jalan agar suara tetap terdengar meski tile tak tampak.
@@ -2020,7 +2050,7 @@ const VideoMeetingPage = () => {
   }
 
   // Hasil paginasi galeri (dihitung di useMemo `gallery`).
-  const { pinnedTile, stripTiles, pageTiles, cols, rows, totalPages, page } = gallery;
+  const { pinnedTile, pageTiles, cols, rows, totalPages, page, participantCount } = gallery;
 
   // Layout berbagi layar (ala Zoom): dukung beberapa layar aktif, satu dipilih
   // sebagai tampilan utama; layar lain muncul di filmstrip.
@@ -2057,7 +2087,7 @@ const VideoMeetingPage = () => {
       return (
         <div className="relative w-full h-full min-h-0 bg-gray-800 rounded-xl overflow-hidden flex items-center justify-center">
           <video
-            ref={localVideoRef}
+            ref={attachLocalVideo}
             autoPlay
             muted
             playsInline
@@ -2099,14 +2129,14 @@ const VideoMeetingPage = () => {
       {!audioUnlocked && (
         <button
           onClick={unlockAudio}
-          className="fixed top-3 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500 text-white text-sm font-semibold shadow-lg hover:bg-amber-600 transition-colors animate-pulse"
+          className="fixed left-2 right-2 top-2 z-50 mx-auto flex w-fit max-w-[calc(100vw-1rem)] items-center justify-center gap-2 rounded-full bg-amber-500 px-3 py-2 text-center text-xs font-semibold text-white shadow-lg transition-colors hover:bg-amber-600 sm:left-1/2 sm:right-auto sm:top-3 sm:max-w-none sm:-translate-x-1/2 sm:px-4 sm:text-sm"
         >
           <Volume2 className="w-4 h-4" /> Klik untuk mengaktifkan suara peserta
         </button>
       )}
       {/* Header */}
-      <div className="px-3 sm:px-4 py-2.5 sm:py-3 flex items-center justify-between gap-2 border-b border-white/10">
-        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+      <div className="shrink-0 flex flex-wrap items-center justify-between gap-1.5 border-b border-white/10 px-2 py-1.5 sm:flex-nowrap sm:gap-2 sm:px-4 sm:py-3">
+        <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
           <h1 className="text-white font-semibold text-base sm:text-lg truncate max-w-[40vw] sm:max-w-none">
             {meeting?.title || 'Video Meeting'}
           </h1>
@@ -2125,7 +2155,7 @@ const VideoMeetingPage = () => {
           )}
         </div>
 
-        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+        <div className="order-2 flex w-full min-w-0 items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:order-none sm:w-auto sm:shrink-0 sm:gap-2">
           {/* Indikator kualitas jaringan */}
           {netQuality && (
             <span title={`Kualitas jaringan: ${netQuality}`} className="flex items-center">
@@ -2156,7 +2186,7 @@ const VideoMeetingPage = () => {
           {/* Fullscreen area video */}
           <button
             onClick={toggleFullscreen}
-            className="p-2 text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-white/60 transition-colors hover:bg-white/10 hover:text-white"
             title={isFullscreen ? 'Keluar layar penuh (F)' : 'Layar penuh (F)'}
           >
             {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
@@ -2164,7 +2194,7 @@ const VideoMeetingPage = () => {
           {/* Pengaturan (perangkat, efek latar, kontrol host) */}
           <button
             onClick={() => { refreshDevices(); setShowSettings(true); }}
-            className="p-2 text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-white/60 transition-colors hover:bg-white/10 hover:text-white"
             title="Pengaturan"
           >
             <Settings className="w-4 h-4" />
@@ -2177,18 +2207,18 @@ const VideoMeetingPage = () => {
                 disabled={broadcasting}
                 onChange={(e) => setBroadcastLayout(e.target.value)}
                 title="Tata letak siaran: Pembicara aktif (1 sumber) atau Galeri (grid)"
-                className="bg-white/10 text-white/80 text-xs rounded-lg px-2 py-1 border border-white/20 focus:outline-none disabled:opacity-50"
+                className="shrink-0 rounded-lg border border-white/20 bg-white/10 px-2 py-1 text-xs text-white/80 focus:outline-none disabled:opacity-50"
               >
                 <option className="text-gray-900" value="speaker">Pembicara aktif</option>
                 <option className="text-gray-900" value="gallery">Galeri</option>
               </select>
-              <label className="flex items-center gap-1 text-xs text-white/70 select-none" title="Rekam siaran ke file (MP4)">
+              <label className="flex shrink-0 items-center gap-1 text-xs text-white/70 select-none" title="Rekam siaran ke file (MP4)">
                 <input type="checkbox" checked={recordBroadcast} disabled={broadcasting} onChange={(e) => setRecordBroadcast(e.target.checked)} />
                 Rekam
               </label>
               <button
                 onClick={toggleBroadcast}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                   broadcasting ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-purple-600 hover:bg-purple-700 text-white'
                 }`}
                 title="Siaran HLS untuk penonton (skala besar)"
@@ -2207,7 +2237,7 @@ const VideoMeetingPage = () => {
           <span className="hidden md:inline text-white/60 text-sm">Room: {roomId}</span>
           <button
             onClick={copyMeetingLink}
-            className="p-2 text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-white/60 transition-colors hover:bg-white/10 hover:text-white"
             title="Salin link undangan"
           >
             <Copy className="w-4 h-4" />
@@ -2317,7 +2347,9 @@ const VideoMeetingPage = () => {
         ) : (
           /* Mode galeri: grid kotak seragam, dipaginasi agar tetap rapih */
           <div
-            className="flex-1 grid gap-2 md:gap-3 min-h-0"
+            className={`flex-1 grid min-h-0 ${
+              pageTiles.length > 25 ? 'gap-1 md:gap-1.5' : 'gap-2 md:gap-3'
+            }`}
             style={{
               gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
               gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`,
@@ -2331,22 +2363,22 @@ const VideoMeetingPage = () => {
 
         {/* Navigasi halaman (muncul saat peserta melebihi 1 halaman) */}
         {!screenActive && totalPages > 1 && (
-          <div className="shrink-0 flex items-center justify-center gap-3 pt-3">
+          <div className="shrink-0 flex items-center justify-center gap-2 pt-1.5 sm:gap-3 sm:pt-3">
             <button
               onClick={() => setGalleryPage(Math.max(0, page - 1))}
               disabled={page === 0}
-              className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/10 text-white transition-colors hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-30"
               title="Halaman sebelumnya"
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
-            <span className="text-white/70 text-sm tabular-nums">
-              Halaman {page + 1} / {totalPages} · {stripTiles.length + 1} peserta
+            <span className="whitespace-nowrap text-xs text-white/70 tabular-nums sm:text-sm">
+              Halaman {page + 1} / {totalPages} · {participantCount} peserta
             </span>
             <button
               onClick={() => setGalleryPage(Math.min(totalPages - 1, page + 1))}
               disabled={page >= totalPages - 1}
-              className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/10 text-white transition-colors hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-30"
               title="Halaman berikutnya"
             >
               <ChevronRight className="w-5 h-5" />
@@ -2356,7 +2388,9 @@ const VideoMeetingPage = () => {
       </div>
 
       {/* Controls */}
-      <div className="shrink-0 px-1.5 sm:px-4 py-2.5 sm:py-4 flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 border-t border-white/10">
+      <div className="shrink-0 flex items-center gap-2 border-t border-white/10 bg-gray-900/95 px-2 py-2 sm:px-4 sm:py-3 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+        <div className="flex-1 min-w-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="mx-auto flex w-max items-center gap-2 px-1">
         {isWebinar && !onStage ? (
           /* Penonton webinar: tidak publish — hanya tombol angkat tangan */
           <button
@@ -2372,7 +2406,7 @@ const VideoMeetingPage = () => {
           <>
             <button
               onClick={toggleMute}
-              className={`w-9 h-9 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-colors ${
+              className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-colors ${
                 isMuted ? 'bg-red-500 hover:bg-red-600' : 'bg-white/10 hover:bg-white/20'
               } text-white`}
               title={isMuted ? 'Nyalakan Mikrofon' : 'Matikan Mikrofon'}
@@ -2382,7 +2416,7 @@ const VideoMeetingPage = () => {
 
             <button
               onClick={toggleVideo}
-              className={`w-9 h-9 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-colors ${
+              className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-colors ${
                 isVideoOff ? 'bg-red-500 hover:bg-red-600' : 'bg-white/10 hover:bg-white/20'
               } text-white`}
               title={isVideoOff ? 'Nyalakan Kamera' : 'Matikan Kamera'}
@@ -2392,7 +2426,7 @@ const VideoMeetingPage = () => {
 
             <button
               onClick={toggleScreenShare}
-              className={`w-9 h-9 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-colors ${
+              className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-colors ${
                 isScreenSharing ? 'bg-green-500 hover:bg-green-600' : 'bg-white/10 hover:bg-white/20'
               } text-white`}
               title={isScreenSharing ? 'Hentikan Screen Share' : 'Screen Share'}
@@ -2404,7 +2438,7 @@ const VideoMeetingPage = () => {
 
         <button
           onClick={toggleSpeaker}
-          className={`w-9 h-9 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-colors ${
+          className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-colors ${
             isSpeakerMuted ? 'bg-red-500 hover:bg-red-600' : 'bg-white/10 hover:bg-white/20'
           } text-white`}
           title={isSpeakerMuted ? 'Nyalakan Speaker' : 'Matikan Speaker'}
@@ -2419,7 +2453,7 @@ const VideoMeetingPage = () => {
                 setShowHostAudioMenu((v) => !v);
                 setShowReactionPicker(false);
               }}
-              className={`w-9 h-9 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-colors text-white ${
+              className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-colors text-white ${
                 showHostAudioMenu ? 'bg-amber-500 hover:bg-amber-600' : 'bg-white/10 hover:bg-white/20'
               }`}
               title="Kontrol mikrofon peserta"
@@ -2427,7 +2461,7 @@ const VideoMeetingPage = () => {
               <MicOffIcon className="w-5 h-5" />
             </button>
             {showHostAudioMenu && (
-              <div className="absolute bottom-14 left-1/2 -translate-x-1/2 z-20 min-w-48 overflow-hidden rounded-xl border border-white/10 bg-gray-800 shadow-xl">
+              <div className="fixed bottom-20 left-1/2 z-50 min-w-48 -translate-x-1/2 overflow-hidden rounded-xl border border-white/10 bg-gray-800 shadow-xl sm:absolute sm:bottom-14">
                 <button
                   onClick={() => { setShowHostAudioMenu(false); hostMuteAll(); }}
                   className="w-full flex items-center gap-2 px-3 py-2.5 text-left text-sm text-white hover:bg-white/10"
@@ -2451,7 +2485,7 @@ const VideoMeetingPage = () => {
         <div className="relative">
           <button
             onClick={() => setShowReactionPicker((v) => !v)}
-            className={`w-9 h-9 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-colors text-white ${
+            className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-colors text-white ${
               showReactionPicker ? 'bg-amber-500 hover:bg-amber-600' : 'bg-white/10 hover:bg-white/20'
             }`}
             title="Kirim reaksi"
@@ -2459,7 +2493,7 @@ const VideoMeetingPage = () => {
             <Smile className="w-5 h-5" />
           </button>
           {showReactionPicker && (
-            <div className="absolute bottom-14 left-1/2 -translate-x-1/2 bg-gray-800 border border-white/10 rounded-2xl p-2 flex gap-1 shadow-xl z-10">
+            <div className="fixed bottom-20 left-2 right-2 z-50 mx-auto flex w-fit max-w-[calc(100vw-1rem)] gap-1 overflow-x-auto rounded-2xl border border-white/10 bg-gray-800 p-2 shadow-xl sm:absolute sm:bottom-14 sm:left-1/2 sm:right-auto sm:max-w-none sm:-translate-x-1/2">
               {REACTION_EMOJIS.map((em) => (
                 <button
                   key={em}
@@ -2475,7 +2509,7 @@ const VideoMeetingPage = () => {
 
         <button
           onClick={openChat}
-          className="w-9 h-9 sm:w-12 sm:h-12 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 text-white relative transition-colors"
+          className="relative flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20 sm:h-12 sm:w-12"
           title="Chat"
         >
           <MessageSquare className="w-5 h-5" />
@@ -2488,7 +2522,7 @@ const VideoMeetingPage = () => {
 
         <button
           onClick={() => setParticipantsOpen(true)}
-          className="w-9 h-9 sm:w-12 sm:h-12 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 text-white relative transition-colors"
+          className="relative flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20 sm:h-12 sm:w-12"
           title="Peserta"
         >
           <Users className="w-5 h-5" />
@@ -2497,9 +2531,12 @@ const VideoMeetingPage = () => {
           </span>
         </button>
 
+          </div>
+        </div>
+
         <button
           onClick={() => setLeaveDialogOpen(true)}
-          className="w-9 h-9 sm:w-12 sm:h-12 rounded-full flex items-center justify-center bg-red-500 hover:bg-red-600 text-white ml-1 sm:ml-4 transition-colors"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-red-500 text-white transition-colors hover:bg-red-600 sm:h-12 sm:w-12"
           title="Tinggalkan Meeting"
         >
           <PhoneOff className="w-5 h-5" />
@@ -2508,12 +2545,13 @@ const VideoMeetingPage = () => {
 
       {/* Chat Sidebar */}
       {chatOpen && (
-        <div className="fixed inset-y-0 right-0 w-full sm:w-80 bg-gray-800 shadow-2xl flex flex-col z-50">
+        <div className="fixed inset-y-0 right-0 z-50 flex h-[100dvh] w-full flex-col bg-gray-800 shadow-2xl sm:w-80">
           <div className="p-4 border-b border-white/10 flex justify-between items-center">
             <h2 className="text-white font-semibold">Chat</h2>
             <button
               onClick={() => setChatOpen(false)}
-              className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+              className="flex h-11 w-11 items-center justify-center rounded-lg transition-colors hover:bg-white/10"
+              title="Tutup chat"
             >
               <X className="w-5 h-5 text-white" />
             </button>
@@ -2572,7 +2610,7 @@ const VideoMeetingPage = () => {
             )}
           </div>
 
-          <div className="p-4 border-t border-white/10">
+          <div className="border-t border-white/10 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:p-4">
             {replyTo && (
               <div className="mb-2 flex items-center gap-2 bg-white/[0.06] border-l-2 border-blue-400 rounded-lg px-3 py-2">
                 <Reply className="w-3.5 h-3.5 text-blue-300 shrink-0" />
@@ -2596,11 +2634,12 @@ const VideoMeetingPage = () => {
                   if (e.key === 'Escape') setReplyTo(null);
                 }}
                 placeholder={replyTo ? `Balas ${replyTo.senderName}…` : 'Ketik pesan...'}
-                className="flex-1 px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:border-blue-500"
+                className="min-w-0 flex-1 rounded-lg border border-white/20 bg-white/10 px-3 py-2.5 text-white placeholder-white/40 focus:border-blue-500 focus:outline-none sm:px-4"
               />
               <button
                 onClick={sendMessage}
-                className="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-blue-500 text-white transition-colors hover:bg-blue-600"
+                title="Kirim pesan"
               >
                 <Send className="w-5 h-5" />
               </button>
@@ -2611,12 +2650,13 @@ const VideoMeetingPage = () => {
 
       {/* Participants Sidebar */}
       {participantsOpen && (
-        <div className="fixed inset-y-0 right-0 w-full sm:w-72 bg-gray-800 shadow-2xl flex flex-col z-50">
+        <div className="fixed inset-y-0 right-0 z-50 flex h-[100dvh] w-full flex-col bg-gray-800 shadow-2xl sm:w-80">
           <div className="p-4 border-b border-white/10 flex justify-between items-center">
             <h2 className="text-white font-semibold">Peserta ({participants.filter(p => p.oduserId !== myPeerId && p.oduserId !== String(user.id)).length + 1})</h2>
             <button
               onClick={() => setParticipantsOpen(false)}
-              className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+              className="flex h-11 w-11 items-center justify-center rounded-lg transition-colors hover:bg-white/10"
+              title="Tutup daftar peserta"
             >
               <X className="w-5 h-5 text-white" />
             </button>
@@ -2700,58 +2740,57 @@ const VideoMeetingPage = () => {
                 {raisedHands[participant.oduserId] && (
                   <span title="Mengangkat tangan" className="text-amber-400"><Hand className="w-4 h-4" /></span>
                 )}
-                {/* Kontrol host umum: mute & keluarkan peserta */}
+                {/* Kontrol host: dapat digeser bila tombol melebihi lebar ponsel. */}
                 {meetingSettings?.isHost && (
-                  <>
+                  <div className="flex max-w-[52%] shrink-0 gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                     <button
                       onClick={() => hostMuteParticipant(participant.oduserId, 'audio')}
                       title="Matikan mikrofon peserta"
-                      className="p-1.5 rounded-lg bg-white/10 hover:bg-amber-500/80 text-white"
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-amber-500/80"
                     >
                       <MicOffIcon className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => hostUnmuteParticipant(participant.oduserId, 'audio')}
                       title="Nyalakan mikrofon peserta"
-                      className="p-1.5 rounded-lg bg-white/10 hover:bg-emerald-500/80 text-white"
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-emerald-500/80"
                     >
                       <Mic className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => hostMuteParticipant(participant.oduserId, 'video')}
                       title="Matikan kamera peserta"
-                      className="p-1.5 rounded-lg bg-white/10 hover:bg-orange-500/80 text-white"
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-orange-500/80"
                     >
                       <VideoOff className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => hostRemoveParticipant(participant.oduserId, participant.userName)}
                       title="Keluarkan peserta"
-                      className="p-1.5 rounded-lg bg-white/10 hover:bg-red-500/80 text-white"
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-red-500/80"
                     >
                       <UserX className="w-4 h-4" />
                     </button>
-                  </>
-                )}
-                {/* Kontrol host webinar: naik/turun panggung */}
-                {isWebinar && meetingSettings?.isHost && (
-                  participant.onStage ? (
-                    <button
-                      onClick={() => demoteFromStage(participant.oduserId)}
-                      title="Turunkan dari panggung"
-                      className="p-1.5 rounded-lg bg-white/10 hover:bg-red-500/80 text-white"
-                    >
-                      <ArrowDownCircle className="w-4 h-4" />
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => promoteToStage(participant.oduserId)}
-                      title="Naikkan ke panggung"
-                      className="p-1.5 rounded-lg bg-white/10 hover:bg-emerald-500/80 text-white"
-                    >
-                      <ArrowUpCircle className="w-4 h-4" />
-                    </button>
-                  )
+                    {isWebinar && (
+                      participant.onStage ? (
+                        <button
+                          onClick={() => demoteFromStage(participant.oduserId)}
+                          title="Turunkan dari panggung"
+                          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-red-500/80"
+                        >
+                          <ArrowDownCircle className="w-4 h-4" />
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => promoteToStage(participant.oduserId)}
+                          title="Naikkan ke panggung"
+                          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-emerald-500/80"
+                        >
+                          <ArrowUpCircle className="w-4 h-4" />
+                        </button>
+                      )
+                    )}
+                  </div>
                 )}
               </div>
             ))}
@@ -2763,7 +2802,7 @@ const VideoMeetingPage = () => {
       {showBgPanel && (
         <div className="fixed inset-0 bg-black/70 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4" onClick={() => setShowBgPanel(false)}>
           <div
-            className="bg-gray-800 rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-lg p-5 sm:p-6 text-white max-h-[85vh] overflow-y-auto"
+            className="max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-gray-800 p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] text-white shadow-xl sm:max-h-[85dvh] sm:rounded-2xl sm:p-6"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-center mb-4">
@@ -2852,7 +2891,7 @@ const VideoMeetingPage = () => {
       {/* Pengaturan (perangkat, efek latar, kontrol host) */}
       {showSettings && (
         <div className="fixed inset-0 bg-black/70 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4" onClick={() => setShowSettings(false)}>
-          <div className="bg-gray-800 rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-md p-5 sm:p-6 text-white max-h-[88vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-gray-800 p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] text-white shadow-xl sm:max-h-[88dvh] sm:rounded-2xl sm:p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold flex items-center gap-2"><Settings className="w-5 h-5" /> Pengaturan</h2>
               <button onClick={() => setShowSettings(false)} className="p-2 hover:bg-white/10 rounded-lg"><X className="w-5 h-5" /></button>
