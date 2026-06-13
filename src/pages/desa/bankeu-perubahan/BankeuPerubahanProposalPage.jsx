@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import api from '../../../api';
 import Swal from 'sweetalert2';
 import {
@@ -133,7 +133,7 @@ const BankeuPerubahanProposalPage = ({ tahun }) => {
     };
   }
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const [proposalsRes, masterRes] = await Promise.all([
@@ -150,9 +150,9 @@ const BankeuPerubahanProposalPage = ({ tahun }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [tahun]);
 
-  useEffect(() => { fetchData(); }, [tahun]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -215,6 +215,7 @@ const BankeuPerubahanProposalPage = ({ tahun }) => {
   const getRemainingAnggaran = (excludeProposalId = null) => MAX_ANGGARAN - getTotalExistingAnggaran(excludeProposalId);
 
   const isRevision = (p) =>
+    ['revision','rejected'].includes(p.status) ||
     ['revision','rejected'].includes(p.kecamatan_status) ||
     ['revision','rejected'].includes(p.dpmd_status);
   // Sudah upload ulang PDF setelah ronde revisi terakhir? (siap dikirim ulang)
@@ -231,6 +232,26 @@ const BankeuPerubahanProposalPage = ({ tahun }) => {
     approved_kec: proposals.filter(p => p.kecamatan_status === 'approved').length,
     dpmd_approved: proposals.filter(p => p.dpmd_status === 'approved').length,
   }), [proposals]);
+
+  const revisionSummary = useMemo(() => {
+    const items = proposals.filter(isRevision);
+    return {
+      items,
+      kecamatan: items.filter(p => ['revision', 'rejected'].includes(p.kecamatan_status)).length,
+      dpmd: items.filter(p => ['revision', 'rejected'].includes(p.dpmd_status)).length,
+      sistem: items.filter(p =>
+        ['revision', 'rejected'].includes(p.status) &&
+        !['revision', 'rejected'].includes(p.kecamatan_status) &&
+        !['revision', 'rejected'].includes(p.dpmd_status)
+      ).length,
+    };
+  }, [proposals]);
+
+  useEffect(() => {
+    if (!expandedProposalId && revisionSummary.items.length > 0) {
+      setExpandedProposalId(revisionSummary.items[0].id);
+    }
+  }, [expandedProposalId, revisionSummary.items]);
 
   const updateAddForm = (kat, field, value) => {
     setAddForm(f => ({ ...f, [kat]: { ...f[kat], [field]: value } }));
@@ -504,6 +525,30 @@ const BankeuPerubahanProposalPage = ({ tahun }) => {
             <StatCard label="Approved DPMD" value={counts.dpmd_approved} color="bg-green-50 text-green-700" />
             <StatCard label="Revisi" value={counts.revision} color="bg-orange-50 text-orange-700" />
           </div>
+
+          {counts.revision > 0 && (
+            <div className="mt-4 rounded-2xl border-2 border-orange-300 bg-gradient-to-r from-orange-50 to-amber-50 p-4 shadow-sm">
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-orange-600 text-white">
+                  <LuTriangleAlert className="h-5 w-5" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-bold text-orange-950">
+                    {counts.revision} proposal dikembalikan untuk diperbaiki
+                  </h3>
+                  <p className="mt-1 text-sm text-orange-800">
+                    Buka proposal yang ditandai, baca catatan pemeriksa, upload ulang PDF, lalu gunakan tombol
+                    <strong> Kirim Ulang Revisi</strong>.
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold">
+                    {revisionSummary.kecamatan > 0 && <span className="rounded-full bg-white px-2.5 py-1 text-orange-800">Kecamatan: {revisionSummary.kecamatan}</span>}
+                    {revisionSummary.dpmd > 0 && <span className="rounded-full bg-white px-2.5 py-1 text-purple-800">DPMD: {revisionSummary.dpmd}</span>}
+                    {revisionSummary.sistem > 0 && <span className="rounded-full bg-white px-2.5 py-1 text-red-800">Dikembalikan DPMD: {revisionSummary.sistem}</span>}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Total anggaran usulan seluruh proposal desa */}
           <div className="mt-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 shadow-md">
@@ -909,14 +954,15 @@ const FormFields = ({ form, onChange, isAnggaranOverLimit, isEdit = false, curre
   </div>
 );
 
-const ProposalCard = ({ proposal, expanded, onToggleExpand, onEdit, onDelete, onView }) => {
+const ProposalCard = ({ proposal, expanded, onToggleExpand, onEdit, onDelete }) => {
   const submitted = !!proposal.submitted_to_kecamatan;
+  const statusRevisi = ['revision','rejected'].includes(proposal.status);
   const kecRevisi = ['revision','rejected'].includes(proposal.kecamatan_status);
   const dpmdRevisi = ['revision','rejected'].includes(proposal.dpmd_status);
-  const inRevisi = kecRevisi || dpmdRevisi;
+  const inRevisi = statusRevisi || kecRevisi || dpmdRevisi;
   // Masih perlu upload ulang PDF sebelum bisa dikirim ulang ke Kecamatan?
   const needsReupload = inRevisi && Number(proposal.reupload_after_revision_count || 0) === 0;
-  const canEdit = !submitted || kecRevisi || dpmdRevisi;
+  const canEdit = !submitted || inRevisi;
   const canDelete = !submitted;
   const meta = KATEGORI_META[proposal.jenis_kegiatan] || KATEGORI_META.wajib;
   const firstKegiatan = proposal.kegiatan_list?.[0];
@@ -924,7 +970,9 @@ const ProposalCard = ({ proposal, expanded, onToggleExpand, onEdit, onDelete, on
   const hasHistory = submitted || inRevisi || (proposal.current_version || 1) > 1;
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+    <div className={`rounded-xl border bg-white shadow-sm overflow-hidden ${
+      inRevisi ? 'border-orange-400 ring-2 ring-orange-100' : 'border-gray-200'
+    }`}>
       <button
         onClick={onToggleExpand}
         className="w-full p-3 hover:bg-gray-50 transition-colors text-left"
@@ -949,8 +997,8 @@ const ProposalCard = ({ proposal, expanded, onToggleExpand, onEdit, onDelete, on
               {!submitted && (
                 inRevisi
                   ? <StatusBadge
-                      status={kecRevisi ? proposal.kecamatan_status : proposal.dpmd_status}
-                      label={kecRevisi ? `Kec: ${proposal.kecamatan_status}` : `DPMD: ${proposal.dpmd_status}`}
+                      status={kecRevisi ? proposal.kecamatan_status : (dpmdRevisi ? proposal.dpmd_status : proposal.status)}
+                      label={kecRevisi ? 'Revisi Kecamatan' : (dpmdRevisi ? 'Revisi DPMD' : 'Dikembalikan untuk Revisi')}
                     />
                   : <StatusBadge status="draft" label="Draft" />
               )}
@@ -1009,6 +1057,23 @@ const ProposalCard = ({ proposal, expanded, onToggleExpand, onEdit, onDelete, on
           {proposal.nama_kegiatan_spesifik && (
             <div className="mb-3 p-2 bg-gray-50 rounded-lg text-sm text-gray-700">
               <strong className="text-gray-900">Nama Spesifik:</strong> {proposal.nama_kegiatan_spesifik}
+            </div>
+          )}
+
+          {statusRevisi && !kecRevisi && !dpmdRevisi && (
+            <div className="mb-3 flex items-start gap-2 rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-900">
+              <LuTriangleAlert className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-600" />
+              <div>
+                <strong>Proposal dikembalikan ke Desa untuk revisi.</strong>
+                <p className="mt-0.5 text-xs text-red-800">
+                  Periksa catatan atau riwayat proposal, lalu upload ulang PDF sebelum dikirim kembali.
+                </p>
+                {proposal.troubleshoot_catatan && (
+                  <p className="mt-2 rounded-lg bg-white/80 p-2 text-xs text-red-900">
+                    <strong>Catatan DPMD:</strong> {proposal.troubleshoot_catatan}
+                  </p>
+                )}
+              </div>
             </div>
           )}
 

@@ -8,6 +8,8 @@ import DesaBankeuPerubahanLpjPage from './DesaBankeuPerubahanLpjPage';
 // Timestamp update verifikasi terbaru pada sebuah proposal (0 jika belum ada)
 const latestUpdateTime = (p) => {
   const times = [];
+  if (['revision', 'rejected'].includes(p.status) && p.updated_at)
+    times.push(new Date(p.updated_at).getTime());
   if (['approved', 'revision', 'rejected'].includes(p.kecamatan_status) && p.kecamatan_verified_at)
     times.push(new Date(p.kecamatan_verified_at).getTime());
   if (['approved', 'revision', 'rejected'].includes(p.dpmd_status) && p.dpmd_verified_at)
@@ -167,8 +169,8 @@ const DesaBankeuPerubahanPage = () => {
 
       {activeTab === 'pengajuan' && <BankeuPerubahanProposalPage tahun={selectedYear} />}
       {activeTab === 'tracking' && (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-orange-50 p-4 md:p-6">
-          <div className="max-w-4xl mx-auto">
+        <div className="min-h-screen bg-slate-50 p-4 md:p-6">
+          <div className="mx-auto max-w-6xl">
             <BankeuPerubahanTrackingTab tahun={selectedYear} />
           </div>
         </div>

@@ -76,6 +76,12 @@ const rupiah = (n) => 'Rp ' + Number(n || 0).toLocaleString('id-ID');
 // Tahap "saat ini" sebuah proposal di alur Desa→Kecamatan→DPMD
 function currentStage(p) {
   const kec = p.kecamatan_status || 'pending';
+  if (['revision', 'rejected'].includes(p.dpmd_status)) {
+    return { key: 'revisi_dokumen_kec', label: 'Revisi BA/SP Kecamatan', tone: 'orange' };
+  }
+  if (['revision', 'rejected'].includes(p.status) && !p.submitted_to_kecamatan) {
+    return { key: 'revisi_desa', label: 'Revisi di Desa', tone: 'red' };
+  }
   // DPMD hanya MENERIMA proposal desa — tidak memverifikasi isi proposal.
   // Verifikasi SP & BA (dokumen kecamatan) bersifat internal kecamatan↔DPMD dan
   // tidak ditampilkan sebagai tahap tracking proposal, jadi begitu sampai di DPMD
@@ -107,10 +113,12 @@ const TONE_DOT = {
 // Urutan tahap mengikuti alur Desa → Kecamatan → DPMD (untuk pengelompokan Tracking).
 const STAGE_ORDER = [
   { key: 'draft', label: 'Draft di Desa', tone: 'gray' },
+  { key: 'revisi_desa', label: 'Revisi di Desa', tone: 'red' },
   { key: 'menunggu_kec', label: 'Menunggu Kecamatan', tone: 'amber' },
   { key: 'revisi_kec', label: 'Revisi Kecamatan', tone: 'orange' },
   { key: 'ditolak_kec', label: 'Ditolak Kecamatan', tone: 'red' },
   { key: 'disetujui_kec', label: 'Disetujui Kec. (belum diteruskan)', tone: 'cyan' },
+  { key: 'revisi_dokumen_kec', label: 'Revisi BA/SP Kecamatan', tone: 'orange' },
   { key: 'diterima_dpmd', label: 'Diterima DPMD', tone: 'emerald' },
 ];
 
@@ -135,6 +143,7 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
   const [loadingTracking, setLoadingTracking] = useState(true);
   const [trackSearch, setTrackSearch] = useState('');
   const [trackKecamatan, setTrackKecamatan] = useState('all');
+  const [trackKegiatan, setTrackKegiatan] = useState('all');
 
   // Master desa/kecamatan (partisipasi)
   const [allDesa, setAllDesa] = useState([]);
@@ -247,13 +256,30 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
   const trackingFiltered = useMemo(() => {
     return trackingData.filter(p => {
       if (trackKecamatan !== 'all' && String(p.desa_kecamatan_id) !== String(trackKecamatan)) return false;
+      if (trackKegiatan !== 'all') {
+        const matchesKegiatan = (p.kegiatan_list || []).some(k => String(k.id) === String(trackKegiatan)) ||
+          String(p.kegiatan_id || '') === String(trackKegiatan);
+        if (!matchesKegiatan) return false;
+      }
       if (trackSearch.trim()) {
         const q = trackSearch.toLowerCase();
-        if (!(p.judul_proposal?.toLowerCase().includes(q) || p.desa_nama?.toLowerCase().includes(q) || p.kecamatan_nama?.toLowerCase().includes(q))) return false;
+        const inKegiatan = (p.kegiatan_list || []).some(k => k.nama_kegiatan?.toLowerCase().includes(q));
+        if (!(p.judul_proposal?.toLowerCase().includes(q) || p.desa_nama?.toLowerCase().includes(q) || p.kecamatan_nama?.toLowerCase().includes(q) || inKegiatan)) return false;
       }
       return true;
     });
-  }, [trackingData, trackKecamatan, trackSearch]);
+  }, [trackingData, trackKecamatan, trackKegiatan, trackSearch]);
+
+  const trackingKegiatanOptions = useMemo(() => {
+    const options = new Map();
+    trackingData.forEach(p => {
+      (p.kegiatan_list || []).forEach(k => options.set(String(k.id), k.nama_kegiatan));
+      if (p.kegiatan_id && p.kegiatan_nama) options.set(String(p.kegiatan_id), p.kegiatan_nama);
+    });
+    return Array.from(options.entries())
+      .map(([id, nama]) => ({ id, nama }))
+      .sort((a, b) => (a.nama || '').localeCompare(b.nama || '', 'id'));
+  }, [trackingData]);
 
   // ---- PARTISIPASI: desa sudah/belum mengajukan ----
   const partisipasiData = useMemo(() => {
@@ -550,6 +576,8 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
             loading={loadingTracking} data={trackingFiltered}
             search={trackSearch} setSearch={setTrackSearch}
             kecamatan={trackKecamatan} setKecamatan={setTrackKecamatan}
+            kegiatan={trackKegiatan} setKegiatan={setTrackKegiatan}
+            kegiatanOptions={trackingKegiatanOptions}
             kecamatanOptions={kecamatanOptions} total={trackingData.length}
             onTroubleshoot={troubleshootRevision} onEdit={openEditDetail}
           />
@@ -1004,7 +1032,10 @@ const StageDots = ({ proposal }) => {
   );
 };
 
-const TrackingTab = ({ loading, data, search, setSearch, kecamatan, setKecamatan, kecamatanOptions, total, onTroubleshoot, onEdit }) => {
+const TrackingTab = ({
+  loading, data, search, setSearch, kecamatan, setKecamatan, kecamatanOptions,
+  kegiatan, setKegiatan, kegiatanOptions, total, onTroubleshoot, onEdit,
+}) => {
   const [trackProposal, setTrackProposal] = useState(null);
   // Default: semua grup status TERTUTUP. openMap[key] === true berarti grup dibuka.
   const [openMap, setOpenMap] = useState({});
@@ -1040,9 +1071,14 @@ const TrackingTab = ({ loading, data, search, setSearch, kecamatan, setKecamatan
           <option value="all">Semua Kecamatan</option>
           {kecamatanOptions.map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}
         </select>
+        <select value={kegiatan} onChange={e => setKegiatan(e.target.value)}
+          className="max-w-sm px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500">
+          <option value="all">Semua Kegiatan</option>
+          {kegiatanOptions.map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}
+        </select>
         <div className="relative flex-1 min-w-[200px] max-w-xs">
           <LuSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari judul / desa / kecamatan..."
+          <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari judul / desa / kecamatan / kegiatan..."
             className="w-full pl-9 pr-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500" />
         </div>
         <span className="ml-auto text-xs text-gray-500">{data.length} dari {total} proposal</span>
@@ -1108,6 +1144,11 @@ const TrackingTab = ({ loading, data, search, setSearch, kecamatan, setKecamatan
                         <div className="flex-1 min-w-0">
                           <span className="text-xs text-gray-500">Kec <strong className="text-gray-800">{p.kecamatan_nama}</strong> · Desa <strong className="text-gray-800">{p.desa_nama}</strong></span>
                           <p className="text-sm font-semibold text-gray-800 truncate mt-0.5">{p.judul_proposal}</p>
+                          {(p.kegiatan_list || []).length > 0 && (
+                            <p className="mt-0.5 text-xs text-violet-700">
+                              Kegiatan: {(p.kegiatan_list || []).map(k => k.nama_kegiatan).join(', ')}
+                            </p>
+                          )}
                           <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-amber-50 text-amber-800 text-xs font-semibold rounded">
                             <LuDollarSign className="w-3.5 h-3.5" /> {rupiah(p.anggaran_usulan)}
                           </span>

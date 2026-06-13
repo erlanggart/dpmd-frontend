@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useState, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../../api';
 import Swal from 'sweetalert2';
@@ -12,6 +12,11 @@ import {
 import PdfAnnotationEditor from '../../../components/shared/PdfAnnotationEditor';
 
 const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
+const getLocalDateInputValue = () => {
+  const now = new Date();
+  const offsetMs = now.getTimezoneOffset() * 60 * 1000;
+  return new Date(now.getTime() - offsetMs).toISOString().split('T')[0];
+};
 
 const STATUS_LABELS = {
   pending: 'Pending', in_review: 'Review',
@@ -80,7 +85,7 @@ const BankeuPerubahanVerificationPage = ({ tahun }) => {
   const [filterKategori, setFilterKategori] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -104,9 +109,9 @@ const BankeuPerubahanVerificationPage = ({ tahun }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [tahun]);
 
-  useEffect(() => { fetchData(); }, [tahun]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   const isKecamatanConfigComplete = () => {
     if (!kecamatanConfig) return false;
@@ -385,9 +390,10 @@ const BankeuPerubahanVerificationPage = ({ tahun }) => {
           <p class="text-sm text-gray-600 mb-2">Desa <strong>${proposal.desa_nama}</strong></p>
           <p class="text-sm text-gray-600 mb-2">Proposal: <strong>${proposal.judul_proposal}</strong></p>
           <div class="mt-3">
-            <label class="block text-sm font-semibold text-gray-700 mb-1">Tanggal Berita Acara</label>
-            <input type="date" id="swal-tanggal-ba" value="${new Date().toISOString().split('T')[0]}"
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Tanggal Berita Acara <span class="text-red-500">*</span></label>
+            <input type="date" id="swal-tanggal-ba" value="${getLocalDateInputValue()}" required
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500" />
+            <p class="mt-1 text-xs text-gray-500">Tanggal ini akan tercetak pada dokumen Berita Acara.</p>
           </div>
         </div>
       `,
@@ -396,7 +402,11 @@ const BankeuPerubahanVerificationPage = ({ tahun }) => {
       cancelButtonText: 'Batal',
       confirmButtonColor: '#ea580c',
       preConfirm: () => {
-        const tanggal = document.getElementById('swal-tanggal-ba')?.value || null;
+        const tanggal = document.getElementById('swal-tanggal-ba')?.value;
+        if (!tanggal) {
+          Swal.showValidationMessage('Tanggal Berita Acara wajib dipilih');
+          return false;
+        }
         return { tanggal };
       },
     });
@@ -442,9 +452,10 @@ const BankeuPerubahanVerificationPage = ({ tahun }) => {
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
           </div>
           <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-1">Tanggal Surat</label>
-            <input type="date" id="swal-tanggal-sp" value="${new Date().toISOString().split('T')[0]}"
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Tanggal Surat <span class="text-red-500">*</span></label>
+            <input type="date" id="swal-tanggal-sp" value="${getLocalDateInputValue()}" required
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+            <p class="mt-1 text-xs text-gray-500">Tanggal ini akan tercetak pada Surat Pengantar.</p>
           </div>
         </div>
       `,
@@ -457,6 +468,10 @@ const BankeuPerubahanVerificationPage = ({ tahun }) => {
         const tanggal = document.getElementById('swal-tanggal-sp')?.value || null;
         if (!nomorSurat) {
           Swal.showValidationMessage('Nomor Surat wajib diisi');
+          return false;
+        }
+        if (!tanggal) {
+          Swal.showValidationMessage('Tanggal Surat wajib dipilih');
           return false;
         }
         return { nomor_surat: nomorSurat, tanggal };
@@ -861,7 +876,8 @@ const ProposalRow = ({ proposal, onApprove, onReject, onRevision, onCancel, onGe
   const submittedToDpmd = !!proposal.submitted_to_dpmd;
   const kecApproved = proposal.kecamatan_status === 'approved';
   const isPending = !proposal.kecamatan_status || proposal.kecamatan_status === 'pending';
-  const canManageKecamatanDocs = !submittedToDpmd && (isPending || kecApproved);
+  const isDpmdDocumentRevision = ['revision', 'rejected'].includes(proposal.dpmd_status);
+  const canManageKecamatanDocs = (isPending || kecApproved) && (!submittedToDpmd || isDpmdDocumentRevision);
   const firstKegiatan = proposal.kegiatan_list?.[0];
   const hasBA = !!proposal.berita_acara_path;
   const hasSP = !!proposal.surat_pengantar_kecamatan_path;
@@ -942,6 +958,14 @@ const ProposalRow = ({ proposal, onApprove, onReject, onRevision, onCancel, onGe
           {proposal.dpmd_catatan && (
             <div className="mt-2 text-xs bg-purple-50 border border-purple-200 rounded p-2 text-purple-800">
               <strong>Catatan DPMD:</strong> {proposal.dpmd_catatan}
+            </div>
+          )}
+          {isDpmdDocumentRevision && (
+            <div className="mt-2 flex items-start gap-2 rounded-lg border border-orange-300 bg-orange-50 p-2 text-xs text-orange-900">
+              <LuTriangleAlert className="mt-0.5 h-4 w-4 flex-shrink-0 text-orange-600" />
+              <div>
+                <strong>BA/SP dikembalikan DPMD.</strong> Generate ulang Berita Acara dan Surat Pengantar, lalu kirim kembali ke DPMD.
+              </div>
             </div>
           )}
         </div>
@@ -1026,7 +1050,7 @@ const ProposalRow = ({ proposal, onApprove, onReject, onRevision, onCancel, onGe
                   onClick={onGenerateBA}
                   className="inline-flex items-center gap-1 px-2.5 py-1 bg-violet-600 hover:bg-violet-700 text-white text-xs font-semibold rounded-lg shadow-sm"
                 >
-                  <LuFileText className="w-3.5 h-3.5" /> Generate BA
+                  <LuFileText className="w-3.5 h-3.5" /> {isDpmdDocumentRevision ? 'Regenerate BA' : 'Generate BA'}
                 </button>
               )}
               {hasSP ? (
@@ -1052,7 +1076,7 @@ const ProposalRow = ({ proposal, onApprove, onReject, onRevision, onCancel, onGe
                   onClick={onGenerateSP}
                   className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm"
                 >
-                  <LuStamp className="w-3.5 h-3.5" /> Generate Surat
+                  <LuStamp className="w-3.5 h-3.5" /> {isDpmdDocumentRevision ? 'Regenerate Surat' : 'Generate Surat'}
                 </button>
               )}
             </div>
