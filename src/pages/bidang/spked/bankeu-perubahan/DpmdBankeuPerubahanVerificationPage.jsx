@@ -79,6 +79,14 @@ function currentStage(p) {
   if (['revision', 'rejected'].includes(p.dpmd_status)) {
     return { key: 'revisi_dokumen_kec', label: 'Revisi BA/SP Kecamatan', tone: 'orange' };
   }
+  // Kecamatan minta revisi / tolak: proposal dikembalikan ke desa (submitted_to_kecamatan=FALSE)
+  // tetapi kecamatan_status tetap 'revision'/'rejected'. Ini harus dideteksi SEBELUM fallback
+  // revisi_desa di bawah, karena alur revisi kecamatan juga menyetel status='revision'.
+  if (!p.submitted_to_dpmd) {
+    if (kec === 'revision') return { key: 'revisi_kec', label: 'Revisi Kecamatan', tone: 'orange' };
+    if (kec === 'rejected') return { key: 'ditolak_kec', label: 'Ditolak Kecamatan', tone: 'red' };
+  }
+  // Revisi murni level desa (mis. hasil troubleshoot: kecamatan_status di-reset ke 'pending').
   if (['revision', 'rejected'].includes(p.status) && !p.submitted_to_kecamatan) {
     return { key: 'revisi_desa', label: 'Revisi di Desa', tone: 'red' };
   }
@@ -309,7 +317,12 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
   const funnel = useMemo(() => {
     const f = { total: trackingData.length, desa: 0, kecamatan: 0, dpmd: 0, selesai: 0 };
     trackingData.forEach(p => {
-      if (!p.submitted_to_kecamatan) f.desa += 1;
+      // Revisi/penolakan kecamatan mengembalikan proposal ke desa (submitted_to_kecamatan=FALSE)
+      // namun secara tahap masih milik Kecamatan — kenali via kecamatan_status agar tidak
+      // salah dihitung sebagai "Masih di Desa".
+      const kecReturned = !p.submitted_to_dpmd && ['revision', 'rejected'].includes(p.kecamatan_status);
+      if (kecReturned) f.kecamatan += 1;
+      else if (!p.submitted_to_kecamatan) f.desa += 1;
       else if (!p.submitted_to_dpmd) f.kecamatan += 1;
       else if (p.dpmd_status === 'approved') f.selesai += 1;
       else f.dpmd += 1;

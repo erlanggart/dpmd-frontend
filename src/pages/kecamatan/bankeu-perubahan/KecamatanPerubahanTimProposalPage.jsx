@@ -149,11 +149,37 @@ const KecamatanPerubahanTimProposalPage = () => {
     setImporting(true);
     try {
       const res = await api.post(`/kecamatan/bankeu-perubahan/tim-config/${kecamatanId}/import-from-reguler`, { proposalId });
-      Swal.fire('Berhasil', res.data?.message || 'Tim disalin dari Bankeu reguler', 'success');
+      const { importedShared = 0, importedAnggota = 0 } = res.data?.data || {};
+      if (importedShared === 0 && importedAnggota === 0) {
+        // Reguler ada tapi tidak ada yang bisa disalin (mis. sudah identik/kosong)
+        Swal.fire({
+          icon: 'info',
+          title: 'Tidak ada data yang diimpor',
+          html: 'Tim Bankeu reguler kecamatan ini tidak punya Ketua/Sekretaris yang bisa disalin. ' +
+                'Silakan isi <b>Ketua</b> dan <b>Sekretaris</b> secara manual di halaman ini.',
+        });
+      } else {
+        Swal.fire('Berhasil', res.data?.message || 'Tim disalin dari Bankeu reguler', 'success');
+      }
       await fetchTimMembers(kecamatanId, activeTab);
       fetchPreviousAnggota(kecamatanId);
     } catch (err) {
-      Swal.fire('Gagal', err.response?.data?.message || 'Gagal mengimpor tim dari Bankeu reguler', 'error');
+      const status = err.response?.status;
+      const serverMsg = err.response?.data?.message;
+      if (status === 404) {
+        // Tim Verifikasi Bankeu reguler belum dibuat untuk kecamatan ini.
+        Swal.fire({
+          icon: 'warning',
+          title: 'Tim Bankeu Reguler Belum Ada',
+          html: (serverMsg || 'Tim Verifikasi Bankeu reguler (Ketua/Sekretaris) belum dibuat untuk kecamatan ini.') +
+                '<br/><br/>Anda bisa:<br/>' +
+                '<b>1.</b> Isi <b>Ketua</b> &amp; <b>Sekretaris</b> langsung secara manual di halaman ini, atau<br/>' +
+                '<b>2.</b> Buat dulu Tim Verifikasi di menu <b>Bankeu Reguler</b>, lalu impor lagi.',
+          confirmButtonText: 'Isi Manual',
+        });
+      } else {
+        Swal.fire('Gagal', serverMsg || 'Gagal mengimpor tim dari Bankeu reguler', 'error');
+      }
     } finally {
       setImporting(false);
     }
