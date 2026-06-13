@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { LuCoins, LuFileText, LuRadar, LuArrowLeft, LuClipboardCheck } from 'react-icons/lu';
 import api from '../../../api';
+import Swal from 'sweetalert2';
 import BankeuPerubahanProposalPage from './BankeuPerubahanProposalPage';
 import BankeuPerubahanTrackingTab from './BankeuPerubahanTrackingTab';
 import DesaBankeuPerubahanLpjPage from './DesaBankeuPerubahanLpjPage';
@@ -17,12 +18,65 @@ const latestUpdateTime = (p) => {
   return times.length ? Math.max(...times) : 0;
 };
 
+const isRevisionProposal = (proposal) => (
+  !proposal.submitted_to_kecamatan
+  && (
+    ['revision', 'rejected'].includes(proposal.status)
+    || ['revision', 'rejected'].includes(proposal.kecamatan_status)
+    || ['revision', 'rejected'].includes(proposal.dpmd_status)
+  )
+);
+
+const revisionSource = (proposal) => (
+  ['revision', 'rejected'].includes(proposal.dpmd_status)
+  || ['revision', 'rejected'].includes(proposal.status)
+    ? 'DPMD'
+    : 'Kecamatan'
+);
+
+const revisionEventTime = (proposal) => {
+  const candidates = [];
+  if (['revision', 'rejected'].includes(proposal.status)) {
+    candidates.push(proposal.troubleshoot_at || proposal.dpmd_verified_at || proposal.updated_at);
+  }
+  if (['revision', 'rejected'].includes(proposal.kecamatan_status)) {
+    candidates.push(proposal.kecamatan_verified_at);
+  }
+  if (['revision', 'rejected'].includes(proposal.dpmd_status)) {
+    candidates.push(proposal.dpmd_verified_at || proposal.troubleshoot_at);
+  }
+  const times = candidates
+    .map((value) => new Date(value || 0).getTime())
+    .filter(Number.isFinite);
+  return times.length ? Math.max(...times) : 0;
+};
+
+const revisionSignature = (proposals) => proposals
+  .map((proposal) => [
+    proposal.id,
+    proposal.status || '',
+    proposal.kecamatan_status || '',
+    proposal.dpmd_status || '',
+    revisionEventTime(proposal),
+  ].join(':'))
+  .sort()
+  .join('|');
+
+const escapeHtml = (value) => String(value || '')
+  .replaceAll('&', '&amp;')
+  .replaceAll('<', '&lt;')
+  .replaceAll('>', '&gt;')
+  .replaceAll('"', '&quot;')
+  .replaceAll("'", '&#039;');
+
 const DesaBankeuPerubahanPage = () => {
   const [selectedYear, setSelectedYear] = useState(null);
   const [activeTab, setActiveTab] = useState('pengajuan');
   const [trackingUpdates, setTrackingUpdates] = useState(0);
+  const revisionPopupOpen = useRef(false);
 
   const seenKey = selectedYear ? `bankeuPerubahanTrackingSeen_${selectedYear}` : null;
+  const revisionPopupKey = selectedYear ? `bankeuPerubahanRevisionPopup_${selectedYear}` : null;
 
   // Tandai semua update tracking sebagai sudah dibaca
   const markTrackingSeen = useCallback((proposals = null) => {
@@ -35,6 +89,82 @@ const DesaBankeuPerubahanPage = () => {
     setTrackingUpdates(0);
   }, [seenKey]);
 
+  const showRevisionPopup = useCallback(async (proposals) => {
+    if (!revisionPopupKey || revisionPopupOpen.current) return;
+    const revisionProposals = proposals.filter(isRevisionProposal);
+    if (!revisionProposals.length) {
+      localStorage.removeItem(revisionPopupKey);
+      return;
+    }
+
+    const signature = revisionSignature(revisionProposals);
+    if (localStorage.getItem(revisionPopupKey) === signature) return;
+
+    revisionPopupOpen.current = true;
+    const proposalItems = revisionProposals.map((proposal) => {
+      const kegiatan = (proposal.kegiatan_list || [])
+        .map((item) => item.nama_kegiatan)
+        .filter(Boolean)
+        .join(', ');
+      const note = proposal.troubleshoot_catatan
+        || proposal.dpmd_catatan
+        || proposal.kecamatan_catatan;
+      return `
+        <div class="rounded-xl border border-orange-200 bg-white p-3 text-left shadow-sm">
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <p class="font-bold leading-snug text-slate-900">${escapeHtml(proposal.judul_proposal)}</p>
+              ${kegiatan ? `<p class="mt-1 text-xs text-slate-500">${escapeHtml(kegiatan)}</p>` : ''}
+            </div>
+            <span class="shrink-0 rounded-full bg-orange-100 px-2 py-1 text-[11px] font-bold text-orange-700">
+              ${escapeHtml(revisionSource(proposal))}
+            </span>
+          </div>
+          ${note ? `
+            <div class="mt-2 rounded-lg bg-orange-50 px-2.5 py-2 text-xs leading-relaxed text-orange-900">
+              <strong>Catatan:</strong> ${escapeHtml(note)}
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }).join('');
+
+    const result = await Swal.fire({
+      icon: 'warning',
+      title: 'Ada kegiatan yang perlu direvisi',
+      html: `
+        <div class="text-left">
+          <p class="mb-3 text-sm leading-relaxed text-slate-600">
+            ${revisionProposals.length} proposal dikembalikan untuk diperbaiki. Periksa catatan verifikator sebelum mengirim ulang.
+          </p>
+          <div class="max-h-72 space-y-2 overflow-y-auto pr-1">${proposalItems}</div>
+        </div>
+      `,
+      width: 640,
+      showDenyButton: true,
+      confirmButtonText: 'Perbaiki Sekarang',
+      denyButtonText: 'Lihat Tracking',
+      confirmButtonColor: '#ea580c',
+      denyButtonColor: '#334155',
+      allowOutsideClick: false,
+      customClass: {
+        popup: 'rounded-3xl',
+        confirmButton: 'rounded-xl px-5 py-2.5',
+        denyButton: 'rounded-xl px-5 py-2.5',
+      },
+    });
+
+    localStorage.setItem(revisionPopupKey, signature);
+    revisionPopupOpen.current = false;
+
+    if (result.isDenied) {
+      setActiveTab('tracking');
+      markTrackingSeen(proposals);
+    } else if (result.isConfirmed) {
+      setActiveTab('pengajuan');
+    }
+  }, [revisionPopupKey, markTrackingSeen]);
+
   // Poll proposal untuk menghitung jumlah update verifikasi yang belum dibaca
   useEffect(() => {
     if (!selectedYear) return;
@@ -44,6 +174,7 @@ const DesaBankeuPerubahanPage = () => {
         const res = await api.get('/desa/bankeu-perubahan/proposals', { params: { tahun: selectedYear } });
         if (!active) return;
         const proposals = res.data?.data || [];
+        showRevisionPopup(proposals);
         if (activeTab === 'tracking') {
           markTrackingSeen(proposals);
         } else {
@@ -57,7 +188,7 @@ const DesaBankeuPerubahanPage = () => {
     fetchUpdates();
     const id = setInterval(fetchUpdates, 30000);
     return () => { active = false; clearInterval(id); };
-  }, [selectedYear, activeTab, seenKey, markTrackingSeen]);
+  }, [selectedYear, activeTab, seenKey, markTrackingSeen, showRevisionPopup]);
 
   // Year selection screen (Phase 1 hanya TA 2026)
   if (!selectedYear) {
