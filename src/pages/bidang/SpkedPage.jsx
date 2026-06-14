@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Building2, Activity, TrendingUp, ArrowLeft, Clock, CheckCircle2, XCircle, FileText, BarChart3, DollarSign, Zap, ChevronRight, ShieldCheck, ArrowRight, BadgeCheck } from 'lucide-react';
+import { Building2, Activity, TrendingUp, ArrowLeft, Clock, CheckCircle2, XCircle, FileText, BarChart3, DollarSign, Zap, ChevronRight, ShieldCheck, ArrowRight, BadgeCheck, CalendarOff } from 'lucide-react';
 import Lottie from 'lottie-react';
 import tableTennisAnimation from '../../assets/table-tennis.json';
 import api from '../../api';
@@ -19,6 +19,8 @@ const DpmdVerificationPage = lazy(() => import('./spked/bankeu/DpmdVerificationP
 const BankeuLpjMonitoringPage = lazy(() => import('./spked/bankeu/BankeuLpjMonitoringPage'));
 // Bankeu Perubahan 2026 (DPMD final verification)
 const DpmdBankeuPerubahanPage = lazy(() => import('./spked/bankeu-perubahan/DpmdBankeuPerubahanPage'));
+// Pengelolaan hari libur (tanggal merah) untuk blokir BA & Surat Pengantar
+const HariLiburManager = lazy(() => import('./spked/HariLiburManager'));
 
 // Loading component
 const LoadingFallback = () => (
@@ -192,6 +194,7 @@ const SpkedPage = () => {
 		{ id: 'bumdes', label: 'BUMDes', icon: Building2, color: 'green' },
 		{ id: 'bankeu', label: 'Bantuan Keuangan', icon: DollarSign, color: 'blue' },
 		{ id: 'bankeu-perubahan', label: 'Bankeu Perubahan', icon: DollarSign, color: 'orange' },
+		{ id: 'hari-libur', label: 'Hari Libur', icon: CalendarOff, color: 'red' },
 		{ id: 'activity', label: 'Aktivitas', icon: Activity, color: 'orange' },
 	];
 
@@ -518,6 +521,12 @@ const SpkedPage = () => {
 							<DpmdBankeuPerubahanPage />
 						</Suspense>
 					</div>
+				)}
+
+				{activeTab === 'hari-libur' && (
+					<Suspense fallback={<LoadingFallback />}>
+						<HariLiburManager />
+					</Suspense>
 				)}
 
 				{activeTab === 'activity' && (

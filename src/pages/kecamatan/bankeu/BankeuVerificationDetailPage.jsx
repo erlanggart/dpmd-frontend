@@ -9,6 +9,7 @@ import {
   LuShield, LuFileText, LuTriangleAlert, LuMessageCircle, LuHistory, LuMessageSquare
 } from "react-icons/lu";
 import ChatDrawer from "../../../components/shared/ChatDrawer";
+import { fetchHariLibur, cekTanggalMerah, attachTanggalMerahGuard } from "../../../utils/tanggalMerah";
 
 const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
 
@@ -1070,6 +1071,8 @@ const BankeuVerificationDetailPage = () => {
       </div>
     ` : '';
 
+    const liburMap = await fetchHariLibur();
+
     const result = await Swal.fire({
       title: '',
       html: `
@@ -1122,9 +1125,17 @@ const BankeuVerificationDetailPage = () => {
       showClass: {
         popup: 'animate__animated animate__zoomIn animate__faster'
       },
+      didOpen: () => {
+        attachTanggalMerahGuard('swal-tanggal-ba-kegiatan', liburMap, 'Berita Acara');
+      },
       preConfirm: () => {
         const tanggalInput = document.getElementById('swal-tanggal-ba-kegiatan');
         const tanggal = tanggalInput ? tanggalInput.value : null;
+        const cek = cekTanggalMerah(tanggal, liburMap);
+        if (cek.merah) {
+          Swal.showValidationMessage(`Tanggal Berita Acara tidak boleh tanggal merah (${cek.alasan}). Pilih hari kerja.`);
+          return false;
+        }
         if (isInfrastruktur) {
           // Collect optional item checkbox states
           const optItems = {};
@@ -1245,6 +1256,8 @@ const BankeuVerificationDetailPage = () => {
       return;
     }
 
+    const liburMap = await fetchHariLibur();
+
     const result = await Swal.fire({
       title: '',
       html: `
@@ -1308,11 +1321,19 @@ const BankeuVerificationDetailPage = () => {
       showClass: {
         popup: 'animate__animated animate__zoomIn animate__faster'
       },
+      didOpen: () => {
+        attachTanggalMerahGuard('swal-tanggal-sp', liburMap, 'Surat Pengantar');
+      },
       preConfirm: () => {
         const nomorSurat = document.getElementById('nomorSurat').value;
         const tanggalSP = document.getElementById('swal-tanggal-sp').value;
         if (!nomorSurat || !nomorSurat.trim()) {
           Swal.showValidationMessage('Nomor Surat wajib diisi');
+          return false;
+        }
+        const cek = cekTanggalMerah(tanggalSP, liburMap);
+        if (cek.merah) {
+          Swal.showValidationMessage(`Tanggal Surat Pengantar tidak boleh tanggal merah (${cek.alasan}). Pilih hari kerja.`);
           return false;
         }
         return { nomorSurat: nomorSurat.trim(), tanggal: tanggalSP || null };

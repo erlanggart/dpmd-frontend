@@ -11,6 +11,7 @@ import {
   LuFileCheck, LuDownload, LuLoader, LuClock, LuEye
 } from 'react-icons/lu';
 import BankeuQuestionnaireForm from '../../../components/BankeuQuestionnaireForm';
+import { fetchHariLibur, cekTanggalMerah, attachTanggalMerahGuard } from '../../../utils/tanggalMerah';
 
 const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL?.replace(/\/api$/, '') || 'http://127.0.0.1:3001';
 
@@ -232,6 +233,8 @@ const KecamatanTimVerifikasiPage = () => {
       return;
     }
 
+    const liburMap = await fetchHariLibur();
+
     const result = await Swal.fire({
       title: 'Generate Berita Acara?',
       html: `
@@ -248,7 +251,19 @@ const KecamatanTimVerifikasiPage = () => {
       confirmButtonColor: '#10b981',
       cancelButtonColor: '#6b7280',
       confirmButtonText: 'Ya, Generate',
-      cancelButtonText: 'Batal'
+      cancelButtonText: 'Batal',
+      didOpen: () => {
+        attachTanggalMerahGuard('swal-tanggal-ba-tim', liburMap, 'Berita Acara');
+      },
+      preConfirm: () => {
+        const tanggal = document.getElementById('swal-tanggal-ba-tim')?.value;
+        const cek = cekTanggalMerah(tanggal, liburMap);
+        if (cek.merah) {
+          Swal.showValidationMessage(`Tanggal Berita Acara tidak boleh tanggal merah (${cek.alasan}). Pilih hari kerja.`);
+          return false;
+        }
+        return true;
+      }
     });
 
     if (result.isConfirmed) {
@@ -318,6 +333,8 @@ const KecamatanTimVerifikasiPage = () => {
       return;
     }
 
+    const liburMap = await fetchHariLibur();
+
     const result = await Swal.fire({
       title: 'Generate Surat Pengantar?',
       html: `
@@ -334,7 +351,19 @@ const KecamatanTimVerifikasiPage = () => {
       confirmButtonColor: '#3b82f6',
       cancelButtonColor: '#6b7280',
       confirmButtonText: 'Ya, Generate',
-      cancelButtonText: 'Batal'
+      cancelButtonText: 'Batal',
+      didOpen: () => {
+        attachTanggalMerahGuard('swal-tanggal-sp-tim', liburMap, 'Surat Pengantar');
+      },
+      preConfirm: () => {
+        const tanggal = document.getElementById('swal-tanggal-sp-tim')?.value;
+        const cek = cekTanggalMerah(tanggal, liburMap);
+        if (cek.merah) {
+          Swal.showValidationMessage(`Tanggal Surat Pengantar tidak boleh tanggal merah (${cek.alasan}). Pilih hari kerja.`);
+          return false;
+        }
+        return true;
+      }
     });
 
     if (result.isConfirmed) {

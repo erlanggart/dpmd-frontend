@@ -10,6 +10,7 @@ import {
   LuDownload
 } from 'react-icons/lu';
 import PdfAnnotationEditor from '../../../components/shared/PdfAnnotationEditor';
+import { fetchHariLibur, cekTanggalMerah, attachTanggalMerahGuard } from '../../../utils/tanggalMerah';
 
 const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
 const getLocalDateInputValue = () => {
@@ -383,6 +384,7 @@ const BankeuPerubahanVerificationPage = ({ tahun }) => {
       });
     }
 
+    const liburMap = await fetchHariLibur();
     const result = await Swal.fire({
       title: proposal.berita_acara_path ? 'Regenerate Berita Acara?' : 'Generate Berita Acara?',
       html: `
@@ -401,10 +403,18 @@ const BankeuPerubahanVerificationPage = ({ tahun }) => {
       confirmButtonText: proposal.berita_acara_path ? 'Regenerate' : 'Generate',
       cancelButtonText: 'Batal',
       confirmButtonColor: '#ea580c',
+      didOpen: () => {
+        attachTanggalMerahGuard('swal-tanggal-ba', liburMap, 'Berita Acara');
+      },
       preConfirm: () => {
         const tanggal = document.getElementById('swal-tanggal-ba')?.value;
         if (!tanggal) {
           Swal.showValidationMessage('Tanggal Berita Acara wajib dipilih');
+          return false;
+        }
+        const cek = cekTanggalMerah(tanggal, liburMap);
+        if (cek.merah) {
+          Swal.showValidationMessage(`Tanggal Berita Acara tidak boleh tanggal merah (${cek.alasan}). Pilih hari kerja.`);
           return false;
         }
         return { tanggal };
@@ -439,6 +449,7 @@ const BankeuPerubahanVerificationPage = ({ tahun }) => {
       return showConfigMissingAlert('membuat Surat Pengantar');
     }
 
+    const liburMap = await fetchHariLibur();
     const result = await Swal.fire({
       title: proposal.surat_pengantar_kecamatan_path ? 'Regenerate Surat Pengantar?' : 'Generate Surat Pengantar?',
       html: `
@@ -463,6 +474,9 @@ const BankeuPerubahanVerificationPage = ({ tahun }) => {
       confirmButtonText: proposal.surat_pengantar_kecamatan_path ? 'Regenerate' : 'Generate',
       cancelButtonText: 'Batal',
       confirmButtonColor: '#2563eb',
+      didOpen: () => {
+        attachTanggalMerahGuard('swal-tanggal-sp', liburMap, 'Surat Pengantar');
+      },
       preConfirm: () => {
         const nomorSurat = document.getElementById('swal-nomor-surat')?.value?.trim();
         const tanggal = document.getElementById('swal-tanggal-sp')?.value || null;
@@ -472,6 +486,11 @@ const BankeuPerubahanVerificationPage = ({ tahun }) => {
         }
         if (!tanggal) {
           Swal.showValidationMessage('Tanggal Surat wajib dipilih');
+          return false;
+        }
+        const cek = cekTanggalMerah(tanggal, liburMap);
+        if (cek.merah) {
+          Swal.showValidationMessage(`Tanggal Surat Pengantar tidak boleh tanggal merah (${cek.alasan}). Pilih hari kerja.`);
           return false;
         }
         return { nomor_surat: nomorSurat, tanggal };
