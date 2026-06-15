@@ -278,14 +278,21 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
     });
   }, [trackingData, trackKecamatan, trackKegiatan, trackSearch]);
 
+  // Opsi kegiatan + jumlah desa yang mengambil tiap kegiatan (untuk filter Tracking).
+  // Satu desa dihitung sekali per kegiatan walau punya beberapa proposal.
   const trackingKegiatanOptions = useMemo(() => {
-    const options = new Map();
+    const map = new Map(); // id -> { id, nama, desaSet }
     trackingData.forEach(p => {
-      (p.kegiatan_list || []).forEach(k => options.set(String(k.id), k.nama_kegiatan));
-      if (p.kegiatan_id && p.kegiatan_nama) options.set(String(p.kegiatan_id), p.kegiatan_nama);
+      const kegs = (p.kegiatan_list || []).map(k => ({ id: String(k.id), nama: k.nama_kegiatan }));
+      if (!kegs.length && p.kegiatan_id) kegs.push({ id: String(p.kegiatan_id), nama: p.kegiatan_nama });
+      kegs.forEach(({ id, nama }) => {
+        if (!id) return;
+        if (!map.has(id)) map.set(id, { id, nama, desaSet: new Set() });
+        if (p.desa_id != null) map.get(id).desaSet.add(Number(p.desa_id));
+      });
     });
-    return Array.from(options.entries())
-      .map(([id, nama]) => ({ id, nama }))
+    return Array.from(map.values())
+      .map(({ id, nama, desaSet }) => ({ id, nama, desaCount: desaSet.size }))
       .sort((a, b) => (a.nama || '').localeCompare(b.nama || '', 'id'));
   }, [trackingData]);
 
@@ -350,6 +357,27 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
       map.set(nama, cur);
     });
     return Array.from(map.entries()).map(([nama, v]) => ({ nama, ...v })).sort((a, b) => b.count - a.count);
+  }, [trackingData]);
+
+  // ---- STATISTIK: rekapitulasi anggaran per kegiatan (1 proposal = 1 kegiatan) ----
+  const perKegiatan = useMemo(() => {
+    const map = new Map(); // id -> { id, nama, kategori, desaSet, proposalCount, anggaran }
+    trackingData.forEach(p => {
+      const primary = (p.kegiatan_list && p.kegiatan_list[0])
+        ? { id: String(p.kegiatan_list[0].id), nama: p.kegiatan_list[0].nama_kegiatan, kategori: p.kegiatan_list[0].kategori || p.jenis_kegiatan }
+        : (p.kegiatan_id ? { id: String(p.kegiatan_id), nama: p.kegiatan_nama, kategori: p.jenis_kegiatan } : null);
+      if (!primary || !primary.id) return;
+      if (!map.has(primary.id)) {
+        map.set(primary.id, { id: primary.id, nama: primary.nama || '-', kategori: primary.kategori, desaSet: new Set(), proposalCount: 0, anggaran: 0 });
+      }
+      const e = map.get(primary.id);
+      e.proposalCount += 1;
+      e.anggaran += Number(p.anggaran_usulan || 0);
+      if (p.desa_id != null) e.desaSet.add(Number(p.desa_id));
+    });
+    return Array.from(map.values())
+      .map(e => ({ id: e.id, nama: e.nama, kategori: e.kategori, desaCount: e.desaSet.size, proposalCount: e.proposalCount, anggaran: e.anggaran }))
+      .sort((a, b) => b.anggaran - a.anggaran);
   }, [trackingData]);
 
   // ---- Verifikasi ----
@@ -529,6 +557,53 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
       const wb = XLSX.utils.book_new();
       const ws = XLSX.utils.json_to_sheet(rows);
       XLSX.utils.book_append_sheet(wb, ws, 'Tracking Bankeu Perubahan');
+
+      // Sheet rekap per kategori: Wajib, Pilihan Infrastruktur, Pilihan Non-Infrastruktur.
+      // Tiap sheet berisi rekap per kegiatan (jumlah desa yang ambil + total anggaran).
+      const sheetNames = {
+        wajib: 'Kegiatan Wajib',
+        pilihan_infrastruktur: 'Pilihan Infrastruktur',
+        pilihan_non_infrastruktur: 'Pilihan Non-Infrastruktur',
+      };
+      KATEGORI_KEYS.forEach(kat => {
+        // Rekap per kegiatan dalam kategori ini (1 proposal = 1 kegiatan).
+        const kegMap = new Map(); // id -> { nama, desaSet, proposalCount, anggaran }
+        trackingData.forEach(p => {
+          const primary = (p.kegiatan_list && p.kegiatan_list[0])
+            ? { id: String(p.kegiatan_list[0].id), nama: p.kegiatan_list[0].nama_kegiatan, kategori: p.kegiatan_list[0].kategori || p.jenis_kegiatan }
+            : (p.kegiatan_id ? { id: String(p.kegiatan_id), nama: p.kegiatan_nama, kategori: p.jenis_kegiatan } : null);
+          if (!primary || !primary.id || primary.kategori !== kat) return;
+          if (!kegMap.has(primary.id)) kegMap.set(primary.id, { nama: primary.nama || '-', desaSet: new Set(), proposalCount: 0, anggaran: 0 });
+          const e = kegMap.get(primary.id);
+          e.proposalCount += 1;
+          e.anggaran += Number(p.anggaran_usulan || 0);
+          if (p.desa_id != null) e.desaSet.add(Number(p.desa_id));
+        });
+        const katRows = Array.from(kegMap.values())
+          .sort((a, b) => b.anggaran - a.anggaran)
+          .map((e, i) => ({
+            No: i + 1,
+            Kegiatan: e.nama,
+            'Jumlah Desa': e.desaSet.size,
+            'Jumlah Proposal': e.proposalCount,
+            'Total Anggaran (Rp)': e.anggaran,
+          }));
+        // Baris TOTAL di akhir.
+        if (katRows.length) {
+          katRows.push({
+            No: '',
+            Kegiatan: 'TOTAL',
+            'Jumlah Desa': '',
+            'Jumlah Proposal': katRows.reduce((s, r) => s + r['Jumlah Proposal'], 0),
+            'Total Anggaran (Rp)': katRows.reduce((s, r) => s + r['Total Anggaran (Rp)'], 0),
+          });
+        }
+        const katWs = XLSX.utils.json_to_sheet(
+          katRows.length ? katRows : [{ Kegiatan: 'Belum ada data pada kategori ini' }]
+        );
+        XLSX.utils.book_append_sheet(wb, katWs, sheetNames[kat]);
+      });
+
       XLSX.writeFile(wb, `bankeu-perubahan-tracking-${tahun}.xlsx`);
     } finally {
       setExporting(false);
@@ -601,7 +676,7 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
         )}
 
         {activeTab === 'statistics' && (
-          <StatisticsTab stats={stats} funnel={funnel} perKategori={perKategori} perKecamatan={perKecamatan} partisipasi={partisipasiData} tahun={tahun} />
+          <StatisticsTab stats={stats} funnel={funnel} perKategori={perKategori} perKecamatan={perKecamatan} perKegiatan={perKegiatan} partisipasi={partisipasiData} tahun={tahun} />
         )}
       </div>
 
@@ -932,6 +1007,14 @@ const ProposalRow = ({ proposal, onApprove, onRevision, onCancelApproval, onTrou
           {proposal.dpmd_catatan && (
             <div className="mt-2 text-xs bg-purple-50 border border-purple-200 rounded p-2 text-purple-800"><strong>Catatan DPMD:</strong> {proposal.dpmd_catatan}</div>
           )}
+          {proposal.troubleshoot_catatan && (
+            <div className="mt-2 text-xs bg-red-50 border border-red-200 rounded p-2 text-red-800 flex items-start gap-1.5">
+              <LuWrench className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+              <span>
+                <strong>Dikembalikan DPMD (Troubleshoot){proposal.troubleshoot_at ? ` · ${fmtDate(proposal.troubleshoot_at)}` : ''}:</strong> {proposal.troubleshoot_catatan}
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="flex flex-wrap gap-1 flex-shrink-0">
@@ -1057,6 +1140,21 @@ const TrackingTab = ({
     [data]
   );
 
+  // Ringkasan kegiatan terpilih: berapa desa & proposal yang mengambil kegiatan ini
+  // (mengikuti filter kecamatan/pencarian yang aktif, karena `data` sudah terfilter).
+  const selectedKegiatanInfo = useMemo(() => {
+    if (kegiatan === 'all') return null;
+    const desaSet = new Set();
+    let proposals = 0, anggaran = 0;
+    data.forEach(p => {
+      if (p.desa_id != null) desaSet.add(Number(p.desa_id));
+      proposals += 1;
+      anggaran += Number(p.anggaran_usulan) || 0;
+    });
+    const opt = kegiatanOptions.find(k => String(k.id) === String(kegiatan));
+    return { nama: opt?.nama || 'Kegiatan', desaCount: desaSet.size, proposals, anggaran };
+  }, [kegiatan, data, kegiatanOptions]);
+
   // Kelompokkan per status (tahap saat ini), diurutkan mengikuti alur Desa→Kec→DPMD.
   const grouped = useMemo(() => {
     const m = new Map();
@@ -1087,7 +1185,9 @@ const TrackingTab = ({
         <select value={kegiatan} onChange={e => setKegiatan(e.target.value)}
           className="max-w-sm px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500">
           <option value="all">Semua Kegiatan</option>
-          {kegiatanOptions.map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}
+          {kegiatanOptions.map(k => (
+            <option key={k.id} value={k.id}>{k.nama}{typeof k.desaCount === 'number' ? ` (${k.desaCount} desa)` : ''}</option>
+          ))}
         </select>
         <div className="relative flex-1 min-w-[200px] max-w-xs">
           <LuSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -1105,6 +1205,25 @@ const TrackingTab = ({
         </div>
         <div className="text-xl md:text-2xl font-bold text-white">{rupiah(totalAnggaran)}</div>
       </div>
+
+      {/* Ringkasan kegiatan terpilih: berapa desa yang mengambil kegiatan ini */}
+      {selectedKegiatanInfo && (
+        <div className="rounded-2xl bg-violet-50 border border-violet-200 p-4 flex flex-wrap items-center gap-x-6 gap-y-2">
+          <div className="flex items-center gap-2 text-violet-800 min-w-0">
+            <LuUsers className="w-5 h-5 flex-shrink-0" />
+            <span className="text-sm font-semibold truncate">Kegiatan: {selectedKegiatanInfo.nama}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-2xl font-extrabold text-violet-700 tabular-nums">{selectedKegiatanInfo.desaCount}</span>
+            <span className="text-xs font-semibold text-violet-600">desa mengambil</span>
+          </div>
+          <div className="flex items-center gap-4 ml-auto text-xs font-semibold text-violet-700">
+            <span>{selectedKegiatanInfo.proposals} proposal</span>
+            <span className="hidden sm:inline">·</span>
+            <span>{rupiah(selectedKegiatanInfo.anggaran)}</span>
+          </div>
+        </div>
+      )}
 
       {/* Ikhtisar status: klik chip untuk buka/tutup grup terkait */}
       {!loading && data.length > 0 && (
@@ -1165,6 +1284,14 @@ const TrackingTab = ({
                           <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-amber-50 text-amber-800 text-xs font-semibold rounded">
                             <LuDollarSign className="w-3.5 h-3.5" /> {rupiah(p.anggaran_usulan)}
                           </span>
+                          {p.troubleshoot_catatan && (
+                            <div className="mt-1.5 text-xs bg-red-50 border border-red-200 rounded p-2 text-red-800 flex items-start gap-1.5">
+                              <LuWrench className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                              <span>
+                                <strong>Dikembalikan DPMD (Troubleshoot){p.troubleshoot_at ? ` · ${fmtDate(p.troubleshoot_at)}` : ''}:</strong> {p.troubleshoot_catatan}
+                              </span>
+                            </div>
+                          )}
                         </div>
                         <StageDots proposal={p} />
                         <div className="flex items-center gap-1 shrink-0">
@@ -1419,7 +1546,7 @@ const KPI_META = [
   { key: 'revision', label: 'Revisi', icon: LuMessageSquare, ring: 'text-orange-600', bar: 'bg-orange-500', bg: 'from-orange-50' },
 ];
 
-const StatisticsTab = ({ stats, funnel, perKategori, perKecamatan, partisipasi, tahun }) => {
+const StatisticsTab = ({ stats, funnel, perKategori, perKecamatan, perKegiatan = [], partisipasi, tahun }) => {
   const totalAnggaran = stats.total_anggaran || Object.values(perKategori).reduce((s, v) => s + v.anggaran, 0);
   const totalMasuk = Number(stats.total) || 0;
 
@@ -1647,6 +1774,72 @@ const StatisticsTab = ({ stats, funnel, perKategori, perKecamatan, partisipasi, 
           )}
         </ChartCard>
       </div>
+
+      {/* Rekapitulasi anggaran per kegiatan (dikelompokkan per kategori) */}
+      <ChartCard title="Rekapitulasi Anggaran per Kegiatan" icon={LuPackage} iconColor="text-orange-600"
+        subtitle="Jumlah desa yang mengambil & total anggaran per kegiatan">
+        {perKegiatan.length === 0 ? (
+          <p className="text-xs text-gray-400">Belum ada data.</p>
+        ) : (
+          <div className="space-y-5">
+            {KATEGORI_KEYS.map(kat => {
+              const items = perKegiatan.filter(k => k.kategori === kat);
+              if (!items.length) return null;
+              const subDesa = items.reduce((s, k) => s + k.desaCount, 0);
+              const subProposal = items.reduce((s, k) => s + k.proposalCount, 0);
+              const subAnggaran = items.reduce((s, k) => s + k.anggaran, 0);
+              const hex = KATEGORI_HEX[kat];
+              return (
+                <div key={kat}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: hex }} />
+                    <h4 className="text-sm font-bold text-gray-700">{KATEGORI_META[kat].label}</h4>
+                    <span className="text-[11px] text-gray-400">{items.length} kegiatan</span>
+                  </div>
+                  <div className="overflow-x-auto -mx-1">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-left text-xs text-gray-500 border-b border-gray-200">
+                          <th className="py-2 px-1 w-8">#</th>
+                          <th className="py-2 px-1">Kegiatan</th>
+                          <th className="py-2 px-1 text-right">Jml Desa</th>
+                          <th className="py-2 px-1 text-right">Proposal</th>
+                          <th className="py-2 px-1 text-right">Anggaran</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {items.map((r, i) => (
+                          <tr key={r.id} className="border-b border-gray-50 hover:bg-gray-50/60">
+                            <td className="py-2 px-1 text-gray-400 tabular-nums">{i + 1}</td>
+                            <td className="py-2 px-1 text-gray-800">{r.nama}</td>
+                            <td className="py-2 px-1 text-right font-semibold text-gray-700 tabular-nums">{r.desaCount}</td>
+                            <td className="py-2 px-1 text-right text-gray-600 tabular-nums">{r.proposalCount}</td>
+                            <td className="py-2 px-1 text-right text-gray-600 tabular-nums">{rupiah(r.anggaran)}</td>
+                          </tr>
+                        ))}
+                        <tr className="border-t-2 border-gray-200 font-bold" style={{ background: `${hex}0d` }}>
+                          <td className="py-2 px-1" />
+                          <td className="py-2 px-1 text-gray-800">Subtotal {KATEGORI_META[kat].label}</td>
+                          <td className="py-2 px-1 text-right tabular-nums" style={{ color: hex }}>{subDesa}</td>
+                          <td className="py-2 px-1 text-right tabular-nums" style={{ color: hex }}>{subProposal}</td>
+                          <td className="py-2 px-1 text-right tabular-nums" style={{ color: hex }}>{rupiah(subAnggaran)}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              );
+            })}
+            <div className="rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 p-4 flex items-center justify-between shadow-md">
+              <div className="flex items-center gap-2 text-white/90">
+                <LuDollarSign className="w-5 h-5" />
+                <span className="text-sm font-semibold">Total Anggaran Seluruh Kegiatan</span>
+              </div>
+              <div className="text-xl md:text-2xl font-bold text-white">{rupiah(perKegiatan.reduce((s, k) => s + k.anggaran, 0))}</div>
+            </div>
+          </div>
+        )}
+      </ChartCard>
 
       {/* Tabel detail per kecamatan */}
       <ChartCard title="Detail per Kecamatan" icon={LuChartColumn} iconColor="text-cyan-600">
