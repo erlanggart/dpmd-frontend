@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api from '../../../../api';
 import Swal from 'sweetalert2';
-import { Save, Calendar, Clock, RefreshCw, Settings as SettingsIcon, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Save, Calendar, Clock, RefreshCw, Settings as SettingsIcon, Lock, Unlock } from 'lucide-react';
 
 const DAYS = [
   { id: 0, label: 'Min' },
@@ -111,30 +111,41 @@ const DpmdBankeuPerubahanSettingsPage = () => {
     }
   };
 
+  const inputCls = 'px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-shadow';
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-orange-50 p-4 md:p-6">
-      <div className="max-w-3xl mx-auto">
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 mb-5">
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <div>
-              <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                <SettingsIcon className="w-5 h-5 text-orange-600" />
-                Pengaturan Submission Bankeu Perubahan
-              </h2>
-              <p className="text-sm text-gray-500 mt-1">
-                Kontrol kapan desa dapat mengajukan proposal perubahan
-              </p>
+    <div className="min-h-screen bg-slate-50 p-4 md:p-6">
+      <div className="max-w-3xl mx-auto space-y-4">
+        {/* Header */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+          <div className="flex items-start justify-between flex-wrap gap-3">
+            <div className="flex items-start gap-3">
+              <div className="h-11 w-11 flex-shrink-0 rounded-xl bg-indigo-50 flex items-center justify-center">
+                <SettingsIcon className="w-5 h-5 text-indigo-600" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">
+                  Pengaturan Submission
+                </h2>
+                <p className="text-sm text-slate-500 mt-0.5">
+                  Kontrol kapan desa dapat mengajukan proposal perubahan
+                </p>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <select
                 value={tahun}
                 onChange={e => setTahun(parseInt(e.target.value))}
-                className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                className={inputCls}
               >
                 <option value="2026">TA 2026</option>
                 <option value="2027">TA 2027</option>
               </select>
-              <button onClick={fetchData} className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold rounded-lg">
+              <button
+                onClick={fetchData}
+                title="Muat ulang"
+                className="inline-flex items-center justify-center w-9 h-9 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg transition-colors"
+              >
                 <RefreshCw className="w-4 h-4" />
               </button>
             </div>
@@ -142,90 +153,101 @@ const DpmdBankeuPerubahanSettingsPage = () => {
         </div>
 
         {loading ? (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center text-gray-500">
-            Memuat...
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-12 text-center text-slate-400">
+            Memuat…
           </div>
         ) : (
           <>
             {/* Status & Quick Toggle */}
-            <div className={`bg-white rounded-2xl shadow-sm border-2 p-5 mb-4 ${currentStatus ? 'border-emerald-200' : 'border-red-200'}`}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm text-gray-500">Status Saat Ini:</div>
-                  <div className={`text-2xl font-bold mt-1 ${currentStatus ? 'text-emerald-600' : 'text-red-600'}`}>
-                    {currentStatus ? '✅ TERBUKA' : '🔒 TERTUTUP'}
+            <div className={`bg-white rounded-2xl border shadow-sm p-5 ${currentStatus ? 'border-emerald-200' : 'border-rose-200'}`}>
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                <div className="flex items-center gap-3">
+                  <div className={`h-12 w-12 rounded-xl flex items-center justify-center ${currentStatus ? 'bg-emerald-50' : 'bg-rose-50'}`}>
+                    {currentStatus
+                      ? <Unlock className="w-6 h-6 text-emerald-600" />
+                      : <Lock className="w-6 h-6 text-rose-600" />}
                   </div>
-                  <div className="text-xs text-gray-500 mt-1">Setting key: <code>{settingKey}</code></div>
+                  <div>
+                    <div className="text-xs font-medium text-slate-400 uppercase tracking-wide">Status saat ini</div>
+                    <div className={`text-xl font-bold leading-tight ${currentStatus ? 'text-emerald-600' : 'text-rose-600'}`}>
+                      {currentStatus ? 'Terbuka' : 'Tertutup'}
+                    </div>
+                    <code className="text-[11px] text-slate-400">{settingKey}</code>
+                  </div>
                 </div>
                 <button
                   onClick={() => handleToggleOpen(!currentStatus)}
                   disabled={saving}
-                  className={`inline-flex items-center gap-2 px-4 py-2 text-white font-semibold rounded-xl shadow-sm disabled:opacity-50 ${
-                    currentStatus ? 'bg-red-600 hover:bg-red-700' : 'bg-emerald-600 hover:bg-emerald-700'
+                  className={`inline-flex items-center gap-2 px-4 py-2.5 text-white text-sm font-semibold rounded-xl shadow-sm transition-colors disabled:opacity-50 ${
+                    currentStatus ? 'bg-rose-600 hover:bg-rose-700' : 'bg-emerald-600 hover:bg-emerald-700'
                   }`}
                 >
-                  {currentStatus ? <ToggleLeft className="w-5 h-5" /> : <ToggleRight className="w-5 h-5" />}
+                  {currentStatus ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
                   {currentStatus ? 'Tutup Submission' : 'Buka Submission'}
                 </button>
               </div>
             </div>
 
             {/* Detailed Config */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 space-y-5">
-              <div>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={config.enabled}
-                    onChange={e => setConfig({ ...config, enabled: e.target.checked })}
-                    className="rounded text-orange-600"
-                  />
-                  <span className="text-sm font-semibold text-gray-700">Aktifkan submission untuk TA {tahun}</span>
-                </label>
-              </div>
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-5">
+              <h3 className="text-sm font-bold text-slate-700">Konfigurasi Detail</h3>
 
-              <div>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={hasSchedule}
-                    onChange={e => setHasSchedule(e.target.checked)}
-                    className="rounded text-orange-600"
-                  />
-                  <span className="text-sm font-semibold text-gray-700">Batasi berdasarkan jadwal (hari & jam)</span>
-                </label>
-                <p className="text-xs text-gray-500 mt-1 ml-6">
-                  Jika tidak dicentang, submission akan terbuka 24/7 selama aktif
-                </p>
-              </div>
+              <label className="flex items-start gap-3 cursor-pointer rounded-xl border border-slate-200 p-3.5 hover:bg-slate-50 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={config.enabled}
+                  onChange={e => setConfig({ ...config, enabled: e.target.checked })}
+                  className="mt-0.5 h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500"
+                />
+                <span>
+                  <span className="block text-sm font-semibold text-slate-800">Aktifkan submission untuk TA {tahun}</span>
+                  <span className="block text-xs text-slate-500 mt-0.5">Saklar utama yang mengizinkan desa mengajukan proposal.</span>
+                </span>
+              </label>
+
+              <label className="flex items-start gap-3 cursor-pointer rounded-xl border border-slate-200 p-3.5 hover:bg-slate-50 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={hasSchedule}
+                  onChange={e => setHasSchedule(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500"
+                />
+                <span>
+                  <span className="block text-sm font-semibold text-slate-800">Batasi berdasarkan jadwal (hari & jam)</span>
+                  <span className="block text-xs text-slate-500 mt-0.5">Jika tidak dicentang, submission terbuka 24/7 selama aktif.</span>
+                </span>
+              </label>
 
               {hasSchedule && config.enabled && (
-                <>
+                <div className="rounded-xl bg-slate-50 border border-slate-200 p-4 space-y-4">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                      <Calendar className="w-4 h-4" /> Hari Aktif
+                    <label className="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-indigo-600" /> Hari Aktif
                     </label>
                     <div className="flex gap-2 flex-wrap">
-                      {DAYS.map(d => (
-                        <button
-                          key={d.id}
-                          onClick={() => toggleDay(d.id)}
-                          className={`px-3 py-2 text-sm font-semibold rounded-xl border-2 transition-colors ${
-                            config.schedule.days.includes(d.id)
-                              ? 'bg-orange-50 border-orange-500 text-orange-700'
-                              : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'
-                          }`}
-                        >
-                          {d.label}
-                        </button>
-                      ))}
+                      {DAYS.map(d => {
+                        const on = config.schedule.days.includes(d.id);
+                        return (
+                          <button
+                            key={d.id}
+                            onClick={() => toggleDay(d.id)}
+                            className={`w-12 py-2 text-sm font-semibold rounded-lg border transition-colors ${
+                              on
+                                ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
+                                : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'
+                            }`}
+                          >
+                            {d.label}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1 flex items-center gap-2">
-                        <Clock className="w-4 h-4" /> Jam Mulai
+                      <label className="text-sm font-semibold text-slate-700 mb-1.5 flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-indigo-600" /> Jam Mulai
                       </label>
                       <input
                         type="time"
@@ -234,12 +256,12 @@ const DpmdBankeuPerubahanSettingsPage = () => {
                           ...config,
                           schedule: { ...config.schedule, startTime: e.target.value }
                         })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        className={`w-full ${inputCls}`}
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1 flex items-center gap-2">
-                        <Clock className="w-4 h-4" /> Jam Selesai
+                      <label className="text-sm font-semibold text-slate-700 mb-1.5 flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-indigo-600" /> Jam Selesai
                       </label>
                       <input
                         type="time"
@@ -248,20 +270,21 @@ const DpmdBankeuPerubahanSettingsPage = () => {
                           ...config,
                           schedule: { ...config.schedule, endTime: e.target.value }
                         })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        className={`w-full ${inputCls}`}
                       />
                     </div>
                   </div>
-                </>
+                </div>
               )}
 
-              <div className="flex justify-end pt-2 border-t border-gray-100">
+              <div className="flex justify-end pt-1">
                 <button
                   onClick={handleSave}
                   disabled={saving}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white font-semibold rounded-xl shadow-sm disabled:opacity-50"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl shadow-sm transition-colors disabled:opacity-50"
                 >
-                  <Save className="w-4 h-4" /> {saving ? 'Menyimpan...' : 'Simpan Setting'}
+                  {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  {saving ? 'Menyimpan…' : 'Simpan Setting'}
                 </button>
               </div>
             </div>

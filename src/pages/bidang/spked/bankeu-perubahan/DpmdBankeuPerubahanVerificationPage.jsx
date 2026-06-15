@@ -24,15 +24,15 @@ const STATUS_LABELS = {
   approved: 'Disetujui', rejected: 'Ditolak', revision: 'Revisi'
 };
 const STATUS_STYLES = {
-  pending:   'bg-amber-100 text-amber-700 border-amber-300',
-  in_review: 'bg-blue-100 text-blue-700 border-blue-300',
-  approved:  'bg-emerald-100 text-emerald-700 border-emerald-300',
-  rejected:  'bg-red-100 text-red-700 border-red-300',
-  revision:  'bg-orange-100 text-orange-700 border-orange-300',
+  pending:   'bg-amber-50 text-amber-700 border-amber-200',
+  in_review: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+  approved:  'bg-emerald-50 text-emerald-700 border-emerald-200',
+  rejected:  'bg-rose-50 text-rose-700 border-rose-200',
+  revision:  'bg-orange-50 text-orange-700 border-orange-200',
 };
 
 const StatusBadge = ({ status }) => (
-  <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-full border ${STATUS_STYLES[status] || 'bg-gray-100 text-gray-700 border-gray-300'}`}>
+  <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-full border ${STATUS_STYLES[status] || 'bg-slate-100 text-slate-700 border-slate-300'}`}>
     {STATUS_LABELS[status] || status}
   </span>
 );
@@ -40,24 +40,24 @@ const StatusBadge = ({ status }) => (
 const KATEGORI_META = {
   wajib: {
     label: 'Wajib', sublabel: 'Kegiatan WAJIB',
-    gradFrom: 'from-red-500', gradTo: 'to-rose-600',
-    headerBg: 'from-red-50 via-rose-50 to-red-50',
-    headerHover: 'hover:from-red-100 hover:via-rose-100 hover:to-red-100',
-    badge: 'bg-red-100 text-red-700 border-red-300',
+    gradFrom: 'from-rose-500', gradTo: 'to-rose-600',
+    headerBg: 'from-rose-50 via-rose-50 to-rose-50',
+    headerHover: 'hover:from-rose-100 hover:via-rose-100 hover:to-rose-100',
+    badge: 'bg-rose-50 text-rose-700 border-rose-200',
   },
   pilihan_infrastruktur: {
     label: 'Pilihan Infrastruktur', sublabel: 'Kegiatan fisik/bangunan',
     gradFrom: 'from-orange-500', gradTo: 'to-amber-600',
     headerBg: 'from-orange-50 via-amber-50 to-orange-50',
     headerHover: 'hover:from-orange-100 hover:via-amber-100 hover:to-orange-100',
-    badge: 'bg-orange-100 text-orange-700 border-orange-300',
+    badge: 'bg-orange-50 text-orange-700 border-orange-200',
   },
   pilihan_non_infrastruktur: {
     label: 'Pilihan Non-Infrastruktur', sublabel: 'Program/pemberdayaan',
-    gradFrom: 'from-blue-500', gradTo: 'to-indigo-600',
-    headerBg: 'from-blue-50 via-indigo-50 to-blue-50',
-    headerHover: 'hover:from-blue-100 hover:via-indigo-100 hover:to-blue-100',
-    badge: 'bg-blue-100 text-blue-700 border-blue-300',
+    gradFrom: 'from-indigo-500', gradTo: 'to-indigo-600',
+    headerBg: 'from-indigo-50 via-indigo-50 to-indigo-50',
+    headerHover: 'hover:from-indigo-100 hover:via-indigo-100 hover:to-indigo-100',
+    badge: 'bg-indigo-50 text-indigo-700 border-indigo-200',
   },
 };
 const KATEGORI_KEYS = Object.keys(KATEGORI_META);
@@ -106,17 +106,17 @@ function currentStage(p) {
   return { key: 'draft', label: 'Draft di Desa', tone: 'gray' };
 }
 const TONE = {
-  emerald: 'bg-emerald-100 text-emerald-700 border-emerald-300',
-  red: 'bg-red-100 text-red-700 border-red-300',
-  orange: 'bg-orange-100 text-orange-700 border-orange-300',
-  amber: 'bg-amber-100 text-amber-700 border-amber-300',
-  cyan: 'bg-cyan-100 text-cyan-700 border-cyan-300',
-  gray: 'bg-gray-100 text-gray-600 border-gray-300',
+  emerald: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  red: 'bg-rose-50 text-rose-700 border-rose-200',
+  orange: 'bg-orange-50 text-orange-700 border-orange-200',
+  amber: 'bg-amber-50 text-amber-700 border-amber-200',
+  cyan: 'bg-cyan-50 text-cyan-700 border-cyan-200',
+  gray: 'bg-slate-100 text-slate-600 border-slate-200',
 };
 // Titik berwarna untuk header grup (dipakai di Tracking — dikelompokkan per status).
 const TONE_DOT = {
-  emerald: 'bg-emerald-500', red: 'bg-red-500', orange: 'bg-orange-500',
-  amber: 'bg-amber-500', cyan: 'bg-cyan-500', gray: 'bg-gray-400',
+  emerald: 'bg-emerald-500', red: 'bg-rose-500', orange: 'bg-orange-500',
+  amber: 'bg-amber-500', cyan: 'bg-cyan-500', gray: 'bg-slate-400',
 };
 // Urutan tahap mengikuti alur Desa → Kecamatan → DPMD (untuk pengelompokan Tracking).
 const STAGE_ORDER = [
@@ -436,7 +436,7 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
   const cancelApproval = async (proposal) => {
     const result = await Swal.fire({
       title: 'Batalkan verifikasi SP & BA?',
-      html: `<p class="text-sm text-gray-600">Verifikasi Surat Pengantar &amp; Berita Acara untuk <strong>${proposal.judul_proposal}</strong> akan dibatalkan dan dokumen kembali menunggu verifikasi DPMD. Status proposal tetap <strong>Diterima DPMD</strong>.</p>`,
+      html: `<p class="text-sm text-slate-600">Verifikasi Surat Pengantar &amp; Berita Acara untuk <strong>${proposal.judul_proposal}</strong> akan dibatalkan dan dokumen kembali menunggu verifikasi DPMD. Status proposal tetap <strong>Diterima DPMD</strong>.</p>`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#d97706',
@@ -459,17 +459,17 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
     const result = await Swal.fire({
       title: '🔧 Troubleshoot Revisi',
       html: `<div class="text-left space-y-3">
-        <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
-          <p class="text-sm font-semibold text-blue-800">${proposal.judul_proposal}</p>
-          <p class="text-sm text-blue-700">Desa ${proposal.desa_nama || ''} · Kec. ${proposal.kecamatan_nama || ''}</p>
-          <p class="text-sm text-blue-600 mt-1">Posisi saat ini: <strong>${stageLabel}</strong></p>
+        <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-3">
+          <p class="text-sm font-semibold text-indigo-800">${proposal.judul_proposal}</p>
+          <p class="text-sm text-indigo-700">Desa ${proposal.desa_nama || ''} · Kec. ${proposal.kecamatan_nama || ''}</p>
+          <p class="text-sm text-indigo-600 mt-1">Posisi saat ini: <strong>${stageLabel}</strong></p>
         </div>
         <div class="bg-amber-50 border border-amber-200 rounded-lg p-3">
           <p class="text-sm text-amber-800">⚠️ Proposal akan dikembalikan ke <strong>Desa</strong> untuk direvisi. Semua status verifikasi (Kecamatan & DPMD), Berita Acara, Surat Pengantar, dan Quisioner akan di-reset. Dokumen desa tetap dipertahankan.</p>
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Alasan Troubleshoot <span class="text-red-500">*</span></label>
-          <textarea id="swal-ts-catatan" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500" rows="3" placeholder="Contoh: Salah ACC / proposal nyangkut, desa minta revisi ulang..."></textarea>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Alasan Troubleshoot <span class="text-rose-500">*</span></label>
+          <textarea id="swal-ts-catatan" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 focus:border-amber-500" rows="3" placeholder="Contoh: Salah ACC / proposal nyangkut, desa minta revisi ulang..."></textarea>
         </div>
       </div>`,
       icon: 'warning',
@@ -616,27 +616,27 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
   const isDesaExpanded = (key) => expandedDesa[key] === true;       // default tertutup
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-orange-50 p-4 md:p-6">
+    <div className="min-h-screen bg-slate-50 p-4 md:p-6">
       <div className="w-full mx-auto space-y-4">
         {/* Tab bar */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-2 flex flex-wrap items-center gap-1.5">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-2 flex flex-wrap items-center gap-1.5">
           {TABS.map(t => {
             const Icon = t.icon;
             const active = activeTab === t.key;
             return (
               <button key={t.key} onClick={() => setActiveTab(t.key)}
-                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-colors ${active ? 'bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow' : 'text-gray-600 hover:bg-gray-100'}`}>
+                className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold transition-colors ${active ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'}`}>
                 <Icon className="w-4 h-4" /> <span className="hidden sm:inline">{t.label}</span>
               </button>
             );
           })}
           <div className="ml-auto flex items-center gap-1.5">
             <button onClick={refreshAll}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-100">
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors">
               <LuRefreshCw className="w-4 h-4" /> <span className="hidden md:inline">Refresh</span>
             </button>
             <button onClick={exportExcel} disabled={exporting}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 disabled:opacity-60">
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-colors disabled:opacity-60">
               <LuDownload className="w-4 h-4" /> <span className="hidden md:inline">Export Excel</span>
             </button>
           </div>
@@ -681,52 +681,52 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
       </div>
 
       {editModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-3 sm:p-4">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[calc(100vh-1.5rem)] overflow-y-auto">
-            <div className="sticky top-0 bg-white px-4 sm:px-6 py-4 border-b border-gray-200 rounded-t-2xl z-10">
-              <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                <LuPencil className="w-5 h-5 text-blue-600" /> Edit Detail Proposal
+            <div className="sticky top-0 bg-white px-4 sm:px-6 py-4 border-b border-slate-200 rounded-t-2xl z-10">
+              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <LuPencil className="w-5 h-5 text-indigo-600" /> Edit Detail Proposal
               </h3>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-slate-500 mt-1">
                 Desa {editModal.proposal.desa_nama || '-'} · {editModal.proposal.judul_proposal}
               </p>
             </div>
             <div className="px-4 sm:px-6 py-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="sm:col-span-2">
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Kegiatan Spesifik</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Kegiatan Spesifik</label>
                 <input
                   type="text"
                   maxLength={255}
                   value={editModal.data.nama_kegiatan_spesifik}
                   onChange={e => updateEditField('nama_kegiatan_spesifik', e.target.value)}
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500"
                   placeholder="Nama kegiatan spesifik"
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Volume</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Volume</label>
                 <input
                   type="text"
                   maxLength={255}
                   value={editModal.data.volume}
                   onChange={e => updateEditField('volume', e.target.value)}
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500"
                   placeholder="Contoh: 1 paket"
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Lokasi</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Lokasi</label>
                 <input
                   type="text"
                   maxLength={255}
                   value={editModal.data.lokasi}
                   onChange={e => updateEditField('lokasi', e.target.value)}
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500"
                   placeholder="Lokasi kegiatan"
                 />
               </div>
               <div className="sm:col-span-2">
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Anggaran Usulan</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Anggaran Usulan</label>
                 <input
                   type="number"
                   min="0"
@@ -734,24 +734,24 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
                   step="1"
                   value={editModal.data.anggaran_usulan}
                   onChange={e => updateEditField('anggaran_usulan', e.target.value)}
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500"
                   placeholder="Maksimal 1500000000"
                 />
-                <p className="text-xs text-gray-500 mt-1">Maksimal Rp 1.500.000.000 per proposal.</p>
+                <p className="text-xs text-slate-500 mt-1">Maksimal Rp 1.500.000.000 per proposal.</p>
               </div>
             </div>
-            <div className="sticky bottom-0 px-4 sm:px-6 py-4 border-t border-gray-200 bg-gray-50 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 rounded-b-2xl">
+            <div className="sticky bottom-0 px-4 sm:px-6 py-4 border-t border-slate-200 bg-slate-50 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 rounded-b-2xl">
               <button
                 onClick={() => setEditModal(null)}
                 disabled={editModal.saving}
-                className="w-full sm:w-auto px-4 py-2.5 bg-white border border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-100 disabled:opacity-60"
+                className="w-full sm:w-auto px-4 py-2.5 bg-white border border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-100 transition-colors disabled:opacity-60"
               >
                 Batal
               </button>
               <button
                 onClick={submitEditDetail}
                 disabled={editModal.saving}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-sm disabled:opacity-60"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-sm transition-colors disabled:opacity-60"
               >
                 {editModal.saving
                   ? <LuRefreshCw className="w-4 h-4 animate-spin" />
@@ -764,13 +764,13 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
       )}
 
       {verifyModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-bold text-gray-800">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-200">
+              <h3 className="text-lg font-bold text-slate-900">
                 {verifyModal.status === 'approved' ? 'Setujui Dokumen Kecamatan (SP & BA)' : 'Revisi Dokumen Kecamatan (SP & BA)'}
               </h3>
-              <p className="text-xs text-gray-500 mt-1">{verifyModal.proposal.judul_proposal}</p>
+              <p className="text-xs text-slate-500 mt-1">{verifyModal.proposal.judul_proposal}</p>
             </div>
             <div className="px-6 py-4 space-y-3">
               <div className={`flex items-start gap-2 text-xs rounded-xl p-3 border ${
@@ -785,23 +785,23 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
                 </span>
               </div>
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  Catatan {verifyModal.status === 'revision' && <span className="text-red-500">*</span>}
+                <label className="block text-sm font-semibold text-slate-700 mb-1">
+                  Catatan {verifyModal.status === 'revision' && <span className="text-rose-500">*</span>}
                 </label>
                 <textarea
                   value={verifyModal.catatan}
                   onChange={e => setVerifyModal({ ...verifyModal, catatan: e.target.value })}
                   rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500"
                   placeholder={verifyModal.status === 'approved' ? 'Catatan (opsional)' : 'Tulis bagian SP / BA yang perlu diperbaiki kecamatan...'}
                 />
               </div>
             </div>
-            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-2">
+            <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-2">
               <button onClick={() => setVerifyModal(null)}
-                className="px-4 py-2 bg-white border border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-100">Batal</button>
+                className="px-4 py-2 bg-white border border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-100 transition-colors">Batal</button>
               <button onClick={submitVerify}
-                className={`px-4 py-2 text-white font-semibold rounded-xl shadow-sm ${
+                className={`px-4 py-2 text-white font-semibold rounded-xl shadow-sm transition-colors ${
                   verifyModal.status === 'approved' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-orange-600 hover:bg-orange-700'}`}
               >{verifyModal.status === 'approved' ? 'Setujui SP & BA' : 'Kirim Revisi ke Kecamatan'}</button>
             </div>
@@ -813,9 +813,9 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
 };
 
 const StatCard = ({ label, value, color }) => (
-  <div className={`rounded-xl p-3 ${color}`}>
-    <div className="text-xs font-semibold opacity-70">{label}</div>
-    <div className="text-2xl font-bold mt-1">{value}</div>
+  <div className={`rounded-xl border border-slate-100 p-3.5 ${color}`}>
+    <div className="text-xs font-medium opacity-70">{label}</div>
+    <div className="text-2xl font-bold mt-1 tabular-nums">{value}</div>
   </div>
 );
 
@@ -828,24 +828,24 @@ const ArchiveTab = ({
   openEditDetail,
 }) => (
   <div className="space-y-4">
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4">
-      <h2 className="text-base font-bold text-gray-800 flex items-center gap-2 mb-3">
-        <LuClipboardCheck className="w-5 h-5 text-orange-600" /> Arsip Proposal Masuk DPMD - TA {tahun}
+    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
+      <h2 className="text-base font-bold text-slate-800 flex items-center gap-2 mb-3">
+        <LuClipboardCheck className="w-5 h-5 text-indigo-600" /> Arsip Proposal Masuk DPMD · TA {tahun}
       </h2>
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <StatCard label="Total Masuk" value={stats.total || 0} color="bg-gray-50 text-gray-700" />
+        <StatCard label="Total Masuk" value={stats.total || 0} color="bg-slate-50 text-slate-700" />
         <StatCard label="Pending" value={stats.pending || 0} color="bg-amber-50 text-amber-700" />
-        <StatCard label="Approved" value={stats.approved || 0} color="bg-emerald-50 text-emerald-700" />
-        <StatCard label="Rejected" value={stats.rejected || 0} color="bg-red-50 text-red-700" />
-        <StatCard label="Revision" value={stats.revision || 0} color="bg-orange-50 text-orange-700" />
+        <StatCard label="Disetujui" value={stats.approved || 0} color="bg-emerald-50 text-emerald-700" />
+        <StatCard label="Ditolak" value={stats.rejected || 0} color="bg-rose-50 text-rose-700" />
+        <StatCard label="Revisi" value={stats.revision || 0} color="bg-orange-50 text-orange-700" />
       </div>
     </div>
 
     {/* Filters */}
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 flex flex-wrap items-center gap-3">
-      <div className="flex items-center gap-2 text-sm font-semibold text-gray-700"><LuFilter className="w-4 h-4" /> Filter:</div>
+    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 flex flex-wrap items-center gap-3">
+      <div className="flex items-center gap-2 text-sm font-semibold text-slate-700"><LuFilter className="w-4 h-4" /> Filter:</div>
       <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-        className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500">
+        className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500">
         <option value="all">Semua Status</option>
         <option value="pending">Pending</option>
         <option value="approved">Approved</option>
@@ -853,71 +853,71 @@ const ArchiveTab = ({
         <option value="revision">Revision</option>
       </select>
       <select value={filterKategori} onChange={e => setFilterKategori(e.target.value)}
-        className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500">
+        className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500">
         <option value="all">Semua Kategori</option>
         {KATEGORI_KEYS.map(k => <option key={k} value={k}>{KATEGORI_META[k].label}</option>)}
       </select>
       <select value={filterKecamatan} onChange={e => setFilterKecamatan(e.target.value)}
-        className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500">
+        className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500">
         <option value="all">Semua Kecamatan</option>
         {kecamatanOptions.map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}
       </select>
       <div className="relative flex-1 min-w-[200px] max-w-xs">
-        <LuSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <LuSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
         <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
           placeholder="Cari judul / desa / kecamatan / kegiatan..."
-          className="w-full pl-9 pr-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500" />
+          className="w-full pl-9 pr-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500" />
       </div>
-      <span className="ml-auto text-xs text-gray-500">{filteredProposals.length} dari {proposals.length} proposal</span>
+      <span className="ml-auto text-xs text-slate-500">{filteredProposals.length} dari {proposals.length} proposal</span>
     </div>
 
     {loading ? (
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center text-gray-500">Memuat data...</div>
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-12 text-center text-slate-500">Memuat data...</div>
     ) : filteredProposals.length === 0 ? (
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center">
-        <LuInfo className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-        <p className="text-gray-600 font-medium">{proposals.length === 0 ? 'Belum ada proposal yang masuk ke DPMD' : 'Tidak ada proposal yang sesuai filter'}</p>
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-12 text-center">
+        <LuInfo className="w-12 h-12 mx-auto text-slate-300 mb-3" />
+        <p className="text-slate-600 font-medium">{proposals.length === 0 ? 'Belum ada proposal yang masuk ke DPMD' : 'Tidak ada proposal yang sesuai filter'}</p>
       </div>
     ) : (
       <div className="space-y-4">
         {groupedByKecamatan.map(kec => {
           const kecOpen = isKecExpanded(kec.kecId);
           return (
-            <div key={kec.kecId} className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+            <div key={kec.kecId} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
               {/* Header Kecamatan */}
               <button onClick={() => toggleKec(kec.kecId)}
-                className="w-full px-5 py-4 flex items-center justify-between bg-gradient-to-r from-orange-50 via-amber-50 to-orange-50 hover:from-orange-100 hover:via-amber-100 hover:to-orange-100 transition-colors">
+                className="w-full px-5 py-4 flex items-center justify-between bg-slate-50/80 hover:bg-slate-100 transition-colors">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-amber-600 rounded-xl flex items-center justify-center shadow-md">
+                  <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-sm">
                     {kecOpen ? <LuChevronDown className="w-5 h-5 text-white" /> : <LuChevronRight className="w-5 h-5 text-white" />}
                   </div>
                   <div className="text-left">
-                    <h3 className="font-bold text-gray-900 text-base flex items-center gap-1.5">
-                      <LuMapPin className="w-4 h-4 text-orange-600" /> Kec. {kec.kecNama}
+                    <h3 className="font-bold text-slate-900 text-base flex items-center gap-1.5">
+                      <LuMapPin className="w-4 h-4 text-indigo-600" /> Kec. {kec.kecNama}
                     </h3>
-                    <p className="text-xs text-gray-600">{kec.desas.length} desa · {kec.count} proposal · {rupiah(kec.anggaran)}</p>
+                    <p className="text-xs text-slate-500">{kec.desas.length} desa · {kec.count} proposal · {rupiah(kec.anggaran)}</p>
                   </div>
                 </div>
-                <span className="text-sm font-bold px-3 py-1 rounded border bg-orange-100 text-orange-700 border-orange-300">{kec.count}</span>
+                <span className="text-sm font-bold px-3 py-1 rounded-lg border bg-indigo-50 text-indigo-700 border-indigo-200">{kec.count}</span>
               </button>
 
               {/* Daftar Desa (default tertutup) */}
               {kecOpen && (
-                <div className="p-3 space-y-2 bg-gray-50/60">
+                <div className="p-3 space-y-2 bg-slate-50/60">
                   {kec.desas.map(desa => {
                     const desaKey = `${kec.kecId}::${desa.desaId}`;
                     const desaOpen = isDesaExpanded(desaKey);
                     return (
-                      <div key={desaKey} className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+                      <div key={desaKey} className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
                         <button onClick={() => toggleDesa(desaKey)}
-                          className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                          className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors">
                           <div className="flex items-center gap-2.5 min-w-0">
-                            <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-lg flex items-center justify-center shadow-sm flex-shrink-0">
+                            <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-sm flex-shrink-0">
                               {desaOpen ? <LuChevronDown className="w-4 h-4 text-white" /> : <LuChevronRight className="w-4 h-4 text-white" />}
                             </div>
                             <div className="text-left min-w-0">
-                              <h4 className="font-bold text-gray-800 text-sm truncate">Desa {desa.desaNama}</h4>
-                              <p className="text-[11px] text-gray-500">{desa.count} proposal</p>
+                              <h4 className="font-bold text-slate-800 text-sm truncate">Desa {desa.desaNama}</h4>
+                              <p className="text-[11px] text-slate-500">{desa.count} proposal</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0">
@@ -929,7 +929,7 @@ const ArchiveTab = ({
                         </button>
                         {/* Total anggaran versi mobile */}
                         {desaOpen && (
-                          <div className="divide-y divide-gray-100 border-t border-gray-100">
+                          <div className="divide-y divide-slate-100 border-t border-slate-100">
                             <div className="sm:hidden px-4 py-2 bg-amber-50 text-amber-800 text-xs font-bold flex items-center gap-1">
                               <LuDollarSign className="w-3.5 h-3.5" /> Total {rupiah(desa.anggaran)}
                             </div>
@@ -981,34 +981,34 @@ const ProposalRow = ({ proposal, onApprove, onRevision, onCancelApproval, onTrou
               </span>
             )}
           </div>
-          <h4 className="font-bold text-gray-800 text-sm md:text-base leading-tight">{proposal.judul_proposal}</h4>
-          {firstKegiatan && <p className="text-xs text-gray-600 mt-1"><span className="font-semibold">Kegiatan:</span> {firstKegiatan.nama_kegiatan}</p>}
-          {proposal.nama_kegiatan_spesifik && <p className="text-sm text-gray-600 mt-0.5">{proposal.nama_kegiatan_spesifik}</p>}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 mt-2 text-xs">
+          <h4 className="font-bold text-slate-800 text-sm md:text-base leading-tight">{proposal.judul_proposal}</h4>
+          {firstKegiatan && <p className="text-xs text-slate-600 mt-1"><span className="font-semibold">Kegiatan:</span> {firstKegiatan.nama_kegiatan}</p>}
+          {proposal.nama_kegiatan_spesifik && <p className="text-sm text-slate-600 mt-0.5">{proposal.nama_kegiatan_spesifik}</p>}
+          <div className="flex flex-wrap gap-1.5 mt-2 text-xs">
             {proposal.volume && (
-              <div className="flex items-center gap-1.5 px-2 py-1 bg-blue-50 rounded text-blue-800">
-                <LuPackage className="w-3.5 h-3.5 flex-shrink-0" /><span className="truncate"><strong>Vol:</strong> {proposal.volume}</span>
-              </div>
+              <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-slate-50 border border-slate-100 rounded-lg text-slate-600">
+                <LuPackage className="w-3.5 h-3.5 flex-shrink-0 text-slate-400" /><span className="truncate">Vol: <strong className="text-slate-700">{proposal.volume}</strong></span>
+              </span>
             )}
             {proposal.lokasi && (
-              <div className="flex items-center gap-1.5 px-2 py-1 bg-green-50 rounded text-green-800">
-                <LuMapPin className="w-3.5 h-3.5 flex-shrink-0" /><span className="truncate"><strong>Lokasi:</strong> {proposal.lokasi}</span>
-              </div>
+              <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-slate-50 border border-slate-100 rounded-lg text-slate-600">
+                <LuMapPin className="w-3.5 h-3.5 flex-shrink-0 text-slate-400" /><span className="truncate">{proposal.lokasi}</span>
+              </span>
             )}
             {proposal.anggaran_usulan && (
-              <div className="flex items-center gap-1.5 px-2 py-1 bg-amber-50 rounded text-amber-800">
-                <LuDollarSign className="w-3.5 h-3.5 flex-shrink-0" /><span className="truncate"><strong>Rp</strong> {Number(proposal.anggaran_usulan).toLocaleString('id-ID')}</span>
-              </div>
+              <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-amber-50 border border-amber-100 rounded-lg text-amber-700 font-semibold">
+                <LuDollarSign className="w-3.5 h-3.5 flex-shrink-0" /><span className="truncate">Rp {Number(proposal.anggaran_usulan).toLocaleString('id-ID')}</span>
+              </span>
             )}
           </div>
           {proposal.kecamatan_catatan && (
-            <div className="mt-2 text-xs bg-blue-50 border border-blue-200 rounded p-2 text-blue-800"><strong>Catatan Kecamatan:</strong> {proposal.kecamatan_catatan}</div>
+            <div className="mt-2 text-xs bg-slate-50 border border-slate-200 rounded-lg p-2 text-slate-600"><strong className="text-slate-700">Catatan Kecamatan:</strong> {proposal.kecamatan_catatan}</div>
           )}
           {proposal.dpmd_catatan && (
-            <div className="mt-2 text-xs bg-purple-50 border border-purple-200 rounded p-2 text-purple-800"><strong>Catatan DPMD:</strong> {proposal.dpmd_catatan}</div>
+            <div className="mt-2 text-xs bg-indigo-50 border border-indigo-100 rounded-lg p-2 text-indigo-800"><strong>Catatan DPMD:</strong> {proposal.dpmd_catatan}</div>
           )}
           {proposal.troubleshoot_catatan && (
-            <div className="mt-2 text-xs bg-red-50 border border-red-200 rounded p-2 text-red-800 flex items-start gap-1.5">
+            <div className="mt-2 text-xs bg-rose-50 border border-rose-100 rounded-lg p-2 text-rose-700 flex items-start gap-1.5">
               <LuWrench className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
               <span>
                 <strong>Dikembalikan DPMD (Troubleshoot){proposal.troubleshoot_at ? ` · ${fmtDate(proposal.troubleshoot_at)}` : ''}:</strong> {proposal.troubleshoot_catatan}
@@ -1017,53 +1017,51 @@ const ProposalRow = ({ proposal, onApprove, onRevision, onCancelApproval, onTrou
           )}
         </div>
 
-        <div className="flex flex-wrap gap-1 flex-shrink-0">
+        <div className="flex flex-wrap items-center gap-1.5 flex-shrink-0 md:max-w-[20rem] md:justify-end">
+          {/* Utilitas & dokumen — netral agar tidak bersaing dengan aksi keputusan */}
           {proposal.file_proposal && (
             <a href={`${imageBaseUrl}/storage/uploads/bankeu-perubahan/${proposal.file_proposal}`} target="_blank" rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-lg">
+              className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold rounded-lg transition-colors">
               <LuEye className="w-3.5 h-3.5" /> File
             </a>
           )}
-          <button onClick={() => setShowTracking(true)}
-            className="inline-flex items-center gap-1 px-2.5 py-1 bg-orange-50 hover:bg-orange-100 text-orange-700 text-xs font-semibold rounded-lg">
-            <LuRoute className="w-3.5 h-3.5" /> Lacak
-          </button>
-          <button onClick={() => setShowHistory(true)}
-            className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-lg">
-            <LuHistory className="w-3.5 h-3.5" /> Riwayat
-          </button>
-          <button onClick={onEdit}
-            className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold rounded-lg">
-            <LuPencil className="w-3.5 h-3.5" /> Edit Detail
-          </button>
-          {(baUrl || spUrl) && (
-            <span className="inline-flex items-center gap-1.5 pl-1 pr-0.5 text-[11px] font-semibold text-purple-700">
-              <span className="w-1.5 h-1.5 rounded-full bg-purple-500" /> Dok. Kecamatan:
-            </span>
-          )}
           {baUrl && (
             <a href={baUrl} target="_blank" rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 px-2.5 py-1 bg-violet-50 hover:bg-violet-100 text-violet-700 text-xs font-semibold rounded-lg"
+              className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold rounded-lg transition-colors"
               title="Lihat Berita Acara Verifikasi Kecamatan">
-              <LuFileText className="w-3.5 h-3.5" /> Lihat BA
+              <LuFileText className="w-3.5 h-3.5" /> BA
             </a>
           )}
           {spUrl && (
             <a href={spUrl} target="_blank" rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold rounded-lg"
+              className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold rounded-lg transition-colors"
               title="Lihat Surat Pengantar Kecamatan">
-              <LuStamp className="w-3.5 h-3.5" /> Lihat SP
+              <LuStamp className="w-3.5 h-3.5" /> SP
             </a>
           )}
+          <button onClick={() => setShowTracking(true)}
+            className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold rounded-lg transition-colors">
+            <LuRoute className="w-3.5 h-3.5" /> Lacak
+          </button>
+          <button onClick={() => setShowHistory(true)}
+            className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold rounded-lg transition-colors">
+            <LuHistory className="w-3.5 h-3.5" /> Riwayat
+          </button>
+          <button onClick={onEdit}
+            className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold rounded-lg transition-colors">
+            <LuPencil className="w-3.5 h-3.5" /> Edit
+          </button>
+
+          {/* Aksi keputusan — diberi warna semantik & penekanan */}
           {isPending && (
             <>
               <button onClick={onApprove}
-                className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-lg"
+                className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors"
                 title="Setujui Surat Pengantar & Berita Acara dari kecamatan">
                 <LuCheck className="w-3.5 h-3.5" /> Setujui SP & BA
               </button>
               <button onClick={onRevision}
-                className="inline-flex items-center gap-1 px-2.5 py-1 bg-orange-50 hover:bg-orange-100 text-orange-700 text-xs font-semibold rounded-lg"
+                className="inline-flex items-center gap-1 px-2.5 py-1 bg-orange-50 hover:bg-orange-100 text-orange-700 text-xs font-semibold rounded-lg transition-colors"
                 title="Kembalikan ke kecamatan untuk revisi Surat Pengantar & Berita Acara">
                 <LuRefreshCw className="w-3.5 h-3.5" /> Revisi BA/SP
               </button>
@@ -1071,14 +1069,14 @@ const ProposalRow = ({ proposal, onApprove, onRevision, onCancelApproval, onTrou
           )}
           {isApproved && (
             <button onClick={onCancelApproval}
-              className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-semibold rounded-lg"
+              className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-semibold rounded-lg transition-colors"
               title="Batalkan verifikasi SP & BA (salah pencet) — dokumen kembali menunggu verifikasi DPMD">
               <LuRotateCcw className="w-3.5 h-3.5" /> Batalkan
             </button>
           )}
           {onTroubleshoot && (
             <button onClick={onTroubleshoot}
-              className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-800 text-xs font-semibold rounded-lg"
+              className="inline-flex items-center gap-1 px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold rounded-lg transition-colors"
               title="Troubleshoot: paksa kembalikan proposal ke Desa untuk direvisi (reset semua tahap)">
               <LuWrench className="w-3.5 h-3.5" /> Troubleshoot
             </button>
@@ -1110,9 +1108,9 @@ const StageDots = ({ proposal }) => {
   ];
   const dotColor = (s) => {
     if (s.status === 'approved') return 'bg-emerald-500';
-    if (s.status === 'rejected') return 'bg-red-500';
+    if (s.status === 'rejected') return 'bg-rose-500';
     if (s.status === 'revision') return 'bg-orange-500';
-    return s.done ? 'bg-emerald-500' : 'bg-gray-300';
+    return s.done ? 'bg-emerald-500' : 'bg-slate-300';
   };
   return (
     <div className="flex items-center gap-1">
@@ -1121,7 +1119,7 @@ const StageDots = ({ proposal }) => {
           <div className="flex flex-col items-center" title={s.label}>
             <span className={`w-3 h-3 rounded-full ${dotColor(s)}`} />
           </div>
-          {i < stages.length - 1 && <span className={`w-4 h-0.5 ${stages[i + 1].done || s.status === 'approved' ? 'bg-emerald-200' : 'bg-gray-200'}`} />}
+          {i < stages.length - 1 && <span className={`w-4 h-0.5 ${stages[i + 1].done || s.status === 'approved' ? 'bg-emerald-200' : 'bg-slate-200'}`} />}
         </React.Fragment>
       ))}
     </div>
@@ -1175,30 +1173,30 @@ const TrackingTab = ({
 
   return (
     <div className="space-y-3">
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-2 text-sm font-semibold text-gray-700"><LuActivity className="w-4 h-4 text-violet-600" /> Tracking lintas-tahap</div>
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2 text-sm font-semibold text-slate-700"><LuActivity className="w-4 h-4 text-indigo-600" /> Tracking lintas-tahap</div>
         <select value={kecamatan} onChange={e => setKecamatan(e.target.value)}
-          className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500">
+          className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500">
           <option value="all">Semua Kecamatan</option>
           {kecamatanOptions.map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}
         </select>
         <select value={kegiatan} onChange={e => setKegiatan(e.target.value)}
-          className="max-w-sm px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500">
+          className="max-w-sm px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500">
           <option value="all">Semua Kegiatan</option>
           {kegiatanOptions.map(k => (
             <option key={k.id} value={k.id}>{k.nama}{typeof k.desaCount === 'number' ? ` (${k.desaCount} desa)` : ''}</option>
           ))}
         </select>
         <div className="relative flex-1 min-w-[200px] max-w-xs">
-          <LuSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <LuSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari judul / desa / kecamatan / kegiatan..."
-            className="w-full pl-9 pr-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500" />
+            className="w-full pl-9 pr-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500" />
         </div>
-        <span className="ml-auto text-xs text-gray-500">{data.length} dari {total} proposal</span>
+        <span className="ml-auto text-xs text-slate-500">{data.length} dari {total} proposal</span>
       </div>
 
       {/* Ringkasan total anggaran usulan (mengikuti filter) */}
-      <div className="rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 p-4 flex items-center justify-between shadow-md">
+      <div className="rounded-2xl bg-gradient-to-r from-indigo-600 to-indigo-500 p-4 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-2 text-white/90">
           <LuDollarSign className="w-5 h-5" />
           <span className="text-sm font-semibold">Total Anggaran Usulan ({data.length} proposal)</span>
@@ -1208,16 +1206,16 @@ const TrackingTab = ({
 
       {/* Ringkasan kegiatan terpilih: berapa desa yang mengambil kegiatan ini */}
       {selectedKegiatanInfo && (
-        <div className="rounded-2xl bg-violet-50 border border-violet-200 p-4 flex flex-wrap items-center gap-x-6 gap-y-2">
-          <div className="flex items-center gap-2 text-violet-800 min-w-0">
+        <div className="rounded-2xl bg-indigo-50 border border-indigo-200 p-4 flex flex-wrap items-center gap-x-6 gap-y-2">
+          <div className="flex items-center gap-2 text-indigo-800 min-w-0">
             <LuUsers className="w-5 h-5 flex-shrink-0" />
             <span className="text-sm font-semibold truncate">Kegiatan: {selectedKegiatanInfo.nama}</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-2xl font-extrabold text-violet-700 tabular-nums">{selectedKegiatanInfo.desaCount}</span>
-            <span className="text-xs font-semibold text-violet-600">desa mengambil</span>
+            <span className="text-2xl font-extrabold text-indigo-700 tabular-nums">{selectedKegiatanInfo.desaCount}</span>
+            <span className="text-xs font-semibold text-indigo-600">desa mengambil</span>
           </div>
-          <div className="flex items-center gap-4 ml-auto text-xs font-semibold text-violet-700">
+          <div className="flex items-center gap-4 ml-auto text-xs font-semibold text-indigo-700">
             <span>{selectedKegiatanInfo.proposals} proposal</span>
             <span className="hidden sm:inline">·</span>
             <span>{rupiah(selectedKegiatanInfo.anggaran)}</span>
@@ -1227,7 +1225,7 @@ const TrackingTab = ({
 
       {/* Ikhtisar status: klik chip untuk buka/tutup grup terkait */}
       {!loading && data.length > 0 && (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-3 flex flex-wrap items-center gap-2">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-3 flex flex-wrap items-center gap-2">
           {sections.map(s => {
             const g = grouped.get(s.key);
             return (
@@ -1239,17 +1237,17 @@ const TrackingTab = ({
             );
           })}
           <div className="ml-auto flex items-center gap-1">
-            <button onClick={expandAll} className="px-2 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-lg">Buka semua</button>
-            <button onClick={collapseAll} className="px-2 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-lg">Tutup semua</button>
+            <button onClick={expandAll} className="px-2 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg">Buka semua</button>
+            <button onClick={collapseAll} className="px-2 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg">Tutup semua</button>
           </div>
         </div>
       )}
 
       {loading ? (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center text-gray-500">Memuat tracking...</div>
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-12 text-center text-slate-500">Memuat tracking...</div>
       ) : data.length === 0 ? (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center">
-          <LuInfo className="w-12 h-12 mx-auto text-gray-300 mb-3" /><p className="text-gray-600 font-medium">Tidak ada data.</p>
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-12 text-center">
+          <LuInfo className="w-12 h-12 mx-auto text-slate-300 mb-3" /><p className="text-slate-600 font-medium">Tidak ada data.</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -1257,27 +1255,27 @@ const TrackingTab = ({
             const g = grouped.get(s.key);
             const open = !!openMap[s.key];
             return (
-              <div key={s.key} className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+              <div key={s.key} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                 {/* Header status */}
                 <button onClick={() => toggle(s.key)}
-                  className="w-full px-4 py-3 flex items-center justify-between gap-3 hover:bg-gray-50 transition-colors">
+                  className="w-full px-4 py-3 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors">
                   <div className="flex items-center gap-2.5 min-w-0">
-                    {open ? <LuChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" /> : <LuChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />}
+                    {open ? <LuChevronDown className="w-4 h-4 text-slate-400 flex-shrink-0" /> : <LuChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />}
                     <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${TONE_DOT[s.tone]}`} />
-                    <span className="font-bold text-gray-800 text-sm truncate">{s.label}</span>
+                    <span className="font-bold text-slate-800 text-sm truncate">{s.label}</span>
                     <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border flex-shrink-0 ${TONE[s.tone]}`}>{g.items.length}</span>
                   </div>
-                  <span className="text-xs font-semibold text-gray-600 flex-shrink-0">{rupiah(g.total)}</span>
+                  <span className="text-xs font-semibold text-slate-600 flex-shrink-0">{rupiah(g.total)}</span>
                 </button>
                 {open && (
-                  <div className="divide-y divide-gray-100 border-t border-gray-100">
+                  <div className="divide-y divide-slate-100 border-t border-slate-100">
                     {g.items.map(p => (
                       <div key={p.id} className="px-4 py-3 flex flex-col md:flex-row md:items-center gap-3">
                         <div className="flex-1 min-w-0">
-                          <span className="text-xs text-gray-500">Kec <strong className="text-gray-800">{p.kecamatan_nama}</strong> · Desa <strong className="text-gray-800">{p.desa_nama}</strong></span>
-                          <p className="text-sm font-semibold text-gray-800 truncate mt-0.5">{p.judul_proposal}</p>
+                          <span className="text-xs text-slate-500">Kec <strong className="text-slate-800">{p.kecamatan_nama}</strong> · Desa <strong className="text-slate-800">{p.desa_nama}</strong></span>
+                          <p className="text-sm font-semibold text-slate-800 truncate mt-0.5">{p.judul_proposal}</p>
                           {(p.kegiatan_list || []).length > 0 && (
-                            <p className="mt-0.5 text-xs text-violet-700">
+                            <p className="mt-0.5 text-xs text-indigo-700">
                               Kegiatan: {(p.kegiatan_list || []).map(k => k.nama_kegiatan).join(', ')}
                             </p>
                           )}
@@ -1285,7 +1283,7 @@ const TrackingTab = ({
                             <LuDollarSign className="w-3.5 h-3.5" /> {rupiah(p.anggaran_usulan)}
                           </span>
                           {p.troubleshoot_catatan && (
-                            <div className="mt-1.5 text-xs bg-red-50 border border-red-200 rounded p-2 text-red-800 flex items-start gap-1.5">
+                            <div className="mt-1.5 text-xs bg-rose-50 border border-rose-200 rounded p-2 text-rose-800 flex items-start gap-1.5">
                               <LuWrench className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
                               <span>
                                 <strong>Dikembalikan DPMD (Troubleshoot){p.troubleshoot_at ? ` · ${fmtDate(p.troubleshoot_at)}` : ''}:</strong> {p.troubleshoot_catatan}
@@ -1294,18 +1292,18 @@ const TrackingTab = ({
                           )}
                         </div>
                         <StageDots proposal={p} />
-                        <div className="flex items-center gap-1 shrink-0">
+                        <div className="flex items-center gap-1.5 shrink-0">
                           <button onClick={() => onEdit(p)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold rounded-lg">
-                            <LuPencil className="w-3.5 h-3.5" /> Edit Detail
+                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold rounded-lg transition-colors">
+                            <LuPencil className="w-3.5 h-3.5" /> Edit
                           </button>
                           <button onClick={() => setTrackProposal(p)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-orange-50 hover:bg-orange-100 text-orange-700 text-xs font-semibold rounded-lg">
+                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold rounded-lg transition-colors">
                             <LuRoute className="w-3.5 h-3.5" /> Lacak
                           </button>
                           {onTroubleshoot && (
                             <button onClick={() => onTroubleshoot(p)}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-semibold rounded-lg"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold rounded-lg transition-colors"
                               title="Troubleshoot: paksa kembalikan proposal ini ke Desa untuk direvisi (reset semua tahap)">
                               <LuWrench className="w-3.5 h-3.5" /> Troubleshoot
                             </button>
@@ -1341,7 +1339,7 @@ const ParticipationGauge = ({ sudah = 0, belum = 0, height = 200 }) => {
       </ResponsiveContainer>
       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
         <span className="text-4xl font-extrabold text-emerald-600 tabular-nums leading-none">{pct}%</span>
-        <span className="text-[11px] text-gray-400 font-semibold mt-1">desa sudah</span>
+        <span className="text-[11px] text-slate-400 font-semibold mt-1">desa sudah</span>
       </div>
     </div>
   );
@@ -1351,23 +1349,23 @@ const KPI_ACCENT = {
   slate:   { bg: 'from-slate-50',   text: 'text-slate-700',   icon: 'text-slate-400',   bar: 'bg-slate-400' },
   emerald: { bg: 'from-emerald-50', text: 'text-emerald-700', icon: 'text-emerald-500', bar: 'bg-emerald-500' },
   rose:    { bg: 'from-rose-50',    text: 'text-rose-600',    icon: 'text-rose-400',    bar: 'bg-rose-400' },
-  violet:  { bg: 'from-violet-50',  text: 'text-violet-600',  icon: 'text-violet-400',  bar: 'bg-violet-500' },
+  indigo:  { bg: 'from-indigo-50',  text: 'text-indigo-600',  icon: 'text-indigo-400',  bar: 'bg-indigo-500' },
 };
 const KpiTile = ({ label, value, sub, icon: Icon, accent = 'slate', pct }) => {
   const a = KPI_ACCENT[accent] || KPI_ACCENT.slate;
   return (
-    <div className={`relative overflow-hidden rounded-2xl border border-gray-100 bg-gradient-to-br ${a.bg} to-white p-4 flex flex-col`}>
+    <div className={`relative overflow-hidden rounded-2xl border border-slate-100 bg-gradient-to-br ${a.bg} to-white p-4 flex flex-col`}>
       <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold text-gray-500">{label}</span>
+        <span className="text-xs font-semibold text-slate-500">{label}</span>
         {Icon && <Icon className={`w-4 h-4 ${a.icon}`} />}
       </div>
       <div className={`text-3xl font-extrabold mt-1 tabular-nums ${a.text}`}>{value}</div>
       {typeof pct === 'number' && (
-        <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden mt-2">
+        <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden mt-2">
           <div className={`h-full ${a.bar} rounded-full transition-all`} style={{ width: `${pct}%` }} />
         </div>
       )}
-      {sub && <span className="text-[10px] text-gray-400 mt-1.5">{sub}</span>}
+      {sub && <span className="text-[10px] text-slate-400 mt-1.5">{sub}</span>}
     </div>
   );
 };
@@ -1377,7 +1375,7 @@ const PartisipasiTab = ({ loading, data }) => {
   const [expanded, setExpanded] = useState({});
   const [search, setSearch] = useState('');
 
-  if (loading) return <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center text-gray-500">Memuat partisipasi...</div>;
+  if (loading) return <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-12 text-center text-slate-500">Memuat partisipasi...</div>;
 
   const { totalSudah = 0, totalBelum = 0, total = 0, pct = 0, kecTuntas = 0, totalKec = 0 } = data;
   const belumPct = total ? Math.round((totalBelum / total) * 100) : 0;
@@ -1396,7 +1394,7 @@ const PartisipasiTab = ({ loading, data }) => {
     <div className="space-y-4">
       {/* Ringkasan infografis: gauge % + KPI */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <ChartCard title="Tingkat Partisipasi Desa" icon={LuUsers} iconColor="text-fuchsia-600"
+        <ChartCard title="Tingkat Partisipasi Desa" icon={LuUsers} iconColor="text-indigo-600"
           subtitle="Desa yang sudah mengajukan ke Kecamatan">
           <ParticipationGauge sudah={totalSudah} belum={totalBelum} height={210} />
           <div className="flex items-center justify-center gap-4 mt-1">
@@ -1409,15 +1407,15 @@ const PartisipasiTab = ({ loading, data }) => {
           <KpiTile label="Total Desa" value={total} sub={`tersebar di ${totalKec} kecamatan`} icon={LuMapPin} accent="slate" />
           <KpiTile label="Sudah Mengajukan" value={totalSudah} sub={`${pct}% dari total desa`} icon={LuCheck} accent="emerald" pct={pct} />
           <KpiTile label="Belum Mengajukan" value={totalBelum} sub={`${belumPct}% masih perlu didorong`} icon={LuX} accent="rose" pct={belumPct} />
-          <KpiTile label="Kecamatan Tuntas" value={kecTuntas} sub={`dari ${totalKec} kecamatan (100% desa)`} icon={LuClipboardCheck} accent="violet" />
+          <KpiTile label="Kecamatan Tuntas" value={kecTuntas} sub={`dari ${totalKec} kecamatan (100% desa)`} icon={LuClipboardCheck} accent="indigo" />
         </div>
       </div>
 
       {/* Per-kecamatan: sudah vs belum (stacked bar) */}
-      <ChartCard title="Partisipasi per Kecamatan" icon={LuMapPin} iconColor="text-rose-600"
+      <ChartCard title="Partisipasi per Kecamatan" icon={LuMapPin} iconColor="text-indigo-600"
         subtitle="Diurutkan dari yang paling banyak desa BELUM mengajukan">
         {kecBar.length === 0 ? (
-          <div className="h-[220px] flex items-center justify-center text-sm text-gray-400">Belum ada data.</div>
+          <div className="h-[220px] flex items-center justify-center text-sm text-slate-400">Belum ada data.</div>
         ) : (
           <ResponsiveContainer width="100%" height={Math.max(240, kecBar.length * 30)}>
             <BarChart data={kecBar} layout="vertical" margin={{ left: 0, right: 34, top: 4, bottom: 4 }}>
@@ -1443,20 +1441,20 @@ const PartisipasiTab = ({ loading, data }) => {
       </ChartCard>
 
       {/* Drill-down: daftar desa per kecamatan */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
         <div className="flex flex-wrap items-center gap-2">
-          <button onClick={() => setTab('belum')} className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${tab === 'belum' ? 'bg-rose-600 text-white' : 'bg-gray-100 text-gray-600'}`}>Belum Mengajukan ({totalBelum})</button>
-          <button onClick={() => setTab('sudah')} className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${tab === 'sudah' ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600'}`}>Sudah Mengajukan ({totalSudah})</button>
+          <button onClick={() => setTab('belum')} className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${tab === 'belum' ? 'bg-rose-600 text-white' : 'bg-slate-100 text-slate-600'}`}>Belum Mengajukan ({totalBelum})</button>
+          <button onClick={() => setTab('sudah')} className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${tab === 'sudah' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600'}`}>Sudah Mengajukan ({totalSudah})</button>
           <div className="relative flex-1 min-w-[160px] max-w-xs ml-auto">
-            <LuSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <LuSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari kecamatan / desa..."
-              className="w-full pl-9 pr-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-fuchsia-500" />
+              className="w-full pl-9 pr-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500" />
           </div>
         </div>
       </div>
 
       {kecList.length === 0 ? (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center text-gray-500">Data desa/kecamatan belum tersedia.</div>
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-12 text-center text-slate-500">Data desa/kecamatan belum tersedia.</div>
       ) : (
         <div className="space-y-2">
           {kecList.map(kec => {
@@ -1465,19 +1463,19 @@ const PartisipasiTab = ({ loading, data }) => {
             const totalDesa = kec.sudah.length + kec.belum.length;
             const kpct = totalDesa ? Math.round((kec.sudah.length / totalDesa) * 100) : 0;
             return (
-              <div key={kec.nama} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <div key={kec.nama} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 <button onClick={() => setExpanded(e => ({ ...e, [kec.nama]: !e[kec.nama] }))}
-                  className="w-full px-4 py-3 flex items-center justify-between gap-3 hover:bg-gray-50">
+                  className="w-full px-4 py-3 flex items-center justify-between gap-3 hover:bg-slate-50">
                   <div className="flex items-center gap-2 min-w-0">
-                    {isOpen ? <LuChevronDown className="w-4 h-4 text-gray-400 shrink-0" /> : <LuChevronRight className="w-4 h-4 text-gray-400 shrink-0" />}
-                    <span className="font-semibold text-gray-800 text-sm truncate">{kec.nama}</span>
+                    {isOpen ? <LuChevronDown className="w-4 h-4 text-slate-400 shrink-0" /> : <LuChevronRight className="w-4 h-4 text-slate-400 shrink-0" />}
+                    <span className="font-semibold text-slate-800 text-sm truncate">{kec.nama}</span>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <div className="hidden sm:flex items-center gap-1.5">
-                      <div className="w-24 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden">
                         <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${kpct}%` }} />
                       </div>
-                      <span className="text-[11px] text-gray-400 tabular-nums w-8 text-right">{kpct}%</span>
+                      <span className="text-[11px] text-slate-400 tabular-nums w-8 text-right">{kpct}%</span>
                     </div>
                     <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-semibold text-[11px]">{kec.sudah.length} sudah</span>
                     <span className="px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 font-semibold text-[11px]">{kec.belum.length} belum</span>
@@ -1486,7 +1484,7 @@ const PartisipasiTab = ({ loading, data }) => {
                 {isOpen && (
                   <div className="px-4 pb-3 pt-1 flex flex-wrap gap-1.5">
                     {items.length === 0 ? (
-                      <span className="text-xs text-gray-400 italic">Tidak ada desa pada kategori ini.</span>
+                      <span className="text-xs text-slate-400 italic">Tidak ada desa pada kategori ini.</span>
                     ) : items.map(d => (
                       <span key={d} className={`px-2 py-1 rounded-lg text-xs font-medium ${tab === 'sudah' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-600 border border-rose-200'}`}>{d}</span>
                     ))}
@@ -1515,34 +1513,34 @@ const compactRupiah = (n) => {
 };
 
 const TipBox = ({ label, rows }) => (
-  <div className="bg-white/95 backdrop-blur border border-gray-200 rounded-xl shadow-lg px-3 py-2 text-xs">
-    {label && <p className="font-bold text-gray-800 mb-1">{label}</p>}
+  <div className="bg-white/95 backdrop-blur border border-slate-200 rounded-xl shadow-lg px-3 py-2 text-xs">
+    {label && <p className="font-bold text-slate-800 mb-1">{label}</p>}
     {rows.map((r, i) => (
-      <p key={i} className="flex items-center gap-1.5 text-gray-600 leading-relaxed">
+      <p key={i} className="flex items-center gap-1.5 text-slate-600 leading-relaxed">
         {r.color && <span className="w-2 h-2 rounded-full inline-block" style={{ background: r.color }} />}
-        <span>{r.name}:</span> <strong className="text-gray-800">{r.value}</strong>
+        <span>{r.name}:</span> <strong className="text-slate-800">{r.value}</strong>
       </p>
     ))}
   </div>
 );
 
 const ChartCard = ({ title, icon: Icon, iconColor, subtitle, children }) => (
-  <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
+  <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
     <div className="mb-4">
-      <h3 className="text-sm font-bold text-gray-700 flex items-center gap-2">
-        {Icon && <Icon className={`w-4 h-4 ${iconColor || 'text-gray-500'}`} />} {title}
+      <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+        {Icon && <Icon className={`w-4 h-4 ${iconColor || 'text-slate-500'}`} />} {title}
       </h3>
-      {subtitle && <p className="text-xs text-gray-400 mt-0.5">{subtitle}</p>}
+      {subtitle && <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>}
     </div>
     {children}
   </div>
 );
 
 const KPI_META = [
-  { key: 'total', label: 'Total Masuk', icon: LuFolder, ring: 'text-gray-500', bar: 'bg-gray-400', bg: 'from-gray-50' },
+  { key: 'total', label: 'Total Masuk', icon: LuFolder, ring: 'text-slate-500', bar: 'bg-slate-400', bg: 'from-slate-50' },
   { key: 'pending', label: 'Pending', icon: LuHistory, ring: 'text-amber-600', bar: 'bg-amber-500', bg: 'from-amber-50' },
   { key: 'approved', label: 'Disetujui', icon: LuCheck, ring: 'text-emerald-600', bar: 'bg-emerald-500', bg: 'from-emerald-50' },
-  { key: 'rejected', label: 'Ditolak', icon: LuX, ring: 'text-red-600', bar: 'bg-red-500', bg: 'from-red-50' },
+  { key: 'rejected', label: 'Ditolak', icon: LuX, ring: 'text-rose-600', bar: 'bg-rose-500', bg: 'from-rose-50' },
   { key: 'revision', label: 'Revisi', icon: LuMessageSquare, ring: 'text-orange-600', bar: 'bg-orange-500', bg: 'from-orange-50' },
 ];
 
@@ -1581,8 +1579,8 @@ const StatisticsTab = ({ stats, funnel, perKategori, perKecamatan, perKegiatan =
   return (
     <div className="space-y-4">
       {/* Header + KPI */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
-        <h2 className="text-base font-bold text-gray-800 flex items-center gap-2 mb-4">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+        <h2 className="text-base font-bold text-slate-800 flex items-center gap-2 mb-4">
           <LuChartColumn className="w-5 h-5 text-cyan-600" /> Statistik Verifikasi DPMD · TA {tahun}
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -1591,27 +1589,27 @@ const StatisticsTab = ({ stats, funnel, perKategori, perKecamatan, perKegiatan =
             const pct = totalMasuk ? Math.round((val / totalMasuk) * 100) : 0;
             const Icon = m.icon;
             return (
-              <div key={m.key} className={`relative overflow-hidden rounded-2xl border border-gray-100 bg-gradient-to-br ${m.bg} to-white p-4`}>
+              <div key={m.key} className={`relative overflow-hidden rounded-2xl border border-slate-100 bg-gradient-to-br ${m.bg} to-white p-4`}>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-gray-500">{m.label}</span>
+                  <span className="text-xs font-semibold text-slate-500">{m.label}</span>
                   <Icon className={`w-4 h-4 ${m.ring}`} />
                 </div>
-                <div className="text-3xl font-extrabold text-gray-800 mt-2 tabular-nums">{val}</div>
+                <div className="text-3xl font-extrabold text-slate-800 mt-2 tabular-nums">{val}</div>
                 {m.key === 'total' ? (
-                  <span className="text-[10px] text-gray-400 mt-2 inline-block">proposal masuk DPMD</span>
+                  <span className="text-[10px] text-slate-400 mt-2 inline-block">proposal masuk DPMD</span>
                 ) : (
                   <div className="mt-2">
-                    <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                    <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
                       <div className={`h-full ${m.bar} rounded-full transition-all`} style={{ width: `${pct}%` }} />
                     </div>
-                    <span className="text-[10px] text-gray-400 mt-1 inline-block">{pct}% dari total</span>
+                    <span className="text-[10px] text-slate-400 mt-1 inline-block">{pct}% dari total</span>
                   </div>
                 )}
               </div>
             );
           })}
         </div>
-        <div className="mt-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 p-4 flex items-center justify-between shadow-md">
+        <div className="mt-3 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-500 p-4 flex items-center justify-between shadow-sm">
           <div className="flex items-center gap-2 text-white/90"><LuDollarSign className="w-5 h-5" /><span className="text-sm font-semibold">Total Anggaran Usulan (masuk DPMD)</span></div>
           <div className="text-xl md:text-2xl font-bold text-white">{rupiah(totalAnggaran)}</div>
         </div>
@@ -1619,7 +1617,7 @@ const StatisticsTab = ({ stats, funnel, perKategori, perKecamatan, perKegiatan =
 
       {/* Partisipasi Desa — sinkron dgn tab Partisipasi (gauge % sudah/belum mengajukan) */}
       {partisipasi && partisipasi.total > 0 && (
-        <ChartCard title="Partisipasi Desa — Pengajuan ke Kecamatan" icon={LuUsers} iconColor="text-fuchsia-600"
+        <ChartCard title="Partisipasi Desa — Pengajuan ke Kecamatan" icon={LuUsers} iconColor="text-indigo-600"
           subtitle={`${partisipasi.totalSudah} dari ${partisipasi.total} desa sudah mengajukan · ${partisipasi.pct}%`}>
           <div className="flex flex-col sm:flex-row items-center gap-5">
             <div className="w-full sm:w-1/3 max-w-[220px]">
@@ -1629,7 +1627,7 @@ const StatisticsTab = ({ stats, funnel, perKategori, perKecamatan, perKegiatan =
               <KpiTile label="Total Desa" value={partisipasi.total} sub={`${partisipasi.totalKec} kecamatan`} icon={LuMapPin} accent="slate" />
               <KpiTile label="Sudah" value={partisipasi.totalSudah} sub={`${partisipasi.pct}% dari total`} icon={LuCheck} accent="emerald" pct={partisipasi.pct} />
               <KpiTile label="Belum" value={partisipasi.totalBelum} sub={`${partisipasi.total ? Math.round((partisipasi.totalBelum / partisipasi.total) * 100) : 0}% perlu didorong`} icon={LuX} accent="rose" pct={partisipasi.total ? Math.round((partisipasi.totalBelum / partisipasi.total) * 100) : 0} />
-              <KpiTile label="Kec. Tuntas" value={partisipasi.kecTuntas} sub={`dari ${partisipasi.totalKec} kecamatan`} icon={LuClipboardCheck} accent="violet" />
+              <KpiTile label="Kec. Tuntas" value={partisipasi.kecTuntas} sub={`dari ${partisipasi.totalKec} kecamatan`} icon={LuClipboardCheck} accent="indigo" />
             </div>
           </div>
         </ChartCard>
@@ -1641,7 +1639,7 @@ const StatisticsTab = ({ stats, funnel, perKategori, perKecamatan, perKegiatan =
         <ChartCard title="Komposisi Keputusan DPMD" icon={LuClipboardCheck} iconColor="text-emerald-600"
           subtitle="Distribusi status verifikasi proposal yang masuk ke DPMD">
           {totalMasuk === 0 ? (
-            <div className="h-[240px] flex items-center justify-center text-sm text-gray-400">Belum ada data.</div>
+            <div className="h-[240px] flex items-center justify-center text-sm text-slate-400">Belum ada data.</div>
           ) : (
             <div className="flex flex-col sm:flex-row items-center gap-4">
               <div className="relative w-full sm:w-1/2" style={{ height: 240 }}>
@@ -1660,8 +1658,8 @@ const StatisticsTab = ({ stats, funnel, perKategori, perKecamatan, perKegiatan =
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                  <span className="text-3xl font-extrabold text-gray-800 tabular-nums">{totalMasuk}</span>
-                  <span className="text-[11px] text-gray-400 font-semibold">Total Proposal</span>
+                  <span className="text-3xl font-extrabold text-slate-800 tabular-nums">{totalMasuk}</span>
+                  <span className="text-[11px] text-slate-400 font-semibold">Total Proposal</span>
                 </div>
               </div>
               <div className="flex-1 w-full space-y-2.5">
@@ -1670,9 +1668,9 @@ const StatisticsTab = ({ stats, funnel, perKategori, perKecamatan, perKegiatan =
                   return (
                     <div key={d.name} className="flex items-center gap-2">
                       <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: d.color }} />
-                      <span className="text-xs text-gray-600 flex-1">{d.name}</span>
-                      <span className="text-sm font-bold text-gray-800 tabular-nums">{d.value}</span>
-                      <span className="text-[10px] text-gray-400 w-9 text-right tabular-nums">{pct}%</span>
+                      <span className="text-xs text-slate-600 flex-1">{d.name}</span>
+                      <span className="text-sm font-bold text-slate-800 tabular-nums">{d.value}</span>
+                      <span className="text-[10px] text-slate-400 w-9 text-right tabular-nums">{pct}%</span>
                     </div>
                   );
                 })}
@@ -1682,7 +1680,7 @@ const StatisticsTab = ({ stats, funnel, perKategori, perKecamatan, perKegiatan =
         </ChartCard>
 
         {/* Pipeline: Sebaran Tahap */}
-        <ChartCard title="Sebaran Tahap (Pipeline)" icon={LuActivity} iconColor="text-violet-600"
+        <ChartCard title="Sebaran Tahap (Pipeline)" icon={LuActivity} iconColor="text-indigo-600"
           subtitle={`Semua proposal lintas-tahap: ${funnel.total || 0}`}>
           <ResponsiveContainer width="100%" height={240}>
             <BarChart data={tahapData} layout="vertical" margin={{ left: 0, right: 28, top: 4, bottom: 4 }}>
@@ -1706,7 +1704,7 @@ const StatisticsTab = ({ stats, funnel, perKategori, perKecamatan, perKegiatan =
 
       {/* Radial kategori + ringkasan anggaran */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <ChartCard title="Proposal per Kategori Kegiatan" icon={LuPackage} iconColor="text-orange-600"
+        <ChartCard title="Proposal per Kategori Kegiatan" icon={LuPackage} iconColor="text-indigo-600"
           subtitle={`Total ${totalKategoriCount} proposal`}>
           <div className="flex flex-col sm:flex-row items-center gap-4">
             <div className="w-full sm:w-1/2" style={{ height: 220 }}>
@@ -1727,14 +1725,14 @@ const StatisticsTab = ({ stats, funnel, perKategori, perKecamatan, perKegiatan =
             </div>
             <div className="flex-1 w-full space-y-2">
               {kategoriData.map(d => (
-                <div key={d.key} className="rounded-xl border border-gray-100 p-3" style={{ background: `${d.fill}0d` }}>
+                <div key={d.key} className="rounded-xl border border-slate-100 p-3" style={{ background: `${d.fill}0d` }}>
                   <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-1.5 text-xs font-bold text-gray-700">
+                    <span className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
                       <span className="w-2.5 h-2.5 rounded-full" style={{ background: d.fill }} /> {d.name}
                     </span>
                     <span className="text-lg font-extrabold tabular-nums" style={{ color: d.fill }}>{d.count}</span>
                   </div>
-                  <p className="text-[11px] text-gray-500 mt-0.5">{rupiah(d.anggaran)}</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5">{rupiah(d.anggaran)}</p>
                 </div>
               ))}
             </div>
@@ -1742,10 +1740,10 @@ const StatisticsTab = ({ stats, funnel, perKategori, perKecamatan, perKegiatan =
         </ChartCard>
 
         {/* Per kecamatan - horizontal bar (top 12) */}
-        <ChartCard title="Top Kecamatan (Jumlah Proposal)" icon={LuMapPin} iconColor="text-rose-600"
+        <ChartCard title="Top Kecamatan (Jumlah Proposal)" icon={LuMapPin} iconColor="text-indigo-600"
           subtitle={kecTop.length ? `Menampilkan ${kecTop.length} dari ${perKecamatan.length} kecamatan` : undefined}>
           {kecTop.length === 0 ? (
-            <div className="h-[220px] flex items-center justify-center text-sm text-gray-400">Belum ada data.</div>
+            <div className="h-[220px] flex items-center justify-center text-sm text-slate-400">Belum ada data.</div>
           ) : (
             <ResponsiveContainer width="100%" height={Math.max(220, kecTop.length * 30)}>
               <BarChart data={kecTop} layout="vertical" margin={{ left: 0, right: 30, top: 4, bottom: 4 }}>
@@ -1776,10 +1774,10 @@ const StatisticsTab = ({ stats, funnel, perKategori, perKecamatan, perKegiatan =
       </div>
 
       {/* Rekapitulasi anggaran per kegiatan (dikelompokkan per kategori) */}
-      <ChartCard title="Rekapitulasi Anggaran per Kegiatan" icon={LuPackage} iconColor="text-orange-600"
+      <ChartCard title="Rekapitulasi Anggaran per Kegiatan" icon={LuPackage} iconColor="text-indigo-600"
         subtitle="Jumlah desa yang mengambil & total anggaran per kegiatan">
         {perKegiatan.length === 0 ? (
-          <p className="text-xs text-gray-400">Belum ada data.</p>
+          <p className="text-xs text-slate-400">Belum ada data.</p>
         ) : (
           <div className="space-y-5">
             {KATEGORI_KEYS.map(kat => {
@@ -1793,13 +1791,13 @@ const StatisticsTab = ({ stats, funnel, perKategori, perKecamatan, perKegiatan =
                 <div key={kat}>
                   <div className="flex items-center gap-2 mb-2">
                     <span className="w-2.5 h-2.5 rounded-full" style={{ background: hex }} />
-                    <h4 className="text-sm font-bold text-gray-700">{KATEGORI_META[kat].label}</h4>
-                    <span className="text-[11px] text-gray-400">{items.length} kegiatan</span>
+                    <h4 className="text-sm font-bold text-slate-700">{KATEGORI_META[kat].label}</h4>
+                    <span className="text-[11px] text-slate-400">{items.length} kegiatan</span>
                   </div>
                   <div className="overflow-x-auto -mx-1">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="text-left text-xs text-gray-500 border-b border-gray-200">
+                        <tr className="text-left text-xs text-slate-500 border-b border-slate-200">
                           <th className="py-2 px-1 w-8">#</th>
                           <th className="py-2 px-1">Kegiatan</th>
                           <th className="py-2 px-1 text-right">Jml Desa</th>
@@ -1809,17 +1807,17 @@ const StatisticsTab = ({ stats, funnel, perKategori, perKecamatan, perKegiatan =
                       </thead>
                       <tbody>
                         {items.map((r, i) => (
-                          <tr key={r.id} className="border-b border-gray-50 hover:bg-gray-50/60">
-                            <td className="py-2 px-1 text-gray-400 tabular-nums">{i + 1}</td>
-                            <td className="py-2 px-1 text-gray-800">{r.nama}</td>
-                            <td className="py-2 px-1 text-right font-semibold text-gray-700 tabular-nums">{r.desaCount}</td>
-                            <td className="py-2 px-1 text-right text-gray-600 tabular-nums">{r.proposalCount}</td>
-                            <td className="py-2 px-1 text-right text-gray-600 tabular-nums">{rupiah(r.anggaran)}</td>
+                          <tr key={r.id} className="border-b border-slate-50 hover:bg-slate-50/60">
+                            <td className="py-2 px-1 text-slate-400 tabular-nums">{i + 1}</td>
+                            <td className="py-2 px-1 text-slate-800">{r.nama}</td>
+                            <td className="py-2 px-1 text-right font-semibold text-slate-700 tabular-nums">{r.desaCount}</td>
+                            <td className="py-2 px-1 text-right text-slate-600 tabular-nums">{r.proposalCount}</td>
+                            <td className="py-2 px-1 text-right text-slate-600 tabular-nums">{rupiah(r.anggaran)}</td>
                           </tr>
                         ))}
-                        <tr className="border-t-2 border-gray-200 font-bold" style={{ background: `${hex}0d` }}>
+                        <tr className="border-t-2 border-slate-200 font-bold" style={{ background: `${hex}0d` }}>
                           <td className="py-2 px-1" />
-                          <td className="py-2 px-1 text-gray-800">Subtotal {KATEGORI_META[kat].label}</td>
+                          <td className="py-2 px-1 text-slate-800">Subtotal {KATEGORI_META[kat].label}</td>
                           <td className="py-2 px-1 text-right tabular-nums" style={{ color: hex }}>{subDesa}</td>
                           <td className="py-2 px-1 text-right tabular-nums" style={{ color: hex }}>{subProposal}</td>
                           <td className="py-2 px-1 text-right tabular-nums" style={{ color: hex }}>{rupiah(subAnggaran)}</td>
@@ -1830,7 +1828,7 @@ const StatisticsTab = ({ stats, funnel, perKategori, perKecamatan, perKegiatan =
                 </div>
               );
             })}
-            <div className="rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 p-4 flex items-center justify-between shadow-md">
+            <div className="rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-500 p-4 flex items-center justify-between shadow-sm">
               <div className="flex items-center gap-2 text-white/90">
                 <LuDollarSign className="w-5 h-5" />
                 <span className="text-sm font-semibold">Total Anggaran Seluruh Kegiatan</span>
@@ -1842,14 +1840,14 @@ const StatisticsTab = ({ stats, funnel, perKategori, perKecamatan, perKegiatan =
       </ChartCard>
 
       {/* Tabel detail per kecamatan */}
-      <ChartCard title="Detail per Kecamatan" icon={LuChartColumn} iconColor="text-cyan-600">
+      <ChartCard title="Detail per Kecamatan" icon={LuChartColumn} iconColor="text-indigo-600">
         {perKecamatan.length === 0 ? (
-          <p className="text-xs text-gray-400">Belum ada data.</p>
+          <p className="text-xs text-slate-400">Belum ada data.</p>
         ) : (
           <div className="overflow-x-auto -mx-1">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs text-gray-500 border-b border-gray-200">
+                <tr className="text-left text-xs text-slate-500 border-b border-slate-200">
                   <th className="py-2 px-1">#</th>
                   <th className="py-2 px-1">Kecamatan</th>
                   <th className="py-2 px-1 text-right">Proposal</th>
@@ -1858,11 +1856,11 @@ const StatisticsTab = ({ stats, funnel, perKategori, perKecamatan, perKegiatan =
               </thead>
               <tbody>
                 {kecSorted.map((r, i) => (
-                  <tr key={r.nama} className="border-b border-gray-50 hover:bg-gray-50/60">
-                    <td className="py-2 px-1 text-gray-400 tabular-nums">{i + 1}</td>
-                    <td className="py-2 px-1 text-gray-800">{r.nama}</td>
-                    <td className="py-2 px-1 text-right font-semibold text-gray-700 tabular-nums">{r.count}</td>
-                    <td className="py-2 px-1 text-right text-gray-600 tabular-nums">{rupiah(r.anggaran)}</td>
+                  <tr key={r.nama} className="border-b border-slate-50 hover:bg-slate-50/60">
+                    <td className="py-2 px-1 text-slate-400 tabular-nums">{i + 1}</td>
+                    <td className="py-2 px-1 text-slate-800">{r.nama}</td>
+                    <td className="py-2 px-1 text-right font-semibold text-slate-700 tabular-nums">{r.count}</td>
+                    <td className="py-2 px-1 text-right text-slate-600 tabular-nums">{rupiah(r.anggaran)}</td>
                   </tr>
                 ))}
               </tbody>
