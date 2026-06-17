@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, MapPin, Users, DollarSign, BarChart3,
-  ChevronDown, ChevronUp, Building2, CheckCircle2,
+  ChevronDown, ChevronUp, CheckCircle2,
   FileText, Layers, ChevronRight, Landmark, Calendar,
   Briefcase, Search, AlertCircle, Eye
 } from 'lucide-react';
@@ -20,13 +20,13 @@ import { API_ENDPOINTS } from '../config/apiConfig';
 // ═══════════════════════════════════════════════════════════════════
 // CONSTANTS & HELPERS
 // ═══════════════════════════════════════════════════════════════════
+// Alur Bankeu Perubahan: Desa → Kecamatan → DPMD (TIDAK ada tahap Dinas).
 const STAGE_CONFIG = {
   di_desa: { label: 'Desa', fullLabel: 'Di Desa', icon: MapPin, color: '#64748b', gradient: 'from-slate-500 to-slate-600' },
-  di_dinas: { label: 'Dinas', fullLabel: 'Di Dinas Terkait', icon: Building2, color: '#f59e0b', gradient: 'from-amber-500 to-orange-500' },
   di_kecamatan: { label: 'Kecamatan', fullLabel: 'Di Kecamatan', icon: Landmark, color: '#3b82f6', gradient: 'from-blue-500 to-indigo-500' },
   selesai: { label: 'DPMD', fullLabel: 'Di DPMD (Final)', icon: CheckCircle2, color: '#10b981', gradient: 'from-emerald-500 to-teal-500' },
 };
-const STAGE_ORDER = ['di_desa', 'di_dinas', 'di_kecamatan', 'selesai'];
+const STAGE_ORDER = ['di_desa', 'di_kecamatan', 'selesai'];
 
 const formatRupiah = (value) => {
   if (!value || value === 0) return 'Rp 0';
@@ -123,7 +123,7 @@ const HeroSection = React.memo(({ activeYear, setActiveYear, totalAnggaran, tota
               Dashboard Eksekutif
             </motion.p>
             <h1 className="text-3xl lg:text-4xl font-bold text-white tracking-tight">
-              Bantuan Keuangan <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">Desa</span>
+              Bantuan Keuangan <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">Perubahan Desa</span>
             </h1>
             <p className="text-slate-400 text-sm mt-2">Kabupaten Bogor · Real-time Monitoring</p>
           </div>
@@ -1116,7 +1116,7 @@ const BankeuPublicPage = () => {
   const fetchData = async (tahun) => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_ENDPOINTS.EXPRESS_BASE}/public/bankeu/tracking-summary?tahun_anggaran=${tahun}`);
+      const res = await fetch(`${API_ENDPOINTS.EXPRESS_BASE}/public/bankeu-perubahan/tracking-summary?tahun_anggaran=${tahun}`);
       if (res.ok) {
         const json = await res.json();
         setProposals(json.proposals || []);
@@ -1175,7 +1175,7 @@ const BankeuPublicPage = () => {
             <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-emerald-500 animate-spin" />
           </div>
           <p className="text-white font-semibold text-lg mb-1">Memuat Dashboard</p>
-          <p className="text-slate-400 text-sm">Bantuan Keuangan Desa TA {activeYear}</p>
+          <p className="text-slate-400 text-sm">Bantuan Keuangan Perubahan Desa TA {activeYear}</p>
         </div>
       </div>
     );
@@ -1203,7 +1203,7 @@ const BankeuPublicPage = () => {
             <img src="/logo-bogor.png" alt="Logo" className="h-9" />
             <div className="hidden sm:block">
               <p className="text-sm font-bold text-white">DPMD Kabupaten Bogor</p>
-              <p className="text-[10px] text-slate-400">Dashboard Bantuan Keuangan</p>
+              <p className="text-[10px] text-slate-400">Dashboard Bantuan Keuangan Perubahan</p>
             </div>
           </div>
         </div>
