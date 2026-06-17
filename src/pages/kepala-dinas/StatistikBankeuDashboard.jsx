@@ -6,7 +6,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MapPin, Users, DollarSign, BarChart3,
-  ChevronDown, ChevronUp, Search, Building2, CheckCircle2,
+  ChevronDown, ChevronUp, Search, CheckCircle2,
   Activity, FileText, Layers, ChevronRight, Landmark, X, Calendar,
   TrendingUp, ArrowUpRight, Globe, Eye,
   CheckCircle, XCircle, Info, Download, RefreshCw
@@ -21,15 +21,23 @@ import toast from 'react-hot-toast';
 import { useDataCache } from '../../context/DataCacheContext';
 
 // ─── CONSTANTS ──────────────────────────────────────────────────────
+// Alur Bankeu Perubahan: Desa → Kecamatan → DPMD (TIDAK ada tahap Dinas).
 const STAGE_CONFIG = {
   di_desa: { label: 'Di Desa', icon: MapPin, color: 'from-slate-500 to-gray-600', bg: 'bg-slate-100', text: 'text-slate-700', hex: '#64748b' },
-  di_dinas: { label: 'Di Dinas Terkait', icon: Building2, color: 'from-amber-500 to-orange-600', bg: 'bg-amber-50', text: 'text-amber-700', hex: '#f59e0b' },
   di_kecamatan: { label: 'Di Kecamatan', icon: Landmark, color: 'from-blue-500 to-indigo-600', bg: 'bg-blue-50', text: 'text-blue-700', hex: '#3b82f6' },
   selesai: { label: 'Di DPMD', icon: CheckCircle2, color: 'from-emerald-500 to-green-600', bg: 'bg-emerald-50', text: 'text-emerald-700', hex: '#10b981' },
 };
 
-const STAGE_ORDER = ['di_desa', 'di_dinas', 'di_kecamatan', 'selesai'];
-const PIE_COLORS = ['#64748b', '#f59e0b', '#3b82f6', '#10b981'];
+const STAGE_ORDER = ['di_desa', 'di_kecamatan', 'selesai'];
+const PIE_COLORS = ['#64748b', '#3b82f6', '#10b981'];
+
+// Label kategori kegiatan perubahan (jenis_kegiatan).
+const KATEGORI_LABEL = {
+  wajib: 'Wajib',
+  pilihan_infrastruktur: 'Infrastruktur',
+  pilihan_non_infrastruktur: 'Non-Infrastruktur',
+};
+const kategoriLabel = (k) => KATEGORI_LABEL[k] || k || '-';
 
 // ─── HELPERS ────────────────────────────────────────────────────────
 const formatRupiah = (value) => {
@@ -62,20 +70,22 @@ const CountUp = ({ end, duration = 1.2 }) => {
   return <>{typeof end === 'number' ? count : end}</>;
 };
 
-const getProposalStage = (proposal) => {
-  // Check from END to START - HARUS sama dengan SPKED DpmdVerificationPage getProposalStage
-  if (proposal.submitted_to_dpmd || proposal.dpmd_status) return 'selesai';
-  // Proposal dikembalikan ke desa (revisi/rejected/troubleshoot)
-  if (proposal.troubleshoot_catatan && !proposal.submitted_to_dinas_at) return 'di_desa';
-  if ((proposal.kecamatan_status === 'rejected' || proposal.kecamatan_status === 'revision') && !proposal.submitted_to_kecamatan) return 'di_desa';
-  if ((proposal.dinas_status === 'rejected' || proposal.dinas_status === 'revision') && !proposal.submitted_to_dinas_at) return 'di_desa';
-  if (proposal.status === 'pending' && !proposal.submitted_to_dinas_at &&
-      (proposal.dinas_status || proposal.kecamatan_status || proposal.troubleshoot_catatan)) return 'di_desa';
-  // Di Kecamatan
-  if (proposal.kecamatan_status === 'approved') return 'di_kecamatan';
-  if (proposal.dinas_status === 'approved') return 'di_kecamatan';
-  // Di Dinas
-  if (proposal.submitted_to_dinas_at || proposal.dinas_status) return 'di_dinas';
+// Tahap proposal perubahan di alur Desa→Kecamatan→DPMD.
+// Mengikuti currentStage() pada DpmdBankeuPerubahanVerificationPage, diciutkan
+// ke 3 bucket: di_desa / di_kecamatan / selesai.
+const getProposalStage = (p) => {
+  const kec = p.kecamatan_status || 'pending';
+  // DPMD minta revisi BA/SP → dokumen dikembalikan ke kecamatan.
+  if (p.dpmd_status === 'revision' || p.dpmd_status === 'rejected') return 'di_kecamatan';
+  // Belum sampai DPMD & kecamatan tolak/revisi → kembali ke desa.
+  if (!p.submitted_to_dpmd && (kec === 'revision' || kec === 'rejected')) return 'di_desa';
+  // Revisi murni level desa (mis. hasil troubleshoot).
+  if ((p.status === 'revision' || p.status === 'rejected') && !p.submitted_to_kecamatan) return 'di_desa';
+  // Sudah diterima DPMD.
+  if (p.submitted_to_dpmd) return 'selesai';
+  // Sudah diteruskan ke kecamatan (menunggu / disetujui belum diteruskan).
+  if (p.submitted_to_kecamatan) return 'di_kecamatan';
+  // Default: masih draft di desa.
   return 'di_desa';
 };
 
@@ -103,7 +113,7 @@ const ExecutiveHero = ({ activeYear, setActiveYear, summary, totalAnggaran, tota
             </div>
             <div>
               <p className="text-[11px] font-semibold text-blue-400 uppercase tracking-[0.15em]">Dashboard Statistik</p>
-              <p className="text-xs text-slate-400">Bantuan Keuangan · Data Real-Time</p>
+              <p className="text-xs text-slate-400">Bantuan Keuangan Perubahan · Data Real-Time</p>
             </div>
           </div>
           <div className="flex items-center gap-3 flex-wrap">
@@ -135,11 +145,11 @@ const ExecutiveHero = ({ activeYear, setActiveYear, summary, totalAnggaran, tota
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight leading-[1.1] mb-2">
             Rekapitulasi Bantuan
             <span className="block bg-gradient-to-r from-blue-400 via-cyan-400 to-emerald-400 bg-clip-text text-transparent">
-              Keuangan Desa
+              Keuangan Perubahan Desa
             </span>
           </h1>
           <p className="text-slate-400 text-sm max-w-xl mt-2 leading-relaxed">
-            Monitoring pengajuan dan verifikasi bantuan keuangan infrastruktur desa Kabupaten Bogor.
+            Monitoring pengajuan dan verifikasi bantuan keuangan perubahan desa Kabupaten Bogor.
           </p>
         </motion.div>
 
@@ -235,7 +245,7 @@ const DesaParticipationCard = ({ summary }) => {
         </div>
         <div>
           <h3 className="text-sm font-bold text-gray-900">Partisipasi Desa</h3>
-          <p className="text-[11px] text-gray-400">Desa yang sudah mengajukan ke dinas terkait</p>
+          <p className="text-[11px] text-gray-400">Desa yang sudah mengajukan ke kecamatan</p>
         </div>
       </div>
 
@@ -316,7 +326,7 @@ const DesaPartisipasiSection = ({ desaPartisipasi, summary }) => {
             </div>
             <div>
               <h3 className="font-bold text-gray-900 text-sm">Partisipasi Desa per Kecamatan</h3>
-              <p className="text-[11px] text-gray-400">Desa yang sudah mengirim proposal ke dinas terkait</p>
+              <p className="text-[11px] text-gray-400">Desa yang sudah mengirim proposal ke kecamatan</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -522,10 +532,9 @@ const FlowPipeline = ({ stageStats, total }) => (
 // ─── PROCESS INFO ───────────────────────────────────────────────────
 const ProcessInfoSection = () => {
   const steps = [
-    { step: '01', title: 'Pengajuan Desa', desc: 'Desa menyusun proposal dan mengupload dokumen persyaratan bantuan keuangan.', icon: FileText, color: 'from-slate-500 to-gray-600' },
-    { step: '02', title: 'Review Dinas Terkait', desc: 'Dinas terkait mereview kelayakan teknis dan kesesuaian proposal.', icon: Building2, color: 'from-amber-500 to-orange-600' },
-    { step: '03', title: 'Verifikasi Kecamatan', desc: 'Tim verifikasi kecamatan memvalidasi kelengkapan dan kebenaran data.', icon: Landmark, color: 'from-blue-500 to-indigo-600' },
-    { step: '04', title: 'Verifikasi DPMD', desc: 'DPMD Kab. Bogor melakukan verifikasi akhir dan persetujuan bantuan.', icon: CheckCircle2, color: 'from-emerald-500 to-green-600' },
+    { step: '01', title: 'Pengajuan Desa', desc: 'Desa menyusun proposal perubahan dan mengupload dokumen persyaratan bantuan keuangan.', icon: FileText, color: 'from-slate-500 to-gray-600' },
+    { step: '02', title: 'Verifikasi Kecamatan', desc: 'Tim verifikasi kecamatan memvalidasi kelengkapan dan kebenaran data, lalu menerbitkan Surat Pengantar & Berita Acara.', icon: Landmark, color: 'from-blue-500 to-indigo-600' },
+    { step: '03', title: 'Verifikasi DPMD', desc: 'DPMD Kab. Bogor melakukan verifikasi akhir Surat Pengantar & Berita Acara dari kecamatan.', icon: CheckCircle2, color: 'from-emerald-500 to-green-600' },
   ];
 
   return (
@@ -542,11 +551,11 @@ const ProcessInfoSection = () => {
             <Info className="w-3.5 h-3.5 text-blue-400" />
             <span className="text-blue-400 text-xs font-semibold tracking-wide">ALUR PROSES</span>
           </div>
-          <h2 className="text-2xl md:text-3xl font-black text-white mb-2">Bagaimana Bankeu Diproses?</h2>
-          <p className="text-slate-400 text-sm max-w-lg mx-auto">4 tahapan verifikasi berjenjang untuk menjamin transparansi dan akuntabilitas.</p>
+          <h2 className="text-2xl md:text-3xl font-black text-white mb-2">Bagaimana Bankeu Perubahan Diproses?</h2>
+          <p className="text-slate-400 text-sm max-w-lg mx-auto">3 tahapan verifikasi berjenjang untuk menjamin transparansi dan akuntabilitas.</p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {steps.map((step, i) => {
             const Icon = step.icon;
             return (
@@ -590,7 +599,7 @@ const StatistikBankeuDashboard = () => {
   const { getCachedData, setCachedData, isCached, clearCache } = useDataCache();
 
   useEffect(() => {
-    const cacheKey = `statistik-bankeu-${activeYear}`;
+    const cacheKey = `statistik-bankeu-perubahan-${activeYear}`;
     if (isCached(cacheKey)) {
       const cached = getCachedData(cacheKey).data;
       setProposals(cached.proposals);
@@ -613,17 +622,22 @@ const StatistikBankeuDashboard = () => {
     let partisipasiData = {};
     try {
       // FASE 1: Fetch proposals (data utama) — tampilkan UI segera setelah ini
-      const response = await api.get(`/dpmd/bankeu/tracking?tahun_anggaran=${activeYear}`);
+      // Endpoint perubahan mengembalikan kolom datar (desa_nama, kecamatan_nama, kegiatan_nama)
+      // dan memakai query param `tahun` (bukan `tahun_anggaran`).
+      const response = await api.get(`/dpmd/bankeu-perubahan/tracking?tahun=${activeYear}`);
       if (response.data.success) {
         const rawProposals = response.data.data || [];
         processedProposals = rawProposals.map(item => {
-          const kecamatan = item.desas?.kecamatans?.nama || 'Tidak Diketahui';
-          const desa = item.desas?.nama || 'Tidak Diketahui';
-          const kegiatan = item.bankeu_master_kegiatan?.nama_kegiatan || item.nama_kegiatan_spesifik || '-';
-          const dinas_terkait = item.bankeu_master_kegiatan?.dinas_terkait || '-';
+          const kecamatan = item.kecamatan_nama || 'Tidak Diketahui';
+          const desa = item.desa_nama || 'Tidak Diketahui';
+          const kegiatan = item.kegiatan_nama
+            || item.kegiatan_list?.map(k => k.nama_kegiatan).filter(Boolean).join(', ')
+            || item.nama_kegiatan_spesifik
+            || '-';
+          const kategori = kategoriLabel(item.jenis_kegiatan);
           const anggaran = Number(item.anggaran_usulan) || 0;
           const stage = getProposalStage(item);
-          return { ...item, kecamatan, desa, kegiatan, dinas_terkait, anggaran, stage };
+          return { ...item, kecamatan, desa, kegiatan, kategori, anggaran, stage };
         });
         setProposals(processedProposals);
       }
@@ -633,7 +647,7 @@ const StatistikBankeuDashboard = () => {
       // FASE 2: Fetch partisipasi desa (secondary data, di background)
       setLoadingPartisipasi(true);
       try {
-        const publicRes = await api.get(`/public/bankeu/tracking-summary?tahun_anggaran=${activeYear}`);
+        const publicRes = await api.get(`/public/bankeu-perubahan/tracking-summary?tahun_anggaran=${activeYear}`);
         if (publicRes.data.success) {
           summaryData = publicRes.data.summary || null;
           partisipasiData = publicRes.data.desa_partisipasi || {};
@@ -651,7 +665,7 @@ const StatistikBankeuDashboard = () => {
       }
 
       // Save to cache
-      setCachedData(`statistik-bankeu-${activeYear}`, {
+      setCachedData(`statistik-bankeu-perubahan-${activeYear}`, {
         proposals: processedProposals,
         summary: summaryData,
         desaPartisipasi: partisipasiData,
@@ -672,9 +686,8 @@ const StatistikBankeuDashboard = () => {
       'Kecamatan': item.kecamatan,
       'Desa': item.desa,
       'Kegiatan': item.kegiatan,
-      'Dinas Terkait': item.dinas_terkait,
+      'Jenis Kegiatan': item.kategori,
       'Anggaran Usulan': item.anggaran,
-      'Status Dinas': item.dinas_status || 'pending',
       'Status Kecamatan': item.kecamatan_status || 'pending',
       'Status DPMD': item.dpmd_status || 'pending',
       'Tahap': STAGE_CONFIG[item.stage]?.label || item.stage
@@ -682,8 +695,8 @@ const StatistikBankeuDashboard = () => {
 
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, `Bankeu ${activeYear}`);
-    XLSX.writeFile(wb, `Bantuan_Keuangan_${activeYear}_${new Date().toISOString().split('T')[0]}.xlsx`);
+    XLSX.utils.book_append_sheet(wb, ws, `Bankeu Perubahan ${activeYear}`);
+    XLSX.writeFile(wb, `Bantuan_Keuangan_Perubahan_${activeYear}_${new Date().toISOString().split('T')[0]}.xlsx`);
     toast.success('Data berhasil diekspor ke Excel');
   };
 
@@ -803,7 +816,7 @@ const StatistikBankeuDashboard = () => {
         totalProposals={totalProposals}
         showDetailAnggaran={showDetailAnggaran}
         setShowDetailAnggaran={setShowDetailAnggaran}
-        onRefresh={() => { clearCache(`statistik-bankeu-${activeYear}`); fetchData(); }}
+        onRefresh={() => { clearCache(`statistik-bankeu-perubahan-${activeYear}`); fetchData(); }}
         onExport={handleExportExcel}
         loading={loading}
       />
@@ -1106,7 +1119,7 @@ const StatistikBankeuDashboard = () => {
                                             <tr className="text-[11px] text-gray-500 uppercase tracking-wider bg-gray-50/80">
                                               <th className="px-4 py-2.5 text-left w-10">No</th>
                                               <th className="px-4 py-2.5 text-left">Kegiatan</th>
-                                              <th className="px-4 py-2.5 text-left">Dinas Terkait</th>
+                                              <th className="px-4 py-2.5 text-left">Jenis Kegiatan</th>
                                               <th className="px-4 py-2.5 text-left">Tahap</th>
                                               <th className="px-4 py-2.5 text-right">Anggaran</th>
                                             </tr>
@@ -1118,7 +1131,7 @@ const StatistikBankeuDashboard = () => {
                                                 <tr key={j} className="hover:bg-blue-50/30 transition-colors">
                                                   <td className="px-4 py-2.5 text-xs text-gray-400 font-medium">{j + 1}</td>
                                                   <td className="px-4 py-2.5 text-sm text-gray-700 font-medium" title={p.kegiatan}>{p.kegiatan}</td>
-                                                  <td className="px-4 py-2.5 text-xs text-gray-500">{p.dinas_terkait}</td>
+                                                  <td className="px-4 py-2.5 text-xs text-gray-500">{p.kategori}</td>
                                                   <td className="px-4 py-2.5">
                                                     <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${sc.bg} ${sc.text}`}>
                                                       {sc.label}
@@ -1157,7 +1170,7 @@ const StatistikBankeuDashboard = () => {
               <p className="font-semibold text-lg text-gray-500">Tidak ada data ditemukan</p>
               <p className="text-sm mt-2 text-gray-400 max-w-sm mx-auto">
                 {proposals.length === 0
-                  ? `Belum ada proposal bantuan keuangan untuk TA ${activeYear}`
+                  ? `Belum ada proposal bantuan keuangan perubahan untuk TA ${activeYear}`
                   : 'Coba ubah kata kunci pencarian atau reset filter'}
               </p>
             </div>
