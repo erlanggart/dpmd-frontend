@@ -153,12 +153,29 @@ const RemoteVideo = ({ participant, stream, isSpeakerMuted, isActive, isHost, on
 };
 
 // Tampilan layar yang dibagikan (screen share) — object-contain, latar hitam.
+// Selalu `muted`: suara layar diputar lewat <ScreenAudio> agar tidak dobel.
 const ScreenShareView = ({ stream }) => {
   const ref = useRef(null);
   useEffect(() => {
     if (ref.current) ref.current.srcObject = stream || null;
   }, [stream]);
   return <video ref={ref} autoPlay playsInline muted className="w-full h-full object-contain bg-black" />;
+};
+
+// Pemutar suara screen share peserta lain (mis. audio tab YouTube). Dirender sekali
+// per stream layar agar suara tidak dobel & tetap terdengar walau tile ada di filmstrip.
+const ScreenAudio = ({ stream, muted }) => {
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!ref.current) return;
+    ref.current.srcObject = stream || null;
+    ref.current.muted = muted;
+    ref.current.play().catch(() => { /* autoplay diblokir → dibuka via tombol "Aktifkan Suara" */ });
+  }, [stream, muted]);
+  useEffect(() => {
+    if (ref.current) ref.current.muted = muted;
+  }, [muted]);
+  return <audio ref={ref} autoPlay playsInline />;
 };
 
 // Keyframes & util animasi untuk layar lobby (di-inject sekali via <style>).
@@ -1098,7 +1115,8 @@ const PublicMeetingPage = () => {
   const consumeProducer = async (producerId, peerId, kind, mediaType = 'video') => {
     // Ensure peerId is always a string for consistency
     const peerIdStr = String(peerId);
-    const isScreen = mediaType === 'screen';
+    // Layar = video ('screen') dan/atau audio tab/sistem ('screenAudio').
+    const isScreen = mediaType === 'screen' || mediaType === 'screenAudio';
     const storeKey = isScreen ? `screen:${peerIdStr}` : peerIdStr;
 
     if (!recvTransportRef.current || !deviceRef.current) {
@@ -1170,7 +1188,16 @@ const PublicMeetingPage = () => {
           consumersRef.current.get(storeKey)[kind] = consumer;
 
           if (isScreen) {
-            setScreenStreams(prev => ({ ...prev, [peerIdStr]: new MediaStream([consumer.track]) }));
+            // Gabungkan track baru ke stream layar yang ada (video + audio tab).
+            setScreenStreams(prev => {
+              const next = { ...prev };
+              const merged = new MediaStream();
+              const existing = prev[peerIdStr];
+              if (existing) existing.getTracks().forEach(t => merged.addTrack(t));
+              merged.addTrack(consumer.track);
+              next[peerIdStr] = merged;
+              return next;
+            });
             setScreenSharerPeerId(peerIdStr);
           } else {
             // Add track to remote stream - create NEW MediaStream to ensure React detects change
@@ -1764,6 +1791,13 @@ const PublicMeetingPage = () => {
           socketRef.current?.emit('close-producer', { producerId: sp.id });
           producersRef.current.delete('screen');
         }
+        // Tutup juga producer audio layar (bila tadi berbagi suara).
+        const sap = producersRef.current.get('screenAudio');
+        if (sap) {
+          try { sap.close(); } catch { /* noop */ }
+          socketRef.current?.emit('close-producer', { producerId: sap.id });
+          producersRef.current.delete('screenAudio');
+        }
         if (localScreenStream) localScreenStream.getTracks().forEach(t => t.stop());
         setLocalScreenStream(null);
         setScreenSharerPeerId(prev => (prev === myPeerIdRef.current ? null : prev));
@@ -1776,11 +1810,17 @@ const PublicMeetingPage = () => {
       }
     } else {
       try {
+        // Minta audio sekalian → bisa berbagi suara tab (mis. video YouTube).
         const screenStream = await navigator.mediaDevices.getDisplayMedia({
           video: true,
-          audio: false,
+          audio: {
+            echoCancellation: false,
+            noiseSuppression: false,
+            autoGainControl: false,
+          },
         });
         const screenTrack = screenStream.getVideoTracks()[0];
+        const screenAudioTrack = screenStream.getAudioTracks()[0];
 
         const screenProducer = await sendTransportRef.current.produce({
           track: screenTrack,
@@ -1790,7 +1830,24 @@ const PublicMeetingPage = () => {
         });
         producersRef.current.set('screen', screenProducer);
 
-        setLocalScreenStream(new MediaStream([screenTrack]));
+        // Producer audio layar TERPISAH bila pengguna mencentang "Bagikan audio".
+        if (screenAudioTrack) {
+          const screenAudioProducer = await sendTransportRef.current.produce({
+            track: screenAudioTrack,
+            codecOptions: {
+              opusStereo: true,
+              opusFec: true,
+              opusDtx: false,
+              opusMaxAverageBitrate: 128000,
+            },
+            appData: { mediaType: 'screenAudio' },
+          });
+          producersRef.current.set('screenAudio', screenAudioProducer);
+        }
+
+        // Simpan SELURUH stream (video + audio) agar berhenti = semua track stop;
+        // elemen self-view tetap muted sehingga tidak ada echo lokal.
+        setLocalScreenStream(screenStream);
         setScreenSharerPeerId(myPeerIdRef.current);
         screenSharerNameRef.current = `${roomDisplayName || accountDisplayName || 'Anda'} (Anda)`;
         isScreenSharingRef.current = true;
@@ -1799,7 +1856,11 @@ const PublicMeetingPage = () => {
 
         socketRef.current?.emit('screen-share-started');
         setIsScreenSharing(true);
-        toast.success('Berbagi layar aktif');
+        toast.success(
+          screenAudioTrack
+            ? 'Berbagi layar + suara aktif'
+            : 'Berbagi layar aktif (centang "Bagikan audio" untuk ikut membagikan suara)'
+        );
       } catch (err) {
         console.error('Error starting screen share:', err);
         if (err.name !== 'NotAllowedError') {
@@ -2262,6 +2323,14 @@ const PublicMeetingPage = () => {
           </button>
         </div>
       </div>
+
+      {/* Pemutar suara screen share peserta lain (audio tab/sistem, mis. YouTube).
+          Dirender sekali per stream layar agar tidak dobel & tetap terdengar. */}
+      {Object.entries(screenStreams)
+        .filter(([, s]) => s.getAudioTracks().length > 0)
+        .map(([pid, s]) => (
+          <ScreenAudio key={`screen-audio-${pid}`} stream={s} muted={isSpeakerMuted} />
+        ))}
 
       {/* Video Grid */}
       <div ref={mainAreaRef} className="flex-1 p-2 sm:p-3 md:p-4 overflow-hidden flex flex-col min-h-0 bg-gray-900">
