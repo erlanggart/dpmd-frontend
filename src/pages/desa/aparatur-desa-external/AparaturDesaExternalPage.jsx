@@ -178,7 +178,7 @@ const AparaturDesaExternalPage = () => {
 					</p>
 					<button
 						onClick={() => navigate('/desa/dashboard')}
-						className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+						className="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition-colors"
 					>
 						Kembali ke Dashboard
 					</button>
@@ -213,7 +213,7 @@ const AparaturDesaExternalPage = () => {
 						</button>
 						<button
 							onClick={checkConnectionStatus}
-							className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors flex items-center gap-2"
+							className="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition-colors flex items-center gap-2"
 						>
 							<RefreshCw className="h-4 w-4" />
 							Coba Lagi
@@ -227,7 +227,7 @@ const AparaturDesaExternalPage = () => {
 	return (
 		<div className="min-h-screen bg-gray-50 pb-6">
 			{/* Header */}
-			<div className="bg-gradient-to-br from-teal-600 via-teal-700 to-teal-800 text-white rounded-md">
+			<div className="bg-gradient-to-br from-slate-600 via-slate-700 to-slate-800 text-white rounded-md">
 				<div className="px-4 sm:px-6 lg:px-8 py-6">
 					<div className="flex items-center gap-4">
 						<div className="h-16 w-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
@@ -235,7 +235,7 @@ const AparaturDesaExternalPage = () => {
 						</div>
 						<div>
 							<h1 className="text-2xl font-bold">Aparatur Desa</h1>
-							<p className="text-teal-100 mt-1">{userVillageName} - Data dari Dapur Desa DPMD Kab. Bogor</p>
+							<p className="text-slate-100 mt-1">{userVillageName} - Data dari Dapur Desa DPMD Kab. Bogor</p>
 						</div>
 					</div>
 					
@@ -243,13 +243,13 @@ const AparaturDesaExternalPage = () => {
 					<div className="mt-4 flex items-center gap-2 text-sm">
 						{connectionStatus?.connected ? (
 							<>
-								<CheckCircle className="h-4 w-4 text-green-300" />
-								<span className="text-green-200">Terhubung ke Dapur Desa</span>
+								<CheckCircle className="h-4 w-4 text-slate-300" />
+								<span className="text-slate-200">Terhubung ke Dapur Desa</span>
 							</>
 						) : (
 							<>
-								<Loader2 className="h-4 w-4 animate-spin text-teal-200" />
-								<span className="text-teal-200">Memeriksa koneksi...</span>
+								<Loader2 className="h-4 w-4 animate-spin text-slate-200" />
+								<span className="text-slate-200">Memeriksa koneksi...</span>
 							</>
 						)}
 					</div>
@@ -268,7 +268,7 @@ const AparaturDesaExternalPage = () => {
 								placeholder="Cari nama aparatur..."
 								value={filters.name}
 								onChange={(e) => setFilters(prev => ({ ...prev, name: e.target.value }))}
-								className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+								className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent"
 							/>
 						</div>
 
@@ -286,7 +286,7 @@ const AparaturDesaExternalPage = () => {
 						{/* Search Button */}
 						<button
 							type="submit"
-							className="px-6 py-2.5 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors flex items-center gap-2"
+							className="px-6 py-2.5 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition-colors flex items-center gap-2"
 						>
 							<Search className="h-4 w-4" />
 							Cari
@@ -312,7 +312,7 @@ const AparaturDesaExternalPage = () => {
 									<select
 										value={filters.gender}
 										onChange={(e) => handleFilterChange('gender', e.target.value)}
-										className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+										className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent"
 									>
 										<option value="">Semua</option>
 										{genderOptions.map(opt => (
@@ -327,7 +327,7 @@ const AparaturDesaExternalPage = () => {
 									<select
 										value={filters.status_pns}
 										onChange={(e) => handleFilterChange('status_pns', e.target.value)}
-										className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+										className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent"
 									>
 										<option value="">Semua</option>
 										{statusPnsOptions.map(opt => (
@@ -344,7 +344,7 @@ const AparaturDesaExternalPage = () => {
 										placeholder="Min"
 										value={filters.min_age}
 										onChange={(e) => handleFilterChange('min_age', e.target.value)}
-										className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+										className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent"
 										min="0"
 									/>
 								</div>
@@ -357,7 +357,7 @@ const AparaturDesaExternalPage = () => {
 										placeholder="Max"
 										value={filters.max_age}
 										onChange={(e) => handleFilterChange('max_age', e.target.value)}
-										className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+										className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent"
 										min="0"
 									/>
 								</div>
@@ -382,7 +382,7 @@ const AparaturDesaExternalPage = () => {
 							onClick={() => { setActiveCategory('Perangkat Desa'); setPagination(prev => ({ ...prev, page: 1 })); }}
 							className={`flex-1 px-4 py-3 rounded-lg font-medium text-sm transition-all flex items-center justify-center gap-2 ${
 								activeCategory === 'Perangkat Desa'
-									? 'bg-teal-600 text-white shadow-sm'
+									? 'bg-slate-600 text-white shadow-sm'
 									: 'text-gray-600 hover:bg-gray-100'
 							}`}
 						>
@@ -393,7 +393,7 @@ const AparaturDesaExternalPage = () => {
 							onClick={() => { setActiveCategory('BPD'); setPagination(prev => ({ ...prev, page: 1 })); }}
 							className={`flex-1 px-4 py-3 rounded-lg font-medium text-sm transition-all flex items-center justify-center gap-2 ${
 								activeCategory === 'BPD'
-									? 'bg-teal-600 text-white shadow-sm'
+									? 'bg-slate-600 text-white shadow-sm'
 									: 'text-gray-600 hover:bg-gray-100'
 							}`}
 						>
@@ -404,14 +404,14 @@ const AparaturDesaExternalPage = () => {
 				</div>
 
 				{/* Summary Card with View Toggle */}
-				<div className="bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl shadow-sm p-4 mb-6 text-white">
+				<div className="bg-gradient-to-br from-slate-500 to-slate-600 rounded-xl shadow-sm p-4 mb-6 text-white">
 					<div className="flex items-center justify-between">
 						<div className="flex items-center gap-3">
 							<div className="h-12 w-12 bg-white/20 rounded-xl flex items-center justify-center">
 								{activeCategory === 'BPD' ? <Building className="h-6 w-6" /> : <Users className="h-6 w-6" />}
 							</div>
 							<div>
-								<p className="text-teal-100 text-sm">Total {activeCategory}</p>
+								<p className="text-slate-100 text-sm">Total {activeCategory}</p>
 								<p className="text-2xl font-bold">{pagination.totalItems}</p>
 							</div>
 						</div>
@@ -420,14 +420,14 @@ const AparaturDesaExternalPage = () => {
 							<div className="hidden sm:flex items-center bg-white/20 rounded-lg p-1">
 								<button
 									onClick={() => setViewMode('table')}
-									className={`p-2 rounded-md transition-colors ${viewMode === 'table' ? 'bg-white text-teal-600' : 'text-white hover:bg-white/20'}`}
+									className={`p-2 rounded-md transition-colors ${viewMode === 'table' ? 'bg-white text-slate-600' : 'text-white hover:bg-white/20'}`}
 									title="Tampilan Tabel"
 								>
 									<List className="h-4 w-4" />
 								</button>
 								<button
 									onClick={() => setViewMode('grid')}
-									className={`p-2 rounded-md transition-colors ${viewMode === 'grid' ? 'bg-white text-teal-600' : 'text-white hover:bg-white/20'}`}
+									className={`p-2 rounded-md transition-colors ${viewMode === 'grid' ? 'bg-white text-slate-600' : 'text-white hover:bg-white/20'}`}
 									title="Tampilan Grid"
 								>
 									<LayoutGrid className="h-4 w-4" />
@@ -440,7 +440,7 @@ const AparaturDesaExternalPage = () => {
 				{/* Data Display */}
 				{loading ? (
 					<div className="bg-white rounded-xl shadow-sm border border-gray-200 flex items-center justify-center py-12">
-						<Loader2 className="h-8 w-8 text-teal-600 animate-spin" />
+						<Loader2 className="h-8 w-8 text-slate-600 animate-spin" />
 					</div>
 				) : data.length === 0 ? (
 					<div className="bg-white rounded-xl shadow-sm border border-gray-200 text-center py-12">
@@ -468,15 +468,15 @@ const AparaturDesaExternalPage = () => {
 											<img 
 												src={aparatur.photo} 
 												alt={aparatur.name}
-												className="h-20 w-20 rounded-full object-cover mb-3 border-4 border-teal-100 group-hover:border-teal-200 transition-colors"
+												className="h-20 w-20 rounded-full object-cover mb-3 border-4 border-slate-100 group-hover:border-slate-200 transition-colors"
 												onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
 											/>
 										) : null}
-										<div className={`h-20 w-20 bg-gradient-to-br from-teal-100 to-teal-200 rounded-full flex items-center justify-center mb-3 ${aparatur.photo ? 'hidden' : ''}`}>
-											<UserCircle className="h-10 w-10 text-teal-600" />
+										<div className={`h-20 w-20 bg-gradient-to-br from-slate-100 to-slate-200 rounded-full flex items-center justify-center mb-3 ${aparatur.photo ? 'hidden' : ''}`}>
+											<UserCircle className="h-10 w-10 text-slate-600" />
 										</div>
 										<h3 className="font-bold text-gray-900 line-clamp-1">{aparatur.name}</h3>
-										<span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-teal-100 text-teal-800 mt-2">
+										<span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-800 mt-2">
 											<Briefcase className="h-3 w-3" />
 											{aparatur.master_job_level_name || '-'}
 										</span>
@@ -496,7 +496,7 @@ const AparaturDesaExternalPage = () => {
 										</div>
 										<div className="flex items-center justify-between">
 											<span className="text-gray-500">Status</span>
-											<span className={`px-2 py-0.5 rounded text-xs font-medium ${aparatur.status_pns === 'PNS' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+											<span className={`px-2 py-0.5 rounded text-xs font-medium ${aparatur.status_pns === 'PNS' ? 'bg-slate-100 text-slate-800' : 'bg-gray-100 text-gray-800'}`}>
 												{aparatur.status_pns || '-'}
 											</span>
 										</div>
@@ -505,7 +505,7 @@ const AparaturDesaExternalPage = () => {
 									{/* View Detail Button */}
 									<div className="mt-4 pt-3 border-t border-gray-100">
 										<button
-											className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-teal-50 text-teal-700 rounded-lg hover:bg-teal-100 transition-colors text-sm font-medium"
+											className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-slate-50 text-slate-700 rounded-lg hover:bg-slate-100 transition-colors text-sm font-medium"
 										>
 											<Eye className="h-4 w-4" />
 											Lihat Detail
@@ -578,8 +578,8 @@ const AparaturDesaExternalPage = () => {
 																onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
 															/>
 														) : null}
-														<div className={`h-10 w-10 bg-teal-100 rounded-full flex items-center justify-center ${aparatur.photo ? 'hidden' : ''}`}>
-															<UserCircle className="h-6 w-6 text-teal-600" />
+														<div className={`h-10 w-10 bg-slate-100 rounded-full flex items-center justify-center ${aparatur.photo ? 'hidden' : ''}`}>
+															<UserCircle className="h-6 w-6 text-slate-600" />
 														</div>
 														<div>
 															<p className="font-medium text-gray-900">{aparatur.name}</p>
@@ -590,7 +590,7 @@ const AparaturDesaExternalPage = () => {
 													</div>
 												</td>
 												<td className="px-6 py-4 whitespace-nowrap">
-													<span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-teal-100 text-teal-800">
+													<span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-800">
 														<Briefcase className="h-3 w-3" />
 														{aparatur.master_job_level_name || '-'}
 													</span>
@@ -601,14 +601,14 @@ const AparaturDesaExternalPage = () => {
 													</span>
 												</td>
 												<td className="px-6 py-4 whitespace-nowrap">
-													<span className={`px-2 py-0.5 rounded text-xs ${aparatur.status_pns === 'PNS' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+													<span className={`px-2 py-0.5 rounded text-xs ${aparatur.status_pns === 'PNS' ? 'bg-slate-100 text-slate-800' : 'bg-gray-100 text-gray-800'}`}>
 														{aparatur.status_pns || '-'}
 													</span>
 												</td>
 												<td className="px-6 py-4 whitespace-nowrap text-right">
 													<button
 														onClick={() => viewDetail(aparatur.id)}
-														className="p-2 text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
+														className="p-2 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors"
 														title="Lihat Detail"
 													>
 														<Eye className="h-4 w-4" />
@@ -633,12 +633,12 @@ const AparaturDesaExternalPage = () => {
 													onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
 												/>
 											) : null}
-											<div className={`h-12 w-12 bg-teal-100 rounded-full flex items-center justify-center flex-shrink-0 ${aparatur.photo ? 'hidden' : ''}`}>
-												<UserCircle className="h-7 w-7 text-teal-600" />
+											<div className={`h-12 w-12 bg-slate-100 rounded-full flex items-center justify-center flex-shrink-0 ${aparatur.photo ? 'hidden' : ''}`}>
+												<UserCircle className="h-7 w-7 text-slate-600" />
 											</div>
 											<div className="flex-1 min-w-0">
 												<h3 className="font-semibold text-gray-900">{aparatur.name}</h3>
-												<span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-teal-100 text-teal-800 mt-1">
+												<span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800 mt-1">
 													<Briefcase className="h-3 w-3" />
 													{aparatur.master_job_level_name || '-'}
 												</span>
@@ -646,7 +646,7 @@ const AparaturDesaExternalPage = () => {
 													<span className="text-gray-500">
 														{aparatur.gender === 'L' ? 'Laki-laki' : aparatur.gender === 'P' ? 'Perempuan' : '-'}
 													</span>
-													<span className={`px-2 py-0.5 rounded text-xs ${aparatur.status_pns === 'PNS' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+													<span className={`px-2 py-0.5 rounded text-xs ${aparatur.status_pns === 'PNS' ? 'bg-slate-100 text-slate-800' : 'bg-gray-100 text-gray-800'}`}>
 														{aparatur.status_pns || '-'}
 													</span>
 													{aparatur.usia && <span className="text-gray-500">• {aparatur.usia} thn</span>}
@@ -654,7 +654,7 @@ const AparaturDesaExternalPage = () => {
 											</div>
 											<button
 												onClick={() => viewDetail(aparatur.id)}
-												className="p-2 text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
+												className="p-2 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors"
 											>
 											<Eye className="h-5 w-5" />
 											</button>
@@ -713,20 +713,20 @@ const AparaturDesaExternalPage = () => {
 									<img 
 										src={selectedAparatur.photo} 
 										alt={selectedAparatur.name}
-										className="h-24 w-24 rounded-full object-cover mb-3 border-4 border-teal-100"
+										className="h-24 w-24 rounded-full object-cover mb-3 border-4 border-slate-100"
 										onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
 									/>
 								) : null}
-								<div className={`h-24 w-24 bg-teal-100 rounded-full flex items-center justify-center mb-3 ${selectedAparatur.photo ? 'hidden' : ''}`}>
-									<UserCircle className="h-14 w-14 text-teal-600" />
+								<div className={`h-24 w-24 bg-slate-100 rounded-full flex items-center justify-center mb-3 ${selectedAparatur.photo ? 'hidden' : ''}`}>
+									<UserCircle className="h-14 w-14 text-slate-600" />
 								</div>
 								<h3 className="text-xl font-bold text-gray-900 text-center">{selectedAparatur.name || '-'}</h3>
-								<span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium bg-teal-100 text-teal-800 mt-2">
+								<span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium bg-slate-100 text-slate-800 mt-2">
 									<Briefcase className="h-4 w-4" />
 									{selectedAparatur.master_job_level_name || '-'}
 								</span>
 								{selectedAparatur.status === 1 && (
-									<span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 mt-2">
+									<span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-800 mt-2">
 										<CheckCircle className="h-3 w-3" />
 										Aktif
 									</span>
@@ -801,7 +801,7 @@ const AparaturDesaExternalPage = () => {
 										<div className="grid grid-cols-2 md:grid-cols-4 gap-3">
 											<div>
 												<p className="text-gray-500">Status</p>
-												<span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${selectedAparatur.status_pns === 'PNS' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+												<span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${selectedAparatur.status_pns === 'PNS' ? 'bg-slate-100 text-slate-800' : 'bg-gray-100 text-gray-800'}`}>
 													{selectedAparatur.status_pns || '-'}
 												</span>
 											</div>

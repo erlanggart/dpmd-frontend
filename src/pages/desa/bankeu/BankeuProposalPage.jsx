@@ -253,7 +253,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                 title: 'Pengajuan Dibuka',
                 html: `
                   <div class="text-left">
-                    <p class="text-green-600 font-semibold">✅ Pengajuan Bankeu telah dibuka oleh DPMD.</p>
+                    <p class="text-slate-600 font-semibold">✅ Pengajuan Bankeu telah dibuka oleh DPMD.</p>
                     <p class="text-sm text-gray-700 mt-2">
                       Anda sekarang dapat mengirim proposal dan surat ke Dinas Terkait.
                     </p>
@@ -1129,9 +1129,9 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
             </p>
           </div>
           
-          <div class="bg-blue-50 border-l-4 border-blue-500 p-3 rounded">
-            <p class="font-semibold text-blue-800">📋 Sebelum mengirim, pastikan:</p>
-            <ul class="list-disc ml-5 text-sm text-blue-700 mt-1 space-y-1">
+          <div class="bg-slate-50 border-l-4 border-slate-500 p-3 rounded">
+            <p class="font-semibold text-slate-800">📋 Sebelum mengirim, pastikan:</p>
+            <ul class="list-disc ml-5 text-sm text-slate-700 mt-1 space-y-1">
               <li>Semua kegiatan yang ingin diajukan <strong>sudah di-upload</strong></li>
               <li>File proposal sudah benar dan lengkap</li>
               <li>Data kegiatan sudah sesuai</li>
@@ -2225,7 +2225,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
     // Check troubleshoot first
     if (proposal.troubleshoot_catatan && proposal.status === 'revision' && !proposal.submitted_to_dinas_at) {
       return (
-        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">
+        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
           <LuWrench className="w-3 h-3" />
           Troubleshoot DPMD
         </span>
@@ -2246,7 +2246,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
       // Sudah dikirim ke Dinas, menunggu review
       if (proposal.submitted_to_dinas_at && (!proposal.dinas_status || proposal.dinas_status === 'pending' || proposal.dinas_status === 'in_review')) {
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
             <LuClock className="w-3 h-3" />
             Di Review Dinas
           </span>
@@ -2255,7 +2255,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
       // Dinas approved, di Kecamatan
       if (proposal.dinas_status === 'approved' && (!proposal.kecamatan_status || proposal.kecamatan_status === 'pending' || proposal.kecamatan_status === 'in_review')) {
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
             <LuClock className="w-3 h-3" />
             Di Review Kecamatan
           </span>
@@ -2274,7 +2274,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
 
     const badges = {
       pending: { icon: LuClock, text: "Menunggu Verifikasi", color: "bg-yellow-100 text-yellow-700" },
-      verified: { icon: LuCheck, text: "Disetujui", color: "bg-green-100 text-green-700" },
+      verified: { icon: LuCheck, text: "Disetujui", color: "bg-emerald-100 text-emerald-700" },
       rejected: { icon: LuX, text: "Ditolak", color: "bg-red-100 text-red-700" },
       revision: { icon: LuRefreshCw, text: "Perlu Revisi", color: "bg-orange-100 text-orange-700" }
     };
@@ -2331,7 +2331,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
           <div className="p-8">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+                <div className="w-12 h-12 bg-gradient-to-br from-slate-500 to-slate-600 rounded-xl flex items-center justify-center shadow-lg">
                   <LuUpload className="w-6 h-6 text-white" />
                 </div>
                 <div>
@@ -2353,7 +2353,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                 </button>
                 <button
                   onClick={() => setShowContohModal(true)}
-                  className="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-lg hover:from-purple-600 hover:to-pink-700 flex items-center gap-2 font-semibold text-sm shadow-md hover:shadow-lg transition-all transform hover:scale-[1.02] active:scale-[0.98]"
+                  className="px-4 py-2 bg-gradient-to-r from-slate-500 to-slate-600 text-white rounded-lg hover:from-slate-600 hover:to-slate-700 flex items-center gap-2 font-semibold text-sm shadow-md hover:shadow-lg transition-all transform hover:scale-[1.02] active:scale-[0.98]"
                 >
                   <LuDownload className="w-4 h-4" />
                   <span>Download Format Dokumen</span>
@@ -2428,25 +2428,25 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
           {/* Alert Banner for Troubleshoot Revision by DPMD */}
           {proposals.some(p => p.status === 'revision' && p.troubleshoot_catatan && !p.submitted_to_dinas_at) && (
             <div className="px-8">
-              <div className="bg-indigo-50 border-l-4 border-indigo-500 rounded-lg p-4 shadow-md">
+              <div className="bg-slate-50 border-l-4 border-slate-500 rounded-lg p-4 shadow-md">
                 <div className="flex items-start gap-3">
                   <div className="flex-shrink-0">
-                    <LuWrench className="w-6 h-6 text-indigo-600" />
+                    <LuWrench className="w-6 h-6 text-slate-600" />
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-base font-bold text-indigo-900 mb-1">
+                    <h3 className="text-base font-bold text-slate-900 mb-1">
                       🔧 Proposal Di-revisi oleh DPMD (Troubleshoot)
                     </h3>
-                    <p className="text-sm text-indigo-800 mb-2">
+                    <p className="text-sm text-slate-800 mb-2">
                       DPMD telah mengembalikan {proposals.filter(p => p.status === 'revision' && p.troubleshoot_catatan && !p.submitted_to_dinas_at).length} proposal untuk direvisi ulang.
                       Seluruh proses verifikasi direset — silakan perbaiki dan kirim ulang dari awal.
                     </p>
                     <div className="flex flex-wrap gap-2 mt-3">
                       {proposals.filter(p => p.status === 'revision' && p.troubleshoot_catatan && !p.submitted_to_dinas_at).map(p => (
-                        <div key={p.id} className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-indigo-200 rounded-lg shadow-sm">
-                          <LuWrench className="w-3 h-3 text-indigo-500" />
-                          <span className="text-xs font-medium text-indigo-700">{p.judul_proposal}</span>
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-700">
+                        <div key={p.id} className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-lg shadow-sm">
+                          <LuWrench className="w-3 h-3 text-slate-500" />
+                          <span className="text-xs font-medium text-slate-700">{p.judul_proposal}</span>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
                             TROUBLESHOOT
                           </span>
                         </div>
@@ -2466,7 +2466,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-semibold text-gray-700">Progress Upload</span>
-                <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded-lg text-xs font-bold">
+                <span className="px-2 py-1 bg-slate-50 text-slate-700 rounded-lg text-xs font-bold">
                   {filledCount} / {totalKegiatan}
                 </span>
               </div>
@@ -2474,12 +2474,12 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
             </div>
             <div className="w-full bg-gray-100 rounded-full h-4 overflow-hidden shadow-inner">
               <div 
-                className={`h-4 rounded-full transition-all duration-500 ${isComplete ? 'bg-gradient-to-r from-green-500 to-emerald-500' : 'bg-gradient-to-r from-blue-500 to-indigo-600'}`}
+                className={`h-4 rounded-full transition-all duration-500 ${isComplete ? 'bg-gradient-to-r from-slate-500 to-slate-500' : 'bg-gradient-to-r from-slate-500 to-slate-600'}`}
                 style={{width: `${percentage}%`}}
               ></div>
             </div>
             {isComplete ? (
-              <div className="flex items-center gap-2 mt-3 text-green-600">
+              <div className="flex items-center gap-2 mt-3 text-slate-600">
                 <LuCheck className="w-4 h-4" />
                 <p className="text-sm font-medium">Semua kegiatan telah terisi</p>
               </div>
@@ -2487,7 +2487,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
               <p className="text-sm text-gray-600 mt-3">
                 {kegiatanPerluDiisi > 0 && (
                   <>Masih ada <span className="font-bold text-gray-900">{kegiatanPerluDiisi}</span> kegiatan lagi<br/>
-                  <span className="text-xs text-green-600">Anda sudah bisa mengirim proposal yang ada</span></>
+                  <span className="text-xs text-slate-600">Anda sudah bisa mengirim proposal yang ada</span></>
                 )}
               </p>
             ) : (
@@ -2501,7 +2501,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
           <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm font-semibold text-gray-700">Total Anggaran Usulan</span>
-              <span className="px-2 py-1 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-bold">
+              <span className="px-2 py-1 bg-slate-50 text-slate-700 rounded-lg text-xs font-bold">
                 Realtime
               </span>
             </div>
@@ -2532,9 +2532,9 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
               return (
                 <>
                   <div className="space-y-3">
-                    <div className="p-4 bg-gradient-to-r from-emerald-50 to-green-50 rounded-lg border border-emerald-100">
+                    <div className="p-4 bg-gradient-to-r from-slate-50 to-slate-50 rounded-lg border border-slate-100">
                       <p className="text-xs text-gray-600 mb-1">Total Keseluruhan</p>
-                      <p className="text-xl font-bold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent break-words">
+                      <p className="text-xl font-bold bg-gradient-to-r from-slate-600 to-slate-600 bg-clip-text text-transparent break-words">
                         {new Intl.NumberFormat("id-ID", {
                           style: "currency",
                           currency: "IDR",
@@ -2585,7 +2585,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm font-semibold text-gray-700">Status Verifikasi</span>
               {isSubmitted && (
-                <span className="px-2 py-1 bg-green-50 text-green-700 rounded-lg text-xs font-bold">
+                <span className="px-2 py-1 bg-slate-50 text-slate-700 rounded-lg text-xs font-bold">
                   Terkirim
                 </span>
               )}
@@ -2614,10 +2614,10 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                       
                       <div className="flex items-center justify-between py-2 border-b border-gray-100">
                         <div className="flex items-center gap-2">
-                          <LuCheck className="w-4 h-4 text-green-600" />
+                          <LuCheck className="w-4 h-4 text-slate-600" />
                           <span className="text-sm text-gray-700">Disetujui</span>
                         </div>
-                        <span className="text-lg font-bold text-green-600">{statusCount.verified}</span>
+                        <span className="text-lg font-bold text-slate-600">{statusCount.verified}</span>
                       </div>
                       
                       <div className="flex items-center justify-between py-2 border-b border-gray-100">
@@ -2651,14 +2651,14 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                   return (
                     <>
                       {troubleshootCount > 0 && (
-                        <div className="px-4 py-3 bg-indigo-50 border border-indigo-200 rounded-lg">
+                        <div className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg">
                           <div className="flex items-center gap-2 mb-2">
-                            <LuWrench className="w-5 h-5 text-indigo-600" />
-                            <span className="text-sm font-bold text-indigo-800">
+                            <LuWrench className="w-5 h-5 text-slate-600" />
+                            <span className="text-sm font-bold text-slate-800">
                               {troubleshootCount} proposal troubleshoot dari DPMD
                             </span>
                           </div>
-                          <p className="text-xs text-indigo-700">
+                          <p className="text-xs text-slate-700">
                             DPMD meminta revisi langsung. Upload ulang file proposal yang diminta.
                           </p>
                         </div>
@@ -2682,14 +2682,14 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                 
                 {/* Info proposal draft yang belum dikirim */}
                 {unsendToKecamatanCount > 0 && (
-                  <div className="px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg">
                     <div className="flex items-center gap-2 mb-2">
-                      <LuSend className="w-5 h-5 text-blue-600" />
-                      <span className="text-sm font-bold text-blue-800">
+                      <LuSend className="w-5 h-5 text-slate-600" />
+                      <span className="text-sm font-bold text-slate-800">
                         {unsendToKecamatanCount} proposal siap dikirim
                       </span>
                     </div>
-                    <p className="text-xs text-blue-700">
+                    <p className="text-xs text-slate-700">
                       Gunakan tombol "Kirim ke Dinas Terkait" di bawah untuk mengirim proposal
                     </p>
                   </div>
@@ -2716,12 +2716,12 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                       <div>
                         <button
                           onClick={handleSubmitToKecamatan}
-                          className="w-full px-6 py-3 rounded-xl flex items-center justify-center gap-2 font-bold text-sm shadow-md transition-all bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 hover:shadow-lg transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                          className="w-full px-6 py-3 rounded-xl flex items-center justify-center gap-2 font-bold text-sm shadow-md transition-all bg-gradient-to-r from-slate-500 to-slate-600 text-white hover:from-slate-600 hover:to-slate-700 hover:shadow-lg transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
                         >
                           <LuSend className="w-5 h-5" />
                           <span>Kirim Semua ke Dinas Terkait</span>
                         </button>
-                        <p className="text-xs text-blue-600 mt-2 text-center font-medium">
+                        <p className="text-xs text-slate-600 mt-2 text-center font-medium">
                           ✓ Proposal baru siap dikirim ke Dinas ({unsendToKecamatanCount} proposal)
                         </p>
                       </div>
@@ -2732,7 +2732,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                       <div>
                         <button
                           onClick={handleSubmitToKecamatanResubmit}
-                          className="w-full px-6 py-3 rounded-xl flex items-center justify-center gap-2 font-bold text-sm shadow-md transition-all bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-700 hover:shadow-lg transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                          className="w-full px-6 py-3 rounded-xl flex items-center justify-center gap-2 font-bold text-sm shadow-md transition-all bg-gradient-to-r from-slate-500 to-slate-600 text-white hover:from-slate-600 hover:to-slate-700 hover:shadow-lg transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
                         >
                           <LuSend className="w-5 h-5" />
                           <span>Kirim Ulang Semua ke Kecamatan</span>
@@ -2748,12 +2748,12 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                       <div>
                         <button
                           onClick={handleSubmitToDinas}
-                          className="w-full px-6 py-3 rounded-xl flex items-center justify-center gap-2 font-bold text-sm shadow-md transition-all bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 hover:shadow-lg transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                          className="w-full px-6 py-3 rounded-xl flex items-center justify-center gap-2 font-bold text-sm shadow-md transition-all bg-gradient-to-r from-slate-500 to-slate-600 text-white hover:from-slate-600 hover:to-slate-700 hover:shadow-lg transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
                         >
                           <LuSend className="w-5 h-5" />
                           <span>Kirim Ulang Semua ke Dinas Terkait</span>
                         </button>
-                        <p className="text-xs text-green-600 mt-2 text-center font-medium">
+                        <p className="text-xs text-slate-600 mt-2 text-center font-medium">
                           ✓ Revisi siap dikirim ke Dinas Terkait ({fromDinasOrDPMDUploaded.length} proposal)
                         </p>
                       </div>
@@ -2771,27 +2771,27 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
           <button
             onClick={() => setExpandedSurat(!expandedSurat)}
-            className="w-full px-6 py-5 flex items-center justify-between bg-gradient-to-r from-green-50 via-emerald-50 to-green-50 hover:from-green-100 hover:via-emerald-100 hover:to-green-100 transition-all group"
+            className="w-full px-6 py-5 flex items-center justify-between bg-gradient-to-r from-slate-50 via-slate-50 to-slate-50 hover:from-slate-100 hover:via-slate-100 hover:to-slate-100 transition-all group"
           >
             <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+              <div className="w-10 h-10 bg-gradient-to-br from-slate-500 to-slate-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
                 {expandedSurat ? <LuChevronDown className="w-5 h-5 text-white" /> : <LuChevronRight className="w-5 h-5 text-white" />}
               </div>
               <div className="text-left">
                 <h3 className="text-xl font-bold text-gray-900">Dokumen Pendukung Proposal</h3>
                 <p className="text-sm text-gray-600">
-                  Upload Surat Pengantar & Surat Permohonan untuk desa ini {desaSurat.submitted_to_kecamatan && <span className="text-green-600 font-medium">(Sudah Dikirim ke Kecamatan)</span>}
+                  Upload Surat Pengantar & Surat Permohonan untuk desa ini {desaSurat.submitted_to_kecamatan && <span className="text-slate-600 font-medium">(Sudah Dikirim ke Kecamatan)</span>}
                 </p>
               </div>
             </div>
             <div className="px-4 py-2 bg-white rounded-xl shadow-md border border-gray-100">
               {desaSurat.surat_pengantar && desaSurat.surat_permohonan ? (
-                <span className="text-xl font-bold flex items-center gap-2 text-green-600">
+                <span className="text-xl font-bold flex items-center gap-2 text-slate-600">
                   <LuCheck className="w-6 h-6" /> 
                   <span>Lengkap</span>
                 </span>
               ) : (
-                <span className="text-2xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+                <span className="text-2xl font-bold bg-gradient-to-r from-slate-600 to-slate-600 bg-clip-text text-transparent">
                   {[desaSurat.surat_pengantar, desaSurat.surat_permohonan].filter(Boolean).length}/2
                 </span>
               )}
@@ -2803,10 +2803,10 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
           }`}>
             <div className="p-6">
               {/* Info Box */}
-              <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="mb-6 p-4 bg-slate-50 border border-slate-200 rounded-lg">
                 <div className="flex items-start gap-3">
-                  <LuInfo className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                  <div className="text-sm text-blue-900">
+                  <LuInfo className="w-5 h-5 text-slate-600 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm text-slate-900">
                     <p className="font-semibold mb-1">Informasi Penting:</p>
                     <ul className="list-disc ml-4 space-y-1">
                       <li>Upload kedua dokumen (Surat Pengantar & Surat Permohonan) untuk seluruh proposal di desa ini</li>
@@ -2820,11 +2820,11 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
               {/* Upload Forms */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 {/* Surat Pengantar */}
-                <div className="bg-blue-50 p-5 rounded-xl border-2 border-blue-200">
+                <div className="bg-slate-50 p-5 rounded-xl border-2 border-slate-200">
                   <div className="flex items-center justify-between gap-2 mb-4">
                     <label className="text-base font-bold text-gray-800">Surat Pengantar Proposal</label>
                     {desaSurat.surat_pengantar && (
-                      <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-lg text-sm font-semibold shadow-sm">
+                      <span className="inline-flex items-center gap-1 px-3 py-1 bg-slate-100 text-slate-700 rounded-lg text-sm font-semibold shadow-sm">
                         <LuCheck className="w-4 h-4" />
                         Uploaded
                       </span>
@@ -2837,7 +2837,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                         href={`${imageBaseUrl}/storage/uploads/bankeu/${desaSurat.surat_pengantar}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="block w-full px-5 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 text-center text-sm font-semibold transition-all shadow-md hover:shadow-lg"
+                        className="block w-full px-5 py-3 bg-slate-600 text-white rounded-xl hover:bg-slate-700 text-center text-sm font-semibold transition-all shadow-md hover:shadow-lg"
                       >
                         <div className="flex items-center justify-center gap-2">
                           <LuEye className="w-5 h-5" />
@@ -2888,7 +2888,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                       />
                       <label
                         htmlFor="desa-surat-pengantar"
-                        className="block w-full px-5 py-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 cursor-pointer text-center text-sm font-semibold transition-all shadow-md hover:shadow-lg"
+                        className="block w-full px-5 py-4 bg-slate-600 text-white rounded-xl hover:bg-slate-700 cursor-pointer text-center text-sm font-semibold transition-all shadow-md hover:shadow-lg"
                       >
                         <div className="flex items-center justify-center gap-2">
                           <LuUpload className="w-5 h-5" />
@@ -2901,11 +2901,11 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                 </div>
 
                 {/* Surat Permohonan */}
-                <div className="bg-purple-50 p-5 rounded-xl border-2 border-purple-200">
+                <div className="bg-slate-50 p-5 rounded-xl border-2 border-slate-200">
                   <div className="flex items-center justify-between gap-2 mb-4">
                     <label className="text-base font-bold text-gray-800">Surat Permohonan Proposal</label>
                     {desaSurat.surat_permohonan && (
-                      <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-lg text-sm font-semibold shadow-sm">
+                      <span className="inline-flex items-center gap-1 px-3 py-1 bg-slate-100 text-slate-700 rounded-lg text-sm font-semibold shadow-sm">
                         <LuCheck className="w-4 h-4" />
                         Uploaded
                       </span>
@@ -2918,7 +2918,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                         href={`${imageBaseUrl}/storage/uploads/bankeu/${desaSurat.surat_permohonan}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="block w-full px-5 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 text-center text-sm font-semibold transition-all shadow-md hover:shadow-lg"
+                        className="block w-full px-5 py-3 bg-slate-600 text-white rounded-xl hover:bg-slate-700 text-center text-sm font-semibold transition-all shadow-md hover:shadow-lg"
                       >
                         <div className="flex items-center justify-center gap-2">
                           <LuEye className="w-5 h-5" />
@@ -2969,7 +2969,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                       />
                       <label
                         htmlFor="desa-surat-permohonan"
-                        className="block w-full px-5 py-4 bg-purple-600 text-white rounded-xl hover:bg-purple-700 cursor-pointer text-center text-sm font-semibold transition-all shadow-md hover:shadow-lg"
+                        className="block w-full px-5 py-4 bg-slate-600 text-white rounded-xl hover:bg-slate-700 cursor-pointer text-center text-sm font-semibold transition-all shadow-md hover:shadow-lg"
                       >
                         <div className="flex items-center justify-center gap-2">
                           <LuUpload className="w-5 h-5" />
@@ -2987,7 +2987,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                 <div className="flex justify-center">
                   <button
                     onClick={handleSubmitDesaSurat}
-                    className="px-8 py-4 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl hover:from-green-700 hover:to-emerald-700 font-bold text-base shadow-lg hover:shadow-xl transition-all flex items-center gap-3"
+                    className="px-8 py-4 bg-gradient-to-r from-slate-600 to-slate-600 text-white rounded-xl hover:from-slate-700 hover:to-slate-700 font-bold text-base shadow-lg hover:shadow-xl transition-all flex items-center gap-3"
                   >
                     <LuSend className="w-5 h-5" />
                     Kirim Surat ke Kecamatan
@@ -2997,21 +2997,21 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
 
               {/* Status Review Kecamatan */}
               {desaSurat.submitted_to_kecamatan && desaSurat.kecamatan_status === 'approved' && (
-                <div className="p-5 bg-green-50 border-2 border-green-300 rounded-xl">
+                <div className="p-5 bg-slate-50 border-2 border-slate-300 rounded-xl">
                   <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0">
+                    <div className="w-12 h-12 bg-slate-600 rounded-full flex items-center justify-center flex-shrink-0">
                       <LuCheck className="w-7 h-7 text-white" />
                     </div>
                     <div className="flex-1">
-                      <h4 className="font-bold text-green-900 text-lg mb-1">Surat Disetujui Kecamatan</h4>
-                      <p className="text-sm text-green-700 mb-2">
+                      <h4 className="font-bold text-slate-900 text-lg mb-1">Surat Disetujui Kecamatan</h4>
+                      <p className="text-sm text-slate-700 mb-2">
                         Direview oleh: <span className="font-semibold">{desaSurat.reviewer_name || 'Kecamatan'}</span>
                         {desaSurat.kecamatan_reviewed_at && (
                           <span className="ml-2">pada {new Date(desaSurat.kecamatan_reviewed_at).toLocaleString('id-ID')}</span>
                         )}
                       </p>
                       {desaSurat.kecamatan_catatan && (
-                        <div className="mt-3 p-3 bg-white border border-green-200 rounded-lg">
+                        <div className="mt-3 p-3 bg-white border border-slate-200 rounded-lg">
                           <p className="text-sm font-semibold text-gray-700 mb-1">Catatan:</p>
                           <p className="text-sm text-gray-600">{desaSurat.kecamatan_catatan}</p>
                         </div>
@@ -3077,10 +3077,10 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
           <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
             <button
               onClick={() => setExpandedInfra(!expandedInfra)}
-              className="w-full px-6 py-5 flex items-center justify-between bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-50 hover:from-blue-100 hover:via-indigo-100 hover:to-blue-100 transition-all group"
+              className="w-full px-6 py-5 flex items-center justify-between bg-gradient-to-r from-slate-50 via-slate-50 to-slate-50 hover:from-slate-100 hover:via-slate-100 hover:to-slate-100 transition-all group"
             >
               <div className="flex items-center gap-4">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                <div className="w-10 h-10 bg-gradient-to-br from-slate-500 to-slate-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
                   {expandedInfra ? <LuChevronDown className="w-5 h-5 text-white" /> : <LuChevronRight className="w-5 h-5 text-white" />}
                 </div>
                 <div className="text-left">
@@ -3101,7 +3101,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                 </div>
               </div>
               <div className="px-4 py-2 bg-white rounded-xl shadow-md border border-gray-100">
-                <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                <span className="text-2xl font-bold bg-gradient-to-r from-slate-600 to-slate-600 bg-clip-text text-transparent">
                   {(() => {
                     const uniqueKegiatanIds = new Set();
                     proposals.forEach(p => {
@@ -3157,7 +3157,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                                   {proposal.kegiatan_list.filter(k => k.jenis_kegiatan === 'infrastruktur').map((kegiatan) => (
                                     <span 
                                       key={kegiatan.id}
-                                      className="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-700"
+                                      className="px-2 py-1 rounded text-xs font-medium bg-slate-100 text-slate-700"
                                     >
                                       {kegiatan.nama_kegiatan.substring(0, 30)}...
                                     </span>
@@ -3175,7 +3175,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                             <div className="flex flex-col items-end gap-2">
                               {getStatusBadge(proposal)}
                               {proposal.anggaran_usulan && (
-                                <span className="text-xs font-semibold text-green-600">
+                                <span className="text-xs font-semibold text-slate-600">
                                   Rp {new Intl.NumberFormat('id-ID').format(proposal.anggaran_usulan)}
                                 </span>
                               )}
@@ -3190,21 +3190,21 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3 mb-3">
                               {/* Volume */}
                               {proposal.volume && (
-                                <div className="flex items-start gap-2 p-2 bg-blue-50 rounded-lg">
-                                  <LuPackage className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                                <div className="flex items-start gap-2 p-2 bg-slate-50 rounded-lg">
+                                  <LuPackage className="w-4 h-4 text-slate-600 mt-0.5 flex-shrink-0" />
                                   <div className="flex-1 min-w-0">
-                                    <p className="text-xs font-semibold text-blue-900">Volume</p>
-                                    <p className="text-sm text-blue-800 break-words">{proposal.volume}</p>
+                                    <p className="text-xs font-semibold text-slate-900">Volume</p>
+                                    <p className="text-sm text-slate-800 break-words">{proposal.volume}</p>
                                   </div>
                                 </div>
                               )}
                               {/* Lokasi */}
                               {proposal.lokasi && (
-                                <div className="flex items-start gap-2 p-2 bg-green-50 rounded-lg">
-                                  <LuMapPin className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                                <div className="flex items-start gap-2 p-2 bg-slate-50 rounded-lg">
+                                  <LuMapPin className="w-4 h-4 text-slate-600 mt-0.5 flex-shrink-0" />
                                   <div className="flex-1 min-w-0">
-                                    <p className="text-xs font-semibold text-green-900">Lokasi</p>
-                                    <p className="text-sm text-green-800 break-words">{proposal.lokasi}</p>
+                                    <p className="text-xs font-semibold text-slate-900">Lokasi</p>
+                                    <p className="text-sm text-slate-800 break-words">{proposal.lokasi}</p>
                                   </div>
                                 </div>
                               )}
@@ -3228,7 +3228,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                                   const apiBaseUrl = imageBaseUrl.replace(/\/api$/, '');
                                   window.open(`${apiBaseUrl}/storage/uploads/bankeu/${proposal.file_proposal}`, '_blank');
                                 }}
-                                className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center gap-1.5 text-xs font-medium transition-all"
+                                className="flex-1 px-3 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 flex items-center justify-center gap-1.5 text-xs font-medium transition-all"
                               >
                                 <LuEye className="w-4 h-4" />
                                 Lihat PDF
@@ -3272,19 +3272,19 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
 
                               if (isNewUnsent) return (
                                 <button onClick={(e) => { e.stopPropagation(); handleSubmitSingleProposal(proposal.id, 'dinas'); }}
-                                  className="w-full mt-2 px-3 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 flex items-center justify-center gap-1.5 text-xs font-bold transition-all shadow-sm">
+                                  className="w-full mt-2 px-3 py-2 bg-gradient-to-r from-slate-500 to-slate-600 text-white rounded-lg hover:from-slate-600 hover:to-slate-700 flex items-center justify-center gap-1.5 text-xs font-bold transition-all shadow-sm">
                                   <LuSend className="w-4 h-4" /> Kirim Proposal Ini ke Dinas
                                 </button>
                               );
                               if (isRevisionReadyDinas) return (
                                 <button onClick={(e) => { e.stopPropagation(); handleResubmitSingleProposal(proposal.id, 'dinas'); }}
-                                  className="w-full mt-2 px-3 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 flex items-center justify-center gap-1.5 text-xs font-bold transition-all shadow-sm">
+                                  className="w-full mt-2 px-3 py-2 bg-gradient-to-r from-slate-500 to-slate-600 text-white rounded-lg hover:from-slate-600 hover:to-slate-700 flex items-center justify-center gap-1.5 text-xs font-bold transition-all shadow-sm">
                                   <LuSend className="w-4 h-4" /> Kirim Ulang ke Dinas
                                 </button>
                               );
                               if (isRevisionReadyKecamatan) return (
                                 <button onClick={(e) => { e.stopPropagation(); handleResubmitSingleProposal(proposal.id, 'kecamatan'); }}
-                                  className="w-full mt-2 px-3 py-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg hover:from-orange-600 hover:to-orange-700 flex items-center justify-center gap-1.5 text-xs font-bold transition-all shadow-sm">
+                                  className="w-full mt-2 px-3 py-2 bg-gradient-to-r from-slate-500 to-slate-600 text-white rounded-lg hover:from-slate-600 hover:to-slate-700 flex items-center justify-center gap-1.5 text-xs font-bold transition-all shadow-sm">
                                   <LuSend className="w-4 h-4" /> Kirim Ulang ke Kecamatan
                                 </button>
                               );
@@ -3306,7 +3306,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                                 </div>
                                 {proposal.dinas_status === 'revision' && (
                                   <button onClick={() => setChatProposalId(proposal.id)}
-                                    className="flex items-center gap-1 px-2.5 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 transition-colors flex-shrink-0">
+                                    className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-600 text-white rounded-lg text-xs font-medium hover:bg-slate-700 transition-colors flex-shrink-0">
                                     <LuMessageSquare className="h-3.5 w-3.5" /> Chat
                                   </button>
                                 )}
@@ -3316,18 +3316,18 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
 
                           {/* Catatan Kecamatan */}
                           {proposal.kecamatan_catatan && (proposal.kecamatan_status === 'rejected' || proposal.kecamatan_status === 'revision') && (
-                            <div className="mt-3 p-3 bg-purple-50 border-l-3 border-purple-400 rounded">
+                            <div className="mt-3 p-3 bg-slate-50 border-l-3 border-slate-400 rounded">
                               <div className="flex items-start gap-2">
-                                <LuInfo className="w-4 h-4 text-purple-600 mt-0.5 flex-shrink-0" />
+                                <LuInfo className="w-4 h-4 text-slate-600 mt-0.5 flex-shrink-0" />
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-xs font-semibold text-purple-800 mb-1">
+                                  <p className="text-xs font-semibold text-slate-800 mb-1">
                                     Catatan Kecamatan {proposal.kecamatan_status === 'rejected' ? '(Ditolak)' : '(Revisi)'}
                                   </p>
-                                  <p className="text-sm text-purple-700">{proposal.kecamatan_catatan}</p>
+                                  <p className="text-sm text-slate-700">{proposal.kecamatan_catatan}</p>
                                 </div>
                                 {proposal.kecamatan_status === 'revision' && (
                                   <button onClick={() => setChatProposalId(proposal.id)}
-                                    className="flex items-center gap-1 px-2.5 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 transition-colors flex-shrink-0">
+                                    className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-600 text-white rounded-lg text-xs font-medium hover:bg-slate-700 transition-colors flex-shrink-0">
                                     <LuMessageSquare className="h-3.5 w-3.5" /> Chat
                                   </button>
                                 )}
@@ -3337,16 +3337,16 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
 
                           {/* Catatan Troubleshoot DPMD - Infrastruktur */}
                           {proposal.troubleshoot_catatan && proposal.status === 'revision' && !proposal.submitted_to_dinas_at && (
-                            <div className="mt-3 p-3 bg-indigo-50 border-l-3 border-indigo-400 rounded">
+                            <div className="mt-3 p-3 bg-slate-50 border-l-3 border-slate-400 rounded">
                               <div className="flex items-start gap-2">
-                                <LuWrench className="w-4 h-4 text-indigo-600 mt-0.5 flex-shrink-0" />
+                                <LuWrench className="w-4 h-4 text-slate-600 mt-0.5 flex-shrink-0" />
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-xs font-semibold text-indigo-800 mb-1">
+                                  <p className="text-xs font-semibold text-slate-800 mb-1">
                                     🔧 Troubleshoot oleh DPMD
                                   </p>
-                                  <p className="text-sm text-indigo-700">{proposal.troubleshoot_catatan}</p>
+                                  <p className="text-sm text-slate-700">{proposal.troubleshoot_catatan}</p>
                                   {proposal.troubleshoot_at && (
-                                    <p className="text-[10px] text-indigo-500 mt-1">
+                                    <p className="text-[10px] text-slate-500 mt-1">
                                       {new Date(proposal.troubleshoot_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                       {proposal.troubleshoot_by_name && ` — oleh ${proposal.troubleshoot_by_name}`}
                                     </p>
@@ -3365,26 +3365,26 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                               (proposal.troubleshoot_catatan && !proposal.submitted_to_dinas_at)
                             )
                           ) && (
-                            <div className="mt-3 bg-gradient-to-r from-orange-50 to-red-50 p-4 rounded-lg border-2 border-orange-300">
+                            <div className="mt-3 bg-gradient-to-r from-slate-50 to-slate-50 p-4 rounded-lg border-2 border-orange-300">
                               <div className="flex items-center gap-2 mb-3">
                                 <LuRefreshCw className="w-5 h-5 text-orange-600" />
                                 <span className="font-bold text-orange-900 text-base">Upload Ulang Proposal</span>
                                 {(proposal.dinas_status === 'revision' || proposal.dinas_status === 'rejected') && (
-                                  <div className="flex items-center gap-1 px-2 py-1 bg-purple-100 border border-purple-300 rounded-lg ml-auto">
-                                    <LuInfo className="w-3 h-3 text-purple-700" />
-                                    <span className="text-xs font-bold text-purple-800">Dari DINAS</span>
+                                  <div className="flex items-center gap-1 px-2 py-1 bg-slate-100 border border-slate-300 rounded-lg ml-auto">
+                                    <LuInfo className="w-3 h-3 text-slate-700" />
+                                    <span className="text-xs font-bold text-slate-800">Dari DINAS</span>
                                   </div>
                                 )}
                                 {(proposal.kecamatan_status === 'revision' || proposal.kecamatan_status === 'rejected') && (
-                                  <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 border border-blue-300 rounded-lg ml-auto">
-                                    <LuInfo className="w-3 h-3 text-blue-700" />
-                                    <span className="text-xs font-bold text-blue-800">Dari KECAMATAN</span>
+                                  <div className="flex items-center gap-1 px-2 py-1 bg-slate-100 border border-slate-300 rounded-lg ml-auto">
+                                    <LuInfo className="w-3 h-3 text-slate-700" />
+                                    <span className="text-xs font-bold text-slate-800">Dari KECAMATAN</span>
                                   </div>
                                 )}
                                 {(proposal.troubleshoot_catatan && !proposal.dinas_status && !proposal.kecamatan_status) && (
-                                  <div className="flex items-center gap-1 px-2 py-1 bg-indigo-100 border border-indigo-300 rounded-lg ml-auto">
-                                    <LuWrench className="w-3 h-3 text-indigo-700" />
-                                    <span className="text-xs font-bold text-indigo-800">TROUBLESHOOT DPMD</span>
+                                  <div className="flex items-center gap-1 px-2 py-1 bg-slate-100 border border-slate-300 rounded-lg ml-auto">
+                                    <LuWrench className="w-3 h-3 text-slate-700" />
+                                    <span className="text-xs font-bold text-slate-800">TROUBLESHOOT DPMD</span>
                                   </div>
                                 )}
                               </div>
@@ -3458,7 +3458,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                                 />
                                 <label
                                   htmlFor={`file-revision-compact-${proposal.id}`}
-                                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-lg font-semibold text-sm hover:from-orange-700 hover:to-red-700 cursor-pointer transition-all shadow-md"
+                                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-slate-600 to-slate-600 text-white rounded-lg font-semibold text-sm hover:from-slate-700 hover:to-slate-700 cursor-pointer transition-all shadow-md"
                                 >
                                   <LuUpload className="w-4 h-4" />
                                   Pilih File PDF Baru
@@ -3486,7 +3486,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                         setSelectedKegiatanIdInfra('');
                       }
                     }}
-                    className="w-full px-6 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 flex items-center justify-center gap-3 font-bold text-lg shadow-lg hover:shadow-xl transition-all transform hover:scale-[1.02]"
+                    className="w-full px-6 py-4 bg-gradient-to-r from-slate-600 to-slate-600 text-white rounded-xl hover:from-slate-700 hover:to-slate-700 flex items-center justify-center gap-3 font-bold text-lg shadow-lg hover:shadow-xl transition-all transform hover:scale-[1.02]"
                   >
                     <LuUpload className="w-6 h-6" />
                     {showUploadFormInfra ? 'Tutup Form' : 'Tambah Proposal Infrastruktur Baru'}
@@ -3494,12 +3494,12 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
 
                   {/* Dropdown & Form Upload Inline */}
                   {showUploadFormInfra && (
-                    <div className="mt-4 p-4 sm:p-6 bg-white rounded-2xl border-2 border-blue-300 shadow-xl transition-all duration-300">
+                    <div className="mt-4 p-4 sm:p-6 bg-white rounded-2xl border-2 border-slate-300 shadow-xl transition-all duration-300">
                       <div className="space-y-5">
                         {/* Dropdown Pilih Program */}
                         <div className={`dropdown-container-infra relative ${dropdownOpenInfra ? 'mb-96' : 'mb-6'}`}>
-                          <label className="flex items-center gap-3 text-lg sm:text-xl font-bold text-blue-900 mb-4">
-                            <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-full shadow-md">
+                          <label className="flex items-center gap-3 text-lg sm:text-xl font-bold text-slate-900 mb-4">
+                            <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-slate-500 to-slate-600 text-white rounded-full shadow-md">
                               <span className="text-base font-bold">1</span>
                             </div>
                             <span>Pilih Program Infrastruktur</span>
@@ -3510,7 +3510,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                               ref={dropdownButtonRefInfra}
                               type="button"
                               onClick={() => setDropdownOpenInfra(!dropdownOpenInfra)}
-                              className="w-full pl-5 pr-12 py-5 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-xl text-base sm:text-lg font-semibold text-left shadow-sm focus:outline-none focus:ring-4 focus:ring-blue-200 focus:border-blue-500 hover:border-blue-400 transition-all duration-200 cursor-pointer"
+                              className="w-full pl-5 pr-12 py-5 bg-gradient-to-r from-slate-50 to-slate-50 border-2 border-slate-300 rounded-xl text-base sm:text-lg font-semibold text-left shadow-sm focus:outline-none focus:ring-4 focus:ring-slate-200 focus:border-slate-500 hover:border-slate-400 transition-all duration-200 cursor-pointer"
                             >
                               <span className={selectedKegiatanIdInfra ? 'text-gray-800' : 'text-gray-500'}>
                                 {selectedKegiatanIdInfra 
@@ -3526,7 +3526,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                             {/* Custom Dropdown Arrow */}
                             <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
                               <svg 
-                                className={`w-7 h-7 text-blue-600 transition-transform duration-200 ${dropdownOpenInfra ? 'rotate-180' : ''}`} 
+                                className={`w-7 h-7 text-slate-600 transition-transform duration-200 ${dropdownOpenInfra ? 'rotate-180' : ''}`}
                                 fill="none" 
                                 stroke="currentColor" 
                                 viewBox="0 0 24 24"
@@ -3537,7 +3537,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                             
                             {/* Dropdown Menu with Scroll - Fixed Position */}
                             {dropdownOpenInfra && (
-                              <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-white border-2 border-blue-300 rounded-xl shadow-2xl overflow-hidden">
+                              <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-white border-2 border-slate-300 rounded-xl shadow-2xl overflow-hidden">
                                 <div className="max-h-80 overflow-y-auto custom-scrollbar">
                                     {infrastrukturData.map((item, idx) => (
                                       <button
@@ -3549,8 +3549,8 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                                         }}
                                         className={`w-full px-5 py-4 text-left text-base sm:text-lg font-medium transition-colors leading-relaxed ${
                                           selectedKegiatanIdInfra === item.kegiatan.id.toString()
-                                            ? 'bg-blue-100 text-blue-900 font-semibold'
-                                            : 'text-gray-800 hover:bg-blue-50'
+                                            ? 'bg-slate-100 text-slate-900 font-semibold'
+                                            : 'text-gray-800 hover:bg-slate-50'
                                         } ${idx !== infrastrukturData.length - 1 ? 'border-b border-gray-200' : 'mb-2'}`}
                                       >
                                         <span className="block">
@@ -3564,7 +3564,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                           </div>
                           {selectedKegiatanIdInfra && (
                             <p className="mt-3 text-sm sm:text-base text-gray-600 flex items-center gap-2">
-                              <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                              <svg className="w-5 h-5 text-slate-500" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                               </svg>
                               Program terpilih. Silakan isi detail proposal di bawah.
@@ -3574,9 +3574,9 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
 
                         {/* Form Input - Muncul setelah pilih program */}
                         {selectedKegiatanIdInfra && (
-                          <div className="pt-5 border-t-2 border-blue-200 space-y-4">
+                          <div className="pt-5 border-t-2 border-slate-200 space-y-4">
                             <div className="flex items-center gap-2 mb-4">
-                              <div className="flex items-center justify-center w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-600 text-white rounded-full shadow-md">
+                              <div className="flex items-center justify-center w-8 h-8 bg-gradient-to-br from-slate-500 to-slate-600 text-white rounded-full shadow-md">
                                 <span className="text-sm font-bold">2</span>
                               </div>
                               <h4 className="text-base sm:text-lg font-bold text-gray-900">
@@ -3590,7 +3590,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                               if (!selectedItem) return null;
                               const formData = uploadForms[selectedItem.kegiatan.id] || {};
                               return (
-                                <div className="bg-blue-50 p-4 rounded-xl border-2 border-blue-200">
+                                <div className="bg-slate-50 p-4 rounded-xl border-2 border-slate-200">
                                   <KegiatanRow
                                     key={`upload-infra-${selectedItem.kegiatan.id}`}
                                     item={selectedItem}
@@ -3626,10 +3626,10 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
           <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
             <button
               onClick={() => setExpandedNonInfra(!expandedNonInfra)}
-              className="w-full px-6 py-5 flex items-center justify-between bg-gradient-to-r from-purple-50 via-fuchsia-50 to-purple-50 hover:from-purple-100 hover:via-fuchsia-100 hover:to-purple-100 transition-all group"
+              className="w-full px-6 py-5 flex items-center justify-between bg-gradient-to-r from-slate-50 via-slate-50 to-slate-50 hover:from-slate-100 hover:via-slate-100 hover:to-slate-100 transition-all group"
             >
               <div className="flex items-center gap-4">
-                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-fuchsia-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                <div className="w-10 h-10 bg-gradient-to-br from-slate-500 to-slate-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
                   {expandedNonInfra ? <LuChevronDown className="w-5 h-5 text-white" /> : <LuChevronRight className="w-5 h-5 text-white" />}
                 </div>
                 <div className="text-left">
@@ -3650,7 +3650,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                 </div>
               </div>
               <div className="px-4 py-2 bg-white rounded-xl shadow-md border border-gray-100">
-                <span className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-fuchsia-600 bg-clip-text text-transparent">
+                <span className="text-2xl font-bold bg-gradient-to-r from-slate-600 to-slate-600 bg-clip-text text-transparent">
                   {(() => {
                     const uniqueKegiatanIds = new Set();
                     proposals.forEach(p => {
@@ -3706,7 +3706,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                                   {proposal.kegiatan_list.filter(k => k.jenis_kegiatan === 'non_infrastruktur').map((kegiatan) => (
                                     <span 
                                       key={kegiatan.id}
-                                      className="px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-700"
+                                      className="px-2 py-1 rounded text-xs font-medium bg-slate-100 text-slate-700"
                                     >
                                       {kegiatan.nama_kegiatan.substring(0, 30)}...
                                     </span>
@@ -3724,7 +3724,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                             <div className="flex flex-col items-end gap-2">
                               {getStatusBadge(proposal)}
                               {proposal.anggaran_usulan && (
-                                <span className="text-xs font-semibold text-green-600">
+                                <span className="text-xs font-semibold text-slate-600">
                                   Rp {new Intl.NumberFormat('id-ID').format(proposal.anggaran_usulan)}
                                 </span>
                               )}
@@ -3739,21 +3739,21 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3 mb-3">
                               {/* Volume */}
                               {proposal.volume && (
-                                <div className="flex items-start gap-2 p-2 bg-blue-50 rounded-lg">
-                                  <LuPackage className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                                <div className="flex items-start gap-2 p-2 bg-slate-50 rounded-lg">
+                                  <LuPackage className="w-4 h-4 text-slate-600 mt-0.5 flex-shrink-0" />
                                   <div className="flex-1 min-w-0">
-                                    <p className="text-xs font-semibold text-blue-900">Volume</p>
-                                    <p className="text-sm text-blue-800 break-words">{proposal.volume}</p>
+                                    <p className="text-xs font-semibold text-slate-900">Volume</p>
+                                    <p className="text-sm text-slate-800 break-words">{proposal.volume}</p>
                                   </div>
                                 </div>
                               )}
                               {/* Lokasi */}
                               {proposal.lokasi && (
-                                <div className="flex items-start gap-2 p-2 bg-green-50 rounded-lg">
-                                  <LuMapPin className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                                <div className="flex items-start gap-2 p-2 bg-slate-50 rounded-lg">
+                                  <LuMapPin className="w-4 h-4 text-slate-600 mt-0.5 flex-shrink-0" />
                                   <div className="flex-1 min-w-0">
-                                    <p className="text-xs font-semibold text-green-900">Lokasi</p>
-                                    <p className="text-sm text-green-800 break-words">{proposal.lokasi}</p>
+                                    <p className="text-xs font-semibold text-slate-900">Lokasi</p>
+                                    <p className="text-sm text-slate-800 break-words">{proposal.lokasi}</p>
                                   </div>
                                 </div>
                               )}
@@ -3777,7 +3777,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                                   const apiBaseUrl = imageBaseUrl.replace(/\/api$/, '');
                                   window.open(`${apiBaseUrl}/storage/uploads/bankeu/${proposal.file_proposal}`, '_blank');
                                 }}
-                                className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center gap-1.5 text-xs font-medium transition-all"
+                                className="flex-1 px-3 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 flex items-center justify-center gap-1.5 text-xs font-medium transition-all"
                               >
                                 <LuEye className="w-4 h-4" />
                                 Lihat PDF
@@ -3821,19 +3821,19 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
 
                               if (isNewUnsent) return (
                                 <button onClick={(e) => { e.stopPropagation(); handleSubmitSingleProposal(proposal.id, 'dinas'); }}
-                                  className="w-full mt-2 px-3 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 flex items-center justify-center gap-1.5 text-xs font-bold transition-all shadow-sm">
+                                  className="w-full mt-2 px-3 py-2 bg-gradient-to-r from-slate-500 to-slate-600 text-white rounded-lg hover:from-slate-600 hover:to-slate-700 flex items-center justify-center gap-1.5 text-xs font-bold transition-all shadow-sm">
                                   <LuSend className="w-4 h-4" /> Kirim Proposal Ini ke Dinas
                                 </button>
                               );
                               if (isRevisionReadyDinas) return (
                                 <button onClick={(e) => { e.stopPropagation(); handleResubmitSingleProposal(proposal.id, 'dinas'); }}
-                                  className="w-full mt-2 px-3 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 flex items-center justify-center gap-1.5 text-xs font-bold transition-all shadow-sm">
+                                  className="w-full mt-2 px-3 py-2 bg-gradient-to-r from-slate-500 to-slate-600 text-white rounded-lg hover:from-slate-600 hover:to-slate-700 flex items-center justify-center gap-1.5 text-xs font-bold transition-all shadow-sm">
                                   <LuSend className="w-4 h-4" /> Kirim Ulang ke Dinas
                                 </button>
                               );
                               if (isRevisionReadyKecamatan) return (
                                 <button onClick={(e) => { e.stopPropagation(); handleResubmitSingleProposal(proposal.id, 'kecamatan'); }}
-                                  className="w-full mt-2 px-3 py-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg hover:from-orange-600 hover:to-orange-700 flex items-center justify-center gap-1.5 text-xs font-bold transition-all shadow-sm">
+                                  className="w-full mt-2 px-3 py-2 bg-gradient-to-r from-slate-500 to-slate-600 text-white rounded-lg hover:from-slate-600 hover:to-slate-700 flex items-center justify-center gap-1.5 text-xs font-bold transition-all shadow-sm">
                                   <LuSend className="w-4 h-4" /> Kirim Ulang ke Kecamatan
                                 </button>
                               );
@@ -3855,7 +3855,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                                 </div>
                                 {proposal.dinas_status === 'revision' && (
                                   <button onClick={() => setChatProposalId(proposal.id)}
-                                    className="flex items-center gap-1 px-2.5 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 transition-colors flex-shrink-0">
+                                    className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-600 text-white rounded-lg text-xs font-medium hover:bg-slate-700 transition-colors flex-shrink-0">
                                     <LuMessageSquare className="h-3.5 w-3.5" /> Chat
                                   </button>
                                 )}
@@ -3865,18 +3865,18 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
 
                           {/* Catatan Kecamatan */}
                           {proposal.kecamatan_catatan && (proposal.kecamatan_status === 'rejected' || proposal.kecamatan_status === 'revision') && (
-                            <div className="mt-3 p-3 bg-purple-50 border-l-3 border-purple-400 rounded">
+                            <div className="mt-3 p-3 bg-slate-50 border-l-3 border-slate-400 rounded">
                               <div className="flex items-start gap-2">
-                                <LuInfo className="w-4 h-4 text-purple-600 mt-0.5 flex-shrink-0" />
+                                <LuInfo className="w-4 h-4 text-slate-600 mt-0.5 flex-shrink-0" />
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-xs font-semibold text-purple-800 mb-1">
+                                  <p className="text-xs font-semibold text-slate-800 mb-1">
                                     Catatan Kecamatan {proposal.kecamatan_status === 'rejected' ? '(Ditolak)' : '(Revisi)'}
                                   </p>
-                                  <p className="text-sm text-purple-700">{proposal.kecamatan_catatan}</p>
+                                  <p className="text-sm text-slate-700">{proposal.kecamatan_catatan}</p>
                                 </div>
                                 {proposal.kecamatan_status === 'revision' && (
                                   <button onClick={() => setChatProposalId(proposal.id)}
-                                    className="flex items-center gap-1 px-2.5 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 transition-colors flex-shrink-0">
+                                    className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-600 text-white rounded-lg text-xs font-medium hover:bg-slate-700 transition-colors flex-shrink-0">
                                     <LuMessageSquare className="h-3.5 w-3.5" /> Chat
                                   </button>
                                 )}
@@ -3886,16 +3886,16 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
 
                           {/* Catatan Troubleshoot DPMD - Non-Infrastruktur */}
                           {proposal.troubleshoot_catatan && proposal.status === 'revision' && !proposal.submitted_to_dinas_at && (
-                            <div className="mt-3 p-3 bg-indigo-50 border-l-3 border-indigo-400 rounded">
+                            <div className="mt-3 p-3 bg-slate-50 border-l-3 border-slate-400 rounded">
                               <div className="flex items-start gap-2">
-                                <LuWrench className="w-4 h-4 text-indigo-600 mt-0.5 flex-shrink-0" />
+                                <LuWrench className="w-4 h-4 text-slate-600 mt-0.5 flex-shrink-0" />
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-xs font-semibold text-indigo-800 mb-1">
+                                  <p className="text-xs font-semibold text-slate-800 mb-1">
                                     🔧 Troubleshoot oleh DPMD
                                   </p>
-                                  <p className="text-sm text-indigo-700">{proposal.troubleshoot_catatan}</p>
+                                  <p className="text-sm text-slate-700">{proposal.troubleshoot_catatan}</p>
                                   {proposal.troubleshoot_at && (
-                                    <p className="text-[10px] text-indigo-500 mt-1">
+                                    <p className="text-[10px] text-slate-500 mt-1">
                                       {new Date(proposal.troubleshoot_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                       {proposal.troubleshoot_by_name && ` — oleh ${proposal.troubleshoot_by_name}`}
                                     </p>
@@ -3914,26 +3914,26 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                               (proposal.troubleshoot_catatan && !proposal.submitted_to_dinas_at)
                             )
                           ) && (
-                            <div className="mt-3 bg-gradient-to-r from-orange-50 to-red-50 p-4 rounded-lg border-2 border-orange-300">
+                            <div className="mt-3 bg-gradient-to-r from-slate-50 to-slate-50 p-4 rounded-lg border-2 border-orange-300">
                               <div className="flex items-center gap-2 mb-3">
                                 <LuRefreshCw className="w-5 h-5 text-orange-600" />
                                 <span className="font-bold text-orange-900 text-base">Upload Ulang Proposal</span>
                                 {(proposal.dinas_status === 'revision' || proposal.dinas_status === 'rejected') && (
-                                  <div className="flex items-center gap-1 px-2 py-1 bg-purple-100 border border-purple-300 rounded-lg ml-auto">
-                                    <LuInfo className="w-3 h-3 text-purple-700" />
-                                    <span className="text-xs font-bold text-purple-800">Dari DINAS</span>
+                                  <div className="flex items-center gap-1 px-2 py-1 bg-slate-100 border border-slate-300 rounded-lg ml-auto">
+                                    <LuInfo className="w-3 h-3 text-slate-700" />
+                                    <span className="text-xs font-bold text-slate-800">Dari DINAS</span>
                                   </div>
                                 )}
                                 {(proposal.kecamatan_status === 'revision' || proposal.kecamatan_status === 'rejected') && (
-                                  <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 border border-blue-300 rounded-lg ml-auto">
-                                    <LuInfo className="w-3 h-3 text-blue-700" />
-                                    <span className="text-xs font-bold text-blue-800">Dari KECAMATAN</span>
+                                  <div className="flex items-center gap-1 px-2 py-1 bg-slate-100 border border-slate-300 rounded-lg ml-auto">
+                                    <LuInfo className="w-3 h-3 text-slate-700" />
+                                    <span className="text-xs font-bold text-slate-800">Dari KECAMATAN</span>
                                   </div>
                                 )}
                                 {(proposal.troubleshoot_catatan && !proposal.dinas_status && !proposal.kecamatan_status) && (
-                                  <div className="flex items-center gap-1 px-2 py-1 bg-indigo-100 border border-indigo-300 rounded-lg ml-auto">
-                                    <LuWrench className="w-3 h-3 text-indigo-700" />
-                                    <span className="text-xs font-bold text-indigo-800">TROUBLESHOOT DPMD</span>
+                                  <div className="flex items-center gap-1 px-2 py-1 bg-slate-100 border border-slate-300 rounded-lg ml-auto">
+                                    <LuWrench className="w-3 h-3 text-slate-700" />
+                                    <span className="text-xs font-bold text-slate-800">TROUBLESHOOT DPMD</span>
                                   </div>
                                 )}
                               </div>
@@ -4006,7 +4006,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                                 />
                                 <label
                                   htmlFor={`file-revision-compact-noninf-${proposal.id}`}
-                                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-lg font-semibold text-sm hover:from-orange-700 hover:to-red-700 cursor-pointer transition-all shadow-md"
+                                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-slate-600 to-slate-600 text-white rounded-lg font-semibold text-sm hover:from-slate-700 hover:to-slate-700 cursor-pointer transition-all shadow-md"
                                 >
                                   <LuUpload className="w-4 h-4" />
                                   Pilih File PDF Baru
@@ -4034,7 +4034,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                         setSelectedKegiatanIdNonInfra('');
                       }
                     }}
-                    className="w-full px-6 py-4 bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white rounded-xl hover:from-purple-700 hover:to-fuchsia-700 flex items-center justify-center gap-3 font-bold text-lg shadow-lg hover:shadow-xl transition-all transform hover:scale-[1.02]"
+                    className="w-full px-6 py-4 bg-gradient-to-r from-slate-600 to-slate-600 text-white rounded-xl hover:from-slate-700 hover:to-slate-700 flex items-center justify-center gap-3 font-bold text-lg shadow-lg hover:shadow-xl transition-all transform hover:scale-[1.02]"
                   >
                     <LuUpload className="w-6 h-6" />
                     {showUploadFormNonInfra ? 'Tutup Form' : 'Tambah Proposal Non-Infrastruktur Baru'}
@@ -4042,12 +4042,12 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
 
                   {/* Dropdown & Form Upload Inline */}
                   {showUploadFormNonInfra && (
-                    <div className="mt-4 p-4 sm:p-6 bg-white rounded-2xl border-2 border-purple-300 shadow-xl transition-all duration-300">
+                    <div className="mt-4 p-4 sm:p-6 bg-white rounded-2xl border-2 border-slate-300 shadow-xl transition-all duration-300">
                       <div className="space-y-5">
                         {/* Dropdown Pilih Program */}
                         <div className={`dropdown-container-noninf relative ${dropdownOpenNonInfra ? 'mb-96' : 'mb-6'}`}>
-                          <label className="flex items-center gap-3 text-lg sm:text-xl font-bold text-purple-900 mb-4">
-                            <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 text-white rounded-full shadow-md">
+                          <label className="flex items-center gap-3 text-lg sm:text-xl font-bold text-slate-900 mb-4">
+                            <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-slate-500 to-slate-600 text-white rounded-full shadow-md">
                               <span className="text-base font-bold">1</span>
                             </div>
                             <span>Pilih Program Non-Infrastruktur</span>
@@ -4058,7 +4058,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                               ref={dropdownButtonRefNonInfra}
                               type="button"
                               onClick={() => setDropdownOpenNonInfra(!dropdownOpenNonInfra)}
-                              className="w-full pl-5 pr-12 py-5 bg-gradient-to-r from-purple-50 to-fuchsia-50 border-2 border-purple-300 rounded-xl text-base sm:text-lg font-semibold text-left shadow-sm focus:outline-none focus:ring-4 focus:ring-purple-200 focus:border-purple-500 hover:border-purple-400 transition-all duration-200 cursor-pointer"
+                              className="w-full pl-5 pr-12 py-5 bg-gradient-to-r from-slate-50 to-slate-50 border-2 border-slate-300 rounded-xl text-base sm:text-lg font-semibold text-left shadow-sm focus:outline-none focus:ring-4 focus:ring-slate-200 focus:border-slate-500 hover:border-slate-400 transition-all duration-200 cursor-pointer"
                             >
                               <span className={selectedKegiatanIdNonInfra ? 'text-gray-800' : 'text-gray-500'}>
                                 {selectedKegiatanIdNonInfra 
@@ -4074,7 +4074,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                             {/* Custom Dropdown Arrow */}
                             <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
                               <svg 
-                                className={`w-7 h-7 text-purple-600 transition-transform duration-200 ${dropdownOpenNonInfra ? 'rotate-180' : ''}`} 
+                                className={`w-7 h-7 text-slate-600 transition-transform duration-200 ${dropdownOpenNonInfra ? 'rotate-180' : ''}`}
                                 fill="none" 
                                 stroke="currentColor" 
                                 viewBox="0 0 24 24"
@@ -4085,7 +4085,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                             
                             {/* Dropdown Menu with Scroll - Fixed Position */}
                             {dropdownOpenNonInfra && (
-                              <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-white border-2 border-purple-300 rounded-xl shadow-2xl overflow-hidden">
+                              <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-white border-2 border-slate-300 rounded-xl shadow-2xl overflow-hidden">
                                 <div className="max-h-80 overflow-y-auto custom-scrollbar">
                                     {nonInfrastrukturData.map((item, idx) => (
                                       <button
@@ -4097,8 +4097,8 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                                         }}
                                         className={`w-full px-5 py-4 text-left text-base sm:text-lg font-medium transition-colors leading-relaxed ${
                                           selectedKegiatanIdNonInfra === item.kegiatan.id.toString()
-                                            ? 'bg-purple-100 text-purple-900 font-semibold'
-                                            : 'text-gray-800 hover:bg-purple-50'
+                                            ? 'bg-slate-100 text-slate-900 font-semibold'
+                                            : 'text-gray-800 hover:bg-slate-50'
                                         } ${idx !== nonInfrastrukturData.length - 1 ? 'border-b border-gray-200' : 'mb-2'}`}
                                       >
                                         <span className="block">
@@ -4112,7 +4112,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                           </div>
                           {selectedKegiatanIdNonInfra && (
                             <p className="mt-3 text-sm sm:text-base text-gray-600 flex items-center gap-2">
-                              <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                              <svg className="w-5 h-5 text-slate-500" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                               </svg>
                               Program terpilih. Silakan isi detail proposal di bawah.
@@ -4122,9 +4122,9 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
 
                         {/* Form Input - Muncul setelah pilih program */}
                         {selectedKegiatanIdNonInfra && (
-                          <div className="pt-5 border-t-2 border-purple-200 space-y-4">
+                          <div className="pt-5 border-t-2 border-slate-200 space-y-4">
                             <div className="flex items-center gap-2 mb-4">
-                              <div className="flex items-center justify-center w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-600 text-white rounded-full shadow-md">
+                              <div className="flex items-center justify-center w-8 h-8 bg-gradient-to-br from-slate-500 to-slate-600 text-white rounded-full shadow-md">
                                 <span className="text-sm font-bold">2</span>
                               </div>
                               <h4 className="text-base sm:text-lg font-bold text-gray-900">
@@ -4138,7 +4138,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                               if (!selectedItem) return null;
                               const formData = uploadForms[selectedItem.kegiatan.id] || {};
                               return (
-                                <div className="bg-purple-50 p-4 rounded-xl border-2 border-purple-200">
+                                <div className="bg-slate-50 p-4 rounded-xl border-2 border-slate-200">
                                   <KegiatanRow
                                     key={`upload-noninf-${selectedItem.kegiatan.id}`}
                                     item={selectedItem}
@@ -4193,7 +4193,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
             {/* Header */}
-            <div className="bg-gradient-to-r from-amber-500 to-orange-600 px-6 py-4 flex items-center justify-between">
+            <div className="bg-gradient-to-r from-slate-500 to-slate-600 px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-white bg-opacity-30 rounded-lg flex items-center justify-center shadow-sm">
                   <LuPencil className="w-5 h-5 text-gray-800" />
@@ -4339,7 +4339,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
               <button
                 onClick={handleSaveEdit}
                 disabled={isEditSaving}
-                className="px-6 py-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white rounded-lg font-semibold text-sm transition-all flex items-center gap-2 disabled:opacity-50"
+                className="px-6 py-2 bg-gradient-to-r from-slate-500 to-slate-600 hover:from-slate-600 hover:to-slate-700 text-white rounded-lg font-semibold text-sm transition-all flex items-center gap-2 disabled:opacity-50"
               >
                 {isEditSaving ? (
                   <>
@@ -4434,8 +4434,8 @@ const KegiatanRow = ({ item, index, onUpload, onRevisionUpload, onReplaceFile, o
         {/* Dropdown pilihan judul (jika ada /) */}
         {hasMultipleOptions && (
           <div className="space-y-2">
-            <label className="flex items-center gap-3 text-lg sm:text-xl font-bold text-blue-900">
-              <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-full shadow-md">
+            <label className="flex items-center gap-3 text-lg sm:text-xl font-bold text-slate-900">
+              <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-slate-500 to-slate-600 text-white rounded-full shadow-md">
                 <span className="text-base font-bold">1</span>
               </div>
               <span>Pilih Judul Kegiatan <span className="text-red-500">*</span></span>
@@ -4449,7 +4449,7 @@ const KegiatanRow = ({ item, index, onUpload, onRevisionUpload, onReplaceFile, o
                   setDropdownJudulOpen(newState);
                 }}
                 disabled={isSubmitted}
-                className="w-full pl-5 pr-12 py-5 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-xl text-base sm:text-lg font-semibold text-left shadow-sm focus:outline-none focus:ring-4 focus:ring-blue-200 focus:border-blue-500 hover:border-blue-400 transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full pl-5 pr-12 py-5 bg-gradient-to-r from-slate-50 to-slate-50 border-2 border-slate-300 rounded-xl text-base sm:text-lg font-semibold text-left shadow-sm focus:outline-none focus:ring-4 focus:ring-slate-200 focus:border-slate-500 hover:border-slate-400 transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <span className={formData.judul_kegiatan ? 'text-gray-800' : 'text-gray-500'}>
                   {formData.judul_kegiatan || '-- Pilih Judul Kegiatan --'}
@@ -4458,7 +4458,7 @@ const KegiatanRow = ({ item, index, onUpload, onRevisionUpload, onReplaceFile, o
               {/* Arrow Icon */}
               <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
                 <svg 
-                  className={`w-7 h-7 text-blue-600 transition-transform duration-200 ${dropdownJudulOpen ? 'rotate-180' : ''}`} 
+                  className={`w-7 h-7 text-slate-600 transition-transform duration-200 ${dropdownJudulOpen ? 'rotate-180' : ''}`}
                   fill="none" 
                   stroke="currentColor" 
                   viewBox="0 0 24 24"
@@ -4469,7 +4469,7 @@ const KegiatanRow = ({ item, index, onUpload, onRevisionUpload, onReplaceFile, o
               
               {/* Dropdown Menu */}
               {dropdownJudulOpen && (
-                <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-white border-2 border-blue-300 rounded-xl shadow-2xl overflow-hidden">
+                <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-white border-2 border-slate-300 rounded-xl shadow-2xl overflow-hidden">
                   <div className="max-h-80 overflow-y-auto custom-scrollbar">
                     {titleOptions.map((title, idx) => (
                       <button
@@ -4481,8 +4481,8 @@ const KegiatanRow = ({ item, index, onUpload, onRevisionUpload, onReplaceFile, o
                         }}
                         className={`w-full px-5 py-4 text-left text-base sm:text-lg font-medium transition-colors leading-relaxed ${
                           formData.judul_kegiatan === title
-                            ? 'bg-blue-100 text-blue-900 font-semibold'
-                            : 'text-gray-800 hover:bg-blue-50'
+                            ? 'bg-slate-100 text-slate-900 font-semibold'
+                            : 'text-gray-800 hover:bg-slate-50'
                         } ${idx !== titleOptions.length - 1 ? 'border-b border-gray-200' : 'mb-2'}`}
                       >
                         <span className="block">
@@ -4508,7 +4508,7 @@ const KegiatanRow = ({ item, index, onUpload, onRevisionUpload, onReplaceFile, o
               onChange={(e) => updateUploadForm(kegiatan.id, 'nama_kegiatan', e.target.value)}
               placeholder="Contoh: Pembangunan Jalan"
               disabled={isSubmitted}
-              className="w-full px-4 py-3 text-sm font-medium border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-200 focus:border-blue-500 bg-white hover:border-blue-400 transition-all duration-200 shadow-sm placeholder:text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-50"
+              className="w-full px-4 py-3 text-sm font-medium border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-slate-200 focus:border-slate-500 bg-white hover:border-slate-400 transition-all duration-200 shadow-sm placeholder:text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-50"
             />
           </div>
 
@@ -4521,7 +4521,7 @@ const KegiatanRow = ({ item, index, onUpload, onRevisionUpload, onReplaceFile, o
               onChange={(e) => updateUploadForm(kegiatan.id, 'volume', e.target.value)}
               placeholder={kegiatan.jenis_kegiatan === 'infrastruktur' ? 'Contoh: 200 m x 3 m x 0.15 m (P x L x T)' : 'Contoh: 500 m'}
               disabled={isSubmitted}
-              className="w-full px-4 py-3 text-sm font-medium border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-200 focus:border-blue-500 bg-white hover:border-blue-400 transition-all duration-200 shadow-sm placeholder:text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-50"
+              className="w-full px-4 py-3 text-sm font-medium border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-slate-200 focus:border-slate-500 bg-white hover:border-slate-400 transition-all duration-200 shadow-sm placeholder:text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-50"
             />
           </div>
 
@@ -4534,7 +4534,7 @@ const KegiatanRow = ({ item, index, onUpload, onRevisionUpload, onReplaceFile, o
               onChange={(e) => updateUploadForm(kegiatan.id, 'lokasi', e.target.value)}
               placeholder="Contoh: Kampung Baru"
               disabled={isSubmitted}
-              className="w-full px-4 py-3 text-sm font-medium border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-200 focus:border-blue-500 bg-white hover:border-blue-400 transition-all duration-200 shadow-sm placeholder:text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-50"
+              className="w-full px-4 py-3 text-sm font-medium border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-slate-200 focus:border-slate-500 bg-white hover:border-slate-400 transition-all duration-200 shadow-sm placeholder:text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-50"
             />
           </div>
 
@@ -4549,7 +4549,7 @@ const KegiatanRow = ({ item, index, onUpload, onRevisionUpload, onReplaceFile, o
                 onChange={(e) => updateUploadForm(kegiatan.id, 'anggaran', e.target.value.replace(/\D/g, ''))}
                 placeholder="0"
                 disabled={isSubmitted}
-                className={`w-full pl-12 pr-4 py-3 text-sm font-medium border-2 rounded-xl focus:outline-none focus:ring-4 transition-all duration-200 shadow-sm placeholder:text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-50 ${isAnggaranOverLimit(formData.anggaran) ? 'border-red-500 focus:ring-red-200 focus:border-red-500 bg-red-50 text-red-700' : 'border-gray-300 focus:ring-blue-200 focus:border-blue-500 bg-white hover:border-blue-400'}`}
+                className={`w-full pl-12 pr-4 py-3 text-sm font-medium border-2 rounded-xl focus:outline-none focus:ring-4 transition-all duration-200 shadow-sm placeholder:text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-50 ${isAnggaranOverLimit(formData.anggaran) ? 'border-red-500 focus:ring-red-200 focus:border-red-500 bg-red-50 text-red-700' : 'border-gray-300 focus:ring-slate-200 focus:border-slate-500 bg-white hover:border-slate-400'}`}
               />
             </div>
             {isAnggaranOverLimit(formData.anggaran) && (
@@ -4573,8 +4573,8 @@ const KegiatanRow = ({ item, index, onUpload, onRevisionUpload, onReplaceFile, o
             />
             <label
               htmlFor={`file-${kegiatan.id}`}
-              className={`flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-semibold text-sm shadow-lg transition-all ${
-                isSubmitted ? 'opacity-50 cursor-not-allowed pointer-events-none' : 'hover:from-green-700 hover:to-emerald-700 hover:shadow-xl cursor-pointer transform hover:scale-[1.02]'
+              className={`flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-slate-600 to-slate-600 text-white rounded-xl font-semibold text-sm shadow-lg transition-all ${
+                isSubmitted ? 'opacity-50 cursor-not-allowed pointer-events-none' : 'hover:from-slate-700 hover:to-slate-700 hover:shadow-xl cursor-pointer transform hover:scale-[1.02]'
               }`}
             >
               <LuUpload className="w-5 h-5" />
@@ -4601,7 +4601,7 @@ const ContohProposalModal = ({ show, onClose, contohFiles, onDownload }) => {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="bg-gradient-to-r from-purple-500 to-pink-600 px-6 py-4 flex items-center justify-between">
+        <div className="bg-gradient-to-r from-slate-500 to-slate-600 px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-white bg-opacity-30 rounded-lg flex items-center justify-center shadow-sm">
               <LuDownload className="w-5 h-5 text-gray-800" />
@@ -4625,7 +4625,7 @@ const ContohProposalModal = ({ show, onClose, contohFiles, onDownload }) => {
           {contohFiles.cover && contohFiles.cover.length > 0 && (
             <div>
               <div className="flex items-center gap-2 mb-3">
-                <LuImage className="w-5 h-5 text-purple-600" />
+                <LuImage className="w-5 h-5 text-slate-600" />
                 <h3 className="font-bold text-gray-900 text-lg">Cover Proposal</h3>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -4633,18 +4633,18 @@ const ContohProposalModal = ({ show, onClose, contohFiles, onDownload }) => {
                   <button
                     key={idx}
                     onClick={() => onDownload(file)}
-                    className="flex items-center gap-3 p-4 bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 rounded-xl border border-purple-200 transition-all group"
+                    className="flex items-center gap-3 p-4 bg-gradient-to-r from-slate-50 to-slate-50 hover:from-slate-100 hover:to-slate-100 rounded-xl border border-slate-200 transition-all group"
                   >
-                    <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <div className="w-12 h-12 bg-gradient-to-r from-slate-500 to-slate-600 rounded-lg flex items-center justify-center flex-shrink-0">
                       <LuImage className="w-6 h-6 text-white" />
                     </div>
                     <div className="flex-1 text-left">
-                      <p className="font-semibold text-gray-900 text-sm group-hover:text-purple-700 transition-colors">
+                      <p className="font-semibold text-gray-900 text-sm group-hover:text-slate-700 transition-colors">
                         {file.display_name}
                       </p>
                       <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
                     </div>
-                    <LuDownload className="w-5 h-5 text-purple-600 group-hover:scale-110 transition-transform" />
+                    <LuDownload className="w-5 h-5 text-slate-600 group-hover:scale-110 transition-transform" />
                   </button>
                 ))}
               </div>
@@ -4655,7 +4655,7 @@ const ContohProposalModal = ({ show, onClose, contohFiles, onDownload }) => {
           {contohFiles.desa && contohFiles.desa.length > 0 && (
             <div>
               <div className="flex items-center gap-2 mb-3">
-                <LuFileText className="w-5 h-5 text-blue-600" />
+                <LuFileText className="w-5 h-5 text-slate-600" />
                 <h3 className="font-bold text-gray-900 text-lg">Template Dokumen Desa</h3>
               </div>
               <div className="grid grid-cols-1 gap-3">
@@ -4663,18 +4663,18 @@ const ContohProposalModal = ({ show, onClose, contohFiles, onDownload }) => {
                   <button
                     key={idx}
                     onClick={() => onDownload(file)}
-                    className="flex items-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 rounded-xl border border-blue-200 transition-all group"
+                    className="flex items-center gap-3 p-4 bg-gradient-to-r from-slate-50 to-slate-50 hover:from-slate-100 hover:to-slate-100 rounded-xl border border-slate-200 transition-all group"
                   >
-                    <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <div className="w-12 h-12 bg-gradient-to-r from-slate-500 to-slate-600 rounded-lg flex items-center justify-center flex-shrink-0">
                       <LuFileText className="w-6 h-6 text-white" />
                     </div>
                     <div className="flex-1 text-left">
-                      <p className="font-semibold text-gray-900 text-sm group-hover:text-blue-700 transition-colors">
+                      <p className="font-semibold text-gray-900 text-sm group-hover:text-slate-700 transition-colors">
                         {file.display_name}
                       </p>
                       <p className="text-xs text-gray-500">{file.extension.toUpperCase()} • {formatFileSize(file.size)}</p>
                     </div>
-                    <LuDownload className="w-5 h-5 text-blue-600 group-hover:scale-110 transition-transform" />
+                    <LuDownload className="w-5 h-5 text-slate-600 group-hover:scale-110 transition-transform" />
                   </button>
                 ))}
               </div>
@@ -4711,7 +4711,7 @@ const PdfViewerModal = ({ show, onClose, pdfData }) => {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-2 sm:p-4">
       <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-7xl h-[95vh] sm:h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 px-3 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-2 flex-shrink-0">
+        <div className="bg-gradient-to-r from-slate-500 to-slate-600 px-3 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-2 flex-shrink-0">
           <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
             <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white bg-opacity-30 rounded-lg flex items-center justify-center shadow-sm flex-shrink-0">
               <LuEye className="w-4 h-4 sm:w-5 sm:h-5 text-gray-800" />
@@ -4744,7 +4744,7 @@ const PdfViewerModal = ({ show, onClose, pdfData }) => {
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-600 w-full sm:w-auto">
             <span className="flex items-center gap-2 flex-shrink-0">
               <span className="font-semibold">Status:</span>
-              {pdfData.proposal.status === 'verified' && <span className="text-green-600 font-medium">✓ Disetujui</span>}
+              {pdfData.proposal.status === 'verified' && <span className="text-slate-600 font-medium">✓ Disetujui</span>}
               {pdfData.proposal.status === 'pending' && <span className="text-yellow-600 font-medium">⏳ Menunggu</span>}
               {pdfData.proposal.status === 'rejected' && <span className="text-red-600 font-medium">✗ Ditolak</span>}
               {pdfData.proposal.status === 'revision' && <span className="text-orange-600 font-medium">↻ Revisi</span>}
@@ -4752,7 +4752,7 @@ const PdfViewerModal = ({ show, onClose, pdfData }) => {
             <span className="text-gray-400 hidden sm:inline">|</span>
             <span className="flex items-center gap-1">
               <span className="font-semibold">Anggaran:</span>
-              <span className="text-green-600 font-medium">Rp {new Intl.NumberFormat("id-ID").format(pdfData.proposal.anggaran_usulan)}</span>
+              <span className="text-slate-600 font-medium">Rp {new Intl.NumberFormat("id-ID").format(pdfData.proposal.anggaran_usulan)}</span>
             </span>
           </div>
           <button

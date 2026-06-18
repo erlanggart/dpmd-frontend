@@ -83,13 +83,13 @@ const DesaBankeuPerubahanLpjPage = ({ tahun }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-orange-50 p-4 md:p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 p-4 md:p-6">
       <div className="max-w-5xl mx-auto">
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-5">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                <LuClipboardCheck className="w-6 h-6 text-orange-600" />
+                <LuClipboardCheck className="w-6 h-6 text-slate-700" />
                 LPJ Bankeu Perubahan TA {tahun}
               </h2>
               <p className="text-sm text-gray-500 mt-1">
@@ -100,7 +100,7 @@ const DesaBankeuPerubahanLpjPage = ({ tahun }) => {
               <button onClick={fetchData} className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold rounded-lg">
                 <LuRefreshCw className="w-4 h-4" />
               </button>
-              <button onClick={() => setShowUpload(true)} className="inline-flex items-center gap-1 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold rounded-xl shadow-sm">
+              <button onClick={() => setShowUpload(true)} className="inline-flex items-center gap-1 px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-sm font-semibold rounded-xl shadow-sm">
                 <LuUpload className="w-4 h-4" /> Upload LPJ
               </button>
             </div>
@@ -123,7 +123,7 @@ const DesaBankeuPerubahanLpjPage = ({ tahun }) => {
               <div key={lpj.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
-                    <LuFileText className="w-8 h-8 text-orange-500 flex-shrink-0" />
+                    <LuFileText className="w-8 h-8 text-slate-500 flex-shrink-0" />
                     <div className="min-w-0">
                       <h4 className="font-semibold text-gray-800 truncate">{lpj.nama_file}</h4>
                       <div className="flex items-center gap-2 mt-1 flex-wrap">
@@ -141,7 +141,7 @@ const DesaBankeuPerubahanLpjPage = ({ tahun }) => {
                       </div>
                       {lpj.keterangan && <p className="text-xs text-gray-600 mt-1">{lpj.keterangan}</p>}
                       {lpj.dpmd_catatan && (
-                        <div className="text-xs bg-purple-50 border border-purple-200 rounded p-1.5 mt-2 text-purple-800">
+                        <div className="text-xs bg-slate-50 border border-slate-200 rounded p-1.5 mt-2 text-slate-800">
                           <strong>Catatan DPMD:</strong> {lpj.dpmd_catatan}
                         </div>
                       )}
@@ -185,7 +185,7 @@ const DesaBankeuPerubahanLpjPage = ({ tahun }) => {
                     accept=".pdf,application/pdf"
                     multiple
                     onChange={e => setSelectedFiles(Array.from(e.target.files || []))}
-                    className="w-full text-sm file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
+                    className="w-full text-sm file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200"
                   />
                   <p className="text-xs text-gray-500 mt-1">{selectedFiles.length} file dipilih</p>
                 </div>
@@ -195,7 +195,7 @@ const DesaBankeuPerubahanLpjPage = ({ tahun }) => {
                     value={keterangan}
                     onChange={e => setKeterangan(e.target.value)}
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-500"
                     placeholder="Keterangan singkat (opsional)"
                   />
                 </div>
@@ -208,7 +208,7 @@ const DesaBankeuPerubahanLpjPage = ({ tahun }) => {
                   <button
                     type="submit"
                     disabled={uploading || selectedFiles.length === 0}
-                    className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white font-semibold rounded-xl shadow-sm disabled:opacity-50"
+                    className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-semibold rounded-xl shadow-sm disabled:opacity-50"
                   >{uploading ? 'Mengupload...' : 'Upload'}</button>
                 </div>
               </form>

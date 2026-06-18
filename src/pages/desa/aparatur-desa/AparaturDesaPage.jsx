@@ -88,7 +88,7 @@ const AparaturDesaPage = () => {
 			showCancelButton: true,
 			confirmButtonText: "Ya, Import",
 			cancelButtonText: "Batal",
-			confirmButtonColor: "#0d9488",
+			confirmButtonColor: "#334155",
 		});
 
 		if (!confirm.isConfirmed) return;
@@ -123,7 +123,7 @@ const AparaturDesaPage = () => {
 					<div className="flex items-center gap-2 flex-wrap">
 						<button
 							onClick={() => navigate("/desa/aparatur-desa-external")}
-							className="bg-teal-600 text-white px-3 py-2 rounded-lg flex items-center gap-1.5 text-sm hover:bg-teal-700 transition-colors"
+							className="bg-slate-600 text-white px-3 py-2 rounded-lg flex items-center gap-1.5 text-sm hover:bg-slate-700 transition-colors"
 						>
 							<ExternalLink className="w-4 h-4" />
 							<span>Dapur Desa</span>
@@ -169,7 +169,7 @@ const AparaturDesaPage = () => {
 				/>
 			) : loading ? (
 				<div className="bg-white rounded-xl border p-12 flex items-center justify-center">
-					<Loader2 className="h-8 w-8 text-teal-600 animate-spin" />
+					<Loader2 className="h-8 w-8 text-slate-600 animate-spin" />
 				</div>
 			) : aparatur.length === 0 && !isFormOpen ? (
 				<div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
@@ -185,7 +185,7 @@ const AparaturDesaPage = () => {
 							<button
 								onClick={handleImportExternal}
 								disabled={importing}
-								className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-teal-500 to-teal-600 text-white rounded-lg hover:from-teal-600 hover:to-teal-700 transition-all shadow-sm disabled:opacity-50"
+								className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-slate-500 to-slate-600 text-white rounded-lg hover:from-slate-600 hover:to-slate-700 transition-all shadow-sm disabled:opacity-50"
 							>
 								{importing ? (
 									<Loader2 className="w-4 h-4 animate-spin" />
@@ -196,7 +196,7 @@ const AparaturDesaPage = () => {
 							</button>
 							<button
 								onClick={() => navigate("/desa/aparatur-desa-external")}
-								className="inline-flex items-center gap-2 px-5 py-2.5 bg-white border border-teal-300 text-teal-700 rounded-lg hover:bg-teal-50 transition-colors"
+								className="inline-flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
 							>
 								<ExternalLink className="w-4 h-4" />
 								Lihat Data Dapur Desa
@@ -210,12 +210,12 @@ const AparaturDesaPage = () => {
 							</button>
 						</div>
 					</div>
-					<div className="bg-teal-50 border-t border-teal-100 px-6 py-4">
+					<div className="bg-slate-50 border-t border-slate-100 px-6 py-4">
 						<div className="flex items-start gap-3">
-							<Database className="w-5 h-5 text-teal-600 mt-0.5 flex-shrink-0" />
+							<Database className="w-5 h-5 text-slate-600 mt-0.5 flex-shrink-0" />
 							<div className="text-sm">
-								<p className="font-medium text-teal-800">Rekomendasi: Import dari Dapur Desa</p>
-								<p className="text-teal-600 mt-1">
+								<p className="font-medium text-slate-800">Rekomendasi: Import dari Dapur Desa</p>
+								<p className="text-slate-600 mt-1">
 									Dengan mengimpor data dari Dapur Desa, data aparatur desa akan otomatis terisi berdasarkan data resmi DPMD Kab. Bogor.
 									Kolom yang cocok akan dipetakan secara otomatis (nama, jabatan, jenis kelamin, pendidikan, agama, SK pengangkatan).
 								</p>

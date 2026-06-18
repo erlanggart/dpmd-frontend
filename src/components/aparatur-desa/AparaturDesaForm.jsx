@@ -67,9 +67,9 @@ const aparaturSchema = z.object({
 /* ---------- Section wrapper ---------- */
 const Section = ({ icon: Icon, title, color = "teal", children }) => {
 	const colors = {
-		teal: "border-teal-500 bg-teal-50 text-teal-700",
-		blue: "border-blue-500 bg-blue-50 text-blue-700",
-		purple: "border-purple-500 bg-purple-50 text-purple-700",
+		teal: "border-slate-500 bg-slate-50 text-slate-700",
+		blue: "border-slate-500 bg-slate-50 text-slate-700",
+		purple: "border-slate-500 bg-slate-50 text-slate-700",
 		amber: "border-amber-500 bg-amber-50 text-amber-700",
 	};
 	return (
@@ -140,8 +140,8 @@ const FileInput = ({
 							onError={(e) => (e.currentTarget.src = "/user-default.svg")}
 						/>
 					) : (
-						<div className="h-10 w-10 bg-blue-50 rounded-lg flex items-center justify-center">
-							<IconComp className="w-5 h-5 text-blue-500" />
+						<div className="h-10 w-10 bg-slate-100 rounded-lg flex items-center justify-center">
+							<IconComp className="w-5 h-5 text-slate-600" />
 						</div>
 					)}
 					<span className="text-xs text-gray-500 flex-1 truncate">{existingFilename}</span>
@@ -149,7 +149,7 @@ const FileInput = ({
 						href={fileUrl(existingFilename) || "#"}
 						target="_blank"
 						rel="noopener noreferrer"
-						className="text-xs font-medium text-teal-600 hover:text-teal-700 hover:underline"
+						className="text-xs font-medium text-slate-600 hover:text-slate-900 hover:underline"
 					>
 						Lihat
 					</a>
@@ -159,15 +159,15 @@ const FileInput = ({
 				{...getRootProps()}
 				className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-all ${
 					isDragActive
-						? "border-teal-400 bg-teal-50"
+						? "border-slate-500 bg-slate-50"
 						: fileName
-						? "border-teal-300 bg-teal-50/50"
-						: "border-gray-200 hover:border-teal-300 hover:bg-gray-50"
+						? "border-slate-300 bg-slate-50/50"
+						: "border-gray-200 hover:border-slate-300 hover:bg-gray-50"
 				}`}
 			>
 				<input {...getInputProps()} />
 				{fileName ? (
-					<div className="flex items-center justify-center gap-2 text-sm text-teal-700">
+					<div className="flex items-center justify-center gap-2 text-sm text-slate-700">
 						<FileText className="w-4 h-4" />
 						<span className="truncate max-w-[200px]">{fileName}</span>
 					</div>
@@ -297,7 +297,7 @@ const AparaturDesaForm = ({
 		}
 	};
 
-	const inputCls = "w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all";
+	const inputCls = "w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all";
 	const selectCls = `${inputCls} appearance-none`;
 
 	return (
@@ -533,7 +533,7 @@ const AparaturDesaForm = ({
 				</button>
 				<button
 					type="submit"
-					className="px-6 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-teal-600 to-emerald-600 rounded-lg hover:from-teal-700 hover:to-emerald-700 shadow-sm transition-all disabled:opacity-60 flex items-center gap-2"
+					className="px-6 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-slate-700 to-slate-900 rounded-lg hover:from-slate-800 hover:to-slate-950 shadow-sm transition-all disabled:opacity-60 flex items-center gap-2"
 					disabled={isSubmitting || submitLock}
 				>
 					{isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}

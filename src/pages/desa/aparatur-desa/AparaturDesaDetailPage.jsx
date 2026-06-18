@@ -260,7 +260,7 @@ const AparaturDesaDetailPage = () => {
 								/>
 								<div className={`absolute -bottom-2 -right-2 px-3 py-1 rounded-full text-xs font-semibold shadow-md ${
 									data.status === 'Aktif' 
-										? 'bg-green-500 text-white' 
+										? 'bg-slate-500 text-white'
 										: 'bg-gray-500 text-white'
 								}`}>
 									{data.status === 'Aktif' ? (
@@ -312,19 +312,19 @@ const AparaturDesaDetailPage = () => {
 							icon={FaMapMarkerAlt}
 							label="Tempat, Tanggal Lahir"
 							value={`${data.tempat_lahir ?? "-"}, ${formatDate(data.tanggal_lahir)}`}
-							color="text-blue-500"
+							color="text-slate-500"
 						/>
 						<InfoCard 
 							icon={FaVenusMars}
 							label="Jenis Kelamin"
 							value={data.jenis_kelamin}
-							color="text-purple-500"
+							color="text-slate-500"
 						/>
 						<InfoCard 
 							icon={FaGraduationCap}
 							label="Pendidikan Terakhir"
 							value={data.pendidikan_terakhir}
-							color="text-green-500"
+							color="text-slate-500"
 						/>
 						<InfoCard 
 							icon={FaPray}
@@ -342,7 +342,7 @@ const AparaturDesaDetailPage = () => {
 							icon={FaIdCard}
 							label="NIAP"
 							value={data.niap}
-							color="text-indigo-500"
+							color="text-slate-500"
 						/>
 					</div>
 				</div>
@@ -358,13 +358,13 @@ const AparaturDesaDetailPage = () => {
 							icon={FaCalendarAlt}
 							label="Tanggal Pengangkatan"
 							value={formatDate(data.tanggal_pengangkatan)}
-							color="text-green-600"
+							color="text-slate-600"
 						/>
 						<InfoCard 
 							icon={FaFileAlt}
 							label="Nomor SK Pengangkatan"
 							value={data.nomor_sk_pengangkatan}
-							color="text-blue-600"
+							color="text-slate-600"
 						/>
 						{data.tanggal_pemberhentian && (
 							<InfoCard 
@@ -396,13 +396,13 @@ const AparaturDesaDetailPage = () => {
 							icon={FaShieldAlt}
 							label="BPJS Kesehatan"
 							value={data.bpjs_kesehatan_nomor}
-							color="text-emerald-600"
+							color="text-slate-600"
 						/>
 						<InfoCard 
 							icon={FaShieldAlt}
 							label="BPJS Ketenagakerjaan"
 							value={data.bpjs_ketenagakerjaan_nomor}
-							color="text-cyan-600"
+							color="text-slate-600"
 						/>
 					</div>
 				</div>
@@ -422,14 +422,14 @@ const AparaturDesaDetailPage = () => {
 								</h3>
 								<div className="space-y-4">
 									{phId && phTitle && (
-										<div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-											<p className="text-xs font-medium text-blue-700 uppercase tracking-wide mb-2 flex items-center gap-2">
+										<div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+											<p className="text-xs font-medium text-slate-700 uppercase tracking-wide mb-2 flex items-center gap-2">
 												<FaLink className="w-3 h-3" />
 												Produk Hukum Terkait
 											</p>
 											<button
 												type="button"
-												className="text-blue-600 hover:text-blue-700 font-semibold flex items-center gap-2 group"
+												className="text-slate-600 hover:text-slate-700 font-semibold flex items-center gap-2 group"
 												onClick={() => nav(`/desa/produk-hukum/${phId}`)}
 											>
 												<span>{phTitle}</span>
@@ -544,7 +544,7 @@ const AparaturDesaDetailPage = () => {
 									</select>
 									<div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
 										{statusForm.status === 'Aktif' ? (
-											<FaCheckCircle className="w-5 h-5 text-green-500" />
+											<FaCheckCircle className="w-5 h-5 text-slate-500" />
 										) : (
 											<FaTimesCircle className="w-5 h-5 text-red-500" />
 										)}

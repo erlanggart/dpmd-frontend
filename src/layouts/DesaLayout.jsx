@@ -23,72 +23,72 @@ const menuItems = [
     label: "Dashboard",
     path: "/desa/dashboard",
     icon: "dashboard",
-    color: "text-blue-600",
-    gradient: "from-blue-500 to-indigo-600",
+    color: "text-slate-600",
+    gradient: "from-slate-700 to-slate-900",
   },
   {
     id: "profil-desa",
     label: "Profil Desa",
     path: "/desa/profil-desa",
     icon: "image",
-    color: "text-emerald-600",
-    gradient: "from-emerald-500 to-teal-600",
+    color: "text-slate-600",
+    gradient: "from-slate-700 to-slate-900",
   },
   {
     id: "produk-hukum",
     label: "Produk Hukum",
     path: "/desa/produk-hukum",
     icon: "file",
-    color: "text-amber-600",
-    gradient: "from-amber-500 to-orange-600",
+    color: "text-slate-600",
+    gradient: "from-slate-700 to-slate-900",
   },
   {
     id: "bumdes",
     label: "BUMDES",
     path: "/desa/bumdes",
     icon: "store",
-    color: "text-purple-600",
-    gradient: "from-purple-500 to-indigo-600",
+    color: "text-slate-600",
+    gradient: "from-slate-700 to-slate-900",
   },
   {
     id: "kelembagaan",
     label: "Kelembagaan",
     path: "/desa/kelembagaan",
     icon: "landmark",
-    color: "text-cyan-600",
-    gradient: "from-cyan-500 to-teal-600",
+    color: "text-slate-600",
+    gradient: "from-slate-700 to-slate-900",
   },
   {
     id: "aparatur-desa",
     label: "Aparatur Desa",
     path: "/desa/aparatur-desa",
     icon: "users",
-    color: "text-teal-600",
-    gradient: "from-teal-500 to-emerald-600",
+    color: "text-slate-600",
+    gradient: "from-slate-700 to-slate-900",
   },
   {
     id: "bankeu",
     label: "Bantuan Keuangan",
     path: "/desa/bankeu",
     icon: "banknote",
-    color: "text-rose-600",
-    gradient: "from-rose-500 to-pink-600",
+    color: "text-slate-600",
+    gradient: "from-slate-700 to-slate-900",
   },
   {
     id: "bankeu-perubahan",
     label: "Bankeu Perubahan",
     path: "/desa/bankeu-perubahan",
     icon: "coins",
-    color: "text-orange-600",
-    gradient: "from-orange-500 to-amber-600",
+    color: "text-slate-600",
+    gradient: "from-slate-700 to-slate-900",
   },
   {
     id: "pesan",
     label: "Pesan",
     path: "/desa/pesan",
     icon: "mail",
-    color: "text-indigo-600",
-    gradient: "from-indigo-500 to-purple-600",
+    color: "text-slate-600",
+    gradient: "from-slate-700 to-slate-900",
   },
 ];
 
@@ -135,25 +135,25 @@ const DesaLayout = () => {
   // Sidebar items = menu + settings + profile
   const sidebarNavItems = [
     ...menuItems,
-    { id: "settings", label: "Pengaturan", path: "/desa/settings", icon: "settings", color: "text-gray-600", gradient: "from-gray-500 to-slate-600" },
+    { id: "settings", label: "Pengaturan", path: "/desa/settings", icon: "settings", color: "text-slate-300", gradient: "from-slate-700 to-slate-900" },
   ];
 
   const desaLabel = user?.desa?.status_pemerintahan === "desa" ? "Desa" : "Kelurahan";
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-50 to-slate-50">
       {/* Desktop Sidebar */}
       {isDesktop && (
         <aside
-          className={`fixed top-0 left-0 h-full bg-white shadow-2xl z-40 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] border-r border-gray-100 ${
+          className={`fixed top-0 left-0 h-full bg-slate-900 text-white shadow-2xl z-40 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] border-r border-slate-800 ${
             isSidebarCollapsed ? 'w-20' : 'w-64'
           }`}
         >
           {/* Gradient Accent Line */}
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-teal-600"></div>
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-slate-300 via-white to-slate-400"></div>
 
           {/* Sidebar Header */}
-          <div className="relative p-4 h-20 border-b border-gray-100 flex items-center justify-between flex-shrink-0 bg-gradient-to-r from-emerald-50 to-green-100">
+          <div className="relative p-4 h-20 border-b border-slate-800 flex items-center justify-between flex-shrink-0 bg-slate-950">
             {!isSidebarCollapsed && (
               <div className="flex items-center justify-center flex-1">
                 <img
@@ -165,19 +165,19 @@ const DesaLayout = () => {
             )}
             <button
               onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-              className={`p-2 bg-emerald-100 hover:bg-emerald-200 rounded-lg transition-colors duration-200 flex-shrink-0 group ${!isSidebarCollapsed ? '' : 'mx-auto'}`}
+              className={`p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors duration-200 flex-shrink-0 group ${!isSidebarCollapsed ? '' : 'mx-auto'}`}
               aria-label={isSidebarCollapsed ? 'Open sidebar' : 'Close sidebar'}
             >
               {!isSidebarCollapsed ? (
-                <ChevronLeft className="w-5 h-5 text-emerald-700 group-hover:scale-110 transition-transform" />
+                <ChevronLeft className="w-5 h-5 text-slate-200 group-hover:scale-110 transition-transform" />
               ) : (
-                <Menu className="w-5 h-5 text-emerald-700 group-hover:scale-110 transition-transform" />
+                <Menu className="w-5 h-5 text-slate-200 group-hover:scale-110 transition-transform" />
               )}
             </button>
           </div>
 
           {/* Navigation Items */}
-          <nav className="relative p-3 space-y-1.5 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent" style={{ height: 'calc(100vh - 280px)' }}>
+          <nav className="relative p-3 space-y-1.5 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent" style={{ height: 'calc(100vh - 280px)' }}>
             {sidebarNavItems.map((item, index) => {
               const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + '/');
 
@@ -189,8 +189,8 @@ const DesaLayout = () => {
                   onMouseLeave={() => setHoveredItem(null)}
                   className={`group relative w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 rounded-xl transition-all duration-200 ${
                     isActive
-                      ? `bg-gradient-to-r ${item.gradient} text-white shadow-md`
-                      : `${item.color} hover:bg-gradient-to-r ${item.gradient} hover:text-white hover:shadow-md`
+                      ? 'bg-white text-slate-900 shadow-lg'
+                      : 'text-slate-300 hover:bg-white/10 hover:text-white'
                   }`}
                   title={isSidebarCollapsed ? item.label : ''}
                 >
@@ -221,19 +221,19 @@ const DesaLayout = () => {
           </nav>
 
           {/* User Profile & Logout at bottom */}
-          <div className="absolute bottom-0 left-0 right-0 border-t border-gray-100">
+          <div className="absolute bottom-0 left-0 right-0 border-t border-slate-800 bg-slate-950">
             {/* User Profile Section */}
-            <div className="p-3 border-b border-gray-100">
+            <div className="p-3 border-b border-slate-800">
               <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'}`}>
-                <div className={`${isSidebarCollapsed ? 'h-12 w-12' : 'h-10 w-10'} bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full flex items-center justify-center shadow-md`}>
+                <div className={`${isSidebarCollapsed ? 'h-12 w-12' : 'h-10 w-10'} bg-slate-700 ring-1 ring-white/15 rounded-full flex items-center justify-center shadow-md`}>
                   <span className="text-white font-bold text-sm">
                     {user?.name?.charAt(0)?.toUpperCase() || "U"}
                   </span>
                 </div>
                 {!isSidebarCollapsed && (
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-gray-800 text-sm truncate">{user?.name}</h3>
-                    <span className="inline-block px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-xs font-medium mt-1">
+                    <h3 className="font-semibold text-white text-sm truncate">{user?.name}</h3>
+                    <span className="inline-block px-2 py-0.5 bg-white/10 text-slate-200 rounded-full text-xs font-medium mt-1">
                       {desaLabel} {user?.desa?.nama}
                     </span>
                   </div>
@@ -245,7 +245,7 @@ const DesaLayout = () => {
             <div className="p-3">
               <button
                 onClick={handleLogout}
-                className={`group relative w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 rounded-xl transition-all duration-200 text-red-600 hover:bg-gradient-to-r hover:from-red-500 hover:to-red-600 hover:text-white hover:shadow-md`}
+                className={`group relative w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 rounded-xl transition-all duration-200 text-red-300 hover:bg-red-500 hover:text-white hover:shadow-md`}
                 title={isSidebarCollapsed ? 'Keluar' : ''}
               >
                 <div className={`relative ${isSidebarCollapsed ? 'mx-auto' : 'flex-shrink-0'}`}>
@@ -275,7 +275,7 @@ const DesaLayout = () => {
 
       {/* Bottom Navigation - Mobile Only */}
       {!isDesktop && (
-        <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-emerald-200 shadow-lg z-50">
+        <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-lg z-50">
           <div className="max-w-lg mx-auto px-4">
             <div className="flex items-end justify-around py-2">
               {bottomNavItems.map((item, index) => {
@@ -290,13 +290,13 @@ const DesaLayout = () => {
                     >
                       <div className={`flex items-center justify-center h-14 w-14 rounded-full shadow-lg transition-all duration-200 ${
                         isActive
-                          ? 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white scale-110'
-                          : 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white hover:scale-105'
+                          ? 'bg-gradient-to-br from-slate-700 to-slate-900 text-white scale-110'
+                          : 'bg-gradient-to-br from-slate-700 to-slate-900 text-white hover:scale-105'
                       }`}>
                         <AnimatedIcon type={item.icon} isActive={isActive} className="w-7 h-7" />
                       </div>
                       <span className={`text-[11px] mt-1 font-semibold ${
-                        isActive ? 'text-emerald-700' : 'text-gray-500'
+                        isActive ? 'text-slate-700' : 'text-gray-500'
                       }`}>{item.label}</span>
                     </button>
                   );
@@ -314,8 +314,8 @@ const DesaLayout = () => {
                     }}
                     className={`relative flex flex-col items-center justify-center px-4 py-1 rounded-xl transition-all duration-200 ${
                       isActive
-                        ? 'text-emerald-700'
-                        : 'text-gray-400 hover:text-emerald-600'
+                        ? 'text-slate-700'
+                        : 'text-gray-400 hover:text-slate-600'
                     }`}
                   >
                       <div className="relative">
@@ -327,7 +327,7 @@ const DesaLayout = () => {
                         )}
                       </div>
                     <span className={`text-[11px] mt-1 font-medium ${
-                      isActive ? 'text-emerald-700' : 'text-gray-400'
+                      isActive ? 'text-slate-700' : 'text-gray-400'
                     }`}>{item.label}</span>
                   </button>
                 );
@@ -352,9 +352,9 @@ const DesaLayout = () => {
               </div>
 
               {/* Menu Header */}
-              <div className="px-6 py-4 border-b border-emerald-100">
+              <div className="px-6 py-4 border-b border-slate-100">
                 <div className="flex items-center gap-3">
-                  <div className="h-14 w-14 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full flex items-center justify-center shadow-md">
+                  <div className="h-14 w-14 bg-gradient-to-br from-slate-700 to-slate-900 rounded-full flex items-center justify-center shadow-md">
                     <span className="text-white font-bold text-xl">
                       {user?.name?.charAt(0)?.toUpperCase() || "U"}
                     </span>
@@ -362,7 +362,7 @@ const DesaLayout = () => {
                   <div className="flex-1">
                     <h3 className="font-bold text-gray-800 text-lg">{user?.name}</h3>
                     <p className="text-sm text-gray-500">{user?.email}</p>
-                    <span className="inline-block mt-1 px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-xs font-medium">
+                    <span className="inline-block mt-1 px-2 py-0.5 bg-slate-100 text-slate-700 rounded-full text-xs font-medium">
                       {desaLabel} {user?.desa?.nama}
                     </span>
                   </div>
@@ -378,7 +378,7 @@ const DesaLayout = () => {
                       setShowMenu(false);
                       navigate(item.path);
                     }}
-                    className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-emerald-50 transition-colors text-left"
+                    className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-slate-50 transition-colors text-left"
                   >
                     <div className={`relative h-12 w-12 bg-gradient-to-br ${item.gradient} rounded-xl flex items-center justify-center flex-shrink-0`}>
                       <AnimatedIcon type={item.icon} isActive={false} className="w-6 h-6 text-white" />
@@ -406,7 +406,7 @@ const DesaLayout = () => {
                   }}
                   className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-gray-50 transition-colors text-left"
                 >
-                  <div className="h-12 w-12 bg-gradient-to-br from-gray-500 to-slate-600 rounded-xl flex items-center justify-center">
+                  <div className="h-12 w-12 bg-gradient-to-br from-slate-700 to-slate-900 rounded-xl flex items-center justify-center">
                     <FiSettings className="h-6 w-6 text-white" />
                   </div>
                   <div>

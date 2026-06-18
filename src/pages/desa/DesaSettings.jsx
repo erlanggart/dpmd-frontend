@@ -141,8 +141,8 @@ const DesaSettings = () => {
 				{/* Profile Tab */}
 				{activeTab === "profile" && (
 					<div className="space-y-6">
-						<div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-							<p className="text-sm text-blue-800">
+						<div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+							<p className="text-sm text-slate-800">
 								<strong>Informasi:</strong> Data profil dikelola oleh administrator.
 								Untuk mengubah data profil, silakan hubungi administrator.
 							</p>

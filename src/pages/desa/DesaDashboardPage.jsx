@@ -139,7 +139,7 @@ const DesaDashboardPage = () => {
 		return (
 			<div className="flex h-64 items-center justify-center rounded-3xl border border-slate-200 bg-white shadow-sm">
 				<div className="flex flex-col items-center gap-3 text-slate-500">
-					<LuLoader className="h-8 w-8 animate-spin text-emerald-600" />
+					<LuLoader className="h-8 w-8 animate-spin text-slate-600" />
 					<p className="text-sm font-medium">Memuat ringkasan dashboard desa...</p>
 				</div>
 			</div>
@@ -230,10 +230,10 @@ const DesaDashboardPage = () => {
 				profileCompletion.percentage === 100 ? "Lengkap" : "Perlu pembaruan",
 			badgeClass:
 				profileCompletion.percentage === 100
-					? "bg-emerald-100 text-emerald-700"
+					? "bg-slate-100 text-slate-700"
 					: "bg-amber-100 text-amber-700",
-			gradient: "from-emerald-500 to-teal-500",
-			surface: "from-emerald-50 via-white to-teal-50",
+			gradient: "from-slate-500 to-slate-500",
+			surface: "from-slate-50 via-white to-slate-50",
 			ready: profileCompletion.percentage > 0,
 			actionLabel: "Buka profil desa",
 		},
@@ -260,10 +260,10 @@ const DesaDashboardPage = () => {
 			badge: aparatur.total > 0 ? "Terdata" : "Kosong",
 			badgeClass:
 				aparatur.total > 0
-					? "bg-sky-100 text-sky-700"
+					? "bg-slate-100 text-slate-700"
 					: "bg-slate-100 text-slate-600",
-			gradient: "from-sky-500 to-blue-600",
-			surface: "from-sky-50 via-white to-blue-50",
+			gradient: "from-slate-500 to-slate-600",
+			surface: "from-slate-50 via-white to-slate-50",
 			ready: aparatur.total > 0,
 			actionLabel: "Kelola aparatur",
 		},
@@ -292,8 +292,8 @@ const DesaDashboardPage = () => {
 				produkHukum.total > 0
 					? "bg-amber-100 text-amber-700"
 					: "bg-slate-100 text-slate-600",
-			gradient: "from-amber-500 to-orange-500",
-			surface: "from-amber-50 via-white to-orange-50",
+			gradient: "from-slate-500 to-slate-500",
+			surface: "from-slate-50 via-white to-slate-50",
 			ready: produkHukum.total > 0,
 			actionLabel: "Buka arsip hukum",
 		},
@@ -324,10 +324,10 @@ const DesaDashboardPage = () => {
 				? humanizeText(bumdes.status) || "Terdata"
 				: "Belum ada",
 			badgeClass: bumdes.exists
-				? "bg-fuchsia-100 text-fuchsia-700"
+				? "bg-slate-100 text-slate-700"
 				: "bg-slate-100 text-slate-600",
-			gradient: "from-fuchsia-500 to-indigo-600",
-			surface: "from-fuchsia-50 via-white to-indigo-50",
+			gradient: "from-slate-500 to-slate-600",
+			surface: "from-slate-50 via-white to-slate-50",
 			ready: !!bumdes.exists,
 			actionLabel: "Kelola BUMDes",
 		},
@@ -354,10 +354,10 @@ const DesaDashboardPage = () => {
 			badge: kelembagaan.total_lembaga > 0 ? "Aktif" : "Belum ada",
 			badgeClass:
 				kelembagaan.total_lembaga > 0
-					? "bg-cyan-100 text-cyan-700"
+					? "bg-slate-100 text-slate-700"
 					: "bg-slate-100 text-slate-600",
-			gradient: "from-cyan-500 to-teal-500",
-			surface: "from-cyan-50 via-white to-teal-50",
+			gradient: "from-slate-500 to-slate-500",
+			surface: "from-slate-50 via-white to-slate-50",
 			ready: kelembagaan.total_lembaga > 0,
 			actionLabel: "Buka kelembagaan",
 		},
@@ -389,12 +389,12 @@ const DesaDashboardPage = () => {
 						: "Siap diajukan",
 			badgeClass:
 				bankeu.needs_action > 0
-					? "bg-rose-100 text-rose-700"
+					? "bg-slate-100 text-slate-700"
 					: bankeu.total_proposals > 0
-						? "bg-violet-100 text-violet-700"
+						? "bg-slate-100 text-slate-700"
 						: "bg-slate-100 text-slate-600",
-			gradient: "from-rose-500 to-pink-600",
-			surface: "from-rose-50 via-white to-pink-50",
+			gradient: "from-slate-500 to-slate-600",
+			surface: "from-slate-50 via-white to-slate-50",
 			ready: bankeu.total_proposals > 0,
 			actionLabel: "Pantau pengajuan",
 		},
@@ -410,8 +410,8 @@ const DesaDashboardPage = () => {
 			status: keuangan?.add?.hasData
 				? humanizeText(keuangan.add.status) || "Data tersedia"
 				: "Belum ada data pencairan",
-			gradient: "from-emerald-500 to-lime-500",
-			surface: "from-emerald-50 via-white to-lime-50",
+			gradient: "from-slate-500 to-slate-500",
+			surface: "from-slate-50 via-white to-slate-50",
 			ready: !!keuangan?.add?.hasData,
 		},
 		{
@@ -424,8 +424,8 @@ const DesaDashboardPage = () => {
 				countAvailableStages(bhprdStages) > 0
 					? `${countAvailableStages(bhprdStages)}/${bhprdStages.length} tahap memiliki data pencairan`
 					: "Belum ada data pencairan",
-			gradient: "from-sky-500 to-blue-600",
-			surface: "from-sky-50 via-white to-blue-50",
+			gradient: "from-slate-500 to-slate-600",
+			surface: "from-slate-50 via-white to-slate-50",
 			ready: countAvailableStages(bhprdStages) > 0,
 		},
 		{
@@ -438,8 +438,8 @@ const DesaDashboardPage = () => {
 				countAvailableStages(ddStages) > 0
 					? `${countAvailableStages(ddStages)}/${ddStages.length} tahap memiliki data pencairan`
 					: "Belum ada data pencairan",
-			gradient: "from-violet-500 to-indigo-600",
-			surface: "from-violet-50 via-white to-indigo-50",
+			gradient: "from-slate-500 to-slate-600",
+			surface: "from-slate-50 via-white to-slate-50",
 			ready: countAvailableStages(ddStages) > 0,
 		},
 		{
@@ -452,8 +452,8 @@ const DesaDashboardPage = () => {
 				countAvailableStages(bankeuFundingStages) > 0
 					? `${countAvailableStages(bankeuFundingStages)}/${bankeuFundingStages.length} tahap memiliki data pencairan`
 					: "Belum ada data pencairan",
-			gradient: "from-amber-500 to-orange-600",
-			surface: "from-amber-50 via-white to-orange-50",
+			gradient: "from-slate-500 to-slate-600",
+			surface: "from-slate-50 via-white to-slate-50",
 			ready: countAvailableStages(bankeuFundingStages) > 0,
 		},
 	];
@@ -467,7 +467,7 @@ const DesaDashboardPage = () => {
 			description: `${profileCompletion.total - profileCompletion.filled} data utama masih perlu dilengkapi agar informasi desa lebih utuh.`,
 			link: "/desa/profil-desa",
 			icon: LuMapPin,
-			tone: "bg-emerald-100 text-emerald-700",
+			tone: "bg-slate-100 text-slate-700",
 			actionLabel: "Perbarui profil",
 		});
 	}
@@ -478,7 +478,7 @@ const DesaDashboardPage = () => {
 			description: `${formatNumber(bankeu.needs_action)} proposal membutuhkan revisi atau tindak lanjut dari desa.`,
 			link: "/desa/bankeu",
 			icon: LuBanknote,
-			tone: "bg-rose-100 text-rose-700",
+			tone: "bg-slate-100 text-slate-700",
 			actionLabel: "Buka modul Bankeu",
 		});
 	}
@@ -489,7 +489,7 @@ const DesaDashboardPage = () => {
 			description: "BUMDes belum tercatat. Isi identitas dan legalitas usaha desa agar profil ekonomi desa lebih kuat.",
 			link: "/desa/bumdes",
 			icon: LuStore,
-			tone: "bg-fuchsia-100 text-fuchsia-700",
+			tone: "bg-slate-100 text-slate-700",
 			actionLabel: "Isi data BUMDes",
 		});
 	}
@@ -511,7 +511,7 @@ const DesaDashboardPage = () => {
 			description: "Belum ada aparatur yang terdata. Tambahkan aparatur untuk memudahkan administrasi dan pelaporan desa.",
 			link: "/desa/aparatur-desa",
 			icon: LuUsers,
-			tone: "bg-sky-100 text-sky-700",
+			tone: "bg-slate-100 text-slate-700",
 			actionLabel: "Kelola aparatur",
 		});
 	}
@@ -522,7 +522,7 @@ const DesaDashboardPage = () => {
 			description: "Pantau pencairan keuangan, pengajuan bantuan keuangan, dan berita DPMD dari dashboard ini.",
 			link: "/desa/dashboard",
 			icon: LuCircleCheck,
-			tone: "bg-emerald-100 text-emerald-700",
+			tone: "bg-slate-100 text-slate-700",
 			actionLabel: "Tetap di dashboard",
 		});
 	}
@@ -530,14 +530,14 @@ const DesaDashboardPage = () => {
 	return (
 		<div className="space-y-6">
 			<section className="relative overflow-hidden rounded-[28px] bg-slate-950 text-white shadow-xl">
-				<div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.28),_transparent_35%),radial-gradient(circle_at_bottom_right,_rgba(59,130,246,0.24),_transparent_32%)]" />
-				<div className="absolute left-8 top-8 h-40 w-40 rounded-full bg-emerald-400/10 blur-3xl" />
-				<div className="absolute bottom-0 right-0 h-56 w-56 rounded-full bg-blue-400/10 blur-3xl" />
+				<div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(148,163,184,0.24),_transparent_35%),radial-gradient(circle_at_bottom_right,_rgba(71,85,105,0.28),_transparent_32%)]" />
+				<div className="absolute left-8 top-8 h-40 w-40 rounded-full bg-slate-400/10 blur-3xl" />
+				<div className="absolute bottom-0 right-0 h-56 w-56 rounded-full bg-slate-400/10 blur-3xl" />
 				<div className="relative p-6 md:p-8 xl:p-10">
 					<div className="flex flex-col gap-8 xl:flex-row xl:items-end xl:justify-between">
 						<div className="max-w-3xl space-y-4">
 							<div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/80 backdrop-blur-sm">
-								<LuLayoutDashboard className="h-4 w-4 text-emerald-300" />
+								<LuLayoutDashboard className="h-4 w-4 text-slate-300" />
 								Ringkasan fitur dan data utama {desaLabel.toLowerCase()}
 							</div>
 							<div>
@@ -589,19 +589,19 @@ const DesaDashboardPage = () => {
 
 					<div className="mt-8 flex flex-wrap gap-3">
 						<div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/80">
-							<LuMapPin className="h-4 w-4 text-emerald-300" />
+							<LuMapPin className="h-4 w-4 text-slate-300" />
 							{desa.kecamatan ? `Kecamatan ${desa.kecamatan}` : "Kecamatan belum tersedia"}
 						</div>
 						<div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/80">
-							<LuCircleCheck className="h-4 w-4 text-emerald-300" />
+							<LuCircleCheck className="h-4 w-4 text-slate-300" />
 							{completedModules}/{featureCards.length} modul telah memiliki data inti
 						</div>
 						<div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/80">
-							<LuDollarSign className="h-4 w-4 text-emerald-300" />
+							<LuDollarSign className="h-4 w-4 text-slate-300" />
 							Realisasi 2025 {keuangan.total_realisasi_formatted || formatCurrency(0)}
 						</div>
 						<div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/80">
-							<LuTrendingUp className="h-4 w-4 text-blue-300" />
+							<LuTrendingUp className="h-4 w-4 text-slate-300" />
 							{todayLabel}
 						</div>
 					</div>
@@ -686,8 +686,8 @@ const DesaDashboardPage = () => {
 									Ringkasan realisasi keuangan desa dari data pencairan yang tersedia di sistem.
 								</p>
 							</div>
-							<div className="rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 px-5 py-4 text-white shadow-lg shadow-emerald-500/20">
-								<p className="text-xs font-medium uppercase tracking-wide text-emerald-100">
+							<div className="rounded-2xl bg-gradient-to-br from-slate-500 to-slate-600 px-5 py-4 text-white shadow-lg shadow-slate-500/20">
+								<p className="text-xs font-medium uppercase tracking-wide text-slate-100">
 									Total realisasi
 								</p>
 								<p className="mt-2 text-2xl font-semibold">
@@ -709,7 +709,7 @@ const DesaDashboardPage = () => {
 										<span
 											className={`rounded-full px-3 py-1 text-xs font-semibold ${
 												card.ready
-													? "bg-emerald-100 text-emerald-700"
+													? "bg-slate-100 text-slate-700"
 													: "bg-slate-100 text-slate-600"
 											}`}
 										>
@@ -765,7 +765,7 @@ const DesaDashboardPage = () => {
 													<span>{formatDate(item.tanggal_publish || item.created_at)}</span>
 													<span>{formatNumber(item.views)} dibaca</span>
 												</div>
-												<h3 className="mt-3 text-base font-semibold leading-6 text-slate-900 transition group-hover:text-emerald-700">
+												<h3 className="mt-3 text-base font-semibold leading-6 text-slate-900 transition group-hover:text-slate-700">
 													{item.judul}
 												</h3>
 												<p className="mt-2 text-sm leading-6 text-slate-600">

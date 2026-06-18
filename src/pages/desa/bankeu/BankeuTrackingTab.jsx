@@ -23,10 +23,10 @@ const formatRupiah = (val) => {
 // ========== STEP STATUS CONFIG ==========
 const stepConfig = {
   completed: { color: 'bg-emerald-500', text: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200', icon: LuCheck, label: 'Selesai' },
-  active: { color: 'bg-blue-500', text: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-200', icon: LuClock, label: 'Sedang Diproses' },
+  active: { color: 'bg-slate-500', text: 'text-slate-700', bg: 'bg-slate-50', border: 'border-slate-200', icon: LuClock, label: 'Sedang Diproses' },
   rejected: { color: 'bg-red-500', text: 'text-red-700', bg: 'bg-red-50', border: 'border-red-200', icon: LuX, label: 'Ditolak' },
   revision: { color: 'bg-amber-500', text: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200', icon: LuRefreshCw, label: 'Perlu Revisi' },
-  troubleshoot: { color: 'bg-indigo-500', text: 'text-indigo-700', bg: 'bg-indigo-50', border: 'border-indigo-200', icon: LuWrench, label: 'Catatan' },
+  troubleshoot: { color: 'bg-slate-500', text: 'text-slate-700', bg: 'bg-slate-50', border: 'border-slate-200', icon: LuWrench, label: 'Catatan' },
   waiting: { color: 'bg-gray-300', text: 'text-gray-500', bg: 'bg-gray-50', border: 'border-gray-200', icon: LuClock, label: 'Menunggu' },
 };
 
@@ -43,7 +43,7 @@ const StepIndicator = ({ step, isLast }) => {
           <Icon className="w-4 h-4 text-white" />
         </div>
         {!isLast && (
-          <div className={`w-0.5 flex-1 min-h-[40px] ${step.status === 'completed' ? 'bg-emerald-300' : 'bg-gray-200'}`} />
+          <div className={`w-0.5 flex-1 min-h-[40px] ${step.status === 'completed' ? 'bg-slate-300' : 'bg-gray-200'}`} />
         )}
       </div>
       {/* Content */}
@@ -197,27 +197,27 @@ const ProposalTrackingCard = ({ proposal, index }) => {
   // Overall status badge
   const getOverallBadge = () => {
     // Alur selesai: Kecamatan sudah KIRIM ke DPMD (bukan hanya approve)
-    if (isSubmittedToDpmd) return { text: '✓ Diterima DPMD', color: 'bg-emerald-100 text-emerald-800 border-emerald-300' };
+    if (isSubmittedToDpmd) return { text: '✓ Diterima DPMD', color: 'bg-slate-100 text-slate-800 border-slate-300' };
     
     // Kecamatan approved tapi belum dikirim ke DPMD
-    if (proposal.kecamatan_status === 'approved') return { text: 'Disetujui Kecamatan', color: 'bg-teal-100 text-teal-800 border-teal-300' };
+    if (proposal.kecamatan_status === 'approved') return { text: 'Disetujui Kecamatan', color: 'bg-slate-100 text-slate-800 border-slate-300' };
     
     // Troubleshoot dari DPMD
-    if (proposal.troubleshoot_catatan && proposal.status === 'revision' && !proposal.submitted_to_dinas_at) return { text: 'Troubleshoot DPMD', color: 'bg-indigo-100 text-indigo-800 border-indigo-300' };
+    if (proposal.troubleshoot_catatan && proposal.status === 'revision' && !proposal.submitted_to_dinas_at) return { text: 'Troubleshoot DPMD', color: 'bg-slate-100 text-slate-800 border-slate-300' };
     
     // Status Kecamatan
     if (proposal.kecamatan_status === 'rejected') return { text: 'Ditolak Kecamatan', color: 'bg-red-100 text-red-800 border-red-300' };
     if (proposal.kecamatan_status === 'revision') return { text: 'Revisi Kecamatan', color: 'bg-amber-100 text-amber-800 border-amber-300' };
-    if (proposal.kecamatan_status === 'pending' || proposal.kecamatan_status === 'in_review') return { text: 'Di Kecamatan', color: 'bg-purple-100 text-purple-800 border-purple-300' };
+    if (proposal.kecamatan_status === 'pending' || proposal.kecamatan_status === 'in_review') return { text: 'Di Kecamatan', color: 'bg-slate-100 text-slate-800 border-slate-300' };
     
     // Status Dinas
     if (proposal.dinas_status === 'rejected') return { text: 'Ditolak Dinas', color: 'bg-red-100 text-red-800 border-red-300' };
     if (proposal.dinas_status === 'revision') return { text: 'Revisi Dinas', color: 'bg-amber-100 text-amber-800 border-amber-300' };
-    if (proposal.dinas_status === 'approved') return { text: 'Di Kecamatan', color: 'bg-blue-100 text-blue-800 border-blue-300' };
-    if (proposal.dinas_status === 'pending' || proposal.dinas_status === 'in_review') return { text: 'Di Dinas', color: 'bg-sky-100 text-sky-800 border-sky-300' };
+    if (proposal.dinas_status === 'approved') return { text: 'Di Kecamatan', color: 'bg-slate-100 text-slate-800 border-slate-300' };
+    if (proposal.dinas_status === 'pending' || proposal.dinas_status === 'in_review') return { text: 'Di Dinas', color: 'bg-slate-100 text-slate-800 border-slate-300' };
     
     // Belum dikirim
-    if (proposal.submitted_to_dinas_at) return { text: 'Dikirim ke Dinas', color: 'bg-sky-100 text-sky-800 border-sky-300' };
+    if (proposal.submitted_to_dinas_at) return { text: 'Dikirim ke Dinas', color: 'bg-slate-100 text-slate-800 border-slate-300' };
     return { text: 'Belum Dikirim', color: 'bg-gray-100 text-gray-700 border-gray-300' };
   };
 
@@ -231,7 +231,7 @@ const ProposalTrackingCard = ({ proposal, index }) => {
 
   return (
     <div className={`bg-white rounded-2xl border-2 transition-all duration-300 shadow-sm hover:shadow-md ${
-      isFinalApproved ? 'border-emerald-200' : isRejected ? 'border-red-200' : 'border-gray-200'
+      isFinalApproved ? 'border-slate-200' : isRejected ? 'border-red-200' : 'border-gray-200'
     }`}>
       {/* Card Header */}
       <button
@@ -250,7 +250,7 @@ const ProposalTrackingCard = ({ proposal, index }) => {
             <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-gray-500">
               {proposal.kegiatan_list?.map((k, i) => (
                 <span key={i} className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
-                  k.jenis_kegiatan === 'infrastruktur' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+                  k.jenis_kegiatan === 'infrastruktur' ? 'bg-slate-100 text-slate-700' : 'bg-slate-100 text-slate-700'
                 }`}>
                   {k.nama_kegiatan}
                 </span>
@@ -290,7 +290,7 @@ const ProposalTrackingCard = ({ proposal, index }) => {
           <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
             <div
               className={`h-full rounded-full transition-all duration-500 ${
-                isFinalApproved ? 'bg-emerald-500' : isRejected ? 'bg-red-500' : 'bg-blue-500'
+                isFinalApproved ? 'bg-slate-500' : isRejected ? 'bg-red-500' : 'bg-slate-500'
               }`}
               style={{ width: `${progressPct}%` }}
             />
@@ -327,10 +327,10 @@ const SuratTrackingCard = ({ surat, tahun }) => {
 
   const getKecamatanBadge = () => {
     const status = surat.kecamatan_status;
-    if (status === 'approved') return { text: 'Disetujui Kecamatan', color: 'bg-emerald-100 text-emerald-800 border-emerald-300', icon: LuCheck };
+    if (status === 'approved') return { text: 'Disetujui Kecamatan', color: 'bg-slate-100 text-slate-800 border-slate-300', icon: LuCheck };
     if (status === 'rejected') return { text: 'Ditolak Kecamatan', color: 'bg-red-100 text-red-800 border-red-300', icon: LuX };
     if (status === 'revision') return { text: 'Perlu Revisi', color: 'bg-amber-100 text-amber-800 border-amber-300', icon: LuRefreshCw };
-    if (surat.submitted_to_kecamatan) return { text: 'Dikirim ke Kecamatan', color: 'bg-blue-100 text-blue-800 border-blue-300', icon: LuClock };
+    if (surat.submitted_to_kecamatan) return { text: 'Dikirim ke Kecamatan', color: 'bg-slate-100 text-slate-800 border-slate-300', icon: LuClock };
     return { text: 'Belum Dikirim', color: 'bg-gray-100 text-gray-700 border-gray-300', icon: LuClock };
   };
 
@@ -342,7 +342,7 @@ const SuratTrackingCard = ({ surat, tahun }) => {
       <div className="p-5">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <div className="w-9 h-9 bg-gradient-to-br from-orange-500 to-amber-600 rounded-xl flex items-center justify-center shadow-md">
+            <div className="w-9 h-9 bg-gradient-to-br from-slate-500 to-slate-600 rounded-xl flex items-center justify-center shadow-md">
               <LuFileText className="w-4 h-4 text-white" />
             </div>
             <div>
@@ -359,14 +359,14 @@ const SuratTrackingCard = ({ surat, tahun }) => {
         {/* Surat items */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {/* Surat Pengantar */}
-          <div className={`rounded-xl p-3 border ${surat.surat_pengantar ? 'bg-emerald-50 border-emerald-200' : 'bg-gray-50 border-gray-200'}`}>
+          <div className={`rounded-xl p-3 border ${surat.surat_pengantar ? 'bg-slate-50 border-slate-200' : 'bg-gray-50 border-gray-200'}`}>
             <div className="flex items-center gap-2 mb-1">
               {surat.surat_pengantar ? (
-                <LuCheck className="w-4 h-4 text-emerald-600" />
+                <LuCheck className="w-4 h-4 text-slate-600" />
               ) : (
                 <LuCircleAlert className="w-4 h-4 text-gray-400" />
               )}
-              <span className={`text-xs font-semibold ${surat.surat_pengantar ? 'text-emerald-700' : 'text-gray-500'}`}>
+              <span className={`text-xs font-semibold ${surat.surat_pengantar ? 'text-slate-700' : 'text-gray-500'}`}>
                 Surat Pengantar
               </span>
             </div>
@@ -376,14 +376,14 @@ const SuratTrackingCard = ({ surat, tahun }) => {
           </div>
 
           {/* Surat Permohonan */}
-          <div className={`rounded-xl p-3 border ${surat.surat_permohonan ? 'bg-emerald-50 border-emerald-200' : 'bg-gray-50 border-gray-200'}`}>
+          <div className={`rounded-xl p-3 border ${surat.surat_permohonan ? 'bg-slate-50 border-slate-200' : 'bg-gray-50 border-gray-200'}`}>
             <div className="flex items-center gap-2 mb-1">
               {surat.surat_permohonan ? (
-                <LuCheck className="w-4 h-4 text-emerald-600" />
+                <LuCheck className="w-4 h-4 text-slate-600" />
               ) : (
                 <LuCircleAlert className="w-4 h-4 text-gray-400" />
               )}
-              <span className={`text-xs font-semibold ${surat.surat_permohonan ? 'text-emerald-700' : 'text-gray-500'}`}>
+              <span className={`text-xs font-semibold ${surat.surat_permohonan ? 'text-slate-700' : 'text-gray-500'}`}>
                 Surat Permohonan
               </span>
             </div>
@@ -467,7 +467,7 @@ const BankeuTrackingTab = ({ tahun }) => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <LuLoader className="w-8 h-8 text-blue-500 animate-spin" />
+        <LuLoader className="w-8 h-8 text-slate-500 animate-spin" />
       </div>
     );
   }
@@ -477,18 +477,18 @@ const BankeuTrackingTab = ({ tahun }) => {
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <button onClick={() => setFilterStatus('all')}
-          className={`p-4 rounded-2xl border-2 transition-all text-left ${filterStatus === 'all' ? 'border-blue-400 bg-blue-50 shadow-md' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+          className={`p-4 rounded-2xl border-2 transition-all text-left ${filterStatus === 'all' ? 'border-slate-400 bg-slate-50 shadow-md' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
           <p className="text-2xl font-bold text-gray-800">{stats.total}</p>
           <p className="text-xs text-gray-500 font-medium mt-1">Total Proposal</p>
         </button>
         <button onClick={() => setFilterStatus('approved')}
-          className={`p-4 rounded-2xl border-2 transition-all text-left ${filterStatus === 'approved' ? 'border-emerald-400 bg-emerald-50 shadow-md' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
-          <p className="text-2xl font-bold text-emerald-600">{stats.approved}</p>
+          className={`p-4 rounded-2xl border-2 transition-all text-left ${filterStatus === 'approved' ? 'border-slate-400 bg-slate-50 shadow-md' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+          <p className="text-2xl font-bold text-slate-600">{stats.approved}</p>
           <p className="text-xs text-gray-500 font-medium mt-1">Disetujui</p>
         </button>
         <button onClick={() => setFilterStatus('in_progress')}
-          className={`p-4 rounded-2xl border-2 transition-all text-left ${filterStatus === 'in_progress' ? 'border-blue-400 bg-blue-50 shadow-md' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
-          <p className="text-2xl font-bold text-blue-600">{stats.inProgress}</p>
+          className={`p-4 rounded-2xl border-2 transition-all text-left ${filterStatus === 'in_progress' ? 'border-slate-400 bg-slate-50 shadow-md' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+          <p className="text-2xl font-bold text-slate-600">{stats.inProgress}</p>
           <p className="text-xs text-gray-500 font-medium mt-1">Dalam Proses</p>
         </button>
         <button onClick={() => setFilterStatus('rejected')}
@@ -511,11 +511,11 @@ const BankeuTrackingTab = ({ tahun }) => {
       <div>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-bold text-gray-700 flex items-center gap-2">
-            <LuFileText className="w-4 h-4 text-blue-500" />
+            <LuFileText className="w-4 h-4 text-slate-500" />
             Status Proposal ({filteredProposals.length})
           </h2>
           <button onClick={fetchTrackingData}
-            className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1 font-medium">
+            className="text-xs text-slate-600 hover:text-slate-800 flex items-center gap-1 font-medium">
             <LuRefreshCw className="w-3 h-3" />
             Refresh
           </button>
@@ -538,14 +538,14 @@ const BankeuTrackingTab = ({ tahun }) => {
       </div>
 
       {/* Flow Legend */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-4 border border-blue-200">
-        <h3 className="text-xs font-bold text-blue-800 mb-3">Alur Verifikasi Proposal</h3>
+      <div className="bg-gradient-to-r from-slate-50 to-slate-50 rounded-2xl p-4 border border-slate-200">
+        <h3 className="text-xs font-bold text-slate-800 mb-3">Alur Verifikasi Proposal</h3>
         <div className="flex items-center gap-1 overflow-x-auto pb-2 text-[10px]">
           {[
-            { label: 'Desa', icon: '📋', color: 'bg-blue-500' },
-            { label: 'Dinas Terkait', icon: '🏢', color: 'bg-sky-500' },
-            { label: 'Kecamatan', icon: '🏛️', color: 'bg-indigo-500' },
-            { label: 'DPMD', icon: '🛡️', color: 'bg-emerald-500' },
+            { label: 'Desa', icon: '📋', color: 'bg-slate-500' },
+            { label: 'Dinas Terkait', icon: '🏢', color: 'bg-slate-500' },
+            { label: 'Kecamatan', icon: '🏛️', color: 'bg-slate-500' },
+            { label: 'DPMD', icon: '🛡️', color: 'bg-slate-500' },
           ].map((item, i, arr) => (
             <React.Fragment key={i}>
               <div className="flex items-center gap-1 bg-white rounded-lg px-2.5 py-1.5 border border-gray-200 whitespace-nowrap shadow-sm">

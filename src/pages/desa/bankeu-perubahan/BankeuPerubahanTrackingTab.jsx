@@ -34,10 +34,10 @@ const STATUS_META = {
   in_review: {
     label: 'Sedang diperiksa',
     shortLabel: 'Diperiksa',
-    text: 'text-blue-700',
-    bg: 'bg-blue-50',
-    border: 'border-blue-200',
-    dot: 'bg-blue-500',
+    text: 'text-slate-700',
+    bg: 'bg-slate-50',
+    border: 'border-slate-200',
+    dot: 'bg-slate-500',
     icon: LuRadar,
   },
   approved: {
@@ -162,9 +162,9 @@ const StatusPill = ({ status, label }) => {
 const SummaryCard = ({ icon: Icon, label, value, detail, tone }) => {
   const tones = {
     slate: 'bg-slate-900 text-white shadow-slate-900/10',
-    blue: 'border-blue-100 bg-blue-50 text-blue-700',
+    blue: 'border-slate-100 bg-slate-50 text-slate-700',
     orange: 'border-orange-100 bg-orange-50 text-orange-700',
-    emerald: 'border-emerald-100 bg-emerald-50 text-emerald-700',
+    emerald: 'border-slate-100 bg-slate-50 text-slate-700',
   };
   return (
     <div className={`rounded-2xl border border-transparent p-4 shadow-sm ${tones[tone]}`}>
@@ -344,8 +344,8 @@ const ProposalTrackingCard = ({ proposal }) => {
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             {notes.map((note) => {
               const tone = {
-                blue: 'border-blue-100 bg-blue-50 text-blue-900',
-                violet: 'border-violet-100 bg-violet-50 text-violet-900',
+                blue: 'border-slate-100 bg-slate-50 text-slate-900',
+                violet: 'border-slate-100 bg-slate-50 text-slate-900',
                 red: 'border-red-100 bg-red-50 text-red-900',
               }[note.tone];
               return (
@@ -466,12 +466,12 @@ const BankeuPerubahanTrackingTab = ({ tahun }) => {
   return (
     <div className="space-y-5">
       <section className="relative overflow-hidden rounded-3xl bg-slate-950 px-5 py-6 text-white shadow-xl shadow-slate-900/10 md:px-8 md:py-8">
-        <div className="absolute -right-20 -top-24 h-64 w-64 rounded-full bg-orange-500/20 blur-3xl" />
-        <div className="absolute -bottom-28 left-1/3 h-56 w-56 rounded-full bg-blue-500/10 blur-3xl" />
+        <div className="absolute -right-20 -top-24 h-64 w-64 rounded-full bg-slate-400/20 blur-3xl" />
+        <div className="absolute -bottom-28 left-1/3 h-56 w-56 rounded-full bg-slate-500/10 blur-3xl" />
         <div className="relative flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-white/70">
-              <LuRadar className="h-4 w-4 text-orange-400" />
+              <LuRadar className="h-4 w-4 text-slate-300" />
               TRACKING TA {tahun}
             </div>
             <h1 className="mt-4 max-w-xl text-2xl font-black tracking-tight md:text-3xl">
@@ -536,7 +536,7 @@ const BankeuPerubahanTrackingTab = ({ tahun }) => {
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Cari proposal, kegiatan, atau lokasi..."
-                className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-orange-300 focus:bg-white focus:ring-4 focus:ring-orange-100"
+                className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:bg-white focus:ring-4 focus:ring-slate-100"
               />
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:flex">
@@ -545,7 +545,7 @@ const BankeuPerubahanTrackingTab = ({ tahun }) => {
                 <select
                   value={statusFilter}
                   onChange={(event) => setStatusFilter(event.target.value)}
-                  className="h-11 w-full appearance-none rounded-xl border border-slate-200 bg-white pl-9 pr-9 text-sm font-semibold text-slate-600 outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-100 xl:w-44"
+                  className="h-11 w-full appearance-none rounded-xl border border-slate-200 bg-white pl-9 pr-9 text-sm font-semibold text-slate-600 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100 xl:w-44"
                 >
                   <option value="all">Semua status</option>
                   <option value="process">Dalam proses</option>
@@ -558,7 +558,7 @@ const BankeuPerubahanTrackingTab = ({ tahun }) => {
                 <select
                   value={kegiatanFilter}
                   onChange={(event) => setKegiatanFilter(event.target.value)}
-                  className="h-11 w-full appearance-none rounded-xl border border-slate-200 bg-white pl-3 pr-9 text-sm font-semibold text-slate-600 outline-none focus:border-orange-300 focus:ring-4 focus:ring-orange-100 xl:w-64"
+                  className="h-11 w-full appearance-none rounded-xl border border-slate-200 bg-white pl-3 pr-9 text-sm font-semibold text-slate-600 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100 xl:w-64"
                 >
                   <option value="all">Semua kegiatan</option>
                   {kegiatanOptions.map((option) => (

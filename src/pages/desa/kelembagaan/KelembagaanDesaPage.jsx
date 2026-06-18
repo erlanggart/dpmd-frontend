@@ -371,7 +371,7 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 		// Simple success notification - bisa diganti dengan SweetAlert2 jika sudah terinstall
 		const alertDiv = document.createElement("div");
 		alertDiv.className =
-			"fixed top-4 right-4 bg-green-500 text-white px-6 py-4 rounded-lg shadow-lg z-50 animate-pulse";
+			"fixed top-4 right-4 bg-slate-500 text-white px-6 py-4 rounded-lg shadow-lg z-50 animate-pulse";
 		alertDiv.innerHTML = `
 			<div class="flex items-center space-x-2">
 				<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -412,22 +412,22 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 			'satlinmas': {
 				title: 'Bentuk Satlinmas',
 				icon: LuShield,
-				gradient: 'from-emerald-500 to-teal-500',
+				gradient: 'from-slate-500 to-slate-500',
 			},
 			'karang-taruna': {
 				title: 'Bentuk Karang Taruna',
 				icon: LuUsers,
-				gradient: 'from-orange-500 to-red-500',
+				gradient: 'from-slate-500 to-slate-500',
 			},
 			'lpm': {
 				title: 'Bentuk LPM',
 				icon: LuBuilding2,
-				gradient: 'from-yellow-500 to-orange-500',
+				gradient: 'from-slate-500 to-slate-500',
 			},
 			'pkk': {
 				title: 'Bentuk PKK',
 				icon: LuSprout,
-				gradient: 'from-pink-500 to-rose-500',
+				gradient: 'from-slate-500 to-slate-500',
 			},
 			'lembaga-lainnya': {
 				title: 'Tambah Lembaga Lainnya',
@@ -585,7 +585,7 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 		const ditolak = verifData.ditolak || 0;
 		if (unverified === 0 && ditolak === 0) {
 			return (
-				<span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
+				<span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-50 text-slate-700 border border-slate-200">
 					<LuCheck className="w-3 h-3" /> Terverifikasi
 				</span>
 			);
@@ -611,7 +611,7 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 		if (!verifData || !formed) return null;
 		if (verifData.status_verifikasi === 'verified') {
 			return (
-				<span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
+				<span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-50 text-slate-700 border border-slate-200">
 					<LuCheck className="w-3 h-3" /> Terverifikasi
 				</span>
 			);
@@ -649,7 +649,7 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 					<span
 						className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
 							isEditMode
-								? "bg-green-100 text-green-700 border border-green-300"
+								? "bg-slate-100 text-slate-700 border border-slate-300"
 								: "bg-red-100 text-red-700 border border-red-300"
 						}`}
 					>
@@ -667,7 +667,7 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 					</span>
 					<div className="text-sm text-gray-600">
 						{isEditMode ? (
-							<span className="text-green-700">Pengguna dapat menambah dan mengedit data kelembagaan</span>
+							<span className="text-slate-700">Pengguna dapat menambah dan mengedit data kelembagaan</span>
 						) : (
 							<span className="text-red-700">Fitur penambahan dan pengeditan data sementara ditutup</span>
 						)}
@@ -707,8 +707,8 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 					<div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
 						<div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
 							<div className="flex items-center gap-3">
-								<div className="p-2 bg-indigo-100 rounded-lg">
-									<LuShieldCheck className="w-5 h-5 text-indigo-700" />
+								<div className="p-2 bg-slate-100 rounded-lg">
+									<LuShieldCheck className="w-5 h-5 text-slate-700" />
 								</div>
 								<div>
 									<h3 className="font-bold text-gray-900">Data Terverifikasi Kabupaten</h3>
@@ -716,7 +716,7 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 								</div>
 							</div>
 							<div className="text-right">
-								<div className="text-2xl font-bold text-indigo-700">{totalVerified}<span className="text-base font-normal text-gray-400">/{totalAll}</span></div>
+								<div className="text-2xl font-bold text-slate-700">{totalVerified}<span className="text-base font-normal text-gray-400">/{totalAll}</span></div>
 								<p className="text-xs text-gray-500">Lembaga Terverifikasi</p>
 							</div>
 						</div>
@@ -724,7 +724,7 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 							{/* Progress bar */}
 							<div className="w-full bg-gray-100 rounded-full h-2 mb-4">
 								<div
-									className={`h-2 rounded-full transition-all duration-500 ${totalVerified === totalAll ? "bg-green-500" : "bg-indigo-500"}`}
+									className={`h-2 rounded-full transition-all duration-500 ${totalVerified === totalAll ? "bg-slate-500" : "bg-slate-500"}`}
 									style={{ width: `${totalAll > 0 ? (totalVerified / totalAll) * 100 : 0}%` }}
 								/>
 							</div>
@@ -734,16 +734,16 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 									const isComplete = item.verified === item.total;
 									const hasDitolak = item.ditolak > 0;
 									return (
-										<div key={item.label} className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg border ${isComplete ? "bg-green-50 border-green-200" : hasDitolak ? "bg-red-50 border-red-200" : "bg-gray-50 border-gray-200"}`}>
-											<Icon className={`w-4 h-4 flex-shrink-0 ${isComplete ? "text-green-600" : hasDitolak ? "text-red-500" : "text-gray-400"}`} />
+										<div key={item.label} className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg border ${isComplete ? "bg-slate-50 border-slate-200" : hasDitolak ? "bg-red-50 border-red-200" : "bg-gray-50 border-gray-200"}`}>
+											<Icon className={`w-4 h-4 flex-shrink-0 ${isComplete ? "text-slate-600" : hasDitolak ? "text-red-500" : "text-gray-400"}`} />
 											<div className="min-w-0">
 												<p className="text-xs text-gray-500 truncate">{item.label}</p>
-												<p className={`text-sm font-bold ${isComplete ? "text-green-700" : hasDitolak ? "text-red-700" : "text-gray-700"}`}>
+												<p className={`text-sm font-bold ${isComplete ? "text-slate-700" : hasDitolak ? "text-red-700" : "text-gray-700"}`}>
 													{item.verified}/{item.total}
 													{hasDitolak && <span className="text-xs font-normal text-red-500 ml-1">({item.ditolak} ditolak)</span>}
 												</p>
 											</div>
-											{isComplete && <LuCheck className="w-3.5 h-3.5 text-green-600 flex-shrink-0 ml-auto" />}
+											{isComplete && <LuCheck className="w-3.5 h-3.5 text-slate-600 flex-shrink-0 ml-auto" />}
 										</div>
 									);
 								})}
@@ -755,7 +755,7 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 
 			{/* Persyaratan Verifikasi Info Box */}
 			{summary.verifikasi && (
-				<div className="mt-6 bg-gradient-to-r from-amber-50 to-yellow-50 rounded-xl border border-amber-200 p-5 shadow-sm">
+				<div className="mt-6 bg-gradient-to-r from-slate-50 to-slate-50 rounded-xl border border-amber-200 p-5 shadow-sm">
 					<div className="flex items-start gap-3 mb-4">
 						<div className="p-2 bg-amber-100 rounded-lg">
 							<LuClipboardList className="w-5 h-5 text-amber-700" />
@@ -803,8 +803,8 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 			{/* ═══ SECTION 1: Lembaga Kemasyarakatan Desa ═══ */}
 			<div>
 				<div className="flex items-center gap-3 mb-4">
-					<div className="p-2 bg-blue-100 rounded-lg">
-						<LuBuilding2 className="w-5 h-5 text-blue-700" />
+					<div className="p-2 bg-slate-100 rounded-lg">
+						<LuBuilding2 className="w-5 h-5 text-slate-700" />
 					</div>
 					<div>
 						<h2 className="text-lg font-bold text-gray-800">Lembaga Kemasyarakatan Desa</h2>
@@ -819,8 +819,8 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 						onClick={() => navigate("/desa/kelembagaan/rw")}
 					>
 						<div className="flex items-center gap-4">
-							<div className="p-2.5 bg-blue-50 rounded-xl">
-								<LuBuilding className="w-5 h-5 text-blue-600" />
+							<div className="p-2.5 bg-slate-50 rounded-xl">
+								<LuBuilding className="w-5 h-5 text-slate-600" />
 							</div>
 							<div>
 								<h4 className="font-semibold text-gray-900">RT & RW</h4>
@@ -847,8 +847,8 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 						onClick={() => navigate("/desa/kelembagaan/posyandu")}
 					>
 						<div className="flex items-center gap-4">
-							<div className="p-2.5 bg-purple-50 rounded-xl">
-								<LuHeart className="w-5 h-5 text-purple-600" />
+							<div className="p-2.5 bg-slate-50 rounded-xl">
+								<LuHeart className="w-5 h-5 text-slate-600" />
 							</div>
 							<div>
 								<h4 className="font-semibold text-gray-900">Posyandu</h4>
@@ -937,8 +937,8 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 						onClick={pkkFormed ? () => navigate("/desa/kelembagaan/pkk/detail") : undefined}
 					>
 						<div className="flex items-center gap-4">
-							<div className="p-2.5 bg-pink-50 rounded-xl">
-								<LuSprout className="w-5 h-5 text-pink-600" />
+							<div className="p-2.5 bg-slate-50 rounded-xl">
+								<LuSprout className="w-5 h-5 text-slate-600" />
 							</div>
 							<div>
 								<h4 className="font-semibold text-gray-900">PKK</h4>
@@ -957,7 +957,7 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 								isEditMode && (
 									<button
 										onClick={(e) => { e.stopPropagation(); handleOpenModal("pkk"); }}
-										className="px-3 py-1.5 bg-pink-500 text-white text-xs font-medium rounded-lg hover:bg-pink-600 transition-colors flex items-center gap-1"
+										className="px-3 py-1.5 bg-slate-500 text-white text-xs font-medium rounded-lg hover:bg-slate-600 transition-colors flex items-center gap-1"
 									>
 										<LuPlus className="w-3 h-3" /> Bentuk
 									</button>
@@ -972,8 +972,8 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 			<div>
 				<div className="flex items-center justify-between mb-4">
 					<div className="flex items-center gap-3">
-						<div className="p-2 bg-emerald-100 rounded-lg">
-							<LuShield className="w-5 h-5 text-emerald-700" />
+						<div className="p-2 bg-slate-100 rounded-lg">
+							<LuShield className="w-5 h-5 text-slate-700" />
 						</div>
 						<div>
 							<h2 className="text-lg font-bold text-gray-800">Kelembagaan Lainnya</h2>
@@ -982,7 +982,7 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 					</div>
 					{isEditMode && (
 						<button
-							className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white hover:from-emerald-600 hover:to-teal-700 shadow-md hover:shadow-lg transition-all duration-200 flex items-center space-x-2 text-sm font-medium"
+							className="px-4 py-2 rounded-xl bg-gradient-to-r from-slate-500 to-slate-600 text-white hover:from-slate-600 hover:to-slate-700 shadow-md hover:shadow-lg transition-all duration-200 flex items-center space-x-2 text-sm font-medium"
 							onClick={() => handleOpenModal("lembaga-lainnya")}
 						>
 							<LuPlus className="w-4 h-4" />
@@ -998,8 +998,8 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 						onClick={satlinmasFormed ? () => navigate("/desa/kelembagaan/satlinmas/detail") : undefined}
 					>
 						<div className="flex items-center gap-4">
-							<div className="p-2.5 bg-emerald-50 rounded-xl">
-								<LuShield className="w-5 h-5 text-emerald-600" />
+							<div className="p-2.5 bg-slate-50 rounded-xl">
+								<LuShield className="w-5 h-5 text-slate-600" />
 							</div>
 							<div>
 								<h4 className="font-semibold text-gray-900">Satlinmas</h4>
@@ -1018,7 +1018,7 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 								isEditMode && (
 									<button
 										onClick={(e) => { e.stopPropagation(); handleOpenModal("satlinmas"); }}
-										className="px-3 py-1.5 bg-emerald-500 text-white text-xs font-medium rounded-lg hover:bg-emerald-600 transition-colors flex items-center gap-1"
+										className="px-3 py-1.5 bg-slate-500 text-white text-xs font-medium rounded-lg hover:bg-slate-600 transition-colors flex items-center gap-1"
 									>
 										<LuPlus className="w-3 h-3" /> Bentuk
 									</button>
@@ -1059,14 +1059,14 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 			</div>
 
 			{/* Info Section - Tentang Lembaga Kemasyarakatan Desa */}
-			<div className="mb-8 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-2xl border border-blue-200 shadow-md overflow-hidden">
+			<div className="mb-8 bg-gradient-to-br from-slate-50 via-slate-50 to-slate-50 rounded-2xl border border-slate-200 shadow-md overflow-hidden">
 				<div className="p-6">
 					<div className="flex items-start space-x-4 mb-4">
-						<div className="p-3 bg-blue-500 rounded-xl flex-shrink-0">
+						<div className="p-3 bg-slate-500 rounded-xl flex-shrink-0">
 							<LuInfo className="w-6 h-6 text-white" />
 						</div>
 						<div>
-							<h3 className="text-xl font-bold text-blue-900 mb-2">
+							<h3 className="text-xl font-bold text-slate-900 mb-2">
 								Tentang Lembaga Kemasyarakatan Desa
 							</h3>
 							<p className="text-gray-700 leading-relaxed mb-4">
@@ -1078,56 +1078,56 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
 						{/* Tugas Utama */}
-						<div className="bg-white rounded-xl p-4 shadow-sm border border-blue-100">
-							<h4 className="font-semibold text-blue-900 mb-3 flex items-center">
-								<LuCheck className="w-5 h-5 mr-2 text-green-600" />
+						<div className="bg-white rounded-xl p-4 shadow-sm border border-slate-100">
+							<h4 className="font-semibold text-slate-900 mb-3 flex items-center">
+								<LuCheck className="w-5 h-5 mr-2 text-slate-600" />
 								Tugas Utama LKD
 							</h4>
 							<ul className="space-y-2 text-sm text-gray-700">
 								<li className="flex items-start">
-									<span className="text-blue-500 mr-2">•</span>
+									<span className="text-slate-500 mr-2">•</span>
 									<span>Memberdayakan masyarakat desa dalam berbagai bidang</span>
 								</li>
 								<li className="flex items-start">
-									<span className="text-blue-500 mr-2">•</span>
+									<span className="text-slate-500 mr-2">•</span>
 									<span>Ikut serta dalam perencanaan dan pelaksanaan pembangunan</span>
 								</li>
 								<li className="flex items-start">
-									<span className="text-blue-500 mr-2">•</span>
+									<span className="text-slate-500 mr-2">•</span>
 									<span>Meningkatkan pelayanan kepada masyarakat desa</span>
 								</li>
 								<li className="flex items-start">
-									<span className="text-blue-500 mr-2">•</span>
+									<span className="text-slate-500 mr-2">•</span>
 									<span>Menampung dan menyalurkan aspirasi masyarakat</span>
 								</li>
 							</ul>
 						</div>
 
 						{/* Jenis LKD */}
-						<div className="bg-white rounded-xl p-4 shadow-sm border border-blue-100">
-							<h4 className="font-semibold text-blue-900 mb-3 flex items-center">
-								<LuUsers className="w-5 h-5 mr-2 text-indigo-600" />
+						<div className="bg-white rounded-xl p-4 shadow-sm border border-slate-100">
+							<h4 className="font-semibold text-slate-900 mb-3 flex items-center">
+								<LuUsers className="w-5 h-5 mr-2 text-slate-600" />
 								Jenis Lembaga Wajib
 							</h4>
 							<ul className="space-y-2 text-sm text-gray-700">
 								<li className="flex items-start">
-									<span className="text-indigo-500 mr-2">•</span>
+									<span className="text-slate-500 mr-2">•</span>
 									<span><strong>RT & RW</strong> - Membantu pelayanan pemerintahan dan data kependudukan</span>
 								</li>
 								<li className="flex items-start">
-									<span className="text-indigo-500 mr-2">•</span>
+									<span className="text-slate-500 mr-2">•</span>
 									<span><strong>PKK</strong> - Pemberdayaan kesejahteraan keluarga</span>
 								</li>
 								<li className="flex items-start">
-									<span className="text-indigo-500 mr-2">•</span>
+									<span className="text-slate-500 mr-2">•</span>
 									<span><strong>Karang Taruna</strong> - Pengembangan generasi muda dan kesejahteraan sosial</span>
 								</li>
 								<li className="flex items-start">
-									<span className="text-indigo-500 mr-2">•</span>
+									<span className="text-slate-500 mr-2">•</span>
 									<span><strong>Posyandu</strong> - Peningkatan pelayanan kesehatan masyarakat</span>
 								</li>
 								<li className="flex items-start">
-									<span className="text-indigo-500 mr-2">•</span>
+									<span className="text-slate-500 mr-2">•</span>
 									<span><strong>LPM</strong> - Perencanaan pembangunan dan swadaya gotong-royong</span>
 								</li>
 							</ul>
@@ -1135,43 +1135,43 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 					</div>
 
 					{/* Persyaratan Pembentukan */}
-					<div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-4 border border-amber-200">
+					<div className="bg-gradient-to-r from-slate-50 to-slate-50 rounded-xl p-4 border border-amber-200">
 						<h4 className="font-semibold text-amber-900 mb-3 flex items-center">
 							<LuBuilding2 className="w-5 h-5 mr-2" />
 							Persyaratan Pembentukan
 						</h4>
 						<div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm text-gray-700">
 							<div className="flex items-start">
-								<LuCheck className="w-4 h-4 mr-2 text-green-600 flex-shrink-0 mt-0.5" />
+								<LuCheck className="w-4 h-4 mr-2 text-slate-600 flex-shrink-0 mt-0.5" />
 								<span>Berasaskan Pancasila dan UUD 1945</span>
 							</div>
 							<div className="flex items-start">
-								<LuCheck className="w-4 h-4 mr-2 text-green-600 flex-shrink-0 mt-0.5" />
+								<LuCheck className="w-4 h-4 mr-2 text-slate-600 flex-shrink-0 mt-0.5" />
 								<span>Bermanfaat bagi masyarakat desa</span>
 							</div>
 							<div className="flex items-start">
-								<LuCheck className="w-4 h-4 mr-2 text-green-600 flex-shrink-0 mt-0.5" />
+								<LuCheck className="w-4 h-4 mr-2 text-slate-600 flex-shrink-0 mt-0.5" />
 								<span>Memiliki kepengurusan tetap</span>
 							</div>
 							<div className="flex items-start">
-								<LuCheck className="w-4 h-4 mr-2 text-green-600 flex-shrink-0 mt-0.5" />
+								<LuCheck className="w-4 h-4 mr-2 text-slate-600 flex-shrink-0 mt-0.5" />
 								<span>Memiliki sekretariat tetap</span>
 							</div>
 							<div className="flex items-start">
-								<LuCheck className="w-4 h-4 mr-2 text-green-600 flex-shrink-0 mt-0.5" />
+								<LuCheck className="w-4 h-4 mr-2 text-slate-600 flex-shrink-0 mt-0.5" />
 								<span>Tidak berafiliasi partai politik</span>
 							</div>
 							<div className="flex items-start">
-								<LuCheck className="w-4 h-4 mr-2 text-green-600 flex-shrink-0 mt-0.5" />
+								<LuCheck className="w-4 h-4 mr-2 text-slate-600 flex-shrink-0 mt-0.5" />
 								<span>Ditetapkan dengan Peraturan Desa</span>
 							</div>
 						</div>
 					</div>
 
 					{/* Info Pengurus */}
-					<div className="mt-4 flex items-start space-x-2 bg-blue-100 rounded-lg p-3">
-						<LuInfo className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-						<div className="text-sm text-blue-800">
+					<div className="mt-4 flex items-start space-x-2 bg-slate-100 rounded-lg p-3">
+						<LuInfo className="w-5 h-5 text-slate-600 flex-shrink-0 mt-0.5" />
+						<div className="text-sm text-slate-800">
 							<p className="font-medium mb-1">Ketentuan Pengurus:</p>
 							<p>Pengurus LKD menjabat selama <strong>5 tahun</strong> dan dapat dipilih kembali maksimal <strong>2 kali masa jabatan</strong>. Pengurus tidak boleh merangkap jabatan di LKD lain atau menjadi anggota partai politik.</p>
 						</div>
@@ -1210,27 +1210,27 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 								<p className="font-medium text-slate-800 mb-2">(2) Pembentukan LKD sebagaimana dimaksud pada ayat (1) dengan memenuhi persyaratan:</p>
 								<div className="ml-4 space-y-2">
 									<div className="flex items-start">
-										<span className="font-semibold text-blue-600 mr-2 flex-shrink-0">a.</span>
+										<span className="font-semibold text-slate-600 mr-2 flex-shrink-0">a.</span>
 										<span className="text-slate-700">berasaskan Pancasila dan Undang-Undang Dasar Negara Republik Indonesia Tahun 1945;</span>
 									</div>
 									<div className="flex items-start">
-										<span className="font-semibold text-blue-600 mr-2 flex-shrink-0">b.</span>
+										<span className="font-semibold text-slate-600 mr-2 flex-shrink-0">b.</span>
 										<span className="text-slate-700">berkedudukan di Desa setempat;</span>
 									</div>
 									<div className="flex items-start">
-										<span className="font-semibold text-blue-600 mr-2 flex-shrink-0">c.</span>
+										<span className="font-semibold text-slate-600 mr-2 flex-shrink-0">c.</span>
 										<span className="text-slate-700">keberadaannya bermanfaat dan dibutuhkan masyarakat Desa;</span>
 									</div>
 									<div className="flex items-start">
-										<span className="font-semibold text-blue-600 mr-2 flex-shrink-0">d.</span>
+										<span className="font-semibold text-slate-600 mr-2 flex-shrink-0">d.</span>
 										<span className="text-slate-700">memiliki kepengurusan yang tetap;</span>
 									</div>
 									<div className="flex items-start">
-										<span className="font-semibold text-blue-600 mr-2 flex-shrink-0">e.</span>
+										<span className="font-semibold text-slate-600 mr-2 flex-shrink-0">e.</span>
 										<span className="text-slate-700">memiliki sekretariat yang bersifat tetap; dan</span>
 									</div>
 									<div className="flex items-start">
-										<span className="font-semibold text-blue-600 mr-2 flex-shrink-0">f.</span>
+										<span className="font-semibold text-slate-600 mr-2 flex-shrink-0">f.</span>
 										<span className="text-slate-700">tidak berafiliasi kepada partai politik.</span>
 									</div>
 								</div>
@@ -1255,15 +1255,15 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 										<p className="font-medium text-slate-800 mb-2">(1) LKD bertugas:</p>
 										<div className="ml-4 space-y-2">
 											<div className="flex items-start">
-												<span className="font-semibold text-indigo-600 mr-2 flex-shrink-0">a.</span>
+												<span className="font-semibold text-slate-600 mr-2 flex-shrink-0">a.</span>
 												<span className="text-slate-700">melakukan pemberdayaan masyarakat Desa;</span>
 											</div>
 											<div className="flex items-start">
-												<span className="font-semibold text-indigo-600 mr-2 flex-shrink-0">b.</span>
+												<span className="font-semibold text-slate-600 mr-2 flex-shrink-0">b.</span>
 												<span className="text-slate-700">ikut serta dalam perencanaan dan pelaksanaan pembangunan; dan</span>
 											</div>
 											<div className="flex items-start">
-												<span className="font-semibold text-indigo-600 mr-2 flex-shrink-0">c.</span>
+												<span className="font-semibold text-slate-600 mr-2 flex-shrink-0">c.</span>
 												<span className="text-slate-700">meningkatkan pelayanan masyarakat Desa.</span>
 											</div>
 										</div>
@@ -1280,31 +1280,31 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 								<p className="font-medium text-slate-800 mb-2">Dalam melaksanakan tugas sebagaimana dimaksud dalam Pasal 4, LKD memiliki fungsi:</p>
 								<div className="ml-4 space-y-2">
 									<div className="flex items-start">
-										<span className="font-semibold text-indigo-600 mr-2 flex-shrink-0">a.</span>
+										<span className="font-semibold text-slate-600 mr-2 flex-shrink-0">a.</span>
 										<span className="text-slate-700">menampung dan menyalurkan aspirasi masyarakat;</span>
 									</div>
 									<div className="flex items-start">
-										<span className="font-semibold text-indigo-600 mr-2 flex-shrink-0">b.</span>
+										<span className="font-semibold text-slate-600 mr-2 flex-shrink-0">b.</span>
 										<span className="text-slate-700">menanamkan dan memupuk rasa persatuan dan kesatuan masyarakat;</span>
 									</div>
 									<div className="flex items-start">
-										<span className="font-semibold text-indigo-600 mr-2 flex-shrink-0">c.</span>
+										<span className="font-semibold text-slate-600 mr-2 flex-shrink-0">c.</span>
 										<span className="text-slate-700">meningkatkan kualitas dan mempercepat pelayanan Pemerintah Desa kepada masyarakat Desa;</span>
 									</div>
 									<div className="flex items-start">
-										<span className="font-semibold text-indigo-600 mr-2 flex-shrink-0">d.</span>
+										<span className="font-semibold text-slate-600 mr-2 flex-shrink-0">d.</span>
 										<span className="text-slate-700">menyusun rencana, melaksanakan, mengendalikan, melestarikan, dan mengembangkan hasil pembangunan secara partisipatif;</span>
 									</div>
 									<div className="flex items-start">
-										<span className="font-semibold text-indigo-600 mr-2 flex-shrink-0">e.</span>
+										<span className="font-semibold text-slate-600 mr-2 flex-shrink-0">e.</span>
 										<span className="text-slate-700">menumbuhkan, mengembangkan, dan menggerakkan prakarsa, partisipasi, swadaya, serta gotong royong masyarakat;</span>
 									</div>
 									<div className="flex items-start">
-										<span className="font-semibold text-indigo-600 mr-2 flex-shrink-0">f.</span>
+										<span className="font-semibold text-slate-600 mr-2 flex-shrink-0">f.</span>
 										<span className="text-slate-700">meningkatkan kesejahteraan keluarga; dan</span>
 									</div>
 									<div className="flex items-start">
-										<span className="font-semibold text-indigo-600 mr-2 flex-shrink-0">g.</span>
+										<span className="font-semibold text-slate-600 mr-2 flex-shrink-0">g.</span>
 										<span className="text-slate-700">meningkatkan kualitas sumber daya manusia.</span>
 									</div>
 								</div>
@@ -1323,27 +1323,27 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 								<p className="font-medium text-slate-800 mb-2">(1) Jenis LKD paling sedikit meliputi:</p>
 								<div className="ml-4 space-y-2">
 									<div className="flex items-start">
-										<span className="font-semibold text-purple-600 mr-2 flex-shrink-0">a.</span>
+										<span className="font-semibold text-slate-600 mr-2 flex-shrink-0">a.</span>
 										<span className="text-slate-700">Rukun Tetangga;</span>
 									</div>
 									<div className="flex items-start">
-										<span className="font-semibold text-purple-600 mr-2 flex-shrink-0">b.</span>
+										<span className="font-semibold text-slate-600 mr-2 flex-shrink-0">b.</span>
 										<span className="text-slate-700">Rukun Warga;</span>
 									</div>
 									<div className="flex items-start">
-										<span className="font-semibold text-purple-600 mr-2 flex-shrink-0">c.</span>
+										<span className="font-semibold text-slate-600 mr-2 flex-shrink-0">c.</span>
 										<span className="text-slate-700">Pemberdayaan Kesejahteraan Keluarga;</span>
 									</div>
 									<div className="flex items-start">
-										<span className="font-semibold text-purple-600 mr-2 flex-shrink-0">d.</span>
+										<span className="font-semibold text-slate-600 mr-2 flex-shrink-0">d.</span>
 										<span className="text-slate-700">Karang Taruna;</span>
 									</div>
 									<div className="flex items-start">
-										<span className="font-semibold text-purple-600 mr-2 flex-shrink-0">e.</span>
+										<span className="font-semibold text-slate-600 mr-2 flex-shrink-0">e.</span>
 										<span className="text-slate-700">Pos Pelayanan Terpadu; dan</span>
 									</div>
 									<div className="flex items-start">
-										<span className="font-semibold text-purple-600 mr-2 flex-shrink-0">f.</span>
+										<span className="font-semibold text-slate-600 mr-2 flex-shrink-0">f.</span>
 										<span className="text-slate-700">Lembaga Pemberdayaan Masyarakat.</span>
 									</div>
 								</div>
@@ -1369,15 +1369,15 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 								<p className="font-medium text-slate-800 mb-2">(1) Rukun Tetangga dan Rukun Warga sebagaimana dimaksud dalam Pasal 6 ayat (1) huruf a dan huruf b bertugas:</p>
 								<div className="ml-4 space-y-2">
 									<div className="flex items-start">
-										<span className="font-semibold text-emerald-600 mr-2 flex-shrink-0">a.</span>
+										<span className="font-semibold text-slate-600 mr-2 flex-shrink-0">a.</span>
 										<span className="text-slate-700">membantu Kepala Desa dalam bidang pelayanan pemerintahan;</span>
 									</div>
 									<div className="flex items-start">
-										<span className="font-semibold text-emerald-600 mr-2 flex-shrink-0">b.</span>
+										<span className="font-semibold text-slate-600 mr-2 flex-shrink-0">b.</span>
 										<span className="text-slate-700">membantu Kepala Desa dalam menyediakan data kependudukan dan perizinan; dan</span>
 									</div>
 									<div className="flex items-start">
-										<span className="font-semibold text-emerald-600 mr-2 flex-shrink-0">c.</span>
+										<span className="font-semibold text-slate-600 mr-2 flex-shrink-0">c.</span>
 										<span className="text-slate-700">melaksanakan tugas lain yang diberikan oleh Kepala Desa.</span>
 									</div>
 								</div>
@@ -1465,15 +1465,15 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 				</div>
 				<div className="p-4">
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-						<a href="/peraturan/Permendagri No. 18 Tahun 2018.pdf" target="_blank" rel="noopener noreferrer" className="group flex items-center justify-between p-3 border-l-4 border-emerald-500 bg-emerald-50 hover:bg-emerald-100 rounded-r transition-all">
+						<a href="/peraturan/Permendagri No. 18 Tahun 2018.pdf" target="_blank" rel="noopener noreferrer" className="group flex items-center justify-between p-3 border-l-4 border-slate-500 bg-slate-50 hover:bg-slate-100 rounded-r transition-all">
 							<div className="flex items-center space-x-3 flex-1 min-w-0">
-								<LuFileText className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+								<LuFileText className="w-4 h-4 text-slate-600 flex-shrink-0" />
 								<div className="min-w-0">
 									<p className="font-semibold text-sm text-slate-900 truncate">Permendagri No. 18/2018</p>
 									<p className="text-xs text-slate-500">Lembaga Kemasyarakatan Desa</p>
 								</div>
 							</div>
-							<LuDownload className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 flex-shrink-0 ml-2" />
+							<LuDownload className="w-4 h-4 text-slate-400 group-hover:text-slate-600 flex-shrink-0 ml-2" />
 						</a>
 						<a href="/peraturan/Permendagri-26-Thn-2020-ttg-Linmas.pdf" target="_blank" rel="noopener noreferrer" className="group flex items-center justify-between p-3 border-l-4 border-amber-500 bg-amber-50 hover:bg-amber-100 rounded-r transition-all">
 							<div className="flex items-center space-x-3 flex-1 min-w-0">
@@ -1485,55 +1485,55 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 							</div>
 							<LuDownload className="w-4 h-4 text-slate-400 group-hover:text-amber-600 flex-shrink-0 ml-2" />
 						</a>
-						<a href="/peraturan/PERMENDAGRI_36_TAHUN_2020 (1).pdf" target="_blank" rel="noopener noreferrer" className="group flex items-center justify-between p-3 border-l-4 border-blue-500 bg-blue-50 hover:bg-blue-100 rounded-r transition-all">
+						<a href="/peraturan/PERMENDAGRI_36_TAHUN_2020 (1).pdf" target="_blank" rel="noopener noreferrer" className="group flex items-center justify-between p-3 border-l-4 border-slate-500 bg-slate-50 hover:bg-slate-100 rounded-r transition-all">
 							<div className="flex items-center space-x-3 flex-1 min-w-0">
-								<LuFileText className="w-4 h-4 text-blue-600 flex-shrink-0" />
+								<LuFileText className="w-4 h-4 text-slate-600 flex-shrink-0" />
 								<div className="min-w-0">
 									<p className="font-semibold text-sm text-slate-900 truncate">Permendagri No. 36/2020</p>
 									<p className="text-xs text-slate-500">Gerakan PKK</p>
 								</div>
 							</div>
-							<LuDownload className="w-4 h-4 text-slate-400 group-hover:text-blue-600 flex-shrink-0 ml-2" />
+							<LuDownload className="w-4 h-4 text-slate-400 group-hover:text-slate-600 flex-shrink-0 ml-2" />
 						</a>
-						<a href="/peraturan/Permendagri Nomor 11 Tahun 2023.pdf" target="_blank" rel="noopener noreferrer" className="group flex items-center justify-between p-3 border-l-4 border-teal-500 bg-teal-50 hover:bg-teal-100 rounded-r transition-all">
+						<a href="/peraturan/Permendagri Nomor 11 Tahun 2023.pdf" target="_blank" rel="noopener noreferrer" className="group flex items-center justify-between p-3 border-l-4 border-slate-500 bg-slate-50 hover:bg-slate-100 rounded-r transition-all">
 							<div className="flex items-center space-x-3 flex-1 min-w-0">
-								<LuFileText className="w-4 h-4 text-teal-600 flex-shrink-0" />
+								<LuFileText className="w-4 h-4 text-slate-600 flex-shrink-0" />
 								<div className="min-w-0">
 									<p className="font-semibold text-sm text-slate-900 truncate">Permendagri No. 11/2023</p>
 									<p className="text-xs text-slate-500">Sarana Prasarana Linmas</p>
 								</div>
 							</div>
-							<LuDownload className="w-4 h-4 text-slate-400 group-hover:text-teal-600 flex-shrink-0 ml-2" />
+							<LuDownload className="w-4 h-4 text-slate-400 group-hover:text-slate-600 flex-shrink-0 ml-2" />
 						</a>
-						<a href="/peraturan/Permendagri No 13 Tahun 2024.pdf" target="_blank" rel="noopener noreferrer" className="group flex items-center justify-between p-3 border-l-4 border-purple-500 bg-purple-50 hover:bg-purple-100 rounded-r transition-all">
+						<a href="/peraturan/Permendagri No 13 Tahun 2024.pdf" target="_blank" rel="noopener noreferrer" className="group flex items-center justify-between p-3 border-l-4 border-slate-500 bg-slate-50 hover:bg-slate-100 rounded-r transition-all">
 							<div className="flex items-center space-x-3 flex-1 min-w-0">
-								<LuFileText className="w-4 h-4 text-purple-600 flex-shrink-0" />
+								<LuFileText className="w-4 h-4 text-slate-600 flex-shrink-0" />
 								<div className="min-w-0">
 									<p className="font-semibold text-sm text-slate-900 truncate">Permendagri No. 13/2024</p>
 									<p className="text-xs text-slate-500">Pos Pelayanan Terpadu (Posyandu)</p>
 								</div>
 							</div>
-							<LuDownload className="w-4 h-4 text-slate-400 group-hover:text-purple-600 flex-shrink-0 ml-2" />
+							<LuDownload className="w-4 h-4 text-slate-400 group-hover:text-slate-600 flex-shrink-0 ml-2" />
 						</a>
-						<a href="/peraturan/perda no 9 tahun 2011.pdf" target="_blank" rel="noopener noreferrer" className="group flex items-center justify-between p-3 border-l-4 border-rose-500 bg-rose-50 hover:bg-rose-100 rounded-r transition-all">
+						<a href="/peraturan/perda no 9 tahun 2011.pdf" target="_blank" rel="noopener noreferrer" className="group flex items-center justify-between p-3 border-l-4 border-slate-500 bg-slate-50 hover:bg-slate-100 rounded-r transition-all">
 							<div className="flex items-center space-x-3 flex-1 min-w-0">
-								<LuFileText className="w-4 h-4 text-rose-600 flex-shrink-0" />
+								<LuFileText className="w-4 h-4 text-slate-600 flex-shrink-0" />
 								<div className="min-w-0">
 									<p className="font-semibold text-sm text-slate-900 truncate">Perda No. 9/2011</p>
 									<p className="text-xs text-slate-500">Lembaga Kemasyarakatan Kab. Bogor</p>
 								</div>
 							</div>
-							<LuDownload className="w-4 h-4 text-slate-400 group-hover:text-rose-600 flex-shrink-0 ml-2" />
+							<LuDownload className="w-4 h-4 text-slate-400 group-hover:text-slate-600 flex-shrink-0 ml-2" />
 						</a>
-						<a href="/peraturan/Perbup 31 Tahun 2012 - Tata Cara Pembentukan LPM Desa, Kel, RW dan RT.pdf" target="_blank" rel="noopener noreferrer" className="group flex items-center justify-between p-3 border-l-4 border-indigo-500 bg-indigo-50 hover:bg-indigo-100 rounded-r transition-all md:col-span-2">
+						<a href="/peraturan/Perbup 31 Tahun 2012 - Tata Cara Pembentukan LPM Desa, Kel, RW dan RT.pdf" target="_blank" rel="noopener noreferrer" className="group flex items-center justify-between p-3 border-l-4 border-slate-500 bg-slate-50 hover:bg-slate-100 rounded-r transition-all md:col-span-2">
 							<div className="flex items-center space-x-3 flex-1 min-w-0">
-								<LuFileText className="w-4 h-4 text-indigo-600 flex-shrink-0" />
+								<LuFileText className="w-4 h-4 text-slate-600 flex-shrink-0" />
 								<div className="min-w-0">
 									<p className="font-semibold text-sm text-slate-900 truncate">Perbup No. 31/2012</p>
 									<p className="text-xs text-slate-500">Tata Cara Pembentukan LPM & RT/RW</p>
 								</div>
 							</div>
-							<LuDownload className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 flex-shrink-0 ml-2" />
+							<LuDownload className="w-4 h-4 text-slate-400 group-hover:text-slate-600 flex-shrink-0 ml-2" />
 						</a>
 					</div>
 				</div>
@@ -1577,14 +1577,14 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 							<div className="relative">
 								<button
 									type="button"
-									className={`w-full text-left border rounded-xl px-4 py-3 text-sm flex items-center justify-between transition-colors ${selectedProdukHukumId ? 'border-blue-300 bg-blue-50' : 'border-gray-300 bg-white'} ${creatingLembaga ? 'opacity-50 cursor-not-allowed' : 'hover:border-blue-400'}`}
+									className={`w-full text-left border rounded-xl px-4 py-3 text-sm flex items-center justify-between transition-colors ${selectedProdukHukumId ? 'border-slate-300 bg-slate-50' : 'border-gray-300 bg-white'} ${creatingLembaga ? 'opacity-50 cursor-not-allowed' : 'hover:border-slate-400'}`}
 									onClick={() => !creatingLembaga && setShowProdukHukumDropdown((open) => !open)}
 									disabled={creatingLembaga}
 								>
 									{selectedProdukHukum ? (
 										<div className="flex-1 min-w-0">
-											<p className="font-medium text-blue-700 truncate">{selectedProdukHukum.judul || '—'}</p>
-											<p className="text-xs text-blue-500 mt-0.5">{(selectedProdukHukum.jenis || '').replace(/_/g, ' ')} — No. {selectedProdukHukum.nomor}</p>
+											<p className="font-medium text-slate-700 truncate">{selectedProdukHukum.judul || '—'}</p>
+											<p className="text-xs text-slate-500 mt-0.5">{(selectedProdukHukum.jenis || '').replace(/_/g, ' ')} — No. {selectedProdukHukum.nomor}</p>
 										</div>
 									) : (
 										<span className="text-gray-400">Pilih produk hukum...</span>
@@ -1601,7 +1601,7 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 													value={produkHukumSearchTerm}
 													onChange={(e) => setProdukHukumSearchTerm(e.target.value)}
 													placeholder="Cari judul atau nomor..."
-													className="w-full border border-gray-200 rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+													className="w-full border border-gray-200 rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-slate-500"
 													autoFocus
 												/>
 											</div>
@@ -1609,7 +1609,7 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 										<div className="max-h-56 overflow-y-auto">
 											{loadingProdukHukum ? (
 												<div className="p-3 text-center text-sm text-gray-500">
-													<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500 mx-auto mb-1"></div>
+													<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-slate-500 mx-auto mb-1"></div>
 													Memuat...
 												</div>
 											) : filteredProdukHukumOptions.length === 0 ? (
@@ -1621,7 +1621,7 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 													<button
 														key={item.id}
 														type="button"
-														className={`w-full text-left px-3 py-2 border-b border-gray-50 last:border-b-0 hover:bg-blue-50 transition-colors ${selectedProdukHukumId === item.id ? 'bg-blue-50' : ''}`}
+														className={`w-full text-left px-3 py-2 border-b border-gray-50 last:border-b-0 hover:bg-slate-50 transition-colors ${selectedProdukHukumId === item.id ? 'bg-slate-50' : ''}`}
 														onClick={() => {
 															setSelectedProdukHukumId(item.id);
 															setShowProdukHukumDropdown(false);
@@ -1630,10 +1630,10 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 													>
 														<div className="flex items-center justify-between gap-3">
 															<div className="flex-1 min-w-0">
-																<p className={`text-sm font-medium truncate ${selectedProdukHukumId === item.id ? 'text-blue-700' : 'text-gray-900'}`}>{item.judul}</p>
+																<p className={`text-sm font-medium truncate ${selectedProdukHukumId === item.id ? 'text-slate-700' : 'text-gray-900'}`}>{item.judul}</p>
 																<p className="text-xs text-gray-500">{(item.jenis || '').replace(/_/g, ' ')} — No. {item.nomor}</p>
 															</div>
-															{selectedProdukHukumId === item.id && <LuCheck className="w-4 h-4 text-blue-600 flex-shrink-0" />}
+															{selectedProdukHukumId === item.id && <LuCheck className="w-4 h-4 text-slate-600 flex-shrink-0" />}
 														</div>
 													</button>
 												))
@@ -1699,32 +1699,32 @@ function AccordionSection({ title, children, icon: Icon, color = "blue" }) {
 
 	const colorClasses = {
 		blue: {
-			border: 'border-blue-200',
-			bg: 'bg-blue-50',
-			hover: 'hover:bg-blue-100',
-			text: 'text-blue-700',
-			icon: 'text-blue-600',
+			border: 'border-slate-200',
+			bg: 'bg-slate-50',
+			hover: 'hover:bg-slate-100',
+			text: 'text-slate-700',
+			icon: 'text-slate-600',
 		},
 		indigo: {
-			border: 'border-indigo-200',
-			bg: 'bg-indigo-50',
-			hover: 'hover:bg-indigo-100',
-			text: 'text-indigo-700',
-			icon: 'text-indigo-600',
+			border: 'border-slate-200',
+			bg: 'bg-slate-50',
+			hover: 'hover:bg-slate-100',
+			text: 'text-slate-700',
+			icon: 'text-slate-600',
 		},
 		purple: {
-			border: 'border-purple-200',
-			bg: 'bg-purple-50',
-			hover: 'hover:bg-purple-100',
-			text: 'text-purple-700',
-			icon: 'text-purple-600',
+			border: 'border-slate-200',
+			bg: 'bg-slate-50',
+			hover: 'hover:bg-slate-100',
+			text: 'text-slate-700',
+			icon: 'text-slate-600',
 		},
 		emerald: {
-			border: 'border-emerald-200',
-			bg: 'bg-emerald-50',
-			hover: 'hover:bg-emerald-100',
-			text: 'text-emerald-700',
-			icon: 'text-emerald-600',
+			border: 'border-slate-200',
+			bg: 'bg-slate-50',
+			hover: 'hover:bg-slate-100',
+			text: 'text-slate-700',
+			icon: 'text-slate-600',
 		},
 		amber: {
 			border: 'border-amber-200',

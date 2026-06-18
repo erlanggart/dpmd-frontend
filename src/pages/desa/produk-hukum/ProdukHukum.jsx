@@ -39,10 +39,10 @@ const SURFACE_CLASS =
 	"rounded-lg border border-slate-200/80 bg-white/90 p-6 shadow-[0_24px_60px_-45px_rgba(15,23,42,0.55)] backdrop-blur-sm";
 
 const INPUT_CLASS =
-	"w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-4 focus:ring-sky-100 disabled:cursor-not-allowed disabled:opacity-50";
+	"w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-4 focus:ring-slate-100 disabled:cursor-not-allowed disabled:opacity-50";
 
 const SELECT_CLASS =
-	"w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100";
+	"w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm outline-none transition focus:border-slate-400 focus:ring-4 focus:ring-slate-100";
 
 const numberFormatter = new Intl.NumberFormat("id-ID");
 
@@ -78,7 +78,7 @@ const FilterChip = ({ label, onRemove }) => (
 	<button
 		type="button"
 		onClick={onRemove}
-		className="inline-flex items-center gap-2 rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-700 transition hover:border-sky-300 hover:bg-sky-100"
+		className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-100"
 	>
 		<span>{label}</span>
 		<LuX className="h-3.5 w-3.5" />
@@ -90,7 +90,7 @@ const InsightRow = ({ icon, label, value, helper }) => {
 
 	return (
 		<div className="flex items-start gap-3 rounded-lg border border-slate-100 bg-slate-50/80 px-4 py-3 text-sm text-slate-600">
-			<div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-sky-600 shadow-sm">
+			<div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-slate-600 shadow-sm">
 				{IconComponent ? <IconComponent className="h-4.5 w-4.5" /> : null}
 			</div>
 			<div className="min-w-0 flex-1">
@@ -105,8 +105,8 @@ const InsightRow = ({ icon, label, value, helper }) => {
 };
 
 const EmptyState = ({ hasScopedView, onResetScope, onAdd }) => (
-	<div className="flex min-h-[340px] flex-col items-center justify-center rounded-lg border border-dashed border-slate-200 bg-[radial-gradient(circle_at_top,rgba(14,165,233,0.12),transparent_35%),linear-gradient(180deg,#f8fafc_0%,#ffffff_100%)] px-6 text-center">
-		<div className="flex h-16 w-16 items-center justify-center rounded-lg bg-sky-100 text-sky-600 shadow-lg shadow-sky-100">
+	<div className="flex min-h-[340px] flex-col items-center justify-center rounded-lg border border-dashed border-slate-200 bg-[radial-gradient(circle_at_top,rgba(100,116,139,0.12),transparent_35%),linear-gradient(180deg,#f8fafc_0%,#ffffff_100%)] px-6 text-center">
+		<div className="flex h-16 w-16 items-center justify-center rounded-lg bg-slate-100 text-slate-600 shadow-lg shadow-slate-100">
 			<LuFileText className="h-8 w-8" />
 		</div>
 		<h3 className="mt-5 text-2xl font-black tracking-tight text-slate-900">
@@ -314,10 +314,10 @@ const ProdukHukum = () => {
 				description: "Peraturan Desa",
 				value: produkHukums.filter((item) => item.jenis === "Peraturan Desa").length,
 				tone: {
-					bg: "bg-sky-50",
-					border: "border-sky-100",
-					text: "text-sky-700",
-					bar: "from-sky-400 to-blue-500",
+					bg: "bg-slate-50",
+					border: "border-slate-100",
+					text: "text-slate-700",
+					bar: "from-slate-400 to-slate-500",
 				},
 			},
 			{
@@ -325,10 +325,10 @@ const ProdukHukum = () => {
 				description: "Peraturan Kepala Desa",
 				value: produkHukums.filter((item) => item.jenis === "Peraturan Kepala Desa").length,
 				tone: {
-					bg: "bg-violet-50",
-					border: "border-violet-100",
-					text: "text-violet-700",
-					bar: "from-violet-400 to-fuchsia-500",
+					bg: "bg-slate-50",
+					border: "border-slate-100",
+					text: "text-slate-700",
+					bar: "from-slate-400 to-slate-500",
 				},
 			},
 			{
@@ -339,7 +339,7 @@ const ProdukHukum = () => {
 					bg: "bg-amber-50",
 					border: "border-amber-100",
 					text: "text-amber-700",
-					bar: "from-amber-400 to-orange-500",
+					bar: "from-slate-400 to-slate-500",
 				},
 			},
 		];
@@ -393,14 +393,14 @@ const ProdukHukum = () => {
 	};
 
 	return (
-		<div className="relative overflow-hidden rounded-lg border border-slate-200/70 bg-[radial-gradient(circle_at_top_right,rgba(14,165,233,0.16),transparent_28%),radial-gradient(circle_at_bottom_left,rgba(59,130,246,0.12),transparent_28%),linear-gradient(180deg,#f8fafc_0%,#ffffff_100%)] p-4 shadow-[0_30px_80px_-55px_rgba(15,23,42,0.45)] sm:p-6 lg:p-8">
+		<div className="relative overflow-hidden rounded-lg border border-slate-200/70 bg-[radial-gradient(circle_at_top_right,rgba(100,116,139,0.16),transparent_28%),radial-gradient(circle_at_bottom_left,rgba(148,163,184,0.12),transparent_28%),linear-gradient(180deg,#f8fafc_0%,#ffffff_100%)] p-4 shadow-[0_30px_80px_-55px_rgba(15,23,42,0.45)] sm:p-6 lg:p-8">
 			<div className="pointer-events-none absolute inset-0">
-				<div className="absolute right-0 top-0 h-56 w-56 rounded-full bg-sky-200/30 blur-3xl" />
-				<div className="absolute bottom-0 left-0 h-64 w-64 rounded-full bg-blue-200/30 blur-3xl" />
+				<div className="absolute right-0 top-0 h-56 w-56 rounded-full bg-slate-200/30 blur-3xl" />
+				<div className="absolute bottom-0 left-0 h-64 w-64 rounded-full bg-slate-200/30 blur-3xl" />
 			</div>
 
 			<div className="relative z-10 space-y-6 lg:space-y-8">
-				<section className="overflow-hidden rounded-lg bg-gradient-to-br from-slate-950 via-sky-900 to-cyan-700 p-6 text-white shadow-[0_32px_90px_-40px_rgba(14,116,144,0.9)] sm:p-8">
+				<section className="overflow-hidden rounded-lg bg-gradient-to-br from-slate-950 via-slate-900 to-slate-700 p-6 text-white shadow-[0_32px_90px_-40px_rgba(15,23,42,0.75)] sm:p-8">
 						<div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-center">
 							<div className="space-y-5">
 							<div className="inline-flex items-center gap-2 rounded-lg border border-white/15 bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-white/75 backdrop-blur-sm">
@@ -430,14 +430,14 @@ const ProdukHukum = () => {
 									label="Berlaku"
 									value={formatCount(stats.berlaku)}
 									hint="Dokumen yang masih aktif digunakan"
-									accentClass="bg-emerald-400/20 text-emerald-100"
+									accentClass="bg-slate-400/20 text-slate-100"
 								/>
 								<StatCard
 									icon={LuX}
 									label="Dicabut"
 									value={formatCount(stats.dicabut)}
 									hint="Dokumen yang sudah tidak berlaku"
-									accentClass="bg-rose-400/20 text-rose-100"
+									accentClass="bg-slate-400/20 text-slate-100"
 								/>
 								<StatCard
 									icon={LuCalendar}
@@ -515,7 +515,7 @@ const ProdukHukum = () => {
 						<section className={SURFACE_CLASS}>
 							<div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 pb-5">
 								<div>
-									<p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-600">
+									<p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">
 										Editor dokumen
 									</p>
 									<h2 className="mt-2 text-2xl font-black tracking-tight text-slate-900">
@@ -543,17 +543,17 @@ const ProdukHukum = () => {
 
 						<aside className="space-y-6 xl:sticky xl:top-6 xl:self-start">
 							<section className={SURFACE_CLASS}>
-								<p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-600">
+								<p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">
 									Checklist input
 								</p>
 								<h3 className="mt-2 text-xl font-black tracking-tight text-slate-900">
 									Sebelum disimpan
 								</h3>
 								<div className="mt-5 space-y-3">
-									<div className="rounded-lg border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+									<div className="rounded-lg border border-slate-100 bg-slate-50 px-4 py-3 text-sm text-slate-700">
 										Judul dokumen harus jelas dan mudah dikenali.
 									</div>
-									<div className="rounded-lg border border-sky-100 bg-sky-50 px-4 py-3 text-sm text-sky-700">
+									<div className="rounded-lg border border-slate-100 bg-slate-50 px-4 py-3 text-sm text-slate-700">
 										Nomor, tahun, dan tanggal penetapan harus konsisten.
 									</div>
 									<div className="rounded-lg border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-700">
@@ -563,7 +563,7 @@ const ProdukHukum = () => {
 							</section>
 
 							<section className={SURFACE_CLASS}>
-								<p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-600">
+								<p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">
 									Ringkasan mode
 								</p>
 								<h3 className="mt-2 text-xl font-black tracking-tight text-slate-900">
@@ -598,7 +598,7 @@ const ProdukHukum = () => {
 							<div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_280px] xl:items-start">
 								<div className="space-y-5">
 									<div>
-										<p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-600">
+										<p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">
 											Pencarian arsip
 										</p>
 										<h2 className="mt-2 text-2xl font-black tracking-tight text-slate-900">
@@ -695,7 +695,7 @@ const ProdukHukum = () => {
 													<button
 														type="button"
 														onClick={clearFilters}
-														className="inline-flex items-center gap-1.5 rounded-lg bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-100"
+														className="inline-flex items-center gap-1.5 rounded-lg bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
 													>
 														<LuX className="h-3.5 w-3.5" />
 														Hapus filter dropdown
@@ -712,7 +712,7 @@ const ProdukHukum = () => {
 										onClick={() => setShowFilters((current) => !current)}
 										className={`flex items-center justify-between rounded-lg border px-4 py-4 text-left transition ${
 											showFilters || activeFilterCount > 0
-												? "border-sky-200 bg-sky-50 text-sky-700"
+												? "border-slate-200 bg-slate-50 text-slate-700"
 												: "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
 										}`}
 									>
@@ -726,7 +726,7 @@ const ProdukHukum = () => {
 										</div>
 										<div className="flex items-center gap-2">
 											{activeFilterCount > 0 ? (
-												<span className="flex h-6 min-w-6 items-center justify-center rounded-lg bg-sky-600 px-2 text-[11px] font-bold text-white">
+												<span className="flex h-6 min-w-6 items-center justify-center rounded-lg bg-slate-600 px-2 text-[11px] font-bold text-white">
 													{activeFilterCount}
 												</span>
 											) : null}
@@ -778,7 +778,7 @@ const ProdukHukum = () => {
 							<section className={SURFACE_CLASS}>
 								<div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 pb-5">
 									<div>
-										<p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-600">
+										<p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">
 											Daftar arsip
 										</p>
 										<h2 className="mt-2 text-2xl font-black tracking-tight text-slate-900">
@@ -854,7 +854,7 @@ const ProdukHukum = () => {
 
 							<aside className="space-y-6">
 								<section className={SURFACE_CLASS}>
-									<p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-600">
+									<p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">
 										Komposisi arsip
 									</p>
 									<h3 className="mt-2 text-xl font-black tracking-tight text-slate-900">
@@ -899,7 +899,7 @@ const ProdukHukum = () => {
 								</section>
 
 								<section className={SURFACE_CLASS}>
-									<p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-600">
+									<p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">
 										Sorotan arsip
 									</p>
 									<h3 className="mt-2 text-xl font-black tracking-tight text-slate-900">

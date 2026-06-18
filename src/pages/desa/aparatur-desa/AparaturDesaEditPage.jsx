@@ -76,16 +76,39 @@ const AparaturDesaEditPage = () => {
 		}
 	};
 
-	if (loading) return <p>Memuat...</p>;
-	if (error) return <p className="text-red-600">{error}</p>;
-	if (!initialData) return <p>Data tidak ditemukan.</p>;
+	if (loading) {
+		return (
+			<div className="flex min-h-64 items-center justify-center rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-500">
+				Memuat data aparatur...
+			</div>
+		);
+	}
+	if (error) {
+		return (
+			<div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+				{error}
+			</div>
+		);
+	}
+	if (!initialData) {
+		return (
+			<div className="rounded-xl border border-slate-200 bg-white px-4 py-8 text-center text-sm font-medium text-slate-500">
+				Data tidak ditemukan.
+			</div>
+		);
+	}
 
 	return (
 		<div className="space-y-6">
-			<div className="flex items-center justify-between">
-				<h1 className="text-2xl font-bold">Ubah Aparatur Desa</h1>
+			<div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+				<div>
+					<p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+						Aparatur Desa
+					</p>
+					<h1 className="mt-1 text-2xl font-bold text-slate-900">Ubah Aparatur Desa</h1>
+				</div>
 				<button
-					className="px-3 py-1.5 rounded border"
+					className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
 					onClick={() => nav(`/desa/aparatur-desa/${id}`)}
 				>
 					Kembali

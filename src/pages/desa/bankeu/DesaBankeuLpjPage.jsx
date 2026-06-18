@@ -10,7 +10,7 @@ const MAX_FILES = 10;
 
 const STATUS_CONFIG = {
   pending: { label: 'Menunggu Verifikasi', color: 'amber', icon: LuClock, bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', badge: 'bg-amber-100 text-amber-700' },
-  approved: { label: 'Disetujui', color: 'green', icon: LuCircleCheck, bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-700', badge: 'bg-green-100 text-green-700' },
+  approved: { label: 'Disetujui', color: 'green', icon: LuCircleCheck, bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-700', badge: 'bg-slate-100 text-slate-700' },
   rejected: { label: 'Ditolak', color: 'red', icon: LuCircleX, bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700', badge: 'bg-red-100 text-red-700' },
   revision: { label: 'Perlu Revisi', color: 'orange', icon: LuPencil, bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-700', badge: 'bg-orange-100 text-orange-700' },
 };
@@ -236,7 +236,7 @@ const DesaBankeuLpjPage = ({ tahun = 2025 }) => {
     return (
       <div className="min-h-[400px] flex items-center justify-center">
         <div className="text-center">
-          <LuLoader className="h-10 w-10 animate-spin text-blue-500 mx-auto" />
+          <LuLoader className="h-10 w-10 animate-spin text-slate-500 mx-auto" />
           <p className="mt-3 text-gray-500">Memuat data LPJ...</p>
         </div>
       </div>
@@ -244,14 +244,14 @@ const DesaBankeuLpjPage = ({ tahun = 2025 }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 p-4 md:p-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 p-4 md:p-8">
       <div className="max-w-3xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex h-16 w-16 bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl items-center justify-center mb-4 shadow-xl shadow-amber-500/30">
+          <div className="inline-flex h-16 w-16 bg-gradient-to-br from-slate-500 to-slate-600 rounded-2xl items-center justify-center mb-4 shadow-xl shadow-amber-500/30">
             <LuFileText className="h-8 w-8 text-white" />
           </div>
-          <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-gray-800 via-amber-700 to-orange-600 bg-clip-text text-transparent mb-2">
+          <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-gray-800 via-slate-700 to-slate-600 bg-clip-text text-transparent mb-2">
             LPJ Bantuan Keuangan {tahun}
           </h1>
           <p className="text-gray-500">
@@ -263,7 +263,7 @@ const DesaBankeuLpjPage = ({ tahun = 2025 }) => {
         {lpjList.length > 0 ? (
           <div className="space-y-4 mb-6">
             <h3 className="font-semibold text-gray-700 flex items-center gap-2">
-              <LuFileText className="h-5 w-5 text-green-600" />
+              <LuFileText className="h-5 w-5 text-slate-600" />
               File LPJ Terupload ({lpjList.length} file)
             </h3>
             {lpjList.map((lpj) => {
@@ -274,7 +274,7 @@ const DesaBankeuLpjPage = ({ tahun = 2025 }) => {
                 <div key={lpj.id} className={`bg-white rounded-2xl shadow-lg border p-5 ${
                   status === 'rejected' ? 'border-red-300' :
                   status === 'revision' ? 'border-orange-300' :
-                  status === 'approved' ? 'border-green-300' :
+                  status === 'approved' ? 'border-slate-300' :
                   'border-amber-200'
                 }`}>
                   <div className="flex items-center justify-between mb-3">
@@ -307,7 +307,7 @@ const DesaBankeuLpjPage = ({ tahun = 2025 }) => {
                         {status === 'revision' && (
                           <button
                             onClick={() => setChatLpjId(lpj.id)}
-                            className="flex items-center gap-1 px-2.5 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 transition-colors flex-shrink-0"
+                            className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-600 text-white rounded-lg text-xs font-medium hover:bg-slate-700 transition-colors flex-shrink-0"
                           >
                             <LuMessageSquare className="h-3.5 w-3.5" />
                             Chat
@@ -327,7 +327,7 @@ const DesaBankeuLpjPage = ({ tahun = 2025 }) => {
                       href={getFileUrl(lpj.file_path)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors text-xs font-medium shadow-sm"
+                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-600 text-white rounded-xl hover:bg-slate-700 transition-colors text-xs font-medium shadow-sm"
                     >
                       <LuDownload className="h-3.5 w-3.5" />
                       Lihat / Download
@@ -367,7 +367,7 @@ const DesaBankeuLpjPage = ({ tahun = 2025 }) => {
         {/* Upload Form */}
         <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
           <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <LuUpload className="h-5 w-5 text-blue-600" />
+            <LuUpload className="h-5 w-5 text-slate-600" />
             Upload LPJ
           </h3>
 
@@ -381,8 +381,8 @@ const DesaBankeuLpjPage = ({ tahun = 2025 }) => {
               onClick={() => fileInputRef.current?.click()}
               className={`relative border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all ${
                 selectedFiles.length > 0
-                  ? 'border-blue-400 bg-blue-50'
-                  : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50/50'
+                  ? 'border-slate-400 bg-slate-50'
+                  : 'border-gray-300 hover:border-slate-400 hover:bg-slate-50/50'
               }`}
             >
               <input
@@ -403,14 +403,14 @@ const DesaBankeuLpjPage = ({ tahun = 2025 }) => {
               <div className="mt-3 space-y-2">
                 <p className="text-xs font-medium text-gray-500">{selectedFiles.length} file dipilih ({formatFileSize(selectedFiles.reduce((s, f) => s + f.size, 0))} total)</p>
                 {selectedFiles.map((file, idx) => (
-                  <div key={idx} className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
-                    <LuFile className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                  <div key={idx} className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+                    <LuFile className="h-4 w-4 text-slate-500 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-blue-700 truncate">{file.name}</p>
-                      <p className="text-xs text-blue-500">{formatFileSize(file.size)}</p>
+                      <p className="text-sm font-medium text-slate-700 truncate">{file.name}</p>
+                      <p className="text-xs text-slate-500">{formatFileSize(file.size)}</p>
                     </div>
-                    <button onClick={(e) => { e.stopPropagation(); removeSelectedFile(idx); }} className="p-1 hover:bg-blue-100 rounded-lg">
-                      <LuX className="h-4 w-4 text-blue-400 hover:text-red-500" />
+                    <button onClick={(e) => { e.stopPropagation(); removeSelectedFile(idx); }} className="p-1 hover:bg-slate-100 rounded-lg">
+                      <LuX className="h-4 w-4 text-slate-400 hover:text-red-500" />
                     </button>
                   </div>
                 ))}
@@ -428,7 +428,7 @@ const DesaBankeuLpjPage = ({ tahun = 2025 }) => {
               onChange={(e) => setKeterangan(e.target.value)}
               placeholder="Catatan tambahan mengenai LPJ..."
               rows={3}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none text-sm"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-slate-500/20 focus:border-slate-500 resize-none text-sm"
             />
           </div>
 
@@ -440,7 +440,7 @@ const DesaBankeuLpjPage = ({ tahun = 2025 }) => {
                 <span>{uploadProgress}%</span>
               </div>
               <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                <div className="h-full bg-blue-500 rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
+                <div className="h-full bg-slate-500 rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
               </div>
             </div>
           )}
@@ -452,7 +452,7 @@ const DesaBankeuLpjPage = ({ tahun = 2025 }) => {
             className={`w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-white font-semibold transition-all ${
               selectedFiles.length === 0 || uploading
                 ? 'bg-gray-300 cursor-not-allowed'
-                : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg shadow-blue-500/25 hover:shadow-xl'
+                : 'bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 shadow-lg shadow-slate-500/25 hover:shadow-xl'
             }`}
           >
             {uploading ? (
@@ -469,8 +469,8 @@ const DesaBankeuLpjPage = ({ tahun = 2025 }) => {
           </button>
 
           {/* Info */}
-          <div className="mt-4 bg-blue-50 border-l-4 border-blue-500 p-3 rounded-lg">
-            <p className="text-xs text-blue-700">
+          <div className="mt-4 bg-slate-50 border-l-4 border-slate-500 p-3 rounded-lg">
+            <p className="text-xs text-slate-700">
               <strong>Informasi:</strong> File LPJ yang diupload akan diverifikasi oleh DPMD.
               Anda dapat mengupload beberapa file LPJ sekaligus (maks {MAX_FILES} file, 100 MB per file).
               Setelah upload, DPMD akan memverifikasi LPJ Anda.

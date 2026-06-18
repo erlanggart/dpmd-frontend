@@ -70,7 +70,7 @@ const AparaturDesaList = ({ aparatur = [] }) => {
 						<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
 						<input
 							type="text"
-							className="w-full pl-10 pr-10 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
+							className="w-full pl-10 pr-10 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all"
 							placeholder="Cari nama atau jabatan..."
 							value={q}
 							onChange={(e) => setQ(e.target.value)}
@@ -91,28 +91,28 @@ const AparaturDesaList = ({ aparatur = [] }) => {
 						onClick={() => setTab("pemdes")}
 						className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-all ${
 							tab === "pemdes"
-								? "text-teal-700 border-b-2 border-teal-600 bg-teal-50/50"
+								? "text-slate-900 border-b-2 border-slate-700 bg-slate-50"
 								: "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
 						}`}
 					>
 						<Users className="w-4 h-4" />
 						Pemerintah Desa
 						<span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-							tab === "pemdes" ? "bg-teal-100 text-teal-700" : "bg-gray-100 text-gray-500"
+							tab === "pemdes" ? "bg-slate-200 text-slate-700" : "bg-gray-100 text-gray-500"
 						}`}>{pemdes.length}</span>
 					</button>
 					<button
 						onClick={() => setTab("bpd")}
 						className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-all ${
 							tab === "bpd"
-								? "text-blue-700 border-b-2 border-blue-500 bg-blue-50/50"
+								? "text-slate-900 border-b-2 border-slate-700 bg-slate-50"
 								: "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
 						}`}
 					>
 						<Landmark className="w-4 h-4" />
 						BPD
 						<span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-							tab === "bpd" ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-500"
+							tab === "bpd" ? "bg-slate-200 text-slate-700" : "bg-gray-100 text-gray-500"
 						}`}>{bpd.length}</span>
 					</button>
 				</div>
@@ -134,7 +134,7 @@ const AparaturDesaList = ({ aparatur = [] }) => {
 							{currentData.length > 0 ? currentData.map((item) => {
 								const foto = getPasFotoUrl(item);
 								return (
-									<tr key={item.id} className="hover:bg-teal-50/30 transition-colors group">
+									<tr key={item.id} className="hover:bg-slate-50 transition-colors group">
 										<td className="px-5 py-3">
 											<Link to={`/desa/aparatur-desa/${item.id}`} className="flex items-center gap-3">
 												{foto ? (
@@ -145,16 +145,16 @@ const AparaturDesaList = ({ aparatur = [] }) => {
 														onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'flex'; }}
 													/>
 												) : null}
-												<div className={`h-9 w-9 bg-gradient-to-br from-teal-100 to-teal-200 rounded-full flex items-center justify-center ring-2 ring-gray-100 ${foto ? 'hidden' : ''}`}>
-													<UserCircle className="h-5 w-5 text-teal-600" />
+												<div className={`h-9 w-9 bg-gradient-to-br from-slate-100 to-slate-200 rounded-full flex items-center justify-center ring-2 ring-gray-100 ${foto ? 'hidden' : ''}`}>
+													<UserCircle className="h-5 w-5 text-slate-600" />
 												</div>
-												<span className="font-medium text-gray-900 group-hover:text-teal-700 transition-colors">
+												<span className="font-medium text-gray-900 group-hover:text-slate-700 transition-colors">
 													{item.nama_lengkap}
 												</span>
 											</Link>
 										</td>
 										<td className="px-5 py-3">
-											<span className="inline-flex px-2.5 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
+											<span className="inline-flex px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
 												{item.jabatan || "-"}
 											</span>
 										</td>
@@ -178,14 +178,14 @@ const AparaturDesaList = ({ aparatur = [] }) => {
 											<div className="flex items-center justify-end gap-1">
 												<button
 													onClick={() => nav(`/desa/aparatur-desa/${item.id}`)}
-													className="p-1.5 text-gray-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
+													className="p-1.5 text-gray-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
 													title="Detail"
 												>
 													<Eye className="w-4 h-4" />
 												</button>
 												<button
 													onClick={() => nav(`/desa/aparatur-desa/${item.id}/edit`)}
-													className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+													className="p-1.5 text-gray-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
 													title="Edit"
 												>
 													<Edit3 className="w-4 h-4" />
@@ -223,15 +223,15 @@ const AparaturDesaList = ({ aparatur = [] }) => {
 											onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'flex'; }}
 										/>
 									) : null}
-									<div className={`h-11 w-11 bg-gradient-to-br from-teal-100 to-teal-200 rounded-full flex items-center justify-center flex-shrink-0 ${foto ? 'hidden' : ''}`}>
-										<UserCircle className="h-6 w-6 text-teal-600" />
+									<div className={`h-11 w-11 bg-gradient-to-br from-slate-100 to-slate-200 rounded-full flex items-center justify-center flex-shrink-0 ${foto ? 'hidden' : ''}`}>
+										<UserCircle className="h-6 w-6 text-slate-600" />
 									</div>
 									<div className="flex-1 min-w-0">
-										<Link to={`/desa/aparatur-desa/${item.id}`} className="font-semibold text-gray-900 text-sm hover:text-teal-700">
+										<Link to={`/desa/aparatur-desa/${item.id}`} className="font-semibold text-gray-900 text-sm hover:text-slate-700">
 											{item.nama_lengkap}
 										</Link>
 										<div className="flex items-center gap-2 mt-1 flex-wrap">
-											<span className="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700">{item.jabatan || "-"}</span>
+											<span className="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700">{item.jabatan || "-"}</span>
 											<span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
 												(item.status || "").toLowerCase() === "aktif" ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
 											}`}>
@@ -241,10 +241,10 @@ const AparaturDesaList = ({ aparatur = [] }) => {
 										</div>
 									</div>
 									<div className="flex items-center gap-1 flex-shrink-0">
-										<button onClick={() => nav(`/desa/aparatur-desa/${item.id}`)} className="p-2 text-gray-400 hover:text-teal-600 rounded-lg">
+										<button onClick={() => nav(`/desa/aparatur-desa/${item.id}`)} className="p-2 text-gray-400 hover:text-slate-700 rounded-lg">
 											<Eye className="w-4 h-4" />
 										</button>
-										<button onClick={() => nav(`/desa/aparatur-desa/${item.id}/edit`)} className="p-2 text-gray-400 hover:text-blue-600 rounded-lg">
+										<button onClick={() => nav(`/desa/aparatur-desa/${item.id}/edit`)} className="p-2 text-gray-400 hover:text-slate-700 rounded-lg">
 											<Edit3 className="w-4 h-4" />
 										</button>
 									</div>

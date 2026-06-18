@@ -31,8 +31,8 @@ const Avatar = ({ person, size = "md" }) => {
 			onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'flex'; }}
 		/>
 	) : (
-		<div className={`${sizes[size]} bg-gradient-to-br from-teal-100 to-emerald-200 rounded-full flex items-center justify-center ring-2 ring-white shadow-md ${foto ? 'hidden' : ''}`}>
-			<UserCircle className={`${iconSizes[size]} text-teal-600`} />
+		<div className={`${sizes[size]} bg-gradient-to-br from-slate-100 to-slate-300 rounded-full flex items-center justify-center ring-2 ring-white shadow-md ${foto ? 'hidden' : ''}`}>
+			<UserCircle className={`${iconSizes[size]} text-slate-600`} />
 		</div>
 	);
 };
@@ -43,8 +43,8 @@ const LeaderCard = ({ person, accent = "teal" }) => {
 	if (!person) return null;
 
 	const gradients = {
-		teal: "from-teal-600 to-emerald-600",
-		blue: "from-blue-600 to-indigo-600",
+		teal: "from-slate-700 to-slate-900",
+		blue: "from-slate-600 to-slate-800",
 	};
 
 	return (
@@ -78,23 +78,23 @@ const StaffCard = ({ person }) => {
 	return (
 		<div
 			onClick={() => nav(`/desa/aparatur-desa/${person.id}`)}
-			className="group cursor-pointer bg-white rounded-xl border border-gray-200 hover:border-teal-300 hover:shadow-md p-4 flex items-center gap-3 transition-all"
+			className="group cursor-pointer bg-white rounded-xl border border-gray-200 hover:border-slate-300 hover:shadow-md p-4 flex items-center gap-3 transition-all"
 		>
 			<Avatar person={person} size="sm" />
 			<div className="flex-1 min-w-0">
-				<p className="font-semibold text-gray-900 text-sm truncate group-hover:text-teal-700 transition-colors">{person.nama_lengkap || "-"}</p>
+				<p className="font-semibold text-gray-900 text-sm truncate group-hover:text-slate-700 transition-colors">{person.nama_lengkap || "-"}</p>
 				<p className="text-xs text-gray-500 truncate">{person.jabatan || "-"}</p>
 			</div>
-			<ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-teal-500 flex-shrink-0 transition-colors" />
+			<ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-slate-500 flex-shrink-0 transition-colors" />
 		</div>
 	);
 };
 
 const SectionLabel = ({ icon: Icon, label, count, color = "teal" }) => {
 	const colors = {
-		teal: "bg-teal-50 text-teal-700 border-teal-200",
-		blue: "bg-blue-50 text-blue-700 border-blue-200",
-		purple: "bg-purple-50 text-purple-700 border-purple-200",
+		teal: "bg-slate-50 text-slate-700 border-slate-200",
+		blue: "bg-slate-100 text-slate-700 border-slate-200",
+		purple: "bg-white text-slate-700 border-slate-300",
 		amber: "bg-amber-50 text-amber-700 border-amber-200",
 		gray: "bg-gray-50 text-gray-700 border-gray-200",
 	};
@@ -111,7 +111,7 @@ const SectionLabel = ({ icon: Icon, label, count, color = "teal" }) => {
 
 const Connector = () => (
 	<div className="flex justify-center py-2">
-		<div className="w-px h-6 bg-gradient-to-b from-teal-300 to-transparent" />
+		<div className="w-px h-6 bg-gradient-to-b from-slate-300 to-transparent" />
 	</div>
 );
 
