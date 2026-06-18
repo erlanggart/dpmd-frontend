@@ -7,7 +7,8 @@ import {
   LuChevronDown, LuChevronRight, LuSearch, LuPackage, LuMapPin, LuDollarSign,
   LuClipboardCheck, LuHistory, LuRoute, LuFolder, LuActivity, LuUsers,
   LuDownload, LuChartColumn, LuFileText, LuStamp, LuRotateCcw, LuWrench,
-  LuPencil, LuSave,
+  LuPencil, LuSave, LuHouse, LuBuilding2, LuShield, LuCircleCheck, LuCircleX,
+  LuChevronUp, LuClock,
 } from 'react-icons/lu';
 import BankeuRevisionHistoryModal from '../../../../components/shared/BankeuRevisionHistoryModal';
 import BankeuPerubahanTrackingModal from '../../../../components/shared/BankeuPerubahanTrackingModal';
@@ -113,22 +114,6 @@ const TONE = {
   cyan: 'bg-cyan-50 text-cyan-700 border-cyan-200',
   gray: 'bg-slate-100 text-slate-600 border-slate-200',
 };
-// Titik berwarna untuk header grup (dipakai di Tracking — dikelompokkan per status).
-const TONE_DOT = {
-  emerald: 'bg-emerald-500', red: 'bg-rose-500', orange: 'bg-orange-500',
-  amber: 'bg-amber-500', cyan: 'bg-cyan-500', gray: 'bg-slate-400',
-};
-// Urutan tahap mengikuti alur Desa → Kecamatan → DPMD (untuk pengelompokan Tracking).
-const STAGE_ORDER = [
-  { key: 'draft', label: 'Draft di Desa', tone: 'gray' },
-  { key: 'revisi_desa', label: 'Revisi di Desa', tone: 'red' },
-  { key: 'menunggu_kec', label: 'Menunggu Kecamatan', tone: 'amber' },
-  { key: 'revisi_kec', label: 'Revisi Kecamatan', tone: 'orange' },
-  { key: 'ditolak_kec', label: 'Ditolak Kecamatan', tone: 'red' },
-  { key: 'disetujui_kec', label: 'Disetujui Kec. (belum diteruskan)', tone: 'cyan' },
-  { key: 'revisi_dokumen_kec', label: 'Revisi BA/SP Kecamatan', tone: 'orange' },
-  { key: 'diterima_dpmd', label: 'Diterima DPMD', tone: 'emerald' },
-];
 
 const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
   const [activeTab, setActiveTab] = useState('archive');
@@ -668,6 +653,7 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
             kegiatanOptions={trackingKegiatanOptions}
             kecamatanOptions={kecamatanOptions} total={trackingData.length}
             onTroubleshoot={troubleshootRevision} onEdit={openEditDetail}
+            tahun={tahun} onRefresh={fetchTracking}
           />
         )}
 
@@ -1096,32 +1082,60 @@ const ProposalRow = ({ proposal, onApprove, onRevision, onCancelApproval, onTrou
 };
 
 // ============================ TRACKING ============================
-const StageDots = ({ proposal }) => {
-  const kec = proposal.kecamatan_status || 'pending';
-  const dpmd = proposal.dpmd_status || 'pending';
-  const stages = [
-    { label: 'Dibuat', done: !!proposal.created_at },
-    { label: 'Kirim Kec', done: !!proposal.submitted_to_kecamatan },
-    { label: 'Verif Kec', done: kec !== 'pending', status: kec },
-    { label: 'Kirim DPMD', done: !!proposal.submitted_to_dpmd },
-    { label: 'Keputusan DPMD', done: dpmd !== 'pending', status: dpmd },
+const fmtShort = (d) =>
+  d ? new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) : null;
+
+// Stepper horizontal progres proposal Desa → Kecamatan → DPMD (mengikuti design
+// "Compact Timeline" tracking Bankeu Reguler, tanpa tahap Dinas).
+const NODE_STYLE = {
+  done:     { circle: 'bg-emerald-500 text-white', Icon: LuCircleCheck },
+  rejected: { circle: 'bg-rose-500 text-white',    Icon: LuCircleX },
+  revision: { circle: 'bg-orange-500 text-white',  Icon: LuRefreshCw },
+  active:   { circle: 'bg-blue-500 text-white animate-pulse', Icon: null },
+  pending:  { circle: 'bg-slate-200 text-slate-500', Icon: null },
+};
+const PerubahanStepper = ({ proposal: p }) => {
+  const kec = p.kecamatan_status || 'pending';
+  const dpmd = p.dpmd_status || 'pending';
+  const submittedKec = !!p.submitted_to_kecamatan;
+  const submittedDpmd = !!p.submitted_to_dpmd;
+
+  const kecState =
+    kec === 'approved' ? 'done' : kec === 'rejected' ? 'rejected' :
+    kec === 'revision' ? 'revision' : submittedKec ? 'active' : 'pending';
+  const dpmdState =
+    dpmd === 'rejected' ? 'rejected' : dpmd === 'revision' ? 'revision' :
+    submittedDpmd ? 'done' : 'pending';
+
+  const nodes = [
+    { key: 'desa', label: 'Desa', TahapIcon: LuHouse, state: 'done', date: fmtShort(p.submitted_at || p.created_at) || '-' },
+    { key: 'kec', label: 'Kec.', TahapIcon: LuBuilding2, state: kecState, date: fmtShort(p.kecamatan_verified_at) || (submittedKec ? 'Menunggu' : '-') },
+    { key: 'dpmd', label: 'DPMD', TahapIcon: LuShield, state: dpmdState, date: fmtShort(p.dpmd_verified_at) || fmtShort(p.submitted_to_dpmd_at) || (submittedDpmd ? 'Selesai' : '-') },
   ];
-  const dotColor = (s) => {
-    if (s.status === 'approved') return 'bg-emerald-500';
-    if (s.status === 'rejected') return 'bg-rose-500';
-    if (s.status === 'revision') return 'bg-orange-500';
-    return s.done ? 'bg-emerald-500' : 'bg-slate-300';
-  };
+  const lines = [submittedKec, submittedDpmd];
+
   return (
-    <div className="flex items-center gap-1">
-      {stages.map((s, i) => (
-        <React.Fragment key={s.label}>
-          <div className="flex flex-col items-center" title={s.label}>
-            <span className={`w-3 h-3 rounded-full ${dotColor(s)}`} />
-          </div>
-          {i < stages.length - 1 && <span className={`w-4 h-0.5 ${stages[i + 1].done || s.status === 'approved' ? 'bg-emerald-200' : 'bg-slate-200'}`} />}
-        </React.Fragment>
-      ))}
+    <div className="relative overflow-x-auto">
+      <div className="flex items-start min-w-[280px]">
+        {nodes.map((n, i) => {
+          const style = NODE_STYLE[n.state];
+          const Icon = style.Icon || n.TahapIcon;
+          return (
+            <div key={n.key} className="contents">
+              <div className="flex flex-col items-center z-10 w-16 shrink-0">
+                <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shadow-sm ${style.circle}`}>
+                  <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
+                </div>
+                <span className="text-[10px] sm:text-xs mt-1 font-medium text-slate-700">{n.label}</span>
+                <span className="text-[9px] sm:text-[10px] text-slate-500">{n.date}</span>
+              </div>
+              {i < nodes.length - 1 && (
+                <div className={`flex-1 h-1 mt-[18px] sm:mt-5 mx-1 rounded-full ${lines[i] ? 'bg-emerald-400' : 'bg-slate-200'}`} />
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 };
@@ -1129,17 +1143,13 @@ const StageDots = ({ proposal }) => {
 const TrackingTab = ({
   loading, data, search, setSearch, kecamatan, setKecamatan, kecamatanOptions,
   kegiatan, setKegiatan, kegiatanOptions, total, onTroubleshoot, onEdit,
+  tahun, onRefresh,
 }) => {
   const [trackProposal, setTrackProposal] = useState(null);
-  // Default: semua grup status TERTUTUP. openMap[key] === true berarti grup dibuka.
-  const [openMap, setOpenMap] = useState({});
-  const totalAnggaran = useMemo(
-    () => data.reduce((s, p) => s + (Number(p.anggaran_usulan) || 0), 0),
-    [data]
-  );
+  // Default: semua desa TERTUTUP. expanded[key] === true berarti dibuka.
+  const [expanded, setExpanded] = useState({});
 
-  // Ringkasan kegiatan terpilih: berapa desa & proposal yang mengambil kegiatan ini
-  // (mengikuti filter kecamatan/pencarian yang aktif, karena `data` sudah terfilter).
+  // Ringkasan kegiatan terpilih (mengikuti filter aktif; `data` sudah terfilter).
   const selectedKegiatanInfo = useMemo(() => {
     if (kegiatan === 'all') return null;
     const desaSet = new Set();
@@ -1153,58 +1163,151 @@ const TrackingTab = ({
     return { nama: opt?.nama || 'Kegiatan', desaCount: desaSet.size, proposals, anggaran };
   }, [kegiatan, data, kegiatanOptions]);
 
-  // Kelompokkan per status (tahap saat ini), diurutkan mengikuti alur Desa→Kec→DPMD.
-  const grouped = useMemo(() => {
-    const m = new Map();
+  // Ringkasan tahap (3 bucket: Di Desa, Di Kecamatan, Selesai/Diterima DPMD).
+  const summary = useMemo(() => {
+    let diDesa = 0, diKec = 0, selesai = 0;
     data.forEach(p => {
-      const { key } = currentStage(p);
-      if (!m.has(key)) m.set(key, { items: [], total: 0 });
-      const g = m.get(key);
-      g.items.push(p);
-      g.total += Number(p.anggaran_usulan) || 0;
+      if (p.submitted_to_dpmd) selesai += 1;
+      else if (p.submitted_to_kecamatan) diKec += 1;
+      else diDesa += 1;
     });
-    return m;
+    return { diDesa, diKec, selesai, totalAll: data.length || 1 };
   }, [data]);
 
-  const sections = STAGE_ORDER.filter(s => grouped.has(s.key));
-  const toggle = (key) => setOpenMap(o => ({ ...o, [key]: !o[key] }));
-  const expandAll = () => setOpenMap(Object.fromEntries(sections.map(s => [s.key, true])));
-  const collapseAll = () => setOpenMap({});
+  // Kelompokkan per Desa (urut Kecamatan → Desa), mengikuti layout tracking Reguler.
+  const desaGroups = useMemo(() => {
+    const map = new Map();
+    data.forEach(p => {
+      const id = p.desa_id ?? `none-${p.desa_nama || ''}`;
+      if (!map.has(id)) {
+        map.set(id, {
+          desaId: p.desa_id, desaName: p.desa_nama || 'Tanpa Desa',
+          kecamatanName: p.kecamatan_nama || '-', proposals: [], anggaran: 0,
+        });
+      }
+      const g = map.get(id);
+      g.proposals.push(p);
+      g.anggaran += Number(p.anggaran_usulan) || 0;
+    });
+    return Array.from(map.values()).sort((a, b) =>
+      (a.kecamatanName || '').localeCompare(b.kecamatanName || '') || (a.desaName || '').localeCompare(b.desaName || ''));
+  }, [data]);
+
+  const totalAnggaran = useMemo(() => data.reduce((s, p) => s + (Number(p.anggaran_usulan) || 0), 0), [data]);
+  const toggle = (key) => setExpanded(e => ({ ...e, [key]: !e[key] }));
+  const expandAll = () => setExpanded(Object.fromEntries(desaGroups.map(g => [String(g.desaId), true])));
+  const collapseAll = () => setExpanded({});
+  const hasFilter = kecamatan !== 'all' || kegiatan !== 'all' || !!search.trim();
+
+  const stageCards = [
+    { label: 'Di Desa', count: summary.diDesa, sub: 'draft / revisi', icon: LuMapPin, gradient: 'from-slate-600 to-slate-700', ring: 'ring-slate-400/20', barColor: 'bg-slate-300' },
+    { label: 'Di Kecamatan', count: summary.diKec, sub: 'menunggu / diproses', icon: LuBuilding2, gradient: 'from-blue-500 to-indigo-600', ring: 'ring-blue-400/20', barColor: 'bg-blue-300' },
+    { label: 'Selesai', count: summary.selesai, sub: 'diterima DPMD', icon: LuCircleCheck, gradient: 'from-emerald-500 to-green-600', ring: 'ring-emerald-400/20', barColor: 'bg-emerald-300' },
+  ].map(c => ({ ...c, percent: Math.round((c.count / summary.totalAll) * 100) }));
 
   return (
-    <div className="space-y-3">
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-2 text-sm font-semibold text-slate-700"><LuActivity className="w-4 h-4 text-indigo-600" /> Tracking lintas-tahap</div>
-        <select value={kecamatan} onChange={e => setKecamatan(e.target.value)}
-          className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500">
-          <option value="all">Semua Kecamatan</option>
-          {kecamatanOptions.map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}
-        </select>
-        <select value={kegiatan} onChange={e => setKegiatan(e.target.value)}
-          className="max-w-sm px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500">
-          <option value="all">Semua Kegiatan</option>
-          {kegiatanOptions.map(k => (
-            <option key={k.id} value={k.id}>{k.nama}{typeof k.desaCount === 'number' ? ` (${k.desaCount} desa)` : ''}</option>
-          ))}
-        </select>
-        <div className="relative flex-1 min-w-[200px] max-w-xs">
-          <LuSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari judul / desa / kecamatan / kegiatan..."
-            className="w-full pl-9 pr-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500" />
+    <div className="space-y-6">
+      {/* Premium Hero */}
+      <div className="relative bg-gradient-to-br from-slate-900 via-indigo-950 to-violet-950 rounded-2xl overflow-hidden">
+        <div className="absolute inset-0">
+          <div className="absolute top-0 left-1/3 w-72 h-72 bg-indigo-500/20 rounded-full blur-[100px] animate-pulse" />
+          <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-violet-500/20 rounded-full blur-[80px]" style={{ animation: 'pulse 3s ease-in-out infinite alternate' }} />
         </div>
-        <span className="ml-auto text-xs text-slate-500">{data.length} dari {total} proposal</span>
+        <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
+        <div className="relative z-10 px-4 py-6 sm:px-6 sm:py-8 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="h-14 w-14 bg-gradient-to-br from-indigo-400 to-violet-600 rounded-2xl flex items-center justify-center shadow-xl shadow-indigo-500/30 ring-2 ring-white/10">
+              <LuActivity className="h-7 w-7 text-white" />
+            </div>
+            <div>
+              <h2 className="text-lg sm:text-xl md:text-2xl font-extrabold text-white tracking-tight">Tracking Proposal Perubahan Tahun {tahun}</h2>
+              <p className="text-indigo-300/80 text-sm mt-0.5">Pantau status proposal di semua tahap verifikasi</p>
+            </div>
+          </div>
+          {onRefresh && (
+            <button onClick={onRefresh} disabled={loading}
+              className="p-2.5 bg-white/10 hover:bg-white/20 rounded-xl transition-all border border-white/10 hover:border-white/20">
+              <LuRefreshCw className={`h-5 w-5 text-white ${loading ? 'animate-spin' : ''}`} />
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Ringkasan total anggaran usulan (mengikuti filter) */}
-      <div className="rounded-2xl bg-gradient-to-r from-indigo-600 to-indigo-500 p-4 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-2 text-white/90">
-          <LuDollarSign className="w-5 h-5" />
-          <span className="text-sm font-semibold">Total Anggaran Usulan ({data.length} proposal)</span>
-        </div>
-        <div className="text-xl md:text-2xl font-bold text-white">{rupiah(totalAnggaran)}</div>
+      {/* Stage Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
+        {stageCards.map((card, i) => (
+          <div key={i} className={`group relative bg-gradient-to-br ${card.gradient} rounded-xl sm:rounded-2xl p-3 sm:p-5 text-white shadow-xl overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl`}>
+            <div className="absolute -top-8 -right-8 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-500" />
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-3">
+                <div className={`h-10 w-10 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center ring-1 ${card.ring}`}>
+                  <card.icon className="h-5 w-5 text-white" />
+                </div>
+                <span className="text-xs font-bold bg-white/20 backdrop-blur-sm px-2.5 py-1 rounded-lg">{card.percent}%</span>
+              </div>
+              <p className="text-xl sm:text-3xl font-extrabold tracking-tight">{card.count}</p>
+              <p className="text-white/90 text-sm font-semibold mt-0.5">{card.label}</p>
+              <p className="text-white/60 text-xs mt-0.5">{card.sub}</p>
+              <div className="mt-3 h-1.5 bg-white/20 rounded-full overflow-hidden">
+                <div className={`h-full ${card.barColor} rounded-full transition-all duration-1000`} style={{ width: `${card.percent}%` }} />
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
 
-      {/* Ringkasan kegiatan terpilih: berapa desa yang mengambil kegiatan ini */}
+      {/* Filter Panel */}
+      <div className="bg-white/80 backdrop-blur-xl rounded-xl sm:rounded-2xl shadow-lg shadow-gray-200/40 p-3 sm:p-5 border border-gray-200/60">
+        <div className="flex items-center gap-2.5 mb-4">
+          <div className="h-8 w-8 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-lg flex items-center justify-center">
+            <LuFilter className="h-4 w-4 text-white" />
+          </div>
+          <span className="font-bold text-gray-800">Filter Tracking</span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
+          <div className="relative">
+            <LuSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari judul / desa / kecamatan / kegiatan..."
+              className="w-full pl-10 pr-4 py-2.5 bg-gray-50/80 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all hover:border-gray-300" />
+          </div>
+          <div className="relative">
+            <LuBuilding2 className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <select value={kecamatan} onChange={e => setKecamatan(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 bg-gray-50/80 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 appearance-none transition-all hover:border-gray-300">
+              <option value="all">Semua Kecamatan</option>
+              {kecamatanOptions.map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}
+            </select>
+          </div>
+          <div className="relative">
+            <LuFileText className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <select value={kegiatan} onChange={e => setKegiatan(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 bg-gray-50/80 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 appearance-none transition-all hover:border-gray-300">
+              <option value="all">Semua Kegiatan</option>
+              {kegiatanOptions.map(k => (
+                <option key={k.id} value={k.id}>{k.nama}{typeof k.desaCount === 'number' ? ` (${k.desaCount} desa)` : ''}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-4 mt-4 pt-4 border-t border-gray-100">
+          <p className="text-sm text-gray-500">
+            Menampilkan <span className="font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md">{desaGroups.length}</span> desa
+            <span className="ml-1">({data.length} dari {total} proposal · {rupiah(totalAnggaran)})</span>
+          </p>
+          <div className="ml-auto flex items-center gap-2">
+            <button onClick={expandAll} className="text-xs font-semibold text-gray-600 hover:bg-gray-100 px-2 py-1 rounded-lg">Buka semua</button>
+            <button onClick={collapseAll} className="text-xs font-semibold text-gray-600 hover:bg-gray-100 px-2 py-1 rounded-lg">Tutup semua</button>
+            {hasFilter && (
+              <button onClick={() => { setKecamatan('all'); setKegiatan('all'); setSearch(''); }}
+                className="text-sm text-rose-600 hover:text-rose-700 flex items-center gap-1">
+                <LuX className="h-4 w-4" /> Reset
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Ringkasan kegiatan terpilih */}
       {selectedKegiatanInfo && (
         <div className="rounded-2xl bg-indigo-50 border border-indigo-200 p-4 flex flex-wrap items-center gap-x-6 gap-y-2">
           <div className="flex items-center gap-2 text-indigo-800 min-w-0">
@@ -1223,94 +1326,145 @@ const TrackingTab = ({
         </div>
       )}
 
-      {/* Ikhtisar status: klik chip untuk buka/tutup grup terkait */}
-      {!loading && data.length > 0 && (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-3 flex flex-wrap items-center gap-2">
-          {sections.map(s => {
-            const g = grouped.get(s.key);
-            return (
-              <button key={s.key} onClick={() => toggle(s.key)} title={`${g.items.length} proposal · ${rupiah(g.total)}`}
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-semibold transition-opacity ${TONE[s.tone]} ${!openMap[s.key] ? 'opacity-40' : ''}`}>
-                <span className={`w-2 h-2 rounded-full ${TONE_DOT[s.tone]}`} /> {s.label}
-                <span className="ml-0.5 px-1.5 rounded-full bg-white/70">{g.items.length}</span>
-              </button>
-            );
-          })}
-          <div className="ml-auto flex items-center gap-1">
-            <button onClick={expandAll} className="px-2 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg">Buka semua</button>
-            <button onClick={collapseAll} className="px-2 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg">Tutup semua</button>
-          </div>
-        </div>
-      )}
-
+      {/* Daftar per Desa */}
       {loading ? (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-12 text-center text-slate-500">Memuat tracking...</div>
-      ) : data.length === 0 ? (
+      ) : desaGroups.length === 0 ? (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-12 text-center">
           <LuInfo className="w-12 h-12 mx-auto text-slate-300 mb-3" /><p className="text-slate-600 font-medium">Tidak ada data.</p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {sections.map(s => {
-            const g = grouped.get(s.key);
-            const open = !!openMap[s.key];
+        <div className="space-y-4">
+          {desaGroups.map(group => {
+            const key = String(group.desaId);
+            const isExpanded = !!expanded[key];
+            const selesaiCount = group.proposals.filter(p => p.submitted_to_dpmd).length;
+            const kecCount = group.proposals.filter(p => p.submitted_to_kecamatan && !p.submitted_to_dpmd).length;
             return (
-              <div key={s.key} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                {/* Header status */}
-                <button onClick={() => toggle(s.key)}
-                  className="w-full px-4 py-3 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    {open ? <LuChevronDown className="w-4 h-4 text-slate-400 flex-shrink-0" /> : <LuChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />}
-                    <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${TONE_DOT[s.tone]}`} />
-                    <span className="font-bold text-slate-800 text-sm truncate">{s.label}</span>
-                    <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border flex-shrink-0 ${TONE[s.tone]}`}>{g.items.length}</span>
+              <div key={key} className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-md shadow-gray-200/40 border border-gray-200/60 overflow-hidden hover:shadow-lg transition-all duration-300">
+                {/* Header Desa */}
+                <button onClick={() => toggle(key)}
+                  className="w-full px-4 sm:px-6 py-4 flex items-center justify-between hover:bg-gradient-to-r hover:from-transparent hover:to-indigo-50/50 transition-all">
+                  <div className="flex items-center gap-4 min-w-0">
+                    <div className="p-3 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl shadow-lg shadow-indigo-500/20 flex-shrink-0">
+                      <LuMapPin className="h-5 w-5 text-white" />
+                    </div>
+                    <div className="text-left min-w-0">
+                      <h3 className="font-bold text-base sm:text-lg text-gray-900 truncate">{group.desaName}</h3>
+                      <p className="text-sm text-gray-500 truncate">{group.kecamatanName}</p>
+                    </div>
                   </div>
-                  <span className="text-xs font-semibold text-slate-600 flex-shrink-0">{rupiah(g.total)}</span>
+                  <div className="flex items-center gap-3 sm:gap-4 flex-shrink-0">
+                    <div className="hidden sm:flex flex-wrap items-center gap-2 justify-end">
+                      <span className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-semibold">{group.proposals.length} Proposal</span>
+                      {kecCount > 0 && (
+                        <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold flex items-center gap-1">
+                          <LuBuilding2 className="h-3 w-3" /> {kecCount} Kec
+                        </span>
+                      )}
+                      {selesaiCount > 0 && (
+                        <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold flex items-center gap-1">
+                          <LuCircleCheck className="h-3 w-3" /> {selesaiCount} Selesai
+                        </span>
+                      )}
+                    </div>
+                    <div className="hidden md:block text-right">
+                      <p className="text-xs text-gray-500">Total Anggaran</p>
+                      <p className="text-sm font-bold text-gray-800">{rupiah(group.anggaran)}</p>
+                    </div>
+                    {isExpanded ? <LuChevronUp className="h-5 w-5 text-gray-400" /> : <LuChevronDown className="h-5 w-5 text-gray-400" />}
+                  </div>
                 </button>
-                {open && (
-                  <div className="divide-y divide-slate-100 border-t border-slate-100">
-                    {g.items.map(p => (
-                      <div key={p.id} className="px-4 py-3 flex flex-col md:flex-row md:items-center gap-3">
-                        <div className="flex-1 min-w-0">
-                          <span className="text-xs text-slate-500">Kec <strong className="text-slate-800">{p.kecamatan_nama}</strong> · Desa <strong className="text-slate-800">{p.desa_nama}</strong></span>
-                          <p className="text-sm font-semibold text-slate-800 truncate mt-0.5">{p.judul_proposal}</p>
-                          {(p.kegiatan_list || []).length > 0 && (
-                            <p className="mt-0.5 text-xs text-indigo-700">
-                              Kegiatan: {(p.kegiatan_list || []).map(k => k.nama_kegiatan).join(', ')}
-                            </p>
-                          )}
-                          <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-amber-50 text-amber-800 text-xs font-semibold rounded">
-                            <LuDollarSign className="w-3.5 h-3.5" /> {rupiah(p.anggaran_usulan)}
-                          </span>
-                          {p.troubleshoot_catatan && (
-                            <div className="mt-1.5 text-xs bg-rose-50 border border-rose-200 rounded p-2 text-rose-800 flex items-start gap-1.5">
-                              <LuWrench className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-                              <span>
-                                <strong>Dikembalikan DPMD (Troubleshoot){p.troubleshoot_at ? ` · ${fmtDate(p.troubleshoot_at)}` : ''}:</strong> {p.troubleshoot_catatan}
-                              </span>
+
+                {/* Konten per proposal */}
+                {isExpanded && (
+                  <div className="border-t border-gray-200 p-3 sm:p-6 space-y-4 sm:space-y-6">
+                    {group.proposals.map((p, idx) => {
+                      const posisi = currentStage(p);
+                      return (
+                        <div key={p.id} className={idx > 0 ? 'pt-4 sm:pt-6 border-t border-gray-100' : ''}>
+                          {/* Judul proposal */}
+                          <div className="flex items-start gap-2 sm:gap-3 mb-3 sm:mb-4">
+                            <div className="p-1.5 sm:p-2 bg-indigo-100 rounded-lg flex-shrink-0">
+                              <LuFileText className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-600" />
                             </div>
-                          )}
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-semibold text-sm sm:text-base text-gray-900">{p.judul_proposal}</h4>
+                              {(p.kegiatan_list || []).length > 0 && (
+                                <span className="inline-block mt-1 px-2 py-0.5 bg-violet-100 text-violet-700 rounded-full text-[10px] sm:text-xs font-medium">
+                                  {(p.kegiatan_list || []).map(k => k.nama_kegiatan).join(', ')}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Stepper + detail */}
+                          <div className="ml-0 sm:ml-11 space-y-3">
+                            <PerubahanStepper proposal={p} />
+
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                              <div className="bg-gray-50 rounded-lg p-2">
+                                <p className="text-gray-500">Anggaran</p>
+                                <p className="font-semibold text-gray-800">{rupiah(p.anggaran_usulan)}</p>
+                              </div>
+                              <div className="bg-gray-50 rounded-lg p-2">
+                                <p className="text-gray-500">Kategori</p>
+                                <p className="font-semibold text-gray-800 truncate">{KATEGORI_META[p.jenis_kegiatan]?.label || '-'}</p>
+                              </div>
+                              <div className="bg-gray-50 rounded-lg p-2">
+                                <p className="text-gray-500">Volume</p>
+                                <p className="font-semibold text-gray-800 truncate">{p.volume || '-'}</p>
+                              </div>
+                              <div className="bg-gray-50 rounded-lg p-2">
+                                <p className="text-gray-500">Lokasi</p>
+                                <p className="font-semibold text-gray-800 truncate">{p.lokasi || '-'}</p>
+                              </div>
+                              <div className="bg-gray-50 rounded-lg p-2">
+                                <p className="text-gray-500">Kegiatan Spesifik</p>
+                                <p className="font-semibold text-gray-800 truncate">{p.nama_kegiatan_spesifik || '-'}</p>
+                              </div>
+                              <div className="bg-gray-50 rounded-lg p-2 col-span-2 md:col-span-3">
+                                <p className="text-gray-500">Posisi Saat Ini</p>
+                                <span className={`inline-flex items-center gap-1 mt-0.5 px-2 py-0.5 rounded-full text-[11px] font-semibold border ${TONE[posisi.tone]}`}>
+                                  <LuClock className="w-3 h-3" /> {posisi.label}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Catatan */}
+                            {(p.kecamatan_catatan || p.dpmd_catatan || p.troubleshoot_catatan) && (
+                              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-1">
+                                <p className="text-xs font-semibold text-amber-800">📝 Catatan:</p>
+                                {p.dpmd_catatan && <p className="text-xs text-amber-700">DPMD: {p.dpmd_catatan}</p>}
+                                {p.kecamatan_catatan && <p className="text-xs text-amber-700">Kecamatan: {p.kecamatan_catatan}</p>}
+                                {p.troubleshoot_catatan && (
+                                  <p className="text-xs text-rose-700">Troubleshoot{p.troubleshoot_at ? ` · ${fmtDate(p.troubleshoot_at)}` : ''}: {p.troubleshoot_catatan}</p>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Aksi */}
+                            <div className="flex flex-wrap items-center justify-end gap-1.5 pt-1">
+                              <button onClick={() => onEdit(p)}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold rounded-lg transition-colors">
+                                <LuPencil className="w-3.5 h-3.5" /> Edit Detail
+                              </button>
+                              <button onClick={() => setTrackProposal(p)}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold rounded-lg transition-colors">
+                                <LuRoute className="w-3.5 h-3.5" /> Lacak
+                              </button>
+                              {onTroubleshoot && (
+                                <button onClick={() => onTroubleshoot(p)}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-semibold rounded-lg shadow-sm hover:shadow-md transition-all"
+                                  title="Troubleshoot: paksa kembalikan proposal ini ke Desa untuk direvisi (reset semua tahap)">
+                                  <LuWrench className="w-3.5 h-3.5" /> Troubleshoot Revisi
+                                </button>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                        <StageDots proposal={p} />
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <button onClick={() => onEdit(p)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold rounded-lg transition-colors">
-                            <LuPencil className="w-3.5 h-3.5" /> Edit
-                          </button>
-                          <button onClick={() => setTrackProposal(p)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold rounded-lg transition-colors">
-                            <LuRoute className="w-3.5 h-3.5" /> Lacak
-                          </button>
-                          {onTroubleshoot && (
-                            <button onClick={() => onTroubleshoot(p)}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold rounded-lg transition-colors"
-                              title="Troubleshoot: paksa kembalikan proposal ini ke Desa untuk direvisi (reset semua tahap)">
-                              <LuWrench className="w-3.5 h-3.5" /> Troubleshoot
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
