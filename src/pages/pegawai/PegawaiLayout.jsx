@@ -1,8 +1,9 @@
 // src/pages/pegawai/PegawaiLayout.jsx
 import React from "react";
 import { Outlet, Navigate, useNavigate, useLocation } from "react-router-dom";
-import { FiHome, FiUser, FiLogOut, FiMenu, FiMail, FiBell, FiCalendar, FiBarChart2, FiFileText, FiDollarSign, FiUsers, FiBriefcase, FiClock } from "react-icons/fi";
+import { FiHome, FiUser, FiLogOut, FiMenu, FiMail, FiBell, FiCalendar, FiBarChart2, FiFileText, FiDollarSign, FiUsers, FiBriefcase } from "react-icons/fi";
 import { Landmark } from "lucide-react";
+import FaceVerificationLottieIcon from "../../components/FaceVerificationLottieIcon";
 import { performFullLogout } from "../../utils/sessionPersistence";
 import { useConfirm } from "../../hooks/useConfirm.jsx";
 import { subscribeToPushNotifications } from "../../utils/pushNotifications";
@@ -146,7 +147,7 @@ const PegawaiLayout = () => {
 	const isOnAbsensi = location.pathname.startsWith('/pegawai/absensi');
 	const bottomNavItems = [
 		{ path: "/pegawai/dashboard", label: "Home", icon: FiHome },
-		{ path: "/pegawai/absensi", label: "Presensi", icon: FiClock, isMain: true },
+		{ path: "/pegawai/absensi", label: "Presensi", icon: FaceVerificationLottieIcon, isMain: true },
 		...(isOnAbsensi
 			? [{ path: "/pegawai/absensi?tab=riwayat", label: "Riwayat", icon: FiCalendar }]
 			: [{ path: "/pegawai/profile", label: "Profil", icon: FiUser }]

@@ -9,7 +9,7 @@ import {
   LayoutDashboard, Building2, Briefcase, FileText, TrendingUp, Users,
   MapPin, Calendar, BarChart3, PieChart, Activity, Bell, Info, X, ExternalLink,
   Clock, CheckCircle, Send, Mail, Inbox, ChevronRight, User, Phone, Award,
-  FolderOpen, ClipboardList, Newspaper, Fingerprint, MessageSquare, Plus, Eye, Trash2,
+  FolderOpen, ClipboardList, Newspaper, Plus, Eye, Trash2,
   Image, Video, Type, Crop, RotateCw, ZoomIn, ChevronUp, SlidersHorizontal, Camera,
   SwitchCamera, Circle, Square
 } from 'lucide-react';
@@ -19,6 +19,10 @@ import { toast } from 'react-hot-toast';
 import Cropper from 'react-easy-crop';
 import MobileHeader from '../../components/mobile/MobileHeader';
 import ServiceGrid from '../../components/mobile/ServiceGrid';
+import FaceVerificationLottieIcon from '../../components/FaceVerificationLottieIcon';
+import MessageLottieIcon from '../../components/MessageLottieIcon';
+import ContactLottieIcon from '../../components/ContactLottieIcon';
+import ScheduleLottieIcon from '../../components/ScheduleLottieIcon';
 import InfoCard from '../../components/mobile/InfoCard';
 import SectionHeader from '../../components/mobile/SectionHeader';
 import ActivityCard from '../../components/mobile/ActivityCard';
@@ -909,7 +913,7 @@ const DPMDDashboard = () => {
     // Common actions for all roles - using unified /dpmd paths
     const commonActions = [
       {
-        icon: MessageSquare,
+        customIcon: <MessageLottieIcon className="relative z-10 h-full w-full" />,
         label: 'Pesan',
         color: 'indigo',
         badge: unreadMessages || null,
@@ -917,7 +921,7 @@ const DPMDDashboard = () => {
       },
       isAbsensiEligible
         ? {
-            icon: Fingerprint,
+            customIcon: <FaceVerificationLottieIcon className="relative z-10 h-full w-full" />,
             label: 'Presensi',
             color: 'rose',
             onClick: () => navigate('/dpmd/absensi')
@@ -929,13 +933,13 @@ const DPMDDashboard = () => {
             onClick: () => navigate('/dpmd/perjadin')
           },
       {
-        icon: Calendar,
+        customIcon: <ScheduleLottieIcon className="relative z-10 h-full w-full" />,
         label: 'Jadwal',
         color: 'blue',
         onClick: () => navigate('/dpmd/jadwal-kegiatan')
       },
       {
-        icon: Mail,
+        customIcon: <ContactLottieIcon className="relative z-10 h-full w-full" />,
         label: 'Disposisi',
         color: 'orange',
         onClick: () => navigate('/dpmd/disposisi')
@@ -950,7 +954,7 @@ const DPMDDashboard = () => {
     if (role === 'sekretaris_dinas' || role === 'kepala_bidang') {
       return [
         {
-          icon: Mail,
+          customIcon: <ContactLottieIcon className="relative z-10 h-full w-full" />,
           label: 'Disposisi',
           color: config.primaryColor,
           onClick: () => navigate('/dpmd/disposisi')

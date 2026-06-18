@@ -22,6 +22,7 @@ import {
 import { Landmark } from "lucide-react";
 import SearchPalette from "../components/SearchPalatte";
 import InstallPWA from "../components/InstallPWA";
+import ContactLottieIcon from "../components/ContactLottieIcon";
 
 import { performFullLogout } from "../utils/sessionPersistence";
 
@@ -108,7 +109,7 @@ const MainLayout = () => {
 			{ to: "/bidang/pmd/produk-hukum", label: "Produk Hukum", icon: <FiFileText />, bidangId: 5 },
 			{ to: "/dashboard/user", label: "Manajemen Pegawai", icon: <FiClipboard />, bidangId: 1, superadminOnly: true },
 			{ to: "/dashboard/perjalanan-dinas", label: "Perjalanan Dinas", icon: <FiClipboard />, bidangId: 1 },
-			{ to: "/dashboard/disposisi", label: "Disposisi Surat", icon: <FiClipboard />, bidangId: 1 },
+			{ to: "/dashboard/disposisi", label: "Disposisi Surat", icon: <ContactLottieIcon className="h-5 w-5" />, bidangId: 1 },
 			{ to: "/dashboard/hero-gallery", label: "Galeri Hero", icon: <FiLayout />, superadminOnly: true },
 			{ to: "/dashboard/berita", label: "Manajemen Berita", icon: <FiLayout />, superadminOnly: true },
 			{ to: "/dashboard/user", label: "Manajemen User", icon: <FiSettings />, superadminOnly: true },

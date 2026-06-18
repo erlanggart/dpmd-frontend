@@ -28,6 +28,9 @@ import {
   Archive,
   Camera,
 } from 'lucide-react';
+import MessageLottieIcon from './MessageLottieIcon';
+import ContactLottieIcon from './ContactLottieIcon';
+import ScheduleLottieIcon from './ScheduleLottieIcon';
 import './AnimatedIcon.css';
 
 const ICON_MAP = {
@@ -46,6 +49,9 @@ const ICON_MAP = {
   chart: BarChart3,
   calendar: Calendar,
   mail: Mail,
+  chatbot: MessageLottieIcon,
+  contact: ContactLottieIcon,
+  schedule: ScheduleLottieIcon,
   user: User,
   video: Video,
   store: Store,

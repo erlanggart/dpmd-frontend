@@ -8,6 +8,8 @@ import { useConfirm } from "../../hooks/useConfirm.jsx";
 import { subscribeToPushNotifications } from "../../utils/pushNotifications";
 import toast from 'react-hot-toast';
 import api from "../../api";
+import ContactLottieIcon from "../../components/ContactLottieIcon";
+import ScheduleLottieIcon from "../../components/ScheduleLottieIcon";
 import './KetuaTimLayout.css';
 
 const KetuaTimLayout = () => {
@@ -195,8 +197,8 @@ const KetuaTimLayout = () => {
 	const bottomNavItems = [
 		{ path: "/ketua-tim/dashboard", label: "Dashboard", icon: FiHome },
 		{ path: "/core-dashboard/dashboard", label: "Statistik", icon: FiBarChart2 },
-		{ path: "/ketua-tim/jadwal-kegiatan", label: "Kegiatan", icon: FiCalendar },
-		{ path: "/ketua-tim/disposisi", label: "Disposisi", icon: FiMail },
+		{ path: "/ketua-tim/jadwal-kegiatan", label: "Kegiatan", icon: ScheduleLottieIcon },
+		{ path: "/ketua-tim/disposisi", label: "Disposisi", icon: ContactLottieIcon },
 		{ path: "/ketua-tim/menu", label: "Menu", icon: FiMenu, action: () => setShowMenu(true) },
 	];
 

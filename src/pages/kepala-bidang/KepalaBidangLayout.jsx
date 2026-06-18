@@ -7,6 +7,8 @@ import { useConfirm } from "../../hooks/useConfirm.jsx";
 import { subscribeToPushNotifications } from "../../utils/pushNotifications";
 import { toast } from 'react-hot-toast';
 import api from "../../api";
+import ContactLottieIcon from "../../components/ContactLottieIcon";
+import ScheduleLottieIcon from "../../components/ScheduleLottieIcon";
 import './KepalaBidangLayout.css';
 
 const KepalaBidangLayout = () => {
@@ -200,8 +202,8 @@ const KepalaBidangLayout = () => {
 	const bottomNavItems = [
 		{ path: "/kepala-bidang/dashboard", label: "Dashboard", icon: FiHome },
 		{ path: "/core-dashboard/dashboard", label: "Statistik", icon: FiBarChart2 },
-		{ path: "/kepala-bidang/jadwal-kegiatan", label: "Kegiatan", icon: FiCalendar },
-		{ path: "/kepala-bidang/disposisi", label: "Disposisi", icon: FiMail },
+		{ path: "/kepala-bidang/jadwal-kegiatan", label: "Kegiatan", icon: ScheduleLottieIcon },
+		{ path: "/kepala-bidang/disposisi", label: "Disposisi", icon: ContactLottieIcon },
 		{ path: "/kepala-bidang/menu", label: "Menu", icon: FiMenu, action: () => setShowMenu(true) },
 	];
 

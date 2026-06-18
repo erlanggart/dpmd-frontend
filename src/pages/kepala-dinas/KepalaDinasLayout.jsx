@@ -7,6 +7,8 @@ import { useConfirm } from "../../hooks/useConfirm.jsx";
 import { subscribeToPushNotifications } from "../../utils/pushNotifications";
 import { toast } from 'react-hot-toast';
 import api from "../../api";
+import ContactLottieIcon from "../../components/ContactLottieIcon";
+import ScheduleLottieIcon from "../../components/ScheduleLottieIcon";
 
 const KepalaDinasLayout = () => {
 	const [showMenu, setShowMenu] = React.useState(false);
@@ -184,8 +186,8 @@ const KepalaDinasLayout = () => {
 	const bottomNavItems = [
 		{ path: "/kepala-dinas/dashboard", label: "Dashboard", icon: FiHome },
 		{ path: "/core-dashboard/dashboard", label: "Statistik", icon: FiBarChart2 },
-		{ path: "/kepala-dinas/jadwal-kegiatan", label: "Kegiatan", icon: FiCalendar },
-		{ path: "/kepala-dinas/disposisi", label: "Disposisi", icon: FiMail },
+		{ path: "/kepala-dinas/jadwal-kegiatan", label: "Kegiatan", icon: ScheduleLottieIcon },
+		{ path: "/kepala-dinas/disposisi", label: "Disposisi", icon: ContactLottieIcon },
 		{ path: "/kepala-dinas/menu", label: "Menu", icon: FiMenu, action: () => setShowMenu(true) },
 	];
 

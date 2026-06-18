@@ -9,10 +9,11 @@ import {
 	FiHome, FiUser, FiLogOut, FiMenu, FiMail, FiBell, 
 	FiCalendar, FiBarChart2, FiFileText, FiDollarSign, 
 	FiUsers, FiBriefcase, FiChevronRight,
-	FiSettings, FiX, FiVideo, FiClock, FiGrid
+	FiSettings, FiX, FiVideo, FiGrid
 } from "react-icons/fi";
 import { Landmark, ChevronDown, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import AnimatedIcon from '../components/AnimatedIcon';
+import FaceVerificationLottieIcon from '../components/FaceVerificationLottieIcon';
 import ChatBot from '../components/chatbot/ChatBot';
 import { performFullLogout } from "../utils/sessionPersistence";
 import { useConfirm } from "../hooks/useConfirm.jsx";
@@ -465,11 +466,11 @@ const DPMDStaffLayout = () => {
 	const navItems = [
 		{ path: "/dpmd/dashboard", label: "Dashboard", icon: 'dashboard', color: 'text-orange-600', gradient: 'from-orange-500 to-orange-600' },
 		{ path: "/core-dashboard/dashboard", label: "Statistik", icon: 'chart', color: 'text-blue-600', gradient: 'from-blue-500 to-blue-700' },
-		{ path: "/dpmd/jadwal-kegiatan", label: "Kegiatan", icon: 'calendar', color: 'text-emerald-600', gradient: 'from-emerald-500 to-teal-600' },
+		{ path: "/dpmd/jadwal-kegiatan", label: "Kegiatan", icon: 'schedule', color: 'text-emerald-600', gradient: 'from-emerald-500 to-teal-600' },
 		{ path: "/dpmd/perjadin", label: "Perjadin", icon: 'briefcase', color: 'text-amber-600', gradient: 'from-amber-500 to-orange-600' },
-		{ path: "/dpmd/disposisi", label: "Disposisi", icon: 'mail', color: 'text-purple-600', gradient: 'from-purple-500 to-indigo-600' },
+		{ path: "/dpmd/disposisi", label: "Disposisi", icon: 'contact', color: 'text-purple-600', gradient: 'from-purple-500 to-indigo-600' },
 		{ path: "/dpmd/video-meeting", label: "Video Meeting", icon: 'video', color: 'text-cyan-600', gradient: 'from-cyan-500 to-teal-600' },
-		{ path: "/dpmd/pesan", label: "Pesan", icon: 'mail', color: 'text-indigo-600', gradient: 'from-indigo-500 to-purple-600' },
+		{ path: "/dpmd/pesan", label: "Pesan", icon: 'chatbot', color: 'text-indigo-600', gradient: 'from-indigo-500 to-purple-600' },
 		{ path: "/dpmd/bank-surat", label: "Bank Surat", icon: 'archive', color: 'text-teal-600', gradient: 'from-teal-500 to-cyan-600' },
 		{ path: "/dpmd/photo-booth", label: "Photo Booth", icon: 'camera', color: 'text-fuchsia-600', gradient: 'from-fuchsia-500 to-violet-700' },
 	];
@@ -1140,7 +1141,7 @@ const DPMDStaffLayout = () => {
 										<div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${
 											location.pathname.startsWith('/dpmd/absensi') ? 'bg-white/15 text-white' : 'bg-white text-slate-600 shadow-sm'
 										}`}>
-											<FiClock className="w-5 h-5" />
+											<FaceVerificationLottieIcon className="h-8 w-8" />
 										</div>
 										<div className="min-w-0 flex-1">
 											<p className="truncate text-sm font-semibold">Presensi</p>

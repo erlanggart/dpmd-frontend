@@ -86,7 +86,7 @@ const menuItems = [
     id: "pesan",
     label: "Pesan",
     path: "/desa/pesan",
-    icon: "mail",
+    icon: "chatbot",
     color: "text-slate-600",
     gradient: "from-slate-700 to-slate-900",
   },

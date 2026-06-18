@@ -7,6 +7,8 @@ import { useConfirm } from "../../hooks/useConfirm.jsx";
 import { subscribeToPushNotifications } from "../../utils/pushNotifications";
 import { toast } from 'react-hot-toast';
 import api from "../../api";
+import ContactLottieIcon from "../../components/ContactLottieIcon";
+import ScheduleLottieIcon from "../../components/ScheduleLottieIcon";
 
 const SekretarisDinasLayout = () => {
 	const [showMenu, setShowMenu] = React.useState(false);
@@ -185,8 +187,8 @@ const SekretarisDinasLayout = () => {
 	const bottomNavItems = [
 		{ path: "/sekretaris-dinas/dashboard", label: "Dashboard", icon: FiHome },
 		{ path: "/core-dashboard/dashboard", label: "Statistik", icon: FiBarChart2 },
-		{ path: "/sekretaris-dinas/jadwal-kegiatan", label: "Kegiatan", icon: FiCalendar },
-		{ path: "/sekretaris-dinas/disposisi", label: "Disposisi", icon: FiMail },
+		{ path: "/sekretaris-dinas/jadwal-kegiatan", label: "Kegiatan", icon: ScheduleLottieIcon },
+		{ path: "/sekretaris-dinas/disposisi", label: "Disposisi", icon: ContactLottieIcon },
 		{ path: "/sekretaris-dinas/menu", label: "Menu", icon: FiMenu, action: () => setShowMenu(true) },
 	];
 

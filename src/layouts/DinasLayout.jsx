@@ -21,8 +21,8 @@ import {
   LuKeyRound,
   LuPanelLeftClose,
   LuPanelLeft,
-  LuMessageCircle
 } from "react-icons/lu";
+import MessageLottieIcon from "../components/MessageLottieIcon";
 
 // Menu items configuration for Dinas
 const menuItems = [
@@ -56,7 +56,7 @@ const menuItems = [
     id: "pesan",
     label: "Pesan",
     path: "/dinas/pesan",
-    icon: LuMessageCircle,
+    icon: MessageLottieIcon,
   },
   {
     id: "konfigurasi",

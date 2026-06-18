@@ -7,9 +7,10 @@ import {
 	User, Briefcase, Calendar, Award,
 	Phone, TrendingUp, FileText,
 	Clock, Activity, Building, Info, X, ExternalLink,
-	Fingerprint,
 } from "lucide-react";
 import api from "../../api";
+import FaceVerificationLottieIcon from "../../components/FaceVerificationLottieIcon";
+import ScheduleLottieIcon from "../../components/ScheduleLottieIcon";
 import { getUserAvatarUrl } from "../../utils/avatarUtils";
 import { pressAnimation, cardPress, listItemVariants, fadeUp, scalePop } from "../../utils/animations";
 
@@ -119,10 +120,10 @@ const PegawaiDashboard = () => {
 
 	const quickActions = [
 		...(isAbsensiEligible
-			? [{ icon: Fingerprint, label: "Presensi", color: "rose", emoji: "🕐", onClick: () => navigate("/dpmd/absensi") }]
+			? [{ label: "Presensi", color: "rose", customIcon: <FaceVerificationLottieIcon className="h-12 w-12" />, onClick: () => navigate("/dpmd/absensi") }]
 			: [{ icon: Briefcase, label: "Perjadin", color: "emerald", emoji: "💼", onClick: () => navigate("/pegawai/perjadin") }]
 		),
-		{ icon: Calendar, label: "Jadwal", color: "sky", emoji: "📅", onClick: () => navigate("/pegawai/jadwal-kegiatan") },
+		{ label: "Jadwal", color: "sky", customIcon: <ScheduleLottieIcon className="h-12 w-12" />, onClick: () => navigate("/pegawai/jadwal-kegiatan") },
 		{ icon: Info, label: "Informasi", color: "amber", emoji: "📰", onClick: () => navigate("/dpmd/informasi") },
 	];
 
@@ -201,7 +202,7 @@ const PegawaiDashboard = () => {
 									className={`flex flex-col items-center gap-2.5 py-4 px-3 ${cc.bg} border ${cc.border} rounded-2xl cursor-pointer hover:brightness-110 transition-all`}
 								>
 									<div className={`w-12 h-12 ${cc.icon} rounded-xl flex items-center justify-center`}>
-										<span className="text-2xl">{action.emoji}</span>
+										{action.customIcon || <span className="text-2xl">{action.emoji}</span>}
 									</div>
 									<span className={`text-xs font-bold ${cc.text}`}>{action.label}</span>
 								</motion.button>

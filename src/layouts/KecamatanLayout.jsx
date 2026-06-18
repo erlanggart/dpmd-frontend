@@ -19,10 +19,10 @@ import {
   LuPanelLeftClose,
   LuPanelLeft,
   LuLock,
-  LuMessageCircle,
   LuCoins,
   LuShield,
 } from "react-icons/lu";
+import MessageLottieIcon from "../components/MessageLottieIcon";
 
 // Menu items configuration
 const menuItems = [
@@ -54,7 +54,7 @@ const menuItems = [
     id: "pesan",
     label: "Pesan",
     path: "/kecamatan/pesan",
-    icon: LuMessageCircle,
+    icon: MessageLottieIcon,
   },
   {
     id: "settings",

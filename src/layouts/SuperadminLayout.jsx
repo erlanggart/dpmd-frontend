@@ -14,7 +14,6 @@ import {
 	FiImage,
 	FiLayers,
 	FiLogOut,
-	FiMail,
 	FiMenu,
 	FiSettings,
 	FiShield,
@@ -29,6 +28,7 @@ import { useConfirm } from "../hooks/useConfirm.jsx";
 import { getAvatarUrl } from "../utils/avatarUtils";
 import { performFullLogout } from "../utils/sessionPersistence";
 import HeaderSearchBot from "../components/chatbot/HeaderSearchBot";
+import MessageLottieIcon from "../components/MessageLottieIcon";
 
 const useResponsive = () => {
 	const [isDesktop, setIsDesktop] = React.useState(window.innerWidth >= 1024);
@@ -120,7 +120,7 @@ const MENU_ITEMS = [
 		path: "/superadmin/pesan",
 		label: "Pesan",
 		description: "Kirim dan terima pesan antar pengguna",
-		icon: FiMail,
+		icon: MessageLottieIcon,
 		gradient: "from-indigo-500 to-purple-600",
 		accent: "text-indigo-600",
 	},
