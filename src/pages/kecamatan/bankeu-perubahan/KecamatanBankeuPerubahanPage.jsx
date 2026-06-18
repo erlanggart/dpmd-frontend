@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { LuCoins, LuArrowLeft, LuClipboardCheck, LuSettings } from 'react-icons/lu';
+import { LuCoins, LuArrowLeft, LuClipboardCheck, LuSettings, LuActivity } from 'react-icons/lu';
 import BankeuPerubahanVerificationPage from './BankeuPerubahanVerificationPage';
 import KecamatanPerubahanTimVerifikasiPage from './KecamatanPerubahanTimVerifikasiPage';
+import KecamatanBankeuPerubahanTrackingPage from './KecamatanBankeuPerubahanTrackingPage';
 
 const KecamatanBankeuPerubahanPage = () => {
   const [selectedYear, setSelectedYear] = useState(null);
   const [activeTab, setActiveTab] = useState('verifikasi');
-  const navigate = useNavigate();
 
   if (!selectedYear) {
     return (
@@ -44,6 +43,7 @@ const KecamatanBankeuPerubahanPage = () => {
 
   const tabs = [
     { id: 'verifikasi', label: 'Verifikasi Proposal', icon: LuClipboardCheck },
+    { id: 'tracking', label: 'Tracking Status', icon: LuActivity },
     { id: 'tim', label: 'Konfigurasi', icon: LuSettings },
   ];
 
@@ -78,6 +78,7 @@ const KecamatanBankeuPerubahanPage = () => {
         </div>
       </div>
       {activeTab === 'verifikasi' && <BankeuPerubahanVerificationPage tahun={selectedYear} />}
+      {activeTab === 'tracking' && <KecamatanBankeuPerubahanTrackingPage tahun={selectedYear} />}
       {activeTab === 'tim' && <KecamatanPerubahanTimVerifikasiPage />}
     </div>
   );
