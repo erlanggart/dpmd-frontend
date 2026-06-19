@@ -27,10 +27,10 @@ import {
   Menu,
   Archive,
   Camera,
+  MessageSquare,
+  Contact,
+  CalendarClock,
 } from 'lucide-react';
-import MessageLottieIcon from './MessageLottieIcon';
-import ContactLottieIcon from './ContactLottieIcon';
-import ScheduleLottieIcon from './ScheduleLottieIcon';
 import './AnimatedIcon.css';
 
 const ICON_MAP = {
@@ -49,9 +49,11 @@ const ICON_MAP = {
   chart: BarChart3,
   calendar: Calendar,
   mail: Mail,
-  chatbot: MessageLottieIcon,
-  contact: ContactLottieIcon,
-  schedule: ScheduleLottieIcon,
+  // Ikon statis (lucide) untuk sidebar & Aksi Cepat — TIDAK pakai Lottie supaya
+  // tidak berat/freeze. Lottie hanya dipakai di dashboard pegawai.
+  chatbot: MessageSquare,
+  contact: Contact,
+  schedule: CalendarClock,
   user: User,
   video: Video,
   store: Store,

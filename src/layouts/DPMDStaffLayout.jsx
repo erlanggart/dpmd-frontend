@@ -11,9 +11,8 @@ import {
 	FiUsers, FiBriefcase, FiChevronRight,
 	FiSettings, FiX, FiVideo, FiGrid
 } from "react-icons/fi";
-import { Landmark, ChevronDown, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Landmark, ChevronDown, PanelLeftClose, PanelLeftOpen, ScanFace } from "lucide-react";
 import AnimatedIcon from '../components/AnimatedIcon';
-import FaceVerificationLottieIcon from '../components/FaceVerificationLottieIcon';
 import ChatBot from '../components/chatbot/ChatBot';
 import { performFullLogout } from "../utils/sessionPersistence";
 import { useConfirm } from "../hooks/useConfirm.jsx";
@@ -1141,7 +1140,7 @@ const DPMDStaffLayout = () => {
 										<div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${
 											location.pathname.startsWith('/dpmd/absensi') ? 'bg-white/15 text-white' : 'bg-white text-slate-600 shadow-sm'
 										}`}>
-											<FaceVerificationLottieIcon className="h-8 w-8" />
+											<ScanFace className="h-6 w-6" />
 										</div>
 										<div className="min-w-0 flex-1">
 											<p className="truncate text-sm font-semibold">Presensi</p>
