@@ -233,6 +233,9 @@ const VideoMeetingPage = () => {
   const [meeting, setMeeting] = useState(null);
   const [connected, setConnected] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState('connecting');
+  // Sinyal lemah: transport WebRTC sedang disconnected/failed & kita coba pulihkan
+  // (ICE restart). Video membeku sementara, tapi TIDAK keluar dari room.
+  const [weakSignal, setWeakSignal] = useState(false);
   const [participants, setParticipants] = useState([]);
   const [myPeerId, setMyPeerId] = useState(null);
   const myPeerIdRef = useRef(null);
@@ -617,6 +620,94 @@ const VideoMeetingPage = () => {
     }, 1000);
   }, []);
 
+  // Set transport yang sedang "lemah" (disconnected/failed) → tentukan banner.
+  const weakTransportsRef = useRef(new Set());
+
+  // Pulihkan ICE satu transport tanpa membongkar producer/consumer (media tetap,
+  // cuma jalur jaringannya yang dinegosiasi ulang). Kembalikan true bila berhasil.
+  const restartIceFor = async (transport, label) => {
+    if (!transport || transport.closed) return false;
+    if (!socketRef.current?.connected) return false;
+    try {
+      const res = await new Promise((resolve) => {
+        socketRef.current.timeout(SIGNAL_ACK_TIMEOUT_MS).emit(
+          'restart-ice',
+          { transportId: transport.id },
+          (ackErr, response) => resolve(ackErr ? { error: 'timeout' } : response),
+        );
+      });
+      if (!res || res.error || !res.iceParameters) return false;
+      await transport.restartIce({ iceParameters: res.iceParameters });
+      console.log(`[Mediasoup] ICE restart ${label} berhasil`);
+      return true;
+    } catch (e) {
+      console.warn(`[Mediasoup] ICE restart ${label} gagal:`, e?.message);
+      return false;
+    }
+  };
+
+  // Pemulihan transport saat sinyal lemah: JANGAN langsung mental/keluar room.
+  // Video membeku (ngeleg) sambil kita coba ICE restart berulang; full-reload media
+  // hanya sebagai upaya terakhir bila berkali-kali tetap gagal.
+  const setupTransportRecovery = (transport, label) => {
+    let attempts = 0;
+    let restarting = false;
+    let retryTimer = null;
+    let disconnectedTimer = null;
+
+    const clearTimers = () => {
+      if (retryTimer) { clearTimeout(retryTimer); retryTimer = null; }
+      if (disconnectedTimer) { clearTimeout(disconnectedTimer); disconnectedTimer = null; }
+    };
+    const stillBad = () =>
+      transport.connectionState === 'failed' || transport.connectionState === 'disconnected';
+    const markWeak = (bad) => {
+      const set = weakTransportsRef.current;
+      if (bad) set.add(label); else set.delete(label);
+      setWeakSignal(set.size > 0);
+    };
+
+    const tryRestart = async () => {
+      if (restarting || transport.closed) return;
+      restarting = true;
+      attempts += 1;
+      const ok = await restartIceFor(transport, label);
+      restarting = false;
+      if (ok || !stillBad()) { attempts = 0; return; }
+      if (attempts >= 8) {
+        // Sudah dicoba berkali-kali & tetap gagal → muat ulang media (terakhir).
+        clearTimers();
+        attempts = 0;
+        recoverMeetingConnection(`Koneksi ${label} sulit pulih, memuat ulang...`);
+        return;
+      }
+      // Backoff: biarkan video tetap freeze, coba lagi sebentar lagi.
+      retryTimer = setTimeout(() => { if (stillBad()) tryRestart(); }, Math.min(2000 * attempts, 8000));
+    };
+
+    transport.on('connectionstatechange', (state) => {
+      console.log(`[Mediasoup] ${label} transport state:`, state);
+      if (state === 'connected' || state === 'completed') {
+        clearTimers();
+        attempts = 0;
+        markWeak(false);
+      } else if (state === 'disconnected') {
+        // Sinyal lemah sesaat: beri ~6 dtk untuk pulih sendiri sebelum ICE restart.
+        markWeak(true);
+        if (!disconnectedTimer) {
+          disconnectedTimer = setTimeout(() => {
+            disconnectedTimer = null;
+            if (stillBad()) tryRestart();
+          }, 6000);
+        }
+      } else if (state === 'failed') {
+        markWeak(true);
+        if (disconnectedTimer) { clearTimeout(disconnectedTimer); disconnectedTimer = null; }
+        tryRestart();
+      }
+    });
+  };
+
   // Helper: Create and setup mediasoup device
   const setupMediasoup = async (rtpCapabilities, existingProducers) => {
     try {
@@ -635,6 +726,8 @@ const VideoMeetingPage = () => {
       producedRef.current = false;
       setRemoteStreams({});
       setScreenStreams({});
+      weakTransportsRef.current.clear();
+      setWeakSignal(false);
 
       console.log('[Mediasoup] Setting up device with RTP capabilities');
       console.log('[Mediasoup] RTP caps:', JSON.stringify(rtpCapabilities).substring(0, 200));
@@ -752,15 +845,9 @@ const VideoMeetingPage = () => {
           });
         });
         
-        // Monitor connection state
-        transport.on('connectionstatechange', (state) => {
-          console.log('[Mediasoup] Send transport connection state:', state);
-          if (state === 'failed') {
-            console.error('[Mediasoup] Send transport connection failed!');
-            recoverMeetingConnection('Koneksi upload terganggu, memulihkan meeting...');
-          }
-        });
-        
+        // Sinyal lemah → freeze + ICE restart (bukan langsung mental/keluar room).
+        setupTransportRecovery(transport, 'upload');
+
         sendTransportRef.current = transport;
         console.log('[Mediasoup] Send transport created');
         resolve(transport);
@@ -804,15 +891,9 @@ const VideoMeetingPage = () => {
           });
         });
         
-        // Monitor connection state
-        transport.on('connectionstatechange', (state) => {
-          console.log('[Mediasoup] Recv transport connection state:', state);
-          if (state === 'failed') {
-            console.error('[Mediasoup] Recv transport connection failed!');
-            recoverMeetingConnection('Koneksi video terganggu, memulihkan meeting...');
-          }
-        });
-        
+        // Sinyal lemah → freeze + ICE restart (bukan langsung mental/keluar room).
+        setupTransportRecovery(transport, 'video');
+
         recvTransportRef.current = transport;
         console.log('[Mediasoup] Recv transport created');
         resolve(transport);
@@ -2376,6 +2457,13 @@ const VideoMeetingPage = () => {
         <div className="fixed inset-x-0 top-0 z-[90] flex items-center justify-center gap-2 bg-amber-500 px-4 py-2 text-sm font-medium text-white shadow-lg">
           <Loader2 className="h-4 w-4 animate-spin" />
           Menyambungkan kembali ke meeting...
+        </div>
+      )}
+      {/* Sinyal lemah: video membeku sementara, TIDAK keluar room — pulih otomatis. */}
+      {weakSignal && connectionStatus !== 'reconnecting' && (
+        <div className="fixed inset-x-0 top-0 z-[85] flex items-center justify-center gap-2 bg-orange-500/90 px-4 py-1.5 text-xs font-medium text-white shadow-md">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          Sinyal lemah — video sementara membeku, menunggu koneksi membaik…
         </div>
       )}
       {/* Banner aktifkan suara: muncul sampai user berinteraksi (atasi blokir autoplay audio) */}
