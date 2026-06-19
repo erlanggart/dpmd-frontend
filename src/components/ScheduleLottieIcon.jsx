@@ -1,5 +1,5 @@
 import React from "react";
-import Lottie from "lottie-react";
+import OptimizedLottie from "./OptimizedLottie";
 import scheduleAnimation from "../assets/lottie/schedule.json";
 
 const ScheduleLottieIcon = ({
@@ -7,17 +7,12 @@ const ScheduleLottieIcon = ({
   loop = true,
   autoplay = true,
 }) => (
-  <span
-    className={`inline-flex flex-shrink-0 items-center justify-center overflow-hidden ${className}`}
-    aria-hidden="true"
-  >
-    <Lottie
-      animationData={scheduleAnimation}
-      loop={loop}
-      autoplay={autoplay}
-      className="h-full w-full"
-    />
-  </span>
+  <OptimizedLottie
+    animationData={scheduleAnimation}
+    className={className}
+    loop={loop}
+    autoplay={autoplay}
+  />
 );
 
 export default ScheduleLottieIcon;

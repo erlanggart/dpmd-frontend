@@ -1,5 +1,5 @@
 import React from "react";
-import Lottie from "lottie-react";
+import OptimizedLottie from "./OptimizedLottie";
 import chatbotAnimation from "../assets/lottie/chatbot.json";
 
 const MessageLottieIcon = ({
@@ -7,17 +7,12 @@ const MessageLottieIcon = ({
   loop = true,
   autoplay = true,
 }) => (
-  <span
-    className={`inline-flex flex-shrink-0 items-center justify-center overflow-hidden ${className}`}
-    aria-hidden="true"
-  >
-    <Lottie
-      animationData={chatbotAnimation}
-      loop={loop}
-      autoplay={autoplay}
-      className="h-full w-full"
-    />
-  </span>
+  <OptimizedLottie
+    animationData={chatbotAnimation}
+    className={className}
+    loop={loop}
+    autoplay={autoplay}
+  />
 );
 
 export default MessageLottieIcon;

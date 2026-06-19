@@ -1,27 +1,24 @@
 // src/components/mobile/LottieIcon.jsx
 import React from 'react';
-import Lottie from 'lottie-react';
+import OptimizedLottie from '../OptimizedLottie';
 
 /**
  * LottieIcon - Wrapper untuk Lottie animations
- * Menampilkan animasi Lottie dengan size & options customizable
+ * Delegasi ke OptimizedLottie: tetap loop, tapi pakai renderer canvas +
+ * auto-pause saat di luar layar/tab tersembunyi supaya tidak bikin freeze.
  */
-const LottieIcon = ({ 
-  animationData, 
-  loop = true, 
+const LottieIcon = ({
+  animationData,
+  loop = true,
   autoplay = true,
   className = "w-8 h-8"
-}) => {
-  return (
-    <div className={className}>
-      <Lottie 
-        animationData={animationData}
-        loop={loop}
-        autoplay={autoplay}
-        style={{ width: '100%', height: '100%' }}
-      />
-    </div>
-  );
-};
+}) => (
+  <OptimizedLottie
+    animationData={animationData}
+    loop={loop}
+    autoplay={autoplay}
+    className={className}
+  />
+);
 
 export default LottieIcon;

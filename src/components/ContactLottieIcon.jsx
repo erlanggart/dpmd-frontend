@@ -1,5 +1,5 @@
 import React from "react";
-import Lottie from "lottie-react";
+import OptimizedLottie from "./OptimizedLottie";
 import contactAnimation from "../assets/lottie/contact.json";
 
 const ContactLottieIcon = ({
@@ -7,17 +7,12 @@ const ContactLottieIcon = ({
   loop = true,
   autoplay = true,
 }) => (
-  <span
-    className={`inline-flex flex-shrink-0 items-center justify-center overflow-hidden ${className}`}
-    aria-hidden="true"
-  >
-    <Lottie
-      animationData={contactAnimation}
-      loop={loop}
-      autoplay={autoplay}
-      className="h-full w-full"
-    />
-  </span>
+  <OptimizedLottie
+    animationData={contactAnimation}
+    className={className}
+    loop={loop}
+    autoplay={autoplay}
+  />
 );
 
 export default ContactLottieIcon;

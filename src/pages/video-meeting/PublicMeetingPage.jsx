@@ -1260,11 +1260,10 @@ const PublicMeetingPage = () => {
         reconnectionDelay: 1000,
         reconnectionDelayMax: 5000,
         timeout: 10000,
-        // Polling-only: LB/proxy di depan (TLS) belum meneruskan upgrade WebSocket,
-        // sehingga 'websocket' selalu gagal & memunculkan error di console. Polling
-        // sudah cukup untuk signaling (media tetap via WebRTC langsung). Kembalikan
-        // ke ['polling','websocket'] bila WebSocket passthrough sudah diaktifkan.
-        transports: (import.meta.env.VITE_SOCKET_TRANSPORTS || 'polling').split(',').map((t) => t.trim()),
+        // Mulai dari polling lalu upgrade ke WebSocket (jauh lebih stabil di
+        // jaringan lambat → mengurangi "kepental"). Bila proxy belum meneruskan
+        // upgrade, Socket.IO otomatis tetap di polling tanpa memutus koneksi.
+        transports: (import.meta.env.VITE_SOCKET_TRANSPORTS || 'polling,websocket').split(',').map((t) => t.trim()),
         auth: {
           token: token || null,
           guestName: cleanName,
