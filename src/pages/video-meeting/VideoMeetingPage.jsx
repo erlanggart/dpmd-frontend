@@ -1458,11 +1458,12 @@ const VideoMeetingPage = () => {
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
       timeout: 10000,
-      // Mulai dari polling lalu upgrade ke WebSocket (jauh lebih stabil & hemat,
-      // mengurangi "kepental" karena polling rapuh di jaringan lambat). Bila proxy
-      // belum meneruskan upgrade WebSocket, Socket.IO otomatis tetap di polling
-      // tanpa memutus koneksi. Bisa dipaksa polling-only via env bila perlu.
-      transports: (import.meta.env.VITE_SOCKET_TRANSPORTS || 'polling,websocket').split(',').map((t) => t.trim()),
+      // Polling-only: TLS/WSS (443) di-terminate proxy LUAR (Diskominfo/Mikrotik)
+      // yang TIDAK meneruskan upgrade WebSocket → 'websocket' selalu gagal (spam
+      // error wss:// di console) tanpa memutus koneksi. Kestabilan dijaga oleh
+      // grace period + pingTimeout 60s di backend. Set env
+      // VITE_SOCKET_TRANSPORTS=polling,websocket bila proxy luar sudah pass WS.
+      transports: (import.meta.env.VITE_SOCKET_TRANSPORTS || 'polling').split(',').map((t) => t.trim()),
     });
 
     let joinInFlight = false;
