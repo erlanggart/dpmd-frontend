@@ -345,9 +345,12 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
   }, [trackingData]);
 
   // ---- STATISTIK: rekapitulasi anggaran per kegiatan (1 proposal = 1 kegiatan) ----
+  // Rekapitulasi hanya menghitung proposal yang SUDAH MASUK DPMD. `proposals` (arsip)
+  // adalah himpunan proposal yang telah sampai DPMD, berbeda dari `trackingData` yang
+  // mencakup semua tahap (Desa/Kecamatan/DPMD).
   const perKegiatan = useMemo(() => {
     const map = new Map(); // id -> { id, nama, kategori, desaSet, proposalCount, anggaran }
-    trackingData.forEach(p => {
+    proposals.forEach(p => {
       const primary = (p.kegiatan_list && p.kegiatan_list[0])
         ? { id: String(p.kegiatan_list[0].id), nama: p.kegiatan_list[0].nama_kegiatan, kategori: p.kegiatan_list[0].kategori || p.jenis_kegiatan }
         : (p.kegiatan_id ? { id: String(p.kegiatan_id), nama: p.kegiatan_nama, kategori: p.jenis_kegiatan } : null);
@@ -363,7 +366,7 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
     return Array.from(map.values())
       .map(e => ({ id: e.id, nama: e.nama, kategori: e.kategori, desaCount: e.desaSet.size, proposalCount: e.proposalCount, anggaran: e.anggaran }))
       .sort((a, b) => b.anggaran - a.anggaran);
-  }, [trackingData]);
+  }, [proposals]);
 
   // ---- Verifikasi ----
   const openVerify = (proposal, status) => setVerifyModal({ proposal, status, catatan: '' });
@@ -518,13 +521,30 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
     }
     setExporting(true);
     try {
+      const wb = XLSX.utils.book_new();
+
+      // Excel membatasi nama sheet maksimal 31 karakter — amankan agar tidak error.
+      const appendSheet = (rows, name) => {
+        const ws = XLSX.utils.json_to_sheet(
+          rows.length ? rows : [{ Keterangan: 'Belum ada data' }]
+        );
+        XLSX.utils.book_append_sheet(wb, ws, String(name).substring(0, 31));
+      };
+
+      // Kegiatan utama sebuah proposal (1 proposal = 1 kegiatan).
+      const primaryKegiatan = (p) => p.kegiatan_nama
+        || (p.kegiatan_list && p.kegiatan_list[0]?.nama_kegiatan)
+        || '';
+
+      // === Sheet 1: detail tracking lintas-tahap (+ kolom Kegiatan Spesifik) ===
       const rows = trackingData.map((p, i) => ({
         No: i + 1,
         Kecamatan: p.kecamatan_nama || '',
         Desa: p.desa_nama || '',
         Kategori: KATEGORI_META[p.jenis_kegiatan]?.label || p.jenis_kegiatan || '',
         Judul: p.judul_proposal || '',
-        Kegiatan: p.kegiatan_nama || '',
+        Kegiatan: primaryKegiatan(p),
+        'Kegiatan Spesifik': p.nama_kegiatan_spesifik || '',
         Volume: p.volume || '',
         Lokasi: p.lokasi || '',
         'Anggaran (Rp)': Number(p.anggaran_usulan || 0),
@@ -539,55 +559,107 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
         'Tgl Kirim DPMD': fmtDate(p.submitted_to_dpmd_at),
         'Tgl Keputusan DPMD': fmtDate(p.dpmd_verified_at),
       }));
-      const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.json_to_sheet(rows);
-      XLSX.utils.book_append_sheet(wb, ws, 'Tracking Bankeu Perubahan');
+      appendSheet(rows, 'Tracking Bankeu Perubahan');
 
-      // Sheet rekap per kategori: Wajib, Pilihan Infrastruktur, Pilihan Non-Infrastruktur.
-      // Tiap sheet berisi rekap per kegiatan (jumlah desa yang ambil + total anggaran).
-      const sheetNames = {
-        wajib: 'Kegiatan Wajib',
-        pilihan_infrastruktur: 'Pilihan Infrastruktur',
-        pilihan_non_infrastruktur: 'Pilihan Non-Infrastruktur',
-      };
-      KATEGORI_KEYS.forEach(kat => {
-        // Rekap per kegiatan dalam kategori ini (1 proposal = 1 kegiatan).
-        const kegMap = new Map(); // id -> { nama, desaSet, proposalCount, anggaran }
-        trackingData.forEach(p => {
-          const primary = (p.kegiatan_list && p.kegiatan_list[0])
-            ? { id: String(p.kegiatan_list[0].id), nama: p.kegiatan_list[0].nama_kegiatan, kategori: p.kegiatan_list[0].kategori || p.jenis_kegiatan }
-            : (p.kegiatan_id ? { id: String(p.kegiatan_id), nama: p.kegiatan_nama, kategori: p.jenis_kegiatan } : null);
-          if (!primary || !primary.id || primary.kategori !== kat) return;
-          if (!kegMap.has(primary.id)) kegMap.set(primary.id, { nama: primary.nama || '-', desaSet: new Set(), proposalCount: 0, anggaran: 0 });
-          const e = kegMap.get(primary.id);
-          e.proposalCount += 1;
-          e.anggaran += Number(p.anggaran_usulan || 0);
-          if (p.desa_id != null) e.desaSet.add(Number(p.desa_id));
+      // === Rekap per desa (detail kegiatan, dikelompokkan per desa) ===
+      // Dipakai untuk "Rekap Keseluruhan" & ketiga sheet rekap per kategori,
+      // sehingga rincian kolom & barisnya identik dengan Rekap Keseluruhan.
+      const buildRekapDesaRows = (items) => {
+        const desaMap = new Map(); // desaId -> { kecamatan, desa, items: [] }
+        items.forEach(p => {
+          const key = p.desa_id ?? `none-${p.desa_nama || ''}`;
+          if (!desaMap.has(key)) {
+            desaMap.set(key, { kecamatan: p.kecamatan_nama || '', desa: p.desa_nama || '', items: [] });
+          }
+          desaMap.get(key).items.push(p);
         });
-        const katRows = Array.from(kegMap.values())
-          .sort((a, b) => b.anggaran - a.anggaran)
-          .map((e, i) => ({
-            No: i + 1,
-            Kegiatan: e.nama,
-            'Jumlah Desa': e.desaSet.size,
-            'Jumlah Proposal': e.proposalCount,
-            'Total Anggaran (Rp)': e.anggaran,
-          }));
-        // Baris TOTAL di akhir.
-        if (katRows.length) {
-          katRows.push({
-            No: '',
-            Kegiatan: 'TOTAL',
-            'Jumlah Desa': '',
-            'Jumlah Proposal': katRows.reduce((s, r) => s + r['Jumlah Proposal'], 0),
-            'Total Anggaran (Rp)': katRows.reduce((s, r) => s + r['Total Anggaran (Rp)'], 0),
-          });
+        const desaList = Array.from(desaMap.values()).sort((a, b) =>
+          (a.kecamatan || '').localeCompare(b.kecamatan || '', 'id') ||
+          (a.desa || '').localeCompare(b.desa || '', 'id'));
+
+        const blankRow = (override) => ({
+          No: '', Kecamatan: '', Desa: '', Kategori: '', Kegiatan: '',
+          'Kegiatan Spesifik': '', Volume: '', Lokasi: '', 'Anggaran (Rp)': '',
+          ...override,
+        });
+
+        const out = [];
+        let no = 0;
+        let grand = 0;
+        desaList.forEach(d => {
+          let subtotal = 0;
+          d.items
+            .sort((a, b) => (a.jenis_kegiatan || '').localeCompare(b.jenis_kegiatan || ''))
+            .forEach(p => {
+              no += 1;
+              const anggaran = Number(p.anggaran_usulan || 0);
+              subtotal += anggaran;
+              out.push({
+                No: no,
+                Kecamatan: d.kecamatan,
+                Desa: d.desa,
+                Kategori: KATEGORI_META[p.jenis_kegiatan]?.label || p.jenis_kegiatan || '',
+                Kegiatan: primaryKegiatan(p),
+                'Kegiatan Spesifik': p.nama_kegiatan_spesifik || '',
+                Volume: p.volume || '',
+                Lokasi: p.lokasi || '',
+                'Anggaran (Rp)': anggaran,
+              });
+            });
+          grand += subtotal;
+          out.push(blankRow({ Lokasi: `Subtotal ${d.desa}`, 'Anggaran (Rp)': subtotal }));
+        });
+        if (out.length) {
+          out.push(blankRow({ Lokasi: 'TOTAL KESELURUHAN', 'Anggaran (Rp)': grand }));
         }
-        const katWs = XLSX.utils.json_to_sheet(
-          katRows.length ? katRows : [{ Kegiatan: 'Belum ada data pada kategori ini' }]
-        );
-        XLSX.utils.book_append_sheet(wb, katWs, sheetNames[kat]);
+        return out;
+      };
+
+      // === Sheet 2: Rekap Keseluruhan (semua kategori) ===
+      appendSheet(buildRekapDesaRows(trackingData), 'Rekap Keseluruhan');
+
+      // === Sheet 3-5: Rekap per kategori (format identik Rekap Keseluruhan) ===
+      const rekapKategori = [
+        { kat: 'wajib', name: 'Rekap Kegiatan Wajib' },
+        { kat: 'pilihan_infrastruktur', name: 'Rekap Pilihan Infrastruktur' },
+        { kat: 'pilihan_non_infrastruktur', name: 'Rekap Non Infrastruktur' },
+      ];
+      rekapKategori.forEach(({ kat, name }) => {
+        appendSheet(buildRekapDesaRows(trackingData.filter(p => p.jenis_kegiatan === kat)), name);
       });
+
+      // === Sheet terakhir: Rekap Total Anggaran per Desa ===
+      const totalDesaMap = new Map(); // desaId -> { kecamatan, desa, count, anggaran }
+      trackingData.forEach(p => {
+        const key = p.desa_id ?? `none-${p.desa_nama || ''}`;
+        if (!totalDesaMap.has(key)) {
+          totalDesaMap.set(key, { kecamatan: p.kecamatan_nama || '', desa: p.desa_nama || '', count: 0, anggaran: 0 });
+        }
+        const e = totalDesaMap.get(key);
+        e.count += 1;
+        e.anggaran += Number(p.anggaran_usulan || 0);
+      });
+      const totalDesaRows = Array.from(totalDesaMap.values())
+        .sort((a, b) =>
+          (a.kecamatan || '').localeCompare(b.kecamatan || '', 'id') ||
+          (a.desa || '').localeCompare(b.desa || '', 'id'))
+        .map((d, i) => ({
+          No: i + 1,
+          Kecamatan: d.kecamatan,
+          Desa: d.desa,
+          'Jumlah Kegiatan': d.count,
+          'Total Anggaran (Rp)': d.anggaran,
+        }));
+      if (totalDesaRows.length) {
+        totalDesaRows.push({
+          No: '',
+          Kecamatan: '',
+          Desa: 'TOTAL',
+          'Jumlah Kegiatan': totalDesaRows.reduce((s, r) => s + r['Jumlah Kegiatan'], 0),
+          'Total Anggaran (Rp)': totalDesaRows.reduce((s, r) => s + r['Total Anggaran (Rp)'], 0),
+        });
+      }
+      appendSheet(totalDesaRows, 'Rekap Total Anggaran per Desa');
 
       XLSX.writeFile(wb, `bankeu-perubahan-tracking-${tahun}.xlsx`);
     } finally {
