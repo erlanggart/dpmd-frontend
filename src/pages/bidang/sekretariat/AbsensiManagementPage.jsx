@@ -1132,6 +1132,153 @@ const AbsensiManagementPage = () => {
     }
   };
 
+  const handleExportPeringkatPDF = async () => {
+    if (!leaderboard.length) return;
+    try {
+      const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+        import("jspdf"),
+        import("jspdf-autotable"),
+      ]);
+
+      const doc = new jsPDF("p", "mm", "a4");
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 12;
+      const periodeLabel = peringkatData?.periode_label || peringkatPeriode;
+
+      // ── Header band ──
+      doc.setFillColor(194, 65, 12);
+      doc.rect(0, 0, pageWidth, 22, "F");
+      doc.setFillColor(245, 158, 11);
+      doc.rect(0, 0, pageWidth, 2.5, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(14);
+      doc.setFont(undefined, "bold");
+      doc.text("PERINGKAT ABSENSI PEGAWAI", margin, 11);
+      doc.setFontSize(8.5);
+      doc.setFont(undefined, "normal");
+      doc.setTextColor(255, 237, 213);
+      doc.text("Dinas Pemberdayaan Masyarakat dan Desa", margin, 17);
+      doc.setFontSize(9);
+      doc.setFont(undefined, "bold");
+      doc.setTextColor(255, 255, 255);
+      doc.text(`Periode: ${periodeLabel}`, pageWidth - margin, 11, { align: "right" });
+      const now = new Date();
+      doc.setFontSize(7.5);
+      doc.setFont(undefined, "normal");
+      doc.setTextColor(255, 237, 213);
+      doc.text(
+        `Dicetak: ${now.toLocaleDateString("id-ID", { day: "2-digit", month: "long", year: "numeric" })} ${now.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })} WIB`,
+        pageWidth - margin, 17, { align: "right" }
+      );
+
+      // ── Podium juara (3 teratas) ──
+      let tableStartY = 30;
+      const top3 = leaderboard.slice(0, 3);
+      if (top3.length) {
+        doc.setFontSize(9);
+        doc.setFont(undefined, "bold");
+        doc.setTextColor(180, 83, 9);
+        doc.text("PODIUM JUARA", margin, 28);
+        const medals = ["1.", "2.", "3."];
+        doc.setFontSize(8);
+        top3.forEach((r, i) => {
+          const u = r.pegawai?.user;
+          const nama = u?.pegawai?.nama_pegawai || u?.name || "-";
+          doc.setFont(undefined, "bold");
+          doc.setTextColor(51, 65, 85);
+          doc.text(`${medals[i]} ${nama}`, margin, 33.5 + i * 4.5);
+          doc.setFont(undefined, "normal");
+          doc.setTextColor(120, 113, 108);
+          doc.text(`${Math.round(r.score)} poin`, margin + 70, 33.5 + i * 4.5);
+        });
+        tableStartY = 33.5 + top3.length * 4.5 + 3;
+      }
+
+      // ── Tabel peringkat lengkap ──
+      const head = [["#", "Nama Pegawai", "Jabatan", "Hadir", "Lengkap", "Tepat\nWaktu", "Terlambat", "Rata²\nDatang", "Skor"]];
+      const body = filteredLeaderboard.map((r) => {
+        const u = r.pegawai?.user;
+        return [
+          String(r.rank),
+          u?.pegawai?.nama_pegawai || u?.name || "-",
+          u?.pegawai?.jabatan || u?.pegawai?.status_kepegawaian?.replace(/_/g, " ") || "-",
+          String(r.presentDays),
+          String(r.completeDays),
+          String(r.onTimeDays),
+          String(r.lateDays),
+          formatArrivalMinutes(r.averageArrival),
+          String(Math.round(r.score)),
+        ];
+      });
+
+      autoTable(doc, {
+        head,
+        body,
+        startY: tableStartY,
+        margin: { left: margin, right: margin, top: 14 },
+        theme: "grid",
+        styles: {
+          fontSize: 7.5,
+          cellPadding: { top: 1.6, right: 1.5, bottom: 1.6, left: 1.5 },
+          valign: "middle",
+          halign: "center",
+          lineColor: [226, 232, 240],
+          lineWidth: 0.2,
+          textColor: [51, 65, 85],
+          overflow: "linebreak",
+        },
+        headStyles: {
+          fillColor: [194, 65, 12],
+          textColor: [255, 255, 255],
+          fontSize: 7.5,
+          fontStyle: "bold",
+          halign: "center",
+          valign: "middle",
+          lineColor: [194, 65, 12],
+          lineWidth: 0.2,
+        },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        columnStyles: {
+          0: { halign: "center", cellWidth: 9, fontStyle: "bold" },
+          1: { halign: "left", cellWidth: 48, fontStyle: "bold", overflow: "linebreak" },
+          2: { halign: "left", cellWidth: 36, fontSize: 6.6, overflow: "linebreak" },
+          3: { halign: "center", cellWidth: 14, textColor: [5, 150, 105], fontStyle: "bold" },
+          4: { halign: "center", cellWidth: 16 },
+          5: { halign: "center", cellWidth: 16 },
+          6: { halign: "center", cellWidth: 18 },
+          7: { halign: "center", cellWidth: 16, font: "courier" },
+          8: { halign: "center", cellWidth: 14, textColor: [180, 83, 9], fontStyle: "bold" },
+        },
+        showHead: "everyPage",
+        didParseCell: (data) => {
+          // Sorot 3 besar dengan latar amber lembut
+          if (data.section === "body" && data.row.index < 3) {
+            data.cell.styles.fillColor = [254, 243, 199];
+          }
+          if (data.section === "head" && (data.column.index === 1 || data.column.index === 2)) {
+            data.cell.styles.halign = "left";
+          }
+        },
+        didDrawPage: () => {
+          const pageNum = doc.internal.getNumberOfPages();
+          doc.setFontSize(7);
+          doc.setFont(undefined, "normal");
+          doc.setTextColor(148, 163, 184);
+          doc.text("Skor = (lengkap x10) + (tepat waktu x6) + (hadir x4) + bonus datang awal - (terlambat x5)", margin, pageHeight - 5);
+          doc.text(`Halaman ${pageNum}`, pageWidth - margin, pageHeight - 5, { align: "right" });
+        },
+      });
+
+      const fileName = `Peringkat_Absensi_${String(periodeLabel).replace(/\s+/g, "_")}.pdf`;
+      doc.save(fileName);
+      showAlert({ icon: "success", title: "Export Berhasil", text: `File ${fileName} berhasil diunduh`, timer: 2000 });
+    } catch (err) {
+      console.error("Export peringkat PDF error:", err);
+      showAlert({ icon: "error", title: "Gagal Export", text: "Terjadi kesalahan saat mengexport PDF" });
+    }
+  };
+
   // ─── Render ───────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-orange-50/30">
@@ -1560,14 +1707,21 @@ const AbsensiManagementPage = () => {
               </div>
             ) : leaderboard.length > 0 ? (
               <>
-                {/* Periode + info skor */}
-                <div className="flex flex-wrap items-center justify-between gap-2 px-1">
-                  <h3 className="font-bold text-slate-800 text-sm">
-                    Peringkat Absensi — {peringkatData?.periode_label}
-                  </h3>
-                  <p className="text-[11px] text-slate-400">
-                    {leaderboard.length} pegawai masuk peringkat • skor = kelengkapan + datang awal + tepat waktu
-                  </p>
+                {/* Periode + info skor + export */}
+                <div className="flex flex-wrap items-center justify-between gap-3 px-1">
+                  <div>
+                    <h3 className="font-bold text-slate-800 text-sm">
+                      Peringkat Absensi — {peringkatData?.periode_label}
+                    </h3>
+                    <p className="text-[11px] text-slate-400">
+                      {leaderboard.length} pegawai masuk peringkat • skor = kelengkapan + datang awal + tepat waktu
+                    </p>
+                  </div>
+                  <button onClick={handleExportPeringkatPDF} disabled={!leaderboard.length}
+                    className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 px-4 py-2 text-xs font-bold text-white shadow-sm transition-all hover:scale-[1.02] disabled:opacity-50">
+                    <LuFileText className="h-4 w-4" />
+                    Export PDF
+                  </button>
                 </div>
 
                 {/* PODIUM JUARA 1-2-3 */}
