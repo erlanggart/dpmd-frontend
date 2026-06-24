@@ -7,7 +7,7 @@ import {
   FiChevronDown, FiChevronLeft, FiChevronRight, FiFilter, FiArrowLeft, FiEye, FiUser, FiBell, FiSend,
   FiUserPlus,
 } from "react-icons/fi";
-import { LuDownload, LuRefreshCw, LuShieldCheck, LuWifi, LuWifiOff, LuLayoutGrid, LuList, LuFileSpreadsheet, LuFileText, LuChartColumn, LuLayoutDashboard, LuArrowUpDown, LuSlidersHorizontal } from "react-icons/lu";
+import { LuDownload, LuRefreshCw, LuShieldCheck, LuWifi, LuWifiOff, LuLayoutGrid, LuList, LuFileSpreadsheet, LuFileText, LuChartColumn, LuLayoutDashboard, LuArrowUpDown, LuSlidersHorizontal, LuTrophy, LuCrown } from "react-icons/lu";
 import Lottie from "lottie-react";
 import tableTennisAnimation from "../../../assets/table-tennis.json";
 import api from "../../../api";
@@ -61,6 +61,72 @@ const getTodayKeyWIB = () =>
     month: "2-digit",
     day: "2-digit",
   }).format(new Date());
+
+// jam_masuk disimpan sebagai Date('1970-01-01T{WIB}:00+07:00'). Konversi ke menit WIB.
+const arrivalToWIBMinutes = (value) => {
+  if (!value) return null;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  const wib = new Date(d.getTime() + 7 * 60 * 60 * 1000);
+  return wib.getUTCHours() * 60 + wib.getUTCMinutes();
+};
+
+const formatArrivalMinutes = (minutes) => {
+  if (minutes === null || minutes === undefined || !Number.isFinite(minutes)) return "-";
+  const h = Math.floor(minutes / 60);
+  const m = Math.round(minutes % 60);
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+};
+
+// Skor absensi gabungan — MIRROR dari backend attendanceAward.service.scoreCandidate
+// agar peringkat di tab ini konsisten dengan podium award mingguan.
+const scoreFromStats = (s, lateThreshold) => {
+  const earliness = s.averageArrival !== null ? Math.max(0, lateThreshold - s.averageArrival) : 0;
+  return (
+    s.completeDays * 10
+    + s.onTimeDays * 6
+    + s.presentDays * 4
+    + earliness * 0.6
+    - s.lateDays * 5
+  );
+};
+
+// Bangun leaderboard dari data rekap-pegawai (semua pegawai wajib absen).
+// Hanya pegawai dengan minimal 1 hari hadir yang masuk peringkat.
+const buildLeaderboard = (pegawaiList, jamMasukSetting) => {
+  const [jmH, jmM] = (jamMasukSetting || "08:00").split(":").map(Number);
+  const lateThreshold = (jmH || 8) * 60 + (jmM || 0);
+
+  const rows = (pegawaiList || []).map((p) => {
+    const days = Object.values(p.daily || {});
+    const present = days.filter((d) => PRESENT_STATUSES.includes(d.status));
+    const withMasuk = present.filter((d) => d.jam_masuk);
+    const arrivals = withMasuk
+      .map((d) => arrivalToWIBMinutes(d.jam_masuk))
+      .filter((n) => Number.isFinite(n));
+    const lateDays = present.filter((d) => (d.telat_masuk_menit || 0) > 0).length;
+    const stats = {
+      presentDays: present.length,
+      completeDays: present.filter((d) => d.jam_masuk && d.jam_keluar).length,
+      lateDays,
+      onTimeDays: Math.max(0, withMasuk.length - lateDays),
+      averageArrival: arrivals.length
+        ? arrivals.reduce((sum, v) => sum + v, 0) / arrivals.length
+        : null,
+    };
+    return { pegawai: p, ...stats, score: scoreFromStats(stats, lateThreshold) };
+  }).filter((r) => r.presentDays > 0);
+
+  rows.sort((a, b) =>
+    b.score - a.score
+    || b.completeDays - a.completeDays
+    || (a.averageArrival ?? Infinity) - (b.averageArrival ?? Infinity)
+    || b.onTimeDays - a.onTimeDays
+    || b.presentDays - a.presentDays
+  );
+
+  return rows.map((r, i) => ({ ...r, rank: i + 1 }));
+};
 
 const POPUP_TYPE_LABELS = {
   masuk: "Absen Masuk", pulang: "Absen Pulang", wfh: "WFH",
@@ -275,6 +341,12 @@ const AbsensiManagementPage = () => {
   const [rekapLoading, setRekapLoading] = useState(false);
   const [rekapSearch, setRekapSearch] = useState("");
 
+  // Peringkat (leaderboard juara absensi) state
+  const [peringkatData, setPeringkatData] = useState(null);
+  const [peringkatPeriode, setPeringkatPeriode] = useState("bulan");
+  const [peringkatLoading, setPeringkatLoading] = useState(false);
+  const [peringkatSearch, setPeringkatSearch] = useState("");
+
   // User History Modal state
   const [historyUser, setHistoryUser] = useState(null);
   const [historyData, setHistoryData] = useState(null);
@@ -392,6 +464,22 @@ const AbsensiManagementPage = () => {
     }
   }, [rekapPeriode, filterDate, filterMonth, filterYear]);
 
+  const fetchPeringkat = useCallback(async () => {
+    try {
+      setPeringkatLoading(true);
+      let url = `/absensi/admin/rekap-pegawai?periode=${peringkatPeriode}`;
+      if (peringkatPeriode === 'minggu') url += `&tanggal=${filterDate}`;
+      else if (peringkatPeriode === 'tahun') url += `&tahun=${filterYear}`;
+      else url += `&bulan=${filterMonth}&tahun=${filterYear}`;
+      const res = await api.get(url);
+      setPeringkatData(res.data.data || null);
+    } catch (err) {
+      console.error("Error fetching peringkat:", err);
+    } finally {
+      setPeringkatLoading(false);
+    }
+  }, [peringkatPeriode, filterDate, filterMonth, filterYear]);
+
   // ─── User History Fetcher ─────────────────────────────────
   const fetchUserHistory = useCallback(async (userId) => {
     try {
@@ -412,11 +500,12 @@ const AbsensiManagementPage = () => {
     if (activeTab === "dashboard") fetchDashboard();
     else if (activeTab === "rekap") fetchRekap();
     else if (activeTab === "rekap-pegawai") fetchRekapPegawai();
+    else if (activeTab === "peringkat") fetchPeringkat();
     else if (activeTab === "pegawai") fetchPegawai();
     else if (activeTab === "settings") fetchSettings();
     else if (activeTab === "popup") fetchPopupMessages();
     else if (activeTab === "reminder") fetchReminderTemplates();
-  }, [activeTab, fetchDashboard, fetchRekap, fetchRekapPegawai, fetchPegawai, fetchSettings, fetchPopupMessages, fetchReminderTemplates]);
+  }, [activeTab, fetchDashboard, fetchRekap, fetchRekapPegawai, fetchPeringkat, fetchPegawai, fetchSettings, fetchPopupMessages, fetchReminderTemplates]);
 
   // Refetch user history when period changes
   useEffect(() => {
@@ -428,6 +517,7 @@ const AbsensiManagementPage = () => {
     if (activeTab === "dashboard") await fetchDashboard();
     else if (activeTab === "rekap") await fetchRekap();
     else if (activeTab === "rekap-pegawai") await fetchRekapPegawai();
+    else if (activeTab === "peringkat") await fetchPeringkat();
     else if (activeTab === "pegawai") await fetchPegawai();
     else if (activeTab === "popup") await fetchPopupMessages();
     else if (activeTab === "reminder") await fetchReminderTemplates();
@@ -650,6 +740,7 @@ const AbsensiManagementPage = () => {
   const tabs = [
     { key: "dashboard", label: "Dashboard", icon: LuLayoutDashboard },
     { key: "rekap-pegawai", label: "Rekap Pegawai", icon: LuChartColumn },
+    { key: "peringkat", label: "Peringkat", icon: LuTrophy },
     { key: "rekap", label: "Rekap Harian", icon: FiCalendar, count: records.length },
     { key: "pegawai", label: "Daftar Pegawai", icon: FiUsers, count: pegawai.length },
     { key: "popup", label: "Popup", icon: FiImage, count: popupMessages.length },
@@ -686,6 +777,22 @@ const AbsensiManagementPage = () => {
   }, [rekapPegawaiData, rekapSearch]);
 
   const rekapCalendarDays = rekapPegawaiData?.calendar_days || [];
+
+  // Leaderboard juara absensi (semua pegawai yang hadir), diperingkat skor gabungan.
+  const leaderboard = useMemo(
+    () => buildLeaderboard(peringkatData?.pegawai, peringkatData?.settings?.jam_masuk),
+    [peringkatData]
+  );
+  const podiumTop3 = leaderboard.slice(0, 3);
+  const filteredLeaderboard = useMemo(() => {
+    if (!peringkatSearch) return leaderboard;
+    const keyword = peringkatSearch.toLowerCase();
+    return leaderboard.filter((r) => {
+      const name = r.pegawai?.user?.pegawai?.nama_pegawai || r.pegawai?.user?.name || "";
+      const nip = r.pegawai?.user?.pegawai?.nip || "";
+      return `${name} ${nip}`.toLowerCase().includes(keyword);
+    });
+  }, [leaderboard, peringkatSearch]);
 
   const handleExportExcel = async () => {
     try {
@@ -1380,6 +1487,225 @@ const AbsensiManagementPage = () => {
                 )}
               </>
             ) : null}
+          </div>
+        )}
+
+        {/* ─── TAB: PERINGKAT (JUARA ABSENSI) ─────────────── */}
+        {activeTab === "peringkat" && (
+          <div className="space-y-5">
+            {/* Period Selector */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-4 sm:p-5">
+              <div className="flex flex-wrap items-end gap-3">
+                <div className="flex bg-slate-100 rounded-xl p-0.5">
+                  {[
+                    { key: "minggu", label: "Mingguan" },
+                    { key: "bulan", label: "Bulanan" },
+                    { key: "tahun", label: "Tahunan" },
+                  ].map(p => (
+                    <button key={p.key} onClick={() => setPeringkatPeriode(p.key)}
+                      className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+                        peringkatPeriode === p.key ? "bg-white text-orange-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                      }`}>{p.label}</button>
+                  ))}
+                </div>
+                {peringkatPeriode === 'minggu' && (
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Tanggal Referensi</label>
+                    <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)}
+                      className="px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400" />
+                  </div>
+                )}
+                {peringkatPeriode === 'bulan' && (
+                  <>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Bulan</label>
+                      <select value={filterMonth} onChange={(e) => setFilterMonth(parseInt(e.target.value))}
+                        className="px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400">
+                        {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Tahun</label>
+                      <input type="number" value={filterYear} onChange={(e) => setFilterYear(parseInt(e.target.value))}
+                        className="px-3 py-2 border border-slate-200 rounded-xl text-sm w-24 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400" />
+                    </div>
+                  </>
+                )}
+                {peringkatPeriode === 'tahun' && (
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Tahun</label>
+                    <input type="number" value={filterYear} onChange={(e) => setFilterYear(parseInt(e.target.value))}
+                      className="px-3 py-2 border border-slate-200 rounded-xl text-sm w-24 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-[180px]">
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Cari Pegawai</label>
+                  <div className="relative">
+                    <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <input type="text" value={peringkatSearch} onChange={(e) => setPeringkatSearch(e.target.value)}
+                      placeholder="Ketik nama..."
+                      className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {peringkatLoading ? (
+              <div className="flex flex-col justify-center items-center py-20 gap-3">
+                <div className="relative h-12 w-12">
+                  <div className="absolute inset-0 rounded-full border-4 border-orange-200" />
+                  <div className="absolute inset-0 rounded-full border-4 border-orange-500 border-t-transparent animate-spin" />
+                </div>
+                <p className="text-sm text-slate-400 font-medium">Memuat peringkat...</p>
+              </div>
+            ) : leaderboard.length > 0 ? (
+              <>
+                {/* Periode + info skor */}
+                <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+                  <h3 className="font-bold text-slate-800 text-sm">
+                    Peringkat Absensi — {peringkatData?.periode_label}
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    {leaderboard.length} pegawai masuk peringkat • skor = kelengkapan + datang awal + tepat waktu
+                  </p>
+                </div>
+
+                {/* PODIUM JUARA 1-2-3 */}
+                {(() => {
+                  const RANK_META = {
+                    1: { medal: "🥇", label: "Juara 1", ring: "ring-amber-400", bar: "from-amber-300 to-yellow-500", text: "text-amber-600", avatar: "h-20 w-20 sm:h-24 sm:w-24", pillar: "h-24 sm:h-28", num: "text-amber-700" },
+                    2: { medal: "🥈", label: "Juara 2", ring: "ring-slate-300", bar: "from-slate-200 to-slate-400", text: "text-slate-500", avatar: "h-16 w-16 sm:h-20 sm:w-20", pillar: "h-16 sm:h-20", num: "text-slate-600" },
+                    3: { medal: "🥉", label: "Juara 3", ring: "ring-orange-300", bar: "from-orange-300 to-amber-600", text: "text-orange-600", avatar: "h-16 w-16 sm:h-20 sm:w-20", pillar: "h-12 sm:h-16", num: "text-orange-700" },
+                  };
+                  // Urutan tampilan: Juara 2 (kiri) - Juara 1 (tengah) - Juara 3 (kanan)
+                  const order = [podiumTop3[1], podiumTop3[0], podiumTop3[2]].filter(Boolean);
+                  return (
+                    <div className="relative overflow-hidden rounded-2xl border border-amber-200/60 bg-gradient-to-b from-amber-50 via-white to-white p-5 shadow-sm sm:p-7">
+                      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(251,191,36,0.18),transparent_55%)]" />
+                      <div className="relative mb-5 text-center">
+                        <div className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-amber-600">
+                          <LuTrophy className="h-4 w-4" /> Podium Juara Absensi <LuTrophy className="h-4 w-4" />
+                        </div>
+                      </div>
+                      <div className="relative flex items-end justify-center gap-3 sm:gap-6">
+                        {order.map((row) => {
+                          const meta = RANK_META[row.rank];
+                          const u = row.pegawai?.user;
+                          const nama = u?.pegawai?.nama_pegawai || u?.name || "-";
+                          const jabatan = u?.pegawai?.jabatan || u?.pegawai?.status_kepegawaian?.replace(/_/g, " ") || "-";
+                          const isChampion = row.rank === 1;
+                          return (
+                            <div key={row.rank} className={`flex w-1/3 max-w-[180px] flex-col items-center ${isChampion ? "z-10" : ""}`}>
+                              {isChampion && <LuCrown className="mb-1 h-6 w-6 text-amber-400" />}
+                              <div className={`relative ${meta.avatar} rounded-full bg-white p-[3px] shadow-lg ring-4 ${meta.ring}`}>
+                                <div className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-orange-400 to-amber-500 text-lg font-black text-white">
+                                  {nama.charAt(0).toUpperCase()}
+                                  {u?.avatar && (
+                                    <img src={getAvatarUrl(u.avatar)} alt={nama}
+                                      className="absolute inset-0 h-full w-full object-cover"
+                                      onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                                  )}
+                                </div>
+                                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-xl drop-shadow sm:text-2xl">{meta.medal}</div>
+                              </div>
+                              <p className={`mt-3 text-center font-extrabold leading-tight text-slate-800 ${isChampion ? "text-sm sm:text-base" : "text-xs sm:text-sm"} line-clamp-2`}>{nama}</p>
+                              <p className="mt-0.5 max-w-full truncate text-[10px] text-slate-400">{jabatan}</p>
+                              <p className={`mt-1 text-xs font-black ${meta.text}`}>{Math.round(row.score)} poin</p>
+                              <div className={`mt-2 flex w-full ${meta.pillar} flex-col items-center justify-start rounded-t-xl bg-gradient-to-b ${meta.bar} shadow-inner`}>
+                                <span className={`mt-1.5 text-2xl font-black ${meta.num} sm:text-3xl`}>{row.rank}</span>
+                                <span className={`text-[8px] font-black uppercase tracking-widest ${meta.num} opacity-80`}>{meta.label}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <div className="relative mx-auto mt-px h-1.5 w-full max-w-[560px] rounded-full bg-gradient-to-r from-transparent via-amber-200 to-transparent" />
+                    </div>
+                  );
+                })()}
+
+                {/* TABEL PERINGKAT LENGKAP */}
+                <div className="overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-sm">
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-max text-sm">
+                      <thead>
+                        <tr className="border-b border-slate-200 bg-slate-50 text-[11px] uppercase tracking-widest text-slate-500">
+                          <th className="px-4 py-3.5 text-center font-bold w-16">Rank</th>
+                          <th className="px-4 py-3.5 text-left font-bold min-w-[220px]">Pegawai</th>
+                          <th className="px-3 py-3.5 text-center font-bold text-emerald-600">Hadir</th>
+                          <th className="px-3 py-3.5 text-center font-bold text-sky-600">Lengkap</th>
+                          <th className="px-3 py-3.5 text-center font-bold text-indigo-600">Tepat Waktu</th>
+                          <th className="px-3 py-3.5 text-center font-bold text-rose-600">Terlambat</th>
+                          <th className="px-3 py-3.5 text-center font-bold text-slate-500">Rata² Datang</th>
+                          <th className="px-4 py-3.5 text-center font-bold text-amber-600">Skor</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredLeaderboard.map((r) => {
+                          const u = r.pegawai?.user;
+                          const nama = u?.pegawai?.nama_pegawai || u?.name || "-";
+                          const jabatan = u?.pegawai?.jabatan || u?.pegawai?.status_kepegawaian?.replace(/_/g, " ") || "-";
+                          const medal = r.rank === 1 ? "🥇" : r.rank === 2 ? "🥈" : r.rank === 3 ? "🥉" : null;
+                          return (
+                            <tr key={u?.id || r.rank} className={`border-b border-slate-100 transition-colors hover:bg-orange-50/40 ${r.rank <= 3 ? "bg-amber-50/40" : ""}`}>
+                              <td className="px-4 py-3 text-center">
+                                {medal ? (
+                                  <span className="text-xl">{medal}</span>
+                                ) : (
+                                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-xs font-black text-slate-500">{r.rank}</span>
+                                )}
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-3">
+                                  <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full bg-gradient-to-br from-orange-400 to-amber-500 text-xs font-bold text-white">
+                                    <span className="flex h-full w-full items-center justify-center">{nama.charAt(0).toUpperCase()}</span>
+                                    {u?.avatar && (
+                                      <img src={getAvatarUrl(u.avatar)} alt={nama}
+                                        className="absolute inset-0 h-full w-full object-cover"
+                                        onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                                    )}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className="truncate text-sm font-bold text-slate-800">{nama}</p>
+                                    <p className="truncate text-[11px] text-slate-400">{jabatan}</p>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-3 py-3 text-center font-bold text-slate-700 tabular-nums">{r.presentDays}</td>
+                              <td className="px-3 py-3 text-center text-slate-600 tabular-nums">{r.completeDays}</td>
+                              <td className="px-3 py-3 text-center text-slate-600 tabular-nums">{r.onTimeDays}</td>
+                              <td className="px-3 py-3 text-center tabular-nums">
+                                <span className={r.lateDays > 0 ? "font-bold text-rose-600" : "text-slate-400"}>{r.lateDays}</span>
+                              </td>
+                              <td className="px-3 py-3 text-center font-mono text-xs text-slate-600">{formatArrivalMinutes(r.averageArrival)}</td>
+                              <td className="px-4 py-3 text-center">
+                                <span className="inline-flex min-w-[44px] items-center justify-center rounded-lg bg-amber-100 px-2 py-1 text-xs font-black text-amber-700 tabular-nums">{Math.round(r.score)}</span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                        {filteredLeaderboard.length === 0 && (
+                          <tr>
+                            <td colSpan={8} className="px-4 py-10 text-center text-sm text-slate-400">Tidak ada pegawai yang cocok dengan pencarian.</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="border-t border-slate-100 bg-slate-50/50 px-5 py-3">
+                    <p className="text-[11px] text-slate-400">
+                      Skor = (hari lengkap ×10) + (tepat waktu ×6) + (total hadir ×4) + bonus datang awal − (terlambat ×5)
+                    </p>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="rounded-2xl border border-slate-200/60 bg-white p-10 text-center shadow-sm">
+                <LuTrophy className="mx-auto mb-3 h-10 w-10 text-slate-300" />
+                <p className="text-sm font-semibold text-slate-600">Belum ada pegawai yang absen pada periode ini.</p>
+                <p className="mt-1 text-xs text-slate-400">Pilih periode lain untuk melihat peringkat.</p>
+              </div>
+            )}
           </div>
         )}
 
