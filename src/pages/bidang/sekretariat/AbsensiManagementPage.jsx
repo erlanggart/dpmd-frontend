@@ -32,13 +32,24 @@ const PRESENT_STATUSES = ['hadir', 'wfh', 'wfa', 'dinas_luar'];
 // Statuses yang dianggap "Tidak Masuk"
 const ABSENT_STATUSES = ['izin', 'sakit', 'alpha', 'cuti'];
 
-// Kategori peringkat absensi (urutan = urutan tampil). Satu kategori bisa
-// mencakup beberapa status kepegawaian — PPPK PW & Tenaga Alih Daya digabung.
+// Kategori peringkat absensi (urutan = urutan tampil).
 const ATTENDANCE_CATEGORIES = [
-  { key: 'pppk_alihdaya', label: 'PPPK PW & Tenaga Alih Daya', short: 'PPPK & Alih Daya', statuses: ['PPPK_Paruh_Waktu', 'Tenaga_Alih_Daya'] },
-  { key: 'Tenaga_Kebersihan', label: 'Petugas Kebersihan', short: 'Kebersihan', statuses: ['Tenaga_Kebersihan'] },
-  { key: 'Tenaga_Keamanan', label: 'Petugas Keamanan', short: 'Keamanan', statuses: ['Tenaga_Keamanan'] },
+  { key: 'pppk_alihdaya', label: 'PPPK PW & Tenaga Alih Daya', short: 'PPPK & Alih Daya' },
+  { key: 'kebersihan', label: 'Petugas Kebersihan', short: 'Kebersihan' },
+  { key: 'keamanan', label: 'Petugas Keamanan', short: 'Keamanan' },
 ];
+
+// Peran kebersihan/keamanan dikenali dari status_kepegawaian ATAU kata kunci jabatan
+// (petugas kebersihan/keamanan sering berstatus Tenaga Alih Daya/PPPK PW).
+const SECURITY_JABATAN_KEYWORDS = ['keamanan', 'security', 'satpam'];
+const CLEANING_JABATAN_KEYWORDS = ['kebersih', 'cleaning', 'cleaning service'];
+const categorizePegawai = (pegawai) => {
+  const status = pegawai?.status_kepegawaian;
+  const jabatan = (pegawai?.jabatan || '').toLowerCase();
+  if (status === 'Tenaga_Keamanan' || SECURITY_JABATAN_KEYWORDS.some((k) => jabatan.includes(k))) return 'keamanan';
+  if (status === 'Tenaga_Kebersihan' || CLEANING_JABATAN_KEYWORDS.some((k) => jabatan.includes(k))) return 'kebersihan';
+  return 'pppk_alihdaya';
+};
 
 // Hitung jumlah hari Masuk & Tidak Masuk berdasarkan kalender hari kerja.
 // Hari kerja yang sudah lewat (atau hari ini) tanpa record kehadiran "Masuk"
@@ -793,7 +804,7 @@ const AbsensiManagementPage = () => {
     const jamMasuk = peringkatData?.settings?.jam_masuk;
     const map = {};
     ATTENDANCE_CATEGORIES.forEach((cat) => {
-      const inCat = all.filter((p) => cat.statuses.includes(p.user?.pegawai?.status_kepegawaian));
+      const inCat = all.filter((p) => categorizePegawai(p.user?.pegawai) === cat.key);
       map[cat.key] = buildLeaderboard(inCat, jamMasuk);
     });
     return map;
