@@ -375,10 +375,26 @@ export default function DisposisiSuratModern() {
 	const [statistik, setStatistik] = useState(null);
 	const [loading, setLoading] = useState(true);
 	const [searchQuery, setSearchQuery] = useState("");
+	const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
 	const [filterStatus, setFilterStatus] = useState("all");
+	const [serverPagination, setServerPagination] = useState({
+		total: 0,
+		page: 1,
+		limit: 10,
+		totalPages: 0,
+	});
 
 	const itemsPerPage = 10;
 	const [currentPageDisposisiMasuk, setCurrentPageDisposisiMasuk] = useState(1);
+	const isExecutive = EXECUTIVE_ROLES.includes(user.role);
+
+	useEffect(() => {
+		const timeoutId = setTimeout(() => {
+			setDebouncedSearchQuery(searchQuery.trim());
+		}, 300);
+
+		return () => clearTimeout(timeoutId);
+	}, [searchQuery]);
 
 	const fetchData = useCallback(async () => {
 		setLoading(true);
@@ -391,17 +407,33 @@ export default function DisposisiSuratModern() {
 				const riwayatRes = await api.get("/disposisi/riwayat-sekretariat");
 				setRiwayatData(riwayatRes.data.data || []);
 			} else {
+				const params = isExecutive
+					? {
+							page: currentPageDisposisiMasuk,
+							limit: itemsPerPage,
+							...(filterStatus !== "all" && { status: filterStatus }),
+							...(debouncedSearchQuery && { search: debouncedSearchQuery }),
+						}
+					: { page: 1, limit: 100 };
 				const [statsRes, disposisiRes] = await Promise.all([
 					api.get("/disposisi/statistik"),
-					api.get(`/disposisi/${activeTab}`),
+					api.get(`/disposisi/${activeTab}`, { params }),
 				]);
 
 				setStatistik(statsRes.data.data);
+				setServerPagination(
+					disposisiRes.data.pagination || {
+						total: disposisiRes.data.data?.length || 0,
+						page: 1,
+						limit: itemsPerPage,
+						totalPages: 1,
+					},
+				);
 
 				if (activeTab === "masuk") {
-					setDisposisiMasuk(disposisiRes.data.data);
+					setDisposisiMasuk(disposisiRes.data.data || []);
 				} else {
-					setDisposisiKeluar(disposisiRes.data.data);
+					setDisposisiKeluar(disposisiRes.data.data || []);
 				}
 			}
 		} catch (error) {
@@ -410,7 +442,13 @@ export default function DisposisiSuratModern() {
 		} finally {
 			setLoading(false);
 		}
-	}, [activeTab]);
+	}, [
+		activeTab,
+		currentPageDisposisiMasuk,
+		debouncedSearchQuery,
+		filterStatus,
+		isExecutive,
+	]);
 
 	useDisposisiAutoReload(fetchData, {
 		enabled: true,
@@ -420,8 +458,11 @@ export default function DisposisiSuratModern() {
 
 	useEffect(() => {
 		fetchData();
-		setCurrentPageDisposisiMasuk(1);
 	}, [fetchData]);
+
+	useEffect(() => {
+		setCurrentPageDisposisiMasuk(1);
+	}, [activeTab]);
 
 	const handleBacaDisposisi = async (id) => {
 		try {
@@ -658,15 +699,11 @@ export default function DisposisiSuratModern() {
 		currentPageDisposisiMasuk,
 	);
 
-	if (EXECUTIVE_ROLES.includes(user.role)) {
+	if (isExecutive) {
 		const executiveItems =
 			activeTab === "masuk"
-				? paginatedDisposisiMasuk
-				: paginatedDisposisiKeluar;
-		const executiveTotal =
-			activeTab === "masuk"
-				? filteredDisposisiMasuk.length
-				: filteredDisposisiKeluar.length;
+				? disposisiMasuk
+				: disposisiKeluar;
 
 		return (
 			<ExecutiveDisposisiView
@@ -680,15 +717,11 @@ export default function DisposisiSuratModern() {
 				filterStatus={filterStatus}
 				setFilterStatus={setFilterStatus}
 				items={executiveItems}
-				totalItems={executiveTotal}
+				totalItems={serverPagination.total}
 				currentPage={currentPageDisposisiMasuk}
 				setCurrentPage={setCurrentPageDisposisiMasuk}
 				itemsPerPage={itemsPerPage}
-				totalPages={getTotalPages(
-					activeTab === "masuk"
-						? filteredDisposisiMasuk
-						: filteredDisposisiKeluar,
-				)}
+				totalPages={serverPagination.totalPages}
 				getStatusBadge={getStatusBadge}
 				formatTanggal={formatTanggal}
 				handleBacaDisposisi={handleBacaDisposisi}
