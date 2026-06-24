@@ -12,7 +12,7 @@ import {
 } from "react-icons/fi";
 import {
 	LuLogIn, LuLogOut, LuClipboardList, LuFileText, LuHeartPulse, LuCalendarOff,
-	LuCircleCheckBig, LuShieldCheck,
+	LuCircleCheckBig, LuShieldCheck, LuTrophy,
 } from "react-icons/lu";
 import Lottie from "lottie-react";
 import manWaitingCarAnim from "../../assets/lottie/man-waiting-car.json";
@@ -23,6 +23,7 @@ import api from "../../api";
 import { getAvatarUrl } from "../../utils/avatarUtils";
 import { pressAnimation, listItemVariants, slideUp } from "../../utils/animations";
 import AbsensiSuccessPopup from "../../components/AbsensiSuccessPopup";
+import AttendanceLeaderboardModal from "../../components/AttendanceLeaderboardModal";
 import { showAlert } from "../../components/AlertPopup";
 
 // ─── Constants ───────────────────────────────────────────────
@@ -100,6 +101,7 @@ const AbsensiPage = () => {
 	const deviceId = useRef(getDeviceId()).current;
 	const [successMessages, setSuccessMessages] = useState({});
 	const [successPopup, setSuccessPopup] = useState({ show: false, data: null });
+	const [showLeaderboard, setShowLeaderboard] = useState(false);
 
 	useEffect(() => { const t = setInterval(() => setCurrentTime(new Date()), 1000); return () => clearInterval(t); }, []);
 
@@ -556,15 +558,22 @@ const AbsensiPage = () => {
 							<p className="text-[10px] text-slate-400 truncate">{eligible?.jabatan || eligible?.status_kepegawaian?.replace(/_/g, " ")}</p>
 						</div>
 					</div>
-					{eligible?.device_registered ? (
-						<span className="flex items-center gap-1 px-2 py-0.5 bg-emerald-50 rounded-lg text-[9px] font-bold text-emerald-600 flex-shrink-0">
-							<LuShieldCheck className="h-3 w-3" />
-						</span>
-					) : (
-						<span className="flex items-center gap-1 px-2 py-0.5 bg-red-50 rounded-lg text-[9px] font-bold text-red-500 flex-shrink-0">
-							<FiAlertCircle className="h-3 w-3" /> Belum
-						</span>
-					)}
+					<div className="flex items-center gap-2 flex-shrink-0">
+						<button onClick={() => setShowLeaderboard(true)}
+							className="flex items-center gap-1 px-2.5 py-1 bg-gradient-to-r from-orange-500 to-amber-500 rounded-lg text-[10px] font-bold text-white shadow-sm active:scale-95 transition"
+							title="Peringkat Absen Terbaik">
+							<LuTrophy className="h-3.5 w-3.5" /> Peringkat
+						</button>
+						{eligible?.device_registered ? (
+							<span className="flex items-center gap-1 px-2 py-0.5 bg-emerald-50 rounded-lg text-[9px] font-bold text-emerald-600">
+								<LuShieldCheck className="h-3 w-3" />
+							</span>
+						) : (
+							<span className="flex items-center gap-1 px-2 py-0.5 bg-red-50 rounded-lg text-[9px] font-bold text-red-500">
+								<FiAlertCircle className="h-3 w-3" /> Belum
+							</span>
+						)}
+					</div>
 				</div>
 				<div className="text-center">
 				<p className="text-[10px] text-slate-400 font-medium tracking-wide">
@@ -1186,6 +1195,8 @@ const AbsensiPage = () => {
 			</AnimatePresence>
 
 			<AbsensiSuccessPopup show={successPopup.show} data={successPopup.data} onClose={() => setSuccessPopup({ show: false, data: null })} />
+
+			<AttendanceLeaderboardModal open={showLeaderboard} onClose={() => setShowLeaderboard(false)} highlightUserId={user?.id} />
 
 			<style>{`.scrollbar-none::-webkit-scrollbar{display:none}.scrollbar-none{-ms-overflow-style:none;scrollbar-width:none}`}</style>
 		</div>
