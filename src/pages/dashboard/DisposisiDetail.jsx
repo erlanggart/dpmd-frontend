@@ -27,6 +27,7 @@ export default function DisposisiDetail() {
   const [showTeruskanModal, setShowTeruskanModal] = useState(false);
   const [showPdfModal, setShowPdfModal] = useState(false);
   const [pdfUrl, setPdfUrl] = useState('');
+  const [pdfTitle, setPdfTitle] = useState('Dokumen');
   const [users, setUsers] = useState([]);
   const [selectedUserIds, setSelectedUserIds] = useState([]);
   const [formTeruskan, setFormTeruskan] = useState({ catatan: '', instruksi: ['laksanakan'] });
@@ -91,7 +92,7 @@ export default function DisposisiDetail() {
       await api.put(`/disposisi/${id}/baca`);
       toast.success('Disposisi ditandai sudah dibaca');
       fetchDisposisi();
-    } catch (error) {
+    } catch {
       toast.error('Gagal menandai disposisi');
     }
   };
@@ -101,7 +102,7 @@ export default function DisposisiDetail() {
       await api.put(`/disposisi/${id}/status`, { status });
       toast.success(`Status diubah menjadi ${status}`);
       fetchDisposisi();
-    } catch (error) {
+    } catch {
       toast.error('Gagal mengubah status');
     }
   };
@@ -222,24 +223,38 @@ export default function DisposisiDetail() {
 
   const baseUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/api$/, '') || 'http://127.0.0.1:3001';
   const filePath = suratMasuk?.file_path ? (suratMasuk.file_path.startsWith('/') ? suratMasuk.file_path : `/${suratMasuk.file_path}`) : null;
+  const dispositionFilePath = suratMasuk?.file_disposisi_path
+    ? (suratMasuk.file_disposisi_path.startsWith('/') ? suratMasuk.file_disposisi_path : `/${suratMasuk.file_disposisi_path}`)
+    : null;
+  const documents = [
+    { title: 'Surat Utama', description: 'Dokumen surat masuk resmi', path: filePath, tone: 'blue' },
+    { title: 'Kertas Disposisi', description: 'Lembar pengantar dan arahan disposisi', path: dispositionFilePath, tone: 'violet' },
+  ];
+
+  const openDocument = (document) => {
+    setPdfTitle(document.title);
+    setPdfUrl(`${baseUrl}${document.path}`);
+    setShowPdfModal(true);
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20 lg:pb-0">
+    <div className="min-h-screen bg-slate-100 pb-24 lg:pb-10">
       {/* Header */}
-      <div className="bg-white border-b sticky top-0 z-40 shadow-sm">
-        <div className="max-w-6xl mx-auto px-3 sm:px-6">
-          <div className="flex items-center h-12 sm:h-14 gap-2">
-            <button onClick={() => navigate(-1)} className="flex items-center justify-center w-9 h-9 sm:w-auto sm:h-auto sm:gap-1.5 text-gray-500 hover:text-gray-900 active:bg-gray-100 rounded-xl transition sm:mr-2">
+      <div className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
+        <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
+          <div className="flex min-h-16 items-center gap-3 py-2">
+            <button onClick={() => navigate(-1)} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition hover:bg-slate-50 hover:text-slate-900 sm:w-auto sm:gap-2 sm:px-3">
               <FiArrowLeft className="w-5 h-5" />
               <span className="text-sm font-medium hidden sm:inline">Kembali</span>
             </button>
             <div className="flex-1 min-w-0">
-              <h1 className="text-[13px] sm:text-sm font-bold text-gray-900 truncate leading-tight">
+              <p className="mb-0.5 text-[10px] font-bold uppercase tracking-[0.16em] text-blue-600">Detail Disposisi</p>
+              <h1 className="truncate text-sm font-bold leading-tight text-slate-900 sm:text-base">
                 {suratMasuk?.perihal || 'Detail Disposisi'}
               </h1>
-              <p className="text-[11px] text-gray-500 truncate">{suratMasuk?.nomor_surat}</p>
+              <p className="truncate text-[11px] text-slate-500">{suratMasuk?.nomor_surat}</p>
             </div>
-            <div className={`flex items-center gap-1 px-2 py-1 sm:gap-1.5 sm:px-3 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-bold ${statusInfo.bg} ${statusInfo.text} ring-1 ${statusInfo.ring}`}>
+            <div className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] font-bold sm:text-xs ${statusInfo.bg} ${statusInfo.text} ring-1 ${statusInfo.ring}`}>
               <StatusIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
               {statusInfo.label}
             </div>
@@ -247,14 +262,14 @@ export default function DisposisiDetail() {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-3 sm:px-6 py-3 sm:py-5">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-5">
+      <div className="mx-auto max-w-7xl px-3 py-4 sm:px-6 sm:py-7 lg:px-8">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-6">
           {/* Main Content */}
-          <div className="lg:col-span-8 space-y-3 sm:space-y-5">
+          <div className="space-y-4 lg:col-span-8">
             {/* Quick Info Bar - Card style on mobile */}
-            <div className="bg-white rounded-2xl border p-3 sm:p-0 sm:bg-transparent sm:border-0 sm:rounded-none">
-              <div className="flex items-center gap-2 sm:gap-2 sm:flex-wrap">
-                <div className="flex items-center gap-2 flex-1 min-w-0 sm:flex-none sm:px-3 sm:py-2 sm:bg-white sm:rounded-xl sm:border">
+            <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+              <div className="flex items-center gap-2">
+                <div className="flex min-w-0 flex-1 items-center gap-2 rounded-xl bg-slate-50 px-3 py-2.5">
                   <div className="w-8 h-8 sm:w-7 sm:h-7 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
                     <FiUser className="w-3.5 h-3.5 text-blue-600" />
                   </div>
@@ -266,7 +281,7 @@ export default function DisposisiDetail() {
                 <div className="flex items-center text-gray-300 flex-shrink-0">
                   <FiChevronRight className="w-4 h-4" />
                 </div>
-                <div className="flex items-center gap-2 flex-1 min-w-0 sm:flex-none sm:px-3 sm:py-2 sm:bg-white sm:rounded-xl sm:border">
+                <div className="flex min-w-0 flex-1 items-center gap-2 rounded-xl bg-slate-50 px-3 py-2.5">
                   <div className="w-8 h-8 sm:w-7 sm:h-7 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0">
                     <FiUser className="w-3.5 h-3.5 text-emerald-600" />
                   </div>
@@ -275,7 +290,7 @@ export default function DisposisiDetail() {
                     <p className="text-xs font-bold text-gray-900 truncate">{disposisi.ke_user?.name}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-indigo-50 rounded-lg flex-shrink-0 sm:ml-auto sm:bg-white sm:rounded-xl sm:border sm:px-3 sm:py-2">
+                <div className="flex shrink-0 items-center gap-1.5 rounded-xl bg-indigo-50 px-3 py-2.5">
                   <FiLayers className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-indigo-500" />
                   <span className="text-[10px] sm:text-xs font-bold text-indigo-700 sm:text-gray-700">L{disposisi.level_disposisi}</span>
                 </div>
@@ -283,8 +298,8 @@ export default function DisposisiDetail() {
             </div>
 
             {/* Instruksi & Catatan */}
-            <div className="bg-white rounded-2xl border overflow-hidden">
-              <div className="px-4 py-3 sm:px-5 sm:py-3.5 border-b bg-gradient-to-r from-indigo-50 to-purple-50">
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div className="border-b border-slate-100 px-4 py-3.5 sm:px-5">
                 <h2 className="text-[13px] sm:text-sm font-bold text-gray-900 flex items-center gap-2">
                   <FiZap className="w-4 h-4 text-indigo-500" />
                   Instruksi Disposisi
@@ -319,8 +334,8 @@ export default function DisposisiDetail() {
             </div>
 
             {/* Informasi Surat */}
-            <div className="bg-white rounded-2xl border overflow-hidden">
-              <div className="px-4 py-3 sm:px-5 sm:py-3.5 border-b bg-gradient-to-r from-blue-50 to-cyan-50">
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div className="border-b border-slate-100 px-4 py-3.5 sm:px-5">
                 <h2 className="text-[13px] sm:text-sm font-bold text-gray-900 flex items-center gap-2">
                   <FiFileText className="w-4 h-4 text-blue-500" />
                   Detail Surat Masuk
@@ -349,26 +364,52 @@ export default function DisposisiDetail() {
                   <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Perihal</p>
                   <p className="text-[13px] sm:text-sm text-gray-900 leading-relaxed">{suratMasuk?.perihal || '-'}</p>
                 </div>
-                {filePath && (
-                  <div className="flex gap-2 mt-3 sm:mt-4 pt-3 border-t">
-                    <button
-                      onClick={() => { setPdfUrl(`${baseUrl}${filePath}`); setShowPdfModal(true); }}
-                      className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 sm:py-2 bg-emerald-600 text-white rounded-xl sm:rounded-lg text-xs font-bold hover:bg-emerald-700 active:bg-emerald-800 transition"
-                    >
-                      <FiEye className="w-3.5 h-3.5" /> Lihat PDF
-                    </button>
-                    <a href={`${baseUrl}${filePath}`} download className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 sm:py-2 bg-blue-600 text-white rounded-xl sm:rounded-lg text-xs font-bold hover:bg-blue-700 active:bg-blue-800 transition">
-                      <FiDownload className="w-3.5 h-3.5" /> Download
-                    </a>
+                <div className="mt-4 border-t border-slate-100 pt-4">
+                  <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Dokumen Terlampir</p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {documents.map((document) => (
+                      <div key={document.title} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                        <div className="flex items-start gap-3">
+                          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                            document.tone === 'blue' ? 'bg-blue-100 text-blue-600' : 'bg-violet-100 text-violet-600'
+                          }`}>
+                            <FiFileText className="h-5 w-5" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-bold text-slate-900">{document.title}</p>
+                            <p className="mt-0.5 text-[11px] text-slate-500">{document.description}</p>
+                          </div>
+                        </div>
+                        {document.path ? (
+                          <div className="mt-4 flex gap-2">
+                            <button
+                              onClick={() => openDocument(document)}
+                              className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold text-white transition ${
+                                document.tone === 'blue' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-violet-600 hover:bg-violet-700'
+                              }`}
+                            >
+                              <FiEye className="h-3.5 w-3.5" /> Preview
+                            </button>
+                            <a href={`${baseUrl}${document.path}`} download className="flex items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-600 transition hover:bg-slate-100" title={`Download ${document.title}`}>
+                              <FiDownload className="h-3.5 w-3.5" />
+                            </a>
+                          </div>
+                        ) : (
+                          <div className="mt-4 rounded-lg bg-white px-3 py-2 text-center text-[11px] font-medium text-slate-400">
+                            Belum diupload
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
-                )}
+                </div>
               </div>
             </div>
 
             {/* Riwayat Disposisi */}
             {riwayat.length > 0 && (
-              <div className="bg-white rounded-2xl border overflow-hidden">
-                <div className="px-4 py-3 sm:px-5 sm:py-3.5 border-b bg-gradient-to-r from-orange-50 to-amber-50">
+              <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <div className="border-b border-slate-100 px-4 py-3.5 sm:px-5">
                   <h2 className="text-[13px] sm:text-sm font-bold text-gray-900 flex items-center gap-2">
                     <FiClock className="w-4 h-4 text-orange-500" />
                     Riwayat Disposisi
@@ -455,9 +496,9 @@ export default function DisposisiDetail() {
           </div>
 
           {/* Actions Sidebar - Desktop only */}
-          <div className="lg:col-span-4 hidden lg:block">
-            <div className="bg-white rounded-2xl border overflow-hidden sticky top-20">
-              <div className="px-5 py-3.5 border-b bg-gradient-to-r from-emerald-50 to-green-50">
+          <div className="hidden lg:col-span-4 lg:block">
+            <div className="sticky top-24 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div className="border-b border-slate-100 px-5 py-4">
                 <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
                   <FiZap className="w-4 h-4 text-emerald-500" /> Aksi
                 </h3>
@@ -778,7 +819,7 @@ export default function DisposisiDetail() {
           <div className="bg-white w-full h-full sm:rounded-2xl sm:max-w-5xl sm:max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
             <div className="flex items-center justify-between px-4 sm:px-5 py-2.5 sm:py-3 border-b flex-shrink-0">
               <h3 className="text-[13px] sm:text-sm font-bold text-gray-900 flex items-center gap-2">
-                <FiFileText className="w-4 h-4 text-blue-500" /> Preview Surat
+                <FiFileText className="w-4 h-4 text-blue-500" /> {pdfTitle}
               </h3>
               <button onClick={() => { setShowPdfModal(false); setPdfUrl(''); }} className="text-gray-400 hover:text-gray-600 p-2 sm:p-1.5 hover:bg-gray-100 active:bg-gray-200 rounded-lg transition -mr-1">
                 <FiX size={20} />

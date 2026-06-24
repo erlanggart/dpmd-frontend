@@ -15,10 +15,11 @@ const SuratMasuk = () => {
     jam_kegiatan: '',
     lokasi_kegiatan: '',
     tanggal_kegiatan: '',
-    file_surat: null
+    file_surat: null,
+    file_disposisi: null
   });
   const [loading, setLoading] = useState(false);
-  const [fileName, setFileName] = useState('');
+  const [fileNames, setFileNames] = useState({ file_surat: '', file_disposisi: '' });
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -29,6 +30,7 @@ const SuratMasuk = () => {
   };
 
   const handleFileChange = (e) => {
+    const { name } = e.target;
     const file = e.target.files[0];
     if (file) {
       // Validate file type (PDF only)
@@ -47,9 +49,9 @@ const SuratMasuk = () => {
 
       setFormData(prev => ({
         ...prev,
-        file_surat: file
+        [name]: file
       }));
-      setFileName(file.name);
+      setFileNames(prev => ({ ...prev, [name]: file.name }));
     }
   };
 
@@ -58,8 +60,9 @@ const SuratMasuk = () => {
     
     // Validation
     if (!formData.asal_surat || !formData.nomor_surat || !formData.perihal_surat || 
-        !formData.tanggal_diterima || !formData.ringkasan_isi || !formData.file_surat) {
-      Swal.fire('Error', 'Mohon lengkapi semua field yang diperlukan!', 'error');
+        !formData.tanggal_diterima || !formData.ringkasan_isi ||
+        !formData.file_surat || !formData.file_disposisi) {
+      Swal.fire('Dokumen Belum Lengkap', 'File surat dan kertas disposisi wajib diupload.', 'warning');
       return;
     }
 
@@ -76,6 +79,7 @@ const SuratMasuk = () => {
       if (formData.lokasi_kegiatan) submitData.append('lokasi_kegiatan', formData.lokasi_kegiatan);
       if (formData.tanggal_kegiatan) submitData.append('tanggal_kegiatan', formData.tanggal_kegiatan);
       submitData.append('file_surat', formData.file_surat);
+      submitData.append('file_disposisi', formData.file_disposisi);
 
       const response = await api.post('/disposisi/surat-masuk', submitData, {
         headers: {
@@ -101,12 +105,14 @@ const SuratMasuk = () => {
           jam_kegiatan: '',
           lokasi_kegiatan: '',
           tanggal_kegiatan: '',
-          file_surat: null
+          file_surat: null,
+          file_disposisi: null
         });
         
         // Reset file input
         document.getElementById('file_surat').value = '';
-        setFileName('');
+        document.getElementById('file_disposisi').value = '';
+        setFileNames({ file_surat: '', file_disposisi: '' });
       }
     } catch (error) {
       console.error('Error submitting surat masuk:', error);
@@ -336,10 +342,10 @@ const SuratMasuk = () => {
                         <div className="text-center">
                           <i className="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-2"></i>
                           <p className="text-sm font-medium text-gray-700">
-                            {fileName ? (
+                            {fileNames.file_surat ? (
                               <span className="text-blue-600">
                                 <i className="fas fa-file-pdf mr-2"></i>
-                                {fileName}
+                                {fileNames.file_surat}
                               </span>
                             ) : (
                               'Klik untuk upload file PDF'
@@ -359,6 +365,51 @@ const SuratMasuk = () => {
                     </div>
                   </div>
 
+                  {/* Upload Kertas Disposisi */}
+                  <div className="group">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700 mb-2">
+                      <i className="fas fa-file-signature text-violet-500"></i>
+                      <span>Upload Kertas Disposisi (PDF) *</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="file"
+                        id="file_disposisi"
+                        name="file_disposisi"
+                        onChange={handleFileChange}
+                        accept=".pdf"
+                        className="hidden"
+                        required
+                      />
+                      <label
+                        htmlFor="file_disposisi"
+                        className={`flex w-full cursor-pointer items-center justify-center rounded-2xl border-2 border-dashed px-4 py-8 transition ${
+                          fileNames.file_disposisi
+                            ? 'border-violet-400 bg-violet-50 ring-4 ring-violet-50'
+                            : 'border-gray-300 bg-gradient-to-br from-gray-50 to-gray-100 hover:border-violet-500 hover:bg-violet-50'
+                        }`}
+                      >
+                        <div className="text-center">
+                          <i className="fas fa-file-signature text-4xl text-violet-400 mb-2"></i>
+                          <p className="text-sm font-medium text-gray-700">
+                            {fileNames.file_disposisi ? (
+                              <span className="text-violet-600">
+                                <i className="fas fa-file-pdf mr-2"></i>
+                                {fileNames.file_disposisi}
+                              </span>
+                            ) : (
+                              'Klik untuk upload kertas disposisi'
+                            )}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">Format PDF · Maksimal 10MB</p>
+                        </div>
+                      </label>
+                    </div>
+                    <div className="mt-3 rounded-xl border border-violet-200 bg-violet-50 p-3 text-xs text-violet-700">
+                      Kertas disposisi akan ikut tersedia untuk seluruh penerima dalam rantai disposisi.
+                    </div>
+                  </div>
+
                   {/* Action Buttons */}
                   <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t-2 border-gray-100">
                     <button
@@ -373,10 +424,12 @@ const SuratMasuk = () => {
                           jam_kegiatan: '',
                           lokasi_kegiatan: '',
                           tanggal_kegiatan: '',
-                          file_surat: null
+                          file_surat: null,
+                          file_disposisi: null
                         });
                         document.getElementById('file_surat').value = '';
-                        setFileName('');
+                        document.getElementById('file_disposisi').value = '';
+                        setFileNames({ file_surat: '', file_disposisi: '' });
                       }}
                       disabled={loading}
                       className="flex-1 px-6 py-3.5 bg-white border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 hover:border-red-400 hover:text-red-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shadow-sm"

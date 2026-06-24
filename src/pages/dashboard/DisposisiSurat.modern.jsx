@@ -35,6 +35,7 @@ import { toast } from "react-hot-toast";
 import Swal from "sweetalert2";
 import { INSTRUKSI_OPTIONS } from "../../constants/disposisiInstruksi";
 import useDisposisiAutoReload from "../../hooks/useDisposisiAutoReload";
+import SuratMasuk from "../bidang/sekretariat/disposisi/SuratMasuk";
 
 const EXECUTIVE_ROLES = ["kepala_dinas", "sekretaris_dinas"];
 
@@ -324,7 +325,9 @@ export default function DisposisiSuratModern() {
 	// Get user first before using in state
 	const user = JSON.parse(localStorage.getItem("user") || "{}");
 	const isSecretariat =
-		user.role === "sekretariat" || user.role === "superadmin";
+		user.role === "sekretariat" ||
+		user.role === "superadmin" ||
+		Number(user.bidang_id) === 2;
 
 	// Get theme color based on user role
 	const getThemeColors = () => {
@@ -753,6 +756,7 @@ export default function DisposisiSuratModern() {
 						{/* Action Button - Only for Sekretariat */}
 						{isSecretariat && (
 							<button
+								onClick={() => setActiveTab("surat-masuk")}
 								className={`flex items-center justify-center gap-2 px-6 py-3 bg-white text-${themeColors.primary}-600 rounded-xl hover:bg-${themeColors.primary}-50 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all`}
 							>
 								<Plus className="h-5 w-5" />
@@ -1571,15 +1575,7 @@ export default function DisposisiSuratModern() {
 						)}
 
 						{activeTab === "surat-masuk" && isSecretariat && (
-							<div className="bg-white rounded-2xl shadow-lg p-12 text-center">
-								<Inbox className="mx-auto h-16 w-16 text-blue-400 mb-4" />
-								<h3 className="text-xl font-bold text-gray-800 mb-2">
-									Surat Masuk
-								</h3>
-								<p className="text-gray-500">
-									Menampilkan surat masuk yang belum didisposisi
-								</p>
-							</div>
+							<SuratMasuk />
 						)}
 					</div>
 				)}
