@@ -441,7 +441,7 @@ const AbsensiManagementPage = () => {
   };
 
   const handleOpenManualAttendance = async () => {
-    await Promise.all([fetchPegawai(), fetchSettings()]);
+    await fetchSettings();
     setShowManualAttendanceModal(true);
   };
 
@@ -648,14 +648,6 @@ const AbsensiManagementPage = () => {
   }, [rekapPegawaiData, rekapSearch]);
 
   const rekapCalendarDays = rekapPegawaiData?.calendar_days || [];
-  const employeeIdsWithAttendance = useMemo(
-    () => new Set(records.map((record) => String(record.user_id || record.user?.id))),
-    [records],
-  );
-  const employeesWithoutAttendance = useMemo(
-    () => pegawai.filter((employee) => !employeeIdsWithAttendance.has(String(employee.id))),
-    [pegawai, employeeIdsWithAttendance],
-  );
 
   const handleExportExcel = async () => {
     try {
@@ -1684,14 +1676,12 @@ const AbsensiManagementPage = () => {
                   className="flex items-center gap-1.5 px-3 py-2 bg-emerald-50 text-emerald-700 rounded-xl text-xs font-bold border border-emerald-200 hover:bg-emerald-100 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
                   <LuFileSpreadsheet className="h-4 w-4" /> Excel
                 </button>
-                {filterMode === "harian" && (
-                  <button
-                    onClick={handleOpenManualAttendance}
-                    className="flex items-center gap-1.5 px-3 py-2 bg-orange-500 text-white rounded-xl text-xs font-bold border border-orange-500 hover:bg-orange-600 transition-all shadow-sm shadow-orange-200"
-                  >
-                    <FiUserPlus className="h-4 w-4" /> Isi Presensi Kosong
-                  </button>
-                )}
+                <button
+                  onClick={handleOpenManualAttendance}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-orange-500 text-white rounded-xl text-xs font-bold border border-orange-500 hover:bg-orange-600 transition-all shadow-sm shadow-orange-200"
+                >
+                  <FiUserPlus className="h-4 w-4" /> Isi Presensi Kosong
+                </button>
               </div>
             </div>
 
@@ -2378,8 +2368,7 @@ const AbsensiManagementPage = () => {
       )}
       {showManualAttendanceModal && (
         <ManualAttendanceModal
-          employees={employeesWithoutAttendance}
-          date={filterDate}
+          initialDate={filterDate}
           settings={settings}
           onClose={() => setShowManualAttendanceModal(false)}
           onSave={handleCreateManualAttendance}
@@ -2410,7 +2399,10 @@ const AbsensiManagementPage = () => {
 };
 
 // ═══ Edit Absensi Modal ═══════════════════════════════════════
-const ManualAttendanceModal = ({ employees, date, settings, onClose, onSave }) => {
+const ManualAttendanceModal = ({ initialDate, settings, onClose, onSave }) => {
+  const [date, setDate] = useState(initialDate);
+  const [employees, setEmployees] = useState([]);
+  const [loadingEmployees, setLoadingEmployees] = useState(true);
   const [employeeId, setEmployeeId] = useState("");
   const [status, setStatus] = useState("hadir");
   const [jamMasuk, setJamMasuk] = useState(settings.jam_masuk || "08:00");
@@ -2419,6 +2411,34 @@ const ManualAttendanceModal = ({ employees, date, settings, onClose, onSave }) =
   const [tujuanDinas, setTujuanDinas] = useState("");
   const [search, setSearch] = useState("");
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    const loadMissingEmployees = async () => {
+      setLoadingEmployees(true);
+      setEmployeeId("");
+      try {
+        const response = await api.get("/absensi/admin/presensi-kosong", {
+          params: { tanggal: date },
+        });
+        if (active) setEmployees(response.data.data || []);
+      } catch (error) {
+        if (active) {
+          setEmployees([]);
+          showAlert({
+            icon: "error",
+            title: "Gagal Memuat Pegawai",
+            text: error.response?.data?.message || "Daftar presensi kosong gagal dimuat",
+          });
+        }
+      } finally {
+        if (active) setLoadingEmployees(false);
+      }
+    };
+
+    loadMissingEmployees();
+    return () => { active = false; };
+  }, [date]);
 
   const isPresent = PRESENT_STATUSES.includes(status);
   const filteredEmployees = employees.filter((employee) => {
@@ -2475,7 +2495,23 @@ const ManualAttendanceModal = ({ employees, date, settings, onClose, onSave }) =
           </div>
 
           <div className="space-y-5 p-5">
-            {employees.length === 0 ? (
+            <div>
+              <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-slate-400">Tanggal Presensi</label>
+              <input
+                type="date"
+                value={date}
+                max={new Date().toISOString().slice(0, 10)}
+                onChange={(event) => setDate(event.target.value)}
+                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold focus:border-orange-400 focus:ring-2 focus:ring-orange-500/20"
+              />
+            </div>
+
+            {loadingEmployees ? (
+              <div className="flex items-center justify-center gap-3 rounded-2xl bg-slate-50 px-5 py-8 text-sm text-slate-500">
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-orange-200 border-t-orange-500" />
+                Memuat pegawai yang belum absen...
+              </div>
+            ) : employees.length === 0 ? (
               <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-8 text-center">
                 <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-xl">✓</div>
                 <p className="font-bold text-emerald-800">Semua pegawai sudah tercatat</p>
@@ -2560,7 +2596,7 @@ const ManualAttendanceModal = ({ employees, date, settings, onClose, onSave }) =
 
           <div className="sticky bottom-0 flex gap-3 border-t border-slate-100 bg-white px-5 py-4">
             <button onClick={onClose} className="flex-1 rounded-xl border border-slate-200 py-2.5 font-semibold text-slate-600 hover:bg-slate-50">Batal</button>
-            {employees.length > 0 && (
+            {!loadingEmployees && employees.length > 0 && (
               <button onClick={handleSave} disabled={saving}
                 className="flex-1 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 py-2.5 font-bold text-white shadow-sm shadow-orange-200 hover:from-orange-600 hover:to-amber-600 disabled:opacity-50">
                 {saving ? "Menyimpan..." : "Simpan Presensi"}
