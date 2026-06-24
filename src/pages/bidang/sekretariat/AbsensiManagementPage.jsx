@@ -1442,12 +1442,14 @@ const AbsensiManagementPage = () => {
                   </div>
                 </div>
 
-                {/* Monthly Calendar Recap */}
+                {/* Calendar Recap */}
                 <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden">
                   <div className="px-5 py-4 border-b border-slate-100 bg-white">
                     <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                       <div>
-                        <h3 className="font-black text-slate-800 text-sm">Kalender Presensi Bulanan</h3>
+                        <h3 className="font-black text-slate-800 text-sm">
+                          Kalender Presensi {rekapPeriode === 'minggu' ? 'Mingguan' : rekapPeriode === 'bulan' ? 'Bulanan' : 'Tahunan'}
+                        </h3>
                         <p className="text-[11px] text-slate-400 mt-0.5">
                           Setiap kolom hari kerja menampilkan jam masuk dan jam keluar per pegawai
                         </p>
@@ -1539,8 +1541,16 @@ const AbsensiManagementPage = () => {
                     </div>
                   ) : (
                     <div className="p-8 text-center">
-                      <p className="text-sm font-semibold text-slate-600">Kalender harian tersedia untuk periode bulanan.</p>
-                      <p className="text-xs text-slate-400 mt-1">Pilih tab Bulanan untuk melihat format kalender selama 1 bulan.</p>
+                      <p className="text-sm font-semibold text-slate-600">
+                        {rekapPeriode === 'tahun'
+                          ? 'Kalender harian tidak ditampilkan untuk periode tahunan.'
+                          : 'Tidak ada hari kerja pada periode yang dipilih.'}
+                      </p>
+                      <p className="text-xs text-slate-400 mt-1">
+                        {rekapPeriode === 'tahun'
+                          ? 'Pilih Mingguan atau Bulanan untuk melihat rincian presensi harian.'
+                          : 'Silakan pilih tanggal referensi atau periode lain.'}
+                      </p>
                     </div>
                   )}
 
