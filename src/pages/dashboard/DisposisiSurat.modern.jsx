@@ -36,6 +36,287 @@ import Swal from "sweetalert2";
 import { INSTRUKSI_OPTIONS } from "../../constants/disposisiInstruksi";
 import useDisposisiAutoReload from "../../hooks/useDisposisiAutoReload";
 
+const EXECUTIVE_ROLES = ["kepala_dinas", "sekretaris_dinas"];
+
+const ExecutiveDisposisiView = ({
+	user,
+	activeTab,
+	setActiveTab,
+	statistik,
+	loading,
+	searchQuery,
+	setSearchQuery,
+	filterStatus,
+	setFilterStatus,
+	items,
+	totalItems,
+	currentPage,
+	setCurrentPage,
+	itemsPerPage,
+	totalPages,
+	getStatusBadge,
+	formatTanggal,
+	handleBacaDisposisi,
+	navigate,
+}) => {
+	const isKepalaDinas = user.role === "kepala_dinas";
+	const roleLabel = isKepalaDinas ? "Kepala Dinas" : "Sekretaris Dinas";
+	const accent = isKepalaDinas
+		? {
+				soft: "bg-blue-50",
+				text: "text-blue-700",
+				button: "bg-blue-600 hover:bg-blue-700",
+				ring: "focus:ring-blue-500",
+				border: "border-blue-200",
+			}
+		: {
+				soft: "bg-indigo-50",
+				text: "text-indigo-700",
+				button: "bg-indigo-600 hover:bg-indigo-700",
+				ring: "focus:ring-indigo-500",
+				border: "border-indigo-200",
+			};
+
+	const incomingStats = statistik?.masuk || {};
+	const summary = [
+		{ label: "Perlu dibaca", value: incomingStats.pending || 0, icon: Mail, color: "text-amber-600", bg: "bg-amber-50" },
+		{ label: "Sudah dibaca", value: incomingStats.dibaca || 0, icon: Eye, color: "text-sky-600", bg: "bg-sky-50" },
+		{ label: "Dalam proses", value: incomingStats.proses || 0, icon: Clock, color: "text-violet-600", bg: "bg-violet-50" },
+		{ label: "Selesai", value: incomingStats.selesai || 0, icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-50" },
+	];
+
+	return (
+		<div className="min-h-screen bg-slate-50 pb-24 lg:pb-10">
+			<div className="border-b border-slate-200 bg-white">
+				<div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+					<div className="flex items-start justify-between gap-4">
+						<div className="flex min-w-0 items-center gap-3 sm:gap-4">
+							<div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${accent.soft} ${accent.text}`}>
+								<Mail className="h-5 w-5" />
+							</div>
+							<div className="min-w-0">
+								<p className={`mb-1 text-xs font-semibold uppercase tracking-[0.16em] ${accent.text}`}>
+									{roleLabel}
+								</p>
+								<h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+									Disposisi Surat
+								</h1>
+								<p className="mt-1 text-sm text-slate-500">
+									Pantau dan tindak lanjuti surat secara ringkas.
+								</p>
+							</div>
+						</div>
+						<div className="hidden rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-right sm:block">
+							<p className="text-xs text-slate-500">Total disposisi masuk</p>
+							<p className="text-lg font-bold text-slate-900">{incomingStats.total || 0}</p>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<main className="mx-auto max-w-6xl space-y-5 px-4 py-5 sm:px-6 sm:py-7 lg:px-8">
+				<section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+					{summary.map(({ label, value, icon: Icon, color, bg }) => (
+						<div key={label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+							<div className="flex items-center justify-between gap-3">
+								<div>
+									<p className="text-xs font-medium text-slate-500">{label}</p>
+									<p className="mt-1 text-2xl font-bold tracking-tight text-slate-900">{value}</p>
+								</div>
+								<div className={`flex h-9 w-9 items-center justify-center rounded-xl ${bg} ${color}`}>
+									<Icon className="h-4 w-4" />
+								</div>
+							</div>
+						</div>
+					))}
+				</section>
+
+				<section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+					<div className="border-b border-slate-200 p-3 sm:p-4">
+						<div className="flex rounded-xl bg-slate-100 p-1">
+							{[
+								{ id: "masuk", label: "Disposisi Masuk", icon: Inbox, count: incomingStats.total || 0 },
+								{ id: "keluar", label: "Disposisi Keluar", icon: Send, count: statistik?.keluar?.total || 0 },
+							].map(({ id, label, icon: Icon, count }) => (
+								<button
+									key={id}
+									type="button"
+									onClick={() => {
+										setActiveTab(id);
+										setCurrentPage(1);
+									}}
+									className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold transition ${
+										activeTab === id
+											? `bg-white ${accent.text} shadow-sm`
+											: "text-slate-500 hover:text-slate-800"
+									}`}
+								>
+									<Icon className="h-4 w-4" />
+									<span>{label}</span>
+									<span className={`rounded-full px-2 py-0.5 text-[11px] ${activeTab === id ? accent.soft : "bg-slate-200 text-slate-600"}`}>
+										{count}
+									</span>
+								</button>
+							))}
+						</div>
+					</div>
+
+					<div className="flex flex-col gap-3 border-b border-slate-200 p-4 sm:flex-row">
+						<div className="relative flex-1">
+							<Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+							<input
+								type="search"
+								value={searchQuery}
+								onChange={(event) => {
+									setSearchQuery(event.target.value);
+									setCurrentPage(1);
+								}}
+								placeholder="Cari nomor atau perihal surat"
+								className={`w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm text-slate-800 outline-none transition focus:bg-white focus:ring-2 ${accent.ring}`}
+							/>
+						</div>
+						<select
+							value={filterStatus}
+							onChange={(event) => {
+								setFilterStatus(event.target.value);
+								setCurrentPage(1);
+							}}
+							className={`rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-700 outline-none focus:bg-white focus:ring-2 ${accent.ring}`}
+						>
+							<option value="all">Semua status</option>
+							<option value="pending">Belum dibaca</option>
+							<option value="dibaca">Sudah dibaca</option>
+							<option value="proses">Dalam proses</option>
+							<option value="selesai">Selesai</option>
+							<option value="teruskan">Diteruskan</option>
+						</select>
+					</div>
+
+					{loading ? (
+						<div className="flex min-h-72 flex-col items-center justify-center gap-3">
+							<div className={`h-9 w-9 animate-spin rounded-full border-2 border-slate-200 border-t-current ${accent.text}`} />
+							<p className="text-sm text-slate-500">Memuat disposisi...</p>
+						</div>
+					) : items.length === 0 ? (
+						<div className="flex min-h-72 flex-col items-center justify-center px-6 text-center">
+							<div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+								<Inbox className="h-6 w-6" />
+							</div>
+							<h2 className="font-semibold text-slate-800">Belum ada disposisi</h2>
+							<p className="mt-1 max-w-sm text-sm text-slate-500">
+								{searchQuery || filterStatus !== "all"
+									? "Tidak ada data yang cocok dengan pencarian atau filter."
+									: `Belum ada disposisi ${activeTab} saat ini.`}
+							</p>
+						</div>
+					) : (
+						<div className="divide-y divide-slate-100">
+							{items.map((disposisi) => {
+								const statusConfig = getStatusBadge(disposisi.status);
+								const StatusIcon = statusConfig.icon;
+								const person = activeTab === "masuk"
+									? disposisi.dari_user?.name
+									: disposisi.ke_user?.name || disposisi.kepada_user?.name;
+
+								return (
+									<article
+										key={disposisi.id}
+										onClick={() => navigate(`/dpmd/disposisi/${disposisi.id}`)}
+										className="group cursor-pointer p-4 transition hover:bg-slate-50 sm:p-5"
+									>
+										<div className="flex items-start gap-3 sm:gap-4">
+											<div className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${accent.soft} ${accent.text}`}>
+												<FileText className="h-5 w-5" />
+											</div>
+											<div className="min-w-0 flex-1">
+												<div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+													<div className="min-w-0">
+														<h3 className="line-clamp-2 text-sm font-semibold leading-5 text-slate-900 group-hover:text-slate-700 sm:text-base">
+															{disposisi.surat?.perihal || "Tanpa perihal"}
+														</h3>
+														<p className="mt-1 text-xs font-medium text-slate-500">
+															{disposisi.surat?.nomor_surat || "Nomor surat tidak tersedia"}
+														</p>
+													</div>
+													<span className={`inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusConfig.bg} ${statusConfig.text}`}>
+														<StatusIcon className="h-3 w-3" />
+														{statusConfig.label}
+													</span>
+												</div>
+
+												<div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-500">
+													<span className="inline-flex items-center gap-1.5">
+														<User className="h-3.5 w-3.5" />
+														{activeTab === "masuk" ? "Dari" : "Kepada"}: {person || "-"}
+													</span>
+													<span className="inline-flex items-center gap-1.5">
+														<Calendar className="h-3.5 w-3.5" />
+														{formatTanggal(disposisi.tanggal_disposisi)}
+													</span>
+												</div>
+
+												{disposisi.catatan && (
+													<p className="mt-3 line-clamp-2 rounded-lg bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-600">
+														{disposisi.catatan}
+													</p>
+												)}
+
+												<div className="mt-3 flex items-center justify-end gap-2">
+													{activeTab === "masuk" && disposisi.status === "pending" && (
+														<button
+															type="button"
+															onClick={(event) => {
+																event.stopPropagation();
+																handleBacaDisposisi(disposisi.id);
+															}}
+															className={`rounded-lg px-3 py-2 text-xs font-semibold text-white transition ${accent.button}`}
+														>
+															Tandai dibaca
+														</button>
+													)}
+													<span className={`inline-flex items-center gap-1 text-xs font-semibold ${accent.text}`}>
+														Lihat detail <ChevronRight className="h-3.5 w-3.5" />
+													</span>
+												</div>
+											</div>
+										</div>
+									</article>
+								);
+							})}
+						</div>
+					)}
+
+					{!loading && totalItems > itemsPerPage && (
+						<div className="flex flex-col gap-3 border-t border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between">
+							<p className="text-xs text-slate-500">
+								Halaman {currentPage} dari {totalPages}
+							</p>
+							<div className="flex gap-2">
+								<button
+									type="button"
+									onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+									disabled={currentPage === 1}
+									className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+								>
+									Sebelumnya
+								</button>
+								<button
+									type="button"
+									onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+									disabled={currentPage >= totalPages}
+									className={`rounded-lg px-3 py-2 text-xs font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-40 ${accent.button}`}
+								>
+									Berikutnya
+								</button>
+							</div>
+						</div>
+					)}
+				</section>
+			</main>
+		</div>
+	);
+};
+
 export default function DisposisiSuratModern() {
 	const navigate = useNavigate();
 	const location = useLocation();
@@ -140,7 +421,7 @@ export default function DisposisiSuratModern() {
 	useEffect(() => {
 		fetchData();
 		setCurrentPageDisposisiMasuk(1);
-	}, [activeTab]);
+	}, [fetchData]);
 
 	const handleBacaDisposisi = async (id) => {
 		try {
@@ -213,7 +494,7 @@ export default function DisposisiSuratModern() {
 		try {
 			existingInstruksi = JSON.parse(disposisi.instruksi);
 			if (!Array.isArray(existingInstruksi)) existingInstruksi = [disposisi.instruksi];
-		} catch (e) {
+		} catch {
 			existingInstruksi = [disposisi.instruksi];
 		}
 
@@ -376,6 +657,45 @@ export default function DisposisiSuratModern() {
 		filteredDisposisiKeluar,
 		currentPageDisposisiMasuk,
 	);
+
+	if (EXECUTIVE_ROLES.includes(user.role)) {
+		const executiveItems =
+			activeTab === "masuk"
+				? paginatedDisposisiMasuk
+				: paginatedDisposisiKeluar;
+		const executiveTotal =
+			activeTab === "masuk"
+				? filteredDisposisiMasuk.length
+				: filteredDisposisiKeluar.length;
+
+		return (
+			<ExecutiveDisposisiView
+				user={user}
+				activeTab={activeTab}
+				setActiveTab={setActiveTab}
+				statistik={statistik}
+				loading={loading}
+				searchQuery={searchQuery}
+				setSearchQuery={setSearchQuery}
+				filterStatus={filterStatus}
+				setFilterStatus={setFilterStatus}
+				items={executiveItems}
+				totalItems={executiveTotal}
+				currentPage={currentPageDisposisiMasuk}
+				setCurrentPage={setCurrentPageDisposisiMasuk}
+				itemsPerPage={itemsPerPage}
+				totalPages={getTotalPages(
+					activeTab === "masuk"
+						? filteredDisposisiMasuk
+						: filteredDisposisiKeluar,
+				)}
+				getStatusBadge={getStatusBadge}
+				formatTanggal={formatTanggal}
+				handleBacaDisposisi={handleBacaDisposisi}
+				navigate={navigate}
+			/>
+		);
+	}
 
 	return (
 		<div className="min-h-screen bg-gray-50 pb-20 lg:pb-8">
