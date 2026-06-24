@@ -32,6 +32,14 @@ const PRESENT_STATUSES = ['hadir', 'wfh', 'wfa', 'dinas_luar'];
 // Statuses yang dianggap "Tidak Masuk"
 const ABSENT_STATUSES = ['izin', 'sakit', 'alpha', 'cuti'];
 
+// Kategori peringkat absensi (urutan = urutan tampil). Satu kategori bisa
+// mencakup beberapa status kepegawaian — PPPK PW & Tenaga Alih Daya digabung.
+const ATTENDANCE_CATEGORIES = [
+  { key: 'pppk_alihdaya', label: 'PPPK PW & Tenaga Alih Daya', short: 'PPPK & Alih Daya', statuses: ['PPPK_Paruh_Waktu', 'Tenaga_Alih_Daya'] },
+  { key: 'Tenaga_Kebersihan', label: 'Petugas Kebersihan', short: 'Kebersihan', statuses: ['Tenaga_Kebersihan'] },
+  { key: 'Tenaga_Keamanan', label: 'Petugas Keamanan', short: 'Keamanan', statuses: ['Tenaga_Keamanan'] },
+];
+
 // Hitung jumlah hari Masuk & Tidak Masuk berdasarkan kalender hari kerja.
 // Hari kerja yang sudah lewat (atau hari ini) tanpa record kehadiran "Masuk"
 // dihitung sebagai Tidak Masuk — termasuk hari yang sama sekali tidak absen.
@@ -346,6 +354,7 @@ const AbsensiManagementPage = () => {
   const [peringkatPeriode, setPeringkatPeriode] = useState("bulan");
   const [peringkatLoading, setPeringkatLoading] = useState(false);
   const [peringkatSearch, setPeringkatSearch] = useState("");
+  const [peringkatKategori, setPeringkatKategori] = useState(ATTENDANCE_CATEGORIES[0].key);
 
   // User History Modal state
   const [historyUser, setHistoryUser] = useState(null);
@@ -778,12 +787,23 @@ const AbsensiManagementPage = () => {
 
   const rekapCalendarDays = rekapPegawaiData?.calendar_days || [];
 
-  // Leaderboard juara absensi (semua pegawai yang hadir), diperingkat skor gabungan.
+  // Leaderboard juara absensi per kategori (status kepegawaian), skor gabungan.
+  const leaderboardByCategory = useMemo(() => {
+    const all = peringkatData?.pegawai || [];
+    const jamMasuk = peringkatData?.settings?.jam_masuk;
+    const map = {};
+    ATTENDANCE_CATEGORIES.forEach((cat) => {
+      const inCat = all.filter((p) => cat.statuses.includes(p.user?.pegawai?.status_kepegawaian));
+      map[cat.key] = buildLeaderboard(inCat, jamMasuk);
+    });
+    return map;
+  }, [peringkatData]);
   const leaderboard = useMemo(
-    () => buildLeaderboard(peringkatData?.pegawai, peringkatData?.settings?.jam_masuk),
-    [peringkatData]
+    () => leaderboardByCategory[peringkatKategori] || [],
+    [leaderboardByCategory, peringkatKategori]
   );
   const podiumTop3 = leaderboard.slice(0, 3);
+  const activeKategori = ATTENDANCE_CATEGORIES.find((c) => c.key === peringkatKategori) || ATTENDANCE_CATEGORIES[0];
   const filteredLeaderboard = useMemo(() => {
     if (!peringkatSearch) return leaderboard;
     const keyword = peringkatSearch.toLowerCase();
@@ -1145,6 +1165,7 @@ const AbsensiManagementPage = () => {
       const pageHeight = doc.internal.pageSize.getHeight();
       const margin = 12;
       const periodeLabel = peringkatData?.periode_label || peringkatPeriode;
+      const kategoriLabel = activeKategori.label;
 
       // ── Header band ──
       doc.setFillColor(194, 65, 12);
@@ -1154,7 +1175,7 @@ const AbsensiManagementPage = () => {
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(14);
       doc.setFont(undefined, "bold");
-      doc.text("PERINGKAT ABSENSI PEGAWAI", margin, 11);
+      doc.text(`PERINGKAT ABSENSI — ${kategoriLabel.toUpperCase()}`, margin, 11);
       doc.setFontSize(8.5);
       doc.setFont(undefined, "normal");
       doc.setTextColor(255, 237, 213);
@@ -1270,7 +1291,7 @@ const AbsensiManagementPage = () => {
         },
       });
 
-      const fileName = `Peringkat_Absensi_${String(periodeLabel).replace(/\s+/g, "_")}.pdf`;
+      const fileName = `Peringkat_${kategoriLabel.replace(/\s+/g, "_")}_${String(periodeLabel).replace(/\s+/g, "_")}.pdf`;
       doc.save(fileName);
       showAlert({ icon: "success", title: "Export Berhasil", text: `File ${fileName} berhasil diunduh`, timer: 2000 });
     } catch (err) {
@@ -1697,6 +1718,27 @@ const AbsensiManagementPage = () => {
               </div>
             </div>
 
+            {/* Pemilih Kategori */}
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+              {ATTENDANCE_CATEGORIES.map((cat) => {
+                const count = (leaderboardByCategory[cat.key] || []).length;
+                const active = peringkatKategori === cat.key;
+                return (
+                  <button key={cat.key} onClick={() => setPeringkatKategori(cat.key)}
+                    className={`flex flex-col items-start rounded-2xl border p-3 text-left transition-all ${
+                      active
+                        ? "border-orange-400 bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-md"
+                        : "border-slate-200 bg-white text-slate-700 hover:border-orange-300 hover:bg-orange-50/40"
+                    }`}>
+                    <span className="text-xs font-black uppercase tracking-wide">{cat.label}</span>
+                    <span className={`mt-1 text-[11px] font-semibold ${active ? "text-white/80" : "text-slate-400"}`}>
+                      {count} pegawai
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
             {peringkatLoading ? (
               <div className="flex flex-col justify-center items-center py-20 gap-3">
                 <div className="relative h-12 w-12">
@@ -1711,7 +1753,7 @@ const AbsensiManagementPage = () => {
                 <div className="flex flex-wrap items-center justify-between gap-3 px-1">
                   <div>
                     <h3 className="font-bold text-slate-800 text-sm">
-                      Peringkat Absensi — {peringkatData?.periode_label}
+                      {activeKategori.label} — {peringkatData?.periode_label}
                     </h3>
                     <p className="text-[11px] text-slate-400">
                       {leaderboard.length} pegawai masuk peringkat • skor = kelengkapan + datang awal + tepat waktu
@@ -1856,8 +1898,8 @@ const AbsensiManagementPage = () => {
             ) : (
               <div className="rounded-2xl border border-slate-200/60 bg-white p-10 text-center shadow-sm">
                 <LuTrophy className="mx-auto mb-3 h-10 w-10 text-slate-300" />
-                <p className="text-sm font-semibold text-slate-600">Belum ada pegawai yang absen pada periode ini.</p>
-                <p className="mt-1 text-xs text-slate-400">Pilih periode lain untuk melihat peringkat.</p>
+                <p className="text-sm font-semibold text-slate-600">Belum ada pegawai {activeKategori.label} yang absen pada periode ini.</p>
+                <p className="mt-1 text-xs text-slate-400">Coba kategori atau periode lain untuk melihat peringkat.</p>
               </div>
             )}
           </div>

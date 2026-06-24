@@ -4,12 +4,15 @@ import confetti from 'canvas-confetti';
 import {
   CalendarCheck2,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   Clock3,
   Crown,
   PartyPopper,
   Sparkles,
   Star,
   Trophy,
+  Users,
   X,
 } from 'lucide-react';
 import api from '../api';
@@ -55,9 +58,17 @@ const RANK_STYLE = {
   },
 };
 
+// Ambil daftar kategori dari payload (kompatibel data lama yang masih memakai `winners`).
+const extractCategories = (data) => {
+  if (data?.categories?.length) return data.categories;
+  if (data?.winners?.length) return [{ key: 'overall', label: 'Absensi Terbaik', winners: data.winners }];
+  return [];
+};
+
 const WeeklyAttendanceAwardPopup = () => {
   const [award, setAward] = useState(null);
   const [show, setShow] = useState(false);
+  const [categoryIndex, setCategoryIndex] = useState(0);
 
   const celebrate = useCallback(() => {
     const colors = ['#facc15', '#fbbf24', '#38bdf8', '#a78bfa', '#f472b6', '#ffffff'];
@@ -73,11 +84,24 @@ const WeeklyAttendanceAwardPopup = () => {
     frame();
   }, []);
 
+  // Ledakan ringan saat berpindah kategori.
+  const burst = useCallback(() => {
+    confetti({
+      particleCount: 70,
+      spread: 80,
+      startVelocity: 38,
+      origin: { y: 0.5 },
+      colors: ['#facc15', '#fbbf24', '#38bdf8', '#a78bfa', '#ffffff'],
+    });
+  }, []);
+
   const openAward = useCallback((data) => {
-    if (!data?.week_key || !data?.winners?.length) return;
+    const categories = extractCategories(data);
+    if (!data?.week_key || !categories.length) return;
     const dismissed = localStorage.getItem(`weekly_attendance_award_${data.week_key}`);
     if (dismissed) return;
-    setAward(data);
+    setAward({ ...data, categories });
+    setCategoryIndex(0);
     setShow(true);
     setTimeout(celebrate, 350);
   }, [celebrate]);
@@ -103,6 +127,7 @@ const WeeklyAttendanceAwardPopup = () => {
       ) {
         openAward({
           week_key: payload.week_key,
+          categories: payload.categories,
           winners: payload.winners,
           month_label: payload.month_label,
           period_start: payload.period_start,
@@ -121,9 +146,23 @@ const WeeklyAttendanceAwardPopup = () => {
     setShow(false);
   };
 
-  // Urutkan pemenang menjadi tata letak podium: Juara 2 (kiri) - Juara 1 (tengah) - Juara 3 (kanan).
+  const categories = award?.categories || [];
+  const current = categories[categoryIndex] || null;
+  const isLast = categoryIndex >= categories.length - 1;
+
+  const goNext = () => {
+    if (categoryIndex < categories.length - 1) {
+      setCategoryIndex((i) => i + 1);
+      setTimeout(burst, 120);
+    }
+  };
+  const goPrev = () => {
+    if (categoryIndex > 0) setCategoryIndex((i) => i - 1);
+  };
+
+  // Urutkan pemenang kategori aktif: Juara 2 (kiri) - Juara 1 (tengah) - Juara 3 (kanan).
   const podium = useMemo(() => {
-    const winners = award?.winners || [];
+    const winners = current?.winners || [];
     const byRank = (rank) => winners.find((w) => w.rank === rank);
     const first = byRank(1) || winners[0];
     const second = byRank(2) || winners[1];
@@ -133,9 +172,9 @@ const WeeklyAttendanceAwardPopup = () => {
       first && { winner: first, rank: 1 },
       third && { winner: third, rank: 3 },
     ].filter(Boolean);
-  }, [award]);
+  }, [current]);
 
-  if (!award) return null;
+  if (!award || !current) return null;
 
   return (
     <AnimatePresence>
@@ -206,10 +245,23 @@ const WeeklyAttendanceAwardPopup = () => {
                   <Sparkles size={15} />
                 </div>
                 <h2 className="text-2xl font-black tracking-tight sm:text-4xl">
-                  🏆 Absensi Terbaik!
+                  🏆 Juara Absensi Terbaik!
                 </h2>
+                {/* Chip kategori aktif + posisi */}
+                <Motion.div
+                  key={current.key}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mt-3 inline-flex items-center gap-2 rounded-full border border-amber-300/40 bg-amber-300/15 px-4 py-1.5 text-sm font-black text-amber-200"
+                >
+                  <Users size={15} />
+                  {current.label}
+                  <span className="ml-1 rounded-full bg-amber-300/30 px-2 py-0.5 text-[10px] font-bold text-amber-100">
+                    Kategori {categoryIndex + 1}/{categories.length}
+                  </span>
+                </Motion.div>
                 <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-slate-300 sm:text-base">
-                  3 pegawai dengan absensi paling lengkap & datang paling awal periode
+                  Juara absensi paling lengkap & datang paling awal periode
                   {' '}{award.month_label || 'bulan ini'}.
                 </p>
                 {award.period_start && award.period_end && (
@@ -277,7 +329,7 @@ const WeeklyAttendanceAwardPopup = () => {
                         </div>
                       </div>
 
-                      {/* Nama & kategori */}
+                      {/* Nama & metrik */}
                       <div className="mt-3 w-full text-center">
                         <h3 className={`line-clamp-2 font-extrabold leading-tight text-white ${isChampion ? 'text-base sm:text-lg' : 'text-sm'}`}>
                           {winner.name}
@@ -320,19 +372,53 @@ const WeeklyAttendanceAwardPopup = () => {
               {/* Lantai podium */}
               <div className="mx-auto -mt-px h-2 w-full max-w-[640px] rounded-full bg-gradient-to-r from-transparent via-white/20 to-transparent" />
 
-              {/* Footer */}
+              {/* Navigasi kategori */}
               <div className="mt-6 flex flex-col items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 sm:flex-row">
-                <p className="text-center text-xs text-slate-300 sm:text-left sm:text-sm">
-                  Terima kasih sudah menjadi inspirasi kedisiplinan bagi seluruh pegawai.
-                </p>
-                <button
-                  type="button"
-                  onClick={dismiss}
-                  className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-300 to-orange-400 px-5 py-2.5 text-sm font-black text-slate-950 shadow-lg shadow-amber-500/20 transition hover:scale-[1.03] sm:w-auto"
-                >
-                  <PartyPopper size={17} />
-                  Selamat untuk Para Juara!
-                </button>
+                {/* Titik indikator kategori */}
+                <div className="flex items-center gap-2">
+                  {categories.map((c, i) => (
+                    <button
+                      key={c.key}
+                      type="button"
+                      onClick={() => setCategoryIndex(i)}
+                      aria-label={c.label}
+                      title={c.label}
+                      className={`h-2.5 rounded-full transition-all ${i === categoryIndex ? 'w-6 bg-amber-300' : 'w-2.5 bg-white/30 hover:bg-white/50'}`}
+                    />
+                  ))}
+                </div>
+
+                <div className="flex w-full gap-2 sm:w-auto">
+                  {categoryIndex > 0 && (
+                    <button
+                      type="button"
+                      onClick={goPrev}
+                      className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-white/15 bg-white/10 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-white/20 sm:flex-none"
+                    >
+                      <ChevronLeft size={17} />
+                      Sebelumnya
+                    </button>
+                  )}
+                  {!isLast ? (
+                    <button
+                      type="button"
+                      onClick={goNext}
+                      className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-300 to-orange-400 px-5 py-2.5 text-sm font-black text-slate-950 shadow-lg shadow-amber-500/20 transition hover:scale-[1.03] sm:flex-none"
+                    >
+                      Berikutnya
+                      <ChevronRight size={17} />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={dismiss}
+                      className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-300 to-orange-400 px-5 py-2.5 text-sm font-black text-slate-950 shadow-lg shadow-amber-500/20 transition hover:scale-[1.03] sm:flex-none"
+                    >
+                      <PartyPopper size={17} />
+                      Selesai
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </Motion.div>
