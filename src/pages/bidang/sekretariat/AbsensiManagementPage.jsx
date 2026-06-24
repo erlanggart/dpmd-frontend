@@ -32,6 +32,36 @@ const PRESENT_STATUSES = ['hadir', 'wfh', 'wfa', 'dinas_luar'];
 // Statuses yang dianggap "Tidak Masuk"
 const ABSENT_STATUSES = ['izin', 'sakit', 'alpha', 'cuti'];
 
+// Hitung jumlah hari Masuk & Tidak Masuk berdasarkan kalender hari kerja.
+// Hari kerja yang sudah lewat (atau hari ini) tanpa record kehadiran "Masuk"
+// dihitung sebagai Tidak Masuk — termasuk hari yang sama sekali tidak absen.
+// Hari kerja yang belum lewat (masa depan) diabaikan agar tidak salah hitung.
+const computeKehadiran = (pegawai, calendarDays, todayKey) => {
+  let masuk = 0;
+  let tidakMasuk = 0;
+  (calendarDays || []).forEach((day) => {
+    const key = getDateKey(day.date);
+    if (todayKey && key > todayKey) return; // hari belum lewat, jangan dihitung
+    const record = pegawai.daily?.[key];
+    if (record && PRESENT_STATUSES.includes(record.status)) {
+      masuk += 1;
+    } else {
+      tidakMasuk += 1;
+    }
+  });
+  return { masuk, tidakMasuk };
+};
+
+// Date key hari ini dalam zona WIB (format YYYY-MM-DD), agar hari masa depan
+// pada periode berjalan tidak ikut dihitung sebagai Tidak Masuk.
+const getTodayKeyWIB = () =>
+  new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+
 const POPUP_TYPE_LABELS = {
   masuk: "Absen Masuk", pulang: "Absen Pulang", wfh: "WFH",
   dinas_luar: "Dinas Luar", wfa: "WFA", izin: "Izin", sakit: "Sakit", cuti: "Cuti",
@@ -225,6 +255,7 @@ const AbsensiManagementPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [editingRecord, setEditingRecord] = useState(null);
   const [showManualAttendanceModal, setShowManualAttendanceModal] = useState(false);
+  const [manualAttendanceDefaults, setManualAttendanceDefaults] = useState({ date: "", employeeId: "" });
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [viewMode, setViewMode] = useState("table"); // table | card
@@ -440,8 +471,13 @@ const AbsensiManagementPage = () => {
     }
   };
 
-  const handleOpenManualAttendance = async () => {
+  const handleOpenManualAttendance = async (record = null) => {
     await fetchSettings();
+    const missingRecord = record?.is_missing ? record : null;
+    setManualAttendanceDefaults({
+      date: missingRecord ? getDateKey(missingRecord.tanggal) : filterDate,
+      employeeId: missingRecord ? String(missingRecord.user_id || missingRecord.user?.id) : "",
+    });
     setShowManualAttendanceModal(true);
   };
 
@@ -455,6 +491,7 @@ const AbsensiManagementPage = () => {
         timer: 1600,
       });
       setShowManualAttendanceModal(false);
+      setManualAttendanceDefaults({ date: "", employeeId: "" });
       await fetchRekap();
       return true;
     } catch (err) {
@@ -582,6 +619,7 @@ const AbsensiManagementPage = () => {
     s.telat = records.filter(r => r.telat_masuk_menit > 0).length;
     return s;
   }, [records]);
+  const showRecordActions = canManageAbsensiRecords || records.some(record => record.is_missing);
 
   const totalPages = Math.ceil(filteredRecords.length / RECORDS_PER_PAGE);
   const paginatedRecords = useMemo(() => {
@@ -696,8 +734,7 @@ const AbsensiManagementPage = () => {
         headers,
         ...filteredRekapPegawai.map((p, i) => {
           const daily = p.daily || {};
-          const masuk = PRESENT_STATUSES.reduce((sum, k) => sum + (p.summary?.[k] || 0), 0);
-          const tidakMasuk = ABSENT_STATUSES.reduce((sum, k) => sum + (p.summary?.[k] || 0), 0);
+          const { masuk, tidakMasuk } = computeKehadiran(p, rekapCalendarDays, getTodayKeyWIB());
           return [
             i + 1,
             p.user?.pegawai?.nama_pegawai || p.user?.name || "-",
@@ -714,14 +751,17 @@ const AbsensiManagementPage = () => {
 
       if (filteredRekapPegawai.length) {
         const gs = rekapPegawaiData.global_summary || {};
+        const todayKey = getTodayKeyWIB();
+        const totalMasuk = filteredRekapPegawai.reduce((sum, p) => sum + computeKehadiran(p, rekapCalendarDays, todayKey).masuk, 0);
+        const totalTidakMasuk = filteredRekapPegawai.reduce((sum, p) => sum + computeKehadiran(p, rekapCalendarDays, todayKey).tidakMasuk, 0);
         data.push([
           "",
           "TOTAL",
           "",
           "",
           ...rekapCalendarDays.map(() => ""),
-          PRESENT_STATUSES.reduce((sum, k) => sum + (gs[k] || 0), 0),
-          ABSENT_STATUSES.reduce((sum, k) => sum + (gs[k] || 0), 0),
+          totalMasuk,
+          totalTidakMasuk,
           gs.telat || 0,
           gs.total || 0,
         ]);
@@ -766,8 +806,9 @@ const AbsensiManagementPage = () => {
 
       const periodeLabel = rekapPegawaiData.periode_label || rekapPeriode;
       const gs = rekapPegawaiData.global_summary || {};
-      const totalMasuk = PRESENT_STATUSES.reduce((s, k) => s + (gs[k] || 0), 0);
-      const totalTidakMasuk = ABSENT_STATUSES.reduce((s, k) => s + (gs[k] || 0), 0);
+      const todayKeyTotal = getTodayKeyWIB();
+      const totalMasuk = filteredRekapPegawai.reduce((s, p) => s + computeKehadiran(p, rekapCalendarDays, todayKeyTotal).masuk, 0);
+      const totalTidakMasuk = filteredRekapPegawai.reduce((s, p) => s + computeKehadiran(p, rekapCalendarDays, todayKeyTotal).tidakMasuk, 0);
       const dayCount = rekapCalendarDays.length;
 
       // ── Header band ──
@@ -880,9 +921,9 @@ const AbsensiManagementPage = () => {
         "Tdk\nMasuk",
       ]];
 
+      const todayKeyPDF = getTodayKeyWIB();
       const body = filteredRekapPegawai.map((p) => {
-        const masuk = PRESENT_STATUSES.reduce((s, k) => s + (p.summary?.[k] || 0), 0);
-        const tidakMasuk = ABSENT_STATUSES.reduce((s, k) => s + (p.summary?.[k] || 0), 0);
+        const { masuk, tidakMasuk } = computeKehadiran(p, rekapCalendarDays, todayKeyPDF);
         return [
           p.user?.pegawai?.nama_pegawai || p.user?.name || "-",
           ...rekapCalendarDays.map((day) => formatDayCellPDF(p.daily?.[getDateKey(day.date)])),
@@ -1432,9 +1473,9 @@ const AbsensiManagementPage = () => {
                   </div>
                   {/* Total Masuk highlight */}
                   {(() => {
-                    const gs = rekapPegawaiData.global_summary || {};
-                    const totalMasuk = PRESENT_STATUSES.reduce((sum, k) => sum + (gs[k] || 0), 0);
-                    const totalTidakMasuk = ABSENT_STATUSES.reduce((sum, k) => sum + (gs[k] || 0), 0);
+                    const todayKey = getTodayKeyWIB();
+                    const totalMasuk = filteredRekapPegawai.reduce((sum, p) => sum + computeKehadiran(p, rekapCalendarDays, todayKey).masuk, 0);
+                    const totalTidakMasuk = filteredRekapPegawai.reduce((sum, p) => sum + computeKehadiran(p, rekapCalendarDays, todayKey).tidakMasuk, 0);
                     return (
                       <div className="grid grid-cols-2 gap-2.5 mb-3">
                         <div className="flex items-center gap-3 bg-emerald-50 rounded-xl p-3 ring-1 ring-emerald-200">
@@ -1514,8 +1555,7 @@ const AbsensiManagementPage = () => {
                         </thead>
                         <tbody>
                           {filteredRekapPegawai.map((p) => {
-                            const masuk = PRESENT_STATUSES.reduce((sum, k) => sum + (p.summary?.[k] || 0), 0);
-                            const tidakMasuk = ABSENT_STATUSES.reduce((sum, k) => sum + (p.summary?.[k] || 0), 0);
+                            const { masuk, tidakMasuk } = computeKehadiran(p, rekapCalendarDays, getTodayKeyWIB());
                             return (
                               <tr key={p.user.id} className="group">
                                 <td className="sticky left-0 z-10 bg-white group-hover:bg-orange-50/40 px-4 py-3.5 min-w-[230px] border-r border-b border-slate-100">
@@ -1832,7 +1872,7 @@ const AbsensiManagementPage = () => {
                         <th className="text-center px-3 py-3.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Jam Keluar</th>
                         <th className="text-center px-3 py-3.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Jarak</th>
                         <th className="text-left px-3 py-3.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Keterangan</th>
-                        {canManageAbsensiRecords && (
+                        {showRecordActions && (
                           <th className="text-center px-3 py-3.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest w-20">Aksi</th>
                         )}
                       </tr>
@@ -1891,18 +1931,28 @@ const AbsensiManagementPage = () => {
                                 {record.keterangan || ""}
                               </div>
                             </td>
-                            {canManageAbsensiRecords && (
+                            {showRecordActions && (
                               <td className="px-3 py-3 text-center">
-                                <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <button onClick={() => setEditingRecord(record)}
-                                    className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
-                                    <FiEdit2 className="h-3.5 w-3.5" />
+                                {record.is_missing ? (
+                                  <button
+                                    onClick={() => handleOpenManualAttendance(record)}
+                                    className="inline-flex items-center gap-1 rounded-lg bg-orange-50 px-2.5 py-1.5 text-[11px] font-bold text-orange-600 ring-1 ring-orange-200 transition hover:bg-orange-100"
+                                    title="Isi presensi yang kosong"
+                                  >
+                                    <FiUserPlus className="h-3.5 w-3.5" /> Isi
                                   </button>
-                                  <button onClick={() => handleDeleteRecord(record.id)}
-                                    className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Hapus">
-                                    <FiTrash2 className="h-3.5 w-3.5" />
-                                  </button>
-                                </div>
+                                ) : canManageAbsensiRecords ? (
+                                  <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button onClick={() => setEditingRecord(record)}
+                                      className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
+                                      <FiEdit2 className="h-3.5 w-3.5" />
+                                    </button>
+                                    <button onClick={() => handleDeleteRecord(record.id)}
+                                      className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Hapus">
+                                      <FiTrash2 className="h-3.5 w-3.5" />
+                                    </button>
+                                  </div>
+                                ) : null}
                               </td>
                             )}
                           </tr>
@@ -1964,14 +2014,22 @@ const AbsensiManagementPage = () => {
                             {record.keterangan || ""}
                           </p>
                         )}
-                        {canManageAbsensiRecords && (
+                        {(record.is_missing || canManageAbsensiRecords) && (
                           <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
-                            <button onClick={() => setEditingRecord(record)} className="p-1.5 bg-white text-blue-600 hover:bg-blue-50 rounded-lg shadow-md border border-slate-200">
-                              <FiEdit2 className="h-3 w-3" />
-                            </button>
-                            <button onClick={() => handleDeleteRecord(record.id)} className="p-1.5 bg-white text-red-500 hover:bg-red-50 rounded-lg shadow-md border border-slate-200">
-                              <FiTrash2 className="h-3 w-3" />
-                            </button>
+                            {record.is_missing ? (
+                              <button onClick={() => handleOpenManualAttendance(record)} className="flex items-center gap-1 rounded-lg border border-orange-200 bg-white px-2 py-1.5 text-[10px] font-bold text-orange-600 shadow-md">
+                                <FiUserPlus className="h-3 w-3" /> Isi
+                              </button>
+                            ) : (
+                              <>
+                                <button onClick={() => setEditingRecord(record)} className="p-1.5 bg-white text-blue-600 hover:bg-blue-50 rounded-lg shadow-md border border-slate-200">
+                                  <FiEdit2 className="h-3 w-3" />
+                                </button>
+                                <button onClick={() => handleDeleteRecord(record.id)} className="p-1.5 bg-white text-red-500 hover:bg-red-50 rounded-lg shadow-md border border-slate-200">
+                                  <FiTrash2 className="h-3 w-3" />
+                                </button>
+                              </>
+                            )}
                           </div>
                         )}
                       </div>
@@ -2368,9 +2426,13 @@ const AbsensiManagementPage = () => {
       )}
       {showManualAttendanceModal && (
         <ManualAttendanceModal
-          initialDate={filterDate}
+          initialDate={manualAttendanceDefaults.date || filterDate}
+          initialEmployeeId={manualAttendanceDefaults.employeeId}
           settings={settings}
-          onClose={() => setShowManualAttendanceModal(false)}
+          onClose={() => {
+            setShowManualAttendanceModal(false);
+            setManualAttendanceDefaults({ date: "", employeeId: "" });
+          }}
           onSave={handleCreateManualAttendance}
         />
       )}
@@ -2399,11 +2461,11 @@ const AbsensiManagementPage = () => {
 };
 
 // ═══ Edit Absensi Modal ═══════════════════════════════════════
-const ManualAttendanceModal = ({ initialDate, settings, onClose, onSave }) => {
+const ManualAttendanceModal = ({ initialDate, initialEmployeeId, settings, onClose, onSave }) => {
   const [date, setDate] = useState(initialDate);
   const [employees, setEmployees] = useState([]);
   const [loadingEmployees, setLoadingEmployees] = useState(true);
-  const [employeeId, setEmployeeId] = useState("");
+  const [employeeId, setEmployeeId] = useState(initialEmployeeId || "");
   const [status, setStatus] = useState("hadir");
   const [jamMasuk, setJamMasuk] = useState(settings.jam_masuk || "08:00");
   const [jamKeluar, setJamKeluar] = useState(settings.jam_pulang || "16:00");
@@ -2421,7 +2483,16 @@ const ManualAttendanceModal = ({ initialDate, settings, onClose, onSave }) => {
         const response = await api.get("/absensi/admin/presensi-kosong", {
           params: { tanggal: date },
         });
-        if (active) setEmployees(response.data.data || []);
+        if (active) {
+          const missingEmployees = response.data.data || [];
+          setEmployees(missingEmployees);
+          setEmployeeId((currentId) => {
+            const preferredId = initialEmployeeId || currentId;
+            return missingEmployees.some(employee => String(employee.id) === String(preferredId))
+              ? String(preferredId)
+              : "";
+          });
+        }
       } catch (error) {
         if (active) {
           setEmployees([]);
@@ -2438,7 +2509,7 @@ const ManualAttendanceModal = ({ initialDate, settings, onClose, onSave }) => {
 
     loadMissingEmployees();
     return () => { active = false; };
-  }, [date]);
+  }, [date, initialEmployeeId]);
 
   const isPresent = PRESENT_STATUSES.includes(status);
   const filteredEmployees = employees.filter((employee) => {
