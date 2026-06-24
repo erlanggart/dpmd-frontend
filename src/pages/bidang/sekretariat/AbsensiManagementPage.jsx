@@ -5,6 +5,7 @@ import {
   FiUsers, FiX, FiSmartphone, FiImage, FiSave,
   FiToggleLeft, FiToggleRight, FiUpload, FiSettings,
   FiChevronDown, FiChevronLeft, FiChevronRight, FiFilter, FiArrowLeft, FiEye, FiUser, FiBell, FiSend,
+  FiUserPlus,
 } from "react-icons/fi";
 import { LuDownload, LuRefreshCw, LuShieldCheck, LuWifi, LuWifiOff, LuLayoutGrid, LuList, LuFileSpreadsheet, LuFileText, LuChartColumn, LuLayoutDashboard, LuArrowUpDown, LuSlidersHorizontal } from "react-icons/lu";
 import Lottie from "lottie-react";
@@ -223,6 +224,7 @@ const AbsensiManagementPage = () => {
   const [filterMode, setFilterMode] = useState("harian");
   const [searchQuery, setSearchQuery] = useState("");
   const [editingRecord, setEditingRecord] = useState(null);
+  const [showManualAttendanceModal, setShowManualAttendanceModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [viewMode, setViewMode] = useState("table"); // table | card
@@ -438,6 +440,33 @@ const AbsensiManagementPage = () => {
     }
   };
 
+  const handleOpenManualAttendance = async () => {
+    await Promise.all([fetchPegawai(), fetchSettings()]);
+    setShowManualAttendanceModal(true);
+  };
+
+  const handleCreateManualAttendance = async (data) => {
+    try {
+      await api.post("/absensi/admin/manual", data);
+      showAlert({
+        icon: "success",
+        title: "Berhasil",
+        text: "Presensi pegawai berhasil diisi",
+        timer: 1600,
+      });
+      setShowManualAttendanceModal(false);
+      await fetchRekap();
+      return true;
+    } catch (err) {
+      showAlert({
+        icon: "error",
+        title: "Gagal Mengisi Presensi",
+        text: err.response?.data?.message || "Gagal mengisi presensi pegawai",
+      });
+      return false;
+    }
+  };
+
   const handleSaveSettings = async (newSettings) => {
     try {
       await api.put("/absensi/admin/settings", newSettings);
@@ -619,6 +648,14 @@ const AbsensiManagementPage = () => {
   }, [rekapPegawaiData, rekapSearch]);
 
   const rekapCalendarDays = rekapPegawaiData?.calendar_days || [];
+  const employeeIdsWithAttendance = useMemo(
+    () => new Set(records.map((record) => String(record.user_id || record.user?.id))),
+    [records],
+  );
+  const employeesWithoutAttendance = useMemo(
+    () => pegawai.filter((employee) => !employeeIdsWithAttendance.has(String(employee.id))),
+    [pegawai, employeeIdsWithAttendance],
+  );
 
   const handleExportExcel = async () => {
     try {
@@ -1647,6 +1684,14 @@ const AbsensiManagementPage = () => {
                   className="flex items-center gap-1.5 px-3 py-2 bg-emerald-50 text-emerald-700 rounded-xl text-xs font-bold border border-emerald-200 hover:bg-emerald-100 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
                   <LuFileSpreadsheet className="h-4 w-4" /> Excel
                 </button>
+                {filterMode === "harian" && (
+                  <button
+                    onClick={handleOpenManualAttendance}
+                    className="flex items-center gap-1.5 px-3 py-2 bg-orange-500 text-white rounded-xl text-xs font-bold border border-orange-500 hover:bg-orange-600 transition-all shadow-sm shadow-orange-200"
+                  >
+                    <FiUserPlus className="h-4 w-4" /> Isi Presensi Kosong
+                  </button>
+                )}
               </div>
             </div>
 
@@ -2331,6 +2376,15 @@ const AbsensiManagementPage = () => {
       {canManageAbsensiRecords && editingRecord && (
         <EditAbsensiModal record={editingRecord} onClose={() => setEditingRecord(null)} onSave={handleUpdateRecord} />
       )}
+      {showManualAttendanceModal && (
+        <ManualAttendanceModal
+          employees={employeesWithoutAttendance}
+          date={filterDate}
+          settings={settings}
+          onClose={() => setShowManualAttendanceModal(false)}
+          onSave={handleCreateManualAttendance}
+        />
+      )}
       {showSettingsModal && (
         <SettingsModal settings={settings} onClose={() => setShowSettingsModal(false)} onSave={handleSaveSettings} />
       )}
@@ -2356,6 +2410,169 @@ const AbsensiManagementPage = () => {
 };
 
 // ═══ Edit Absensi Modal ═══════════════════════════════════════
+const ManualAttendanceModal = ({ employees, date, settings, onClose, onSave }) => {
+  const [employeeId, setEmployeeId] = useState("");
+  const [status, setStatus] = useState("hadir");
+  const [jamMasuk, setJamMasuk] = useState(settings.jam_masuk || "08:00");
+  const [jamKeluar, setJamKeluar] = useState(settings.jam_pulang || "16:00");
+  const [keterangan, setKeterangan] = useState("");
+  const [tujuanDinas, setTujuanDinas] = useState("");
+  const [search, setSearch] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const isPresent = PRESENT_STATUSES.includes(status);
+  const filteredEmployees = employees.filter((employee) => {
+    const name = employee.pegawai?.nama_pegawai || employee.name || "";
+    const role = employee.pegawai?.jabatan || employee.pegawai?.status_kepegawaian || "";
+    return `${name} ${role}`.toLowerCase().includes(search.toLowerCase());
+  });
+
+  const handleSave = async () => {
+    if (!employeeId) {
+      showAlert({ icon: "warning", title: "Pilih Pegawai", text: "Pegawai wajib dipilih." });
+      return;
+    }
+    if (isPresent && !jamMasuk) {
+      showAlert({ icon: "warning", title: "Jam Masuk Kosong", text: "Jam masuk wajib diisi untuk status kehadiran." });
+      return;
+    }
+    if (status === "dinas_luar" && !tujuanDinas.trim()) {
+      showAlert({ icon: "warning", title: "Tujuan Dinas Kosong", text: "Tujuan dinas luar wajib diisi." });
+      return;
+    }
+
+    setSaving(true);
+    const success = await onSave({
+      user_id: employeeId,
+      tanggal: date,
+      status,
+      jam_masuk: isPresent ? jamMasuk || null : null,
+      jam_keluar: isPresent ? jamKeluar || null : null,
+      keterangan: keterangan.trim() || null,
+      tujuan_dinas: status === "dinas_luar" ? tujuanDinas.trim() : null,
+    });
+    if (!success) setSaving(false);
+  };
+
+  return (
+    <>
+      <div className="fixed inset-0 z-50 bg-black/45 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
+        <div className="max-h-[94vh] w-full overflow-y-auto rounded-t-3xl bg-white shadow-2xl sm:max-w-lg sm:rounded-3xl">
+          <div className="sticky top-0 z-10 flex items-center justify-between bg-gradient-to-r from-orange-500 to-amber-500 px-5 py-4 text-white">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20">
+                <FiUserPlus className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="font-bold">Isi Presensi Kosong</h3>
+                <p className="text-xs text-orange-100">{formatDate(`${date}T00:00:00`)}</p>
+              </div>
+            </div>
+            <button onClick={onClose} className="rounded-xl p-2 transition hover:bg-white/20">
+              <FiX className="h-5 w-5" />
+            </button>
+          </div>
+
+          <div className="space-y-5 p-5">
+            {employees.length === 0 ? (
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-8 text-center">
+                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-xl">✓</div>
+                <p className="font-bold text-emerald-800">Semua pegawai sudah tercatat</p>
+                <p className="mt-1 text-xs text-emerald-600">Tidak ada presensi kosong pada tanggal ini.</p>
+              </div>
+            ) : (
+              <>
+                <div>
+                  <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-slate-400">Cari Pegawai</label>
+                  <div className="relative">
+                    <FiSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <input value={search} onChange={(event) => setSearch(event.target.value)}
+                      placeholder="Cari nama atau jabatan..."
+                      className="w-full rounded-xl border border-slate-200 py-2.5 pl-9 pr-3 text-sm focus:border-orange-400 focus:ring-2 focus:ring-orange-500/20" />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                    Pegawai Belum Absen ({filteredEmployees.length})
+                  </label>
+                  <select value={employeeId} onChange={(event) => setEmployeeId(event.target.value)}
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:border-orange-400 focus:ring-2 focus:ring-orange-500/20">
+                    <option value="">Pilih pegawai</option>
+                    {filteredEmployees.map((employee) => (
+                      <option key={employee.id} value={employee.id}>
+                        {employee.pegawai?.nama_pegawai || employee.name} — {employee.pegawai?.jabatan || employee.pegawai?.status_kepegawaian?.replace(/_/g, " ") || "Pegawai"}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-slate-400">Status Presensi</label>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    {Object.entries(STATUS_MAP).map(([key, item]) => (
+                      <button key={key} type="button" onClick={() => setStatus(key)}
+                        className={`rounded-xl border px-2 py-2.5 text-xs font-bold transition ${
+                          status === key
+                            ? "border-orange-400 bg-orange-50 text-orange-700 ring-2 ring-orange-100"
+                            : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                        }`}>
+                        <span className="mr-1">{item.icon}</span>{item.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {isPresent && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-slate-400">Jam Masuk *</label>
+                      <input type="time" value={jamMasuk} onChange={(event) => setJamMasuk(event.target.value)}
+                        className="w-full rounded-xl border border-slate-200 px-3 py-2.5 font-mono text-sm focus:border-orange-400 focus:ring-2 focus:ring-orange-500/20" />
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-slate-400">Jam Keluar</label>
+                      <input type="time" value={jamKeluar} onChange={(event) => setJamKeluar(event.target.value)}
+                        className="w-full rounded-xl border border-slate-200 px-3 py-2.5 font-mono text-sm focus:border-orange-400 focus:ring-2 focus:ring-orange-500/20" />
+                    </div>
+                  </div>
+                )}
+
+                {status === "dinas_luar" && (
+                  <div>
+                    <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-slate-400">Tujuan Dinas *</label>
+                    <input value={tujuanDinas} onChange={(event) => setTujuanDinas(event.target.value)}
+                      placeholder="Lokasi atau tujuan dinas luar"
+                      className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:border-orange-400 focus:ring-2 focus:ring-orange-500/20" />
+                  </div>
+                )}
+
+                <div>
+                  <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-slate-400">Keterangan</label>
+                  <textarea value={keterangan} onChange={(event) => setKeterangan(event.target.value)}
+                    placeholder="Alasan atau catatan pengisian manual..." rows={3}
+                    className="w-full resize-none rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:border-orange-400 focus:ring-2 focus:ring-orange-500/20" />
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="sticky bottom-0 flex gap-3 border-t border-slate-100 bg-white px-5 py-4">
+            <button onClick={onClose} className="flex-1 rounded-xl border border-slate-200 py-2.5 font-semibold text-slate-600 hover:bg-slate-50">Batal</button>
+            {employees.length > 0 && (
+              <button onClick={handleSave} disabled={saving}
+                className="flex-1 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 py-2.5 font-bold text-white shadow-sm shadow-orange-200 hover:from-orange-600 hover:to-amber-600 disabled:opacity-50">
+                {saving ? "Menyimpan..." : "Simpan Presensi"}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+};
+
 const EditAbsensiModal = ({ record, onClose, onSave }) => {
   const [status, setStatus] = useState(record.status);
   const [keterangan, setKeterangan] = useState(record.keterangan || "");
