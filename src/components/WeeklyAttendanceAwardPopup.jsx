@@ -127,6 +127,7 @@ const WeeklyAttendanceAwardPopup = () => {
       ) {
         openAward({
           week_key: payload.week_key,
+          period_type: payload.period_type,
           categories: payload.categories,
           winners: payload.winners,
           month_label: payload.month_label,
@@ -149,6 +150,8 @@ const WeeklyAttendanceAwardPopup = () => {
   const categories = award?.categories || [];
   const current = categories[categoryIndex] || null;
   const isLast = categoryIndex >= categories.length - 1;
+  const periodType = award?.period_type === 'monthly' ? 'monthly' : 'weekly';
+  const periodWord = periodType === 'monthly' ? 'Bulanan' : 'Mingguan';
 
   const goNext = () => {
     if (categoryIndex < categories.length - 1) {
@@ -241,11 +244,11 @@ const WeeklyAttendanceAwardPopup = () => {
                 </Motion.div>
                 <div className="mb-2 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-[0.24em] text-amber-300">
                   <Sparkles size={15} />
-                  DPMD Weekly Appreciation
+                  DPMD {periodType === 'monthly' ? 'Monthly' : 'Weekly'} Appreciation
                   <Sparkles size={15} />
                 </div>
                 <h2 className="text-2xl font-black tracking-tight sm:text-4xl">
-                  🏆 Juara Absensi Terbaik!
+                  🏆 Juara Absensi {periodWord} Terbaik!
                 </h2>
                 {/* Chip kategori aktif + posisi */}
                 <Motion.div
@@ -261,8 +264,8 @@ const WeeklyAttendanceAwardPopup = () => {
                   </span>
                 </Motion.div>
                 <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-slate-300 sm:text-base">
-                  Juara absensi paling lengkap & datang paling awal periode
-                  {' '}{award.month_label || 'bulan ini'}.
+                  Juara absensi paling lengkap & datang paling awal
+                  {' '}{periodType === 'monthly' ? `selama bulan ${award.month_label || 'ini'}` : 'minggu lalu'}.
                 </p>
                 {award.period_start && award.period_end && (
                   <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-300">
@@ -273,6 +276,17 @@ const WeeklyAttendanceAwardPopup = () => {
               </div>
 
               {/* PODIUM */}
+              {podium.length === 0 ? (
+                <div className="mt-8 flex flex-col items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-6 py-10 text-center">
+                  <Users size={32} className="text-slate-500" />
+                  <p className="text-sm font-semibold text-slate-300">
+                    Belum ada juara untuk kategori {current.label}.
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    Data kehadiran kategori ini belum mencukupi pada periode ini.
+                  </p>
+                </div>
+              ) : (
               <div className="mt-8 flex items-end justify-center gap-2 sm:gap-4">
                 {podium.map(({ winner, rank }) => {
                   const style = RANK_STYLE[rank];
@@ -369,6 +383,7 @@ const WeeklyAttendanceAwardPopup = () => {
                   );
                 })}
               </div>
+              )}
               {/* Lantai podium */}
               <div className="mx-auto -mt-px h-2 w-full max-w-[640px] rounded-full bg-gradient-to-r from-transparent via-white/20 to-transparent" />
 
