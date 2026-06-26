@@ -49,6 +49,22 @@ const fmtCompact = (n) => {
   return formatRupiah(n);
 };
 
+// Tipe SHT yang tersedia untuk katalog item RKA
+const SHT_TABS = [
+  { type: 'SSH',  sub: 'Standar Satuan Harga' },
+  { type: 'SBU',  sub: 'Standar Biaya Umum' },
+  { type: 'ASB',  sub: 'Analisis Standar Belanja' },
+  { type: 'HSPK', sub: 'Harga Satuan Pokok Kegiatan' },
+];
+
+const SHT_BADGE = {
+  SSH:  'bg-blue-100 text-blue-700',
+  SBU:  'bg-amber-100 text-amber-700',
+  ASB:  'bg-emerald-100 text-emerald-700',
+  HSPK: 'bg-rose-100 text-rose-700',
+};
+const shtBadge = (type) => SHT_BADGE[type] || 'bg-gray-100 text-gray-600';
+
 const SATUAN_OPTIONS = [
   'Orang', 'OH', 'OJ', 'OK', 'OB', 'OBK',
   'Hari', 'Bulan', 'Tahun', 'Kali', 'Sesi', 'Jam',
@@ -136,7 +152,7 @@ const CatalogItem = ({ item, shtType, isSelected, isPinned, onSelect, onTogglePi
     <div className="flex-1 min-w-0 cursor-pointer" onClick={() => onSelect(item)}>
       <div className="flex items-center gap-1.5 flex-wrap">
         <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 ${
-          shtType === 'SSH' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
+          shtBadge(shtType)
         }`}>{shtType}</span>
         {item.kode_barang && <span className="font-mono text-[10px] text-gray-400">{item.kode_barang}</span>}
         <span className="ml-auto text-[11px] font-bold text-emerald-700 shrink-0">{formatRupiah(item.harga_satuan)}</span>
@@ -223,10 +239,7 @@ const CatalogPanel = ({ shtType, onShtTypeChange, onSelect, selectedItem }) => {
     <div className="flex flex-col h-full">
       {/* SHT type tabs */}
       <div className="flex shrink-0 border-b border-gray-100">
-        {[
-          { type: 'SSH', sub: 'Standar Satuan Harga' },
-          { type: 'SBU', sub: 'Standar Biaya Umum' },
-        ].map(({ type, sub }) => (
+        {SHT_TABS.map(({ type, sub }) => (
           <button key={type} type="button" onClick={() => onShtTypeChange(type)}
             className={`flex-1 py-2.5 px-4 text-xs font-bold transition-colors border-b-2 ${
               shtType === type
@@ -452,7 +465,7 @@ const ItemModal = ({ isOpen, onClose, onSave, editData, loading, existingGroups 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1.5">
                       <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${
-                        shtType === 'SSH' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
+                        shtBadge(shtType)
                       }`}>{shtType}</span>
                       {shtSelected.kode_barang && (
                         <span className="font-mono text-[11px] text-gray-400">{shtSelected.kode_barang}</span>
@@ -908,7 +921,7 @@ const PaketModal = ({ isOpen, onClose, onSave, loading, existingGroups }) => {
                       <p className="text-sm font-bold text-gray-800 leading-tight">{row.label}</p>
                       <p className="text-[11px] text-gray-500 mt-0.5 flex items-center gap-1.5 flex-wrap">
                         <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                          row.shtType === 'SSH' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
+                          row.shtBadge(shtType)
                         }`}>{row.shtType}</span>
                         <span className="text-gray-600 font-semibold">Vol: <span className="text-violet-700">{vol.toLocaleString('id-ID')}</span></span>
                         <span className="text-gray-300">·</span>
@@ -1065,7 +1078,7 @@ const GroupSection = ({ groupName, isRekening, grupNames, items, isSuperadmin, o
                     </div>
                     <div className="flex justify-center pt-0.5">
                       <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${
-                        item.jenis_sht === 'SSH' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
+                        shtBadge(item.jenis_sht)
                       }`}>{item.jenis_sht}</span>
                     </div>
                     <div className="text-right">
@@ -1103,7 +1116,7 @@ const GroupSection = ({ groupName, isRekening, grupNames, items, isSuperadmin, o
                         <div className="flex items-center gap-1.5 mb-1">
                           <span className="text-[11px] font-mono text-slate-400">#{startIdx + idx + 1}</span>
                           <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded ${
-                            item.jenis_sht === 'SSH' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
+                            shtBadge(item.jenis_sht)
                           }`}>{item.jenis_sht}</span>
                         </div>
                         <p className="font-semibold text-slate-800 text-sm leading-snug">{item.nama_item}</p>
@@ -1158,7 +1171,7 @@ const ItemDetailRow = ({ item, globalIdx, isSuperadmin, onEdit, onDelete, indent
         </div>
         <div className="flex justify-center pt-0.5">
           <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${
-            item.jenis_sht === 'SSH' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
+            shtBadge(item.jenis_sht)
           }`}>{item.jenis_sht}</span>
         </div>
         <div className="text-right">
@@ -1193,7 +1206,7 @@ const ItemDetailRow = ({ item, globalIdx, isSuperadmin, onEdit, onDelete, indent
             <div className="flex items-center gap-1.5 mb-1">
               <span className="text-[11px] font-mono text-slate-400">#{globalIdx + 1}</span>
               <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded ${
-                item.jenis_sht === 'SSH' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
+                shtBadge(item.jenis_sht)
               }`}>{item.jenis_sht}</span>
             </div>
             <p className="font-semibold text-slate-800 text-sm leading-snug">{item.nama_item}</p>
@@ -1463,7 +1476,7 @@ const SesuaikanSidebar = ({
                               <span className="text-[9px] font-bold uppercase tracking-wider bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">Fotokopi</span>
                             )}
                             <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
-                              item.jenis_sht === 'SSH' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
+                              shtBadge(item.jenis_sht)
                             }`}>{item.jenis_sht}</span>
                           </div>
                           {item.grup && <p className="text-[11px] text-slate-500">Grup: {item.grup}</p>}
@@ -1896,6 +1909,8 @@ const ItemAnggaranPage = () => {
               <div className="hidden sm:flex items-center gap-3 text-[11px] text-slate-500">
                 <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-blue-500 inline-block" />SSH · Standar Satuan Harga</span>
                 <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-amber-500 inline-block" />SBU · Standar Biaya Umum</span>
+                <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" />ASB · Analisis Standar Belanja</span>
+                <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-rose-500 inline-block" />HSPK · Harga Satuan Pokok Kegiatan</span>
               </div>
               <button onClick={fetchItems} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
                 <RefreshCw className="h-4 w-4" />

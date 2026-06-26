@@ -98,7 +98,7 @@ const ShtPage = () => {
             <div>
               <h1 className="text-2xl font-bold">Standar Harga Satuan (SHT)</h1>
               <p className="text-indigo-100 mt-1">
-                Daftar acuan SSH &amp; SBU Kab. Bogor Tahun {tahun}
+                Daftar acuan SSH, SBU, ASB &amp; HSPK Kab. Bogor Tahun {tahun}
               </p>
             </div>
           </div>
@@ -108,6 +108,8 @@ const ShtPage = () => {
             {[
               { key: 'ssh', label: 'SSH', desc: 'Standar Harga Satuan' },
               { key: 'sbu', label: 'SBU', desc: 'Standar Biaya Umum' },
+              { key: 'asb', label: 'ASB', desc: 'Analisis Standar Belanja' },
+              { key: 'hspk', label: 'HSPK', desc: 'Harga Satuan Pokok Kegiatan' },
             ].map(t => (
               <button
                 key={t.key}
