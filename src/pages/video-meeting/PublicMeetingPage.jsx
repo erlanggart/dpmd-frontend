@@ -2594,7 +2594,7 @@ const PublicMeetingPage = () => {
             <Smile className="w-5 h-5" />
           </button>
           {showReactionPicker && (
-            <div className="fixed bottom-20 left-2 right-2 z-50 mx-auto flex w-fit max-w-[calc(100vw-1rem)] gap-1 overflow-x-auto rounded-2xl border border-white/10 bg-gray-800 p-2 shadow-xl sm:absolute sm:bottom-14 sm:left-1/2 sm:right-auto sm:max-w-none sm:-translate-x-1/2">
+            <div className="fixed bottom-20 left-1/2 z-50 flex w-fit max-w-[calc(100vw-1rem)] -translate-x-1/2 gap-1 overflow-x-auto rounded-2xl border border-white/10 bg-gray-800 p-2 shadow-xl">
               {REACTION_EMOJIS.map((em) => (
                 <button
                   key={em}
@@ -2633,7 +2633,7 @@ const PublicMeetingPage = () => {
               <MicOff className="w-5 h-5" />
             </button>
             {showHostAudioMenu && (
-              <div className="fixed bottom-20 left-1/2 z-50 min-w-48 -translate-x-1/2 overflow-hidden rounded-xl border border-white/10 bg-gray-800 shadow-xl sm:absolute sm:bottom-14">
+              <div className="fixed bottom-20 left-1/2 z-50 min-w-48 -translate-x-1/2 overflow-hidden rounded-xl border border-white/10 bg-gray-800 shadow-xl">
                 <button
                   onClick={() => { setShowHostAudioMenu(false); hostMuteAll(); }}
                   className="w-full flex items-center gap-2 px-3 py-2.5 text-left text-sm text-white hover:bg-white/10"
