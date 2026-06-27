@@ -57,19 +57,22 @@ return { calendarDays: days, firstDayOfMonth: startingDayOfWeek };
 		jadwals.forEach(jadwal => {
 			const startDate = new Date(jadwal.tanggal_mulai);
 			const endDate = new Date(jadwal.tanggal_selesai);
-			
+
 			console.log('📅 Processing jadwal:', jadwal.judul, 'from', startDate, 'to', endDate);
 
-			// Add jadwal to all dates in range
-			let currentLoop = new Date(startDate);
-			while (currentLoop <= endDate) {
-				if (currentLoop.getMonth() === currentMonth && currentLoop.getFullYear() === currentYear) {
-					const day = currentLoop.getDate();
+			// Jam disimpan sebagai wall-clock UTC, jadi bucketing pakai komponen UTC.
+			// Normalisasi ke tanggal (UTC) supaya kegiatan 1 hari tetap muncul walau
+			// jam mulai > jam selesai.
+			let currentLoop = new Date(Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), startDate.getUTCDate()));
+			const lastDay = new Date(Date.UTC(endDate.getUTCFullYear(), endDate.getUTCMonth(), endDate.getUTCDate()));
+			while (currentLoop <= lastDay) {
+				if (currentLoop.getUTCMonth() === currentMonth && currentLoop.getUTCFullYear() === currentYear) {
+					const day = currentLoop.getUTCDate();
 					if (!grouped[day]) grouped[day] = [];
 					grouped[day].push(jadwal);
 					console.log('  ✅ Added to day', day);
 				}
-				currentLoop.setDate(currentLoop.getDate() + 1);
+				currentLoop.setUTCDate(currentLoop.getUTCDate() + 1);
 			}
 		});
 		
@@ -320,12 +323,12 @@ onEventClick && onEventClick(jadwal);
 <div className="flex items-center gap-2">
 <LuClock className="w-4 h-4 text-gray-400 flex-shrink-0" />
 <span>
-{new Date(jadwal.tanggal_mulai).toLocaleDateString('id-ID')}
-{jadwal.tanggal_mulai !== jadwal.tanggal_selesai && 
-` - ${new Date(jadwal.tanggal_selesai).toLocaleDateString('id-ID')}`
+{new Date(jadwal.tanggal_mulai).toLocaleDateString('id-ID', { timeZone: 'UTC' })}
+{jadwal.tanggal_mulai !== jadwal.tanggal_selesai &&
+` - ${new Date(jadwal.tanggal_selesai).toLocaleDateString('id-ID', { timeZone: 'UTC' })}`
 }
 {' · '}
-{`${String(new Date(jadwal.tanggal_mulai).getHours()).padStart(2,'0')}.${String(new Date(jadwal.tanggal_mulai).getMinutes()).padStart(2,'0')}`}
+{`${String(new Date(jadwal.tanggal_mulai).getUTCHours()).padStart(2,'0')}.${String(new Date(jadwal.tanggal_mulai).getUTCMinutes()).padStart(2,'0')}`}
 </span>
 </div>
 </div>

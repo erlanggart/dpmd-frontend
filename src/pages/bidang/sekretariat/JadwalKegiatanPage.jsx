@@ -54,10 +54,14 @@ const JadwalKegiatanPage = () => {
 	const [filterStatus, setFilterStatus] = useState('all');
 	const [filterPrioritas, setFilterPrioritas] = useState('all');
 	
-	// Get today's date in YYYY-MM-DD format for default filter
+	// Get today's date in YYYY-MM-DD format for default filter (pakai tanggal lokal user,
+	// bukan UTC, supaya tidak meleset ke kemarin saat dini hari di WIB/WITA).
 	const getTodayDate = () => {
 		const today = new Date();
-		return today.toISOString().split('T')[0];
+		const year = today.getFullYear();
+		const month = String(today.getMonth() + 1).padStart(2, '0');
+		const day = String(today.getDate()).padStart(2, '0');
+		return `${year}-${month}-${day}`;
 	};
 
 	// Cek URL query param ?tanggal= (dari klik notifikasi)
@@ -208,8 +212,10 @@ const JadwalKegiatanPage = () => {
 	const handleCreate = async (e) => {
 		e.preventDefault();
 		try {
+			// Simpan jam apa adanya (wall-clock) sebagai UTC, tanpa konversi timezone.
+			// Tampilan memakai getUTC* sehingga jam yang diketik selalu tampil sama di device manapun.
 			const combinedMulai = formData.tanggal_mulai
-				? `${formData.tanggal_mulai}T${formData.jam || '00:00'}:00+07:00`
+				? `${formData.tanggal_mulai}T${formData.jam || '00:00'}:00Z`
 				: '';
 			const { jam, ...restForm } = formData;
 			const dataToSend = {
@@ -230,7 +236,7 @@ const JadwalKegiatanPage = () => {
 			// Format tanggal untuk pesan WA
 			const fmtTgl = (dt) => {
 				if (!dt) return '-';
-				return new Date(dt).toLocaleString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+				return new Date(dt).toLocaleString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' });
 			};
 			const appUrl = `${window.location.origin}/sekretariat/jadwal-kegiatan${newId ? `?highlight=${newId}` : ''}`;
 			const waText = [
@@ -279,8 +285,9 @@ const JadwalKegiatanPage = () => {
 		if (!selectedJadwal) return;
 		
 		try {
+			// Simpan jam apa adanya (wall-clock) sebagai UTC, tanpa konversi timezone.
 			const combinedMulai = formData.tanggal_mulai
-				? `${formData.tanggal_mulai}T${formData.jam || '00:00'}:00+07:00`
+				? `${formData.tanggal_mulai}T${formData.jam || '00:00'}:00Z`
 				: '';
 			const { jam, ...restForm } = formData;
 			const dataToSend = {
@@ -337,15 +344,15 @@ const JadwalKegiatanPage = () => {
 		const formatDateOnly = (dateString) => {
 			if (!dateString) return '';
 			const date = new Date(dateString);
-			const year = date.getFullYear();
-			const month = String(date.getMonth() + 1).padStart(2, '0');
-			const day = String(date.getDate()).padStart(2, '0');
+			const year = date.getUTCFullYear();
+			const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+			const day = String(date.getUTCDate()).padStart(2, '0');
 			return `${year}-${month}-${day}`;
 		};
 		const formatTimeOnly = (dateString) => {
 			if (!dateString) return '08:00';
 			const date = new Date(dateString);
-			return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+			return `${String(date.getUTCHours()).padStart(2, '0')}:${String(date.getUTCMinutes()).padStart(2, '0')}`;
 		};
 		
 		setFormData({
@@ -479,15 +486,16 @@ const JadwalKegiatanPage = () => {
 		return date.toLocaleDateString('id-ID', {
 			day: 'numeric',
 			month: 'short',
-			year: 'numeric'
+			year: 'numeric',
+			timeZone: 'UTC'
 		});
 	};
 
 	const formatTime = (dateString) => {
 		if (!dateString) return '';
 		const date = new Date(dateString);
-		const h = date.getHours();
-		const m = date.getMinutes();
+		const h = date.getUTCHours();
+		const m = date.getUTCMinutes();
 		return `${String(h).padStart(2, '0')}.${String(m).padStart(2, '0')}`;
 	};
 
