@@ -1997,6 +1997,27 @@ const VideoMeetingPage = () => {
       toast('Mikrofon dikunci oleh host', { icon: '🔒' });
     });
 
+    // Producer kamera peserta lain di-pause/resume (oleh host ATAU oleh peserta itu
+    // sendiri). Paksa MediaStream-nya dibuat ulang (track sama) agar RemoteVideo
+    // mengevaluasi ulang status video — tanpa ini, kamera yang DINYALAKAN kembali
+    // sering tetap tampil sebagai avatar karena event unmute track tak selalu jalan.
+    // Audio pulih otomatis begitu RTP mengalir, jadi cukup tangani video.
+    const refreshRemoteVideoTile = (data) => {
+      if ((data?.kind || 'video') !== 'video') return;
+      if (data?.mediaType === 'screen' || data?.mediaType === 'screenAudio') return;
+      const peerId = String(data?.peerId || '');
+      if (!peerId || peerId === String(myPeerIdRef.current) || peerId === String(user.id)) return;
+      setRemoteStreams((prev) => {
+        const stream = prev[peerId];
+        if (!stream) return prev;
+        const fresh = new MediaStream();
+        stream.getTracks().forEach((t) => fresh.addTrack(t));
+        return { ...prev, [peerId]: fresh };
+      });
+    };
+    socketRef.current.on('producer-paused', refreshRemoteVideoTile);
+    socketRef.current.on('producer-resumed', refreshRemoteVideoTile);
+
     // Host mengeluarkan kita dari meeting.
     socketRef.current.on('removed-by-host', (data) => {
       toast.error(`Anda dikeluarkan dari meeting oleh ${data?.by || 'host'}`);
@@ -3154,6 +3175,13 @@ const VideoMeetingPage = () => {
                       className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-orange-500/80"
                     >
                       <VideoOff className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => hostUnmuteParticipant(participant.oduserId, 'video')}
+                      title="Nyalakan kamera peserta"
+                      className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-sky-500/80"
+                    >
+                      <Video className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => hostRemoveParticipant(participant.oduserId, participant.userName)}
