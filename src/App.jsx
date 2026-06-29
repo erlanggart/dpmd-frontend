@@ -16,6 +16,7 @@ import { DataCacheProvider } from "./context/DataCacheContext";
 import { EditModeProvider } from "./context/EditModeContext.jsx";
 import { AlertProvider } from "./components/AlertPopup";
 import PushNotificationInitializer from "./components/PushNotificationInitializer";
+import ForceChangePasswordModal from "./components/ForceChangePasswordModal";
 import {
   registerServiceWorker,
   subscribeToPushNotifications,
@@ -747,6 +748,8 @@ function App() {
             <NetworkProvider>
             {/* Push Notification Initializer: ensures permission prompt and auto-subscribe */}
             <PushNotificationInitializer />
+            {/* Popup wajib ganti password default — global untuk semua role */}
+            <ForceChangePasswordModal />
             <Suspense
               fallback={
                 <div className="flex h-screen items-center justify-center">

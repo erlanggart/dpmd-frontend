@@ -259,6 +259,27 @@ export const AuthProvider = ({ children }) => {
 		}
 	};
 
+	// Memperbarui sebagian data user (mis. setelah ganti password default) +
+	// menyimpannya kembali ke sesi agar tetap konsisten setelah refresh.
+	const updateUser = (partial) => {
+		setUser((prev) => {
+			const next = { ...(prev || {}), ...partial };
+			try {
+				const sessionStr = localStorage.getItem("authSession");
+				if (sessionStr) {
+					const session = JSON.parse(sessionStr);
+					session.user = next;
+					localStorage.setItem("authSession", JSON.stringify(session));
+				}
+				localStorage.setItem("user", JSON.stringify(next));
+				backupSessionToIndexedDB();
+			} catch (err) {
+				console.error('[Auth] Error updating user:', err);
+			}
+			return next;
+		});
+	};
+
 	// Fungsi untuk menghapus data saat logout
 	const logout = async () => {
 		// Use performFullLogout to clear everything including IndexedDB + set logout flag
@@ -325,6 +346,7 @@ export const AuthProvider = ({ children }) => {
 		expressToken,
 		login,
 		logout,
+		updateUser, // Update sebagian data user + persist (mis. must_change_password)
 		updateActivity, // Expose for manual updates if needed
 		isCheckingSession, // Expose loading state
 		// Role helpers
