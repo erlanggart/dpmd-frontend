@@ -3,7 +3,8 @@ import { useParams, useNavigate, useOutletContext } from 'react-router-dom';
 import { 
   FiArrowLeft, FiMail, FiUser, FiCalendar, FiClock, FiFileText,
   FiSend, FiEye, FiX, FiCheck, FiDownload, FiAlertCircle, FiActivity,
-  FiLayers, FiInbox, FiZap, FiMessageSquare, FiChevronDown, FiChevronRight
+  FiLayers, FiInbox, FiZap, FiMessageSquare, FiChevronDown, FiChevronRight,
+  FiUpload
 } from 'react-icons/fi';
 import api from '../../api';
 import { toast } from 'react-hot-toast';
@@ -35,6 +36,7 @@ export default function DisposisiDetail() {
   const [expandedGroups, setExpandedGroups] = useState({});
   const [showInstruksiDropdown, setShowInstruksiDropdown] = useState(false);
   const [instruksiSearch, setInstruksiSearch] = useState('');
+  const [uploadingDispositionSheet, setUploadingDispositionSheet] = useState(false);
   const instruksiDropdownRef = useRef(null);
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -104,6 +106,46 @@ export default function DisposisiDetail() {
       fetchDisposisi();
     } catch {
       toast.error('Gagal mengubah status');
+    }
+  };
+
+  const handleOpenForwardModal = () => {
+    if (user.role === 'sekretaris_dinas' && !disposisi?.surat_masuk?.file_disposisi_path) {
+      toast.error('Upload kertas disposisi dulu sebelum surat diteruskan.');
+      return;
+    }
+    setShowTeruskanModal(true);
+  };
+
+  const handleDispositionSheetUpload = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file || uploadingDispositionSheet) return;
+
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    if (!isPdf) {
+      toast.error('Kertas disposisi harus berupa file PDF.');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Ukuran file maksimal 10MB.');
+      return;
+    }
+
+    setUploadingDispositionSheet(true);
+    try {
+      const formData = new FormData();
+      formData.append('file_disposisi', file);
+      await api.post(
+        `/disposisi/surat-masuk/${disposisi.surat_masuk.id}/kertas-disposisi`,
+        formData
+      );
+      toast.success('Kertas disposisi berhasil diupload.');
+      await fetchDisposisi();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Gagal mengupload kertas disposisi.');
+    } finally {
+      setUploadingDispositionSheet(false);
     }
   };
 
@@ -394,9 +436,25 @@ export default function DisposisiDetail() {
                               <FiDownload className="h-3.5 w-3.5" />
                             </a>
                           </div>
+                        ) : document.title === 'Kertas Disposisi' && user.role === 'sekretaris_dinas' && isRecipient ? (
+                          <label className={`mt-4 flex cursor-pointer items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs font-bold text-white transition ${
+                            uploadingDispositionSheet
+                              ? 'cursor-wait bg-violet-400'
+                              : 'bg-violet-600 hover:bg-violet-700'
+                          }`}>
+                            <FiUpload className={`h-3.5 w-3.5 ${uploadingDispositionSheet ? 'animate-bounce' : ''}`} />
+                            {uploadingDispositionSheet ? 'Mengupload...' : 'Upload Kertas Disposisi'}
+                            <input
+                              type="file"
+                              accept=".pdf,application/pdf"
+                              onChange={handleDispositionSheetUpload}
+                              disabled={uploadingDispositionSheet}
+                              className="hidden"
+                            />
+                          </label>
                         ) : (
                           <div className="mt-4 rounded-lg bg-white px-3 py-2 text-center text-[11px] font-medium text-slate-400">
-                            Belum diupload
+                            Belum diupload oleh Sekretaris Dinas
                           </div>
                         )}
                       </div>
@@ -521,7 +579,7 @@ export default function DisposisiDetail() {
                         )}
 
                         {canForward && (
-                          <button onClick={() => setShowTeruskanModal(true)} className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 text-sm font-bold transition shadow-sm">
+                          <button onClick={handleOpenForwardModal} className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 text-sm font-bold transition shadow-sm">
                             <FiSend className="w-4 h-4" /> Teruskan
                           </button>
                         )}
@@ -581,7 +639,7 @@ export default function DisposisiDetail() {
                     </button>
                   )}
                   {canForward && (
-                    <button onClick={() => setShowTeruskanModal(true)} className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 bg-purple-600 text-white rounded-xl text-[12px] font-bold active:bg-purple-700 transition shadow-sm">
+                    <button onClick={handleOpenForwardModal} className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 bg-purple-600 text-white rounded-xl text-[12px] font-bold active:bg-purple-700 transition shadow-sm">
                       <FiSend className="w-3.5 h-3.5" /> Teruskan
                     </button>
                   )}
