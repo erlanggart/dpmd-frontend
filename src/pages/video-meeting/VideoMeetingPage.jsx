@@ -267,6 +267,7 @@ const VideoMeetingPage = () => {
   // Media state
   const [localStream, setLocalStream] = useState(null);
   const [isMuted, setIsMuted] = useState(false);
+  const [micLocked, setMicLocked] = useState(false); // host hard-mute → tak bisa buka mic sendiri
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [isSpeakerMuted, setIsSpeakerMuted] = useState(false);
@@ -1012,9 +1013,10 @@ const VideoMeetingPage = () => {
     });
   };
 
-  const hostMuteAll = () => {
-    socketRef.current?.emit('host-mute-all', {}, (r) => {
-      if (r?.error) toast.error(r.error); else toast.success('Mikrofon semua peserta dimatikan');
+  const hostMuteAll = (lock = false) => {
+    socketRef.current?.emit('host-mute-all', { lock }, (r) => {
+      if (r?.error) toast.error(r.error);
+      else toast.success(lock ? 'Semua di-mute & dikunci' : 'Mikrofon semua peserta dimatikan');
     });
   };
 
@@ -1940,13 +1942,19 @@ const VideoMeetingPage = () => {
     socketRef.current.on('force-muted', (data) => {
       const kind = data?.kind || 'audio';
       if (kind === 'audio') {
+        setMicLocked(data?.locked === true); // hard-mute: tak bisa buka sendiri
         const track = localStreamRef.current?.getAudioTracks()[0];
         if (track && track.enabled) {
           track.enabled = false;
           setIsMuted(true);
           socketRef.current?.emit('media-state-change', { roomId, isMuted: true, isVideoOff });
         }
-        toast(`Mikrofon Anda dimatikan oleh ${data?.by || 'host'}`, { icon: '🔇' });
+        toast(
+          data?.locked
+            ? `Mikrofon Anda dikunci oleh ${data?.by || 'host'}`
+            : `Mikrofon Anda dimatikan oleh ${data?.by || 'host'}`,
+          { icon: data?.locked ? '🔒' : '🔇' }
+        );
       } else {
         const track = localStreamRef.current?.getVideoTracks()[0];
         if (track && track.enabled) {
@@ -1961,6 +1969,7 @@ const VideoMeetingPage = () => {
     socketRef.current.on('force-unmuted', (data) => {
       const kind = data?.kind || 'audio';
       if (kind === 'audio') {
+        setMicLocked(false); // kunci dilepas host
         const track = localStreamRef.current?.getAudioTracks()[0];
         if (track && !track.enabled) {
           track.enabled = true;
@@ -1977,6 +1986,15 @@ const VideoMeetingPage = () => {
         }
         toast(`Kamera Anda dinyalakan oleh ${data?.by || 'host'}`, { icon: '📷' });
       }
+    });
+
+    // Server menolak self-unmute karena mic dikunci host.
+    socketRef.current.on('mic-locked', () => {
+      setMicLocked(true);
+      const track = localStreamRef.current?.getAudioTracks()[0];
+      if (track && track.enabled) { track.enabled = false; }
+      setIsMuted(true);
+      toast('Mikrofon dikunci oleh host', { icon: '🔒' });
     });
 
     // Host mengeluarkan kita dari meeting.
@@ -2052,6 +2070,11 @@ const VideoMeetingPage = () => {
   };
 
   const toggleMute = () => {
+    // Mic dikunci host → peserta tak boleh membuka sendiri.
+    if (micLocked && isMuted) {
+      toast('Mikrofon dikunci oleh host', { icon: '🔒' });
+      return;
+    }
     if (localStream) {
       const audioTrack = localStream.getAudioTracks()[0];
       if (audioTrack) {
@@ -2348,8 +2371,14 @@ const VideoMeetingPage = () => {
   };
 
   const openChat = () => {
+    setParticipantsOpen(false);
     setChatOpen(true);
     setUnreadCount(0);
+  };
+
+  const openParticipants = () => {
+    setChatOpen(false);
+    setParticipantsOpen(true);
   };
 
   if (loading) {
@@ -2452,7 +2481,7 @@ const VideoMeetingPage = () => {
   };
 
   return (
-    <div className="h-[100dvh] bg-gray-900 flex flex-col overflow-hidden">
+    <div className={`h-[100dvh] bg-gray-900 flex flex-col overflow-hidden transition-[padding] duration-200 ${(participantsOpen || chatOpen) ? 'lg:pr-80' : ''}`}>
       {connectionStatus === 'reconnecting' && (
         <div className="fixed inset-x-0 top-0 z-[90] flex items-center justify-center gap-2 bg-amber-500 px-4 py-2 text-sm font-medium text-white shadow-lg">
           <Loader2 className="h-4 w-4 animate-spin" />
@@ -2756,12 +2785,15 @@ const VideoMeetingPage = () => {
           <>
             <button
               onClick={toggleMute}
-              className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-colors ${
+              className={`relative w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-colors ${
                 isMuted ? 'bg-red-500 hover:bg-red-600' : 'bg-white/10 hover:bg-white/20'
               } text-white`}
-              title={isMuted ? 'Nyalakan Mikrofon' : 'Matikan Mikrofon'}
+              title={micLocked ? 'Mikrofon dikunci oleh host' : (isMuted ? 'Nyalakan Mikrofon' : 'Matikan Mikrofon')}
             >
               {isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+              {micLocked && (
+                <span className="absolute -top-1 -right-1 text-[10px] leading-none bg-gray-900 rounded-full px-0.5" title="Dikunci host">🔒</span>
+              )}
             </button>
 
             <button
@@ -2813,18 +2845,25 @@ const VideoMeetingPage = () => {
             {showHostAudioMenu && (
               <div className="fixed bottom-20 left-1/2 z-50 min-w-48 -translate-x-1/2 overflow-hidden rounded-xl border border-white/10 bg-gray-800 shadow-xl">
                 <button
-                  onClick={() => { setShowHostAudioMenu(false); hostMuteAll(); }}
+                  onClick={() => { setShowHostAudioMenu(false); hostMuteAll(false); }}
                   className="w-full flex items-center gap-2 px-3 py-2.5 text-left text-sm text-white hover:bg-white/10"
                 >
                   <MicOffIcon className="w-4 h-4 text-amber-300" />
                   Mute semua
                 </button>
                 <button
+                  onClick={() => { setShowHostAudioMenu(false); hostMuteAll(true); }}
+                  className="w-full flex items-center gap-2 px-3 py-2.5 text-left text-sm text-white hover:bg-white/10"
+                >
+                  <span className="text-sm">🔒</span>
+                  Mute semua &amp; kunci
+                </button>
+                <button
                   onClick={() => { setShowHostAudioMenu(false); hostUnmuteAll(); }}
                   className="w-full flex items-center gap-2 px-3 py-2.5 text-left text-sm text-white hover:bg-white/10"
                 >
                   <Mic className="w-4 h-4 text-emerald-300" />
-                  Unmute semua
+                  Unmute semua &amp; buka kunci
                 </button>
               </div>
             )}
@@ -2871,7 +2910,7 @@ const VideoMeetingPage = () => {
         </button>
 
         <button
-          onClick={() => setParticipantsOpen(true)}
+          onClick={openParticipants}
           className="relative flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20 sm:h-12 sm:w-12"
           title="Peserta"
         >
@@ -2895,7 +2934,7 @@ const VideoMeetingPage = () => {
 
       {/* Chat Sidebar */}
       {chatOpen && (
-        <div className="fixed inset-y-0 right-0 z-50 flex h-[100dvh] w-full flex-col bg-gray-800 shadow-2xl sm:w-80">
+        <div className="fixed inset-y-0 right-0 z-50 flex h-[100dvh] w-full flex-col bg-gray-800 shadow-2xl lg:w-80">
           <div className="p-4 border-b border-white/10 flex justify-between items-center">
             <h2 className="text-white font-semibold">Chat</h2>
             <button
@@ -3000,7 +3039,7 @@ const VideoMeetingPage = () => {
 
       {/* Participants Sidebar */}
       {participantsOpen && (
-        <div className="fixed inset-y-0 right-0 z-50 flex h-[100dvh] w-full flex-col bg-gray-800 shadow-2xl sm:w-80">
+        <div className="fixed inset-y-0 right-0 z-50 flex h-[100dvh] w-full flex-col bg-gray-800 shadow-2xl lg:w-80">
           <div className="p-4 border-b border-white/10 flex justify-between items-center">
             <h2 className="text-white font-semibold">Peserta ({participants.filter(p => p.oduserId !== myPeerId && p.oduserId !== String(user.id)).length + 1})</h2>
             <button
@@ -3076,48 +3115,50 @@ const VideoMeetingPage = () => {
             
             {/* Remote participants */}
             {participants.filter(p => p.oduserId !== myPeerId && p.oduserId !== String(user.id)).map((participant) => (
-              <div key={participant.oduserId} className="p-4 flex items-center gap-3 border-b border-white/5">
-                <div className="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center text-white font-semibold">
-                  {(participant.userName || 'U')[0].toUpperCase()}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-white text-sm truncate">{participant.userName}</p>
-                  {isWebinar && (
-                    <p className="text-xs text-white/40">{participant.onStage ? 'Panggung' : 'Penonton'}</p>
+              <div key={participant.oduserId} className="px-4 py-3 border-b border-white/5">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 shrink-0 bg-gray-600 rounded-full flex items-center justify-center text-white font-semibold">
+                    {(participant.userName || 'U')[0].toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white text-sm truncate">{participant.userName}</p>
+                    {isWebinar && (
+                      <p className="text-xs text-white/40">{participant.onStage ? 'Panggung' : 'Penonton'}</p>
+                    )}
+                  </div>
+                  {/* Badge tangan terangkat */}
+                  {raisedHands[participant.oduserId] && (
+                    <span title="Mengangkat tangan" className="shrink-0 text-amber-400"><Hand className="w-4 h-4" /></span>
                   )}
                 </div>
-                {/* Badge tangan terangkat */}
-                {raisedHands[participant.oduserId] && (
-                  <span title="Mengangkat tangan" className="text-amber-400"><Hand className="w-4 h-4" /></span>
-                )}
-                {/* Kontrol host: dapat digeser bila tombol melebihi lebar ponsel. */}
+                {/* Kontrol host: baris sendiri, membungkus bila sempit agar tidak terpotong. */}
                 {meetingSettings?.isHost && (
-                  <div className="flex max-w-[52%] shrink-0 gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  <div className="mt-2 flex flex-wrap gap-1.5">
                     <button
                       onClick={() => hostMuteParticipant(participant.oduserId, 'audio')}
                       title="Matikan mikrofon peserta"
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-amber-500/80"
+                      className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-amber-500/80"
                     >
                       <MicOffIcon className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => hostUnmuteParticipant(participant.oduserId, 'audio')}
                       title="Nyalakan mikrofon peserta"
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-emerald-500/80"
+                      className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-emerald-500/80"
                     >
                       <Mic className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => hostMuteParticipant(participant.oduserId, 'video')}
                       title="Matikan kamera peserta"
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-orange-500/80"
+                      className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-orange-500/80"
                     >
                       <VideoOff className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => hostRemoveParticipant(participant.oduserId, participant.userName)}
                       title="Keluarkan peserta"
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-red-500/80"
+                      className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-red-500/80"
                     >
                       <UserX className="w-4 h-4" />
                     </button>
@@ -3126,7 +3167,7 @@ const VideoMeetingPage = () => {
                         <button
                           onClick={() => demoteFromStage(participant.oduserId)}
                           title="Turunkan dari panggung"
-                          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-red-500/80"
+                          className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-red-500/80"
                         >
                           <ArrowDownCircle className="w-4 h-4" />
                         </button>
@@ -3134,7 +3175,7 @@ const VideoMeetingPage = () => {
                         <button
                           onClick={() => promoteToStage(participant.oduserId)}
                           title="Naikkan ke panggung"
-                          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-emerald-500/80"
+                          className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-emerald-500/80"
                         >
                           <ArrowUpCircle className="w-4 h-4" />
                         </button>
@@ -3299,11 +3340,18 @@ const VideoMeetingPage = () => {
                 <div className="space-y-2 pt-1 border-t border-white/10">
                   <p className="text-xs font-semibold uppercase tracking-wide text-white/40 pt-3">Kontrol Host</p>
                   <button
-                    onClick={hostMuteAll}
+                    onClick={() => hostMuteAll(false)}
                     className="w-full flex items-center gap-2 px-3 py-2.5 bg-white/10 hover:bg-white/15 rounded-lg transition-colors text-left"
                   >
                     <MicOffIcon className="w-4 h-4 text-white/60 shrink-0" />
                     Matikan mikrofon semua peserta
+                  </button>
+                  <button
+                    onClick={() => hostMuteAll(true)}
+                    className="w-full flex items-center gap-2 px-3 py-2.5 bg-white/10 hover:bg-white/15 rounded-lg transition-colors text-left"
+                  >
+                    <span className="w-4 h-4 shrink-0 text-center">🔒</span>
+                    Matikan &amp; kunci mikrofon semua
                   </button>
                   <button
                     onClick={hostUnmuteAll}
