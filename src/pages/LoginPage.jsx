@@ -286,114 +286,65 @@ const LoginPage = () => {
 					<h2 className="text-3xl font-bold text-gray-800">Selamat Datang!</h2>
 					<p className="mt-2 text-gray-600">Silakan masuk untuk melanjutkan.</p>
 
-					{/* Notification Permission - Wajib di PWA, opsional di browser */}
-					{notificationPermission !== 'granted' && (
-						<div className={`mt-6 rounded-xl p-4 border ${isPWA ? 'bg-gradient-to-br from-amber-50 to-orange-50 border-amber-300' : 'bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200'}`}>
-							<div className="flex items-center gap-3">
-								<div className={`p-2 rounded-lg flex-shrink-0 ${isPWA ? 'bg-amber-100' : 'bg-blue-100'}`}>
-									<FiBell className={`w-5 h-5 ${isPWA ? 'text-amber-600' : 'text-blue-600'}`} />
-								</div>
-								<div className="flex-1">
-									<p className="text-sm font-semibold text-gray-800">
-										{isPWA ? '⚠️ Notifikasi Wajib Diizinkan' : 'Aktifkan Notifikasi'}
-									</p>
-									<p className="text-xs text-gray-600">
-										{isPWA
-											? 'Anda harus mengizinkan notifikasi untuk login di aplikasi'
-											: 'Untuk menerima update disposisi real-time'}
-									</p>
-								</div>
+					{/* Izin perangkat dibuat ringkas agar form login tetap terasa ringan. */}
+					<div className="mt-6 divide-y divide-gray-200 rounded-xl border border-gray-200 bg-gray-50 px-4">
+						<div className="flex items-center gap-3 py-3">
+							<FiBell className="h-5 w-5 flex-shrink-0 text-blue-600" />
+							<div className="min-w-0 flex-1">
+								<p className="text-sm font-semibold text-gray-800">Notifikasi</p>
+								<p className="text-xs text-gray-500">
+									{notificationPermission === 'denied'
+										? 'Masih diblokir browser. Buka izin situs dulu, ya.'
+										: 'Biar kabar penting nggak kelewat.'}
+								</p>
+							</div>
+							{notificationPermission === 'granted' ? (
+								<button
+									type="button"
+									onClick={() => setShowNotificationGuide(true)}
+									className="flex flex-shrink-0 items-center gap-1 rounded-full bg-green-100 px-3 py-1.5 text-xs font-semibold text-green-700"
+									title="Panduan pengaturan notifikasi"
+								>
+									✓ Siap <FiInfo className="h-3.5 w-3.5" />
+								</button>
+							) : (
 								<button
 									type="button"
 									onClick={handleRequestNotification}
 									disabled={checkingNotification}
-									className={`flex items-center gap-1.5 px-4 py-2 text-white rounded-lg font-medium text-sm transition-all disabled:opacity-70 disabled:cursor-not-allowed flex-shrink-0 ${isPWA ? 'bg-amber-600 hover:bg-amber-700' : 'bg-blue-600 hover:bg-blue-700'}`}
+									className="flex flex-shrink-0 items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-60"
 								>
-									{checkingNotification ? (
-										<FiLoader className="animate-spin w-4 h-4" />
-									) : (
-										<>
-											<FiBell className="w-4 h-4" />
-											<span>Izinkan</span>
-										</>
-									)}
+									{checkingNotification ? <FiLoader className="h-4 w-4 animate-spin" /> : 'Aktifkan'}
 								</button>
-							</div>
-							{isPWA && notificationPermission === 'denied' && (
-								<div className="mt-3 p-3 bg-red-50 rounded-lg border border-red-200">
-									<p className="text-xs text-red-700 font-medium">Notifikasi diblokir oleh browser.</p>
-									<p className="text-xs text-red-600 mt-1">Buka pengaturan browser/aplikasi → Izin situs → Notifikasi → Izinkan, lalu refresh halaman ini.</p>
-								</div>
 							)}
 						</div>
-					)}
 
-					{/* Success Notification Badge */}
-					{notificationPermission === 'granted' && (
-						<div className="mt-6 rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-300 p-4">
-							<div className="flex items-center justify-between">
-								<div className="flex items-center gap-3">
-									<div className="p-2 bg-green-100 rounded-lg">
-										<FiBell className="w-6 h-6 text-green-600" />
-									</div>
-									<div>
-										<p className="text-sm font-semibold text-gray-800">
-											✅ Notifikasi Diizinkan
-										</p>
-										<p className="text-xs text-gray-600">
-											Silakan login untuk melanjutkan
-										</p>
-									</div>
-								</div>
-								<button
-									type="button"
-									onClick={() => setShowNotificationGuide(true)}
-									className="p-2 hover:bg-green-200 rounded-lg transition-colors"
-									title="Panduan pengaturan notifikasi background"
-								>
-									<FiInfo className="w-5 h-5 text-green-700" />
-								</button>
+						<div className="flex items-center gap-3 py-3">
+							<FiMapPin className="h-5 w-5 flex-shrink-0 text-orange-500" />
+							<div className="min-w-0 flex-1">
+								<p className="text-sm font-semibold text-gray-800">Lokasi</p>
+								<p className="text-xs text-gray-500">
+									{locationStatus === 'denied'
+										? 'Lokasinya masih ngumpet. Izinkan lewat browser, ya.'
+										: 'Cuma dicek saat login, kok.'}
+								</p>
 							</div>
-						</div>
-					)}
-
-					{/* Lokasi Wajib */}
-					{locationStatus !== 'granted' ? (
-						<div className="mt-4 rounded-xl p-4 border bg-gradient-to-br from-amber-50 to-orange-50 border-amber-300">
-							<div className="flex items-center gap-3">
-								<div className="p-2 rounded-lg flex-shrink-0 bg-amber-100">
-									<FiMapPin className="w-5 h-5 text-amber-600" />
-								</div>
-								<div className="flex-1">
-									<p className="text-sm font-semibold text-gray-800">📍 Lokasi Wajib Diaktifkan</p>
-									<p className="text-xs text-gray-600">Anda harus mengizinkan akses lokasi untuk dapat login.</p>
-								</div>
+							{locationStatus === 'granted' ? (
+								<span className="flex-shrink-0 rounded-full bg-green-100 px-3 py-1.5 text-xs font-semibold text-green-700">
+									✓ Siap
+								</span>
+							) : (
 								<button
 									type="button"
 									onClick={handleRequestLocation}
 									disabled={gettingLocation}
-									className="flex items-center gap-1.5 px-4 py-2 text-white rounded-lg font-medium text-sm transition-all disabled:opacity-70 disabled:cursor-not-allowed flex-shrink-0 bg-amber-600 hover:bg-amber-700"
+									className="flex flex-shrink-0 items-center gap-1.5 rounded-lg bg-orange-500 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-orange-600 disabled:opacity-60"
 								>
-									{gettingLocation ? <FiLoader className="animate-spin w-4 h-4" /> : <><FiMapPin className="w-4 h-4" /><span>Izinkan</span></>}
+									{gettingLocation ? <FiLoader className="h-4 w-4 animate-spin" /> : 'Aktifkan'}
 								</button>
-							</div>
-							{locationStatus === 'denied' && (
-								<div className="mt-3 p-3 bg-red-50 rounded-lg border border-red-200">
-									<p className="text-xs text-red-700 font-medium">Lokasi diblokir oleh browser.</p>
-									<p className="text-xs text-red-600 mt-1">Buka pengaturan situs → Izin → Lokasi → Izinkan, lalu klik "Izinkan" lagi.</p>
-								</div>
 							)}
 						</div>
-					) : (
-						<div className="mt-4 rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-300 p-3">
-							<div className="flex items-center gap-3">
-								<div className="p-2 bg-green-100 rounded-lg">
-									<FiMapPin className="w-5 h-5 text-green-600" />
-								</div>
-								<p className="text-sm font-semibold text-gray-800">✅ Lokasi Aktif</p>
-							</div>
-						</div>
-					)}
+					</div>
 
 					<form onSubmit={handleLogin} className="mt-8 space-y-6">
 						<div>
