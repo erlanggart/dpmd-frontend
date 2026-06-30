@@ -4,12 +4,21 @@ import { AnimatePresence, motion } from 'framer-motion';
 import {
   FiUser, FiMail, FiShield, FiEdit2, FiX, FiCamera, FiArrowLeft,
   FiLogOut, FiLock, FiEye, FiEyeOff, FiPhone, FiMapPin, FiCalendar,
-  FiBriefcase, FiBook, FiHash, FiChevronRight, FiCheck, FiAward, FiStar
+  FiBriefcase, FiBook, FiHash, FiChevronRight, FiCheck, FiAward, FiStar,
+  FiClock, FiLogIn, FiInfo
 } from 'react-icons/fi';
 import api from '../../services/api';
 import { toast } from 'react-hot-toast';
 import { getAvatarUrl } from '../../utils/avatarUtils';
 import AvatarCropModal from '../../components/AvatarCropModal';
+
+const ABSENSI_ELIGIBLE_STATUS = ['PPPK Paruh Waktu', 'Tenaga Alih Daya', 'Tenaga Keamanan', 'Tenaga Kebersihan'];
+
+const fmtJam = (value) => {
+  if (!value) return '--:--:--';
+  const m = String(value).match(/(\d{2}:\d{2}(:\d{2})?)/);
+  return m ? m[1] : String(value);
+};
 
 const STATUS_OPTIONS = [
   { value: '', label: '— Pilih —' },
@@ -98,6 +107,8 @@ const ProfilePage = () => {
   const [pegawaiData, setPegawaiData] = useState(null);
   const [pegawaiLoading, setPegawaiLoading] = useState(false);
   const [pegawaiForm, setPegawaiForm] = useState({});
+  const [now, setNow] = useState(new Date());
+  const [todayData, setTodayData] = useState(null);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [passwordLoading, setPasswordLoading] = useState(false);
@@ -161,6 +172,22 @@ const ProfilePage = () => {
   };
 
   useEffect(() => { fetchPegawaiData(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Jam real-time untuk kartu Presensi
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  // Presensi hari ini (hanya untuk status yang eligible)
+  useEffect(() => {
+    const st = (pegawaiData?.status_kepegawaian || user.status_kepegawaian || '').replace(/_/g, ' ');
+    if (!ABSENSI_ELIGIBLE_STATUS.includes(st)) return;
+    (async () => {
+      try { const r = await api.get('/absensi/today'); setTodayData(r.data?.data || null); }
+      catch (err) { console.error('Error fetching today:', err); }
+    })();
+  }, [pegawaiData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const formatDate = (d) => {
     if (!d) return null;
@@ -302,6 +329,24 @@ const ProfilePage = () => {
     </button>
   );
 
+  // ─── Presensi & Layanan (gaya SIKEPO) ───
+  const statusKepeg = (pegawaiData?.status_kepegawaian || user.status_kepegawaian || '').replace(/_/g, ' ');
+  const isAbsensiEligible = ABSENSI_ELIGIBLE_STATUS.includes(statusKepeg);
+  const hariTanggal = now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const jamSekarang = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const sudahMasuk = !!todayData?.jam_masuk;
+  const sudahPulang = !!todayData?.jam_keluar;
+
+  const services = [
+    { label: 'Perjadin', icon: FiBriefcase, bg: 'bg-emerald-50', text: 'text-emerald-600', onClick: () => navigate('/pegawai/perjadin') },
+    { label: 'Jadwal', icon: FiCalendar, bg: 'bg-sky-50', text: 'text-sky-600', onClick: () => navigate('/pegawai/jadwal-kegiatan') },
+    ...(isAbsensiEligible
+      ? [{ label: 'Presensi', icon: FiClock, bg: 'bg-rose-50', text: 'text-rose-600', onClick: () => navigate('/dpmd/absensi') }]
+      : [{ label: 'Photo Booth', icon: FiCamera, bg: 'bg-violet-50', text: 'text-violet-600', onClick: () => navigate('/dpmd/photo-booth') }]
+    ),
+    { label: 'Informasi', icon: FiInfo, bg: 'bg-amber-50', text: 'text-amber-600', onClick: () => navigate('/dpmd/informasi') },
+  ];
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
       {/* Hero Header */}
@@ -376,6 +421,72 @@ const ProfilePage = () => {
           </div>
         </div>
       </div>
+
+      {/* Presensi & Layanan (gaya SIKEPO) */}
+      {user.pegawai_id && (
+        <div className="max-w-2xl mx-auto px-4 mt-6 space-y-4">
+          {isAbsensiEligible && (
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs text-gray-400 font-medium">
+                  {hariTanggal} · <span className="tabular-nums text-gray-600 font-semibold">{jamSekarang}</span>
+                </p>
+                {todayData?.status && (
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-600 capitalize">
+                    {String(todayData.status).replace(/_/g, ' ')}
+                  </span>
+                )}
+              </div>
+              <h3 className="text-base font-bold text-gray-900 mt-2 mb-4">Presensi &amp; Kinerja</h3>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex items-center gap-3 rounded-2xl bg-emerald-50/70 p-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                    <FiLogIn className="h-5 w-5 text-emerald-600" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-base font-extrabold text-gray-800 tabular-nums leading-none">{fmtJam(todayData?.jam_masuk)}</p>
+                    <p className="text-[11px] text-gray-400 mt-1">Jam Datang</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 rounded-2xl bg-rose-50/70 p-3">
+                  <div className="w-10 h-10 rounded-xl bg-rose-100 flex items-center justify-center flex-shrink-0">
+                    <FiLogOut className="h-5 w-5 text-rose-500" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-base font-extrabold text-gray-800 tabular-nums leading-none">{fmtJam(todayData?.jam_keluar)}</p>
+                    <p className="text-[11px] text-gray-400 mt-1">Jam Pulang</p>
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => navigate('/dpmd/absensi')}
+                className="mt-3 w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-green-500 text-white font-semibold text-sm shadow-lg shadow-emerald-500/25 transition-all hover:brightness-105"
+              >
+                <FiClock className="h-4 w-4" />
+                {!sudahMasuk ? 'Absen Datang' : !sudahPulang ? 'Absen Pulang' : 'Lihat Presensi'}
+              </button>
+            </div>
+          )}
+
+          {/* Layanan Lainnya */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+            <h3 className="text-base font-bold text-gray-900 mb-4">Layanan Lainnya</h3>
+            <div className="grid grid-cols-4 gap-2">
+              {services.map((s) => {
+                const Icon = s.icon;
+                return (
+                  <button key={s.label} onClick={s.onClick} className="flex flex-col items-center gap-2 py-2 transition-transform active:scale-95">
+                    <div className={`w-14 h-14 ${s.bg} rounded-2xl flex items-center justify-center`}>
+                      <Icon className={`h-6 w-6 ${s.text}`} />
+                    </div>
+                    <span className="text-[11px] font-semibold text-gray-600 text-center leading-tight">{s.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Tab Navigation */}
       <div className="max-w-2xl mx-auto px-4 mt-6">
