@@ -143,7 +143,6 @@ const ROLES = {
 // Role groups
 const ADMIN_ROLES = [ROLES.SUPERADMIN, ROLES.PMD, ROLES.PMD_ALT];
 
-const CetakBonBensin = lazy(() => import("./pages/CetakBonBensin"));
 
 // Komponen lain di-lazy load untuk code-splitting
 const DashboardPage = lazy(() => import("./pages/DashboardPage"));
@@ -868,7 +867,6 @@ function App() {
                   <Route path="perjadin/detail/:id" element={<PerjadinDetail />} />
                   <Route path="informasi" element={<InformasiPage />} />
                   <Route path="video-meeting" element={<VideoMeetingListPage />} />
-                  <Route path="etanol" element={<CetakBonBensin />} />
                   <Route path="absensi" element={<AbsensiPage />} />
                   <Route path="pesan" element={<MessagingPage />} />
                   <Route path="bank-surat" element={<BankSuratPage />} />

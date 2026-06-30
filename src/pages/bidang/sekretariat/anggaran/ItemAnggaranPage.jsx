@@ -14,13 +14,6 @@ const formatRupiah = (value) =>
 
 const firstRekening = (val) => val ? val.split(',')[0].trim() || null : null;
 
-// Parent prefix (remove last segment) — used for grouping
-const rekeningParent = (kode) => {
-  if (!kode) return null;
-  const parts = kode.split('.');
-  return parts.length > 1 ? parts.slice(0, -1).join('.') : kode;
-};
-
 // Bangun pohon hierarki rekening dari daftar item flat
 function buildRekeningTree(items) {
   const root = { code: null, depth: -1, children: new Map(), items: [], total: 0, itemCount: 0 };
@@ -62,6 +55,7 @@ const SHT_BADGE = {
   SBU:  'bg-amber-100 text-amber-700',
   ASB:  'bg-emerald-100 text-emerald-700',
   HSPK: 'bg-rose-100 text-rose-700',
+  Lainnya: 'bg-slate-200 text-slate-700',
 };
 const shtBadge = (type) => SHT_BADGE[type] || 'bg-gray-100 text-gray-600';
 
@@ -185,7 +179,7 @@ const CatalogItem = ({ item, shtType, isSelected, isPinned, onSelect, onTogglePi
 );
 
 // ─── Catalog Panel (left panel) ──────────────────────────────────────────────
-const CatalogPanel = ({ shtType, onShtTypeChange, onSelect, selectedItem }) => {
+const CatalogPanel = ({ shtType, onShtTypeChange, onSelect, selectedItem, showLainnya }) => {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch]   = useState('');
@@ -208,7 +202,7 @@ const CatalogPanel = ({ shtType, onShtTypeChange, onSelect, selectedItem }) => {
     setSearch('');
     setResults([]);
     setTotal(0);
-    doSearch('', shtType);
+    if (shtType !== 'Lainnya') doSearch('', shtType);
   }, [shtType, doSearch]);
 
   const handleSearch = (e) => {
@@ -250,8 +244,31 @@ const CatalogPanel = ({ shtType, onShtTypeChange, onSelect, selectedItem }) => {
             <div className={`text-[9.5px] font-normal mt-0.5 hidden sm:block ${shtType === type ? 'text-indigo-400' : 'text-gray-300'}`}>{sub}</div>
           </button>
         ))}
+        {showLainnya && (
+          <button type="button" onClick={() => onShtTypeChange('Lainnya')}
+            className={`flex-1 py-2.5 px-4 text-xs font-bold transition-colors border-b-2 ${
+              shtType === 'Lainnya'
+                ? 'border-slate-500 text-slate-700 bg-slate-50'
+                : 'border-transparent text-gray-400 hover:text-gray-600 hover:bg-gray-50'
+            }`}>
+            <div>Lainnya</div>
+            <div className={`text-[9.5px] font-normal mt-0.5 hidden sm:block ${shtType === 'Lainnya' ? 'text-slate-400' : 'text-gray-300'}`}>Item Custom</div>
+          </button>
+        )}
       </div>
 
+      {shtType === 'Lainnya' ? (
+        <div className="flex-1 flex flex-col items-center justify-center text-center p-6 gap-3">
+          <div className="h-14 w-14 rounded-2xl bg-slate-100 flex items-center justify-center">
+            <Edit2 className="h-7 w-7 text-slate-300" />
+          </div>
+          <div>
+            <p className="font-semibold text-slate-500 text-sm">Item Custom (Lainnya)</p>
+            <p className="text-[11px] text-slate-400 mt-1 px-4">Tidak terkunci katalog — isi nama, satuan, harga, dan kode rekening di panel kanan →</p>
+          </div>
+        </div>
+      ) : (
+      <>
       {/* Search */}
       <div className="px-3 py-2.5 shrink-0 border-b border-gray-100">
         <div className="relative">
@@ -320,6 +337,8 @@ const CatalogPanel = ({ shtType, onShtTypeChange, onSelect, selectedItem }) => {
           {search ? `${results.length} hasil` : `${results.length} dari ${total}`}
         </span>
       </div>
+      </>
+      )}
     </div>
   );
 };
@@ -343,6 +362,7 @@ const ItemModal = ({ isOpen, onClose, onSave, editData, loading, existingGroups 
       const type = editData.jenis_sht || 'SSH';
       setShtType(type);
       setShtSelected({
+        _custom:       type === 'Lainnya',
         uraian:        editData.nama_item,
         kode_barang:   editData.kode_sht || '',
         kode_rekening: editData.kode_rekening || '',
@@ -368,7 +388,15 @@ const ItemModal = ({ isOpen, onClose, onSave, editData, loading, existingGroups 
     }
   }, [editData, isOpen]);
 
-  const handleShtTypeChange = (type) => { setShtType(type); setShtSelected(null); setSelectedRekening(''); };
+  const handleShtTypeChange = (type) => {
+    setShtType(type);
+    setSelectedRekening('');
+    setShtSelected(type === 'Lainnya'
+      ? { _custom: true, uraian: '', satuan: 'Unit', harga_satuan: '', kode_rekening: '', kode_barang: '' }
+      : null);
+  };
+
+  const updateCustom = (field, val) => setShtSelected(prev => ({ ...prev, [field]: val }));
 
   const handleSelectItem = (item) => {
     setShtSelected(item);
@@ -397,6 +425,10 @@ const ItemModal = ({ isOpen, onClose, onSave, editData, loading, existingGroups 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!shtSelected) return toast.error('Pilih item dari katalog terlebih dahulu');
+    if (shtSelected._custom) {
+      if (!shtSelected.uraian?.trim()) return toast.error('Isi nama item terlebih dahulu');
+      if (!(Number(shtSelected.harga_satuan) > 0)) return toast.error('Isi harga satuan yang valid');
+    }
     if (rekeningList.length > 1 && !selectedRekening)
       return toast.error('Pilih kode rekening untuk item ini');
     const rekening = selectedRekening || firstRekening(shtSelected.kode_rekening);
@@ -442,6 +474,7 @@ const ItemModal = ({ isOpen, onClose, onSave, editData, loading, existingGroups 
               onShtTypeChange={handleShtTypeChange}
               onSelect={handleSelectItem}
               selectedItem={shtSelected}
+              showLainnya
             />
           </div>
 
@@ -460,6 +493,51 @@ const ItemModal = ({ isOpen, onClose, onSave, editData, loading, existingGroups 
             ) : (
               <div className="flex-1 overflow-y-auto p-5 space-y-4">
 
+                {shtSelected._custom ? (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1.5">
+                        Nama Item<span className="ml-1 font-normal normal-case tracking-normal text-rose-400">— wajib</span>
+                      </label>
+                      <input value={shtSelected.uraian} onChange={e => updateCustom('uraian', e.target.value)}
+                        placeholder="Cth: Sewa Sound System Panggung"
+                        className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1.5">Satuan</label>
+                        <input list="custom-satuan-opts" value={shtSelected.satuan} onChange={e => updateCustom('satuan', e.target.value)}
+                          placeholder="Unit, Paket, OH…"
+                          className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none" />
+                        <datalist id="custom-satuan-opts">
+                          {SATUAN_OPTIONS.map(s => <option key={s} value={s} />)}
+                        </datalist>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-emerald-500 mb-1.5">
+                          Harga Satuan<span className="ml-1 font-normal normal-case tracking-normal text-rose-400">— wajib</span>
+                        </label>
+                        <input type="text" inputMode="numeric" value={shtSelected.harga_satuan}
+                          onChange={e => updateCustom('harga_satuan', e.target.value.replace(/[^0-9]/g, ''))}
+                          placeholder="0"
+                          className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-emerald-400 focus:outline-none" />
+                        {Number(shtSelected.harga_satuan) > 0 && (
+                          <p className="text-[10.5px] text-emerald-600 mt-1 font-semibold">{formatRupiah(shtSelected.harga_satuan)}</p>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1.5">
+                        Kode Rekening
+                        <span className="ml-1 text-gray-300 font-normal normal-case tracking-normal">— opsional</span>
+                      </label>
+                      <input value={shtSelected.kode_rekening} onChange={e => updateCustom('kode_rekening', e.target.value)}
+                        placeholder="Cth: 5.1.02.01.01.0024"
+                        className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm font-mono focus:ring-2 focus:ring-indigo-400 focus:outline-none" />
+                    </div>
+                  </div>
+                ) : (
+                <>
                 {/* Item header */}
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
@@ -529,6 +607,8 @@ const ItemModal = ({ isOpen, onClose, onSave, editData, loading, existingGroups 
                     <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Kode Rekening</p>
                     <p className="text-xs font-mono text-gray-700">{rekeningList[0]}</p>
                   </div>
+                )}
+                </>
                 )}
 
                 {/* Volume stepper */}
@@ -921,7 +1001,7 @@ const PaketModal = ({ isOpen, onClose, onSave, loading, existingGroups }) => {
                       <p className="text-sm font-bold text-gray-800 leading-tight">{row.label}</p>
                       <p className="text-[11px] text-gray-500 mt-0.5 flex items-center gap-1.5 flex-wrap">
                         <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                          row.shtBadge(shtType)
+                          shtBadge(row.shtType)
                         }`}>{row.shtType}</span>
                         <span className="text-gray-600 font-semibold">Vol: <span className="text-violet-700">{vol.toLocaleString('id-ID')}</span></span>
                         <span className="text-gray-300">·</span>
@@ -1246,7 +1326,6 @@ const RekeningTreeNode = ({ node, isSuperadmin, onEdit, onDelete, itemIndexMap }
   const s = REKENING_DEPTH_STYLES[Math.min(depth, REKENING_DEPTH_STYLES.length - 1)];
   const headerIndent = 12 + depth * INDENT_STEP;
   const itemIndent   = headerIndent + INDENT_STEP + 4;
-  const hasChildren  = node.children.size > 0;
 
   return (
     <div>

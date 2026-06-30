@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft, DollarSign, Calendar, TrendingUp, TrendingDown,
   FileText, BarChart2, AlertCircle, CheckCircle2, Clock,
-  ChevronDown, ChevronUp, Layers, Package, Wallet, X,
+  ChevronDown, Layers, Package, Wallet, X,
   Utensils, Printer, Plane, Wrench, Gift, ChevronRight,
   Eye, Receipt, Loader2, Percent,
 } from 'lucide-react';
@@ -23,6 +23,126 @@ const fmtCompact = (n) => {
 const persen = (num, denom) => {
   if (!denom || denom <= 0) return 0;
   return Math.round((num / denom) * 1000) / 10;
+};
+
+// Bangun pohon hierarki rekening dari daftar item flat (sama seperti Item Anggaran)
+function buildRekeningTree(items) {
+  const root = { code: null, depth: -1, children: new Map(), items: [], total: 0, itemCount: 0 };
+  for (const item of items) {
+    const kode = (item.kode_rekening || '').trim();
+    const parts = kode ? kode.split('.') : ['—'];
+    let node = root;
+    for (let i = 0; i < parts.length; i++) {
+      const prefix = parts.slice(0, i + 1).join('.');
+      if (!node.children.has(prefix)) {
+        node.children.set(prefix, { code: prefix, depth: i, children: new Map(), items: [], total: 0, itemCount: 0 });
+      }
+      node = node.children.get(prefix);
+      node.total += Number(item.total) || 0;
+      node.itemCount += 1;
+    }
+    node.items.push(item);
+  }
+  return root;
+}
+
+// Style per kedalaman segmen rekening: 0='5', 1='5.1', 2='5.1.02', dst.
+// Slate netral + garis aksen kiri menandakan kedalaman; total tetap emerald.
+const REK_DEPTH_STYLES = [
+  { bg: 'bg-slate-700', text: 'text-white',     count: 'text-slate-300', acc: 'text-emerald-300', bar: 'border-l-slate-700', weight: 'font-black'    },
+  { bg: 'bg-slate-100', text: 'text-slate-800', count: 'text-slate-400', acc: 'text-emerald-700', bar: 'border-l-slate-400', weight: 'font-bold'     },
+  { bg: 'bg-slate-50',  text: 'text-slate-700', count: 'text-slate-400', acc: 'text-emerald-700', bar: 'border-l-slate-300', weight: 'font-bold'     },
+  { bg: 'bg-white',     text: 'text-slate-600', count: 'text-slate-300', acc: 'text-emerald-700', bar: 'border-l-slate-200', weight: 'font-semibold' },
+  { bg: 'bg-white',     text: 'text-slate-500', count: 'text-slate-300', acc: 'text-emerald-700', bar: 'border-l-slate-100', weight: 'font-semibold' },
+  { bg: 'bg-white',     text: 'text-slate-400', count: 'text-slate-300', acc: 'text-emerald-700', bar: 'border-l-slate-100', weight: 'font-semibold' },
+];
+const REK_INDENT = 14; // px per kedalaman
+
+// Badge warna per jenis SHT (selaras Item Anggaran)
+const SHT_BADGE = {
+  SSH:  'bg-blue-100 text-blue-700',
+  SBU:  'bg-amber-100 text-amber-700',
+  ASB:  'bg-emerald-100 text-emerald-700',
+  HSPK: 'bg-rose-100 text-rose-700',
+};
+const shtBadge = (t) => SHT_BADGE[t] || 'bg-gray-100 text-gray-600';
+
+// Grid kolom tabel item: No | Uraian | Jenis | Vol.Satuan | Harga Satuan | Total
+const ITEM_GRID = '2.5rem 1fr 4.5rem 9rem 9rem 9rem';
+
+// ─── Print (PDF via window.print) ─────────────────────────────────────────────
+const esc = (s) => String(s ?? '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+
+// Render satu node rekening + anak + itemnya jadi baris-baris <tr> (rekursif)
+const printRekeningRows = (node, depth, indexMap) => {
+  const pad = 6 + depth * 18;
+  const shade = ['#334155', '#e2e8f0', '#f1f5f9', '#f8fafc'][Math.min(depth, 3)];
+  const color = depth === 0 ? '#ffffff' : '#1e293b';
+  let html = `<tr>
+    <td colspan="5" style="background:${shade};color:${color};padding:5px 6px 5px ${pad}px;font-family:monospace;font-weight:bold;border-left:3px solid #94a3b8">${esc(node.code)} <span style="font-weight:400;opacity:.65">· ${node.itemCount} item</span></td>
+    <td style="background:${shade};color:${color};text-align:right;padding:5px 8px;font-weight:bold">${formatRupiah(node.total)}</td>
+  </tr>`;
+  for (const child of node.children.values()) html += printRekeningRows(child, depth + 1, indexMap);
+  if (node.items.length) {
+    const ipad = pad + 18;
+    html += `<tr class="ih">
+      <td style="padding-left:${ipad}px">No</td><td>Uraian Item</td>
+      <td style="text-align:center">Jenis</td><td style="text-align:right">Vol. Satuan</td>
+      <td style="text-align:right">Harga Satuan</td><td style="text-align:right">Total</td>
+    </tr>`;
+    for (const item of node.items) {
+      const no = String((indexMap[item.id] ?? 0) + 1).padStart(2, '0');
+      html += `<tr class="it">
+        <td style="padding-left:${ipad}px;text-align:right;color:#94a3b8">${no}</td>
+        <td>${esc(item.nama_item)}${item.keterangan ? `<div class="ket">${esc(item.keterangan)}</div>` : ''}</td>
+        <td style="text-align:center">${esc(item.jenis_sht || '')}</td>
+        <td style="text-align:right">${esc(item.volume)} ${esc(item.satuan || '')}</td>
+        <td style="text-align:right">${formatRupiah(item.harga_satuan)}</td>
+        <td style="text-align:right;color:#059669;font-weight:600">${formatRupiah(item.total)}</td>
+      </tr>`;
+    }
+  }
+  return html;
+};
+
+const openPrintRKA = ({ master, tahun, tree, indexMap, pagu }) => {
+  const rows = [...tree.children.values()].map(n => printRekeningRows(n, 0, indexMap)).join('');
+  const win = window.open('', '_blank');
+  if (!win) return;
+  win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>RKA ${esc(master?.nama_sub_kegiatan || '')} ${tahun}</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Arial, Helvetica, sans-serif; color: #1e293b; margin: 24px; font-size: 11px; }
+    h1 { font-size: 15px; margin: 0 0 2px; }
+    .sub { font-size: 11px; color: #475569; margin: 0; }
+    .meta { margin: 12px 0 14px; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; font-size: 11px; }
+    .meta div { margin: 2px 0; display: flex; gap: 6px; align-items: baseline; }
+    .meta b { flex: 0 0 100px; color: #475569; font-weight: 600; }
+    table { width: 100%; border-collapse: collapse; }
+    td { padding: 4px 6px; border-bottom: 1px solid #eef2f6; vertical-align: top; }
+    tr.ih td { font-size: 8.5px; text-transform: uppercase; letter-spacing: .05em; color: #94a3b8; font-weight: 700; background: #fbfdff; border-bottom: 1px solid #e2e8f0; }
+    tr.it td { font-size: 10.5px; }
+    tr.it td:nth-child(2) { font-weight: 600; }
+    .ket { font-size: 9px; color: #64748b; font-weight: 400; margin-top: 1px; }
+    tfoot td { border-top: 2px solid #cbd5e1; font-weight: bold; padding: 7px 8px; font-size: 12px; }
+    .ft { margin-top: 18px; padding-top: 8px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 9px; color: #94a3b8; }
+    @media print { body { margin: 0; } @page { margin: 14mm; } }
+  </style></head><body>
+    <h1>RENCANA KERJA ANGGARAN ${tahun}</h1>
+    <p class="sub">${esc(master?.bidangs?.nama || '')}</p>
+    <div class="meta">
+      <div><b>Sub Kegiatan</b> ${esc(master?.kode_sub_kegiatan || '')} — ${esc(master?.nama_sub_kegiatan || '')}</div>
+      <div><b>Program</b> ${esc(master?.nama_program || '-')}</div>
+      <div><b>Kegiatan</b> ${esc(master?.nama_kegiatan || '-')}</div>
+      <div><b>Pagu</b> ${formatRupiah(pagu)}</div>
+    </div>
+    <table>
+      <tbody>${rows}</tbody>
+    </table>
+    <div class="ft">DPMD Kabupaten Bogor — GEMA SuperApps</div>
+    <script>window.onload=function(){window.print();}</script>
+  </body></html>`);
+  win.document.close();
 };
 
 // ─── Stat Card ────────────────────────────────────────────────────────────────
@@ -134,28 +254,110 @@ const PencairanTypeModal = ({ open, onClose, onSelect }) => {
 };
 
 // ─── Item Row ─────────────────────────────────────────────────────────────────
-const ItemRow = ({ item, index }) => (
-  <div className="flex items-start gap-3 px-4 py-2.5 hover:bg-gray-50 border-b border-gray-50 last:border-0">
-    <span className="text-[10.5px] text-gray-400 font-mono mt-0.5 shrink-0 w-5 text-right">{index + 1}.</span>
-    <div className="flex-1 min-w-0">
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-sm text-gray-800 font-medium leading-snug">{item.nama_item}</span>
-        {item.grup && (
-          <span className="text-[9.5px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full shrink-0">{item.grup}</span>
-        )}
-        {item.jenis_sht && (
-          <span className="text-[9.5px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full shrink-0">{item.jenis_sht}</span>
-        )}
+const ItemRow = ({ item, index, indentLeft = 16 }) => {
+  const hasKoef = item.koefisien?.length > 1;
+  return (
+    <div className="hover:bg-gray-50/60 transition-colors border-b border-gray-50 last:border-0">
+      {/* Desktop — tabel sejajar header kolom */}
+      <div
+        className="hidden md:grid items-start gap-3 py-3 pr-5"
+        style={{ gridTemplateColumns: ITEM_GRID, paddingLeft: `${indentLeft}px` }}
+      >
+        <div className="text-sm font-mono text-gray-400 pt-0.5">{String(index + 1).padStart(2, '0')}</div>
+        <div className="min-w-0">
+          <p className="font-semibold text-gray-800 text-sm leading-snug">{item.nama_item}</p>
+          {item.keterangan && <p className="text-[11px] text-gray-500 mt-0.5">{item.keterangan}</p>}
+        </div>
+        <div className="flex justify-center pt-0.5">
+          {item.jenis_sht && (
+            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${shtBadge(item.jenis_sht)}`}>{item.jenis_sht}</span>
+          )}
+        </div>
+        <div className="text-right">
+          <p className="text-sm font-semibold text-gray-700">
+            {item.volume} <span className="text-gray-500 font-normal text-xs">{item.satuan}</span>
+          </p>
+          {hasKoef && (
+            <p className="text-[10px] text-gray-400 mt-0.5">
+              {item.koefisien.map(k => `${k.nilai} ${k.satuan}`).join(' × ')}
+            </p>
+          )}
+        </div>
+        <div className="text-right text-sm text-gray-600 pt-0.5">{formatRupiah(item.harga_satuan)}</div>
+        <div className="text-right font-semibold text-emerald-600/80 text-sm pt-0.5">{formatRupiah(item.total)}</div>
       </div>
-      <div className="flex items-center gap-3 mt-0.5 flex-wrap">
-        <span className="text-[11px] text-gray-500">
-          {item.volume} {item.satuan} × {formatRupiah(item.harga_satuan)}
-        </span>
-        <span className="text-[11.5px] font-bold text-emerald-700">{formatRupiah(item.total)}</span>
+
+      {/* Mobile */}
+      <div className="md:hidden flex items-start gap-3 pr-4 py-2.5" style={{ paddingLeft: `${indentLeft}px` }}>
+        <span className="text-[10.5px] text-gray-400 font-mono mt-0.5 shrink-0 w-5 text-right">{index + 1}.</span>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm text-gray-800 font-medium leading-snug">{item.nama_item}</span>
+            {item.jenis_sht && (
+              <span className={`text-[9.5px] px-1.5 py-0.5 rounded-full shrink-0 ${shtBadge(item.jenis_sht)}`}>{item.jenis_sht}</span>
+            )}
+          </div>
+          {item.keterangan && <p className="text-[11px] text-gray-500 mt-0.5">{item.keterangan}</p>}
+          <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+            <span className="text-[11px] text-gray-500">
+              {item.volume} {item.satuan} × {formatRupiah(item.harga_satuan)}
+            </span>
+            <span className="text-[11.5px] font-semibold text-emerald-600/80">{formatRupiah(item.total)}</span>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
+
+// ─── Rekening Group (collapsible, hierarki bertingkat) ────────────────────────
+const RekeningGroup = ({ node, indexMap }) => {
+  const [open, setOpen] = useState(true);
+  const s = REK_DEPTH_STYLES[Math.min(node.depth, REK_DEPTH_STYLES.length - 1)];
+  const headerIndent = 12 + node.depth * REK_INDENT;
+  const itemIndent = headerIndent + REK_INDENT + 4; // item menjorok ke dalam dari header rekeningnya
+
+  return (
+    <div>
+      <button
+        onClick={() => setOpen(v => !v)}
+        className={`w-full flex items-center gap-2 py-2 pr-4 border-b border-l-4 border-b-gray-100 ${s.bar} ${s.bg} transition-colors text-left`}
+        style={{ paddingLeft: `${headerIndent}px` }}
+      >
+        {open
+          ? <ChevronDown className={`h-3 w-3 shrink-0 ${s.text} opacity-60`} />
+          : <ChevronRight className={`h-3 w-3 shrink-0 ${s.text} opacity-60`} />}
+        <span className={`font-mono text-[11.5px] ${s.weight} ${s.text} flex-1 min-w-0 truncate`}>{node.code}</span>
+        <span className={`text-[10px] ${s.count} shrink-0`}>{node.itemCount} item</span>
+        <span className={`text-[11.5px] font-bold ${s.acc} shrink-0`}>{formatRupiah(node.total)}</span>
+      </button>
+
+      {open && (
+        <div>
+          {[...node.children.values()].map(child => (
+            <RekeningGroup key={child.code} node={child} indexMap={indexMap} />
+          ))}
+          {node.items.length > 0 && (
+            <div
+              className="hidden md:grid py-1.5 pr-5 border-b border-gray-100 bg-gray-50/40 text-[9.5px] font-bold uppercase tracking-widest text-gray-400"
+              style={{ gridTemplateColumns: ITEM_GRID, paddingLeft: `${itemIndent}px` }}
+            >
+              <div>No</div>
+              <div>Uraian Item</div>
+              <div className="text-center">Jenis</div>
+              <div className="text-right">Vol. Satuan</div>
+              <div className="text-right">Harga Satuan</div>
+              <div className="text-right">Total</div>
+            </div>
+          )}
+          {node.items.map(item => (
+            <ItemRow key={item.id} item={item} index={indexMap[item.id] ?? 0} indentLeft={itemIndent} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 // ─── Pencairan Row (untuk tab Realisasi) ──────────────────────────────────────
 const JENIS_LABEL = {
@@ -226,7 +428,6 @@ const DetailSubKegiatanPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedTahun, setSelectedTahun] = useState(null);
-  const [showAllItems, setShowAllItems] = useState(false);
   const [pencairanModalOpen, setPencairanModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('rka'); // 'rka' | 'realisasi'
 
@@ -291,6 +492,16 @@ const DetailSubKegiatanPage = () => {
 
   const handleBack = () => navigate(-1);
 
+  const handlePrint = () => {
+    openPrintRKA({
+      master,
+      tahun: selectedTahun,
+      tree: rekeningTree,
+      indexMap: itemIndexMap,
+      pagu: pagNominal,
+    });
+  };
+
   const handleOpenRKA = (paguId) => {
     const params = new URLSearchParams({ pagu_id: paguId, label: master.nama_sub_kegiatan });
     navigate(`${getPath('/sekretariat/anggaran/item-rka')}?${params}`);
@@ -315,8 +526,20 @@ const DetailSubKegiatanPage = () => {
   const totalRka = paguSelected?.total_anggaran ?? 0;
   const pagNominal = paguSelected?.pagu ?? 0;
   const sisaPagu = pagNominal - totalRka;
-  const items = paguSelected?.rka_items ?? [];
-  const ITEMS_PREVIEW = 5;
+  const items = useMemo(() => paguSelected?.rka_items ?? [], [paguSelected]);
+
+  // Pohon hierarki rekening + penomoran item global (urutan DFS)
+  const rekeningTree = useMemo(() => buildRekeningTree(items), [items]);
+  const itemIndexMap = useMemo(() => {
+    const map = {};
+    let idx = 0;
+    const dfs = (node) => {
+      node.children.forEach(dfs);
+      node.items.forEach(item => { map[item.id] = idx++; });
+    };
+    dfs(rekeningTree);
+    return map;
+  }, [rekeningTree]);
 
   // Realisasi totals (finalized only)
   const realisasiStats = useMemo(() => {
@@ -547,13 +770,23 @@ const DetailSubKegiatanPage = () => {
                       <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">{items.length} item</span>
                     )}
                   </div>
-                  <button
-                    onClick={() => handleOpenRKA(paguSelected.id)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors shrink-0"
-                  >
-                    <FileText className="h-3.5 w-3.5" />
-                    Kelola Item RKA
-                  </button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={handlePrint}
+                      disabled={items.length === 0}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 text-gray-700 rounded-lg text-xs font-semibold hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <Printer className="h-3.5 w-3.5" />
+                      Print
+                    </button>
+                    <button
+                      onClick={() => handleOpenRKA(paguSelected.id)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors"
+                    >
+                      <FileText className="h-3.5 w-3.5" />
+                      Kelola Item RKA
+                    </button>
+                  </div>
                 </div>
 
                 {/* RKA Items */}
@@ -564,21 +797,9 @@ const DetailSubKegiatanPage = () => {
                   </div>
                 ) : (
                   <>
-                    {(showAllItems ? items : items.slice(0, ITEMS_PREVIEW)).map((item, i) => (
-                      <ItemRow key={item.id} item={item} index={i} />
+                    {[...rekeningTree.children.values()].map(node => (
+                      <RekeningGroup key={node.code} node={node} indexMap={itemIndexMap} />
                     ))}
-                    {items.length > ITEMS_PREVIEW && (
-                      <button
-                        onClick={() => setShowAllItems(v => !v)}
-                        className="w-full flex items-center justify-center gap-1.5 py-2.5 text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors border-t border-gray-100"
-                      >
-                        {showAllItems ? (
-                          <><ChevronUp className="h-3.5 w-3.5" /> Tampilkan lebih sedikit</>
-                        ) : (
-                          <><ChevronDown className="h-3.5 w-3.5" /> {items.length - ITEMS_PREVIEW} item lainnya</>
-                        )}
-                      </button>
-                    )}
                     <div className="flex items-center justify-between px-4 py-3 bg-blue-50 border-t border-blue-100">
                       <span className="text-xs font-semibold text-blue-700">Total RKA</span>
                       <span className="text-sm font-bold text-blue-700">{formatRupiah(totalRka)}</span>
