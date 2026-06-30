@@ -20,8 +20,8 @@ const CoreDashboardPublic = () => {
   const fetchPublicDashboardData = async () => {
     try {
       setLoading(true);
-      // Public endpoint - no authentication needed
-      const response = await axios.get(`${API_CONFIG.BASE_URL}/public/dashboard`);
+      // Endpoint publik keyless khusus landing (bukan core-dashboard ber-API-key)
+      const response = await axios.get(`${API_CONFIG.BASE_URL}/public/landing-stats`);
       
       console.log('Public Dashboard API Response:', response.data);
       setDashboardData(response.data.data);
@@ -145,7 +145,7 @@ const CoreDashboardPublic = () => {
               </div>
             </div>
             <p className="text-3xl font-bold text-slate-800">
-              {dashboardData?.kelembagaan || '2000+'}
+              {dashboardData?.total_kelembagaan || '2000+'}
             </p>
             <p className="text-sm text-slate-500 mt-2">RW, RT, LPM, PKK, dll</p>
           </div>
