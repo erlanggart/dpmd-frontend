@@ -163,7 +163,7 @@ const ExecutiveHero = ({ activeYear, setActiveYear, summary, totalAnggaran, tota
               <div className="flex items-start justify-between">
                 <div>
                   <div className="flex items-center gap-2">
-                    <p className="text-emerald-400/80 text-xs font-semibold tracking-wide uppercase">Total Anggaran Usulan</p>
+                    <p className="text-emerald-400/80 text-xs font-semibold tracking-wide uppercase">Total Anggaran Usulan (masuk DPMD)</p>
                     <button
                       onClick={() => setShowDetailAnggaran(!showDetailAnggaran)}
                       className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition-all ${
@@ -182,7 +182,7 @@ const ExecutiveHero = ({ activeYear, setActiveYear, summary, totalAnggaran, tota
                   >
                     {showDetailAnggaran ? formatRupiah(totalAnggaran) : formatRupiahShort(totalAnggaran)}
                   </p>
-                  <p className="text-slate-400 text-xs mt-2">TA {activeYear} · {totalProposals} proposal aktif</p>
+                  <p className="text-slate-400 text-xs mt-2">TA {activeYear} · {totalProposals} proposal masuk DPMD</p>
                 </div>
                 <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center">
                   <DollarSign className="w-6 h-6 text-emerald-400" />
@@ -203,7 +203,7 @@ const ExecutiveHero = ({ activeYear, setActiveYear, summary, totalAnggaran, tota
                 <ArrowUpRight className="w-4 h-4 text-blue-400" />
               </div>
               <p className="text-2xl sm:text-3xl font-black text-white"><CountUp end={totalProposals} /></p>
-              <p className="text-slate-400 text-xs mt-1">Total Proposal</p>
+              <p className="text-slate-400 text-xs mt-1">Proposal Masuk DPMD</p>
             </div>
           </motion.div>
 
@@ -585,6 +585,7 @@ const StatistikBankeuDashboard = () => {
   const [activeYear, setActiveYear] = useState(2026);
   const [proposals, setProposals] = useState([]);
   const [summary, setSummary] = useState(null);
+  const [stats, setStats] = useState(null);
   const [desaPartisipasi, setDesaPartisipasi] = useState({});
   const [loading, setLoading] = useState(true);
   const [loadingPartisipasi, setLoadingPartisipasi] = useState(false);
@@ -604,6 +605,7 @@ const StatistikBankeuDashboard = () => {
       const cached = getCachedData(cacheKey).data;
       setProposals(cached.proposals);
       setSummary(cached.summary);
+      setStats(cached.stats || null);
       setDesaPartisipasi(cached.desaPartisipasi);
       setLoading(false);
     } else {
@@ -619,6 +621,7 @@ const StatistikBankeuDashboard = () => {
     setExpandedDesa({});
     let processedProposals = [];
     let summaryData = null;
+    let statsData = null;
     let partisipasiData = {};
     try {
       // FASE 1: Fetch proposals (data utama) — tampilkan UI segera setelah ini
@@ -644,6 +647,16 @@ const StatistikBankeuDashboard = () => {
       // Tampilkan UI utama dulu
       setLoading(false);
 
+      // Statistik "masuk DPMD" — sumber sama dgn halaman verifikasi SPKED
+      // (getStatistics: submitted_to_dpmd / submitted_to_dpmd_at / dpmd_verified_at).
+      try {
+        const statsRes = await api.get(`/dpmd/bankeu-perubahan/statistics?tahun=${activeYear}`);
+        statsData = statsRes.data?.success ? (statsRes.data.data || null) : null;
+        setStats(statsData);
+      } catch {
+        setStats(null);
+      }
+
       // FASE 2: Fetch partisipasi desa (secondary data, di background)
       setLoadingPartisipasi(true);
       try {
@@ -668,6 +681,7 @@ const StatistikBankeuDashboard = () => {
       setCachedData(`statistik-bankeu-perubahan-${activeYear}`, {
         proposals: processedProposals,
         summary: summaryData,
+        stats: statsData,
         desaPartisipasi: partisipasiData,
       });
     } catch (err) {
@@ -675,6 +689,7 @@ const StatistikBankeuDashboard = () => {
       toast.error('Gagal memuat data Bantuan Keuangan');
       setProposals([]);
       setSummary(null);
+      setStats(null);
       setDesaPartisipasi({});
     } finally {
       setLoading(false);
@@ -723,6 +738,10 @@ const StatistikBankeuDashboard = () => {
 
   const totalProposals = proposals.length;
   const totalAnggaran = useMemo(() => proposals.reduce((s, d) => s + (d.anggaran || 0), 0), [proposals]);
+  // Angka hero diselaraskan dgn halaman verifikasi SPKED: yang sudah MASUK DPMD,
+  // bukan global (semua tahap). Fallback ke hitungan lokal bila statistik gagal.
+  const masukDpmdProposals = stats?.total != null ? Number(stats.total) : totalProposals;
+  const masukDpmdAnggaran = stats?.total_anggaran != null ? Number(stats.total_anggaran) : totalAnggaran;
   const filteredAnggaran = useMemo(() => processed.reduce((s, d) => s + (d.anggaran || 0), 0), [processed]);
   const totalKecamatan = useMemo(() => new Set(processed.map(d => d.kecamatan)).size, [processed]);
   const totalDesa = useMemo(() => new Set(processed.map(d => d.desa)).size, [processed]);
@@ -812,8 +831,8 @@ const StatistikBankeuDashboard = () => {
         activeYear={activeYear}
         setActiveYear={setActiveYear}
         summary={summary}
-        totalAnggaran={totalAnggaran}
-        totalProposals={totalProposals}
+        totalAnggaran={masukDpmdAnggaran}
+        totalProposals={masukDpmdProposals}
         showDetailAnggaran={showDetailAnggaran}
         setShowDetailAnggaran={setShowDetailAnggaran}
         onRefresh={() => { clearCache(`statistik-bankeu-perubahan-${activeYear}`); fetchData(); }}
