@@ -105,8 +105,44 @@ const printRekeningRows = (node, depth, indexMap) => {
   return html;
 };
 
-const openPrintRKA = ({ master, tahun, tree, indexMap, pagu }) => {
-  const rows = [...tree.children.values()].map(n => printRekeningRows(n, 0, indexMap)).join('');
+// Render satu grup (flat) jadi baris-baris <tr> — header grup + tabel item
+const printGrupRows = (name, items, startNo) => {
+  const total = items.reduce((s, i) => s + (Number(i.total) || 0), 0);
+  let html = `<tr>
+    <td colspan="5" style="background:#334155;color:#ffffff;padding:5px 6px 5px 6px;font-weight:bold;border-left:3px solid #94a3b8">${esc(name)} <span style="font-weight:400;opacity:.65">· ${items.length} item</span></td>
+    <td style="background:#334155;color:#ffffff;text-align:right;padding:5px 8px;font-weight:bold">${formatRupiah(total)}</td>
+  </tr>`;
+  html += `<tr class="ih">
+    <td style="padding-left:24px">No</td><td>Uraian Item</td>
+    <td style="text-align:center">Jenis</td><td style="text-align:right">Vol. Satuan</td>
+    <td style="text-align:right">Harga Satuan</td><td style="text-align:right">Total</td>
+  </tr>`;
+  items.forEach((item, i) => {
+    const no = String(startNo + i + 1).padStart(2, '0');
+    html += `<tr class="it">
+      <td style="padding-left:24px;text-align:right;color:#94a3b8">${no}</td>
+      <td>${esc(item.nama_item)}${item.keterangan ? `<div class="ket">${esc(item.keterangan)}</div>` : ''}</td>
+      <td style="text-align:center">${esc(item.jenis_sht || '')}</td>
+      <td style="text-align:right">${esc(item.volume)} ${esc(item.satuan || '')}</td>
+      <td style="text-align:right">${formatRupiah(item.harga_satuan)}</td>
+      <td style="text-align:right;color:#059669;font-weight:600">${formatRupiah(item.total)}</td>
+    </tr>`;
+  });
+  return html;
+};
+
+const openPrintRKA = ({ master, tahun, tree, groupedItems, indexMap, pagu, mode = 'rekening' }) => {
+  let rows;
+  if (mode === 'grup') {
+    let running = 0;
+    rows = groupedItems.map(({ name, items }) => {
+      const html = printGrupRows(name, items, running);
+      running += items.length;
+      return html;
+    }).join('');
+  } else {
+    rows = [...tree.children.values()].map(n => printRekeningRows(n, 0, indexMap)).join('');
+  }
   const win = window.open('', '_blank');
   if (!win) return;
   win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>RKA ${esc(master?.nama_sub_kegiatan || '')} ${tahun}</title>
@@ -359,6 +395,50 @@ const RekeningGroup = ({ node, indexMap }) => {
   );
 };
 
+// ─── Grup Group (collapsible, pengelompokan berdasarkan grup item) ────────────
+const GrupGroup = ({ name, items, startIndex }) => {
+  const [open, setOpen] = useState(true);
+  const total = items.reduce((s, i) => s + (Number(i.total) || 0), 0);
+  const headerIndent = 12;
+  const itemIndent = headerIndent + REK_INDENT + 4;
+
+  return (
+    <div>
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center gap-2 py-2 pr-4 border-b border-l-4 border-b-gray-100 border-l-slate-700 bg-slate-700 transition-colors text-left"
+        style={{ paddingLeft: `${headerIndent}px` }}
+      >
+        {open
+          ? <ChevronDown className="h-3 w-3 shrink-0 text-white opacity-60" />
+          : <ChevronRight className="h-3 w-3 shrink-0 text-white opacity-60" />}
+        <span className="text-[11.5px] font-black text-white flex-1 min-w-0 truncate">{name || 'Umum'}</span>
+        <span className="text-[10px] text-slate-300 shrink-0">{items.length} item</span>
+        <span className="text-[11.5px] font-bold text-emerald-300 shrink-0">{formatRupiah(total)}</span>
+      </button>
+
+      {open && (
+        <div>
+          <div
+            className="hidden md:grid py-1.5 pr-5 border-b border-gray-100 bg-gray-50/40 text-[9.5px] font-bold uppercase tracking-widest text-gray-400"
+            style={{ gridTemplateColumns: ITEM_GRID, paddingLeft: `${itemIndent}px` }}
+          >
+            <div>No</div>
+            <div>Uraian Item</div>
+            <div className="text-center">Jenis</div>
+            <div className="text-right">Vol. Satuan</div>
+            <div className="text-right">Harga Satuan</div>
+            <div className="text-right">Total</div>
+          </div>
+          {items.map((item, idx) => (
+            <ItemRow key={item.id} item={item} index={startIndex + idx} indentLeft={itemIndent} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ─── Pencairan Row (untuk tab Realisasi) ──────────────────────────────────────
 const JENIS_LABEL = {
   atk: 'ATK', cetak: 'Cetak', makmin: 'Makan Minum',
@@ -430,6 +510,8 @@ const DetailSubKegiatanPage = () => {
   const [selectedTahun, setSelectedTahun] = useState(null);
   const [pencairanModalOpen, setPencairanModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('rka'); // 'rka' | 'realisasi'
+  const [groupMode, setGroupMode] = useState('rekening'); // 'rekening' | 'grup'
+  const [printMenuOpen, setPrintMenuOpen] = useState(false);
 
   // Realisasi data (list of pencairan terkait master ini)
   const [pencairanList, setPencairanList] = useState([]);
@@ -492,13 +574,16 @@ const DetailSubKegiatanPage = () => {
 
   const handleBack = () => navigate(-1);
 
-  const handlePrint = () => {
+  const handlePrint = (mode = groupMode) => {
+    setPrintMenuOpen(false);
     openPrintRKA({
       master,
       tahun: selectedTahun,
       tree: rekeningTree,
+      groupedItems,
       indexMap: itemIndexMap,
       pagu: pagNominal,
+      mode,
     });
   };
 
@@ -540,6 +625,17 @@ const DetailSubKegiatanPage = () => {
     dfs(rekeningTree);
     return map;
   }, [rekeningTree]);
+
+  // Pengelompokan berdasarkan grup item (mode 'grup')
+  const groupedItems = useMemo(() => {
+    const map = new Map();
+    items.forEach(item => {
+      const key = item.grup || 'Umum';
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(item);
+    });
+    return Array.from(map.entries()).map(([name, its]) => ({ name, items: its }));
+  }, [items]);
 
   // Realisasi totals (finalized only)
   const realisasiStats = useMemo(() => {
@@ -771,14 +867,56 @@ const DetailSubKegiatanPage = () => {
                     )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      onClick={handlePrint}
-                      disabled={items.length === 0}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 text-gray-700 rounded-lg text-xs font-semibold hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                    >
-                      <Printer className="h-3.5 w-3.5" />
-                      Print
-                    </button>
+                    {/* Toggle pengelompokan */}
+                    {items.length > 0 && (
+                      <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden text-xs font-semibold">
+                        <button
+                          onClick={() => setGroupMode('rekening')}
+                          className={`px-3 py-1.5 transition-colors ${groupMode === 'rekening' ? 'bg-slate-700 text-white' : 'text-gray-500 hover:bg-gray-50'}`}
+                        >
+                          Rekening
+                        </button>
+                        <button
+                          onClick={() => setGroupMode('grup')}
+                          className={`px-3 py-1.5 transition-colors ${groupMode === 'grup' ? 'bg-slate-700 text-white' : 'text-gray-500 hover:bg-gray-50'}`}
+                        >
+                          Grup
+                        </button>
+                      </div>
+                    )}
+                    {/* Print dengan pilihan pengelompokan */}
+                    <div className="relative">
+                      <button
+                        onClick={() => setPrintMenuOpen(v => !v)}
+                        disabled={items.length === 0}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 text-gray-700 rounded-lg text-xs font-semibold hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <Printer className="h-3.5 w-3.5" />
+                        Print
+                        <ChevronDown className="h-3 w-3 opacity-60" />
+                      </button>
+                      {printMenuOpen && (
+                        <>
+                          <div className="fixed inset-0 z-10" onClick={() => setPrintMenuOpen(false)} />
+                          <div className="absolute right-0 mt-1 z-20 w-56 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden py-1">
+                            <button
+                              onClick={() => handlePrint('rekening')}
+                              className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                            >
+                              <Layers className="h-3.5 w-3.5 text-slate-400" />
+                              Per Kode Rekening
+                            </button>
+                            <button
+                              onClick={() => handlePrint('grup')}
+                              className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                            >
+                              <Layers className="h-3.5 w-3.5 text-slate-400" />
+                              Per Grup
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
                     <button
                       onClick={() => handleOpenRKA(paguSelected.id)}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors"
@@ -797,9 +935,18 @@ const DetailSubKegiatanPage = () => {
                   </div>
                 ) : (
                   <>
-                    {[...rekeningTree.children.values()].map(node => (
-                      <RekeningGroup key={node.code} node={node} indexMap={itemIndexMap} />
-                    ))}
+                    {groupMode === 'rekening'
+                      ? [...rekeningTree.children.values()].map(node => (
+                          <RekeningGroup key={node.code} node={node} indexMap={itemIndexMap} />
+                        ))
+                      : (() => {
+                          let running = 0;
+                          return groupedItems.map(({ name, items: gItems }) => {
+                            const start = running;
+                            running += gItems.length;
+                            return <GrupGroup key={name} name={name} items={gItems} startIndex={start} />;
+                          });
+                        })()}
                     <div className="flex items-center justify-between px-4 py-3 bg-blue-50 border-t border-blue-100">
                       <span className="text-xs font-semibold text-blue-700">Total RKA</span>
                       <span className="text-sm font-bold text-blue-700">{formatRupiah(totalRka)}</span>
