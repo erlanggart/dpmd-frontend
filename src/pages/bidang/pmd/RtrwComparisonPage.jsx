@@ -85,6 +85,247 @@ const joinValues = (values) => {
 
 const sumValues = (values) => (values || []).reduce((sum, v) => sum + Number(v || 0), 0);
 
+const TANGKIL_KODE = "32.01.03.2011";
+
+// Bangun klasifikasi (7 golongan) langsung dari data.comparison — semua field
+// yang dibutuhkan sudah tersedia di respons dasar tanpa perlu memuat detail.
+const buildClassification = (data) => {
+  const dbBpjs = [];
+  const nikBerbeda = [];
+  const desaBerbeda = [];
+  const bpjsNoDb = [];
+  const dbNoBpjs = [];
+  const bpjsCocokAdd = [];
+
+  const comparison = [...(data?.comparison || [])].sort((a, b) => a.desaKode.localeCompare(b.desaKode));
+
+  comparison.forEach((desa) => {
+    (desa.items || []).forEach((item) => {
+      const base = {
+        key: `${desa.desaKode}::${item.key}`,
+        desaKode: desa.desaKode,
+        desaNama: desa.desaNama,
+        kecamatanNama: desa.kecamatanNama,
+        jenis: item.jenis || "",
+        rw: item.rwNomor || "",
+        rt: item.rtNomor || "",
+        namaDb: (item.dbNama || []).join(", "),
+        namaAdd: (item.addNama || []).join(", "),
+        namaBpjs: (item.bpjsNama || []).join(", "),
+        nik: (item.nik || []).join(", "),
+        nikDb: (item.dbNik || []).join(", "),
+        nikBpjs: (item.bpjsNik || []).join(", "),
+        nikCocok: item.nikMatch,
+        nikBerbeda: item.nikMismatch,
+        tglBeda: item.tglLahirMismatch,
+        desaBedaTangkil: item.bpjsTangkilDbConfirmed,
+        kodeDesaBpjsAsal: item.bpjsTangkilDbConfirmed
+          ? (item.bpjsOriginalDesaKode || TANGKIL_KODE)
+          : (item.bpjsOriginalDesaKode || ""),
+        adaAdd: item.inAdd,
+        nilaiAdd: item.addNilai || 0,
+        upahBpjs: item.bpjsUpah || 0,
+        fuzzy: item.isFuzzy,
+        status: item.status,
+        keterangan: item.keterangan || "",
+        sumber: "",
+        kandidatDesa: "",
+      };
+
+      if (item.inDb && item.inBpjs) {
+        dbBpjs.push(base);
+        if (item.nikMismatch) nikBerbeda.push(base);
+        if (item.bpjsTangkilDbConfirmed) desaBerbeda.push(base);
+      }
+
+      if (item.inBpjs && !item.inDb) {
+        if (item.inAdd) bpjsCocokAdd.push(base);
+        else bpjsNoDb.push({ ...base, sumber: "BPJS (tanpa DB & ADD)" });
+      }
+
+      if (item.inDb && !item.inBpjs) {
+        dbNoBpjs.push(base);
+      }
+    });
+  });
+
+  (data?.tangkilUnresolved || []).forEach((item) => {
+    bpjsNoDb.push({
+      key: `tangkil::${item.nik || item.nama}`,
+      desaKode: TANGKIL_KODE,
+      desaNama: "Tangkil (asal BPJS)",
+      kecamatanNama: "Citeureup",
+      jenis: "",
+      rw: "",
+      rt: "",
+      namaDb: "",
+      namaAdd: "",
+      namaBpjs: item.nama || "",
+      nik: item.nik || "",
+      nikDb: "",
+      nikBpjs: item.nik || "",
+      nikCocok: false,
+      nikBerbeda: false,
+      tglBeda: false,
+      desaBedaTangkil: false,
+      kodeDesaBpjsAsal: TANGKIL_KODE,
+      adaAdd: false,
+      nilaiAdd: 0,
+      upahBpjs: item.upah || 0,
+      fuzzy: false,
+      status: "only_bpjs",
+      keterangan: "",
+      sumber: "BPJS Tangkil (tak terkonfirmasi walau fuzzy)",
+      kandidatDesa: (item.bpjsCandidates || [])
+        .map((c) => `${c.desaNama || c.desaKode}${c.kecamatanNama ? ` (${c.kecamatanNama})` : ""}`)
+        .join("; "),
+    });
+  });
+
+  const bySortKey = (a, b) =>
+    a.desaKode.localeCompare(b.desaKode)
+    || String(a.jenis).localeCompare(String(b.jenis))
+    || String(a.rw).localeCompare(String(b.rw))
+    || String(a.rt).localeCompare(String(b.rt))
+    || String(a.namaDb || a.namaBpjs).localeCompare(String(b.namaDb || b.namaBpjs));
+
+  [dbBpjs, nikBerbeda, desaBerbeda, bpjsNoDb, dbNoBpjs, bpjsCocokAdd].forEach((arr) => arr.sort(bySortKey));
+
+  return { dbBpjs, nikBerbeda, desaBerbeda, bpjsNoDb, dbNoBpjs, bpjsCocokAdd };
+};
+
+const COL_DESA = { key: "desa", label: "Desa", type: "desa" };
+const COL_LOKASI = { key: "lokasi", label: "RT/RW", type: "lokasi" };
+
+// Definisi 7 tab. Tab pertama tetap tampilan perbandingan lama.
+const TAB_DEFS = [
+  { id: "comparison", label: "Perbandingan RT/RW" },
+  {
+    id: "db_bpjs",
+    label: "DB + BPJS",
+    bucket: "dbBpjs",
+    title: "Data Cocok Database & BPJS",
+    description: "Seluruh data yang cocok antara Database dan BPJS (termasuk yang juga ada di ADD).",
+    columns: [
+      COL_DESA, COL_LOKASI,
+      { key: "namaDb", label: "Nama DB" },
+      { key: "namaBpjs", label: "Nama BPJS" },
+      { key: "nik", label: "NIK" },
+      { key: "nikCocok", label: "NIK Cocok", type: "bool" },
+      { key: "tglBeda", label: "Tgl Lahir Beda", type: "bool" },
+      { key: "desaBedaTangkil", label: "Desa Beda", type: "bool" },
+      { key: "adaAdd", label: "Ada ADD", type: "bool" },
+      { key: "nilaiAdd", label: "Nilai ADD", type: "currency", align: "right" },
+      { key: "upahBpjs", label: "Upah BPJS", type: "currency", align: "right" },
+    ],
+  },
+  {
+    id: "nik_berbeda",
+    label: "DB + BPJS NIK Berbeda",
+    bucket: "nikBerbeda",
+    title: "Cocok Database & BPJS — NIK Berbeda",
+    description: "Data cocok DB & BPJS namun NIK berbeda (sudah disamakan aplikasi via fuzzy match). Angka NIK yang berbeda ditandai merah.",
+    columns: [
+      COL_DESA, COL_LOKASI,
+      { key: "namaDb", label: "Nama & NIK DB", type: "nameNik", nameKey: "namaDb", nikKey: "nikDb", otherNikKey: "nikBpjs" },
+      { key: "namaBpjs", label: "Nama & NIK BPJS", type: "nameNik", nameKey: "namaBpjs", nikKey: "nikBpjs", otherNikKey: "nikDb" },
+      { key: "keterangan", label: "Keterangan" },
+    ],
+  },
+  {
+    id: "desa_berbeda",
+    label: "DB + BPJS Desa Berbeda",
+    bucket: "desaBerbeda",
+    title: "Cocok Database & BPJS — Lokasi Desa Berbeda",
+    description: "Anomali BPJS Desa Tangkil: cocok via NIK database namun kode desa asal BPJS berbeda.",
+    columns: [
+      COL_DESA, COL_LOKASI,
+      { key: "namaDb", label: "Nama DB" },
+      { key: "namaBpjs", label: "Nama BPJS" },
+      { key: "nik", label: "NIK" },
+      { key: "kodeDesaBpjsAsal", label: "Kode Desa BPJS Asal" },
+      { key: "keterangan", label: "Keterangan" },
+    ],
+  },
+  {
+    id: "bpjs_no_db",
+    label: "BPJS Tidak Ada di DB",
+    bucket: "bpjsNoDb",
+    title: "BPJS Tidak Ada di Database",
+    description: "BPJS tanpa padanan di Database (termasuk pool Tangkil yang tak terkonfirmasi walau fuzzy).",
+    columns: [
+      COL_DESA, COL_LOKASI,
+      { key: "namaBpjs", label: "Nama BPJS" },
+      { key: "nik", label: "NIK" },
+      { key: "upahBpjs", label: "Upah BPJS", type: "currency", align: "right" },
+      { key: "sumber", label: "Sumber" },
+      { key: "kandidatDesa", label: "Kandidat Desa" },
+    ],
+  },
+  {
+    id: "db_no_bpjs",
+    label: "DB Tidak Ada di BPJS",
+    bucket: "dbNoBpjs",
+    title: "Database Tidak Ada di BPJS",
+    description: "Data Database (pengurus RT/RW) yang tidak memiliki padanan di BPJS.",
+    columns: [
+      COL_DESA, COL_LOKASI,
+      { key: "namaDb", label: "Nama DB" },
+      { key: "nik", label: "NIK" },
+      { key: "adaAdd", label: "Ada ADD", type: "bool" },
+      { key: "nilaiAdd", label: "Nilai ADD", type: "currency", align: "right" },
+      { key: "status", label: "Status" },
+    ],
+  },
+  {
+    id: "bpjs_add",
+    label: "BPJS Cocok ADD Tanpa DB",
+    bucket: "bpjsCocokAdd",
+    title: "BPJS Cocok ADD (Tanpa Database)",
+    description: "BPJS tanpa DB namun memiliki referensi cocok dari data ADD.",
+    columns: [
+      COL_DESA, COL_LOKASI,
+      { key: "namaBpjs", label: "Nama BPJS" },
+      { key: "namaAdd", label: "Nama ADD" },
+      { key: "nik", label: "NIK" },
+      { key: "upahBpjs", label: "Upah BPJS", type: "currency", align: "right" },
+      { key: "nilaiAdd", label: "Nilai ADD", type: "currency", align: "right" },
+      { key: "fuzzy", label: "Cocok Fuzzy", type: "bool" },
+    ],
+  },
+];
+
+// Warna kartu tab (dipakai saat tab aktif)
+const TAB_COLOR = {
+  comparison: "blue",
+  db_bpjs: "green",
+  nik_berbeda: "red",
+  desa_berbeda: "violet",
+  bpjs_no_db: "amber",
+  db_no_bpjs: "gray",
+  bpjs_add: "indigo",
+};
+
+const TAB_ACTIVE_CLASS = {
+  blue: "border-blue-500 bg-blue-50 ring-1 ring-blue-300",
+  green: "border-green-500 bg-green-50 ring-1 ring-green-300",
+  red: "border-red-500 bg-red-50 ring-1 ring-red-300",
+  violet: "border-violet-500 bg-violet-50 ring-1 ring-violet-300",
+  amber: "border-amber-500 bg-amber-50 ring-1 ring-amber-300",
+  gray: "border-gray-500 bg-gray-100 ring-1 ring-gray-300",
+  indigo: "border-indigo-500 bg-indigo-50 ring-1 ring-indigo-300",
+};
+
+const TAB_VALUE_CLASS = {
+  blue: "text-blue-700",
+  green: "text-green-700",
+  red: "text-red-700",
+  violet: "text-violet-700",
+  amber: "text-amber-700",
+  gray: "text-gray-700",
+  indigo: "text-indigo-700",
+};
+
 const loadAllDetailsForExport = async (filteredData) => {
   const hasAllDetails = filteredData.every((desa) =>
     desa.items.every((item) => item.detailsLoaded),
@@ -290,6 +531,19 @@ const RtrwComparisonPage = () => {
     };
   }, [filteredData]);
 
+  const classification = useMemo(() => buildClassification(data), [data]);
+
+  const tabCounts = useMemo(() => ({
+    db_bpjs: classification.dbBpjs.length,
+    nik_berbeda: classification.nikBerbeda.length,
+    desa_berbeda: classification.desaBerbeda.length,
+    bpjs_no_db: classification.bpjsNoDb.length,
+    db_no_bpjs: classification.dbNoBpjs.length,
+    bpjs_add: classification.bpjsCocokAdd.length,
+  }), [classification]);
+
+  const activeTabDef = TAB_DEFS.find((tab) => tab.id === activeTab);
+
   const toggleDesa = (desaId) => {
     setExpandedDesa((prev) => {
       const next = new Set(prev);
@@ -408,30 +662,29 @@ const RtrwComparisonPage = () => {
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-8">
-        <SummaryCard label="DB + ADD" value={data.summary.totalDbAdd} color="teal" />
-        <SummaryCard label="DB + BPJS" value={data.summary.totalDbBpjs} color="green" />
-        <SummaryCard label="ADD + BPJS" value={data.summary.totalAddBpjs} color="indigo" />
-        <SummaryCard label="Hanya DB" value={data.summary.totalOnlyDb} color="gray" />
-        <SummaryCard label="Hanya ADD" value={data.summary.totalOnlyAdd} color="blue" />
-        <SummaryCard label="Hanya BPJS" value={data.summary.totalOnlyBpjs} color="amber" />
-        <SummaryCard label="NIK Berbeda" value={data.summary.totalNikMismatch} color="red" />
-        <SummaryCard
-          label="BPJS Tangkil ✓"
-          value={data.summary.totalBpjsTangkilConfirmed}
-          color="green"
-          subtitle={`${data.summary.totalBpjsTangkilPool || 0} pool Tangkil`}
-        />
-        <SummaryCard
-          label="BPJS Tangkil ?"
-          value={data.summary.totalBpjsTangkilUnresolved}
-          color="violet"
-          subtitle="tidak terselesaikan"
-          extraInfo={data.summary.totalBpjsTangkilUnresolved ? {
-            label: "Lihat tab khusus",
-            onClick: () => setActiveTab("tangkil_unresolved"),
-          } : null}
-        />
+      <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+        <h3 className="mb-3 text-sm font-semibold text-gray-700">Rincian Persandingan</h3>
+        <div className="grid grid-cols-1 gap-x-8 gap-y-1 sm:grid-cols-2 lg:grid-cols-3">
+          <InfoRow label="DB + ADD" value={data.summary.totalDbAdd} />
+          <InfoRow label="DB + BPJS" value={data.summary.totalDbBpjs} />
+          <InfoRow label="ADD + BPJS" value={data.summary.totalAddBpjs} />
+          <InfoRow label="Hanya DB" value={data.summary.totalOnlyDb} />
+          <InfoRow label="Hanya ADD" value={data.summary.totalOnlyAdd} />
+          <InfoRow label="Hanya BPJS" value={data.summary.totalOnlyBpjs} />
+          <InfoRow label="NIK Berbeda" value={data.summary.totalNikMismatch} valueClass="text-red-600" />
+          <InfoRow
+            label="BPJS Tangkil ✓ (dikonfirmasi)"
+            value={data.summary.totalBpjsTangkilConfirmed}
+            hint={`${data.summary.totalBpjsTangkilPool || 0} pool Tangkil`}
+            valueClass="text-green-600"
+          />
+          <InfoRow
+            label="BPJS Tangkil ? (tidak terselesaikan)"
+            value={data.summary.totalBpjsTangkilUnresolved}
+            valueClass="text-violet-600"
+            onClick={data.summary.totalBpjsTangkilUnresolved ? () => setActiveTab("bpjs_no_db") : null}
+          />
+        </div>
       </div>
 
       {listModal && (
@@ -458,28 +711,42 @@ const RtrwComparisonPage = () => {
         </div>
       )}
 
-      <div className="flex gap-1 rounded-xl border border-gray-200 bg-gray-50 p-1">
-        <button
-          onClick={() => setActiveTab("comparison")}
-          className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${activeTab === "comparison" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
-        >
-          Perbandingan RT/RW
-        </button>
-        <button
-          onClick={() => setActiveTab("tangkil_unresolved")}
-          className={`flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${activeTab === "tangkil_unresolved" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
-        >
-          BPJS Tangkil Tidak Terselesaikan
-          {data.tangkilUnresolved?.length > 0 && (
-            <span className="rounded-full bg-violet-100 px-2 py-0.5 text-xs font-bold text-violet-700">
-              {data.tangkilUnresolved.length}
-            </span>
-          )}
-        </button>
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-7">
+        {TAB_DEFS.map((tab) => {
+          const isComparison = tab.id === "comparison";
+          const count = isComparison ? data.summary.totalDesa : tabCounts[tab.id];
+          const isActive = activeTab === tab.id;
+          const color = TAB_COLOR[tab.id] || "gray";
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`rounded-xl border p-3 text-left transition-all ${isActive
+                ? `${TAB_ACTIVE_CLASS[color]} shadow-sm`
+                : "border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm"}`}
+            >
+              <span className="block text-xs font-medium leading-tight text-gray-500">{tab.label}</span>
+              <span className={`mt-1 block text-2xl font-bold ${isActive ? TAB_VALUE_CLASS[color] : "text-gray-800"}`}>
+                {(count || 0).toLocaleString("id-ID")}
+              </span>
+              <span className="mt-0.5 block text-[10px] text-gray-400">
+                {isComparison ? "desa" : "data"}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
-      {activeTab === "tangkil_unresolved" && (
-        <TangkilUnresolvedPanel items={data.tangkilUnresolved || []} />
+      {activeTabDef && activeTabDef.bucket && (
+        <ClassifiedTable
+          key={activeTabDef.id}
+          title={activeTabDef.title}
+          description={activeTabDef.description}
+          rows={classification[activeTabDef.bucket]}
+          columns={activeTabDef.columns}
+          kecamatanList={kecamatanList}
+          filenameBase={activeTabDef.id}
+        />
       )}
 
       {activeTab === "comparison" && (
@@ -591,6 +858,37 @@ const RtrwComparisonPage = () => {
           </div>
         </>
       )}
+    </div>
+  );
+};
+
+const InfoRow = ({ label, value, hint, valueClass, onClick }) => {
+  const content = (
+    <>
+      <span className="flex items-center gap-1 text-gray-500">
+        {label}
+        {hint && <span className="text-[11px] text-gray-400">· {hint}</span>}
+      </span>
+      <span className={`font-semibold tabular-nums ${valueClass || "text-gray-800"}`}>
+        {(value || 0).toLocaleString("id-ID")}
+      </span>
+    </>
+  );
+
+  if (onClick) {
+    return (
+      <button
+        onClick={onClick}
+        className="flex items-center justify-between border-b border-gray-100 py-1.5 text-sm text-left transition-colors hover:bg-gray-50"
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex items-center justify-between border-b border-gray-100 py-1.5 text-sm">
+      {content}
     </div>
   );
 };
@@ -981,82 +1279,318 @@ const BpjsDetails = ({ details = [] }) => {
   );
 };
 
-const TangkilUnresolvedPanel = ({ items }) => {
-  const [search, setSearch] = useState("");
-  const filtered = useMemo(() => {
-    if (!search) return items;
-    const term = search.toUpperCase();
-    return items.filter((item) =>
-      item.nama?.toUpperCase().includes(term) || item.nik?.includes(term)
-    );
-  }, [items, search]);
+const BoolBadge = ({ value }) => (
+  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${value ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+    {value ? "Ya" : "Tidak"}
+  </span>
+);
 
-  if (!items.length) {
-    return (
-      <div className="py-16 text-center text-gray-400">
-        <LuShieldCheck className="mx-auto mb-3 h-12 w-12 opacity-40" />
-        <p className="font-medium">Semua BPJS dari Tangkil sudah terkonfirmasi via NIK database</p>
-      </div>
-    );
+// Render NIK dengan menandai angka yang berbeda (dibanding NIK pembanding) merah.
+const renderNikDiff = (nik, otherNik) => {
+  const value = String(nik || "").trim();
+  if (!value) return <span className="italic text-gray-300">-</span>;
+
+  const other = String(otherNik || "").trim();
+  const comparable = /^\d+$/.test(value) && /^\d+$/.test(other);
+
+  if (!comparable) {
+    return <span className="font-mono text-gray-500">{value}</span>;
   }
 
   return (
+    <span className="font-mono">
+      {value.split("").map((ch, index) => (
+        <span key={index} className={other[index] !== ch ? "font-bold text-red-600" : "text-gray-500"}>
+          {ch}
+        </span>
+      ))}
+    </span>
+  );
+};
+
+const renderClassifiedCell = (col, row) => {
+  const value = row[col.key];
+  switch (col.type) {
+    case "nameNik":
+      return (
+        <div className="min-w-[11rem]">
+          <div className="font-medium text-gray-800">{row[col.nameKey] || "-"}</div>
+          <div className="mt-0.5 text-xs">{renderNikDiff(row[col.nikKey], row[col.otherNikKey])}</div>
+        </div>
+      );
+    case "desa":
+      return (
+        <div className="min-w-[10rem]">
+          <div className="font-medium text-gray-800">{row.desaNama}</div>
+          <div className="text-xs text-gray-400">{row.kecamatanNama} · {row.desaKode}</div>
+        </div>
+      );
+    case "lokasi":
+      return (
+        <div>
+          <div className="text-xs font-medium text-gray-700">{row.jenis || "-"}</div>
+          <div className="text-xs text-gray-400">
+            {row.rw ? `RW ${row.rw}` : ""}{row.rt ? ` / RT ${row.rt}` : ""}
+          </div>
+        </div>
+      );
+    case "bool":
+      return <BoolBadge value={Boolean(value)} />;
+    case "currency":
+      return <span className="tabular-nums text-gray-700">{value ? formatCurrency(value) : "-"}</span>;
+    default:
+      return <span className="text-gray-700">{value || <span className="italic text-gray-300">-</span>}</span>;
+  }
+};
+
+const ClassifiedTable = ({ title, description, rows, columns, kecamatanList, filenameBase }) => {
+  const [search, setSearch] = useState("");
+  const [kecamatan, setKecamatan] = useState("");
+  const [openKec, setOpenKec] = useState(() => new Set());
+  const [openDesa, setOpenDesa] = useState(() => new Set());
+
+  // Kolom "Desa" tak perlu ditampilkan per baris karena sudah jadi grup dropdown
+  const displayColumns = useMemo(() => columns.filter((col) => col.type !== "desa"), [columns]);
+  const totalCols = displayColumns.length + 1;
+
+  const filtered = useMemo(() => {
+    let result = rows;
+    if (kecamatan) result = result.filter((row) => row.kecamatanNama === kecamatan);
+    if (search) {
+      const term = search.toUpperCase();
+      result = result.filter((row) =>
+        (row.namaDb || "").toUpperCase().includes(term)
+        || (row.namaBpjs || "").toUpperCase().includes(term)
+        || (row.namaAdd || "").toUpperCase().includes(term)
+        || (row.nik || "").includes(term)
+        || (row.desaNama || "").toUpperCase().includes(term)
+      );
+    }
+    return result;
+  }, [rows, search, kecamatan]);
+
+  // Kelompokkan: Kecamatan -> Desa
+  const groups = useMemo(() => {
+    const kecMap = new Map();
+    filtered.forEach((row) => {
+      if (!kecMap.has(row.kecamatanNama)) kecMap.set(row.kecamatanNama, new Map());
+      const desaMap = kecMap.get(row.kecamatanNama);
+      if (!desaMap.has(row.desaKode)) {
+        desaMap.set(row.desaKode, { desaKode: row.desaKode, desaNama: row.desaNama, rows: [] });
+      }
+      desaMap.get(row.desaKode).rows.push(row);
+    });
+    return [...kecMap.entries()]
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([kec, desaMap]) => {
+        const desas = [...desaMap.values()].sort((a, b) => a.desaKode.localeCompare(b.desaKode));
+        return { kecamatan: kec, count: desas.reduce((sum, d) => sum + d.rows.length, 0), desas };
+      });
+  }, [filtered]);
+
+  // Auto buka grup saat mencari / memfilter kecamatan
+  useEffect(() => {
+    if (search) {
+      setOpenKec(new Set(groups.map((g) => g.kecamatan)));
+      setOpenDesa(new Set(groups.flatMap((g) => g.desas.map((d) => `${g.kecamatan}::${d.desaKode}`))));
+    } else if (kecamatan) {
+      setOpenKec(new Set([kecamatan]));
+      setOpenDesa(new Set());
+    } else {
+      setOpenKec(new Set());
+      setOpenDesa(new Set());
+    }
+  }, [search, kecamatan, groups]);
+
+  const toggleKec = (kec) => setOpenKec((prev) => {
+    const next = new Set(prev);
+    if (next.has(kec)) next.delete(kec); else next.add(kec);
+    return next;
+  });
+  const toggleDesa = (id) => setOpenDesa((prev) => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+  const expandAll = () => {
+    setOpenKec(new Set(groups.map((g) => g.kecamatan)));
+    setOpenDesa(new Set(groups.flatMap((g) => g.desas.map((d) => `${g.kecamatan}::${d.desaKode}`))));
+  };
+  const collapseAll = () => {
+    setOpenKec(new Set());
+    setOpenDesa(new Set());
+  };
+
+  const exportTab = () => {
+    if (!filtered.length) return;
+    const exportRows = filtered.map((row) => {
+      const out = {
+        "KODE DESA": row.desaKode,
+        "DESA": row.desaNama,
+        "KECAMATAN": row.kecamatanNama,
+        "JENIS": row.jenis || "",
+        "RW": row.rw || "",
+        "RT": row.rt || "",
+      };
+      columns.forEach((col) => {
+        if (col.type === "desa" || col.type === "lokasi") return;
+        if (col.type === "nameNik") {
+          const nameHeader = col.label.toUpperCase();
+          out[nameHeader] = row[col.nameKey] ?? "";
+          out[nameHeader.replace("NAMA & ", "")] = row[col.nikKey] ?? "";
+          return;
+        }
+        const value = row[col.key];
+        out[col.label.toUpperCase()] = col.type === "bool"
+          ? (value ? "Ya" : "Tidak")
+          : col.type === "currency"
+            ? Number(value || 0)
+            : (value ?? "");
+      });
+      return out;
+    });
+
+    const ws = XLSX.utils.json_to_sheet(exportRows);
+    ws["!cols"] = Object.keys(exportRows[0]).map((key) => {
+      const maxLen = Math.max(key.length, ...exportRows.map((r) => String(r[key] ?? "").length));
+      return { wch: Math.min(maxLen + 2, 55) };
+    });
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Data");
+    XLSX.writeFile(wb, `RTRW_${filenameBase}_${new Date().toISOString().split("T")[0]}.xlsx`);
+  };
+
+  return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm text-violet-700">
-        <strong>{items.length} data BPJS</strong> dengan ID Pegawai asal <strong>32.01.03.2011 (Tangkil)</strong> tidak dapat dikonfirmasi via NIK database.
-        Data ini tidak masuk ke persandingan utama.
+      <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+            <p className="mt-0.5 text-sm text-gray-500">{description}</p>
+          </div>
+          <button
+            onClick={exportTab}
+            disabled={filtered.length === 0}
+            className="flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-2 text-xs text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <LuDownload className="h-3.5 w-3.5" />
+            Export Excel
+          </button>
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <div className="relative min-w-[220px] flex-1">
+            <LuSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Cari desa, nama, atau NIK..."
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <select
+            value={kecamatan}
+            onChange={(event) => setKecamatan(event.target.value)}
+            className="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">Semua Kecamatan</option>
+            {kecamatanList.map((kec) => (
+              <option key={kec} value={kec}>{kec}</option>
+            ))}
+          </select>
+          <button
+            onClick={expandAll}
+            className="rounded-lg bg-gray-100 px-3 py-2 text-xs transition-colors hover:bg-gray-200"
+          >
+            Buka Semua
+          </button>
+          <button
+            onClick={collapseAll}
+            className="rounded-lg bg-gray-100 px-3 py-2 text-xs transition-colors hover:bg-gray-200"
+          >
+            Tutup Semua
+          </button>
+          <span className="text-xs text-gray-500">
+            {filtered.length.toLocaleString("id-ID")} baris · {groups.length} kecamatan
+          </span>
+        </div>
       </div>
 
-      <div className="relative max-w-sm">
-        <LuSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-        <input
-          type="text"
-          placeholder="Cari nama atau NIK..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 text-sm outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500"
-        />
-      </div>
-
-      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-50 text-xs uppercase text-gray-500">
-              <th className="w-8 px-4 py-2 text-left font-medium">No</th>
-              <th className="px-4 py-2 text-left font-medium">Nama</th>
-              <th className="px-4 py-2 text-left font-medium">NIK</th>
-              <th className="px-4 py-2 text-left font-medium">Tgl Lahir</th>
-              <th className="px-4 py-2 text-left font-medium">KPJ</th>
-              <th className="px-4 py-2 text-left font-medium">BLTH</th>
-              <th className="px-4 py-2 text-left font-medium">Kandidat Desa</th>
-              <th className="px-4 py-2 text-right font-medium">Upah</th>
+              <th className="w-12 px-4 py-2 text-left font-medium">No</th>
+              {displayColumns.map((col) => (
+                <th key={col.key} className={`px-4 py-2 font-medium ${col.align === "right" ? "text-right" : "text-left"}`}>
+                  {col.label}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
-            {filtered.length === 0 ? (
+            {groups.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-4 py-8 text-center text-gray-400">Tidak ada data sesuai pencarian</td>
+                <td colSpan={totalCols} className="px-4 py-10 text-center text-gray-400">
+                  Tidak ada data sesuai filter
+                </td>
               </tr>
             ) : (
-              filtered.map((item, index) => (
-                <tr key={`${item.nik || item.nama}-${index}`} className="border-t border-gray-50 hover:bg-gray-50">
-                  <td className="px-4 py-2 text-xs text-gray-400">{index + 1}</td>
-                  <td className="px-4 py-2 font-medium text-gray-900">{item.nama}</td>
-                  <td className="px-4 py-2 text-xs text-gray-500">{item.nik || "-"}</td>
-                  <td className="px-4 py-2 text-xs text-gray-500">{item.tglLahir || "-"}</td>
-                  <td className="px-4 py-2 text-xs text-gray-500">{item.kpj || "-"}</td>
-                  <td className="px-4 py-2 text-xs text-gray-500">{item.blth || "-"}</td>
-                  <td className="px-4 py-2 text-xs text-gray-500">
-                    {item.bpjsCandidates?.length > 0
-                      ? item.bpjsCandidates.map((c) => `${c.desaNama || c.desaKode}${c.kecamatanNama ? ` (${c.kecamatanNama})` : ""}`).join("; ")
-                      : <span className="italic text-gray-400">tidak ada kandidat</span>
-                    }
-                  </td>
-                  <td className="px-4 py-2 text-right text-xs font-medium text-amber-700">
-                    {item.upah ? formatCurrency(item.upah) : "-"}
-                  </td>
-                </tr>
-              ))
+              groups.map((group) => {
+                const kecOpen = openKec.has(group.kecamatan);
+                return (
+                  <React.Fragment key={group.kecamatan}>
+                    <tr
+                      className="cursor-pointer border-t border-gray-200 bg-gray-100 hover:bg-gray-200"
+                      onClick={() => toggleKec(group.kecamatan)}
+                    >
+                      <td colSpan={totalCols} className="px-3 py-2">
+                        <div className="flex items-center gap-2 font-semibold text-gray-800">
+                          {kecOpen ? <LuChevronDown className="h-4 w-4" /> : <LuChevronRight className="h-4 w-4" />}
+                          <span>{group.kecamatan}</span>
+                          <span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-gray-500">
+                            {group.desas.length} desa · {group.count.toLocaleString("id-ID")} baris
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+                    {kecOpen && group.desas.map((desa) => {
+                      const desaId = `${group.kecamatan}::${desa.desaKode}`;
+                      const desaOpen = openDesa.has(desaId);
+                      return (
+                        <React.Fragment key={desaId}>
+                          <tr
+                            className="cursor-pointer border-t border-gray-100 bg-gray-50 hover:bg-gray-100"
+                            onClick={() => toggleDesa(desaId)}
+                          >
+                            <td colSpan={totalCols} className="py-1.5 pl-9 pr-3">
+                              <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                                {desaOpen ? <LuChevronDown className="h-3.5 w-3.5" /> : <LuChevronRight className="h-3.5 w-3.5" />}
+                                <span>{desa.desaNama}</span>
+                                <span className="text-xs text-gray-400">{desa.desaKode}</span>
+                                <span className="rounded-full bg-white px-2 py-0.5 text-xs text-gray-500">
+                                  {desa.rows.length.toLocaleString("id-ID")}
+                                </span>
+                              </div>
+                            </td>
+                          </tr>
+                          {desaOpen && desa.rows.map((row, index) => (
+                            <tr key={row.key} className="border-t border-gray-50 hover:bg-blue-50/40">
+                              <td className="px-4 py-2 text-xs text-gray-400">{index + 1}</td>
+                              {displayColumns.map((col) => (
+                                <td key={col.key} className={`px-4 py-2 align-top ${col.align === "right" ? "text-right" : "text-left"}`}>
+                                  {renderClassifiedCell(col, row)}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </React.Fragment>
+                      );
+                    })}
+                  </React.Fragment>
+                );
+              })
             )}
           </tbody>
         </table>
