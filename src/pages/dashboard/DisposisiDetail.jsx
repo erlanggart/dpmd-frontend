@@ -138,7 +138,8 @@ export default function DisposisiDetail() {
       formData.append('file_disposisi', file);
       await api.post(
         `/disposisi/surat-masuk/${disposisi.surat_masuk.id}/kertas-disposisi`,
-        formData
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
       );
       toast.success('Kertas disposisi berhasil diupload.');
       await fetchDisposisi();
