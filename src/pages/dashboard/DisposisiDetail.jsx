@@ -4,7 +4,7 @@ import {
   FiArrowLeft, FiMail, FiUser, FiCalendar, FiClock, FiFileText,
   FiSend, FiEye, FiX, FiCheck, FiDownload, FiAlertCircle, FiActivity,
   FiLayers, FiInbox, FiZap, FiMessageSquare, FiChevronDown, FiChevronRight,
-  FiUpload
+  FiUpload, FiSearch, FiUsers
 } from 'react-icons/fi';
 import api from '../../api';
 import { toast } from 'react-hot-toast';
@@ -36,6 +36,7 @@ export default function DisposisiDetail() {
   const [expandedGroups, setExpandedGroups] = useState({});
   const [showInstruksiDropdown, setShowInstruksiDropdown] = useState(false);
   const [instruksiSearch, setInstruksiSearch] = useState('');
+  const [recipientSearch, setRecipientSearch] = useState('');
   const [uploadingDispositionSheet, setUploadingDispositionSheet] = useState(false);
   const instruksiDropdownRef = useRef(null);
 
@@ -170,6 +171,7 @@ export default function DisposisiDetail() {
       toast.success(`Disposisi diteruskan ke ${selectedUserIds.length} penerima`);
       setShowTeruskanModal(false);
       setSelectedUserIds([]);
+      setRecipientSearch('');
       setFormTeruskan({ catatan: '', instruksi: ['laksanakan'] });
       fetchDisposisi();
     } catch (error) {
@@ -207,6 +209,42 @@ export default function DisposisiDetail() {
       users: users.filter(u => u.role === role && u.id.toString() !== user.id.toString())
     }))
     .filter(g => g.users.length > 0);
+
+  // --- Derived helpers untuk modal Teruskan Disposisi ---
+  const getInitials = (name) => {
+    if (!name) return '?';
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    return ((parts[0]?.[0] || '') + (parts[1]?.[0] || '')).toUpperCase() || '?';
+  };
+
+  const roleAvatarTone = {
+    kepala_dinas: 'bg-purple-100 text-purple-700',
+    sekretaris_dinas: 'bg-indigo-100 text-indigo-700',
+    kepala_bidang: 'bg-blue-100 text-blue-700',
+    ketua_tim: 'bg-teal-100 text-teal-700',
+    pegawai: 'bg-amber-100 text-amber-700',
+  };
+
+  const totalAvailableRecipients = groupedUsers.reduce((n, g) => n + g.users.length, 0);
+  const selectedUsers = users.filter(u => selectedUserIds.includes(u.id.toString()));
+
+  const recipientQuery = recipientSearch.trim().toLowerCase();
+  const visibleGroups = groupedUsers
+    .map(g => ({
+      ...g,
+      users: recipientQuery
+        ? g.users.filter(u =>
+            u.name?.toLowerCase().includes(recipientQuery) ||
+            g.label.toLowerCase().includes(recipientQuery))
+        : g.users,
+    }))
+    .filter(g => g.users.length > 0);
+
+  const closeTeruskanModal = () => {
+    setShowTeruskanModal(false);
+    setSelectedUserIds([]);
+    setRecipientSearch('');
+  };
 
   const getStatusBadge = (status) => {
     const badges = {
@@ -675,83 +713,129 @@ export default function DisposisiDetail() {
 
       {/* Modal Teruskan - Multi-select */}
       {showTeruskanModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center z-[999] p-0 sm:p-4">
-          <div className="bg-white w-full sm:rounded-2xl sm:max-w-xl max-h-[92vh] sm:max-h-[90vh] flex flex-col shadow-2xl overflow-hidden rounded-t-2xl">
-            <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-4 sm:px-5 py-3 sm:py-4 flex-shrink-0">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5 sm:gap-3">
-                  <div className="p-1.5 sm:p-2 bg-white/20 rounded-lg"><FiSend className="w-4 h-4 sm:w-5 sm:h-5 text-white" /></div>
+        <div className="fixed inset-0 z-[999] flex items-end justify-center bg-slate-900/60 p-0 backdrop-blur-sm sm:items-center sm:p-4">
+          <div className="flex max-h-[94vh] w-full flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl ring-1 ring-black/5 sm:max-h-[90vh] sm:max-w-lg sm:rounded-3xl">
+            {/* Header */}
+            <div className="relative flex-shrink-0 overflow-hidden bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-600 px-5 py-4">
+              <div className="pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
+              <div className="pointer-events-none absolute -bottom-12 -left-6 h-28 w-28 rounded-full bg-white/10 blur-2xl" />
+              <div className="relative flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/25 backdrop-blur">
+                    <FiSend className="h-5 w-5 text-white" />
+                  </div>
                   <div>
-                    <h2 className="text-[15px] sm:text-base font-bold text-white">Teruskan Disposisi</h2>
-                    <p className="text-[11px] sm:text-xs text-white/70">{selectedUserIds.length} penerima dipilih</p>
+                    <h2 className="text-base font-bold leading-tight text-white">Teruskan Disposisi</h2>
+                    <p className="text-xs text-white/70">Pilih penerima &amp; instruksi tindak lanjut</p>
                   </div>
                 </div>
-                <button onClick={() => { setShowTeruskanModal(false); setSelectedUserIds([]); }} className="text-white/70 hover:text-white p-2 hover:bg-white/10 rounded-lg transition">
-                  <FiX size={22} />
+                <button onClick={closeTeruskanModal} className="rounded-lg p-2 text-white/80 transition hover:bg-white/15 hover:text-white">
+                  <FiX size={20} />
                 </button>
+              </div>
+              <div className="relative mt-3 flex items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white ring-1 ring-white/25 backdrop-blur">
+                  <FiUsers className="h-3.5 w-3.5" />
+                  {selectedUserIds.length} dari {totalAvailableRecipients} dipilih
+                </span>
+                {selectedUserIds.length > 0 && (
+                  <button type="button" onClick={() => setSelectedUserIds([])} className="text-xs font-semibold text-white/80 underline-offset-2 transition hover:text-white hover:underline">
+                    Kosongkan
+                  </button>
+                )}
               </div>
             </div>
 
-            <form onSubmit={handleTeruskan} className="flex-1 overflow-y-auto overscroll-contain">
-              <div className="p-4 sm:p-5 space-y-3 sm:space-y-4">
+            <form onSubmit={handleTeruskan} className="flex flex-1 flex-col overflow-hidden">
+              <div className="flex-1 space-y-5 overflow-y-auto overscroll-contain p-4 sm:p-5">
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-2">
-                    Pilih Penerima <span className="text-red-500">*</span>
+                  <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                    Pilih Penerima <span className="text-rose-500">*</span>
                   </label>
-                  <div className="border rounded-xl overflow-hidden divide-y">
-                    {groupedUsers.map(group => {
-                      const isExpanded = expandedGroups[group.role] !== false;
+
+                  {/* Pencarian penerima */}
+                  <div className="relative mb-2.5">
+                    <FiSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      value={recipientSearch}
+                      onChange={(e) => setRecipientSearch(e.target.value)}
+                      placeholder="Cari nama penerima..."
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-3 text-sm text-slate-800 outline-none transition focus:border-purple-400 focus:bg-white focus:ring-2 focus:ring-purple-100"
+                    />
+                  </div>
+
+                  {/* Chip penerima terpilih */}
+                  {selectedUsers.length > 0 && (
+                    <div className="mb-2.5 flex flex-wrap gap-1.5">
+                      {selectedUsers.map(u => (
+                        <span key={u.id} className="inline-flex items-center gap-1 rounded-full bg-purple-100 py-1 pl-2.5 pr-1 text-[11px] font-semibold text-purple-700">
+                          {u.name}
+                          <button type="button" onClick={() => toggleUser(u.id)} className="flex h-4 w-4 items-center justify-center rounded-full text-purple-500 transition hover:bg-purple-200 hover:text-purple-800">
+                            <FiX className="h-3 w-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Grup penerima */}
+                  <div className="space-y-2.5">
+                    {visibleGroups.map(group => {
+                      const isExpanded = recipientQuery ? true : expandedGroups[group.role] !== false;
                       const allSelectedInGroup = group.users.every(u => selectedUserIds.includes(u.id.toString()));
                       const selectedCount = group.users.filter(u => selectedUserIds.includes(u.id.toString())).length;
+                      const tone = roleAvatarTone[group.role] || 'bg-slate-100 text-slate-600';
 
                       return (
-                        <div key={group.role}>
-                          <div className="flex items-center bg-gray-50 px-3 py-2.5 cursor-pointer hover:bg-gray-100 transition" onClick={() => toggleGroup(group.role)}>
-                            <button type="button" className="mr-2 text-gray-400">
-                              {isExpanded ? <FiChevronDown className="w-4 h-4" /> : <FiChevronRight className="w-4 h-4" />}
+                        <div key={group.role} className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                          <div className="flex items-center gap-2 bg-slate-50/80 px-3 py-2.5">
+                            <button type="button" onClick={() => toggleGroup(group.role)} className="flex flex-1 items-center gap-2 text-left">
+                              <span className="flex h-5 w-5 items-center justify-center rounded-md text-slate-400 transition hover:text-slate-600">
+                                {isExpanded ? <FiChevronDown className="h-4 w-4" /> : <FiChevronRight className="h-4 w-4" />}
+                              </span>
+                              <span className="text-sm font-bold text-slate-700">{group.label}</span>
+                              <span className="rounded-full bg-slate-200 px-1.5 py-0.5 text-[10px] font-bold text-slate-500">{group.users.length}</span>
+                              {selectedCount > 0 && (
+                                <span className="rounded-full bg-purple-100 px-1.5 py-0.5 text-[10px] font-bold text-purple-600">{selectedCount} dipilih</span>
+                              )}
                             </button>
-                            <span className="text-xs font-bold text-gray-700 flex-1">{group.label}</span>
-                            {selectedCount > 0 && (
-                              <span className="text-[10px] font-bold text-purple-600 bg-purple-100 px-2 py-0.5 rounded-full mr-2">{selectedCount}</span>
-                            )}
                             <button
                               type="button"
                               onClick={(e) => { e.stopPropagation(); toggleSelectAllInGroup(group.users); }}
-                              className={`text-[10px] font-bold px-2.5 py-1 rounded-full transition ${
-                                allSelectedInGroup ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                              className={`rounded-full px-2.5 py-1 text-[10px] font-bold transition ${
+                                allSelectedInGroup ? 'bg-purple-600 text-white shadow-sm shadow-purple-200' : 'bg-white text-slate-500 ring-1 ring-slate-200 hover:bg-slate-100'
                               }`}
                             >
-                              {allSelectedInGroup ? 'Hapus Semua' : 'Pilih Semua'}
+                              {allSelectedInGroup ? 'Batal semua' : 'Pilih semua'}
                             </button>
                           </div>
-                          
+
                           {isExpanded && (
-                            <div className="divide-y divide-gray-100">
+                            <div className="divide-y divide-slate-100">
                               {group.users.map(u => {
                                 const isSelected = selectedUserIds.includes(u.id.toString());
+                                const subtitle = u.role === 'ketua_tim' && (u.pegawai?.sub_bidang || u.pegawai?.bidangs?.nama)
+                                  ? `Ketua Tim ${u.pegawai.sub_bidang || u.pegawai.bidangs.nama}`
+                                  : u.role === 'kepala_bidang' && u.pegawai?.bidangs?.nama
+                                    ? u.pegawai.bidangs.nama
+                                    : u.role?.replace(/_/g, ' ');
                                 return (
                                   <label
                                     key={u.id}
-                                    className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer transition hover:bg-gray-50 ${isSelected ? 'bg-purple-50' : ''}`}
+                                    className={`flex cursor-pointer items-center gap-3 px-3 py-2.5 transition ${isSelected ? 'bg-purple-50/70' : 'hover:bg-slate-50'}`}
                                   >
-                                    <input
-                                      type="checkbox"
-                                      checked={isSelected}
-                                      onChange={() => toggleUser(u.id)}
-                                      className="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
-                                    />
-                                    <div className="flex-1 min-w-0">
-                                      <p className="text-sm font-semibold text-gray-900 truncate">{u.name}</p>
-                                      <p className="text-[11px] text-gray-500 truncate">
-                                        {u.role === 'ketua_tim' && (u.pegawai?.sub_bidang || u.pegawai?.bidangs?.nama)
-                                          ? `Ketua Tim ${u.pegawai.sub_bidang || u.pegawai.bidangs.nama}`
-                                          : u.role === 'kepala_bidang' && u.pegawai?.bidangs?.nama
-                                            ? u.pegawai.bidangs.nama
-                                            : u.role?.replace(/_/g, ' ')
-                                        }
-                                      </p>
+                                    <span className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold ${tone}`}>
+                                      {getInitials(u.name)}
+                                    </span>
+                                    <div className="min-w-0 flex-1">
+                                      <p className="truncate text-sm font-semibold text-slate-900">{u.name}</p>
+                                      <p className="truncate text-[11px] capitalize text-slate-500">{subtitle}</p>
                                     </div>
-                                    {isSelected && <FiCheck className="w-4 h-4 text-purple-600 flex-shrink-0" />}
+                                    <input type="checkbox" checked={isSelected} onChange={() => toggleUser(u.id)} className="sr-only" />
+                                    <span className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md border-2 transition ${isSelected ? 'border-purple-600 bg-purple-600' : 'border-slate-300 bg-white'}`}>
+                                      {isSelected && <FiCheck className="h-3.5 w-3.5 text-white" />}
+                                    </span>
                                   </label>
                                 );
                               })}
@@ -760,15 +844,17 @@ export default function DisposisiDetail() {
                         </div>
                       );
                     })}
-                    {groupedUsers.length === 0 && (
-                      <div className="text-center py-8 text-gray-400 text-sm">Tidak ada penerima tersedia</div>
+                    {visibleGroups.length === 0 && (
+                      <div className="rounded-2xl border border-dashed border-slate-200 py-10 text-center text-sm text-slate-400">
+                        {recipientQuery ? 'Tidak ada penerima yang cocok' : 'Tidak ada penerima tersedia'}
+                      </div>
                     )}
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-2">
-                    Instruksi {formTeruskan.instruksi.length > 0 && <span className="text-purple-600">({formTeruskan.instruksi.length} dipilih)</span>}
+                  <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                    Instruksi {formTeruskan.instruksi.length > 0 && <span className="text-purple-600">· {formTeruskan.instruksi.length} dipilih</span>}
                   </label>
                   <div className="relative" ref={instruksiDropdownRef}>
                     <button
@@ -840,30 +926,30 @@ export default function DisposisiDetail() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-2">Catatan</label>
+                  <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-500">Catatan</label>
                   <textarea
                     value={formTeruskan.catatan}
                     onChange={(e) => setFormTeruskan({ ...formTeruskan, catatan: e.target.value })}
                     rows={3}
-                    className="w-full px-3 py-2.5 border rounded-xl text-sm text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 resize-none"
-                    placeholder="Tambahkan catatan..."
+                    className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-purple-400 focus:bg-white focus:ring-2 focus:ring-purple-100"
+                    placeholder="Tambahkan catatan (opsional)..."
                   />
                 </div>
               </div>
 
-              <div className="flex gap-2 sm:gap-2.5 px-4 sm:px-5 py-3 sm:py-4 border-t bg-gray-50 flex-shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-                <button type="button" onClick={() => { setShowTeruskanModal(false); setSelectedUserIds([]); }} className="flex-1 px-4 py-3 sm:py-2.5 border-2 text-gray-700 rounded-xl text-[13px] sm:text-sm font-bold hover:bg-gray-100 active:bg-gray-200 transition" disabled={submitting}>
+              <div className="flex flex-shrink-0 gap-2.5 border-t border-slate-100 bg-white px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-5">
+                <button type="button" onClick={closeTeruskanModal} className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-600 transition hover:bg-slate-100 active:bg-slate-200 sm:py-2.5" disabled={submitting}>
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={submitting || selectedUserIds.length === 0}
-                  className="flex-1 px-4 py-3 sm:py-2.5 bg-purple-600 text-white rounded-xl text-[13px] sm:text-sm font-bold hover:bg-purple-700 active:bg-purple-800 disabled:opacity-50 transition flex items-center justify-center gap-2"
+                  className="flex flex-[1.6] items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-purple-200 transition hover:from-violet-700 hover:to-indigo-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none sm:py-2.5"
                 >
                   {submitting ? (
-                    <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Mengirim...</>
+                    <><div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"></div> Mengirim...</>
                   ) : (
-                    <><FiSend className="w-4 h-4" /> Kirim ke {selectedUserIds.length} Penerima</>
+                    <><FiSend className="h-4 w-4" /> Kirim {selectedUserIds.length > 0 ? `(${selectedUserIds.length})` : ''}</>
                   )}
                 </button>
               </div>
