@@ -368,8 +368,15 @@ export default function DisposisiSuratModern() {
 
 	const themeColors = getThemeColors();
 
+	// Executive roles (kepala_dinas / sekretaris_dinas) memakai ExecutiveDisposisiView
+	// yang hanya punya tab "masuk" & "keluar". Jangan set default "surat-masuk" untuk
+	// mereka walau bidang_id === 2, karena tab itu tidak ada → data masuk tidak ter-fetch.
 	const [activeTab, setActiveTab] = useState(
-		isSecretariat ? "surat-masuk" : "masuk",
+		EXECUTIVE_ROLES.includes(user.role)
+			? "masuk"
+			: isSecretariat
+				? "surat-masuk"
+				: "masuk",
 	);
 	const [suratMasuk, setSuratMasuk] = useState([]);
 	const [disposisiMasuk, setDisposisiMasuk] = useState([]);
