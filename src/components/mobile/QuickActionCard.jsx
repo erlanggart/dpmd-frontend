@@ -5,14 +5,15 @@ import React from 'react';
  * QuickActionCard - Modern Rounded Style Quick Action Button
  * Elegant card dengan rounded design dan smooth animations
  */
-const QuickActionCard = ({ 
-  icon: Icon, 
+const QuickActionCard = ({
+  icon: Icon,
   customIcon,
-  label, 
-  badge, 
-  onClick, 
+  label,
+  badge,
+  onClick,
   color = "blue",
-  gradient = "from-blue-500 to-blue-600"
+  gradient = "from-blue-500 to-blue-600",
+  labelClassName = "text-slate-700 lg:text-slate-800"
 }) => {
   
   const colorVariants = {
@@ -26,10 +27,12 @@ const QuickActionCard = ({
     teal: "from-teal-500 to-teal-600",
     yellow: "from-yellow-500 to-yellow-600",
     cyan: "from-cyan-500 to-cyan-600",
-    rose: "from-rose-500 to-rose-600"
+    rose: "from-rose-500 to-rose-600",
+    white: "from-white to-white"
   };
 
   const selectedGradient = colorVariants[color] || gradient;
+  const isWhite = color === 'white';
 
   return (
     <div 
@@ -39,10 +42,11 @@ const QuickActionCard = ({
       {/* Icon Container with Modern Rounded Design */}
       <div className={`
         relative w-12 h-12 sm:w-14 sm:h-14 lg:w-20 lg:h-20 flex-shrink-0
-        bg-gradient-to-br ${selectedGradient} 
+        bg-gradient-to-br ${selectedGradient}
         rounded-[20px] sm:rounded-[24px] lg:rounded-[32px]
-        shadow-lg shadow-${color}-500/30
-        group-hover:shadow-xl group-hover:shadow-${color}-500/40
+        ${isWhite
+          ? 'ring-1 ring-gray-200 shadow-md shadow-gray-200/60'
+          : `shadow-lg shadow-${color}-500/30 group-hover:shadow-xl group-hover:shadow-${color}-500/40`}
         transition-all duration-300
         group-hover:scale-105
         flex items-center justify-center 
@@ -63,7 +67,7 @@ const QuickActionCard = ({
       
       {/* Label - fixed height container for alignment */}
       <div className="mt-2 lg:mt-3 h-8 flex items-start justify-center">
-        <p className="text-[10px] sm:text-xs lg:text-sm text-slate-700 lg:text-slate-800 font-semibold text-center max-w-[70px] lg:max-w-[85px] leading-tight lg:leading-snug">
+        <p className={`text-[10px] sm:text-xs lg:text-sm ${labelClassName} font-semibold text-center max-w-[70px] lg:max-w-[85px] leading-tight lg:leading-snug`}>
           {label}
         </p>
       </div>

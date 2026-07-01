@@ -276,13 +276,9 @@ const ProfilePage = () => {
     if (!file) return;
     if (!file.type.startsWith('image/')) return toast.error('File harus berupa gambar');
     if (file.size > 10 * 1024 * 1024) return toast.error('Maksimal 10MB');
-    const reader = new FileReader();
-    reader.onload = () => {
-      setCropImageSrc(reader.result);
-      setShowCropModal(true);
-    };
-    reader.readAsDataURL(file);
     e.target.value = '';
+    // Upload foto asli apa adanya — tidak dipotong/dibatasi ukuran (tanpa crop).
+    handleCropDone(file);
   };
 
   const handleCropDone = async (croppedFile) => {

@@ -17,12 +17,12 @@ import api from '../../api';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import Cropper from 'react-easy-crop';
-import MobileHeader from '../../components/mobile/MobileHeader';
 import ServiceGrid from '../../components/mobile/ServiceGrid';
 import FaceVerificationLottieIcon from '../../components/FaceVerificationLottieIcon';
 import MessageLottieIcon from '../../components/MessageLottieIcon';
 import ContactLottieIcon from '../../components/ContactLottieIcon';
 import ScheduleLottieIcon from '../../components/ScheduleLottieIcon';
+import BriefcaseLottieIcon from '../../components/BriefcaseLottieIcon';
 import InfoCard from '../../components/mobile/InfoCard';
 import SectionHeader from '../../components/mobile/SectionHeader';
 import ActivityCard from '../../components/mobile/ActivityCard';
@@ -139,6 +139,18 @@ const DPMDDashboard = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState(JSON.parse(localStorage.getItem('user') || '{}'));
   const [loading, setLoading] = useState(true);
+  // Kalimat motivasi dipilih acak sekali saat halaman dibuka (stabil selama sesi ini).
+  const [motivasi] = useState(() => {
+    const list = [
+      'Sekecil apa pun peranmu hari ini, ia menggerakkan desa menjadi lebih baik.',
+      'Layani dengan hati, kerja dengan tuntas — hasil baik akan mengikuti.',
+      'Hari baru, semangat baru. Mari berikan yang terbaik untuk masyarakat.',
+      'Konsistensi kecil setiap hari mengalahkan usaha besar yang sesekali.',
+      'Dedikasimu hari ini adalah kemajuan desa di hari esok.',
+      'Bekerja bukan sekadar tugas, tapi cara kita berarti bagi orang lain.',
+    ];
+    return list[Math.floor(Math.random() * list.length)];
+  });
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -916,7 +928,7 @@ const DPMDDashboard = () => {
       {
         customIcon: <MessageLottieIcon className="relative z-10 h-full w-full" />,
         label: 'Pesan',
-        color: 'indigo',
+        color: 'white',
         badge: unreadMessages || null,
         onClick: () => navigate('/dpmd/pesan')
       },
@@ -928,7 +940,7 @@ const DPMDDashboard = () => {
             onClick: () => navigate('/dpmd/absensi')
           }
         : {
-            icon: Briefcase,
+            customIcon: <BriefcaseLottieIcon className="relative z-10 h-full w-full" />,
             label: 'Perjadin',
             color: config.primaryColor,
             onClick: () => navigate('/dpmd/perjadin')
@@ -986,10 +998,13 @@ const DPMDDashboard = () => {
   // ==================== LOADING STATE ====================
   if (loading) {
     return (
-      <div className={`min-h-screen bg-gradient-to-br ${config.gradient} flex items-center justify-center`}>
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-4 border-white border-t-transparent mx-auto mb-4"></div>
-          <p className="text-white font-semibold text-lg">Memuat Dashboard...</p>
+          <div className="relative w-14 h-14 mx-auto mb-4">
+            <div className="absolute inset-0 rounded-full border-[3px] border-emerald-500/20" />
+            <div className="absolute inset-0 rounded-full border-[3px] border-transparent border-t-emerald-500 animate-spin" />
+          </div>
+          <p className="text-slate-400 font-medium text-sm">Memuat Dashboard...</p>
         </div>
       </div>
     );
@@ -998,16 +1013,16 @@ const DPMDDashboard = () => {
   // ==================== ERROR STATE ====================
   if (error && !dashboardData && !statistik && !pegawaiData) {
     return (
-      <div className={`min-h-screen bg-gradient-to-br ${config.gradient} p-4 flex items-center justify-center`}>
-        <div className="bg-white rounded-3xl shadow-2xl p-6 max-w-md w-full">
-          <div className="h-16 w-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Activity className="h-8 w-8 text-red-600" />
+      <div className="min-h-screen bg-slate-50 p-4 flex items-center justify-center">
+        <div className="bg-white border border-slate-100 rounded-3xl shadow-sm p-6 max-w-md w-full">
+          <div className="h-16 w-16 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Activity className="h-8 w-8 text-red-400" />
           </div>
-          <h3 className="text-center font-bold text-gray-800 text-xl mb-2">Oops!</h3>
-          <p className="text-center text-gray-600 text-sm mb-6">{error}</p>
+          <h3 className="text-center font-bold text-slate-800 text-xl mb-2">Oops!</h3>
+          <p className="text-center text-slate-500 text-sm mb-6">{error}</p>
           <button
             onClick={fetchData}
-            className={`w-full bg-gradient-to-r ${config.gradient} text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg active:scale-95 transition-all`}
+            className="w-full bg-gradient-to-r from-emerald-500 to-green-500 text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-emerald-500/25 hover:shadow-xl active:scale-95 transition-all"
           >
             Coba Lagi
           </button>
@@ -1017,23 +1032,21 @@ const DPMDDashboard = () => {
   }
 
   // ==================== RENDER ====================
+  const avatarUrl = getUserAvatarUrl(user);
+  const displayName = pegawaiData?.nama_pegawai || user.name || 'Pengguna';
+  const jabatanText = pegawaiData?.jabatan || getRoleTitle;
+  const bidangText = pegawaiData?.bidang?.nama_bidang || pegawaiData?.bidangs?.nama
+    || BIDANG_MAP[user.bidang_id] || user.bidang_name || '';
+  const nipText = pegawaiData?.nip;
+
   return (
-    <div className="min-h-screen bg-gray-50 pb-20 lg:pb-4">
+    <div className="min-h-screen bg-slate-50 pb-20 lg:pb-4">
       {/* Birthday Popup */}
       <BirthdayPopup />
       <WeeklyAttendanceAwardPopup />
 
-      {/* Mobile Header */}
-      <MobileHeader
-        userName={user.name || pegawaiData?.nama_pegawai?.split(' ')[0] || 'User'}
-        userRole={getRoleTitle}
-        bidangName={role === 'pegawai' ? getBidangName() : undefined}
-        greeting="Selamat Datang"
-        gradient={config.gradient}
-        notificationCount={unreadCount}
-        onNotificationClick={handleNotificationClick}
-        avatar={getUserAvatarUrl(user)}
-      />
+      {/* Safe area top spacer (PWA standalone) */}
+      <div className="h-[env(safe-area-inset-top,0px)]"></div>
 
       {/* Notification Panel */}
       {showNotifications && (
@@ -1110,7 +1123,50 @@ const DPMDDashboard = () => {
       )}
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10">
+
+        {/* Identitas (kiri) + Foto besar (kanan) */}
+        <div className="flex items-end justify-between gap-3">
+          {/* Kiri: nama, jabatan, bidang, NIP */}
+          <div className="min-w-0 flex-1 pb-6">
+            <h1 className="text-3xl sm:text-4xl font-black uppercase leading-[1.05] tracking-tight text-slate-800 break-words">
+              {displayName}
+            </h1>
+            {jabatanText && <p className="mt-2 text-sm font-semibold text-slate-600">{jabatanText}</p>}
+            {bidangText && <p className="text-xs text-slate-400">{bidangText}</p>}
+            {nipText && (
+              <div className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-slate-500">
+                <User className="h-3.5 w-3.5 flex-shrink-0" />
+                <span className="text-[11px] font-semibold tracking-wide tabular-nums">{nipText}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Kanan: foto besar */}
+          <div className="flex-shrink-0">
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt={displayName}
+                className="h-56 w-auto max-w-[42vw] object-contain object-bottom"
+              />
+            ) : (
+              <div className="h-56 flex items-center justify-center px-4">
+                <span className="text-7xl font-extrabold text-emerald-600">{displayName.charAt(0).toUpperCase()}</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Quick Actions Section — ditarik naik agar menutupi ~10% bagian bawah foto */}
+        <div className="relative z-10 -mt-4 bg-slate-800 rounded-[24px] sm:rounded-[28px] shadow-lg shadow-slate-900/25 p-5 sm:p-6 mb-5 border border-slate-700">
+          <ServiceGrid
+            services={quickActions}
+            columns={quickActions.length > 3 ? 4 : 3}
+            buttonColor="white"
+            labelClassName="text-slate-100"
+          />
+        </div>
 
         {/* Status Stories Section */}
         {statusGroups.length > 0 || true ? (
@@ -1170,12 +1226,6 @@ const DPMDDashboard = () => {
           </div>
         ) : null}
 
-        {/* Quick Actions Section */}
-        <div className="bg-white rounded-[24px] sm:rounded-[28px] shadow-lg shadow-gray-200/60 p-5 sm:p-6 mb-5 border border-gray-100">
-         
-          <ServiceGrid services={quickActions} columns={quickActions.length > 3 ? 4 : 3} />
-        </div>
-
         {/* KEPALA DINAS: Executive Stats */}
         {config.showExecutiveStats && dashboardData?.summary && (
           <>
@@ -1190,14 +1240,14 @@ const DPMDDashboard = () => {
                   icon={MapPin}
                   title="Total Desa"
                   value={dashboardData.summary.total_desa || 0}
-                  color="blue"
+                  color="emerald"
                   onClick={() => navigate('/core-dashboard/laporan-desa')}
                 />
                 <InfoCard
                   icon={Users}
                   title="Pegawai"
                   value={dashboardData.summary.total_pegawai || 0}
-                  color="purple"
+                  color="teal"
                 />
               </div>
             </div>
@@ -1210,21 +1260,21 @@ const DPMDDashboard = () => {
                 icon={PieChart}
               />
               <div className="grid grid-cols-2 gap-3">
-                <div 
+                <div
                   onClick={() => navigate('/core-dashboard/statistik-bankeu')}
-                  className="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl p-5 text-white cursor-pointer active:scale-95 transition-transform shadow-lg"
+                  className="bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl p-5 text-white cursor-pointer active:scale-95 transition-transform shadow-lg shadow-emerald-500/25"
                 >
                   <PieChart className="w-8 h-8 mb-3" />
                   <h4 className="font-bold text-sm mb-1">Statistik Bankeu</h4>
-                  <p className="text-xs text-green-100">Lihat detail</p>
+                  <p className="text-xs text-emerald-100">Lihat detail</p>
                 </div>
-                <div 
+                <div
                   onClick={() => navigate('/core-dashboard/statistik-add')}
-                  className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl p-5 text-white cursor-pointer active:scale-95 transition-transform shadow-lg"
+                  className="bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl p-5 text-white cursor-pointer active:scale-95 transition-transform shadow-lg shadow-teal-500/25"
                 >
                   <BarChart3 className="w-8 h-8 mb-3" />
                   <h4 className="font-bold text-sm mb-1">Statistik ADD</h4>
-                  <p className="text-xs text-purple-100">Lihat detail</p>
+                  <p className="text-xs text-teal-100">Lihat detail</p>
                 </div>
               </div>
             </div>
@@ -1245,7 +1295,7 @@ const DPMDDashboard = () => {
                   icon={Clock}
                   title="Pending"
                   value={statistik?.masuk?.pending || 0}
-                  color="yellow"
+                  color="emerald"
                   badge={statistik?.masuk?.pending > 5 ? '!' : null}
                   onClick={() => navigate('/dpmd/disposisi?filter=pending')}
                 />
@@ -1253,19 +1303,19 @@ const DPMDDashboard = () => {
                   icon={TrendingUp}
                   title="Diproses"
                   value={(statistik?.masuk?.dibaca || 0) + (statistik?.masuk?.proses || 0)}
-                  color="blue"
+                  color="teal"
                 />
                 <InfoCard
                   icon={CheckCircle}
                   title="Selesai"
                   value={statistik?.masuk?.selesai || 0}
-                  color="green"
+                  color="emerald"
                 />
                 <InfoCard
                   icon={Send}
                   title="Diteruskan"
                   value={statistik?.keluar?.total || 0}
-                  color="purple"
+                  color="teal"
                 />
               </div>
             </div>
@@ -1318,13 +1368,13 @@ const DPMDDashboard = () => {
               <div className="space-y-3">
                 {/* Bidang */}
                 {pegawaiData?.bidang?.nama_bidang && (
-                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-4 border border-blue-200">
+                  <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-2xl p-4 border border-emerald-200">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <div className="w-12 h-12 bg-emerald-600 rounded-xl flex items-center justify-center flex-shrink-0">
                         <Building2 className="h-6 w-6 text-white" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs text-blue-600 font-medium mb-0.5">Bidang</p>
+                        <p className="text-xs text-emerald-600 font-medium mb-0.5">Bidang</p>
                         <p className="text-sm font-bold text-gray-900 truncate">{pegawaiData.bidang.nama_bidang}</p>
                         <p className="text-xs text-gray-500 mt-0.5">Unit Kerja</p>
                       </div>
@@ -1381,13 +1431,13 @@ const DPMDDashboard = () => {
 
                 {/* NIP */}
                 {pegawaiData?.nip && (
-                  <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-4 border border-green-200">
+                  <div className="bg-gradient-to-br from-teal-50 to-teal-100 rounded-2xl p-4 border border-teal-200">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-green-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <div className="w-12 h-12 bg-teal-600 rounded-xl flex items-center justify-center flex-shrink-0">
                         <FileText className="h-6 w-6 text-white" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs text-green-600 font-medium mb-0.5">NIP</p>
+                        <p className="text-xs text-teal-600 font-medium mb-0.5">NIP</p>
                         <p className="text-sm font-bold text-gray-900">{pegawaiData.nip}</p>
                       </div>
                     </div>
@@ -1396,13 +1446,13 @@ const DPMDDashboard = () => {
 
                 {/* Phone */}
                 {pegawaiData?.no_hp && (
-                  <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-2xl p-4 border border-orange-200">
+                  <div className="bg-gradient-to-br from-emerald-50 to-teal-100 rounded-2xl p-4 border border-emerald-200">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-orange-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <div className="w-12 h-12 bg-emerald-600 rounded-xl flex items-center justify-center flex-shrink-0">
                         <Phone className="h-6 w-6 text-white" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs text-orange-600 font-medium mb-0.5">No. HP</p>
+                        <p className="text-xs text-emerald-600 font-medium mb-0.5">No. HP</p>
                         <p className="text-sm font-bold text-gray-900">{pegawaiData.no_hp}</p>
                       </div>
                     </div>
@@ -1421,23 +1471,23 @@ const DPMDDashboard = () => {
                 />
                 <div className="grid grid-cols-2 gap-3">
                   {pegawaiData?.pangkat && (
-                    <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-2xl p-4 border border-indigo-200">
+                    <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-2xl p-4 border border-emerald-200">
                       <div className="flex flex-col items-center text-center">
-                        <div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center mb-3">
+                        <div className="w-12 h-12 bg-emerald-600 rounded-xl flex items-center justify-center mb-3">
                           <Award className="h-6 w-6 text-white" />
                         </div>
-                        <p className="text-xs text-indigo-600 font-medium mb-1">Pangkat</p>
+                        <p className="text-xs text-emerald-600 font-medium mb-1">Pangkat</p>
                         <p className="text-sm font-bold text-gray-900 break-words">{pegawaiData.pangkat}</p>
                       </div>
                     </div>
                   )}
                   {pegawaiData?.golongan && (
-                    <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-2xl p-4 border border-orange-200">
+                    <div className="bg-gradient-to-br from-teal-50 to-teal-100 rounded-2xl p-4 border border-teal-200">
                       <div className="flex flex-col items-center text-center">
-                        <div className="w-12 h-12 bg-orange-600 rounded-xl flex items-center justify-center mb-3">
+                        <div className="w-12 h-12 bg-teal-600 rounded-xl flex items-center justify-center mb-3">
                           <TrendingUp className="h-6 w-6 text-white" />
                         </div>
-                        <p className="text-xs text-orange-600 font-medium mb-1">Golongan</p>
+                        <p className="text-xs text-teal-600 font-medium mb-1">Golongan</p>
                         <p className="text-sm font-bold text-gray-900">{pegawaiData.golongan}</p>
                       </div>
                     </div>
@@ -1448,78 +1498,18 @@ const DPMDDashboard = () => {
           </>
         )}
 
-        {/* Informasi Bidang Sekretariat */}
-        <div className="mb-5">
-          <SectionHeader 
-            title="Informasi Sekretariat" 
-            subtitle="Data terkini bidang sekretariat"
-            icon={Building2}
-          />
-          <div className="space-y-3">
-            {/* Disposisi Pending */}
-            <div 
-              onClick={() => navigate('/dpmd/disposisi')}
-              className="bg-white rounded-2xl p-4 border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all duration-200 cursor-pointer active:scale-[0.98]"
-            >
-              <div className="flex items-center gap-3">
-                <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-md">
-                  <Mail className="w-6 h-6 text-white" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="text-sm font-semibold text-gray-900">Disposisi Pending</h4>
-                  <p className="text-xs text-gray-500 mt-0.5">Surat masuk menunggu disposisi</p>
-                </div>
-                <div className="flex-shrink-0 text-right">
-                  <span className="text-2xl font-bold text-blue-600">
-                    {sekretariatData?.stats?.disposisi_pending ?? '-'}
-                  </span>
-                  <p className="text-[10px] text-gray-400">surat</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Perjadin Bulan Ini */}
-            <div 
-              onClick={() => navigate('/dpmd/perjadin')}
-              className="bg-white rounded-2xl p-4 border border-gray-200 hover:border-green-300 hover:shadow-md transition-all duration-200 cursor-pointer active:scale-[0.98]"
-            >
-              <div className="flex items-center gap-3">
-                <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center shadow-md">
-                  <Briefcase className="w-6 h-6 text-white" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="text-sm font-semibold text-gray-900">Perjalanan Dinas</h4>
-                  <p className="text-xs text-gray-500 mt-0.5">Kegiatan perjadin bulan ini</p>
-                </div>
-                <div className="flex-shrink-0 text-right">
-                  <span className="text-2xl font-bold text-green-600">
-                    {sekretariatData?.stats?.perjadin_bulan_ini ?? '-'}
-                  </span>
-                  <p className="text-[10px] text-gray-400">kegiatan</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Total Pegawai */}
-            <div 
-              className="bg-white rounded-2xl p-4 border border-gray-200 transition-all duration-200"
-            >
-              <div className="flex items-center gap-3">
-                <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center shadow-md">
-                  <Users className="w-6 h-6 text-white" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="text-sm font-semibold text-gray-900">Total Pegawai</h4>
-                  <p className="text-xs text-gray-500 mt-0.5">Jumlah pegawai aktif DPMD</p>
-                </div>
-                <div className="flex-shrink-0 text-right">
-                  <span className="text-2xl font-bold text-purple-600">
-                    {sekretariatData?.stats?.total_pegawai ?? '-'}
-                  </span>
-                  <p className="text-[10px] text-gray-400">orang</p>
-                </div>
-              </div>
-            </div>
+        {/* Sambutan + Motivasi */}
+        <div className="mb-5 relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-600 p-5 sm:p-6 text-white shadow-lg shadow-emerald-500/25">
+          <div className="pointer-events-none absolute -right-6 -top-10 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
+          <div className="pointer-events-none absolute -bottom-12 -left-6 h-28 w-28 rounded-full bg-white/10 blur-2xl" />
+          <div className="relative">
+            <p className="text-sm font-medium text-emerald-50/90">Selamat datang kembali,</p>
+            <h3 className="mt-0.5 text-xl sm:text-2xl font-extrabold leading-tight">
+              {displayName} <span className="align-middle">👋</span>
+            </h3>
+            <p className="mt-3 text-sm leading-relaxed text-emerald-50/95">
+              “{motivasi}”
+            </p>
           </div>
         </div>
 

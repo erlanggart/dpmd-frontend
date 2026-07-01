@@ -21,6 +21,8 @@ async function getCroppedImg(imageSrc, pixelCrop) {
   canvas.height = 512;
   const ctx = canvas.getContext('2d');
 
+  // Jangan isi latar apa pun. Diekspor sebagai PNG (punya alpha) sehingga
+  // area transparan pada foto tetap transparan — tidak jadi hitam/putih.
   ctx.drawImage(
     image,
     pixelCrop.x,
@@ -34,7 +36,7 @@ async function getCroppedImg(imageSrc, pixelCrop) {
   );
 
   return new Promise((resolve) => {
-    canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.9);
+    canvas.toBlob((blob) => resolve(blob), 'image/png');
   });
 }
 
@@ -54,7 +56,7 @@ export default function AvatarCropModal({ isOpen, imageSrc, onClose, onCropDone 
     setSaving(true);
     try {
       const blob = await getCroppedImg(imageSrc, croppedAreaPixels);
-      const file = new File([blob], 'avatar.jpg', { type: 'image/jpeg' });
+      const file = new File([blob], 'avatar.png', { type: 'image/png' });
       await onCropDone(file);
     } catch {
       // handled by parent
@@ -100,14 +102,23 @@ export default function AvatarCropModal({ isOpen, imageSrc, onClose, onCropDone 
               zoom={zoom}
               rotation={rotation}
               aspect={1}
-              cropShape="round"
+              cropShape="rect"
+              objectFit="contain"
               showGrid={false}
               onCropChange={setCrop}
               onZoomChange={setZoom}
               onRotationChange={setRotation}
               onCropComplete={onCropComplete}
               style={{
-                containerStyle: { background: '#000' },
+                containerStyle: {
+                  // Pola kotak-kotak (checkerboard) menandakan area transparan,
+                  // sesuai hasil ekspor PNG yang mempertahankan transparansi.
+                  backgroundColor: '#f8fafc',
+                  backgroundImage:
+                    'linear-gradient(45deg, #e2e8f0 25%, transparent 25%), linear-gradient(-45deg, #e2e8f0 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e2e8f0 75%), linear-gradient(-45deg, transparent 75%, #e2e8f0 75%)',
+                  backgroundSize: '20px 20px',
+                  backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
+                },
                 cropAreaStyle: {
                   border: '3px solid rgba(255,255,255,0.8)',
                   boxShadow: '0 0 0 9999px rgba(0,0,0,0.65)',

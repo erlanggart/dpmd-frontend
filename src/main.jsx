@@ -7,6 +7,18 @@ import "@splidejs/react-splide/css";
 import { AuthProvider } from "./context/AuthContext.jsx";
 import "leaflet/dist/leaflet.css";
 
+// DEV: pastikan tidak ada service worker/cache lama yang membajak request,
+// supaya Hot Module Replacement (HMR) Vite jalan & perubahan kode langsung
+// tampil tanpa refresh manual. (Produksi tidak terpengaruh.)
+if (import.meta.env.DEV && "serviceWorker" in navigator) {
+	navigator.serviceWorker.getRegistrations().then((regs) => {
+		regs.forEach((r) => r.unregister());
+	});
+	if (typeof caches !== "undefined") {
+		caches.keys().then((keys) => keys.forEach((k) => caches.delete(k)));
+	}
+}
+
 // Register service worker for PWA
 // if ('serviceWorker' in navigator) {
 //   // Register immediately, not waiting for load event

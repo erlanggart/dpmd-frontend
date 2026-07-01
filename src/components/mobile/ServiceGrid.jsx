@@ -6,7 +6,7 @@ import QuickActionCard from './QuickActionCard';
  * ServiceGrid - Modern Clean Grid Layout
  * Grid container tanpa background (dibungkus di parent)
  */
-const ServiceGrid = ({ services = [], columns = 3 }) => {
+const ServiceGrid = ({ services = [], columns = 3, buttonColor, labelClassName }) => {
   const gridCols = {
     2: 'grid-cols-2',
     3: 'grid-cols-3',
@@ -24,8 +24,9 @@ const ServiceGrid = ({ services = [], columns = 3 }) => {
           label={service.label}
           badge={service.badge}
           onClick={service.onClick}
-          color={service.color}
+          color={buttonColor || service.color}
           gradient={service.gradient}
+          labelClassName={labelClassName}
         />
       ))}
     </div>
