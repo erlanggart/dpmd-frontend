@@ -2,10 +2,10 @@
 // Redesign tema terang ala SIKEPO — kartu profil, Presensi & Kinerja, grid Layanan.
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
-	User, Briefcase, Calendar, Info, X, ExternalLink,
-	Clock, LogIn, LogOut, Camera, ChevronRight, Activity,
+	User, Briefcase, Calendar, Info,
+	Clock, LogIn, LogOut, Camera, Activity,
 } from "lucide-react";
 import api from "../../api";
 import { getUserAvatarUrl } from "../../utils/avatarUtils";
@@ -27,10 +27,6 @@ const PegawaiDashboard = () => {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
 	const [user, setUser] = useState(JSON.parse(localStorage.getItem("user") || "{}"));
-	const [informasiList, setInformasiList] = useState([]);
-	const [currentInformasiIndex, setCurrentInformasiIndex] = useState(0);
-	const [showInformasiModal, setShowInformasiModal] = useState(false);
-	const [selectedInformasi, setSelectedInformasi] = useState(null);
 	const [todayData, setTodayData] = useState(null);
 	const [now, setNow] = useState(new Date());
 
@@ -50,7 +46,6 @@ const PegawaiDashboard = () => {
 
 	useEffect(() => {
 		fetchPegawaiProfile();
-		fetchInformasi();
 		if (isAbsensiEligible) fetchToday();
 	}, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -62,25 +57,6 @@ const PegawaiDashboard = () => {
 			console.error("Error fetching today:", err);
 		}
 	};
-
-	const fetchInformasi = async () => {
-		try {
-			const response = await api.get("/informasi/public");
-			if (response.data.success && response.data.data?.length > 0) {
-				setInformasiList(response.data.data);
-			}
-		} catch (err) {
-			console.error("Error fetching informasi:", err);
-		}
-	};
-
-	useEffect(() => {
-		if (informasiList.length <= 1) return;
-		const interval = setInterval(() => {
-			setCurrentInformasiIndex((prev) => (prev + 1) % informasiList.length);
-		}, 5000);
-		return () => clearInterval(interval);
-	}, [informasiList.length]);
 
 	const fetchPegawaiProfile = async () => {
 		try {
@@ -154,12 +130,11 @@ const PegawaiDashboard = () => {
 
 	// Layanan
 	const services = [
-		{ label: "Perjadin", icon: Briefcase, color: "emerald", onClick: () => navigate("/pegawai/perjadin") },
+		isAbsensiEligible
+			? { label: "Presensi", icon: Clock, color: "rose", onClick: () => navigate("/dpmd/absensi") }
+			: { label: "Perjadin", icon: Briefcase, color: "emerald", onClick: () => navigate("/pegawai/perjadin") },
 		{ label: "Jadwal", icon: Calendar, color: "sky", onClick: () => navigate("/pegawai/jadwal-kegiatan") },
-		...(isAbsensiEligible
-			? [{ label: "Presensi", icon: Clock, color: "rose", onClick: () => navigate("/dpmd/absensi") }]
-			: [{ label: "Photo Booth", icon: Camera, color: "violet", onClick: () => navigate("/dpmd/photo-booth") }]
-		),
+		{ label: "Photo Booth", icon: Camera, color: "violet", onClick: () => navigate("/dpmd/photo-booth") },
 		{ label: "Informasi", icon: Info, color: "amber", onClick: () => navigate("/dpmd/informasi") },
 	];
 
@@ -170,8 +145,6 @@ const PegawaiDashboard = () => {
 		rose: { bg: "bg-rose-50", text: "text-rose-600" },
 		violet: { bg: "bg-violet-50", text: "text-violet-600" },
 	};
-
-	const imgBase = import.meta.env.VITE_API_BASE_URL?.replace("/api", "") || "http://127.0.0.1:3001";
 
 	return (
 		<div className="min-h-screen bg-slate-50 pb-24 lg:pb-8">
@@ -307,133 +280,11 @@ const PegawaiDashboard = () => {
 					</div>
 				</motion.div>
 
-				{/* ─── Informasi ────────────────────────────── */}
-				{informasiList.length > 0 && (
-					<motion.div
-						initial={{ opacity: 0, y: 16 }}
-						animate={{ opacity: 1, y: 0 }}
-						transition={{ delay: 0.15 }}
-						className="bg-white rounded-3xl shadow-sm border border-slate-100 p-5"
-					>
-						<div className="flex items-center justify-between mb-3">
-							<h3 className="text-base font-bold text-slate-800">Informasi</h3>
-							<button onClick={() => navigate("/dpmd/informasi")} className="flex items-center gap-0.5 text-xs text-emerald-600 font-semibold cursor-pointer">
-								Lihat Semua <ChevronRight className="h-3.5 w-3.5" />
-							</button>
-						</div>
-						<div className="relative w-full h-44 rounded-2xl overflow-hidden shadow-sm group">
-							<AnimatePresence mode="wait">
-								<motion.button
-									key={currentInformasiIndex}
-									initial={{ opacity: 0, x: 40 }}
-									animate={{ opacity: 1, x: 0 }}
-									exit={{ opacity: 0, x: -40 }}
-									transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
-									onClick={() => {
-										setSelectedInformasi(informasiList[currentInformasiIndex]);
-										setShowInformasiModal(true);
-									}}
-									className="absolute inset-0 w-full h-full cursor-pointer"
-								>
-									<img
-										src={`${imgBase}/${informasiList[currentInformasiIndex].gambar}`}
-										alt={informasiList[currentInformasiIndex].judul}
-										className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
-									/>
-									<div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-									<div className="absolute bottom-0 left-0 right-0 p-4 text-left">
-										<div className="flex items-center gap-1.5 mb-1.5">
-											<span className="inline-flex items-center px-2 py-0.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white text-[10px] font-semibold rounded-full shadow">
-												<Info className="h-2.5 w-2.5 mr-0.5" /> Informasi
-											</span>
-											{informasiList.length > 1 && (
-												<span className="text-white/80 text-[10px] font-medium bg-white/20 backdrop-blur-sm px-1.5 py-0.5 rounded-full">
-													{currentInformasiIndex + 1}/{informasiList.length}
-												</span>
-											)}
-										</div>
-										<p className="text-white font-bold text-sm line-clamp-1 drop-shadow">{informasiList[currentInformasiIndex].judul}</p>
-									</div>
-								</motion.button>
-							</AnimatePresence>
-						</div>
-					</motion.div>
-				)}
-
 				{/* Footer */}
 				<div className="text-center py-4">
 					<p className="text-slate-300 text-xs">DPMD Kabupaten Bogor © 2026</p>
 				</div>
 			</div>
-
-			{/* ─── Informasi Modal ──────────────────────────── */}
-			<AnimatePresence>
-				{showInformasiModal && selectedInformasi && (
-					<motion.div
-						initial={{ opacity: 0 }}
-						animate={{ opacity: 1 }}
-						exit={{ opacity: 0 }}
-						className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4"
-						onClick={() => setShowInformasiModal(false)}
-					>
-						<motion.div
-							initial={{ y: 100, opacity: 0, scale: 0.95 }}
-							animate={{ y: 0, opacity: 1, scale: 1 }}
-							exit={{ y: 100, opacity: 0, scale: 0.95 }}
-							transition={{ type: "spring", damping: 25, stiffness: 300 }}
-							className="bg-white w-full sm:max-w-lg sm:rounded-3xl rounded-t-3xl shadow-2xl max-h-[90vh] overflow-hidden"
-							onClick={(e) => e.stopPropagation()}
-						>
-							<div className="sm:hidden flex justify-center py-3">
-								<div className="w-12 h-1.5 bg-slate-200 rounded-full" />
-							</div>
-							<div className="relative h-52 sm:h-64 overflow-hidden">
-								<img src={`${imgBase}/${selectedInformasi.gambar}`} alt={selectedInformasi.judul} className="w-full h-full object-cover" />
-								<motion.button
-									{...pressAnimation}
-									onClick={() => setShowInformasiModal(false)}
-									className="absolute top-4 right-4 p-2 bg-black/50 hover:bg-black/70 text-white rounded-full transition-colors cursor-pointer"
-								>
-									<X className="h-5 w-5" />
-								</motion.button>
-								<div className="absolute bottom-4 left-4">
-									<span className="inline-flex items-center px-3 py-1 bg-gradient-to-r from-emerald-500 to-teal-600 text-white text-xs font-semibold rounded-full shadow">
-										<Info className="h-3 w-3 mr-1" /> Informasi DPMD
-									</span>
-								</div>
-							</div>
-							<div className="p-6 max-h-[40vh] overflow-y-auto">
-								<h2 className="text-xl font-bold text-slate-800 mb-4 leading-tight">{selectedInformasi.judul}</h2>
-								{selectedInformasi.deskripsi ? (
-									<p className="text-slate-500 whitespace-pre-wrap leading-relaxed text-sm">{selectedInformasi.deskripsi}</p>
-								) : (
-									<p className="text-slate-400 italic text-sm">Tidak ada detail informasi tambahan.</p>
-								)}
-								{selectedInformasi.link && (
-									<motion.a
-										{...pressAnimation}
-										href={selectedInformasi.link}
-										target="_blank"
-										rel="noopener noreferrer"
-										className="mt-5 flex items-center justify-center gap-2 w-full py-3 px-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold rounded-xl shadow-lg shadow-emerald-500/25 cursor-pointer"
-									>
-										<ExternalLink className="h-4 w-4" /> Buka Link
-									</motion.a>
-								)}
-							</div>
-							<div className="px-6 py-4 border-t border-slate-100">
-								<motion.button
-									{...pressAnimation}
-									onClick={() => setShowInformasiModal(false)}
-									className="w-full py-3 px-4 bg-slate-50 border border-slate-200 text-slate-600 font-medium rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
-								>
-									Tutup
-								</motion.button>
-							</div>
-						</motion.div>
-					</motion.div>
-				)}
-			</AnimatePresence>
 		</div>
 	);
 };

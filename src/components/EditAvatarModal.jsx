@@ -2,9 +2,10 @@ import React, { useState, useEffect, useRef } from "react";
 import { LuX, LuCamera, LuSave, LuUpload, LuTrash2, LuImagePlus } from "react-icons/lu";
 import api from "../api";
 import { getAvatarUrl } from "../utils/avatarUtils";
+import { convertAvatarToWebp, validateAvatarInput } from "../utils/avatarImage";
 import Swal from "sweetalert2";
 
-const MAX_SIZE_MB = 2;
+const MAX_SIZE_MB = 20;
 const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"];
 
 const EditAvatarModal = ({ isOpen, onClose, onUpdated, userData }) => {
@@ -29,19 +30,28 @@ const EditAvatarModal = ({ isOpen, onClose, onUpdated, userData }) => {
 			Swal.fire({ icon: "error", title: "Format tidak didukung", text: "Hanya file JPG, PNG, GIF, atau WebP yang diperbolehkan." });
 			return false;
 		}
-		if (f.size > MAX_SIZE_MB * 1024 * 1024) {
-			Swal.fire({ icon: "error", title: "Ukuran terlalu besar", text: `Maksimal ukuran file adalah ${MAX_SIZE_MB}MB.` });
+		const validation = validateAvatarInput(f);
+		if (!validation.valid) {
+			Swal.fire({ icon: "error", title: "File tidak valid", text: validation.message });
 			return false;
 		}
 		return true;
 	};
 
-	const handleFileSelect = (f) => {
+	const handleFileSelect = async (f) => {
 		if (!validateFile(f)) return;
-		setFile(f);
-		const reader = new FileReader();
-		reader.onloadend = () => setPreview(reader.result);
-		reader.readAsDataURL(f);
+		setLoading(true);
+		try {
+			const webpFile = await convertAvatarToWebp(f, { outputName: "avatar" });
+			setFile(webpFile);
+			const reader = new FileReader();
+			reader.onloadend = () => setPreview(reader.result);
+			reader.readAsDataURL(webpFile);
+		} catch (error) {
+			Swal.fire({ icon: "error", title: "Gagal mengonversi foto", text: error.message || "Silakan coba foto lain." });
+		} finally {
+			setLoading(false);
+		}
 	};
 
 	const handleInputChange = (e) => {

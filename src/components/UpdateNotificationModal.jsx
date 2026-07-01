@@ -1,7 +1,5 @@
 import React, { useEffect } from 'react';
 import { RefreshCw, X, ShieldCheck } from 'lucide-react';
-import OptimizedLottie from './OptimizedLottie';
-import updateAnimation from '../assets/lottie/update.json';
 
 const UpdateNotificationModal = ({ isOpen, onUpdate, onDismiss }) => {
   // Inject animation keyframes on mount
@@ -47,9 +45,11 @@ const UpdateNotificationModal = ({ isOpen, onUpdate, onDismiss }) => {
           <X className="h-5 w-5" />
         </button>
 
-        {/* Animasi Lottie */}
+        {/* Ikon statis: lebih ringan daripada Lottie saat aplikasi baru dibuka */}
         <div className="flex justify-center bg-gradient-to-b from-blue-50 to-white pt-7">
-          <OptimizedLottie animationData={updateAnimation} className="h-32 w-32" />
+          <div className="flex h-28 w-28 items-center justify-center rounded-[2rem] bg-gradient-to-br from-blue-500 to-cyan-400 text-white shadow-xl shadow-blue-500/20">
+            <RefreshCw className="h-12 w-12" />
+          </div>
         </div>
 
         {/* Isi */}

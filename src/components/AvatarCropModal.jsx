@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FiX, FiZoomIn, FiZoomOut, FiCheck, FiRotateCw } from 'react-icons/fi';
 
 /**
- * Crop image and return blob
+ * Crop image and return WebP blob
  */
 async function getCroppedImg(imageSrc, pixelCrop) {
   const image = new Image();
@@ -21,7 +21,7 @@ async function getCroppedImg(imageSrc, pixelCrop) {
   canvas.height = 512;
   const ctx = canvas.getContext('2d');
 
-  // Jangan isi latar apa pun. Diekspor sebagai PNG (punya alpha) sehingga
+  // Jangan isi latar apa pun. Diekspor sebagai WebP sehingga
   // area transparan pada foto tetap transparan — tidak jadi hitam/putih.
   ctx.drawImage(
     image,
@@ -35,8 +35,11 @@ async function getCroppedImg(imageSrc, pixelCrop) {
     512
   );
 
-  return new Promise((resolve) => {
-    canvas.toBlob((blob) => resolve(blob), 'image/png');
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) resolve(blob);
+      else reject(new Error('Browser gagal mengonversi gambar ke WebP'));
+    }, 'image/webp', 0.82);
   });
 }
 
@@ -56,7 +59,7 @@ export default function AvatarCropModal({ isOpen, imageSrc, onClose, onCropDone 
     setSaving(true);
     try {
       const blob = await getCroppedImg(imageSrc, croppedAreaPixels);
-      const file = new File([blob], 'avatar.png', { type: 'image/png' });
+      const file = new File([blob], 'avatar.webp', { type: 'image/webp', lastModified: Date.now() });
       await onCropDone(file);
     } catch {
       // handled by parent
@@ -112,7 +115,7 @@ export default function AvatarCropModal({ isOpen, imageSrc, onClose, onCropDone 
               style={{
                 containerStyle: {
                   // Pola kotak-kotak (checkerboard) menandakan area transparan,
-                  // sesuai hasil ekspor PNG yang mempertahankan transparansi.
+                  // sesuai hasil ekspor WebP yang mempertahankan transparansi.
                   backgroundColor: '#f8fafc',
                   backgroundImage:
                     'linear-gradient(45deg, #e2e8f0 25%, transparent 25%), linear-gradient(-45deg, #e2e8f0 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e2e8f0 75%), linear-gradient(-45deg, transparent 75%, #e2e8f0 75%)',

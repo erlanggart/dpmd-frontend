@@ -2,9 +2,11 @@
 // Unified layout for all internal DPMD staff roles
 // Supports both mobile (bottom nav) and desktop (sidebar) modes
 import React from "react";
-import { Outlet, Navigate, useNavigate, useLocation } from "react-router-dom";
+import { Navigate, useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
+import KeepAliveOutlet from "../components/KeepAliveOutlet";
+import LiquidBottomNav from "../components/LiquidBottomNav";
 import { 
 	FiHome, FiUser, FiLogOut, FiMenu, FiMail, FiBell, 
 	FiCalendar, FiBarChart2, FiFileText, FiDollarSign, 
@@ -231,7 +233,21 @@ const DPMDStaffLayout = () => {
 
 	const token = localStorage.getItem("expressToken");
 	const config = ROLE_CONFIG[roleType] || ROLE_CONFIG.pegawai;
-	const theme = config.theme;
+	// Tema sidebar/layout diseragamkan emerald–teal agar selaras dengan gradient
+	// halaman (bukan warna-warni per role/menu).
+	const theme = {
+		primary: 'emerald',
+		borderColor: 'border-emerald-200',
+		activeText: 'text-emerald-700',
+		activeBg: 'bg-emerald-50',
+		hoverText: 'hover:text-emerald-600',
+		hoverBg: 'hover:bg-emerald-50',
+		gradientFrom: 'from-emerald-500',
+		gradientTo: 'to-teal-600',
+		badgeBg: 'bg-emerald-100',
+		badgeText: 'text-emerald-700',
+		menuBorder: 'border-emerald-100',
+	};
 
 	// Auto-open submenu when on a bidang page
 	React.useEffect(() => {
@@ -599,8 +615,8 @@ const DPMDStaffLayout = () => {
 										onMouseLeave={() => setHoveredItem(null)}
 										className={`group relative w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : ''} rounded-xl transition-all duration-200 ${
 											(hasSubmenus ? isBidangActive : isActive)
-												? `bg-gradient-to-r ${item.gradient || theme.gradientFrom + ' ' + theme.gradientTo} text-white shadow-md` 
-												: `${item.color || theme.activeText} hover:bg-gradient-to-r ${item.gradient || theme.gradientFrom + ' ' + theme.gradientTo} hover:text-white hover:shadow-md`
+												? `bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md`
+												: `text-slate-600 hover:bg-emerald-50 hover:text-emerald-700`
 										}`}
 										title={isSidebarCollapsed ? item.label : ''}
 									>
@@ -652,8 +668,8 @@ const DPMDStaffLayout = () => {
 														onClick={() => navigate(sub.path)}
 														className={`group w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all duration-200 ${
 															isSubActive
-																? `${item.color || theme.activeText} ${theme.activeBg} font-semibold`
-																: `text-gray-500 hover:text-gray-700 ${theme.hoverBg}`
+																? `text-emerald-700 bg-emerald-50 font-semibold`
+																: `text-gray-500 hover:text-gray-700 hover:bg-emerald-50/60`
 														}`}
 													>
 														<AnimatedIcon 
@@ -877,112 +893,30 @@ const DPMDStaffLayout = () => {
 				className={`min-h-screen transition-all duration-300 ${
 					isDesktop 
 						? isSidebarCollapsed ? 'ml-20' : 'ml-64'
-						: hideBottomNav ? '' : 'pb-20'
+						: hideBottomNav ? '' : 'pb-28'
 				}`}
 			>
-				<Outlet context={{ setHideBottomNav }} />
+				<KeepAliveOutlet context={{ setHideBottomNav }} />
 			</main>
 
-			{/* Bottom Navigation - Mobile Only - Premium Floating Pill */}
-			{!isDesktop && !hideBottomNav && (() => {
-				const isMessagingPage = location.pathname.startsWith('/dpmd/pesan');
-				return (
-				<nav className="fixed bottom-4 left-5 right-5 z-50">
-					{/* Main navigation container */}
-					<div className="relative bg-white border border-gray-100 shadow-[0_2px_20px_rgba(0,0,0,0.08)] rounded-full">
-						<div className="max-w-lg mx-auto px-1">
-							<div className="flex items-center justify-around h-[56px]">
-							{bottomNavItems.map((item, index) => {
-								const itemPath = item.path ? item.path.split('?')[0] : '';
-								const itemQuery = item.path && item.path.includes('?') ? item.path.split('?')[1] : null;
-								const isActive = item.path
-									? itemQuery
-										? location.pathname === itemPath && location.search === `?${itemQuery}`
-										: location.pathname === item.path ||
-											(item.isMain && location.pathname.startsWith(item.path))
-									: false;
-								const Icon = item.icon;
-								
-								// Aksi Cepat FAB - opens full menu bottom sheet
-								if (item.isQuickAction) {
-									// On messaging page: compact icon aligned with other nav items
-									if (isMessagingPage) {
-										return (
-											<button
-												key={index}
-												onClick={() => setShowMenu(true)}
-												className="relative flex flex-col items-center justify-center py-1 group"
-											>
-												<FiGrid className="h-[22px] w-[22px] text-slate-400 group-hover:text-slate-600 transition-all duration-200" />
-												<span className="text-[9px] mt-1 font-bold tracking-wider uppercase text-slate-400">
-													{item.label}
-												</span>
-												{unreadCount > 0 && (
-													<span className="absolute -right-2 top-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-0.5 text-[9px] font-bold text-white">
-														{unreadCount > 9 ? '9+' : unreadCount}
-													</span>
-												)}
-											</button>
-										);
-									}
-									return (
-										<button
-											key={index}
-											onClick={() => setShowMenu(true)}
-											className="relative flex flex-col items-center"
-										>
-											<div className="relative -mt-8 mb-0.5">
-												<div className="relative flex items-center justify-center h-[52px] w-[52px] rounded-full shadow-lg ring-[5px] ring-white transition-all duration-300 bg-gradient-to-br from-blue-600 to-indigo-700 hover:scale-110">
-													<FiGrid className="h-6 w-6 text-white" />
-													{unreadCount > 0 && (
-														<span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
-															{unreadCount > 9 ? '9+' : unreadCount}
-														</span>
-													)}
-												</div>
-											</div>
-											<span className="text-[9px] font-bold tracking-wider uppercase text-slate-400">
-												{item.label}
-											</span>
-										</button>
-									);
-								}
-
-								// Regular nav items
-								return (
-									<button
-										key={index}
-										onClick={() => {
-											if (item.action) {
-												item.action();
-											} else {
-												navigate(item.path);
-											}
-										}}
-										className="relative flex flex-col items-center justify-center py-1 group"
-									>
-										{isActive && (
-											<motion.div
-												layoutId="navDot"
-												className={`absolute -top-0.5 w-5 h-1 rounded-full bg-gradient-to-r ${theme.gradientFrom} ${theme.gradientTo}`}
-												transition={{ type: "spring", stiffness: 500, damping: 30 }}
-											/>
-										)}
-										<Icon className={`h-[22px] w-[22px] transition-all duration-200 ${
-											isActive ? `${theme.activeText} scale-110` : 'text-slate-400 group-hover:text-slate-600'
-										}`} />
-										<span className={`text-[9px] mt-1 font-bold tracking-wider uppercase ${
-											isActive ? theme.activeText : 'text-slate-400'
-										}`}>{item.label}</span>
-									</button>
-								);
-							})}
-							</div>
-						</div>
-					</div>
-				</nav>
-				);
-			})()}
+			{/* Bottom Navigation - Mobile Only — liquid bar (cekungan + bola bergulir) */}
+			{!isDesktop && !hideBottomNav && (
+				<LiquidBottomNav
+					items={bottomNavItems.map((item) => ({
+						label: item.label,
+						icon: item.icon || FiGrid,
+						badge: item.isQuickAction ? unreadCount : 0,
+						active: item.path
+							? (location.pathname === item.path || (item.isMain && location.pathname.startsWith(item.path)))
+							: false,
+						onClick: () => {
+							if (item.isQuickAction) setShowMenu(true);
+							else if (item.action) item.action();
+							else navigate(item.path);
+						},
+					}))}
+				/>
+			)}
 
 			{/* Aksi Cepat Menu - Mobile Only, Slide from bottom (superadmin-style) */}
 			<AnimatePresence>
@@ -1076,7 +1010,7 @@ const DPMDStaffLayout = () => {
 											}}
 											className={`flex w-full items-center gap-4 rounded-2xl px-4 py-3 text-left transition-all duration-200 ${
 												location.pathname.startsWith(userBidang.path)
-													? `bg-gradient-to-r ${userBidang.gradient} text-white shadow-lg`
+													? `bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg`
 													: 'bg-slate-50 text-slate-700 hover:bg-slate-100'
 											}`}
 										>
@@ -1107,7 +1041,7 @@ const DPMDStaffLayout = () => {
 											}}
 											className={`flex w-full items-center gap-4 rounded-2xl px-4 py-3 text-left transition-all duration-200 ${
 												isActive
-													? `bg-gradient-to-r ${item.gradient} text-white shadow-lg`
+													? `bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg`
 													: 'text-slate-700 hover:bg-slate-100'
 											}`}
 										>

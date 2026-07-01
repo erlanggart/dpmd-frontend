@@ -13,7 +13,8 @@ const QuickActionCard = ({
   onClick,
   color = "blue",
   gradient = "from-blue-500 to-blue-600",
-  labelClassName = "text-slate-700 lg:text-slate-800"
+  labelClassName = "text-slate-700 lg:text-slate-800",
+  compact = false
 }) => {
   
   const colorVariants = {
@@ -33,6 +34,18 @@ const QuickActionCard = ({
 
   const selectedGradient = colorVariants[color] || gradient;
   const isWhite = color === 'white';
+  const isPlain = color === 'none'; // tanpa background/bayangan — ikon langsung
+  const iconSizeClass = compact
+    ? 'w-10 h-10 sm:w-11 sm:h-11 lg:w-16 lg:h-16 rounded-[16px] sm:rounded-[18px] lg:rounded-[24px]'
+    : 'w-12 h-12 sm:w-14 sm:h-14 lg:w-20 lg:h-20 rounded-[20px] sm:rounded-[24px] lg:rounded-[32px]';
+  const iconClassName = compact
+    ? 'w-4 h-4 sm:w-5 sm:h-5 lg:w-8 lg:h-8'
+    : 'w-5 h-5 sm:w-6 sm:h-6 lg:w-10 lg:h-10';
+  const iconToneClass = isWhite ? 'text-slate-700' : 'text-white';
+  const labelWrapClass = compact ? 'mt-1.5 lg:mt-2 h-6' : 'mt-2 lg:mt-3 h-8';
+  const labelTextClass = compact
+    ? 'text-[9px] sm:text-[10px] lg:text-xs max-w-[62px] lg:max-w-[74px] leading-tight'
+    : 'text-[10px] sm:text-xs lg:text-sm max-w-[70px] lg:max-w-[85px] leading-tight lg:leading-snug';
 
   return (
     <div 
@@ -41,21 +54,23 @@ const QuickActionCard = ({
     >
       {/* Icon Container with Modern Rounded Design */}
       <div className={`
-        relative w-12 h-12 sm:w-14 sm:h-14 lg:w-20 lg:h-20 flex-shrink-0
-        bg-gradient-to-br ${selectedGradient}
-        rounded-[20px] sm:rounded-[24px] lg:rounded-[32px]
-        ${isWhite
-          ? 'ring-1 ring-gray-200 shadow-md shadow-gray-200/60'
-          : `shadow-lg shadow-${color}-500/30 group-hover:shadow-xl group-hover:shadow-${color}-500/40`}
+        relative ${iconSizeClass} flex-shrink-0
+        ${isPlain
+          ? 'bg-transparent'
+          : `bg-gradient-to-br ${selectedGradient} ${isWhite
+              ? 'ring-1 ring-gray-200 shadow-md shadow-gray-200/60'
+              : `shadow-lg shadow-${color}-500/30 group-hover:shadow-xl group-hover:shadow-${color}-500/40`}`}
         transition-all duration-300
         group-hover:scale-105
-        flex items-center justify-center 
+        flex items-center justify-center
         overflow-hidden
       `}>
         {/* Subtle Shine Effect */}
-        <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/20 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-        
-        {customIcon ? customIcon : (Icon && <Icon className="w-5 h-5 sm:w-6 sm:h-6 lg:w-10 lg:h-10 text-white relative z-10 drop-shadow-md" />)}
+        {!isPlain && (
+          <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/20 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        )}
+
+        {customIcon ? customIcon : (Icon && <Icon className={`${iconClassName} ${isPlain ? 'text-white' : iconToneClass} relative z-10 drop-shadow-md`} />)}
       </div>
       
       {/* Badge - outside overflow-hidden container */}
@@ -66,8 +81,8 @@ const QuickActionCard = ({
       )}
       
       {/* Label - fixed height container for alignment */}
-      <div className="mt-2 lg:mt-3 h-8 flex items-start justify-center">
-        <p className={`text-[10px] sm:text-xs lg:text-sm ${labelClassName} font-semibold text-center max-w-[70px] lg:max-w-[85px] leading-tight lg:leading-snug`}>
+      <div className={`${labelWrapClass} flex items-start justify-center`}>
+        <p className={`${labelTextClass} ${labelClassName} font-semibold text-center`}>
           {label}
         </p>
       </div>

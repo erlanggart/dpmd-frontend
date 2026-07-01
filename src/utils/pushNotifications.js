@@ -34,6 +34,10 @@ export const requestNotificationPermission = async () => {
 // Register service worker
 export const registerServiceWorker = async () => {
   try {
+    if (import.meta.env.DEV) {
+      return null;
+    }
+
     if (!('serviceWorker' in navigator)) {
       // console.warn('Service Worker tidak didukung browser');
       return null;

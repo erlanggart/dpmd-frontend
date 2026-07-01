@@ -547,9 +547,12 @@ const ChatBot = ({ isDesktop = false }) => {
         /* Mobile: Above bottom bar */
         <div className="fixed z-[55] right-3 bottom-[76px]">
           {chatPopup}
-          <div className="flex justify-end mt-2">
-            {fabButton}
-          </div>
+          {/* FAB disembunyikan saat panel terbuka — tutup lewat tombol X di header */}
+          {!isOpen && (
+            <div className="flex justify-end mt-2">
+              {fabButton}
+            </div>
+          )}
         </div>
       )}
     </>

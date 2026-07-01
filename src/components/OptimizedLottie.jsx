@@ -14,7 +14,7 @@
 //  - Auto-pauses whenever the icon is scrolled offscreen or the browser
 //    tab is hidden (IntersectionObserver + Page Visibility API), so no
 //    animation runs when nobody can see it.
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import Lottie from "lottie-react";
 
 const OptimizedLottie = ({
@@ -22,9 +22,14 @@ const OptimizedLottie = ({
   className = "h-5 w-5",
   loop = true,
   autoplay = true,
+  fallbackIcon = null,
+  fallbackClassName = "text-white",
+  fallbackDuration = 700,
 }) => {
   const lottieRef = useRef(null);
   const containerRef = useRef(null);
+  const fallbackTimerRef = useRef(null);
+  const [showFallback, setShowFallback] = useState(Boolean(fallbackIcon));
 
   // Pause when offscreen / tab hidden so looping icons never burn CPU in
   // the background. Resumes automatically when visible again.
@@ -59,17 +64,39 @@ const OptimizedLottie = ({
     };
   }, [loop]);
 
+  useEffect(() => () => {
+    if (fallbackTimerRef.current) clearTimeout(fallbackTimerRef.current);
+  }, []);
+
+  const handleDomLoaded = () => {
+    if (!fallbackIcon) return;
+    if (fallbackTimerRef.current) clearTimeout(fallbackTimerRef.current);
+    fallbackTimerRef.current = setTimeout(() => {
+      setShowFallback(false);
+    }, fallbackDuration);
+  };
+
   return (
     <span
       ref={containerRef}
-      className={`inline-flex flex-shrink-0 items-center justify-center overflow-hidden ${className}`}
+      className={`relative inline-flex flex-shrink-0 items-center justify-center overflow-hidden ${className}`}
       aria-hidden="true"
     >
+      {fallbackIcon && (
+        <span
+          className={`absolute inset-0 z-10 flex items-center justify-center transition-opacity duration-200 ${
+            showFallback ? "opacity-100" : "opacity-0"
+          } ${fallbackClassName}`}
+        >
+          {fallbackIcon}
+        </span>
+      )}
       <Lottie
         lottieRef={lottieRef}
         animationData={animationData}
         loop={loop}
         autoplay={autoplay}
+        onDOMLoaded={handleDomLoaded}
         renderer="canvas"
         rendererSettings={{ clearCanvas: true, progressiveLoad: false }}
         className="h-full w-full"

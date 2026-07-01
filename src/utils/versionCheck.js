@@ -224,6 +224,10 @@ function processVersionData(data, localHash) {
  * Setup periodic version check
  */
 export const setupPeriodicVersionCheck = (onUpdateAvailable) => {
+  if (import.meta.env.DEV) {
+    return () => {};
+  }
+
   // Check on visibility change (when user returns to app / switches tab)
   const handleVisibilityChange = async () => {
     if (document.visibilityState === 'visible') {

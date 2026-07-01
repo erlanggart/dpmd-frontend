@@ -4,21 +4,13 @@ import { AnimatePresence, motion } from 'framer-motion';
 import {
   FiUser, FiMail, FiShield, FiEdit2, FiX, FiCamera, FiArrowLeft,
   FiLogOut, FiLock, FiEye, FiEyeOff, FiPhone, FiMapPin, FiCalendar,
-  FiBriefcase, FiBook, FiHash, FiChevronRight, FiCheck, FiAward, FiStar,
-  FiClock, FiLogIn, FiInfo
+  FiBriefcase, FiBook, FiHash, FiChevronRight, FiCheck, FiAward, FiStar
 } from 'react-icons/fi';
 import api from '../../services/api';
 import { toast } from 'react-hot-toast';
 import { getAvatarUrl } from '../../utils/avatarUtils';
 import AvatarCropModal from '../../components/AvatarCropModal';
-
-const ABSENSI_ELIGIBLE_STATUS = ['PPPK Paruh Waktu', 'Tenaga Alih Daya', 'Tenaga Keamanan', 'Tenaga Kebersihan'];
-
-const fmtJam = (value) => {
-  if (!value) return '--:--:--';
-  const m = String(value).match(/(\d{2}:\d{2}(:\d{2})?)/);
-  return m ? m[1] : String(value);
-};
+import { convertAvatarToWebp, validateAvatarInput } from '../../utils/avatarImage';
 
 const STATUS_OPTIONS = [
   { value: '', label: '— Pilih —' },
@@ -49,14 +41,14 @@ const PENDIDIKAN_OPTIONS = [
 ];
 
 // Reusable display field
-const InfoField = ({ icon: Icon, label, value, iconColor = 'text-gray-400' }) => (
+const InfoField = ({ icon: Icon, label, value, iconColor = 'text-slate-300' }) => (
   <div className="flex items-start gap-3 py-3">
-    <div className={`w-9 h-9 rounded-xl bg-gray-50 flex items-center justify-center flex-shrink-0 ${iconColor}`}>
+    <div className={`w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0 ${iconColor}`}>
       <Icon className="w-4 h-4" />
     </div>
     <div className="flex-1 min-w-0">
-      <p className="text-[11px] uppercase tracking-wider text-gray-400 font-medium">{label}</p>
-      <p className="text-sm font-semibold text-gray-800 mt-0.5 truncate">{value || <span className="text-gray-300 italic font-normal">Belum diisi</span>}</p>
+      <p className="text-[11px] uppercase tracking-wider text-slate-400 font-medium">{label}</p>
+      <p className="text-sm font-semibold text-white mt-0.5 truncate">{value || <span className="text-slate-500 italic font-normal">Belum diisi</span>}</p>
     </div>
   </div>
 );
@@ -64,12 +56,12 @@ const InfoField = ({ icon: Icon, label, value, iconColor = 'text-gray-400' }) =>
 // Reusable edit field
 const EditField = ({ label, name, value, onChange, type = 'text', options, placeholder }) => (
   <div>
-    <label className="block text-[11px] uppercase tracking-wider text-gray-500 font-semibold mb-1.5">{label}</label>
+    <label className="block text-[11px] uppercase tracking-wider text-slate-300 font-semibold mb-1.5">{label}</label>
     {options ? (
       <select
         value={value}
         onChange={(e) => onChange(name, e.target.value)}
-        className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all outline-none"
+        className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm text-white placeholder:text-slate-500 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-all outline-none"
       >
         {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
@@ -78,7 +70,7 @@ const EditField = ({ label, name, value, onChange, type = 'text', options, place
         value={value}
         onChange={(e) => onChange(name, e.target.value)}
         rows={3}
-        className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all outline-none resize-none"
+        className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm text-white placeholder:text-slate-500 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-all outline-none resize-none"
         placeholder={placeholder}
       />
     ) : (
@@ -86,7 +78,7 @@ const EditField = ({ label, name, value, onChange, type = 'text', options, place
         type={type}
         value={value}
         onChange={(e) => onChange(name, e.target.value)}
-        className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all outline-none"
+        className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm text-white placeholder:text-slate-500 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-all outline-none"
         placeholder={placeholder}
       />
     )}
@@ -107,8 +99,6 @@ const ProfilePage = () => {
   const [pegawaiData, setPegawaiData] = useState(null);
   const [pegawaiLoading, setPegawaiLoading] = useState(false);
   const [pegawaiForm, setPegawaiForm] = useState({});
-  const [now, setNow] = useState(new Date());
-  const [todayData, setTodayData] = useState(null);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [passwordLoading, setPasswordLoading] = useState(false);
@@ -172,22 +162,6 @@ const ProfilePage = () => {
   };
 
   useEffect(() => { fetchPegawaiData(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Jam real-time untuk kartu Presensi
-  useEffect(() => {
-    const t = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(t);
-  }, []);
-
-  // Presensi hari ini (hanya untuk status yang eligible)
-  useEffect(() => {
-    const st = (pegawaiData?.status_kepegawaian || user.status_kepegawaian || '').replace(/_/g, ' ');
-    if (!ABSENSI_ELIGIBLE_STATUS.includes(st)) return;
-    (async () => {
-      try { const r = await api.get('/absensi/today'); setTodayData(r.data?.data || null); }
-      catch (err) { console.error('Error fetching today:', err); }
-    })();
-  }, [pegawaiData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const formatDate = (d) => {
     if (!d) return null;
@@ -271,14 +245,22 @@ const ProfilePage = () => {
   const [cropImageSrc, setCropImageSrc] = useState(null);
   const [showCropModal, setShowCropModal] = useState(false);
 
-  const handlePhotoSelect = (e) => {
+  const handlePhotoSelect = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith('image/')) return toast.error('File harus berupa gambar');
-    if (file.size > 10 * 1024 * 1024) return toast.error('Maksimal 10MB');
+    const validation = validateAvatarInput(file);
     e.target.value = '';
-    // Upload foto asli apa adanya — tidak dipotong/dibatasi ukuran (tanpa crop).
-    handleCropDone(file);
+    // Konversi foto ke WebP sebelum upload agar ukuran penyimpanan lebih ringan.
+    if (!validation.valid) return toast.error(validation.message);
+
+    setIsUploadingPhoto(true);
+    try {
+      const webpFile = await convertAvatarToWebp(file, { outputName: 'avatar' });
+      await handleCropDone(webpFile);
+    } catch (err) {
+      toast.error(err.message || 'Gagal mengonversi foto');
+      setIsUploadingPhoto(false);
+    }
   };
 
   const handleCropDone = async (croppedFile) => {
@@ -287,7 +269,10 @@ const ProfilePage = () => {
     try {
       const fd = new FormData();
       fd.append('avatar', croppedFile);
-      const res = await api.post(`/users/${user.id}/avatar`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      const res = await api.post(`/users/${user.id}/avatar`, fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 30000,
+      });
       if (res.data.success) {
         setAvatarUrl(getAvatarUrl(res.data.data.avatar));
         const updated = { ...user, avatar: res.data.data.avatar };
@@ -311,8 +296,8 @@ const ProfilePage = () => {
 
   const SaveCancelButtons = ({ onSave, onCancel }) => (
     <div className="flex gap-2">
-      <button onClick={onCancel} className="px-3.5 py-2 text-sm font-medium text-gray-500 bg-gray-50 hover:bg-gray-100 rounded-xl transition-all">Batal</button>
-      <button onClick={onSave} disabled={isLoading} className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 rounded-xl transition-all disabled:opacity-50">
+      <button onClick={onCancel} className="px-3.5 py-2 text-sm font-medium text-slate-300 bg-white/10 hover:bg-white/20 rounded-xl transition-all">Batal</button>
+      <button onClick={onSave} disabled={isLoading} className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-emerald-500 hover:bg-emerald-600 rounded-xl transition-all disabled:opacity-50">
         {isLoading ? <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg> : <FiCheck className="w-3.5 h-3.5" />}
         Simpan
       </button>
@@ -320,178 +305,85 @@ const ProfilePage = () => {
   );
 
   const EditButton = ({ onClick }) => (
-    <button onClick={onClick} className="flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 rounded-xl transition-all">
+    <button onClick={onClick} className="flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium text-slate-200 hover:text-white bg-white/10 hover:bg-white/20 rounded-xl transition-all">
       <FiEdit2 className="w-3.5 h-3.5" /> Edit
     </button>
   );
 
-  // ─── Presensi & Layanan (gaya SIKEPO) ───
-  const statusKepeg = (pegawaiData?.status_kepegawaian || user.status_kepegawaian || '').replace(/_/g, ' ');
-  const isAbsensiEligible = ABSENSI_ELIGIBLE_STATUS.includes(statusKepeg);
-  const hariTanggal = now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-  const jamSekarang = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  const sudahMasuk = !!todayData?.jam_masuk;
-  const sudahPulang = !!todayData?.jam_keluar;
-
-  const services = [
-    { label: 'Perjadin', icon: FiBriefcase, bg: 'bg-emerald-50', text: 'text-emerald-600', onClick: () => navigate('/pegawai/perjadin') },
-    { label: 'Jadwal', icon: FiCalendar, bg: 'bg-sky-50', text: 'text-sky-600', onClick: () => navigate('/pegawai/jadwal-kegiatan') },
-    ...(isAbsensiEligible
-      ? [{ label: 'Presensi', icon: FiClock, bg: 'bg-rose-50', text: 'text-rose-600', onClick: () => navigate('/dpmd/absensi') }]
-      : [{ label: 'Photo Booth', icon: FiCamera, bg: 'bg-violet-50', text: 'text-violet-600', onClick: () => navigate('/dpmd/photo-booth') }]
-    ),
-    { label: 'Informasi', icon: FiInfo, bg: 'bg-amber-50', text: 'text-amber-600', onClick: () => navigate('/dpmd/informasi') },
-  ];
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
-      {/* Hero Header */}
-      <div className="relative overflow-hidden">
-        <div className={`bg-gradient-to-r ${gradient} px-4 pt-6 pb-28`}>
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/3" />
-          <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/4" />
-          <div className="absolute top-1/2 left-1/2 w-32 h-32 bg-white/5 rounded-full -translate-x-1/2 -translate-y-1/2" />
-
-          <div className="relative max-w-2xl mx-auto">
-            <div className="flex items-center justify-between mb-6">
-              <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-white/80 hover:text-white transition-colors">
-                <FiArrowLeft className="h-5 w-5" />
-                <span className="text-sm font-medium">Kembali</span>
-              </button>
-              <div className="flex items-center gap-2">
-                <button onClick={() => setShowPasswordModal(true)} className="p-2.5 bg-white/15 hover:bg-white/25 rounded-xl transition-all backdrop-blur-sm" title="Ubah Password">
-                  <FiLock className="h-4 w-4 text-white" />
-                </button>
-                <button onClick={handleLogout} className="p-2.5 bg-red-500 rounded-xl backdrop-blur-sm shadow-md" title="Keluar">
-                  <FiLogOut className="h-5 w-5 text-white" />
-                </button>
-              </div>
-            </div>
+    <div className="min-h-screen bg-[linear-gradient(180deg,#0f172a_0%,#115e59_36%,#dbeafe_74%,#f8fafc_100%)]">
+      {/* Hero Header — background mengikuti halaman home, foto tanpa card */}
+      <div className="relative max-w-2xl mx-auto px-4 pt-6">
+        <div className="flex items-center justify-between mb-4">
+          <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-white/90 hover:text-white transition-colors">
+            <FiArrowLeft className="h-5 w-5" />
+            <span className="text-sm font-medium">Kembali</span>
+          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setShowPasswordModal(true)} className="p-2.5 bg-white/15 hover:bg-white/25 rounded-xl transition-all backdrop-blur-sm" title="Ubah Password">
+              <FiLock className="h-4 w-4 text-white" />
+            </button>
+            <button onClick={handleLogout} className="p-2.5 bg-red-500 rounded-xl backdrop-blur-sm shadow-md" title="Keluar">
+              <FiLogOut className="h-5 w-5 text-white" />
+            </button>
           </div>
         </div>
 
-        {/* Profile Card */}
-        <div className="max-w-2xl mx-auto px-4 -mt-20 relative z-10">
-          <div className="bg-white rounded-3xl shadow-xl shadow-gray-200/50 p-6 border border-gray-100">
-            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
-              <div className="relative flex-shrink-0">
-                <button
-                  onClick={() => avatarUrl && setShowPhotoReview(true)}
-                  className="w-24 h-24 rounded-2xl overflow-hidden ring-4 ring-white shadow-lg cursor-pointer hover:ring-blue-200 transition-all"
-                >
-                  {avatarUrl ? (
-                    <img src={avatarUrl} alt={user.name} className="w-full h-full object-cover" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }} />
-                  ) : null}
-                  <div className={`w-full h-full bg-gradient-to-br ${gradient} flex items-center justify-center ${avatarUrl ? 'hidden' : ''}`} style={{ display: avatarUrl ? 'none' : 'flex' }}>
-                    <span className="text-white font-bold text-3xl">{user.name?.charAt(0).toUpperCase() || 'U'}</span>
-                  </div>
-                </button>
-                <button onClick={() => fileInputRef.current?.click()} disabled={isUploadingPhoto} className="absolute -bottom-1 -right-1 w-8 h-8 bg-white rounded-xl shadow-md border border-gray-100 flex items-center justify-center hover:scale-110 transition-transform disabled:opacity-50">
-                  {isUploadingPhoto ? (
-                    <svg className="animate-spin h-4 w-4 text-gray-400" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>
-                  ) : (
-                    <FiCamera className="h-3.5 w-3.5 text-gray-500" />
-                  )}
-                </button>
-                <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhotoSelect} disabled={isUploadingPhoto} className="hidden" />
+        {/* Foto profil — tanpa bingkai; kartu info menutupi ~5% bawah foto (gaya home) */}
+        <div className="flex flex-col items-center">
+          <div className="relative z-0">
+            <button
+              onClick={() => avatarUrl && setShowPhotoReview(true)}
+              className="w-36 h-36 rounded-[28px] overflow-hidden shadow-2xl shadow-black/30 cursor-pointer transition-all"
+            >
+              {avatarUrl ? (
+                <img src={avatarUrl} alt={user.name} className="w-full h-full object-cover" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }} />
+              ) : null}
+              <div className={`w-full h-full bg-gradient-to-br ${gradient} flex items-center justify-center ${avatarUrl ? 'hidden' : ''}`} style={{ display: avatarUrl ? 'none' : 'flex' }}>
+                <span className="text-white font-bold text-5xl">{user.name?.charAt(0).toUpperCase() || 'U'}</span>
               </div>
+            </button>
+            <button onClick={() => fileInputRef.current?.click()} disabled={isUploadingPhoto} className="absolute top-2 right-2 w-9 h-9 bg-white/95 rounded-xl shadow-md border border-gray-100 flex items-center justify-center hover:scale-110 transition-transform disabled:opacity-50">
+              {isUploadingPhoto ? (
+                <svg className="animate-spin h-4 w-4 text-gray-400" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>
+              ) : (
+                <FiCamera className="h-3.5 w-3.5 text-gray-500" />
+              )}
+            </button>
+            <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhotoSelect} disabled={isUploadingPhoto} className="hidden" />
+          </div>
 
-              <div className="flex-1 text-center sm:text-left min-w-0">
-                <h1 className="text-xl font-bold text-gray-900 truncate">{user.name}</h1>
-                {pegawaiData?.jabatan && <p className="text-sm text-gray-500 mt-0.5">{pegawaiData.jabatan}</p>}
-                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mt-3">
-                  <span className={`inline-flex items-center gap-1 px-3 py-1 bg-gradient-to-r ${gradient} text-white rounded-full text-xs font-semibold shadow-sm`}>
-                    <FiShield className="w-3 h-3" />
-                    {roleLabels[user.role] || user.role}
+          {/* Kartu info — dark glass (senada kartu Aksi Cepat), tidak menutupi foto */}
+          <div className="w-full mt-4">
+            <div className="bg-slate-800/60 backdrop-blur-md border border-white/10 rounded-3xl shadow-xl shadow-black/20 py-5 px-5 text-center">
+              <h1 className="text-xl font-bold text-white">{user.name}</h1>
+              {pegawaiData?.jabatan && <p className="text-sm text-slate-300 mt-0.5">{pegawaiData.jabatan}</p>}
+              <div className="flex flex-wrap items-center justify-center gap-2 mt-3">
+                <span className={`inline-flex items-center gap-1 px-3 py-1 bg-gradient-to-r ${gradient} text-white rounded-full text-xs font-semibold shadow-sm`}>
+                  <FiShield className="w-3 h-3" />
+                  {roleLabels[user.role] || user.role}
+                </span>
+                {pegawaiData?.status_kepegawaian && (
+                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-white/10 text-slate-200 rounded-full text-xs font-semibold">
+                    <FiAward className="w-3 h-3" />
+                    {statusLabel(pegawaiData.status_kepegawaian)}
                   </span>
-                  {pegawaiData?.status_kepegawaian && (
-                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold">
-                      <FiAward className="w-3 h-3" />
-                      {statusLabel(pegawaiData.status_kepegawaian)}
-                    </span>
-                  )}
-                </div>
-                {pegawaiData?.nip && <p className="text-xs text-gray-400 mt-2 font-mono">NIP: {pegawaiData.nip}</p>}
+                )}
               </div>
+              {pegawaiData?.nip && <p className="text-xs text-slate-400 mt-2 font-mono">NIP: {pegawaiData.nip}</p>}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Presensi & Layanan (gaya SIKEPO) */}
-      {user.pegawai_id && (
-        <div className="max-w-2xl mx-auto px-4 mt-6 space-y-4">
-          {isAbsensiEligible && (
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-xs text-gray-400 font-medium">
-                  {hariTanggal} · <span className="tabular-nums text-gray-600 font-semibold">{jamSekarang}</span>
-                </p>
-                {todayData?.status && (
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-600 capitalize">
-                    {String(todayData.status).replace(/_/g, ' ')}
-                  </span>
-                )}
-              </div>
-              <h3 className="text-base font-bold text-gray-900 mt-2 mb-4">Presensi &amp; Kinerja</h3>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="flex items-center gap-3 rounded-2xl bg-emerald-50/70 p-3">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                    <FiLogIn className="h-5 w-5 text-emerald-600" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-base font-extrabold text-gray-800 tabular-nums leading-none">{fmtJam(todayData?.jam_masuk)}</p>
-                    <p className="text-[11px] text-gray-400 mt-1">Jam Datang</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 rounded-2xl bg-rose-50/70 p-3">
-                  <div className="w-10 h-10 rounded-xl bg-rose-100 flex items-center justify-center flex-shrink-0">
-                    <FiLogOut className="h-5 w-5 text-rose-500" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-base font-extrabold text-gray-800 tabular-nums leading-none">{fmtJam(todayData?.jam_keluar)}</p>
-                    <p className="text-[11px] text-gray-400 mt-1">Jam Pulang</p>
-                  </div>
-                </div>
-              </div>
-              <button
-                onClick={() => navigate('/dpmd/absensi')}
-                className="mt-3 w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-green-500 text-white font-semibold text-sm shadow-lg shadow-emerald-500/25 transition-all hover:brightness-105"
-              >
-                <FiClock className="h-4 w-4" />
-                {!sudahMasuk ? 'Absen Datang' : !sudahPulang ? 'Absen Pulang' : 'Lihat Presensi'}
-              </button>
-            </div>
-          )}
-
-          {/* Layanan Lainnya */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-            <h3 className="text-base font-bold text-gray-900 mb-4">Layanan Lainnya</h3>
-            <div className="grid grid-cols-4 gap-2">
-              {services.map((s) => {
-                const Icon = s.icon;
-                return (
-                  <button key={s.label} onClick={s.onClick} className="flex flex-col items-center gap-2 py-2 transition-transform active:scale-95">
-                    <div className={`w-14 h-14 ${s.bg} rounded-2xl flex items-center justify-center`}>
-                      <Icon className={`h-6 w-6 ${s.text}`} />
-                    </div>
-                    <span className="text-[11px] font-semibold text-gray-600 text-center leading-tight">{s.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Tab Navigation */}
       <div className="max-w-2xl mx-auto px-4 mt-6">
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-1.5 flex gap-1">
+        <div className="bg-slate-800/60 backdrop-blur-md border border-white/10 rounded-2xl p-1.5 flex gap-1">
           {tabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => { setActiveTab(tab.id); setEditingSection(null); }}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-all ${activeTab === tab.id ? 'bg-gray-900 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-all ${activeTab === tab.id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-300 hover:text-white hover:bg-white/10'}`}
             >
               <tab.icon className="w-4 h-4" />
               {tab.label}
@@ -505,10 +397,10 @@ const ProfilePage = () => {
 
         {/* PERSONAL TAB */}
         {activeTab === 'personal' && user.pegawai_id && (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+          <div className="bg-slate-800/60 backdrop-blur-md border border-white/10 rounded-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between">
               <div>
-                <h3 className="font-bold text-gray-900">Data Pribadi</h3>
+                <h3 className="font-bold text-white">Data Pribadi</h3>
                 <p className="text-xs text-gray-400 mt-0.5">Informasi personal pegawai</p>
               </div>
               {editingSection !== 'personal'
@@ -518,7 +410,7 @@ const ProfilePage = () => {
             </div>
             <div className="p-6">
               {pegawaiLoading ? (
-                <div className="flex justify-center py-12"><div className="w-8 h-8 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin" /></div>
+                <div className="flex justify-center py-12"><div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" /></div>
               ) : editingSection === 'personal' ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <EditField label="Jenis Kelamin" name="jenis_kelamin" value={pegawaiForm.jenis_kelamin} onChange={(n, v) => setPegawaiForm({ ...pegawaiForm, [n]: v })} options={GENDER_OPTIONS} />
@@ -532,12 +424,12 @@ const ProfilePage = () => {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6">
-                  <div className="space-y-0 divide-y divide-gray-50">
+                  <div className="space-y-0 divide-y divide-white/5">
                     <InfoField icon={FiUser} label="Jenis Kelamin" value={pegawaiData?.jenis_kelamin === 'L' ? 'Laki-laki' : pegawaiData?.jenis_kelamin === 'P' ? 'Perempuan' : null} iconColor="text-blue-500" />
                     <InfoField icon={FiMapPin} label="Tempat Lahir" value={pegawaiData?.tempat_lahir} iconColor="text-rose-400" />
                     <InfoField icon={FiCalendar} label="Tanggal Lahir" value={formatDate(pegawaiData?.tanggal_lahir)} iconColor="text-amber-500" />
                   </div>
-                  <div className="space-y-0 divide-y divide-gray-50">
+                  <div className="space-y-0 divide-y divide-white/5">
                     <InfoField icon={FiBook} label="Pendidikan Terakhir" value={pegawaiData?.pendidikan_terakhir} iconColor="text-purple-500" />
                     <InfoField icon={FiPhone} label="No. HP" value={pegawaiData?.no_hp} iconColor="text-green-500" />
                     <InfoField icon={FiMapPin} label="Alamat" value={pegawaiData?.alamat} iconColor="text-teal-500" />
@@ -549,21 +441,21 @@ const ProfilePage = () => {
         )}
 
         {activeTab === 'personal' && !user.pegawai_id && (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center">
-            <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <FiUser className="w-7 h-7 text-gray-300" />
+          <div className="bg-slate-800/60 backdrop-blur-md border border-white/10 rounded-2xl p-8 text-center">
+            <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <FiUser className="w-7 h-7 text-slate-400" />
             </div>
-            <p className="text-gray-500 font-medium">Data pribadi tidak tersedia</p>
-            <p className="text-xs text-gray-400 mt-1">Akun Anda belum terhubung dengan data pegawai</p>
+            <p className="text-slate-200 font-medium">Data pribadi tidak tersedia</p>
+            <p className="text-xs text-slate-400 mt-1">Akun Anda belum terhubung dengan data pegawai</p>
           </div>
         )}
 
         {/* EMPLOYMENT TAB */}
         {activeTab === 'employment' && user.pegawai_id && (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+          <div className="bg-slate-800/60 backdrop-blur-md border border-white/10 rounded-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between">
               <div>
-                <h3 className="font-bold text-gray-900">Data Kepegawaian</h3>
+                <h3 className="font-bold text-white">Data Kepegawaian</h3>
                 <p className="text-xs text-gray-400 mt-0.5">Jabatan, pangkat, dan status</p>
               </div>
               {editingSection !== 'employment'
@@ -573,7 +465,7 @@ const ProfilePage = () => {
             </div>
             <div className="p-6">
               {pegawaiLoading ? (
-                <div className="flex justify-center py-12"><div className="w-8 h-8 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin" /></div>
+                <div className="flex justify-center py-12"><div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" /></div>
               ) : editingSection === 'employment' ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <EditField label="NIP" name="nip" value={pegawaiForm.nip} onChange={(n, v) => setPegawaiForm({ ...pegawaiForm, [n]: v })} placeholder="Nomor Induk Pegawai" />
@@ -587,13 +479,13 @@ const ProfilePage = () => {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6">
-                  <div className="space-y-0 divide-y divide-gray-50">
+                  <div className="space-y-0 divide-y divide-white/5">
                     <InfoField icon={FiHash} label="NIP" value={pegawaiData?.nip} iconColor="text-blue-500" />
                     <InfoField icon={FiBriefcase} label="Jabatan" value={pegawaiData?.jabatan} iconColor="text-orange-500" />
                     <InfoField icon={FiAward} label="Status Kepegawaian" value={statusLabel(pegawaiData?.status_kepegawaian)} iconColor="text-emerald-500" />
                     <InfoField icon={FiStar} label="Pangkat" value={pegawaiData?.pangkat} iconColor="text-amber-500" />
                   </div>
-                  <div className="space-y-0 divide-y divide-gray-50">
+                  <div className="space-y-0 divide-y divide-white/5">
                     <InfoField icon={FiShield} label="Golongan" value={pegawaiData?.golongan} iconColor="text-purple-500" />
                     <InfoField icon={FiShield} label="Eselon" value={pegawaiData?.eselon} iconColor="text-indigo-500" />
                     <InfoField icon={FiBriefcase} label="Unit Kerja" value={pegawaiData?.unit_kerja} iconColor="text-teal-500" />
@@ -608,10 +500,10 @@ const ProfilePage = () => {
         {/* ACCOUNT TAB */}
         {activeTab === 'account' && (
           <div className="space-y-4">
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+            <div className="bg-slate-800/60 backdrop-blur-md border border-white/10 rounded-2xl overflow-hidden">
+              <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between">
                 <div>
-                  <h3 className="font-bold text-gray-900">Informasi Akun</h3>
+                  <h3 className="font-bold text-white">Informasi Akun</h3>
                   <p className="text-xs text-gray-400 mt-0.5">Nama, email, dan role</p>
                 </div>
                 {editingSection !== 'account'
@@ -625,12 +517,12 @@ const ProfilePage = () => {
                     <EditField label="Nama Lengkap" name="name" value={accountForm.name} onChange={(n, v) => setAccountForm({ ...accountForm, [n]: v })} placeholder="Nama lengkap" />
                     <EditField label="Email" name="email" value={accountForm.email} onChange={(n, v) => setAccountForm({ ...accountForm, [n]: v })} type="email" placeholder="email@example.com" />
                     <div>
-                      <label className="block text-[11px] uppercase tracking-wider text-gray-500 font-semibold mb-1.5">Role</label>
-                      <div className="px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-400">{roleLabels[user.role] || user.role} <span className="text-[10px]">(tidak dapat diubah)</span></div>
+                      <label className="block text-[11px] uppercase tracking-wider text-slate-300 font-semibold mb-1.5">Role</label>
+                      <div className="px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm text-slate-400">{roleLabels[user.role] || user.role} <span className="text-[10px]">(tidak dapat diubah)</span></div>
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-0 divide-y divide-gray-50">
+                  <div className="space-y-0 divide-y divide-white/5">
                     <InfoField icon={FiUser} label="Nama Lengkap" value={user.name} iconColor="text-blue-500" />
                     <InfoField icon={FiMail} label="Email" value={user.email} iconColor="text-rose-400" />
                     <InfoField icon={FiShield} label="Role" value={roleLabels[user.role] || user.role} iconColor="text-purple-500" />
@@ -641,34 +533,34 @@ const ProfilePage = () => {
             </div>
 
             {/* Quick Actions */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-100">
-                <h3 className="font-bold text-gray-900">Pengaturan</h3>
+            <div className="bg-slate-800/60 backdrop-blur-md border border-white/10 rounded-2xl overflow-hidden">
+              <div className="px-6 py-4 border-b border-white/10">
+                <h3 className="font-bold text-white">Pengaturan</h3>
               </div>
-              <div className="divide-y divide-gray-50">
-                <button onClick={() => setShowPasswordModal(true)} className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors">
+              <div className="divide-y divide-white/5">
+                <button onClick={() => setShowPasswordModal(true)} className="w-full flex items-center justify-between px-6 py-4 hover:bg-white/5 transition-colors">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 bg-amber-50 rounded-xl flex items-center justify-center">
-                      <FiLock className="w-4 h-4 text-amber-500" />
+                    <div className="w-9 h-9 bg-amber-500/15 rounded-xl flex items-center justify-center">
+                      <FiLock className="w-4 h-4 text-amber-400" />
                     </div>
                     <div className="text-left">
-                      <p className="text-sm font-semibold text-gray-800">Ubah Password</p>
-                      <p className="text-xs text-gray-400">Ganti password akun Anda</p>
+                      <p className="text-sm font-semibold text-white">Ubah Password</p>
+                      <p className="text-xs text-slate-400">Ganti password akun Anda</p>
                     </div>
                   </div>
-                  <FiChevronRight className="w-4 h-4 text-gray-300" />
+                  <FiChevronRight className="w-4 h-4 text-slate-500" />
                 </button>
-                <button onClick={handleLogout} className="w-full flex items-center justify-between px-6 py-4 bg-red-50">
+                <button onClick={handleLogout} className="w-full flex items-center justify-between px-6 py-4 bg-red-500/10 hover:bg-red-500/15 transition-colors">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 bg-red-100 rounded-xl flex items-center justify-center">
-                      <FiLogOut className="w-4 h-4 text-red-600" />
+                    <div className="w-9 h-9 bg-red-500/20 rounded-xl flex items-center justify-center">
+                      <FiLogOut className="w-4 h-4 text-red-400" />
                     </div>
                     <div className="text-left">
-                      <p className="text-sm font-semibold text-red-600">Keluar</p>
-                      <p className="text-xs text-gray-400">Keluar dari sistem</p>
+                      <p className="text-sm font-semibold text-red-400">Keluar</p>
+                      <p className="text-xs text-slate-400">Keluar dari sistem</p>
                     </div>
                   </div>
-                  <FiChevronRight className="w-4 h-4 text-gray-300" />
+                  <FiChevronRight className="w-4 h-4 text-slate-500" />
                 </button>
               </div>
             </div>

@@ -8,6 +8,10 @@ import pushNotificationManager from '../utils/pushNotificationManager';
  */
 const PushNotificationInitializer = () => {
   useEffect(() => {
+    if (import.meta.env.DEV) {
+      return;
+    }
+
     const initPushNotifications = async () => {
       try {
         // Check if supported
