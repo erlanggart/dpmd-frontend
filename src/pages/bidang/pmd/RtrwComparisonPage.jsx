@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
   LuChevronDown,
   LuChevronRight,
@@ -84,6 +84,48 @@ const joinValues = (values) => {
 };
 
 const sumValues = (values) => (values || []).reduce((sum, v) => sum + Number(v || 0), 0);
+
+// Pisahkan daftar wilayah kosong menjadi desa vs kelurahan (dari status_pemerintahan)
+const splitEmpty = (list = []) => ({
+  desa: list.filter((e) => e.jenis !== "kelurahan"),
+  kelurahan: list.filter((e) => e.jenis === "kelurahan"),
+});
+
+const emptyLabel = (list = []) => {
+  const { desa, kelurahan } = splitEmpty(list);
+  const parts = [];
+  if (desa.length) parts.push(`${desa.length} desa`);
+  if (kelurahan.length) parts.push(`${kelurahan.length} kelurahan`);
+  return `${parts.join(" · ") || "0"} kosong`;
+};
+
+// Angka dengan animasi hitung-naik (easeOutCubic). Melanjutkan dari nilai
+// yang sedang tampil bila target berubah, jadi mulus saat pindah tab.
+const CountUp = ({ value = 0, duration = 800, className }) => {
+  const [display, setDisplay] = useState(0);
+  const fromRef = useRef(0);
+
+  useEffect(() => {
+    const from = fromRef.current;
+    const to = Number(value) || 0;
+    if (from === to) return;
+    const start = performance.now();
+    let raf;
+    const tick = (now) => {
+      const t = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - t, 3);
+      const current = Math.round(from + (to - from) * eased);
+      fromRef.current = current;
+      setDisplay(current);
+      if (t < 1) raf = requestAnimationFrame(tick);
+      else fromRef.current = to;
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [value, duration]);
+
+  return <span className={className}>{display.toLocaleString("id-ID")}</span>;
+};
 
 const TANGKIL_KODE = "32.01.03.2011";
 
@@ -191,11 +233,24 @@ const buildClassification = (data) => {
 
   [dbBpjs, nikBerbeda, desaBerbeda, bpjsNoDb, dbNoBpjs, bpjsCocokAdd].forEach((arr) => arr.sort(bySortKey));
 
-  return { dbBpjs, nikBerbeda, desaBerbeda, bpjsNoDb, dbNoBpjs, bpjsCocokAdd };
+  // Pecah "DB tidak ada di BPJS" berdasarkan ada/tidaknya referensi ADD.
+  const dbNoBpjsAdd = dbNoBpjs.filter((row) => row.adaAdd);
+  const dbNoBpjsNoAdd = dbNoBpjs.filter((row) => !row.adaAdd);
+
+  return { dbBpjs, nikBerbeda, desaBerbeda, bpjsNoDb, dbNoBpjs, dbNoBpjsAdd, dbNoBpjsNoAdd, bpjsCocokAdd };
 };
 
 const COL_DESA = { key: "desa", label: "Desa", type: "desa" };
 const COL_LOKASI = { key: "lokasi", label: "RT/RW", type: "lokasi" };
+
+const DB_NO_BPJS_COLUMNS = [
+  COL_DESA, COL_LOKASI,
+  { key: "namaDb", label: "Nama DB" },
+  { key: "nik", label: "NIK" },
+  { key: "adaAdd", label: "Ada ADD", type: "bool" },
+  { key: "nilaiAdd", label: "Nilai ADD", type: "currency", align: "right" },
+  { key: "status", label: "Status" },
+];
 
 // Definisi 7 tab. Tab pertama tetap tampilan perbandingan lama.
 const TAB_DEFS = [
@@ -268,14 +323,23 @@ const TAB_DEFS = [
     bucket: "dbNoBpjs",
     title: "Database Tidak Ada di BPJS",
     description: "Data Database (pengurus RT/RW) yang tidak memiliki padanan di BPJS.",
-    columns: [
-      COL_DESA, COL_LOKASI,
-      { key: "namaDb", label: "Nama DB" },
-      { key: "nik", label: "NIK" },
-      { key: "adaAdd", label: "Ada ADD", type: "bool" },
-      { key: "nilaiAdd", label: "Nilai ADD", type: "currency", align: "right" },
-      { key: "status", label: "Status" },
-    ],
+    columns: DB_NO_BPJS_COLUMNS,
+  },
+  {
+    id: "db_no_bpjs_no_add",
+    label: "DB Tanpa Referensi ADD",
+    bucket: "dbNoBpjsNoAdd",
+    title: "Database Tidak Ada di BPJS — Tanpa Referensi ADD",
+    description: "Pengurus RT/RW di Database yang tidak ada di BPJS dan tidak memiliki referensi dari ADD.",
+    columns: DB_NO_BPJS_COLUMNS,
+  },
+  {
+    id: "db_no_bpjs_with_add",
+    label: "DB Ada Referensi ADD",
+    bucket: "dbNoBpjsAdd",
+    title: "Database Tidak Ada di BPJS — Ada Referensi ADD",
+    description: "Pengurus RT/RW di Database yang tidak ada di BPJS namun memiliki referensi dari ADD.",
+    columns: DB_NO_BPJS_COLUMNS,
   },
   {
     id: "bpjs_add",
@@ -324,6 +388,59 @@ const TAB_VALUE_CLASS = {
   amber: "text-amber-700",
   gray: "text-gray-700",
   indigo: "text-indigo-700",
+};
+
+// Kartu tab dikelompokkan menjadi "kolam" (pool). mainTab = tab yang dibuka saat
+// badan kartu diklik; subTabs = tombol kecil di dalam kartu. count = angka besar kartu.
+const POOLS = [
+  {
+    id: "comparison",
+    label: "Perbandingan RT/RW",
+    color: "blue",
+    mainTab: "comparison",
+    subTabs: [],
+    showWilayahSplit: true,
+    count: (_tc, summary) => summary.totalDesa,
+  },
+  {
+    id: "db_and_bpjs",
+    label: "Database dan BPJS",
+    color: "green",
+    mainTab: "db_bpjs",
+    subTabs: ["nik_berbeda", "desa_berbeda"],
+    // Angka unik: NIK/Desa Berbeda adalah subset dari DB+BPJS, jadi jangan dijumlah.
+    count: (tc) => tc.db_bpjs,
+  },
+  {
+    id: "bpjs_no_db_pool",
+    label: "BPJS Tidak Ada di Database",
+    color: "amber",
+    mainTab: "bpjs_no_db",
+    subTabs: ["bpjs_no_db", "bpjs_add"],
+    count: (tc) => (tc.bpjs_no_db || 0) + (tc.bpjs_add || 0),
+  },
+  {
+    id: "db_no_bpjs_pool",
+    label: "Database Tidak Ada di BPJS",
+    color: "gray",
+    mainTab: "db_no_bpjs",
+    subTabs: ["db_no_bpjs_no_add", "db_no_bpjs_with_add"],
+    count: (tc) => tc.db_no_bpjs,
+  },
+];
+
+const poolTabs = (pool) => [...new Set([pool.mainTab, ...pool.subTabs])];
+
+const TAB_DEF_BY_ID = Object.fromEntries(TAB_DEFS.map((tab) => [tab.id, tab]));
+
+// Label ringkas untuk tombol sub-tab di dalam kartu pool (tanpa prefix "DB + BPJS" dsb)
+const SUBTAB_SHORT = {
+  nik_berbeda: "NIK Berbeda",
+  desa_berbeda: "Desa Berbeda",
+  bpjs_no_db: "BPJS",
+  bpjs_add: "BPJS ada di ADD",
+  db_no_bpjs_no_add: "Database",
+  db_no_bpjs_with_add: "ADD",
 };
 
 const loadAllDetailsForExport = async (filteredData) => {
@@ -419,6 +536,11 @@ const RtrwComparisonPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState("comparison");
+  const [isPending, startTransition] = useTransition();
+
+  // Pindah tab lewat transition agar kartu tetap responsif dan kita bisa
+  // menampilkan overlay loading saat tabel besar sedang dirender.
+  const selectTab = (tabId) => startTransition(() => setActiveTab(tabId));
   const [searchTerm, setSearchTerm] = useState("");
   const [filterKecamatan, setFilterKecamatan] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
@@ -539,10 +661,19 @@ const RtrwComparisonPage = () => {
     desa_berbeda: classification.desaBerbeda.length,
     bpjs_no_db: classification.bpjsNoDb.length,
     db_no_bpjs: classification.dbNoBpjs.length,
+    db_no_bpjs_no_add: classification.dbNoBpjsNoAdd.length,
+    db_no_bpjs_with_add: classification.dbNoBpjsAdd.length,
     bpjs_add: classification.bpjsCocokAdd.length,
   }), [classification]);
 
   const activeTabDef = TAB_DEFS.find((tab) => tab.id === activeTab);
+  const activePoolDef = POOLS.find((pool) => poolTabs(pool).includes(activeTab)) || POOLS[0];
+
+  const wilayahSplit = useMemo(() => {
+    const list = data?.comparison || [];
+    const kelurahan = list.filter((d) => d.statusPemerintahan === "kelurahan").length;
+    return { kelurahan, desa: list.length - kelurahan };
+  }, [data]);
 
   const toggleDesa = (desaId) => {
     setExpandedDesa((prev) => {
@@ -627,8 +758,8 @@ const RtrwComparisonPage = () => {
           color="gray"
           subtitle={`${data.summary.totalDbDesa} desa`}
           extraInfo={data.summary.desaWithoutDb?.length ? {
-            label: `${data.summary.desaWithoutDb.length} desa kosong`,
-            onClick: () => setListModal({ title: "Desa Tanpa Data Database", list: data.summary.desaWithoutDb }),
+            label: emptyLabel(data.summary.desaWithoutDb),
+            onClick: () => setListModal({ title: "Wilayah Tanpa Data Database", list: data.summary.desaWithoutDb }),
           } : null}
         />
         <SummaryCard
@@ -638,8 +769,8 @@ const RtrwComparisonPage = () => {
           color="blue"
           subtitle={`${data.summary.totalAddRows} baris transaksi`}
           extraInfo={data.summary.desaWithoutAdd?.length ? {
-            label: `${data.summary.desaWithoutAdd.length} desa kosong`,
-            onClick: () => setListModal({ title: "Desa Tanpa Data ADD", list: data.summary.desaWithoutAdd }),
+            label: emptyLabel(data.summary.desaWithoutAdd),
+            onClick: () => setListModal({ title: "Wilayah Tanpa Data ADD", list: data.summary.desaWithoutAdd }),
           } : null}
         />
         <SummaryCard
@@ -649,8 +780,8 @@ const RtrwComparisonPage = () => {
           color="amber"
           subtitle={`${data.summary.totalBpjsDesa} desa`}
           extraInfo={data.summary.desaWithoutBpjs?.length ? {
-            label: `${data.summary.desaWithoutBpjs.length} desa kosong`,
-            onClick: () => setListModal({ title: "Desa Tanpa Data BPJS", list: data.summary.desaWithoutBpjs }),
+            label: emptyLabel(data.summary.desaWithoutBpjs),
+            onClick: () => setListModal({ title: "Wilayah Tanpa Data BPJS", list: data.summary.desaWithoutBpjs }),
           } : null}
         />
         <SummaryCard
@@ -682,60 +813,83 @@ const RtrwComparisonPage = () => {
             label="BPJS Tangkil ? (tidak terselesaikan)"
             value={data.summary.totalBpjsTangkilUnresolved}
             valueClass="text-violet-600"
-            onClick={data.summary.totalBpjsTangkilUnresolved ? () => setActiveTab("bpjs_no_db") : null}
+            onClick={data.summary.totalBpjsTangkilUnresolved ? () => selectTab("bpjs_no_db") : null}
           />
         </div>
       </div>
 
       {listModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setListModal(null)}>
-          <div className="mx-4 flex max-h-[70vh] w-full max-w-md flex-col rounded-xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
-              <h3 className="font-semibold text-gray-900">{listModal.title}</h3>
-              <button onClick={() => setListModal(null)} className="rounded-lg p-1 hover:bg-gray-100">
-                <LuX className="h-5 w-5 text-gray-500" />
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto px-4 py-3">
-              <p className="mb-2 text-xs text-gray-500">{listModal.list.length} desa</p>
-              <ul className="space-y-1">
-                {listModal.list.map((item, index) => (
-                  <li key={`${item}-${index}`} className="rounded px-2 py-1 text-sm text-gray-700 hover:bg-gray-50">
-                    <span className="mr-2 inline-block w-6 text-right text-xs text-gray-400">{index + 1}.</span>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
+        <EmptyListModal title={listModal.title} list={listModal.list} onClose={() => setListModal(null)} />
       )}
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-7">
-        {TAB_DEFS.map((tab) => {
-          const isComparison = tab.id === "comparison";
-          const count = isComparison ? data.summary.totalDesa : tabCounts[tab.id];
-          const isActive = activeTab === tab.id;
-          const color = TAB_COLOR[tab.id] || "gray";
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+        {POOLS.map((pool) => {
+          const count = pool.count(tabCounts, data.summary);
+          const poolActive = activePoolDef.id === pool.id;
+          const color = pool.color;
+          const mainActive = poolActive && activeTab === pool.mainTab;
           return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`rounded-xl border p-3 text-left transition-all ${isActive
+            <div
+              key={pool.id}
+              className={`flex flex-col rounded-xl border p-3 transition-all ${poolActive
                 ? `${TAB_ACTIVE_CLASS[color]} shadow-sm`
                 : "border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm"}`}
             >
-              <span className="block text-xs font-medium leading-tight text-gray-500">{tab.label}</span>
-              <span className={`mt-1 block text-2xl font-bold ${isActive ? TAB_VALUE_CLASS[color] : "text-gray-800"}`}>
-                {(count || 0).toLocaleString("id-ID")}
-              </span>
-              <span className="mt-0.5 block text-[10px] text-gray-400">
-                {isComparison ? "desa" : "data"}
-              </span>
-            </button>
+              <button onClick={() => selectTab(pool.mainTab)} className="block text-left">
+                <span className="block text-xs font-medium leading-tight text-gray-500">{pool.label}</span>
+                <CountUp
+                  value={count}
+                  className={`mt-1 block text-2xl font-bold ${mainActive ? TAB_VALUE_CLASS[color] : "text-gray-800"}`}
+                />
+              </button>
+
+              {pool.showWilayahSplit && (
+                <span className="mt-1 block text-[11px] text-gray-500">
+                  {wilayahSplit.desa.toLocaleString("id-ID")} Desa · {wilayahSplit.kelurahan.toLocaleString("id-ID")} Kelurahan
+                </span>
+              )}
+
+              {pool.subtitle && (
+                <span className="mt-1 block text-[11px] text-gray-500">{pool.subtitle}</span>
+              )}
+
+              {pool.subTabs.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {pool.subTabs.map((tabId) => {
+                    const label = SUBTAB_SHORT[tabId] || TAB_DEF_BY_ID[tabId].label;
+                    const subActive = activeTab === tabId;
+                    return (
+                      <button
+                        key={tabId}
+                        onClick={() => selectTab(tabId)}
+                        className={`flex flex-1 items-center justify-between gap-2 rounded-lg border px-2 py-1 text-left text-[11px] transition-all ${subActive
+                          ? `${TAB_ACTIVE_CLASS[color]} font-semibold`
+                          : "border-gray-200 bg-white/70 text-gray-600 hover:border-gray-300"}`}
+                      >
+                        <span className="leading-tight">{label}</span>
+                        <CountUp
+                          value={tabCounts[tabId]}
+                          className={`shrink-0 text-sm font-bold ${subActive ? TAB_VALUE_CLASS[color] : "text-gray-700"}`}
+                        />
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           );
         })}
       </div>
+
+      <div className="relative space-y-6">
+        {isPending && (
+          <div className="absolute inset-0 z-20 flex items-start justify-center rounded-xl bg-white/70 pt-16 backdrop-blur-[1px]">
+            <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-4 py-2 shadow-md">
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-blue-200 border-t-blue-600" />
+              <span className="text-sm font-medium text-gray-600">Memproses data...</span>
+            </div>
+          </div>
+        )}
 
       {activeTabDef && activeTabDef.bucket && (
         <ClassifiedTable
@@ -858,6 +1012,80 @@ const RtrwComparisonPage = () => {
           </div>
         </>
       )}
+      </div>
+    </div>
+  );
+};
+
+// Kelompokkan daftar wilayah per kecamatan (urut nama), untuk ditampilkan di modal.
+const groupByKecamatan = (items) => {
+  const map = new Map();
+  items.forEach((item) => {
+    if (!map.has(item.kecamatan)) map.set(item.kecamatan, []);
+    map.get(item.kecamatan).push(item);
+  });
+  return [...map.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([kecamatan, list]) => ({
+      kecamatan,
+      list: list.sort((a, b) => a.nama.localeCompare(b.nama)),
+    }));
+};
+
+const EmptyListModal = ({ title, list, onClose }) => {
+  const { desa, kelurahan } = splitEmpty(list);
+
+  const Column = ({ heading, items, accent }) => {
+    const groups = groupByKecamatan(items);
+    return (
+      <div className="flex-1">
+        <div className={`mb-2 flex items-center justify-between rounded-lg px-2 py-1 text-xs font-semibold ${accent}`}>
+          <span>{heading}</span>
+          <span>{items.length}</span>
+        </div>
+        {items.length === 0 ? (
+          <p className="px-2 py-1 text-xs italic text-gray-400">Tidak ada</p>
+        ) : (
+          <div className="space-y-3">
+            {groups.map((group) => (
+              <div key={group.kecamatan}>
+                <div className="mb-1 flex items-center justify-between border-b border-gray-100 px-1 pb-0.5 text-xs font-semibold text-gray-500">
+                  <span>{group.kecamatan}</span>
+                  <span className="text-gray-400">{group.list.length}</span>
+                </div>
+                <ul className="space-y-0.5">
+                  {group.list.map((item, index) => (
+                    <li key={`${item.nama}-${index}`} className="rounded px-2 py-0.5 text-sm text-gray-700 hover:bg-gray-50">
+                      <span className="mr-1.5 inline-block w-5 text-right text-xs text-gray-400">{index + 1}.</span>
+                      {item.nama}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+      <div className="mx-4 flex max-h-[75vh] w-full max-w-2xl flex-col rounded-xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
+          <div>
+            <h3 className="font-semibold text-gray-900">{title}</h3>
+            <p className="text-xs text-gray-500">{desa.length} desa · {kelurahan.length} kelurahan</p>
+          </div>
+          <button onClick={onClose} className="rounded-lg p-1 hover:bg-gray-100">
+            <LuX className="h-5 w-5 text-gray-500" />
+          </button>
+        </div>
+        <div className="flex flex-1 gap-4 overflow-y-auto px-4 py-3">
+          <Column heading="Desa" items={desa} accent="bg-gray-100 text-gray-600" />
+          <Column heading="Kelurahan" items={kelurahan} accent="bg-blue-100 text-blue-700" />
+        </div>
+      </div>
     </div>
   );
 };
@@ -869,9 +1097,7 @@ const InfoRow = ({ label, value, hint, valueClass, onClick }) => {
         {label}
         {hint && <span className="text-[11px] text-gray-400">· {hint}</span>}
       </span>
-      <span className={`font-semibold tabular-nums ${valueClass || "text-gray-800"}`}>
-        {(value || 0).toLocaleString("id-ID")}
-      </span>
+      <CountUp value={value} className={`font-semibold tabular-nums ${valueClass || "text-gray-800"}`} />
     </>
   );
 
@@ -911,7 +1137,7 @@ const SummaryCard = ({ icon, label, value, color, subtitle, extraInfo }) => {
         {icon && <span className="text-lg">{icon}</span>}
         <span className="text-xs font-medium opacity-75">{label}</span>
       </div>
-      <p className="text-2xl font-bold">{(value || 0).toLocaleString("id-ID")}</p>
+      <p className="text-2xl font-bold"><CountUp value={value} /></p>
       {subtitle && <p className="mt-0.5 text-xs opacity-60">{subtitle}</p>}
       {extraInfo && (
         <button onClick={extraInfo.onClick} className="mt-1 text-[10px] underline opacity-60 hover:opacity-100">

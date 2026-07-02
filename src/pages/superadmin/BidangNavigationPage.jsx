@@ -1,9 +1,9 @@
 // src/pages/superadmin/BidangNavigationPage.jsx
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-	FiLayers, FiTool, FiDollarSign, FiUsers, FiMapPin, 
-	FiArrowRight, FiGrid, FiActivity, FiCheckCircle 
+import {
+	FiLayers, FiTool, FiDollarSign, FiUsers, FiMapPin,
+	FiArrowRight, FiGrid
 } from 'react-icons/fi';
 
 const BidangNavigationPage = () => {
@@ -20,7 +20,6 @@ const BidangNavigationPage = () => {
 			bgLight: 'bg-gray-50',
 			borderColor: 'border-gray-200',
 			hoverColor: 'hover:border-gray-400',
-			features: ['Disposisi Surat', 'Perjalanan Dinas', 'Manajemen Pegawai', 'Activity Logs']
 		},
 		{
 			id: 3,
@@ -32,7 +31,6 @@ const BidangNavigationPage = () => {
 			bgLight: 'bg-blue-50',
 			borderColor: 'border-blue-200',
 			hoverColor: 'hover:border-blue-400',
-			features: ['BUMDes Management', 'Sarana Prasarana', 'Ekonomi Desa', 'Kewilayahan']
 		},
 		{
 			id: 4,
@@ -44,7 +42,6 @@ const BidangNavigationPage = () => {
 			bgLight: 'bg-green-50',
 			borderColor: 'border-green-200',
 			hoverColor: 'hover:border-green-400',
-			features: ['Dana Desa', 'BHPRD', 'Bantuan Keuangan', 'Insentif DD']
 		},
 		{
 			id: 5,
@@ -56,7 +53,6 @@ const BidangNavigationPage = () => {
 			bgLight: 'bg-purple-50',
 			borderColor: 'border-purple-200',
 			hoverColor: 'hover:border-purple-400',
-			features: ['Kelembagaan Desa', 'Pemberdayaan Masyarakat', 'Program PMD', 'Monitoring']
 		},
 		{
 			id: 6,
@@ -68,7 +64,6 @@ const BidangNavigationPage = () => {
 			bgLight: 'bg-orange-50',
 			borderColor: 'border-orange-200',
 			hoverColor: 'hover:border-orange-400',
-			features: ['Administrasi Desa', 'Pemerintahan', 'Program Pemdes', 'Data Desa']
 		}
 	];
 
@@ -80,7 +75,7 @@ const BidangNavigationPage = () => {
 		<div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
 			{/* Header */}
 			<header className="bg-white/80 backdrop-blur-md border-b border-gray-200/50 sticky top-0 z-50">
-				<div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
+				<div className="px-4 sm:px-6 lg:px-8 py-4">
 					<div className="flex items-center justify-between">
 						<div className="flex items-center gap-4">
 							<div className="relative">
@@ -101,59 +96,42 @@ const BidangNavigationPage = () => {
 			</header>
 
 			{/* Main Content */}
-			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-				{/* Info Banner */}
-			
-
-				{/* Bidang Cards Grid */}
-				<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+			<div className="px-4 sm:px-6 lg:px-8 py-12">
+				{/* Bidang Cards Grid — 5 sejajar */}
+				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5">
 					{bidangList.map((bidang) => {
 						const Icon = bidang.icon;
 						return (
 							<div
 								key={bidang.id}
-								className={`group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border-2 ${bidang.borderColor} ${bidang.hoverColor} transition-all duration-300 overflow-hidden hover:-translate-y-1 cursor-pointer`}
+								className={`group relative bg-white rounded-2xl border ${bidang.borderColor} ${bidang.hoverColor} shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden hover:-translate-y-1 cursor-pointer`}
 								onClick={() => handleNavigate(bidang.slug)}
 							>
-								{/* Decorative Background */}
-								<div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${bidang.color} opacity-5 rounded-full blur-2xl group-hover:opacity-10 transition-opacity`}></div>
-								
-								<div className="relative p-8">
+								{/* Top accent bar */}
+								<div className={`h-1.5 w-full bg-gradient-to-r ${bidang.color}`}></div>
+								{/* Decorative glow */}
+								<div className={`absolute top-0 right-0 w-28 h-28 bg-gradient-to-br ${bidang.color} opacity-5 rounded-full blur-2xl group-hover:opacity-15 transition-opacity`}></div>
+
+								<div className="relative p-6 flex flex-col h-full">
 									{/* Icon */}
-									<div className={`inline-flex h-16 w-16 bg-gradient-to-br ${bidang.color} rounded-2xl items-center justify-center mb-6 shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-300`}>
-										<Icon className="h-8 w-8 text-white" />
+									<div className={`inline-flex h-14 w-14 bg-gradient-to-br ${bidang.color} rounded-2xl items-center justify-center mb-5 shadow-md group-hover:scale-110 group-hover:rotate-3 transition-all duration-300`}>
+										<Icon className="h-7 w-7 text-white" />
 									</div>
 
 									{/* Title & Description */}
-									<h3 className="text-2xl font-bold text-gray-800 mb-3 group-hover:text-red-600 transition-colors">
+									<h3 className="text-xl font-bold text-gray-800 mb-2 group-hover:text-red-600 transition-colors">
 										{bidang.name}
 									</h3>
-									<p className="text-gray-600 leading-relaxed mb-6 min-h-[60px]">
+									<p className="text-sm text-gray-500 leading-relaxed mb-6 flex-1">
 										{bidang.description}
 									</p>
 
-									{/* Features List */}
-									<div className="space-y-2 mb-6">
-										{bidang.features.map((feature, idx) => (
-											<div key={idx} className="flex items-center gap-2 text-sm text-gray-600">
-												<FiCheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
-												<span>{feature}</span>
-											</div>
-										))}
-									</div>
-
-									{/* Action Button */}
-									<button
-										onClick={() => handleNavigate(bidang.slug)}
-										className={`w-full bg-gradient-to-r ${bidang.color} text-white px-6 py-3 rounded-xl font-semibold hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-2 group-hover:gap-4`}
-									>
+									{/* Action */}
+									<div className="flex items-center gap-2 text-sm font-semibold text-gray-700 group-hover:text-red-600 transition-colors">
 										<span>Akses Bidang</span>
-										<FiArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
-									</button>
+										<FiArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+									</div>
 								</div>
-
-								{/* Hover Effect Border */}
-								<div className="absolute inset-0 border-2 border-transparent group-hover:border-red-200 rounded-2xl transition-colors pointer-events-none"></div>
 							</div>
 						);
 					})}
