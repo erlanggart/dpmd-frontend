@@ -334,6 +334,9 @@ const KecamatanChangePasswordPage = lazy(
   () => import("./pages/kecamatan/KecamatanChangePasswordPage"),
 );
 const DinasBankeuPage = lazy(() => import("./pages/dinas/DinasBankeuPage"));
+const DinasBankeuPerubahanArsipPage = lazy(
+  () => import("./pages/dinas/DinasBankeuPerubahanArsipPage"),
+);
 const DinasVerificationPage = lazy(
   () => import("./pages/dinas/DinasVerificationPage"),
 );
@@ -1229,6 +1232,10 @@ function App() {
                   <Route index element={<Navigate to="dashboard" replace />} />
                   <Route path="dashboard" element={<DinasDashboardPage />} />
                   <Route path="bankeu" element={<DinasBankeuPage />} />
+                  <Route
+                    path="bankeu-perubahan"
+                    element={<DinasBankeuPerubahanArsipPage />}
+                  />
                   <Route
                     path="bankeu/verifikasi/:proposalId"
                     element={<DinasVerificationDetailPage />}

@@ -12,8 +12,9 @@ import {
   FiX,
 } from "react-icons/fi";
 import { 
-  LuLayoutDashboard, 
+  LuLayoutDashboard,
   LuClipboardCheck,
+  LuFolderArchive,
   LuBuilding2,
   LuSettings,
   LuUsers,
@@ -37,6 +38,12 @@ const menuItems = [
     label: "Verifikasi Bankeu",
     path: "/dinas/bankeu",
     icon: LuClipboardCheck,
+  },
+  {
+    id: "bankeu-perubahan",
+    label: "Arsip Bankeu Perubahan",
+    path: "/dinas/bankeu-perubahan",
+    icon: LuFolderArchive,
   },
   {
     id: "profil",
