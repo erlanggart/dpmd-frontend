@@ -522,6 +522,7 @@ const AbsensiPage = () => {
 	const todayStatus = todayData?.status || null;
 	const isNonHadir = todayStatus && ["izin", "sakit", "cuti"].includes(todayStatus) && !hasIn;
 	const isDinasMode = todayStatus && ["dinas_luar", "wfh", "wfa"].includes(todayStatus);
+	const isLateToday = telatMasukMenit > 0;
 
 	// Can clock out?
 	const canClockOut = (() => {
@@ -775,7 +776,7 @@ const AbsensiPage = () => {
 													<div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/30 mb-2">
 														<LuLogIn className="w-5 h-5 text-white" />
 													</div>
-													<span className="text-lg font-black text-slate-800 tabular-nums">{fmt(todayData?.jam_masuk)}</span>
+													<span className={`text-lg font-black tabular-nums ${isLateToday ? "text-rose-600" : "text-slate-800"}`}>{fmt(todayData?.jam_masuk)}</span>
 													<span className="text-[10px] text-slate-400 font-medium">Masuk</span>
 												</motion.div>
 
@@ -811,19 +812,13 @@ const AbsensiPage = () => {
 											</div>
 
 											{/* Status tags */}
-											{(telatMasukMenit > 0 || pulangLebiahAwalMenit > 0) && (
+											{pulangLebiahAwalMenit > 0 && (
 												<motion.div
 													initial={{ opacity: 0 }}
 													animate={{ opacity: 1 }}
 													transition={{ delay: 1 }}
 													className="flex flex-wrap justify-center gap-2 pt-3 border-t border-slate-100"
 												>
-													{telatMasukMenit > 0 && (
-														<span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-50 text-rose-600 text-[10px] font-bold">
-															<span className="w-1 h-1 rounded-full bg-rose-400" />
-															Telat {telatMasukMenit >= 60 ? `${Math.floor(telatMasukMenit / 60)} jam ${telatMasukMenit % 60} menit` : `${telatMasukMenit} menit`}
-														</span>
-													)}
 													{pulangLebiahAwalMenit > 0 && (
 														<span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-600 text-[10px] font-bold">
 															<span className="w-1 h-1 rounded-full bg-amber-400" />
@@ -877,7 +872,7 @@ const AbsensiPage = () => {
 										</div>
 										<div>
 											<p className="text-[10px] text-emerald-500 font-semibold leading-none">Masuk</p>
-											<p className="text-sm font-black text-emerald-700 tabular-nums leading-tight">{fmt(todayData?.jam_masuk)}</p>
+											<p className={`text-sm font-black tabular-nums leading-tight ${isLateToday ? "text-rose-600" : "text-emerald-700"}`}>{fmt(todayData?.jam_masuk)}</p>
 										</div>
 									</motion.div>
 
@@ -890,18 +885,6 @@ const AbsensiPage = () => {
 										>
 											<span className={`w-1.5 h-1.5 rounded-full ${STATUS_COLORS[todayStatus]?.dot} animate-pulse`} />
 											{STATUS_LABELS[todayStatus]}
-										</motion.span>
-									)}
-
-									{/* Late badge */}
-									{telatMasukMenit > 0 && (
-										<motion.span
-											initial={{ opacity: 0, scale: 0.9 }}
-											animate={{ opacity: 1, scale: 1 }}
-											className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-rose-50 text-rose-600 text-[10px] font-bold mb-3 ring-1 ring-rose-200"
-										>
-											<span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse" />
-											Telat {telatMasukMenit >= 60 ? `${Math.floor(telatMasukMenit / 60)} jam ${telatMasukMenit % 60} menit` : `${telatMasukMenit} menit`}
 										</motion.span>
 									)}
 
@@ -1166,7 +1149,11 @@ const AbsensiPage = () => {
 
 												{/* Times */}
 												<div className="text-right flex-shrink-0">
-													{r.jam_masuk && <p className="text-[11px] font-bold text-slate-700 tabular-nums">{fmt(r.jam_masuk)}</p>}
+													{r.jam_masuk && (
+														<p className={`text-[11px] font-bold tabular-nums ${r.telat_masuk_menit > 0 ? "text-rose-600" : "text-slate-700"}`}>
+															{fmt(r.jam_masuk)}
+														</p>
+													)}
 													{r.jam_keluar ? (
 														<p className="text-[10px] text-slate-400 tabular-nums">{fmt(r.jam_keluar)}</p>
 													) : r.jam_masuk && new Date(r.tanggal).toDateString() !== new Date().toDateString() && !["izin", "sakit", "cuti"].includes(r.status) ? (

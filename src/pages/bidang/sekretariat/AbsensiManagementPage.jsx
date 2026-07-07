@@ -184,16 +184,6 @@ const getStorageUrl = (imagePath) => {
   return `${base}/storage/${imagePath}`;
 };
 
-const formatTelat = (menit) => {
-  if (!menit || menit <= 0) return null;
-  if (menit >= 60) {
-    const jam = Math.floor(menit / 60);
-    const m = menit % 60;
-    return m > 0 ? `${jam}j ${m}m` : `${jam}j`;
-  }
-  return `${menit}m`;
-};
-
 const colorMap = {
   emerald: { bg: "bg-emerald-500/10", text: "text-emerald-600", badge: "bg-emerald-100 text-emerald-700", ring: "ring-emerald-500/20" },
   amber: { bg: "bg-amber-500/10", text: "text-amber-600", badge: "bg-amber-100 text-amber-700", ring: "ring-amber-500/20" },
@@ -248,12 +238,11 @@ const formatDailyRecord = (record, { multiline = false } = {}) => {
   const keluar = formatTime(record.jam_keluar);
   const hasTime = record.jam_masuk || record.jam_keluar;
   const timeText = hasTime ? `${masuk} - ${keluar}` : "";
-  const telatText = record.telat_masuk_menit > 0 ? `Telat ${formatTelat(record.telat_masuk_menit)}` : "";
 
   if (multiline) {
-    return [label, timeText, telatText].filter(Boolean);
+    return [label, timeText].filter(Boolean);
   }
-  return [label, timeText, telatText ? `(${telatText})` : ""].filter(Boolean).join(" ");
+  return [label, timeText].filter(Boolean).join(" ");
 };
 
 // Hex palette mirroring colorMap, untuk chart & PDF
@@ -269,6 +258,16 @@ const formatDayCellPDF = (record) => {
   const keluar = formatTime(record.jam_keluar);
   if (masuk === "-" && keluar === "-") return "-";
   return `${masuk}\n${keluar}`;
+};
+
+const markExcelCellLate = (ws, XLSX, row, col) => {
+  const ref = XLSX.utils.encode_cell({ r: row, c: col });
+  if (!ws[ref]) return;
+  ws[ref].s = {
+    ...(ws[ref].s || {}),
+    font: { ...((ws[ref].s || {}).font || {}), color: { rgb: "DC2626" }, bold: true },
+    alignment: { ...((ws[ref].s || {}).alignment || {}), wrapText: true, vertical: "center" },
+  };
 };
 
 // Render konfigurasi Chart.js ke data URL PNG (latar putih) untuk disisipkan ke PDF
@@ -834,6 +833,9 @@ const AbsensiManagementPage = () => {
         "Tanggal": d.tanggal, "Status": d.status, "Jam Masuk": d.jamMasuk,
         "Jam Keluar": d.jamKeluar, "Jarak": d.jarak, "Keterangan": d.keterangan,
       })));
+      filteredRecords.forEach((record, i) => {
+        if (record.telat_masuk_menit > 0) markExcelCellLate(ws, XLSX, i + 1, 5);
+      });
       // Auto column width
       const colWidths = [
         { wch: 4 }, { wch: 28 }, { wch: 22 }, { wch: 14 },
@@ -906,6 +908,13 @@ const AbsensiManagementPage = () => {
       }
 
       const ws = XLSX.utils.aoa_to_sheet(data);
+      filteredRekapPegawai.forEach((p, rowIndex) => {
+        const daily = p.daily || {};
+        rekapCalendarDays.forEach((day, dayIndex) => {
+          const record = daily[getDateKey(day.date)];
+          if (record?.telat_masuk_menit > 0) markExcelCellLate(ws, XLSX, rowIndex + 1, dayIndex + 4);
+        });
+      });
       ws["!cols"] = [
         { wch: 4 },
         { wch: 28 },
@@ -1130,13 +1139,16 @@ const AbsensiManagementPage = () => {
         showHead: "everyPage",
         showFoot: "lastPage",
         didParseCell: (data) => {
-          // Warnai sel jam (hijau) vs tidak hadir (abu) pada kolom hari
+          // Warnai sel jam: merah jika telat, hijau jika tepat waktu, abu jika kosong.
           if (data.section === "body" && data.column.index >= 1 && data.column.index <= dayCount) {
             const raw = Array.isArray(data.cell.raw) ? data.cell.raw.join("") : String(data.cell.raw ?? "");
             if (raw.trim() === "-") {
               data.cell.styles.textColor = [203, 213, 225];
             } else {
-              data.cell.styles.textColor = [4, 120, 87];
+              const person = filteredRekapPegawai[data.row.index];
+              const day = rekapCalendarDays[data.column.index - 1];
+              const record = person?.daily?.[getDateKey(day?.date)];
+              data.cell.styles.textColor = record?.telat_masuk_menit > 0 ? [220, 38, 38] : [4, 120, 87];
               data.cell.styles.fontStyle = "bold";
             }
           }
@@ -1149,7 +1161,7 @@ const AbsensiManagementPage = () => {
           doc.setFontSize(7);
           doc.setFont(undefined, "normal");
           doc.setTextColor(148, 163, 184);
-          doc.text("Format jam: baris atas = jam masuk, baris bawah = jam pulang. Tanda - menandakan tidak ada kehadiran.", margin, pageHeight - 5);
+          doc.text("Format jam: baris atas = jam masuk, baris bawah = jam pulang. Jam masuk merah menandakan terlambat.", margin, pageHeight - 5);
           doc.text(`Halaman ${pageNum}`, pageWidth - margin, pageHeight - 5, { align: "right" });
         },
       });
@@ -1636,11 +1648,8 @@ const AbsensiManagementPage = () => {
                                 <p className="text-[11px] text-slate-400 truncate">{r.user?.pegawai?.jabatan || "-"}</p>
                               </div>
                               <div className="flex items-center gap-2 shrink-0">
-                                {r.telat_masuk_menit > 0 && (
-                                  <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-md">Telat {formatTelat(r.telat_masuk_menit)}</span>
-                                )}
                                 {r.jam_masuk && (
-                                  <span className="text-[11px] font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">{formatTime(r.jam_masuk)}</span>
+                                  <span className={`text-[11px] font-mono px-2 py-0.5 rounded-md ${r.telat_masuk_menit > 0 ? "text-red-600 bg-red-50" : "text-slate-500 bg-slate-100"}`}>{formatTime(r.jam_masuk)}</span>
                                 )}
                                 {r.tujuan_dinas && (
                                   <span className="text-[11px] text-purple-600 bg-purple-50 px-2 py-0.5 rounded-md truncate max-w-[120px]">📍 {r.tujuan_dinas}</span>
@@ -2112,8 +2121,11 @@ const AbsensiManagementPage = () => {
                                         {record ? (
                                           <>
                                             <span className={`text-[9px] font-black uppercase ${tone.text}`}>{lines[0]}</span>
-                                            {lines[1] && <span className="mt-0.5 text-[10px] font-mono font-bold text-slate-700">{lines[1]}</span>}
-                                            {lines[2] && <span className={`mt-1 px-1.5 py-0.5 rounded text-[8px] font-black ${tone.badge}`}>{lines[2]}</span>}
+                                            {lines[1] && (
+                                              <span className={`mt-0.5 text-[10px] font-mono font-bold ${record.telat_masuk_menit > 0 ? "text-red-600" : "text-slate-700"}`}>
+                                                {lines[1]}
+                                              </span>
+                                            )}
                                           </>
                                         ) : (
                                           <span className="text-sm font-bold text-slate-300">-</span>
@@ -2439,14 +2451,7 @@ const AbsensiManagementPage = () => {
                               </span>
                             </td>
                             <td className="px-3 py-3 text-center">
-                              <div className="inline-flex flex-col items-center gap-0.5">
-                                <span className="font-mono text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-1 rounded-lg">{formatTime(record.jam_masuk)}</span>
-                                {record.telat_masuk_menit > 0 && (
-                                  <span className="text-[9px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-md animate-pulse">
-                                    ⏰ Telat {formatTelat(record.telat_masuk_menit)}
-                                  </span>
-                                )}
-                              </div>
+                              <span className={`font-mono text-xs font-semibold px-2 py-1 rounded-lg ${record.telat_masuk_menit > 0 ? "text-red-600 bg-red-50" : "text-slate-700 bg-slate-100"}`}>{formatTime(record.jam_masuk)}</span>
                             </td>
                             <td className="px-3 py-3 text-center">
                               <span className="font-mono text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-1 rounded-lg">{formatTime(record.jam_keluar)}</span>
@@ -2522,7 +2527,7 @@ const AbsensiManagementPage = () => {
                           <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold ${c.badge}`}>{st.icon} {st.label}</span>
                         </div>
                         <div className="flex items-center gap-3 text-xs bg-slate-50 rounded-xl p-2.5">
-                          <div className="flex items-center gap-1.5 text-slate-600">
+                          <div className={`flex items-center gap-1.5 ${record.telat_masuk_menit > 0 ? "text-red-600" : "text-slate-600"}`}>
                             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                             <span className="font-mono font-bold">{formatTime(record.jam_masuk)}</span>
                           </div>
@@ -2535,12 +2540,6 @@ const AbsensiManagementPage = () => {
                             <span className="text-slate-400 ml-auto text-[11px]">{record.jarak_masuk}m</span>
                           )}
                         </div>
-                        {record.telat_masuk_menit > 0 && (
-                          <div className="mt-2 flex items-center gap-1.5 text-amber-700 bg-amber-100 rounded-lg px-2.5 py-1.5">
-                            <FiClock className="h-3 w-3 animate-pulse" />
-                            <span className="text-[11px] font-bold">Terlambat {formatTelat(record.telat_masuk_menit)}</span>
-                          </div>
-                        )}
                         {(record.tujuan_dinas || record.keterangan) && (
                           <p className="mt-2 text-[11px] text-slate-400 truncate">
                             {record.tujuan_dinas && <span className="text-purple-500 font-medium">📍 {record.tujuan_dinas} </span>}
@@ -3616,10 +3615,7 @@ const UserHistoryModal = ({ user, data, loading, periode, onPeriodeChange, filte
                                 </span>
                               </td>
                               <td className="text-center px-3 py-3">
-                                <span className="font-mono text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-1 rounded-lg">{formatTime(r.jam_masuk)}</span>
-                                {r.telat_masuk_menit > 0 && (
-                                  <span className="ml-1 text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-md">Telat {formatTelat(r.telat_masuk_menit)}</span>
-                                )}
+                                <span className={`font-mono text-xs font-semibold px-2 py-1 rounded-lg ${r.telat_masuk_menit > 0 ? "text-red-600 bg-red-50" : "text-slate-700 bg-slate-100"}`}>{formatTime(r.jam_masuk)}</span>
                               </td>
                               <td className="text-center px-3 py-3">
                                 <span className="font-mono text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-1 rounded-lg">{formatTime(r.jam_keluar)}</span>
