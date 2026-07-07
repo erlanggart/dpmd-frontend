@@ -194,6 +194,8 @@ const BIDANG_SUBMENUS = {
 		{ label: 'Alokasi Dana Desa', path: '/bidang/kkd/add', icon: 'dollar' },
 		{ label: 'Dana Desa', path: '/bidang/kkd/dd', icon: 'banknote' },
 		{ label: 'BHPRD', path: '/bidang/kkd/bhprd', icon: 'file' },
+		{ label: 'BANKEU Infra Desa', path: '/bidang/kkd/bankeu', icon: 'coins' },
+		{ label: 'Bantuan Provinsi', path: '/bidang/kkd/bp', icon: 'landmark' },
 	],
 	5: [
 		{ label: 'LKD', path: '/bidang/pmd/kelembagaan', icon: 'users' },

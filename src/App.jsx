@@ -411,6 +411,8 @@ const AddDashboard = lazy(() => import("./pages/bidang/kkd/add/AddDashboard"));
 const BhprdDashboard = lazy(() => import("./pages/bidang/kkd/BhprdDashboard"));
 // DD Sub-categories
 const DdDashboard = lazy(() => import("./pages/bidang/kkd/dd/DdDashboard"));
+const KkdBankeuDashboard = lazy(() => import("./pages/bidang/kkd/BankeuDashboard"));
+const KkdBpDashboard = lazy(() => import("./pages/bidang/kkd/BpDashboard"));
 // Statistik untuk Core Dashboard
 const StatistikAddDashboard = lazy(
   () => import("./pages/kepala-dinas/StatistikAddDashboard"),
@@ -1149,6 +1151,8 @@ function App() {
                   <Route path="bidang/kkd/add" element={<AddDashboard />} />
                   <Route path="bidang/kkd/bhprd" element={<BhprdDashboard />} />
                   <Route path="bidang/kkd/dd" element={<DdDashboard />} />
+                  <Route path="bidang/kkd/bankeu" element={<KkdBankeuDashboard />} />
+                  <Route path="bidang/kkd/bp" element={<KkdBpDashboard />} />
 
                   {/* PMD sub-routes */}
                   <Route path="bidang/pmd/kelembagaan" element={<Kelembagaan />} />

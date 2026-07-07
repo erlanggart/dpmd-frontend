@@ -312,7 +312,23 @@ const KKDPage = () => {
       desc: 'Bagi Hasil Pajak & Retribusi Daerah per desa',
       icon: FileCheck,
       route: getPath('/kkd/bhprd'),
-      stat: { value: 'Triwulan', label: 'per periode' },
+      stat: { value: 'Tahap I–III', label: 'per periode' },
+    },
+    {
+      id: 'bankeu', tone: 'amber',
+      title: 'BANKEU Infra Desa', short: 'BANKEU',
+      desc: 'Bantuan Keuangan Infrastruktur Desa per tahap',
+      icon: Landmark,
+      route: getPath('/kkd/bankeu'),
+      stat: { value: 'Tahap I–IV', label: 'per periode' },
+    },
+    {
+      id: 'bp', tone: 'rose',
+      title: 'Bantuan Provinsi', short: 'BP',
+      desc: 'Penyaluran Bantuan Provinsi (BP) per desa',
+      icon: DollarSign,
+      route: getPath('/kkd/bp'),
+      stat: { value: 'Tahap I–II', label: 'per periode' },
     },
   ];
 
