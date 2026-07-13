@@ -630,18 +630,28 @@ const StatistikBankeuDashboard = () => {
       const response = await api.get(`/dpmd/bankeu-perubahan/tracking?tahun=${activeYear}`);
       if (response.data.success) {
         const rawProposals = response.data.data || [];
-        processedProposals = rawProposals.map(item => {
-          const kecamatan = item.kecamatan_nama || 'Tidak Diketahui';
-          const desa = item.desa_nama || 'Tidak Diketahui';
-          const kegiatan = item.kegiatan_nama
-            || item.kegiatan_list?.map(k => k.nama_kegiatan).filter(Boolean).join(', ')
-            || item.nama_kegiatan_spesifik
-            || '-';
-          const kategori = kategoriLabel(item.jenis_kegiatan);
-          const anggaran = Number(item.anggaran_usulan) || 0;
-          const stage = getProposalStage(item);
-          return { ...item, kecamatan, desa, kegiatan, kategori, anggaran, stage };
-        });
+        // Core-dashboard: hanya proposal yang SUDAH MASUK DPMD. Scope disamakan
+        // persis dgn API publik (BANKEU_PERUBAHAN_DPMD_WHERE di publicDashboard.controller)
+        // dan endpoint /dpmd/bankeu-perubahan/statistics — agar angka per-kecamatan
+        // (mis. Jasinga) konsisten antara dashboard, halaman verifikasi, & API mitra.
+        const sudahMasukDpmd = (p) =>
+          Boolean(p.submitted_to_dpmd) ||
+          p.submitted_to_dpmd_at != null ||
+          p.dpmd_verified_at != null;
+        processedProposals = rawProposals
+          .filter(sudahMasukDpmd)
+          .map(item => {
+            const kecamatan = item.kecamatan_nama || 'Tidak Diketahui';
+            const desa = item.desa_nama || 'Tidak Diketahui';
+            const kegiatan = item.kegiatan_nama
+              || item.kegiatan_list?.map(k => k.nama_kegiatan).filter(Boolean).join(', ')
+              || item.nama_kegiatan_spesifik
+              || '-';
+            const kategori = kategoriLabel(item.jenis_kegiatan);
+            const anggaran = Number(item.anggaran_usulan) || 0;
+            const stage = getProposalStage(item);
+            return { ...item, kecamatan, desa, kegiatan, kategori, anggaran, stage };
+          });
         setProposals(processedProposals);
       }
       // Tampilkan UI utama dulu
