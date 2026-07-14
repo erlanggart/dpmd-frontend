@@ -30,6 +30,7 @@ import {
 	LuCamera,
 	LuSmartphone,
 	LuShieldCheck,
+	LuLogIn,
 } from "react-icons/lu";
 import * as XLSX from 'xlsx';
 import api from "../../api";
@@ -63,11 +64,26 @@ const ROLE_THEME = {
 };
 const DEFAULT_THEME = { gradient: "from-gray-400 to-gray-600", ring: "ring-gray-200", bg: "bg-gray-500", glow: "shadow-gray-200/60" };
 
+const ROLE_DASHBOARD_MAP = {
+	superadmin: "/superadmin/dashboard",
+	kepala_dinas: "/dpmd/dashboard",
+	sekretaris_dinas: "/dpmd/dashboard",
+	kepala_bidang: "/dpmd/dashboard",
+	ketua_tim: "/dpmd/dashboard",
+	bendahara: "/dpmd/dashboard",
+	pegawai: "/dpmd/dashboard",
+	desa: "/desa/dashboard",
+	kecamatan: "/kecamatan/dashboard",
+	dinas_terkait: "/dinas/dashboard",
+	verifikator_dinas: "/dinas/dashboard",
+	bpjs: "/bpjs/dashboard",
+};
+
 // ─── UserCard ────────────────────────────────────────────────────
 const UserCard = ({
-	user, canManage, isSuperadmin, visiblePasswords, togglePasswordVisibility,
+	user, canManage, isSuperadmin, canImpersonate, visiblePasswords, togglePasswordVisibility,
 	onEditRole, onEditBidang, onEditTanggalLahir, onEditJabatan,
-	onEditAvatar, onSetDevice, onResetPassword, onDeleteUser, getRoleInfo,
+	onEditAvatar, onSetDevice, onResetPassword, onDeleteUser, onImpersonate, getRoleInfo,
 }) => {
 	const [menuOpen, setMenuOpen] = useState(false);
 	const menuRef = useRef(null);
@@ -83,34 +99,34 @@ const UserCard = ({
 	}, [menuOpen]);
 
 	const InfoRow = ({ icon: Icon, children, mono }) => (
-		<div className="flex items-center gap-2 min-w-0">
-			<div className="flex-shrink-0 w-5 h-5 rounded-md bg-gray-50 flex items-center justify-center">
-				<Icon className="h-3 w-3 text-gray-400" />
+		<div className="flex items-center gap-2 min-w-0 rounded-lg px-2 py-1.5 text-slate-600 transition-colors hover:bg-slate-50">
+			<div className="flex-shrink-0 w-6 h-6 rounded-lg bg-slate-100 flex items-center justify-center">
+				<Icon className="h-3.5 w-3.5 text-slate-400" />
 			</div>
-			<span className={`text-[13px] text-gray-600 truncate ${mono ? 'font-mono tracking-tight' : ''}`}>
+			<span className={`text-[13px] leading-5 truncate ${mono ? 'font-mono tracking-tight' : ''}`}>
 				{children}
 			</span>
 		</div>
 	);
 
 	return (
-		<div className="group relative bg-white rounded-[20px] border border-gray-100 overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-gray-200/50">
+		<div className="group relative self-start overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm ring-1 ring-slate-900/[0.03] transition-all duration-300 hover:-translate-y-1 hover:border-slate-300 hover:shadow-xl hover:shadow-slate-200/70">
 			{/* Decorative gradient header */}
-			<div className={`relative h-20 bg-gradient-to-br ${theme.gradient} overflow-hidden`}>
+			<div className={`relative h-16 bg-gradient-to-br ${theme.gradient} overflow-hidden`}>
 				{/* Mesh pattern overlay */}
 				<div className="absolute inset-0 opacity-20" style={{
 					backgroundImage: 'radial-gradient(circle at 20% 50%, rgba(255,255,255,0.3) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(255,255,255,0.2) 0%, transparent 50%)',
 				}} />
 				{/* Floating circles for depth */}
-				<div className="absolute -top-4 -right-4 w-20 h-20 rounded-full bg-white/10 blur-sm" />
-				<div className="absolute -bottom-6 -left-6 w-24 h-24 rounded-full bg-black/5" />
+				<div className="absolute -top-5 -right-5 w-24 h-24 rounded-full bg-white/15 blur-sm" />
+				<div className="absolute -bottom-8 -left-8 w-28 h-28 rounded-full bg-black/10" />
 
 				{/* Three-dot menu */}
 				{canManage && (
-					<div className="absolute top-2.5 right-2.5" ref={menuRef}>
+					<div className="absolute top-2.5 right-2.5 z-20" ref={menuRef}>
 						<button
 							onClick={() => setMenuOpen(!menuOpen)}
-							className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center hover:bg-white/40 transition-all"
+							className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white ring-1 ring-white/20 transition-all hover:bg-white/35"
 						>
 							<LuEllipsisVertical className="h-4 w-4 text-white" />
 						</button>
@@ -156,6 +172,15 @@ const UserCard = ({
 											<span className="font-medium">Device Absensi</span>
 										</button>
 									)}
+									{canImpersonate && (
+										<button onClick={() => { onImpersonate(user); setMenuOpen(false); }}
+											className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 rounded-xl transition-colors">
+											<div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
+												<LuLogIn className="h-4 w-4 text-emerald-600" />
+											</div>
+											<span className="font-medium">Masuk Sebagai</span>
+										</button>
+									)}
 									<button onClick={() => { onResetPassword(user); setMenuOpen(false); }}
 										className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 hover:bg-amber-50 hover:text-amber-700 rounded-xl transition-colors">
 										<div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
@@ -178,8 +203,8 @@ const UserCard = ({
 			</div>
 
 			{/* Avatar — floats between header and body */}
-			<div className="relative px-5 -mt-10">
-				<div className={`relative w-[72px] h-[72px] rounded-2xl ring-[3px] ${theme.ring} ring-offset-2 ring-offset-white shadow-lg ${theme.glow} overflow-hidden`}>
+			<div className="relative px-4 -mt-8">
+				<div className={`relative w-16 h-16 rounded-2xl ring-[3px] ${theme.ring} ring-offset-2 ring-offset-white shadow-lg ${theme.glow} overflow-hidden`}>
 					{avatarUrl ? (
 						<img
 							src={avatarUrl}
@@ -199,32 +224,32 @@ const UserCard = ({
 				</div>
 				{/* Active dot */}
 				{user.is_active && (
-					<div className="absolute bottom-0 left-[68px] w-4 h-4 rounded-full bg-emerald-400 border-[2.5px] border-white shadow-sm" />
+					<div className="absolute bottom-0 left-[62px] w-4 h-4 rounded-full bg-emerald-400 border-[2.5px] border-white shadow-sm" />
 				)}
 			</div>
 
 			{/* Body */}
-			<div className="px-5 pt-3 pb-4">
+			<div className="px-4 pt-3 pb-3">
 				{/* Name */}
-				<h4 className="font-bold text-gray-900 text-[15px] leading-tight truncate mb-1.5">
+				<h4 className="min-h-[2.5rem] text-[16px] font-bold leading-5 text-slate-950 line-clamp-2">
 					{user.name}
 				</h4>
 
 				{/* Badges row */}
-				<div className="flex flex-wrap items-center gap-1.5 mb-3">
-					<span className={`inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded-lg border ${roleInfo.color}`}>
+				<div className="mt-2 mb-3 flex flex-wrap items-center gap-1.5">
+					<span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold rounded-lg border shadow-sm ${roleInfo.color}`}>
 						<LuBadgeCheck className="w-3 h-3" />
 						{roleInfo.label}
 					</span>
 					{user.status_kepegawaian && (
-						<span className="inline-flex items-center px-2 py-1 text-[11px] font-medium rounded-lg bg-gray-50 text-gray-600 border border-gray-100">
+						<span className="inline-flex items-center px-2 py-1 text-[11px] font-semibold rounded-lg bg-slate-50 text-slate-600 border border-slate-200">
 							{user.status_kepegawaian?.replace(/_/g, ' ')}
 						</span>
 					)}
 				</div>
 
 				{/* Info rows */}
-				<div className="space-y-1.5">
+				<div className="space-y-0.5">
 					<InfoRow icon={LuMail}>{user.email}</InfoRow>
 
 					{user.nip && <InfoRow icon={LuHash} mono>{user.nip}</InfoRow>}
@@ -252,74 +277,81 @@ const UserCard = ({
 
 					{/* Password - only visible to superadmin, never shown for superadmin users */}
 					{isSuperadmin && user.role !== 'superadmin' && (
-						<div className="flex items-center gap-2 min-w-0">
-							<div className="flex-shrink-0 w-5 h-5 rounded-md bg-gray-50 flex items-center justify-center">
-								<LuLock className="h-3 w-3 text-gray-400" />
+						<div className="flex items-center gap-2 min-w-0 rounded-lg px-2 py-1.5 text-slate-600 transition-colors hover:bg-slate-50">
+							<div className="flex-shrink-0 w-6 h-6 rounded-lg bg-slate-100 flex items-center justify-center">
+								<LuLock className="h-3.5 w-3.5 text-slate-400" />
 							</div>
 							{user.plain_password ? (
 								<div className="flex items-center gap-1 flex-1 min-w-0">
-									<span className="text-[13px] font-mono text-gray-500 bg-gray-50 px-1.5 py-0.5 rounded-md truncate">
+									<span className="text-[13px] font-mono text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-md truncate">
 										{visiblePasswords[user.id] ? user.plain_password : '••••••••'}
 									</span>
 									<button
 										onClick={() => togglePasswordVisibility(user.id)}
-										className="flex-shrink-0 w-5 h-5 rounded-md hover:bg-gray-100 flex items-center justify-center transition-colors"
+										className="flex-shrink-0 w-6 h-6 rounded-md hover:bg-slate-100 flex items-center justify-center transition-colors"
 									>
-										{visiblePasswords[user.id] ? <LuEyeOff className="h-3 w-3 text-gray-400" /> : <LuEye className="h-3 w-3 text-gray-400" />}
+										{visiblePasswords[user.id] ? <LuEyeOff className="h-3.5 w-3.5 text-slate-400" /> : <LuEye className="h-3.5 w-3.5 text-slate-400" />}
 									</button>
 								</div>
 							) : (
-								<span className="text-[13px] text-gray-400 italic">Tidak tersedia</span>
+								<span className="text-[13px] text-slate-400 italic">Tidak tersedia</span>
 							)}
 						</div>
 					)}
 				</div>
 			</div>
 
-			{/* Bottom action bar — visible on hover */}
+			{/* Bottom action bar */}
 			{canManage && (
-				<div className="px-4 pb-3 pt-0 opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 transition-all duration-300">
-					<div className="flex flex-wrap items-center justify-center gap-1.5 bg-gray-50/80 backdrop-blur-sm rounded-xl p-2">
+				<div className="border-t border-slate-100 bg-slate-50/80 px-3 py-3">
+					<div className="flex flex-wrap items-center justify-center gap-1.5">
 						<button onClick={() => onEditRole(user)} title="Ubah Role"
-							className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors">
+							className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-blue-600 bg-white ring-1 ring-slate-200 hover:bg-blue-50 transition-colors">
 							<LuShield className="h-3.5 w-3.5" />
 							<span>Role</span>
 						</button>
 						<button onClick={() => onEditBidang(user)} title="Ubah Bidang"
-							className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-purple-600 bg-purple-50 hover:bg-purple-100 transition-colors">
+							className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-purple-600 bg-white ring-1 ring-slate-200 hover:bg-purple-50 transition-colors">
 							<LuBuilding2 className="h-3.5 w-3.5" />
 							<span>Bidang</span>
 						</button>
 						<button onClick={() => onEditAvatar(user)} title="Ubah Foto Profil"
-							className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-pink-600 bg-pink-50 hover:bg-pink-100 transition-colors">
+							className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-pink-600 bg-white ring-1 ring-slate-200 hover:bg-pink-50 transition-colors">
 							<LuCamera className="h-3.5 w-3.5" />
 							<span>Foto</span>
 						</button>
 						<button onClick={() => onEditTanggalLahir(user)} title="Tanggal Lahir"
-							className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-orange-600 bg-orange-50 hover:bg-orange-100 transition-colors">
+							className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-orange-600 bg-white ring-1 ring-slate-200 hover:bg-orange-50 transition-colors">
 							<LuCake className="h-3.5 w-3.5" />
 							<span>Tgl Lahir</span>
 						</button>
 						<button onClick={() => onEditJabatan(user)} title="Jabatan & Status"
-							className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-teal-600 bg-teal-50 hover:bg-teal-100 transition-colors">
+							className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-teal-600 bg-white ring-1 ring-slate-200 hover:bg-teal-50 transition-colors">
 							<LuPenLine className="h-3.5 w-3.5" />
 							<span>Jabatan</span>
 						</button>
 						{['PPPK_Paruh_Waktu','Tenaga_Alih_Daya','Tenaga_Keamanan','Tenaga_Kebersihan'].includes(user.status_kepegawaian) && (
 							<button onClick={() => onSetDevice(user)} title="Device Absensi"
-								className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-cyan-600 bg-cyan-50 hover:bg-cyan-100 transition-colors">
+								className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-cyan-600 bg-white ring-1 ring-slate-200 hover:bg-cyan-50 transition-colors">
 								<LuSmartphone className="h-3.5 w-3.5" />
 								<span>Device</span>
 							</button>
 						)}
+						{canImpersonate && (
+							<button onClick={() => onImpersonate(user)} title="Masuk Sebagai User"
+								className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold text-white bg-slate-950 hover:bg-slate-800 transition-colors">
+								<LuLogIn className="h-3.5 w-3.5" />
+								<span>Masuk</span>
+							</button>
+						)}
 						<div className="w-px h-5 bg-gray-200" />
 						<button onClick={() => onResetPassword(user)} title="Reset Password"
-							className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-amber-600 bg-amber-50 hover:bg-amber-100 transition-colors">
+							className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-amber-600 bg-white ring-1 ring-slate-200 hover:bg-amber-50 transition-colors">
 							<LuKey className="h-3.5 w-3.5" />
 							<span>Reset</span>
 						</button>
 						<button onClick={() => onDeleteUser(user)} title="Hapus"
-							className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-red-600 bg-red-50 hover:bg-red-100 transition-colors">
+							className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-red-600 bg-white ring-1 ring-slate-200 hover:bg-red-50 transition-colors">
 							<LuTrash2 className="h-3.5 w-3.5" />
 							<span>Hapus</span>
 						</button>
@@ -565,6 +597,93 @@ const UserManagementPage = () => {
 			fetchUsers();
 		} catch (err) {
 			Swal.fire({ icon: 'error', title: 'Gagal', text: err.response?.data?.message || 'Gagal update device' });
+		}
+	};
+
+	const handleImpersonate = async (targetUser) => {
+		if (currentUser?.role !== "superadmin") {
+			Swal.fire("Akses ditolak", "Hanya superadmin yang dapat masuk sebagai user lain.", "error");
+			return;
+		}
+
+		if (String(currentUser?.id) === String(targetUser.id)) {
+			Swal.fire("Info", "Anda sudah berada di akun superadmin ini.", "info");
+			return;
+		}
+
+		const result = await Swal.fire({
+			title: "Masuk sebagai user?",
+			html: `<p class="text-sm text-gray-600">Anda akan masuk sebagai <strong>${targetUser.name}</strong>.</p><p class="text-xs text-gray-500 mt-2">Sesi superadmin disimpan sementara dan dapat dikembalikan lewat tombol di bagian atas halaman.</p>`,
+			icon: "question",
+			showCancelButton: true,
+			confirmButtonText: "Ya, Masuk",
+			cancelButtonText: "Batal",
+			confirmButtonColor: "#059669",
+		});
+
+		if (!result.isConfirmed) return;
+
+		try {
+			Swal.fire({
+				title: "Memindahkan sesi...",
+				text: "Mohon tunggu sebentar.",
+				allowOutsideClick: false,
+				didOpen: () => Swal.showLoading(),
+			});
+
+			const currentSession = localStorage.getItem("authSession");
+			const currentToken = localStorage.getItem("expressToken");
+			const currentUserData = localStorage.getItem("user");
+			const alreadyImpersonating = localStorage.getItem("isImpersonating") === "true";
+
+			const response = await api.post(`/users/${targetUser.id}/impersonate`);
+			const { token, user } = response.data.data;
+
+			if (!token || !user) {
+				throw new Error("Token impersonasi tidak valid");
+			}
+
+			const impersonatedSessionUser = {
+				...user,
+				role: String(user.role || "").trim(),
+			};
+			const sessionData = {
+				user: impersonatedSessionUser,
+				token,
+				lastActivity: Date.now(),
+			};
+
+			if (!alreadyImpersonating) {
+				localStorage.setItem("superadminReturnSession", currentSession || "");
+				localStorage.setItem("superadminReturnToken", currentToken || "");
+				localStorage.setItem("superadminReturnUser", currentUserData || "");
+			}
+
+			localStorage.setItem("authSession", JSON.stringify(sessionData));
+			localStorage.setItem("user", JSON.stringify(impersonatedSessionUser));
+			localStorage.setItem("expressToken", token);
+			localStorage.setItem("isImpersonating", "true");
+			localStorage.setItem("impersonatedUser", JSON.stringify({
+				id: impersonatedSessionUser.id,
+				name: impersonatedSessionUser.name,
+				email: impersonatedSessionUser.email,
+				role: impersonatedSessionUser.role,
+			}));
+
+			window.dispatchEvent(new CustomEvent("sessionUpdated", { detail: sessionData }));
+			Swal.close();
+
+			const dashboardPath = ROLE_DASHBOARD_MAP[impersonatedSessionUser.role] || "/dashboard";
+			window.location.replace(dashboardPath);
+		} catch (err) {
+			console.error("Error impersonating user:", err);
+			Swal.fire({
+				title: "Gagal!",
+				text: err.response?.data?.message || err.message || "Gagal masuk sebagai user.",
+				icon: "error",
+				confirmButtonText: "OK",
+				confirmButtonColor: "#ef4444",
+			});
 		}
 	};
 
@@ -1067,13 +1186,14 @@ const UserManagementPage = () => {
 					</div>
 
 					{/* Users Grid */}
-					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+					<div className="grid grid-cols-1 items-start gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 						{paginatedUsers.map((user) => (
 							<UserCard
 								key={user.id}
 								user={user}
 								canManage={canManage}
 								isSuperadmin={currentUser?.role === 'superadmin'}
+								canImpersonate={currentUser?.role === 'superadmin' && String(currentUser?.id) !== String(user.id)}
 								visiblePasswords={visiblePasswords}
 								togglePasswordVisibility={togglePasswordVisibility}
 								onEditRole={handleEditRole}
@@ -1084,6 +1204,7 @@ const UserManagementPage = () => {
 								onSetDevice={handleSetDevice}
 								onResetPassword={handleResetPassword}
 								onDeleteUser={handleDeleteUser}
+								onImpersonate={handleImpersonate}
 								getRoleInfo={getRoleInfo}
 							/>
 						))}

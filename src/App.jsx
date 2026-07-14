@@ -22,6 +22,7 @@ import {
   subscribeToPushNotifications,
 } from "./utils/pushNotifications";
 import {
+  backupSessionToIndexedDB,
   initSessionPersistence,
   setupPeriodicBackup,
   syncSessionAcrossTabs,
@@ -152,10 +153,6 @@ const HeroGalleryManagement = lazy(
 );
 const BeritaManagement = lazy(
   () => import("./pages/dashboard/BeritaManagement"),
-);
-// Admin management pages
-const MusdesusMonitoringPage = lazy(
-  () => import("./pages/admin/MusdesusMonitoringPage"),
 );
 // Bidang apps
 const BumdesApp = lazy(() => import("./pages/bidang/spked/bumdes"));
@@ -477,6 +474,21 @@ const RoleProtectedRoute = ({ children, allowedRoles }) => {
   const { user, isCheckingSession } = useAuth();
   const location = useLocation();
 
+  const getStoredUser = () => {
+    try {
+      const session = JSON.parse(localStorage.getItem("authSession") || "null");
+      if (session?.user) return session.user;
+    } catch {
+      // Fall back to legacy user storage below.
+    }
+
+    try {
+      return JSON.parse(localStorage.getItem("user") || "null");
+    } catch {
+      return null;
+    }
+  };
+
   // CRITICAL: Wait for session restore (IndexedDB) before deciding to redirect
   if (isCheckingSession) {
     return (
@@ -497,10 +509,14 @@ const RoleProtectedRoute = ({ children, allowedRoles }) => {
 
   // Check if user role is allowed
   if (allowedRoles) {
-    const userRole = user?.role;
+    const isImpersonating = localStorage.getItem("isImpersonating") === "true";
+    const storedUser = isImpersonating ? getStoredUser() : null;
+    const activeUser = storedUser || user;
+    const userRole = activeUser?.role ? String(activeUser.role).trim() : "";
+    const normalizedAllowedRoles = allowedRoles.map((role) => String(role).trim());
 
     // Check if user role is in allowed roles
-    const hasAccess = userRole && allowedRoles.includes(userRole);
+    const hasAccess = userRole && normalizedAllowedRoles.includes(userRole);
 
     if (!hasAccess) {
       // Access denied - redirect to forbidden page
@@ -706,6 +722,86 @@ const ThemeColorWrapper = ({ children }) => {
   return children;
 };
 
+const ImpersonationReturnBanner = () => {
+  const [impersonatedUser, setImpersonatedUser] = useState(null);
+  const [isRestoring, setIsRestoring] = useState(false);
+
+  useEffect(() => {
+    if (localStorage.getItem("isImpersonating") !== "true") return;
+
+    try {
+      const storedUser = localStorage.getItem("impersonatedUser");
+      const parsedUser = storedUser ? JSON.parse(storedUser) : null;
+      setImpersonatedUser(parsedUser || { name: "user lain" });
+    } catch {
+      setImpersonatedUser({ name: "user lain" });
+    }
+  }, []);
+
+  const handleReturn = () => {
+    setIsRestoring(true);
+
+    try {
+      const savedSession = localStorage.getItem("superadminReturnSession");
+      const savedToken = localStorage.getItem("superadminReturnToken");
+      const savedUser = localStorage.getItem("superadminReturnUser");
+
+      if (savedSession) {
+        localStorage.setItem("authSession", savedSession);
+      } else if (savedToken && savedUser) {
+        localStorage.setItem("authSession", JSON.stringify({
+          user: JSON.parse(savedUser),
+          token: savedToken,
+          lastActivity: Date.now(),
+        }));
+      }
+
+      if (savedToken) localStorage.setItem("expressToken", savedToken);
+      if (savedUser) localStorage.setItem("user", savedUser);
+
+      localStorage.removeItem("isImpersonating");
+      localStorage.removeItem("impersonatedUser");
+      localStorage.removeItem("superadminReturnSession");
+      localStorage.removeItem("superadminReturnToken");
+      localStorage.removeItem("superadminReturnUser");
+
+      backupSessionToIndexedDB().catch((error) => {
+        console.warn("[Impersonate] Backup sesi superadmin gagal:", error);
+      });
+      window.location.replace("/superadmin/users");
+    } catch (error) {
+      console.error("[Impersonate] Gagal kembali ke superadmin:", error);
+      localStorage.removeItem("isImpersonating");
+      window.location.replace("/");
+    }
+  };
+
+  if (!impersonatedUser) return null;
+
+  return (
+    <div className="fixed left-1/2 top-3 z-[9999] w-[calc(100%-1.5rem)] max-w-xl -translate-x-1/2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 shadow-lg shadow-amber-900/10 md:top-4 md:px-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">
+            Mode superadmin
+          </p>
+          <p className="truncate text-sm font-medium text-amber-950">
+            Sedang masuk sebagai {impersonatedUser.name || "user lain"}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={handleReturn}
+          disabled={isRestoring}
+          className="inline-flex shrink-0 items-center justify-center rounded-lg bg-amber-700 px-3 py-2 text-sm font-semibold text-white transition hover:bg-amber-800 disabled:cursor-not-allowed disabled:opacity-70"
+        >
+          {isRestoring ? "Mengembalikan..." : "Kembali Superadmin"}
+        </button>
+      </div>
+    </div>
+  );
+};
+
 function App() {
   const [showUpdateModal, setShowUpdateModal] = useState(false);
 
@@ -755,6 +851,7 @@ function App() {
             <PushNotificationInitializer />
             {/* Popup wajib ganti password default — global untuk semua role */}
             <ForceChangePasswordModal />
+            <ImpersonationReturnBanner />
             <Suspense
               fallback={
                 <div className="flex h-screen items-center justify-center">
@@ -1115,7 +1212,6 @@ function App() {
                     path="hero-gallery"
                     element={<HeroGalleryManagement />}
                   />
-                  <Route path="musdesus" element={<MusdesusMonitoringPage />} />
                   <Route path="settings" element={<SettingsPage />} />
                   <Route path="profile" element={<ProfilePage />} />
 

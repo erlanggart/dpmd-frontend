@@ -1,8 +1,39 @@
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { LuShieldX, LuHouse, LuArrowLeft, LuLock } from "react-icons/lu";
+import { LuShieldX, LuHouse, LuArrowLeft } from "react-icons/lu";
+import Swal from "sweetalert2";
 
 export default function Forbidden() {
 	const navigate = useNavigate();
+
+	useEffect(() => {
+		Swal.close();
+	}, []);
+
+	const getDashboardPath = () => {
+		const roleDashboardMap = {
+			superadmin: "/superadmin/dashboard",
+			kepala_dinas: "/dpmd/dashboard",
+			sekretaris_dinas: "/dpmd/dashboard",
+			kepala_bidang: "/dpmd/dashboard",
+			ketua_tim: "/dpmd/dashboard",
+			bendahara: "/dpmd/dashboard",
+			pegawai: "/dpmd/dashboard",
+			desa: "/desa/dashboard",
+			kecamatan: "/kecamatan/dashboard",
+			dinas_terkait: "/dinas/dashboard",
+			verifikator_dinas: "/dinas/dashboard",
+			bpjs: "/bpjs/dashboard",
+		};
+
+		try {
+			const session = JSON.parse(localStorage.getItem("authSession") || "null");
+			const role = String(session?.user?.role || JSON.parse(localStorage.getItem("user") || "null")?.role || "").trim();
+			return roleDashboardMap[role] || "/";
+		} catch {
+			return "/";
+		}
+	};
 
 	return (
 		<div className="min-h-screen bg-gradient-to-br from-gray-50 via-red-50 to-orange-50 flex items-center justify-center p-4">
@@ -50,11 +81,11 @@ export default function Forbidden() {
 							<span>Kembali</span>
 						</button>
 						<button
-							onClick={() => navigate("/dashboard")}
+							onClick={() => navigate(getDashboardPath())}
 							className="group px-6 py-3 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white rounded-xl font-medium transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg hover:shadow-xl"
 						>
 							<LuHouse className="w-5 h-5" />
-							<span>Ke Halaman Utama</span>
+							<span>Ke Dashboard</span>
 						</button>
 					</div>
 

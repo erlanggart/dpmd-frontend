@@ -109,14 +109,6 @@ const MENU_ITEMS = [
 		accent: "text-slate-600",
 	},
 	{
-		path: "/superadmin/musdesus",
-		label: "Musdesus",
-		description: "Monitor pelaksanaan musdesus",
-		icon: FiBriefcase,
-		gradient: "from-fuchsia-500 to-purple-600",
-		accent: "text-fuchsia-600",
-	},
-	{
 		path: "/superadmin/pesan",
 		label: "Pesan",
 		description: "Kirim dan terima pesan antar pengguna",

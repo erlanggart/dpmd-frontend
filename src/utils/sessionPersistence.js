@@ -45,6 +45,11 @@ export const performFullLogout = async () => {
   localStorage.removeItem('authSession');
   localStorage.removeItem('user');
   localStorage.removeItem('expressToken');
+  localStorage.removeItem('isImpersonating');
+  localStorage.removeItem('impersonatedUser');
+  localStorage.removeItem('superadminReturnSession');
+  localStorage.removeItem('superadminReturnToken');
+  localStorage.removeItem('superadminReturnUser');
   
   // Clear IndexedDB
   try {
@@ -333,6 +338,11 @@ export const clearAllSessionData = async () => {
     localStorage.removeItem('authSession');
     localStorage.removeItem('user');
     localStorage.removeItem('expressToken');
+    localStorage.removeItem('isImpersonating');
+    localStorage.removeItem('impersonatedUser');
+    localStorage.removeItem('superadminReturnSession');
+    localStorage.removeItem('superadminReturnToken');
+    localStorage.removeItem('superadminReturnUser');
     
     // Clear IndexedDB
     const db = await openSessionDB();
