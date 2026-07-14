@@ -282,6 +282,7 @@ const ProfilDesaPage = lazy(() => import("./pages/desa/ProfilDesaPage"));
 const DesaSettings = lazy(() => import("./pages/desa/DesaSettings"));
 const DesaBankeuPage = lazy(() => import("./pages/desa/bankeu/DesaBankeuPage"));
 const DesaBankeuPerubahanPage = lazy(() => import("./pages/desa/bankeu-perubahan/DesaBankeuPerubahanPage"));
+const DesaBantuanProvinsiLpjPage = lazy(() => import("./pages/desa/bantuan-provinsi/DesaBantuanProvinsiLpjPage"));
 // Leadership layouts removed - all internal roles use unified DPMDStaffLayout
 const SuperadminLayout = lazy(
   () => import("./layouts/SuperadminLayout"),
@@ -832,6 +833,7 @@ function App() {
                   />
                   <Route path="bankeu" element={<DesaBankeuPage />} />
                   <Route path="bankeu-perubahan" element={<DesaBankeuPerubahanPage />} />
+                  <Route path="bantuan-provinsi-lpj" element={<DesaBantuanProvinsiLpjPage />} />
                   <Route path="aparatur-desa-external" element={<DesaAparaturExternalPage />} />
                   <Route path="settings" element={<DesaSettings />} />
                   <Route path="pesan" element={<MessagingPage />} />

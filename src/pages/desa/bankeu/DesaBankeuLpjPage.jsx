@@ -15,7 +15,14 @@ const STATUS_CONFIG = {
   revision: { label: 'Perlu Revisi', color: 'orange', icon: LuPencil, bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-700', badge: 'bg-orange-100 text-orange-700' },
 };
 
-const DesaBankeuLpjPage = ({ tahun = 2025 }) => {
+const DesaBankeuLpjPage = ({
+  tahun = 2025,
+  programName = 'Bantuan Keuangan',
+  endpointBase = '/desa/bankeu-lpj',
+  storageBase = '/storage/uploads/bankeu_lpj',
+  referenceType = 'bankeu_lpj',
+  chatTitle = 'Chat LPJ Bankeu',
+}) => {
   const [lpjList, setLpjList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -33,7 +40,7 @@ const DesaBankeuLpjPage = ({ tahun = 2025 }) => {
   const fetchLpj = async () => {
     try {
       setLoading(true);
-      const response = await api.get(`/desa/bankeu-lpj?tahun=${tahun}`);
+      const response = await api.get(`${endpointBase}?tahun=${tahun}`);
       if (response.data.success) {
         setLpjList(Array.isArray(response.data.data) ? response.data.data : response.data.data ? [response.data.data] : []);
       }
@@ -143,7 +150,7 @@ const DesaBankeuLpjPage = ({ tahun = 2025 }) => {
       const totalSize = selectedFiles.reduce((sum, f) => sum + f.size, 0);
       const timeoutMs = Math.max(60000, Math.ceil(totalSize / (50 * 1024)) * 1000); // min 60s, ~50KB/s
 
-      const response = await api.post('/desa/bankeu-lpj/upload', formData, {
+      const response = await api.post(`${endpointBase}/upload`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         timeout: timeoutMs,
         onUploadProgress: (progressEvent) => {
@@ -196,7 +203,7 @@ const DesaBankeuLpjPage = ({ tahun = 2025 }) => {
 
     try {
       setDeleting(lpj.id);
-      const response = await api.delete(`/desa/bankeu-lpj/${lpj.id}`);
+      const response = await api.delete(`${endpointBase}/${lpj.id}`);
       if (response.data.success) {
         toast.success('LPJ berhasil dihapus');
         fetchLpj();
@@ -211,7 +218,7 @@ const DesaBankeuLpjPage = ({ tahun = 2025 }) => {
 
   const getFileUrl = (filePath) => {
     const baseUrl = api.defaults.baseURL?.replace('/api', '') || '';
-    return `${baseUrl}/storage/uploads/bankeu_lpj/${filePath}`;
+    return `${baseUrl}${storageBase}/${filePath}`;
   };
 
   const formatFileSize = (bytes) => {
@@ -252,10 +259,10 @@ const DesaBankeuLpjPage = ({ tahun = 2025 }) => {
             <LuFileText className="h-8 w-8 text-white" />
           </div>
           <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-gray-800 via-slate-700 to-slate-600 bg-clip-text text-transparent mb-2">
-            LPJ Bantuan Keuangan {tahun}
+            LPJ {programName} {tahun}
           </h1>
           <p className="text-gray-500">
-            Upload Laporan Pertanggungjawaban Bantuan Keuangan Tahun {tahun}
+            Upload Laporan Pertanggungjawaban {programName} Tahun {tahun}
           </p>
         </div>
 
@@ -471,7 +478,7 @@ const DesaBankeuLpjPage = ({ tahun = 2025 }) => {
           {/* Info */}
           <div className="mt-4 bg-slate-50 border-l-4 border-slate-500 p-3 rounded-lg">
             <p className="text-xs text-slate-700">
-              <strong>Informasi:</strong> File LPJ yang diupload akan diverifikasi oleh DPMD.
+              <strong>Informasi:</strong> File LPJ {programName} yang diupload akan diverifikasi oleh DPMD.
               Anda dapat mengupload beberapa file LPJ sekaligus (maks {MAX_FILES} file, 100 MB per file).
               Setelah upload, DPMD akan memverifikasi LPJ Anda.
             </p>
@@ -482,13 +489,13 @@ const DesaBankeuLpjPage = ({ tahun = 2025 }) => {
       {/* Contextual Chat Drawer */}
       {chatLpjId && (
         <ChatDrawer
-          referenceType="bankeu_lpj"
+          referenceType={referenceType}
           referenceId={chatLpjId}
           targetUserId={lpjList.find(l => l.id === chatLpjId)?.dpmd_verified_by}
           floating={false}
           isOpen={!!chatLpjId}
           onClose={() => setChatLpjId(null)}
-          title="Chat LPJ Bankeu"
+          title={chatTitle}
         />
       )}
     </div>

@@ -12,6 +12,7 @@ const API_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http:
 const REFERENCE_LABELS = {
   bankeu_lpj: 'LPJ Bankeu',
   bankeu_proposal: 'Proposal Bankeu',
+  bantuan_provinsi_lpj: 'LPJ Bantuan Provinsi',
 };
 
 function shortTime(d) {

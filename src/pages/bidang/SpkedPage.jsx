@@ -194,6 +194,7 @@ const SpkedPage = () => {
 		{ id: 'bumdes', label: 'BUMDes', icon: Building2, color: 'green' },
 		{ id: 'bankeu', label: 'Bantuan Keuangan', icon: DollarSign, color: 'blue' },
 		{ id: 'bankeu-perubahan', label: 'Bankeu Perubahan', icon: DollarSign, color: 'orange' },
+		{ id: 'bantuan-provinsi-lpj', label: 'LPJ Bantuan Provinsi', icon: FileText, color: 'blue' },
 		{ id: 'hari-libur', label: 'Hari Libur', icon: CalendarOff, color: 'red' },
 		{ id: 'activity', label: 'Aktivitas', icon: Activity, color: 'orange' },
 	];
@@ -519,6 +520,21 @@ const SpkedPage = () => {
 					<div className="relative bg-white rounded-2xl shadow-xl border border-gray-200/50 overflow-hidden">
 						<Suspense fallback={<LoadingFallback />}>
 							<DpmdBankeuPerubahanPage />
+						</Suspense>
+					</div>
+				)}
+
+				{activeTab === 'bantuan-provinsi-lpj' && (
+					<div className="relative bg-white rounded-2xl shadow-xl border border-gray-200/50 overflow-hidden">
+						<Suspense fallback={<LoadingFallback />}>
+							<BankeuLpjMonitoringPage
+								tahun={2026}
+								programName="Bantuan Provinsi"
+								endpointBase="/dpmd/bantuan-provinsi-lpj"
+								storageBase="/storage/uploads/bantuan_provinsi_lpj"
+								referenceType="bantuan_provinsi_lpj"
+								chatTitle="Chat LPJ Bantuan Provinsi"
+							/>
 						</Suspense>
 					</div>
 				)}

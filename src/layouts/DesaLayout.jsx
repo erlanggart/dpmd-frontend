@@ -83,6 +83,14 @@ const menuItems = [
     gradient: "from-slate-700 to-slate-900",
   },
   {
+    id: "bantuan-provinsi-lpj",
+    label: "LPJ Bantuan Provinsi",
+    path: "/desa/bantuan-provinsi-lpj",
+    icon: "banknote",
+    color: "text-slate-600",
+    gradient: "from-slate-700 to-slate-900",
+  },
+  {
     id: "pesan",
     label: "Pesan",
     path: "/desa/pesan",

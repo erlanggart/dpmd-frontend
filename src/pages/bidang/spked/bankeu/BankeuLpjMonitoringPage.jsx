@@ -13,7 +13,14 @@ const STATUS_CONFIG = {
   revision: { label: 'Revisi', color: 'orange', bgBadge: 'bg-orange-100 text-orange-700', icon: RotateCcw },
 };
 
-const BankeuLpjMonitoringPage = ({ tahun = 2025 }) => {
+const BankeuLpjMonitoringPage = ({
+  tahun = 2025,
+  programName = 'Bantuan Keuangan',
+  endpointBase = '/dpmd/bankeu-lpj',
+  storageBase = '/storage/uploads/bankeu_lpj',
+  referenceType = 'bankeu_lpj',
+  chatTitle = 'Chat LPJ Bankeu',
+}) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -34,7 +41,7 @@ const BankeuLpjMonitoringPage = ({ tahun = 2025 }) => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const response = await api.get(`/dpmd/bankeu-lpj?tahun=${tahun}`);
+      const response = await api.get(`${endpointBase}?tahun=${tahun}`);
       if (response.data.success) {
         setData(response.data.data);
       }
@@ -63,7 +70,7 @@ const BankeuLpjMonitoringPage = ({ tahun = 2025 }) => {
 
   const getFileUrl = (filePath) => {
     const baseUrl = api.defaults.baseURL?.replace('/api', '') || '';
-    return `${baseUrl}/storage/uploads/bankeu_lpj/${filePath}`;
+    return `${baseUrl}${storageBase}/${filePath}`;
   };
 
   const formatFileSize = (bytes) => {
@@ -134,7 +141,7 @@ const BankeuLpjMonitoringPage = ({ tahun = 2025 }) => {
     }
     try {
       setVerifying(true);
-      const res = await api.put(`/dpmd/bankeu-lpj/${verifyModal.lpj.id}/verify`, {
+      const res = await api.put(`${endpointBase}/${verifyModal.lpj.id}/verify`, {
         action: verifyAction,
         catatan: verifyCatatan.trim() || null
       });
@@ -176,7 +183,7 @@ const BankeuLpjMonitoringPage = ({ tahun = 2025 }) => {
 
     try {
       setDeletingLpj(lpj.id);
-      const res = await api.delete(`/dpmd/bankeu-lpj/${lpj.id}`);
+      const res = await api.delete(`${endpointBase}/${lpj.id}`);
       if (res.data.success) {
         toast.success(res.data.message);
         fetchData();
@@ -232,8 +239,8 @@ const BankeuLpjMonitoringPage = ({ tahun = 2025 }) => {
 
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, `LPJ Bankeu ${tahun}`);
-    XLSX.writeFile(wb, `LPJ_Bantuan_Keuangan_${tahun}_${new Date().toISOString().split('T')[0]}.xlsx`);
+    XLSX.utils.book_append_sheet(wb, ws, `LPJ ${programName} ${tahun}`);
+    XLSX.writeFile(wb, `LPJ_${programName.replace(/\s+/g, '_')}_${tahun}_${new Date().toISOString().split('T')[0]}.xlsx`);
     toast.success('Data berhasil diekspor ke Excel');
   };
 
@@ -242,7 +249,7 @@ const BankeuLpjMonitoringPage = ({ tahun = 2025 }) => {
       <div className="min-h-[400px] flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-10 w-10 animate-spin text-amber-500 mx-auto" />
-          <p className="mt-3 text-gray-500">Memuat data LPJ Bantuan Keuangan...</p>
+          <p className="mt-3 text-gray-500">Memuat data LPJ {programName}...</p>
         </div>
       </div>
     );
@@ -678,13 +685,13 @@ const BankeuLpjMonitoringPage = ({ tahun = 2025 }) => {
       {/* Contextual Chat Drawer */}
       {chatLpjId && (
         <ChatDrawer
-          referenceType="bankeu_lpj"
+          referenceType={referenceType}
           referenceId={chatLpjId}
           targetUserId={chatTargetUserId}
           floating={false}
           isOpen={!!chatLpjId}
           onClose={() => { setChatLpjId(null); setChatTargetUserId(null); }}
-          title="Chat LPJ Bankeu"
+          title={chatTitle}
         />
       )}
     </div>
