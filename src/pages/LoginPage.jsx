@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import api from "../api";
 import { FiEye, FiEyeOff, FiLoader, FiAlertCircle, FiBell, FiInfo, FiLock, FiClock, FiMapPin } from "react-icons/fi";
@@ -75,7 +75,7 @@ const LoginPage = () => {
 			const c = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
 			setCoords(c);
 			setLocationStatus('granted');
-			toast.success('Lokasi aktif!', { icon: '📍', duration: 3000 });
+			toast.success('Lokasi aktif!', { duration: 3000 });
 			return c;
 		} catch (err) {
 			const denied = err?.code === 1; // PERMISSION_DENIED
@@ -205,7 +205,7 @@ const LoginPage = () => {
 			const newUser = response.data.data.user;
 			const expressToken = response.data.data.token;
 
-			console.log('✅ Login successful');
+			console.log('Login successful');
 
 			// Reset lockout on successful login
 			setLockoutUntil(null);
@@ -260,43 +260,60 @@ const LoginPage = () => {
 	};
 
 	return (
-		<div className="relative flex min-h-screen items-center justify-center bg-gray-300 p-4">
-			<div className="relative z-10 flex w-full max-w-5xl overflow-hidden rounded-2xl bg-white/60 shadow-2xl p-4 border-2 border-white">
+		<div className="min-h-screen bg-slate-100 px-4 py-6 text-slate-900 sm:px-6 lg:flex lg:items-center lg:justify-center lg:px-8">
+			<div className="relative z-10 flex w-full max-w-6xl overflow-hidden rounded-[1.75rem] border border-white/80 bg-white shadow-2xl shadow-slate-950/10 lg:min-h-[680px]">
 				{/* Left Side - Image Slider */}
-				<div className="relative hidden w-1/2 lg:block rounded-2xl">
+				<div className="relative hidden w-[52%] overflow-hidden bg-slate-950 lg:block">
 					<LoginImageSlider />
-					<div className="absolute inset-0 z-10 bg-black/50 rounded-2xl"></div>
-					<div className="absolute inset-0 z-10 flex flex-col items-center justify-center p-8 text-white rounded-2xl">
+					<div className="absolute inset-0 z-10 bg-slate-950/60"></div>
+					<div className="absolute inset-0 z-10 flex flex-col justify-end p-10 text-white">
 						<img
 							src="/logo-bogor.png"
 							alt="Logo Kabupaten Bogor"
-							className="h-24 w-auto drop-shadow-lg"
+							className="h-16 w-fit rounded-2xl bg-white/95 p-2 shadow-lg"
 						/>
-						<h1 className="mt-6 text-center text-3xl font-extrabold text-white">
+						<p className="mt-8 w-fit rounded-full border border-white/25 bg-white/12 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-white/85">
+							Sistem Informasi Terpadu
+						</p>
+						<h1 className="mt-4 max-w-lg text-4xl font-bold leading-tight text-white">
 							Dinas Pemberdayaan Masyarakat dan Desa
 						</h1>
-						<h2 className="mt-2 text-center text-xl font-semibold text-gray-200">
+						<h2 className="mt-3 text-lg font-semibold text-white/80">
 							Kabupaten Bogor
 						</h2>
 					</div>
 				</div>
 
 				{/* Right Side - Login Form */}
-				<div className="w-full p-8 lg:w-1/2 lg:p-12">
-					<h2 className="text-3xl font-bold text-gray-800">Selamat Datang!</h2>
-					<p className="mt-2 text-gray-600">Silakan masuk untuk melanjutkan.</p>
+				<div className="w-full px-5 py-7 sm:px-8 sm:py-10 lg:w-[48%] lg:px-12">
+					<div className="mb-7 flex items-center gap-3 lg:hidden">
+						<img
+							src="/logo-bogor.png"
+							alt="Logo Kabupaten Bogor"
+							className="h-12 w-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-sm"
+						/>
+						<div>
+							<p className="text-sm font-semibold text-slate-950">DPMD Kabupaten Bogor</p>
+							<p className="text-xs text-slate-500">Sistem Informasi Terpadu</p>
+						</div>
+					</div>
+					<p className="text-sm font-semibold text-[rgb(var(--color-secondary))]">Masuk akun</p>
+					<h2 className="mt-2 text-3xl font-bold tracking-normal text-slate-950 sm:text-4xl">Selamat datang</h2>
+					<p className="mt-3 text-sm leading-6 text-slate-600">Gunakan akun DPMD, desa, kecamatan, atau dinas terkait untuk melanjutkan.</p>
 
 					{/* Izin perangkat dibuat ringkas agar form login tetap terasa ringan. */}
-					<div className="mt-6 grid grid-cols-2 gap-3">
-						<div className="min-w-0 rounded-xl border border-gray-200 bg-gray-50 p-3">
-							<div className="flex items-center gap-2">
-								<FiBell className="h-5 w-5 flex-shrink-0 text-blue-600" />
-								<p className="min-w-0 flex-1 text-sm font-semibold text-gray-800">Notifikasi</p>
+					<div className="mt-7 grid gap-3 md:grid-cols-2">
+						<div className="min-w-0 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+							<div className="flex items-center gap-3">
+								<div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
+									<FiBell className="h-5 w-5" />
+								</div>
+								<p className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-900">Notifikasi</p>
 							{notificationPermission === 'granted' ? (
 								<button
 									type="button"
 									onClick={() => setShowNotificationGuide(true)}
-										className="flex flex-shrink-0 items-center gap-1 rounded-full bg-green-100 px-2.5 py-1.5 text-xs font-semibold text-green-700"
+										className="flex flex-shrink-0 items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1.5 text-[11px] font-semibold leading-none text-emerald-700"
 									title="Panduan pengaturan notifikasi"
 								>
 									✓ Siap <FiInfo className="h-3.5 w-3.5" />
@@ -306,25 +323,27 @@ const LoginPage = () => {
 									type="button"
 									onClick={handleRequestNotification}
 									disabled={checkingNotification}
-										className="flex flex-shrink-0 items-center rounded-lg bg-blue-600 px-2.5 py-2 text-xs font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-60"
+										className="flex flex-shrink-0 items-center rounded-xl bg-blue-700 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-blue-800 disabled:opacity-60"
 								>
 									{checkingNotification ? <FiLoader className="h-4 w-4 animate-spin" /> : 'Aktifkan'}
 								</button>
 							)}
 							</div>
-							<p className="mt-1.5 text-xs leading-relaxed text-gray-500">
+							<p className="mt-3 text-xs leading-relaxed text-slate-500">
 								{notificationPermission === 'denied'
-									? 'Masih diblokir browser, nih.'
-									: 'Biar info nggak kelewat.'}
+									? 'Diblokir oleh browser.'
+									: 'Dipakai untuk info penting.'}
 							</p>
 						</div>
 
-						<div className="min-w-0 rounded-xl border border-gray-200 bg-gray-50 p-3">
-							<div className="flex items-center gap-2">
-								<FiMapPin className="h-5 w-5 flex-shrink-0 text-orange-500" />
-								<p className="min-w-0 flex-1 text-sm font-semibold text-gray-800">Lokasi</p>
+						<div className="min-w-0 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+							<div className="flex items-center gap-3">
+								<div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-700">
+									<FiMapPin className="h-5 w-5" />
+								</div>
+								<p className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-900">Lokasi</p>
 							{locationStatus === 'granted' ? (
-									<span className="flex-shrink-0 rounded-full bg-green-100 px-2.5 py-1.5 text-xs font-semibold text-green-700">
+									<span className="flex-shrink-0 rounded-full bg-emerald-100 px-2.5 py-1.5 text-[11px] font-semibold leading-none text-emerald-700">
 									✓ Siap
 								</span>
 							) : (
@@ -332,51 +351,51 @@ const LoginPage = () => {
 									type="button"
 									onClick={handleRequestLocation}
 									disabled={gettingLocation}
-										className="flex flex-shrink-0 items-center rounded-lg bg-orange-500 px-2.5 py-2 text-xs font-semibold text-white transition-colors hover:bg-orange-600 disabled:opacity-60"
+										className="flex flex-shrink-0 items-center rounded-xl bg-amber-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-amber-700 disabled:opacity-60"
 								>
 									{gettingLocation ? <FiLoader className="h-4 w-4 animate-spin" /> : 'Aktifkan'}
 								</button>
 							)}
 							</div>
-							<p className="mt-1.5 text-xs leading-relaxed text-gray-500">
+							<p className="mt-3 text-xs leading-relaxed text-slate-500">
 								{locationStatus === 'denied'
-									? 'Lokasinya masih ngumpet, nih.'
-									: 'Cuma saat login, kok.'}
+									? 'Izin lokasi belum aktif.'
+									: 'Wajib saat login.'}
 							</p>
 						</div>
 					</div>
 
-					<form onSubmit={handleLogin} className="mt-8 space-y-6">
+					<form onSubmit={handleLogin} className="mt-8 space-y-5">
 						<div>
-							<label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+							<label htmlFor="email" className="mb-2 block text-sm font-semibold text-slate-700">
 								Email
 							</label>
 							<input
 								type="email"
 								id="email"
-								placeholder="anda@email.com"
-								className={`w-full bg-white rounded-lg border px-4 py-3 focus:ring-1 focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60 ${emailError ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-[rgb(var(--color-primary))] focus:ring-[rgb(var(--color-primary))]'}`}
+								placeholder="nama@domain.go.id"
+								className={`w-full rounded-2xl border bg-white px-4 py-3.5 text-slate-900 outline-none transition placeholder:text-slate-400 focus:ring-4 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:opacity-60 ${emailError ? 'border-red-300 focus:border-red-500 focus:ring-red-100' : 'border-slate-200 focus:border-[rgb(var(--color-primary))] focus:ring-slate-200'}`}
 								value={email}
 								onChange={(e) => { setEmail(e.target.value); setEmailError(null); }}
 								required
 							/>
 							{emailError && (
-								<p className="mt-1.5 text-sm text-red-600 flex items-center gap-1">
-									<FiAlertCircle className="w-4 h-4 flex-shrink-0" />
+								<p className="mt-2 flex items-center gap-1.5 text-sm text-red-600">
+									<FiAlertCircle className="h-4 w-4 flex-shrink-0" />
 									{emailError}
 								</p>
 							)}
 						</div>
 						<div>
-							<label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+							<label htmlFor="password" className="mb-2 block text-sm font-semibold text-slate-700">
 								Password
 							</label>
 							<div className="relative">
 								<input
 									type={showPassword ? "text" : "password"}
 									id="password"
-									placeholder="Password"
-									className={`w-full bg-white rounded-lg border px-4 py-3 pr-10 focus:ring-1 focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60 ${passwordError ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-[rgb(var(--color-primary))] focus:ring-[rgb(var(--color-primary))]'}`}
+									placeholder="Masukkan password"
+									className={`w-full rounded-2xl border bg-white px-4 py-3.5 pr-12 text-slate-900 outline-none transition placeholder:text-slate-400 focus:ring-4 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:opacity-60 ${passwordError ? 'border-red-300 focus:border-red-500 focus:ring-red-100' : 'border-slate-200 focus:border-[rgb(var(--color-primary))] focus:ring-slate-200'}`}
 									value={password}
 									onChange={(e) => { setPassword(e.target.value); setPasswordError(null); }}
 									required
@@ -384,15 +403,15 @@ const LoginPage = () => {
 								<button
 									type="button"
 									onClick={() => setShowPassword(!showPassword)}
-									className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700 focus:outline-none"
+									className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-slate-500 transition hover:text-slate-800 focus:outline-none"
 									aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
 								>
 									{showPassword ? <FiEyeOff size={20} /> : <FiEye size={20} />}
 								</button>
 							</div>
 							{passwordError && (
-								<p className="mt-1.5 text-sm text-red-600 flex items-center gap-1">
-									<FiAlertCircle className="w-4 h-4 flex-shrink-0" />
+								<p className="mt-2 flex items-center gap-1.5 text-sm text-red-600">
+									<FiAlertCircle className="h-4 w-4 flex-shrink-0" />
 									{passwordError}
 								</p>
 							)}
@@ -400,15 +419,15 @@ const LoginPage = () => {
 						<button
 							type="submit"
 							disabled={loading || isLockedOut || (isPWA && notificationPermission !== 'granted') || locationStatus !== 'granted'}
-							className={`flex w-full items-center justify-center rounded-lg py-3 font-semibold text-white transition-colors shadow-xl disabled:cursor-not-allowed disabled:opacity-60 ${
-								isLockedOut ? 'bg-red-400 disabled:bg-red-400' : 'bg-[rgb(var(--color-primary))] hover:bg-[rgb(var(--color-primary))]/90 disabled:bg-gray-400'
+							className={`flex min-h-12 w-full items-center justify-center rounded-2xl px-5 py-3.5 text-sm font-bold text-white shadow-lg transition disabled:cursor-not-allowed disabled:opacity-65 ${
+								isLockedOut ? 'bg-red-500 shadow-red-500/20' : 'bg-[rgb(var(--color-primary))] shadow-slate-950/15 hover:bg-slate-800 disabled:bg-slate-400'
 							}`}
 						>
 							{loading ? (
-								<FiLoader className="animate-spin" />
+								<FiLoader className="h-5 w-5 animate-spin" />
 							) : isLockedOut ? (
 								<span className="flex items-center gap-2">
-									<FiLock className="w-4 h-4" />
+									<FiLock className="h-4 w-4" />
 									Dikunci {lockoutMinutes}:{lockoutSeconds.toString().padStart(2, '0')}
 								</span>
 							) : (isPWA && notificationPermission !== 'granted') ? (
@@ -416,23 +435,23 @@ const LoginPage = () => {
 							) : locationStatus !== 'granted' ? (
 								"Aktifkan Lokasi Dulu"
 							) : (
-								"Sign In"
+								"Masuk"
 							)}
 						</button>
 
 						{/* Lockout Warning Banner */}
 						{isLockedOut && (
-							<div className="rounded-lg bg-gradient-to-r from-red-50 to-orange-50 border border-red-300 p-4">
-								<div className="flex items-center gap-3">
-									<div className="p-2 bg-red-100 rounded-lg flex-shrink-0">
-										<FiLock className="w-5 h-5 text-red-600" />
+							<div className="rounded-2xl border border-red-200 bg-red-50 p-4">
+								<div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+									<div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-red-100">
+										<FiLock className="h-5 w-5 text-red-600" />
 									</div>
 									<div className="flex-1">
-										<p className="text-sm font-semibold text-red-800">Akun Dikunci Sementara</p>
-										<p className="text-xs text-red-600 mt-0.5">Terlalu banyak percobaan login gagal (maks 5x)</p>
+										<p className="text-sm font-semibold text-red-800">Akun dikunci sementara</p>
+										<p className="mt-0.5 text-xs leading-5 text-red-600">Terlalu banyak percobaan login gagal.</p>
 									</div>
-									<div className="flex items-center gap-1.5 bg-red-100 px-3 py-1.5 rounded-lg flex-shrink-0">
-										<FiClock className="w-4 h-4 text-red-600" />
+									<div className="inline-flex w-fit flex-shrink-0 items-center gap-1.5 rounded-xl bg-red-100 px-3 py-2 sm:ml-auto">
+										<FiClock className="h-4 w-4 text-red-600" />
 										<span className="text-sm font-bold text-red-700 tabular-nums">
 											{lockoutMinutes}:{lockoutSeconds.toString().padStart(2, '0')}
 										</span>
@@ -442,10 +461,10 @@ const LoginPage = () => {
 						)}
 
 						{error && !isLockedOut && (
-							<div className="rounded-lg bg-red-50 border border-red-200 p-4 animate-shake">
-								<div className="flex items-center gap-3">
-									<FiAlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
-									<p className="text-sm text-red-700">{error}</p>
+							<div className="animate-shake rounded-2xl border border-red-200 bg-red-50 p-4">
+								<div className="flex items-start gap-3">
+									<FiAlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-600" />
+									<p className="text-sm leading-5 text-red-700">{error}</p>
 								</div>
 							</div>
 						)}
