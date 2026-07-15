@@ -1,7 +1,7 @@
 // Service Worker for Development Mode
 // This file is used in development. In production, sw-custom.js is injected into the built sw.js
 
-const SW_VERSION = '1.0.4-dev';
+const SW_VERSION = '1.1.0-dev';
 console.log(`[SW] Version ${SW_VERSION} loaded`);
 
 // Install event
@@ -32,24 +32,71 @@ self.addEventListener('fetch', (event) => {
 
 console.log('[SW] Push notification handler initializing...');
 
-// Push event handler
-self.addEventListener('push', async (event) => {
-	console.log('[SW] 📨 Push event received');
-	
-	if (!event.data) {
-		console.warn('[SW] Push event tanpa data');
-		return;
+// Semua disposisi berbagi satu tag supaya beberapa disposisi yang datang
+// beruntun menimpa satu sama lain, bukan menumpuk jadi banyak pop-up.
+const DISPOSISI_TAG = 'dpmd-disposisi';
+const DISPOSISI_URL = '/dpmd/disposisi';
+
+function isDisposisiType(type) {
+	return typeof type === 'string' && type.includes('disposisi');
+}
+
+// Disposisi ke-2 dan seterusnya diringkas jadi "N Disposisi Baru" tanpa
+// disposisi_id, supaya klik mengarah ke halaman daftar disposisi.
+async function buildDisposisiNotification(notificationData) {
+	const { title, body, data, icon, badge } = notificationData;
+	const existing = await self.registration.getNotifications({ tag: DISPOSISI_TAG });
+	const count = existing.reduce((total, notif) => total + (notif.data?.count || 1), 0) + 1;
+
+	if (count === 1) {
+		return {
+			title: title || 'Disposisi Baru',
+			options: {
+				body: body || 'Anda menerima disposisi baru',
+				icon: icon || '/logo-dpmd.png',
+				badge: badge || '/logo-dpmd.png',
+				data: { ...(data || {}), count: 1 },
+				tag: DISPOSISI_TAG,
+				requireInteraction: true,
+				renotify: false,
+				silent: false,
+				actions: notificationData.actions || []
+			},
+			playSound: true
+		};
 	}
 
-	try {
-		const notificationData = event.data.json();
-		console.log('[SW] Notification data:', notificationData);
+	return {
+		title: `📨 ${count} Disposisi Baru`,
+		options: {
+			body: 'Ketuk untuk melihat semua disposisi masuk Anda',
+			icon: icon || '/logo-dpmd.png',
+			badge: badge || '/logo-dpmd.png',
+			data: {
+				type: data?.type || 'new_disposisi',
+				count,
+				url: DISPOSISI_URL,
+				timestamp: Date.now()
+			},
+			tag: DISPOSISI_TAG,
+			requireInteraction: true,
+			// renotify + silent: perbarui diam-diam, jangan bunyi/getar berulang
+			renotify: false,
+			silent: true,
+			actions: []
+		},
+		playSound: false
+	};
+}
 
-		const { title, body, data, icon, badge } = notificationData;
+async function handlePushNotification(notificationData) {
+	const { title, body, data, icon, badge } = notificationData;
 
-		// Show notification popup with proper options
-		event.waitUntil(
-			self.registration.showNotification(title || 'Notifikasi Baru', {
+	const notification = isDisposisiType(data?.type)
+		? await buildDisposisiNotification(notificationData)
+		: {
+			title: title || 'Notifikasi Baru',
+			options: {
 				body: body || 'Anda memiliki notifikasi baru',
 				icon: icon || '/logo-dpmd.png',
 				badge: badge || '/logo-dpmd.png',
@@ -59,29 +106,52 @@ self.addEventListener('push', async (event) => {
 				renotify: false,
 				silent: false,
 				actions: notificationData.actions || []
-			}).then(() => {
-				console.log('[SW] ✅ Browser notification shown');
+			},
+			playSound: true
+		};
 
-				// Broadcast message to all clients (untuk popup di app)
-				return self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-			}).then(clients => {
-				console.log(`[SW] Broadcasting to ${clients.length} clients`);
-				
-				clients.forEach(client => {
-					client.postMessage({
-						type: 'PUSH_NOTIFICATION_RECEIVED',
-						payload: data || notificationData,
-						timestamp: Date.now(),
-						playSound: true,
-						soundUrl: '/dpmd.mp3'
-					});
-					console.log('[SW] Message sent to client:', client.url);
-				});
-			})
-		);
-	} catch (error) {
-		console.error('[SW] Error handling push:', error);
+	await self.registration.showNotification(notification.title, notification.options);
+	console.log('[SW] ✅ Browser notification shown:', notification.title);
+
+	// Broadcast message to all clients (untuk popup di app)
+	const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+	console.log(`[SW] Broadcasting to ${clients.length} clients`);
+
+	clients.forEach(client => {
+		client.postMessage({
+			type: 'PUSH_NOTIFICATION_RECEIVED',
+			payload: data || notificationData,
+			timestamp: Date.now(),
+			playSound: notification.playSound,
+			soundUrl: '/dpmd.mp3'
+		});
+		console.log('[SW] Message sent to client:', client.url);
+	});
+}
+
+// Push event handler
+self.addEventListener('push', (event) => {
+	console.log('[SW] 📨 Push event received');
+
+	if (!event.data) {
+		console.warn('[SW] Push event tanpa data');
+		return;
 	}
+
+	let notificationData;
+	try {
+		notificationData = event.data.json();
+		console.log('[SW] Notification data:', notificationData);
+	} catch (error) {
+		console.error('[SW] Error parsing push data:', error);
+		return;
+	}
+
+	event.waitUntil(
+		handlePushNotification(notificationData).catch(error => {
+			console.error('[SW] Error handling push:', error);
+		})
+	);
 });
 
 // Notification click handler
@@ -102,7 +172,12 @@ self.addEventListener('notificationclick', (event) => {
 	// - kecamatan -> /kecamatan/dashboard
 	// - DPMD staff -> /dpmd/dashboard
 	// Fix URLs tanpa prefix yang benar
-	if (urlToOpen === '/disposisi' || urlToOpen === '/admin/disposisi') {
+	if (isDisposisiType(notificationType)) {
+		// Notifikasi ringkasan tidak punya disposisi_id → buka daftar disposisi
+		urlToOpen = notificationData.disposisi_id
+			? `${DISPOSISI_URL}/${notificationData.disposisi_id}`
+			: DISPOSISI_URL;
+	} else if (urlToOpen === '/disposisi' || urlToOpen === '/admin/disposisi') {
 		urlToOpen = '/'; // App will smart-redirect to user's dashboard
 	}
 	if (urlToOpen === '/jadwal-kegiatan') {
