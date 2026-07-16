@@ -190,6 +190,9 @@ export default defineConfig({
 		})
 	],
 	server: {
+		// Dengarkan semua antarmuka jaringan, bukan hanya localhost, agar HP di
+		// Wi-Fi yang sama bisa membuka dev server (dipakai menguji scan QR label).
+		host: true,
 		proxy: {
 			"/api": {
 				target: "http://localhost:3001",
