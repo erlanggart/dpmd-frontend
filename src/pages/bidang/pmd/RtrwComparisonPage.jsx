@@ -62,6 +62,11 @@ const STATUS_CONFIG = {
     color: "bg-violet-100 text-violet-800",
     dotColor: "bg-violet-500",
   },
+  nik_invalid: {
+    label: "NIK Invalid",
+    color: "bg-rose-100 text-rose-800",
+    dotColor: "bg-rose-500",
+  },
 };
 
 // Status kepesertaan BPJS (overlay dari DESK BPJS JULI 2026)
@@ -143,6 +148,7 @@ const buildClassification = (data) => {
   const dbBpjs = [];
   const nikBerbeda = [];
   const desaBerbeda = [];
+  const nikInvalid = [];
   const bpjsNoDb = [];
   const dbNoBpjs = [];
   const bpjsCocokAdd = [];
@@ -185,15 +191,25 @@ const buildClassification = (data) => {
         bpjsNonAktifSebab: item.bpjsNonAktifSebab || "",
         inBaru: Boolean(item.inBaru),
         baruJabatan: item.baruJabatan || "",
+        // Desa Berbeda (Tangkil / NIK lintas-desa) & klasifikasi NIK Invalid.
+        desaBerbedaSumber: item.bpjsDesaBerbedaSumber || "",
+        desaBerbedaLabel: item.bpjsDesaBerbedaSumber === "nik_lintas_desa" ? "NIK Lintas-Desa"
+          : item.bpjsDesaBerbedaSumber === "tangkil" ? "Tangkil" : "",
+        nikInvalidSebab: item.bpjsNikInvalidSebab || "",
+        nikInvalidLabel: ({ nama_berbeda: "Nama Berbeda", tgl_lahir_beda: "Tgl Lahir Berbeda", banyak_desa: "Banyak Desa" })[item.bpjsNikInvalidSebab] || "",
+        kandidatNik: (item.bpjsNikInvalidKandidat || [])
+          .map((c) => `${c.nama || ""} — ${c.desaNama || c.desaKode}${c.kecamatanNama ? ` (${c.kecamatanNama})` : ""}`)
+          .join("; "),
       };
 
       if (item.inDb && item.inBpjs) {
         dbBpjs.push(base);
         if (item.nikMismatch) nikBerbeda.push(base);
-        if (item.bpjsTangkilDbConfirmed) desaBerbeda.push(base);
+        if (item.bpjsDesaBerbeda) desaBerbeda.push(base);
       }
 
       if (item.inBpjs && !item.inDb) {
+        if (item.bpjsNikInvalid) nikInvalid.push(base);
         if (item.inAdd) bpjsCocokAdd.push(base);
         else bpjsNoDb.push({ ...base, sumber: "BPJS (tanpa DB & ADD)" });
       }
@@ -244,7 +260,7 @@ const buildClassification = (data) => {
     || String(a.rt).localeCompare(String(b.rt))
     || String(a.namaDb || a.namaBpjs).localeCompare(String(b.namaDb || b.namaBpjs));
 
-  [dbBpjs, nikBerbeda, desaBerbeda, bpjsNoDb, dbNoBpjs, bpjsCocokAdd].forEach((arr) => arr.sort(bySortKey));
+  [dbBpjs, nikBerbeda, desaBerbeda, nikInvalid, bpjsNoDb, dbNoBpjs, bpjsCocokAdd].forEach((arr) => arr.sort(bySortKey));
 
   // Pecah "DB tidak ada di BPJS" berdasarkan ada/tidaknya referensi ADD.
   const dbNoBpjsAdd = dbNoBpjs.filter((row) => row.adaAdd);
@@ -296,7 +312,7 @@ const buildClassification = (data) => {
   const dbNoBpjsBaruTidak = baruMapped.filter((r) => !r.matchedDb).sort(byBaruSort);
 
   return {
-    dbBpjs, nikBerbeda, desaBerbeda, bpjsNoDb, dbNoBpjs, dbNoBpjsAdd, dbNoBpjsNoAdd, bpjsCocokAdd,
+    dbBpjs, nikBerbeda, desaBerbeda, nikInvalid, bpjsNoDb, dbNoBpjs, dbNoBpjsAdd, dbNoBpjsNoAdd, bpjsCocokAdd,
     dbBpjsAktif, dbBpjsNonAktif,
     bpjsNoDbAktif, bpjsNoDbNonAktif,
     dbNoBpjsBaruAda, dbNoBpjsBaruTidak,
@@ -356,7 +372,7 @@ const TAB_DEFS = [
     label: "DB + BPJS Desa Berbeda",
     bucket: "desaBerbeda",
     title: "Cocok Database & BPJS — Lokasi Desa Berbeda",
-    description: "Anomali BPJS Desa Tangkil: cocok via NIK database namun kode desa asal BPJS berbeda. Angka NIK yang berbeda antara Database & BPJS ditandai merah.",
+    description: "Cocok via NIK database namun kode desa asal BPJS berbeda: anomali Tangkil ATAU NIK yang terdaftar di desa lain (kini di-reassign ke desa database). Angka NIK yang berbeda ditandai merah.",
     columns: [
       COL_DESA, COL_LOKASI,
       { key: "namaDb", label: "Nama DB" },
@@ -364,7 +380,22 @@ const TAB_DEFS = [
       { key: "nikDb", label: "NIK Database", type: "nikDiff", nikKey: "nikDb", otherNikKey: "nikBpjs" },
       { key: "nikBpjs", label: "NIK BPJS", type: "nikDiff", nikKey: "nikBpjs", otherNikKey: "nikDb" },
       { key: "kodeDesaBpjsAsal", label: "Kode Desa BPJS Asal" },
+      { key: "desaBerbedaLabel", label: "Sumber Anomali" },
       { key: "keterangan", label: "Keterangan" },
+    ],
+  },
+  {
+    id: "bpjs_nik_invalid",
+    label: "NIK Invalid",
+    bucket: "nikInvalid",
+    title: "BPJS Tanpa Database — NIK Invalid",
+    description: "Peserta BPJS tanpa padanan DB di desanya; NIK-nya ditemukan di database desa lain namun tak dapat dikonfirmasi (nama berbeda, tanggal lahir berbeda, atau tersebar di >1 desa). Perlu verifikasi manual.",
+    columns: [
+      COL_DESA, COL_LOKASI,
+      { key: "namaBpjs", label: "Nama BPJS" },
+      { key: "nik", label: "NIK" },
+      { key: "nikInvalidLabel", label: "Sebab" },
+      { key: "kandidatNik", label: "Kandidat di Database (desa lain)" },
     ],
   },
   {
@@ -526,6 +557,7 @@ const TAB_COLOR = {
   bpjs_no_db: "amber",
   db_no_bpjs: "gray",
   bpjs_add: "indigo",
+  bpjs_nik_invalid: "red",
   db_bpjs_aktif: "green",
   db_bpjs_non_aktif: "green",
   bpjs_nodb_aktif: "amber",
@@ -582,7 +614,7 @@ const POOLS = [
     label: "BPJS Tidak Ada di Database",
     color: "amber",
     mainTab: "bpjs_no_db",
-    subTabs: ["bpjs_no_db", "bpjs_add", "bpjs_nodb_aktif", "bpjs_nodb_non_aktif"],
+    subTabs: ["bpjs_no_db", "bpjs_add", "bpjs_nodb_aktif", "bpjs_nodb_non_aktif", "bpjs_nik_invalid"],
     count: (tc) => (tc.bpjs_no_db || 0) + (tc.bpjs_add || 0),
   },
   {
@@ -611,6 +643,7 @@ const SUBTAB_SHORT = {
   db_bpjs_non_aktif: "Cek Non-Aktif",
   bpjs_nodb_aktif: "Cek Aktif",
   bpjs_nodb_non_aktif: "Cek Non-Aktif",
+  bpjs_nik_invalid: "NIK Invalid",
   db_no_bpjs_baru_ada: "Baru • di DB",
   db_no_bpjs_baru_tidak: "Baru • tak di DB",
 };
@@ -621,6 +654,7 @@ const SUBTAB_ACCENT = {
   bpjs_nodb_aktif: { color: "green", dot: "bg-green-500" },
   db_bpjs_non_aktif: { color: "red", dot: "bg-red-500" },
   bpjs_nodb_non_aktif: { color: "red", dot: "bg-red-500" },
+  bpjs_nik_invalid: { color: "red", dot: "bg-rose-500" },
 };
 
 // Sub-tab crosscheck Data Status BPJS -> ditaruh di BARIS KEDUA (di bawah sub-tab asli pool).
@@ -629,6 +663,9 @@ const SUBTAB_SECOND_ROW = new Set([
   "bpjs_nodb_aktif", "bpjs_nodb_non_aktif",
   "db_no_bpjs_baru_ada", "db_no_bpjs_baru_tidak",
 ]);
+
+// Sub-tab yang ditaruh di BARIS KETIGA (di bawah Aktif/Non-Aktif).
+const SUBTAB_THIRD_ROW = new Set(["bpjs_nik_invalid"]);
 
 const loadAllDetailsForExport = async (filteredData) => {
   const hasAllDetails = filteredData.every((desa) =>
@@ -805,6 +842,7 @@ const RtrwComparisonPage = () => {
           items: desa.items.filter((item) => {
             if (filterStatus === "nik_mismatch") return item.nikMismatch;
             if (filterStatus === "bpjs_tangkil_suspect") return item.bpjsTangkilSuspect;
+            if (filterStatus === "nik_invalid") return item.bpjsNikInvalid;
             return item.status === filterStatus;
           }),
         }))
@@ -846,6 +884,7 @@ const RtrwComparisonPage = () => {
     db_bpjs: classification.dbBpjs.length,
     nik_berbeda: classification.nikBerbeda.length,
     desa_berbeda: classification.desaBerbeda.length,
+    bpjs_nik_invalid: classification.nikInvalid.length,
     bpjs_no_db: classification.bpjsNoDb.length,
     db_no_bpjs: classification.dbNoBpjs.length,
     db_no_bpjs_no_add: classification.dbNoBpjsNoAdd.length,
@@ -1040,7 +1079,7 @@ const RtrwComparisonPage = () => {
           return (
             <div
               key={pool.id}
-              className={`flex flex-col rounded-xl border p-3 transition-all ${poolActive
+              className={`flex h-full flex-col rounded-xl border p-3 transition-all ${poolActive
                 ? `${TAB_ACTIVE_CLASS[color]} shadow-sm`
                 : "border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm"}`}
             >
@@ -1087,17 +1126,21 @@ const RtrwComparisonPage = () => {
                     </button>
                   );
                 };
-                const baseTabs = pool.subTabs.filter((t) => !SUBTAB_SECOND_ROW.has(t));
-                const extraTabs = pool.subTabs.filter((t) => SUBTAB_SECOND_ROW.has(t));
+                const baseTabs = pool.subTabs.filter((t) => !SUBTAB_SECOND_ROW.has(t) && !SUBTAB_THIRD_ROW.has(t));
+                const secondTabs = pool.subTabs.filter((t) => SUBTAB_SECOND_ROW.has(t));
+                const thirdTabs = pool.subTabs.filter((t) => SUBTAB_THIRD_ROW.has(t));
                 return (
-                  <>
+                  <div className="mt-2 flex flex-1 flex-col gap-2">
                     {baseTabs.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-2">{baseTabs.map(renderSubTab)}</div>
+                      <div className="flex flex-1 flex-wrap gap-2">{baseTabs.map(renderSubTab)}</div>
                     )}
-                    {extraTabs.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-2 border-t border-gray-100 pt-2">{extraTabs.map(renderSubTab)}</div>
+                    {secondTabs.length > 0 && (
+                      <div className="flex flex-1 flex-wrap gap-2 border-t border-gray-100 pt-2">{secondTabs.map(renderSubTab)}</div>
                     )}
-                  </>
+                    {thirdTabs.length > 0 && (
+                      <div className="flex flex-1 flex-wrap gap-2">{thirdTabs.map(renderSubTab)}</div>
+                    )}
+                  </div>
                 );
               })()}
             </div>
@@ -1440,7 +1483,9 @@ const RtrwItemRow = ({ item, index, desaKode }) => {
   const [detailItem, setDetailItem] = useState(item);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState(null);
-  const statusConfig = item.nikMismatch ? STATUS_CONFIG.nik_mismatch : STATUS_CONFIG[item.status];
+  const statusConfig = item.nikMismatch ? STATUS_CONFIG.nik_mismatch
+    : item.bpjsNikInvalid ? STATUS_CONFIG.nik_invalid
+      : STATUS_CONFIG[item.status];
   const bpjsSuspectText = item.bpjsTangkilSuspect
     ? `Kode BPJS asal ${item.bpjsOriginalDesaNama || "Tangkil"} (${item.bpjsOriginalDesaKode || "-"}), disandingkan berdasarkan nama${item.bpjsTangkilAmbiguous ? ` dari ${item.bpjsTangkilCandidateCount} kandidat` : ""}.`
     : "";
