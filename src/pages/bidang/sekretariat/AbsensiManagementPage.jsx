@@ -5,7 +5,7 @@ import {
   FiUsers, FiX, FiSmartphone, FiImage, FiSave,
   FiToggleLeft, FiToggleRight, FiUpload, FiSettings,
   FiChevronDown, FiChevronLeft, FiChevronRight, FiFilter, FiArrowLeft, FiEye, FiUser, FiBell, FiSend,
-  FiUserPlus,
+  FiUserPlus, FiMapPin,
 } from "react-icons/fi";
 import { LuDownload, LuRefreshCw, LuShieldCheck, LuWifi, LuWifiOff, LuLayoutGrid, LuList, LuFileSpreadsheet, LuFileText, LuChartColumn, LuLayoutDashboard, LuArrowUpDown, LuSlidersHorizontal, LuTrophy, LuCrown } from "react-icons/lu";
 import Lottie from "lottie-react";
@@ -14,6 +14,9 @@ import api from "../../../api";
 import { showAlert } from "../../../components/AlertPopup";
 import { useAuth } from "../../../context/AuthContext";
 import { getAvatarUrl } from "../../../utils/avatarUtils";
+
+// Lazy: tab ini membawa Leaflet yang berat dan hanya dipakai superadmin.
+const LokasiKhususTab = React.lazy(() => import("./LokasiKhususTab"));
 
 // ─── Constants ────────────────────────────────────────────────
 const STATUS_MAP = {
@@ -764,6 +767,8 @@ const AbsensiManagementPage = () => {
     { key: "pegawai", label: "Daftar Pegawai", icon: FiUsers, count: pegawai.length },
     { key: "popup", label: "Popup", icon: FiImage, count: popupMessages.length },
     { key: "reminder", label: "Reminder", icon: FiBell },
+    // Menentukan titik absen menyangkut keabsahan presensi — superadmin saja.
+    ...(canManageAbsensiRecords ? [{ key: "lokasi", label: "Lokasi Khusus", icon: FiMapPin }] : []),
   ];
 
   // ─── Export Functions ─────────────────────────────────────
@@ -2949,6 +2954,18 @@ const AbsensiManagementPage = () => {
               </div>
             )}
           </div>
+        )}
+
+        {activeTab === "lokasi" && canManageAbsensiRecords && (
+          <React.Suspense
+            fallback={
+              <div className="flex justify-center py-16">
+                <div className="w-9 h-9 border-[3px] border-cyan-200 border-t-cyan-500 rounded-full animate-spin" />
+              </div>
+            }
+          >
+            <LokasiKhususTab />
+          </React.Suspense>
         )}
       </div>
 

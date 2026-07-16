@@ -267,7 +267,10 @@ const AbsensiPage = () => {
 				showAlert({
 					icon: "error",
 					title: isJarak ? "Kejauhan Cuy! 🏃‍♂️💨" : "Absensi Gagal",
-					text: isJarak ? `😅 Kamu masih jauh dari kantor nih!\n\n📍 Maksimal 500 meter dari kantor ya!\n\n🦶 Coba deketin dulu baru absen lagi~ 🫡` : errMsg,
+					// Pesan jarak memakai teks dari server: pegawai dengan titik lokasi
+					// khusus tidak selalu harus mendekat ke kantor, dan radiusnya bisa
+					// berbeda per titik — teks hardcoded akan menyesatkan mereka.
+					text: isJarak ? `😅 ${errMsg}\n\n🦶 Coba deketin dulu baru absen lagi~ 🫡` : errMsg,
 				});
 			}
 		} finally { setClockLoading(false); }
