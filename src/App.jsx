@@ -217,6 +217,10 @@ const PencairanAtkListPage = lazy(() => import("./pages/bidang/sekretariat/penca
 const PencairanAtkFormPage = lazy(() => import("./pages/bidang/sekretariat/pencairan/PencairanAtkFormPage"));
 const PencairanAtkDetailPage = lazy(() => import("./pages/bidang/sekretariat/pencairan/PencairanAtkDetailPage"));
 const PenyediaPage = lazy(() => import("./pages/bidang/sekretariat/pencairan/PenyediaPage"));
+const ArsipBarangPage = lazy(() => import("./pages/bidang/sekretariat/arsip-barang/ArsipBarangPage"));
+const ArsipBarangFormPage = lazy(() => import("./pages/bidang/sekretariat/arsip-barang/ArsipBarangFormPage"));
+const ArsipBarangDetailPage = lazy(() => import("./pages/bidang/sekretariat/arsip-barang/ArsipBarangDetailPage"));
+const ArsipBarangQrPage = lazy(() => import("./pages/bidang/sekretariat/arsip-barang/ArsipBarangQrPage"));
 
 // Bidang pages
 const SekretariatPage = lazy(() => import("./pages/bidang/SekretariatPage"));
@@ -1179,6 +1183,13 @@ function App() {
                   <Route path="pencairan/atk/:id" element={<RoleProtectedRoute allowedRoles={["bendahara", "superadmin"]}><PencairanAtkDetailPage /></RoleProtectedRoute>} />
                   <Route path="pencairan/atk/:id/edit" element={<RoleProtectedRoute allowedRoles={["bendahara", "superadmin"]}><PencairanAtkFormPage /></RoleProtectedRoute>} />
                   <Route path="pencairan/penyedia" element={<RoleProtectedRoute allowedRoles={["bendahara", "superadmin"]}><PenyediaPage /></RoleProtectedRoute>} />
+
+                  {/* Arsip Barang — tujuan QR label ada di "arsip-barang/qr/:token" */}
+                  <Route path="arsip-barang" element={<ArsipBarangPage />} />
+                  <Route path="arsip-barang/baru" element={<ArsipBarangFormPage />} />
+                  <Route path="arsip-barang/qr/:token" element={<ArsipBarangQrPage />} />
+                  <Route path="arsip-barang/:id" element={<ArsipBarangDetailPage />} />
+                  <Route path="arsip-barang/:id/edit" element={<ArsipBarangFormPage />} />
                 </Route>
 
                 {/* Video Meeting Room - MAINTENANCE */}
@@ -1244,6 +1255,13 @@ function App() {
                   <Route path="bidang/sekretariat/pencairan/atk/:id" element={<RoleProtectedRoute allowedRoles={["bendahara", "superadmin"]}><PencairanAtkDetailPage /></RoleProtectedRoute>} />
                   <Route path="bidang/sekretariat/pencairan/atk/:id/edit" element={<RoleProtectedRoute allowedRoles={["bendahara", "superadmin"]}><PencairanAtkFormPage /></RoleProtectedRoute>} />
                   <Route path="bidang/sekretariat/pencairan/penyedia" element={<RoleProtectedRoute allowedRoles={["bendahara", "superadmin"]}><PenyediaPage /></RoleProtectedRoute>} />
+
+                  {/* Arsip Barang */}
+                  <Route path="bidang/sekretariat/arsip-barang" element={<ArsipBarangPage />} />
+                  <Route path="bidang/sekretariat/arsip-barang/baru" element={<ArsipBarangFormPage />} />
+                  <Route path="bidang/sekretariat/arsip-barang/qr/:token" element={<ArsipBarangQrPage />} />
+                  <Route path="bidang/sekretariat/arsip-barang/:id" element={<ArsipBarangDetailPage />} />
+                  <Route path="bidang/sekretariat/arsip-barang/:id/edit" element={<ArsipBarangFormPage />} />
 
                   {/* KKD sub-routes */}
                   <Route path="bidang/kkd/add" element={<AddDashboard />} />
