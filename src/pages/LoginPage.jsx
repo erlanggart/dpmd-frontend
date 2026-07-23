@@ -2,12 +2,10 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 import api from "../api";
-import { FiEye, FiEyeOff, FiLoader, FiAlertCircle, FiBell, FiInfo, FiLock, FiClock, FiMapPin } from "react-icons/fi";
+import { FiEye, FiEyeOff, FiLoader, FiAlertCircle, FiLock, FiClock, FiMapPin } from "react-icons/fi";
 import LoginImageSlider from "../components/login/LoginImageSlider";
 import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
-import { requestNotificationPermission, registerServiceWorker } from "../utils/pushNotifications";
-import NotificationSettingsGuide from "../components/NotificationSettingsGuide";
 
 // Ambil posisi GPS sebagai Promise (lokasi WAJIB saat login).
 const getCurrentPosition = (options = {}) =>
@@ -33,11 +31,7 @@ const LoginPage = () => {
 	const [loading, setLoading] = useState(false);
 	const navigate = useNavigate();
 	const [showPassword, setShowPassword] = useState(false);
-	const [showNotificationGuide, setShowNotificationGuide] = useState(false);
 	const { login } = useAuth();
-	const [notificationPermission, setNotificationPermission] = useState('default');
-	const [checkingNotification, setCheckingNotification] = useState(false);
-	const [isPWA, setIsPWA] = useState(false);
 	const [lockoutUntil, setLockoutUntil] = useState(null);
 	const [lockoutRemaining, setLockoutRemaining] = useState(0);
 	// Lokasi wajib saat login
@@ -45,15 +39,7 @@ const LoginPage = () => {
 	const [locationStatus, setLocationStatus] = useState('unknown'); // unknown | granted | denied | error
 	const [gettingLocation, setGettingLocation] = useState(false);
 
-	// Detect PWA standalone mode & check notification permission on mount
 	useEffect(() => {
-		const standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-		setIsPWA(standalone);
-
-		if ('Notification' in window) {
-			setNotificationPermission(Notification.permission);
-		}
-
 		// Cek status izin lokasi (jika browser mendukung Permissions API).
 		if (navigator.permissions?.query) {
 			navigator.permissions.query({ name: 'geolocation' }).then((res) => {
@@ -112,60 +98,12 @@ const LoginPage = () => {
 	const lockoutMinutes = Math.floor(lockoutRemaining / 60000);
 	const lockoutSeconds = Math.floor((lockoutRemaining % 60000) / 1000);
 
-	const handleRequestNotification = async () => {
-		setCheckingNotification(true);
-		setError(null);
-		
-		try {
-			// Register service worker first
-			await registerServiceWorker();
-			
-			// Request notification permission
-			const granted = await requestNotificationPermission();
-			
-			if (granted) {
-				setNotificationPermission('granted');
-				toast.success('Notifikasi diizinkan!', {
-					duration: 4000,
-					icon: '📱',
-					style: {
-						background: '#10b981',
-						color: '#fff',
-						fontWeight: 'bold'
-					}
-				});
-			} else {
-				setNotificationPermission(Notification.permission);
-				toast.error('Izin notifikasi ditolak!', {
-					duration: 4000,
-					icon: '❌'
-				});
-			}
-		} catch (error) {
-			console.error('Error requesting notification:', error);
-			setError('Gagal meminta izin notifikasi. Coba lagi.');
-		} finally {
-			setCheckingNotification(false);
-		}
-	};
-
 	const handleLogin = async (e) => {
 		e.preventDefault();
-		
-		// Update notification permission state
-		if ('Notification' in window) {
-			setNotificationPermission(Notification.permission);
-		}
 
 		// Block login if currently locked out
 		if (isLockedOut) {
 			setError(`Terlalu banyak percobaan login. Coba lagi dalam ${lockoutMinutes}:${lockoutSeconds.toString().padStart(2, '0')}`);
-			return;
-		}
-
-		// Block login in PWA mode if notifications not granted
-		if (isPWA && Notification.permission !== 'granted') {
-			setError('Anda harus mengizinkan notifikasi terlebih dahulu untuk login melalui aplikasi.');
 			return;
 		}
 
@@ -301,41 +239,9 @@ const LoginPage = () => {
 					<h2 className="mt-2 text-3xl font-bold tracking-normal text-slate-950 sm:text-4xl">Selamat datang</h2>
 					<p className="mt-3 text-sm leading-6 text-slate-600">Gunakan akun DPMD, desa, kecamatan, atau dinas terkait untuk melanjutkan.</p>
 
-					{/* Izin perangkat dibuat ringkas agar form login tetap terasa ringan. */}
-					<div className="mt-7 grid gap-3 md:grid-cols-2">
-						<div className="min-w-0 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-							<div className="flex items-center gap-3">
-								<div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
-									<FiBell className="h-5 w-5" />
-								</div>
-								<p className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-900">Notifikasi</p>
-							{notificationPermission === 'granted' ? (
-								<button
-									type="button"
-									onClick={() => setShowNotificationGuide(true)}
-										className="flex flex-shrink-0 items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1.5 text-[11px] font-semibold leading-none text-emerald-700"
-									title="Panduan pengaturan notifikasi"
-								>
-									✓ Siap <FiInfo className="h-3.5 w-3.5" />
-								</button>
-							) : (
-								<button
-									type="button"
-									onClick={handleRequestNotification}
-									disabled={checkingNotification}
-										className="flex flex-shrink-0 items-center rounded-xl bg-blue-700 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-blue-800 disabled:opacity-60"
-								>
-									{checkingNotification ? <FiLoader className="h-4 w-4 animate-spin" /> : 'Aktifkan'}
-								</button>
-							)}
-							</div>
-							<p className="mt-3 text-xs leading-relaxed text-slate-500">
-								{notificationPermission === 'denied'
-									? 'Diblokir oleh browser.'
-									: 'Dipakai untuk info penting.'}
-							</p>
-						</div>
-
+					{/* Hanya lokasi — izin notifikasi tidak lagi diminta di sini; langganan
+					    push dibentuk setelah login oleh layout masing-masing peran. */}
+					<div className="mt-7 grid gap-3">
 						<div className="min-w-0 rounded-2xl border border-slate-200 bg-slate-50 p-4">
 							<div className="flex items-center gap-3">
 								<div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-700">
@@ -418,7 +324,7 @@ const LoginPage = () => {
 						</div>
 						<button
 							type="submit"
-							disabled={loading || isLockedOut || (isPWA && notificationPermission !== 'granted') || locationStatus !== 'granted'}
+							disabled={loading || isLockedOut || locationStatus !== 'granted'}
 							className={`flex min-h-12 w-full items-center justify-center rounded-2xl px-5 py-3.5 text-sm font-bold text-white shadow-lg transition disabled:cursor-not-allowed disabled:opacity-65 ${
 								isLockedOut ? 'bg-red-500 shadow-red-500/20' : 'bg-[rgb(var(--color-primary))] shadow-slate-950/15 hover:bg-slate-800 disabled:bg-slate-400'
 							}`}
@@ -430,8 +336,6 @@ const LoginPage = () => {
 									<FiLock className="h-4 w-4" />
 									Dikunci {lockoutMinutes}:{lockoutSeconds.toString().padStart(2, '0')}
 								</span>
-							) : (isPWA && notificationPermission !== 'granted') ? (
-								"Izinkan Notifikasi Dulu"
 							) : locationStatus !== 'granted' ? (
 								"Aktifkan Lokasi Dulu"
 							) : (
@@ -472,10 +376,6 @@ const LoginPage = () => {
 				</div>
 			</div>
 
-			{/* Notification Settings Guide Modal */}
-			{showNotificationGuide && (
-				<NotificationSettingsGuide onClose={() => setShowNotificationGuide(false)} />
-			)}
 		</div>
 	);
 };
