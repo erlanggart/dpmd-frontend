@@ -4,8 +4,10 @@ const isDevelopment = import.meta.env.DEV || window.location.hostname === 'local
 
 export const API_ENDPOINTS = {
   // Express Backend - use env variable or default based on environment
-  EXPRESS_BASE: import.meta.env.VITE_API_BASE_URL || 
-    (isDevelopment ? 'http://localhost:3001/api' : 'https://dpmdbogorkab.id/api'),
+  // Produksi memakai '/api' relatif, bukan domain absolut: origin-nya sama dengan
+  // halaman yang dibuka, jadi perpindahan domain tidak menyentuh file ini.
+  EXPRESS_BASE: import.meta.env.VITE_API_BASE_URL ||
+    (isDevelopment ? 'http://localhost:3001/api' : '/api'),
 };
 
 /**

@@ -8,9 +8,13 @@
  * @returns {string} Base URL for avatar storage
  */
 export const getAvatarBaseUrl = () => {
-  // In production, use the API domain without /api suffix
+  // Produksi: ikut host yang sedang dibuka. Jangan hardcode domain — frontend dan
+  // backend disajikan dari origin yang sama lewat nginx, dan domain sempat berpindah
+  // (dpmdbogorkab.id → dpmd.bogorkab.go.id). Same-origin bikin ini tidak perlu
+  // disentuh lagi kalau domain berubah, sekaligus tetap benar saat diakses lewat
+  // domain lama yang masih diredirect.
   if (import.meta.env.PROD) {
-    return 'https://dpmdbogorkab.id';
+    return window.location.origin;
   }
   
   // In development, use local server

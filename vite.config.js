@@ -118,7 +118,12 @@ export default defineConfig({
 						}
 					},
 					{
-						urlPattern: /^https:\/\/dpmdbogorkab\.id\/api\/.*/i,
+						// Tanpa domain agar tetap cocok setelah pindah ke dpmd.bogorkab.go.id.
+						// JANGAN diberi jangkar ^: Workbox mencocokkan regex ini ke URL
+						// lengkap (href), sehingga ^\/api\/ tidak akan pernah cocok. Tanpa
+						// jangkar, kecocokan di tengah href hanya diterima untuk request
+						// same-origin — persis yang kita mau.
+						urlPattern: /\/api\/.*/i,
 						handler: 'NetworkFirst',
 						options: {
 							cacheName: 'api-cache',
@@ -132,7 +137,7 @@ export default defineConfig({
 						}
 					},
 					{
-						urlPattern: /^https:\/\/dpmdbogorkab\.id\/(storage|uploads|public)\/.*/i,
+						urlPattern: /\/(storage|uploads|public)\/.*/i,
 						handler: 'CacheFirst',
 						options: {
 							cacheName: 'media-cache',
