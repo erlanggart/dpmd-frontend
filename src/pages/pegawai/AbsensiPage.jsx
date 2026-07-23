@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
 	FiCheckCircle, FiXCircle, FiCalendar,
 	FiChevronLeft, FiChevronRight, FiAlertCircle, FiMapPin,
-	FiCamera, FiSmartphone,
+	FiCamera, FiSmartphone, FiClock,
 } from "react-icons/fi";
 import {
 	LuLogIn, LuLogOut, LuClipboardList, LuFileText, LuHeartPulse, LuCalendarOff,
@@ -78,7 +78,7 @@ const getDeviceType = () => {
 
 // ═══════════════════════════════════════════════════════════════
 const AbsensiPage = () => {
-	const [searchParams] = useSearchParams();
+	const [searchParams, setSearchParams] = useSearchParams();
 	const [user] = useState(JSON.parse(localStorage.getItem("user") || "{}"));
 	const [todayData, setTodayData] = useState(null);
 	const [absensiSettings, setAbsensiSettings] = useState({});
@@ -102,6 +102,7 @@ const AbsensiPage = () => {
 	const [successMessages, setSuccessMessages] = useState({});
 	const [successPopup, setSuccessPopup] = useState({ show: false, data: null });
 	const [showLeaderboard, setShowLeaderboard] = useState(false);
+	const [showMonthPicker, setShowMonthPicker] = useState(false);
 
 	useEffect(() => { const t = setInterval(() => setCurrentTime(new Date()), 1000); return () => clearInterval(t); }, []);
 
@@ -290,9 +291,27 @@ const AbsensiPage = () => {
 		} catch (err) { showAlert({ icon: "error", title: "Gagal", text: err.response?.data?.message || "Gagal submit" }); }
 	};
 
-	const prevMonth = () => { if (selectedMonth === 1) { setSelectedMonth(12); setSelectedYear(y => y - 1); } else setSelectedMonth(m => m - 1); };
-	const nextMonth = () => { if (selectedMonth === 12) { setSelectedMonth(1); setSelectedYear(y => y + 1); } else setSelectedMonth(m => m + 1); };
 	const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+
+	// Bulan depan tidak pernah punya data — dibatasi agar pengguna tidak
+	// menyusuri halaman kosong dan mengira riwayatnya hilang.
+	const today = new Date();
+	const isAtCurrentMonth = selectedYear === today.getFullYear() && selectedMonth === today.getMonth() + 1;
+	const isFutureMonth = (year, monthIdx) =>
+		year > today.getFullYear() || (year === today.getFullYear() && monthIdx > today.getMonth());
+
+	const prevMonth = () => { if (selectedMonth === 1) { setSelectedMonth(12); setSelectedYear(y => y - 1); } else setSelectedMonth(m => m - 1); };
+	const nextMonth = () => {
+		if (isAtCurrentMonth) return;
+		if (selectedMonth === 12) { setSelectedMonth(1); setSelectedYear(y => y + 1); } else setSelectedMonth(m => m + 1);
+	};
+
+	// Tab disetir lewat query string supaya tombol "kembali" browser berfungsi
+	// dan tautan ?tab=riwayat yang sudah dipakai di menu lain tetap sah.
+	const toggleRiwayat = () => {
+		setShowMonthPicker(false);
+		setSearchParams(activeTab === "riwayat" ? {} : { tab: "riwayat" });
+	};
 
 	// ─── Loading ─────────────────────────────────────────────
 	if (loading) {
@@ -563,6 +582,19 @@ const AbsensiPage = () => {
 						</div>
 					</div>
 					<div className="flex items-center gap-2 flex-shrink-0">
+						{/* Riwayat dulu hanya bisa dicapai lewat URL ?tab=riwayat — tanpa
+						    tombol ini tidak ada jalan masuk dari dalam halaman. */}
+						<button onClick={toggleRiwayat}
+							className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold shadow-sm active:scale-95 transition border ${
+								activeTab === "riwayat"
+									? "bg-slate-800 text-white border-slate-800"
+									: "bg-white text-slate-600 border-slate-200 hover:border-slate-300"
+							}`}
+							title={activeTab === "riwayat" ? "Kembali ke presensi" : "Lihat riwayat absensi"}>
+							{activeTab === "riwayat"
+								? <><FiClock className="h-3.5 w-3.5" /> Presensi</>
+								: <><FiCalendar className="h-3.5 w-3.5" /> Riwayat</>}
+						</button>
 						<button onClick={() => setShowLeaderboard(true)}
 							className="flex items-center gap-1 px-2.5 py-1 bg-gradient-to-r from-orange-500 to-amber-500 rounded-lg text-[10px] font-bold text-white shadow-sm active:scale-95 transition"
 							title="Peringkat Absen Terbaik">
@@ -1096,15 +1128,74 @@ const AbsensiPage = () => {
 								</div>
 							</div>
 
-							{/* Month nav */}
-							<div className="flex items-center justify-between mb-2 flex-shrink-0">
-								<button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-slate-50 cursor-pointer">
-									<FiChevronLeft className="h-4 w-4 text-slate-400" />
-								</button>
-								<span className="font-bold text-slate-700 text-xs">{monthNames[selectedMonth - 1]} {selectedYear}</span>
-								<button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-slate-50 cursor-pointer">
-									<FiChevronRight className="h-4 w-4 text-slate-400" />
-								</button>
+							{/* Filter bulan: panah untuk geser satu-satu, label untuk lompat
+							    langsung ke bulan mana pun lewat pemilih di bawahnya. */}
+							<div className="relative mb-2 flex-shrink-0">
+								<div className="flex items-center gap-1 p-1 rounded-xl bg-slate-50 border border-slate-100">
+									<button onClick={prevMonth} title="Bulan sebelumnya"
+										className="p-1.5 rounded-lg hover:bg-white active:scale-95 transition cursor-pointer">
+										<FiChevronLeft className="h-4 w-4 text-slate-500" />
+									</button>
+
+									<button onClick={() => setShowMonthPicker(v => !v)}
+										className="flex-1 flex items-center justify-center gap-1.5 py-1 rounded-lg hover:bg-white active:scale-95 transition cursor-pointer"
+										title="Pilih bulan">
+										<FiCalendar className="h-3.5 w-3.5 text-orange-500" />
+										<span className="font-bold text-slate-700 text-xs">{monthNames[selectedMonth - 1]} {selectedYear}</span>
+									</button>
+
+									<button onClick={nextMonth} disabled={isAtCurrentMonth}
+										title={isAtCurrentMonth ? "Sudah di bulan berjalan" : "Bulan berikutnya"}
+										className="p-1.5 rounded-lg hover:bg-white active:scale-95 transition cursor-pointer disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent">
+										<FiChevronRight className="h-4 w-4 text-slate-500" />
+									</button>
+								</div>
+
+								<AnimatePresence>
+									{showMonthPicker && (
+										<>
+											<div className="fixed inset-0 z-20" onClick={() => setShowMonthPicker(false)} />
+											<motion.div
+												initial={{ opacity: 0, y: -6, scale: 0.98 }}
+												animate={{ opacity: 1, y: 0, scale: 1 }}
+												exit={{ opacity: 0, y: -6, scale: 0.98 }}
+												transition={{ duration: 0.15 }}
+												className="absolute left-0 right-0 top-full mt-1.5 z-30 p-3 rounded-2xl bg-white border border-slate-100 shadow-xl shadow-slate-300/40"
+											>
+												<div className="flex items-center justify-between mb-2.5">
+													<button onClick={() => setSelectedYear(y => y - 1)}
+														className="p-1 rounded-lg hover:bg-slate-50 active:scale-95 transition cursor-pointer">
+														<FiChevronLeft className="h-3.5 w-3.5 text-slate-400" />
+													</button>
+													<span className="text-xs font-black text-slate-700 tabular-nums">{selectedYear}</span>
+													<button onClick={() => setSelectedYear(y => y + 1)}
+														disabled={selectedYear >= today.getFullYear()}
+														className="p-1 rounded-lg hover:bg-slate-50 active:scale-95 transition cursor-pointer disabled:opacity-25 disabled:cursor-not-allowed">
+														<FiChevronRight className="h-3.5 w-3.5 text-slate-400" />
+													</button>
+												</div>
+
+												<div className="grid grid-cols-3 gap-1">
+													{monthNames.map((nama, i) => {
+														const nonaktif = isFutureMonth(selectedYear, i);
+														const aktif = selectedMonth === i + 1;
+														return (
+															<button key={nama} disabled={nonaktif}
+																onClick={() => { setSelectedMonth(i + 1); setShowMonthPicker(false); }}
+																className={`py-1.5 rounded-lg text-[10px] font-bold transition cursor-pointer disabled:opacity-25 disabled:cursor-not-allowed ${
+																	aktif
+																		? "bg-orange-500 text-white shadow-sm shadow-orange-500/30"
+																		: "text-slate-600 hover:bg-slate-50"
+																}`}>
+																{nama.slice(0, 3)}
+															</button>
+														);
+													})}
+												</div>
+											</motion.div>
+										</>
+									)}
+								</AnimatePresence>
 							</div>
 
 							{/* List */}
