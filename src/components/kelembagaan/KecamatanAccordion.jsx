@@ -37,6 +37,50 @@ const SummaryChip = ({ icon: Icon, title, value, color }) => {
   );
 };
 
+// Ambil angka sesuai mode. Belum terverifikasi = total - terverifikasi (termasuk yang ditolak).
+// Bekerja untuk desa (status berupa string) maupun kecamatan (semua berupa angka).
+const pickCounts = (node, mode) => {
+  const verified = node.verifiedKelembagaan || {};
+  if (mode === "verified") return verified;
+
+  const total = node.kelembagaan || node.totalKelembagaan || {};
+  const pick = (key) =>
+    typeof total[key] === "number"
+      ? Math.max((total[key] || 0) - (verified[key] || 0), 0)
+      : total[key] === "Terbentuk" && verified[key] !== "Terbentuk"
+      ? "Terbentuk"
+      : "Belum Terbentuk";
+
+  return {
+    rw: pick("rw"),
+    rt: pick("rt"),
+    posyandu: pick("posyandu"),
+    karangTaruna: pick("karangTaruna"),
+    lpm: pick("lpm"),
+    pkk: pick("pkk"),
+    satlinmas: pick("satlinmas"),
+  };
+};
+
+const StatusCell = ({ desa, counts, field, mode }) => {
+  if (mode === "verified") {
+    return (
+      <VerifiedStatusBadge
+        status={desa.kelembagaan?.[field] || "Belum Terbentuk"}
+        verifiedStatus={desa.verifiedKelembagaan?.[field] || "Belum Terbentuk"}
+      />
+    );
+  }
+
+  return counts[field] === "Terbentuk" ? (
+    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+      Belum Terverifikasi
+    </span>
+  ) : (
+    <span className="text-xs text-gray-400">—</span>
+  );
+};
+
 const VerifiedStatusBadge = ({ status, verifiedStatus }) => {
   if (status === "Belum Terbentuk") {
     return (
@@ -60,7 +104,7 @@ const VerifiedStatusBadge = ({ status, verifiedStatus }) => {
   );
 };
 
-const KecamatanAccordion = ({ kecamatanData, onDesaClick }) => {
+const KecamatanAccordion = ({ kecamatanData, onDesaClick, mode = "verified", onModeChange }) => {
   const [expandedKecamatan, setExpandedKecamatan] = useState({});
   const [searchKecamatan, setSearchKecamatan] = useState("");
   const [searchDesa, setSearchDesa] = useState("");
@@ -112,18 +156,42 @@ const KecamatanAccordion = ({ kecamatanData, onDesaClick }) => {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <div className="h-10 w-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-md">
-          <LuBuilding2 className="h-5 w-5 text-white" />
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-md">
+            <LuBuilding2 className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">Data Kecamatan & Desa</h2>
+            <p className="text-sm text-gray-500">
+              {isSearching
+                ? `${filteredKecamatanData.length} Kecamatan • ${visibleDesaCount} Desa/Kelurahan ditemukan`
+                : `${kecamatanData.length} Kecamatan — Klik untuk melihat detail kelembagaan`}
+            </p>
+          </div>
         </div>
-        <div>
-          <h2 className="text-lg font-bold text-gray-900">Data Kecamatan & Desa</h2>
-          <p className="text-sm text-gray-500">
-            {isSearching
-              ? `${filteredKecamatanData.length} Kecamatan • ${visibleDesaCount} Desa/Kelurahan ditemukan`
-              : `${kecamatanData.length} Kecamatan — Klik untuk melihat detail kelembagaan`}
-          </p>
-        </div>
+
+        {onModeChange && (
+          <div className="inline-flex rounded-xl border border-gray-200 bg-gray-100 p-1">
+            {[
+              { id: "verified", label: "Terverifikasi" },
+              { id: "unverified", label: "Belum Terverifikasi" },
+            ].map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => onModeChange(item.id)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  mode === item.id
+                    ? "bg-white text-blue-600 shadow-sm"
+                    : "text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -184,6 +252,7 @@ const KecamatanAccordion = ({ kecamatanData, onDesaClick }) => {
 
       filteredKecamatanData.map((kecamatan) => {
         const isExpanded = isSearching || expandedKecamatan[kecamatan.id];
+        const kecCounts = pickCounts(kecamatan, mode);
 
         return (
         <div
@@ -210,15 +279,15 @@ const KecamatanAccordion = ({ kecamatanData, onDesaClick }) => {
               {/* Summary Stats - Verified Only */}
               <div className="hidden md:flex items-center gap-2 text-sm">
                 <div className="flex items-center gap-1.5 bg-purple-50 text-purple-700 px-2.5 py-1 rounded-lg">
-                  <span className="font-bold">{kecamatan.verifiedKelembagaan?.rw || 0}</span>
+                  <span className="font-bold">{kecCounts.rw || 0}</span>
                   <span className="text-purple-500 text-xs">RW</span>
                 </div>
                 <div className="flex items-center gap-1.5 bg-green-50 text-green-700 px-2.5 py-1 rounded-lg">
-                  <span className="font-bold">{kecamatan.verifiedKelembagaan?.rt || 0}</span>
+                  <span className="font-bold">{kecCounts.rt || 0}</span>
                   <span className="text-green-500 text-xs">RT</span>
                 </div>
                 <div className="flex items-center gap-1.5 bg-red-50 text-red-700 px-2.5 py-1 rounded-lg">
-                  <span className="font-bold">{kecamatan.verifiedKelembagaan?.posyandu || 0}</span>
+                  <span className="font-bold">{kecCounts.posyandu || 0}</span>
                   <span className="text-red-500 text-xs">Posyandu</span>
                 </div>
               </div>
@@ -236,15 +305,17 @@ const KecamatanAccordion = ({ kecamatanData, onDesaClick }) => {
               {/* Summary Table for Kecamatan */}
               <div className="p-5 bg-gray-50/80">
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">
-                  Kelembagaan Terverifikasi
+                  {mode === "verified"
+                    ? "Kelembagaan Terverifikasi"
+                    : "Kelembagaan Belum Terverifikasi"}
                 </p>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-                  <SummaryChip icon={LuUsers} title="RW" value={kecamatan.verifiedKelembagaan?.rw} color="#9333ea" />
-                  <SummaryChip icon={LuUser} title="RT" value={kecamatan.verifiedKelembagaan?.rt} color="#16a34a" />
-                  <SummaryChip icon={LuHeartHandshake} title="Posyandu" value={kecamatan.verifiedKelembagaan?.posyandu} color="#dc2626" />
-                  <SummaryChip icon={LuUsers} title="Karang Taruna" value={kecamatan.verifiedKelembagaan?.karangTaruna} color="#2563eb" />
-                  <SummaryChip icon={LuBuilding2} title="LPM" value={kecamatan.verifiedKelembagaan?.lpm} color="#4f46e5" />
-                  <SummaryChip icon={LuHeart} title="PKK" value={kecamatan.verifiedKelembagaan?.pkk} color="#ec4899" />
+                  <SummaryChip icon={LuUsers} title="RW" value={kecCounts.rw} color="#9333ea" />
+                  <SummaryChip icon={LuUser} title="RT" value={kecCounts.rt} color="#16a34a" />
+                  <SummaryChip icon={LuHeartHandshake} title="Posyandu" value={kecCounts.posyandu} color="#dc2626" />
+                  <SummaryChip icon={LuUsers} title="Karang Taruna" value={kecCounts.karangTaruna} color="#2563eb" />
+                  <SummaryChip icon={LuBuilding2} title="LPM" value={kecCounts.lpm} color="#4f46e5" />
+                  <SummaryChip icon={LuHeart} title="PKK" value={kecCounts.pkk} color="#ec4899" />
                 </div>
               </div>
 
@@ -284,7 +355,9 @@ const KecamatanAccordion = ({ kecamatanData, onDesaClick }) => {
                       </tr>
                     </thead>
                     <tbody>
-                      {kecamatan.desas.map((desa) => (
+                      {kecamatan.desas.map((desa) => {
+                        const desaCounts = pickCounts(desa, mode);
+                        return (
                         <tr
                           key={desa.id}
                           className="hover:bg-blue-50 cursor-pointer transition-colors"
@@ -314,53 +387,31 @@ const KecamatanAccordion = ({ kecamatanData, onDesaClick }) => {
                           </td>
                           <td className="border border-gray-300 px-4 py-3 text-center">
                             <span className="text-sm font-semibold text-gray-800">
-                              {desa.verifiedKelembagaan?.rw || 0}
+                              {desaCounts.rw || 0}
                             </span>
                           </td>
                           <td className="border border-gray-300 px-4 py-3 text-center">
                             <span className="text-sm font-semibold text-gray-800">
-                              {desa.verifiedKelembagaan?.rt || 0}
+                              {desaCounts.rt || 0}
                             </span>
                           </td>
                           <td className="border border-gray-300 px-4 py-3 text-center">
                             <span className="text-sm font-semibold text-gray-800">
-                              {desa.verifiedKelembagaan?.posyandu || 0}
+                              {desaCounts.posyandu || 0}
                             </span>
                           </td>
                           <td className="border border-gray-300 px-4 py-3 text-center">
-                            <VerifiedStatusBadge
-                              status={
-                                desa.kelembagaan?.karangTaruna ||
-                                "Belum Terbentuk"
-                              }
-                              verifiedStatus={
-                                desa.verifiedKelembagaan?.karangTaruna ||
-                                "Belum Terbentuk"
-                              }
-                            />
+                            <StatusCell desa={desa} counts={desaCounts} field="karangTaruna" mode={mode} />
                           </td>
                           <td className="border border-gray-300 px-4 py-3 text-center">
-                            <VerifiedStatusBadge
-                              status={
-                                desa.kelembagaan?.lpm || "Belum Terbentuk"
-                              }
-                              verifiedStatus={
-                                desa.verifiedKelembagaan?.lpm || "Belum Terbentuk"
-                              }
-                            />
+                            <StatusCell desa={desa} counts={desaCounts} field="lpm" mode={mode} />
                           </td>
                           <td className="border border-gray-300 px-4 py-3 text-center">
-                            <VerifiedStatusBadge
-                              status={
-                                desa.kelembagaan?.pkk || "Belum Terbentuk"
-                              }
-                              verifiedStatus={
-                                desa.verifiedKelembagaan?.pkk || "Belum Terbentuk"
-                              }
-                            />
+                            <StatusCell desa={desa} counts={desaCounts} field="pkk" mode={mode} />
                           </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

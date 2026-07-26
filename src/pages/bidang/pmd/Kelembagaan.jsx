@@ -18,7 +18,7 @@ import TabelVerifikasiTahunan from "../../../components/kelembagaan/TabelVerifik
 import CapaianVerifikasiLembaga from "../../../components/kelembagaan/CapaianVerifikasiLembaga";
 import RingkasanStatusKelembagaan from "../../../components/kelembagaan/RingkasanStatusKelembagaan";
 import useStatistikTahunan from "../../../hooks/useStatistikTahunan";
-import UnverifiedKelembagaanList from "../../../components/kelembagaan/UnverifiedKelembagaanList";
+import VerifikasiNotifikasi from "../../../components/kelembagaan/VerifikasiNotifikasi";
 import KecamatanAccordion from "../../../components/kelembagaan/KecamatanAccordion";
 import KelembagaanActivityList from "../../../components/kelembagaan/KelembagaanActivityList";
 
@@ -30,6 +30,7 @@ const Kelembagaan = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
+  const [viewMode, setViewMode] = useState("verified");
   const navigate = useNavigate();
   const { data: statistikData, loading: statistikLoading, error: statistikError } = useStatistikTahunan();
 
@@ -184,7 +185,8 @@ const Kelembagaan = () => {
   return (
     <div className="space-y-6 p-4 lg:p-6">
       {/* Header - Minimalist Design */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      {/* overflow visible supaya dropdown notifikasi tidak terpotong */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200">
         {/* Top Section */}
         <div className="p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -205,6 +207,12 @@ const Kelembagaan = () => {
 
             {/* Action Buttons */}
             <div className="flex items-center gap-2 sm:gap-3">
+              {/* Notifikasi Verifikasi */}
+              <VerifikasiNotifikasi
+                kecamatanData={kecamatanData}
+                onDesaClick={handleDesaClick}
+              />
+
               {/* Toggle Edit Mode Button */}
               {canToggleEdit && (
                 <button
@@ -249,7 +257,7 @@ const Kelembagaan = () => {
         {/* Edit Mode Status Banner */}
         {canToggleEdit && (
           <div
-            className={`px-4 sm:px-6 py-3 border-t ${
+            className={`px-4 sm:px-6 py-3 border-t rounded-b-xl ${
               isEditMode
                 ? "bg-green-50 border-green-200"
                 : "bg-gray-50 border-gray-200"
@@ -300,20 +308,17 @@ const Kelembagaan = () => {
             <RingkasanStatusKelembagaan data={statistikData} loading={statistikLoading} error={statistikError} />
           </div>
         </div>
-
-        <UnverifiedKelembagaanList 
-          kecamatanData={kecamatanData}
-          onDesaClick={handleDesaClick}
-        />
       </div>
 
 <div className="grid grid-cols-4 gap-6">
   <div className="col-span-3">
 
       {/* Kecamatan Accordion */}
-      <KecamatanAccordion 
+      <KecamatanAccordion
         kecamatanData={kecamatanData}
         onDesaClick={handleDesaClick}
+        mode={viewMode}
+        onModeChange={setViewMode}
       />
   </div>
 <div className="col-span-1 space-y-4 gap-4">
