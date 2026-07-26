@@ -276,10 +276,10 @@ const buildClassification = (data) => {
   const bpjsNoDbAktif = bpjsNoDbAll.filter(isAktif);
   const bpjsNoDbNonAktif = bpjsNoDbAll.filter(isNonAktif);
 
-  // "Data Baru": pengurus di sheet BARU yang BELUM ada di BPJS master (anomaliBpjs=false).
-  // Dipisah 2: yang cocok Database (disandingkan dgn record DB) & yang tidak. Sumber: baruList.
+  // "Data Baru": pengurus di sheet BARU. Dipisah 2: yang cocok Database
+  // (disandingkan dgn record DB) & yang tidak — keduanya hanya untuk yang BELUM
+  // ada di BPJS master (anomaliBpjs=false). Sumber: baruList.
   const baruMapped = [...(data?.baruList || [])]
-    .filter((b) => !b.anomaliBpjs)
     .map((b, index) => ({
       key: `baru::${b.desaKode}::${b.nik || b.nama}::${index}`,
       desaKode: b.desaKode,
@@ -296,6 +296,7 @@ const buildClassification = (data) => {
       alamat: b.alamat || "",
       matchedDb: Boolean(b.matchedDb),
       matchType: b.matchType || "",
+      anomaliBpjs: Boolean(b.anomaliBpjs),
       // Sandingan record Database (bila cocok)
       dbNama: b.db?.nama || "",
       dbNik: b.db?.nik || "",
@@ -308,14 +309,36 @@ const buildClassification = (data) => {
       dbPendidikan: b.db?.pendidikan || "",
     }));
   const byBaruSort = (a, b) => a.desaKode.localeCompare(b.desaKode) || String(a.nama).localeCompare(String(b.nama));
-  const dbNoBpjsBaruAda = baruMapped.filter((r) => r.matchedDb).sort(byBaruSort);
-  const dbNoBpjsBaruTidak = baruMapped.filter((r) => !r.matchedDb).sort(byBaruSort);
+  const baruBelumBpjs = baruMapped.filter((r) => !r.anomaliBpjs);
+  const dbNoBpjsBaruAda = baruBelumBpjs.filter((r) => r.matchedDb).sort(byBaruSort);
+  const dbNoBpjsBaruTidak = baruBelumBpjs.filter((r) => !r.matchedDb).sort(byBaruSort);
+
+  // Data Status BPJS sebagai sumber tersendiri (rtrwbpjsstatus.json), apa adanya —
+  // bukan hasil persandingan. Sheet AKTIF / NON AKTIF / BARU.
+  const statusAktif = (data?.bpjsStatus?.aktif || []).map((r, index) => ({
+    ...r,
+    key: `status-aktif::${r.desaKode}::${r.nik || r.kpj}::${index}`,
+    bpjsMembership: "aktif",
+  }));
+  const statusNonAktif = (data?.bpjsStatus?.nonAktif || []).map((r, index) => ({
+    ...r,
+    key: `status-nonaktif::${r.desaKode}::${r.nama}::${index}`,
+    bpjsMembership: "non_aktif",
+    bpjsNonAktifSebab: r.sebab || "",
+  }));
+  const statusBaru = [...baruMapped].sort(byBaruSort);
+  // Selisih: peserta Data Status BPJS (sheet AKTIF/NON AKTIF) yang tidak ketemu
+  // di master Data BPJS. Sheet BARU tidak dihitung — memang belum di master.
+  const statusSelisih = [...statusAktif, ...statusNonAktif]
+    .filter((r) => !r.adaDiMaster)
+    .sort((a, b) => a.desaKode.localeCompare(b.desaKode) || String(a.nama).localeCompare(String(b.nama)));
 
   return {
     dbBpjs, nikBerbeda, desaBerbeda, nikInvalid, bpjsNoDb, dbNoBpjs, dbNoBpjsAdd, dbNoBpjsNoAdd, bpjsCocokAdd,
     dbBpjsAktif, dbBpjsNonAktif,
     bpjsNoDbAktif, bpjsNoDbNonAktif,
     dbNoBpjsBaruAda, dbNoBpjsBaruTidak,
+    statusAktif, statusNonAktif, statusBaru, statusSelisih,
   };
 };
 
@@ -546,6 +569,75 @@ const TAB_DEFS = [
       { key: "alamat", label: "Alamat" },
     ],
   },
+  // --- Data Status BPJS sebagai sumber tersendiri (rtrwbpjsstatus.json) ---
+  {
+    id: "status_aktif",
+    label: "Status BPJS — Aktif",
+    bucket: "statusAktif",
+    title: "Data Status BPJS — AKTIF",
+    description: "Isi sheet AKTIF pada Data Status BPJS (rtrwbpjsstatus.json), apa adanya — belum disandingkan dengan Database/ADD. Nama diambil dari master Data BPJS via NIK/KPJ. Baris di-dedup per NIK/KPJ sehingga bisa lebih sedikit dari jumlah baris mentah sheet.",
+    columns: [
+      COL_DESA,
+      { key: "nama", label: "Nama" },
+      { key: "nik", label: "NIK" },
+      { key: "kpj", label: "KPJ" },
+      { key: "kodeTk", label: "Kode TK" },
+      { key: "tglLahir", label: "Tgl Lahir" },
+      { key: "bpjsMembership", label: "Status", type: "membership" },
+      { key: "upah", label: "Upah", type: "currency", align: "right" },
+    ],
+  },
+  {
+    id: "status_non_aktif",
+    label: "Status BPJS — Non-Aktif",
+    bucket: "statusNonAktif",
+    title: "Data Status BPJS — NON AKTIF",
+    description: "Isi sheet NON AKTIF pada Data Status BPJS (rtrwbpjsstatus.json). Sheet ini tidak memuat NIK — NIK/KPJ dilengkapi dari master Data BPJS bila nama & desa cocok. Baris di-dedup per nama+desa.",
+    columns: [
+      COL_DESA,
+      { key: "nama", label: "Nama" },
+      { key: "nik", label: "NIK" },
+      { key: "kpj", label: "KPJ" },
+      { key: "tglLahir", label: "Tgl Lahir" },
+      { key: "sebab", label: "Sebab Non-Aktif" },
+      { key: "bpjsMembership", label: "Status", type: "membership" },
+    ],
+  },
+  {
+    id: "status_baru",
+    label: "Status BPJS — Baru",
+    bucket: "statusBaru",
+    title: "Data Status BPJS — BARU",
+    description: "Isi sheet BARU pada Data Status BPJS (rtrwbpjsstatus.json): pengurus RT/RW yang diajukan baru. Klik baris untuk penyandingan dengan Database.",
+    detail: "baru",
+    columns: [
+      COL_DESA, COL_LOKASI,
+      { key: "nama", label: "Nama" },
+      { key: "nik", label: "NIK" },
+      { key: "jabatan", label: "Jabatan" },
+      { key: "tglLahir", label: "Tgl Lahir" },
+      { key: "matchedDb", label: "Ada di DB", type: "bool" },
+      { key: "anomaliBpjs", label: "Sudah di BPJS", type: "bool" },
+      { key: "_detail", label: "", type: "detail" },
+    ],
+  },
+  {
+    id: "status_selisih",
+    label: "Selisih vs Master BPJS",
+    bucket: "statusSelisih",
+    title: "Data Status BPJS — Selisih terhadap Master Data BPJS",
+    description: "Peserta pada sheet AKTIF / NON AKTIF Data Status BPJS yang TIDAK ditemukan di master Data BPJS (rtrwbpjs.json). AKTIF dicari via NIK lalu KPJ; NON AKTIF via nama + kode desa (sheet-nya tidak memuat NIK). Baris AKTIF di sini tampil tanpa nama karena namanya memang hanya ada di master. Sheet BARU tidak dihitung — memang belum terdaftar di master.",
+    columns: [
+      COL_DESA,
+      { key: "sheet", label: "Sheet" },
+      { key: "nama", label: "Nama" },
+      { key: "nik", label: "NIK" },
+      { key: "kpj", label: "KPJ" },
+      { key: "tglLahir", label: "Tgl Lahir" },
+      { key: "sebab", label: "Sebab Non-Aktif" },
+      { key: "bpjsMembership", label: "Status", type: "membership" },
+    ],
+  },
 ];
 
 // Warna kartu tab (dipakai saat tab aktif)
@@ -564,6 +656,10 @@ const TAB_COLOR = {
   bpjs_nodb_non_aktif: "amber",
   db_no_bpjs_baru_ada: "gray",
   db_no_bpjs_baru_tidak: "gray",
+  status_aktif: "sky",
+  status_non_aktif: "sky",
+  status_baru: "sky",
+  status_selisih: "sky",
 };
 
 const TAB_ACTIVE_CLASS = {
@@ -625,6 +721,15 @@ const POOLS = [
     subTabs: ["db_no_bpjs_no_add", "db_no_bpjs_with_add", "db_no_bpjs_baru_ada", "db_no_bpjs_baru_tidak"],
     count: (tc) => tc.db_no_bpjs,
   },
+  {
+    id: "bpjs_status_pool",
+    label: "Data Status BPJS",
+    subtitle: "Sumber: rtrwbpjsstatus.json (AKTIF / NON AKTIF / BARU)",
+    color: "sky",
+    mainTab: "status_aktif",
+    subTabs: ["status_aktif", "status_non_aktif", "status_baru", "status_selisih"],
+    count: (tc) => (tc.status_aktif || 0) + (tc.status_non_aktif || 0) + (tc.status_baru || 0),
+  },
 ];
 
 const poolTabs = (pool) => [...new Set([pool.mainTab, ...pool.subTabs])];
@@ -646,6 +751,10 @@ const SUBTAB_SHORT = {
   bpjs_nik_invalid: "NIK Invalid",
   db_no_bpjs_baru_ada: "Baru • di DB",
   db_no_bpjs_baru_tidak: "Baru • tak di DB",
+  status_aktif: "Aktif",
+  status_non_aktif: "Non-Aktif",
+  status_baru: "Baru",
+  status_selisih: "Selisih vs Master",
 };
 
 // Aksen warna khusus tombol sub-tab crosscheck: hijau utk Aktif, merah utk Non-Aktif.
@@ -655,6 +764,10 @@ const SUBTAB_ACCENT = {
   db_bpjs_non_aktif: { color: "red", dot: "bg-red-500" },
   bpjs_nodb_non_aktif: { color: "red", dot: "bg-red-500" },
   bpjs_nik_invalid: { color: "red", dot: "bg-rose-500" },
+  status_aktif: { color: "green", dot: "bg-green-500" },
+  status_non_aktif: { color: "red", dot: "bg-red-500" },
+  status_baru: { color: "sky", dot: "bg-sky-500" },
+  status_selisih: { color: "amber", dot: "bg-amber-500" },
 };
 
 // Sub-tab crosscheck Data Status BPJS -> ditaruh di BARIS KEDUA (di bawah sub-tab asli pool).
@@ -662,6 +775,7 @@ const SUBTAB_SECOND_ROW = new Set([
   "db_bpjs_aktif", "db_bpjs_non_aktif",
   "bpjs_nodb_aktif", "bpjs_nodb_non_aktif",
   "db_no_bpjs_baru_ada", "db_no_bpjs_baru_tidak",
+  "status_selisih",
 ]);
 
 // Sub-tab yang ditaruh di BARIS KETIGA (di bawah Aktif/Non-Aktif).
@@ -896,6 +1010,10 @@ const RtrwComparisonPage = () => {
     bpjs_nodb_non_aktif: classification.bpjsNoDbNonAktif.length,
     db_no_bpjs_baru_ada: classification.dbNoBpjsBaruAda.length,
     db_no_bpjs_baru_tidak: classification.dbNoBpjsBaruTidak.length,
+    status_aktif: classification.statusAktif.length,
+    status_non_aktif: classification.statusNonAktif.length,
+    status_baru: classification.statusBaru.length,
+    status_selisih: classification.statusSelisih.length,
   }), [classification]);
 
   const activeTabDef = TAB_DEFS.find((tab) => tab.id === activeTab);
@@ -982,7 +1100,7 @@ const RtrwComparisonPage = () => {
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
         <SummaryCard
           icon={<LuDatabase />}
           label="Database"
@@ -1015,6 +1133,13 @@ const RtrwComparisonPage = () => {
             label: emptyLabel(data.summary.desaWithoutBpjs),
             onClick: () => setListModal({ title: "Wilayah Tanpa Data BPJS", list: data.summary.desaWithoutBpjs }),
           } : null}
+        />
+        <SummaryCard
+          icon={<LuShieldCheck />}
+          label="Status BPJS"
+          value={(data.summary.totalStatusAktif || 0) + (data.summary.totalStatusNonAktif || 0) + (data.summary.totalBaru || 0)}
+          color="sky"
+          subtitle={`${(data.summary.totalStatusAktif || 0).toLocaleString("id-ID")} aktif · ${(data.summary.totalStatusNonAktif || 0).toLocaleString("id-ID")} non-aktif · ${(data.summary.totalBaru || 0).toLocaleString("id-ID")} baru`}
         />
         <SummaryCard
           icon={<LuCircleCheck />}
@@ -1070,7 +1195,7 @@ const RtrwComparisonPage = () => {
         <EmptyListModal title={listModal.title} list={listModal.list} onClose={() => setListModal(null)} />
       )}
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
         {POOLS.map((pool) => {
           const count = pool.count(tabCounts, data.summary);
           const poolActive = activePoolDef.id === pool.id;
@@ -1397,6 +1522,7 @@ const SummaryCard = ({ icon, label, value, color, subtitle, extraInfo }) => {
     indigo: "bg-indigo-50 text-indigo-600 border-indigo-200",
     red: "bg-red-50 text-red-600 border-red-200",
     violet: "bg-violet-50 text-violet-600 border-violet-200",
+    sky: "bg-sky-50 text-sky-600 border-sky-200",
   };
 
   return (
@@ -2187,7 +2313,9 @@ const BaruDetailModal = ({ row, onClose }) => {
         <div className="flex items-start justify-between gap-3 border-b border-gray-100 p-4">
           <div>
             <h3 className="text-base font-semibold text-gray-900">Penyandingan Data Baru ↔ Database</h3>
-            <p className="mt-0.5 text-xs text-gray-500">{row.desaNama} · {row.kecamatanNama} · cocok via {row.matchType === "nik" ? "NIK" : "nama"}</p>
+            <p className="mt-0.5 text-xs text-gray-500">
+            {row.desaNama} · {row.kecamatanNama} · {row.matchType === "nik" ? "cocok via NIK" : row.matchType === "nama" ? "cocok via nama" : "tidak ada padanan di Database"}
+          </p>
           </div>
           <button onClick={onClose} className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600">
             <LuX className="h-5 w-5" />
