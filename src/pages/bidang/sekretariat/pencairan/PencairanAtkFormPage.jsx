@@ -7,11 +7,49 @@ import {
 import toast from 'react-hot-toast';
 import api from '../../../../api';
 import PegawaiSelect from '../../../../components/pencairan/PegawaiSelect';
+import SkReferensiSelect from '../../../../components/pencairan/SkReferensiSelect';
+import { confirmDialog } from '../../../../utils/confirmDialog';
 
 const formatRupiah = (n) =>
   new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n || 0);
 
 const inputCls = "w-full px-3 py-2 text-sm rounded-lg border border-gray-200 focus:border-teal-400 focus:ring-2 focus:ring-teal-100 outline-none transition";
+
+// Daftar dokumen yang akan terbentuk setelah finalisasi (urut sesuai generator Excel).
+const DOKUMEN_LIST = [
+  'Surat Pesanan', 'Faktur', 'Kwitansi', 'BA Pemeriksaan', 'Lamp Pemeriksaan',
+  'BAST', 'Lampiran BAST', 'BASTHP', 'Bend 35', 'Bend 29',
+];
+
+// Peta field tanggal → dokumen tempat tanggal itu muncul (berdasarkan generateAtkExcel.js).
+const TANGGAL_FIELDS = [
+  { key: 'pesanan', label: 'Surat Pesanan', docs: ['Surat Pesanan', 'BA Pemeriksaan'] },
+  { key: 'surat_perintah_tugas', label: 'Surat Perintah Tugas', docs: ['BA Pemeriksaan'] },
+  { key: 'ba_pemeriksaan', label: 'BA Pemeriksaan', docs: ['BA Pemeriksaan', 'Lamp Pemeriksaan'] },
+  { key: 'bast', label: 'BAST', docs: ['BAST', 'Lampiran BAST'] },
+  { key: 'basthp', label: 'BASTHP', docs: ['BASTHP'] },
+  { key: 'faktur', label: 'Faktur', docs: ['Faktur'] },
+  { key: 'kwitansi', label: 'Kwitansi', docs: ['Kwitansi'] },
+];
+
+// Peta field nomor surat → dokumen tempat nomor itu muncul.
+const NOMOR_FIELDS = [
+  { key: 'pesanan_b', label: 'No. Surat Pesanan', docs: ['Surat Pesanan', 'BA Pemeriksaan', 'BAST'] },
+  { key: 'faktur', label: 'No. Faktur', docs: ['Faktur'] },
+  { key: 'kwitansi', label: 'No. Kwitansi', docs: ['Kwitansi'] },
+  { key: 'ba_pemeriksaan', label: 'No. BA Pemeriksaan', docs: ['BA Pemeriksaan', 'Lamp Pemeriksaan', 'BAST'] },
+  { key: 'bast', label: 'No. BAST', docs: ['BAST', 'Lampiran BAST'] },
+  { key: 'basthp', label: 'No. BASTHP', docs: ['BASTHP'] },
+  { key: 'surat_perintah_tugas', label: 'No. Surat Perintah Tugas PPK', docs: ['BA Pemeriksaan'] },
+  { key: 'bappbj', label: 'No. BAPPBJ', docs: [] },
+  { key: 'lampiran_bat', label: 'No. Lampiran BAT', docs: [] },
+];
+
+// SK dasar yang statis per tahun — dikelola sebagai referensi tersimpan (SkReferensiSelect).
+const SK_FIELDS = [
+  { key: 'sk_bupati_kpa', jenis: 'bupati_kpa', label: 'SK Bupati (KPA)', docs: ['BASTHP'] },
+  { key: 'sk_kadis_ppk', jenis: 'kadis_ppk', label: 'SK Kepala Dinas (PPK)', docs: ['BAST', 'BASTHP'] },
+];
 
 const getPenyediaPath = (pathname) => {
   const match = pathname.match(/^(.*\/pencairan)\/atk(?:\/.*)?$/);
@@ -70,7 +108,7 @@ const StepBadge = ({ num, label, done, active }) => (
   </div>
 );
 
-const SectionCard = ({ icon: Icon, title, desc, children, color = 'teal' }) => {
+const SectionCard = ({ icon: Icon, title, desc, children, color = 'teal', className = '', bodyClassName = '' }) => {
   const colors = {
     teal: 'from-teal-500 to-emerald-600 shadow-teal-200/50',
     blue: 'from-blue-500 to-indigo-600 shadow-blue-200/50',
@@ -78,8 +116,8 @@ const SectionCard = ({ icon: Icon, title, desc, children, color = 'teal' }) => {
     amber: 'from-amber-500 to-orange-600 shadow-amber-200/50',
   };
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-      <div className="px-5 py-4 border-b border-gray-100 flex items-start gap-3">
+    <div className={`bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm ${className}`}>
+      <div className="px-5 py-4 border-b border-gray-100 flex items-start gap-3 shrink-0">
         <div className={`h-9 w-9 rounded-lg bg-gradient-to-br ${colors[color]} flex items-center justify-center shadow-md shrink-0`}>
           <Icon className="h-4 w-4 text-white" />
         </div>
@@ -88,7 +126,7 @@ const SectionCard = ({ icon: Icon, title, desc, children, color = 'teal' }) => {
           {desc && <p className="text-[11.5px] text-gray-500 mt-0.5">{desc}</p>}
         </div>
       </div>
-      <div className="p-5">{children}</div>
+      <div className={`p-5 ${bodyClassName}`}>{children}</div>
     </div>
   );
 };
@@ -123,6 +161,10 @@ const PencairanAtkFormPage = () => {
   const [selectedTahun, setSelectedTahun] = useState(null);
   const [penyediaList, setPenyediaList] = useState([]);
   const [pegawaiList, setPegawaiList] = useState([]); // [{ user_id, name, nip, jabatan }]
+
+  // Pemakaian qty item RKA oleh pencairan lain (draft+final), untuk hitung sisa.
+  // { [rka_item_id]: qtyTerpakaiOlehPencairanLain }
+  const [rkaUsage, setRkaUsage] = useState({});
 
   // ─── Form States ───────────────────────────────────────────────────────
   const [selectedItems, setSelectedItems] = useState({}); // { rkaItemId: { qty, harga_satuan } }
@@ -286,6 +328,31 @@ const PencairanAtkFormPage = () => {
 
   const itemsAvailable = useMemo(() => paguSelected?.rka_items || [], [paguSelected]);
 
+  // Ambil pemakaian qty item RKA untuk pagu terpilih (kecualikan pencairan yang
+  // sedang diedit agar qty-nya sendiri tidak menghitung dirinya).
+  useEffect(() => {
+    if (!paguSelected?.id) { setRkaUsage({}); return; }
+    let alive = true;
+    (async () => {
+      try {
+        const res = await api.get('/pencairan/rka-usage', {
+          params: { pagu_id: paguSelected.id, ...(isEdit && id ? { exclude: id } : {}) },
+        });
+        if (alive) setRkaUsage(res.data?.data || {});
+      } catch {
+        if (alive) setRkaUsage({});
+      }
+    })();
+    return () => { alive = false; };
+  }, [paguSelected?.id, isEdit, id]);
+
+  // Sisa qty per item = volume − qty terpakai pencairan lain. >= 0.
+  const sisaQtyOf = useCallback((item) => {
+    const volume = Number(item.volume) || 0;
+    const used = Number(rkaUsage[item.id]) || 0;
+    return Math.max(0, volume - used);
+  }, [rkaUsage]);
+
   const totalRealisasi = useMemo(() => {
     return Object.entries(selectedItems).reduce((sum, [, val]) => {
       return sum + ((val.qty || 0) * (val.harga_satuan || 0));
@@ -400,8 +467,15 @@ const PencairanAtkFormPage = () => {
     } catch { /* ignore quota errors */ }
   }, [pejabat, pemeriksa, loadingRef, defaultsLoaded, isEdit]);
 
-  const handleResetDefaults = () => {
-    if (!window.confirm('Hapus pilihan pejabat tersimpan? Form ini akan dikosongkan.')) return;
+  const handleResetDefaults = async () => {
+    const ok = await confirmDialog({
+      title: 'Hapus pilihan pejabat tersimpan?',
+      text: 'Form pejabat & tim pemeriksa akan dikosongkan.',
+      icon: 'warning',
+      confirmText: 'Ya, Hapus',
+      confirmColor: '#dc2626',
+    });
+    if (!ok) return;
     try { localStorage.removeItem(LS_PEJABAT_KEY); } catch { /* noop */ }
     setPejabat(EMPTY_PEJABAT);
     setPemeriksa(['', '', '']);
@@ -414,22 +488,34 @@ const PencairanAtkFormPage = () => {
   }, [penyediaPath]);
 
   const toggleItem = (item) => {
+    const sisa = sisaQtyOf(item);
     setSelectedItems(prev => {
       const next = { ...prev };
       if (next[item.id]) {
         delete next[item.id];
       } else {
-        next[item.id] = { qty: Number(item.volume) || 1, harga_satuan: Number(item.harga_satuan) || 0 };
+        if (sisa <= 0) {
+          toast.error(`${item.nama_item} sudah habis dicairkan (sisa 0 ${item.satuan})`);
+          return prev;
+        }
+        // Default qty = sisa rencana (maksimal yang boleh), tidak melebihi.
+        const defaultQty = Math.min(Number(item.volume) || 1, sisa);
+        next[item.id] = { qty: defaultQty, harga_satuan: Number(item.harga_satuan) || 0 };
       }
       return next;
     });
   };
 
   const updateField = (itemId, key, value) => {
-    setSelectedItems(prev => ({
-      ...prev,
-      [itemId]: { ...prev[itemId], [key]: Math.max(0, Number(value) || 0) },
-    }));
+    setSelectedItems(prev => {
+      let v = Math.max(0, Number(value) || 0);
+      // Batasi qty agar tidak melebihi sisa rencana item ini.
+      if (key === 'qty') {
+        const item = itemsAvailable.find(i => String(i.id) === String(itemId));
+        if (item) v = Math.min(v, sisaQtyOf(item));
+      }
+      return { ...prev, [itemId]: { ...prev[itemId], [key]: v } };
+    });
   };
 
   const removeItem = (itemId) => {
@@ -492,7 +578,7 @@ const PencairanAtkFormPage = () => {
       tgl_ba_pemeriksaan: tanggal.ba_pemeriksaan || null,
       tgl_bast: tanggal.bast || null,
       tgl_basthp: tanggal.basthp || null,
-      no_pesanan_a: nomor.pesanan_a || null,
+      no_pesanan_a: null, // digabung menjadi satu nomor pada no_pesanan_b
       no_pesanan_b: nomor.pesanan_b || null,
       no_faktur: nomor.faktur || null,
       no_kwitansi: nomor.kwitansi || null,
@@ -512,6 +598,16 @@ const PencairanAtkFormPage = () => {
   const handleSubmit = async (finalize = false) => {
     const payload = buildPayload();
     if (!payload) return;
+    if (finalize) {
+      const ok = await confirmDialog({
+        title: 'Finalisasi pencairan?',
+        text: 'Setelah difinalisasi, data TIDAK bisa diubah atau dihapus lagi. Jika hanya ingin menyimpan sementara, gunakan "Simpan Draft".',
+        icon: 'warning',
+        confirmText: 'Ya, Finalisasi',
+        confirmColor: '#059669',
+      });
+      if (!ok) return;
+    }
     setSaving(true);
     try {
       let savedId;
@@ -575,7 +671,7 @@ const PencairanAtkFormPage = () => {
     <div className="min-h-screen bg-gradient-to-br from-teal-50/30 via-white to-emerald-50/30">
       {/* Sticky Header */}
       <div className="sticky top-0 z-20 bg-white/95 backdrop-blur border-b border-gray-100 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3">
+        <div className="w-full px-4 sm:px-6 py-3">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-3 min-w-0">
               <button onClick={() => navigate(-1)} className="p-2 rounded-lg hover:bg-gray-100 transition shrink-0">
@@ -622,13 +718,18 @@ const PencairanAtkFormPage = () => {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-5">
+      <div className="w-full px-4 sm:px-6 py-6">
+        <div className="lg:grid lg:grid-cols-2 lg:gap-5 lg:items-start">
+        {/* ─── KOLOM KIRI (lg): kotak Pilih Item, tinggi 1 layar & scroll sendiri ─── */}
+        <div className="mb-5 lg:mb-0 lg:sticky lg:top-[124px] lg:h-[calc(100vh-140px)]">
         {/* STEP 1: ITEMS */}
         <SectionCard
           icon={Package}
           title="1. Pilih Item Realisasi"
           desc="Centang barang yang akan direalisasikan beserta jumlah dan harga"
           color="teal"
+          className="lg:h-full lg:flex lg:flex-col"
+          bodyClassName="lg:flex-1 lg:overflow-y-auto lg:min-h-0"
         >
           {paguSelected && (
             <div className="mb-4 grid grid-cols-3 gap-2">
@@ -647,48 +748,8 @@ const PencairanAtkFormPage = () => {
             </div>
           )}
 
-          <p className="text-[11.5px] font-semibold text-gray-700 mb-2">
-            Item Tersedia di Sub Kegiatan ini ({itemsAvailable.length})
-          </p>
-          {itemsAvailable.length === 0 ? (
-            <div className="border border-gray-200 rounded-xl p-6 text-center">
-              <Package className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-              <p className="text-[13px] text-gray-500">Belum ada item RKA untuk tahun {selectedTahun}</p>
-            </div>
-          ) : (
-            <div className="border border-gray-200 rounded-xl divide-y divide-gray-100 max-h-96 overflow-y-auto">
-              {itemsAvailable.map(item => {
-                const isSelected = !!selectedItems[item.id];
-                return (
-                  <div
-                    key={item.id}
-                    onClick={() => toggleItem(item)}
-                    className={`px-4 py-3 flex items-center gap-3 cursor-pointer transition ${
-                      isSelected ? 'bg-teal-50' : 'hover:bg-gray-50'
-                    }`}
-                  >
-                    <div className={`h-5 w-5 rounded-md border-2 flex items-center justify-center shrink-0 transition ${
-                      isSelected ? 'bg-teal-600 border-teal-600' : 'border-gray-300 bg-white'
-                    }`}>
-                      {isSelected && <Check className="h-3 w-3 text-white" />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-800">{item.nama_item}</p>
-                      <p className="text-[11px] text-gray-500 mt-0.5">
-                        {Number(item.volume)} {item.satuan} × {formatRupiah(Number(item.harga_satuan))}
-                      </p>
-                    </div>
-                    <span className="text-[11.5px] font-bold text-emerald-700">
-                      {formatRupiah(Number(item.volume) * Number(item.harga_satuan))}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
           {selectedCount > 0 && (
-            <div className="mt-5">
+            <div className="mb-5">
               <p className="text-[11.5px] font-semibold text-gray-700 mb-2">
                 Detail Realisasi ({selectedCount} item terpilih)
               </p>
@@ -715,11 +776,12 @@ const PencairanAtkFormPage = () => {
                           <td className="px-3 py-2 text-gray-800">{item.nama_item}</td>
                           <td className="px-3 py-2">
                             <input
-                              type="number" min="0" step="0.01"
+                              type="number" min="0" step="0.01" max={sisaQtyOf(item)}
                               value={val.qty}
                               onChange={e => updateField(rkaId, 'qty', e.target.value)}
                               className="w-20 px-2 py-1 text-sm text-center rounded-md border border-gray-200 focus:border-teal-400 focus:ring-1 focus:ring-teal-200 outline-none"
                             />
+                            <p className="text-[9.5px] text-gray-400 mt-0.5 text-center">maks {sisaQtyOf(item)}</p>
                           </td>
                           <td className="px-3 py-2 text-gray-600">{item.satuan}</td>
                           <td className="px-3 py-2">
@@ -755,6 +817,55 @@ const PencairanAtkFormPage = () => {
             </div>
           )}
 
+          <p className="text-[11.5px] font-semibold text-gray-700 mb-2">
+            Item Tersedia di Sub Kegiatan ini ({itemsAvailable.length})
+          </p>
+          {itemsAvailable.length === 0 ? (
+            <div className="border border-gray-200 rounded-xl p-6 text-center">
+              <Package className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+              <p className="text-[13px] text-gray-500">Belum ada item RKA untuk tahun {selectedTahun}</p>
+            </div>
+          ) : (
+            <div className="border border-gray-200 rounded-xl divide-y divide-gray-100 max-h-[65vh] lg:max-h-none overflow-y-auto">
+              {itemsAvailable.map(item => {
+                const isSelected = !!selectedItems[item.id];
+                const sisa = sisaQtyOf(item);
+                const habis = sisa <= 0 && !isSelected;
+                return (
+                  <div
+                    key={item.id}
+                    onClick={() => { if (!habis) toggleItem(item); }}
+                    className={`px-4 py-3 flex items-center gap-3 transition ${
+                      habis ? 'opacity-60 cursor-not-allowed bg-gray-50/60' : 'cursor-pointer'
+                    } ${isSelected ? 'bg-teal-50' : !habis ? 'hover:bg-gray-50' : ''}`}
+                  >
+                    <div className={`h-5 w-5 rounded-md border-2 flex items-center justify-center shrink-0 transition ${
+                      isSelected ? 'bg-teal-600 border-teal-600' : habis ? 'border-gray-200 bg-gray-100' : 'border-gray-300 bg-white'
+                    }`}>
+                      {isSelected && <Check className="h-3 w-3 text-white" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-800">{item.nama_item}</p>
+                      <p className="text-[11px] text-gray-500 mt-0.5">
+                        {Number(item.volume)} {item.satuan} × {formatRupiah(Number(item.harga_satuan))}
+                      </p>
+                      <p className={`text-[10.5px] mt-0.5 font-semibold ${
+                        habis ? 'text-rose-600' : sisa < Number(item.volume) ? 'text-amber-600' : 'text-emerald-600'
+                      }`}>
+                        {habis
+                          ? `Habis dicairkan (sisa 0 ${item.satuan})`
+                          : `Sisa ${sisa} dari ${Number(item.volume)} ${item.satuan}`}
+                      </p>
+                    </div>
+                    <span className="text-[11.5px] font-bold text-emerald-700">
+                      {formatRupiah(Number(item.volume) * Number(item.harga_satuan))}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
           {/* Uraian kegiatan */}
           <div className="mt-5">
             <Field label="Uraian Kegiatan" hint="Akan muncul di dokumen Pesanan, Faktur, Kwitansi, dst.">
@@ -768,7 +879,9 @@ const PencairanAtkFormPage = () => {
             </Field>
           </div>
         </SectionCard>
-
+        </div>
+        {/* ─── KOLOM KANAN (lg): Penyedia, Pejabat, Tanggal & Nomor, ringkasan ─── */}
+        <div className="space-y-5">
         {/* STEP 2: PENYEDIA */}
         <SectionCard
           icon={Building2}
@@ -921,23 +1034,43 @@ const PencairanAtkFormPage = () => {
           desc="Tanggal otomatis hari ini dan bisa disesuaikan sebelum finalisasi"
           color="amber"
         >
+          {/* Daftar dokumen yang akan terbentuk */}
+          <div className="mb-5 rounded-xl bg-amber-50/60 border border-amber-100 p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Info className="h-4 w-4 text-amber-600 shrink-0" />
+              <p className="text-[12px] font-semibold text-amber-800">
+                {DOKUMEN_LIST.length} dokumen yang akan terbentuk setelah finalisasi
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {DOKUMEN_LIST.map((doc, i) => (
+                <span
+                  key={doc}
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-white border border-amber-200 text-[11px] font-medium text-amber-900"
+                >
+                  <span className="text-[9.5px] font-bold text-amber-500">{i + 1}</span>
+                  {doc}
+                </span>
+              ))}
+            </div>
+            <p className="text-[10.5px] text-amber-700/80 mt-2">
+              Isian tanggal & nomor di bawah menandai muncul di dokumen mana saja.
+            </p>
+          </div>
+
           <div className="mb-5">
             <p className="text-[12px] font-semibold text-gray-700 mb-2.5">Tanggal Dokumen</p>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {[
-                ['pesanan', 'Surat Pesanan'],
-                ['surat_perintah_tugas', 'Surat Perintah Tugas'],
-                ['ba_pemeriksaan', 'BA Pemeriksaan'],
-                ['bast', 'BAST'],
-                ['basthp', 'BASTHP'],
-                ['faktur', 'Faktur'],
-                ['kwitansi', 'Kwitansi'],
-              ].map(([k, label]) => (
-                <Field key={k} label={label}>
+              {TANGGAL_FIELDS.map(({ key, label, docs }) => (
+                <Field
+                  key={key}
+                  label={label}
+                  hint={docs.length ? `Muncul di: ${docs.join(', ')}` : 'Belum dipakai di dokumen'}
+                >
                   <input
                     type="date"
-                    value={tanggal[k]}
-                    onChange={e => setTanggal(t => ({ ...t, [k]: e.target.value }))}
+                    value={tanggal[key]}
+                    onChange={e => setTanggal(t => ({ ...t, [key]: e.target.value }))}
                     className={inputCls}
                   />
                 </Field>
@@ -948,25 +1081,42 @@ const PencairanAtkFormPage = () => {
           <div className="pt-5 border-t border-gray-100">
             <p className="text-[12px] font-semibold text-gray-700 mb-2.5">Nomor Surat</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {[
-                ['pesanan_a', 'No. Pesanan (BP/PPBJ)'],
-                ['pesanan_b', 'No. Pesanan (Umpeg)'],
-                ['faktur', 'No. Faktur'],
-                ['kwitansi', 'No. Kwitansi'],
-                ['ba_pemeriksaan', 'No. BA Pemeriksaan'],
-                ['bast', 'No. BAST'],
-                ['basthp', 'No. BASTHP'],
-                ['bappbj', 'No. BAPPBJ'],
-                ['lampiran_bat', 'No. Lampiran BAT'],
-                ['surat_perintah_tugas', 'No. Surat Perintah Tugas PPK'],
-                ['sk_bupati_kpa', 'No. SK Bupati (KPA)'],
-                ['sk_kadis_ppk', 'No. SK Kepala Dinas (PPK)'],
-              ].map(([k, label]) => (
-                <Field key={k} label={label}>
+              {NOMOR_FIELDS.map(({ key, label, docs }) => (
+                <Field
+                  key={key}
+                  label={label}
+                  hint={docs.length ? `Muncul di: ${docs.join(', ')}` : 'Belum dipakai di dokumen'}
+                >
                   <input
-                    value={nomor[k]}
-                    onChange={e => setNomor(n => ({ ...n, [k]: e.target.value }))}
+                    value={nomor[key]}
+                    onChange={e => setNomor(n => ({ ...n, [key]: e.target.value }))}
                     className={inputCls}
+                  />
+                </Field>
+              ))}
+            </div>
+          </div>
+
+          {/* SK dasar (statis per tahun, dipilih dari referensi tersimpan) */}
+          <div className="pt-5 border-t border-gray-100">
+            <div className="mb-2.5">
+              <p className="text-[12px] font-semibold text-gray-700">SK Dasar (per tahun)</p>
+              <p className="text-[10.5px] text-gray-400">
+                SK ini umumnya sama sepanjang tahun. Pilih dari daftar tersimpan, atau tambah bila belum ada.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {SK_FIELDS.map(({ key, jenis, label, docs }) => (
+                <Field
+                  key={key}
+                  label={label}
+                  hint={docs.length ? `Muncul di: ${docs.join(', ')}` : 'Belum dipakai di dokumen'}
+                >
+                  <SkReferensiSelect
+                    jenis={jenis}
+                    value={nomor[key]}
+                    onChange={v => setNomor(n => ({ ...n, [key]: v }))}
+                    tahun={selectedTahun}
                   />
                 </Field>
               ))}
@@ -990,6 +1140,8 @@ const PencairanAtkFormPage = () => {
               <p className="text-2xl font-bold">{formatRupiah(totalRealisasi)}</p>
             </div>
           </div>
+        </div>
+        </div>
         </div>
       </div>
     </div>

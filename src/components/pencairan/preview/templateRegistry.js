@@ -18,8 +18,8 @@ import Bend29Template from './templates/Bend29Template';
  */
 export const TEMPLATE_REGISTRY = {
   pesanan:          { label: 'Surat Pesanan',          component: PesananTemplate,         orientation: 'portrait'  },
-  faktur:           { label: 'Faktur',                 component: FakturTemplate,           orientation: 'landscape' },
-  kwitansi:         { label: 'Kwitansi',               component: KwitansiTemplate,         orientation: 'landscape' },
+  faktur:           { label: 'Faktur',                 component: FakturTemplate,           orientation: 'portrait'  },
+  kwitansi:         { label: 'Kwitansi',               component: KwitansiTemplate,         orientation: 'portrait'  },
   ba_pemeriksaan:   { label: 'BA Pemeriksaan',         component: BAPemeriksaanTemplate,    orientation: 'portrait'  },
   lamp_pemeriksaan: { label: 'Lampiran Pemeriksaan',   component: LampPemeriksaanTemplate,  orientation: 'portrait'  },
   bast:             { label: 'BAST',                   component: BastTemplate,             orientation: 'portrait'  },

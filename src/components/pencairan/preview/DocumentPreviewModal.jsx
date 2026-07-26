@@ -1,7 +1,9 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Download, Printer, AlertCircle, ChevronLeft, ChevronRight, Check, Loader2 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { TEMPLATE_REGISTRY } from './templateRegistry';
+import { DraftWatermarkContext } from './DocumentSheet';
 import { generatePdf } from '../../../utils/generatePdf';
 
 const ComingSoonTemplate = ({ docKey, docLabel }) => (
@@ -65,7 +67,7 @@ const DocumentPreviewModal = ({
       });
     } catch (err) {
       console.error('PDF generation error:', err);
-      alert(`Gagal generate PDF: ${err.message}`);
+      toast.error(`Gagal generate PDF: ${err.message}`);
     } finally {
       setPdfLoading(false);
       setPdfProgress(0);
@@ -82,6 +84,7 @@ const DocumentPreviewModal = ({
   const entry = TEMPLATE_REGISTRY[docKey];
   const TemplateComp = entry?.component;
   const printOrientation = entry?.orientation === 'landscape' ? 'A4 landscape' : 'A4';
+  const isDraft = pencairan?.status === 'draft';
 
   const body = (
     <div className="doc-preview-overlay fixed inset-0 z-[9999] bg-gray-900/80 backdrop-blur-sm flex flex-col">
@@ -92,7 +95,14 @@ const DocumentPreviewModal = ({
             <X className="h-4 w-4 text-gray-600" />
           </button>
           <div className="min-w-0">
-            <h2 className="text-sm font-bold text-gray-900 truncate">Preview: {docLabel}</h2>
+            <h2 className="text-sm font-bold text-gray-900 truncate flex items-center gap-2">
+              Preview: {docLabel}
+              {isDraft && (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 text-[9.5px] font-bold tracking-wide">
+                  DRAFT
+                </span>
+              )}
+            </h2>
             <p className="text-[11px] text-gray-500 truncate">
               {pencairan?.no_pesanan_b || `#${pencairan?.id}`} — Periksa data lalu download PDF
             </p>
@@ -175,9 +185,11 @@ const DocumentPreviewModal = ({
       {/* Body — scrollable preview area */}
       <div className="flex-1 overflow-auto py-6">
         <div ref={printAreaRef} className="printable-document mx-auto">
-          {TemplateComp
-            ? <TemplateComp pencairan={pencairan} />
-            : <ComingSoonTemplate docKey={docKey} docLabel={docLabel} />}
+          <DraftWatermarkContext.Provider value={isDraft}>
+            {TemplateComp
+              ? <TemplateComp pencairan={pencairan} />
+              : <ComingSoonTemplate docKey={docKey} docLabel={docLabel} />}
+          </DraftWatermarkContext.Provider>
         </div>
       </div>
 

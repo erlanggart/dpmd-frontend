@@ -2,7 +2,11 @@
 // Shared wrapper untuk semua template dokumen pencairan.
 // Memberi styling kertas A4, kop surat, dan area print-safe.
 
-import { forwardRef } from 'react';
+import { forwardRef, createContext, useContext } from 'react';
+
+// Context penanda dokumen masih draft → menampilkan watermark "DRAFT".
+// Diisi oleh DocumentPreviewModal (preview/print) & generatePdf (unduh PDF).
+export const DraftWatermarkContext = createContext(false);
 
 /**
  * DocumentSheet — wrapper A4 dengan kop surat opsional.
@@ -19,8 +23,11 @@ const DocumentSheet = forwardRef(({
   kopLogoSrc,
   children,
   className = '',
+  draft,
 }, ref) => {
   const isLandscape = orientation === 'landscape';
+  const draftCtx = useContext(DraftWatermarkContext);
+  const showDraft = draft ?? draftCtx;
   return (
   <div
     ref={ref}
@@ -35,6 +42,33 @@ const DocumentSheet = forwardRef(({
       boxSizing: 'border-box',
     }}
   >
+    {showDraft && (
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute', inset: 0, overflow: 'hidden',
+          pointerEvents: 'none', zIndex: 5,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}
+      >
+        <span
+          style={{
+            transform: 'rotate(-32deg)',
+            fontSize: isLandscape ? '150pt' : '120pt',
+            fontWeight: 'bold',
+            color: 'rgba(220,38,38,0.13)',
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase',
+            whiteSpace: 'nowrap',
+            fontFamily: 'Arial, Helvetica, sans-serif',
+            userSelect: 'none',
+          }}
+        >
+          DRAFT
+        </span>
+      </div>
+    )}
+
     {modelTag && (
       <div style={{ position: 'absolute', top: '0.6cm', right: '1.2cm', fontSize: '9.5pt' }}>
         {modelTag}

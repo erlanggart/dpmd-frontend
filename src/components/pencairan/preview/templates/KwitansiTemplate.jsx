@@ -20,7 +20,7 @@ const KwitansiTemplate = ({ pencairan }) => {
   });
 
   return (
-    <DocumentSheet withKop={false} orientation="landscape">
+    <DocumentSheet withKop={false} orientation="portrait">
 
       {/* ── Atas: KWITANSI/NOMOR (kiri) + KPA (kanan) ── */}
       <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: '12pt', marginTop: '20pt' }}>

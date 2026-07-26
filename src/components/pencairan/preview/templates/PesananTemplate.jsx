@@ -66,11 +66,7 @@ const PesananTemplate = ({ pencairan }) => {
               <td style={{ padding: '1.5pt 0', verticalAlign: 'top', whiteSpace: 'nowrap' }}>Nomor</td>
               <td style={{ padding: '1.5pt 8pt', verticalAlign: 'top' }}>:</td>
               <td style={{ padding: '1.5pt 0' }}>
-                {d.no_pesanan_a || '000.3.1 /'}
-                {' '}
-                <span style={{ display: 'inline-block', minWidth: '28pt', borderBottom: '1px solid #000' }}>&nbsp;</span>
-                {' '}
-                {d.no_pesanan_b ? `- ${d.no_pesanan_b}` : '- Umpeg'}
+                {d.no_pesanan_b || d.no_pesanan_a || '000.3.1 / ................'}
               </td>
             </tr>
             <tr>

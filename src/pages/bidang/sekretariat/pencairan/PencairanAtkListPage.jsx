@@ -3,10 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Plus, Search, FileText, Eye, Edit2, Trash2,
   Calendar, Package, Building2, CheckCircle2,
-  Clock, AlertCircle, Loader2, RefreshCw,
+  Clock, AlertCircle, Loader2, RefreshCw, Archive, ArchiveRestore,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../../../api';
+import { confirmDialog } from '../../../../utils/confirmDialog';
 
 const formatRupiah = (n) =>
   new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n || 0);
@@ -15,7 +16,7 @@ const StatusBadge = ({ status }) => {
   const config = {
     draft: { label: 'Draft', icon: Clock, color: 'bg-amber-100 text-amber-700 border-amber-200' },
     finalized: { label: 'Final', icon: CheckCircle2, color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
-    cancelled: { label: 'Dibatalkan', icon: AlertCircle, color: 'bg-rose-100 text-rose-700 border-rose-200' },
+    cancelled: { label: 'Diarsipkan', icon: Archive, color: 'bg-gray-100 text-gray-600 border-gray-200' },
   }[status] || { label: status, icon: AlertCircle, color: 'bg-gray-100 text-gray-700 border-gray-200' };
   const Icon = config.icon;
   return (
@@ -62,7 +63,14 @@ const PencairanAtkListPage = () => {
   const totalNilai = useMemo(() => filtered.reduce((s, p) => s + (p.total_nilai || 0), 0), [filtered]);
 
   const handleDelete = async (p) => {
-    if (!window.confirm(`Hapus pencairan ${p.no_pesanan_b || `#${p.id}`}?`)) return;
+    const ok = await confirmDialog({
+      title: `Hapus pencairan ${p.no_pesanan_b || `#${p.id}`}?`,
+      text: 'Tindakan ini permanen dan tidak bisa dibatalkan.',
+      icon: 'warning',
+      confirmText: 'Ya, Hapus',
+      confirmColor: '#dc2626',
+    });
+    if (!ok) return;
     try {
       await api.delete(`/pencairan/${p.id}`);
       toast.success('Pencairan berhasil dihapus');
@@ -72,9 +80,45 @@ const PencairanAtkListPage = () => {
     }
   };
 
+  const handleArchive = async (p) => {
+    const ok = await confirmDialog({
+      title: `Arsipkan pencairan ${p.no_pesanan_b || `#${p.id}`}?`,
+      text: 'Data tetap tersimpan dan bisa dipulihkan kapan saja.',
+      icon: 'warning',
+      confirmText: 'Ya, Arsipkan',
+      confirmColor: '#d97706',
+    });
+    if (!ok) return;
+    try {
+      await api.post(`/pencairan/${p.id}/cancel`);
+      toast.success('Pencairan diarsipkan');
+      fetchList();
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Gagal mengarsipkan');
+    }
+  };
+
+  const handleRestore = async (p) => {
+    const ok = await confirmDialog({
+      title: `Pulihkan pencairan ${p.no_pesanan_b || `#${p.id}`}?`,
+      text: 'Pencairan akan dikembalikan dari arsip ke status semula.',
+      icon: 'question',
+      confirmText: 'Ya, Pulihkan',
+      confirmColor: '#059669',
+    });
+    if (!ok) return;
+    try {
+      const res = await api.post(`/pencairan/${p.id}/restore`);
+      toast.success(res.data?.message || 'Pencairan dipulihkan');
+      fetchList();
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Gagal memulihkan');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-50/30 via-white to-emerald-50/30 p-4 sm:p-6">
-      <div className="max-w-7xl mx-auto">
+      <div className="w-full">
         <div className="mb-6">
           <button
             onClick={() => navigate(-1)}
@@ -224,16 +268,33 @@ const PencairanAtkListPage = () => {
                           <button
                             onClick={() => navigate(`${p.id}/edit`)}
                             className="p-1.5 rounded-lg text-gray-500 hover:text-blue-700 hover:bg-blue-50 transition disabled:opacity-30 disabled:cursor-not-allowed"
-                            title="Edit"
-                            disabled={p.status === 'finalized'}
+                            title={p.status === 'draft' ? 'Edit' : 'Hanya draft yang bisa diedit'}
+                            disabled={p.status !== 'draft'}
                           >
                             <Edit2 className="h-4 w-4" />
                           </button>
+                          {p.status === 'cancelled' ? (
+                            <button
+                              onClick={() => handleRestore(p)}
+                              className="p-1.5 rounded-lg text-gray-500 hover:text-emerald-700 hover:bg-emerald-50 transition"
+                              title="Pulihkan dari arsip"
+                            >
+                              <ArchiveRestore className="h-4 w-4" />
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleArchive(p)}
+                              className="p-1.5 rounded-lg text-gray-500 hover:text-amber-700 hover:bg-amber-50 transition"
+                              title="Arsipkan"
+                            >
+                              <Archive className="h-4 w-4" />
+                            </button>
+                          )}
                           <button
                             onClick={() => handleDelete(p)}
                             className="p-1.5 rounded-lg text-gray-500 hover:text-rose-700 hover:bg-rose-50 transition disabled:opacity-30 disabled:cursor-not-allowed"
-                            title="Hapus"
-                            disabled={p.status === 'finalized'}
+                            title={p.status === 'finalized' || p.finalized_at ? 'Pencairan final tidak bisa dihapus — arsipkan saja' : 'Hapus'}
+                            disabled={p.status === 'finalized' || !!p.finalized_at}
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>

@@ -3,13 +3,15 @@ import { useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft, Download, Eye, Edit2, Printer, Package,
   Calendar, Building2, Users, FileText, CheckCircle2,
-  Loader2, AlertCircle, Send, XCircle, Clock, FileSpreadsheet,
+  Loader2, AlertCircle, Send, Clock, FileSpreadsheet,
+  Archive, ArchiveRestore,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../../../api';
 import DocumentPreviewModal from '../../../../components/pencairan/preview/DocumentPreviewModal';
 import { TEMPLATE_REGISTRY } from '../../../../components/pencairan/preview/templateRegistry';
 import { generatePdf } from '../../../../utils/generatePdf';
+import { confirmDialog } from '../../../../utils/confirmDialog';
 
 const formatRupiah = (n) =>
   new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n || 0);
@@ -44,7 +46,7 @@ const StatusPill = ({ status }) => {
   const map = {
     draft: { label: 'Draft', cls: 'bg-amber-400 text-amber-950' },
     finalized: { label: 'FINAL', cls: 'bg-emerald-400 text-emerald-950' },
-    cancelled: { label: 'Dibatalkan', cls: 'bg-rose-400 text-rose-950' },
+    cancelled: { label: 'Diarsipkan', cls: 'bg-gray-400 text-gray-950' },
   };
   const c = map[status] || { label: status, cls: 'bg-gray-300 text-gray-800' };
   return (
@@ -234,7 +236,14 @@ const PencairanAtkDetailPage = () => {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const handleFinalize = async () => {
-    if (!window.confirm('Setelah difinalisasi, pencairan tidak bisa diubah. Lanjutkan?')) return;
+    const ok = await confirmDialog({
+      title: 'Finalisasi pencairan?',
+      text: 'Setelah difinalisasi, pencairan tidak bisa diubah atau dihapus lagi.',
+      icon: 'warning',
+      confirmText: 'Ya, Finalisasi',
+      confirmColor: '#059669',
+    });
+    if (!ok) return;
     setActionLoading(true);
     try {
       await api.post(`/pencairan/${id}/finalize`);
@@ -247,15 +256,45 @@ const PencairanAtkDetailPage = () => {
     }
   };
 
-  const handleCancel = async () => {
-    if (!window.confirm('Batalkan pencairan ini?')) return;
+  const handleArchive = async () => {
+    const ok = await confirmDialog({
+      title: 'Arsipkan pencairan ini?',
+      text: 'Data tetap tersimpan dan bisa dipulihkan kapan saja, tapi tidak dihitung sebagai realisasi selama diarsipkan.',
+      icon: 'warning',
+      confirmText: 'Ya, Arsipkan',
+      confirmColor: '#d97706',
+    });
+    if (!ok) return;
     setActionLoading(true);
     try {
       await api.post(`/pencairan/${id}/cancel`);
-      toast.success('Pencairan dibatalkan');
+      toast.success('Pencairan diarsipkan');
       fetchData();
     } catch (e) {
-      toast.error(e.response?.data?.message || 'Gagal membatalkan');
+      toast.error(e.response?.data?.message || 'Gagal mengarsipkan');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRestore = async () => {
+    const ok = await confirmDialog({
+      title: 'Pulihkan pencairan ini?',
+      text: data?.finalized_at
+        ? 'Pencairan akan dikembalikan ke status FINAL.'
+        : 'Pencairan akan dikembalikan ke status DRAFT.',
+      icon: 'question',
+      confirmText: 'Ya, Pulihkan',
+      confirmColor: '#059669',
+    });
+    if (!ok) return;
+    setActionLoading(true);
+    try {
+      const res = await api.post(`/pencairan/${id}/restore`);
+      toast.success(res.data?.message || 'Pencairan dipulihkan');
+      fetchData();
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Gagal memulihkan');
     } finally {
       setActionLoading(false);
     }
@@ -286,7 +325,11 @@ const PencairanAtkDetailPage = () => {
   const d = data;
   const isDraft = d.status === 'draft';
   const isFinalized = d.status === 'finalized';
-  const docsDisabled = !isFinalized;
+  const isArchived = d.status === 'cancelled';
+  const wasFinalized = !!d.finalized_at; // pernah final (dipakai untuk arsip yang bisa dipulihkan ke final)
+  // Draft & final sama-sama bisa preview/print/unduh (draft diberi watermark DRAFT).
+  // Hanya arsip (cancelled) yang dikunci.
+  const docsDisabled = isArchived;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-50/30 via-white to-emerald-50/30 p-4 sm:p-6">
@@ -364,14 +407,28 @@ const PencairanAtkDetailPage = () => {
                 </button>
               </>
             )}
-            {!isFinalized && (
+            {!isArchived && (
               <button
-                onClick={handleCancel}
-                disabled={actionLoading || d.status === 'cancelled'}
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-white/15 text-white rounded-lg text-[13px] font-medium hover:bg-rose-500/30 transition disabled:opacity-50"
+                onClick={handleArchive}
+                disabled={actionLoading}
+                title={isFinalized
+                  ? 'Arsipkan pencairan final (bisa dipulihkan kembali)'
+                  : 'Arsipkan pencairan ini'}
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-white/15 text-white rounded-lg text-[13px] font-medium hover:bg-amber-500/30 transition disabled:opacity-50"
               >
-                <XCircle className="h-4 w-4" />
-                Batalkan
+                <Archive className="h-4 w-4" />
+                Arsipkan
+              </button>
+            )}
+            {isArchived && (
+              <button
+                onClick={handleRestore}
+                disabled={actionLoading}
+                title={wasFinalized ? 'Pulihkan kembali ke status final' : 'Pulihkan kembali ke draft'}
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-400 text-emerald-950 rounded-lg text-[13px] font-bold hover:bg-emerald-300 transition disabled:opacity-50"
+              >
+                {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArchiveRestore className="h-4 w-4" />}
+                Pulihkan{wasFinalized ? ' ke Final' : ' ke Draft'}
               </button>
             )}
             <button
@@ -437,15 +494,22 @@ const PencairanAtkDetailPage = () => {
                 Dokumen Pencairan ({DOKUMEN_LIST.length})
               </h3>
               <p className="text-[11.5px] text-gray-500 mt-0.5">
-                {isFinalized
-                  ? 'Preview setiap dokumen dulu untuk dicek, baru bisa download PDF'
-                  : 'Dokumen baru tersedia setelah pencairan difinalisasi'}
+                {isArchived
+                  ? 'Pencairan diarsipkan — dokumen dikunci'
+                  : isDraft
+                    ? 'Masih draft — bisa dipreview, diprint, & diunduh dengan watermark DRAFT'
+                    : 'Preview setiap dokumen dulu untuk dicek, baru bisa download PDF'}
               </p>
             </div>
-            {!isFinalized ? (
-              <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-700 rounded text-[10.5px] font-semibold">
+            {isArchived ? (
+              <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-500 rounded text-[10.5px] font-semibold">
                 <AlertCircle className="h-3 w-3" />
-                Belum final
+                Diarsipkan
+              </span>
+            ) : isDraft ? (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-rose-50 border border-rose-200 text-rose-700 rounded-lg text-[11px] font-semibold">
+                <AlertCircle className="h-3.5 w-3.5" />
+                Draft · {reviewedDocs.size} / {DOKUMEN_LIST.length} dicek
               </span>
             ) : (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-lg text-[11px] font-semibold">
@@ -455,8 +519,22 @@ const PencairanAtkDetailPage = () => {
             )}
           </div>
 
+          {/* Catatan draft */}
+          {isDraft && (
+            <div className="mb-4 p-3 rounded-lg bg-rose-50 border border-rose-100 flex items-start gap-2">
+              <AlertCircle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
+              <div className="flex-1 text-[12px] text-rose-900">
+                <p className="font-semibold">Dokumen masih berstatus draft</p>
+                <p className="text-[11px] text-rose-700 mt-0.5">
+                  Preview, print, dan unduh PDF akan diberi <strong>watermark "DRAFT"</strong>. Finalisasi
+                  pencairan untuk menghasilkan dokumen resmi tanpa watermark.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Review progress */}
-          {isFinalized && reviewedDocs.size < DOKUMEN_LIST.length && (
+          {!docsDisabled && reviewedDocs.size < DOKUMEN_LIST.length && (
             <div className="mb-4 p-3 rounded-lg bg-blue-50 border border-blue-100 flex items-start gap-2">
               <AlertCircle className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
               <div className="flex-1 text-[12px] text-blue-900">
@@ -468,7 +546,7 @@ const PencairanAtkDetailPage = () => {
               </div>
             </div>
           )}
-          {isFinalized && reviewedDocs.size === DOKUMEN_LIST.length && (
+          {!docsDisabled && reviewedDocs.size === DOKUMEN_LIST.length && (
             <div className="mb-4 p-3 rounded-lg bg-emerald-50 border border-emerald-200 flex items-start gap-2">
               <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
               <div className="flex-1 text-[12px] text-emerald-900">

@@ -225,7 +225,7 @@ const PenyediaPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50/30 via-white to-cyan-50/30 p-4 sm:p-6">
-      <div className="max-w-6xl mx-auto">
+      <div className="w-full">
         <button
           onClick={() => navigate(-1)}
           className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-blue-700 mb-3 transition-colors"

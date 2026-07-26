@@ -3,11 +3,13 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft, DollarSign, Calendar, TrendingUp, TrendingDown,
   FileText, BarChart2, AlertCircle, CheckCircle2, Clock,
-  ChevronDown, Layers, Package, Wallet, X,
+  ChevronDown, Layers, Package, Wallet, X, Plus,
   Utensils, Printer, Plane, Wrench, Gift, ChevronRight,
-  Eye, Receipt, Loader2, Percent,
+  Eye, Receipt, Loader2, Percent, Archive, ArchiveRestore, HandCoins,
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import api from '../../../../api';
+import { confirmDialog } from '../../../../utils/confirmDialog';
 import { useBidangPath } from '../../../../hooks/useBidangPath';
 
 const formatRupiah = (n) =>
@@ -456,11 +458,12 @@ const JENIS_COLOR = {
 const STATUS_COLOR = {
   draft:     { label: 'Draft',     cls: 'bg-amber-100 text-amber-700 border-amber-200' },
   finalized: { label: 'Final',     cls: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
-  cancelled: { label: 'Dibatalkan',cls: 'bg-rose-100 text-rose-700 border-rose-200' },
+  cancelled: { label: 'Diarsipkan',cls: 'bg-gray-100 text-gray-600 border-gray-200' },
 };
 
-const PencairanRow = ({ p, onDetail }) => {
+const PencairanRow = ({ p, onDetail, onArchive, onRestore }) => {
   const status = STATUS_COLOR[p.status] || { label: p.status, cls: 'bg-gray-100 text-gray-700 border-gray-200' };
+  const isArchived = p.status === 'cancelled';
   return (
     <tr className="hover:bg-emerald-50/40 transition-colors">
       <td className="px-4 py-3">
@@ -485,13 +488,32 @@ const PencairanRow = ({ p, onDetail }) => {
         </span>
       </td>
       <td className="px-4 py-3 text-right">
-        <button
-          onClick={() => onDetail(p)}
-          className="p-1.5 rounded-lg text-gray-500 hover:text-emerald-700 hover:bg-emerald-50 transition"
-          title="Detail"
-        >
-          <Eye className="h-4 w-4" />
-        </button>
+        <div className="flex items-center justify-end gap-1">
+          <button
+            onClick={() => onDetail(p)}
+            className="p-1.5 rounded-lg text-gray-500 hover:text-emerald-700 hover:bg-emerald-50 transition"
+            title="Detail"
+          >
+            <Eye className="h-4 w-4" />
+          </button>
+          {isArchived ? (
+            <button
+              onClick={() => onRestore(p)}
+              className="p-1.5 rounded-lg text-gray-500 hover:text-emerald-700 hover:bg-emerald-50 transition"
+              title="Pulihkan dari arsip"
+            >
+              <ArchiveRestore className="h-4 w-4" />
+            </button>
+          ) : (
+            <button
+              onClick={() => onArchive(p)}
+              className="p-1.5 rounded-lg text-gray-500 hover:text-amber-700 hover:bg-amber-50 transition"
+              title="Arsipkan"
+            >
+              <Archive className="h-4 w-4" />
+            </button>
+          )}
+        </div>
       </td>
     </tr>
   );
@@ -501,7 +523,7 @@ const PencairanRow = ({ p, onDetail }) => {
 const DetailSubKegiatanPage = () => {
   const navigate = useNavigate();
   const { getPath } = useBidangPath();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const masterId = searchParams.get('master_id');
 
   const [master, setMaster] = useState(null);
@@ -509,9 +531,17 @@ const DetailSubKegiatanPage = () => {
   const [error, setError] = useState(null);
   const [selectedTahun, setSelectedTahun] = useState(null);
   const [pencairanModalOpen, setPencairanModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('rka'); // 'rka' | 'realisasi'
+  // Tab aktif disimpan di URL (?tab=) agar tetap sama saat halaman di-refresh
+  // dan hanya berubah ketika user klik tombol tab.
+  const activeTab = searchParams.get('tab') === 'realisasi' ? 'realisasi' : 'rka';
+  const setActiveTab = (tab) => {
+    const next = new URLSearchParams(searchParams);
+    next.set('tab', tab);
+    setSearchParams(next, { replace: true });
+  };
   const [groupMode, setGroupMode] = useState('rekening'); // 'rekening' | 'grup'
   const [printMenuOpen, setPrintMenuOpen] = useState(false);
+  const [showArchived, setShowArchived] = useState(false); // tampilkan arsip (soft delete) di tab pencairan
 
   // Realisasi data (list of pencairan terkait master ini)
   const [pencairanList, setPencairanList] = useState([]);
@@ -598,6 +628,42 @@ const DetailSubKegiatanPage = () => {
     }
   };
 
+  const handlePencairanArchive = async (p) => {
+    const ok = await confirmDialog({
+      title: `Arsipkan pencairan ${p.no_pesanan_b || `#${p.id}`}?`,
+      text: 'Data tetap tersimpan dan bisa dipulihkan kapan saja, tapi tidak dihitung sebagai realisasi selama diarsipkan.',
+      icon: 'warning',
+      confirmText: 'Ya, Arsipkan',
+      confirmColor: '#d97706',
+    });
+    if (!ok) return;
+    try {
+      await api.post(`/pencairan/${p.id}/cancel`);
+      toast.success('Pencairan diarsipkan');
+      fetchPencairan();
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Gagal mengarsipkan');
+    }
+  };
+
+  const handlePencairanRestore = async (p) => {
+    const ok = await confirmDialog({
+      title: `Pulihkan pencairan ${p.no_pesanan_b || `#${p.id}`}?`,
+      text: 'Pencairan akan dikembalikan dari arsip ke status semula.',
+      icon: 'question',
+      confirmText: 'Ya, Pulihkan',
+      confirmColor: '#059669',
+    });
+    if (!ok) return;
+    try {
+      const res = await api.post(`/pencairan/${p.id}/restore`);
+      toast.success(res.data?.message || 'Pencairan dipulihkan');
+      fetchPencairan();
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Gagal memulihkan');
+    }
+  };
+
   // ─── Derived ──────────────────────────────────────────────────────────
   const paguTahunList = useMemo(
     () => [...(master?.pagu_list || [])].sort((a, b) => b.tahun - a.tahun),
@@ -637,6 +703,17 @@ const DetailSubKegiatanPage = () => {
     return Array.from(map.entries()).map(([name, its]) => ({ name, items: its }));
   }, [items]);
 
+  // Pisahkan pencairan aktif (draft + final) dari arsip (soft delete / cancelled)
+  const activePencairan = useMemo(
+    () => pencairanList.filter(p => p.status !== 'cancelled'),
+    [pencairanList],
+  );
+  const archivedPencairan = useMemo(
+    () => pencairanList.filter(p => p.status === 'cancelled'),
+    [pencairanList],
+  );
+  const displayedPencairan = showArchived ? archivedPencairan : activePencairan;
+
   // Realisasi totals (finalized only)
   const realisasiStats = useMemo(() => {
     const finalized = pencairanList.filter(p => p.status === 'finalized');
@@ -645,10 +722,11 @@ const DetailSubKegiatanPage = () => {
       totalRealisasi,
       countFinalized: finalized.length,
       countDraft: pencairanList.filter(p => p.status === 'draft').length,
-      countAll: pencairanList.length,
+      countActive: activePencairan.length,
+      countArchived: archivedPencairan.length,
       pctRealisasi: persen(totalRealisasi, totalRka),
     };
-  }, [pencairanList, totalRka]);
+  }, [pencairanList, activePencairan, archivedPencairan, totalRka]);
 
   if (loading) return (
     <div className="flex items-center justify-center min-h-[60vh]">
@@ -694,13 +772,6 @@ const DetailSubKegiatanPage = () => {
           <h1 className="text-base font-bold text-gray-900 mt-1 leading-snug">{master.nama_sub_kegiatan}</h1>
           <p className="text-xs text-gray-500 mt-0.5">{master.nama_program} › {master.nama_kegiatan}</p>
         </div>
-        <button
-          onClick={() => setPencairanModalOpen(true)}
-          className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl text-[12.5px] font-semibold shadow-md shadow-emerald-200/50 hover:shadow-lg hover:shadow-emerald-200/70 transition-all"
-        >
-          <Wallet className="h-3.5 w-3.5" />
-          Pencairan
-        </button>
       </div>
 
       {/* ── Year Selector ── */}
@@ -752,44 +823,44 @@ const DetailSubKegiatanPage = () => {
             />
           </div>
 
-          {/* ── Tabs ── */}
+          {/* ── Tab buttons (di luar box putih, dipisah kiri–kanan) ── */}
+          <div className="flex items-center justify-between gap-3">
+            <button
+              onClick={() => setActiveTab('rka')}
+              className={`flex items-center gap-2.5 px-5 py-3 rounded-xl text-[13.5px] font-semibold border transition-all ${
+                activeTab === 'rka'
+                  ? 'bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-200/60'
+                  : 'bg-white border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-700'
+              }`}
+            >
+              <FileText className="h-6 w-6 shrink-0" />
+              Rencana Kerja Anggaran
+              {items.length > 0 && (
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+                  activeTab === 'rka' ? 'bg-white/25 text-white' : 'bg-blue-100 text-blue-700'
+                }`}>{items.length}</span>
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab('realisasi')}
+              className={`flex items-center gap-2.5 px-5 py-3 rounded-xl text-[13.5px] font-semibold border transition-all ${
+                activeTab === 'realisasi'
+                  ? 'bg-purple-600 border-purple-600 text-white shadow-md shadow-purple-200/60'
+                  : 'bg-white border-gray-200 text-gray-600 hover:border-purple-300 hover:text-purple-700'
+              }`}
+            >
+              <HandCoins className="h-6 w-6 shrink-0" />
+              Pencairan
+              {realisasiStats.countActive > 0 && (
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+                  activeTab === 'realisasi' ? 'bg-white/25 text-white' : 'bg-purple-100 text-purple-700'
+                }`}>{realisasiStats.countActive}</span>
+              )}
+            </button>
+          </div>
+
+          {/* ── Konten tab (box putih) ── */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/40 flex items-center gap-2">
-              <div className="inline-flex items-center bg-gray-100 rounded-xl p-1 gap-0.5">
-                <button
-                  onClick={() => setActiveTab('rka')}
-                  className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-[12.5px] font-semibold transition-all ${
-                    activeTab === 'rka'
-                      ? 'bg-white shadow-sm text-blue-700 shadow-blue-100/60'
-                      : 'text-gray-500 hover:text-gray-700'
-                  }`}
-                >
-                  <FileText className="h-3.5 w-3.5" />
-                  Rencana Kerja Anggaran
-                  {items.length > 0 && (
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
-                      activeTab === 'rka' ? 'bg-blue-100 text-blue-700' : 'bg-gray-200 text-gray-500'
-                    }`}>{items.length}</span>
-                  )}
-                </button>
-                <button
-                  onClick={() => setActiveTab('realisasi')}
-                  className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-[12.5px] font-semibold transition-all ${
-                    activeTab === 'realisasi'
-                      ? 'bg-white shadow-sm text-purple-700 shadow-purple-100/60'
-                      : 'text-gray-500 hover:text-gray-700'
-                  }`}
-                >
-                  <Receipt className="h-3.5 w-3.5" />
-                  Realisasi Anggaran
-                  {realisasiStats.countAll > 0 && (
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
-                      activeTab === 'realisasi' ? 'bg-purple-100 text-purple-700' : 'bg-gray-200 text-gray-500'
-                    }`}>{realisasiStats.countAll}</span>
-                  )}
-                </button>
-              </div>
-            </div>
 
             {/* ═══════════════ TAB RKA ═══════════════ */}
             {activeTab === 'rka' && (
@@ -986,25 +1057,71 @@ const DetailSubKegiatanPage = () => {
                 </div>
 
                 {/* List pencairan */}
-                <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
-                  <Receipt className="h-4 w-4 text-purple-500" />
-                  <h2 className="text-sm font-bold text-gray-800">Daftar Pencairan {selectedTahun}</h2>
-                  {pencairanList.length > 0 && (
-                    <span className="text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-bold ml-auto">
-                      {pencairanList.length} pencairan
+                <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2 flex-wrap">
+                  {showArchived
+                    ? <Archive className="h-4 w-4 text-gray-500" />
+                    : <Receipt className="h-4 w-4 text-purple-500" />}
+                  <h2 className="text-sm font-bold text-gray-800">
+                    {showArchived ? 'Arsip Pencairan' : `Daftar Pencairan ${selectedTahun}`}
+                  </h2>
+                  {displayedPencairan.length > 0 && (
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                      showArchived ? 'bg-gray-200 text-gray-600' : 'bg-purple-100 text-purple-700'
+                    }`}>
+                      {displayedPencairan.length} pencairan
                     </span>
                   )}
+                  <div className="ml-auto flex items-center gap-2">
+                    <button
+                      onClick={() => setShowArchived(s => !s)}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11.5px] font-semibold border transition ${
+                        showArchived
+                          ? 'bg-purple-600 border-purple-600 text-white hover:bg-purple-700'
+                          : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300 hover:text-gray-800'
+                      }`}
+                      title={showArchived ? 'Kembali ke daftar pencairan aktif' : 'Lihat pencairan yang diarsipkan'}
+                    >
+                      {showArchived ? <Receipt className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
+                      {showArchived ? 'Lihat Aktif' : `Arsip (${realisasiStats.countArchived})`}
+                    </button>
+                    {!showArchived && (
+                      <button
+                        onClick={() => setPencairanModalOpen(true)}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-lg text-[11.5px] font-semibold shadow-sm shadow-emerald-200/50 hover:shadow-md transition-all"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        Buat Pencairan
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {loadingPencairan ? (
                   <div className="flex items-center justify-center py-10">
                     <Loader2 className="h-6 w-6 animate-spin text-purple-500" />
                   </div>
-                ) : pencairanList.length === 0 ? (
+                ) : displayedPencairan.length === 0 ? (
                   <div className="text-center py-10">
-                    <Receipt className="h-10 w-10 text-gray-300 mx-auto mb-2" />
-                    <p className="text-sm text-gray-500 mb-1">Belum ada realisasi untuk tahun {selectedTahun}</p>
-                    <p className="text-[11.5px] text-gray-400">Klik tombol "Pencairan" di atas untuk membuat realisasi pertama</p>
+                    {showArchived ? (
+                      <>
+                        <Archive className="h-10 w-10 text-gray-300 mx-auto mb-2" />
+                        <p className="text-sm text-gray-500 mb-1">Belum ada pencairan yang diarsipkan</p>
+                        <p className="text-[11.5px] text-gray-400">Pencairan yang diarsipkan akan muncul di sini</p>
+                      </>
+                    ) : (
+                      <>
+                        <Receipt className="h-10 w-10 text-gray-300 mx-auto mb-2" />
+                        <p className="text-sm text-gray-500 mb-1">Belum ada realisasi untuk tahun {selectedTahun}</p>
+                        <p className="text-[11.5px] text-gray-400 mb-4">Klik tombol "Buat Pencairan" untuk membuat realisasi pertama</p>
+                        <button
+                          onClick={() => setPencairanModalOpen(true)}
+                          className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-lg text-[12px] font-semibold shadow-sm shadow-emerald-200/50 hover:shadow-md transition-all"
+                        >
+                          <Plus className="h-4 w-4" />
+                          Buat Pencairan
+                        </button>
+                      </>
+                    )}
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
@@ -1021,8 +1138,14 @@ const DetailSubKegiatanPage = () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
-                        {pencairanList.map(p => (
-                          <PencairanRow key={p.id} p={p} onDetail={handlePencairanDetail} />
+                        {displayedPencairan.map(p => (
+                          <PencairanRow
+                            key={p.id}
+                            p={p}
+                            onDetail={handlePencairanDetail}
+                            onArchive={handlePencairanArchive}
+                            onRestore={handlePencairanRestore}
+                          />
                         ))}
                       </tbody>
                     </table>

@@ -25,7 +25,7 @@ const FakturTemplate = ({ pencairan }) => {
     || 'Belanja Alat/Bahan untuk Kegiatan Kantor - Alat Tulis Kantor';
 
   return (
-    <DocumentSheet withKop={false} orientation="landscape">
+    <DocumentSheet withKop={false} orientation="portrait">
 
       {/* ── Space atas untuk kop surat penyedia (saat print) ── */}
       <div style={{ height: '3.5cm' }} />

@@ -13,6 +13,7 @@ import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import { DraftWatermarkContext } from '../components/pencairan/preview/DocumentSheet';
 
 // A4 dimensions
 const A4 = {
@@ -59,7 +60,13 @@ export async function generatePdf(TemplateComponent, pencairan, {
     await new Promise((resolve, reject) => {
       try {
         root = createRoot(container);
-        root.render(createElement(TemplateComponent, { pencairan }));
+        root.render(
+          createElement(
+            DraftWatermarkContext.Provider,
+            { value: pencairan?.status === 'draft' },
+            createElement(TemplateComponent, { pencairan }),
+          ),
+        );
 
         // Tunggu font load, lalu dua frame animasi + 400ms untuk layout stabil
         const waitAndResolve = () =>
