@@ -77,6 +77,21 @@ const MEMBERSHIP_CONFIG = {
   unmarked: { label: "Belum ditandai", color: "bg-gray-100 text-gray-500", dotColor: "bg-gray-300" },
 };
 
+// Status jabatan pengurus di database (kolom pengurus.status_jabatan)
+const STATUS_JABATAN_CONFIG = {
+  aktif: { label: "Aktif", color: "bg-green-100 text-green-800", dotColor: "bg-green-500" },
+  selesai: { label: "Selesai", color: "bg-gray-100 text-gray-600", dotColor: "bg-gray-400" },
+  nonaktif: { label: "Non-Aktif", color: "bg-red-100 text-red-800", dotColor: "bg-red-500" },
+  campuran: { label: "Campuran", color: "bg-orange-100 text-orange-800", dotColor: "bg-orange-500" },
+};
+
+// Satu baris bisa membawa >1 record DB (mis. ketua lama "selesai" + ketua baru
+// "aktif" bernama sama) → tampilkan sebagai "Campuran", detailnya di tooltip.
+const statusJabatanConfig = (value) => {
+  const parts = String(value || "").split(", ").filter(Boolean);
+  return parts.length > 1 ? STATUS_JABATAN_CONFIG.campuran : STATUS_JABATAN_CONFIG[parts[0]];
+};
+
 const formatCurrency = (value) => {
   return new Intl.NumberFormat("id-ID", {
     style: "currency",
@@ -170,6 +185,9 @@ const buildClassification = (data) => {
         namaBpjs: (item.bpjsNama || []).join(", "),
         nik: (item.nik || []).join(", "),
         nikDb: (item.dbNik || []).join(", "),
+        // Status jabatan dari database. Nilai jamak (merge >1 record) → tampil apa adanya.
+        statusJabatan: (item.dbStatusJabatan || []).join(", "),
+        jabatanDb: (item.dbJabatan || []).join(", "),
         nikBpjs: (item.bpjsNik || []).join(", "),
         nikCocok: item.nikMatch,
         nikBerbeda: item.nikMismatch,
@@ -345,10 +363,13 @@ const buildClassification = (data) => {
 const COL_DESA = { key: "desa", label: "Desa", type: "desa" };
 const COL_LOKASI = { key: "lokasi", label: "RT/RW", type: "lokasi" };
 
+const COL_STATUS_JABATAN = { key: "statusJabatan", label: "Status Jabatan", type: "statusJabatan" };
+
 const DB_NO_BPJS_COLUMNS = [
   COL_DESA, COL_LOKASI,
   { key: "namaDb", label: "Nama DB" },
   { key: "nik", label: "NIK" },
+  COL_STATUS_JABATAN,
   { key: "adaAdd", label: "Ada ADD", type: "bool" },
   { key: "nilaiAdd", label: "Nilai ADD", type: "currency", align: "right" },
   { key: "status", label: "Status" },
@@ -368,6 +389,7 @@ const TAB_DEFS = [
       { key: "namaDb", label: "Nama DB" },
       { key: "namaBpjs", label: "Nama BPJS" },
       { key: "nik", label: "NIK" },
+      COL_STATUS_JABATAN,
       { key: "nikCocok", label: "NIK Cocok", type: "bool" },
       { key: "tglBeda", label: "Tgl Lahir Beda", type: "bool" },
       { key: "desaBedaTangkil", label: "Desa Beda", type: "bool" },
@@ -441,7 +463,7 @@ const TAB_DEFS = [
     label: "DB Tidak Ada di BPJS",
     bucket: "dbNoBpjs",
     title: "Database Tidak Ada di BPJS",
-    description: "Data Database (pengurus RT/RW) yang tidak memiliki padanan di BPJS.",
+    description: "Data Database (Ketua RT/RW) yang tidak memiliki padanan di BPJS.",
     columns: DB_NO_BPJS_COLUMNS,
   },
   {
@@ -449,7 +471,7 @@ const TAB_DEFS = [
     label: "DB Tanpa Referensi ADD",
     bucket: "dbNoBpjsNoAdd",
     title: "Database Tidak Ada di BPJS — Tanpa Referensi ADD",
-    description: "Pengurus RT/RW di Database yang tidak ada di BPJS dan tidak memiliki referensi dari ADD.",
+    description: "Ketua RT/RW di Database yang tidak ada di BPJS dan tidak memiliki referensi dari ADD.",
     columns: DB_NO_BPJS_COLUMNS,
   },
   {
@@ -457,7 +479,7 @@ const TAB_DEFS = [
     label: "DB Ada Referensi ADD",
     bucket: "dbNoBpjsAdd",
     title: "Database Tidak Ada di BPJS — Ada Referensi ADD",
-    description: "Pengurus RT/RW di Database yang tidak ada di BPJS namun memiliki referensi dari ADD.",
+    description: "Ketua RT/RW di Database yang tidak ada di BPJS namun memiliki referensi dari ADD.",
     columns: DB_NO_BPJS_COLUMNS,
   },
   {
@@ -488,7 +510,8 @@ const TAB_DEFS = [
       { key: "namaDb", label: "Nama DB" },
       { key: "namaBpjs", label: "Nama BPJS" },
       { key: "nik", label: "NIK" },
-      { key: "bpjsMembership", label: "Status", type: "membership" },
+      COL_STATUS_JABATAN,
+      { key: "bpjsMembership", label: "Status BPJS", type: "membership" },
       { key: "upahBpjs", label: "Upah BPJS", type: "currency", align: "right" },
     ],
   },
@@ -503,8 +526,9 @@ const TAB_DEFS = [
       { key: "namaDb", label: "Nama DB" },
       { key: "namaBpjs", label: "Nama BPJS" },
       { key: "nik", label: "NIK" },
+      COL_STATUS_JABATAN,
       { key: "bpjsNonAktifSebab", label: "Sebab Non-Aktif" },
-      { key: "bpjsMembership", label: "Status", type: "membership" },
+      { key: "bpjsMembership", label: "Status BPJS", type: "membership" },
     ],
   },
   // --- Crosscheck Data Status BPJS pada pool "BPJS Tidak Ada di Database" ---
@@ -828,6 +852,7 @@ const buildExportRows = (filteredData) => {
         "TEMPAT LAHIR": joinValues(db.map((d) => d.tempatLahir)),
         "TANGGAL LAHIR": joinValues(db.map((d) => d.tglLahir)),
         "JABATAN": joinValues(db.map((d) => d.jabatan)),
+        "STATUS JABATAN": joinValues(db.map((d) => STATUS_JABATAN_CONFIG[d.statusJabatan]?.label || d.statusJabatan)),
         "NOMOR RW": joinValues(db.map((d) => d.rwNomor)) || item.rwNomor || "",
         "NOMOR RT": joinValues(db.map((d) => d.rtNomor)) || item.rtNomor || "",
         "ALAMAT": joinValues(db.map((d) => d.alamat)),
@@ -1096,7 +1121,7 @@ const RtrwComparisonPage = () => {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Persandingan Data RT/RW</h1>
         <p className="mt-1 text-gray-500">
-          Perbandingan pengurus RT/RW dari Database, penerima insentif ADD, dan peserta BPJS
+          Perbandingan Ketua RT/RW dari Database, penerima insentif ADD, dan peserta BPJS
         </p>
       </div>
 
@@ -1106,7 +1131,7 @@ const RtrwComparisonPage = () => {
           label="Database"
           value={data.summary.totalDbPengurus}
           color="gray"
-          subtitle={`${data.summary.totalDbDesa} desa`}
+          subtitle={`${data.summary.totalDbDesa} desa · ${data.summary.totalDbAktif ?? 0} aktif${data.summary.totalDbNonAktif ? ` · ${data.summary.totalDbNonAktif} non-aktif` : ""}`}
           extraInfo={data.summary.desaWithoutDb?.length ? {
             label: emptyLabel(data.summary.desaWithoutDb),
             onClick: () => setListModal({ title: "Wilayah Tanpa Data Database", list: data.summary.desaWithoutDb }),
@@ -1989,6 +2014,16 @@ const renderClassifiedCell = (col, row) => {
       );
     case "bool":
       return <BoolBadge value={Boolean(value)} />;
+    case "statusJabatan": {
+      const cfg = statusJabatanConfig(value);
+      if (!cfg) return <span className="italic text-gray-300">-</span>;
+      return (
+        <span title={[row.jabatanDb, value].filter(Boolean).join(" — ") || undefined} className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${cfg.color}`}>
+          <span className={`h-1.5 w-1.5 rounded-full ${cfg.dotColor}`} />
+          {cfg.label}
+        </span>
+      );
+    }
     case "membership": {
       const cfg = MEMBERSHIP_CONFIG[value];
       if (!cfg) return <span className="italic text-gray-300">-</span>;
@@ -2120,7 +2155,9 @@ const ClassifiedTable = ({ title, description, rows, columns, kecamatanList, fil
             ? Number(value || 0)
             : col.type === "membership"
               ? (MEMBERSHIP_CONFIG[value]?.label || "")
-              : (value ?? "");
+              : col.type === "statusJabatan"
+                ? (statusJabatanConfig(value)?.label || "")
+                : (value ?? "");
       });
       // Tab "Data Baru — Ada di DB": sertakan sandingan record Database di export.
       if (detailType === "baru") {
