@@ -213,6 +213,7 @@ const ProgramKegiatanPage = lazy(() => import("./pages/bidang/sekretariat/anggar
 const ItemAnggaranPage = lazy(() => import("./pages/bidang/sekretariat/anggaran/ItemAnggaranPage"));
 const ShtPage = lazy(() => import("./pages/bidang/sekretariat/anggaran/ShtPage"));
 const DetailSubKegiatanPage = lazy(() => import("./pages/bidang/sekretariat/anggaran/DetailSubKegiatanPage"));
+const RekeningRefPage = lazy(() => import("./pages/bidang/sekretariat/anggaran/RekeningRefPage"));
 const PencairanAtkListPage = lazy(() => import("./pages/bidang/sekretariat/pencairan/PencairanAtkListPage"));
 const PencairanAtkFormPage = lazy(() => import("./pages/bidang/sekretariat/pencairan/PencairanAtkFormPage"));
 const PencairanAtkDetailPage = lazy(() => import("./pages/bidang/sekretariat/pencairan/PencairanAtkDetailPage"));
@@ -1178,6 +1179,7 @@ function App() {
                   <Route path="anggaran/item-rka" element={<RoleProtectedRoute allowedRoles={["bendahara", "superadmin"]}><ItemAnggaranPage /></RoleProtectedRoute>} />
                   <Route path="anggaran/sht" element={<RoleProtectedRoute allowedRoles={["bendahara", "superadmin"]}><ShtPage /></RoleProtectedRoute>} />
                   <Route path="anggaran/detail-sub-kegiatan" element={<RoleProtectedRoute allowedRoles={["bendahara", "superadmin"]}><DetailSubKegiatanPage /></RoleProtectedRoute>} />
+                  <Route path="anggaran/rekening-ref" element={<RoleProtectedRoute allowedRoles={["bendahara", "superadmin"]}><RekeningRefPage /></RoleProtectedRoute>} />
                   <Route path="pencairan/atk" element={<RoleProtectedRoute allowedRoles={["bendahara", "superadmin"]}><PencairanAtkListPage /></RoleProtectedRoute>} />
                   <Route path="pencairan/atk/new" element={<RoleProtectedRoute allowedRoles={["bendahara", "superadmin"]}><PencairanAtkFormPage /></RoleProtectedRoute>} />
                   <Route path="pencairan/atk/:id" element={<RoleProtectedRoute allowedRoles={["bendahara", "superadmin"]}><PencairanAtkDetailPage /></RoleProtectedRoute>} />
@@ -1250,6 +1252,7 @@ function App() {
                   <Route path="bidang/sekretariat/anggaran/item-rka" element={<RoleProtectedRoute allowedRoles={["bendahara", "superadmin"]}><ItemAnggaranPage /></RoleProtectedRoute>} />
                   <Route path="bidang/sekretariat/anggaran/sht" element={<RoleProtectedRoute allowedRoles={["bendahara", "superadmin"]}><ShtPage /></RoleProtectedRoute>} />
                   <Route path="bidang/sekretariat/anggaran/detail-sub-kegiatan" element={<RoleProtectedRoute allowedRoles={["bendahara", "superadmin"]}><DetailSubKegiatanPage /></RoleProtectedRoute>} />
+                  <Route path="bidang/sekretariat/anggaran/rekening-ref" element={<RoleProtectedRoute allowedRoles={["bendahara", "superadmin"]}><RekeningRefPage /></RoleProtectedRoute>} />
                   <Route path="bidang/sekretariat/pencairan/atk" element={<RoleProtectedRoute allowedRoles={["bendahara", "superadmin"]}><PencairanAtkListPage /></RoleProtectedRoute>} />
                   <Route path="bidang/sekretariat/pencairan/atk/new" element={<RoleProtectedRoute allowedRoles={["bendahara", "superadmin"]}><PencairanAtkFormPage /></RoleProtectedRoute>} />
                   <Route path="bidang/sekretariat/pencairan/atk/:id" element={<RoleProtectedRoute allowedRoles={["bendahara", "superadmin"]}><PencairanAtkDetailPage /></RoleProtectedRoute>} />

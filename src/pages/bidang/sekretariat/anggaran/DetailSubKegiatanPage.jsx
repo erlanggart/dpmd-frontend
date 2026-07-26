@@ -11,6 +11,8 @@ import toast from 'react-hot-toast';
 import api from '../../../../api';
 import { confirmDialog } from '../../../../utils/confirmDialog';
 import { useBidangPath } from '../../../../hooks/useBidangPath';
+import { useAuth } from '../../../../context/AuthContext';
+import AnggaranKasTab from '../../../../components/anggaran/AnggaranKasTab';
 
 const formatRupiah = (n) =>
   new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n || 0);
@@ -523,6 +525,8 @@ const PencairanRow = ({ p, onDetail, onArchive, onRestore }) => {
 const DetailSubKegiatanPage = () => {
   const navigate = useNavigate();
   const { getPath } = useBidangPath();
+  const { user } = useAuth();
+  const canEditAngkas = ['bendahara', 'superadmin'].includes(user?.role);
   const [searchParams, setSearchParams] = useSearchParams();
   const masterId = searchParams.get('master_id');
 
@@ -533,7 +537,8 @@ const DetailSubKegiatanPage = () => {
   const [pencairanModalOpen, setPencairanModalOpen] = useState(false);
   // Tab aktif disimpan di URL (?tab=) agar tetap sama saat halaman di-refresh
   // dan hanya berubah ketika user klik tombol tab.
-  const activeTab = searchParams.get('tab') === 'realisasi' ? 'realisasi' : 'rka';
+  const tabParam = searchParams.get('tab');
+  const activeTab = ['rka', 'angkas', 'realisasi'].includes(tabParam) ? tabParam : 'rka';
   const setActiveTab = (tab) => {
     const next = new URLSearchParams(searchParams);
     next.set('tab', tab);
@@ -823,11 +828,11 @@ const DetailSubKegiatanPage = () => {
             />
           </div>
 
-          {/* ── Tab buttons (di luar box putih, dipisah kiri–kanan) ── */}
-          <div className="flex items-center justify-between gap-3">
+          {/* ── Tab buttons (di luar box putih): RKA · Anggaran Kas · Pencairan ── */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <button
               onClick={() => setActiveTab('rka')}
-              className={`flex items-center gap-2.5 px-5 py-3 rounded-xl text-[13.5px] font-semibold border transition-all ${
+              className={`flex items-center justify-center gap-2.5 px-5 py-3 rounded-xl text-[13.5px] font-semibold border transition-all ${
                 activeTab === 'rka'
                   ? 'bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-200/60'
                   : 'bg-white border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-700'
@@ -842,8 +847,19 @@ const DetailSubKegiatanPage = () => {
               )}
             </button>
             <button
+              onClick={() => setActiveTab('angkas')}
+              className={`flex items-center justify-center gap-2.5 px-5 py-3 rounded-xl text-[13.5px] font-semibold border transition-all ${
+                activeTab === 'angkas'
+                  ? 'bg-amber-500 border-amber-500 text-white shadow-md shadow-amber-200/60'
+                  : 'bg-white border-gray-200 text-gray-600 hover:border-amber-300 hover:text-amber-700'
+              }`}
+            >
+              <Wallet className="h-6 w-6 shrink-0" />
+              Anggaran Kas
+            </button>
+            <button
               onClick={() => setActiveTab('realisasi')}
-              className={`flex items-center gap-2.5 px-5 py-3 rounded-xl text-[13.5px] font-semibold border transition-all ${
+              className={`flex items-center justify-center gap-2.5 px-5 py-3 rounded-xl text-[13.5px] font-semibold border transition-all ${
                 activeTab === 'realisasi'
                   ? 'bg-purple-600 border-purple-600 text-white shadow-md shadow-purple-200/60'
                   : 'bg-white border-gray-200 text-gray-600 hover:border-purple-300 hover:text-purple-700'
@@ -1025,6 +1041,24 @@ const DetailSubKegiatanPage = () => {
                   </>
                 )}
               </div>
+            )}
+
+            {/* ═══════════════ TAB ANGGARAN KAS ═══════════════ */}
+            {activeTab === 'angkas' && (
+              <AnggaranKasTab
+                paguId={paguSelected.id}
+                tahun={selectedTahun}
+                master={master}
+                totalRka={totalRka}
+                canEdit={canEditAngkas}
+                onManageRekening={() => {
+                  const params = new URLSearchParams({
+                    pagu_id: paguSelected.id,
+                    label: master?.nama_sub_kegiatan || '',
+                  });
+                  navigate(`${getPath('/sekretariat/anggaran/rekening-ref')}?${params}`);
+                }}
+              />
             )}
 
             {/* ═══════════════ TAB REALISASI ═══════════════ */}
