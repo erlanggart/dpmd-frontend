@@ -18,6 +18,7 @@ import { EditModeProvider } from "./context/EditModeContext.jsx";
 import { AlertProvider } from "./components/AlertPopup";
 import PushNotificationInitializer from "./components/PushNotificationInitializer";
 import ForceChangePasswordModal from "./components/ForceChangePasswordModal";
+import CompleteDesaProfileModal from "./components/CompleteDesaProfileModal";
 import {
   registerServiceWorker,
   subscribeToPushNotifications,
@@ -884,6 +885,8 @@ function App() {
             <PushNotificationInitializer />
             {/* Popup wajib ganti password default — global untuk semua role */}
             <ForceChangePasswordModal />
+            {/* Popup wajib lengkapi identitas — khusus Admin Desa */}
+            <CompleteDesaProfileModal />
             <ImpersonationReturnBanner />
             <Suspense
               fallback={

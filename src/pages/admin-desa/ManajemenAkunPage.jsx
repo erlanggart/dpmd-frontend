@@ -22,6 +22,7 @@ const emptyForm = {
 	email: "",
 	password: "",
 	jabatan_desa: "",
+	no_hp: "",
 	is_active: true,
 	permissions: [],
 };
@@ -87,6 +88,7 @@ const ManajemenAkunPage = () => {
 			email: user.email || "",
 			password: "",
 			jabatan_desa: user.jabatan_desa || "",
+			no_hp: user.no_hp || "",
 			is_active: user.is_active !== false,
 			permissions: [...(user.permissions || [])],
 		});
@@ -140,6 +142,7 @@ const ManajemenAkunPage = () => {
 				name: form.name.trim(),
 				email: form.email.trim(),
 				jabatan_desa: form.jabatan_desa.trim(),
+				no_hp: form.no_hp.trim(),
 				is_active: form.is_active,
 				permissions: form.permissions,
 			};
@@ -290,6 +293,9 @@ const ManajemenAkunPage = () => {
 										</span>
 									</div>
 									<p className="text-sm text-slate-500 mt-0.5 break-all">{user.email}</p>
+									{user.no_hp && (
+										<p className="text-sm text-slate-500 mt-0.5">HP: {user.no_hp}</p>
+									)}
 								</div>
 
 								<div className="flex items-center gap-2">
@@ -424,6 +430,22 @@ const ManajemenAkunPage = () => {
 										<option key={opt} value={opt} />
 									))}
 								</datalist>
+							</div>
+
+							<div>
+								<label className="block text-sm font-semibold text-slate-700 mb-1.5">
+									Nomor HP
+								</label>
+								<input
+									type="tel"
+									value={form.no_hp}
+									onChange={(e) => setForm({ ...form, no_hp: e.target.value })}
+									placeholder="Contoh: 081234567890"
+									className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+								/>
+								<p className="text-[11px] text-slate-500 mt-1">
+									Opsional. Memudahkan DPMD dan kecamatan menghubungi petugas ini.
+								</p>
 							</div>
 
 							<div>

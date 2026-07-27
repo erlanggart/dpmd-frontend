@@ -31,6 +31,8 @@ import {
 	LuSmartphone,
 	LuShieldCheck,
 	LuLogIn,
+	LuPhone,
+	LuTriangleAlert,
 } from "react-icons/lu";
 import * as XLSX from 'xlsx';
 import api from "../../api";
@@ -266,6 +268,33 @@ const UserCard = ({
 					{user.nip && <InfoRow icon={LuHash} mono>{user.nip}</InfoRow>}
 
 					{user.jabatan && <InfoRow icon={LuBriefcase}>{user.jabatan}</InfoRow>}
+
+					{/* Identitas kontak akun desa — jabatan & nomor HP petugas */}
+					{user.jabatan_desa && <InfoRow icon={LuBriefcase}>{user.jabatan_desa}</InfoRow>}
+
+					{user.no_hp && (
+						<InfoRow icon={LuPhone} mono>
+							<a
+								href={`https://wa.me/62${user.no_hp.replace(/^0/, '')}`}
+								target="_blank"
+								rel="noreferrer"
+								className="hover:text-emerald-700 hover:underline"
+								onClick={(e) => e.stopPropagation()}
+							>
+								{user.no_hp}
+							</a>
+						</InfoRow>
+					)}
+
+					{/* Admin Desa yang belum mengisi identitas — DPMD tidak punya kontaknya */}
+					{user.profile_incomplete && (
+						<div className="flex items-center gap-2 min-w-0 rounded-lg bg-amber-50 px-2 py-1.5 text-amber-800">
+							<div className="flex-shrink-0 w-6 h-6 rounded-lg bg-amber-100 flex items-center justify-center">
+								<LuTriangleAlert className="h-3.5 w-3.5 text-amber-600" />
+							</div>
+							<span className="text-[13px] leading-5">Identitas belum dilengkapi</span>
+						</div>
+					)}
 
 					{user.bidang && <InfoRow icon={LuBuilding2}>{user.bidang.nama}</InfoRow>}
 
