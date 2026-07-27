@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion as Motion } from 'framer-motion';
 import { IdCard, User, Briefcase, Phone, Loader2, LogOut, CheckCircle2 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -35,6 +35,10 @@ const Field = ({ icon: Icon, label, value, onChange, placeholder, type = 'text',
 	</div>
 );
 
+// Nama bawaan sistem, mis. "Admin Desa Mekarsari" — dipakai untuk mendeteksi sesi
+// lama yang datanya belum pernah dicek server. Sama dengan pola di backend.
+const PLACEHOLDER_NAME = /^admin\s+desa\b/i;
+
 /**
  * Popup WAJIB lengkapi identitas Admin Desa.
  *
@@ -48,8 +52,43 @@ const CompleteDesaProfileModal = () => {
 	const [errors, setErrors] = useState({});
 	const [submitting, setSubmitting] = useState(false);
 	const [generalError, setGeneralError] = useState(null);
+	const verifiedRef = useRef(false);
 
-	const open = Boolean(user && user.must_complete_profile);
+	// Sesi di aplikasi ini tidak pernah kedaluwarsa, jadi Admin Desa yang sudah
+	// login sebelum fitur ini ada memegang data user lama yang belum punya
+	// `must_complete_profile` — popup tidak akan pernah muncul kalau hanya
+	// mengandalkan data login. Karena itu status dikonfirmasi ulang ke server
+	// sekali tiap aplikasi dibuka, bukan cuma saat login.
+	useEffect(() => {
+		if (!user || verifiedRef.current) return;
+		if (String(user.role || '').toLowerCase() !== 'admin_desa') return;
+
+		const belumPernahDicek = typeof user.must_complete_profile !== 'boolean';
+		const namanyaMasihBawaan = PLACEHOLDER_NAME.test(String(user.name || ''));
+		if (!belumPernahDicek && !namanyaMasihBawaan) return;
+
+		verifiedRef.current = true;
+		api
+			.get('/auth/profile')
+			.then((res) => {
+				const data = res.data?.data;
+				if (!data) return;
+				updateUser({
+					name: data.name,
+					jabatan_desa: data.jabatan_desa,
+					no_hp: data.no_hp,
+					must_complete_profile: Boolean(data.must_complete_profile),
+					must_change_password: Boolean(data.must_change_password),
+				});
+			})
+			// Offline/koneksi putus: diamkan dan jangan retry di sesi ini (ref sengaja
+			// dibiarkan true) supaya tidak jadi loop request; dicek lagi saat aplikasi dibuka berikutnya.
+			.catch(() => {});
+	}, [user, updateUser]);
+
+	// Kalau password masih bawaan, dahulukan popup ganti password (z-index-nya sama,
+	// popup ini akan menutupinya) supaya urutannya: amankan akun dulu, baru identitas.
+	const open = Boolean(user && user.must_complete_profile && !user.must_change_password);
 
 	// Prefill: nama bawaan sistem sengaja dikosongkan supaya tidak asal disimpan lagi.
 	useEffect(() => {
@@ -117,6 +156,13 @@ const CompleteDesaProfileModal = () => {
 								<IdCard className="h-7 w-7" />
 							</div>
 							<h2 className="text-lg font-bold">Lengkapi Identitas Admin Desa</h2>
+							{user?.desa?.nama && (
+								<span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white">
+									{user.desa.status_pemerintahan === 'kelurahan' ? 'Kelurahan' : 'Desa'}{' '}
+									{user.desa.nama}
+									{user.desa.kecamatan?.nama ? ` — Kec. ${user.desa.kecamatan.nama}` : ''}
+								</span>
+							)}
 							<p className="text-sm text-white/90">
 								DPMD perlu tahu siapa petugas yang memegang akun ini dan nomor yang bisa
 								dihubungi. Lengkapi dulu untuk melanjutkan.
@@ -131,7 +177,7 @@ const CompleteDesaProfileModal = () => {
 								onChange={setField('name')}
 								error={errors.name}
 								placeholder="Contoh: Rahmat Ramadan"
-								hint="Nama asli petugas, bukan nama desa."
+								hint="Nama asli petugas, bukan nama desa. Nama desa tetap menempel di akun ini."
 								autoFocus
 							/>
 							<Field
