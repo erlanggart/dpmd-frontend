@@ -28,8 +28,18 @@ export const deleteAparaturDesa = (id) => {
 	return api.delete(`/desa/aparatur-desa/${id}`);
 };
 
-export const importAparaturFromExternal = () => {
-	return api.post("/desa/aparatur-desa/import-external");
+// Rekonsiliasi arsip Dapur Desa: daftar konflik + orang yang belum ada di data desa.
+export const getRekonsiliasiDapurDesa = () => {
+	return api.get("/desa/aparatur-desa/dapur-desa");
+};
+
+// keputusan: "dapur" (pakai arsip) atau "desa" (pertahankan isian desa).
+export const putuskanDapurDesa = (dapurId, keputusan) => {
+	return api.post(`/desa/aparatur-desa/dapur-desa/${dapurId}/putuskan`, { keputusan });
+};
+
+export const tambahSemuaBaruDapurDesa = () => {
+	return api.post("/desa/aparatur-desa/dapur-desa/tambah-semua-baru");
 };
 
 export const getProdukHukumList = (params) => {

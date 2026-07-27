@@ -284,9 +284,6 @@ const AparaturDesaDetailPage = lazy(
 const AparaturDesaEditPage = lazy(
   () => import("./pages/desa/aparatur-desa/AparaturDesaEditPage"),
 );
-const DesaAparaturExternalPage = lazy(
-  () => import("./pages/desa/aparatur-desa-external/AparaturDesaExternalPage"),
-);
 const ProfilDesaPage = lazy(() => import("./pages/desa/ProfilDesaPage"));
 const DesaSettings = lazy(() => import("./pages/desa/DesaSettings"));
 const DesaBankeuPage = lazy(() => import("./pages/desa/bankeu/DesaBankeuPage"));
@@ -973,7 +970,6 @@ function App() {
                       path="aparatur-desa/:id/edit"
                       element={<AparaturDesaEditPage />}
                     />
-                    <Route path="aparatur-desa-external" element={<DesaAparaturExternalPage />} />
                   </Route>
 
                   <Route element={<DesaPermissionRoute permission="produk-hukum" />}>
@@ -1534,7 +1530,6 @@ function App() {
                     element={
                       <PemdesAparaturDesaPage
                         mode="core-dashboard"
-                        allowedTabs={["database", "external"]}
                       />
                     }
                   />
