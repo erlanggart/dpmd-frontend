@@ -26,6 +26,17 @@ const LoginPage = () => {
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 	const [error, setError] = useState(null);
+	// Pesan dari interceptor saat sesi dihentikan paksa (mis. role akun berubah).
+	// Dibaca sekali lalu dibuang supaya tidak muncul lagi di kunjungan berikutnya.
+	const [authNotice] = useState(() => {
+		try {
+			const notice = sessionStorage.getItem("authNotice");
+			if (notice) sessionStorage.removeItem("authNotice");
+			return notice;
+		} catch {
+			return null;
+		}
+	});
 	const [emailError, setEmailError] = useState(null);
 	const [passwordError, setPasswordError] = useState(null);
 	const [loading, setLoading] = useState(false);
@@ -240,6 +251,11 @@ const LoginPage = () => {
 					<p className="text-sm font-semibold text-[rgb(var(--color-secondary))]">Masuk akun</p>
 					<h2 className="mt-2 text-3xl font-bold tracking-normal text-slate-950 sm:text-4xl">Selamat datang</h2>
 					<p className="mt-3 text-sm leading-6 text-slate-600">Gunakan akun DPMD, desa, kecamatan, atau dinas terkait untuk melanjutkan.</p>
+					{authNotice && (
+						<div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3">
+							<p className="text-sm font-medium text-amber-900">{authNotice}</p>
+						</div>
+					)}
 
 					{/* Hanya lokasi — izin notifikasi tidak lagi diminta di sini; langganan
 					    push dibentuk setelah login oleh layout masing-masing peran. */}

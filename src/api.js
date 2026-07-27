@@ -82,11 +82,29 @@ api.interceptors.response.use(
 
 		// Check if error is 401
 		if (error.response && error.response.status === 401) {
+			// Role di database berubah (mis. akun desa dijadikan Admin Desa), sehingga
+			// token lama ditolak. Simpan alasannya supaya halaman login bisa
+			// menjelaskan, bukan sekadar melempar user keluar tanpa keterangan.
+			const isRoleChanged = error.response.data?.code === "ROLE_CHANGED";
+			if (isRoleChanged) {
+				try {
+					sessionStorage.setItem(
+						"authNotice",
+						error.response.data.message ||
+							"Hak akses akun Anda telah diperbarui. Silakan login kembali.",
+					);
+				} catch {
+					// sessionStorage bisa diblokir (mode privat); abaikan saja.
+				}
+			}
+
 			// Only redirect if NOT on login or landing page, and not already logging out
 			if (window.location.pathname !== "/login" && window.location.pathname !== "/" && !isLoggingOut) {
 				isLoggingOut = true;
 				performFullLogout().then(() => {
-					window.location.href = "/";
+					// Khusus perubahan role, langsung ke halaman login supaya
+					// pesan penjelasannya terbaca.
+					window.location.href = isRoleChanged ? "/login" : "/";
 				}).finally(() => {
 					isLoggingOut = false;
 				});
