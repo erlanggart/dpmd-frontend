@@ -155,6 +155,8 @@ const LoginPage = () => {
 			// Navigate based on role
 			if (newUser.role === "desa") {
 				navigate("/desa/dashboard");
+			} else if (newUser.role === "admin_desa") {
+				navigate("/admin-desa/akun");
 			} else if (newUser.role === "kecamatan") {
 				navigate("/kecamatan/dashboard");
 			} else if (newUser.role === "dinas_terkait" || newUser.role === "verifikator_dinas") {

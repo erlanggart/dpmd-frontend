@@ -20,6 +20,7 @@ export default function Forbidden() {
 			bendahara: "/dpmd/dashboard",
 			pegawai: "/dpmd/dashboard",
 			desa: "/desa/dashboard",
+			admin_desa: "/admin-desa/akun",
 			kecamatan: "/kecamatan/dashboard",
 			dinas_terkait: "/dinas/dashboard",
 			verifikator_dinas: "/dinas/dashboard",

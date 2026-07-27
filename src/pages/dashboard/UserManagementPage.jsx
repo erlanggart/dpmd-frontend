@@ -40,6 +40,7 @@ import EditRoleModal from "../../components/EditRoleModal";
 import EditBidangModal from "../../components/EditBidangModal";
 import EditTanggalLahirModal from "../../components/EditTanggalLahirModal";
 import EditJabatanModal from "../../components/EditJabatanModal";
+import DesaPermissionsModal from "../../components/DesaPermissionsModal";
 import EditAvatarModal from "../../components/EditAvatarModal";
 import UserStatsCard from "../../components/UserStatsCard";
 import OnlineUsersSidebar from "../../components/users/OnlineUsersSidebar";
@@ -82,7 +83,7 @@ const ROLE_DASHBOARD_MAP = {
 // ─── UserCard ────────────────────────────────────────────────────
 const UserCard = ({
 	user, canManage, isSuperadmin, canImpersonate, visiblePasswords, togglePasswordVisibility,
-	onEditRole, onEditBidang, onEditTanggalLahir, onEditJabatan,
+	onEditRole, onEditBidang, onEditTanggalLahir, onEditJabatan, onEditDesaPermissions,
 	onEditAvatar, onSetDevice, onResetPassword, onDeleteUser, onImpersonate, getRoleInfo,
 }) => {
 	const [menuOpen, setMenuOpen] = useState(false);
@@ -162,6 +163,16 @@ const UserCard = ({
 										</div>
 										<span className="font-medium">Jabatan & Status</span>
 									</button>
+									{/* Hak akses fitur hanya relevan untuk akun operasional desa */}
+									{user.role === 'desa' && (
+										<button onClick={() => { onEditDesaPermissions(user); setMenuOpen(false); }}
+											className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 rounded-xl transition-colors">
+											<div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
+												<LuShieldCheck className="h-4 w-4 text-emerald-600" />
+											</div>
+											<span className="font-medium">Hak Akses Fitur</span>
+										</button>
+									)}
 									<div className="my-1.5 border-t border-gray-100" />
 									{['PPPK_Paruh_Waktu','Tenaga_Alih_Daya','Tenaga_Keamanan','Tenaga_Kebersihan'].includes(user.status_kepegawaian) && (
 										<button onClick={() => { onSetDevice(user); setMenuOpen(false); }}
@@ -372,6 +383,7 @@ const UserManagementPage = () => {
 	const [showBidangModal, setShowBidangModal] = useState(false);
 	const [showTanggalLahirModal, setShowTanggalLahirModal] = useState(false);
 	const [showJabatanModal, setShowJabatanModal] = useState(false);
+	const [showDesaPermModal, setShowDesaPermModal] = useState(false);
 	const [showAvatarModal, setShowAvatarModal] = useState(false);
 	const [selectedUser, setSelectedUser] = useState(null);
 	const [isResettingPassword, setIsResettingPassword] = useState(false);
@@ -407,7 +419,8 @@ const UserManagementPage = () => {
 			icon: LuBriefcase,
 			color: "blue"
 		},
-		{ id: "desa", label: "Admin Desa", role: "desa", icon: LuHouse, color: "emerald" },
+		// Admin Desa (pengelola akun) + operator desa yang dibuatnya
+		{ id: "desa", label: "Akun Desa", roles: ["admin_desa", "desa"], icon: LuHouse, color: "emerald" },
 		{ id: "kecamatan", label: "Admin Kecamatan", role: "kecamatan", icon: LuMapPin, color: "violet" },
 		{ id: "dinas_terkait", label: "Dinas Terkait", role: "dinas_terkait", icon: LuBuilding2, color: "amber" },
 		{ id: "bpjs", label: "BPJS", role: "bpjs", icon: LuShieldCheck, color: "emerald" },
@@ -537,6 +550,12 @@ const UserManagementPage = () => {
 	const handleEditJabatan = (user) => {
 		setSelectedUser(user);
 		setShowJabatanModal(true);
+	};
+
+	// Handle hak akses fitur akun operasional desa (role `desa`)
+	const handleEditDesaPermissions = (user) => {
+		setSelectedUser(user);
+		setShowDesaPermModal(true);
 	};
 
 	// Handle edit avatar
@@ -739,7 +758,8 @@ const UserManagementPage = () => {
 			ketua_tim: { label: "Ketua Tim", color: "bg-cyan-100 text-cyan-700 border-cyan-200" },
 			bendahara: { label: "Bendahara", color: "bg-green-100 text-green-700 border-green-200" },
 			pegawai: { label: "Pegawai", color: "bg-gray-100 text-gray-700 border-gray-200" },
-			desa: { label: "Admin Desa", color: "bg-emerald-100 text-emerald-700 border-emerald-200" },
+			admin_desa: { label: "Admin Desa", color: "bg-emerald-100 text-emerald-700 border-emerald-200" },
+			desa: { label: "Operator Desa", color: "bg-lime-100 text-lime-700 border-lime-200" },
 			kecamatan: { label: "Admin Kecamatan", color: "bg-violet-100 text-violet-700 border-violet-200" },
 			dinas_terkait: { label: "Dinas Terkait", color: "bg-amber-100 text-amber-700 border-amber-200" },
 			verifikator_dinas: { label: "Verifikator Dinas", color: "bg-orange-100 text-orange-700 border-orange-200" },
@@ -1200,6 +1220,7 @@ const UserManagementPage = () => {
 								onEditBidang={handleEditBidang}
 								onEditTanggalLahir={handleEditTanggalLahir}
 								onEditJabatan={handleEditJabatan}
+							onEditDesaPermissions={handleEditDesaPermissions}
 								onEditAvatar={handleEditAvatar}
 								onSetDevice={handleSetDevice}
 								onResetPassword={handleResetPassword}
@@ -1350,6 +1371,18 @@ const UserManagementPage = () => {
 						setSelectedUser(null);
 					}}
 					onUpdated={handleJabatanUpdated}
+					userData={selectedUser}
+				/>
+			)}
+
+			{showDesaPermModal && selectedUser && (
+				<DesaPermissionsModal
+					isOpen={showDesaPermModal}
+					onClose={() => {
+						setShowDesaPermModal(false);
+						setSelectedUser(null);
+					}}
+					onUpdated={fetchUsers}
 					userData={selectedUser}
 				/>
 			)}

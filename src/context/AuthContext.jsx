@@ -1,6 +1,7 @@
 // src/context/AuthContext.jsx
 import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import { clearAllSessionData, backupSessionToIndexedDB, restoreSessionFromIndexedDB, performFullLogout } from "../utils/sessionPersistence";
+import { resetDesaPermissionRefresh } from "../hooks/useDesaPermissions";
 
 // 1. Membuat Context
 const AuthContext = createContext(null);
@@ -284,6 +285,7 @@ export const AuthProvider = ({ children }) => {
 	const logout = async () => {
 		// Use performFullLogout to clear everything including IndexedDB + set logout flag
 		await performFullLogout();
+		resetDesaPermissionRefresh();
 		setUser(null);
 		setExpressToken(null);
 		console.log('[Auth] User logged out, all session data cleared');
@@ -323,7 +325,7 @@ export const AuthProvider = ({ children }) => {
 	// (superadmin, admin bidang PMD, atau internal DPMD staff lainnya)
 	const isKelembagaanAdmin = () => {
 		if (!user) return false;
-		const nonAdminRoles = ['desa', 'kecamatan', 'dinas_terkait', 'verifikator_dinas', 'bpjs'];
+		const nonAdminRoles = ['desa', 'admin_desa', 'kecamatan', 'dinas_terkait', 'verifikator_dinas', 'bpjs'];
 		return !nonAdminRoles.includes(user.role);
 	};
 

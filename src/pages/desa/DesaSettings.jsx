@@ -4,6 +4,12 @@ import { FiUser, FiLock, FiEye, FiEyeOff, FiSave } from "react-icons/fi";
 import api from "../../api";
 import Swal from "sweetalert2";
 
+// Halaman ini dipakai dua role: Admin Desa (pengelola akun) dan operator desa.
+const ROLE_LABELS = {
+	admin_desa: "Admin Desa (pengelola akun)",
+	desa: "Operator Desa",
+};
+
 const DesaSettings = () => {
 	const user = useUserProfile(); // Fetch profile with desa data
 	const [activeTab, setActiveTab] = useState("profile");
@@ -179,9 +185,9 @@ const DesaSettings = () => {
 								</label>
 								<input
 									type="text"
-									value={user?.role || ""}
+									value={ROLE_LABELS[user?.role] || user?.role || ""}
 									disabled
-									className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed capitalize"
+									className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed"
 								/>
 							</div>
 

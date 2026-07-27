@@ -12,6 +12,7 @@ import { Suspense, lazy, useEffect, useState } from "react";
 import { Toaster, toast } from "react-hot-toast";
 import { useAuth } from "./context/AuthContext";
 import { useThemeColor } from "./hooks/useThemeColor";
+import { useDesaPermissions } from "./hooks/useDesaPermissions";
 import { DataCacheProvider } from "./context/DataCacheContext";
 import { EditModeProvider } from "./context/EditModeContext.jsx";
 import { AlertProvider } from "./components/AlertPopup";
@@ -97,6 +98,7 @@ function HomeRedirect() {
       bendahara: "/dpmd/dashboard",
       pegawai: "/dpmd/dashboard",
       desa: "/desa/dashboard",
+      admin_desa: "/admin-desa/akun",
       kecamatan: "/kecamatan/dashboard",
       dinas_terkait: "/dinas/dashboard",
       verifikator_dinas: "/dinas/dashboard",
@@ -196,6 +198,10 @@ const PerjadinDetail = lazy(
 );
 const DesaLayout = lazy(() => import("./layouts/DesaLayout"));
 const DesaDashboard = lazy(() => import("./pages/desa/DesaDashboardPage"));
+const AdminDesaLayout = lazy(() => import("./layouts/AdminDesaLayout"));
+const ManajemenAkunPage = lazy(
+  () => import("./pages/admin-desa/ManajemenAkunPage"),
+);
 const BumdesDesaPage = lazy(() => import("./pages/desa/bumdes/BumdesDesaPage"));
 
 // Pegawai routes - Using unified DPMDStaffLayout
@@ -532,6 +538,27 @@ const RoleProtectedRoute = ({ children, allowedRoles }) => {
   return children || <Outlet />;
 };
 
+// Pagar hak akses fitur untuk akun operasional desa.
+// Menu yang tidak diizinkan Admin Desa tidak boleh dibuka lewat URL langsung.
+// Backend tetap penjaga terakhir; ini hanya supaya UX-nya jelas.
+const DesaPermissionRoute = ({ permission, children }) => {
+  const { hasPermission, isReady } = useDesaPermissions();
+
+  if (!isReady) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <div className="animate-spin rounded-full h-10 w-10 border-4 border-slate-200 border-t-slate-800"></div>
+      </div>
+    );
+  }
+
+  if (!hasPermission(permission)) {
+    return <Navigate to="/forbidden" replace />;
+  }
+
+  return children || <Outlet />;
+};
+
 // Component wrapper untuk theme color hook
 const ThemeColorWrapper = ({ children }) => {
   const location = useLocation();
@@ -634,6 +661,7 @@ const ThemeColorWrapper = ({ children }) => {
                 ketua_tim: "/dpmd/dashboard",
                 pegawai: "/dpmd/dashboard",
                 desa: "/desa/dashboard",
+                admin_desa: "/admin-desa/akun",
                 kecamatan: "/kecamatan/dashboard",
                 dinas_terkait: "/dinas/dashboard",
                 verifikator_dinas: "/dinas/dashboard",
@@ -902,43 +930,87 @@ function App() {
                     </RoleProtectedRoute>
                   }
                 >
+                  {/* Dashboard & Pengaturan selalu terbuka untuk semua akun desa */}
                   <Route path="dashboard" element={<DesaDashboard />} />
-                  <Route path="profil-desa" element={<ProfilDesaPage />} />
-                  <Route path="bumdes" element={<BumdesDesaPage />} />
-                  <Route path="kelembagaan" element={<KelembagaanDesaPage />} />
-                  <Route
-                    path="kelembagaan/:type"
-                    element={<KelembagaanList />}
-                  />
-                  <Route
-                    path="kelembagaan/:type/:id"
-                    element={<KelembagaanDetailPage />}
-                  />
-                  <Route path="pengurus/:id" element={<PengurusDetailPage />} />
-                  <Route
-                    path="pengurus/:id/edit"
-                    element={<PengurusEditPage />}
-                  />
-                  <Route path="aparatur-desa" element={<AparaturDesaPage />} />
-                  <Route
-                    path="aparatur-desa/:id"
-                    element={<AparaturDesaDetailPage />}
-                  />
-                  <Route
-                    path="aparatur-desa/:id/edit"
-                    element={<AparaturDesaEditPage />}
-                  />
-                  <Route path="produk-hukum" element={<ProdukHukum />} />
-                  <Route
-                    path="produk-hukum/:id"
-                    element={<ProdukHukumDetail />}
-                  />
-                  <Route path="bankeu" element={<DesaBankeuPage />} />
-                  <Route path="bankeu-perubahan" element={<DesaBankeuPerubahanPage />} />
-                  <Route path="bantuan-provinsi-lpj" element={<DesaBantuanProvinsiLpjPage />} />
-                  <Route path="aparatur-desa-external" element={<DesaAparaturExternalPage />} />
                   <Route path="settings" element={<DesaSettings />} />
+
+                  {/* Sisanya mengikuti hak akses yang diberikan Admin Desa */}
+                  <Route element={<DesaPermissionRoute permission="profil-desa" />}>
+                    <Route path="profil-desa" element={<ProfilDesaPage />} />
+                  </Route>
+
+                  <Route element={<DesaPermissionRoute permission="bumdes" />}>
+                    <Route path="bumdes" element={<BumdesDesaPage />} />
+                  </Route>
+
+                  <Route element={<DesaPermissionRoute permission="kelembagaan" />}>
+                    <Route path="kelembagaan" element={<KelembagaanDesaPage />} />
+                    <Route
+                      path="kelembagaan/:type"
+                      element={<KelembagaanList />}
+                    />
+                    <Route
+                      path="kelembagaan/:type/:id"
+                      element={<KelembagaanDetailPage />}
+                    />
+                    <Route path="pengurus/:id" element={<PengurusDetailPage />} />
+                    <Route
+                      path="pengurus/:id/edit"
+                      element={<PengurusEditPage />}
+                    />
+                  </Route>
+
+                  <Route element={<DesaPermissionRoute permission="aparatur-desa" />}>
+                    <Route path="aparatur-desa" element={<AparaturDesaPage />} />
+                    <Route
+                      path="aparatur-desa/:id"
+                      element={<AparaturDesaDetailPage />}
+                    />
+                    <Route
+                      path="aparatur-desa/:id/edit"
+                      element={<AparaturDesaEditPage />}
+                    />
+                    <Route path="aparatur-desa-external" element={<DesaAparaturExternalPage />} />
+                  </Route>
+
+                  <Route element={<DesaPermissionRoute permission="produk-hukum" />}>
+                    <Route path="produk-hukum" element={<ProdukHukum />} />
+                    <Route
+                      path="produk-hukum/:id"
+                      element={<ProdukHukumDetail />}
+                    />
+                  </Route>
+
+                  <Route element={<DesaPermissionRoute permission="bankeu" />}>
+                    <Route path="bankeu" element={<DesaBankeuPage />} />
+                  </Route>
+
+                  <Route element={<DesaPermissionRoute permission="bankeu-perubahan" />}>
+                    <Route path="bankeu-perubahan" element={<DesaBankeuPerubahanPage />} />
+                  </Route>
+
+                  <Route element={<DesaPermissionRoute permission="bantuan-provinsi-lpj" />}>
+                    <Route path="bantuan-provinsi-lpj" element={<DesaBantuanProvinsiLpjPage />} />
+                  </Route>
+
+                  <Route element={<DesaPermissionRoute permission="pesan" />}>
+                    <Route path="pesan" element={<MessagingPage />} />
+                  </Route>
+                </Route>
+
+                {/* Rute Admin Desa - pengelola akun di satu desa, tanpa fitur operasional */}
+                <Route
+                  path="/admin-desa"
+                  element={
+                    <RoleProtectedRoute allowedRoles={["admin_desa"]}>
+                      <AdminDesaLayout />
+                    </RoleProtectedRoute>
+                  }
+                >
+                  <Route index element={<Navigate to="akun" replace />} />
+                  <Route path="akun" element={<ManajemenAkunPage />} />
                   <Route path="pesan" element={<MessagingPage />} />
+                  <Route path="settings" element={<DesaSettings />} />
                 </Route>
                 {/* ============================================ */}
                 {/* DPMD INTERNAL STAFF ROUTES - Unified Single Route */}

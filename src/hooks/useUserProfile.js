@@ -12,7 +12,7 @@ export const useUserProfile = () => {
 	useEffect(() => {
 		const fetchProfile = async () => {
 			// Only fetch if user exists but doesn't have complete desa data
-			if (user && user.role === "desa" && !user.desa) {
+			if (user && (user.role === "desa" || user.role === "admin_desa") && !user.desa) {
 				try {
 					const response = await api.get("/auth/profile");
 					

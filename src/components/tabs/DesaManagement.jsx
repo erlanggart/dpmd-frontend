@@ -39,16 +39,17 @@ const DesaManagement = () => {
 	const fetchUsers = useCallback(async () => {
 		setLoading(true);
 		try {
-			const response = await api.get("/users", {
-				params: {
-					role: "desa",
-					limit: 500,
-				},
-			});
+			// Dua jenis akun di level desa: `admin_desa` (pengelola akun, dibuat
+			// superadmin) dan `desa` (operator, dibuat sendiri oleh Admin Desa).
+			const [adminRes, operatorRes] = await Promise.all([
+				api.get("/users", { params: { role: "admin_desa", limit: 500 } }),
+				api.get("/users", { params: { role: "desa", limit: 1000 } }),
+			]);
 
-			const desaUsers = response.data.data.filter(
-				(user) => user.role === "desa"
-			);
+			const desaUsers = [
+				...(adminRes.data.data || []).filter((user) => user.role === "admin_desa"),
+				...(operatorRes.data.data || []).filter((user) => user.role === "desa"),
+			];
 			setUsers(desaUsers);
 		} catch (err) {
 			setError("Gagal mengambil data user.");
@@ -192,7 +193,7 @@ const DesaManagement = () => {
 						<LuMapPin className="h-7 w-7 text-white" />
 					</div>
 					<div>
-						<h3 className="text-2xl font-bold text-gray-800">Admin Desa</h3>
+						<h3 className="text-2xl font-bold text-gray-800">Akun Desa</h3>
 						<p className="text-sm text-gray-600">
 							{filteredUsers.length} dari {users.length} user
 						</p>
@@ -255,7 +256,7 @@ const DesaManagement = () => {
 											{user.name}
 										</h4>
 										<span className="inline-block px-3 py-1 text-xs bg-white/20 backdrop-blur-sm text-white rounded-full font-medium">
-											Desa
+											{user.role === "admin_desa" ? "Admin Desa" : "Operator Desa"}
 										</span>
 									</div>
 								</div>

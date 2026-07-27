@@ -38,7 +38,9 @@ const ROLE_GROUPS = [
 		label: "Wilayah",
 		roles: [
 			{ value: "kecamatan", label: "Admin Kecamatan", needs_entity: true },
-			{ value: "desa", label: "Admin Desa", needs_entity: true },
+			// Admin Desa = pengelola akun di satu desa. Akun operasional desa (role
+			// `desa`) dibuat sendiri oleh Admin Desa lewat menu Manajemen Akun.
+			{ value: "admin_desa", label: "Admin Desa", needs_entity: true },
 		],
 	},
 	{
@@ -116,8 +118,9 @@ const AddUserModal = ({ isOpen, onClose, onUserAdded }) => {
 
 			if (role === "kecamatan") {
 				endpoint = "/kecamatans";
-			} else if (role === "desa") {
-				endpoint = "/desas";
+			} else if (role === "admin_desa") {
+				// Kelurahan juga punya Admin Desa sendiri, jadi jangan disaring keluar.
+				endpoint = "/desas?include_kelurahan=1";
 			}
 
 			if (endpoint) {
@@ -200,9 +203,24 @@ const AddUserModal = ({ isOpen, onClose, onUserAdded }) => {
 				role: formData.role,
 			};
 
-			// Add entity_id only if needed
+			// Add entity_id only if needed. Backend `POST /users` menerima desa_id /
+			// kecamatan_id, jadi kirim juga bentuk itu supaya penugasan wilayahnya tersimpan.
 			if (needsEntity(formData.role) && formData.entity_id) {
 				submitData.entity_id = formData.entity_id;
+
+				if (formData.role === "kecamatan") {
+					submitData.kecamatan_id = formData.entity_id;
+				} else if (formData.role === "admin_desa") {
+					submitData.desa_id = formData.entity_id;
+					// Admin Desa butuh kecamatan_id juga: akun operasional yang dia buat
+					// mewarisi kecamatan dari sini.
+					const selectedDesa = entities.find(
+						(entity) => String(entity.id) === String(formData.entity_id),
+					);
+					if (selectedDesa?.kecamatan_id) {
+						submitData.kecamatan_id = selectedDesa.kecamatan_id;
+					}
+				}
 			}
 
 			const response = await api.post("/users", submitData, {
@@ -346,7 +364,7 @@ const AddUserModal = ({ isOpen, onClose, onUserAdded }) => {
 							<label className="block text-sm font-medium text-gray-700 mb-1">
 								{formData.role === "kecamatan"
 									? "Pilih Kecamatan"
-									: "Pilih Desa"}
+									: "Pilih Desa/Kelurahan"}
 							</label>
 							<select
 								name="entity_id"
@@ -358,11 +376,18 @@ const AddUserModal = ({ isOpen, onClose, onUserAdded }) => {
 							>
 								<option value="">
 									-- Pilih{" "}
-									{formData.role === "kecamatan" ? "Kecamatan" : "Desa"} --
+									{formData.role === "kecamatan" ? "Kecamatan" : "Desa/Kelurahan"} --
 								</option>
 								{entities.map((entity) => (
 									<option key={entity.id} value={entity.id}>
-										{entity.nama}
+										{/* Desa dan kelurahan bisa bernama sama, jadi diberi awalan status
+										    dan nama kecamatan supaya tidak salah pilih. */}
+										{entity.status_pemerintahan === "kelurahan"
+											? `Kelurahan ${entity.nama}`
+											: entity.status_pemerintahan === "desa"
+												? `Desa ${entity.nama}`
+												: entity.nama}
+										{entity.kecamatans?.nama ? ` — Kec. ${entity.kecamatans.nama}` : ""}
 									</option>
 								))}
 							</select>

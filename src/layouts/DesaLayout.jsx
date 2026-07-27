@@ -15,8 +15,11 @@ import { LuStore, LuFileText, LuUsers, LuUserCheck, LuWallpaper, LuLayoutDashboa
 import AnimatedIcon from "../components/AnimatedIcon";
 import InstallPWA from "../components/InstallPWA";
 import { useUnreadMessages } from "../hooks/useUnreadMessages";
+import { useDesaPermissions } from "../hooks/useDesaPermissions";
 
-// Menu items configuration
+// Menu items configuration.
+// `permission` = key hak akses yang diberikan Admin Desa; menu tanpa `permission`
+// selalu tampil (Dashboard & Pengaturan).
 const menuItems = [
   {
     id: "dashboard",
@@ -28,6 +31,7 @@ const menuItems = [
   },
   {
     id: "profil-desa",
+    permission: "profil-desa",
     label: "Profil Desa",
     path: "/desa/profil-desa",
     icon: "image",
@@ -36,6 +40,7 @@ const menuItems = [
   },
   {
     id: "produk-hukum",
+    permission: "produk-hukum",
     label: "Produk Hukum",
     path: "/desa/produk-hukum",
     icon: "file",
@@ -44,6 +49,7 @@ const menuItems = [
   },
   {
     id: "bumdes",
+    permission: "bumdes",
     label: "BUMDES",
     path: "/desa/bumdes",
     icon: "store",
@@ -52,6 +58,7 @@ const menuItems = [
   },
   {
     id: "kelembagaan",
+    permission: "kelembagaan",
     label: "Kelembagaan",
     path: "/desa/kelembagaan",
     icon: "landmark",
@@ -60,6 +67,7 @@ const menuItems = [
   },
   {
     id: "aparatur-desa",
+    permission: "aparatur-desa",
     label: "Aparatur Desa",
     path: "/desa/aparatur-desa",
     icon: "users",
@@ -68,6 +76,7 @@ const menuItems = [
   },
   {
     id: "bankeu",
+    permission: "bankeu",
     label: "Bantuan Keuangan",
     path: "/desa/bankeu",
     icon: "banknote",
@@ -76,6 +85,7 @@ const menuItems = [
   },
   {
     id: "bankeu-perubahan",
+    permission: "bankeu-perubahan",
     label: "Bankeu Perubahan",
     path: "/desa/bankeu-perubahan",
     icon: "coins",
@@ -84,6 +94,7 @@ const menuItems = [
   },
   {
     id: "bantuan-provinsi-lpj",
+    permission: "bantuan-provinsi-lpj",
     label: "LPJ Bantuan Provinsi",
     path: "/desa/bantuan-provinsi-lpj",
     icon: "banknote",
@@ -92,6 +103,7 @@ const menuItems = [
   },
   {
     id: "pesan",
+    permission: "pesan",
     label: "Pesan",
     path: "/desa/pesan",
     icon: "chatbot",
@@ -123,6 +135,12 @@ const DesaLayout = () => {
   const [showMenu, setShowMenu] = useState(false);
   const [hoveredItem, setHoveredItem] = useState(null);
   const { unreadMessages } = useUnreadMessages('/desa/pesan');
+  const { hasPermission } = useDesaPermissions();
+
+  // Menu yang tidak diizinkan Admin Desa tidak ditampilkan sama sekali.
+  const visibleMenuItems = menuItems.filter(
+    (item) => !item.permission || hasPermission(item.permission)
+  );
 
   const handleLogout = () => {
     logout();
@@ -142,7 +160,7 @@ const DesaLayout = () => {
 
   // Sidebar items = menu + settings + profile
   const sidebarNavItems = [
-    ...menuItems,
+    ...visibleMenuItems,
     { id: "settings", label: "Pengaturan", path: "/desa/settings", icon: "settings", color: "text-slate-300", gradient: "from-slate-700 to-slate-900" },
   ];
 
@@ -379,7 +397,7 @@ const DesaLayout = () => {
 
               {/* Menu Items */}
               <div className="px-6 py-4 space-y-2 max-h-96 overflow-y-auto">
-                {menuItems.map((item) => (
+                {visibleMenuItems.map((item) => (
                   <button
                     key={item.id}
                     onClick={() => {

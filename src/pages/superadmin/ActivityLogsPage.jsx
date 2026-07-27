@@ -26,6 +26,7 @@ const MODULE_LABELS = {
 	pegawai: 'Pegawai',
 	user: 'User Management',
 	dana_desa: 'Dana Desa',
+	manajemen_akun_desa: 'Manajemen Akun Desa',
 };
 
 const MODULE_COLORS = [
