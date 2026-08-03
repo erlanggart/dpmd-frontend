@@ -35,7 +35,6 @@ import toast from 'react-hot-toast';
 const GENDER_COLORS = ['#2a78d6', '#eb6834'];
 const AGE_RAMP = ['#86b6ef', '#5598e7', '#2a78d6', '#1c5cab', '#104281'];
 const EDU_COLOR = '#1baf7a';
-const JABATAN_COLOR = '#4a3aa7';
 const DONUT_SIZE = 192; // px — harus sama dengan h-48/w-48 pada wrapper donut
 
 const fmt = (n) => Number(n ?? 0).toLocaleString('id-ID');
@@ -109,8 +108,8 @@ const StatCard = ({ label, value, hint, icon: Icon, iconClass, share, barClass }
 	</div>
 );
 
-const ChartCard = ({ title, subtitle, children, actions }) => (
-	<div className="flex flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+const ChartCard = ({ title, subtitle, children, actions, className = '' }) => (
+	<div className={`flex flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-sm ${className}`}>
 		<div className="mb-4 flex items-start justify-between gap-3">
 			<div>
 				<h3 className="text-sm font-semibold text-slate-900">{title}</h3>
@@ -118,7 +117,7 @@ const ChartCard = ({ title, subtitle, children, actions }) => (
 			</div>
 			{actions}
 		</div>
-		<div className="flex-1">{children}</div>
+		<div className="flex flex-1 flex-col justify-center">{children}</div>
 	</div>
 );
 
@@ -133,7 +132,15 @@ const EmptyChart = ({ message = 'Belum ada data' }) => (
  * Bar chart horizontal berbasis HTML — label & nilai selalu terbaca,
  * tidak ada tabrakan teks seperti pie/legend recharts.
  */
-const BarList = ({ items = [], color, ramp, total, maxRows = 8, otherLabel = 'Lainnya' }) => {
+const BarList = ({
+	items = [],
+	color,
+	ramp,
+	total,
+	maxRows = 8,
+	otherLabel = 'Lainnya',
+	labelClass = 'w-24 sm:w-32',
+}) => {
 	const rows = useMemo(() => {
 		if (!items.length) return [];
 		if (items.length <= maxRows) return items;
@@ -160,7 +167,7 @@ const BarList = ({ items = [], color, ramp, total, maxRows = 8, otherLabel = 'La
 						title={`${row.name}: ${fmt(value)} orang (${share}%)`}
 						className="group flex items-center gap-3 rounded-lg px-1.5 py-1 transition-colors hover:bg-slate-50"
 					>
-						<span className="w-24 shrink-0 truncate text-xs font-medium text-slate-600 sm:w-32" title={row.name}>
+						<span className={`${labelClass} shrink-0 truncate text-xs font-medium text-slate-600`} title={row.name}>
 							{row.name}
 						</span>
 						<div className="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-100">
@@ -190,7 +197,7 @@ const GenderDonut = ({ lakiLaki = 0, perempuan = 0 }) => {
 	if (total === 0) return <EmptyChart />;
 
 	return (
-		<div className="flex flex-col items-center gap-4 sm:flex-row">
+		<div className="flex flex-col items-center gap-4">
 			{/* Ukuran SVG dipatok (bukan ResponsiveContainer) supaya donut tidak pernah
 			    terpotong saat recharts salah mengukur tinggi kontainer flex. */}
 			<div className="relative h-48 w-48 shrink-0">
@@ -221,7 +228,7 @@ const GenderDonut = ({ lakiLaki = 0, perempuan = 0 }) => {
 				</div>
 			</div>
 
-			<div className="w-full space-y-2">
+			<div className="w-full max-w-sm space-y-2">
 				{data.map((item, index) => (
 					<div key={item.name} className="flex items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-slate-50">
 						<span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: GENDER_COLORS[index] }} />
@@ -739,25 +746,35 @@ const DatabaseTab = ({ refreshKey = 0, onLoadingChange, onUpdated }) => {
 										/>
 									</div>
 
-									<div className="mt-4 grid gap-4 lg:grid-cols-2">
-										<ChartCard title="Jenis Kelamin" subtitle="Komposisi laki-laki dan perempuan">
+									{/* 5 kolom: donut butuh ruang persegi, bar butuh ruang lebar */}
+									<div className="mt-4 grid gap-4 lg:grid-cols-5">
+										<ChartCard
+											title="Jenis Kelamin"
+											subtitle="Komposisi laki-laki dan perempuan"
+											className="lg:col-span-2"
+										>
 											<GenderDonut lakiLaki={stats.laki_laki} perempuan={stats.perempuan} />
 										</ChartCard>
 
-										<ChartCard title="Rentang Usia" subtitle="Sebaran umur aparatur saat ini">
+										<ChartCard
+											title="Rentang Usia"
+											subtitle="Sebaran umur aparatur saat ini"
+											className="lg:col-span-3"
+										>
 											<BarList items={stats.rentang_usia || []} ramp={AGE_RAMP} maxRows={6} />
 										</ChartCard>
 
-										<ChartCard title="Pendidikan Terakhir" subtitle="7 jenjang terbanyak">
-											<BarList items={stats.pendidikan || []} color={EDU_COLOR} maxRows={8} />
-										</ChartCard>
-
-										<ChartCard title="Jabatan Terbanyak" subtitle="Komposisi jabatan aparatur">
-											{stats.jabatan?.length ? (
-												<BarList items={stats.jabatan} color={JABATAN_COLOR} maxRows={8} />
-											) : (
-												<EmptyChart message="Rincian jabatan belum tersedia" />
-											)}
+										<ChartCard
+											title="Pendidikan Terakhir"
+											subtitle="8 jenjang terbanyak"
+											className="lg:col-span-5"
+										>
+											<BarList
+												items={stats.pendidikan || []}
+												color={EDU_COLOR}
+												maxRows={9}
+												labelClass="w-32 sm:w-52 lg:w-64"
+											/>
 										</ChartCard>
 									</div>
 								</>
