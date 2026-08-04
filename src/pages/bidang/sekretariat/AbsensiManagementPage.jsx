@@ -177,6 +177,21 @@ const formatDate = (dateStr) => {
   });
 };
 
+const formatDateShort = (dateStr) => {
+  if (!dateStr) return "-";
+  return new Date(dateStr).toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+};
+
+// Telat bisa lewat sejam; "83 menit" lebih sulit dibaca daripada "1j 23m".
+const formatTelat = (menit) => {
+  const m = Number(menit) || 0;
+  if (m <= 0) return "-";
+  if (m < 60) return `${m} menit`;
+  const jam = Math.floor(m / 60);
+  const sisa = m % 60;
+  return sisa ? `${jam}j ${sisa}m` : `${jam} jam`;
+};
+
 const getStorageUrl = (imagePath) => {
   if (!imagePath) return null;
   const base = import.meta.env.VITE_IMAGE_BASE_URL || "http://127.0.0.1:3001";
@@ -1581,22 +1596,75 @@ const AbsensiManagementPage = () => {
                   })}
                 </div>
 
-                {/* Telat Alert */}
-                {(dashboardData.summary?.telat || 0) > 0 && (
-                  <button onClick={() => { setActiveTab("rekap"); setFilterStatus("telat"); }}
-                    className="w-full bg-amber-50 border border-amber-200 rounded-2xl px-5 py-3.5 flex items-center justify-between hover:bg-amber-100/60 hover:shadow-md transition-all cursor-pointer text-left">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center">
-                        <FiClock className="h-5 w-5 text-amber-600" />
+                {/* Pegawai Terlambat — tampilkan siapa & berapa lama, bukan cuma jumlahnya.
+                    Data telat tersebar di semua status (hadir/wfh/dinas_luar), jadi dikumpulkan
+                    dari seluruh grouped lalu diurutkan dari yang paling telat. */}
+                {(() => {
+                  const daftarTelat = Object.values(dashboardData.grouped || {})
+                    .flat()
+                    .filter((r) => (r.telat_masuk_menit || 0) > 0)
+                    .sort((a, b) => (b.telat_masuk_menit || 0) - (a.telat_masuk_menit || 0));
+
+                  if (daftarTelat.length === 0) return null;
+                  const jamMasuk = dashboardData.settings?.jam_masuk || "08:00";
+
+                  return (
+                    <div className="bg-white rounded-2xl shadow-sm border border-amber-200/60 overflow-hidden">
+                      <div className="px-5 py-3.5 border-b border-amber-100 bg-amber-50/40">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
+                            <FiClock className="h-4 w-4 text-amber-600" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-bold text-amber-700 text-sm">Pegawai Terlambat</h3>
+                            <p className="text-[11px] text-amber-500">Masuk melebihi jam {jamMasuk}</p>
+                          </div>
+                          <span className="px-3 py-1 bg-amber-100 text-amber-700 text-xs font-bold rounded-full tabular-nums shrink-0">
+                            {daftarTelat.length}
+                          </span>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-bold text-amber-800 text-sm">Pegawai Terlambat</p>
-                        <p className="text-[11px] text-amber-600">Masuk melebihi batas waktu + toleransi</p>
+
+                      <div className="divide-y divide-slate-50 max-h-80 overflow-y-auto">
+                        {daftarTelat.map((r) => (
+                          <div key={r.id} className="flex items-center gap-3 px-5 py-3 hover:bg-amber-50/30 transition-colors">
+                            <div className="w-8 h-8 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0">
+                              {(r.user?.pegawai?.nama_pegawai || r.user?.name || "?")[0].toUpperCase()}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-slate-700 text-sm truncate">
+                                {r.user?.pegawai?.nama_pegawai || r.user?.name || "-"}
+                              </p>
+                              <p className="text-[11px] text-slate-400 truncate">
+                                {/* Di mode minggu/bulan/tahun satu pegawai bisa muncul beberapa kali,
+                                    jadi tanggal wajib ikut agar barisnya tidak ambigu. */}
+                                {dashboardPeriode !== "hari" && (
+                                  <span className="text-slate-500 font-medium">{formatDateShort(r.tanggal)} · </span>
+                                )}
+                                {r.user?.pegawai?.jabatan || "-"}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="text-[11px] font-mono text-red-600 bg-red-50 px-2 py-0.5 rounded-md">
+                                {formatTime(r.jam_masuk)}
+                              </span>
+                              <span className="text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md tabular-nums whitespace-nowrap">
+                                +{formatTelat(r.telat_masuk_menit)}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
                       </div>
+
+                      <button
+                        onClick={() => { setActiveTab("rekap"); setFilterStatus("telat"); }}
+                        className="w-full px-5 py-2.5 text-xs font-semibold text-amber-700 hover:bg-amber-50 border-t border-amber-100 transition-colors"
+                      >
+                        Buka di Rekap Harian
+                      </button>
                     </div>
-                    <span className="text-2xl font-black text-amber-700 tabular-nums">{dashboardData.summary.telat}</span>
-                  </button>
-                )}
+                  );
+                })()}
 
                 {/* Belum Absen Section (hanya untuk mode harian) */}
                 {dashboardPeriode === 'hari' && dashboardData.belum_absen?.length > 0 && (
