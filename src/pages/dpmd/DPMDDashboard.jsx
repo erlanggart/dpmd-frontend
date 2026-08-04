@@ -1044,7 +1044,6 @@ const DPMDDashboard = () => {
                   label: 'Total Desa',
                   value: dashboardData.summary.total_desa || 0,
                   icon: MapPin,
-                  onClick: () => navigate('/core-dashboard/laporan-desa'),
                 },
                 { label: 'Pegawai', value: dashboardData.summary.total_pegawai || 0, icon: Users },
               ]}

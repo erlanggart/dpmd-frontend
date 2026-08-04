@@ -221,7 +221,6 @@ const KepalaDinasDashboard = () => {
               title="Total Desa"
               value={summary?.total_desa || 0}
               color="blue"
-              onClick={() => navigate('/kepala-dinas/laporan-desa')}
             />
             <InfoCard
               icon={Users}
