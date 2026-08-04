@@ -8,17 +8,17 @@
  * @returns {string} Base URL for avatar storage
  */
 export const getAvatarBaseUrl = () => {
-  // Produksi: ikut host yang sedang dibuka. Jangan hardcode domain — frontend dan
+  // Selalu ikut host yang sedang dibuka. Jangan hardcode domain — frontend dan
   // backend disajikan dari origin yang sama lewat nginx, dan domain sempat berpindah
-  // (dpmdbogorkab.id → dpmd.bogorkab.go.id). Same-origin bikin ini tidak perlu
-  // disentuh lagi kalau domain berubah, sekaligus tetap benar saat diakses lewat
-  // domain lama yang masih diredirect.
-  if (import.meta.env.PROD) {
-    return window.location.origin;
-  }
-  
-  // In development, use local server
-  return 'http://127.0.0.1:3001';
+  // (dpmdbogorkab.id → dpmd.bogorkab.go.id). Saat dev pun benar, karena Vite
+  // mem-proxy /storage ke backend (lihat server.proxy di vite.config.js), jadi ini
+  // juga tetap jalan saat diuji dari HP di jaringan lokal.
+  //
+  // JANGAN kembalikan cabang `import.meta.env.PROD ? origin : '127.0.0.1:3001'`:
+  // sekali `npm run build` dijalankan dengan NODE_ENV bukan 'production', PROD
+  // bernilai false dan seluruh avatar di produksi menunjuk localhost pengguna
+  // (ERR_CONNECTION_REFUSED). Itu insiden 4 Agustus 2026.
+  return window.location.origin;
 };
 
 /**
