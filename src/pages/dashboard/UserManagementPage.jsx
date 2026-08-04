@@ -1,15 +1,18 @@
 // src/pages/dashboard/UserManagementPage.jsx
-import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
+// Manajemen pengguna: tabel yang bisa dipindai, dengan rincian dan tindakan di
+// panel samping.
+//
+// Sebelumnya halaman ini berupa grid kartu 12-per-halaman. Tiap kartu memuat
+// sampai dua belas baris atribut, satu deret delapan tombol berwarna, DAN menu
+// tiga titik berisi tindakan yang sama persis — dua salinan tindakan di satu
+// kartu. Mencari satu orang di antara 683 akun berarti membalik puluhan
+// halaman. Bentuk tabel dipilih karena pekerjaan utamanya memang memindai dan
+// membandingkan, bukan memandangi satu per satu.
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import {
 	LuUsers,
-	LuMail,
-	LuCalendar,
 	LuPlus,
-	LuKey,
-	LuTrash2,
-	LuShield,
 	LuSearch,
-	LuFilter,
 	LuChevronDown,
 	LuBuilding2,
 	LuMapPin,
@@ -19,20 +22,11 @@ import {
 	LuChevronRight,
 	LuDownload,
 	LuFileSpreadsheet,
-	LuEye,
-	LuEyeOff,
-	LuLock,
-	LuPenLine,
-	LuHash,
-	LuEllipsisVertical,
-	LuCake,
-	LuBadgeCheck,
-	LuCamera,
-	LuSmartphone,
+	LuShield,
 	LuShieldCheck,
-	LuLogIn,
-	LuPhone,
+	LuX,
 	LuTriangleAlert,
+	LuBadgeCheck,
 } from "react-icons/lu";
 import * as XLSX from 'xlsx';
 import api from "../../api";
@@ -44,28 +38,11 @@ import EditTanggalLahirModal from "../../components/EditTanggalLahirModal";
 import EditJabatanModal from "../../components/EditJabatanModal";
 import DesaPermissionsModal from "../../components/DesaPermissionsModal";
 import EditAvatarModal from "../../components/EditAvatarModal";
-import UserStatsCard from "../../components/UserStatsCard";
-import OnlineUsersSidebar from "../../components/users/OnlineUsersSidebar";
+import UserDetailDrawer from "../../components/users/UserDetailDrawer";
 import { getAvatarUrl } from "../../utils/avatarUtils";
+import { getRoleInfo } from "../../constants/userRoles";
 import { useAuth } from "../../context/AuthContext";
 import Swal from "sweetalert2";
-
-// ─── Role gradient & ring configs ────────────────────────────────
-const ROLE_THEME = {
-	superadmin:       { gradient: "from-rose-500 via-red-500 to-pink-600",   ring: "ring-rose-200",   bg: "bg-rose-500",   glow: "shadow-rose-200/60" },
-	kepala_dinas:     { gradient: "from-blue-500 via-indigo-500 to-blue-700", ring: "ring-blue-200",   bg: "bg-blue-500",   glow: "shadow-blue-200/60" },
-	sekretaris_dinas: { gradient: "from-indigo-500 via-purple-500 to-indigo-700", ring: "ring-indigo-200", bg: "bg-indigo-500", glow: "shadow-indigo-200/60" },
-	kepala_bidang:    { gradient: "from-emerald-500 via-teal-500 to-green-600", ring: "ring-emerald-200", bg: "bg-emerald-500", glow: "shadow-emerald-200/60" },
-	ketua_tim:        { gradient: "from-teal-500 via-cyan-500 to-teal-600", ring: "ring-teal-200",   bg: "bg-teal-500",   glow: "shadow-teal-200/60" },
-	pegawai:          { gradient: "from-slate-500 via-gray-500 to-slate-600", ring: "ring-slate-200",  bg: "bg-slate-500",  glow: "shadow-slate-200/60" },
-	desa:             { gradient: "from-emerald-500 via-green-500 to-lime-600", ring: "ring-green-200",  bg: "bg-green-500",  glow: "shadow-green-200/60" },
-	kecamatan:        { gradient: "from-violet-500 via-purple-500 to-fuchsia-600", ring: "ring-violet-200", bg: "bg-violet-500", glow: "shadow-violet-200/60" },
-	dinas_terkait:    { gradient: "from-amber-500 via-orange-500 to-yellow-600", ring: "ring-amber-200",  bg: "bg-amber-500",  glow: "shadow-amber-200/60" },
-	verifikator_dinas:{ gradient: "from-orange-500 via-rose-500 to-pink-500", ring: "ring-orange-200", bg: "bg-orange-500", glow: "shadow-orange-200/60" },
-	bpjs:             { gradient: "from-emerald-500 via-teal-500 to-emerald-700", ring: "ring-emerald-200", bg: "bg-emerald-500", glow: "shadow-emerald-200/60" },
-	bendahara:        { gradient: "from-green-500 via-emerald-500 to-teal-600", ring: "ring-green-200", bg: "bg-green-500", glow: "shadow-green-200/60" },
-};
-const DEFAULT_THEME = { gradient: "from-gray-400 to-gray-600", ring: "ring-gray-200", bg: "bg-gray-500", glow: "shadow-gray-200/60" };
 
 const ROLE_DASHBOARD_MAP = {
 	superadmin: "/superadmin/dashboard",
@@ -82,323 +59,95 @@ const ROLE_DASHBOARD_MAP = {
 	bpjs: "/bpjs/dashboard",
 };
 
-// ─── UserCard ────────────────────────────────────────────────────
-const UserCard = ({
-	user, canManage, isSuperadmin, canImpersonate, visiblePasswords, togglePasswordVisibility,
-	onEditRole, onEditBidang, onEditTanggalLahir, onEditJabatan, onEditDesaPermissions,
-	onEditAvatar, onSetDevice, onResetPassword, onDeleteUser, onImpersonate, getRoleInfo,
-}) => {
-	const [menuOpen, setMenuOpen] = useState(false);
-	const menuRef = useRef(null);
-	const theme = ROLE_THEME[user.role] || DEFAULT_THEME;
-	const roleInfo = getRoleInfo(user.role);
+const PILIHAN_PER_HALAMAN = [10, 25, 50, 100];
+const PER_HALAMAN_AWAL = 10;
+
+/** Satuan kerja pengguna, apa pun bentuknya — supaya kolomnya cukup satu. */
+const unitKerja = (user) => {
+	if (user.bidang?.nama) return { label: user.bidang.nama, icon: LuBuilding2, sub: user.sub_bidang };
+	if (user.desa?.nama)
+		return {
+			label: user.desa.nama,
+			icon: LuHouse,
+			sub: user.desa.kecamatan?.nama ? `Kec. ${user.desa.kecamatan.nama}` : null,
+		};
+	if (user.kecamatan?.nama) return { label: `Kec. ${user.kecamatan.nama}`, icon: LuMapPin, sub: null };
+	if (user.dinas?.nama_dinas) return { label: user.dinas.nama_dinas, icon: LuBuilding2, sub: null };
+	return null;
+};
+
+const BarisPengguna = ({ user, terpilih, onPilih }) => {
 	const avatarUrl = getAvatarUrl(user.avatar);
-
-	// Close menu on outside click
-	useEffect(() => {
-		const handler = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false); };
-		if (menuOpen) document.addEventListener("mousedown", handler);
-		return () => document.removeEventListener("mousedown", handler);
-	}, [menuOpen]);
-
-	const InfoRow = ({ icon: Icon, children, mono }) => (
-		<div className="flex items-center gap-2 min-w-0 rounded-lg px-2 py-1.5 text-slate-600 transition-colors hover:bg-slate-50">
-			<div className="flex-shrink-0 w-6 h-6 rounded-lg bg-slate-100 flex items-center justify-center">
-				<Icon className="h-3.5 w-3.5 text-slate-400" />
-			</div>
-			<span className={`text-[13px] leading-5 truncate ${mono ? 'font-mono tracking-tight' : ''}`}>
-				{children}
-			</span>
-		</div>
-	);
+	const peran = getRoleInfo(user.role);
+	const unit = unitKerja(user);
+	const UnitIcon = unit?.icon;
 
 	return (
-		<div className="group relative self-start overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm ring-1 ring-slate-900/[0.03] transition-all duration-300 hover:-translate-y-1 hover:border-slate-300 hover:shadow-xl hover:shadow-slate-200/70">
-			{/* Decorative gradient header */}
-			<div className={`relative h-16 bg-gradient-to-br ${theme.gradient} overflow-hidden`}>
-				{/* Mesh pattern overlay */}
-				<div className="absolute inset-0 opacity-20" style={{
-					backgroundImage: 'radial-gradient(circle at 20% 50%, rgba(255,255,255,0.3) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(255,255,255,0.2) 0%, transparent 50%)',
-				}} />
-				{/* Floating circles for depth */}
-				<div className="absolute -top-5 -right-5 w-24 h-24 rounded-full bg-white/15 blur-sm" />
-				<div className="absolute -bottom-8 -left-8 w-28 h-28 rounded-full bg-black/10" />
-
-				{/* Three-dot menu */}
-				{canManage && (
-					<div className="absolute top-2.5 right-2.5 z-20" ref={menuRef}>
-						<button
-							onClick={() => setMenuOpen(!menuOpen)}
-							className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white ring-1 ring-white/20 transition-all hover:bg-white/35"
-						>
-							<LuEllipsisVertical className="h-4 w-4 text-white" />
-						</button>
-
-						{menuOpen && (
-							<div className="absolute right-0 top-10 w-56 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-								<div className="p-1.5">
-									<button onClick={() => { onEditRole(user); setMenuOpen(false); }}
-										className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-xl transition-colors">
-										<div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
-											<LuShield className="h-4 w-4 text-blue-600" />
-										</div>
-										<span className="font-medium">Ubah Role</span>
-									</button>
-									<button onClick={() => { onEditBidang(user); setMenuOpen(false); }}
-										className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 rounded-xl transition-colors">
-										<div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
-											<LuBuilding2 className="h-4 w-4 text-purple-600" />
-										</div>
-										<span className="font-medium">Ubah Bidang</span>
-									</button>
-									<button onClick={() => { onEditTanggalLahir(user); setMenuOpen(false); }}
-										className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-700 rounded-xl transition-colors">
-										<div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
-											<LuCake className="h-4 w-4 text-orange-600" />
-										</div>
-										<span className="font-medium">Tanggal Lahir</span>
-									</button>
-									<button onClick={() => { onEditJabatan(user); setMenuOpen(false); }}
-										className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 hover:bg-teal-50 hover:text-teal-700 rounded-xl transition-colors">
-										<div className="w-8 h-8 rounded-lg bg-teal-100 flex items-center justify-center">
-											<LuPenLine className="h-4 w-4 text-teal-600" />
-										</div>
-										<span className="font-medium">Jabatan & Status</span>
-									</button>
-									{/* Hak akses fitur hanya relevan untuk akun operasional desa */}
-									{user.role === 'desa' && (
-										<button onClick={() => { onEditDesaPermissions(user); setMenuOpen(false); }}
-											className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 rounded-xl transition-colors">
-											<div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
-												<LuShieldCheck className="h-4 w-4 text-emerald-600" />
-											</div>
-											<span className="font-medium">Hak Akses Fitur</span>
-										</button>
-									)}
-									<div className="my-1.5 border-t border-gray-100" />
-									{['PPPK_Paruh_Waktu','Tenaga_Alih_Daya','Tenaga_Keamanan','Tenaga_Kebersihan'].includes(user.status_kepegawaian) && (
-										<button onClick={() => { onSetDevice(user); setMenuOpen(false); }}
-											className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 hover:bg-cyan-50 hover:text-cyan-700 rounded-xl transition-colors">
-											<div className="w-8 h-8 rounded-lg bg-cyan-100 flex items-center justify-center">
-												<LuSmartphone className="h-4 w-4 text-cyan-600" />
-											</div>
-											<span className="font-medium">Device Absensi</span>
-										</button>
-									)}
-									{canImpersonate && (
-										<button onClick={() => { onImpersonate(user); setMenuOpen(false); }}
-											className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 rounded-xl transition-colors">
-											<div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
-												<LuLogIn className="h-4 w-4 text-emerald-600" />
-											</div>
-											<span className="font-medium">Masuk Sebagai</span>
-										</button>
-									)}
-									<button onClick={() => { onResetPassword(user); setMenuOpen(false); }}
-										className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 hover:bg-amber-50 hover:text-amber-700 rounded-xl transition-colors">
-										<div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
-											<LuKey className="h-4 w-4 text-amber-600" />
-										</div>
-										<span className="font-medium">Reset Password</span>
-									</button>
-									<button onClick={() => { onDeleteUser(user); setMenuOpen(false); }}
-										className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-red-600 hover:bg-red-50 rounded-xl transition-colors">
-										<div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center">
-											<LuTrash2 className="h-4 w-4 text-red-500" />
-										</div>
-										<span className="font-medium">Hapus User</span>
-									</button>
-								</div>
+		<tr
+			onClick={() => onPilih(user)}
+			className={`cursor-pointer border-b border-slate-100 transition-colors last:border-0 ${
+				terpilih ? 'bg-slate-50' : 'hover:bg-slate-50'
+			}`}
+		>
+			<td className="px-4 py-3">
+				<div className="flex items-center gap-3">
+					<div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-xl bg-slate-100">
+						{avatarUrl ? (
+							<img src={avatarUrl} alt={user.name} className="h-full w-full object-cover" />
+						) : (
+							<div className="flex h-full w-full items-center justify-center bg-slate-900 text-sm font-bold text-white">
+								{user.name?.charAt(0)?.toUpperCase() || 'U'}
 							</div>
 						)}
 					</div>
-				)}
-			</div>
-
-			{/* Avatar — floats between header and body */}
-			<div className="relative px-4 -mt-8">
-				<div className={`relative w-16 h-16 rounded-2xl ring-[3px] ${theme.ring} ring-offset-2 ring-offset-white shadow-lg ${theme.glow} overflow-hidden`}>
-					{avatarUrl ? (
-						<img
-							src={avatarUrl}
-							alt={user.name}
-							className="w-full h-full object-cover"
-							onError={(e) => {
-								e.target.style.display = 'none';
-								e.target.nextElementSibling.style.display = 'flex';
-							}}
-						/>
-					) : null}
-					<div className={`w-full h-full bg-gradient-to-br ${theme.gradient} flex items-center justify-center ${avatarUrl ? 'hidden' : ''}`}>
-						<span className="text-white font-bold text-2xl drop-shadow-sm">
-							{user.name?.charAt(0)?.toUpperCase() || "U"}
-						</span>
-					</div>
-				</div>
-				{/* Active dot */}
-				{user.is_active && (
-					<div className="absolute bottom-0 left-[62px] w-4 h-4 rounded-full bg-emerald-400 border-[2.5px] border-white shadow-sm" />
-				)}
-			</div>
-
-			{/* Body */}
-			<div className="px-4 pt-3 pb-3">
-				{/* Name */}
-				<h4 className="min-h-[2.5rem] text-[16px] font-bold leading-5 text-slate-950 line-clamp-2">
-					{user.name}
-				</h4>
-
-				{/* Badges row */}
-				<div className="mt-2 mb-3 flex flex-wrap items-center gap-1.5">
-					<span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold rounded-lg border shadow-sm ${roleInfo.color}`}>
-						<LuBadgeCheck className="w-3 h-3" />
-						{roleInfo.label}
-					</span>
-					{user.status_kepegawaian && (
-						<span className="inline-flex items-center px-2 py-1 text-[11px] font-semibold rounded-lg bg-slate-50 text-slate-600 border border-slate-200">
-							{user.status_kepegawaian?.replace(/_/g, ' ')}
-						</span>
-					)}
-				</div>
-
-				{/* Info rows */}
-				<div className="space-y-0.5">
-					<InfoRow icon={LuMail}>{user.email}</InfoRow>
-
-					{user.nip && <InfoRow icon={LuHash} mono>{user.nip}</InfoRow>}
-
-					{user.jabatan && <InfoRow icon={LuBriefcase}>{user.jabatan}</InfoRow>}
-
-					{/* Identitas kontak akun desa — jabatan & nomor HP petugas */}
-					{user.jabatan_desa && <InfoRow icon={LuBriefcase}>{user.jabatan_desa}</InfoRow>}
-
-					{user.no_hp && (
-						<InfoRow icon={LuPhone} mono>
-							<a
-								href={`https://wa.me/62${user.no_hp.replace(/^0/, '')}`}
-								target="_blank"
-								rel="noreferrer"
-								className="hover:text-emerald-700 hover:underline"
-								onClick={(e) => e.stopPropagation()}
-							>
-								{user.no_hp}
-							</a>
-						</InfoRow>
-					)}
-
-					{/* Admin Desa yang belum mengisi identitas — DPMD tidak punya kontaknya */}
-					{user.profile_incomplete && (
-						<div className="flex items-center gap-2 min-w-0 rounded-lg bg-amber-50 px-2 py-1.5 text-amber-800">
-							<div className="flex-shrink-0 w-6 h-6 rounded-lg bg-amber-100 flex items-center justify-center">
-								<LuTriangleAlert className="h-3.5 w-3.5 text-amber-600" />
-							</div>
-							<span className="text-[13px] leading-5">Identitas belum dilengkapi</span>
-						</div>
-					)}
-
-					{user.bidang && <InfoRow icon={LuBuilding2}>{user.bidang.nama}</InfoRow>}
-
-					{user.sub_bidang && <InfoRow icon={LuBuilding2}>{user.sub_bidang}</InfoRow>}
-
-					{user.desa && <InfoRow icon={LuHouse}>{user.desa.nama}</InfoRow>}
-
-					{user.kecamatan && <InfoRow icon={LuMapPin}>{user.kecamatan.nama}</InfoRow>}
-
-					{user.dinas && <InfoRow icon={LuBuilding2}>{user.dinas.nama_dinas}</InfoRow>}
-
-					{(user.tempat_lahir || user.tanggal_lahir) && (
-						<InfoRow icon={LuCake}>
-							{[
-								user.tempat_lahir,
-								user.tanggal_lahir ? new Date(user.tanggal_lahir).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : null
-							].filter(Boolean).join(', ')}
-						</InfoRow>
-					)}
-
-					{/* Password - only visible to superadmin, never shown for superadmin users */}
-					{isSuperadmin && user.role !== 'superadmin' && (
-						<div className="flex items-center gap-2 min-w-0 rounded-lg px-2 py-1.5 text-slate-600 transition-colors hover:bg-slate-50">
-							<div className="flex-shrink-0 w-6 h-6 rounded-lg bg-slate-100 flex items-center justify-center">
-								<LuLock className="h-3.5 w-3.5 text-slate-400" />
-							</div>
-							{user.plain_password ? (
-								<div className="flex items-center gap-1 flex-1 min-w-0">
-									<span className="text-[13px] font-mono text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-md truncate">
-										{visiblePasswords[user.id] ? user.plain_password : '••••••••'}
-									</span>
-									<button
-										onClick={() => togglePasswordVisibility(user.id)}
-										className="flex-shrink-0 w-6 h-6 rounded-md hover:bg-slate-100 flex items-center justify-center transition-colors"
-									>
-										{visiblePasswords[user.id] ? <LuEyeOff className="h-3.5 w-3.5 text-slate-400" /> : <LuEye className="h-3.5 w-3.5 text-slate-400" />}
-									</button>
-								</div>
-							) : (
-								<span className="text-[13px] text-slate-400 italic">Tidak tersedia</span>
+					<div className="min-w-0">
+						<p className="flex items-center gap-1.5 truncate text-sm font-semibold text-slate-900">
+							{user.name}
+							{user.profile_incomplete && (
+								<LuTriangleAlert className="h-3.5 w-3.5 shrink-0 text-amber-500" title="Identitas belum dilengkapi" />
 							)}
-						</div>
-					)}
-				</div>
-			</div>
-
-			{/* Bottom action bar */}
-			{canManage && (
-				<div className="border-t border-slate-100 bg-slate-50/80 px-3 py-3">
-					<div className="flex flex-wrap items-center justify-center gap-1.5">
-						<button onClick={() => onEditRole(user)} title="Ubah Role"
-							className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-blue-600 bg-white ring-1 ring-slate-200 hover:bg-blue-50 transition-colors">
-							<LuShield className="h-3.5 w-3.5" />
-							<span>Role</span>
-						</button>
-						<button onClick={() => onEditBidang(user)} title="Ubah Bidang"
-							className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-purple-600 bg-white ring-1 ring-slate-200 hover:bg-purple-50 transition-colors">
-							<LuBuilding2 className="h-3.5 w-3.5" />
-							<span>Bidang</span>
-						</button>
-						<button onClick={() => onEditAvatar(user)} title="Ubah Foto Profil"
-							className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-pink-600 bg-white ring-1 ring-slate-200 hover:bg-pink-50 transition-colors">
-							<LuCamera className="h-3.5 w-3.5" />
-							<span>Foto</span>
-						</button>
-						<button onClick={() => onEditTanggalLahir(user)} title="Tanggal Lahir"
-							className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-orange-600 bg-white ring-1 ring-slate-200 hover:bg-orange-50 transition-colors">
-							<LuCake className="h-3.5 w-3.5" />
-							<span>Tgl Lahir</span>
-						</button>
-						<button onClick={() => onEditJabatan(user)} title="Jabatan & Status"
-							className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-teal-600 bg-white ring-1 ring-slate-200 hover:bg-teal-50 transition-colors">
-							<LuPenLine className="h-3.5 w-3.5" />
-							<span>Jabatan</span>
-						</button>
-						{['PPPK_Paruh_Waktu','Tenaga_Alih_Daya','Tenaga_Keamanan','Tenaga_Kebersihan'].includes(user.status_kepegawaian) && (
-							<button onClick={() => onSetDevice(user)} title="Device Absensi"
-								className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-cyan-600 bg-white ring-1 ring-slate-200 hover:bg-cyan-50 transition-colors">
-								<LuSmartphone className="h-3.5 w-3.5" />
-								<span>Device</span>
-							</button>
-						)}
-						{canImpersonate && (
-							<button onClick={() => onImpersonate(user)} title="Masuk Sebagai User"
-								className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold text-white bg-slate-950 hover:bg-slate-800 transition-colors">
-								<LuLogIn className="h-3.5 w-3.5" />
-								<span>Masuk</span>
-							</button>
-						)}
-						<div className="w-px h-5 bg-gray-200" />
-						<button onClick={() => onResetPassword(user)} title="Reset Password"
-							className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-amber-600 bg-white ring-1 ring-slate-200 hover:bg-amber-50 transition-colors">
-							<LuKey className="h-3.5 w-3.5" />
-							<span>Reset</span>
-						</button>
-						<button onClick={() => onDeleteUser(user)} title="Hapus"
-							className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-red-600 bg-white ring-1 ring-slate-200 hover:bg-red-50 transition-colors">
-							<LuTrash2 className="h-3.5 w-3.5" />
-							<span>Hapus</span>
-						</button>
+						</p>
+						<p className="truncate text-xs text-slate-500">{user.email}</p>
 					</div>
 				</div>
-			)}
-		</div>
+			</td>
+			<td className="px-4 py-3">
+				<span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-700">
+					<span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: peran.dot }} />
+					{peran.label}
+				</span>
+			</td>
+			<td className="hidden px-4 py-3 lg:table-cell">
+				{unit ? (
+					<div className="flex items-center gap-2 text-sm text-slate-600">
+						<UnitIcon className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+						<span className="truncate">
+							{unit.label}
+							{unit.sub && <span className="text-slate-400"> · {unit.sub}</span>}
+						</span>
+					</div>
+				) : (
+					<span className="text-sm text-slate-300">—</span>
+				)}
+			</td>
+			<td className="hidden px-4 py-3 xl:table-cell">
+				{user.jabatan || user.jabatan_desa ? (
+					<span className="truncate text-sm text-slate-600">{user.jabatan || user.jabatan_desa}</span>
+				) : (
+					<span className="text-sm text-slate-300">—</span>
+				)}
+			</td>
+			<td className="px-4 py-3 text-right">
+				<span
+					className={`inline-flex items-center gap-1.5 whitespace-nowrap text-xs font-medium ${
+						user.is_active ? 'text-emerald-700' : 'text-slate-400'
+					}`}
+				>
+					<span className={`h-1.5 w-1.5 rounded-full ${user.is_active ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+					{user.is_active ? 'Aktif' : 'Nonaktif'}
+				</span>
+			</td>
+		</tr>
 	);
 };
 
@@ -416,21 +165,24 @@ const UserManagementPage = () => {
 	const [showAvatarModal, setShowAvatarModal] = useState(false);
 	const [selectedUser, setSelectedUser] = useState(null);
 	const [isResettingPassword, setIsResettingPassword] = useState(false);
-	
+
+	// Pengguna yang sedang dibuka rinciannya di panel samping.
+	const [detailUser, setDetailUser] = useState(null);
+
 	// Filters
 	const [searchTerm, setSearchTerm] = useState("");
-	const [filterBidang, setFilterBidang] = useState("all"); // Filter bidang untuk tab Pegawai DPMD
-	const [filterDinas, setFilterDinas] = useState("all"); // Filter dinas untuk tab Dinas Terkait
-	const [activeTab, setActiveTab] = useState("superadmin"); // Tab aktif
-	const [bidangList, setBidangList] = useState([]); // List bidang untuk dropdown
-	const [dinasList, setDinasList] = useState([]); // List dinas untuk dropdown
+	const [filterBidang, setFilterBidang] = useState("all");
+	const [filterDinas, setFilterDinas] = useState("all");
+	const [activeTab, setActiveTab] = useState("superadmin");
+	const [bidangList, setBidangList] = useState([]);
+	const [dinasList, setDinasList] = useState([]);
 
 	// Pagination
 	const [currentPage, setCurrentPage] = useState(1);
-	const [itemsPerPage] = useState(12); // 12 items per page untuk grid 3 kolom
+	const [itemsPerPage, setItemsPerPage] = useState(PER_HALAMAN_AWAL);
 
-	// Password visibility state
 	const [visiblePasswords, setVisiblePasswords] = useState({});
+	const [showExportMenu, setShowExportMenu] = useState(false);
 
 	const { user: currentUser } = useAuth();
 	const canManage =
@@ -438,21 +190,23 @@ const UserManagementPage = () => {
 		currentUser?.role === "sekretaris_dinas" ||
 		Number(currentUser?.bidang_id) === 2;
 
-	// Tab configuration
+	// Tab configuration.
+	// Verifikator Dinas sempat tidak punya tab sama sekali — 92 akun karena itu
+	// tidak pernah tampil dan tidak bisa dikelola dari halaman ini.
 	const tabs = useMemo(() => [
-		{ id: "superadmin", label: "Super Admin", role: "superadmin", icon: LuShield, color: "red" },
+		{ id: "superadmin", label: "Super Admin", role: "superadmin", icon: LuShield },
 		{
 			id: "pegawai",
 			label: "Pegawai DPMD",
 			roles: ["kepala_dinas", "sekretaris_dinas", "kepala_bidang", "ketua_tim", "bendahara", "pegawai"],
 			icon: LuBriefcase,
-			color: "blue"
 		},
 		// Admin Desa (pengelola akun) + operator desa yang dibuatnya
-		{ id: "desa", label: "Akun Desa", roles: ["admin_desa", "desa"], icon: LuHouse, color: "emerald" },
-		{ id: "kecamatan", label: "Admin Kecamatan", role: "kecamatan", icon: LuMapPin, color: "violet" },
-		{ id: "dinas_terkait", label: "Dinas Terkait", role: "dinas_terkait", icon: LuBuilding2, color: "amber" },
-		{ id: "bpjs", label: "BPJS", role: "bpjs", icon: LuShieldCheck, color: "emerald" },
+		{ id: "desa", label: "Akun Desa", roles: ["admin_desa", "desa"], icon: LuHouse },
+		{ id: "kecamatan", label: "Admin Kecamatan", role: "kecamatan", icon: LuMapPin },
+		{ id: "dinas_terkait", label: "Dinas Terkait", role: "dinas_terkait", icon: LuBuilding2 },
+		{ id: "verifikator_dinas", label: "Verifikator Dinas", role: "verifikator_dinas", icon: LuBadgeCheck },
+		{ id: "bpjs", label: "BPJS", role: "bpjs", icon: LuShieldCheck },
 	], []);
 
 	// Fetch users
@@ -473,7 +227,6 @@ const UserManagementPage = () => {
 		}
 	}, []);
 
-	// Fetch bidang list
 	const fetchBidangList = useCallback(async () => {
 		try {
 			const response = await api.get("/bidang");
@@ -483,7 +236,6 @@ const UserManagementPage = () => {
 		}
 	}, []);
 
-	// Fetch dinas list
 	const fetchDinasList = useCallback(async () => {
 		try {
 			const response = await api.get("/master/dinas");
@@ -499,7 +251,6 @@ const UserManagementPage = () => {
 		fetchDinasList();
 	}, [fetchUsers, fetchBidangList, fetchDinasList]);
 
-	// Handle user added
 	const handleUserAdded = () => {
 		setShowAddModal(false);
 		fetchUsers();
@@ -512,7 +263,6 @@ const UserManagementPage = () => {
 		});
 	};
 
-	// Handle reset password
 	const handleResetPassword = (user) => {
 		setSelectedUser(user);
 		setShowResetModal(true);
@@ -551,7 +301,6 @@ const UserManagementPage = () => {
 		}
 	};
 
-	// Handle edit role
 	const handleEditRole = (user) => {
 		setSelectedUser(user);
 		setShowRoleModal(true);
@@ -563,31 +312,27 @@ const UserManagementPage = () => {
 		fetchUsers();
 	};
 
-	// Handle edit bidang
 	const handleEditBidang = (user) => {
 		setSelectedUser(user);
 		setShowBidangModal(true);
 	};
 
-	// Handle edit tanggal lahir
 	const handleEditTanggalLahir = (user) => {
 		setSelectedUser(user);
 		setShowTanggalLahirModal(true);
 	};
 
-	// Handle edit jabatan
 	const handleEditJabatan = (user) => {
 		setSelectedUser(user);
 		setShowJabatanModal(true);
 	};
 
-	// Handle hak akses fitur akun operasional desa (role `desa`)
+	// Hak akses fitur akun operasional desa (role `desa`)
 	const handleEditDesaPermissions = (user) => {
 		setSelectedUser(user);
 		setShowDesaPermModal(true);
 	};
 
-	// Handle edit avatar
 	const handleEditAvatar = (user) => {
 		setSelectedUser(user);
 		setShowAvatarModal(true);
@@ -611,12 +356,20 @@ const UserManagementPage = () => {
 		fetchUsers();
 	};
 
-	// Handle device management
+	const handleJabatanUpdated = () => {
+		setShowJabatanModal(false);
+		setSelectedUser(null);
+		fetchUsers();
+	};
+
 	const handleSetDevice = async (user) => {
 		const result = await Swal.fire({
-			title: 'Device Absensi',
-			html: `<p class="text-sm text-gray-600 mb-2">Pegawai: <strong>${user.name}</strong></p>` +
-				(user.device_id ? `<p class="text-xs text-gray-400 mb-3">Device terdaftar: <code class="bg-gray-100 px-1 rounded">${user.device_id}</code></p>` : '<p class="text-xs text-red-500 mb-3">Belum ada device terdaftar</p>') +
+			title: 'Kelola Device Absensi',
+			html:
+				`<p class="text-sm text-gray-600 mb-3">Pegawai: <strong>${user.name}</strong></p>` +
+				(user.device_id
+					? `<p class="text-xs text-gray-500 mb-2">Device terdaftar: <code class="bg-gray-100 px-2 py-1 rounded">${user.device_id.substring(0, 20)}...</code></p>`
+					: '<p class="text-xs text-amber-600 mb-2">Belum ada device terdaftar</p>') +
 				'<p class="text-xs text-gray-500">Masukkan Device ID dari HP pegawai. Device ID dapat dilihat di halaman Absensi pegawai.</p>',
 			input: 'text',
 			inputValue: user.device_id || '',
@@ -735,13 +488,6 @@ const UserManagementPage = () => {
 		}
 	};
 
-	const handleJabatanUpdated = () => {
-		setShowJabatanModal(false);
-		setSelectedUser(null);
-		fetchUsers();
-	};
-
-	// Handle toggle password visibility
 	const togglePasswordVisibility = (userId) => {
 		setVisiblePasswords(prev => ({
 			...prev,
@@ -749,7 +495,6 @@ const UserManagementPage = () => {
 		}));
 	};
 
-	// Handle delete user
 	const handleDeleteUser = async (user) => {
 		const result = await Swal.fire({
 			title: "Hapus User?",
@@ -765,6 +510,7 @@ const UserManagementPage = () => {
 		if (result.isConfirmed) {
 			try {
 				await api.delete(`/users/${user.id}`);
+				setDetailUser(null);
 				Swal.fire("Terhapus!", "User berhasil dihapus.", "success");
 				fetchUsers();
 			} catch (err) {
@@ -777,39 +523,18 @@ const UserManagementPage = () => {
 		}
 	};
 
-	// Get role info from schema
-	const getRoleInfo = (role) => {
-		const roleMap = {
-			superadmin: { label: "Super Admin", color: "bg-red-100 text-red-700 border-red-200" },
-			kepala_dinas: { label: "Kepala Dinas", color: "bg-indigo-100 text-indigo-700 border-indigo-200" },
-			sekretaris_dinas: { label: "Sekretaris Dinas", color: "bg-blue-100 text-blue-700 border-blue-200" },
-			kepala_bidang: { label: "Kepala Bidang", color: "bg-teal-100 text-teal-700 border-teal-200" },
-			ketua_tim: { label: "Ketua Tim", color: "bg-cyan-100 text-cyan-700 border-cyan-200" },
-			bendahara: { label: "Bendahara", color: "bg-green-100 text-green-700 border-green-200" },
-			pegawai: { label: "Pegawai", color: "bg-gray-100 text-gray-700 border-gray-200" },
-			admin_desa: { label: "Admin Desa", color: "bg-emerald-100 text-emerald-700 border-emerald-200" },
-			desa: { label: "Operator Desa", color: "bg-lime-100 text-lime-700 border-lime-200" },
-			kecamatan: { label: "Admin Kecamatan", color: "bg-violet-100 text-violet-700 border-violet-200" },
-			dinas_terkait: { label: "Dinas Terkait", color: "bg-amber-100 text-amber-700 border-amber-200" },
-			verifikator_dinas: { label: "Verifikator Dinas", color: "bg-orange-100 text-orange-700 border-orange-200" },
-		};
-		return roleMap[role] || { label: role, color: "bg-gray-100 text-gray-700 border-gray-200" };
-	};
-
 	// Filter users
 	const filteredUsers = useMemo(() => {
 		return users.filter((user) => {
-			// Filter berdasarkan tab aktif
 			const activeTabConfig = tabs.find(t => t.id === activeTab);
 			let matchTab = false;
-			
+
 			if (activeTabConfig.role) {
 				matchTab = user.role === activeTabConfig.role;
 			} else if (activeTabConfig.roles) {
 				matchTab = activeTabConfig.roles.includes(user.role);
 			}
 
-			// Filter berdasarkan search
 			const searchLower = searchTerm.toLowerCase();
 			const matchSearch =
 				user.name?.toLowerCase().includes(searchLower) ||
@@ -818,14 +543,12 @@ const UserManagementPage = () => {
 				user.kecamatan?.nama?.toLowerCase().includes(searchLower) ||
 				user.bidang?.nama?.toLowerCase().includes(searchLower);
 
-			// Filter berdasarkan bidang (hanya untuk tab Pegawai DPMD)
-			const matchBidang = 
+			const matchBidang =
 				activeTab !== "pegawai" ||
 				filterBidang === "all" ||
 				user.bidang_id === parseInt(filterBidang);
 
-			// Filter berdasarkan dinas (hanya untuk tab Dinas Terkait)
-			const matchDinas = 
+			const matchDinas =
 				activeTab !== "dinas_terkait" ||
 				filterDinas === "all" ||
 				user.dinas_id === parseInt(filterDinas);
@@ -834,16 +557,13 @@ const UserManagementPage = () => {
 		});
 	}, [users, searchTerm, activeTab, filterBidang, filterDinas, tabs]);
 
-	// Pagination calculations
-	const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+	const totalPages = Math.max(Math.ceil(filteredUsers.length / itemsPerPage), 1);
 	const startIndex = (currentPage - 1) * itemsPerPage;
-	const endIndex = startIndex + itemsPerPage;
-	const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
+	const paginatedUsers = filteredUsers.slice(startIndex, startIndex + itemsPerPage);
 
-	// Reset to page 1 when filters change
 	useEffect(() => {
 		setCurrentPage(1);
-	}, [searchTerm, activeTab, filterBidang, filterDinas]);
+	}, [searchTerm, activeTab, filterBidang, filterDinas, itemsPerPage]);
 
 	// Export users to Excel
 	const handleExportUsers = (exportType = 'current') => {
@@ -855,12 +575,10 @@ const UserManagementPage = () => {
 		const today = new Date().toISOString().split('T')[0];
 
 		if (exportType === 'current') {
-			// Export tab yang sedang aktif
 			dataToExport = filteredUsers;
 			sheetName = activeTabConfig?.label || 'Users';
 			fileName = `User_${sheetName.replace(/\s+/g, '_')}_${today}.xlsx`;
 		} else if (exportType === 'all') {
-			// Export semua user ke multiple sheets
 			const wb = XLSX.utils.book_new();
 
 			tabs.forEach(tab => {
@@ -891,7 +609,6 @@ const UserManagementPage = () => {
 
 				const ws = XLSX.utils.json_to_sheet(rows);
 
-				// Auto-width columns
 				const colWidths = Object.keys(rows[0] || {}).map(key => ({
 					wch: Math.max(key.length, ...rows.map(r => String(r[key] || '').length)) + 2
 				}));
@@ -922,7 +639,6 @@ const UserManagementPage = () => {
 				'Role': getRoleInfo(user.role).label,
 			};
 
-			// Kolom tambahan berdasarkan tab
 			if (activeTab === 'pegawai') {
 				row['Bidang'] = user.bidang?.nama || '-';
 			} else if (activeTab === 'desa') {
@@ -940,7 +656,6 @@ const UserManagementPage = () => {
 
 		const ws = XLSX.utils.json_to_sheet(rows);
 
-		// Auto-width columns
 		if (rows.length > 0) {
 			const colWidths = Object.keys(rows[0]).map(key => ({
 				wch: Math.max(key.length, ...rows.map(r => String(r[key] || '').length)) + 2
@@ -961,380 +676,324 @@ const UserManagementPage = () => {
 		});
 	};
 
-	// State for export dropdown
-	const [showExportMenu, setShowExportMenu] = useState(false);
-
-	// Group by role for stats
-	const statsByRole = useMemo(() => {
-		const stats = {};
+	// Hitungan diambil dari daftar yang sudah dimuat (batas 1000 baris), bukan
+	// panggilan statistik terpisah — satu permintaan jaringan lebih sedikit.
+	const jumlahPerRole = useMemo(() => {
+		const hitung = {};
 		users.forEach((user) => {
-			stats[user.role] = (stats[user.role] || 0) + 1;
+			hitung[user.role] = (hitung[user.role] || 0) + 1;
 		});
-		return stats;
+		return hitung;
 	}, [users]);
+
+	const jumlahTab = (tab) =>
+		tab.role
+			? jumlahPerRole[tab.role] || 0
+			: tab.roles?.reduce((total, role) => total + (jumlahPerRole[role] || 0), 0) || 0;
+
+	const adaFilter = Boolean(searchTerm) || filterBidang !== 'all' || filterDinas !== 'all';
+	const nonaktif = users.filter((user) => !user.is_active).length;
+	const belumLengkap = users.filter((user) => user.profile_incomplete).length;
 
 	if (loading)
 		return (
-			<div className="flex justify-center items-center p-12">
-				<div className="flex flex-col items-center gap-3">
-					<div className="animate-spin rounded-full h-12 w-12 border-b-3 border-indigo-500"></div>
-					<p className="text-gray-600 text-sm">Memuat data...</p>
-				</div>
+			<div className="flex min-h-screen items-center justify-center bg-slate-50">
+				<p className="text-sm font-medium text-slate-500">Memuat data pengguna…</p>
 			</div>
 		);
 
 	if (error)
 		return (
-			<div className="p-6 text-center bg-red-50 border border-red-200 rounded-xl">
-				<p className="text-red-600 font-medium">{error}</p>
+			<div className="min-h-screen bg-slate-50 p-6">
+				<div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-800">{error}</div>
 			</div>
 		);
 
 	return (
-		<div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 md:p-6 lg:p-8">
-			<div className="flex gap-6">
-			{/* Main Content */}
-			<div className="flex-1 min-w-0">
-			{/* Header */}
-			<div className="mb-6">
-				<div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-2xl p-6 md:p-8 text-white shadow-2xl relative overflow-hidden">
-					<div className="absolute inset-0 bg-black opacity-5"></div>
-					<div className="relative z-10">
-						<h1 className="text-3xl md:text-4xl font-bold mb-3 flex items-center gap-3">
-							<div className="h-10 w-10 md:h-12 md:w-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
-								<LuUsers className="w-6 h-6 md:w-7 md:h-7" />
-							</div>
-							Manajemen Pengguna
-						</h1>
-						<p className="text-white/90 text-base md:text-lg">
-							Kelola semua pengguna sistem DPMD dalam satu halaman
-						</p>
+		<div className="min-h-screen bg-slate-50">
+			<div className="mx-auto max-w-6xl space-y-5 px-4 py-6 sm:px-6 lg:px-8">
+				{/* ---------- Kepala ---------- */}
+				<div className="flex flex-wrap items-start justify-between gap-4">
+					<div className="flex items-start gap-4">
+						<div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white">
+							<LuUsers className="h-6 w-6" />
+						</div>
+						<div>
+							<h1 className="text-2xl font-bold tracking-tight text-slate-900">Manajemen Pengguna</h1>
+							<p className="mt-1 text-sm text-slate-500">
+								<span className="font-semibold text-slate-700">{users.length}</span> akun terdaftar
+								{nonaktif > 0 && <> · {nonaktif} nonaktif</>}
+								{belumLengkap > 0 && <> · {belumLengkap} identitas belum lengkap</>}
+							</p>
+						</div>
 					</div>
-				</div>
-			</div>
 
-			{/* Statistics */}
-			<UserStatsCard />
-
-			{/* Tabs untuk Role */}
-			<div className="bg-white rounded-2xl shadow-lg p-4 mb-6 overflow-x-auto">
-				<div className="flex gap-2 min-w-max">
-					{tabs.map((tab) => {
-						const Icon = tab.icon;
-						const isActive = activeTab === tab.id;
-						const count = tab.role 
-							? statsByRole[tab.role] || 0
-							: tab.roles?.reduce((sum, r) => sum + (statsByRole[r] || 0), 0) || 0;
-						
-						// Get button color class
-						const getButtonClass = () => {
-							if (!isActive) return 'bg-gray-100 text-gray-700 hover:bg-gray-200';
-							
-							const colorMap = {
-								red: 'bg-red-500 text-white shadow-lg',
-								blue: 'bg-blue-500 text-white shadow-lg',
-								indigo: 'bg-indigo-500 text-white shadow-lg',
-								green: 'bg-green-500 text-white shadow-lg',
-								teal: 'bg-teal-500 text-white shadow-lg',
-								gray: 'bg-gray-500 text-white shadow-lg',
-								purple: 'bg-purple-500 text-white shadow-lg',
-								emerald: 'bg-emerald-500 text-white shadow-lg',
-								violet: 'bg-violet-500 text-white shadow-lg',
-							};
-							return colorMap[tab.color] || 'bg-gray-500 text-white shadow-lg';
-						};
-						
-						return (
+					<div className="flex items-center gap-2">
+						<div className="relative">
 							<button
-								key={tab.id}
-								onClick={() => {
-									setActiveTab(tab.id);
-									setSearchTerm('');
-									setFilterBidang('all'); // Reset filter bidang
-									setFilterDinas('all'); // Reset filter dinas
-								}}
-								className={`
-									flex items-center gap-2 px-4 py-3 rounded-xl font-medium transition-all
-									${getButtonClass()}
-								`}
+								onClick={() => setShowExportMenu((buka) => !buka)}
+								className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
 							>
-								<Icon className="w-4 h-4" />
-								<span>{tab.label}</span>
-								<span className={`
-									px-2 py-0.5 rounded-full text-xs font-bold
-									${isActive ? 'bg-white/20' : 'bg-gray-200 text-gray-600'}
-								`}>
-									{count}
-								</span>
+								<LuDownload className="h-4 w-4" />
+								Ekspor
+								<LuChevronDown
+									className={`h-3.5 w-3.5 transition-transform ${showExportMenu ? 'rotate-180' : ''}`}
+								/>
 							</button>
-						);
-					})}
-				</div>
-			</div>
 
-			{/* Filters & Actions */}
-			<div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
-				<div className={`grid grid-cols-1 gap-4 ${(activeTab === "pegawai" || activeTab === "dinas_terkait") ? "md:grid-cols-3" : "md:grid-cols-1"}`}>
-					{/* Search */}
-					<div className={(activeTab === "pegawai" || activeTab === "dinas_terkait") ? "" : "md:col-span-1"}>
-						<div className="relative">
-							<LuSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-							<input
-								type="text"
-								placeholder="Cari nama, email, atau wilayah..."
-								value={searchTerm}
-								onChange={(e) => setSearchTerm(e.target.value)}
-								className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-							/>
-						</div>
-					</div>
-
-					{/* Filter Bidang - Hanya muncul di tab Pegawai DPMD */}
-					{activeTab === "pegawai" && (
-						<div className="relative">
-							<LuBuilding2 className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-							<select
-								value={filterBidang}
-								onChange={(e) => setFilterBidang(e.target.value)}
-								className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all appearance-none bg-white"
-							>
-								<option value="all">Semua Bidang</option>
-								{bidangList.map((bidang) => (
-									<option key={bidang.id} value={bidang.id}>
-										{bidang.nama}
-									</option>
-								))}
-							</select>
-							<LuChevronDown className="absolute right-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
-						</div>
-					)}
-
-					{/* Filter Dinas - Hanya muncul di tab Dinas Terkait */}
-					{activeTab === "dinas_terkait" && (
-						<div className="relative">
-							<LuBuilding2 className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-							<select
-								value={filterDinas}
-								onChange={(e) => setFilterDinas(e.target.value)}
-								className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all appearance-none bg-white"
-							>
-								<option value="all">Semua Dinas</option>
-								{dinasList.map((dinas) => (
-									<option key={dinas.id} value={dinas.id}>
-										{dinas.nama_dinas}
-									</option>
-								))}
-							</select>
-							<LuChevronDown className="absolute right-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
-						</div>
-					)}
-				</div>
-
-				{/* Add User & Export Buttons */}
-				<div className="mt-4 flex justify-end gap-3">
-					{/* Export Dropdown */}
-					<div className="relative">
-						<button
-							onClick={() => setShowExportMenu(!showExportMenu)}
-							className="flex items-center justify-center gap-2 px-5 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl hover:from-emerald-700 hover:to-teal-700 transition-all duration-200 shadow-lg hover:shadow-xl"
-						>
-							<LuDownload className="h-5 w-5" />
-							<span className="font-semibold">Ekspor</span>
-							<LuChevronDown className={`h-4 w-4 transition-transform ${showExportMenu ? 'rotate-180' : ''}`} />
-						</button>
-
-						{showExportMenu && (
-							<>
-								<div className="fixed inset-0 z-40" onClick={() => setShowExportMenu(false)} />
-								<div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 overflow-hidden">
-									<div className="p-3 bg-gray-50 border-b border-gray-200">
-										<p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Ekspor Data User</p>
-									</div>
-									<div className="p-2">
+							{showExportMenu && (
+								<>
+									<div className="fixed inset-0 z-30" onClick={() => setShowExportMenu(false)} />
+									<div className="absolute right-0 z-40 mt-2 w-64 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg">
 										<button
 											onClick={() => {
 												handleExportUsers('current');
 												setShowExportMenu(false);
 											}}
-											className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 rounded-lg transition-colors"
+											className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50"
 										>
-											<LuFileSpreadsheet className="h-5 w-5 text-emerald-600" />
-											<div>
-												<p className="font-medium">Ekspor Tab Aktif</p>
-												<p className="text-xs text-gray-500">{tabs.find(t => t.id === activeTab)?.label} ({filteredUsers.length} user)</p>
-											</div>
+											<LuFileSpreadsheet className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+											<span>
+												<span className="block text-sm font-medium text-slate-800">Tab aktif</span>
+												<span className="block text-xs text-slate-500">
+													{tabs.find((t) => t.id === activeTab)?.label} · {filteredUsers.length} akun
+												</span>
+											</span>
 										</button>
 										<button
 											onClick={() => {
 												handleExportUsers('all');
 												setShowExportMenu(false);
 											}}
-											className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 rounded-lg transition-colors"
+											className="flex w-full items-start gap-3 border-t border-slate-100 px-4 py-3 text-left transition-colors hover:bg-slate-50"
 										>
-											<LuUsers className="h-5 w-5 text-indigo-600" />
-											<div>
-												<p className="font-medium">Ekspor Semua Kategori</p>
-												<p className="text-xs text-gray-500">Semua user ({users.length} user, multi-sheet)</p>
-											</div>
+											<LuUsers className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+											<span>
+												<span className="block text-sm font-medium text-slate-800">Semua kategori</span>
+												<span className="block text-xs text-slate-500">{users.length} akun · multi-sheet</span>
+											</span>
 										</button>
 									</div>
-								</div>
-							</>
+								</>
+							)}
+						</div>
+
+						{canManage && (
+							<button
+								onClick={() => setShowAddModal(true)}
+								className="flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
+							>
+								<LuPlus className="h-4 w-4" />
+								Tambah User
+							</button>
+						)}
+					</div>
+				</div>
+
+				{/* ---------- Tab peran ---------- */}
+				<div className="scrollbar-hide flex gap-1 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-1 shadow-sm">
+					{tabs.map((tab) => {
+						const Icon = tab.icon;
+						const aktif = activeTab === tab.id;
+						return (
+							<button
+								key={tab.id}
+								onClick={() => {
+									setActiveTab(tab.id);
+									setSearchTerm('');
+									setFilterBidang('all');
+									setFilterDinas('all');
+								}}
+								aria-current={aktif ? 'page' : undefined}
+								className={`flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all duration-200 ${
+									aktif
+										? 'bg-slate-900 text-white shadow-sm'
+										: 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+								}`}
+							>
+								<Icon className="h-4 w-4" />
+								{tab.label}
+								<span
+									className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums ${
+										aktif ? 'bg-white/20' : 'bg-slate-100 text-slate-500'
+									}`}
+								>
+									{jumlahTab(tab)}
+								</span>
+							</button>
+						);
+					})}
+				</div>
+
+				{/* ---------- Alat ---------- */}
+				<div className="flex flex-wrap items-center gap-2">
+					<div className="relative min-w-0 flex-1 sm:max-w-sm">
+						<LuSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+						<input
+							type="text"
+							placeholder="Cari nama, email, atau wilayah…"
+							value={searchTerm}
+							onChange={(e) => setSearchTerm(e.target.value)}
+							className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-9 text-sm text-slate-700 transition-colors focus:border-slate-900 focus:outline-none"
+						/>
+						{searchTerm && (
+							<button
+								onClick={() => setSearchTerm('')}
+								aria-label="Hapus pencarian"
+								className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md p-0.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+							>
+								<LuX className="h-3.5 w-3.5" />
+							</button>
 						)}
 					</div>
 
-					<button
-						onClick={() => setShowAddModal(true)}
-						className="flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl"
-					>
-						<LuPlus className="h-5 w-5" />
-						<span className="font-semibold">Tambah User</span>
-					</button>
+					{activeTab === 'pegawai' && (
+						<select
+							value={filterBidang}
+							onChange={(e) => setFilterBidang(e.target.value)}
+							className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 focus:border-slate-900 focus:outline-none"
+						>
+							<option value="all">Semua Bidang</option>
+							{bidangList.map((bidang) => (
+								<option key={bidang.id} value={bidang.id}>
+									{bidang.nama}
+								</option>
+							))}
+						</select>
+					)}
+
+					{activeTab === 'dinas_terkait' && (
+						<select
+							value={filterDinas}
+							onChange={(e) => setFilterDinas(e.target.value)}
+							className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 focus:border-slate-900 focus:outline-none"
+						>
+							<option value="all">Semua Dinas</option>
+							{dinasList.map((dinas) => (
+								<option key={dinas.id} value={dinas.id}>
+									{dinas.nama_dinas}
+								</option>
+							))}
+						</select>
+					)}
+
+					<span className="ml-auto text-xs tabular-nums text-slate-500">
+						{filteredUsers.length} akun{adaFilter && ' (disaring)'}
+					</span>
 				</div>
 
-				{/* Results Info */}
-				<div className="mt-4 pt-4 border-t border-gray-200">
-					<p className="text-sm text-gray-600">
-						Menampilkan <span className="font-semibold text-gray-900">{filteredUsers.length}</span> dari{" "}
-						<span className="font-semibold text-gray-900">{users.length}</span> user
-					</p>
+				{/* ---------- Tabel ---------- */}
+				<div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+					{filteredUsers.length === 0 ? (
+						<div className="py-20 text-center">
+							<LuUsers className="mx-auto h-8 w-8 text-slate-300" />
+							<p className="mt-3 text-sm font-medium text-slate-600">
+								{adaFilter ? 'Tidak ada akun yang cocok' : 'Belum ada akun di kategori ini'}
+							</p>
+							<p className="mt-1 text-xs text-slate-400">
+								{adaFilter ? 'Coba ubah kata kunci atau filternya.' : 'Tambahkan lewat tombol “Tambah User”.'}
+							</p>
+						</div>
+					) : (
+						<>
+							<div className="overflow-x-auto">
+								<table className="w-full min-w-[640px]">
+									<thead>
+										<tr className="border-b border-slate-100 text-left text-[11px] uppercase tracking-wider text-slate-400">
+											<th className="px-4 py-3 font-semibold">Pengguna</th>
+											<th className="px-4 py-3 font-semibold">Peran</th>
+											<th className="hidden px-4 py-3 font-semibold lg:table-cell">Unit Kerja</th>
+											<th className="hidden px-4 py-3 font-semibold xl:table-cell">Jabatan</th>
+											<th className="px-4 py-3 text-right font-semibold">Status</th>
+										</tr>
+									</thead>
+									<tbody>
+										{paginatedUsers.map((user) => (
+											<BarisPengguna
+												key={user.id}
+												user={user}
+												terpilih={detailUser?.id === user.id}
+												onPilih={setDetailUser}
+											/>
+										))}
+									</tbody>
+								</table>
+							</div>
+
+							{/* ---------- Halaman ---------- */}
+							<div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-4 py-3">
+								<div className="flex items-center gap-2 text-xs text-slate-500">
+									<span className="tabular-nums">
+										{startIndex + 1}–{Math.min(startIndex + itemsPerPage, filteredUsers.length)} dari{' '}
+										{filteredUsers.length}
+									</span>
+									<select
+										value={itemsPerPage}
+										onChange={(e) => setItemsPerPage(Number(e.target.value))}
+										className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-600 focus:border-slate-900 focus:outline-none"
+									>
+										{PILIHAN_PER_HALAMAN.map((jumlah) => (
+											<option key={jumlah} value={jumlah}>
+												{jumlah} / halaman
+											</option>
+										))}
+									</select>
+								</div>
+
+								<div className="flex items-center gap-1">
+									<button
+										onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+										disabled={currentPage === 1}
+										aria-label="Halaman sebelumnya"
+										className="rounded-lg border border-slate-200 p-2 text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-transparent"
+									>
+										<LuChevronLeft className="h-4 w-4" />
+									</button>
+									<span className="px-2 text-xs tabular-nums text-slate-500">
+										Halaman {currentPage} dari {totalPages}
+									</span>
+									<button
+										onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+										disabled={currentPage === totalPages}
+										aria-label="Halaman berikutnya"
+										className="rounded-lg border border-slate-200 p-2 text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-transparent"
+									>
+										<LuChevronRight className="h-4 w-4" />
+									</button>
+								</div>
+							</div>
+						</>
+					)}
 				</div>
 			</div>
 
-			{/* Users Grid */}
-			{filteredUsers.length === 0 ? (
-				<div className="text-center py-16 bg-white rounded-2xl border-2 border-dashed border-gray-200">
-					<div className="flex flex-col items-center gap-4">
-						<div className="h-20 w-20 bg-gray-100 rounded-2xl flex items-center justify-center">
-							<LuUsers className="h-10 w-10 text-gray-400" />
-						</div>
-						<div>
-							<p className="text-gray-700 font-semibold text-lg mb-1">
-								{searchTerm || filterBidang !== "all" || filterDinas !== "all"
-									? "Tidak ada user yang sesuai"
-									: "Belum ada user"}
-							</p>
-							<p className="text-sm text-gray-500">
-								{searchTerm || filterBidang !== "all" || filterDinas !== "all"
-									? "Coba ubah filter atau kata kunci pencarian"
-									: 'Klik tombol "Tambah User" untuk menambahkan user baru'}
-							</p>
-						</div>
-					</div>
-				</div>
-			) : (
-				<>
-					{/* Pagination Info */}
-					<div className="mb-4 flex justify-between items-center text-sm text-gray-600">
-						<div>
-							Menampilkan <span className="font-semibold text-indigo-600">{startIndex + 1}</span> - <span className="font-semibold text-indigo-600">{Math.min(endIndex, filteredUsers.length)}</span> dari <span className="font-semibold text-indigo-600">{filteredUsers.length}</span> user
-						</div>
-						<div className="text-gray-500">
-							Halaman {currentPage} dari {totalPages}
-						</div>
-					</div>
-
-					{/* Users Grid */}
-					<div className="grid grid-cols-1 items-start gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-						{paginatedUsers.map((user) => (
-							<UserCard
-								key={user.id}
-								user={user}
-								canManage={canManage}
-								isSuperadmin={currentUser?.role === 'superadmin'}
-								canImpersonate={currentUser?.role === 'superadmin' && String(currentUser?.id) !== String(user.id)}
-								visiblePasswords={visiblePasswords}
-								togglePasswordVisibility={togglePasswordVisibility}
-								onEditRole={handleEditRole}
-								onEditBidang={handleEditBidang}
-								onEditTanggalLahir={handleEditTanggalLahir}
-								onEditJabatan={handleEditJabatan}
-							onEditDesaPermissions={handleEditDesaPermissions}
-								onEditAvatar={handleEditAvatar}
-								onSetDevice={handleSetDevice}
-								onResetPassword={handleResetPassword}
-								onDeleteUser={handleDeleteUser}
-								onImpersonate={handleImpersonate}
-								getRoleInfo={getRoleInfo}
-							/>
-						))}
-				</div>
-
-				{/* Pagination Controls */}
-				{totalPages > 1 && (
-					<div className="mt-8 flex justify-center items-center gap-2">
-						<button
-							onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-							disabled={currentPage === 1}
-							className={`p-3 rounded-xl transition-all ${
-								currentPage === 1
-									? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-									: 'bg-white text-indigo-600 hover:bg-indigo-50 shadow-md hover:shadow-lg'
-							}`}
-							title="Halaman Sebelumnya"
-						>
-							<LuChevronLeft className="h-5 w-5" />
-						</button>
-
-						{/* Page Numbers */}
-						<div className="flex gap-2">
-							{Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-								// Show first page, last page, current page, and pages around current
-								const showPage =
-									page === 1 ||
-									page === totalPages ||
-									(page >= currentPage - 1 && page <= currentPage + 1);
-
-								// Show ellipsis
-								const showEllipsisBefore = page === currentPage - 2 && currentPage > 3;
-								const showEllipsisAfter = page === currentPage + 2 && currentPage < totalPages - 2;
-
-								if (!showPage && !showEllipsisBefore && !showEllipsisAfter) {
-									return null;
-								}
-
-								if (showEllipsisBefore || showEllipsisAfter) {
-									return (
-										<span key={page} className="px-3 py-2 text-gray-400">
-											...
-										</span>
-									);
-								}
-
-								return (
-									<button
-										key={page}
-										onClick={() => setCurrentPage(page)}
-										className={`min-w-[44px] h-[44px] rounded-xl font-medium transition-all ${
-											currentPage === page
-												? 'bg-indigo-600 text-white shadow-lg scale-105'
-												: 'bg-white text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 shadow-md'
-										}`}
-									>
-										{page}
-									</button>
-								);
-							})}
-						</div>
-
-						<button
-							onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-							disabled={currentPage === totalPages}
-							className={`p-3 rounded-xl transition-all ${
-								currentPage === totalPages
-									? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-									: 'bg-white text-indigo-600 hover:bg-indigo-50 shadow-md hover:shadow-lg'
-							}`}
-							title="Halaman Berikutnya"
-						>
-							<LuChevronRight className="h-5 w-5" />
-						</button>
-					</div>
-				)}
-				</>
+			{/* ---------- Panel rincian ---------- */}
+			{detailUser && (
+				<UserDetailDrawer
+					user={detailUser}
+					onClose={() => setDetailUser(null)}
+					canManage={canManage}
+					isSuperadmin={currentUser?.role === 'superadmin'}
+					canImpersonate={currentUser?.role === 'superadmin' && String(currentUser?.id) !== String(detailUser.id)}
+					passwordTerlihat={Boolean(visiblePasswords[detailUser.id])}
+					onTogglePassword={() => togglePasswordVisibility(detailUser.id)}
+					roleInfo={getRoleInfo(detailUser.role)}
+					aksi={{
+						role: handleEditRole,
+						bidang: handleEditBidang,
+						avatar: handleEditAvatar,
+						tanggalLahir: handleEditTanggalLahir,
+						jabatan: handleEditJabatan,
+						desaPermissions: handleEditDesaPermissions,
+						device: handleSetDevice,
+						impersonate: handleImpersonate,
+						resetPassword: handleResetPassword,
+						hapus: handleDeleteUser,
+					}}
+				/>
 			)}
 
-			{/* Modals */}
+			{/* ---------- Modal ---------- */}
 			{showAddModal && (
 				<AddUserModal
 					isOpen={showAddModal}
@@ -1427,17 +1086,6 @@ const UserManagementPage = () => {
 					userData={selectedUser}
 				/>
 			)}
-
-			</div>
-			{/* End Main Content */}
-
-			{/* Online Users Sidebar */}
-			{canManage && (
-				<div className="hidden lg:block">
-					<OnlineUsersSidebar />
-				</div>
-			)}
-			</div>
 		</div>
 	);
 };
