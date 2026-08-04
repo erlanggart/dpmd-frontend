@@ -1,14 +1,12 @@
-import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
-import { MapContainer, TileLayer, Polygon, CircleMarker, Tooltip, useMap } from 'react-leaflet';
 import { Delaunay } from 'd3-delaunay';
 import {
   FiMapPin, FiSearch, FiX, FiMaximize2, FiMinimize2,
   FiNavigation, FiLayers, FiChevronRight, FiHome, FiGrid,
-  FiImage, FiUsers
+  FiImage, FiUsers, FiMinus, FiPlus, FiCompass, FiCrosshair
 } from 'react-icons/fi';
-import 'leaflet/dist/leaflet.css';
 
 // ======================= DATA =======================
 
@@ -55,9 +53,6 @@ const KECAMATAN_DATA = [
   { name: 'Tajurhalang', lat: -6.4713, lng: 106.7583, desa: 7, kelurahan: 0 },
 ];
 
-const BOGOR_CENTER = [-6.55, 106.75];
-const DEFAULT_ZOOM = 10;
-
 const BOGOR_BOUNDARY = [
   [-6.30, 106.42], [-6.29, 106.50], [-6.30, 106.56], [-6.32, 106.62],
   [-6.33, 106.66], [-6.34, 106.70], [-6.37, 106.73], [-6.39, 106.76],
@@ -76,14 +71,10 @@ const BOGOR_BOUNDARY = [
   [-6.36, 106.41], [-6.33, 106.42], [-6.30, 106.42],
 ];
 
-const MASK_OUTER = [[-90, -180], [-90, 180], [90, 180], [90, -180]];
-const MAX_BOUNDS = [[-6.88, 106.28], [-6.20, 107.30]];
-
-const TILE_LAYERS = {
-  dark: { url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', label: 'Gelap' },
-  light: { url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', label: 'Terang' },
-  satellite: { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', label: 'Satelit' },
-};
+const SVG_WIDTH = 1120;
+const SVG_HEIGHT = 740;
+const MIN_SCALE = 1;
+const MAX_SCALE = 7;
 
 // ======================= GEOMETRY UTILS =======================
 
@@ -136,12 +127,69 @@ function clipPolygon(subject, clip) {
   return output;
 }
 
+function pointInPolygon(point, polygon) {
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const xi = polygon[i][0], yi = polygon[i][1];
+    const xj = polygon[j][0], yj = polygon[j][1];
+    const intersects = ((yi > point[1]) !== (yj > point[1]))
+      && (point[0] < ((xj - xi) * (point[1] - yi)) / ((yj - yi) || 1e-12) + xi);
+    if (intersects) inside = !inside;
+  }
+  return inside;
+}
+
+function seededRandom(seed) {
+  let value = seed || 1;
+  return () => {
+    value = (value * 1664525 + 1013904223) % 4294967296;
+    return value / 4294967296;
+  };
+}
+
+function generateSubRegions(regionLatLng, count, seed) {
+  if (!regionLatLng?.length || count <= 1) return [];
+
+  const poly = regionLatLng.map(([lat, lng]) => [lng, lat]);
+  if (computeSignedArea(poly) < 0) poly.reverse();
+
+  const xs = poly.map((p) => p[0]);
+  const ys = poly.map((p) => p[1]);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+  const rng = seededRandom(seed + 17);
+  const points = [];
+
+  let attempts = 0;
+  while (points.length < count && attempts < count * 700) {
+    attempts += 1;
+    const x = minX + (maxX - minX) * rng();
+    const y = minY + (maxY - minY) * rng();
+    if (pointInPolygon([x, y], poly)) points.push([x, y]);
+  }
+
+  if (points.length < 2) return [];
+
+  const padX = Math.max(0.01, (maxX - minX) * 0.15);
+  const padY = Math.max(0.01, (maxY - minY) * 0.15);
+  const voronoi = Delaunay.from(points).voronoi([minX - padX, minY - padY, maxX + padX, maxY + padY]);
+
+  return points
+    .map((_, i) => {
+      const cell = voronoi.cellPolygon(i);
+      if (!cell) return [];
+      const clipped = clipPolygon(cell.slice(0, -1), poly);
+      return clipped.map(([lng, lat]) => [lat, lng]);
+    })
+    .filter((cell) => cell.length >= 3);
+}
+
 // ======================= VORONOI COMPUTATION =======================
 
 function computeKecamatanRegions() {
-  // Convert boundary [lat, lng] → [lng, lat] for geometry operations
   const clipBdy = BOGOR_BOUNDARY.map(([lat, lng]) => [lng, lat]);
-  // Ensure CCW winding for Sutherland-Hodgman
   if (computeSignedArea(clipBdy) < 0) clipBdy.reverse();
 
   const centers = KECAMATAN_DATA.map(k => [k.lng, k.lat]);
@@ -151,32 +199,99 @@ function computeKecamatanRegions() {
   return KECAMATAN_DATA.map((_, i) => {
     const cell = voronoi.cellPolygon(i);
     if (!cell) return [];
-    // cellPolygon returns closed ring (first == last), remove duplicate
     const openCell = cell.slice(0, -1);
     const clipped = clipPolygon(openCell, clipBdy);
-    // Convert back to [lat, lng] for Leaflet
     return clipped.map(([lng, lat]) => [lat, lng]);
   });
 }
 
 const KECAMATAN_REGIONS = computeKecamatanRegions();
+const KECAMATAN_SUB_REGIONS = KECAMATAN_DATA.map((kec, i) =>
+  generateSubRegions(KECAMATAN_REGIONS[i], kec.desa + kec.kelurahan, i + 1)
+);
+
+const SVG_BOUNDS = (() => {
+  const lats = BOGOR_BOUNDARY.map(([lat]) => lat);
+  const lngs = BOGOR_BOUNDARY.map(([, lng]) => lng);
+  const latPad = (Math.max(...lats) - Math.min(...lats)) * 0.08;
+  const lngPad = (Math.max(...lngs) - Math.min(...lngs)) * 0.08;
+  return {
+    minLat: Math.min(...lats) - latPad,
+    maxLat: Math.max(...lats) + latPad,
+    minLng: Math.min(...lngs) - lngPad,
+    maxLng: Math.max(...lngs) + lngPad,
+  };
+})();
+
+function projectLatLng([lat, lng]) {
+  const x = ((lng - SVG_BOUNDS.minLng) / (SVG_BOUNDS.maxLng - SVG_BOUNDS.minLng)) * SVG_WIDTH;
+  const y = ((SVG_BOUNDS.maxLat - lat) / (SVG_BOUNDS.maxLat - SVG_BOUNDS.minLat)) * SVG_HEIGHT;
+  return [x, y];
+}
+
+function polygonPath(points) {
+  if (!points?.length) return '';
+  return points.map((point, i) => {
+    const [x, y] = projectLatLng(point);
+    return `${i === 0 ? 'M' : 'L'}${x.toFixed(2)} ${y.toFixed(2)}`;
+  }).join(' ') + ' Z';
+}
+
+function projectedCentroid(points) {
+  let x = 0, y = 0;
+  for (const p of points) {
+    const [px, py] = projectLatLng(p);
+    x += px; y += py;
+  }
+  return [x / points.length, y / points.length];
+}
+
+function projectedBBox(points) {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const p of points) {
+    const [x, y] = projectLatLng(p);
+    if (x < minX) minX = x;
+    if (y < minY) minY = y;
+    if (x > maxX) maxX = x;
+    if (y > maxY) maxY = y;
+  }
+  return { minX, minY, maxX, maxY };
+}
+
+// ======================= PRECOMPUTED GEOMETRY =======================
+
+const BOGOR_PATH = polygonPath(BOGOR_BOUNDARY);
+
+const KEC_GEOM = KECAMATAN_DATA.map((kec, i) => {
+  const region = KECAMATAN_REGIONS[i];
+  const valid = region && region.length >= 3;
+  return {
+    path: valid ? polygonPath(region) : '',
+    center: projectLatLng([kec.lat, kec.lng]),
+    bbox: valid ? projectedBBox(region) : null,
+    desa: (KECAMATAN_SUB_REGIONS[i] || []).map((cell) => ({
+      path: polygonPath(cell),
+      centroid: projectedCentroid(cell),
+    })),
+  };
+});
 
 // ======================= STYLING UTILS =======================
 
 function getRegionHue(total) {
   const min = 7, max = 16;
   const t = Math.min(1, Math.max(0, (total - min) / (max - min)));
-  return 145 - t * 100; // green(145) → amber(45)
+  return 158 - t * 118; // teal-green(158) -> amber(40)
 }
 
 function getRegionColor(total, isDark) {
   const h = getRegionHue(total);
-  return isDark ? `hsl(${h}, 70%, 45%)` : `hsl(${h}, 55%, 42%)`;
+  return isDark ? `hsl(${h}, 68%, 46%)` : `hsl(${h}, 55%, 42%)`;
 }
 
 function getRegionBorder(total, isDark) {
   const h = getRegionHue(total);
-  return isDark ? `hsl(${h}, 80%, 60%)` : `hsl(${h}, 65%, 30%)`;
+  return isDark ? `hsl(${h}, 82%, 62%)` : `hsl(${h}, 65%, 30%)`;
 }
 
 function getPlaceholderGradient(index) {
@@ -184,15 +299,9 @@ function getPlaceholderGradient(index) {
   return `linear-gradient(135deg, hsl(${h}, 50%, 28%) 0%, hsl(${h + 40}, 55%, 16%) 100%)`;
 }
 
-// ======================= SUB-COMPONENTS =======================
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
-const RecenterMap = ({ center, zoom }) => {
-  const map = useMap();
-  useEffect(() => {
-    if (center) map.flyTo(center, zoom, { duration: 1.2, easeLinearity: 0.25 });
-  }, [center, zoom, map]);
-  return null;
-};
+// ======================= SUB-COMPONENTS =======================
 
 const KecamatanPhoto = ({ kec, index }) => (
   <div
@@ -221,15 +330,19 @@ const MapSection = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedKec, setSelectedKec] = useState(null);
   const [hoveredKec, setHoveredKec] = useState(null);
-  const [mapCenter, setMapCenter] = useState(BOGOR_CENTER);
-  const [mapZoom, setMapZoom] = useState(DEFAULT_ZOOM);
+  const [hoveredDesa, setHoveredDesa] = useState(null); // { kec, idx }
   const [isExpanded, setIsExpanded] = useState(false);
-  const [tileMode, setTileMode] = useState('dark');
   const [showPanel, setShowPanel] = useState(true);
+  const [view, setView] = useState({ s: 1, x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
   const { ref, inView } = useInView({ threshold: 0.1, triggerOnce: true });
-  const mapRef = useRef(null);
 
-  const isDark = tileMode === 'dark' || tileMode === 'satellite';
+  const svgRef = useRef(null);
+  const viewRef = useRef(view);
+  viewRef.current = view;
+  const rafRef = useRef(null);
+  const dragState = useRef(null);
+  const draggedRef = useRef(false);
 
   const filteredKecamatan = useMemo(() => {
     const list = [...KECAMATAN_DATA].sort((a, b) => a.name.localeCompare(b.name));
@@ -241,29 +354,140 @@ const MapSection = () => {
   const totalDesa = KECAMATAN_DATA.reduce((s, k) => s + k.desa, 0);
   const totalKelurahan = KECAMATAN_DATA.reduce((s, k) => s + k.kelurahan, 0);
 
+  const selectedIndex = selectedKec
+    ? KECAMATAN_DATA.findIndex(k => k.name === selectedKec.name)
+    : -1;
+
+  // ---------- view helpers ----------
+  const clampView = useCallback((v) => {
+    const s = clamp(v.s, MIN_SCALE, MAX_SCALE);
+    return {
+      s,
+      x: clamp(v.x, -(s - 1) * SVG_WIDTH, 0),
+      y: clamp(v.y, -(s - 1) * SVG_HEIGHT, 0),
+    };
+  }, []);
+
+  const animateView = useCallback((target, dur = 650) => {
+    cancelAnimationFrame(rafRef.current);
+    const from = { ...viewRef.current };
+    const to = target;
+    const start = performance.now();
+    const ease = (t) => 1 - Math.pow(1 - t, 3);
+    const step = (now) => {
+      const t = Math.min(1, (now - start) / dur);
+      const k = ease(t);
+      setView({
+        s: from.s + (to.s - from.s) * k,
+        x: from.x + (to.x - from.x) * k,
+        y: from.y + (to.y - from.y) * k,
+      });
+      if (t < 1) rafRef.current = requestAnimationFrame(step);
+    };
+    rafRef.current = requestAnimationFrame(step);
+  }, []);
+
+  useEffect(() => () => cancelAnimationFrame(rafRef.current), []);
+
+  const clientToSvg = useCallback((clientX, clientY) => {
+    const svg = svgRef.current;
+    if (!svg) return null;
+    const pt = svg.createSVGPoint();
+    pt.x = clientX; pt.y = clientY;
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return null;
+    const p = pt.matrixTransform(ctm.inverse());
+    return [p.x, p.y];
+  }, []);
+
+  const focusRegion = useCallback((index) => {
+    const bbox = KEC_GEOM[index]?.bbox;
+    if (!bbox) return;
+    const bw = Math.max(1, bbox.maxX - bbox.minX);
+    const bh = Math.max(1, bbox.maxY - bbox.minY);
+    const s = clamp(Math.min(SVG_WIDTH / (bw * 1.7), SVG_HEIGHT / (bh * 1.7)), 1.6, MAX_SCALE);
+    const cx = (bbox.minX + bbox.maxX) / 2;
+    const cy = (bbox.minY + bbox.maxY) / 2;
+    animateView(clampView({ s, x: SVG_WIDTH / 2 - cx * s, y: SVG_HEIGHT / 2 - cy * s }));
+  }, [animateView, clampView]);
+
   const handleKecSelect = useCallback((kec) => {
+    const idx = KECAMATAN_DATA.findIndex(k => k.name === kec.name);
     setSelectedKec(kec);
     setHoveredKec(null);
-    setMapCenter([kec.lat, kec.lng]);
-    setMapZoom(13);
+    setHoveredDesa(null);
     setSearchQuery('');
-  }, []);
+    if (idx >= 0) focusRegion(idx);
+  }, [focusRegion]);
 
   const handleReset = useCallback(() => {
     setSelectedKec(null);
     setHoveredKec(null);
-    setMapCenter(BOGOR_CENTER);
-    setMapZoom(DEFAULT_ZOOM);
+    setHoveredDesa(null);
     setSearchQuery('');
+    animateView({ s: 1, x: 0, y: 0 });
+  }, [animateView]);
+
+  const zoomBy = useCallback((factor) => {
+    const cur = viewRef.current;
+    const ns = clamp(cur.s * factor, MIN_SCALE, MAX_SCALE);
+    const k = ns / cur.s;
+    const cx = SVG_WIDTH / 2, cy = SVG_HEIGHT / 2;
+    animateView(clampView({ s: ns, x: cx - (cx - cur.x) * k, y: cy - (cy - cur.y) * k }), 260);
+  }, [animateView, clampView]);
+
+  const handleWheel = useCallback((e) => {
+    e.preventDefault();
+    const p = clientToSvg(e.clientX, e.clientY);
+    if (!p) return;
+    cancelAnimationFrame(rafRef.current);
+    const cur = viewRef.current;
+    const factor = e.deltaY < 0 ? 1.18 : 1 / 1.18;
+    const ns = clamp(cur.s * factor, MIN_SCALE, MAX_SCALE);
+    const k = ns / cur.s;
+    setView(clampView({ s: ns, x: p[0] - (p[0] - cur.x) * k, y: p[1] - (p[1] - cur.y) * k }));
+  }, [clientToSvg, clampView]);
+
+  // ---------- drag to pan ----------
+  const handlePointerDown = useCallback((e) => {
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+    const p = clientToSvg(e.clientX, e.clientY);
+    if (!p) return;
+    cancelAnimationFrame(rafRef.current);
+    dragState.current = { startX: p[0], startY: p[1], view: { ...viewRef.current } };
+    draggedRef.current = false;
+    setIsDragging(true);
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+  }, [clientToSvg]);
+
+  const handlePointerMove = useCallback((e) => {
+    if (!dragState.current) return;
+    const p = clientToSvg(e.clientX, e.clientY);
+    if (!p) return;
+    const dx = p[0] - dragState.current.startX;
+    const dy = p[1] - dragState.current.startY;
+    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) draggedRef.current = true;
+    setView(clampView({
+      s: dragState.current.view.s,
+      x: dragState.current.view.x + dx,
+      y: dragState.current.view.y + dy,
+    }));
+  }, [clientToSvg, clampView]);
+
+  const handlePointerUp = useCallback(() => {
+    dragState.current = null;
+    setIsDragging(false);
+    // let the click handler read draggedRef, then clear on next tick
+    setTimeout(() => { draggedRef.current = false; }, 0);
   }, []);
 
-  const maskFill = isDark
-    ? { fillColor: '#0a1628', fillOpacity: 0.97, stroke: false, interactive: false }
-    : { fillColor: '#f0f4f8', fillOpacity: 0.94, stroke: false, interactive: false };
+  const guardClick = useCallback((fn) => (e) => {
+    if (draggedRef.current) { e.stopPropagation(); return; }
+    fn();
+  }, []);
 
-  const outerBorder = isDark
-    ? { color: '#c6a73d', weight: 2, fillOpacity: 0, opacity: 0.5, dashArray: '8, 4', interactive: false }
-    : { color: '#112642', weight: 2.5, fillOpacity: 0, opacity: 0.6, interactive: false };
+  const transform = `translate(${view.x.toFixed(2)} ${view.y.toFixed(2)}) scale(${view.s.toFixed(4)})`;
+  const strokeK = 1 / view.s; // keep strokes crisp regardless of zoom
 
   return (
     <section ref={ref} className="relative py-0 overflow-hidden">
@@ -364,10 +588,7 @@ const MapSection = () => {
                         >
                           <div className="p-4">
                             {/* Kantor Photo */}
-                            <KecamatanPhoto
-                              kec={selectedKec}
-                              index={KECAMATAN_DATA.findIndex(k => k.name === selectedKec.name)}
-                            />
+                            <KecamatanPhoto kec={selectedKec} index={selectedIndex} />
 
                             {/* Info */}
                             <div className="mt-4">
@@ -396,6 +617,40 @@ const MapSection = () => {
                                 </div>
                               </div>
                             </div>
+
+                            {/* Desa/Kelurahan chips (linked to map cells) */}
+                            {KEC_GEOM[selectedIndex]?.desa?.length > 0 && (
+                              <div className="mt-4">
+                                <p className="text-[10px] text-white/30 uppercase tracking-widest font-semibold mb-2">
+                                  Batas wilayah ({KEC_GEOM[selectedIndex].desa.length})
+                                </p>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {KEC_GEOM[selectedIndex].desa.map((_, idx) => {
+                                    const isKel = idx >= selectedKec.desa;
+                                    const label = isKel
+                                      ? `Kel. ${idx - selectedKec.desa + 1}`
+                                      : `Desa ${idx + 1}`;
+                                    const isHov = hoveredDesa?.kec === selectedKec.name && hoveredDesa?.idx === idx;
+                                    return (
+                                      <button
+                                        key={idx}
+                                        onMouseEnter={() => setHoveredDesa({ kec: selectedKec.name, idx })}
+                                        onMouseLeave={() => setHoveredDesa(null)}
+                                        className={`text-[10px] px-2 py-1 rounded-lg border transition-all ${
+                                          isHov
+                                            ? 'bg-[rgb(var(--color-secondary))]/25 border-[rgb(var(--color-secondary))]/50 text-[rgb(var(--color-secondary))]'
+                                            : isKel
+                                              ? 'bg-blue-400/10 border-blue-400/20 text-blue-200/70 hover:bg-blue-400/20'
+                                              : 'bg-white/[0.04] border-white/10 text-white/50 hover:bg-white/[0.08] hover:text-white/80'
+                                        }`}
+                                      >
+                                        {label}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
 
                             <p className="text-[11px] text-white/25 mt-3 leading-relaxed">
                               Kecamatan {selectedKec.name} merupakan salah satu dari 40 kecamatan di
@@ -441,7 +696,7 @@ const MapSection = () => {
                               }`}>{kec.name}</p>
                               <p className="text-[11px] text-white/25 mt-0.5">
                                 {kec.desa > 0 && `${kec.desa} desa`}
-                                {kec.desa > 0 && kec.kelurahan > 0 && ' · '}
+                                {kec.desa > 0 && kec.kelurahan > 0 && ' / '}
                                 {kec.kelurahan > 0 && `${kec.kelurahan} kel`}
                               </p>
                             </div>
@@ -502,31 +757,35 @@ const MapSection = () => {
                       <FiLayers className="w-4 h-4" />
                     </button>
 
-                    <div className="flex bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden">
-                      {Object.entries(TILE_LAYERS).map(([key, { label }]) => (
-                        <button
-                          key={key}
-                          onClick={() => setTileMode(key)}
-                          className={`px-3 py-2.5 text-[11px] font-medium transition-all ${
-                            tileMode === key
-                              ? 'bg-[rgb(var(--color-secondary))] text-[rgb(var(--color-primary))]'
-                              : 'text-white/50 hover:text-white/80'
-                          }`}
-                        >
-                          {label}
-                        </button>
-                      ))}
+                    <div className="flex items-center bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden">
+                      <button
+                        onClick={() => zoomBy(1 / 1.35)}
+                        className="p-2.5 text-white/60 hover:text-white hover:bg-white/5 transition-all disabled:opacity-30"
+                        disabled={view.s <= MIN_SCALE + 0.001}
+                        title="Perkecil"
+                      >
+                        <FiMinus className="w-4 h-4" />
+                      </button>
+                      <span className="min-w-[54px] px-2 text-center text-[11px] font-bold text-white/70 tabular-nums">
+                        {Math.round(view.s * 100)}%
+                      </span>
+                      <button
+                        onClick={() => zoomBy(1.35)}
+                        className="p-2.5 text-white/60 hover:text-white hover:bg-white/5 transition-all disabled:opacity-30"
+                        disabled={view.s >= MAX_SCALE - 0.001}
+                        title="Perbesar"
+                      >
+                        <FiPlus className="w-4 h-4" />
+                      </button>
                     </div>
 
-                    {selectedKec && (
-                      <button
-                        onClick={handleReset}
-                        className="p-2.5 bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl text-white/60 hover:text-white hover:bg-black/60 transition-all"
-                        title="Reset peta"
-                      >
-                        <FiNavigation className="w-4 h-4" />
-                      </button>
-                    )}
+                    <button
+                      onClick={handleReset}
+                      className="p-2.5 bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl text-white/60 hover:text-white hover:bg-black/60 transition-all"
+                      title="Reset peta"
+                    >
+                      <FiNavigation className="w-4 h-4" />
+                    </button>
 
                     <button
                       onClick={() => setIsExpanded(!isExpanded)}
@@ -543,12 +802,20 @@ const MapSection = () => {
                     <div className="bg-black/60 backdrop-blur-xl border border-white/10 rounded-xl p-3 flex items-center justify-between">
                       <div>
                         <h4 className="font-bold text-white text-sm">Kec. {selectedKec.name}</h4>
-                        <p className="text-[11px] text-white/40">{selectedKec.desa} desa · {selectedKec.kelurahan} kel</p>
+                        <p className="text-[11px] text-white/40">{selectedKec.desa} desa / {selectedKec.kelurahan} kel</p>
                       </div>
                       <button onClick={handleReset} className="text-white/30 hover:text-white p-1"><FiX className="w-4 h-4" /></button>
                     </div>
                   </div>
                 )}
+
+                {/* Compass */}
+                <div className="absolute top-20 left-4 z-[1000] hidden md:block pointer-events-none">
+                  <div className="w-11 h-11 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center relative">
+                    <FiCompass className="w-5 h-5 text-white/50" />
+                    <span className="absolute top-1 text-[8px] font-bold text-[rgb(var(--color-secondary))]">N</span>
+                  </div>
+                </div>
 
                 {/* Legend */}
                 <div className="absolute bottom-4 right-4 z-[1000]">
@@ -557,127 +824,198 @@ const MapSection = () => {
                     <div className="space-y-1.5">
                       {[
                         { total: 16, label: '14+ desa/kel' },
-                        { total: 11, label: '10–13 desa/kel' },
+                        { total: 11, label: '10-13 desa/kel' },
                         { total: 7, label: '< 10 desa/kel' },
                       ].map((item) => (
                         <div key={item.label} className="flex items-center gap-2">
                           <span className="w-4 h-3 rounded-sm shrink-0" style={{
-                            backgroundColor: getRegionColor(item.total, isDark), opacity: 0.7,
+                            backgroundColor: getRegionColor(item.total, true), opacity: 0.7,
                           }} />
                           <span className="text-[10px] text-white/50">{item.label}</span>
                         </div>
                       ))}
                     </div>
-                    <div className="mt-2.5 pt-2 border-t border-white/5 flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-white border-2 border-white/60 shrink-0" />
-                      <span className="text-[10px] text-white/40">Kantor Kecamatan</span>
+                    <div className="mt-2.5 pt-2 border-t border-white/5 space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full bg-white border-2 border-white/60 shrink-0" />
+                        <span className="text-[10px] text-white/40">Kantor Kecamatan</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="w-4 h-3 shrink-0" style={{
+                          backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(255,255,255,0.4) 2px, rgba(255,255,255,0.4) 3px)',
+                        }} />
+                        <span className="text-[10px] text-white/40">Batas desa/kelurahan</span>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                {/* ========= LEAFLET MAP ========= */}
-                <div className="w-full h-full">
+                {/* Hint */}
+                {!selectedKec && (
+                  <div className="absolute bottom-4 left-4 z-[1000] hidden md:flex items-center gap-2 bg-black/30 backdrop-blur-xl border border-white/10 rounded-xl px-3 py-2 pointer-events-none">
+                    <FiCrosshair className="w-3.5 h-3.5 text-white/40" />
+                    <span className="text-[10px] text-white/45">Klik wilayah · seret untuk geser · scroll untuk zoom</span>
+                  </div>
+                )}
+
+                {/* ========= INTERACTIVE SVG MAP ========= */}
+                <div className="w-full h-full overflow-hidden bg-[#081629]">
                   {inView && (
-                    <MapContainer
-                      ref={mapRef}
-                      center={BOGOR_CENTER}
-                      zoom={DEFAULT_ZOOM}
-                      scrollWheelZoom={true}
-                      className="w-full h-full z-0"
-                      zoomControl={false}
-                      minZoom={10}
-                      maxZoom={17}
-                      maxBounds={MAX_BOUNDS}
-                      maxBoundsViscosity={1.0}
-                      style={{ background: isDark ? '#0a1628' : '#f0f4f8' }}
+                    <svg
+                      ref={svgRef}
+                      viewBox={`0 0 ${SVG_WIDTH} ${SVG_HEIGHT}`}
+                      preserveAspectRatio="xMidYMid meet"
+                      className={`block w-full h-full select-none ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+                      role="img"
+                      aria-label="Peta interaktif Kabupaten Bogor dengan batas kecamatan dan desa"
+                      onWheel={handleWheel}
+                      onPointerDown={handlePointerDown}
+                      onPointerMove={handlePointerMove}
+                      onPointerUp={handlePointerUp}
+                      onPointerLeave={handlePointerUp}
+                      onClick={guardClick(() => { if (selectedKec) handleReset(); })}
                     >
-                      <TileLayer
-                        attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-                        url={TILE_LAYERS[tileMode].url}
-                        key={tileMode}
-                      />
-                      <RecenterMap center={mapCenter} zoom={mapZoom} />
+                      <defs>
+                        <linearGradient id="bogorMapBg" x1="0" x2="1" y1="0" y2="1">
+                          <stop offset="0%" stopColor="#081629" />
+                          <stop offset="60%" stopColor="#102847" />
+                          <stop offset="100%" stopColor="#07111f" />
+                        </linearGradient>
+                        <radialGradient id="mapVignette" cx="50%" cy="45%" r="75%">
+                          <stop offset="60%" stopColor="#000000" stopOpacity="0" />
+                          <stop offset="100%" stopColor="#000000" stopOpacity="0.45" />
+                        </radialGradient>
+                        <filter id="mapGlow" x="-20%" y="-20%" width="140%" height="140%">
+                          <feDropShadow dx="0" dy="14" stdDeviation="18" floodColor="#000000" floodOpacity="0.35" />
+                        </filter>
+                        <filter id="regionLift" x="-40%" y="-40%" width="180%" height="180%">
+                          <feDropShadow dx="0" dy="0" stdDeviation="7" floodColor="#d6b44a" floodOpacity="0.55" />
+                        </filter>
+                      </defs>
 
-                      {/* Mask outside Bogor */}
-                      <Polygon positions={[MASK_OUTER, BOGOR_BOUNDARY]} pathOptions={maskFill} />
+                      <rect width={SVG_WIDTH} height={SVG_HEIGHT} fill="url(#bogorMapBg)" />
 
-                      {/* Outer boundary */}
-                      <Polygon positions={BOGOR_BOUNDARY} pathOptions={outerBorder} />
+                      {/* Everything below pans/zooms together */}
+                      <g style={{ transform, transformOrigin: '0px 0px' }}>
+                        {/* graticule */}
+                        <g opacity="0.14">
+                          {Array.from({ length: 18 }).map((_, i) => (
+                            <path key={`grid-h-${i}`} d={`M0 ${70 + i * 34} H${SVG_WIDTH}`} stroke="#ffffff" strokeWidth={0.7 * strokeK} strokeDasharray={`${2 * strokeK} ${12 * strokeK}`} />
+                          ))}
+                          {Array.from({ length: 22 }).map((_, i) => (
+                            <path key={`grid-v-${i}`} d={`M${60 + i * 48} 0 V${SVG_HEIGHT}`} stroke="#ffffff" strokeWidth={0.7 * strokeK} strokeDasharray={`${2 * strokeK} ${12 * strokeK}`} />
+                          ))}
+                        </g>
 
-                      {/* === KECAMATAN REGION POLYGONS === */}
-                      {KECAMATAN_DATA.map((kec, i) => {
-                        const region = KECAMATAN_REGIONS[i];
-                        if (!region || region.length < 3) return null;
+                        <g filter="url(#mapGlow)">
+                          {/* kabupaten outline */}
+                          <path
+                            d={BOGOR_PATH}
+                            fill="rgba(8, 22, 41, 0.72)"
+                            stroke="#d6b44a"
+                            strokeWidth="4"
+                            strokeLinejoin="round"
+                            vectorEffect="non-scaling-stroke"
+                          />
 
-                        const total = kec.desa + kec.kelurahan;
-                        const isActive = selectedKec?.name === kec.name;
-                        const isHover = hoveredKec?.name === kec.name;
+                          {KECAMATAN_DATA.map((kec, i) => {
+                            const geom = KEC_GEOM[i];
+                            if (!geom.path) return null;
 
-                        const fillColor = isActive ? '#c6a73d' : getRegionColor(total, isDark);
-                        const borderColor = isActive
-                          ? '#fbbf24'
-                          : isHover
-                            ? getRegionBorder(total, isDark)
-                            : isDark ? 'rgba(255,255,255,0.15)' : 'rgba(17,38,66,0.2)';
+                            const total = kec.desa + kec.kelurahan;
+                            const isActive = selectedKec?.name === kec.name;
+                            const isHover = hoveredKec?.name === kec.name;
+                            const isDim = selectedKec && !isActive;
+                            const fillColor = isActive ? '#d6b44a' : getRegionColor(total, true);
+                            const borderColor = isActive
+                              ? '#fde68a'
+                              : isHover ? getRegionBorder(total, true) : 'rgba(255,255,255,0.46)';
+                            const [cx, cy] = geom.center;
 
-                        return (
-                          <Polygon
-                            key={kec.name}
-                            positions={region}
-                            pathOptions={{
-                              fillColor,
-                              fillOpacity: isActive ? 0.55 : isHover ? 0.45 : 0.3,
-                              color: borderColor,
-                              weight: isActive ? 3 : isHover ? 2 : 1,
-                              opacity: isActive ? 1 : isHover ? 0.8 : 0.5,
-                            }}
-                            eventHandlers={{
-                              click: () => handleKecSelect(kec),
-                              mouseover: () => setHoveredKec(kec),
-                              mouseout: () => setHoveredKec(null),
-                            }}
-                          >
-                            <Tooltip direction="center" className="map-region-tooltip" permanent={false}>
-                              <div className="text-center">
-                                <p className="font-bold text-xs">{kec.name}</p>
-                                <p className="text-[10px] opacity-60">{total} desa/kel</p>
-                              </div>
-                            </Tooltip>
-                          </Polygon>
-                        );
-                      })}
+                            return (
+                              <g
+                                key={kec.name}
+                                onClick={guardClick(() => handleKecSelect(kec))}
+                                onMouseEnter={() => !isDragging && setHoveredKec(kec)}
+                                onMouseLeave={() => setHoveredKec(null)}
+                                className="cursor-pointer"
+                                style={{ transition: 'opacity 0.4s' }}
+                                opacity={isDim ? 0.4 : 1}
+                                filter={isActive ? 'url(#regionLift)' : undefined}
+                              >
+                                <path
+                                  d={geom.path}
+                                  fill={fillColor}
+                                  fillOpacity={isActive ? 0.68 : isHover ? 0.58 : 0.4}
+                                  stroke={borderColor}
+                                  strokeWidth={isActive ? 3.2 : isHover ? 2.4 : 1.4}
+                                  strokeLinejoin="round"
+                                  vectorEffect="non-scaling-stroke"
+                                  style={{ transition: 'fill-opacity 0.3s' }}
+                                />
 
-                      {/* === KANTOR KECAMATAN MARKERS === */}
-                      {KECAMATAN_DATA.map((kec) => {
-                        const isActive = selectedKec?.name === kec.name;
-                        const isHover = hoveredKec?.name === kec.name;
+                                {/* desa / kelurahan cells */}
+                                {geom.desa.map((desa, di) => {
+                                  const isKel = di >= kec.desa;
+                                  const desaHover = hoveredDesa?.kec === kec.name && hoveredDesa?.idx === di;
+                                  return (
+                                    <path
+                                      key={di}
+                                      d={desa.path}
+                                      fill={desaHover ? '#fbbf24' : isActive ? (isKel ? 'rgba(96,165,250,0.30)' : 'rgba(255,255,255,0.06)') : 'none'}
+                                      fillOpacity={desaHover ? 0.55 : 1}
+                                      stroke={desaHover ? '#fde68a' : isActive ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.3)'}
+                                      strokeWidth={desaHover ? 1.6 : 0.72}
+                                      strokeLinejoin="round"
+                                      vectorEffect="non-scaling-stroke"
+                                      onMouseEnter={() => isActive && setHoveredDesa({ kec: kec.name, idx: di })}
+                                      onMouseLeave={() => setHoveredDesa(null)}
+                                      style={{ pointerEvents: isActive ? 'auto' : 'none', transition: 'fill 0.2s' }}
+                                    />
+                                  );
+                                })}
 
-                        return (
-                          <CircleMarker
-                            key={`dot-${kec.name}`}
-                            center={[kec.lat, kec.lng]}
-                            radius={isActive ? 6 : isHover ? 5 : 3.5}
-                            pathOptions={{
-                              color: isActive ? '#fbbf24' : isDark ? '#fff' : '#112642',
-                              fillColor: isActive ? '#fbbf24' : '#fff',
-                              fillOpacity: isActive ? 1 : 0.9,
-                              weight: isActive ? 2.5 : 1.5,
-                            }}
-                            eventHandlers={{
-                              click: () => handleKecSelect(kec),
-                              mouseover: () => setHoveredKec(kec),
-                              mouseout: () => setHoveredKec(null),
-                            }}
-                          >
-                            <Tooltip direction="top" offset={[0, -8]} className="map-tooltip-custom">
-                              <div className="text-center">
-                                <p className="font-semibold text-[11px]">Kantor Kec. {kec.name}</p>
-                              </div>
-                            </Tooltip>
-                          </CircleMarker>
-                        );
-                      })}
-                    </MapContainer>
+                                {/* desa hover label */}
+                                {isActive && hoveredDesa?.kec === kec.name && geom.desa[hoveredDesa.idx] && (() => {
+                                  const [dx, dy] = geom.desa[hoveredDesa.idx].centroid;
+                                  const isKel = hoveredDesa.idx >= kec.desa;
+                                  const label = isKel ? `Kel. ${hoveredDesa.idx - kec.desa + 1}` : `Desa ${hoveredDesa.idx + 1}`;
+                                  return (
+                                    <g pointerEvents="none" transform={`translate(${dx} ${dy}) scale(${strokeK})`}>
+                                      <rect x={-label.length * 3.4 - 6} y={-9} width={label.length * 6.8 + 12} height="18" rx="5" fill="rgba(5,12,24,0.9)" stroke="rgba(214,180,74,0.5)" />
+                                      <text x="0" y="3.5" textAnchor="middle" fill="#fde68a" fontSize="10" fontWeight="700">{label}</text>
+                                    </g>
+                                  );
+                                })()}
+
+                                {/* office marker */}
+                                <circle
+                                  cx={cx}
+                                  cy={cy}
+                                  r={isActive ? 6 : isHover ? 5.5 : 4.2}
+                                  fill={isActive ? '#fbbf24' : '#ffffff'}
+                                  stroke={isActive ? '#fff7ed' : '#0f172a'}
+                                  strokeWidth="2"
+                                  vectorEffect="non-scaling-stroke"
+                                />
+
+                                {/* kecamatan hover tooltip */}
+                                {(isHover && !isActive) && (
+                                  <g pointerEvents="none" transform={`translate(${cx} ${cy}) scale(${strokeK})`}>
+                                    <rect x={10} y={-22} width={Math.max(88, kec.name.length * 7.2 + 28)} height="36" rx="8" fill="rgba(5,12,24,0.9)" stroke="rgba(255,255,255,0.18)" />
+                                    <text x={24} y={-7} fill="#ffffff" fontSize="11" fontWeight="700">{kec.name}</text>
+                                    <text x={24} y={7} fill="rgba(255,255,255,0.56)" fontSize="9">{total} desa/kel</text>
+                                  </g>
+                                )}
+                                <title>{`Kecamatan ${kec.name} - ${total} desa/kelurahan`}</title>
+                              </g>
+                            );
+                          })}
+                        </g>
+                      </g>
+
+                      <rect width={SVG_WIDTH} height={SVG_HEIGHT} fill="url(#mapVignette)" pointerEvents="none" />
+                    </svg>
                   )}
                 </div>
               </div>
