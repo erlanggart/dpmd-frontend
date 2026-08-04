@@ -43,73 +43,41 @@ const useResponsive = () => {
 	return { isDesktop, isSidebarCollapsed, setIsSidebarCollapsed };
 };
 
-const MENU_ITEMS = [
+const MENU_GROUPS = [
 	{
-		path: "/superadmin/dashboard",
-		label: "Dashboard",
-		description: "Ringkasan sistem dan status layanan",
-		icon: FiHome,
+		title: "Utama",
+		items: [
+			{ path: "/superadmin/dashboard", label: "Dashboard", icon: FiHome },
+			{ path: "/core-dashboard", label: "Core Dashboard", icon: FiBarChart2 },
+		],
 	},
 	{
-		path: "/superadmin/users",
-		label: "User Management",
-		description: "Kelola akun, role, dan akses pengguna",
-		icon: FiUsers,
+		title: "Manajemen",
+		items: [
+			{ path: "/superadmin/users", label: "User Management", icon: FiUsers },
+			{ path: "/superadmin/kepegawaian", label: "Kepegawaian", icon: FiBriefcase },
+			{ path: "/superadmin/bidang", label: "Bidang & Program", icon: FiLayers },
+		],
 	},
 	{
-		path: "/superadmin/kepegawaian",
-		label: "Kepegawaian",
-		description: "Data pegawai dan profil internal",
-		icon: FiBriefcase,
+		title: "Konten",
+		items: [
+			{ path: "/superadmin/berita", label: "Berita", icon: FiFileText },
+			{ path: "/superadmin/hero-gallery", label: "Hero Gallery", icon: FiImage },
+		],
 	},
 	{
-		path: "/superadmin/bidang",
-		label: "Bidang & Program",
-		description: "Akses modul per bidang dan program",
-		icon: FiLayers,
-	},
-	{
-		path: "/superadmin/berita",
-		label: "Berita",
-		description: "Kelola konten publik dan publikasi",
-		icon: FiFileText,
-	},
-	{
-		path: "/superadmin/hero-gallery",
-		label: "Hero Gallery",
-		description: "Atur galeri hero dan visual homepage",
-		icon: FiImage,
-	},
-	{
-		path: "/core-dashboard",
-		label: "Core Dashboard",
-		description: "Masuk ke dashboard publik inti",
-		icon: FiBarChart2,
-	},
-	{
-		path: "/superadmin/activity-logs",
-		label: "Activity Logs",
-		description: "Pantau log aktivitas sistem",
-		icon: FiActivity,
-	},
-	{
-		path: "/superadmin/pesan",
-		label: "Pesan",
-		description: "Kirim dan terima pesan antar pengguna",
-		icon: MessageLottieIcon,
-	},
-	{
-		path: "/superadmin/settings",
-		label: "Settings",
-		description: "Konfigurasi global aplikasi",
-		icon: FiSettings,
+		title: "Sistem",
+		items: [
+			{ path: "/superadmin/activity-logs", label: "Activity Logs", icon: FiActivity },
+			{ path: "/superadmin/pesan", label: "Pesan", icon: MessageLottieIcon },
+			{ path: "/superadmin/settings", label: "Settings", icon: FiSettings },
+		],
 	},
 ];
 
 const isMenuItemActive = (pathname, path) =>
 	pathname === path || pathname.startsWith(`${path}/`);
-
-const CORE_DASHBOARD_PATH = "/core-dashboard";
 
 const getNotificationTarget = (notification) => {
 	if (notification?.data?.url) {
@@ -142,14 +110,6 @@ const SuperadminLayout = () => {
 	const location = useLocation();
 	const { confirmDialog, showConfirm } = useConfirm();
 	const { isDesktop, isSidebarCollapsed, setIsSidebarCollapsed } = useResponsive();
-	const coreDashboardItem = React.useMemo(
-		() => MENU_ITEMS.find((item) => item.path === CORE_DASHBOARD_PATH),
-		[],
-	);
-	const mainMenuItems = React.useMemo(
-		() => MENU_ITEMS.filter((item) => item.path !== CORE_DASHBOARD_PATH),
-		[],
-	);
 
 	const token = localStorage.getItem("expressToken");
 	const avatarUrl = getAvatarUrl(user.avatar || user.avatar_url);
@@ -209,7 +169,7 @@ const SuperadminLayout = () => {
 
 	if (isCheckingSession) {
 		return (
-			<div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800">
+			<div className="flex min-h-screen items-center justify-center bg-slate-900">
 				<div className="text-center">
 					<div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-white/30 border-t-white"></div>
 					<p className="text-sm font-medium text-white/85">Memuat...</p>
@@ -292,152 +252,110 @@ const SuperadminLayout = () => {
 						isSidebarCollapsed ? "w-20" : "w-64"
 					}`}
 				>
-					<div className="relative flex h-24 items-center justify-between gap-3 border-b border-slate-200 px-4">
+					<div className="flex h-16 flex-shrink-0 items-center justify-between gap-2 border-b border-slate-200 px-3">
 						{!isSidebarCollapsed && (
-							<div className="flex flex-1 items-center justify-center rounded-2xl bg-slate-900 px-4 py-2">
-								<img src="/logo-dpmd.png" alt="DPMD Logo" className="h-16 w-auto" />
+							<div className="flex min-w-0 flex-1 items-center gap-2.5 pl-1">
+								<img src="/logo-dpmd.png" alt="DPMD" className="h-9 w-auto" />
+								<div className="min-w-0">
+									<p className="truncate text-sm font-semibold leading-tight text-slate-900">DPMD</p>
+									<p className="truncate text-[11px] leading-tight text-slate-400">Control Panel</p>
+								</div>
 							</div>
 						)}
 						<button
 							onClick={() => setIsSidebarCollapsed((prev) => !prev)}
-							className={`group rounded-xl border border-slate-200 p-2 text-slate-600 transition-colors duration-200 hover:bg-slate-100 hover:text-slate-900 ${
-								isSidebarCollapsed ? "mx-auto" : "flex-shrink-0"
+							className={`flex-shrink-0 rounded-lg border border-slate-200 p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 ${
+								isSidebarCollapsed ? "mx-auto" : ""
 							}`}
 							aria-label={isSidebarCollapsed ? "Buka sidebar" : "Tutup sidebar"}
 						>
 							{isSidebarCollapsed ? (
-								<FiMenu className="h-5 w-5 transition-transform group-hover:scale-110" />
+								<FiMenu className="h-4 w-4" />
 							) : (
-								<FiChevronLeft className="h-5 w-5 transition-transform group-hover:-translate-x-0.5" />
+								<FiChevronLeft className="h-4 w-4" />
 							)}
 						</button>
 					</div>
 
-					<nav className="flex-1 overflow-y-auto p-3 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-200" style={{ height: "calc(100vh - 252px)" }}>
-						<div className="space-y-3">
-							{coreDashboardItem && (() => {
-								const item = coreDashboardItem;
-								const isActive = isMenuItemActive(location.pathname, item.path);
-								const Icon = item.icon;
+					<nav className="flex-1 overflow-y-auto px-2.5 py-3 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-200">
+						{MENU_GROUPS.map((group) => (
+							<div key={group.title} className="mb-4 last:mb-0">
+								{!isSidebarCollapsed && (
+									<p className="mb-1.5 px-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+										{group.title}
+									</p>
+								)}
+								<div className="space-y-0.5">
+									{group.items.map((item) => {
+										const isActive = isMenuItemActive(location.pathname, item.path);
+										const Icon = item.icon;
 
-								return (
-									<div className="space-y-2 border-b border-slate-100 pb-3">
-										{!isSidebarCollapsed && (
-											<p className="px-2 text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-400">
-												Akses Cepat
-											</p>
-										)}
-										<button
-											key={item.path}
-											onClick={() => navigate(item.path)}
-											title={isSidebarCollapsed ? item.label : ""}
-											className={`group flex w-full items-center rounded-2xl transition-all duration-200 ${
-												isSidebarCollapsed ? "justify-center px-3 py-3" : "gap-3 px-3 py-3"
-											} ${
-												isActive
-													? "bg-slate-900 text-white shadow-sm"
-													: "bg-slate-50 text-slate-700 hover:bg-slate-100 hover:shadow-sm"
-											}`}
-										>
-											<Icon className="h-5 w-5 flex-shrink-0 transition-transform duration-200 group-hover:scale-110" />
-											{!isSidebarCollapsed && (
-												<div className="min-w-0 flex-1 text-left">
-													<p className="truncate text-sm font-semibold">
+										return (
+											<button
+												key={item.path}
+												onClick={() => navigate(item.path)}
+												title={isSidebarCollapsed ? item.label : ""}
+												className={`flex w-full items-center rounded-lg px-2.5 py-2 transition-colors duration-150 ${
+													isSidebarCollapsed ? "justify-center" : "gap-3"
+												} ${
+													isActive
+														? "bg-slate-900 text-white"
+														: "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+												}`}
+											>
+												<Icon className="h-5 w-5 flex-shrink-0" />
+												{!isSidebarCollapsed && (
+													<span className="flex-1 truncate text-left text-sm font-medium">
 														{item.label}
-													</p>
-												</div>
-											)}
-											{!isSidebarCollapsed && (
-												<FiChevronRight className={`h-4 w-4 transition-transform duration-200 ${isActive ? "text-white/90" : "text-slate-300 group-hover:translate-x-0.5 group-hover:text-slate-500"}`} />
-											)}
-										</button>
-									</div>
-								);
-							})()}
-
-							<div className="space-y-1.5">
-								{mainMenuItems.map((item) => {
-								const isActive = isMenuItemActive(location.pathname, item.path);
-								const Icon = item.icon;
-
-								return (
-									<button
-										key={item.path}
-										onClick={() => navigate(item.path)}
-										title={isSidebarCollapsed ? item.label : ""}
-										className={`group flex w-full items-center rounded-2xl transition-all duration-200 ${
-											isSidebarCollapsed ? "justify-center px-3 py-3" : "gap-3 px-3 py-3"
-										} ${
-											isActive
-												? "bg-slate-900 text-white shadow-sm"
-												: "text-slate-700 hover:bg-slate-100 hover:shadow-sm"
-										}`}
-									>
-										<Icon className="h-5 w-5 flex-shrink-0 transition-transform duration-200 group-hover:scale-110" />
-										{!isSidebarCollapsed && (
-											<div className="min-w-0 flex-1 text-left">
-												<p className="truncate text-sm font-semibold">
-													{item.label}
-												</p>
-											</div>
-										)}
-										{!isSidebarCollapsed && (
-											<FiChevronRight className={`h-4 w-4 transition-transform duration-200 ${isActive ? "text-white/90" : "text-slate-300 group-hover:translate-x-0.5 group-hover:text-white/70"}`} />
-										)}
-									</button>
-								);
-								})}
+													</span>
+												)}
+											</button>
+										);
+									})}
+								</div>
 							</div>
-						</div>
+						))}
 					</nav>
 
-					<div className="border-t border-slate-100 bg-white">
+					<div className="flex-shrink-0 border-t border-slate-200 p-2.5">
+						<button
+							onClick={() => navigate("/superadmin/profile")}
+							title={isSidebarCollapsed ? "Profil" : ""}
+							className={`flex w-full items-center rounded-lg py-2 transition-colors hover:bg-slate-100 ${
+								isSidebarCollapsed ? "justify-center px-1" : "gap-2.5 px-2"
+							}`}
+						>
+							{avatarUrl ? (
+								<img
+									src={avatarUrl}
+									alt={user.nama || user.name || "Superadmin"}
+									className="h-9 w-9 flex-shrink-0 rounded-lg object-cover"
+								/>
+							) : (
+								<div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-slate-900 text-white">
+									<FiShield className="h-4 w-4" />
+								</div>
+							)}
+							{!isSidebarCollapsed && (
+								<div className="min-w-0 flex-1 text-left">
+									<p className="truncate text-sm font-medium leading-tight text-slate-900">
+										{user.nama || user.name || "Superadmin"}
+									</p>
+									<p className="truncate text-[11px] leading-tight text-slate-500">Super Admin</p>
+								</div>
+							)}
+						</button>
 
-						<div className="border-b border-slate-100 p-3">
-							<button
-								onClick={() => navigate("/superadmin/profile")}
-								title={isSidebarCollapsed ? "Profil" : ""}
-								className={`flex w-full items-center rounded-2xl transition-all duration-200 hover:bg-slate-50 ${
-									isSidebarCollapsed ? "justify-center px-2 py-2.5" : "gap-3 px-2 py-2.5"
-								}`}
-							>
-								{avatarUrl ? (
-									<img
-										src={avatarUrl}
-										alt={user.nama || user.name || "Superadmin"}
-										className={`${isSidebarCollapsed ? "h-12 w-12" : "h-11 w-11"} rounded-2xl object-cover shadow-md`}
-									/>
-								) : (
-									<div className={`${isSidebarCollapsed ? "h-12 w-12" : "h-11 w-11"} flex items-center justify-center rounded-2xl bg-slate-900 text-white`}>
-										<FiShield className="h-5 w-5" />
-									</div>
-								)}
-								{!isSidebarCollapsed && (
-									<div className="min-w-0 flex-1 text-left">
-										<p className="truncate text-sm font-semibold text-slate-800">
-											{user.nama || user.name || "Superadmin"}
-										</p>
-										<p className="truncate text-xs text-slate-500">{user.email || "superadmin@dpmd"}</p>
-										<span className="mt-1 inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600">
-											Super Admin
-										</span>
-									</div>
-								)}
-							</button>
-						</div>
-
-						<div className="p-3">
-							<button
-								onClick={handleLogout}
-								title={isSidebarCollapsed ? "Logout" : ""}
-								className={`group flex w-full items-center rounded-2xl border border-slate-200 px-3 py-2.5 text-slate-600 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600 ${
-									isSidebarCollapsed ? "justify-center" : "gap-3"
-								}`}
-							>
-								<FiLogOut className="h-5 w-5" />
-								{!isSidebarCollapsed && <span className="text-sm font-semibold">Keluar</span>}
-							</button>
-						</div>
+						<button
+							onClick={handleLogout}
+							title={isSidebarCollapsed ? "Logout" : ""}
+							className={`mt-1 flex w-full items-center rounded-lg px-2.5 py-2 text-slate-500 transition-colors hover:bg-rose-50 hover:text-rose-600 ${
+								isSidebarCollapsed ? "justify-center" : "gap-3"
+							}`}
+						>
+							<FiLogOut className="h-5 w-5 flex-shrink-0" />
+							{!isSidebarCollapsed && <span className="text-sm font-medium">Keluar</span>}
+						</button>
 					</div>
 				</aside>
 			)}
@@ -461,14 +379,14 @@ const SuperadminLayout = () => {
 								isDesktop ? "right-6 top-6 w-[26rem]" : "left-4 right-4 top-4"
 							}`}
 						>
-							<div className="flex items-center justify-between bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 px-5 py-4 text-white">
+							<div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
 								<div>
-									<p className="text-sm font-semibold uppercase tracking-[0.24em] text-white/70">Inbox</p>
-									<h3 className="text-lg font-bold">Notifikasi Superadmin</h3>
+									<p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Inbox</p>
+									<h3 className="text-base font-semibold text-slate-900">Notifikasi</h3>
 								</div>
 								<button
 									onClick={() => setShowNotifications(false)}
-									className="rounded-xl bg-white/15 p-2 transition-colors hover:bg-white/25"
+									className="rounded-lg border border-slate-200 p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
 								>
 									<FiX className="h-5 w-5" />
 								</button>
@@ -491,24 +409,24 @@ const SuperadminLayout = () => {
 												key={notification.id}
 												onClick={() => handleNotificationItemClick(notification)}
 												className={`w-full px-5 py-4 text-left transition-colors hover:bg-slate-50 ${
-													notification.read ? "" : "bg-blue-50/60"
+													notification.read ? "" : "bg-slate-50"
 												}`}
 											>
 												<div className="flex items-start gap-3">
 													<div className={`mt-0.5 flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl ${
-														notification.read ? "bg-slate-100 text-slate-500" : "bg-blue-100 text-blue-600"
+														notification.read ? "bg-slate-100 text-slate-400" : "bg-slate-900 text-white"
 													}`}>
 														<FiBell className="h-5 w-5" />
 													</div>
 													<div className="min-w-0 flex-1">
 														<div className="flex items-center gap-2">
 															<p className="truncate text-sm font-semibold text-slate-800">{notification.title}</p>
-															{!notification.read && <span className="h-2 w-2 flex-shrink-0 rounded-full bg-blue-500"></span>}
+															{!notification.read && <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-slate-900"></span>}
 														</div>
 														<p className="mt-1 line-clamp-2 text-sm text-slate-600">{notification.message}</p>
 														<div className="mt-2 flex items-center justify-between gap-3">
 															<span className="text-xs text-slate-400">{getNotificationTime(notification)}</span>
-															{targetPath && <span className="text-xs font-semibold uppercase tracking-wide text-blue-600">Buka</span>}
+															{targetPath && <span className="text-xs font-medium text-slate-500">Buka</span>}
 														</div>
 													</div>
 												</div>
@@ -578,7 +496,7 @@ const SuperadminLayout = () => {
 												className="relative flex flex-col items-center"
 											>
 												<div className="relative -mt-8 mb-0.5">
-													<div className="relative flex h-[52px] w-[52px] items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-lg ring-[5px] ring-white transition-transform duration-300 hover:scale-110">
+													<div className="relative flex h-[52px] w-[52px] items-center justify-center rounded-full bg-slate-900 text-white shadow-lg ring-[5px] ring-white transition-transform duration-300 hover:scale-110">
 														<Icon className="h-6 w-6" />
 														{unreadCount > 0 && (
 															<span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
@@ -603,15 +521,15 @@ const SuperadminLayout = () => {
 											{isActive && (
 												<motion.div
 													layoutId="superadminNavDot"
-													className="absolute -top-0.5 h-1 w-5 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600"
+													className="absolute -top-0.5 h-1 w-5 rounded-full bg-slate-900"
 													transition={{ type: "spring", stiffness: 500, damping: 30 }}
 												/>
 											)}
 											<Icon className={`h-[22px] w-[22px] transition-all duration-200 ${
-												isActive ? "scale-110 text-blue-700" : "text-slate-400 group-hover:text-slate-600"
+												isActive ? "scale-110 text-slate-900" : "text-slate-400 group-hover:text-slate-600"
 											}`} />
 											<span className={`mt-1 text-[9px] font-bold uppercase tracking-wider ${
-												isActive ? "text-blue-700" : "text-slate-400"
+												isActive ? "text-slate-900" : "text-slate-400"
 											}`}>
 												{item.label}
 											</span>
@@ -646,7 +564,7 @@ const SuperadminLayout = () => {
 									<div className="h-1.5 w-12 rounded-full bg-slate-300"></div>
 								</div>
 
-								<div className="border-b border-slate-100 bg-gradient-to-r from-slate-50 via-blue-50 to-indigo-50 px-6 py-5">
+								<div className="border-b border-slate-100 bg-slate-50 px-6 py-5">
 									<div className="flex items-start gap-4">
 										{avatarUrl ? (
 											<img
@@ -655,17 +573,17 @@ const SuperadminLayout = () => {
 												className="h-14 w-14 rounded-2xl object-cover shadow-md"
 											/>
 										) : (
-											<div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-md">
+											<div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-900 text-white">
 												<FiShield className="h-6 w-6" />
 											</div>
 										)}
 										<div className="min-w-0 flex-1">
-											<p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-500">Control Center</p>
+											<p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Control Center</p>
 											<h3 className="truncate text-lg font-bold text-slate-900">
 												{user.nama || user.name || "Superadmin"}
 											</h3>
 											<p className="truncate text-sm text-slate-500">{user.email || "superadmin@dpmd"}</p>
-											<span className="mt-2 inline-flex rounded-full bg-blue-100 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-700">
+											<span className="mt-2 inline-flex rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600">
 												Super Admin
 											</span>
 										</div>
@@ -682,7 +600,7 @@ const SuperadminLayout = () => {
 											onClick={openNotifications}
 											className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left shadow-sm"
 										>
-											<div className="relative flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-100 text-blue-700">
+											<div className="relative flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
 												<FiBell className="h-5 w-5" />
 												{unreadCount > 0 && (
 													<span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
@@ -703,7 +621,7 @@ const SuperadminLayout = () => {
 											}}
 											className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left shadow-sm"
 										>
-											<div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-700">
+											<div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
 												<FiUser className="h-5 w-5" />
 											</div>
 											<div>
@@ -714,72 +632,43 @@ const SuperadminLayout = () => {
 									</div>
 								</div>
 
-								<div className="max-h-[50vh] space-y-2 overflow-y-auto px-6 py-4">
-									{coreDashboardItem && (() => {
-										const item = coreDashboardItem;
-										const Icon = item.icon;
-										const isActive = isMenuItemActive(location.pathname, item.path);
+								<div className="max-h-[50vh] overflow-y-auto px-6 py-4">
+									{MENU_GROUPS.map((group) => (
+										<div key={group.title} className="mb-4 last:mb-0">
+											<p className="mb-1.5 px-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+												{group.title}
+											</p>
+											<div className="space-y-1">
+												{group.items.map((item) => {
+													const Icon = item.icon;
+													const isActive = isMenuItemActive(location.pathname, item.path);
 
-										return (
-											<div className="border-b border-slate-100 pb-4">
-												<p className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-400">
-													Akses Cepat
-												</p>
-												<button
-													key={item.path}
-													onClick={() => {
-														setShowMenu(false);
-														navigate(item.path);
-													}}
-													className={`flex w-full items-center gap-4 rounded-2xl px-4 py-3 text-left transition-all duration-200 ${
-														isActive
-															? "bg-slate-900 text-white shadow-sm"
-															: "bg-slate-50 text-slate-700 hover:bg-slate-100"
-													}`}
-												>
-													<div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${
-														isActive ? "bg-white/15 text-white" : "bg-white text-slate-600 shadow-sm"
-													}`}>
-														<Icon className="h-5 w-5" />
-													</div>
-													<div className="min-w-0 flex-1">
-														<p className="truncate text-sm font-semibold">{item.label}</p>
-													</div>
-													<FiChevronRight className={`h-4 w-4 ${isActive ? "text-white/80" : "text-slate-300"}`} />
-												</button>
+													return (
+														<button
+															key={item.path}
+															onClick={() => {
+																setShowMenu(false);
+																navigate(item.path);
+															}}
+															className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors duration-150 ${
+																isActive
+																	? "bg-slate-900 text-white"
+																	: "text-slate-700 hover:bg-slate-100"
+															}`}
+														>
+															<Icon className="h-5 w-5 flex-shrink-0" />
+															<span className="min-w-0 flex-1 truncate text-sm font-medium">
+																{item.label}
+															</span>
+															<FiChevronRight
+																className={`h-4 w-4 ${isActive ? "text-white/70" : "text-slate-300"}`}
+															/>
+														</button>
+													);
+												})}
 											</div>
-										);
-									})()}
-
-									{mainMenuItems.map((item) => {
-										const Icon = item.icon;
-										const isActive = isMenuItemActive(location.pathname, item.path);
-
-										return (
-											<button
-												key={item.path}
-												onClick={() => {
-													setShowMenu(false);
-													navigate(item.path);
-												}}
-												className={`flex w-full items-center gap-4 rounded-2xl px-4 py-3 text-left transition-all duration-200 ${
-													isActive
-														? "bg-slate-900 text-white shadow-sm"
-														: "bg-slate-50 text-slate-700 hover:bg-slate-100"
-												}`}
-											>
-												<div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${
-													isActive ? "bg-white/15 text-white" : "bg-white text-slate-600 shadow-sm"
-												}`}>
-													<Icon className="h-5 w-5" />
-												</div>
-												<div className="min-w-0 flex-1">
-													<p className="truncate text-sm font-semibold">{item.label}</p>
-												</div>
-												<FiChevronRight className={`h-4 w-4 ${isActive ? "text-white/80" : "text-slate-300"}`} />
-											</button>
-										);
-									})}
+										</div>
+									))}
 								</div>
 
 								<div className="border-t border-slate-100 px-6 py-4">

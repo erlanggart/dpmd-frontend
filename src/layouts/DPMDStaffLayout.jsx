@@ -235,20 +235,20 @@ const DPMDStaffLayout = () => {
 
 	const token = localStorage.getItem("expressToken");
 	const config = ROLE_CONFIG[roleType] || ROLE_CONFIG.pegawai;
-	// Tema sidebar/layout diseragamkan emerald–teal agar selaras dengan gradient
-	// halaman (bukan warna-warni per role/menu).
+	// Tema netral (slate) — satu bahasa desain untuk sidebar, sheet mobile, dan
+	// halaman. Tidak ada warna per role/menu.
 	const theme = {
-		primary: 'emerald',
-		borderColor: 'border-emerald-200',
-		activeText: 'text-emerald-700',
-		activeBg: 'bg-emerald-50',
-		hoverText: 'hover:text-emerald-600',
-		hoverBg: 'hover:bg-emerald-50',
-		gradientFrom: 'from-emerald-500',
-		gradientTo: 'to-teal-600',
-		badgeBg: 'bg-emerald-100',
-		badgeText: 'text-emerald-700',
-		menuBorder: 'border-emerald-100',
+		primary: 'slate',
+		borderColor: 'border-slate-200',
+		activeText: 'text-slate-900',
+		activeBg: 'bg-slate-100',
+		hoverText: 'hover:text-slate-900',
+		hoverBg: 'hover:bg-slate-50',
+		gradientFrom: 'from-slate-800',
+		gradientTo: 'to-slate-900',
+		badgeBg: 'bg-slate-100',
+		badgeText: 'text-slate-700',
+		menuBorder: 'border-slate-100',
 	};
 
 	// Auto-open submenu when on a bidang page
@@ -406,7 +406,7 @@ const DPMDStaffLayout = () => {
 	// CRITICAL: Wait for session restore before deciding to redirect
 	if (isCheckingSession) {
 		return (
-			<div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800">
+			<div className="flex items-center justify-center min-h-screen bg-slate-900">
 				<div className="text-center">
 					<div className="animate-spin rounded-full h-12 w-12 border-4 border-white/30 border-t-white mx-auto mb-4"></div>
 					<p className="text-white/80 text-sm font-medium">Memuat...</p>
@@ -481,15 +481,15 @@ const DPMDStaffLayout = () => {
 
 	// Navigation items
 	const navItems = [
-		{ path: "/dpmd/dashboard", label: "Dashboard", icon: 'dashboard', color: 'text-orange-600', gradient: 'from-orange-500 to-orange-600' },
-		{ path: "/core-dashboard/dashboard", label: "Statistik", icon: 'chart', color: 'text-blue-600', gradient: 'from-blue-500 to-blue-700' },
-		{ path: "/dpmd/jadwal-kegiatan", label: "Kegiatan", icon: 'schedule', color: 'text-emerald-600', gradient: 'from-emerald-500 to-teal-600' },
-		{ path: "/dpmd/perjadin", label: "Perjadin", icon: 'briefcase', color: 'text-amber-600', gradient: 'from-amber-500 to-orange-600' },
-		{ path: "/dpmd/disposisi", label: "Disposisi", icon: 'contact', color: 'text-purple-600', gradient: 'from-purple-500 to-indigo-600' },
-		{ path: "/dpmd/video-meeting", label: "Video Meeting", icon: 'video', color: 'text-cyan-600', gradient: 'from-cyan-500 to-teal-600' },
-		{ path: "/dpmd/pesan", label: "Pesan", icon: 'chatbot', color: 'text-indigo-600', gradient: 'from-indigo-500 to-purple-600' },
-		{ path: "/dpmd/bank-surat", label: "Bank Surat", icon: 'archive', color: 'text-teal-600', gradient: 'from-teal-500 to-cyan-600' },
-		{ path: "/dpmd/photo-booth", label: "Photo Booth", icon: 'camera', color: 'text-fuchsia-600', gradient: 'from-fuchsia-500 to-violet-700' },
+		{ path: "/dpmd/dashboard", label: "Dashboard", icon: 'dashboard' },
+		{ path: "/core-dashboard/dashboard", label: "Statistik", icon: 'chart' },
+		{ path: "/dpmd/jadwal-kegiatan", label: "Kegiatan", icon: 'schedule' },
+		{ path: "/dpmd/perjadin", label: "Perjadin", icon: 'briefcase' },
+		{ path: "/dpmd/disposisi", label: "Disposisi", icon: 'contact' },
+		{ path: "/dpmd/bank-surat", label: "Bank Surat", icon: 'archive' },
+		{ path: "/dpmd/video-meeting", label: "Video Meeting", icon: 'video' },
+		{ path: "/dpmd/pesan", label: "Pesan", icon: 'chatbot' },
+		{ path: "/dpmd/photo-booth", label: "Photo Booth", icon: 'camera' },
 	];
 
 	// Mobile bottom nav - 3 items: Home, Aksi Cepat (FAB), Profil
@@ -503,282 +503,272 @@ const DPMDStaffLayout = () => {
 		{ path: `${config.basePath}/profile`, label: "Profil", icon: FiUser },
 	];
 
-	// Sidebar nav items (includes profile and bidang)
-	const getSidebarNavItems = () => {
-		const items = [...navItems];
-		
-		// Add bidang navigation if applicable
+	// Sidebar dikelompokkan supaya menu panjang tetap mudah dipindai.
+	const buildSidebarGroups = () => {
+		const byPath = (path) => navItems.find((item) => item.path === path);
+		const groups = [
+			{
+				title: "Utama",
+				items: [byPath("/dpmd/dashboard"), byPath("/core-dashboard/dashboard")],
+			},
+			{
+				title: "Pekerjaan",
+				items: [
+					byPath("/dpmd/jadwal-kegiatan"),
+					byPath("/dpmd/perjadin"),
+					byPath("/dpmd/disposisi"),
+					byPath("/dpmd/bank-surat"),
+				],
+			},
+			{
+				title: "Kolaborasi",
+				items: [
+					byPath("/dpmd/video-meeting"),
+					byPath("/dpmd/pesan"),
+					byPath("/dpmd/photo-booth"),
+				],
+			},
+		];
+
+		// Bidang milik user (beserta submenu-nya)
 		if (config.showBidangNav && user.bidang_id) {
 			const bidangNav = BIDANG_ROUTES[user.bidang_id];
 			if (bidangNav) {
 				const submenus = BIDANG_SUBMENUS[user.bidang_id] || [];
-				items.push({
-					path: bidangNav.path,
-					label: `Bidang ${bidangNav.name}`,
-					icon: bidangNav.icon,
-					gradient: bidangNav.gradient,
-					color: bidangNav.color,
-					submenus: submenus.length > 0 ? submenus : undefined,
+				groups.push({
+					title: "Bidang",
+					items: [
+						{
+							path: bidangNav.path,
+							label: bidangNav.name,
+							icon: bidangNav.icon,
+							submenus: submenus.length > 0 ? submenus : undefined,
+						},
+					],
 				});
 			}
 		}
-		
-		// Add profile
-		items.push({
-			path: `${config.basePath}/profile`,
-			label: "Profil Saya",
-			icon: 'user',
-			gradient: 'from-blue-500 to-indigo-600',
-			color: 'text-blue-600'
+
+		groups.push({
+			title: "Akun",
+			items: [{ path: `${config.basePath}/profile`, label: "Profil Saya", icon: 'user' }],
 		});
-		
-		return items;
+
+		return groups.map((group) => ({ ...group, items: group.items.filter(Boolean) }));
 	};
 
-	// Render bidang navigation menu item
-	const renderBidangNavItem = () => {
-		if (!config.showBidangNav || !user.bidang_id) return null;
-		
-		const bidangNav = BIDANG_ROUTES[user.bidang_id];
-		if (!bidangNav) return null;
+	const sidebarGroups = buildSidebarGroups();
 
-		const BidangIcon = bidangNav.icon;
-		
-		return (
-			<button
-				onClick={() => {
-					setShowMenu(false);
-					navigate(bidangNav.path);
-				}}
-				className={`w-full flex items-center gap-4 p-4 rounded-xl ${theme.hoverBg} transition-colors text-left`}
-			>
-				<div className={`h-12 w-12 bg-gradient-to-br ${theme.gradientFrom} ${theme.gradientTo} rounded-xl flex items-center justify-center`}>
-					<BidangIcon className="h-6 w-6 text-white" />
-				</div>
-				<div>
-					<h4 className="font-semibold text-gray-800">Bidang {bidangNav.name}</h4>
-					<p className="text-sm text-gray-500">Kelola data bidang</p>
-				</div>
-			</button>
-		);
-	};
-
-	const sidebarNavItems = getSidebarNavItems();
+	const isNavItemActive = (path) =>
+		location.pathname === path || location.pathname.startsWith(`${path}/`);
 
 	return (
-		<div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+		<div className="min-h-screen bg-slate-50">
 			{/* Desktop Sidebar */}
 			{isDesktop && (
-				<aside 
-					className={`fixed top-0 left-0 h-full bg-white shadow-2xl z-40 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] border-r border-gray-100 ${
+				<aside
+					className={`fixed top-0 left-0 z-40 flex h-full flex-col border-r border-slate-200 bg-white transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${
 						isSidebarCollapsed ? 'w-20' : 'w-64'
 					}`}
 				>
-					{/* Gradient Accent Line */}
-					<div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${theme.gradientFrom} ${theme.gradientTo}`}></div>
-
 					{/* Sidebar Header */}
-					<div className={`relative p-4 h-20 border-b border-gray-100 flex items-center justify-between flex-shrink-0 bg-gradient-to-r from-blue-50 to-purple-50`}>
+					<div className="flex h-16 flex-shrink-0 items-center justify-between gap-2 border-b border-slate-200 px-3">
 						{!isSidebarCollapsed && (
-							<div className="flex items-center justify-center flex-1">
-								<img 
-									src="/logo-dpmd.png" 
-									alt="DPMD Logo" 
-									className="h-20 transition-opacity duration-300"
-								/>
+							<div className="flex min-w-0 flex-1 items-center gap-2.5 pl-1">
+								<img src="/logo-dpmd.png" alt="DPMD" className="h-9 w-auto" />
+								<div className="min-w-0">
+									<p className="truncate text-sm font-semibold leading-tight text-slate-900">DPMD</p>
+									<p className="truncate text-[11px] leading-tight text-slate-400">Kabupaten Bogor</p>
+								</div>
 							</div>
 						)}
 						<button
 							onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-							className={`p-2 bg-${theme.primary}-100 hover:bg-${theme.primary}-200 rounded-lg transition-colors duration-200 flex-shrink-0 group ${!isSidebarCollapsed ? '' : 'mx-auto'}`}
+							className={`flex-shrink-0 rounded-lg border border-slate-200 p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 ${isSidebarCollapsed ? 'mx-auto' : ''}`}
 							aria-label={isSidebarCollapsed ? 'Buka Sidebar' : 'Tutup Sidebar'}
 							title={isSidebarCollapsed ? 'Buka Sidebar' : 'Tutup Sidebar'}
 						>
 							{!isSidebarCollapsed ? (
-								<PanelLeftClose className={`w-5 h-5 ${theme.activeText} group-hover:scale-110 transition-transform`} />
+								<PanelLeftClose className="h-4 w-4" />
 							) : (
-								<PanelLeftOpen className={`w-5 h-5 ${theme.activeText} group-hover:scale-110 transition-transform`} />
+								<PanelLeftOpen className="h-4 w-4" />
 							)}
 						</button>
 					</div>
 
 					{/* Navigation Items */}
-					<nav className="relative p-3 space-y-1.5 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent" style={{ height: 'calc(100vh - 320px)' }}>
-						{sidebarNavItems.map((item, index) => {
-							const isActive = location.pathname === item.path;
-							const hasSubmenus = item.submenus && item.submenus.length > 0;
-							const isSubmenuActive = hasSubmenus && item.submenus.some(sub => location.pathname.startsWith(sub.path));
-							const isBidangActive = isActive || isSubmenuActive || (hasSubmenus && location.pathname.startsWith(item.path));
-							
-							return (
-								<div key={index}>
-									<div
-										onMouseEnter={() => setHoveredItem(item.label)}
-										onMouseLeave={() => setHoveredItem(null)}
-										className={`group relative w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : ''} rounded-xl transition-all duration-200 ${
-											(hasSubmenus ? isBidangActive : isActive)
-												? `bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md`
-												: `text-slate-600 hover:bg-emerald-50 hover:text-emerald-700`
-										}`}
-										title={isSidebarCollapsed ? item.label : ''}
-									>
-										<button
-											onClick={() => navigate(item.path)}
-											className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 flex-1 min-w-0`}
-										>
-											<div className={`relative ${isSidebarCollapsed ? 'mx-auto' : 'flex-shrink-0'}`}>
-												<AnimatedIcon 
-													type={item.icon} 
-													isActive={hasSubmenus ? isBidangActive : isActive} 
-													isHovered={hoveredItem === item.label}
-													className="w-5 h-5"
-												/>
-											</div>
-											{!isSidebarCollapsed && (
-												<span className="relative font-semibold truncate text-sm flex-1 text-left">{item.label}</span>
-											)}
-										</button>
-										{hasSubmenus && !isSidebarCollapsed && (
-											<button
-												onClick={(e) => {
-													e.stopPropagation();
-													setBidangSubmenuOpen(!bidangSubmenuOpen);
-												}}
-												className="px-2.5 py-2.5 flex-shrink-0 hover:opacity-70 transition-opacity"
-												title={bidangSubmenuOpen ? 'Tutup submenu' : 'Buka submenu'}
-											>
-												<ChevronDown className={`w-4 h-4 transition-transform duration-200 ${bidangSubmenuOpen ? 'rotate-180' : ''}`} />
-											</button>
-										)}
-									</div>
+					<nav className="flex-1 overflow-y-auto px-2.5 py-3 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
+						{sidebarGroups.map((group) => (
+							<div key={group.title} className="mb-4 last:mb-0">
+								{!isSidebarCollapsed && (
+									<p className="mb-1.5 px-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+										{group.title}
+									</p>
+								)}
+								<div className="space-y-0.5">
+									{group.items.map((item) => {
+										const hasSubmenus = item.submenus && item.submenus.length > 0;
+										const isSubmenuActive =
+											hasSubmenus && item.submenus.some((sub) => location.pathname.startsWith(sub.path));
+										const isActive = isNavItemActive(item.path) || isSubmenuActive;
+										const LucideIcon = item.lucideIcon;
 
-									{/* Submenu items */}
-									{hasSubmenus && !isSidebarCollapsed && bidangSubmenuOpen && (
-										<div className="mt-1 ml-3 pl-3 border-l-2 border-gray-200 space-y-0.5">
-											{item.submenus.map((sub, subIndex) => {
-												const exactMatch = location.pathname === sub.path;
-												const prefixMatch = location.pathname.startsWith(sub.path + '/');
-												// Avoid false active when a sibling submenu has a more specific path match
-												const moreSpecific = prefixMatch && item.submenus.some(
-													s => s !== sub && s.path.startsWith(sub.path + '/') &&
-													(location.pathname === s.path || location.pathname.startsWith(s.path + '/'))
-												);
-												const isSubActive = exactMatch || (prefixMatch && !moreSpecific);
-												return (
+										return (
+											<div key={item.path}>
+												<div
+													onMouseEnter={() => setHoveredItem(item.label)}
+													onMouseLeave={() => setHoveredItem(null)}
+													className={`group relative flex w-full items-center rounded-lg transition-colors duration-150 ${
+														isSidebarCollapsed ? 'justify-center' : ''
+													} ${
+														isActive
+															? 'bg-slate-900 text-white'
+															: 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+													}`}
+													title={isSidebarCollapsed ? item.label : ''}
+												>
 													<button
-														key={subIndex}
-														onClick={() => navigate(sub.path)}
-														className={`group w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all duration-200 ${
-															isSubActive
-																? `text-emerald-700 bg-emerald-50 font-semibold`
-																: `text-gray-500 hover:text-gray-700 hover:bg-emerald-50/60`
+														onClick={() => navigate(item.path)}
+														className={`flex min-w-0 flex-1 items-center px-2.5 py-2 ${
+															isSidebarCollapsed ? 'justify-center' : 'gap-3'
 														}`}
 													>
-														<AnimatedIcon 
-															type={sub.icon} 
-															isActive={isSubActive} 
-															isHovered={false}
-															className="w-4 h-4"
-														/>
-														<span className="truncate">{sub.label}</span>
+														<span className={isSidebarCollapsed ? 'mx-auto' : 'flex-shrink-0'}>
+															{LucideIcon ? (
+																<LucideIcon className="h-5 w-5" strokeWidth={isActive ? 2.4 : 2} />
+															) : (
+																<AnimatedIcon
+																	type={item.icon}
+																	isActive={isActive}
+																	isHovered={hoveredItem === item.label}
+																	className="h-5 w-5"
+																/>
+															)}
+														</span>
+														{!isSidebarCollapsed && (
+															<span className="flex-1 truncate text-left text-sm font-medium">
+																{item.label}
+															</span>
+														)}
 													</button>
-												);
-											})}
-										</div>
-									)}
-								</div>
-							);
-						})}
-					</nav>
-
-					{/* User Profile & Logout at bottom */}
-					<div className="absolute bottom-0 left-0 right-0">
-						{/* User Profile Card - Premium Design */}
-						<div className={`${isSidebarCollapsed ? 'p-2' : 'p-3'}`}>
-							<div className={`relative overflow-hidden rounded-2xl ${isSidebarCollapsed ? '' : `bg-gradient-to-br ${theme.gradientFrom} ${theme.gradientTo}`}`}>
-								{/* Decorative pattern overlay */}
-								{!isSidebarCollapsed && (
-									<div className="absolute inset-0 opacity-10">
-										<div className="absolute -right-6 -top-6 w-24 h-24 rounded-full border-[3px] border-white/40" />
-										<div className="absolute -left-4 -bottom-4 w-20 h-20 rounded-full border-[3px] border-white/30" />
-										<div className="absolute right-8 bottom-2 w-8 h-8 rounded-full bg-white/20" />
-									</div>
-								)}
-								
-								<div className={`relative ${isSidebarCollapsed ? 'flex flex-col items-center gap-2 py-2' : 'p-4'}`}>
-									{/* Avatar */}
-									<div className={`relative ${isSidebarCollapsed ? '' : 'flex items-center gap-3 mb-3'}`}>
-										<div className="relative">
-											{user.avatar ? (
-												<img 
-													src={getAvatarUrl(user.avatar)}
-													alt={user.name}
-													className={`${isSidebarCollapsed ? 'h-11 w-11' : 'h-12 w-12'} rounded-xl object-cover shadow-lg ring-2 ring-white/30`}
-													onError={(e) => {
-														e.target.style.display = 'none';
-														e.target.nextElementSibling.style.display = 'flex';
-													}}
-												/>
-											) : null}
-											<div className={`${isSidebarCollapsed ? 'h-11 w-11' : 'h-12 w-12'} bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-lg ring-2 ring-white/30 ${user.avatar ? 'hidden' : ''}`}>
-												<span className="text-white font-bold text-lg">
-													{user.name?.charAt(0) || "U"}
-												</span>
-											</div>
-											{/* Online indicator */}
-											<div className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-400 rounded-full border-2 ${isSidebarCollapsed ? 'border-white' : 'border-white/50'}`} />
-										</div>
-										{!isSidebarCollapsed && (
-											<div className="flex-1 min-w-0">
-												<h3 className="font-bold text-white text-sm truncate leading-tight">{user.name || getDisplayName()}</h3>
-												{user.jabatan && (
-													<p className="text-white/70 text-[11px] truncate mt-0.5">{user.jabatan}</p>
-												)}
-											</div>
-										)}
-									</div>
-									
-									{/* Badges & NIP */}
-									{!isSidebarCollapsed && (
-										<div className="space-y-2">
-											<div className="flex items-center gap-1.5 flex-wrap">
-												<span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white/20 backdrop-blur-sm text-white rounded-lg text-[11px] font-semibold shadow-sm">
-													<span className="w-1.5 h-1.5 rounded-full bg-white/80" />
-													{getShortDisplayName()}
-												</span>
-												{user.status_kepegawaian && (
-													<span className="inline-flex items-center px-2 py-1 bg-white/15 backdrop-blur-sm text-white/90 rounded-lg text-[10px] font-medium">
-														{user.status_kepegawaian}
-													</span>
-												)}
-											</div>
-											{user.nip && (
-												<div className="flex items-center gap-2 px-2.5 py-1.5 bg-black/10 backdrop-blur-sm rounded-lg">
-													<FiUser className="w-3 h-3 text-white/60 flex-shrink-0" />
-													<p className="text-[10px] text-white/80 font-mono tracking-wide truncate">{user.nip}</p>
+													{hasSubmenus && !isSidebarCollapsed && (
+														<button
+															onClick={(e) => {
+																e.stopPropagation();
+																setBidangSubmenuOpen(!bidangSubmenuOpen);
+															}}
+															className="flex-shrink-0 px-2 py-2 opacity-60 transition-opacity hover:opacity-100"
+															title={bidangSubmenuOpen ? 'Tutup submenu' : 'Buka submenu'}
+														>
+															<ChevronDown
+																className={`h-4 w-4 transition-transform duration-200 ${
+																	bidangSubmenuOpen ? 'rotate-180' : ''
+																}`}
+															/>
+														</button>
+													)}
 												</div>
-											)}
-										</div>
-									)}
+
+												{/* Submenu */}
+												{hasSubmenus && !isSidebarCollapsed && bidangSubmenuOpen && (
+													<div className="ml-4 mt-0.5 space-y-0.5 border-l border-slate-200 pl-3">
+														{item.submenus.map((sub) => {
+															const exactMatch = location.pathname === sub.path;
+															const prefixMatch = location.pathname.startsWith(sub.path + '/');
+															// Hindari aktif ganda saat submenu lain lebih spesifik
+															const moreSpecific =
+																prefixMatch &&
+																item.submenus.some(
+																	(s) =>
+																		s !== sub &&
+																		s.path.startsWith(sub.path + '/') &&
+																		(location.pathname === s.path ||
+																			location.pathname.startsWith(s.path + '/')),
+																);
+															const isSubActive = exactMatch || (prefixMatch && !moreSpecific);
+
+															return (
+																<button
+																	key={sub.path}
+																	onClick={() => navigate(sub.path)}
+																	className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-[13px] transition-colors ${
+																		isSubActive
+																			? 'bg-slate-100 font-medium text-slate-900'
+																			: 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+																	}`}
+																>
+																	<AnimatedIcon
+																		type={sub.icon}
+																		isActive={isSubActive}
+																		isHovered={false}
+																		className="h-4 w-4"
+																	/>
+																	<span className="truncate">{sub.label}</span>
+																</button>
+															);
+														})}
+													</div>
+												)}
+											</div>
+										);
+									})}
 								</div>
 							</div>
-						</div>
-						
-						{/* Logout Button */}
-						<div className={`${isSidebarCollapsed ? 'px-2 pb-3' : 'px-3 pb-3'}`}>
-							<button
-								onClick={handleLogout}
-								className={`group relative w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 rounded-xl bg-red-50 text-red-600 border border-red-200 active:scale-[0.98]`}
-								title={isSidebarCollapsed ? 'Keluar' : ''}
-							>
-								<div className={`relative ${isSidebarCollapsed ? 'mx-auto' : 'flex-shrink-0'}`}>
-									<FiLogOut className="h-5 w-5" />
+						))}
+					</nav>
+
+					{/* User & Logout */}
+					<div className="flex-shrink-0 border-t border-slate-200 p-2.5">
+						<button
+							onClick={() => navigate(`${config.basePath}/profile`)}
+							title={isSidebarCollapsed ? (user.name || getDisplayName()) : ''}
+							className={`flex w-full items-center rounded-lg py-2 transition-colors hover:bg-slate-100 ${
+								isSidebarCollapsed ? 'justify-center px-1' : 'gap-2.5 px-2'
+							}`}
+						>
+							<div className="relative flex-shrink-0">
+								{user.avatar ? (
+									<img
+										src={getAvatarUrl(user.avatar)}
+										alt={user.name}
+										className="h-9 w-9 rounded-lg object-cover"
+										onError={(e) => {
+											e.target.style.display = 'none';
+											e.target.nextElementSibling.style.display = 'flex';
+										}}
+									/>
+								) : null}
+								<div
+									className={`h-9 w-9 items-center justify-center rounded-lg bg-slate-900 text-sm font-semibold text-white ${
+										user.avatar ? 'hidden' : 'flex'
+									}`}
+								>
+									{user.name?.charAt(0) || 'U'}
 								</div>
-								{!isSidebarCollapsed && (
-									<span className="relative font-semibold text-sm">Keluar</span>
-								)}
-							</button>
-						</div>
+								<span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500" />
+							</div>
+							{!isSidebarCollapsed && (
+								<div className="min-w-0 flex-1 text-left">
+									<p className="truncate text-sm font-medium leading-tight text-slate-900">
+										{user.name || getDisplayName()}
+									</p>
+									<p className="truncate text-[11px] leading-tight text-slate-500">
+										{getShortDisplayName()}
+									</p>
+								</div>
+							)}
+						</button>
+
+						<button
+							onClick={handleLogout}
+							className={`mt-1 flex w-full items-center rounded-lg px-2.5 py-2 text-slate-500 transition-colors hover:bg-rose-50 hover:text-rose-600 ${
+								isSidebarCollapsed ? 'justify-center' : 'gap-3'
+							}`}
+							title={isSidebarCollapsed ? 'Keluar' : ''}
+						>
+							<FiLogOut className="h-5 w-5 flex-shrink-0" />
+							{!isSidebarCollapsed && <span className="text-sm font-medium">Keluar</span>}
+						</button>
 					</div>
 				</aside>
 			)}
@@ -793,9 +783,9 @@ const DPMDStaffLayout = () => {
 					{/* Desktop: Dropdown dari sidebar */}
 					{isDesktop ? (
 						<div className={`fixed right-10 top-4 w-96 bg-white rounded-xl shadow-2xl z-50 animate-slideDown max-h-[32rem] overflow-hidden`}>
-							<div className={`px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-${theme.primary}-50 to-${theme.primary}-100 rounded-t-xl`}>
+							<div className={"px-4 py-3 border-b border-slate-200 bg-white rounded-t-xl"}>
 								<h3 className="font-bold text-gray-800 flex items-center gap-2">
-									<FiBell className={`text-${theme.primary}-600`} />
+									<FiBell className={"text-slate-500"} />
 									Notifikasi
 								</h3>
 							</div>
@@ -830,7 +820,7 @@ const DPMDStaffLayout = () => {
 													<span className="text-xs text-gray-400 mt-1 inline-block">{notification.time}</span>
 												</div>
 												{!notification.read && (
-													<div className={`h-2 w-2 bg-${theme.primary}-500 rounded-full flex-shrink-0 mt-2`}></div>
+													<div className={"h-2 w-2 bg-slate-900 rounded-full flex-shrink-0 mt-2"}></div>
 												)}
 											</div>
 										</button>
@@ -841,9 +831,9 @@ const DPMDStaffLayout = () => {
 					) : (
 						/* Mobile: Full width tanpa garis putih */
 						<div className="fixed top-0 left-0 right-0 bg-white shadow-xl z-50 animate-slideDown max-h-[80vh] overflow-hidden">
-							<div className={`px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-${theme.primary}-50 to-${theme.primary}-100`}>
+							<div className={"px-4 py-3 border-b border-slate-200 bg-white"}>
 								<h3 className="font-bold text-gray-800 flex items-center gap-2">
-									<FiBell className={`text-${theme.primary}-600`} />
+									<FiBell className={"text-slate-500"} />
 									Notifikasi
 								</h3>
 							</div>
@@ -878,7 +868,7 @@ const DPMDStaffLayout = () => {
 													<span className="text-xs text-gray-400 mt-1 inline-block">{notification.time}</span>
 												</div>
 												{!notification.read && (
-													<div className={`h-2 w-2 bg-${theme.primary}-500 rounded-full flex-shrink-0 mt-2`}></div>
+													<div className={"h-2 w-2 bg-slate-900 rounded-full flex-shrink-0 mt-2"}></div>
 												)}
 											</div>
 										</button>
@@ -945,7 +935,7 @@ const DPMDStaffLayout = () => {
 							</div>
 
 							{/* User Header */}
-							<div className={`border-b ${theme.menuBorder} bg-gradient-to-r from-slate-50 via-blue-50 to-indigo-50 px-6 py-5`}>
+							<div className={"border-b border-slate-100 bg-slate-50 px-6 py-5"}>
 								<div className="flex items-start gap-4">
 									{user.avatar ? (
 										<img
@@ -1012,7 +1002,7 @@ const DPMDStaffLayout = () => {
 											}}
 											className={`flex w-full items-center gap-4 rounded-2xl px-4 py-3 text-left transition-all duration-200 ${
 												location.pathname.startsWith(userBidang.path)
-													? `bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg`
+													? 'bg-slate-900 text-white'
 													: 'bg-slate-50 text-slate-700 hover:bg-slate-100'
 											}`}
 										>
@@ -1043,7 +1033,7 @@ const DPMDStaffLayout = () => {
 											}}
 											className={`flex w-full items-center gap-4 rounded-2xl px-4 py-3 text-left transition-all duration-200 ${
 												isActive
-													? `bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg`
+													? 'bg-slate-900 text-white'
 													: 'text-slate-700 hover:bg-slate-100'
 											}`}
 										>
@@ -1069,7 +1059,7 @@ const DPMDStaffLayout = () => {
 										}}
 										className={`flex w-full items-center gap-4 rounded-2xl px-4 py-3 text-left transition-all duration-200 ${
 											location.pathname.startsWith('/dpmd/absensi')
-												? 'bg-gradient-to-r from-emerald-400 to-teal-600 text-white shadow-lg'
+												? 'bg-slate-900 text-white'
 												: 'text-slate-700 hover:bg-slate-100'
 										}`}
 									>

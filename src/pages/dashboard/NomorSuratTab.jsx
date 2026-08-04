@@ -50,9 +50,9 @@ function SearchableSelect({ items, value, onChange, placeholder, icon: Icon, lab
       {label && (
         <label className="block text-sm font-semibold text-slate-700 mb-2">
           {stepNumber && (
-            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-violet-600 text-white text-[10px] font-bold mr-1.5">{stepNumber}</span>
+            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-slate-900 text-white text-[10px] font-semibold mr-1.5">{stepNumber}</span>
           )}
-          {label} {required && <span className="text-red-500">*</span>}
+          {label} {required && <span className="text-rose-500">*</span>}
         </label>
       )}
       <div ref={containerRef} className="relative">
@@ -62,17 +62,17 @@ function SearchableSelect({ items, value, onChange, placeholder, icon: Icon, lab
           onClick={() => setOpen(!open)}
           className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-left text-sm transition ${
             open
-              ? 'border-violet-400 ring-2 ring-violet-100 bg-white'
+              ? 'border-slate-400 ring-2 ring-slate-900/10 bg-white'
               : value
-                ? 'border-violet-300 bg-violet-50/50'
+                ? 'border-slate-300 bg-slate-50'
                 : 'border-slate-200 bg-white hover:border-slate-300'
           }`}
         >
-          {Icon && <Icon className={`w-4 h-4 flex-shrink-0 ${value ? 'text-violet-500' : 'text-slate-400'}`} />}
+          {Icon && <Icon className={`w-4 h-4 flex-shrink-0 ${value ? 'text-slate-600' : 'text-slate-400'}`} />}
           <div className="flex-1 min-w-0">
             {selected ? (
               <div className="flex items-center gap-2">
-                <span className="font-mono font-bold text-violet-700 text-xs bg-violet-100 px-1.5 py-0.5 rounded">{selected.kode}</span>
+                <span className="font-mono text-xs font-semibold text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded">{selected.kode}</span>
                 <span className="text-slate-700 truncate text-sm">{selected.nama}</span>
               </div>
             ) : (
@@ -80,7 +80,7 @@ function SearchableSelect({ items, value, onChange, placeholder, icon: Icon, lab
             )}
           </div>
           {externalLoading ? (
-            <Loader2 className="w-4 h-4 text-violet-500 animate-spin flex-shrink-0" />
+            <Loader2 className="w-4 h-4 text-slate-400 animate-spin flex-shrink-0" />
           ) : (
             <ChevronDown className={`w-4 h-4 text-slate-400 flex-shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
           )}
@@ -98,7 +98,7 @@ function SearchableSelect({ items, value, onChange, placeholder, icon: Icon, lab
                   value={query}
                   onChange={e => setQuery(e.target.value)}
                   placeholder="Cari kode atau nama..."
-                  className="w-full pl-8 pr-3 py-2 rounded-lg bg-slate-50 border border-slate-100 text-sm focus:ring-1 focus:ring-violet-200 focus:border-violet-300 focus:bg-white outline-none transition placeholder:text-slate-400"
+                  className="w-full pl-8 pr-3 py-2 rounded-lg bg-slate-50 border border-slate-100 text-sm focus:ring-1 focus:ring-slate-200 focus:border-slate-400 focus:bg-white outline-none transition placeholder:text-slate-400"
                 />
                 {query && (
                   <button type="button" onClick={() => setQuery('')}
@@ -124,21 +124,21 @@ function SearchableSelect({ items, value, onChange, placeholder, icon: Icon, lab
                     onClick={() => { onChange(item.kode); setOpen(false); }}
                     className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-left transition ${
                       value === item.kode
-                        ? 'bg-violet-50 border-l-[3px] border-l-violet-500'
+                        ? 'bg-slate-50 border-l-[3px] border-l-slate-900'
                         : 'hover:bg-slate-50 border-l-[3px] border-l-transparent'
                     } ${idx < filtered.length - 1 ? 'border-b border-b-slate-50' : ''}`}
                   >
                     <span className={`font-mono text-xs font-bold px-1.5 py-0.5 rounded flex-shrink-0 ${
-                      value === item.kode ? 'bg-violet-200 text-violet-800' : 'bg-slate-100 text-slate-600'
+                      value === item.kode ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600'
                     }`}>
                       {item.kode}
                     </span>
                     <span className={`text-sm truncate flex-1 ${
-                      value === item.kode ? 'text-violet-800 font-medium' : 'text-slate-700'
+                      value === item.kode ? 'text-slate-900 font-medium' : 'text-slate-700'
                     }`}>
                       {item.nama}
                     </span>
-                    {value === item.kode && <Check className="w-4 h-4 text-violet-600 flex-shrink-0" />}
+                    {value === item.kode && <Check className="w-4 h-4 text-slate-900 flex-shrink-0" />}
                   </button>
                 ))
               )}
@@ -348,13 +348,13 @@ export default function NomorSuratTab() {
   const handleDelete = async (id) => {
     toast((t) => (
       <div className="flex items-center gap-3">
-        <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
-          <Trash2 className="w-4 h-4 text-red-600" />
+        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-rose-50 text-rose-600">
+          <Trash2 className="w-4 h-4" />
         </div>
         <p className="text-sm font-medium text-gray-800">Hapus nomor surat ini?</p>
         <div className="flex gap-2">
           <button onClick={() => toast.dismiss(t.id)}
-            className="px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition">
+            className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50">
             Batal
           </button>
           <button onClick={async () => {
@@ -367,7 +367,7 @@ export default function NomorSuratTab() {
             } catch (err) {
               toast.error(err.response?.data?.message || 'Gagal menghapus');
             }
-          }} className="px-3 py-1.5 text-xs font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition">
+          }} className="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-rose-700">
             Hapus
           </button>
         </div>
@@ -393,38 +393,31 @@ export default function NomorSuratTab() {
   // RENDER
   // ═══════════════════════════════════════════════════════════════
   return (
-    <div className="space-y-6">
-      {/* ─── Stats ─────────────────────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="relative overflow-hidden rounded-2xl border border-white/60 bg-white p-5 shadow-sm">
-          <div className="absolute -top-4 -right-4 w-20 h-20 rounded-full opacity-10 bg-gradient-to-br from-violet-500 to-purple-600" />
-          <div className="flex items-center gap-4">
-            <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg">
-              <Hash className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-slate-900">{statistik?.total || 0}</p>
-              <p className="text-xs text-slate-500 font-medium">Total {tahun}</p>
-            </div>
+    <div className="space-y-4">
+      {/* ─── Ringkasan ─────────────────────────── */}
+      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-slate-200 bg-slate-200 sm:grid-cols-4">
+        <div className="bg-white px-4 py-3.5">
+          <div className="flex items-center gap-2 text-slate-400">
+            <Hash className="h-3.5 w-3.5" />
+            <span className="truncate text-xs font-medium">Total {tahun}</span>
           </div>
+          <p className="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-slate-900">
+            {statistik?.total || 0}
+          </p>
         </div>
         {Object.entries(statistik?.by_bidang || {}).slice(0, 3).map(([nama, count]) => (
-          <div key={nama} className="relative overflow-hidden rounded-2xl border border-white/60 bg-white p-5 shadow-sm">
-            <div className="flex items-center gap-4">
-              <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg">
-                <Building2 className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-slate-900">{count}</p>
-                <p className="text-xs text-slate-500 font-medium">{nama}</p>
-              </div>
+          <div key={nama} className="bg-white px-4 py-3.5">
+            <div className="flex items-center gap-2 text-slate-400">
+              <Building2 className="h-3.5 w-3.5" />
+              <span className="truncate text-xs font-medium">{nama}</span>
             </div>
+            <p className="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-slate-900">{count}</p>
           </div>
         ))}
       </div>
 
       {/* ─── Actions & Filter Bar ──────────────── */}
-      <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm p-4">
+      <div className="rounded-xl border border-slate-200 bg-white p-3">
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
           {/* Search */}
           <div className="relative flex-1">
@@ -433,7 +426,7 @@ export default function NomorSuratTab() {
               value={searchInput}
               onChange={e => setSearchInput(e.target.value)}
               placeholder="Cari nomor surat, perihal, pemohon..."
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-violet-100 focus:border-violet-400 outline-none transition"
+              className="w-full pl-9 pr-4 py-2 rounded-lg border border-slate-200 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-900/10"
             />
           </div>
 
@@ -441,7 +434,7 @@ export default function NomorSuratTab() {
           <select
             value={filterBidang}
             onChange={e => { setFilterBidang(e.target.value); setPage(1); }}
-            className="px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-violet-100 focus:border-violet-400 outline-none bg-white"
+            className="px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm text-slate-700 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-900/10"
           >
             <option value="">Semua Bidang</option>
             {Object.entries(BIDANG_ROUTES).map(([id, b]) => (
@@ -453,7 +446,7 @@ export default function NomorSuratTab() {
           <select
             value={tahun}
             onChange={e => { setTahun(parseInt(e.target.value)); setPage(1); }}
-            className="px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-violet-100 focus:border-violet-400 outline-none bg-white"
+            className="px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm text-slate-700 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-900/10"
           >
             {[2026, 2025, 2024].map(y => (
               <option key={y} value={y}>{y}</option>
@@ -462,27 +455,27 @@ export default function NomorSuratTab() {
 
           {/* Refresh */}
           <button onClick={() => { fetchRequests(); fetchStatistik(); }}
-            className="p-2.5 rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 transition">
+            className="p-2 rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50">
             <RefreshCw className="w-4 h-4" />
           </button>
 
           {/* New Request */}
           <button onClick={() => setShowForm(true)}
-            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 text-white text-sm font-semibold flex items-center gap-2 hover:shadow-lg hover:shadow-violet-200/50 transition shadow-sm whitespace-nowrap">
+            className="flex items-center gap-2 whitespace-nowrap rounded-lg bg-slate-900 px-3.5 py-2 text-sm font-medium text-white transition hover:bg-slate-800">
             <Plus className="w-4 h-4" /> Ajukan Nomor
           </button>
         </div>
 
-        <p className="text-xs text-violet-600 font-medium mt-3">
-          Menampilkan <span className="font-bold">{requests.length}</span> dari <span className="font-bold">{total}</span> nomor surat
+        <p className="mt-3 text-xs text-slate-500">
+          Menampilkan <span className="font-semibold text-slate-800">{requests.length}</span> dari <span className="font-semibold text-slate-800">{total}</span> nomor surat
         </p>
       </div>
 
       {/* ─── Table ─────────────────────────────── */}
-      <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden">
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
         {loading ? (
           <div className="flex items-center justify-center py-16">
-            <div className="w-8 h-8 border-3 border-violet-200 border-t-violet-600 rounded-full animate-spin" />
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-slate-900" />
           </div>
         ) : requests.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -494,29 +487,29 @@ export default function NomorSuratTab() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="bg-gradient-to-r from-slate-50 to-blue-50/50 border-b border-slate-100">
-                  <th className="px-4 py-3.5 text-left font-semibold text-slate-500 text-xs uppercase tracking-wider">No</th>
-                  <th className="px-4 py-3.5 text-left font-semibold text-slate-500 text-xs uppercase tracking-wider">Nomor Surat</th>
-                  <th className="px-4 py-3.5 text-left font-semibold text-slate-500 text-xs uppercase tracking-wider">Perihal</th>
-                  <th className="px-4 py-3.5 text-left font-semibold text-slate-500 text-xs uppercase tracking-wider">Klasifikasi</th>
-                  <th className="px-4 py-3.5 text-center font-semibold text-slate-500 text-xs uppercase tracking-wider">Bidang</th>
-                  <th className="px-4 py-3.5 text-left font-semibold text-slate-500 text-xs uppercase tracking-wider">Pemohon</th>
-                  <th className="px-4 py-3.5 text-left font-semibold text-slate-500 text-xs uppercase tracking-wider">Tanggal</th>
-                  <th className="px-4 py-3.5 text-center font-semibold text-slate-500 text-xs uppercase tracking-wider">Aksi</th>
+                <tr className="border-b border-slate-100 bg-slate-50/70">
+                  <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-400">No</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-400">Nomor Surat</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-400">Perihal</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-400">Klasifikasi</th>
+                  <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wide text-slate-400">Bidang</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-400">Pemohon</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-400">Tanggal</th>
+                  <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wide text-slate-400">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {requests.map((r, i) => (
-                  <tr key={r.id} className="hover:bg-violet-50/30 transition-colors">
+                  <tr key={r.id} className="transition hover:bg-slate-50">
                     <td className="px-4 py-3.5 text-sm text-slate-500">{(page - 1) * 15 + i + 1}</td>
                     <td className="px-4 py-3.5">
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-sm font-bold text-violet-700 bg-violet-50 px-2.5 py-1 rounded-lg">
+                        <span className="font-mono text-[13px] font-semibold text-slate-800 bg-slate-100 px-2 py-0.5 rounded-md">
                           {r.nomor_surat}
                         </span>
                         <button
                           onClick={() => handleCopy(r.nomor_surat, r.id)}
-                          className="p-1 rounded-md hover:bg-violet-100 text-violet-400 hover:text-violet-600 transition"
+                          className="rounded-md p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-900"
                           title="Salin"
                         >
                           {copiedId === r.id ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
@@ -532,14 +525,14 @@ export default function NomorSuratTab() {
                       </span>
                     </td>
                     <td className="px-4 py-3.5 text-center">
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700">
+                      <span className="inline-flex items-center rounded-full border border-slate-200 px-2.5 py-1 text-[11px] font-medium text-slate-600">
                         {r.bidang_nama}
                       </span>
                     </td>
                     <td className="px-4 py-3.5">
                       <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-violet-100 to-purple-100 flex items-center justify-center flex-shrink-0">
-                          <User className="w-3 h-3 text-violet-600" />
+                        <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md border border-slate-200 bg-slate-50">
+                          <User className="w-3 h-3 text-slate-400" />
                         </div>
                         <span className="text-sm text-slate-700 truncate max-w-[120px]">{r.requested_by_name}</span>
                       </div>
@@ -555,7 +548,7 @@ export default function NomorSuratTab() {
                         <button
                           onClick={() => handleCopy(r.nomor_surat, r.id)}
                           title="Salin Nomor Surat"
-                          className="w-8 h-8 rounded-lg bg-violet-50 hover:bg-violet-100 text-violet-600 flex items-center justify-center transition"
+                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
                         >
                           {copiedId === r.id ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
                         </button>
@@ -563,7 +556,7 @@ export default function NomorSuratTab() {
                           <button
                             onClick={() => handleDelete(r.id)}
                             title="Hapus"
-                            className="w-8 h-8 rounded-lg bg-red-50 hover:bg-red-100 text-red-500 flex items-center justify-center transition"
+                            className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-400 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -583,7 +576,7 @@ export default function NomorSuratTab() {
             <p className="text-xs text-slate-400">Halaman {page} dari {totalPages}</p>
             <div className="flex items-center gap-1">
               <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-                className="w-9 h-9 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition">
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40">
                 <ChevronLeft className="w-4 h-4" />
               </button>
               {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
@@ -594,9 +587,9 @@ export default function NomorSuratTab() {
                 else pageNum = page - 2 + i;
                 return (
                   <button key={pageNum} onClick={() => setPage(pageNum)}
-                    className={`w-9 h-9 rounded-lg text-sm font-medium transition ${
+                    className={`h-8 w-8 rounded-lg text-sm font-medium tabular-nums transition ${
                       page === pageNum
-                        ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-md'
+                        ? 'bg-slate-900 text-white'
                         : 'border border-slate-200 hover:bg-slate-50 text-slate-600'
                     }`}>
                     {pageNum}
@@ -604,7 +597,7 @@ export default function NomorSuratTab() {
                 );
               })}
               <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-                className="w-9 h-9 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition">
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40">
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
@@ -616,22 +609,22 @@ export default function NomorSuratTab() {
       {/* CREATE MODAL                                          */}
       {/* ═══════════════════════════════════════════════════════ */}
       {showForm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
+          <div className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
             {/* Header */}
-            <div className="bg-gradient-to-r from-violet-600 to-purple-600 px-6 py-5 flex-shrink-0">
+            <div className="flex-shrink-0 border-b border-slate-200 px-6 py-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-                    <Hash className="w-5 h-5 text-white" />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-500">
+                    <Hash className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-white">Ajukan Nomor Surat</h3>
-                    <p className="text-xs text-white/70">Bidang: {BIDANG_ROUTES[userBidangId]?.name || 'Sekretariat'}</p>
+                    <h3 className="text-base font-semibold text-slate-900">Ajukan Nomor Surat</h3>
+                    <p className="text-xs text-slate-500">Bidang: {BIDANG_ROUTES[userBidangId]?.name || 'Sekretariat'}</p>
                   </div>
                 </div>
                 <button onClick={() => { setShowForm(false); setSelectedKlasifikasi(null); setSelectedRoot(''); setSelectedSub(''); setSelectedDetail(''); }}
-                  className="p-2 hover:bg-white/20 rounded-xl transition text-white/80 hover:text-white">
+                  className="rounded-lg border border-slate-200 p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900">
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -681,18 +674,18 @@ export default function NomorSuratTab() {
 
               {/* ── Selected Preview ── */}
               {selectedKlasifikasi && (
-                <div className="bg-gradient-to-r from-violet-50 to-purple-50 rounded-xl p-4 border border-violet-200">
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <Check className="w-4 h-4 text-emerald-600" />
                     <p className="text-xs text-emerald-700 font-semibold">Kode Klasifikasi Terpilih</p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-violet-600 text-white flex items-center justify-center flex-shrink-0">
+                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-slate-900 text-white">
                       <Hash className="w-5 h-5" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="font-mono font-bold text-violet-800 text-base">{selectedKlasifikasi.kode}</p>
-                      <p className="text-xs text-violet-600 truncate">{selectedKlasifikasi.nama}</p>
+                      <p className="font-mono text-base font-semibold text-slate-900">{selectedKlasifikasi.kode}</p>
+                      <p className="truncate text-xs text-slate-500">{selectedKlasifikasi.nama}</p>
                     </div>
                     <button type="button" onClick={() => {
                       setSelectedKlasifikasi(null);
@@ -700,14 +693,14 @@ export default function NomorSuratTab() {
                       setSelectedSub('');
                       setSelectedDetail('');
                       setFormData(f => ({ ...f, klasifikasi_kode: '' }));
-                    }} className="p-1.5 hover:bg-violet-200 rounded-lg transition text-violet-500">
+                    }} className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-200 hover:text-slate-700">
                       <X className="w-4 h-4" />
                     </button>
                   </div>
-                  <div className="mt-3 pt-3 border-t border-violet-200/50">
-                    <p className="text-[11px] text-violet-500 font-medium mb-1">Preview Nomor Surat:</p>
+                  <div className="mt-3 border-t border-slate-200 pt-3">
+                    <p className="mb-1 text-[11px] font-medium text-slate-400">Preview Nomor Surat:</p>
                     <p className="font-mono font-bold text-sm text-slate-800">
-                      {selectedKlasifikasi.kode}/<span className="text-violet-600">XXX</span>-{BIDANG_ROUTES[userBidangId]?.name || 'Sekretariat'}
+                      {selectedKlasifikasi.kode}/<span className="text-slate-400">XXX</span>-{BIDANG_ROUTES[userBidangId]?.name || 'Sekretariat'}
                     </p>
                   </div>
                 </div>
@@ -716,14 +709,14 @@ export default function NomorSuratTab() {
               {/* Perihal */}
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-2">
-                  Perihal <span className="text-red-500">*</span>
+                  Perihal <span className="text-rose-500">*</span>
                 </label>
                 <input
                   value={formData.perihal}
                   onChange={e => setFormData(f => ({ ...f, perihal: e.target.value }))}
                   placeholder="Masukkan perihal surat..."
                   maxLength={500}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-violet-100 focus:border-violet-400 outline-none transition"
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-900/10"
                 />
               </div>
 
@@ -735,18 +728,18 @@ export default function NomorSuratTab() {
                   onChange={e => setFormData(f => ({ ...f, catatan: e.target.value }))}
                   placeholder="Catatan tambahan..."
                   rows={2}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-violet-100 focus:border-violet-400 outline-none transition resize-none"
+                  className="w-full resize-none rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-900/10"
                 />
               </div>
 
               {/* Actions */}
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => { setShowForm(false); setSelectedKlasifikasi(null); setSelectedRoot(''); setSelectedSub(''); setSelectedDetail(''); }}
-                  className="flex-1 px-4 py-3 rounded-xl border border-slate-200 text-slate-600 font-semibold text-sm hover:bg-slate-50 transition">
+                  className="flex-1 rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50">
                   Batal
                 </button>
                 <button type="submit" disabled={submitting || !formData.klasifikasi_kode || !formData.perihal.trim()}
-                  className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 text-white font-semibold text-sm hover:shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                  className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40">
                   {submitting ? (
                     <><Loader2 className="w-4 h-4 animate-spin" /> Memproses...</>
                   ) : (

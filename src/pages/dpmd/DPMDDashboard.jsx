@@ -24,6 +24,7 @@ import bellAnimation from '../../assets/lottie/bell.json';
 import contactAnimation from '../../assets/lottie/contact.json';
 import briefcaseAnimation from '../../assets/lottie/briefcase.json';
 import documentAnimation from '../../assets/lottie/document.json';
+import calendarAnimation from '../../assets/lottie/calendar.json';
 import InfoCard from '../../components/mobile/InfoCard';
 import SectionHeader from '../../components/mobile/SectionHeader';
 import ActivityCard from '../../components/mobile/ActivityCard';
@@ -137,6 +138,96 @@ const BIDANG_PATH_MAP = {
   8: '/bidang/sekretariat',
   9: '/bidang/sekretariat'
 };
+
+// ==================== PRESENTASI ====================
+const getGreeting = () => {
+  const hour = new Date().getHours();
+  if (hour < 11) return 'Selamat pagi';
+  if (hour < 15) return 'Selamat siang';
+  if (hour < 18) return 'Selamat sore';
+  return 'Selamat malam';
+};
+
+const DashSection = ({ title, subtitle, actionText, onAction, delay = 0, children }) => (
+  <motion.section
+    initial={{ opacity: 0, y: 12 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.4, ease: 'easeOut', delay }}
+    className="mt-6"
+  >
+    <div className="mb-3 flex items-end justify-between gap-3">
+      <div className="min-w-0">
+        <h2 className="text-sm font-semibold tracking-tight text-slate-900">{title}</h2>
+        {subtitle && <p className="mt-0.5 truncate text-xs text-slate-500">{subtitle}</p>}
+      </div>
+      {onAction && (
+        <button
+          onClick={onAction}
+          className="flex flex-shrink-0 items-center gap-0.5 text-xs font-medium text-slate-500 transition hover:text-slate-900"
+        >
+          {actionText || 'Lihat semua'}
+          <ChevronRight className="h-3.5 w-3.5" />
+        </button>
+      )}
+    </div>
+    {children}
+  </motion.section>
+);
+
+const StatGrid = ({ items }) => (
+  <div
+    className={`grid gap-px overflow-hidden rounded-xl border border-slate-200 bg-slate-200 ${
+      items.length >= 4 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2'
+    }`}
+  >
+    {items.map(({ label, value, icon: Icon, onClick }) => {
+      const Tag = onClick ? 'button' : 'div';
+      return (
+        <Tag
+          key={label}
+          onClick={onClick}
+          className={`bg-white px-4 py-3.5 text-left transition ${onClick ? 'hover:bg-slate-50' : ''}`}
+        >
+          <div className="flex items-center gap-2 text-slate-400">
+            {Icon && <Icon className="h-3.5 w-3.5" />}
+            <span className="truncate text-xs font-medium">{label}</span>
+          </div>
+          <p className="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-slate-900">
+            {value}
+          </p>
+        </Tag>
+      );
+    })}
+  </div>
+);
+
+const LinkRow = ({ icon: Icon, title, subtitle, onClick }) => (
+  <button
+    onClick={onClick}
+    className="group flex w-full items-center gap-3 border-b border-slate-100 px-4 py-3 text-left transition last:border-b-0 hover:bg-slate-50"
+  >
+    <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-500">
+      <Icon className="h-4 w-4" />
+    </span>
+    <span className="min-w-0 flex-1">
+      <span className="block truncate text-sm font-medium text-slate-900">{title}</span>
+      {subtitle && <span className="mt-0.5 block truncate text-xs text-slate-500">{subtitle}</span>}
+    </span>
+    <ChevronRight className="h-4 w-4 flex-shrink-0 text-slate-300 transition group-hover:text-slate-500" />
+  </button>
+);
+
+const InfoRow = ({ icon: Icon, label, value }) => (
+  <div className="flex items-center gap-3 px-4 py-3">
+    <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-500">
+      <Icon className="h-4 w-4" />
+    </span>
+    <div className="min-w-0 flex-1">
+      <p className="text-xs text-slate-400">{label}</p>
+      <p className="truncate text-sm font-medium text-slate-900">{value}</p>
+    </div>
+  </div>
+);
 
 // ==================== MAIN COMPONENT ====================
 const DPMDDashboard = () => {
@@ -643,8 +734,7 @@ const DPMDDashboard = () => {
           },
       {
         icon: Calendar,
-        // Jadwal: pakai emoji kalender, bukan Lottie.
-        customIcon: <span className="leading-none text-[30px] sm:text-4xl lg:text-5xl" role="img" aria-label="Jadwal">📅</span>,
+        customIcon: <LottieIcon animationData={calendarAnimation} className={qaIconClass} />,
         label: 'Jadwal',
         color: 'blue',
         onClick: () => navigate('/dpmd/jadwal-kegiatan')
@@ -697,15 +787,24 @@ const DPMDDashboard = () => {
   };
 
   // ==================== LOADING STATE ====================
+  // Skeleton mengikuti bentuk akhir halaman supaya transisinya tidak "lompat".
   if (loading) {
     return (
-      <div className="min-h-screen bg-[linear-gradient(180deg,#0f172a_0%,#115e59_36%,#dbeafe_74%,#f8fafc_100%)] flex items-center justify-center">
-        <div className="text-center">
-          <div className="relative w-14 h-14 mx-auto mb-4">
-            <div className="absolute inset-0 rounded-full border-[3px] border-emerald-500/20" />
-            <div className="absolute inset-0 rounded-full border-[3px] border-transparent border-t-emerald-500 animate-spin" />
+      <div className="min-h-screen animate-pulse bg-slate-50 pb-20 lg:pb-6">
+        <div className="h-[env(safe-area-inset-top,0px)]" />
+        <header className="bg-slate-900">
+          <div className="mx-auto max-w-6xl px-4 pb-16 pt-10 sm:px-6 lg:px-8">
+            <div className="h-3 w-28 rounded bg-white/10" />
+            <div className="mt-3 h-7 w-56 rounded bg-white/15" />
+            <div className="mt-2.5 h-3.5 w-40 rounded bg-white/10" />
           </div>
-          <p className="text-slate-400 font-medium text-sm">Memuat Dashboard...</p>
+        </header>
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <div className="relative z-10 -mt-7 h-28 rounded-2xl border border-slate-200 bg-white shadow-sm" />
+          <div className="mt-6 h-4 w-32 rounded bg-slate-200" />
+          <div className="mt-3 h-24 rounded-xl border border-slate-200 bg-white" />
+          <div className="mt-6 h-4 w-40 rounded bg-slate-200" />
+          <div className="mt-3 h-48 rounded-xl border border-slate-200 bg-white" />
         </div>
       </div>
     );
@@ -714,16 +813,16 @@ const DPMDDashboard = () => {
   // ==================== ERROR STATE ====================
   if (error && !dashboardData && !statistik && !pegawaiData) {
     return (
-      <div className="min-h-screen bg-[linear-gradient(180deg,#0f172a_0%,#115e59_36%,#dbeafe_74%,#f8fafc_100%)] p-4 flex items-center justify-center">
-        <div className="bg-white border border-slate-100 rounded-3xl shadow-sm p-6 max-w-md w-full">
-          <div className="h-16 w-16 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Activity className="h-8 w-8 text-red-400" />
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
+        <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-400">
+            <Activity className="h-6 w-6" />
           </div>
-          <h3 className="text-center font-bold text-slate-800 text-xl mb-2">Oops!</h3>
-          <p className="text-center text-slate-500 text-sm mb-6">{error}</p>
+          <h3 className="text-center text-lg font-semibold text-slate-900">Gagal memuat dashboard</h3>
+          <p className="mt-1 text-center text-sm text-slate-500">{error}</p>
           <button
             onClick={fetchData}
-            className="w-full bg-gradient-to-r from-emerald-500 to-green-500 text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-emerald-500/25 hover:shadow-xl active:scale-95 transition-all"
+            className="mt-5 w-full rounded-lg bg-slate-900 px-6 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800 active:scale-[0.99]"
           >
             Coba Lagi
           </button>
@@ -733,6 +832,7 @@ const DPMDDashboard = () => {
   }
 
   // ==================== RENDER ====================
+  const greeting = getGreeting();
   const avatarUrl = getUserAvatarUrl(user);
   const displayName = pegawaiData?.nama_pegawai || user.name || 'Pengguna';
   const jabatanText = pegawaiData?.jabatan || getRoleTitle;
@@ -741,7 +841,7 @@ const DPMDDashboard = () => {
   const nipText = pegawaiData?.nip;
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(180deg,#0f172a_0%,#115e59_36%,#dbeafe_74%,#f8fafc_100%)] pb-20 lg:pb-4">
+    <div className="min-h-screen bg-slate-50 pb-20 lg:pb-6">
       {/* Birthday Popup */}
       <BirthdayPopup />
       <WeeklyAttendanceAwardPopup />
@@ -753,66 +853,59 @@ const DPMDDashboard = () => {
       {showNotifications && (
         <>
           <div
-            className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40"
+            className="fixed inset-0 bg-slate-900/30 backdrop-blur-sm z-40"
             onClick={() => setShowNotifications(false)}
           />
-          <div className="fixed top-0 left-0 right-0 lg:top-4 lg:right-4 lg:left-auto lg:w-96 bg-white lg:rounded-2xl shadow-2xl z-50 overflow-hidden border border-gray-100 animate-slideDown max-h-[80vh] lg:max-h-[32rem]">
-            <div className={`bg-gradient-to-r ${config.notifGradient} px-5 py-4`}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
-                    <Bell className="h-5 w-5 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-white text-base">Notifikasi</h3>
-                    <p className="text-xs text-white/80">
-                      {unreadCount > 0 ? `${unreadCount} belum dibaca` : 'Semua dibaca'}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowNotifications(false)}
-                  className="h-8 w-8 flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
-                >
-                  <X className="h-4 w-4 text-white" />
-                </button>
+          <div className="fixed top-0 left-0 right-0 lg:top-4 lg:right-4 lg:left-auto lg:w-96 bg-white lg:rounded-2xl shadow-xl z-50 overflow-hidden border border-slate-200 animate-slideDown max-h-[80vh] lg:max-h-[32rem]">
+            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+              <div>
+                <h3 className="text-base font-semibold text-slate-900">Notifikasi</h3>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  {unreadCount > 0 ? `${unreadCount} belum dibaca` : 'Semua sudah dibaca'}
+                </p>
               </div>
+              <button
+                onClick={() => setShowNotifications(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </div>
-            <div className="divide-y divide-gray-100 overflow-y-auto max-h-[calc(80vh-72px)] lg:max-h-[28rem]">
+            <div className="divide-y divide-slate-100 overflow-y-auto max-h-[calc(80vh-72px)] lg:max-h-[28rem]">
               {notifications.length === 0 ? (
                 <div className="px-6 py-12 text-center">
-                  <div className={`mx-auto mb-4 h-20 w-20 bg-gradient-to-br ${config.notifBg} rounded-2xl flex items-center justify-center`}>
-                    <Bell className={`h-10 w-10 ${config.notifIconColor}`} />
+                  <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-400">
+                    <Bell className="h-6 w-6" />
                   </div>
-                  <h4 className="font-semibold text-gray-700 mb-1">Tidak ada notifikasi</h4>
-                  <p className="text-sm text-gray-500">Notifikasi penting akan muncul di sini</p>
+                  <p className="font-medium text-slate-800">Tidak ada notifikasi</p>
+                  <p className="mt-1 text-sm text-slate-500">Notifikasi penting akan muncul di sini</p>
                 </div>
               ) : (
                 notifications.map((notification) => (
                   <button
                     key={notification.id}
                     onClick={() => handleNotificationItemClick(notification)}
-                    className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors ${
-                      !notification.read ? 'bg-blue-50/50' : ''
+                    className={`w-full px-4 py-3 text-left transition-colors hover:bg-slate-50 ${
+                      !notification.read ? 'bg-slate-50' : ''
                     }`}
                   >
                     <div className="flex items-start gap-3">
-                      <div className={`h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                        (notification.type === 'disposisi' || notification.data?.type === 'new_disposisi') ? 'bg-orange-100' : 'bg-blue-100'
+                      <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg ${
+                        notification.read ? 'bg-slate-100 text-slate-400' : 'bg-slate-900 text-white'
                       }`}>
                         {(notification.type === 'disposisi' || notification.data?.type === 'new_disposisi') ? (
-                          <Mail className="h-5 w-5 text-orange-600" />
+                          <Mail className="h-4 w-4" />
                         ) : (
-                          <Bell className="h-5 w-5 text-blue-600" />
+                          <Bell className="h-4 w-4" />
                         )}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold text-gray-800 text-sm">{notification.title}</h4>
-                        <p className="text-sm text-gray-600 mt-0.5 line-clamp-2">{notification.message}</p>
-                        <span className="text-xs text-gray-400 mt-1 inline-block">{notification.time}</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-slate-900">{notification.title}</p>
+                        <p className="mt-0.5 line-clamp-2 text-sm text-slate-500">{notification.message}</p>
+                        <span className="mt-1 inline-block text-xs text-slate-400">{notification.time}</span>
                       </div>
                       {!notification.read && (
-                        <div className={`h-2 w-2 bg-${config.primaryColor}-500 rounded-full flex-shrink-0 mt-2`}></div>
+                        <span className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-slate-900" />
                       )}
                     </div>
                   </button>
@@ -823,58 +916,90 @@ const DPMDDashboard = () => {
         </>
       )}
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10">
+      {/* ============ HERO ============ */}
+      <header className="relative overflow-hidden bg-slate-900">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-70"
+          style={{ background: 'radial-gradient(120% 90% at 85% 0%, rgba(148,163,184,0.18) 0%, rgba(15,23,42,0) 60%)' }}
+        />
+        <div className="relative mx-auto max-w-6xl px-4 pt-8 sm:px-6 lg:px-8">
+          <div className="flex items-end justify-between gap-4">
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, ease: 'easeOut' }}
+              className="min-w-0 flex-1 pb-7"
+            >
+              <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-400">
+                {greeting}
+              </p>
+              <h1 className="mt-1.5 text-2xl font-semibold leading-tight tracking-tight text-white sm:text-3xl">
+                {displayName}
+              </h1>
+              {(jabatanText || bidangText) && (
+                <p className="mt-1 text-sm text-slate-300">
+                  {jabatanText}
+                  {jabatanText && bidangText && <span className="mx-1.5 text-slate-600">·</span>}
+                  {bidangText}
+                </p>
+              )}
+              {nipText && (
+                <span className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-slate-200 ring-1 ring-white/10">
+                  <User className="h-3.5 w-3.5 flex-shrink-0" />
+                  <span className="text-[11px] font-medium tabular-nums tracking-wide">{nipText}</span>
+                </span>
+              )}
+              <p className="mt-4 max-w-md border-l border-white/15 pl-3 text-[13px] leading-relaxed text-slate-300">
+                {motivasi}
+              </p>
+            </motion.div>
 
-        {/* Identitas (kiri) + Foto besar (kanan) */}
-        <div className="flex items-end justify-between gap-3">
-          {/* Kiri: nama, jabatan, bidang, NIP */}
-          <div className="min-w-0 flex-1 pb-6">
-            <h1 className="text-3xl sm:text-4xl font-black uppercase leading-[1.05] tracking-tight text-white break-words drop-shadow-sm">
-              {displayName}
-            </h1>
-            {jabatanText && <p className="mt-2 text-sm font-semibold text-slate-200">{jabatanText}</p>}
-            {bidangText && <p className="text-xs text-emerald-100/80">{bidangText}</p>}
-            {nipText && (
-              <div className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-white/12 px-2.5 py-1 text-slate-100 ring-1 ring-white/15 backdrop-blur">
-                <User className="h-3.5 w-3.5 flex-shrink-0" />
-                <span className="text-[11px] font-semibold tracking-wide tabular-nums">{nipText}</span>
-              </div>
-            )}
-          </div>
-
-          {/* Kanan: foto besar */}
-          <div className="flex-shrink-0">
-            {avatarUrl ? (
-              <img
-                src={avatarUrl}
-                alt={displayName}
-                className="h-56 w-auto max-w-[42vw] object-contain object-bottom"
-              />
-            ) : (
-              <div className="h-56 flex items-center justify-center px-4">
-                <span className="text-7xl font-extrabold text-emerald-100 drop-shadow-sm">{displayName.charAt(0).toUpperCase()}</span>
-              </div>
-            )}
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.45, ease: 'easeOut', delay: 0.05 }}
+              className="flex-shrink-0"
+            >
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt={displayName}
+                  className="h-44 w-auto max-w-[38vw] object-contain object-bottom sm:h-52 sm:max-w-[34vw]"
+                />
+              ) : (
+                <div className="flex h-44 items-center justify-center px-5 sm:h-52">
+                  <span className="text-5xl font-semibold text-white/15 sm:text-6xl">
+                    {displayName.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+              )}
+            </motion.div>
           </div>
         </div>
+      </header>
 
-        {/* Quick Actions Section — card ada, tapi tombol tanpa background (ikon langsung) */}
-        <div className="relative z-10 -mt-4 bg-slate-800/60 backdrop-blur-md rounded-[22px] sm:rounded-[24px] shadow-lg shadow-slate-900/25 p-4 sm:p-5 mb-4 border border-white/10">
+      {/* ============ CONTENT ============ */}
+      <main className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        {/* Aksi Cepat — kartu putih menimpa hero */}
+        <motion.section
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: 'easeOut', delay: 0.08 }}
+          className="relative z-10 -mt-7 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"
+        >
           <ServiceGrid
             services={quickActions}
             columns={quickActions.length > 3 ? 4 : 3}
             buttonColor="none"
-            labelClassName="text-white"
+            labelClassName="text-slate-600"
             compact
           />
-        </div>
+        </motion.section>
 
-        {/* Status Stories Section */}
-        {statusGroups.length > 0 ? (
-          <div className="mb-3 overflow-hidden">
-            <div className="flex gap-2.5 overflow-x-auto pb-1.5 scrollbar-hide px-1">
-              {/* Status Rings */}
+        {/* Status Stories */}
+        {statusGroups.length > 0 && (
+          <section className="mt-5 overflow-hidden">
+            <div className="flex gap-3 overflow-x-auto px-0.5 pb-1.5 scrollbar-hide">
               {statusGroups.map((group, i) => {
                 const initial = group.user?.name?.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase() || '?';
                 const hasUnviewed = group.has_unviewed || group.is_own;
@@ -882,262 +1007,160 @@ const DPMDDashboard = () => {
                   <button
                     key={group.user?.id || i}
                     onClick={() => openStatusViewer(group)}
-                    className="flex flex-col items-center gap-1 flex-shrink-0"
+                    className="flex flex-shrink-0 flex-col items-center gap-1.5"
                   >
-                    <div className={`relative w-12 h-12 rounded-full p-[2px] ${
-                      hasUnviewed
-                        ? 'bg-gradient-to-tr from-emerald-500 via-teal-400 to-cyan-500'
-                        : 'bg-gray-300'
+                    <div className={`relative h-12 w-12 rounded-full p-[2px] transition ${
+                      hasUnviewed ? 'bg-slate-900' : 'bg-slate-200'
                     }`}>
-                      <div className="w-full h-full rounded-full bg-white p-[2px]">
+                      <div className="h-full w-full rounded-full bg-white p-[2px]">
                         {group.user?.avatar ? (
                           <img
                             src={`${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://127.0.0.1:3001'}${group.user.avatar}`}
-                            alt="" className="w-full h-full rounded-full object-cover"
+                            alt="" className="h-full w-full rounded-full object-cover"
                           />
                         ) : (
-                          <div className="w-full h-full rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white text-[10px] font-bold">
+                          <div className="flex h-full w-full items-center justify-center rounded-full bg-slate-100 text-[10px] font-semibold text-slate-600">
                             {initial}
                           </div>
                         )}
                       </div>
                     </div>
-                    <span className="text-[9px] text-gray-600 font-medium w-14 text-center truncate">
+                    <span className="w-14 truncate text-center text-[10px] font-medium text-slate-500">
                       {group.is_own ? 'Status Saya' : group.user?.name?.split(' ')[0]}
                     </span>
                   </button>
                 );
               })}
             </div>
-          </div>
-        ) : null}
-
-        {/* KEPALA DINAS: Executive Stats */}
-        {config.showExecutiveStats && dashboardData?.summary && (
-          <>
-            <div className="mb-5">
-              <SectionHeader 
-                title="Ringkasan" 
-                subtitle="Data keseluruhan sistem"
-                icon={Activity}
-              />
-              <div className="grid grid-cols-2 gap-3">
-                <InfoCard
-                  icon={MapPin}
-                  title="Total Desa"
-                  value={dashboardData.summary.total_desa || 0}
-                  color="emerald"
-                  onClick={() => navigate('/core-dashboard/laporan-desa')}
-                />
-                <InfoCard
-                  icon={Users}
-                  title="Pegawai"
-                  value={dashboardData.summary.total_pegawai || 0}
-                  color="teal"
-                />
-              </div>
-            </div>
-
-            {/* Data Visualization Cards */}
-            <div className="mb-5">
-              <SectionHeader 
-                title="Visualisasi Data" 
-                subtitle="Grafik dan analisis"
-                icon={PieChart}
-              />
-              <div className="grid grid-cols-2 gap-3">
-                <div
-                  onClick={() => navigate('/core-dashboard/statistik-bankeu')}
-                  className="bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl p-5 text-white cursor-pointer active:scale-95 transition-transform shadow-lg shadow-emerald-500/25"
-                >
-                  <PieChart className="w-8 h-8 mb-3" />
-                  <h4 className="font-bold text-sm mb-1">Statistik Bankeu</h4>
-                  <p className="text-xs text-emerald-100">Lihat detail</p>
-                </div>
-                <div
-                  onClick={() => navigate('/core-dashboard/statistik-add')}
-                  className="bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl p-5 text-white cursor-pointer active:scale-95 transition-transform shadow-lg shadow-teal-500/25"
-                >
-                  <BarChart3 className="w-8 h-8 mb-3" />
-                  <h4 className="font-bold text-sm mb-1">Statistik ADD</h4>
-                  <p className="text-xs text-teal-100">Lihat detail</p>
-                </div>
-              </div>
-            </div>
-          </>
+          </section>
         )}
 
-        {/* SEKRETARIS/KEPALA_BIDANG: Disposisi Stats */}
+        {/* KEPALA DINAS: Ringkasan eksekutif */}
+        {config.showExecutiveStats && dashboardData?.summary && (
+          <DashSection title="Ringkasan" subtitle="Data keseluruhan sistem" delay={0.12}>
+            <StatGrid
+              items={[
+                {
+                  label: 'Total Desa',
+                  value: dashboardData.summary.total_desa || 0,
+                  icon: MapPin,
+                  onClick: () => navigate('/core-dashboard/laporan-desa'),
+                },
+                { label: 'Pegawai', value: dashboardData.summary.total_pegawai || 0, icon: Users },
+              ]}
+            />
+
+            <div className="mt-3 overflow-hidden rounded-xl border border-slate-200 bg-white">
+              <LinkRow
+                icon={PieChart}
+                title="Statistik Bankeu"
+                subtitle="Realisasi bantuan keuangan desa"
+                onClick={() => navigate('/core-dashboard/statistik-bankeu')}
+              />
+              <LinkRow
+                icon={BarChart3}
+                title="Statistik ADD"
+                subtitle="Alokasi dana desa per kecamatan"
+                onClick={() => navigate('/core-dashboard/statistik-add')}
+              />
+            </div>
+          </DashSection>
+        )}
+
+        {/* Statistik disposisi */}
         {config.showDisposisi && statistik && (
           <>
-            <div className="mb-5">
-              <SectionHeader 
-                title="Statistik Disposisi" 
-                subtitle="Ringkasan surat masuk & keluar"
-                icon={Activity}
+            <DashSection title="Disposisi" subtitle="Ringkasan surat masuk & keluar" delay={0.14}>
+              <StatGrid
+                items={[
+                  {
+                    label: 'Perlu dibaca',
+                    value: statistik?.masuk?.pending || 0,
+                    icon: Clock,
+                    onClick: () => navigate('/dpmd/disposisi?filter=pending'),
+                  },
+                  {
+                    label: 'Diproses',
+                    value: (statistik?.masuk?.dibaca || 0) + (statistik?.masuk?.proses || 0),
+                    icon: TrendingUp,
+                  },
+                  { label: 'Selesai', value: statistik?.masuk?.selesai || 0, icon: CheckCircle },
+                  { label: 'Diteruskan', value: statistik?.keluar?.total || 0, icon: Send },
+                ]}
               />
-              <div className="grid grid-cols-2 gap-3">
-                <InfoCard
-                  icon={Clock}
-                  title="Pending"
-                  value={statistik?.masuk?.pending || 0}
-                  color="emerald"
-                  badge={statistik?.masuk?.pending > 5 ? '!' : null}
-                  onClick={() => navigate('/dpmd/disposisi?filter=pending')}
-                />
-                <InfoCard
-                  icon={TrendingUp}
-                  title="Diproses"
-                  value={(statistik?.masuk?.dibaca || 0) + (statistik?.masuk?.proses || 0)}
-                  color="teal"
-                />
-                <InfoCard
-                  icon={CheckCircle}
-                  title="Selesai"
-                  value={statistik?.masuk?.selesai || 0}
-                  color="emerald"
-                />
-                <InfoCard
-                  icon={Send}
-                  title="Diteruskan"
-                  value={statistik?.keluar?.total || 0}
-                  color="teal"
-                />
-              </div>
-            </div>
+            </DashSection>
 
-            {/* Recent Disposisi */}
-            <div className="mb-5">
-              <SectionHeader 
-                title="Disposisi Terbaru" 
-                subtitle="Surat yang perlu ditindaklanjuti"
-                icon={FileText}
-                actionText="Lihat Semua"
-                onActionClick={() => navigate('/dpmd/disposisi')}
-              />
-              
-              {recentDisposisi.length === 0 ? (
-                <div className="bg-white rounded-2xl p-12 text-center shadow-sm">
-                  <FileText className="mx-auto text-gray-300 mb-4" size={48} />
-                  <p className="text-gray-400 font-medium">Tidak ada disposisi terbaru</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {recentDisposisi.slice(0, 5).map((disposisi) => (
-                    <ActivityCard
-                      key={disposisi.id}
-                      icon={Mail}
-                      title={disposisi.surat?.perihal || 'Tanpa Perihal'}
-                      subtitle={`Dari: ${disposisi.dari_user?.name || 'Unknown'}`}
-                      time={formatTanggal(disposisi.tanggal_disposisi)}
-                      status={disposisi.status === 'pending' ? 'pending' : 
-                              disposisi.status === 'selesai' ? 'success' : 'info'}
-                      onClick={() => navigate(`/dpmd/disposisi/${disposisi.id}`)}
-                      badge={disposisi.status === 'pending' ? 1 : null}
-                    />
-                  ))}
-                </div>
+            <DashSection
+              title="Disposisi Terbaru"
+              subtitle="Surat yang perlu ditindaklanjuti"
+              actionText="Lihat semua"
+              onAction={() => navigate('/dpmd/disposisi')}
+              delay={0.16}
+            >
+              <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+                {recentDisposisi.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center px-6 py-12 text-center">
+                    <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-400">
+                      <FileText className="h-6 w-6" />
+                    </div>
+                    <p className="font-medium text-slate-800">Tidak ada disposisi terbaru</p>
+                    <p className="mt-1 text-sm text-slate-500">Surat baru akan muncul di sini.</p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-slate-100">
+                    {recentDisposisi.slice(0, 5).map((disposisi) => (
+                      <button
+                        key={disposisi.id}
+                        onClick={() => navigate(`/dpmd/disposisi/${disposisi.id}`)}
+                        className="group flex w-full items-start gap-3 px-4 py-3 text-left transition hover:bg-slate-50"
+                      >
+                        <span className={`mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full ${
+                          disposisi.status === 'pending' ? 'bg-amber-500'
+                            : disposisi.status === 'selesai' ? 'bg-emerald-500' : 'bg-slate-300'
+                        }`} />
+                        <span className="min-w-0 flex-1">
+                          <span className="flex items-start justify-between gap-3">
+                            <span className="line-clamp-1 text-sm font-medium text-slate-900">
+                              {disposisi.surat?.perihal || 'Tanpa perihal'}
+                            </span>
+                            <span className="flex-shrink-0 whitespace-nowrap text-xs text-slate-400">
+                              {formatTanggal(disposisi.tanggal_disposisi)}
+                            </span>
+                          </span>
+                          <span className="mt-0.5 block truncate text-xs text-slate-500">
+                            Dari {disposisi.dari_user?.name || 'Unknown'}
+                          </span>
+                        </span>
+                        <ChevronRight className="mt-1.5 h-4 w-4 flex-shrink-0 text-slate-300 transition group-hover:text-slate-500" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </DashSection>
+          </>
+        )}
+
+        {/* Informasi pegawai */}
+        {config.showPegawaiInfo && pegawaiData && (
+          <DashSection title="Informasi Pegawai" subtitle="Data profil dan kontak" delay={0.18}>
+            <div className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
+              {pegawaiData?.bidang?.nama_bidang && (
+                <InfoRow icon={Building2} label="Bidang" value={pegawaiData.bidang.nama_bidang} />
+              )}
+              {pegawaiData?.no_hp && (
+                <InfoRow icon={Phone} label="No. HP" value={pegawaiData.no_hp} />
+              )}
+              {pegawaiData?.pangkat && (
+                <InfoRow icon={Award} label="Pangkat" value={pegawaiData.pangkat} />
+              )}
+              {pegawaiData?.golongan && (
+                <InfoRow icon={TrendingUp} label="Golongan" value={pegawaiData.golongan} />
               )}
             </div>
-          </>
+          </DashSection>
         )}
-
-        {/* PEGAWAI: Profile Info */}
-        {config.showPegawaiInfo && pegawaiData && (
-          <>
-            <div className="mb-5">
-              <SectionHeader 
-                title="Informasi Pegawai" 
-                subtitle="Data profil dan kontak"
-                icon={User}
-              />
-              <div className="space-y-3">
-                {/* Bidang */}
-                {pegawaiData?.bidang?.nama_bidang && (
-                  <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-2xl p-4 border border-emerald-200">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-emerald-600 rounded-xl flex items-center justify-center flex-shrink-0">
-                        <Building2 className="h-6 w-6 text-white" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-emerald-600 font-medium mb-0.5">Bidang</p>
-                        <p className="text-sm font-bold text-gray-900 truncate">{pegawaiData.bidang.nama_bidang}</p>
-                        <p className="text-xs text-gray-500 mt-0.5">Unit Kerja</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Phone */}
-                {pegawaiData?.no_hp && (
-                  <div className="bg-gradient-to-br from-emerald-50 to-teal-100 rounded-2xl p-4 border border-emerald-200">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-emerald-600 rounded-xl flex items-center justify-center flex-shrink-0">
-                        <Phone className="h-6 w-6 text-white" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-emerald-600 font-medium mb-0.5">No. HP</p>
-                        <p className="text-sm font-bold text-gray-900">{pegawaiData.no_hp}</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Additional Info */}
-            {(pegawaiData?.pangkat || pegawaiData?.golongan) && (
-              <div className="mb-5">
-                <SectionHeader 
-                  title="Informasi Tambahan" 
-                  subtitle="Detail pegawai"
-                  icon={FileText}
-                />
-                <div className="grid grid-cols-2 gap-3">
-                  {pegawaiData?.pangkat && (
-                    <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-2xl p-4 border border-emerald-200">
-                      <div className="flex flex-col items-center text-center">
-                        <div className="w-12 h-12 bg-emerald-600 rounded-xl flex items-center justify-center mb-3">
-                          <Award className="h-6 w-6 text-white" />
-                        </div>
-                        <p className="text-xs text-emerald-600 font-medium mb-1">Pangkat</p>
-                        <p className="text-sm font-bold text-gray-900 break-words">{pegawaiData.pangkat}</p>
-                      </div>
-                    </div>
-                  )}
-                  {pegawaiData?.golongan && (
-                    <div className="bg-gradient-to-br from-teal-50 to-teal-100 rounded-2xl p-4 border border-teal-200">
-                      <div className="flex flex-col items-center text-center">
-                        <div className="w-12 h-12 bg-teal-600 rounded-xl flex items-center justify-center mb-3">
-                          <TrendingUp className="h-6 w-6 text-white" />
-                        </div>
-                        <p className="text-xs text-teal-600 font-medium mb-1">Golongan</p>
-                        <p className="text-sm font-bold text-gray-900">{pegawaiData.golongan}</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </>
-        )}
-
-        {/* Sambutan + Motivasi — tint emerald/teal (senada tema) agar teks terbaca */}
-        <div className="mb-5 relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-500/90 to-teal-600/90 backdrop-blur-sm border border-white/15 p-5 sm:p-6 text-white shadow-lg shadow-emerald-900/20">
-          <div className="pointer-events-none absolute -right-6 -top-10 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
-          <div className="pointer-events-none absolute -bottom-12 -left-6 h-28 w-28 rounded-full bg-white/10 blur-2xl" />
-          <div className="relative">
-            <p className="text-sm font-medium text-emerald-50/90">Selamat datang kembali,</p>
-            <h3 className="mt-0.5 text-xl sm:text-2xl font-extrabold leading-tight">
-              {displayName} <span className="align-middle">👋</span>
-            </h3>
-            <p className="mt-3 text-sm leading-relaxed text-emerald-50/95">
-              “{motivasi}”
-            </p>
-          </div>
-        </div>
-
-      </div>
+      </main>
 
       {/* Status Viewer (Fullscreen) */}
       <AnimatePresence>
