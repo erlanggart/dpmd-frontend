@@ -49,80 +49,60 @@ const MENU_ITEMS = [
 		label: "Dashboard",
 		description: "Ringkasan sistem dan status layanan",
 		icon: FiHome,
-		gradient: "from-blue-500 to-indigo-600",
-		accent: "text-blue-600",
 	},
 	{
 		path: "/superadmin/users",
 		label: "User Management",
 		description: "Kelola akun, role, dan akses pengguna",
 		icon: FiUsers,
-		gradient: "from-sky-500 to-cyan-600",
-		accent: "text-sky-600",
 	},
 	{
 		path: "/superadmin/kepegawaian",
 		label: "Kepegawaian",
 		description: "Data pegawai dan profil internal",
 		icon: FiBriefcase,
-		gradient: "from-emerald-500 to-teal-600",
-		accent: "text-emerald-600",
 	},
 	{
 		path: "/superadmin/bidang",
 		label: "Bidang & Program",
 		description: "Akses modul per bidang dan program",
 		icon: FiLayers,
-		gradient: "from-violet-500 to-indigo-600",
-		accent: "text-violet-600",
 	},
 	{
 		path: "/superadmin/berita",
 		label: "Berita",
 		description: "Kelola konten publik dan publikasi",
 		icon: FiFileText,
-		gradient: "from-amber-500 to-orange-600",
-		accent: "text-amber-600",
 	},
 	{
 		path: "/superadmin/hero-gallery",
 		label: "Hero Gallery",
 		description: "Atur galeri hero dan visual homepage",
 		icon: FiImage,
-		gradient: "from-pink-500 to-rose-600",
-		accent: "text-pink-600",
 	},
 	{
 		path: "/core-dashboard",
 		label: "Core Dashboard",
 		description: "Masuk ke dashboard publik inti",
 		icon: FiBarChart2,
-		gradient: "from-cyan-500 to-blue-600",
-		accent: "text-cyan-600",
 	},
 	{
 		path: "/superadmin/activity-logs",
 		label: "Activity Logs",
 		description: "Pantau log aktivitas sistem",
 		icon: FiActivity,
-		gradient: "from-slate-500 to-slate-700",
-		accent: "text-slate-600",
 	},
 	{
 		path: "/superadmin/pesan",
 		label: "Pesan",
 		description: "Kirim dan terima pesan antar pengguna",
 		icon: MessageLottieIcon,
-		gradient: "from-indigo-500 to-purple-600",
-		accent: "text-indigo-600",
 	},
 	{
 		path: "/superadmin/settings",
 		label: "Settings",
 		description: "Konfigurasi global aplikasi",
 		icon: FiSettings,
-		gradient: "from-gray-500 to-gray-700",
-		accent: "text-gray-600",
 	},
 ];
 
@@ -303,26 +283,24 @@ const SuperadminLayout = () => {
 	];
 
 	return (
-		<div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+		<div className="min-h-screen bg-slate-50">
 			{confirmDialog}
 
 			{isDesktop && (
 				<aside
-					className={`fixed left-0 top-0 z-40 flex h-full flex-col border-r border-slate-100 bg-white shadow-2xl transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${
+					className={`fixed left-0 top-0 z-40 flex h-full flex-col border-r border-slate-200 bg-white transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${
 						isSidebarCollapsed ? "w-20" : "w-64"
 					}`}
 				>
-					<div className="absolute left-0 top-0 h-1 w-full bg-gradient-to-r from-blue-600 via-indigo-500 to-cyan-500"></div>
-
-					<div className="relative flex h-24 items-center justify-between border-b border-slate-100 bg-gradient-to-r from-slate-50 via-blue-50 to-indigo-50 px-4">
+					<div className="relative flex h-24 items-center justify-between gap-3 border-b border-slate-200 px-4">
 						{!isSidebarCollapsed && (
-							<div className="flex flex-1 items-center justify-center">
-								<img src="/logo-dpmd.png" alt="DPMD Logo" className="h-20" />
+							<div className="flex flex-1 items-center justify-center rounded-2xl bg-slate-900 px-4 py-2">
+								<img src="/logo-dpmd.png" alt="DPMD Logo" className="h-16 w-auto" />
 							</div>
 						)}
 						<button
 							onClick={() => setIsSidebarCollapsed((prev) => !prev)}
-							className={`group rounded-xl bg-blue-100 p-2 text-blue-700 transition-colors duration-200 hover:bg-blue-200 ${
+							className={`group rounded-xl border border-slate-200 p-2 text-slate-600 transition-colors duration-200 hover:bg-slate-100 hover:text-slate-900 ${
 								isSidebarCollapsed ? "mx-auto" : "flex-shrink-0"
 							}`}
 							aria-label={isSidebarCollapsed ? "Buka sidebar" : "Tutup sidebar"}
@@ -357,11 +335,11 @@ const SuperadminLayout = () => {
 												isSidebarCollapsed ? "justify-center px-3 py-3" : "gap-3 px-3 py-3"
 											} ${
 												isActive
-													? `bg-gradient-to-r ${item.gradient} text-white shadow-lg`
+													? "bg-slate-900 text-white shadow-sm"
 													: "bg-slate-50 text-slate-700 hover:bg-slate-100 hover:shadow-sm"
 											}`}
 										>
-											<Icon className={`h-5 w-5 flex-shrink-0 transition-transform duration-200 group-hover:scale-110 ${isActive ? "text-white" : item.accent}`} />
+											<Icon className="h-5 w-5 flex-shrink-0 transition-transform duration-200 group-hover:scale-110" />
 											{!isSidebarCollapsed && (
 												<div className="min-w-0 flex-1 text-left">
 													<p className="truncate text-sm font-semibold">
@@ -391,11 +369,11 @@ const SuperadminLayout = () => {
 											isSidebarCollapsed ? "justify-center px-3 py-3" : "gap-3 px-3 py-3"
 										} ${
 											isActive
-												? `bg-gradient-to-r ${item.gradient} text-white shadow-lg`
+												? "bg-slate-900 text-white shadow-sm"
 												: "text-slate-700 hover:bg-slate-100 hover:shadow-sm"
 										}`}
 									>
-										<Icon className={`h-5 w-5 flex-shrink-0 transition-transform duration-200 group-hover:scale-110 ${isActive ? "text-white" : item.accent}`} />
+										<Icon className="h-5 w-5 flex-shrink-0 transition-transform duration-200 group-hover:scale-110" />
 										{!isSidebarCollapsed && (
 											<div className="min-w-0 flex-1 text-left">
 												<p className="truncate text-sm font-semibold">
@@ -414,30 +392,6 @@ const SuperadminLayout = () => {
 					</nav>
 
 					<div className="border-t border-slate-100 bg-white">
-						<div className="border-b border-slate-100 p-3">
-							<button
-								onClick={openNotifications}
-								title={isSidebarCollapsed ? "Notifikasi" : ""}
-								className={`group flex w-full items-center rounded-2xl border border-slate-100 bg-slate-50 px-3 py-2.5 transition-all duration-200 hover:border-blue-100 hover:bg-blue-50 ${
-									isSidebarCollapsed ? "justify-center" : "gap-3"
-								}`}
-							>
-								<div className="relative">
-									<FiBell className="h-5 w-5 text-slate-600 transition-transform duration-200 group-hover:scale-110 group-hover:text-blue-600" />
-									{unreadCount > 0 && (
-										<span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
-											{unreadCount > 9 ? "9+" : unreadCount}
-										</span>
-									)}
-								</div>
-								{!isSidebarCollapsed && (
-									<div className="min-w-0 flex-1 text-left">
-										<p className="text-sm font-semibold text-slate-800">Notifikasi</p>
-										<p className="text-xs text-slate-400">{unreadCount > 0 ? `${unreadCount} belum dibaca` : "Semua sudah dibaca"}</p>
-									</div>
-								)}
-							</button>
-						</div>
 
 						<div className="border-b border-slate-100 p-3">
 							<button
@@ -454,7 +408,7 @@ const SuperadminLayout = () => {
 										className={`${isSidebarCollapsed ? "h-12 w-12" : "h-11 w-11"} rounded-2xl object-cover shadow-md`}
 									/>
 								) : (
-									<div className={`${isSidebarCollapsed ? "h-12 w-12" : "h-11 w-11"} flex items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-md`}>
+									<div className={`${isSidebarCollapsed ? "h-12 w-12" : "h-11 w-11"} flex items-center justify-center rounded-2xl bg-slate-900 text-white`}>
 										<FiShield className="h-5 w-5" />
 									</div>
 								)}
@@ -464,7 +418,7 @@ const SuperadminLayout = () => {
 											{user.nama || user.name || "Superadmin"}
 										</p>
 										<p className="truncate text-xs text-slate-500">{user.email || "superadmin@dpmd"}</p>
-										<span className="mt-1 inline-flex rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-700">
+										<span className="mt-1 inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600">
 											Super Admin
 										</span>
 									</div>
@@ -476,7 +430,7 @@ const SuperadminLayout = () => {
 							<button
 								onClick={handleLogout}
 								title={isSidebarCollapsed ? "Logout" : ""}
-								className={`group flex w-full items-center rounded-2xl px-3 py-2.5 bg-red-50 text-red-600 border border-red-200 ${
+								className={`group flex w-full items-center rounded-2xl border border-slate-200 px-3 py-2.5 text-slate-600 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600 ${
 									isSidebarCollapsed ? "justify-center" : "gap-3"
 								}`}
 							>
@@ -581,9 +535,21 @@ const SuperadminLayout = () => {
 								<HeaderSearchBot />
 							</div>
 							<div className="flex items-center gap-3">
-								<span className="text-xs text-slate-400 font-medium">
+								<span className="hidden text-xs font-medium text-slate-400 xl:inline">
 									{new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
 								</span>
+								<button
+									onClick={openNotifications}
+									aria-label="Notifikasi"
+									className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
+								>
+									<FiBell className="h-4 w-4" />
+									{unreadCount > 0 && (
+										<span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+											{unreadCount > 9 ? "9+" : unreadCount}
+										</span>
+									)}
+								</button>
 							</div>
 						</div>
 					</div>
@@ -767,7 +733,7 @@ const SuperadminLayout = () => {
 													}}
 													className={`flex w-full items-center gap-4 rounded-2xl px-4 py-3 text-left transition-all duration-200 ${
 														isActive
-															? `bg-gradient-to-r ${item.gradient} text-white shadow-lg`
+															? "bg-slate-900 text-white shadow-sm"
 															: "bg-slate-50 text-slate-700 hover:bg-slate-100"
 													}`}
 												>
@@ -798,7 +764,7 @@ const SuperadminLayout = () => {
 												}}
 												className={`flex w-full items-center gap-4 rounded-2xl px-4 py-3 text-left transition-all duration-200 ${
 													isActive
-														? `bg-gradient-to-r ${item.gradient} text-white shadow-lg`
+														? "bg-slate-900 text-white shadow-sm"
 														: "bg-slate-50 text-slate-700 hover:bg-slate-100"
 												}`}
 											>

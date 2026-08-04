@@ -345,8 +345,15 @@ const ManajemenAkunPage = () => {
 			{/* Modal tambah/ubah akun */}
 			{isModalOpen && (
 				<div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4">
-					<div className="w-full sm:max-w-2xl max-h-[92vh] overflow-y-auto rounded-t-3xl sm:rounded-2xl bg-white shadow-2xl">
-						<div className="sticky top-0 flex items-center justify-between border-b border-slate-100 bg-white px-5 py-4">
+					{/* Tinggi dibatasi dvh, bukan vh: di HP, vh mengabaikan bilah alamat
+					    browser sehingga dasar modal — tempat tombol simpan — jatuh di luar
+					    layar. Kelas vh tetap dipakai sebagai cadangan untuk peramban lama
+					    yang membuang nilai dvh. */}
+					<div
+						className="flex w-full max-h-[92vh] flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:max-w-2xl sm:rounded-2xl"
+						style={{ maxHeight: "92dvh" }}
+					>
+						<div className="flex shrink-0 items-center justify-between border-b border-slate-100 bg-white px-5 py-4">
 							<h2 className="font-bold text-slate-800">
 								{editingUser ? "Ubah Akun" : "Tambah Akun"}
 							</h2>
@@ -359,156 +366,164 @@ const ManajemenAkunPage = () => {
 							</button>
 						</div>
 
-						<form onSubmit={handleSubmit} className="px-5 py-4 space-y-4">
-							<div>
-								<label className="block text-sm font-semibold text-slate-700 mb-1.5">
-									Nama <span className="text-red-500">*</span>
-								</label>
-								<input
-									type="text"
-									value={form.name}
-									onChange={(e) => setForm({ ...form, name: e.target.value })}
-									placeholder="Contoh: Rahmat Ramadan"
-									className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
-								/>
-							</div>
-
-							<div>
-								<label className="block text-sm font-semibold text-slate-700 mb-1.5">
-									Email (dipakai untuk login) <span className="text-red-500">*</span>
-								</label>
-								<input
-									type="email"
-									value={form.email}
-									onChange={(e) => setForm({ ...form, email: e.target.value })}
-									placeholder="nama@contoh.com"
-									autoComplete="off"
-									className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
-								/>
-							</div>
-
-							<div>
-								<label className="block text-sm font-semibold text-slate-700 mb-1.5">
-									Password {editingUser ? "" : <span className="text-red-500">*</span>}
-								</label>
-								<div className="relative">
-									<input
-										type={showPassword ? "text" : "password"}
-										value={form.password}
-										onChange={(e) => setForm({ ...form, password: e.target.value })}
-										placeholder={
-											editingUser ? "Kosongkan bila tidak diganti" : "Minimal 6 karakter"
-										}
-										autoComplete="new-password"
-										className="w-full px-3 py-2.5 pr-11 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
-									/>
-									<button
-										type="button"
-										onClick={() => setShowPassword((s) => !s)}
-										className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-										aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
-									>
-										{showPassword ? <FiEyeOff className="h-4 w-4" /> : <FiEye className="h-4 w-4" />}
-									</button>
-								</div>
-							</div>
-
-							<div>
-								<label className="block text-sm font-semibold text-slate-700 mb-1.5">
-									Jabatan / Bagian
-								</label>
-								<input
-									type="text"
-									list="desa-jabatan-options"
-									value={form.jabatan_desa}
-									onChange={(e) => setForm({ ...form, jabatan_desa: e.target.value })}
-									placeholder="Contoh: Keuangan"
-									className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
-								/>
-								<datalist id="desa-jabatan-options">
-									{DESA_JABATAN_OPTIONS.map((opt) => (
-										<option key={opt} value={opt} />
-									))}
-								</datalist>
-							</div>
-
-							<div>
-								<label className="block text-sm font-semibold text-slate-700 mb-1.5">
-									Nomor HP
-								</label>
-								<input
-									type="tel"
-									value={form.no_hp}
-									onChange={(e) => setForm({ ...form, no_hp: e.target.value })}
-									placeholder="Contoh: 081234567890"
-									className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
-								/>
-								<p className="text-[11px] text-slate-500 mt-1">
-									Opsional. Memudahkan DPMD dan kecamatan menghubungi petugas ini.
-								</p>
-							</div>
-
-							<div>
-								<div className="flex items-center justify-between mb-2">
-									<label className="block text-sm font-semibold text-slate-700">
-										Hak Akses Fitur
+						{/* Hanya bagian isian yang menggulung; tombol aksi tinggal di footer
+						    supaya selalu terlihat, termasuk saat papan ketik terbuka. */}
+						<form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+							<div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
+								<div>
+									<label className="block text-sm font-semibold text-slate-700 mb-1.5">
+										Nama <span className="text-red-500">*</span>
 									</label>
-									<button
-										type="button"
-										onClick={toggleAllPermissions}
-										className="text-xs font-semibold text-slate-600 hover:text-slate-900 underline"
-									>
-										{form.permissions.length === DESA_PERMISSIONS.length
-											? "Kosongkan semua"
-											: "Pilih semua"}
-									</button>
+									<input
+										type="text"
+										value={form.name}
+										onChange={(e) => setForm({ ...form, name: e.target.value })}
+										placeholder="Contoh: Rahmat Ramadan"
+										className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+									/>
 								</div>
-								<div className="grid gap-2 sm:grid-cols-2">
-									{DESA_PERMISSIONS.map((permission) => {
-										const checked = form.permissions.includes(permission.key);
-										return (
-											<label
-												key={permission.key}
-												className={`flex gap-2.5 items-start rounded-xl border p-3 cursor-pointer transition-colors ${
-													checked
-														? "border-slate-900 bg-slate-900/5"
-														: "border-slate-200 hover:bg-slate-50"
-												}`}
-											>
-												<input
-													type="checkbox"
-													checked={checked}
-													onChange={() => togglePermission(permission.key)}
-													className="mt-0.5 h-4 w-4 accent-slate-900"
-												/>
-												<span className="min-w-0">
-													<span className="block text-sm font-semibold text-slate-800">
-														{permission.label}
-													</span>
-													<span className="block text-[11px] text-slate-500 leading-snug">
-														{permission.description}
-													</span>
-												</span>
-											</label>
-										);
-									})}
+
+								<div>
+									<label className="block text-sm font-semibold text-slate-700 mb-1.5">
+										Email (dipakai untuk login) <span className="text-red-500">*</span>
+									</label>
+									<input
+										type="email"
+										value={form.email}
+										onChange={(e) => setForm({ ...form, email: e.target.value })}
+										placeholder="nama@contoh.com"
+										autoComplete="off"
+										className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+									/>
 								</div>
-								<p className="text-[11px] text-slate-500 mt-2">
-									Dashboard dan Pengaturan selalu bisa diakses semua akun.
-								</p>
+
+								<div>
+									<label className="block text-sm font-semibold text-slate-700 mb-1.5">
+										Password {editingUser ? "" : <span className="text-red-500">*</span>}
+									</label>
+									<div className="relative">
+										<input
+											type={showPassword ? "text" : "password"}
+											value={form.password}
+											onChange={(e) => setForm({ ...form, password: e.target.value })}
+											placeholder={
+												editingUser ? "Kosongkan bila tidak diganti" : "Minimal 6 karakter"
+											}
+											autoComplete="new-password"
+											className="w-full px-3 py-2.5 pr-11 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+										/>
+										<button
+											type="button"
+											onClick={() => setShowPassword((s) => !s)}
+											className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+											aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
+										>
+											{showPassword ? <FiEyeOff className="h-4 w-4" /> : <FiEye className="h-4 w-4" />}
+										</button>
+									</div>
+								</div>
+
+								<div>
+									<label className="block text-sm font-semibold text-slate-700 mb-1.5">
+										Jabatan / Bagian
+									</label>
+									<input
+										type="text"
+										list="desa-jabatan-options"
+										value={form.jabatan_desa}
+										onChange={(e) => setForm({ ...form, jabatan_desa: e.target.value })}
+										placeholder="Contoh: Keuangan"
+										className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+									/>
+									<datalist id="desa-jabatan-options">
+										{DESA_JABATAN_OPTIONS.map((opt) => (
+											<option key={opt} value={opt} />
+										))}
+									</datalist>
+								</div>
+
+								<div>
+									<label className="block text-sm font-semibold text-slate-700 mb-1.5">
+										Nomor HP
+									</label>
+									<input
+										type="tel"
+										value={form.no_hp}
+										onChange={(e) => setForm({ ...form, no_hp: e.target.value })}
+										placeholder="Contoh: 081234567890"
+										className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+									/>
+									<p className="text-[11px] text-slate-500 mt-1">
+										Opsional. Memudahkan DPMD dan kecamatan menghubungi petugas ini.
+									</p>
+								</div>
+
+								<div>
+									<div className="flex items-center justify-between mb-2">
+										<label className="block text-sm font-semibold text-slate-700">
+											Hak Akses Fitur
+										</label>
+										<button
+											type="button"
+											onClick={toggleAllPermissions}
+											className="text-xs font-semibold text-slate-600 hover:text-slate-900 underline"
+										>
+											{form.permissions.length === DESA_PERMISSIONS.length
+												? "Kosongkan semua"
+												: "Pilih semua"}
+										</button>
+									</div>
+									<div className="grid gap-2 sm:grid-cols-2">
+										{DESA_PERMISSIONS.map((permission) => {
+											const checked = form.permissions.includes(permission.key);
+											return (
+												<label
+													key={permission.key}
+													className={`flex gap-2.5 items-start rounded-xl border p-3 cursor-pointer transition-colors ${
+														checked
+															? "border-slate-900 bg-slate-900/5"
+															: "border-slate-200 hover:bg-slate-50"
+													}`}
+												>
+													<input
+														type="checkbox"
+														checked={checked}
+														onChange={() => togglePermission(permission.key)}
+														className="mt-0.5 h-4 w-4 accent-slate-900"
+													/>
+													<span className="min-w-0">
+														<span className="block text-sm font-semibold text-slate-800">
+															{permission.label}
+														</span>
+														<span className="block text-[11px] text-slate-500 leading-snug">
+															{permission.description}
+														</span>
+													</span>
+												</label>
+											);
+										})}
+									</div>
+									<p className="text-[11px] text-slate-500 mt-2">
+										Dashboard dan Pengaturan selalu bisa diakses semua akun.
+									</p>
+								</div>
+
+								<label className="flex items-center gap-2.5 cursor-pointer">
+									<input
+										type="checkbox"
+										checked={form.is_active}
+										onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
+										className="h-4 w-4 accent-slate-900"
+									/>
+									<span className="text-sm font-medium text-slate-700">Akun aktif</span>
+								</label>
 							</div>
 
-							<label className="flex items-center gap-2.5 cursor-pointer">
-								<input
-									type="checkbox"
-									checked={form.is_active}
-									onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
-									className="h-4 w-4 accent-slate-900"
-								/>
-								<span className="text-sm font-medium text-slate-700">Akun aktif</span>
-							</label>
-
-							<div className="flex gap-3 pt-2">
+							{/* Padding bawah ikut menghindari batang gestur iOS. */}
+							<div
+								className="flex shrink-0 gap-3 border-t border-slate-100 bg-white px-5 py-3"
+								style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}
+							>
 								<button
 									type="button"
 									onClick={() => setIsModalOpen(false)}

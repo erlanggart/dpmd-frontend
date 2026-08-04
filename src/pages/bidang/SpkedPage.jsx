@@ -1,12 +1,36 @@
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Building2, Activity, TrendingUp, ArrowLeft, Clock, CheckCircle2, XCircle, FileText, BarChart3, DollarSign, Zap, ChevronRight, ShieldCheck, ArrowRight, BadgeCheck, CalendarOff } from 'lucide-react';
-import Lottie from 'lottie-react';
-import tableTennisAnimation from '../../assets/table-tennis.json';
+import {
+	Building2,
+	Activity,
+	TrendingUp,
+	ArrowLeft,
+	CheckCircle2,
+	XCircle,
+	FileText,
+	BarChart3,
+	DollarSign,
+	Hammer,
+	ArrowRight,
+	ShieldCheck,
+	BadgeCheck,
+	CalendarOff,
+} from 'lucide-react';
 import api from '../../api';
 import AnggaranBidangSection from '../../components/bidang/AnggaranBidangSection';
 import toast from 'react-hot-toast';
+import { bidangBySlug } from '../../constants/bidang';
+import {
+	BidangHeader,
+	StatChip,
+	StatTile,
+	TabBar,
+	SubTabs,
+	AksiCard,
+	PanelMemuat,
+	LogAktivitas,
+} from '../../components/bidang/BidangUI';
+import { angka } from '../../components/bidang/bidangFormat';
 
 // Lazy load BUMDes components
 const BumdesForm = lazy(() => import('./spked/bumdes/BumdesForm'));
@@ -22,42 +46,69 @@ const DpmdBankeuPerubahanPage = lazy(() => import('./spked/bankeu-perubahan/Dpmd
 // Pengelolaan hari libur (tanggal merah) untuk blokir BA & Surat Pengantar
 const HariLiburManager = lazy(() => import('./spked/HariLiburManager'));
 
-// Loading component
-const LoadingFallback = () => (
-	<div className="flex items-center justify-center py-12">
-		<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+const LoadingFallback = () => <PanelMemuat pesan="Menyiapkan modul…" />;
+
+const AKSEN = bidangBySlug('spked').accent;
+
+// Tahun anggaran Bankeu ditulis sebagai data, bukan tiga blok markup kembar —
+// menambah tahun berikutnya cukup satu baris di sini.
+const TAHUN_BANKEU = [
+	{ tahun: 2025, icon: DollarSign, keterangan: 'Penyaluran T1 & T2 + LPJ', accent: '#2a78d6' },
+	{ tahun: 2026, icon: ShieldCheck, keterangan: 'Verifikasi proposal', accent: '#1baf7a' },
+	{ tahun: 2027, icon: BadgeCheck, keterangan: 'Verifikasi proposal', accent: '#4a3aa7' },
+];
+
+const TABS = [
+	{ id: 'overview', label: 'Ikhtisar', icon: BarChart3 },
+	{ id: 'bumdes', label: 'BUMDes', icon: Building2 },
+	{ id: 'bankeu', label: 'Bantuan Keuangan', icon: DollarSign },
+	{ id: 'bankeu-perubahan', label: 'Bankeu Perubahan', icon: DollarSign },
+	{ id: 'bantuan-provinsi-lpj', label: 'LPJ Bantuan Provinsi', icon: FileText },
+	{ id: 'hari-libur', label: 'Hari Libur', icon: CalendarOff },
+	{ id: 'activity', label: 'Aktivitas', icon: Activity },
+];
+
+const SUB_BUMDES = [
+	{ id: 'dashboard', label: 'Dashboard' },
+	{ id: 'form', label: 'Tambah Data' },
+	{ id: 'dokumen', label: 'Dokumen' },
+];
+
+const SUB_BANKEU_2025 = [
+	{ id: 'penyaluran', label: 'Penyaluran T1 & T2' },
+	{ id: 'lpj', label: 'LPJ Bantuan Keuangan' },
+];
+
+const OPSI_AKTIVITAS = [
+	{ value: 'all', label: 'Semua Aktivitas' },
+	{ value: 'bumdes', label: 'BUMDes' },
+	{ value: 'bankeu', label: 'Bantuan Keuangan' },
+];
+
+/** Pembungkus panel modul yang dimuat malas (lazy). */
+const PanelModul = ({ children }) => (
+	<div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+		<Suspense fallback={<LoadingFallback />}>{children}</Suspense>
 	</div>
 );
 
 const SpkedPage = () => {
-	const navigate = useNavigate();
 	const { user } = useAuth();
 	const isBendahara = user?.role === 'bendahara' || user?.role === 'superadmin';
 	const [loading, setLoading] = useState(true);
 	const [data, setData] = useState(null);
-	const [activeTab, setActiveTab] = useState('overview'); // overview, bumdes, bankeu, activity
-	const [bumdesView, setBumdesView] = useState('dashboard'); // dashboard, form, dokumen
-	const [bankeuYear, setBankeuYear] = useState(null); // null (picker), 2025, or 2026
-	const [bankeu2025View, setBankeu2025View] = useState('penyaluran'); // penyaluran or lpj
-	
+	const [activeTab, setActiveTab] = useState('overview');
+	const [bumdesView, setBumdesView] = useState('dashboard');
+	const [bankeuYear, setBankeuYear] = useState(null); // null = layar pilih tahun
+	const [bankeu2025View, setBankeu2025View] = useState('penyaluran');
+
 	// Activity logs state
 	const [activityLogs, setActivityLogs] = useState([]);
 	const [activityLoading, setActivityLoading] = useState(false);
-	const [activityFilter, setActivityFilter] = useState('all'); // all, bumdes, bankeu
-	
+	const [activityFilter, setActivityFilter] = useState('all');
+
 	// Ref to prevent duplicate logs
-	const loggedRef = useRef({ userInfo: false, dashboard: false });
-	
-	// Get user info for debugging (log only once)
-	if (!loggedRef.current.userInfo) {
-		console.log('🔍 [SpkedPage] User Info:', {
-			id: user.id,
-			name: user.name,
-			role: user.role,
-			bidang_id: user.bidang_id
-		});
-		loggedRef.current.userInfo = true;
-	}
+	const loggedRef = useRef({ dashboard: false });
 
 	useEffect(() => {
 		fetchDashboard();
@@ -74,20 +125,13 @@ const SpkedPage = () => {
 	const fetchDashboard = async () => {
 		try {
 			setLoading(true);
-			if (!loggedRef.current.dashboard) {
-				console.log('📡 [SpkedPage] Fetching dashboard for bidang 3...');
-			}
 			const response = await api.get('/bidang/3/dashboard');
 			if (response.data.success) {
 				setData(response.data.data);
-				if (!loggedRef.current.dashboard) {
-					console.log('✅ [SpkedPage] Dashboard data loaded');
-					loggedRef.current.dashboard = true;
-				}
+				loggedRef.current.dashboard = true;
 			}
 		} catch (error) {
-			console.error('❌ [SpkedPage] Error fetching dashboard:', error);
-			console.error('Error response:', error.response?.data);
+			console.error('[SpkedPage] Error fetching dashboard:', error);
 			toast.error(error.response?.data?.message || 'Gagal memuat data bidang');
 		} finally {
 			setLoading(false);
@@ -101,18 +145,13 @@ const SpkedPage = () => {
 			if (activityFilter !== 'all') {
 				params.module = activityFilter;
 			}
-			
-			console.log('📡 Fetching activity logs with params:', params);
+
 			const response = await api.get('/bidang/3/activity-logs', { params });
-			console.log('📊 Activity logs response:', response.data);
-			
 			if (response.data.success) {
 				setActivityLogs(response.data.data || []);
-				console.log('✅ Activity logs loaded:', response.data.data?.length || 0, 'items');
 			}
 		} catch (error) {
-			console.error('❌ [SpkedPage] Error fetching activity logs:', error);
-			console.error('Error response:', error.response?.data);
+			console.error('[SpkedPage] Error fetching activity logs:', error);
 			toast.error('Gagal memuat aktivitas');
 		} finally {
 			setActivityLoading(false);
@@ -121,412 +160,204 @@ const SpkedPage = () => {
 
 	if (loading) {
 		return (
-			<div className="min-h-screen bg-gray-50 flex items-center justify-center">
-				<div className="text-center">
-					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-					<p className="mt-4 text-gray-600">Memuat data...</p>
-				</div>
+			<div className="flex min-h-screen items-center justify-center bg-slate-50">
+				<PanelMemuat pesan="Memuat data bidang…" />
 			</div>
 		);
 	}
 
 	const stats = data?.stats || {};
-
-	const statsCards = [
-		{
-			title: 'Total BUMDes',
-			value: stats.total_bumdes || 0,
-			icon: Building2,
-			color: 'from-green-500 to-green-600'
-		},
-		{
-			title: 'BUMDes Aktif',
-			value: stats.active_bumdes || 0,
-			icon: CheckCircle2,
-			color: 'from-emerald-500 to-emerald-600'
-		},
-		{
-			title: 'BUMDes Tidak Aktif',
-			value: stats.inactive_bumdes || 0,
-			icon: XCircle,
-			color: 'from-red-500 to-red-600'
-		},
-		{
-			title: 'Total Unit Usaha',
-			value: stats.total_unit_usaha || 0,
-			icon: TrendingUp,
-			color: 'from-blue-500 to-blue-600'
-		}
-	];
-
-	const getActionColor = (action) => {
-		const colors = {
-			create: 'text-green-600 bg-green-50',
-			update: 'text-blue-600 bg-blue-50',
-			delete: 'text-red-600 bg-red-50',
-			approve: 'text-purple-600 bg-purple-50',
-			reject: 'text-orange-600 bg-orange-50',
-			upload: 'text-teal-600 bg-teal-50',
-			download: 'text-gray-600 bg-gray-50'
-		};
-		return colors[action] || 'text-gray-600 bg-gray-50';
-	};
-
-	const formatTime = (dateString) => {
-		const date = new Date(dateString);
-		const now = new Date();
-		const diff = Math.floor((now - date) / 1000);
-
-		if (diff < 60) return 'Baru saja';
-		if (diff < 3600) return `${Math.floor(diff / 60)} menit yang lalu`;
-		if (diff < 86400) return `${Math.floor(diff / 3600)} jam yang lalu`;
-		if (diff < 604800) return `${Math.floor(diff / 86400)} hari yang lalu`;
-		
-		return date.toLocaleDateString('id-ID', { 
-			day: 'numeric', 
-			month: 'short', 
-			year: 'numeric' 
-		});
-	};
-
-	const spkedTabs = [
-		{ id: 'overview', label: 'Overview', icon: BarChart3, color: 'green' },
-		{ id: 'bumdes', label: 'BUMDes', icon: Building2, color: 'green' },
-		{ id: 'bankeu', label: 'Bantuan Keuangan', icon: DollarSign, color: 'blue' },
-		{ id: 'bankeu-perubahan', label: 'Bankeu Perubahan', icon: DollarSign, color: 'orange' },
-		{ id: 'bantuan-provinsi-lpj', label: 'LPJ Bantuan Provinsi', icon: FileText, color: 'blue' },
-		{ id: 'hari-libur', label: 'Hari Libur', icon: CalendarOff, color: 'red' },
-		{ id: 'activity', label: 'Aktivitas', icon: Activity, color: 'orange' },
-	];
+	const persenAktif = stats.total_bumdes
+		? Math.round(((stats.active_bumdes || 0) / stats.total_bumdes) * 100)
+		: null;
 
 	return (
-		<div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/20 to-green-50/20">
-			{/* Main Content */}
-			<div className={`mx-auto px-4 sm:px-6 py-6 ${activeTab === 'bankeu-perubahan' ? 'max-w-[1800px]' : 'max-w-7xl'}`}>
-				{/* Tab Navigation */}
-				<div className="flex items-center gap-2 mb-6 overflow-x-auto pb-1 scrollbar-hide">
-					{spkedTabs.map((tab) => {
-						const Icon = tab.icon;
-						const isActive = activeTab === tab.id;
-						return (
-							<button
-								key={tab.id}
-								onClick={() => {
-									setActiveTab(tab.id);
-									if (tab.id === 'bankeu') { setBankeuYear(null); setBankeu2025View('penyaluran'); }
-								}}
-								className={`
-									flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 whitespace-nowrap
-									${isActive
-										? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg shadow-green-500/25'
-										: 'bg-white text-gray-600 hover:text-gray-800 hover:shadow-md border border-gray-200'
-									}
-								`}
-							>
-								<Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-gray-400'}`} />
-								{tab.label}
-							</button>
-						);
-					})}
-				</div>
-				{/* Tab Content */}
+		<div className="min-h-screen bg-slate-50">
+			<div
+				className={`mx-auto space-y-6 px-4 py-6 sm:px-6 lg:px-8 ${
+					activeTab === 'bankeu-perubahan' ? 'max-w-[1800px]' : 'max-w-7xl'
+				}`}
+			>
+				<BidangHeader
+					slug="spked"
+					icon={Hammer}
+					deskripsi="Bantuan Keuangan desa dari proposal sampai LPJ, Bankeu Perubahan, dan pembinaan BUMDes."
+				>
+					<StatChip label="BUMDes" value={angka(stats.total_bumdes)} />
+					<StatChip label="Unit usaha" value={angka(stats.total_unit_usaha)} />
+					<StatChip label="Data Bankeu" value={angka(stats.total_bankeu)} />
+				</BidangHeader>
+
+				<TabBar
+					tabs={TABS}
+					aktif={activeTab}
+					onPilih={(id) => {
+						setActiveTab(id);
+						if (id === 'bankeu') {
+							setBankeuYear(null);
+							setBankeu2025View('penyaluran');
+						}
+					}}
+				/>
+
+				{/* ---------- Ikhtisar ---------- */}
 				{activeTab === 'overview' && (
-					<div className="relative bg-gradient-to-br from-white via-white to-green-50/30 rounded-2xl shadow-xl border border-gray-200/50 p-8 overflow-hidden">
-						{/* Decorative Elements */}
-						<div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-green-400/10 to-emerald-500/10 rounded-full blur-3xl -z-0"></div>
-						<div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-tr from-blue-400/10 to-purple-500/10 rounded-full blur-3xl -z-0"></div>
-
-						<div className="relative z-10">
-							{/* Stats Overview */}
-							<div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-								{stats && stats.total_bumdes !== undefined && (
-									<>
-										<div className="group relative bg-white rounded-3xl shadow-xl hover:shadow-2xl border border-gray-100 p-8 transition-all duration-300 hover:-translate-y-1 overflow-hidden">
-											<div className="absolute inset-0 bg-gradient-to-br from-green-400 to-green-500 opacity-0 group-hover:opacity-5 transition-opacity duration-300"></div>
-											<div className="relative">
-												<div className="flex items-center justify-between mb-6">
-													<div className="h-16 w-16 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center shadow-xl shadow-green-500/30 group-hover:scale-110 transition-transform duration-300">
-														<Building2 className="h-8 w-8 text-white" />
-													</div>
-												</div>
-												<div>
-													<p className="text-base font-semibold text-gray-600 mb-2">Total BUMDes</p>
-													<p className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
-														{stats.total_bumdes || 0}
-													</p>
-												</div>
-											</div>
-										</div>
-
-										<div className="group relative bg-white rounded-3xl shadow-xl hover:shadow-2xl border border-gray-100 p-8 transition-all duration-300 hover:-translate-y-1 overflow-hidden">
-											<div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-blue-500 opacity-0 group-hover:opacity-5 transition-opacity duration-300"></div>
-											<div className="relative">
-												<div className="flex items-center justify-between mb-6">
-													<div className="h-16 w-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-xl shadow-blue-500/30 group-hover:scale-110 transition-transform duration-300">
-														<TrendingUp className="h-8 w-8 text-white" />
-													</div>
-												</div>
-												<div>
-													<p className="text-base font-semibold text-gray-600 mb-2">Unit Usaha</p>
-													<p className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
-														{stats.total_unit_usaha || 0}
-													</p>
-												</div>
-											</div>
-										</div>
-
-										<div className="group relative bg-white rounded-3xl shadow-xl hover:shadow-2xl border border-gray-100 p-8 transition-all duration-300 hover:-translate-y-1 overflow-hidden">
-											<div className="absolute inset-0 bg-gradient-to-br from-purple-400 to-purple-500 opacity-0 group-hover:opacity-5 transition-opacity duration-300"></div>
-											<div className="relative">
-												<div className="flex items-center justify-between mb-6">
-													<div className="h-16 w-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-xl shadow-purple-500/30 group-hover:scale-110 transition-transform duration-300">
-														<DollarSign className="h-8 w-8 text-white" />
-													</div>
-												</div>
-												<div>
-													<p className="text-base font-semibold text-gray-600 mb-2">Data Bankeu</p>
-													<p className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
-														{stats.total_bankeu || 0}
-													</p>
-												</div>
-											</div>
-										</div>
-									</>
-								)}
-							</div>
-
-							{/* Quick Actions */}
-							<div>
-								<h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-									<Zap className="h-5 w-5 text-yellow-500" />
-									Aksi Cepat
-								</h3>
-								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-									<button
-										onClick={() => setActiveTab('bumdes')}
-										className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border border-gray-100 p-6 hover:border-green-300 transition-all duration-300 text-left overflow-hidden hover:-translate-y-1"
-									>
-										<div className="absolute inset-0 bg-gradient-to-br from-green-400/5 to-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-										<div className="relative flex items-center gap-5">
-											<div className="h-16 w-16 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg shadow-green-500/25">
-												<Building2 className="h-8 w-8 text-white" />
-											</div>
-											<div className="flex-1">
-												<h3 className="font-bold text-gray-800 text-lg mb-1">Kelola BUMDes</h3>
-												<p className="text-sm text-gray-500">Data BUMDes & unit usaha</p>
-											</div>
-											<ChevronRight className="h-6 w-6 text-gray-400 group-hover:text-green-600 group-hover:translate-x-1 transition-all" />
-										</div>
-									</button>
-
-									<button
-										onClick={() => { setActiveTab('bankeu'); setBankeuYear(null); }}
-										className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border border-gray-100 p-6 hover:border-blue-300 transition-all duration-300 text-left overflow-hidden hover:-translate-y-1"
-									>
-										<div className="absolute inset-0 bg-gradient-to-br from-blue-400/5 to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-										<div className="relative flex items-center gap-5">
-											<div className="h-16 w-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg shadow-blue-500/25">
-												<DollarSign className="h-8 w-8 text-white" />
-											</div>
-											<div className="flex-1">
-												<h3 className="font-bold text-gray-800 text-lg mb-1">Bantuan Keuangan</h3>
-												<p className="text-sm text-gray-500">Data penyaluran bankeu</p>
-											</div>
-											<ChevronRight className="h-6 w-6 text-gray-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
-										</div>
-									</button>
-								</div>
-							</div>
-
-							{/* Anggaran — hanya tampil untuk Bendahara */}
-							{isBendahara && (
-								<div className="mt-8">
-									<AnggaranBidangSection bidangId={3} />
-								</div>
-							)}
+					<div key="overview" className="animate-fadeIn space-y-6">
+						{/* Empat angka, bukan tiga: status aktif/tidak aktif BUMDes sudah
+						    dikirim API tapi selama ini tidak pernah ditampilkan. */}
+						<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+							<StatTile
+								icon={Building2}
+								label="Total BUMDes"
+								value={angka(stats.total_bumdes)}
+								caption="terdata di sistem"
+								accent={AKSEN}
+							/>
+							<StatTile
+								icon={CheckCircle2}
+								label="BUMDes Aktif"
+								value={angka(stats.active_bumdes)}
+								caption={persenAktif === null ? 'belum ada data' : `${persenAktif}% dari yang terdata`}
+								accent="#1baf7a"
+							/>
+							<StatTile
+								icon={XCircle}
+								label="Tidak Aktif"
+								value={angka(stats.inactive_bumdes)}
+								caption="perlu pembinaan"
+								accent="#e34948"
+							/>
+							<StatTile
+								icon={TrendingUp}
+								label="Unit Usaha"
+								value={angka(stats.total_unit_usaha)}
+								caption="dari seluruh BUMDes"
+								accent="#2a78d6"
+							/>
 						</div>
+
+						<div>
+							<h2 className="text-sm font-bold uppercase tracking-wider text-slate-500">Aksi Cepat</h2>
+							<div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+								<AksiCard
+									icon={Building2}
+									judul="Kelola BUMDes"
+									deskripsi="Data BUMDes, unit usaha, dan dokumen badan hukum"
+									accent={AKSEN}
+									onClick={() => setActiveTab('bumdes')}
+								/>
+								<AksiCard
+									icon={DollarSign}
+									judul="Bantuan Keuangan"
+									deskripsi="Verifikasi proposal, penyaluran, dan LPJ per tahun anggaran"
+									accent="#2a78d6"
+									onClick={() => {
+										setActiveTab('bankeu');
+										setBankeuYear(null);
+									}}
+								/>
+							</div>
+						</div>
+
+						{/* Anggaran — hanya tampil untuk Bendahara */}
+						{isBendahara && <AnggaranBidangSection bidangId={3} />}
 					</div>
 				)}
 
+				{/* ---------- BUMDes ---------- */}
 				{activeTab === 'bumdes' && (
-					<div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl border border-gray-200/50 overflow-hidden">
-						<Suspense fallback={<LoadingFallback />}>
-							{/* BUMDes Sub-Navigation */}
-							<div className="border-b border-gray-200 bg-gray-50 p-4">
-								<div className="flex gap-2">
-									<button
-										onClick={() => setBumdesView('dashboard')}
-										className={`px-4 py-2 rounded-lg font-medium transition-all ${
-											bumdesView === 'dashboard'
-												? 'bg-white text-green-600 shadow-sm'
-												: 'text-gray-600 hover:bg-white/50'
-										}`}
-									>
-										📊 Dashboard
-									</button>
-									<button
-										onClick={() => setBumdesView('form')}
-										className={`px-4 py-2 rounded-lg font-medium transition-all ${
-											bumdesView === 'form'
-												? 'bg-white text-green-600 shadow-sm'
-												: 'text-gray-600 hover:bg-white/50'
-										}`}
-									>
-										➕ Tambah Data
-									</button>
-									<button
-										onClick={() => setBumdesView('dokumen')}
-										className={`px-4 py-2 rounded-lg font-medium transition-all ${
-											bumdesView === 'dokumen'
-												? 'bg-white text-green-600 shadow-sm'
-												: 'text-gray-600 hover:bg-white/50'
-										}`}
-									>
-										📁 Dokumen
-									</button>
-								</div>
-							</div>
-
-							<div className="p-6">
+					<div key="bumdes" className="animate-fadeIn">
+						<PanelModul>
+							<SubTabs items={SUB_BUMDES} aktif={bumdesView} onPilih={setBumdesView} />
+							<div className="p-5">
 								{bumdesView === 'dashboard' && <BumdesDashboardModern />}
 								{bumdesView === 'form' && <BumdesForm onSwitchToDashboard={() => setBumdesView('dashboard')} />}
 								{bumdesView === 'dokumen' && <BumdesDokumenManager />}
 							</div>
-						</Suspense>
+						</PanelModul>
 					</div>
 				)}
 
+				{/* ---------- Bantuan Keuangan ---------- */}
 				{activeTab === 'bankeu' && (
-					<div className="relative overflow-hidden">
+					<div key="bankeu" className="animate-fadeIn">
 						{!bankeuYear ? (
-							/* ========== YEAR SELECTION SCREEN ========== */
-							<div className="py-16 px-4 flex flex-col items-center justify-center">
-								{/* Title */}
-								<h2 className="text-2xl font-bold text-gray-800 mb-1 tracking-tight">Bantuan Keuangan</h2>
-								<p className="text-sm text-gray-400 mb-10">Pilih tahun anggaran</p>
-
-								{/* Year Cards */}
-								<div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-3xl">
-									{/* TA 2025 */}
-									<button
-										onClick={() => setBankeuYear(2025)}
-										className="group relative bg-white rounded-2xl border border-gray-200 hover:border-blue-400 p-6 transition-all duration-300 text-left hover:shadow-xl hover:shadow-blue-500/10 hover:-translate-y-1"
-									>
-										<div className="flex items-center gap-4">
-											<div className="h-12 w-12 rounded-xl bg-blue-50 group-hover:bg-blue-100 flex items-center justify-center transition-colors">
-												<DollarSign className="h-6 w-6 text-blue-600" />
-											</div>
-											<div className="flex-1 min-w-0">
-												<h3 className="text-xl font-bold text-gray-900">TA 2025</h3>
-												<p className="text-xs text-gray-400 mt-0.5">Penyaluran T1 & T2 + LPJ</p>
-											</div>
-											<ArrowRight className="h-5 w-5 text-gray-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all" />
-										</div>
-									</button>
-
-									{/* TA 2026 */}
-									<button
-										onClick={() => setBankeuYear(2026)}
-										className="group relative bg-white rounded-2xl border border-gray-200 hover:border-emerald-400 p-6 transition-all duration-300 text-left hover:shadow-xl hover:shadow-emerald-500/10 hover:-translate-y-1"
-									>
-										<div className="flex items-center gap-4">
-											<div className="h-12 w-12 rounded-xl bg-emerald-50 group-hover:bg-emerald-100 flex items-center justify-center transition-colors">
-												<ShieldCheck className="h-6 w-6 text-emerald-600" />
-											</div>
-											<div className="flex-1 min-w-0">
-												<h3 className="text-xl font-bold text-gray-900">TA 2026</h3>
-												<p className="text-xs text-gray-400 mt-0.5">Verifikasi Proposal</p>
-											</div>
-											<ArrowRight className="h-5 w-5 text-gray-300 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all" />
-										</div>
-									</button>
-
-									{/* TA 2027 */}
-									<button
-										onClick={() => setBankeuYear(2027)}
-										className="group relative bg-white rounded-2xl border border-gray-200 hover:border-violet-400 p-6 transition-all duration-300 text-left hover:shadow-xl hover:shadow-violet-500/10 hover:-translate-y-1"
-									>
-										<div className="flex items-center gap-4">
-											<div className="h-12 w-12 rounded-xl bg-violet-50 group-hover:bg-violet-100 flex items-center justify-center transition-colors">
-												<BadgeCheck className="h-6 w-6 text-violet-600" />
-											</div>
-											<div className="flex-1 min-w-0">
-												<h3 className="text-xl font-bold text-gray-900">TA 2027</h3>
-												<p className="text-xs text-gray-400 mt-0.5">Verifikasi Proposal</p>
-											</div>
-											<ArrowRight className="h-5 w-5 text-gray-300 group-hover:text-violet-500 group-hover:translate-x-1 transition-all" />
-										</div>
-									</button>
+							<div>
+								<h2 className="text-lg font-bold text-slate-900">Bantuan Keuangan</h2>
+								<p className="mt-0.5 text-sm text-slate-500">Pilih tahun anggaran yang ingin dibuka.</p>
+								<div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+									{TAHUN_BANKEU.map((item) => {
+										const Icon = item.icon;
+										return (
+											<button
+												key={item.tahun}
+												onClick={() => setBankeuYear(item.tahun)}
+												className="group relative flex items-center gap-4 overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900"
+											>
+												<span
+													className="absolute inset-y-0 left-0 w-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+													style={{ backgroundColor: item.accent }}
+												/>
+												<span
+													className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-105"
+													style={{ backgroundColor: `${item.accent}1a`, color: item.accent }}
+												>
+													<Icon className="h-6 w-6" />
+												</span>
+												<span className="min-w-0 flex-1">
+													<span className="block text-lg font-bold tabular-nums text-slate-900">
+														TA {item.tahun}
+													</span>
+													<span className="mt-0.5 block text-xs text-slate-500">{item.keterangan}</span>
+												</span>
+												<ArrowRight className="h-4 w-4 shrink-0 text-slate-300 transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-slate-500" />
+											</button>
+										);
+									})}
 								</div>
 							</div>
 						) : (
-							<div className="relative">
-								{/* Back Navigation */}
-								<div className="mb-5">
-									<button
-										onClick={() => setBankeuYear(null)}
-										className="group inline-flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-blue-600 transition-colors"
-									>
-										<ArrowLeft className="h-4 w-4 group-hover:-translate-x-0.5 transition-transform" />
-										Kembali ke pilihan tahun
-									</button>
-								</div>
-								<div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl border border-gray-200/50 overflow-hidden">
-									<Suspense fallback={<LoadingFallback />}>
-										{bankeuYear === 2025 ? (
-											<div>
-												{/* Sub-tabs for TA 2025 */}
-												<div className="border-b border-gray-200 bg-gray-50 p-4">
-													<div className="flex gap-2">
-														<button
-															onClick={() => setBankeu2025View('penyaluran')}
-															className={`px-4 py-2 rounded-lg font-medium transition-all ${
-																bankeu2025View === 'penyaluran'
-																	? 'bg-white text-blue-600 shadow-sm'
-																	: 'text-gray-600 hover:bg-white/50'
-															}`}
-														>
-															💰 Penyaluran T1 & T2
-														</button>
-														<button
-															onClick={() => setBankeu2025View('lpj')}
-															className={`px-4 py-2 rounded-lg font-medium transition-all ${
-																bankeu2025View === 'lpj'
-																	? 'bg-white text-amber-600 shadow-sm'
-																	: 'text-gray-600 hover:bg-white/50'
-															}`}
-														>
-															📋 LPJ Bantuan Keuangan
-														</button>
-													</div>
-												</div>
-												{bankeu2025View === 'penyaluran' ? (
-													<BankeuDashboard />
-												) : (
-													<BankeuLpjMonitoringPage tahun={2025} />
-												)}
-											</div>
-										) : (bankeuYear === 2026 || bankeuYear === 2027) ? (
-											<DpmdVerificationPage tahunAnggaran={bankeuYear} />
-										) : null}
-									</Suspense>
-								</div>
+							<div className="space-y-4">
+								<button
+									onClick={() => setBankeuYear(null)}
+									className="group inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition-colors hover:text-slate-900"
+								>
+									<ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
+									Kembali ke pilihan tahun
+								</button>
+
+								<PanelModul>
+									{bankeuYear === 2025 ? (
+										<>
+											<SubTabs items={SUB_BANKEU_2025} aktif={bankeu2025View} onPilih={setBankeu2025View} />
+											{bankeu2025View === 'penyaluran' ? (
+												<BankeuDashboard />
+											) : (
+												<BankeuLpjMonitoringPage tahun={2025} />
+											)}
+										</>
+									) : (
+										<DpmdVerificationPage tahunAnggaran={bankeuYear} />
+									)}
+								</PanelModul>
 							</div>
 						)}
 					</div>
 				)}
 
+				{/* ---------- Bankeu Perubahan ---------- */}
 				{activeTab === 'bankeu-perubahan' && (
-					<div className="relative bg-white rounded-2xl shadow-xl border border-gray-200/50 overflow-hidden">
-						<Suspense fallback={<LoadingFallback />}>
+					<div key="bankeu-perubahan" className="animate-fadeIn">
+						<PanelModul>
 							<DpmdBankeuPerubahanPage />
-						</Suspense>
+						</PanelModul>
 					</div>
 				)}
 
+				{/* ---------- LPJ Bantuan Provinsi ---------- */}
 				{activeTab === 'bantuan-provinsi-lpj' && (
-					<div className="relative bg-white rounded-2xl shadow-xl border border-gray-200/50 overflow-hidden">
-						<Suspense fallback={<LoadingFallback />}>
+					<div key="bantuan-provinsi-lpj" className="animate-fadeIn">
+						<PanelModul>
 							<BankeuLpjMonitoringPage
 								tahun={2026}
 								programName="Bantuan Provinsi"
@@ -535,103 +366,30 @@ const SpkedPage = () => {
 								referenceType="bantuan_provinsi_lpj"
 								chatTitle="Chat LPJ Bantuan Provinsi"
 							/>
+						</PanelModul>
+					</div>
+				)}
+
+				{/* ---------- Hari Libur ---------- */}
+				{activeTab === 'hari-libur' && (
+					<div key="hari-libur" className="animate-fadeIn">
+						<Suspense fallback={<LoadingFallback />}>
+							<HariLiburManager />
 						</Suspense>
 					</div>
 				)}
 
-				{activeTab === 'hari-libur' && (
-					<Suspense fallback={<LoadingFallback />}>
-						<HariLiburManager />
-					</Suspense>
-				)}
-
+				{/* ---------- Aktivitas ---------- */}
 				{activeTab === 'activity' && (
-					<div className="relative bg-gradient-to-br from-white via-white to-green-50/30 rounded-2xl shadow-xl border border-gray-200/50 p-8 overflow-hidden">
-						{/* Decorative Elements */}
-						<div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-green-400/5 to-emerald-500/5 rounded-full blur-3xl -z-0"></div>
-						<div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-tr from-blue-400/5 to-purple-500/5 rounded-full blur-3xl -z-0"></div>
-						
-						<div className="relative z-10">
-							<div className="flex flex-col sm:flex-row items-center justify-between mb-8 gap-4">
-								<div className="flex items-center gap-3">
-									<div className="h-12 w-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-green-500/25">
-										<Activity className="h-6 w-6 text-white" />
-									</div>
-									<div>
-										<h2 className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
-											Aktivitas Terkini
-										</h2>
-										<p className="text-sm text-gray-500">Pantau semua aktivitas terbaru</p>
-									</div>
-								</div>
-								
-								<div className="flex items-center gap-3">
-									{/* Filter */}
-									<select
-										value={activityFilter}
-										onChange={(e) => setActivityFilter(e.target.value)}
-										className="px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-green-500/20 focus:border-green-500 bg-white/80 backdrop-blur-sm shadow-sm hover:shadow-md transition-all"
-									>
-										<option value="all">🔍 Semua Aktivitas</option>
-										<option value="bumdes">🏢 BUMDes</option>
-										<option value="bankeu">💰 Bantuan Keuangan</option>
-									</select>
-									
-									{/* Refresh Button */}
-									<button
-										onClick={fetchActivityLogs}
-										disabled={activityLoading}
-										className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl hover:from-green-700 hover:to-green-800 transition-all duration-300 shadow-lg shadow-green-500/25 hover:shadow-xl hover:shadow-green-500/40 hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 font-medium"
-									>
-										<Activity className={`h-4 w-4 ${activityLoading ? 'animate-spin' : ''}`} />
-										<span>{activityLoading ? 'Memuat...' : 'Refresh'}</span>
-									</button>
-								</div>
-							</div>
-
-							{activityLoading ? (
-								<div className="text-center py-16">
-									<div className="relative inline-flex">
-										<div className="animate-spin rounded-full h-16 w-16 border-4 border-gray-200"></div>
-										<div className="animate-spin rounded-full h-16 w-16 border-4 border-green-600 border-t-transparent absolute top-0 left-0"></div>
-									</div>
-									<p className="mt-6 text-gray-600 font-medium">Memuat aktivitas...</p>
-								</div>
-							) : activityLogs.length === 0 ? (
-								<div className="text-center py-16 bg-gradient-to-br from-gray-50 to-green-50/20 rounded-2xl border-2 border-dashed border-gray-200">
-									<div className="inline-flex h-20 w-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl items-center justify-center mb-4 shadow-inner">
-										<Activity className="h-10 w-10 text-gray-400" />
-									</div>
-									<p className="text-gray-600 font-medium text-lg">Belum ada aktivitas</p>
-									<p className="text-gray-400 text-sm mt-1">Aktivitas akan muncul di sini</p>
-								</div>
-							) : (
-								<div className="space-y-3">
-									{activityLogs.map((log) => (
-										<div key={log.id} className="group flex gap-4 p-5 bg-white/80 backdrop-blur-sm rounded-2xl border border-gray-200/50 hover:border-green-200 hover:shadow-lg transition-all duration-300">
-											<div className="flex-shrink-0">
-												<div className={`h-12 w-12 rounded-xl ${getActionColor(log.action)} flex items-center justify-center font-bold text-sm uppercase shadow-md group-hover:scale-110 transition-transform`}>
-													{log.action.substring(0, 2)}
-												</div>
-											</div>
-											<div className="flex-1 min-w-0">
-												<p className="text-sm text-gray-800 font-semibold mb-1.5">{log.description}</p>
-												<div className="flex items-center gap-3 text-xs text-gray-500">
-													<span className="font-medium">{log.userName}</span>
-													<span>•</span>
-													<span className="capitalize bg-gray-100 px-2 py-1 rounded-md">{log.module}</span>
-													<span>•</span>
-													<div className="flex items-center gap-1">
-														<Clock className="h-3 w-3" />
-														{formatTime(log.createdAt)}
-													</div>
-												</div>
-											</div>
-										</div>
-									))}
-								</div>
-							)}
-						</div>
+					<div key="activity" className="animate-fadeIn">
+						<LogAktivitas
+							logs={activityLogs}
+							loading={activityLoading}
+							filter={activityFilter}
+							onFilter={setActivityFilter}
+							opsiFilter={OPSI_AKTIVITAS}
+							onRefresh={fetchActivityLogs}
+						/>
 					</div>
 				)}
 			</div>

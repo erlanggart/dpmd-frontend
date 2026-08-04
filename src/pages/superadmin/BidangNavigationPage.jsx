@@ -1,148 +1,124 @@
 // src/pages/superadmin/BidangNavigationPage.jsx
+// Pintu masuk ke lima bidang DPMD.
+//
+// Identitas bidang (nama, urutan, warna) tidak ditulis di sini — diambil dari
+// `constants/bidang.js`, sumber yang sama dengan pengelompokan output Prolap,
+// supaya satu bidang selalu berwarna sama di seluruh aplikasi.
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-	FiLayers, FiTool, FiDollarSign, FiUsers, FiMapPin,
-	FiArrowRight, FiGrid
-} from 'react-icons/fi';
+import { LayoutGrid, FileText, Hammer, Wallet, Users2, Landmark, ArrowUpRight } from 'lucide-react';
+import { BIDANG } from '../../constants/bidang';
+import { jumlahOutputBidang } from '../../constants/prolapOutputs';
+
+// Ikon dipetakan per slug, bukan disimpan di konstanta bidang: pustaka ikon
+// adalah urusan tampilan, bukan bagian dari identitas bidang.
+const IKON = {
+	sekretariat: FileText,
+	spked: Hammer,
+	kkd: Wallet,
+	pmd: Users2,
+	pemdes: Landmark,
+};
+
+const KartuBidang = ({ bidang, onClick }) => {
+	const Icon = IKON[bidang.slug] || LayoutGrid;
+	const output = jumlahOutputBidang(bidang.slug);
+	return (
+		<button
+			onClick={onClick}
+			style={{ '--aksen': bidang.accent }}
+			className="group flex h-full flex-col overflow-hidden rounded-3xl bg-white text-left shadow-sm ring-1 ring-slate-200/80 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-900/[0.06] hover:ring-[color:var(--aksen)]/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900"
+		>
+			{/* Kepala berwarna bidang: nama besar sebagai elemen utama, ikon jadi
+			    cap air raksasa di belakangnya. Warna dipakai sebagai bidang penuh,
+			    bukan sekadar kotak ikon kecil — itu yang membedakannya dari kartu
+			    dasbor kebanyakan. */}
+			<div
+				className="relative isolate overflow-hidden px-6 pb-5 pt-6"
+				style={{ backgroundColor: `${bidang.accent}12` }}
+			>
+				<Icon
+					aria-hidden="true"
+					className="pointer-events-none absolute -bottom-6 -right-5 h-32 w-32 -z-10 opacity-[0.13] transition-transform duration-500 ease-out group-hover:-translate-y-1 group-hover:rotate-3 group-hover:scale-110"
+					style={{ color: bidang.accent }}
+				/>
+
+				<div className="flex items-start justify-between gap-3">
+					<div className="min-w-0">
+						<span
+							className="inline-flex items-center gap-1.5 rounded-full bg-white/70 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-600 backdrop-blur-sm"
+						>
+							<span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: bidang.accent }} />
+							Bidang
+						</span>
+						<h2 className="mt-2.5 truncate text-2xl font-bold tracking-tight text-slate-900">{bidang.short}</h2>
+					</div>
+
+					{/* Tombol panah membalik warna saat kartu disorot. */}
+					<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/80 text-slate-500 shadow-sm transition-all duration-300 group-hover:bg-[color:var(--aksen)] group-hover:text-white">
+						<ArrowUpRight className="h-4 w-4 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+					</span>
+				</div>
+			</div>
+
+			{/* Badan putih: nama panjang + penjelasan. */}
+			<div className="flex flex-1 flex-col px-6 pb-6 pt-5">
+				<p className="text-[11px] font-semibold uppercase leading-relaxed tracking-wider text-slate-400">
+					{bidang.label}
+				</p>
+				<p className="mt-2 flex-1 text-sm leading-relaxed text-slate-500">{bidang.description}</p>
+
+				<div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4">
+					<span className="text-xs font-medium text-slate-400">
+						{output > 0 ? (
+							<>
+								<span className="font-bold tabular-nums text-slate-700">{output}</span> output Prolap
+							</>
+						) : (
+							'Belum ada output Prolap'
+						)}
+					</span>
+					<span className="text-xs font-semibold text-slate-400 transition-colors duration-300 group-hover:text-slate-900">
+						Buka bidang
+					</span>
+				</div>
+			</div>
+		</button>
+	);
+};
 
 const BidangNavigationPage = () => {
 	const navigate = useNavigate();
 
-	const bidangList = [
-		{
-			id: 2,
-			name: 'Sekretariat',
-			slug: 'sekretariat',
-			description: 'Administrasi, Disposisi Surat, Perjalanan Dinas, dan Manajemen Pegawai',
-			icon: FiLayers,
-			color: 'from-gray-600 to-slate-700',
-			bgLight: 'bg-gray-50',
-			borderColor: 'border-gray-200',
-			hoverColor: 'hover:border-gray-400',
-		},
-		{
-			id: 3,
-			name: 'SPKED',
-			slug: 'spked',
-			description: 'Sarana Prasarana Kewilayahan dan Ekonomi Desa (BUMDes)',
-			icon: FiTool,
-			color: 'from-blue-600 to-cyan-700',
-			bgLight: 'bg-blue-50',
-			borderColor: 'border-blue-200',
-			hoverColor: 'hover:border-blue-400',
-		},
-		{
-			id: 4,
-			name: 'KKD',
-			slug: 'kkd',
-			description: 'Kekayaan dan Keuangan Desa (Dana Desa, BHPRD, Bankeu)',
-			icon: FiDollarSign,
-			color: 'from-green-600 to-emerald-700',
-			bgLight: 'bg-green-50',
-			borderColor: 'border-green-200',
-			hoverColor: 'hover:border-green-400',
-		},
-		{
-			id: 5,
-			name: 'PMD',
-			slug: 'pmd',
-			description: 'Pemberdayaan Masyarakat Desa dan Kelembagaan',
-			icon: FiUsers,
-			color: 'from-purple-600 to-violet-700',
-			bgLight: 'bg-purple-50',
-			borderColor: 'border-purple-200',
-			hoverColor: 'hover:border-purple-400',
-		},
-		{
-			id: 6,
-			name: 'Pemdes',
-			slug: 'pemdes',
-			description: 'Pemerintahan Desa',
-			icon: FiMapPin,
-			color: 'from-orange-600 to-red-700',
-			bgLight: 'bg-orange-50',
-			borderColor: 'border-orange-200',
-			hoverColor: 'hover:border-orange-400',
-		}
-	];
-
-	const handleNavigate = (slug) => {
-		navigate(`/superadmin/bidang/${slug}`);
-	};
-
 	return (
-		<div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
-			{/* Header */}
-			<header className="bg-white/80 backdrop-blur-md border-b border-gray-200/50 sticky top-0 z-50">
-				<div className="px-4 sm:px-6 lg:px-8 py-4">
-					<div className="flex items-center justify-between">
-						<div className="flex items-center gap-4">
-							<div className="relative">
-								<div className="absolute inset-0 bg-red-500 blur-md opacity-20 rounded-xl"></div>
-								<div className="relative h-10 w-10 sm:h-12 sm:w-12 bg-gradient-to-br from-red-500 to-red-700 rounded-xl flex items-center justify-center shadow-sm border border-red-400">
-									<FiGrid className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-								</div>
-							</div>
-							<div>
-								<h1 className="text-lg sm:text-xl lg:text-2xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600">
-									Bidang & Program
-								</h1>
-								<p className="text-xs sm:text-sm font-medium text-gray-500">DPMD Kabupaten Bogor</p>
-							</div>
-						</div>
+		<div className="min-h-screen bg-slate-50">
+			<div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+				{/* ---------- Kepala ---------- */}
+				<div className="flex flex-wrap items-end justify-between gap-4">
+					<div>
+						<p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+							DPMD Kabupaten Bogor
+						</p>
+						<h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900">Bidang &amp; Program</h1>
+						<p className="mt-2 max-w-xl text-sm text-slate-500">
+							Pilih bidang untuk membuka modul dan datanya.
+						</p>
+					</div>
+					<div className="rounded-2xl bg-white px-4 py-2.5 shadow-sm ring-1 ring-slate-200/80">
+						<p className="text-xl font-bold leading-none tabular-nums text-slate-900">{BIDANG.length}</p>
+						<p className="mt-1 text-[11px] font-medium text-slate-500">Bidang aktif</p>
 					</div>
 				</div>
-			</header>
 
-			{/* Main Content */}
-			<div className="px-4 sm:px-6 lg:px-8 py-12">
-				{/* Bidang Cards Grid — 5 sejajar */}
-				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5">
-					{bidangList.map((bidang) => {
-						const Icon = bidang.icon;
-						return (
-							<div
-								key={bidang.id}
-								className={`group relative bg-white rounded-2xl border ${bidang.borderColor} ${bidang.hoverColor} shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden hover:-translate-y-1 cursor-pointer`}
-								onClick={() => handleNavigate(bidang.slug)}
-							>
-								{/* Top accent bar */}
-								<div className={`h-1.5 w-full bg-gradient-to-r ${bidang.color}`}></div>
-								{/* Decorative glow */}
-								<div className={`absolute top-0 right-0 w-28 h-28 bg-gradient-to-br ${bidang.color} opacity-5 rounded-full blur-2xl group-hover:opacity-15 transition-opacity`}></div>
-
-								<div className="relative p-6 flex flex-col h-full">
-									{/* Icon */}
-									<div className={`inline-flex h-14 w-14 bg-gradient-to-br ${bidang.color} rounded-2xl items-center justify-center mb-5 shadow-md group-hover:scale-110 group-hover:rotate-3 transition-all duration-300`}>
-										<Icon className="h-7 w-7 text-white" />
-									</div>
-
-									{/* Title & Description */}
-									<h3 className="text-xl font-bold text-gray-800 mb-2 group-hover:text-red-600 transition-colors">
-										{bidang.name}
-									</h3>
-									<p className="text-sm text-gray-500 leading-relaxed mb-6 flex-1">
-										{bidang.description}
-									</p>
-
-									{/* Action */}
-									<div className="flex items-center gap-2 text-sm font-semibold text-gray-700 group-hover:text-red-600 transition-colors">
-										<span>Akses Bidang</span>
-										<FiArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-									</div>
-								</div>
-							</div>
-						);
-					})}
-				</div>
-
-				{/* Bottom Info */}
-				<div className="mt-12 text-center">
-					<div className="inline-flex items-center gap-2 px-6 py-3 bg-gray-100 rounded-full text-gray-600">
-						<FiLayers className="h-5 w-5" />
-						<span className="font-medium">Total 5 Bidang Aktif</span>
-					</div>
+				{/* ---------- Kartu bidang ---------- */}
+				<div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+					{BIDANG.map((bidang) => (
+						<KartuBidang
+							key={bidang.id}
+							bidang={bidang}
+							onClick={() => navigate(`/superadmin/bidang/${bidang.slug}`)}
+						/>
+					))}
 				</div>
 			</div>
 		</div>

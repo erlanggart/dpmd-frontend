@@ -229,6 +229,11 @@ const ArsipBarangPage = lazy(() => import("./pages/bidang/sekretariat/arsip-bara
 const ArsipBarangFormPage = lazy(() => import("./pages/bidang/sekretariat/arsip-barang/ArsipBarangFormPage"));
 const ArsipBarangDetailPage = lazy(() => import("./pages/bidang/sekretariat/arsip-barang/ArsipBarangDetailPage"));
 const ArsipBarangQrPage = lazy(() => import("./pages/bidang/sekretariat/arsip-barang/ArsipBarangQrPage"));
+const OutputInfrastrukturPage = lazy(() => import("./pages/bidang/sekretariat/prolap/OutputInfrastrukturPage"));
+const OutputKeuanganPage = lazy(() => import("./pages/bidang/sekretariat/prolap/OutputKeuanganPage"));
+const OutputKelembagaanPage = lazy(() => import("./pages/bidang/sekretariat/prolap/OutputKelembagaanPage"));
+const OutputPemerintahanPage = lazy(() => import("./pages/bidang/sekretariat/prolap/OutputPemerintahanPage"));
+const OutputBumdesPage = lazy(() => import("./pages/bidang/sekretariat/prolap/OutputBumdesPage"));
 
 // Bidang pages
 const SekretariatPage = lazy(() => import("./pages/bidang/SekretariatPage"));
@@ -479,7 +484,13 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
-const RoleProtectedRoute = ({ children, allowedRoles }) => {
+// Id bidang di tabel `bidangs`. Prolap adalah sub bagian Sekretariat.
+const BIDANG_SEKRETARIAT = 2;
+
+// `allowedBidang` menyaring lebih jauh dari peran: daftar id bidang yang boleh
+// masuk (mis. [2] = Sekretariat). Superadmin selalu lolos karena tidak terikat
+// pada satu bidang.
+const RoleProtectedRoute = ({ children, allowedRoles, allowedBidang }) => {
   const { user, isCheckingSession } = useAuth();
   const location = useLocation();
 
@@ -516,12 +527,13 @@ const RoleProtectedRoute = ({ children, allowedRoles }) => {
     return <Navigate to="/" state={{ from: location }} replace />;
   }
 
+  const isImpersonating = localStorage.getItem("isImpersonating") === "true";
+  const storedUser = isImpersonating ? getStoredUser() : null;
+  const activeUser = storedUser || user;
+  const userRole = activeUser?.role ? String(activeUser.role).trim() : "";
+
   // Check if user role is allowed
   if (allowedRoles) {
-    const isImpersonating = localStorage.getItem("isImpersonating") === "true";
-    const storedUser = isImpersonating ? getStoredUser() : null;
-    const activeUser = storedUser || user;
-    const userRole = activeUser?.role ? String(activeUser.role).trim() : "";
     const normalizedAllowedRoles = allowedRoles.map((role) => String(role).trim());
 
     // Check if user role is in allowed roles
@@ -529,6 +541,13 @@ const RoleProtectedRoute = ({ children, allowedRoles }) => {
 
     if (!hasAccess) {
       // Access denied - redirect to forbidden page
+      return <Navigate to="/forbidden" replace />;
+    }
+  }
+
+  if (allowedBidang && userRole !== "superadmin") {
+    const bidangId = Number(activeUser?.bidang_id);
+    if (!allowedBidang.includes(bidangId)) {
       return <Navigate to="/forbidden" replace />;
     }
   }
@@ -1263,6 +1282,19 @@ function App() {
                   <Route path="arsip-barang/qr/:token" element={<ArsipBarangQrPage />} />
                   <Route path="arsip-barang/:id" element={<ArsipBarangDetailPage />} />
                   <Route path="arsip-barang/:id/edit" element={<ArsipBarangFormPage />} />
+
+                  {/* Prolap — kartu di SekretariatPage menuju /sekretariat/prolap/*
+                      untuk pengguna non-superadmin (useBidangPath tidak memberi
+                      awalan). Tanpa rute ini kartunya menuju halaman kosong.
+                      Isinya rekap lintas bidang, jadi dibatasi ke pegawai bidang
+                      Sekretariat; superadmin lolos otomatis. */}
+                  <Route path="prolap" element={<RoleProtectedRoute allowedBidang={[BIDANG_SEKRETARIAT]} />}>
+                    <Route path="output-infrastruktur" element={<OutputInfrastrukturPage />} />
+                    <Route path="output-bumdes" element={<OutputBumdesPage />} />
+                    <Route path="output-keuangan" element={<OutputKeuanganPage />} />
+                    <Route path="output-kelembagaan" element={<OutputKelembagaanPage />} />
+                    <Route path="output-pemerintahan" element={<OutputPemerintahanPage />} />
+                  </Route>
                 </Route>
 
                 {/* Video Meeting Room - MAINTENANCE */}
@@ -1336,6 +1368,13 @@ function App() {
                   <Route path="bidang/sekretariat/arsip-barang/qr/:token" element={<ArsipBarangQrPage />} />
                   <Route path="bidang/sekretariat/arsip-barang/:id" element={<ArsipBarangDetailPage />} />
                   <Route path="bidang/sekretariat/arsip-barang/:id/edit" element={<ArsipBarangFormPage />} />
+
+                  {/* Prolap — rekap output kegiatan */}
+                  <Route path="bidang/sekretariat/prolap/output-infrastruktur" element={<OutputInfrastrukturPage />} />
+                  <Route path="bidang/sekretariat/prolap/output-bumdes" element={<OutputBumdesPage />} />
+                  <Route path="bidang/sekretariat/prolap/output-keuangan" element={<OutputKeuanganPage />} />
+                  <Route path="bidang/sekretariat/prolap/output-kelembagaan" element={<OutputKelembagaanPage />} />
+                  <Route path="bidang/sekretariat/prolap/output-pemerintahan" element={<OutputPemerintahanPage />} />
 
                   {/* KKD sub-routes */}
                   <Route path="bidang/kkd/add" element={<AddDashboard />} />
